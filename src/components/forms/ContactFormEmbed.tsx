@@ -1,0 +1,31 @@
+'use client'
+
+import { siteConfig } from '@/lib/config'
+
+export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }) {
+  return (
+    <div className="bg-white shadow-card overflow-hidden">
+      {showHeader && (
+        <div className="p-6 pb-0">
+          <h2 className="font-serif text-2xl mb-1">Get in touch</h2>
+          <p className="text-gray text-md">
+            or email us at{' '}
+            <a href={`mailto:${siteConfig.email.info}`} className="text-primary">
+              {siteConfig.email.info}
+            </a>
+          </p>
+        </div>
+      )}
+      <div className="p-6">
+        <iframe
+          id={`JotFormIFrame-${siteConfig.jotformId}`}
+          title="Contact"
+          allowTransparency
+          src={`https://form.jotform.com/${siteConfig.jotformId}`}
+          className="w-full border-0"
+          style={{ height: '700px' }}
+        />
+      </div>
+    </div>
+  )
+}

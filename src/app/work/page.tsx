@@ -1,0 +1,177 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import Image from 'next/image'
+import { client } from '@/sanity/lib/client'
+import { allCaseStudiesQuery, allFeaturesQuery } from '@/sanity/lib/queries'
+import { ProjectSearch } from '@/components/work/ProjectSearch'
+import { Quote } from '@/components/ui/Quote'
+import { Reveal } from '@/components/ui/Reveal'
+import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
+import { cloudfrontImage } from '@/lib/utils'
+import type { CaseStudy, Feature } from '@/types'
+
+export const metadata: Metadata = {
+  title: 'Case Studies by UX Design Agency GoInvo',
+  description:
+    'We design and ship beautiful software for healthcare organizations as far-reaching as 3M, Johnson & Johnson, and Walgreens, to leading startups.',
+}
+
+const upNext = [
+  {
+    title: 'Design for the Enterprise',
+    description: 'Beautiful software design for the Enterprise to catapult your business forward.',
+    image: '/images/enterprise/enterprise-hero-1.jpg',
+    link: '/enterprise',
+  },
+  {
+    title: 'Explore our research',
+    description: 'We investigate the future of healthcare through our podcast, features, books, and articles. Check it out!',
+    image: '/images/homepage/standardized-health-data-preview-2.jpg',
+    link: '/vision',
+  },
+  {
+    title: 'Meet the team',
+    description: 'We bring together the very best people and deploy them on your hardest digital problems.',
+    image: '/images/about/bowling.jpg',
+    link: '/about',
+  },
+]
+
+export default async function WorkPage() {
+  const [caseStudies, features] = await Promise.all([
+    client.fetch<CaseStudy[]>(allCaseStudiesQuery),
+    client.fetch<Feature[]>(allFeaturesQuery),
+  ])
+
+  const visibleFeatures = features.filter((f) => !f.hiddenWorkPage)
+
+  return (
+    <div className="pt-[var(--spacing-header-height)]">
+      {/* Featured Work */}
+      {visibleFeatures.length > 0 && (
+        <Reveal style="slide-up">
+        <section className="py-12">
+          <div className="max-width content-padding">
+            <h2 className="font-serif text-2xl mb-8">Featured</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {visibleFeatures.map((feature) => (
+                <a
+                  key={feature._id}
+                  href={feature.externalLink || `/vision/${feature.slug?.current}`}
+                  className="group block"
+                >
+                  <div className="bg-white  overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)]">
+                    {feature.image && (
+                      <div className="relative aspect-[16/10] overflow-hidden bg-gray-light">
+                        {/* Sanity image renders here when CMS is configured */}
+                      </div>
+                    )}
+                    <div className="p-6">
+                      {feature.client && (
+                        <span className="text-xs uppercase tracking-wider text-gray font-semibold">
+                          {feature.client}
+                        </span>
+                      )}
+                      <h3 className="font-serif text-xl mt-1 mb-2 group-hover:text-primary transition-colors">
+                        {feature.title}
+                      </h3>
+                      {feature.description && (
+                        <p className="text-gray text-md line-clamp-2">
+                          {feature.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+        </Reveal>
+      )}
+
+      {/* Case Studies with Filter */}
+      <section className="py-12 bg-gray-light">
+        <div className="max-width content-padding">
+          <h2 className="font-serif text-2xl mb-8">Case Studies</h2>
+          <ProjectSearch caseStudies={caseStudies} />
+        </div>
+      </section>
+
+      {/* Quote */}
+      <Reveal style="scale">
+        <section className="py-16">
+          <div className="max-width content-padding">
+            <Quote
+              text="Invo beautifully helped shape our next generation clinician and patient experience."
+              author="Igor Gershfang"
+              role="Walgreens Emerging Tech Director"
+            />
+          </div>
+        </section>
+      </Reveal>
+
+      {/* CTA */}
+      <Reveal style="clip-up">
+        <section
+          className="relative py-16 bg-cover bg-center"
+          style={{ backgroundImage: `url(${cloudfrontImage('/images/work/eric-comp.jpg')})` }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-primary/70" />
+          <div className="relative z-10 max-width content-padding text-center">
+            <h2 className="font-serif text-2xl text-white mb-4">
+              Want to take your healthcare product to the next level?
+            </h2>
+            <Link
+              href="/contact"
+              className="inline-block bg-white text-primary font-semibold px-8 py-3 hover:bg-white/90 transition-colors"
+            >
+              Get in touch
+            </Link>
+          </div>
+        </section>
+      </Reveal>
+
+      {/* Contact Form */}
+      <section className="py-16">
+        <div className="max-width-md content-padding mx-auto">
+          <ContactFormEmbed />
+        </div>
+      </section>
+
+      {/* Up Next */}
+      <Reveal style="slide-up">
+        <section className="bg-gray-light py-16">
+          <div className="max-width content-padding">
+            <h2 className="font-serif text-2xl mb-8 text-center">Up next</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {upNext.map((item) => (
+                <Link
+                  key={item.title}
+                  href={item.link}
+                  className="group block bg-white  overflow-hidden shadow-card hover:shadow-card-hover transition-shadow"
+                >
+                  <div className="aspect-[16/10] overflow-hidden">
+                    <Image
+                      src={cloudfrontImage(item.image)}
+                      alt={item.title}
+                      width={500}
+                      height={312}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">
+                      {item.title}
+                    </h3>
+                    <p className="text-gray text-md">{item.description}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      </Reveal>
+    </div>
+  )
+}

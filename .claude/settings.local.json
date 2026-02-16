@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(printf:*)",
+      "Bash(yes:*)",
+      "Bash(npm install:*)",
+      "Bash(npx next build)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:www.goinvo.com)",
+      "Bash(ls -la \"c:\\\\Users\\\\quest\\\\Programming\\\\GoInvo\\\\goinvo.com\\\\src\\\\pages\"\" | grep -E \"about)",
+      "Bash(patient)",
+      "Bash(open-source \")",
+      "Bash(dir:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "Bash(findstr:*)",
+      "Bash(wc:*)",
+      "Bash(node -e:*)",
+      "Bash(del \"C:\\\\Users\\\\quest\\\\Programming\\\\GoInvo\\\\goinvo-website\\\\src\\\\app\\\\template.tsx\")",
+      "WebFetch(domain:goinvo.com)",
+      "Bash(for f in *.svg)",
+      "Bash(do sed -i 's/fill=\"\"#787473\"\"/fill=\"\"#B2AFAF\"\"/g; s/fill-rule=\"\"evenodd\"\" clip-rule=\"\"evenodd\"\" fill=\"\"#787473\"\"/fill-rule=\"\"evenodd\"\" clip-rule=\"\"evenodd\"\" fill=\"\"#B2AFAF\"\"/g' \"$f\")",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(for f in *.mdx)",
+      "Bash(do head -20 \"$f\")",
+      "Bash(echo:*)",
+      "Bash(python3:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

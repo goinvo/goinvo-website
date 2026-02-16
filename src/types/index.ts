@@ -1,0 +1,134 @@
+import type { PortableTextBlock } from '@portabletext/types'
+
+export interface SanityImage {
+  _type: 'image'
+  asset: {
+    _ref: string
+    _type: 'reference'
+  }
+  hotspot?: {
+    x: number
+    y: number
+    height: number
+    width: number
+  }
+  alt?: string
+  caption?: string
+}
+
+export interface Category {
+  _id: string
+  title: string
+  slug: { current: string }
+  description?: string
+}
+
+export interface CaseStudy {
+  _id: string
+  title: string
+  slug: { current: string }
+  client?: string
+  image?: SanityImage
+  caption?: string
+  categories?: Category[]
+  content?: PortableTextBlock[]
+  results?: Result[]
+  references?: Reference[]
+  upNext?: CaseStudy[]
+  hidden?: boolean
+  metaDescription?: string
+  order?: number
+}
+
+export interface Result {
+  stat: string
+  description: string
+}
+
+export interface Reference {
+  title: string
+  link: string
+}
+
+export interface TeamMember {
+  _id: string
+  name: string
+  role: string
+  bio?: PortableTextBlock[]
+  image?: SanityImage
+  social?: {
+    linkedin?: string
+    twitter?: string
+    medium?: string
+    website?: string
+    email?: string
+  }
+  isAlumni?: boolean
+  order?: number
+}
+
+export interface Feature {
+  _id: string
+  title: string
+  slug: { current: string }
+  image?: SanityImage
+  video?: string
+  description?: string
+  categories?: string[]
+  date?: string
+  client?: string
+  externalLink?: string
+  hiddenWorkPage?: boolean
+}
+
+export interface Job {
+  _id: string
+  title: string
+  description?: PortableTextBlock[]
+  location?: string
+  type?: string
+  isActive?: boolean
+}
+
+export interface VisionProject {
+  _id: string
+  title: string
+  slug: { current: string }
+  image?: SanityImage
+  description?: PortableTextBlock[]
+  content?: PortableTextBlock[]
+  category?: string
+}
+
+export interface HomepageHeader {
+  _id: string
+  title: string
+  subtitle?: string
+  image?: SanityImage
+  link?: string
+  order?: number
+}
+
+export interface SiteSettings {
+  siteTitle: string
+  description?: string
+  socialLinks?: {
+    linkedin?: string
+    twitter?: string
+    medium?: string
+    flickr?: string
+    soundcloud?: string
+  }
+  footerText?: string
+  contactInfo?: {
+    email?: string
+    phone?: string
+    address?: string
+  }
+}
+
+export interface SEO {
+  title?: string
+  description?: string
+  image?: SanityImage
+}
