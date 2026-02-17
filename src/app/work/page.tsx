@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
 import { client } from '@/sanity/lib/client'
-import { allCaseStudiesQuery, allFeaturesQuery } from '@/sanity/lib/queries'
+import { allCaseStudiesQuery } from '@/sanity/lib/queries'
 import { ProjectSearch } from '@/components/work/ProjectSearch'
 import { Quote } from '@/components/ui/Quote'
 import { Reveal } from '@/components/ui/Reveal'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
-import type { CaseStudy, Feature } from '@/types'
+import type { CaseStudy } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Case Studies by UX Design Agency GoInvo',
@@ -38,65 +38,12 @@ const upNext = [
 ]
 
 export default async function WorkPage() {
-  const [caseStudies, features] = await Promise.all([
-    client.fetch<CaseStudy[]>(allCaseStudiesQuery),
-    client.fetch<Feature[]>(allFeaturesQuery),
-  ])
-
-  const visibleFeatures = features.filter((f) => !f.hiddenWorkPage)
+  const caseStudies = await client.fetch<CaseStudy[]>(allCaseStudiesQuery)
 
   return (
     <div className="pt-[var(--spacing-header-height)]">
-      {/* Featured Work */}
-      {visibleFeatures.length > 0 && (
-        <Reveal style="slide-up">
-        <section className="py-12">
-          <div className="max-width content-padding">
-            <h2 className="font-serif text-2xl mb-8">Featured</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {visibleFeatures.map((feature) => (
-                <a
-                  key={feature._id}
-                  href={feature.externalLink || `/vision/${feature.slug?.current}`}
-                  className="group block"
-                >
-                  <div className="bg-white  overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)]">
-                    {feature.image && (
-                      <div className="relative aspect-[16/10] overflow-hidden bg-gray-light">
-                        {/* Sanity image renders here when CMS is configured */}
-                      </div>
-                    )}
-                    <div className="p-6">
-                      {feature.client && (
-                        <span className="text-xs uppercase tracking-wider text-gray font-semibold">
-                          {feature.client}
-                        </span>
-                      )}
-                      <h3 className="font-serif text-xl mt-1 mb-2 group-hover:text-primary transition-colors">
-                        {feature.title}
-                      </h3>
-                      {feature.description && (
-                        <p className="text-gray text-md line-clamp-2">
-                          {feature.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
-        </Reveal>
-      )}
-
       {/* Case Studies with Filter */}
-      <section className="py-12 bg-gray-light">
-        <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-8">Case Studies</h2>
-          <ProjectSearch caseStudies={caseStudies} />
-        </div>
-      </section>
+      <ProjectSearch caseStudies={caseStudies} />
 
       {/* Quote */}
       <Reveal style="scale">

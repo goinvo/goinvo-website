@@ -54,41 +54,52 @@ export function ProjectSearch({ caseStudies }: ProjectSearchProps) {
 
   return (
     <div>
-      {/* Dynamic Hero */}
+      {/* Hero with white text box */}
       <div
-        className="relative min-h-[50vh] flex items-center bg-cover bg-center -mx-[var(--spacing-content-padding)] -mt-12 mb-12"
+        className="relative h-[220px] lg:h-[450px] bg-cover bg-center"
         style={{
           backgroundImage: `url(${cloudfrontImage(heroImage)})`,
         }}
       >
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative z-10 max-width content-padding py-16">
-          <h1
-            className="font-serif text-3xl md:text-4xl text-white mb-4"
-            style={{ viewTransitionName: 'page-title' }}
-          >
-            Design that Delivers<span className="text-primary font-serif">.</span>
-          </h1>
-          <p className="text-white/80 text-lg max-w-2xl">
-            Real projects, real users, real business outcomes.
-          </p>
+        <div className="absolute bottom-0 left-0 w-full lg:w-auto">
+          <div className="max-width content-padding">
+            <div
+              className="bg-white/80 backdrop-blur-sm px-8 py-6 lg:w-[385px]"
+              style={{ viewTransitionName: 'page-title' }}
+            >
+              <h1 className="font-serif text-3xl md:text-4xl text-black mb-2">
+                Design that Delivers<span className="text-primary font-serif">.</span>
+              </h1>
+              <p className="text-black/70 text-lg font-serif">
+                Real projects, real users, real business outcomes.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <CategoriesList
-        categories={filterCategories}
-        activeCategory={activeCategory}
-        onSelect={handleCategorySelect}
-        className="mb-8"
-      />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredStudies.map((study) => (
-          <CaseStudyCard key={study._id} caseStudy={study} />
-        ))}
+      {/* Categories band — gray background */}
+      <div className="bg-gray-light">
+        <div className="max-width content-padding py-8">
+          <CategoriesList
+            categories={filterCategories}
+            activeCategory={activeCategory}
+            onSelect={handleCategorySelect}
+          />
+        </div>
       </div>
-      {filteredStudies.length === 0 && (
-        <p className="text-center text-gray py-12">No projects found in this category.</p>
-      )}
+
+      {/* Case study grid — white background */}
+      <div className="max-width content-padding py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {filteredStudies.map((study) => (
+            <CaseStudyCard key={study._id} caseStudy={study} />
+          ))}
+        </div>
+        {filteredStudies.length === 0 && (
+          <p className="text-center text-gray py-12">No projects found in this category.</p>
+        )}
+      </div>
     </div>
   )
 }

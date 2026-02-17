@@ -57,7 +57,7 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
           transition={{ duration: 0.3 }}
         >
           {imageUrl && (
-            <div data-card-image className="relative aspect-[16/10] overflow-hidden">
+            <div data-card-image className="relative h-[250px] overflow-hidden">
               <Image
                 src={imageUrl}
                 alt={caseStudy.title}
@@ -66,27 +66,15 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
               />
             </div>
           )}
-          <div className="p-6">
+          <div className="p-4">
             {caseStudy.client && (
               <span className="text-xs uppercase tracking-wider text-gray font-semibold">
                 {caseStudy.client}
               </span>
             )}
-            <h3 className="font-serif text-xl mt-1 mb-2">{caseStudy.title}</h3>
+            <h3 className="font-serif text-xl font-bold mt-1 mb-2">{caseStudy.title}</h3>
             {caseStudy.caption && (
               <p className="text-gray text-md line-clamp-2">{caseStudy.caption}</p>
-            )}
-            {caseStudy.categories && caseStudy.categories.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-4">
-                {caseStudy.categories.map((cat) => (
-                  <span
-                    key={cat._id}
-                    className="text-xs uppercase tracking-wider text-gray bg-gray-light px-2 py-1"
-                  >
-                    {cat.title}
-                  </span>
-                ))}
-              </div>
             )}
           </div>
         </motion.article>

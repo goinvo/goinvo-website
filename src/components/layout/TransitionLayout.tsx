@@ -6,6 +6,7 @@ import { PageTransitionProvider } from '@/context/PageTransitionContext'
 import { CardTransitionOverlay } from './CardTransitionOverlay'
 import { SectionMorphOverlay } from './SectionMorphOverlay'
 import { FrozenRouter } from './FrozenRouter'
+import { Footer } from './Footer'
 
 const pageVariants = {
   enter: {
@@ -50,6 +51,9 @@ export function TransitionLayout({ children }: { children: React.ReactNode }) {
           <FrozenRouter>{children}</FrozenRouter>
         </motion.div>
       </AnimatePresence>
+      <motion.div layout="position" transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}>
+        <Footer />
+      </motion.div>
       <CardTransitionOverlay />
       <SectionMorphOverlay />
     </PageTransitionProvider>

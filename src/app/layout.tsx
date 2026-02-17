@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import { siteConfig } from '@/lib/config'
 import { Header } from '@/components/layout/Header'
-import { Footer } from '@/components/layout/Footer'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
 import { HubSpotTracking } from '@/components/analytics/HubSpotTracking'
 import { ChatlioWidget } from '@/components/analytics/ChatlioWidget'
@@ -59,7 +58,6 @@ export default function RootLayout({
         <TransitionLayout>
           <main>{children}</main>
         </TransitionLayout>
-        <Footer />
         <GoogleAnalytics />
         <HubSpotTracking />
         <ChatlioWidget />

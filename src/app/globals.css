@@ -139,7 +139,7 @@
     padding-right: 1rem;
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 864px) {
     .content-padding {
       padding-left: 2rem;
       padding-right: 2rem;

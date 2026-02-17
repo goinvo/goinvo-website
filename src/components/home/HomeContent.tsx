@@ -129,7 +129,7 @@ export function HomeContent() {
           className="object-cover"
           priority
         />
-        <div className="relative z-10 max-width content-padding pb-10 pt-[var(--spacing-header-height)]">
+        <div className="relative z-10 max-width content-padding w-full pb-10 pt-[calc(var(--spacing-header-height)+2rem)]">
           <h1
             className="font-serif text-2xl md:text-[3rem] md:leading-[3.25rem] mb-0"
             style={{ viewTransitionName: 'page-title' }}
@@ -158,9 +158,9 @@ export function HomeContent() {
           backgroundImage: `url(${cloudfrontImage('/images/homepage/bg-storycard-3m.jpg')})`,
         }}
       >
-        <div className="max-width content-padding flex justify-start w-full">
+        <div className="max-width flex justify-start w-full">
           <Reveal style="slide-right">
-            <div data-morph-card className="bg-white p-6 md:p-10 w-[85vw] md:w-[380px]">
+            <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] md:w-[380px]">
               <h2 className="font-serif text-2xl md:text-3xl mb-4">
                 Backlog: Zero
               </h2>
@@ -189,16 +189,15 @@ export function HomeContent() {
       </section>
 
       {/* 3. Eric Topol Testimonial */}
-      <Reveal style="scale">
-        <section
+      <section
           className="relative py-16 md:py-24 bg-cover min-h-[500px] md:min-h-[600px]"
           style={{
-            backgroundImage: `url(${cloudfrontImage('/images/homepage/eric-topol-2.jpg')})`,
-            backgroundPosition: 'top right',
+            backgroundImage: `linear-gradient(to bottom right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 50%, transparent 100%), url(${cloudfrontImage('/images/homepage/eric-topol-2.jpg')})`,
+            backgroundPosition: 'center, top right',
           }}
         >
           <div className="max-width content-padding">
-            <p className="font-serif text-xl md:text-[1.5rem] lg:text-[1.75rem] italic text-white leading-[1.8] mb-6 max-w-[700px]">
+            <p className="font-serif text-2xl md:text-[1.75rem] lg:text-[2rem] italic text-white leading-[1.8] mb-6 max-w-[700px]">
               &ldquo;The GoInvo studio is one of the most talented groups of
               designers I have ever met in the healthcare space. Not only are
               their ideas, designs, and graphics remarkable, but I haven&apos;t yet
@@ -223,7 +222,6 @@ export function HomeContent() {
             </p>
           </div>
         </section>
-      </Reveal>
 
       {/* 4. Weeks to Hours - Ipsos Case Study (RIGHT) */}
       <section
@@ -283,9 +281,9 @@ export function HomeContent() {
           backgroundImage: `url(${cloudfrontImage('/images/homepage/bg-storycard-snap.jpg')})`,
         }}
       >
-        <div className="max-width content-padding flex justify-start w-full">
+        <div className="max-width flex justify-start w-full">
           <Reveal style="slide-right">
-            <div data-morph-card className="bg-white p-6 md:p-10 w-[85vw] md:w-[380px]">
+            <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] md:w-[380px]">
               <h2 className="font-serif text-2xl md:text-3xl mb-6">
                 10x increase<span className="text-primary font-serif">.</span>
               </h2>

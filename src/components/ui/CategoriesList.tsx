@@ -16,21 +16,30 @@ export function CategoriesList({
   className,
 }: CategoriesListProps) {
   return (
-    <div className={cn('flex flex-wrap gap-2', className)}>
-      {categories.map((category) => (
-        <button
-          key={category}
-          onClick={() => onSelect(category)}
-          className={cn(
-            'px-4 py-2 text-sm font-semibold uppercase tracking-wider transition-colors duration-[var(--transition-button)]',
-            activeCategory === category
-              ? 'bg-primary text-white'
-              : 'bg-gray-light text-gray hover:bg-gray-medium hover:text-black'
-          )}
-        >
-          {category}
-        </button>
-      ))}
+    <div
+      className={cn(
+        'grid grid-cols-1 lg:grid-cols-5 w-full lg:w-[90%]',
+        className
+      )}
+    >
+      {categories.map((category) => {
+        const isActive = activeCategory === category
+        return (
+          <button
+            key={category}
+            onClick={() => onSelect(category)}
+            className={cn(
+              'relative text-left font-serif text-lg font-light py-4 pr-8 border-b border-primary-light transition-colors',
+              isActive ? 'text-primary font-normal' : 'text-black hover:text-primary'
+            )}
+          >
+            {category}
+            {isActive && (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary" />
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }
