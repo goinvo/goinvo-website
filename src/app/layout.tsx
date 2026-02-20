@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
+import { draftMode } from 'next/headers'
+import { VisualEditing } from 'next-sanity'
 import { siteConfig } from '@/lib/config'
-import { Header } from '@/components/layout/Header'
+import { SanityLive } from '@/sanity/lib/live'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
 import { HubSpotTracking } from '@/components/analytics/HubSpotTracking'
 import { ChatlioWidget } from '@/components/analytics/ChatlioWidget'
-import { TransitionLayout } from '@/components/layout/TransitionLayout'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -40,11 +41,13 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const { isEnabled: isDraftMode } = await draftMode()
+
   return (
     <html lang="en">
       <head>
@@ -54,10 +57,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans text-black antialiased">
-        <Header />
-        <TransitionLayout>
-          <main>{children}</main>
-        </TransitionLayout>
+        {children}
+        <SanityLive />
+        {isDraftMode && <VisualEditing />}
         <GoogleAnalytics />
         <HubSpotTracking />
         <ChatlioWidget />

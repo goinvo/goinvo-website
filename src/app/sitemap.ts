@@ -31,22 +31,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }))
 
   // Dynamic case study routes
-  const caseStudies = await client.fetch<CaseStudy[]>(allCaseStudiesQuery)
-  const caseStudyRoutes = caseStudies.map((study) => ({
-    url: `${baseUrl}/work/${study.slug.current}`,
-    lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }))
+  let caseStudyRoutes: MetadataRoute.Sitemap = []
+  let visionRoutes: MetadataRoute.Sitemap = []
 
-  // Dynamic vision project routes
-  const visionProjects = await client.fetch<VisionProject[]>(visionProjectsQuery)
-  const visionRoutes = visionProjects.map((project) => ({
-    url: `${baseUrl}/vision/${project.slug.current}`,
-    lastModified: new Date(),
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }))
+  try {
+    const caseStudies = await client.fetch<CaseStudy[]>(allCaseStudiesQuery)
+    caseStudyRoutes = caseStudies.map((study) => ({
+      url: `${baseUrl}/work/${study.slug.current}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }))
+
+    const visionProjects = await client.fetch<VisionProject[]>(visionProjectsQuery)
+    visionRoutes = visionProjects.map((project) => ({
+      url: `${baseUrl}/vision/${project.slug.current}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    }))
+  } catch {
+    // Sanity not configured — skip dynamic routes
+  }
 
   return [...staticRoutes, ...caseStudyRoutes, ...visionRoutes]
 }

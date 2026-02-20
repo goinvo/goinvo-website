@@ -249,11 +249,7 @@ export function HomeContent() {
                 <strong>10M+ API calls</strong> driving real research, not toys.
               </p>
               <p className="text-gray mb-6">
-                This wasn&apos;t novelty.
-                <br />
-                It was transformation.
-                <br />
-                Research that once took weeks now yields cited insights in hours.
+                Research that took weeks now takes hours. With citations.
               </p>
               <Button onClick={() => handleMorphClick('/work/ipsos-facto', 'ipsos')} variant="primary">
                 Ipsos Case Study

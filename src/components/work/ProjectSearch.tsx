@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { CategoriesList } from '@/components/ui/CategoriesList'
 import { CaseStudyCard } from './CaseStudyCard'
-import { cloudfrontImage } from '@/lib/utils'
+import { useHero } from '@/context/HeroContext'
 import type { CaseStudy } from '@/types'
 
 const filterCategories = ['All', 'Healthcare', 'Enterprise', 'Government', 'AI']
@@ -35,13 +35,20 @@ interface ProjectSearchProps {
 
 export function ProjectSearch({ caseStudies }: ProjectSearchProps) {
   const [activeCategory, setActiveCategory] = useState('All')
-  const [heroImage, setHeroImage] = useState('/images/work/dr-emily.jpg')
+  const { overrideImage } = useHero()
+  const prevIndexRef = useRef(0)
 
   const handleCategorySelect = useCallback((category: string) => {
+    const prevIndex = prevIndexRef.current
+    const nextIndex = filterCategories.indexOf(category)
+    const direction = nextIndex > prevIndex ? 1 : -1
+    prevIndexRef.current = nextIndex
+
     setActiveCategory(category)
+
     const images = categoryHeroImages[category] || categoryHeroImages.All
-    setHeroImage(pickRandom(images))
-  }, [])
+    overrideImage(pickRandom(images), 'center top', direction)
+  }, [overrideImage])
 
   const filteredStudies = useMemo(() => {
     if (activeCategory === 'All') return caseStudies
@@ -54,33 +61,9 @@ export function ProjectSearch({ caseStudies }: ProjectSearchProps) {
 
   return (
     <div>
-      {/* Hero with white text box */}
-      <div
-        className="relative h-[220px] lg:h-[450px] bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${cloudfrontImage(heroImage)})`,
-        }}
-      >
-        <div className="absolute bottom-0 left-0 w-full lg:w-auto">
-          <div className="max-width content-padding">
-            <div
-              className="bg-white/80 backdrop-blur-sm px-8 py-6 lg:w-[385px]"
-              style={{ viewTransitionName: 'page-title' }}
-            >
-              <h1 className="font-serif text-3xl md:text-4xl text-black mb-2">
-                Design that Delivers<span className="text-primary font-serif">.</span>
-              </h1>
-              <p className="text-black/70 text-lg font-serif">
-                Real projects, real users, real business outcomes.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Categories band — gray background */}
       <div className="bg-gray-light">
-        <div className="max-width content-padding py-8">
+        <div className="max-width content-padding pt-4 pb-8">
           <CategoriesList
             categories={filterCategories}
             activeCategory={activeCategory}
@@ -90,15 +73,17 @@ export function ProjectSearch({ caseStudies }: ProjectSearchProps) {
       </div>
 
       {/* Case study grid — white background */}
-      <div className="max-width content-padding py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {filteredStudies.map((study) => (
-            <CaseStudyCard key={study._id} caseStudy={study} />
-          ))}
+      <div className="max-width content-padding py-8 lg:py-8">
+        <div className="lg:mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {filteredStudies.map((study) => (
+              <CaseStudyCard key={study._id} caseStudy={study} />
+            ))}
+          </div>
+          {filteredStudies.length === 0 && (
+            <p className="text-center text-gray py-12">No projects found in this category.</p>
+          )}
         </div>
-        {filteredStudies.length === 0 && (
-          <p className="text-center text-gray py-12">No projects found in this category.</p>
-        )}
       </div>
     </div>
   )

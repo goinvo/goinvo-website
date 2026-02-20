@@ -48,7 +48,7 @@ export function Header() {
     >
       <div className="max-width content-padding flex items-center justify-between w-full h-full">
         {/* Logo */}
-        <Link href="/" className="flex items-center" aria-label="GoInvo Home" data-debug="header-logo">
+        <Link href="/" className="flex items-center no-underline" aria-label="GoInvo Home" data-debug="header-logo">
           <GoInvoLogo />
         </Link>
 
@@ -59,7 +59,7 @@ export function Header() {
               key={item.href}
               href={item.href}
               className={cn(
-                'text-sm font-semibold uppercase tracking-wider transition-colors duration-[var(--transition-button)]',
+                'text-sm font-semibold uppercase tracking-wider no-underline transition-colors duration-[var(--transition-button)]',
                 pathname === item.href || pathname.startsWith(item.href + '/')
                   ? 'text-primary'
                   : 'text-black hover:text-primary'
@@ -70,7 +70,7 @@ export function Header() {
           ))}
           <Link
             href="/contact"
-            className="bg-primary text-white text-sm font-semibold uppercase tracking-wider px-5 py-2 hover:bg-primary-dark transition-colors duration-[var(--transition-button)]"
+            className="bg-primary text-white text-sm font-semibold uppercase tracking-wider no-underline px-5 py-2 hover:bg-primary-dark transition-colors duration-[var(--transition-button)]"
           >
             Contact
           </Link>
@@ -125,7 +125,7 @@ export function Header() {
                       <Link
                         href="/"
                         className={cn(
-                          'block py-3 text-lg font-serif',
+                          'block py-3 text-lg font-serif no-underline',
                           pathname === '/' ? 'text-primary' : 'text-black'
                         )}
                         onClick={closeMobileNav}
@@ -138,7 +138,7 @@ export function Header() {
                         <Link
                           href={item.href}
                           className={cn(
-                            'block py-3 text-lg font-serif',
+                            'block py-3 text-lg font-serif no-underline',
                             pathname === item.href || pathname.startsWith(item.href + '/')
                               ? 'text-primary'
                               : 'text-black'
@@ -153,7 +153,7 @@ export function Header() {
                       <Link
                         href="/contact"
                         className={cn(
-                          'block py-3 text-lg font-serif',
+                          'block py-3 text-lg font-serif no-underline',
                           pathname === '/contact' ? 'text-primary' : 'text-black'
                         )}
                         onClick={closeMobileNav}
@@ -167,7 +167,7 @@ export function Header() {
                     <li>
                       <Link
                         href="/about/careers"
-                        className="block py-2 text-md text-gray"
+                        className="block py-2 text-md text-gray no-underline"
                         onClick={closeMobileNav}
                       >
                         Careers
@@ -176,7 +176,7 @@ export function Header() {
                     <li>
                       <Link
                         href="/about/open-office-hours"
-                        className="block py-2 text-md text-gray"
+                        className="block py-2 text-md text-gray no-underline"
                         onClick={closeMobileNav}
                       >
                         Open Office Hours

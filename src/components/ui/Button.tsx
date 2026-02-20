@@ -23,7 +23,7 @@ export function Button({
   type = 'button',
 }: ButtonProps) {
   const baseClasses =
-    'inline-flex items-center justify-center font-semibold uppercase tracking-wider transition-all duration-[var(--transition-button)] rounded-none border border-transparent'
+    'inline-flex items-center justify-center font-semibold uppercase tracking-wider no-underline transition-all duration-[var(--transition-button)] rounded-none border border-transparent'
   const variantClasses = {
     primary: 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark',
     secondary: 'bg-secondary text-white border-secondary hover:bg-tertiary hover:border-tertiary',

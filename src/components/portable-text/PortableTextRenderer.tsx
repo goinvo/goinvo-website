@@ -7,6 +7,12 @@ import { urlForImage } from '@/sanity/lib/image'
 import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 
+/** Check if a URL points to a direct video file (not an embed like YouTube). */
+function isDirectVideoUrl(url: string) {
+  if (!url) return false
+  return /\.(webm|mp4|mov|ogv)(\?|$)/i.test(url)
+}
+
 const components: PortableTextComponents = {
   types: {
     image: ({ value }) => {
@@ -21,7 +27,7 @@ const components: PortableTextComponents = {
             className="w-full h-auto"
           />
           {value.caption && (
-            <figcaption className="mt-2 text-sm text-gray italic">
+            <figcaption className="mt-2 text-sm text-gray italic text-center">
               {value.caption}
             </figcaption>
           )}
@@ -57,7 +63,7 @@ const components: PortableTextComponents = {
                     href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:text-primary-dark"
+                    className="hover:text-primary"
                   >
                     {item.title}
                   </a>
@@ -70,28 +76,83 @@ const components: PortableTextComponents = {
         </ol>
       </section>
     ),
-    columns: ({ value }) => (
-      <div
-        className={`grid gap-8 my-8 ${
-          value.layout === '3' ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'
-        }`}
-      >
-        {/* Column content rendered via nested portable text */}
-      </div>
-    ),
-    videoEmbed: ({ value }) => (
-      <div className="my-8 aspect-video">
-        <iframe
-          src={value.url}
-          className="w-full h-full"
-          allowFullScreen
-          title={value.caption || 'Video'}
-        />
-        {value.caption && (
-          <p className="mt-2 text-sm text-gray italic">{value.caption}</p>
-        )}
-      </div>
-    ),
+    columns: ({ value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const items: any[] = value.content || []
+      return (
+        <figure className="my-8">
+          <div
+            className={`grid gap-4 ${
+              value.layout === '3'
+                ? 'grid-cols-1 md:grid-cols-3'
+                : 'grid-cols-1 md:grid-cols-2'
+            }`}
+          >
+            {items.map((item: { _key?: string; _type: string; alt?: string; asset?: { _ref: string } }) => {
+              if (item._type === 'image' && item.asset) {
+                const imgUrl = urlForImage(item).width(800).url()
+                return (
+                  <div key={item._key} className="relative">
+                    <Image
+                      src={imgUrl}
+                      alt={item.alt || ''}
+                      width={800}
+                      height={600}
+                      className="w-full h-auto"
+                    />
+                  </div>
+                )
+              }
+              return null
+            })}
+          </div>
+          {value.caption && (
+            <figcaption className="mt-2 text-sm text-gray italic text-center">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      )
+    },
+    videoEmbed: ({ value }) => {
+      if (isDirectVideoUrl(value.url)) {
+        return (
+          <figure className="my-8">
+            <video
+              src={value.url}
+              poster={value.poster || undefined}
+              controls
+              loop
+              muted
+              playsInline
+              className="w-full"
+            />
+            {value.caption && (
+              <figcaption className="mt-2 text-sm text-gray italic text-center">
+                {value.caption}
+              </figcaption>
+            )}
+          </figure>
+        )
+      }
+      return (
+        <figure className="my-8">
+          <div className="aspect-video">
+            <iframe
+              src={value.url}
+              className="w-full h-full"
+              allowFullScreen
+              title={value.caption || 'Video'}
+            />
+          </div>
+          {value.caption && (
+            <figcaption className="mt-2 text-sm text-gray italic text-center">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      )
+    },
     divider: ({ value }) => (
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     ),
@@ -105,7 +166,7 @@ const components: PortableTextComponents = {
           href={value?.href}
           rel={rel}
           target={target}
-          className="text-primary hover:text-primary-dark underline"
+          className="hover:text-primary"
         >
           {children}
         </a>

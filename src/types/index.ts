@@ -79,6 +79,9 @@ export interface Feature {
   client?: string
   externalLink?: string
   hiddenWorkPage?: boolean
+  content?: PortableTextBlock[]
+  metaDescription?: string
+  order?: number
 }
 
 export interface Job {
@@ -98,6 +101,22 @@ export interface VisionProject {
   description?: PortableTextBlock[]
   content?: PortableTextBlock[]
   category?: string
+}
+
+/** Static feature from features.json (Gatsby-sourced data) */
+export interface StaticFeature {
+  id: string
+  title: string
+  date: string
+  client: string
+  categories: string[]
+  caption?: string
+  image: string
+  video?: string
+  link: string
+  externalLink?: boolean
+  hiddenWorkPage?: boolean
+  imagePosition?: string
 }
 
 export interface HomepageHeader {

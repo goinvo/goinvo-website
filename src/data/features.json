@@ -1,0 +1,729 @@
+[
+  {
+    "id": "human-centered-design-for-ai",
+    "title": "The Human-Centered Design Behind AI Clinicians Can Trust",
+    "date": "Dec.2025",
+    "client": "Feature",
+    "categories": [
+      "healthcare",
+      "AI"
+    ],
+    "caption": "Designing AI that people can understand, trust, and use through human-centered design.",
+    "image": "/images/features/human-centered-design-for-ai/human-centered-ai-hero.jpg",
+    "link": "/vision/human-centered-design-for-ai/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "doodle-to-demo",
+    "title": "Doodle to Demo",
+    "date": "Dec.2025",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "government",
+      "healthcare",
+      "AI"
+    ],
+    "caption": "Using generative AI as our storytelling partner",
+    "image": "/videos/features/doodle-to-demo/Video_R4-C.mp4",
+    "video": "/videos/features/doodle-to-demo/Video_R4-C.mp4",
+    "link": "https://doodletodemo.com/",
+    "externalLink": true,
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "visual-storytelling-with-genai",
+    "title": "Reimagining Visual Storytelling with GenAI",
+    "date": "Jul.2025",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "government",
+      "healthcare",
+      "AI"
+    ],
+    "caption": "With GenAI, we can create visual stories that are more engaging, accessible, and allows us to explore more than ever before.",
+    "image": "/images/features/visual-storytelling-with-genai/genai-hero-2.jpg",
+    "link": "/vision/visual-storytelling-with-genai/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "healthcare-dollars-redux",
+    "title": "Where Your Health Dollars Go (Redux)",
+    "date": "Apr.2025",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "government",
+      "healthcare",
+      "AI"
+    ],
+    "caption": "An interactive map that tracks the origin, flow, and destination of money through the US healthcare system.",
+    "image": "/images/features/health-dollars-redux/health-dollars-redux-hero.jpg",
+    "link": "/vision/healthcare-dollars-redux/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "goinvo-timeline",
+    "title": "Our Time Machine",
+    "date": "Mar.2025",
+    "client": "Feature",
+    "categories": [
+      ""
+    ],
+    "caption": "The GoInvo history visualized, no co-pay required.",
+    "link": "/about/studio-timeline/",
+    "image": "/images/about/studio-timeline/morninglight.jpg",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "eligibility-engine",
+    "title": "Eligibility Engine for Massachusetts",
+    "date": "Oct.2024",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "government",
+      "healthcare",
+      "AI"
+    ],
+    "caption": "A centralized MA resident database for better service accessibility.",
+    "link": "/vision/eligibility-engine/",
+    "image": "/images/features/eligibility/hero-image.jpg"
+  },
+  {
+    "id": "fraud-waste-abuse-in-healthcare",
+    "title": "Fraud, Waste, Abuse in US Healthcare",
+    "date": "Jul.2024",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare",
+      "government"
+    ],
+    "caption": "The $1 Trillion yearly burden on the US Healthcare system.",
+    "link": "/vision/fraud-waste-abuse-in-healthcare/",
+    "image": "/images/features/fraud-waste-abuse-in-healthcare/fwa-hero1.png",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "augmented-clinical-decision-support",
+    "title": "Augmented Clinical Decision Support",
+    "date": "May.2024",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "AI",
+      "healthcare"
+    ],
+    "caption": "Real-time, augmented decision support and guidance for mobile health workers, to better training and repeatable health outcomes.",
+    "link": "/vision/augmented-clinical-decision-support/",
+    "image": "/images/features/augmented-clinical-decision-support/augmented-clinical-decision-support-hero-1.jpg"
+  },
+  {
+    "id": "healthcare-ai",
+    "title": "The AI Healthcare Future We Need",
+    "date": "Nov.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare",
+      "AI"
+    ],
+    "caption": "Exploring the AI Healthcare future - opportunities and unexpected outcomes.",
+    "link": "/vision/healthcare-ai/",
+    "image": "/images/features/healthcare-ai/healthcare-ai-hero-4.jpg",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "healthcare-mottos",
+    "title": "Healthcare Mottos",
+    "date": "Apr.2024",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "Healthcare principles and rights are essential in any healthcare system, as they provide a framework for guiding the delivery, quality, and ethical considerations of healthcare services.",
+    "link": "https://www.healthcaremottos.com/",
+    "externalLink": true,
+    "image": "/images/features/healthcare-mottos/hc-mottos-hero-02.jpg",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "national-cancer-navigation",
+    "title": "National Cancer Navigation",
+    "date": "Jun.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare",
+      "government",
+      "AI"
+    ],
+    "caption": "Mapping cancer journey pain points and exploring how navigation could support patients and their families.",
+    "link": "/vision/national-cancer-navigation/",
+    "image": "/images/features/national-cancer-navigation/hero.png"
+  },
+  {
+    "id": "history-of-health-design",
+    "title": "History of Health Design",
+    "date": "Jun.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "Our list of the top healthcare innovations from the past 10,000 years of human history.",
+    "link": "/vision/history-of-health-design/",
+    "image": "/images/features/history-of-health-design/hero.jpg",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "living-health-lab",
+    "title": "Living Health Lab",
+    "date": "May.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "An open source project to help people examine, understand, and improve their day-to-day health through guided exploration, self-tracking, and behavior change.",
+    "image": "/images/features/living-health-lab/hero.jpg",
+    "link": "/vision/living-health-lab/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "virtual-diabetes-care",
+    "title": "Virtual Diabetes Care",
+    "date": "Apr.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "Learn about the benefits of virtual diabetes care, and a hybrid healthcare approach, which combines in-person visits with telehealth.",
+    "image": "/images/features/virtual-care-diabetes/virtual-care-diabetes-hero.jpg",
+    "link": "/vision/virtual-diabetes-care/",
+    "imagePosition": "20% center",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "public-healthroom",
+    "title": "From Public Restroom to Public Healthroom",
+    "date": "Mar.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "As part of GoInvo's Design Vision Series on Health Futures, we explore preventative health infrastructure for cities and towns.",
+    "image": "/images/features/public-healthroom/pubhrm-hero-1.jpg",
+    "link": "/vision/public-healthroom/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "digital-health-connections-model",
+    "title": "Digital Health Connections Model",
+    "date": "Feb.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "This model is a representation of the system of services that can make up digital health software.",
+    "image": "/images/features/digital-health-connections-model/digital-health-connections-model-hero.jpg",
+    "link": "https://goinvo.github.io/DigitalHealthServiceComponents/",
+    "externalLink": true,
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "us-healthcare-system-map",
+    "title": "US Healthcare System Map",
+    "date": "Jan.2023",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare",
+      "government"
+    ],
+    "caption": "A map of the US healthcare system that describes the main actors and relationships between actors.",
+    "image": "/images/features/us-healthcare-system-map/us-healthcare-system-map-hero.jpg",
+    "link": "https://goinvo.github.io/healthcare-map/",
+    "externalLink": true,
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "whats-on-fhir",
+    "title": "What's on FHIR?",
+    "date": "Nov.2022",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "health-it-and-infrastructure",
+      "healthcare"
+    ],
+    "caption": "What's on FHIR? — Are you a UX designer, developer, or product manager in digital healthcare and not quite sure what the heck FHIR is? Yeah, it can be tricky.",
+    "image": "/images/features/whats-on-fhir/whats-on-fhir-hero.jpg",
+    "link": "https://www.whatsonfhir.org/",
+    "externalLink": true,
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "primary-self-care-algorithms",
+    "title": "Primary Self Care Algorithms",
+    "date": "Sep.2022",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "Primary self care algorithms are decision support tools for individuals to better understand their health and the steps needed to optimize their health status.",
+    "image": "/images/features/primary-self-care-algorithms/primary-self-care-algorithms-hero.jpg",
+    "link": "/vision/primary-self-care-algorithms/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "digital-health-trends-2022",
+    "title": "Digital Health Trends to Watch",
+    "date": "May.2022",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "GoInvo breaks down significant digital health trends you should watch for.",
+    "image": "/images/features/digital-health-trends-2022/digital-health-trends-2022-hero.jpg",
+    "link": "/vision/digital-health-trends-2022/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "faces-in-health-communication",
+    "title": "Faces in Health Communication",
+    "date": "Mar.2022",
+    "client": "Feature",
+    "categories": [
+      "open-source"
+    ],
+    "caption": "The Benefits of Information Graphics and Human Faces for Improved Patient Understanding.",
+    "image": "/images/features/faces-in-health-communication/hero-2.jpg",
+    "link": "/vision/faces-in-health-communication/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "health-design-thinking",
+    "title": "Health Design Thinking Book",
+    "date": "Mar.2022",
+    "client": "Feature",
+    "categories": [],
+    "caption": "GoInvo highlighted in Health Design Thinking book",
+    "image": "/images/features/health-design-thinking/health-design-thinking-book-thumbnail.jpg",
+    "link": "/vision/health-design-thinking/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "own-your-health-data",
+    "title": "Own Your Health Data",
+    "date": "Oct.2021",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "healthcare",
+      "government"
+    ],
+    "caption": "As the future of our healthcare system moves towards electronic healthcare records, we need patient data ownership rights to protect patient care.",
+    "image": "/images/features/own-your-health-data/patient-data-ownership.jpg",
+    "link": "/vision/own-your-health-data/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "us-healthcare-problems",
+    "title": "US Healthcare Problems",
+    "date": "Apr.2021",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "government",
+      "healthcare"
+    ],
+    "caption": "The United States is home to some of the best and worst care. The list serves as a call to action for everyone to close the gap.",
+    "image": "/images/features/us-healthcare-problems/us_healthcare_problems_hero_v01.jpg",
+    "link": "/vision/us-healthcare-problems/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "precision-autism",
+    "title": "Precision Autism",
+    "date": "Aug.2020",
+    "client": "Feature",
+    "categories": [
+      "precision-medicine-and-genomics",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "Our open source visual depiction of the history of autism, and how precision medicine will help to define, manage, and treat the condition.",
+    "image": "/images/features/precision-autism/precision-autism.jpg",
+    "link": "/vision/precision-autism/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "test-treat-trace",
+    "title": "Test. Treat. Trace.",
+    "date": "Jun.2020",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "government",
+      "healthcare"
+    ],
+    "caption": "The strategy to defeat pandemic viruses.",
+    "image": "/images/features/test-treat-trace/test-treat-trace-header-2.jpg",
+    "link": "/vision/test-treat-trace/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "physician-burnout",
+    "title": "Physician Burnout: The Silent Killer",
+    "date": "May.2020",
+    "client": "Feature",
+    "categories": [
+      "healthcare"
+    ],
+    "caption": "Physician burnout is a public health crisis worsening by the day",
+    "image": "/images/features/burnout/hero.jpg",
+    "link": "/vision/physician-burnout/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "determinants-of-health",
+    "title": "Determinants of Health",
+    "date": "Apr.2020",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "89% of health occurs outside of the clinical space through our genetics, behavior, environment, and social circumstances. These factors are known as the social determinants of health.",
+    "image": "/images/services/doh-preview.jpg",
+    "link": "/vision/determinants-of-health/"
+  },
+  {
+    "id": "coronavirus",
+    "title": "Understanding the 2019 Novel Coronavirus",
+    "date": "Mar.2020",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "healthcare"
+    ],
+    "caption": "A primer on COVID-19 with weekly updates",
+    "image": "/images/features/coronavirus/hero.jpg",
+    "imagePosition": "right center",
+    "link": "/vision/coronavirus/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "patient-centered-consent",
+    "title": "A Guide to Patient-Centered Consent",
+    "date": "Feb.2020",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "health-it-and-infrastructure",
+      "healthcare"
+    ],
+    "caption": "A meaningful, informed consent process designed for patients",
+    "image": "/images/features/patient-centered-consent/consent-hero2.jpg",
+    "link": "/vision/patient-centered-consent/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "vapepocolypse",
+    "title": "Vapepocolypse",
+    "date": "Oct.2019",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "patient-engagement",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "",
+    "image": "/images/features/vapepocolypse/vapepocolypse-hero.jpg",
+    "imagePosition": "right center",
+    "link": "/vision/vapepocolypse/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "who-uses-my-health-data",
+    "title": "Who Uses My Health Data?",
+    "date": "Jun.2019",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "health-it-and-infrastructure",
+      "healthcare"
+    ],
+    "caption": "The health data trade has quietly grown with little patient or doctor knowledge.",
+    "image": "/images/features/health-data-use/health-data-use-hero-2.jpg",
+    "link": "/vision/who-uses-my-health-data/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "open-pro",
+    "title": "openPRO: Your health. Your voice.",
+    "date": "May.2019",
+    "client": "Feature",
+    "categories": [
+      "care-management",
+      "health-it-and-infrastructure",
+      "patient-engagement",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "An open source framework for patient-reported outcomes.",
+    "image": "/images/features/open-pro/open-pro-hero-v2.jpg",
+    "link": "/vision/open-pro/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "healthcare-dollars",
+    "title": "Where Your Health Dollars Go",
+    "date": "Feb.2019",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "healthcare"
+    ],
+    "caption": "Tracking the allocation and flow of money in the US healthcare system to reveal connections within.",
+    "image": "/images/features/healthcare-dollars/healthcare-dollars-hero.jpg",
+    "link": "/vision/healthcare-dollars/"
+  },
+  {
+    "id": "virtual-care",
+    "title": "Virtual Care",
+    "date": "Feb.2019",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "healthcare"
+    ],
+    "caption": "Half of face-to-face clinical office visits can be conducted virtually.",
+    "image": "/images/features/virtual-primary-care/virtual-primary-care-hero-2.jpg",
+    "link": "/vision/virtual-care/"
+  },
+  {
+    "id": "loneliness-in-our-human-code",
+    "title": "Loneliness in Our Human Code",
+    "date": "Nov.2018",
+    "client": "Feature",
+    "categories": [
+      "open-source",
+      "public-health-and-policy",
+      "healthcare"
+    ],
+    "caption": "Loneliness is more than a feeling, it can effect our overall health and increase our risk for certain conditions.",
+    "image": "/images/features/loneliness-in-our-human-code/loneliness-featured.jpg",
+    "link": "/vision/loneliness-in-our-human-code/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "open-source-healthcare",
+    "title": "Open Source Healthcare",
+    "date": "Oct.2018",
+    "client": "Feature",
+    "categories": [
+      "health-it-and-infrastructure",
+      "open-source",
+      "public-health-and-policy",
+      "healthcare"
+    ],
+    "caption": "The debut issue of our Open Source Healthcare Journal, advocating innovative open source ideas to change healthcare for the better.",
+    "image": "/images/features/open-source-healthcare/open-source-healthcare-featured.jpg",
+    "link": "/vision/open-source-healthcare/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "carrier-testing",
+    "title": "Carrier Testing",
+    "date": "Oct.2018",
+    "client": "Feature",
+    "categories": [
+      "precision-medicine-and-genomics",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "Open source design guidelines for delivering digitized carrier testing results.",
+    "image": "/images/features/carrier-testing/carrier-testing-featured.jpg",
+    "link": "https://goinvo.github.io/CarrierTestingDesignTenets/",
+    "externalLink": true,
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "print-big",
+    "title": "Print big. Print often.",
+    "date": "Mar.2018",
+    "client": "Feature",
+    "categories": [],
+    "caption": "In strategy, the pieces and parts are typically nested in different documents that do not allow everything to be seen at once. The ability to see everything at once, at anytime, is core to our approach.",
+    "image": "/images/features/print-big-print-often/print-big-print-often-featured.jpg",
+    "link": "https://www.goinvo.com/features/print-big/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "killer-truths",
+    "title": "Killer Truths",
+    "date": "Apr.2017",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "open-source"
+    ],
+    "caption": "How citizens of the USA really die (from 2007-2014).",
+    "image": "/images/features/killer-truths/killer-truths-featured2.jpg",
+    "link": "https://www.goinvo.com/features/killer-truths/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "care-plans",
+    "title": "Care Plans that Drive Recovery",
+    "date": "Mar.2016",
+    "client": "Feature",
+    "categories": [
+      "patient-engagement",
+      "care-management",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "A patient guide to manage day-to-day health based on health concerns, goals, and interventions.",
+    "image": "/images/features/care-plans/care-plans-featured2.jpg",
+    "link": "https://www.goinvo.com/features/careplans/"
+  },
+  {
+    "id": "understanding-zika",
+    "title": "Understanding Zika",
+    "date": "Feb.2016",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "There are an estimated 1.6 million cases of Zika cirus in 33 countries.",
+    "image": "/images/features/understanding-zika/understanding-zika-featured.jpg",
+    "link": "https://www.goinvo.com/features/zika/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "digital-healthcare",
+    "title": "Digital Healthcare in 2016",
+    "date": "Jan.2016",
+    "client": "Feature",
+    "categories": [],
+    "caption": "8 guidelines to drive engagement in future health services.",
+    "image": "/images/features/digital-healthcare/digital-healthcare-featured.jpg",
+    "link": "https://www.goinvo.com/features/digital-healthcare/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "healing-us-healthcare",
+    "title": "Healing U.S. Healthcare",
+    "client": "Feature",
+    "categories": [
+      "health-it-and-infrastructure",
+      "public-health-and-policy",
+      "healthcare",
+      "government"
+    ],
+    "date": "Sep.2015",
+    "caption": "How do we heal an ailing system?",
+    "image": "/images/features/healing-us-healthcare/healing-us-healthcare-featured.jpg",
+    "link": "https://www.goinvo.com/features/us-healthcare/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "disrupt",
+    "title": "Disrupt!",
+    "date": "Jun.2015",
+    "client": "Feature",
+    "categories": [],
+    "caption": "Designing for emerging technologies.",
+    "image": "/images/features/disrupt/disrupt-featured.jpg",
+    "link": "https://www.goinvo.com/features/disrupt/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "bathroom-to-healthroom",
+    "title": "From Bathroom to Healthroom",
+    "date": "Mar.2015",
+    "client": "Feature",
+    "categories": [
+      "patient-engagement",
+      "healthcare"
+    ],
+    "caption": "How magical technology will revolutionize human health.",
+    "image": "/images/features/bathroom-to-healthroom/bathroom-to-healthroom-featured.jpg",
+    "link": "https://www.goinvo.com/features/from-bathroom-to-healthroom/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "oral-history-goinvo",
+    "title": "An Oral History of GoInvo",
+    "date": "Dec.2014",
+    "client": "Feature",
+    "categories": [],
+    "image": "/images/features/oral-history-goinvo/oral-history-goinvo-featured.jpg",
+    "link": "https://www.goinvo.com/features/an-oral-history/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "redesign-democracy",
+    "title": "Redesign Democracy",
+    "date": "Oct.2014",
+    "client": "Feature",
+    "categories": [
+      "government"
+    ],
+    "caption": "A better solution for the digital era.",
+    "image": "/images/features/redesign-democracy/redesign-democracy-featured.jpg",
+    "link": "https://www.goinvo.com/features/redesign-democracy/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "understanding-ebola",
+    "title": "Understanding Ebola",
+    "date": "Oct.2014",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "A visual guide.",
+    "image": "/images/features/understanding-ebola/understanding-ebola-featured.jpg",
+    "link": "https://www.goinvo.com/features/ebola/",
+    "hiddenWorkPage": true
+  },
+  {
+    "id": "ebola-care-guideline",
+    "title": "Ebola Care Guideline",
+    "date": "Oct.2014",
+    "client": "Feature",
+    "categories": [
+      "public-health-and-policy",
+      "open-source",
+      "healthcare"
+    ],
+    "caption": "An illustrated process on personal protective equipment.",
+    "image": "/images/features/ebola-care-guideline/ebola-care-guideline-featured.jpg",
+    "link": "https://www.goinvo.com/features/ebola-care-guideline/",
+    "hiddenWorkPage": true
+  }
+]

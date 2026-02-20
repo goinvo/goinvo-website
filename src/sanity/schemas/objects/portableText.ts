@@ -89,6 +89,7 @@ export default defineType({
           type: 'array',
           of: [{ type: 'block' }, { type: 'image', options: { hotspot: true } }],
         },
+        { name: 'caption', title: 'Caption', type: 'string' },
       ],
     }),
     defineArrayMember({
@@ -149,6 +150,7 @@ export default defineType({
       type: 'object',
       fields: [
         { name: 'url', title: 'Video URL', type: 'url' },
+        { name: 'poster', title: 'Poster image URL', type: 'url' },
         { name: 'caption', title: 'Caption', type: 'string' },
       ],
     }),

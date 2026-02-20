@@ -7,54 +7,88 @@ interface QuoteProps {
   text: string
   author?: string
   role?: string
+  background?: 'gray' | 'white'
   className?: string
 }
 
-function QuoteMark({ flip }: { flip?: boolean }) {
+function EkgDivider() {
   return (
     <svg
-      width="20"
-      height="16"
-      viewBox="0 0 20 16"
+      viewBox="0 0 2040 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn('text-primary', flip && 'rotate-180 scale-x-[-1]')}
+      className="block w-full h-[30px]"
       aria-hidden="true"
+      preserveAspectRatio="none"
     >
       <path
-        d="M4.36 15.48C3.21 15.48 2.27 15.07 1.54 14.25C0.81 13.39 0.45 12.32 0.45 11.04C0.45 9.5 0.94 7.86 1.92 6.12C2.94 4.34 4.36 2.72 6.18 1.26L7.56 2.82C6.54 3.62 5.72 4.46 5.1 5.34C4.52 6.22 4.16 7.08 4.02 7.92C4.56 7.72 5.1 7.62 5.64 7.62C6.7 7.62 7.58 7.98 8.28 8.7C9.02 9.42 9.39 10.36 9.39 11.52C9.39 12.72 8.99 13.7 8.19 14.46C7.43 15.14 6.12 15.48 4.36 15.48ZM14.64 15.48C13.49 15.48 12.55 15.07 11.82 14.25C11.09 13.39 10.73 12.32 10.73 11.04C10.73 9.5 11.22 7.86 12.2 6.12C13.22 4.34 14.64 2.72 16.46 1.26L17.84 2.82C16.82 3.62 16 4.46 15.38 5.34C14.8 6.22 14.44 7.08 14.3 7.92C14.84 7.72 15.38 7.62 15.92 7.62C16.98 7.62 17.86 7.98 18.56 8.7C19.3 9.42 19.67 10.36 19.67 11.52C19.67 12.72 19.27 13.7 18.47 14.46C17.71 15.14 16.4 15.48 14.64 15.48Z"
-        fill="currentColor"
+        vectorEffect="non-scaling-stroke"
+        d="M2 30L992.356 30.6667L996.28 25.4815L1000.2 30.6667H1003.15L1006.09 34.3704L1016.88 4L1029.62 44L1033.54 30.6667L2039 30"
+        stroke="#d0cfce"
+        strokeLinecap="square"
       />
     </svg>
   )
 }
 
-export function Quote({ text, author, role, className }: QuoteProps) {
+export function Quote({ text, author, role, background, className }: QuoteProps) {
   return (
-    <motion.blockquote
-      className={cn('my-12 py-8', className)}
+    <motion.div
+      className={cn(
+        'p-4',
+        background === 'gray' && 'bg-gray-light',
+        className
+      )}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.6 }}
     >
-      <div className="relative">
-        <div className="mb-2">
-          <QuoteMark />
+      <div className="max-width-sm mx-auto">
+        <div className="my-4">
+          <EkgDivider />
         </div>
-        <p className="font-serif text-xl md:text-2xl text-black leading-relaxed mb-2">
-          {text}
-        </p>
-        <div className="flex justify-end mb-4">
-          <QuoteMark flip />
+        <blockquote className="relative my-12">
+          <svg
+            viewBox="0 0 31 22"
+            fill="#787473"
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute w-5 h-5 lg:w-[30px] lg:h-[30px] -top-[25px] lg:-top-[35px] lg:-left-[35px]"
+            aria-hidden="true"
+          >
+            <path d="M6.88874 8.06782C5.89421 8.06782 4.95769 7.00809 5.51532 6.1846C6.55555 4.6484 7.83132 3.39269 9.23986 2.61755C9.90807 2.24974 10.1554 1.40406 9.79165 0.72765C9.42792 0.0519394 8.59163 -0.198144 7.92274 0.169666C3.33208 2.69557 0 8.94694 0 15.0339C0 18.875 3.09029 22 6.88874 22C10.6872 22 13.7775 18.875 13.7775 15.0339C13.7775 11.1928 10.6879 8.06782 6.88874 8.06782Z" />
+            <path d="M24.1113 8.06786C23.1164 8.06786 22.1796 7.00827 22.7374 6.18452C23.7777 4.64826 25.0535 3.39268 26.4624 2.61759C27.1306 2.24978 27.3779 1.4041 27.0142 0.727689C26.6511 0.0526751 25.8149 -0.197408 25.1453 0.169705C20.5546 2.69561 17.2225 8.94698 17.2225 15.0339C17.2225 18.8751 20.3128 22 24.1113 22C27.9097 22 31 18.8751 31 15.0339C31 11.1928 27.9097 8.06786 24.1113 8.06786Z" />
+          </svg>
+          <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light">
+            {text}
+          </p>
+          <svg
+            viewBox="0 0 31 22"
+            fill="#787473"
+            xmlns="http://www.w3.org/2000/svg"
+            className="absolute w-5 h-5 lg:w-[30px] lg:h-[30px] -bottom-[25px] right-0 lg:-bottom-[35px] lg:-right-[35px]"
+            style={{ transform: 'rotateX(180deg) scaleX(-1)' }}
+            aria-hidden="true"
+          >
+            <path d="M6.88874 8.06782C5.89421 8.06782 4.95769 7.00809 5.51532 6.1846C6.55555 4.6484 7.83132 3.39269 9.23986 2.61755C9.90807 2.24974 10.1554 1.40406 9.79165 0.72765C9.42792 0.0519394 8.59163 -0.198144 7.92274 0.169666C3.33208 2.69557 0 8.94694 0 15.0339C0 18.875 3.09029 22 6.88874 22C10.6872 22 13.7775 18.875 13.7775 15.0339C13.7775 11.1928 10.6879 8.06782 6.88874 8.06782Z" />
+            <path d="M24.1113 8.06786C23.1164 8.06786 22.1796 7.00827 22.7374 6.18452C23.7777 4.64826 25.0535 3.39268 26.4624 2.61759C27.1306 2.24978 27.3779 1.4041 27.0142 0.727689C26.6511 0.0526751 25.8149 -0.197408 25.1453 0.169705C20.5546 2.69561 17.2225 8.94698 17.2225 15.0339C17.2225 18.8751 20.3128 22 24.1113 22C27.9097 22 31 18.8751 31 15.0339C31 11.1928 27.9097 8.06786 24.1113 8.06786Z" />
+          </svg>
+        </blockquote>
+        {(author || role) && (
+          <p className="text-gray text-sm leading-[1.4375rem]">
+            <span>{author}</span>
+            {role && (
+              <>
+                <br />
+                <span>{role}</span>
+              </>
+            )}
+          </p>
+        )}
+        <div className="mt-8">
+          <EkgDivider />
         </div>
       </div>
-      {(author || role) && (
-        <footer className="text-gray">
-          {author && <cite className="not-italic font-semibold">{author}</cite>}
-          {role && <span className="block text-sm mt-1">{role}</span>}
-        </footer>
-      )}
-    </motion.blockquote>
+    </motion.div>
   )
 }

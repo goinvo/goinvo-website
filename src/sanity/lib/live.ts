@@ -1,0 +1,21 @@
+import { defineLive } from 'next-sanity'
+import { client } from './client'
+import { projectId } from '../env'
+
+const token = process.env.SANITY_API_READ_TOKEN
+
+const live = defineLive({
+  client,
+  serverToken: token,
+  browserToken: token,
+})
+
+/**
+ * Wraps the defineLive sanityFetch to gracefully handle unconfigured Sanity.
+ * Returns empty data when no project ID is set.
+ */
+export const sanityFetch: typeof live.sanityFetch = projectId
+  ? live.sanityFetch
+  : async () => ({ data: [] as never, sourceMap: null, tags: [] })
+
+export const SanityLive = live.SanityLive

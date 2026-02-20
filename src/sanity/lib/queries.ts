@@ -75,7 +75,7 @@ export const alumniQuery = groq`
 
 // Features
 export const allFeaturesQuery = groq`
-  *[_type == "feature"] | order(date desc) {
+  *[_type == "feature"] | order(order asc) {
     _id,
     title,
     slug,
@@ -86,7 +86,24 @@ export const allFeaturesQuery = groq`
     date,
     client,
     externalLink,
-    hiddenWorkPage
+    hiddenWorkPage,
+    order
+  }
+`
+
+export const featureBySlugQuery = groq`
+  *[_type == "feature" && slug.current == $slug][0] {
+    _id,
+    title,
+    slug,
+    image,
+    video,
+    description,
+    categories,
+    date,
+    client,
+    content,
+    metaDescription
   }
 `
 

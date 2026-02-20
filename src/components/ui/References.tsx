@@ -18,7 +18,7 @@ export function References({ items, className }: ReferencesProps) {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:text-primary-dark"
+                className="hover:text-primary"
               >
                 {item.title}
               </a>

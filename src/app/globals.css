@@ -95,13 +95,13 @@
   }
 
   a {
-    color: var(--color-primary);
-    text-decoration: none;
+    color: var(--color-secondary);
+    text-decoration: underline;
     transition: color var(--transition-button);
   }
 
   a:hover {
-    color: var(--color-primary-dark);
+    color: var(--color-primary);
   }
 
   p {
