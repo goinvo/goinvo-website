@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { trackFormSubmit } from '@/lib/analytics'
 
 type FormState = 'idle' | 'submitting' | 'success' | 'error'
 
@@ -35,6 +36,7 @@ export function NewsletterForm() {
 
       if (response.ok) {
         setState('success')
+        trackFormSubmit({ form_name: 'newsletter', form_location: 'homepage' })
       } else {
         setState('error')
       }

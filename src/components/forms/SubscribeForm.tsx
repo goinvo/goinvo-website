@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { siteConfig } from '@/lib/config'
+import { trackFormSubmit } from '@/lib/analytics'
 
 export function SubscribeForm() {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -28,6 +29,7 @@ export function SubscribeForm() {
 
       if (response.ok) {
         setStatus('success')
+        trackFormSubmit({ form_name: 'newsletter_subscribe', form_location: 'footer' })
       } else {
         setStatus('error')
       }

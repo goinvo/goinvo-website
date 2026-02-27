@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { siteConfig } from '@/lib/config'
+import { trackFormSubmit } from '@/lib/analytics'
 
 interface HubSpotFormProps {
   formId: string
@@ -16,6 +17,7 @@ declare global {
           portalId: string
           formId: string
           target: string
+          onFormSubmitted?: () => void
         }) => void
       }
     }
@@ -36,6 +38,9 @@ export function HubSpotForm({ formId, className }: HubSpotFormProps) {
           portalId: siteConfig.hubspot.portalId,
           formId,
           target: `#hubspot-form-${formId}`,
+          onFormSubmitted: () => {
+            trackFormSubmit({ form_name: `hubspot_${formId}`, form_location: 'page' })
+          },
         })
       }
     }

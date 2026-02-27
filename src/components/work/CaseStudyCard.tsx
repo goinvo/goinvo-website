@@ -9,6 +9,7 @@ import type { CaseStudy } from '@/types'
 import { urlForImage } from '@/sanity/lib/image'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { useHero } from '@/context/HeroContext'
+import { trackCaseStudyClick } from '@/lib/analytics'
 
 interface CaseStudyCardProps {
   caseStudy: CaseStudy
@@ -41,9 +42,11 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
       const rect = imageEl.getBoundingClientRect()
       e.preventDefault()
 
-      // Scroll to top during the morph so the viewport is at 0 when
-      // the fixed overlay hands off to the in-flow PersistentHero.
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      trackCaseStudyClick({
+        case_study_title: caseStudy.title,
+        case_study_slug: caseStudy.slug.current,
+        click_location: 'work_grid',
+      })
 
       // Preload the hero-res image so PersistentHero can show it from cache
       const preload = new window.Image()

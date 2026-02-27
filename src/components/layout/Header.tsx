@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { navItems } from '@/lib/config'
 import { cn } from '@/lib/utils'
+import { trackNavClick } from '@/lib/analytics'
 
 export function Header() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
@@ -58,6 +59,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => trackNavClick({ nav_item: item.title, nav_type: 'desktop', nav_location: 'header' })}
               className={cn(
                 'text-sm font-semibold uppercase tracking-wider no-underline transition-colors duration-[var(--transition-button)]',
                 pathname === item.href || pathname.startsWith(item.href + '/')
@@ -70,6 +72,7 @@ export function Header() {
           ))}
           <Link
             href="/contact"
+            onClick={() => trackNavClick({ nav_item: 'Contact', nav_type: 'desktop', nav_location: 'header' })}
             className="bg-primary text-white text-sm font-semibold uppercase tracking-wider no-underline px-5 py-2 hover:bg-primary-dark transition-colors duration-[var(--transition-button)]"
           >
             Contact
@@ -128,7 +131,7 @@ export function Header() {
                           'block py-3 text-lg font-serif no-underline',
                           pathname === '/' ? 'text-primary' : 'text-black'
                         )}
-                        onClick={closeMobileNav}
+                        onClick={() => { trackNavClick({ nav_item: 'Home', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
                       >
                         Home
                       </Link>
@@ -143,7 +146,7 @@ export function Header() {
                               ? 'text-primary'
                               : 'text-black'
                           )}
-                          onClick={closeMobileNav}
+                          onClick={() => { trackNavClick({ nav_item: item.title, nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
                         >
                           {item.title}
                         </Link>
@@ -156,7 +159,7 @@ export function Header() {
                           'block py-3 text-lg font-serif no-underline',
                           pathname === '/contact' ? 'text-primary' : 'text-black'
                         )}
-                        onClick={closeMobileNav}
+                        onClick={() => { trackNavClick({ nav_item: 'Contact', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
                       >
                         Contact
                       </Link>
@@ -168,7 +171,7 @@ export function Header() {
                       <Link
                         href="/about/careers"
                         className="block py-2 text-md text-gray no-underline"
-                        onClick={closeMobileNav}
+                        onClick={() => { trackNavClick({ nav_item: 'Careers', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
                       >
                         Careers
                       </Link>
@@ -177,7 +180,7 @@ export function Header() {
                       <Link
                         href="/about/open-office-hours"
                         className="block py-2 text-md text-gray no-underline"
-                        onClick={closeMobileNav}
+                        onClick={() => { trackNavClick({ nav_item: 'Open Office Hours', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
                       >
                         Open Office Hours
                       </Link>
