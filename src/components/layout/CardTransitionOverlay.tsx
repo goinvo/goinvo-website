@@ -32,6 +32,8 @@ export function CardTransitionOverlay() {
   const [headerH, setHeaderH] = useState(50)
   const [contentW, setContentW] = useState<number | null>(null)
 
+  const [showScrim, setShowScrim] = useState(false)
+
   const cardRect = ctx?.cardRect ?? null
   const clearTransition = ctx?.clearTransition
 
@@ -48,11 +50,27 @@ export function CardTransitionOverlay() {
     }
   }, [cardRect])
 
+  // Show scrim during morph, auto-hide after scroll-to-top + navigation
+  useEffect(() => {
+    if (cardRect) {
+      setShowScrim(true)
+      // Hide scrim after navigation fires (550ms) + old page exit (350ms)
+      const timer = setTimeout(() => setShowScrim(false), 700)
+      return () => clearTimeout(timer)
+    }
+    setShowScrim(false)
+  }, [cardRect])
+
   // Navigate after morph animation completes
   useEffect(() => {
     if (!cardRect) return
 
     const navTimer = setTimeout(() => {
+      // Scroll to top just before navigating. By now the old page is
+      // fully collapsed and the overlay covers the hero area, so the
+      // instant scroll is invisible. This ensures the new page's
+      // in-flow PersistentHero lines up with the overlay for handoff.
+      window.scrollTo({ top: 0, behavior: 'instant' })
       router.push(cardRect.href, { scroll: false })
     }, 550)
 
@@ -78,40 +96,56 @@ export function CardTransitionOverlay() {
   }, [pathname, cardRect, clearTransition])
 
   return (
-    <AnimatePresence>
-      {cardRect && (
-        <motion.div
-          className="fixed z-[1050] overflow-hidden"
-          initial={{
-            top: cardRect.top,
-            left: cardRect.left,
-            width: cardRect.width,
-            height: cardRect.height,
-            borderRadius: '4px',
-          }}
-          animate={{
-            top: headerH,
-            left: 0,
-            width: contentW ?? '100vw',
-            height: heroH,
-            borderRadius: '0px',
-          }}
-          exit={{ opacity: 0, transition: { duration: 0 } }}
-          transition={{
-            duration: 0.55,
-            ease: [0.32, 0.72, 0, 1],
-          }}
-        >
-          <Image
-            src={cardRect.image}
-            alt=""
-            fill
-            className="object-cover"
-            style={{ objectPosition: 'center top' }}
-            sizes="100vw"
+    <>
+      {/* Scrim: temporary full-viewport backdrop to hide page collapse */}
+      <AnimatePresence>
+        {showScrim && (
+          <motion.div
+            className="fixed inset-0 z-[1049] bg-white"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
           />
-        </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+
+      {/* Morphing image overlay (stays until navigating away) */}
+      <AnimatePresence>
+        {cardRect && (
+          <motion.div
+            className="fixed z-[1050] overflow-hidden"
+            initial={{
+              top: cardRect.top,
+              left: cardRect.left,
+              width: cardRect.width,
+              height: cardRect.height,
+              borderRadius: '4px',
+            }}
+            animate={{
+              top: headerH,
+              left: 0,
+              width: contentW ?? '100vw',
+              height: heroH,
+              borderRadius: '0px',
+            }}
+            exit={{ opacity: 0, transition: { duration: 0 } }}
+            transition={{
+              duration: 0.55,
+              ease: [0.32, 0.72, 0, 1],
+            }}
+          >
+            <Image
+              src={cardRect.image}
+              alt=""
+              fill
+              className="object-cover"
+              style={{ objectPosition: 'center top' }}
+              sizes="100vw"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }

@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Portfolio case study (personal, not part of GoInvo repo)
+src/app/case-study/

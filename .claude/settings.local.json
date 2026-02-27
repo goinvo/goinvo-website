@@ -55,7 +55,9 @@
       "Bash(node:*)",
       "Bash(fnm:*)",
       "Bash(test:*)",
-      "Bash(bash -c \"ls ''/c/Users/quest/Programming/GoInvo/goinvo.com/src/pages/vision/''\")"
+      "Bash(bash -c \"ls ''/c/Users/quest/Programming/GoInvo/goinvo.com/src/pages/vision/''\")",
+      "Bash(npx playwright:*)",
+      "Bash(npm ls:*)"
     ]
   }
 }

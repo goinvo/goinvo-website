@@ -1,7 +1,9 @@
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
 import { Results } from '@/components/ui/Results'
 import { References } from '@/components/ui/References'
+import { Reveal } from '@/components/ui/Reveal'
 import { CaseStudyCard } from './CaseStudyCard'
+import { cn } from '@/lib/utils'
 import type { CaseStudy } from '@/types'
 
 interface CaseStudyLayoutProps {
@@ -20,30 +22,45 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
 
       {/* Results */}
       {caseStudy.results && caseStudy.results.length > 0 && (
-        <div className="max-width content-padding">
-          <Results items={caseStudy.results} />
-        </div>
+        <Reveal style="slide-up">
+          <div className="max-width content-padding">
+            <Results items={caseStudy.results} />
+          </div>
+        </Reveal>
       )}
 
       {/* References */}
       {caseStudy.references && caseStudy.references.length > 0 && (
-        <div className="max-width content-padding">
-          <References items={caseStudy.references} />
-        </div>
+        <Reveal style="slide-up">
+          <div className="max-width content-padding">
+            <References items={caseStudy.references} />
+          </div>
+        </Reveal>
       )}
 
       {/* Up Next */}
       {caseStudy.upNext && caseStudy.upNext.length > 0 && (
-        <section className="bg-gray-light py-16">
-          <div className="max-width content-padding">
-            <h2 className="font-serif text-2xl mb-8 text-center">Up Next</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {caseStudy.upNext.map((study) => (
-                <CaseStudyCard key={study._id} caseStudy={study} />
-              ))}
+        <Reveal style="slide-up">
+          <section className="bg-blue-light py-8 pb-16">
+            <div className="max-width content-padding">
+              <h3 className="font-serif text-2xl mb-8">Up next</h3>
+              <div
+                className={cn(
+                  'grid grid-cols-1 gap-8',
+                  caseStudy.upNext.length === 1
+                    ? 'max-w-sm mx-auto'
+                    : caseStudy.upNext.length === 2
+                      ? 'md:grid-cols-2 max-w-3xl mx-auto'
+                      : 'md:grid-cols-2 lg:grid-cols-3'
+                )}
+              >
+                {caseStudy.upNext.map((study) => (
+                  <CaseStudyCard key={study._id} caseStudy={study} />
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </Reveal>
       )}
     </article>
   )
