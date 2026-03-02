@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,20 +10,16 @@ import { trackNavClick } from '@/lib/analytics'
 
 export function Header() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const pathname = usePathname()
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10)
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  const hamburgerRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const navPanelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (mobileNavOpen) {
       document.body.style.overflow = 'hidden'
+      // Move focus to close button when nav opens
+      requestAnimationFrame(() => closeButtonRef.current?.focus())
     } else {
       document.body.style.overflow = ''
     }
@@ -32,166 +28,220 @@ export function Header() {
     }
   }, [mobileNavOpen])
 
-  const toggleMobileNav = () => setMobileNavOpen((prev) => !prev)
-  const closeMobileNav = () => setMobileNavOpen(false)
+  // Focus trap: keep Tab/Shift+Tab within the nav panel
+  useEffect(() => {
+    if (!mobileNavOpen) return
 
-  const isHomepage = pathname === '/'
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileNavOpen(false)
+        hamburgerRef.current?.focus()
+        return
+      }
+
+      if (e.key !== 'Tab') return
+
+      const panel = navPanelRef.current
+      if (!panel) return
+
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [mobileNavOpen])
+
+  const toggleMobileNav = () => setMobileNavOpen((prev) => !prev)
+  const closeMobileNav = useCallback(() => {
+    setMobileNavOpen(false)
+    hamburgerRef.current?.focus()
+  }, [])
+
+  const isActive = (href: string) =>
+    pathname === href || pathname.startsWith(href + '/')
 
   return (
     <header
-      className={cn(
-        'fixed top-0 left-0 right-0 z-[var(--z-header)] transition-all duration-[var(--transition-nav)]',
-        'h-[var(--spacing-header-height)]',
-        scrolled || !isHomepage
-          ? 'bg-white shadow-sm'
-          : 'bg-transparent'
-      )}
+      className="fixed top-0 left-0 right-0 z-[var(--z-header)] bg-white h-[var(--spacing-header-height)] flex items-center justify-around"
     >
-      <div className="max-width content-padding flex items-center justify-between w-full h-full">
-        {/* Logo */}
-        <Link href="/" className="flex items-center no-underline" aria-label="GoInvo Home" data-debug="header-logo">
-          <GoInvoLogo />
-        </Link>
+      {/* Logo */}
+      <Link
+        href="/"
+        className="flex flex-col justify-center h-full w-[75px] px-2 no-underline lg:ml-4 lg:mr-auto"
+        aria-label="GoInvo Home"
+      >
+        <GoInvoLogo />
+      </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden lg:flex items-center gap-6">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => trackNavClick({ nav_item: item.title, nav_type: 'desktop', nav_location: 'header' })}
-              className={cn(
-                'text-sm font-semibold uppercase tracking-wider no-underline transition-colors duration-[var(--transition-button)]',
-                pathname === item.href || pathname.startsWith(item.href + '/')
-                  ? 'text-primary'
-                  : 'text-black hover:text-primary'
-              )}
-            >
-              {item.title}
-            </Link>
-          ))}
-          <Link
-            href="/contact"
-            onClick={() => trackNavClick({ nav_item: 'Contact', nav_type: 'desktop', nav_location: 'header' })}
-            className="bg-primary text-white text-sm font-semibold uppercase tracking-wider no-underline px-5 py-2 hover:bg-primary-dark transition-colors duration-[var(--transition-button)]"
-          >
-            Contact
-          </Link>
-        </nav>
-
-        {/* Mobile Hamburger */}
-        <button
-          className="lg:hidden p-2 text-black"
-          onClick={toggleMobileNav}
-          aria-label="Open navigation menu"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-
-        {/* Mobile Nav Overlay */}
-        <AnimatePresence>
-          {mobileNavOpen && (
-            <>
-              <motion.div
-                className="fixed inset-0 bg-black/50 z-[var(--z-overlay)] lg:hidden"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={closeMobileNav}
-              />
-              <motion.div
-                className="fixed top-0 right-0 h-full w-72 bg-white z-[var(--z-mobile-nav)] shadow-xl lg:hidden"
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'tween', duration: 0.25 }}
-              >
-                <div className="flex justify-end p-4">
-                  <button
-                    onClick={closeMobileNav}
-                    aria-label="Close navigation menu"
-                    className="p-2 text-black"
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="6" x2="6" y2="18" />
-                      <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
-                <nav className="flex flex-col px-6">
-                  <ul className="space-y-1">
-                    <li>
-                      <Link
-                        href="/"
-                        className={cn(
-                          'block py-3 text-lg font-serif no-underline',
-                          pathname === '/' ? 'text-primary' : 'text-black'
-                        )}
-                        onClick={() => { trackNavClick({ nav_item: 'Home', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
-                      >
-                        Home
-                      </Link>
-                    </li>
-                    {navItems.map((item) => (
-                      <li key={item.href}>
-                        <Link
-                          href={item.href}
-                          className={cn(
-                            'block py-3 text-lg font-serif no-underline',
-                            pathname === item.href || pathname.startsWith(item.href + '/')
-                              ? 'text-primary'
-                              : 'text-black'
-                          )}
-                          onClick={() => { trackNavClick({ nav_item: item.title, nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
-                        >
-                          {item.title}
-                        </Link>
-                      </li>
-                    ))}
-                    <li>
-                      <Link
-                        href="/contact"
-                        className={cn(
-                          'block py-3 text-lg font-serif no-underline',
-                          pathname === '/contact' ? 'text-primary' : 'text-black'
-                        )}
-                        onClick={() => { trackNavClick({ nav_item: 'Contact', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
-                      >
-                        Contact
-                      </Link>
-                    </li>
-                  </ul>
-                  <div className="border-t border-gray-medium my-4" />
-                  <ul className="space-y-1">
-                    <li>
-                      <Link
-                        href="/about/careers"
-                        className="block py-2 text-md text-gray no-underline"
-                        onClick={() => { trackNavClick({ nav_item: 'Careers', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
-                      >
-                        Careers
-                      </Link>
-                    </li>
-                    <li>
-                      <Link
-                        href="/about/open-office-hours"
-                        className="block py-2 text-md text-gray no-underline"
-                        onClick={() => { trackNavClick({ nav_item: 'Open Office Hours', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
-                      >
-                        Open Office Hours
-                      </Link>
-                    </li>
-                  </ul>
-                </nav>
-              </motion.div>
-            </>
+      {/* Desktop Nav Links */}
+      {navItems.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          onClick={() => trackNavClick({ nav_item: item.title, nav_type: 'desktop', nav_location: 'header' })}
+          className={cn(
+            'relative hidden h-full flex-col justify-center px-4 text-[15px] font-semibold uppercase tracking-[2px] no-underline text-[#1d1b1a] transition-colors hover:text-primary',
+            'hideOnMobile' in item && item.hideOnMobile ? 'lg:flex' : 'sm:flex',
+            isActive(item.href) && 'after:content-[""] after:absolute after:left-0 after:bottom-0 after:w-full after:h-[5px] after:bg-primary'
           )}
-        </AnimatePresence>
-      </div>
+        >
+          {item.title}
+        </Link>
+      ))}
+
+      {/* Mobile Hamburger */}
+      <button
+        ref={hamburgerRef}
+        className="lg:hidden flex flex-col p-2 border-0 bg-transparent cursor-pointer"
+        onClick={toggleMobileNav}
+        aria-label="Open navigation menu"
+        aria-expanded={mobileNavOpen}
+      >
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="#E36216" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3" y="5" width="18" height="2" rx="1" />
+          <rect x="3" y="11" width="18" height="2" rx="1" />
+          <rect x="3" y="17" width="18" height="2" rx="1" />
+        </svg>
+      </button>
+
+      {/* Desktop Contact Button */}
+      <Link
+        href="/contact"
+        onClick={() => trackNavClick({ nav_item: 'Contact', nav_type: 'desktop', nav_location: 'header' })}
+        className="hidden lg:flex items-center px-4 text-[15px] font-semibold uppercase tracking-[2px] no-underline h-full"
+      >
+        <span className="border border-primary bg-primary text-white px-5 py-2 hover:bg-primary-dark hover:border-primary-dark transition-colors duration-75">
+          Contact
+        </span>
+      </Link>
+
+      {/* Mobile Nav Overlay */}
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.div
+              className="fixed inset-0 bg-black/50 z-[var(--z-overlay)] lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              onClick={closeMobileNav}
+              aria-hidden="true"
+            />
+            <motion.div
+              ref={navPanelRef}
+              role="dialog"
+              aria-label="Navigation menu"
+              className="fixed top-0 right-0 h-screen w-[65vw] bg-white z-[var(--z-mobile-nav)] pt-20 lg:hidden"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'tween', duration: 0.25, ease: 'easeInOut' }}
+            >
+              {/* Close Button */}
+              <button
+                ref={closeButtonRef}
+                onClick={closeMobileNav}
+                aria-label="Close navigation menu"
+                className="absolute top-0 right-0 p-4 border-0 bg-transparent cursor-pointer"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#E36216" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7A1 1 0 105.7 7.11L10.59 12 5.7 16.89a1 1 0 101.41 1.41L12 13.41l4.89 4.89a1 1 0 001.41-1.41L13.41 12l4.89-4.89a1 1 0 000-1.4z" />
+                </svg>
+              </button>
+
+              <div className="flex-1 overflow-y-auto">
+                {/* Primary Nav Links */}
+                <ul className="list-none m-0 px-4">
+                  <li>
+                    <Link
+                      href="/"
+                      className={cn(
+                        'block p-4 font-serif text-2xl font-light no-underline leading-[2.125rem]',
+                        isActive('/') && pathname === '/' ? 'text-primary' : 'text-[#1d1b1a]'
+                      )}
+                      onClick={() => { trackNavClick({ nav_item: 'Home', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
+                    >
+                      Home
+                    </Link>
+                  </li>
+                  {navItems.map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          'block p-4 font-serif text-2xl font-light no-underline leading-[2.125rem]',
+                          isActive(item.href) ? 'text-primary' : 'text-[#1d1b1a]'
+                        )}
+                        onClick={() => { trackNavClick({ nav_item: item.title, nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
+                      >
+                        {item.title}
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
+                    <Link
+                      href="/contact"
+                      className={cn(
+                        'block p-4 font-serif text-2xl font-light no-underline leading-[2.125rem]',
+                        isActive('/contact') ? 'text-primary' : 'text-[#1d1b1a]'
+                      )}
+                      onClick={() => { trackNavClick({ nav_item: 'Contact', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
+                    >
+                      Contact
+                    </Link>
+                  </li>
+                </ul>
+
+                {/* Divider */}
+                <div className="w-[70px] ml-8 my-0 border-t border-gray-medium" />
+
+                {/* Secondary Links */}
+                <ul className="list-none m-0 px-4">
+                  <li>
+                    <Link
+                      href="/about/careers"
+                      className={cn(
+                        'block p-4 text-base font-semibold no-underline',
+                        isActive('/about/careers') ? 'text-primary' : 'text-gray'
+                      )}
+                      onClick={() => { trackNavClick({ nav_item: 'Careers', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
+                    >
+                      Careers
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/about/open-office-hours"
+                      className={cn(
+                        'block p-4 text-base font-semibold no-underline',
+                        isActive('/about/open-office-hours') ? 'text-primary' : 'text-gray'
+                      )}
+                      onClick={() => { trackNavClick({ nav_item: 'Open Office Hours', nav_type: 'mobile', nav_location: 'header' }); closeMobileNav() }}
+                    >
+                      Open Office Hours
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </header>
   )
 }
@@ -202,7 +252,7 @@ function GoInvoLogo() {
       width="64"
       height="35"
       viewBox="0 0 64 35"
-      fill="currentColor"
+      fill="#787473"
       xmlns="http://www.w3.org/2000/svg"
       aria-label="GoInvo"
     >

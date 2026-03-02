@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
+import { useReducedMotion } from '@/lib/motion'
 
 interface StaggerChildrenProps {
   children: React.ReactNode
@@ -18,6 +19,11 @@ export function StaggerChildren({
 }: StaggerChildrenProps) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once, margin: '-50px' })
+  const prefersReducedMotion = useReducedMotion()
+
+  if (prefersReducedMotion) {
+    return <div ref={ref} className={className}>{children}</div>
+  }
 
   return (
     <motion.div

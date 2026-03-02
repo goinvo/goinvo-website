@@ -40,7 +40,7 @@ export function SubscribeForm() {
 
   if (status === 'success') {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+      <div className="bg-white rounded-lg shadow-sm p-8 text-center" aria-live="polite">
         <h4 className="font-serif text-lg mb-2">Thank you!</h4>
         <p className="text-gray">You have successfully joined our subscriber list.</p>
       </div>
@@ -49,7 +49,7 @@ export function SubscribeForm() {
 
   if (status === 'error') {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+      <div className="bg-white rounded-lg shadow-sm p-8 text-center" aria-live="polite">
         <h4 className="font-serif text-lg mb-2">Something went wrong...</h4>
         <p className="text-gray">Please try again.</p>
       </div>
@@ -71,7 +71,7 @@ export function SubscribeForm() {
           placeholder="Email"
           autoComplete="email"
           required
-          className="w-full px-4 py-3 border border-gray-medium rounded focus:outline-none focus:border-primary"
+          className="w-full px-4 py-3 border border-gray-medium rounded focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         />
         <input
           aria-label="Name"
@@ -80,7 +80,7 @@ export function SubscribeForm() {
           placeholder="Name"
           autoComplete="given-name"
           required
-          className="w-full px-4 py-3 border border-gray-medium rounded focus:outline-none focus:border-primary"
+          className="w-full px-4 py-3 border border-gray-medium rounded focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         />
         <button
           type="submit"

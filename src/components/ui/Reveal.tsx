@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView, type TargetAndTransition } from 'framer-motion'
+import { useReducedMotion } from '@/lib/motion'
 
 type RevealStyle = 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'clip-up' | 'clip-left'
 
@@ -51,8 +52,13 @@ export function Reveal({
 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once, margin: '-60px' })
+  const prefersReducedMotion = useReducedMotion()
 
   const v = variants[style]
+
+  if (prefersReducedMotion) {
+    return <div ref={ref} className={className}>{children}</div>
+  }
 
   return (
     <motion.div

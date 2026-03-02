@@ -57,7 +57,9 @@
       "Bash(test:*)",
       "Bash(bash -c \"ls ''/c/Users/quest/Programming/GoInvo/goinvo.com/src/pages/vision/''\")",
       "Bash(npx playwright:*)",
-      "Bash(npm ls:*)"
+      "Bash(npm ls:*)",
+      "Bash(cd:*)",
+      "Bash(cd /c/Users/quest/Programming/GoInvo/goinvo-website && npx vercel env ls 2>&1)"
     ]
   }
 }

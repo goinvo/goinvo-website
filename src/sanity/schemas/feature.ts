@@ -9,18 +9,21 @@ export default defineType({
       name: 'title',
       title: 'Title',
       type: 'string',
+      description: 'Feature headline shown on the card and page header',
       validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
+      description: 'URL path segment (e.g. "determinants-of-health" → /vision/determinants-of-health)',
       options: { source: 'title', maxLength: 96 },
     }),
     defineField({
       name: 'image',
       title: 'Image',
       type: 'image',
+      description: 'Hero/card image. Recommended: 1600×900 px.',
       options: { hotspot: true },
     }),
     defineField({
@@ -34,11 +37,13 @@ export default defineType({
       title: 'Description',
       type: 'text',
       rows: 3,
+      description: 'Short summary shown on the listing card (1-2 sentences)',
     }),
     defineField({
       name: 'categories',
       title: 'Categories',
       type: 'array',
+      description: 'Select one or more categories for filtering on the Work page',
       of: [{ type: 'string' }],
       options: {
         list: [
@@ -65,6 +70,7 @@ export default defineType({
       name: 'client',
       title: 'Client',
       type: 'string',
+      description: 'Client or partner name, if applicable',
     }),
     defineField({
       name: 'externalLink',
@@ -76,6 +82,7 @@ export default defineType({
       name: 'hiddenWorkPage',
       title: 'Hidden on Work Page',
       type: 'boolean',
+      description: 'Hide from the /work listing (still accessible at its direct URL)',
       initialValue: false,
     }),
     defineField({
@@ -89,6 +96,7 @@ export default defineType({
       title: 'Meta Description',
       type: 'text',
       rows: 2,
+      description: 'SEO description for search engines (max ~160 characters)',
     }),
     defineField({
       name: 'order',

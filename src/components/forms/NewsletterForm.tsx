@@ -47,7 +47,7 @@ export function NewsletterForm() {
 
   if (state === 'success') {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8" aria-live="polite">
         <h4 className="font-serif text-lg mb-2">Thank you!</h4>
         <p className="text-gray">You have successfully joined our subscriber list.</p>
       </div>
@@ -56,7 +56,7 @@ export function NewsletterForm() {
 
   if (state === 'error') {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8" aria-live="polite">
         <h4 className="font-serif text-lg mb-2">Something went wrong...</h4>
         <p className="text-gray mb-4">Please try again.</p>
         <Button onClick={() => setState('idle')} variant="outline">
@@ -81,7 +81,7 @@ export function NewsletterForm() {
           required
           autoComplete="email"
           aria-label="Email"
-          className="flex-1 border border-gray-medium px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-primary"
+          className="flex-1 border border-gray-medium px-4 py-2.5 text-sm bg-white focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         />
         <input
           type="text"
@@ -90,7 +90,7 @@ export function NewsletterForm() {
           required
           autoComplete="given-name"
           aria-label="Name"
-          className="flex-1 border border-gray-medium px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-primary"
+          className="flex-1 border border-gray-medium px-4 py-2.5 text-sm bg-white focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
         />
         <Button type="submit" variant="primary">
           {state === 'submitting' ? 'Subscribing...' : 'Subscribe'}

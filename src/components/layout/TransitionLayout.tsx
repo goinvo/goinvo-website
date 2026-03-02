@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useReducedMotion } from '@/lib/motion'
 import {
   PageTransitionProvider,
   usePageTransition,
@@ -80,6 +81,11 @@ const pageTransition = {
   },
 }
 
+const instantTransition = {
+  clipPath: { duration: 0 },
+  default: { duration: 0 },
+}
+
 /* ------------------------------------------------------------------ */
 /*  Inner component (has access to PageTransitionContext)               */
 /* ------------------------------------------------------------------ */
@@ -92,6 +98,7 @@ function TransitionContent({
   pathname: string
 }) {
   const ctx = usePageTransition()
+  const prefersReducedMotion = useReducedMotion()
   const isCard = !!ctx?.cardRect
 
   // Track the page that was visible when the card transition started.
@@ -117,7 +124,7 @@ function TransitionContent({
         initial="enter"
         animate={animateState}
         exit="exit"
-        transition={pageTransition}
+        transition={prefersReducedMotion ? instantTransition : pageTransition}
         onAnimationComplete={(definition) => {
           // When the NEW page finishes entering ('visible'), hand off from
           // the fixed CardTransitionOverlay to the in-flow PersistentHero

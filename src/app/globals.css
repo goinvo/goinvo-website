@@ -112,6 +112,11 @@
     max-width: 100%;
     height: auto;
   }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }
 
 /* Utility classes matching existing site */
@@ -268,5 +273,14 @@ header {
   ::view-transition-old(page-title),
   ::view-transition-new(page-title) {
     animation-duration: 0.01s !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

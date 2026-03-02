@@ -3,6 +3,7 @@ import { structureTool } from 'sanity/structure'
 import { presentationTool } from 'sanity/presentation'
 import { schemaTypes } from './schemas'
 import { apiVersion, dataset, projectId } from './env'
+import { gettingStartedPlugin } from './tools/gettingStarted'
 
 export default defineConfig({
   name: 'goinvo',
@@ -20,6 +21,7 @@ export default defineConfig({
         },
       },
     }),
+    gettingStartedPlugin(),
   ],
   schema: {
     types: schemaTypes,

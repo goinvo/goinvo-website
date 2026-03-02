@@ -2,6 +2,7 @@
 
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
+import { useReducedMotion } from '@/lib/motion'
 
 interface FadeInProps {
   children: React.ReactNode
@@ -30,8 +31,13 @@ export function FadeIn({
 }: FadeInProps) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once, margin: '-50px' })
+  const prefersReducedMotion = useReducedMotion()
 
   const offset = directionOffset[direction]
+
+  if (prefersReducedMotion) {
+    return <div ref={ref} className={className}>{children}</div>
+  }
 
   return (
     <motion.div
