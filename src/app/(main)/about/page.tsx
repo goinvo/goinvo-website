@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { PortableText } from '@portabletext/react'
 import { Reveal } from '@/components/ui/Reveal'
+import { LoadingIframe } from '@/components/ui/LoadingIframe'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { cloudfrontImage } from '@/lib/utils'
 import { sanityFetch } from '@/sanity/lib/live'
@@ -160,7 +161,7 @@ export default async function AboutPage() {
       {/* Google Slides Embed */}
       <div className="max-width content-padding mb-8">
         <div className="aspect-video">
-          <iframe
+          <LoadingIframe
             src="https://docs.google.com/presentation/d/e/2PACX-1vQbOnDhq-ObLQhYTayN-sWzlR5MVk_Y9O12_HYPlgPBVs0xop6wF3Bs2Q6smWkSHpCCJ8Xv1SHNBmmb/embed?start=false&loop=true&delayms=3000"
             title="GoInvo Studio Plan"
             width="100%"
@@ -225,7 +226,7 @@ export default async function AboutPage() {
 
       {/* Team - First 3 */}
       <Reveal style="slide-up">
-        <div className="max-width content-padding py-8 lg:py-12">
+        <div id="our-team" className="max-width content-padding py-8 lg:py-12 scroll-mt-[var(--spacing-header-height)]">
           <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-center mb-8 lg:mb-12">
             Our team
           </h2>
