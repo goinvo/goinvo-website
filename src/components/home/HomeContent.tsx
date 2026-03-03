@@ -10,20 +10,11 @@ import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { cloudfrontImage } from '@/lib/utils'
 
-const teamMembers = [
-  { name: 'Juhan Sonin', image: '/images/about/headshot-juhan-sonin-2.jpg' },
-  { name: 'Eric Benoit', image: '/images/about/headshot-eric-benoit.jpg' },
-  { name: 'Jen Patel', image: '/images/about/headshot-jen-patel.jpg' },
-  { name: 'Claire Lin', image: '/images/about/headshot-claire-lin.jpg' },
-  { name: 'Chloe Ma', image: '/images/about/headshot-chloe-ma-2.jpg' },
-  { name: 'Craig McGinley', image: '/images/about/headshot-craig-mcginley.jpg' },
-  { name: 'Tala Habbab', image: '/images/about/headshot-tala-habbab.jpg' },
-  { name: 'Shirley Xu', image: '/images/about/headshot-shirley-xu.jpg' },
-  { name: 'Maverick Chan', image: '/images/about/headshot-maverick-chan2.jpg' },
-  { name: 'Jonathan Follett', image: '/images/about/headshot-jon-follett3.jpg' },
-]
+interface HomeContentProps {
+  teamMembers: { name: string; image: string }[]
+}
 
-export function HomeContent() {
+export function HomeContent({ teamMembers }: HomeContentProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const ctx = usePageTransition()
 
@@ -333,10 +324,10 @@ export function HomeContent() {
         {/* Top marquee - scrolls right */}
         <div className="h-[300px] overflow-hidden" aria-hidden="true">
           <Marquee direction="right" speed={30} gradient={false} pauseOnHover={false} autoFill>
-            {teamMembers.slice(0, 5).map((member) => (
+            {teamMembers.slice(0, Math.ceil(teamMembers.length / 2)).map((member) => (
               <div key={`top-${member.name}`} className="inline-block w-[300px] h-[300px] mr-2">
                 <Image
-                  src={cloudfrontImage(member.image)}
+                  src={member.image}
                   alt=""
                   width={300}
                   height={300}
@@ -370,10 +361,10 @@ export function HomeContent() {
         {/* Bottom marquee - scrolls left */}
         <div className="h-[300px] overflow-hidden" aria-hidden="true">
           <Marquee direction="left" speed={30} gradient={false} pauseOnHover={false} autoFill>
-            {teamMembers.slice(5, 10).map((member) => (
+            {teamMembers.slice(Math.ceil(teamMembers.length / 2)).map((member) => (
               <div key={`bottom-${member.name}`} className="inline-block w-[300px] h-[300px] mr-2">
                 <Image
-                  src={cloudfrontImage(member.image)}
+                  src={member.image}
                   alt=""
                   width={300}
                   height={300}
