@@ -351,7 +351,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
               </p>
             </div>
             <div className="flex justify-center">
-              <Button href="/about" variant="outline" className="px-8 py-3">
+              <Button href="/about#our-team" variant="outline" className="px-8 py-3">
                 Meet Our Team
               </Button>
             </div>

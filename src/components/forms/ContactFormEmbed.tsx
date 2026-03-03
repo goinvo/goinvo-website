@@ -1,6 +1,7 @@
 'use client'
 
 import { siteConfig } from '@/lib/config'
+import { LoadingIframe } from '@/components/ui/LoadingIframe'
 
 export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }) {
   return (
@@ -17,7 +18,7 @@ export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }
         </div>
       )}
       <div className="p-6">
-        <iframe
+        <LoadingIframe
           id={`JotFormIFrame-${siteConfig.jotformId}`}
           title="Contact"
           allowTransparency
