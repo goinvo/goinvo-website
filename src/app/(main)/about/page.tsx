@@ -1,100 +1,20 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { PortableText } from '@portabletext/react'
 import { Reveal } from '@/components/ui/Reveal'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { cloudfrontImage } from '@/lib/utils'
+import { sanityFetch } from '@/sanity/lib/live'
+import { teamMembersQuery } from '@/sanity/lib/queries'
+import { urlForImage } from '@/sanity/lib/image'
+import type { TeamMember } from '@/types'
 
 export const metadata: Metadata = {
   title: 'About GoInvo, a UX design company in Boston',
   description:
     "Over the past decade, we've created beautiful software for patients, clinicians, researchers, and administrators.",
 }
-
-const team = [
-  {
-    name: 'Juhan Sonin',
-    title: 'Director',
-    bio: "Juhan Sonin leads GoInvo with expertise in healthcare design and system engineering. He's spent time at Apple, the National Center for Supercomputing Applications (NCSA), and MITRE. His work has been recognized by the New York Times, BBC, and National Public Radio (NPR) and published in The Journal of Participatory Medicine and The Lancet. He currently lectures on design and engineering at MIT.",
-    image: '/images/about/headshot-juhan-sonin-2.jpg',
-    email: 'juhan@goinvo.com',
-    twitter: 'https://twitter.com/jsonin',
-    linkedin: 'https://www.linkedin.com/in/juhansonin/',
-  },
-  {
-    name: 'Eric Benoit',
-    title: 'Creative Director',
-    bio: "Eric Benoit is the Creative Director of GoInvo, leading the studio's UX creation process from concept to production. Eric works as an interaction designer, experience designer, and information architect, designing better products by thoroughly understanding user behaviors, expectations, and goals. Eric's background and love for design in the context of human experience helps him transform complex information systems in healthcare and the enterprise into responsive and adaptive human-centered designs.",
-    image: '/images/about/headshot-eric-benoit.jpg',
-    email: 'eric@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/ericbenoitdesigner/',
-  },
-  {
-    name: 'Jen Patel',
-    title: 'Designer, Engineer',
-    bio: 'Jennifer is a designer-developer hybrid specializing in user interface design and front-end development. She creates beautiful designs using big and small data, often for health and enterprise services. Jennifer joined Invo in 2011 and is a graduate of the Rochester Institute of Technology.',
-    image: '/images/about/headshot-jen-patel.jpg',
-    email: 'jen@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/jennifer-patel-bb118341/',
-  },
-  {
-    name: 'Claire Lin',
-    title: 'Designer, Engineer',
-    bio: 'Claire is a designer-engineer combining architecture and product design in making healthcare digital services. She works on local, public projects on clothing recycling and neighborhood health through Design for America. Claire joined Invo in 2021 with a BA in Mechanical Engineering from Brown University.',
-    image: '/images/about/headshot-claire-lin.jpg',
-    email: 'claire@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/byclairelin/',
-  },
-  {
-    name: 'Chloe Ma',
-    title: 'Designer',
-    bio: 'Chloe is a designer and researcher specializing in medical and scientific storytelling. She drives to improve healthcare equity, education, and accessibility through good design. Chloe joined Invo in 2021 with a BS in BioChemistry and Molecular Biology from Dalhousie University and a MSc in Biomedical Communication from University of Toronto.',
-    image: '/images/about/headshot-chloe-ma-2.jpg',
-    email: 'chloe@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/chloexyma/',
-  },
-  {
-    name: 'Craig McGinley',
-    title: 'Designer, Engineer',
-    bio: 'Craig is an engineer devoted to full stack design and development. He brings skillful javascripting, front-end development techniques, and application logic design to software projects. Craig joined Invo in 2014 as a Launch Academy graduate, vegan, and a musician.',
-    image: '/images/about/headshot-craig-mcginley.jpg',
-    email: 'craig@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/craigmcginley/',
-  },
-  {
-    name: 'Tala Habbab',
-    title: 'Designer',
-    bio: 'Tala is a designer with a background in medical devices and product design. She creates services that improve healthcare access and understandability. Tala joined GoInvo in 2022 with a BS in Materials Science and Biomedical Engineering and a MS in Product & Service Design from Carnegie Mellon University.',
-    image: '/images/about/headshot-tala-habbab.jpg',
-    email: 'tala@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/talahabbab/',
-  },
-  {
-    name: 'Shirley Xu',
-    title: 'Designer, Engineer',
-    bio: 'Shirley is a designer-engineer with a background in art, engineering, and bioinformatics. She makes complex healthcare concepts and information actionable and beautiful. Shirley holds a BS in Computer Science from University of Massachusetts Amherst and an MS in Bioinformatics from Brandeis University.',
-    image: '/images/about/headshot-shirley-xu.jpg',
-    email: 'shirley@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/mystarryspace/',
-  },
-  {
-    name: 'Maverick Chan',
-    title: 'Designer',
-    bio: "Maverick is a designer with a background in architecture and public health. He works to make people's lives better by creating digital spaces and systems that support healthier living. Maverick joined GoInvo in 2024 with a BASc from McMaster University and an M.Arch from the University of British Columbia.",
-    image: '/images/about/headshot-maverick-chan2.jpg',
-    email: 'maverick@goinvo.com',
-    linkedin: 'https://www.linkedin.com/in/maverickchan/',
-  },
-  {
-    name: 'Jonathan Follett',
-    title: 'Principal',
-    bio: "As Principal of GoInvo, Jonathan is responsible for project management and design for select engagements. Jon has fifteen years of experience and has garnered several American Graphic Design Awards. Jon is an internationally published author on user experience and information design with over 25 articles published in UXmatters, Digital Web and A List Apart. His most recent book, Designing for Emerging Technologies, was published by O'Reilly Media.",
-    image: '/images/about/headshot-jon-follett3.jpg',
-    email: 'jon@goinvo.com',
-    twitter: 'https://twitter.com/jonfollett',
-    linkedin: 'https://www.linkedin.com/in/jonfollett/',
-  },
-]
 
 const ethics = [
   {
@@ -150,35 +70,41 @@ const upNext = [
   },
 ]
 
-function TeamMember({ member }: { member: (typeof team)[number] }) {
+function TeamMemberCard({ member }: { member: TeamMember }) {
+  const imageUrl = member.image
+    ? urlForImage(member.image).width(500).height(500).url()
+    : null
+
   return (
     <div className="mb-12">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="lg:pr-4 mb-4">
-          <Image
-            src={cloudfrontImage(member.image)}
-            alt={member.name}
-            width={500}
-            height={500}
-            className="w-full h-auto"
-          />
+          {imageUrl && (
+            <Image
+              src={imageUrl}
+              alt={member.name}
+              width={500}
+              height={500}
+              className="w-full h-auto"
+            />
+          )}
         </div>
         <div className="lg:pl-4">
           <p className="font-semibold mt-0 mb-1">{member.name}</p>
-          <p className="text-gray mb-0">{member.title}</p>
+          <p className="text-gray mb-0">{member.role}</p>
           <div className="flex items-center gap-2 my-2">
-            {member.email && (
+            {member.social?.email && (
               <a
-                href={`mailto:${member.email}`}
+                href={`mailto:${member.social.email}`}
                 className="p-2 text-black hover:text-secondary no-underline transition-colors"
                 aria-label={`Email ${member.name}`}
               >
                 <EmailIcon />
               </a>
             )}
-            {'twitter' in member && member.twitter && (
+            {member.social?.twitter && (
               <a
-                href={member.twitter}
+                href={member.social.twitter}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 text-black hover:text-secondary no-underline transition-colors"
@@ -187,9 +113,9 @@ function TeamMember({ member }: { member: (typeof team)[number] }) {
                 <TwitterIcon />
               </a>
             )}
-            {member.linkedin && (
+            {member.social?.linkedin && (
               <a
-                href={member.linkedin}
+                href={member.social.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 text-black hover:text-secondary no-underline transition-colors"
@@ -199,14 +125,20 @@ function TeamMember({ member }: { member: (typeof team)[number] }) {
               </a>
             )}
           </div>
-          <p className="text-gray mt-0">{member.bio}</p>
+          {member.bio && (
+            <div className="text-gray mt-0 [&_p]:mb-0">
+              <PortableText value={member.bio} />
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const { data: team } = await sanityFetch({ query: teamMembersQuery }) as { data: TeamMember[] }
+
   return (
     <div>
       {/* Intro */}
@@ -298,7 +230,7 @@ export default function AboutPage() {
             Our team
           </h2>
           {team.slice(0, 3).map((member) => (
-            <TeamMember key={member.name} member={member} />
+            <TeamMemberCard key={member._id} member={member} />
           ))}
         </div>
       </Reveal>
@@ -338,7 +270,7 @@ export default function AboutPage() {
       {/* Team - Remaining */}
       <div className="max-width content-padding pb-8">
         {team.slice(3).map((member) => (
-          <TeamMember key={member.name} member={member} />
+          <TeamMemberCard key={member._id} member={member} />
         ))}
       </div>
 
