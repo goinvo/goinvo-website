@@ -17,11 +17,12 @@ export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }
           </p>
         </div>
       )}
-      <div className="p-6">
+      <div className="p-6 overflow-hidden">
         <LoadingIframe
           id={`JotFormIFrame-${siteConfig.jotformId}`}
           title="Contact"
           allowTransparency
+          scrolling="no"
           src={`https://form.jotform.com/${siteConfig.jotformId}`}
           className="w-full border-0"
           style={{ height: '548px' }}
