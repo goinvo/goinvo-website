@@ -76,12 +76,12 @@ export function Header() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-[var(--z-header)] bg-white h-[var(--spacing-header-height)] flex items-center justify-around"
+      className="fixed top-0 left-0 right-0 z-[var(--z-header)] bg-white h-[var(--spacing-header-height)] flex items-center justify-between px-4 lg:justify-around lg:px-0"
     >
       {/* Logo */}
       <Link
         href="/"
-        className="flex flex-col justify-center h-full w-[75px] px-2 no-underline lg:ml-4 lg:mr-auto"
+        className="flex flex-col justify-center h-full w-[75px] no-underline lg:px-2 lg:ml-4 lg:mr-auto"
         aria-label="GoInvo Home"
       >
         <GoInvoLogo />

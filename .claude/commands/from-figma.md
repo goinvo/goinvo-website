@@ -4,6 +4,21 @@ Implement a design from Figma into the GoInvo website.
 
 $ARGUMENTS
 
+## Prerequisites
+
+The Figma MCP server must be connected. If `get_design_context` fails with a connection error, guide the user through setup:
+
+1. Run this command in the terminal (one-time, works across all projects):
+   ```
+   claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp
+   ```
+2. Restart Claude Code (`exit` then `claude`)
+3. Type `/mcp` and select **figma** → **Authenticate**
+4. A browser window opens — click **Allow Access** to authorize with their Figma account
+5. Back in Claude Code, `/mcp` should show figma as connected
+
+Once connected, proceed with the instructions below.
+
 ## Instructions
 
 1. **Get the design context** from the Figma URL using the Figma MCP tool (`get_design_context`). Extract the fileKey and nodeId from the URL.

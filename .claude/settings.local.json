@@ -59,7 +59,12 @@
       "Bash(npx playwright:*)",
       "Bash(npm ls:*)",
       "Bash(cd:*)",
-      "Bash(cd /c/Users/quest/Programming/GoInvo/goinvo-website && npx vercel env ls 2>&1)"
+      "Bash(cd /c/Users/quest/Programming/GoInvo/goinvo-website && npx vercel env ls 2>&1)",
+      "WebFetch(domain:developers.figma.com)",
+      "WebFetch(domain:help.figma.com)",
+      "Bash(SANITY_PROJECT_ID=a1wsimxr SANITY_API_TOKEN=skIC0NPjJZIOfD93Tj4xjAeVPnHErppTd8qvvkxqoHcZl6HBmRRR1QmQzqAnVsRVPrN48oaU78F9mI8Avdyv0ahRXaG876z5AcrCVGjcpLJEjjmvJT4a9bgqQMQR8dKnK83gQGOIgb4DhJnMBlaID4QwDENgRqJTUAlycRfZzr6X62n3AUD8 npx tsx:*)",
+      "Bash(SANITY_PROJECT_ID=a1wsimxr SANITY_API_TOKEN=skj9Z4ygBuOPSK0TVzUxLJsZmpj1itMi2RfQYLZAb4ADBLXbCwXRIlobNkZGhAb30m65CW5hsSkxRD342JSXRVvJfxScJBoLuqE1dlquG45rYg6XJbx6azvEc8ePlr7JyVLPS1ZPTbFFdafNorlGa0JAUNH7W3dxVcGeMFgkwQaagcLolefB npx tsx:*)",
+      "Bash(npx next:*)"
     ]
   }
 }
