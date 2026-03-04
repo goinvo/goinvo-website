@@ -73,7 +73,7 @@ const upNext = [
 
 function TeamMemberCard({ member }: { member: TeamMember }) {
   const imageUrl = member.image
-    ? urlForImage(member.image).width(500).height(500).url()
+    ? urlForImage(member.image).width(600).height(400).fit('crop').url()
     : null
 
   return (
@@ -84,8 +84,8 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
             <Image
               src={imageUrl}
               alt={member.name}
-              width={500}
-              height={500}
+              width={600}
+              height={400}
               className="w-full h-auto"
             />
           )}
@@ -224,56 +224,17 @@ export default async function AboutPage() {
         </div>
       </div>
 
-      {/* Team - First 3 */}
+      {/* Team */}
       <Reveal style="slide-up">
         <div id="our-team" className="max-width content-padding py-8 lg:py-12 scroll-mt-[var(--spacing-header-height)]">
           <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-center mb-8 lg:mb-12">
             Our team
           </h2>
-          {team.slice(0, 3).map((member) => (
+          {team.map((member) => (
             <TeamMemberCard key={member._id} member={member} />
           ))}
         </div>
       </Reveal>
-
-      {/* Your Career Awaits */}
-      <div className="bg-blue-light mb-8">
-        <div className="max-width content-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="lg:pr-4">
-              <Image
-                src={cloudfrontImage('/images/about/silhouette.jpg')}
-                alt="Career opportunities at GoInvo"
-                width={600}
-                height={400}
-                className="w-full h-auto"
-              />
-            </div>
-            <div className="lg:pl-4 py-8">
-              <p className="font-semibold mt-0 mb-1">Your Career Awaits</p>
-              <p className="text-gray mb-0">Designer and/or Engineer</p>
-              <p className="text-gray">
-                If you&apos;re looking to engage in meaningful work, learn from a
-                diverse team and thrive with autonomy on complex projects, we&apos;d
-                be a good fit.
-              </p>
-              <Link
-                href="/about/careers"
-                className="inline-block text-center border border-primary-light text-primary no-underline font-semibold uppercase tracking-wider text-sm py-3 px-8 hover:bg-primary-lightest transition-colors"
-              >
-                Learn about careers
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Team - Remaining */}
-      <div className="max-width content-padding pb-8">
-        {team.slice(3).map((member) => (
-          <TeamMemberCard key={member._id} member={member} />
-        ))}
-      </div>
 
       {/* Code of Ethics */}
       <Reveal style="slide-up">

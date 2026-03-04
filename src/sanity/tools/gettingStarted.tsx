@@ -38,6 +38,23 @@ function GettingStartedComponent() {
             ['Site Settings', 'Global config: title, social links, footer, contact info'],
           ]}
         />
+
+        <h4 style={{ marginTop: 20, marginBottom: 8 }}>Creating a Case Study</h4>
+        <ol>
+          <li>In <strong>Structure</strong>, click <strong>Case Study</strong> → <strong>+ Create</strong></li>
+          <li>Fill in <strong>Title</strong>, then click <strong>Generate</strong> on the Slug field</li>
+          <li>Upload a <strong>Hero Image</strong> (1600 × 900 px recommended)</li>
+          <li>Write a short <strong>Caption</strong> for the listing card on /work</li>
+          <li>Tag with one or more <strong>Categories</strong></li>
+          <li>Author the <strong>Content</strong> using the rich text editor (see Section 4)</li>
+          <li>Set a <strong>Sort Order</strong> — lower numbers appear first on /work</li>
+          <li>Click <strong>Publish</strong></li>
+        </ol>
+        <Callout>
+          <strong>Need a custom layout for a case study?</strong> If the standard template doesn&apos;t fit — for example, you need a side-by-side before/after hero, a unique color scheme, or a non-standard section — use the{' '}
+          <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/new-case-study</code>{' '}
+          command in Claude Code (see Section 8) to set up a custom layout.
+        </Callout>
       </Section>
 
       <Section title="3. Drafts & Publishing">
@@ -137,14 +154,14 @@ function GettingStartedComponent() {
         <p>If no overrides are set, the page title and site description are used as defaults.</p>
       </Section>
 
-      <Section title="8. Adding Custom Components with Claude Code">
+      <Section title="8. Making Changes with Claude Code">
         <p>
-          If you need something the rich text editor doesn&apos;t support — a custom layout, interactive element, new page section, or a new Sanity block type — you can use <strong>Claude Code</strong> to build it directly, no developer handoff needed.
+          Need a new page, custom component, or something the rich text editor doesn&apos;t support? You can use <strong>Claude Code</strong> to build it directly — no developer handoff needed.
         </p>
 
         <h4 style={{ marginTop: 20, marginBottom: 8 }}>What is Claude Code?</h4>
         <p>
-          Claude Code is an AI coding assistant that runs in your terminal. It can read the project files, understand the codebase, write code, and run the dev server — all from a conversation in plain English.
+          Claude Code is an AI coding assistant that runs in your terminal. It understands this entire codebase and can create pages, components, and Sanity blocks from a plain-English description.
         </p>
 
         <h4 style={{ marginTop: 24, marginBottom: 8 }}>Setup (one-time)</h4>
@@ -155,65 +172,84 @@ function GettingStartedComponent() {
             <Code>{'npm install -g @anthropic-ai/claude-code'}</Code>
           </li>
           <li>
-            Navigate to the project folder:
-            <Code>{'cd path/to/goinvo-website'}</Code>
-          </li>
-          <li>
-            Launch Claude Code:
-            <Code>{'claude'}</Code>
+            Navigate to the project folder and launch it:
+            <Code>{'cd path/to/goinvo-website && claude'}</Code>
           </li>
           <li>On first run, it will ask you to log in with your Anthropic account</li>
         </ol>
 
-        <h4 style={{ marginTop: 24, marginBottom: 8 }}>How to ask for what you need</h4>
+        <h4 style={{ marginTop: 24, marginBottom: 8 }}>Connecting Figma (optional, one-time)</h4>
         <p>
-          Once Claude Code is running, describe what you want in plain English. Be specific about the design and behavior. Here are example prompts:
+          To use the <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/from-figma</code> command, connect the Figma MCP server:
+        </p>
+        <ol>
+          <li>
+            Run this in your terminal (outside of Claude Code):
+            <Code>{'claude mcp add --scope user --transport http figma https://mcp.figma.com/mcp'}</Code>
+          </li>
+          <li>Restart Claude Code (type <code>exit</code>, then <code>claude</code>)</li>
+          <li>Type <code>/mcp</code> in Claude Code, select <strong>figma</strong> → <strong>Authenticate</strong></li>
+          <li>A browser window opens — click <strong>Allow Access</strong> to authorize with your Figma account</li>
+        </ol>
+        <p>
+          After this, you can paste any <code>figma.com/design/...</code> URL and Claude Code will read the design directly.
         </p>
 
+        <h4 style={{ marginTop: 24, marginBottom: 8 }}>Quick commands</h4>
+        <p>
+          The project includes ready-made commands you can run by typing a <strong>/</strong> in Claude Code. Each command knows the codebase conventions and will handle all the wiring for you.
+        </p>
+
+        <Table
+          headers={['Command', 'What it does', 'Example']}
+          rows={[
+            ['/new-page', 'Create a new page with routing, SEO metadata, and layout', '"A /resources page with a filterable grid of downloadable PDFs"'],
+            ['/new-block', 'Add a new block type to the Sanity rich text editor', '"An accordion block with expandable Q&A items"'],
+            ['/new-component', 'Create a reusable UI component', '"A testimonial carousel with auto-play and dot navigation"'],
+            ['/new-case-study', 'Set up a case study — schema changes, custom layout, or content', '"A case study for Project X with a side-by-side before/after layout"'],
+            ['/add-section', 'Add a new section to an existing page', '"Add a team spotlight grid to the About page"'],
+            ['/from-figma', 'Implement a design straight from a Figma URL', 'Paste a figma.com/design/... link'],
+          ]}
+        />
+
+        <Callout>
+          Type the command, then describe what you want after it. For example:<br />
+          <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/new-block A &quot;Before / After&quot; image comparison slider with two image fields and a draggable handle</code>
+        </Callout>
+
+        <h4 style={{ marginTop: 24, marginBottom: 8 }}>You can also just talk to it</h4>
+        <p>
+          Commands are shortcuts, but you can always describe what you need in plain English. Some examples:
+        </p>
         <div style={{ margin: '16px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <ExamplePrompt>
-            Add a new &quot;Accordion&quot; block to the rich text editor. Each item should have a question (text field) and an answer (rich text). On the front end, clicking a question expands/collapses the answer with a smooth animation.
+            Add a full-width CTA banner block to the rich text editor with fields for background color (teal, orange, or dark), heading, body text, button label, and button link.
           </ExamplePrompt>
           <ExamplePrompt>
-            Create a full-width CTA banner block for the rich text editor with fields for: background color (choose from teal, orange, or dark), heading, body text, button label, and button link. Style it to match the rest of the site.
+            The case study hero on /work/hgraph looks wrong on mobile — the image gets cut off. Can you fix it?
           </ExamplePrompt>
           <ExamplePrompt>
-            Add a new &quot;Before / After&quot; image comparison block. It should have two image fields and a draggable slider to reveal one image over the other.
-          </ExamplePrompt>
-          <ExamplePrompt>
-            I need a &quot;Team Spotlight&quot; section on the About page that pulls in 3 featured team members and displays them in a card grid with photo, name, role, and a short quote.
+            Make the homepage testimonial section use a carousel instead of showing all quotes at once.
           </ExamplePrompt>
         </div>
 
         <h4 style={{ marginTop: 24, marginBottom: 8 }}>Tips for better results</h4>
         <ul>
           <li><strong>Be specific about fields</strong> — list exactly what content editors should be able to fill in</li>
-          <li><strong>Describe the visual design</strong> — mention colors, layout, spacing, or reference an existing section of the site (&quot;style it like the Results block&quot;)</li>
-          <li><strong>Share a Figma link</strong> — paste a Figma URL and Claude Code can pull in the design directly</li>
-          <li><strong>Iterate</strong> — if the first result isn&apos;t right, just say what to change (&quot;make the heading larger&quot;, &quot;add a border&quot;, &quot;switch to a 3-column layout&quot;)</li>
-          <li><strong>Ask it to run the dev server</strong> — say &quot;start the dev server&quot; and Claude Code will run it so you can preview changes at <code>localhost:3000</code></li>
+          <li><strong>Describe the visual design</strong> — mention colors, layout, spacing, or reference an existing section (&quot;style it like the Results block&quot;)</li>
+          <li><strong>Share a Figma link</strong> — use <code>/from-figma</code> with a Figma URL and it will pull in the design directly</li>
+          <li><strong>Iterate</strong> — if the first result isn&apos;t right, just say what to change (&quot;make the heading larger&quot;, &quot;switch to 3 columns&quot;)</li>
         </ul>
 
-        <h4 style={{ marginTop: 24, marginBottom: 8 }}>What Claude Code will do behind the scenes</h4>
-        <p>
-          You don&apos;t need to understand these details, but for reference, Claude Code typically:
-        </p>
-        <ol>
-          <li>Adds a new block type to the Sanity schema so it appears in the rich text editor</li>
-          <li>Creates a React component that renders the block on the front end</li>
-          <li>Wires it into the Portable Text renderer so Sanity content maps to the component</li>
-          <li>Optionally adds a preview in the Studio so you can see a representation while editing</li>
-        </ol>
-
         <Callout>
-          <strong>Don&apos;t worry about breaking things.</strong> Claude Code works with Git, so all changes can be reviewed and reverted. Ask it to &quot;show me what you changed&quot; or &quot;undo that last change&quot; at any time.
+          <strong>Don&apos;t worry about breaking things.</strong> Claude Code works with Git, so all changes can be reviewed and reverted. Say &quot;undo that&quot; or &quot;show me what you changed&quot; at any time.
         </Callout>
 
         <h4 style={{ marginTop: 24, marginBottom: 8 }}>After making changes</h4>
         <ol>
-          <li>Preview the changes at <code>localhost:3000</code> and in the Studio at <code>localhost:3000/studio</code></li>
-          <li>If everything looks good, ask Claude Code: <strong>&quot;commit these changes&quot;</strong></li>
-          <li>Then ask: <strong>&quot;push to GitHub&quot;</strong> — this will trigger a deployment to the live site</li>
+          <li>Claude Code will start the dev server automatically — preview at <code>localhost:3000</code></li>
+          <li>Check the Studio at <code>localhost:3000/studio</code> if you added new Sanity blocks or fields</li>
+          <li>When happy, tell Claude Code: <strong>&quot;commit and push&quot;</strong> — this triggers deployment to the live site</li>
         </ol>
       </Section>
 

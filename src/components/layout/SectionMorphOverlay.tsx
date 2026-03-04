@@ -20,6 +20,7 @@ export function SectionMorphOverlay() {
     if (!morph) return
 
     const navTimer = setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'instant' })
       router.push(morph.href, { scroll: false })
     }, NAV_DELAY)
 
