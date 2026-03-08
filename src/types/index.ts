@@ -151,3 +151,15 @@ export interface SEO {
   description?: string
   image?: SanityImage
 }
+
+export interface HealthVisualization {
+  _id: string
+  title: string
+  slug: { current: string }
+  image?: SanityImage
+  caption?: string
+  date?: string
+  downloadLink?: string
+  learnMoreLink?: string
+  order?: number
+}

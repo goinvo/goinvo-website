@@ -174,6 +174,21 @@ export const homepageQuery = groq`{
   }
 }`
 
+// Health Visualizations
+export const allHealthVisualizationsQuery = groq`
+  *[_type == "healthVisualization"] | order(order asc) {
+    _id,
+    title,
+    slug,
+    image,
+    caption,
+    date,
+    downloadLink,
+    learnMoreLink,
+    order
+  }
+`
+
 // Site Settings
 export const siteSettingsQuery = groq`
   *[_type == "siteSettings"][0] {
