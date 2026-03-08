@@ -7,6 +7,7 @@ import visionProject from './visionProject'
 import homepageHeader from './homepageHeader'
 import siteSettings from './siteSettings'
 import page from './page'
+import healthVisualization from './healthVisualization'
 import portableText from './objects/portableText'
 import seo from './objects/seo'
 
@@ -21,6 +22,7 @@ export const schemaTypes = [
   homepageHeader,
   siteSettings,
   page,
+  healthVisualization,
   // Objects
   portableText,
   seo,
