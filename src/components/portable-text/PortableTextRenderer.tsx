@@ -217,6 +217,33 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    iframeEmbed: ({ value }) => (
+      <ArticleReveal intensity="visual">
+        <figure className="my-8">
+          <div
+            className="relative w-full overflow-hidden"
+            style={
+              value.height
+                ? { height: `${value.height}px` }
+                : { aspectRatio: value.aspectRatio || '16/9' }
+            }
+          >
+            <iframe
+              src={value.url}
+              className="absolute inset-0 w-full h-full border-0"
+              allowFullScreen
+              loading="lazy"
+              title={value.caption || 'Embedded content'}
+            />
+          </div>
+          {value.caption && (
+            <figcaption className="mt-2 text-sm text-gray italic text-center">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      </ArticleReveal>
+    ),
     divider: ({ value }) => (
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     ),

@@ -51,6 +51,7 @@
   --transition-card: 300ms ease-in-out;
   --transition-collapse-fast: 300ms ease-in-out;
   --transition-collapse-slow: 600ms ease-in-out;
+  --transition-flip: 300ms ease-in-out;
 
   /* Spacing */
   --spacing-header-height: 50px;
@@ -102,6 +103,16 @@
 
   a:hover {
     color: var(--color-primary);
+  }
+
+  sup a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  sup a:hover {
+    color: var(--color-black);
+    text-decoration: underline;
   }
 
   p {

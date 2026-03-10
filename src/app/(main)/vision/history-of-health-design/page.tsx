@@ -1,0 +1,94 @@
+import type { Metadata } from 'next'
+import Image from 'next/image'
+import { cloudfrontImage } from '@/lib/utils'
+import { Divider } from '@/components/ui/Divider'
+import { Author } from '@/components/ui/Author'
+
+export const metadata: Metadata = {
+  title: 'History of Health Design - GoInvo',
+  description:
+    'A 10,000-year timeline of healthcare innovation, from ancient medicine to modern digital health.',
+}
+
+export default function HistoryOfHealthDesignPage() {
+  return (
+    <div className="pt-[var(--spacing-header-height)]">
+      {/* Hero */}
+      <section className="relative min-h-[50vh] flex items-end">
+        <Image
+          src={cloudfrontImage('/images/features/history-of-health-design/hero.jpg')}
+          alt="History of Health Design"
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <div className="relative z-10 max-width content-padding py-12 w-full">
+          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
+            Healthcare / Open Source
+          </span>
+          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
+            History of Health Design
+          </h1>
+        </div>
+      </section>
+
+      {/* Content */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <p className="leading-relaxed mb-4">
+            Early humans didn&apos;t know much about how our bodies worked. We
+            had to come up with clever ways to treat illnesses and injuries,
+            often with rituals and herbal remedies.
+          </p>
+          <p className="leading-relaxed mb-4">
+            Over the past 10,000 years, we&apos;ve gone on a tear. As we&apos;ve
+            learned more about science, the world around us, and our own
+            minds, we&apos;ve invented tools, machines, and techniques that help
+            us stay healthy and fix things that go wrong inside and out of
+            our bodies. Soon enough, we&apos;ll be dictating how long we want to
+            live.
+          </p>
+          <p className="leading-relaxed mb-4">
+            Here&apos;s our evolving list of top healthcare innovations over
+            the last 10,000 years, from the stone surgical knife to genetic &ldquo;scissors.&rdquo;
+          </p>
+          <p className="leading-relaxed mb-8">
+            Let us know what we&apos;re missing at{' '}
+            <a href="mailto:feedback@goinvo.com" className="text-primary hover:underline">feedback@goinvo.com</a>.
+          </p>
+        </div>
+
+        {/* Timeline Embed */}
+        <div className="max-width content-padding mx-auto">
+          <iframe
+            src="https://cdn.knightlab.com/libs/timeline3/latest/embed/index.html?source=1qa0ZwX09I8ON2YuHXaigZ8M7p_wnImQALPFyd8fVN98&font=Default&lang=en&initial_zoom=10&height=650&start_at_slide=1"
+            className="w-full border-0"
+            style={{ height: 650 }}
+            allowFullScreen
+            loading="lazy"
+            title="History of Health Design Timeline"
+          />
+          <div className="text-center mt-6">
+            <a
+              href="https://docs.google.com/spreadsheets/d/1qa0ZwX09I8ON2YuHXaigZ8M7p_wnImQALPFyd8fVN98/edit#gid=301364053"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider"
+            >
+              Timeline Events and References
+            </a>
+          </div>
+        </div>
+
+        <div className="max-width max-width-md content-padding mx-auto mt-12">
+          <Divider />
+
+          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <Author name="Samantha Wuu" company="GoInvo" />
+          <Author name="Juhan Sonin" company="GoInvo" />
+        </div>
+      </section>
+    </div>
+  )
+}

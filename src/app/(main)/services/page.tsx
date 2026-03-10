@@ -156,7 +156,7 @@ export default function ServicesPage() {
             <p className="text-gray">Or, talk to us live on Zoom.</p>
             <Link
               href="#calendly-open-office-hours"
-              className="block w-full text-center bg-secondary text-white font-semibold no-underline py-3 px-6 mt-8 mb-8 hover:opacity-90 transition-opacity"
+              className="block w-full text-center bg-primary text-white font-semibold uppercase tracking-wider no-underline py-3 px-6 mt-8 mb-8 hover:bg-primary-dark transition-colors"
             >
               Schedule a chat
             </Link>

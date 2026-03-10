@@ -208,6 +208,47 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'iframeEmbed',
+      title: 'Iframe Embed',
+      type: 'object',
+      fields: [
+        {
+          name: 'url',
+          title: 'URL',
+          type: 'url',
+          description: 'URL to embed (Figma prototype, Miro board, KnightLab Timeline, Google Sheets, etc.)',
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: 'caption',
+          title: 'Caption',
+          type: 'string',
+          description: 'Optional caption displayed below the embed',
+        },
+        {
+          name: 'aspectRatio',
+          title: 'Aspect Ratio',
+          type: 'string',
+          description: 'Controls the embed height proportionally',
+          options: {
+            list: [
+              { title: '16:9 (video/slides)', value: '16/9' },
+              { title: '4:3 (documents)', value: '4/3' },
+              { title: '1:1 (square)', value: '1/1' },
+              { title: '9:16 (tall/mobile prototype)', value: '9/16' },
+            ],
+          },
+          initialValue: '16/9',
+        },
+        {
+          name: 'height',
+          title: 'Fixed Height (px)',
+          type: 'number',
+          description: 'Override aspect ratio with a fixed pixel height (e.g. 650 for timelines)',
+        },
+      ],
+    }),
+    defineArrayMember({
       name: 'divider',
       title: 'Divider',
       type: 'object',
