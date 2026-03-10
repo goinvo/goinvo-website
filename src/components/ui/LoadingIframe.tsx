@@ -20,7 +20,7 @@ export function LoadingIframe({
   const [loaded, setLoaded] = useState(false)
 
   return (
-    <div className="relative">
+    <div className="relative w-full h-full">
       {!loaded && (
         <div
           className={cn(

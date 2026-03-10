@@ -164,10 +164,8 @@ export default async function AboutPage() {
           <LoadingIframe
             src="https://docs.google.com/presentation/d/e/2PACX-1vQbOnDhq-ObLQhYTayN-sWzlR5MVk_Y9O12_HYPlgPBVs0xop6wF3Bs2Q6smWkSHpCCJ8Xv1SHNBmmb/embed?start=false&loop=true&delayms=3000"
             title="GoInvo Studio Plan"
-            width="100%"
-            height="100%"
             allowFullScreen
-            className="border-0"
+            className="border-0 w-full h-full"
           />
         </div>
       </div>
@@ -184,7 +182,7 @@ export default async function AboutPage() {
                 height={400}
                 className="w-full h-auto mb-4"
               />
-              <h3 className="text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
+              <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
                 Open office hours
               </h3>
               <p className="text-gray text-md mb-0">
@@ -206,7 +204,7 @@ export default async function AboutPage() {
                 height={400}
                 className="w-full h-auto mb-4"
               />
-              <h3 className="text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
+              <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
                 Join the team
               </h3>
               <p className="text-gray text-md mb-0">

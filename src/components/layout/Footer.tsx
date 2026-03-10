@@ -3,7 +3,7 @@ import { siteConfig, footerLinks } from '@/lib/config'
 
 export function Footer() {
   return (
-    <footer className="bg-secondary text-white">
+    <footer className="bg-secondary text-white border-b-[3rem] border-secondary">
       <div className="max-width content-padding py-12 md:py-16">
         {/* Navigation Links */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
@@ -13,7 +13,7 @@ export function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-white hover:text-primary-light no-underline transition-colors duration-[var(--transition-button)]"
+                  className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
                 >
                   {link.title}
                 </Link>
@@ -27,7 +27,7 @@ export function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-white hover:text-primary-light no-underline transition-colors duration-[var(--transition-button)]"
+                  className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
                 >
                   {link.title}
                 </Link>
@@ -41,7 +41,7 @@ export function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-white hover:text-primary-light no-underline transition-colors duration-[var(--transition-button)]"
+                  className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
                 >
                   {link.title}
                 </Link>
@@ -54,7 +54,7 @@ export function Footer() {
             <li>
               <Link
                 href="/contact"
-                className="text-white hover:text-primary-light no-underline transition-colors duration-[var(--transition-button)]"
+                className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
               >
                 Contact Us
               </Link>
@@ -64,7 +64,7 @@ export function Footer() {
                 href={siteConfig.address.mapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white hover:text-primary-light no-underline transition-colors duration-[var(--transition-button)]"
+                className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
               >
                 {siteConfig.address.street}
                 <br />
@@ -75,7 +75,7 @@ export function Footer() {
             <li>
               <a
                 href={`mailto:${siteConfig.email.info}`}
-                className="text-white hover:text-primary-light no-underline transition-colors duration-[var(--transition-button)]"
+                className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
               >
                 {siteConfig.email.info}
               </a>
@@ -87,7 +87,7 @@ export function Footer() {
         <div className="flex items-center justify-center gap-6 pt-8 border-t border-white/20">
           <a
             href={`mailto:${siteConfig.email.hello}`}
-            className="text-white hover:text-primary-light no-underline transition-colors"
+            className="text-white hover:text-white/80 no-underline transition-colors"
             aria-label="Email"
           >
             <EmailIcon />
@@ -96,7 +96,7 @@ export function Footer() {
             href={siteConfig.social.linkedin}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-primary-light no-underline transition-colors"
+            className="text-white hover:text-white/80 no-underline transition-colors"
             aria-label="LinkedIn"
           >
             <LinkedInIcon />
@@ -105,7 +105,7 @@ export function Footer() {
             href={siteConfig.social.twitter}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-primary-light no-underline transition-colors"
+            className="text-white hover:text-white/80 no-underline transition-colors"
             aria-label="Twitter"
           >
             <TwitterIcon />
@@ -118,7 +118,7 @@ export function Footer() {
             href={siteConfig.social.medium}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-primary-light no-underline transition-colors"
+            className="text-white hover:text-white/80 no-underline transition-colors"
             aria-label="Medium"
           >
             <MediumIcon />
@@ -127,7 +127,7 @@ export function Footer() {
             href={siteConfig.social.flickr}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-primary-light no-underline transition-colors"
+            className="text-white hover:text-white/80 no-underline transition-colors"
             aria-label="Flickr"
           >
             <FlickrIcon />
@@ -136,7 +136,7 @@ export function Footer() {
             href={siteConfig.social.soundcloud}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-white hover:text-primary-light no-underline transition-colors"
+            className="text-white hover:text-white/80 no-underline transition-colors"
             aria-label="SoundCloud"
           >
             <SoundCloudIcon />

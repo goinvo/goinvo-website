@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Portfolio case study (personal, not part of GoInvo repo)
 src/app/case-study/
+
+# Migration audit (local reference only)
+/.audit/
