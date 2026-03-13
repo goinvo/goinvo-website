@@ -24,6 +24,7 @@ export const caseStudyBySlugQuery = groq`
     image,
     caption,
     categories[]-> { _id, title, slug },
+    authors[]-> { _id, name, role, bio, image },
     content,
     results,
     references,
@@ -102,6 +103,7 @@ export const featureBySlugQuery = groq`
     categories,
     date,
     client,
+    authors[]-> { _id, name, role, bio, image },
     content,
     metaDescription
   }

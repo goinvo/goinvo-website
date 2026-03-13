@@ -86,6 +86,13 @@ export default defineType({
       initialValue: false,
     }),
     defineField({
+      name: 'authors',
+      title: 'Authors',
+      type: 'array',
+      description: 'Team members who authored this feature',
+      of: [{ type: 'reference', to: [{ type: 'teamMember' }] }],
+    }),
+    defineField({
       name: 'content',
       title: 'Content',
       type: 'portableText',
