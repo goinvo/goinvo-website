@@ -105,8 +105,10 @@ export default function GovernmentPage() {
           </p>
           <ClientLogos />
           <p className="text-gray text-md mt-4">
-            Our <strong>ITS81 contract</strong> with the Commonwealth of Massachusetts
-            prequalifies us for IT professional services&mdash;streamlining government procurement and validating our expertise as a trusted vendor.
+            Our <strong>ITS81</strong> and <strong>GSA 47QTCA26D001W</strong> contracts
+            prequalify us for IT professional services&mdash;streamlining government
+            procurement and validating our expertise as a trusted vendor for both
+            Massachusetts state agencies and federal programs.
           </p>
         </div>
       </section>
@@ -192,6 +194,24 @@ export default function GovernmentPage() {
               </div>
             </div>
           </Link>
+        </div>
+      </section>
+
+      {/* Contracts and Certifications */}
+      <section className="py-16">
+        <div className="max-width content-padding">
+          <h2 className="font-serif text-2xl mb-4">
+            Contracts and Certifications
+          </h2>
+          <p className="text-gray mb-4">
+            Our contracts prequalify us for IT professional services&mdash;streamlining
+            government procurement and validating our expertise as a trusted vendor for
+            both Massachusetts state agencies and federal programs.
+          </p>
+          <ul className="list-disc list-inside text-gray space-y-2">
+            <li>State of MA: <strong>ITS81</strong></li>
+            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
+          </ul>
         </div>
       </section>
 

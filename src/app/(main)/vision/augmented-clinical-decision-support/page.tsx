@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { PregnancyCarousel } from './PregnancyCarousel'
 
 export const metadata: Metadata = {
-  title: 'Augmented Clinical Decision Support - GoInvo',
+  title: 'Augmented Clinical Decision Support',
   description:
     'Real-time, augmented decision support and guidance for mobile health workers, to better training and repeatable health outcomes.',
 }

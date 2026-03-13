@@ -5,7 +5,7 @@ import experiments from '@/data/vision/experiments.json'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'Experiments in Design - GoInvo',
+  title: 'Experiments in Design',
   description: 'A repo of our experiments in design.',
 }
 

@@ -5,7 +5,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 
 export const metadata: Metadata = {
-  title: 'National Cancer Navigation - GoInvo',
+  title: 'National Cancer Navigation',
   description:
     'Mapping cancer journey pain points and exploring how navigation could support patients and their families.',
 }

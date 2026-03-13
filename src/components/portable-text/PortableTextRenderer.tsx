@@ -66,19 +66,18 @@ function isDirectVideoUrl(url: string) {
 const components: PortableTextComponents = {
   types: {
     image: ({ value }) => {
-      const imageUrl = urlForImage(value).width(1200).url()
+      const imageUrl = urlForImage(value).width(800).url()
       return (
         <ArticleReveal intensity="visual">
           <figure className="my-8">
-            <Image
+            <img
               src={imageUrl}
               alt={value.alt || ''}
-              width={1200}
-              height={800}
-              className="w-full h-auto"
+              loading="lazy"
+              className="max-w-full h-auto"
             />
             {value.caption && (
-              <figcaption className="mt-2 text-sm text-gray italic text-center">
+              <figcaption className="mt-2 text-sm text-gray italic">
                 {value.caption}
               </figcaption>
             )}
@@ -137,32 +136,56 @@ const components: PortableTextComponents = {
     columns: ({ value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
+
+      // Group items: pair each image with any immediately following text block (caption)
+      const groups: { image: any; caption?: string }[] = []
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        if (item._type === 'image' && item.asset) {
+          // Check for caption: image's own caption field, or a text block immediately after
+          let caption = item.caption || ''
+          const next = items[i + 1]
+          if (next && next._type === 'block' && next.children) {
+            const text = next.children.map((c: { text: string }) => c.text).join('')
+            if (text.trim()) {
+              caption = caption || text.trim()
+              i++ // skip the text block since we consumed it as a caption
+            }
+          }
+          groups.push({ image: item, caption })
+        }
+      }
+
       return (
         <ArticleReveal intensity="visual">
           <figure className="my-8">
             <div
               className={`grid gap-4 ${
-                value.layout === '3'
+                groups.length >= 3 || value.layout === '3'
                   ? 'grid-cols-1 md:grid-cols-3'
-                  : 'grid-cols-1 md:grid-cols-2'
+                  : groups.length === 2
+                    ? 'grid-cols-1 md:grid-cols-2'
+                    : 'grid-cols-1'
               }`}
             >
-              {items.map((item: { _key?: string; _type: string; alt?: string; asset?: { _ref: string } }) => {
-                if (item._type === 'image' && item.asset) {
-                  const imgUrl = urlForImage(item).width(800).url()
-                  return (
-                    <div key={item._key} className="relative">
-                      <Image
-                        src={imgUrl}
-                        alt={item.alt || ''}
-                        width={800}
-                        height={600}
-                        className="w-full h-auto"
-                      />
-                    </div>
-                  )
-                }
-                return null
+              {groups.map((group) => {
+                const imgUrl = urlForImage(group.image).width(800).url()
+                return (
+                  <figure key={group.image._key} className="m-0">
+                    <Image
+                      src={imgUrl}
+                      alt={group.image.alt || ''}
+                      width={800}
+                      height={600}
+                      className="w-full h-auto"
+                    />
+                    {group.caption && (
+                      <figcaption className="mt-2 text-sm text-gray italic text-center">
+                        {group.caption}
+                      </figcaption>
+                    )}
+                  </figure>
+                )
               })}
             </div>
             {value.caption && (

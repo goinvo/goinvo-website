@@ -10,7 +10,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import type { CaseStudy } from '@/types'
 
 export const metadata: Metadata = {
-  title: 'Case Studies by UX Design Agency GoInvo',
+  title: 'Case Studies by UX Design Agency',
   description:
     'We design and ship beautiful software for healthcare organizations as far-reaching as 3M, Johnson & Johnson, and Walgreens, to leading startups.',
 }

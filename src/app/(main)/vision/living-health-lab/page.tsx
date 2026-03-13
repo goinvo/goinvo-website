@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { LivingHealthLabCarousels, LivingHealthLabAppendixCarousel } from './LivingHealthLabCarousels'
 
 export const metadata: Metadata = {
-  title: 'Living Health Lab - GoInvo',
+  title: 'Living Health Lab',
   description:
     'An open source project to help people examine, understand, and improve their day-to-day health through guided exploration, self-tracking, and behavior change.',
 }

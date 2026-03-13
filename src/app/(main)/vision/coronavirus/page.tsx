@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { CovidChart } from './CovidChart'
 
 export const metadata: Metadata = {
-  title: 'Understanding the Novel Coronavirus (COVID-19) - GoInvo',
+  title: 'Understanding the Novel Coronavirus (COVID-19)',
   description:
     'Learn about COVID-19, what it means for U.S. residents, and how you can protect yourself. Updated as new information emerges.',
 }

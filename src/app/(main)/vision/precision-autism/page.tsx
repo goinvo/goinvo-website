@@ -6,7 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Video } from '@/components/ui/Video'
 
 export const metadata: Metadata = {
-  title: 'Precision Autism - GoInvo',
+  title: 'Precision Autism',
   description:
     'An open-source visual depiction of the history of autism and how precision medicine will help define, manage, and treat the condition.',
 }

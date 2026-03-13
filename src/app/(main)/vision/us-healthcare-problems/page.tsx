@@ -6,7 +6,7 @@ import problems from '@/data/vision/problems.json'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'US Healthcare Problems - GoInvo',
+  title: 'US Healthcare Problems',
   description:
     'A visual list of the biggest problems in US healthcare, ranked by deaths, people impacted, and dollars spent.',
 }

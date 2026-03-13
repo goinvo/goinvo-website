@@ -15,7 +15,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
     <article>
       {/* Content */}
       {caseStudy.content && (
-        <div className="max-width content-padding py-12">
+        <div className="max-width max-width-md content-padding mx-auto py-12">
           <PortableTextRenderer content={caseStudy.content} />
         </div>
       )}

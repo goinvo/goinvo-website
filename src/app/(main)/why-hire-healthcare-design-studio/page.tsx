@@ -6,7 +6,7 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'Why hire a Healthcare design studio? - GoInvo',
+  title: 'Why hire a Healthcare design studio?',
   description:
     "For over a decade, GoInvo's design approach to digital health has incorporated a deep understanding of clinicians, patients, and administrators.",
 }

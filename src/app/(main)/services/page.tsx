@@ -8,7 +8,7 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'UX Design Services in Boston - GoInvo',
+  title: 'UX Design Services in Boston',
   description:
     'Our UX design process is tailored to your project. Contact GoInvo today to get started in designing a beautiful UX for your product!',
 }
@@ -235,6 +235,16 @@ export default function ServicesPage() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Certifications */}
+        <div className="py-8">
+          <Divider />
+          <p className="text-gray text-md mt-8">
+            Our contracts prequalify us for IT professional services as a
+            trusted vendor for state and federal agencies.{' '}
+            <Link href="/government">Learn more about our government work</Link>.
+          </p>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { DeterminantsChart } from './DeterminantsChart'
 
 export const metadata: Metadata = {
-  title: 'Determinants of Health Visualized - GoInvo',
+  title: 'Determinants of Health Visualized',
   description:
     'A comprehensive open source visualization of the social determinants of health. Order your poster today!',
 }
