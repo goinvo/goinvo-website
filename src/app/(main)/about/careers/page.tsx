@@ -242,6 +242,21 @@ export default async function CareersPage() {
         </div>
       </section>
 
+      {/* Apply */}
+      <section className="bg-blue-light py-16">
+        <div className="max-width-md content-padding mx-auto">
+          <h2 className="font-serif text-2xl mb-6">Apply</h2>
+          <iframe
+            id="JotFormIFrame-251193306087052"
+            title="Application"
+            src="https://form.jotform.com/251193306087052"
+            className="w-full border-0"
+            style={{ minHeight: '600px' }}
+            allowTransparency
+          />
+        </div>
+      </section>
+
       {/* Perks */}
       <section className="py-16">
         <div className="max-width content-padding">

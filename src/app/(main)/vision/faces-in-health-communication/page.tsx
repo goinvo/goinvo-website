@@ -6,7 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 
 export const metadata: Metadata = {
-  title: 'Faces in Health Communication - GoInvo',
+  title: 'Faces in Health Communication',
   description:
     'The Benefits of Information Graphics and Human Faces for Improved Patient Understanding.',
 }

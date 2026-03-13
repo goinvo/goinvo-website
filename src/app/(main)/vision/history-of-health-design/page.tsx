@@ -5,7 +5,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 
 export const metadata: Metadata = {
-  title: 'History of Health Design - GoInvo',
+  title: 'History of Health Design',
   description:
     'A 10,000-year timeline of healthcare innovation, from ancient medicine to modern digital health.',
 }

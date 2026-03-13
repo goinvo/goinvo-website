@@ -5,7 +5,7 @@ import { siteConfig } from '@/lib/config'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'Open Office Hours for UX Design at GoInvo',
+  title: 'Open Office Hours for UX Design',
   description:
     'Our UX design company is open to anyone seeking advice on design, from students to startups. Sign up!',
 }

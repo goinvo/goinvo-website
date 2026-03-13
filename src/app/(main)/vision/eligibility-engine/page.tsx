@@ -7,7 +7,7 @@ import { Quote } from '@/components/ui/Quote'
 import { EligibilityVideos } from './EligibilityVideos'
 
 export const metadata: Metadata = {
-  title: 'Transforming Service Access in Massachusetts - GoInvo',
+  title: 'Transforming Service Access in Massachusetts',
   description:
     'A centralized MA resident database for better service accessibility.',
 }

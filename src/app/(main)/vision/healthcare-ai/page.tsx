@@ -6,7 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Video } from '@/components/ui/Video'
 
 export const metadata: Metadata = {
-  title: 'The AI Healthcare Future We Need - GoInvo',
+  title: 'The AI Healthcare Future We Need',
   description:
     'Exploring the AI Healthcare future – opportunities and unexpected outcomes.',
 }

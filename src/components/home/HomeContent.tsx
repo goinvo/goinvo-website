@@ -260,6 +260,45 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         </div>
       </section>
 
+      {/* 5b. Credibility Stats */}
+      <section className="py-12 md:py-20">
+        <div className="max-width content-padding">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-12 items-start">
+            <h2 className="font-serif text-2xl md:text-3xl">
+              Our designs in healthcare are used every day<span className="text-primary font-serif">.</span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
+              <div>
+                <p className="font-semibold mb-1">160 million patients</p>
+                <p className="text-gray text-sm">
+                  are analyzed, care planned, and risk adjusted with the software we design.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">1,000,000 Massachusetts residents</p>
+                <p className="text-gray text-sm">
+                  count on our service design for food assistance each month.{' '}
+                  <a href="/work/mass-snap" className="text-secondary">Read the case study</a>
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">Wikipedia</p>
+                <p className="text-gray text-sm">
+                  relies on our data visualization to explain complex health topics.{' '}
+                  <a href="/vision/determinants-of-health" className="text-secondary">Social determinants of health</a>
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold mb-1">1 billion prescriptions</p>
+                <p className="text-gray text-sm">
+                  flow through software we&apos;ve designed for healthcare systems nationwide.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 6. 10x increase - SNAP Impact (LEFT) */}
       <section
         data-morph-section="snap"

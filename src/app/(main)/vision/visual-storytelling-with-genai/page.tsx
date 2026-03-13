@@ -7,7 +7,7 @@ import { Video } from '@/components/ui/Video'
 import { ModelViewerSection } from './ModelViewerSection'
 
 export const metadata: Metadata = {
-  title: 'Reimagining Visual Storytelling with GenAI - GoInvo',
+  title: 'Reimagining Visual Storytelling with GenAI',
   description:
     'How GoInvo uses 3D modeling and generative AI tools like Midjourney to accelerate visual storytelling in healthcare design.',
 }

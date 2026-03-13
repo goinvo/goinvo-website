@@ -6,7 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { PscaAlgorithms } from './PscaAlgorithms'
 
 export const metadata: Metadata = {
-  title: 'Primary Self Care Algorithms - GoInvo',
+  title: 'Primary Self Care Algorithms',
   description:
     'Primary self care algorithms are decision support tools for individuals to better understand their health and the steps needed to optimize their health status.',
 }
