@@ -6,6 +6,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { featureBySlugQuery, allFeaturesQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
+import { AuthorSection } from '@/components/ui/AuthorSection'
 import type { Feature } from '@/types'
 
 interface Props {
@@ -91,6 +92,15 @@ export default async function VisionFeaturePage({ params }: Props) {
         <section className="py-12">
           <div className="max-width max-width-md content-padding mx-auto">
             <PortableTextRenderer content={feature.content} />
+          </div>
+        </section>
+      )}
+
+      {/* Authors */}
+      {feature.authors && feature.authors.length > 0 && (
+        <section className="pb-12">
+          <div className="max-width max-width-md content-padding mx-auto">
+            <AuthorSection authors={feature.authors} />
           </div>
         </section>
       )}

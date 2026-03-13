@@ -1,6 +1,7 @@
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
 import { Results } from '@/components/ui/Results'
 import { References } from '@/components/ui/References'
+import { AuthorSection } from '@/components/ui/AuthorSection'
 import { Reveal } from '@/components/ui/Reveal'
 import { CaseStudyCard } from './CaseStudyCard'
 import { cn } from '@/lib/utils'
@@ -18,6 +19,15 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
         <div className="max-width max-width-md content-padding mx-auto py-12">
           <PortableTextRenderer content={caseStudy.content} />
         </div>
+      )}
+
+      {/* Authors */}
+      {caseStudy.authors && caseStudy.authors.length > 0 && (
+        <Reveal style="slide-up">
+          <div className="max-width max-width-md content-padding mx-auto">
+            <AuthorSection authors={caseStudy.authors} />
+          </div>
+        </Reveal>
       )}
 
       {/* Results */}

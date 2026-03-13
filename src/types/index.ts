@@ -31,6 +31,7 @@ export interface CaseStudy {
   image?: SanityImage
   caption?: string
   categories?: Category[]
+  authors?: TeamMember[]
   content?: PortableTextBlock[]
   results?: Result[]
   references?: Reference[]
@@ -77,6 +78,7 @@ export interface Feature {
   categories?: string[]
   date?: string
   client?: string
+  authors?: TeamMember[]
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
