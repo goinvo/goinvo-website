@@ -147,12 +147,11 @@ export default async function AboutPage() {
         <div className="max-width content-padding py-8 lg:py-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light lg:pr-4">
-              GoInvo is a healthcare design studio in Boston, shipping software
-              for the hardest problems in care, policy, and research.
+              GoInvo is a digital design studio in Boston, crafting the future of
+              software through strategy, creativity, and vision.
             </h2>
             <p className="text-gray lg:pl-4">
-              Engineers, illustrators, designers, and developers. We make
-              health software that works for the people who use it.
+              With backgrounds in engineering, illustration, design, and software development, we share a foundational technical and creative expertise in the shared pursuit of impact for good.
             </p>
           </div>
         </div>
@@ -174,7 +173,7 @@ export default async function AboutPage() {
       <div className="bg-blue-light py-8 lg:py-16">
         <div className="max-width content-padding">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="lg:pr-4">
+            <div className="lg:pr-4 flex flex-col">
               <Image
                 src={cloudfrontImage('/images/about/design-markup.jpg')}
                 alt="Open office hours"
@@ -185,7 +184,7 @@ export default async function AboutPage() {
               <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
                 Open office hours
               </h3>
-              <p className="text-gray text-md mb-0">
+              <p className="text-gray text-md mb-0 flex-grow">
                 Receive design advice on your product&apos;s strategy, layout, and data
                 visualization. Alternatively, meet the tribe, or plot your career direction.
               </p>
@@ -196,7 +195,7 @@ export default async function AboutPage() {
                 Schedule a chat
               </Link>
             </div>
-            <div className="lg:pl-4">
+            <div className="lg:pl-4 flex flex-col">
               <Image
                 src={cloudfrontImage('/images/about/megan-and-claire-ultrasound.jpg')}
                 alt="Join the team"
@@ -207,7 +206,7 @@ export default async function AboutPage() {
               <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-2">
                 Join the team
               </h3>
-              <p className="text-gray text-md mb-0">
+              <p className="text-gray text-md mb-0 flex-grow">
                 If you&apos;re an independent thinker and passionate maker hunting for meaningful
                 work, give us a holler.
               </p>
@@ -238,16 +237,26 @@ export default async function AboutPage() {
       <Reveal style="slide-up">
         <div className="bg-gray-light py-8 lg:py-12">
           <div className="max-width content-padding">
-            <h3 className="text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
+            <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
               Code of Ethics
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-              {ethics.map((ethic) => (
-                <div key={ethic.title} className="mb-4">
-                  <p className="font-semibold mb-1">{ethic.title}</p>
-                  <p className="text-gray text-md">{ethic.content}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+              <ul className="ul">
+                {ethics.slice(0, 3).map((ethic) => (
+                  <li key={ethic.title} className="mb-8">
+                    <p className="font-semibold mb-1">{ethic.title}</p>
+                    <p className="text-gray text-md">{ethic.content}</p>
+                  </li>
+                ))}
+              </ul>
+              <ul className="ul">
+                {ethics.slice(3).map((ethic) => (
+                  <li key={ethic.title} className="mb-8">
+                    <p className="font-semibold mb-1">{ethic.title}</p>
+                    <p className="text-gray text-md">{ethic.content}</p>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
@@ -273,7 +282,7 @@ export default async function AboutPage() {
         <div className="max-width content-padding">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="lg:pr-4">
-              <h3 className="text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
+              <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
                 Our Story
               </h3>
               <p className="text-gray">
@@ -315,7 +324,7 @@ export default async function AboutPage() {
       {/* Up Next */}
       <div className="bg-blue-light py-4 lg:py-16">
         <div className="max-width content-padding">
-          <h4 className="text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-4">
+          <h4 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-4">
             Up next
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

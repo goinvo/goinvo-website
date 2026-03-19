@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Button } from '@/components/ui/Button'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { VisionGrid } from '@/components/vision/VisionGrid'
+import { ReviewCarousel } from '@/components/vision/ReviewCarousel'
 import { cloudfrontImage } from '@/lib/utils'
 import type { StaticFeature } from '@/types'
 
@@ -318,58 +320,7 @@ export default function VisionPage() {
       </div>
 
       {/* Reviews */}
-      <div className="max-width content-padding pt-16">
-        <h2 className="font-serif text-3xl mb-0">
-          Reviews for
-          <span className="text-primary font-serif">...</span>
-        </h2>
-      </div>
-      <div className="space-y-0">
-        {reviews.map((review) => (
-          <div key={review.id} className="bg-gray-light">
-            <div className="max-width content-padding">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
-                <div className="h-[260px] lg:h-[360px] overflow-hidden">
-                  <Image
-                    src={cloudfrontImage(review.image)}
-                    alt=""
-                    width={510}
-                    height={360}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="flex flex-col justify-center p-8 lg:p-12">
-                  <blockquote className="text-gray font-serif text-lg leading-relaxed italic m-0">
-                    &ldquo;{review.quote}&rdquo;
-                  </blockquote>
-                  <p className="text-sm mt-4 mb-0">
-                    <span className="font-semibold">{review.quotee}</span>
-                    <br />
-                    <span className="text-gray">{review.quoteeSub}</span>
-                  </p>
-                  {review.ctaExternal ? (
-                    <a
-                      href={review.ctaLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="button button--primary button--lg mt-6 self-start inline-block bg-primary text-white font-semibold px-8 py-3 no-underline hover:opacity-90 transition-opacity"
-                    >
-                      {review.ctaText}
-                    </a>
-                  ) : (
-                    <Link
-                      href={review.ctaLink}
-                      className="mt-6 self-start inline-block bg-primary text-white font-semibold px-8 py-3 no-underline hover:opacity-90 transition-opacity"
-                    >
-                      {review.ctaText}
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <ReviewCarousel reviews={reviews} />
 
       {/* Subscribe */}
       <div className="bg-gray-light py-16">
@@ -380,7 +331,7 @@ export default function VisionPage() {
 
       {/* CTA */}
       <div className="max-width max-width-sm content-padding py-16">
-        <h2 className="font-serif text-2xl">
+        <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light">
           Designing the future of healthcare
           <span className="text-primary font-serif">.</span>
         </h2>
@@ -389,12 +340,9 @@ export default function VisionPage() {
           design. If you have an idea or want to collaborate, we&apos;d love to
           hear from you.
         </p>
-        <Link
-          href="/contact/"
-          className="inline-block border-2 border-secondary text-secondary font-semibold px-8 py-3 mt-4 no-underline hover:bg-secondary hover:text-white transition-colors"
-        >
+        <Button href="/contact/" variant="secondary" size="lg" className="mt-4">
           Get in touch
-        </Link>
+        </Button>
       </div>
     </div>
   )

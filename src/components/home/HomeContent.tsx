@@ -112,7 +112,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
   return (
     <div ref={containerRef}>
       {/* 1. Hero Section */}
-      <section className="relative flex flex-col justify-end min-h-[250px] min-h-[50vh]">
+      <section className="relative flex flex-col justify-end min-h-[250px] min-h-[60vh]">
         <Image
           src={cloudfrontImage('/images/homepage/bg-wavy-lines.jpg')}
           alt=""
@@ -171,7 +171,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
                 A backlog that typically measured in thousands of charts and weeks
                 of delay had been cleared. This had never happened before.
               </p>
-              <Button onClick={() => handleMorphClick('/work/3m-coderyte', '3m')} variant="primary">
+              <Button onClick={() => handleMorphClick('/work/3m-coderyte', '3m')} variant="outline" className="w-full block">
                 3M Case Study
               </Button>
             </div>
@@ -242,7 +242,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
               <p className="text-gray mb-6">
                 Research that took weeks now takes hours. With citations.
               </p>
-              <Button onClick={() => handleMorphClick('/work/ipsos-facto', 'ipsos')} variant="primary">
+              <Button onClick={() => handleMorphClick('/work/ipsos-facto', 'ipsos')} variant="outline" className="w-full block">
                 Ipsos Case Study
               </Button>
             </div>
@@ -341,7 +341,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
                   <strong>The digital system did.</strong>
                 </p>
               </div>
-              <Button onClick={() => handleMorphClick('/work/mass-snap', 'snap')} variant="primary" className="mt-6">
+              <Button onClick={() => handleMorphClick('/work/mass-snap', 'snap')} variant="outline" className="w-full block mt-6">
                 SNAP Case Study
               </Button>
             </div>
