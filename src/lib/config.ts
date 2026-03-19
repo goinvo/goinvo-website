@@ -26,11 +26,8 @@ export const siteConfig = {
   cloudfrontUrl: 'https://dd17w042cevyt.cloudfront.net',
   typekitId: 'luw8hiq',
   jotformId: '251276832519159',
-  mailerlite: {
-    formId: '25168203',
-    accountId: '1457992',
-    formEndpoint:
-      'https://assets.mailerlite.com/jsonp/1457992/forms/152494406199412364/subscribe',
+  emailoctopus: {
+    formId: 'e260d99a-9007-11f0-9271-35d5d1204339',
   },
   hubspot: {
     portalId: '356419',
