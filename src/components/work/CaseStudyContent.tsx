@@ -16,7 +16,7 @@ interface Props {
 export function CaseStudyContent({ initialData, slug }: Props) {
   const caseStudy = useLiveData(initialData, caseStudyBySlugQuery, { slug })
 
-  const heroImageUrl = caseStudy.image
+  const heroImageUrl = caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(1600).height(900).url()
     : null
 
