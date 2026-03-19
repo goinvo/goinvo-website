@@ -21,12 +21,12 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
   const ctx = usePageTransition()
   const { setCaseStudyHero } = useHero()
 
-  const imageUrl = caseStudy.image
+  const imageUrl = caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(800).height(500).url()
     : undefined
 
   // Higher-res URL for the hero (overlay morph + PersistentHero)
-  const heroImageUrl = caseStudy.image
+  const heroImageUrl = caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(1600).height(900).url()
     : undefined
 

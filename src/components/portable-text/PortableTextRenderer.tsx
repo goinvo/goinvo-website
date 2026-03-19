@@ -66,6 +66,7 @@ function isDirectVideoUrl(url: string) {
 const components: PortableTextComponents = {
   types: {
     image: ({ value }) => {
+      if (!value?.asset) return null
       const imageUrl = urlForImage(value).width(800).url()
       return (
         <ArticleReveal intensity="visual">
@@ -141,7 +142,7 @@ const components: PortableTextComponents = {
       const groups: { image: any; caption?: string }[] = []
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
-        if (item._type === 'image' && item.asset) {
+        if (item._type === 'image' && item.asset?._ref) {
           // Check for caption: image's own caption field, or a text block immediately after
           let caption = item.caption || ''
           const next = items[i + 1]
