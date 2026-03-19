@@ -53,7 +53,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
         <Reveal style="slide-up">
           <section className="bg-blue-light py-8 pb-16">
             <div className="max-width content-padding">
-              <h3 className="font-serif text-2xl mb-8">Up next</h3>
+              <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-8">Up next</h3>
               <div
                 className={cn(
                   'grid grid-cols-1 gap-8',

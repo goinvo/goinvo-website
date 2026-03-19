@@ -80,7 +80,7 @@ export default async function WorkPage() {
       {/* Up Next */}
       <section className="bg-blue-light pt-28 pb-4 lg:pt-32 lg:pb-16">
         <div className="max-width content-padding">
-          <h4 className="text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.1875rem] lg:leading-[1.375rem] mb-4">Up next</h4>
+          <h4 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.1875rem] lg:leading-[1.375rem] mb-4">Up next</h4>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {upNext.map((item) => (
               <Link

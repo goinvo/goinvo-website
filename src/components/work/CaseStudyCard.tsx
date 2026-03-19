@@ -68,11 +68,11 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
   )
 
   return (
-    <div ref={cardRef}>
-      <Link href={href} onClick={handleClick} className="no-underline">
+    <div ref={cardRef} className="h-full">
+      <Link href={href} onClick={handleClick} className="no-underline h-full block">
         <motion.article
           className={cn(
-            'group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)]',
+            'group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] h-full flex flex-col',
             className
           )}
           whileHover={{ y: -4 }}
@@ -89,8 +89,8 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
               />
             </div>
           )}
-          <div className="p-4 [&>p]:m-0 [&>p]:mb-1">
-            <p className="font-semibold">{caseStudy.title}</p>
+          <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
+            <p className="font-semibold text-black">{caseStudy.title}</p>
             {caseStudy.client && (
               <p className="text-gray">{caseStudy.client}</p>
             )}

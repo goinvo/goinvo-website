@@ -176,7 +176,7 @@ export default function ServicesPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 pb-8">
             {whatWeDo.map((item) => (
               <div key={item.title} className="lg:pr-8 mb-8 lg:py-8 first:lg:py-8">
-                <h4 className="font-semibold text-base mt-0 mb-2">
+                <h4 className="font-sans font-semibold text-base mt-0 mb-2">
                   {item.title}
                 </h4>
                 <p
@@ -202,7 +202,7 @@ export default function ServicesPage() {
             <div key={service.title} className="grid grid-cols-1 lg:grid-cols-2">
               <div className="lg:pr-8 mb-4">
                 <div className="lg:pb-8">
-                  <h4 className="font-semibold text-base mb-0">
+                  <h4 className="font-sans font-semibold text-base mb-0">
                     {service.title}
                   </h4>
                   <hr
@@ -210,7 +210,7 @@ export default function ServicesPage() {
                     style={{ backgroundColor: service.color }}
                   />
                   <p className="text-gray mb-2">{service.description}</p>
-                  <ul className="text-gray mt-2 mb-4 pl-6 list-disc">
+                  <ul className="ul text-gray mt-2 mb-4">
                     {service.methods.map((method) => (
                       <li key={method}>{method}</li>
                     ))}
@@ -240,11 +240,21 @@ export default function ServicesPage() {
         {/* Certifications */}
         <div className="py-8">
           <Divider />
-          <p className="text-gray text-md mt-8">
+          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-2">
+            Our certifications and contracts
+          </h3>
+          <p className="text-gray text-md">
             Our contracts prequalify us for IT professional services as a
-            trusted vendor for state and federal agencies.{' '}
+            trusted vendor for state and federal agencies.
+          </p>
+          <ul className="ul text-gray mb-8">
+            <li>State of MA: <strong>ITS81</strong></li>
+            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
+          </ul>
+          <p className="text-gray text-md">
             <Link href="/government">Learn more about our government work</Link>.
           </p>
+          <Divider />
         </div>
       </div>
 

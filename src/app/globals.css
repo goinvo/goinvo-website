@@ -181,6 +181,18 @@
   .image--interactive:hover {
     transform: scale(1.05);
   }
+
+  .ul {
+    list-style-position: outside;
+    list-style-type: none;
+    list-style-image: url('/images/bullet.svg');
+    padding-left: 21px;
+  }
+
+  .ul li {
+    padding-left: 4px;
+    margin-bottom: 0.5rem;
+  }
 }
 
 /* ── View Transitions (cross-page morphing) ── */
