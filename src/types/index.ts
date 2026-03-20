@@ -32,6 +32,7 @@ export interface CaseStudy {
   caption?: string
   categories?: Category[]
   authors?: TeamMember[]
+  time?: string
   content?: PortableTextBlock[]
   results?: Result[]
   references?: Reference[]

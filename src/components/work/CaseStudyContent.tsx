@@ -32,16 +32,26 @@ export function CaseStudyContent({ initialData, slug }: Props) {
           >
             {caseStudy.title}
           </h1>
-          {caseStudy.categories && caseStudy.categories.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
-              {caseStudy.categories.map((cat) => (
-                <span
-                  key={cat._id}
-                  className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1"
-                >
-                  {cat.title}
-                </span>
-              ))}
+          {(caseStudy.categories?.length || caseStudy.time) && (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
+              {caseStudy.categories && caseStudy.categories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {caseStudy.categories.map((cat) => (
+                    <span
+                      key={cat._id}
+                      className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1"
+                    >
+                      {cat.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {caseStudy.time && (
+                <p className="text-gray text-sm m-0">
+                  <span className="font-sans text-xs font-semibold uppercase tracking-[2px] text-gray">Time:</span>{' '}
+                  {caseStudy.time}
+                </p>
+              )}
             </div>
           )}
         </div>
