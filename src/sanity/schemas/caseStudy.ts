@@ -98,6 +98,12 @@ export default defineType({
       of: [{ type: 'reference', to: [{ type: 'caseStudy' }] }],
     }),
     defineField({
+      name: 'time',
+      title: 'Time',
+      type: 'string',
+      description: 'Project duration (e.g. "1.5 designers for 6 months")',
+    }),
+    defineField({
       name: 'hidden',
       title: 'Hidden',
       type: 'boolean',

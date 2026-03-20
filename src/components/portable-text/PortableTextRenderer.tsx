@@ -272,6 +272,22 @@ const components: PortableTextComponents = {
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     ),
   },
+  list: {
+    bullet: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <ul className="ul text-gray mb-8">{children}</ul>
+      </ArticleReveal>
+    ),
+    number: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <ol className="list-decimal pl-6 text-gray mb-8 space-y-2">{children}</ol>
+      </ArticleReveal>
+    ),
+  },
+  listItem: {
+    bullet: ({ children }) => <li>{children}</li>,
+    number: ({ children }) => <li>{children}</li>,
+  },
   marks: {
     link: ({ children, value }) => {
       const rel = value?.blank ? 'noopener noreferrer' : undefined
@@ -291,12 +307,12 @@ const components: PortableTextComponents = {
   block: {
     h2: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h2 className="font-serif text-2xl mt-12 mb-4">{children}</h2>
+        <h2 className="font-serif text-2xl mt-12 mb-4 text-center">{children}</h2>
       </ArticleReveal>
     ),
     h3: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h3 className="font-serif text-xl mt-8 mb-3">{children}</h3>
+        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
       </ArticleReveal>
     ),
     h4: ({ children }) => (
@@ -313,7 +329,7 @@ const components: PortableTextComponents = {
     ),
     normal: ({ children }) => (
       <ArticleReveal intensity="text">
-        <p className="mb-4 leading-relaxed">{children}</p>
+        <p className="text-gray mb-4 leading-relaxed">{children}</p>
       </ArticleReveal>
     ),
   },
