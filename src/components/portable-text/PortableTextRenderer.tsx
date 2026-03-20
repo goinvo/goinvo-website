@@ -317,7 +317,7 @@ const components: PortableTextComponents = {
     ),
     h4: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h4 className="font-serif text-lg mt-6 mb-2">{children}</h4>
+        <h4 className="font-sans text-base font-bold mt-6 mb-2">{children}</h4>
       </ArticleReveal>
     ),
     blockquote: ({ children }) => (
