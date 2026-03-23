@@ -1,10 +1,10 @@
 import type { Metadata } from 'next'
 import { draftMode } from 'next/headers'
-import { VisualEditing } from 'next-sanity'
 import { siteConfig } from '@/lib/config'
 import { ThrottledSanityLive } from '@/components/sanity/ThrottledSanityLive'
 import { PreviewBanner } from '@/components/sanity/PreviewBanner'
 import { DraftModeGuard } from '@/components/sanity/DraftModeGuard'
+import { SafeVisualEditing } from '@/components/sanity/SafeVisualEditing'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -58,7 +58,7 @@ export default async function RootLayout({
       <body className="font-sans text-black antialiased">
         {children}
         <ThrottledSanityLive />
-        {isDraftMode && <VisualEditing />}
+        {isDraftMode && <SafeVisualEditing />}
         {isDraftMode && <PreviewBanner />}
         {isDraftMode && <DraftModeGuard />}
       </body>
