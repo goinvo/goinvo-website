@@ -31,9 +31,10 @@ function pickRandom(arr: string[]): string {
 
 interface ProjectSearchProps {
   caseStudies: CaseStudy[]
+  draftCaseStudies?: CaseStudy[]
 }
 
-export function ProjectSearch({ caseStudies }: ProjectSearchProps) {
+export function ProjectSearch({ caseStudies, draftCaseStudies = [] }: ProjectSearchProps) {
   const [activeCategory, setActiveCategory] = useState('All')
   const { overrideImage } = useHero()
   const prevIndexRef = useRef(0)
@@ -61,6 +62,39 @@ export function ProjectSearch({ caseStudies }: ProjectSearchProps) {
 
   return (
     <div>
+      {/* Draft-only case studies — visible only in preview mode */}
+      {draftCaseStudies.length > 0 && (
+        <div className="relative border-b border-gray-medium">
+          <div
+            className="absolute left-0 top-0 bottom-0 w-3"
+            style={{
+              background: 'repeating-linear-gradient(180deg, #f59e0b 0px, #f59e0b 8px, white 8px, white 16px)',
+              maskImage: 'linear-gradient(to right, black, transparent)',
+              WebkitMaskImage: 'linear-gradient(to right, black, transparent)',
+            }}
+          />
+          <div className="max-width content-padding py-8">
+            <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary m-0 mb-6">
+              Drafts ({draftCaseStudies.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {draftCaseStudies.map((study) => (
+                <div key={study._id} className="relative">
+                  {study.slug?.current ? (
+                    <CaseStudyCard caseStudy={study} />
+                  ) : (
+                    <div className="bg-white overflow-hidden shadow-card p-6 h-full flex flex-col justify-center items-center text-center">
+                      <p className="font-semibold text-black mb-1">{study.title || 'Untitled'}</p>
+                      <p className="text-gray text-sm">No slug set — generate one in the Studio to preview</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Categories band — gray background */}
       <div className="bg-gray-light">
         <div className="max-width content-padding pt-4 pb-8">

@@ -25,7 +25,7 @@ export function AuthorSection({ authors }: AuthorSectionProps) {
       <h2 className="font-serif text-2xl mb-8">Authors</h2>
       {authors.map((author) => {
         const imageUrl = author.image
-          ? urlForImage(author.image).width(200).height(200).url()
+          ? urlForImage(author.image).width(200).height(300).fit('crop').url()
           : null
         const bio = author.bio ? extractText(author.bio) : ''
 
@@ -40,8 +40,8 @@ export function AuthorSection({ authors }: AuthorSectionProps) {
                   src={imageUrl}
                   alt={author.name}
                   width={200}
-                  height={200}
-                  className="w-[200px] h-[200px] object-cover rounded"
+                  height={300}
+                  className="w-[200px] h-[300px] object-cover"
                 />
               </div>
             )}

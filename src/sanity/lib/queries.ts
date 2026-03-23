@@ -41,6 +41,41 @@ export const caseStudyBySlugQuery = groq`
   }
 `
 
+// Draft-only case studies (used in preview mode)
+export const draftCaseStudiesQuery = groq`{
+  "drafts": *[_type == "caseStudy" && _id in path("drafts.**")] {
+    _id,
+    title,
+    slug,
+    client,
+    image,
+    caption,
+    categories[]-> { _id, title, slug },
+    metaDescription,
+    order
+  },
+  "publishedIds": *[_type == "caseStudy" && !(_id in path("drafts.**"))]._id
+}`
+
+// Draft-only features (used in preview mode)
+export const draftFeaturesQuery = groq`{
+  "drafts": *[_type == "feature" && _id in path("drafts.**")] {
+    _id,
+    title,
+    slug,
+    image,
+    video,
+    description,
+    categories,
+    date,
+    client,
+    externalLink,
+    hiddenWorkPage,
+    order
+  },
+  "publishedIds": *[_type == "feature" && !(_id in path("drafts.**"))]._id
+}`
+
 // Categories
 export const allCategoriesQuery = groq`
   *[_type == "category"] | order(title asc) {

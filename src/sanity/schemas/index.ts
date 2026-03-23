@@ -8,6 +8,7 @@ import homepageHeader from './homepageHeader'
 import siteSettings from './siteSettings'
 import page from './page'
 import healthVisualization from './healthVisualization'
+import cmsFeedback from './cmsFeedback'
 import portableText from './objects/portableText'
 import seo from './objects/seo'
 
@@ -23,6 +24,7 @@ export const schemaTypes = [
   siteSettings,
   page,
   healthVisualization,
+  cmsFeedback,
   // Objects
   portableText,
   seo,
