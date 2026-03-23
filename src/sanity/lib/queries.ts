@@ -27,8 +27,6 @@ export const caseStudyBySlugQuery = groq`
     authors[]-> { _id, name, role, bio, image },
     time,
     content,
-    results,
-    references,
     upNext[]-> {
       _id,
       title,

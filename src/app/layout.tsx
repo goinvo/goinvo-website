@@ -3,16 +3,8 @@ import { draftMode } from 'next/headers'
 import { VisualEditing } from 'next-sanity'
 import { siteConfig } from '@/lib/config'
 import { ThrottledSanityLive } from '@/components/sanity/ThrottledSanityLive'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
-import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
-import { HubSpotTracking } from '@/components/analytics/HubSpotTracking'
-import { ChatlioWidget } from '@/components/analytics/ChatlioWidget'
 import { PreviewBanner } from '@/components/sanity/PreviewBanner'
 import { DraftModeGuard } from '@/components/sanity/DraftModeGuard'
-import { WebVitals } from '@/components/analytics/WebVitals'
-import { ScrollDepthTracker } from '@/components/analytics/ScrollDepthTracker'
-import { ExternalLinkTracker } from '@/components/analytics/ExternalLinkTracker'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -69,14 +61,6 @@ export default async function RootLayout({
         {isDraftMode && <VisualEditing />}
         {isDraftMode && <PreviewBanner />}
         {isDraftMode && <DraftModeGuard />}
-        <GoogleAnalytics />
-        <HubSpotTracking />
-        <ChatlioWidget />
-        <Analytics />
-        <SpeedInsights />
-        <WebVitals />
-        <ScrollDepthTracker />
-        <ExternalLinkTracker />
       </body>
     </html>
   )
