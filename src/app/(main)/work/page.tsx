@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
+import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import Image from 'next/image'
 import { sanityFetch } from '@/sanity/lib/live'
-import { allCaseStudiesQuery } from '@/sanity/lib/queries'
+import { client } from '@/sanity/lib/client'
+import { allCaseStudiesQuery, draftCaseStudiesQuery } from '@/sanity/lib/queries'
 import { ProjectSearch } from '@/components/work/ProjectSearch'
 import { Quote } from '@/components/ui/Quote'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
@@ -39,10 +41,28 @@ const upNext = [
 export default async function WorkPage() {
   const { data: caseStudies } = await sanityFetch({ query: allCaseStudiesQuery }) as { data: CaseStudy[] }
 
+  // Fetch draft-only case studies when in preview mode
+  let draftCaseStudies: CaseStudy[] = []
+  const { isEnabled: isDraftMode } = await draftMode()
+  if (isDraftMode) {
+    try {
+      const rawClient = client.withConfig({
+        token: process.env.SANITY_API_READ_TOKEN,
+        useCdn: false,
+      })
+      const { drafts, publishedIds } = await rawClient.fetch(draftCaseStudiesQuery)
+      draftCaseStudies = (drafts as (CaseStudy & { _id: string })[])
+        .filter((d) => !publishedIds.includes(d._id.replace('drafts.', '')))
+        .map((d) => ({ ...d, _id: d._id.replace('drafts.', '') }))
+    } catch (e) {
+      console.error('Failed to fetch draft case studies:', e)
+    }
+  }
+
   return (
     <div>
       {/* Case Studies with Filter */}
-      <ProjectSearch caseStudies={caseStudies} />
+      <ProjectSearch caseStudies={caseStudies} draftCaseStudies={draftCaseStudies} />
 
       {/* Quote */}
       <Quote

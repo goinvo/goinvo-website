@@ -1,0 +1,24 @@
+'use client'
+
+import { useEffect } from 'react'
+
+/**
+ * Auto-disables draft mode when the page is NOT loaded inside an iframe
+ * (i.e., not in the Sanity Studio Presentation tab).
+ *
+ * This prevents stale draft-mode cookies from leaking draft content
+ * into normal site browsing after a Presentation session.
+ */
+export function DraftModeGuard() {
+  useEffect(() => {
+    // If we're inside an iframe (Presentation tool), keep draft mode on
+    if (window.self !== window.top) return
+
+    // Not in an iframe — draft mode cookie is stale, disable it
+    fetch('/api/draft-mode/disable', { redirect: 'manual' }).then(() => {
+      window.location.reload()
+    })
+  }, [])
+
+  return null
+}

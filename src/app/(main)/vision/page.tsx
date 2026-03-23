@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
+import { draftMode } from 'next/headers'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { VisionGrid } from '@/components/vision/VisionGrid'
+import { DraftFeaturesSection } from '@/components/vision/DraftFeaturesSection'
 import { ReviewCarousel } from '@/components/vision/ReviewCarousel'
 import { cloudfrontImage } from '@/lib/utils'
-import type { StaticFeature } from '@/types'
+import { client } from '@/sanity/lib/client'
+import { draftFeaturesQuery } from '@/sanity/lib/queries'
+import type { StaticFeature, Feature } from '@/types'
 
 import allFeatures from '@/data/features.json'
 
@@ -116,9 +120,32 @@ const reviews = [
   },
 ]
 
-export default function VisionPage() {
+export default async function VisionPage() {
+  // Fetch draft-only features when in preview mode
+  let draftFeatures: Feature[] = []
+  const { isEnabled: isDraftMode } = await draftMode()
+  if (isDraftMode) {
+    try {
+      const rawClient = client.withConfig({
+        token: process.env.SANITY_API_READ_TOKEN,
+        useCdn: false,
+      })
+      const { drafts, publishedIds } = await rawClient.fetch(draftFeaturesQuery)
+      draftFeatures = (drafts as (Feature & { _id: string })[])
+        .filter((d) => !publishedIds.includes(d._id.replace('drafts.', '')))
+        .map((d) => ({ ...d, _id: d._id.replace('drafts.', '') }))
+    } catch (e) {
+      console.error('Failed to fetch draft features:', e)
+    }
+  }
+
   return (
     <div>
+      {/* Draft features — visible only in preview mode */}
+      {draftFeatures.length > 0 && (
+        <DraftFeaturesSection features={draftFeatures} />
+      )}
+
       {/* Spotlight */}
       <div className="max-width content-padding py-8 lg:py-16">
         <h3 className="font-serif text-xl mb-8">Spotlight</h3>

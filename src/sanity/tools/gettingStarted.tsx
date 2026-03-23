@@ -3,9 +3,9 @@ import { BookIcon } from '@sanity/icons'
 
 function GettingStartedComponent() {
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: '#1a1a2e', lineHeight: 1.7 }}>
+    <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px', fontFamily: 'system-ui, -apple-system, sans-serif', color: 'var(--card-fg-color)', lineHeight: 1.7 }}>
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>Getting Started</h1>
-      <p style={{ fontSize: 16, color: '#6b7280', marginBottom: 40 }}>
+      <p style={{ fontSize: 16, color: 'var(--card-muted-fg-color)', marginBottom: 40 }}>
         A guide for designers and editors working in the GoInvo CMS.
       </p>
 
@@ -52,7 +52,7 @@ function GettingStartedComponent() {
         </ol>
         <Callout>
           <strong>Need a custom layout for a case study?</strong> If the standard template doesn&apos;t fit — for example, you need a side-by-side before/after hero, a unique color scheme, or a non-standard section — use the{' '}
-          <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/new-case-study</code>{' '}
+          <code style={{ background: 'var(--card-code-bg-color, rgba(128,128,128,0.15))', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/new-case-study</code>{' '}
           command in Claude Code (see Section 8) to set up a custom layout.
         </Callout>
       </Section>
@@ -120,7 +120,7 @@ function GettingStartedComponent() {
             ['Case Study hero', '1600 × 900 px', 'Landscape, high quality'],
             ['Feature / Vision', '1600 × 900 px', 'Same as case studies'],
             ['Homepage Header', '1920 × 800 px', 'Extra wide for hero carousel'],
-            ['Team Member photo', '400 × 400 px min', 'Square headshot'],
+            ['Team Member photo', '400 × 600 px min', 'Portrait (2:3 ratio)'],
             ['Inline content', '800–1200 px wide', 'Depends on size setting'],
             ['Social share (SEO)', '1200 × 630 px', 'Open Graph standard'],
           ]}
@@ -180,7 +180,7 @@ function GettingStartedComponent() {
 
         <h4 style={{ marginTop: 24, marginBottom: 8 }}>Connecting Figma (optional, one-time)</h4>
         <p>
-          To use the <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/from-figma</code> command, connect the Figma MCP server:
+          To use the <code style={{ background: 'var(--card-code-bg-color, rgba(128,128,128,0.15))', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/from-figma</code> command, connect the Figma MCP server:
         </p>
         <ol>
           <li>
@@ -214,7 +214,7 @@ function GettingStartedComponent() {
 
         <Callout>
           Type the command, then describe what you want after it. For example:<br />
-          <code style={{ background: '#e5e7eb', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/new-block A &quot;Before / After&quot; image comparison slider with two image fields and a draggable handle</code>
+          <code style={{ background: 'var(--card-code-bg-color, rgba(128,128,128,0.15))', padding: '2px 6px', borderRadius: 3, fontSize: 13 }}>/new-block A &quot;Before / After&quot; image comparison slider with two image fields and a draggable handle</code>
         </Callout>
 
         <h4 style={{ marginTop: 24, marginBottom: 8 }}>You can also just talk to it</h4>
@@ -263,7 +263,7 @@ function GettingStartedComponent() {
         </ul>
       </Section>
 
-      <div style={{ marginTop: 48, padding: '16px 20px', background: '#f3f4f6', borderRadius: 8, fontSize: 14, color: '#6b7280' }}>
+      <div style={{ marginTop: 48, padding: '16px 20px', background: 'var(--card-badge-default-bg-color, rgba(128,128,128,0.1))', borderRadius: 8, fontSize: 14, color: 'var(--card-muted-fg-color)' }}>
         Questions? Reach out to the development team or check the{' '}
         <a href="https://www.sanity.io/docs" target="_blank" rel="noopener noreferrer" style={{ color: '#007385' }}>
           Sanity documentation
@@ -276,7 +276,7 @@ function GettingStartedComponent() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 40 }}>
-      <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid #e5e7eb' }}>
+      <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--card-border-color)' }}>
         {title}
       </h2>
       {children}
@@ -291,7 +291,7 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
         <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} style={{ textAlign: 'left', padding: '8px 12px', background: '#f9fafb', borderBottom: '2px solid #e5e7eb', fontWeight: 600 }}>
+              <th key={h} style={{ textAlign: 'left', padding: '8px 12px', background: 'var(--card-badge-default-bg-color, rgba(128,128,128,0.1))', borderBottom: '2px solid var(--card-border-color)', fontWeight: 600 }}>
                 {h}
               </th>
             ))}
@@ -301,7 +301,7 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
           {rows.map((row, i) => (
             <tr key={i}>
               {row.map((cell, j) => (
-                <td key={j} style={{ padding: '8px 12px', borderBottom: '1px solid #f3f4f6' }}>
+                <td key={j} style={{ padding: '8px 12px', borderBottom: '1px solid var(--card-border-color)' }}>
                   {j === 0 ? <strong>{cell}</strong> : cell}
                 </td>
               ))}
@@ -315,7 +315,7 @@ function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
 
 function Callout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ margin: '16px 0', padding: '12px 16px', background: '#f0fdfa', borderLeft: '4px solid #007385', borderRadius: '0 6px 6px 0', fontSize: 14 }}>
+    <div style={{ margin: '16px 0', padding: '12px 16px', background: 'var(--card-badge-default-bg-color, rgba(128,128,128,0.1))', borderLeft: '4px solid #007385', borderRadius: '0 6px 6px 0', fontSize: 14 }}>
       {children}
     </div>
   )
@@ -323,7 +323,7 @@ function Callout({ children }: { children: React.ReactNode }) {
 
 function Code({ children }: { children: string }) {
   return (
-    <code style={{ display: 'block', margin: '6px 0', padding: '6px 10px', background: '#f3f4f6', borderRadius: 4, fontSize: 13, fontFamily: 'monospace' }}>
+    <code style={{ display: 'block', margin: '6px 0', padding: '6px 10px', background: 'var(--card-code-bg-color, rgba(128,128,128,0.15))', borderRadius: 4, fontSize: 13, fontFamily: 'monospace' }}>
       {children}
     </code>
   )
@@ -331,7 +331,7 @@ function Code({ children }: { children: string }) {
 
 function ExamplePrompt({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 14, fontStyle: 'italic', color: '#374151' }}>
+    <div style={{ padding: '10px 14px', background: 'var(--card-badge-default-bg-color, rgba(128,128,128,0.1))', border: '1px solid var(--card-border-color)', borderRadius: 6, fontSize: 14, fontStyle: 'italic', color: 'var(--card-muted-fg-color)' }}>
       &ldquo;{children}&rdquo;
     </div>
   )

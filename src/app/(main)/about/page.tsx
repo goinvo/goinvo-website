@@ -73,7 +73,7 @@ const upNext = [
 
 function TeamMemberCard({ member }: { member: TeamMember }) {
   const imageUrl = member.image
-    ? urlForImage(member.image).width(600).height(400).fit('crop').url()
+    ? urlForImage(member.image).width(400).height(600).fit('crop').url()
     : null
 
   return (
@@ -84,8 +84,8 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
             <Image
               src={imageUrl}
               alt={member.name}
-              width={600}
-              height={400}
+              width={400}
+              height={600}
               className="w-full h-auto"
             />
           )}

@@ -4,6 +4,7 @@ import { presentationTool } from 'sanity/presentation'
 import { schemaTypes } from './schemas'
 import { apiVersion, dataset, projectId } from './env'
 import { gettingStartedPlugin } from './tools/gettingStarted'
+import { feedbackPlugin } from './tools/feedbackTool'
 
 export default defineConfig({
   name: 'goinvo',
@@ -22,6 +23,7 @@ export default defineConfig({
       },
     }),
     gettingStartedPlugin(),
+    feedbackPlugin(),
   ],
   schema: {
     types: schemaTypes,
