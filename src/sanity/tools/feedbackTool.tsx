@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { definePlugin, type Tool, useClient } from 'sanity'
 import { CommentIcon } from '@sanity/icons'
 import { useCurrentUser } from 'sanity'
@@ -67,23 +67,67 @@ interface TaskState {
   comment: string
 }
 
+const STORAGE_KEY = 'cms-feedback-progress'
+
+interface SavedProgress {
+  taskStates: Record<string, TaskState>
+  overallRating: number
+  whatWorkedWell: string
+  whatWasConfusing: string
+  suggestions: string
+}
+
+function loadProgress(): SavedProgress | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function getInitialTaskStates(): Record<string, TaskState> {
+  const initial: Record<string, TaskState> = {}
+  TASKS.forEach((t) => {
+    initial[t.id] = { completed: false, difficulty: 0, comment: '' }
+  })
+  return initial
+}
+
 function FeedbackComponent() {
   const client = useClient({ apiVersion: '2024-01-01' })
   const currentUser = useCurrentUser()
 
-  const [taskStates, setTaskStates] = useState<Record<string, TaskState>>(() => {
-    const initial: Record<string, TaskState> = {}
-    TASKS.forEach((t) => {
-      initial[t.id] = { completed: false, difficulty: 0, comment: '' }
-    })
-    return initial
-  })
-  const [overallRating, setOverallRating] = useState(0)
-  const [whatWorkedWell, setWhatWorkedWell] = useState('')
-  const [whatWasConfusing, setWhatWasConfusing] = useState('')
-  const [suggestions, setSuggestions] = useState('')
+  const [savedProgress] = useState(loadProgress)
+  const [taskStates, setTaskStates] = useState<Record<string, TaskState>>(
+    savedProgress?.taskStates ?? getInitialTaskStates
+  )
+  const [overallRating, setOverallRating] = useState(savedProgress?.overallRating ?? 0)
+  const [whatWorkedWell, setWhatWorkedWell] = useState(savedProgress?.whatWorkedWell ?? '')
+  const [whatWasConfusing, setWhatWasConfusing] = useState(savedProgress?.whatWasConfusing ?? '')
+  const [suggestions, setSuggestions] = useState(savedProgress?.suggestions ?? '')
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [lastSaved, setLastSaved] = useState<string | null>(null)
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const hasMounted = useRef(false)
+
+  // Auto-save to localStorage on every change (debounced), skip initial mount
+  useEffect(() => {
+    if (!hasMounted.current) {
+      hasMounted.current = true
+      return
+    }
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        const progress: SavedProgress = { taskStates, overallRating, whatWorkedWell, whatWasConfusing, suggestions }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+        setLastSaved(new Date().toLocaleTimeString())
+      } catch { /* ignore storage errors */ }
+    }, 500)
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current) }
+  }, [taskStates, overallRating, whatWorkedWell, whatWasConfusing, suggestions])
 
   const updateTask = useCallback((id: string, field: keyof TaskState, value: boolean | number | string) => {
     setTaskStates((prev) => ({
@@ -111,6 +155,7 @@ function FeedbackComponent() {
         whatWasConfusing: whatWasConfusing || undefined,
         suggestions: suggestions || undefined,
       })
+      localStorage.removeItem(STORAGE_KEY)
       setSubmitted(true)
     } catch (err) {
       console.error('Failed to submit feedback:', err)
@@ -131,18 +176,14 @@ function FeedbackComponent() {
         <button
           type="button"
           onClick={() => {
+            localStorage.removeItem(STORAGE_KEY)
             setSubmitted(false)
-            setTaskStates(() => {
-              const initial: Record<string, TaskState> = {}
-              TASKS.forEach((t) => {
-                initial[t.id] = { completed: false, difficulty: 0, comment: '' }
-              })
-              return initial
-            })
+            setTaskStates(getInitialTaskStates())
             setOverallRating(0)
             setWhatWorkedWell('')
             setWhatWasConfusing('')
             setSuggestions('')
+            setLastSaved(null)
           }}
           style={{
             marginTop: 24,
@@ -166,8 +207,14 @@ function FeedbackComponent() {
       <h1 style={{ fontSize: 32, fontWeight: 700, marginBottom: 8 }}>CMS Feedback</h1>
       <p style={{ fontSize: 16, color: 'var(--card-muted-fg-color)', marginBottom: 12 }}>
         Help us improve the CMS by trying the tasks below and sharing your experience.
-        Your feedback is saved automatically when you submit.
+        Your progress is saved automatically as you go — feel free to come back anytime.
       </p>
+      {lastSaved && (
+        <p style={{ fontSize: 13, color: 'var(--card-muted-fg-color)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#4caf50' }} />
+          Progress saved at {lastSaved}
+        </p>
+      )}
       <div style={{ padding: '12px 16px', background: 'var(--card-badge-default-bg-color, rgba(128,128,128,0.1))', borderLeft: '4px solid #007385', borderRadius: '0 6px 6px 0', fontSize: 14, marginBottom: 40 }}>
         <strong>How this works:</strong> Try each task, check it off, rate how easy it was (1 = very hard, 5 = very easy), and optionally leave a comment. Then fill in the overall feedback at the bottom and click Submit.
       </div>
@@ -384,7 +431,7 @@ function FeedbackComponent() {
       </button>
 
       <p style={{ marginTop: 12, fontSize: 13, color: 'var(--card-muted-fg-color)', textAlign: 'center' }}>
-        Your responses are saved as a document in the CMS and can be reviewed later.
+        Your progress is saved locally as you fill this out. Once submitted, responses are stored as a CMS document.
       </p>
     </div>
   )
