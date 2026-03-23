@@ -109,26 +109,36 @@ const components: PortableTextComponents = {
     ),
     references: ({ value }) => (
       <ArticleReveal intensity="text">
-        <section className="my-12">
-          <h3 className="font-serif text-xl mb-4">References</h3>
-          <ol className="list-decimal list-inside space-y-2">
+        <section className="my-12 border-t border-gray-medium pt-8">
+          <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-gray mb-4">References</h3>
+          <ol className="list-none pl-0 space-y-3 text-sm">
             {value.items?.map(
-              (item: { title: string; link?: string }, i: number) => (
-                <li key={i} className="text-md text-gray">
-                  {item.link ? (
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-primary"
-                    >
-                      {item.title}
-                    </a>
-                  ) : (
-                    item.title
-                  )}
-                </li>
-              )
+              (item: { title: string; link?: string }, i: number) => {
+                // Strip redundant URL from title if it ends with the link
+                let displayTitle = item.title || ''
+                if (item.link && displayTitle.includes(item.link)) {
+                  displayTitle = displayTitle.replace(item.link, '').replace(/:\s*$/, '').trim()
+                }
+                return (
+                  <li key={i} className="text-gray flex gap-2">
+                    <span className="text-gray/50 font-semibold shrink-0">{i + 1}.</span>
+                    <span>
+                      {item.link ? (
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-secondary hover:text-primary underline underline-offset-2"
+                        >
+                          {displayTitle || item.link}
+                        </a>
+                      ) : (
+                        displayTitle
+                      )}
+                    </span>
+                  </li>
+                )
+              }
             )}
           </ol>
         </section>

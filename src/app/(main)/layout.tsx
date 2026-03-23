@@ -2,6 +2,14 @@ import { Header } from '@/components/layout/Header'
 import { TransitionLayout } from '@/components/layout/TransitionLayout'
 import { HeroProvider } from '@/context/HeroContext'
 import { PersistentHero } from '@/components/layout/PersistentHero'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
+import { HubSpotTracking } from '@/components/analytics/HubSpotTracking'
+import { ChatlioWidget } from '@/components/analytics/ChatlioWidget'
+import { WebVitals } from '@/components/analytics/WebVitals'
+import { ScrollDepthTracker } from '@/components/analytics/ScrollDepthTracker'
+import { ExternalLinkTracker } from '@/components/analytics/ExternalLinkTracker'
 
 export default function MainLayout({
   children,
@@ -21,6 +29,14 @@ export default function MainLayout({
       <TransitionLayout>
         <main id="main-content">{children}</main>
       </TransitionLayout>
+      <GoogleAnalytics />
+      <HubSpotTracking />
+      <ChatlioWidget />
+      <Analytics />
+      <SpeedInsights />
+      <WebVitals />
+      <ScrollDepthTracker />
+      <ExternalLinkTracker />
     </HeroProvider>
   )
 }

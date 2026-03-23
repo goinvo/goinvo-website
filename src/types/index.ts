@@ -34,8 +34,6 @@ export interface CaseStudy {
   authors?: TeamMember[]
   time?: string
   content?: PortableTextBlock[]
-  results?: Result[]
-  references?: Reference[]
   upNext?: CaseStudy[]
   hidden?: boolean
   metaDescription?: string

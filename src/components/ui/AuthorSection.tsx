@@ -22,7 +22,7 @@ export function AuthorSection({ authors }: AuthorSectionProps) {
 
   return (
     <section className="my-12">
-      <h2 className="font-serif text-2xl mb-8">Authors</h2>
+      <h2 className="font-serif text-2xl mb-8">{authors.length === 1 ? 'Author' : 'Authors'}</h2>
       {authors.map((author) => {
         const imageUrl = author.image
           ? urlForImage(author.image).width(200).height(300).fit('crop').url()

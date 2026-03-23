@@ -18,7 +18,4 @@ export const sanityFetch: typeof live.sanityFetch = projectId
   ? live.sanityFetch
   : async () => ({ data: [] as never, sourceMap: null, tags: [] })
 
-// SanityLive is NOT exported here — use ThrottledSanityLive instead,
-// which wraps the client component with debounced revalidation to
-// prevent full-page re-renders on every keystroke in the editor.
 export const _SanityLive = live.SanityLive

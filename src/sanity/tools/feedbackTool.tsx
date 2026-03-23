@@ -40,6 +40,11 @@ const TASKS = [
     description: 'Switch to the Presentation tab at the top of the Studio. Navigate to a case study you edited and check that your changes appear.',
   },
   {
+    id: 'add-comment',
+    title: 'Add a comment on a document',
+    description: 'Open any document, select some text or click a field, then use the comment button (💬) in the toolbar to leave a comment for a colleague.',
+  },
+  {
     id: 'team-member',
     title: 'Add or edit a team member',
     description: 'In Structure, click Team Member. Try editing a bio or adding a social link.',

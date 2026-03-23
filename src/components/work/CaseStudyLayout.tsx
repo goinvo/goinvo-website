@@ -1,10 +1,8 @@
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
-import { Results } from '@/components/ui/Results'
-import { References } from '@/components/ui/References'
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { Reveal } from '@/components/ui/Reveal'
 import { CaseStudyCard } from './CaseStudyCard'
-import { cn } from '@/lib/utils'
+import { cn, stripAuthorHeading } from '@/lib/utils'
 import type { CaseStudy } from '@/types'
 
 interface CaseStudyLayoutProps {
@@ -12,12 +10,17 @@ interface CaseStudyLayoutProps {
 }
 
 export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
+  const hasAuthors = caseStudy.authors && caseStudy.authors.length > 0
+  const content = hasAuthors && caseStudy.content
+    ? stripAuthorHeading(caseStudy.content)
+    : caseStudy.content
+
   return (
     <article>
       {/* Content */}
-      {caseStudy.content && (
+      {content && (
         <div className="max-width max-width-md content-padding mx-auto py-12">
-          <PortableTextRenderer content={caseStudy.content} />
+          <PortableTextRenderer content={content} />
         </div>
       )}
 
@@ -26,24 +29,6 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
         <Reveal style="slide-up">
           <div className="max-width max-width-md content-padding mx-auto">
             <AuthorSection authors={caseStudy.authors} />
-          </div>
-        </Reveal>
-      )}
-
-      {/* Results */}
-      {caseStudy.results && caseStudy.results.length > 0 && (
-        <Reveal style="slide-up">
-          <div className="max-width content-padding">
-            <Results items={caseStudy.results} />
-          </div>
-        </Reveal>
-      )}
-
-      {/* References */}
-      {caseStudy.references && caseStudy.references.length > 0 && (
-        <Reveal style="slide-up">
-          <div className="max-width content-padding">
-            <References items={caseStudy.references} />
           </div>
         </Reveal>
       )}

@@ -61,36 +61,6 @@ export default defineType({
       description: 'Full case study body — use headings, images, columns, and quotes',
     }),
     defineField({
-      name: 'results',
-      title: 'Results',
-      type: 'array',
-      description: 'Key outcomes displayed in a stats banner (e.g. "40%" / "reduction in errors")',
-      of: [
-        {
-          type: 'object',
-          fields: [
-            { name: 'stat', title: 'Statistic', type: 'string', description: 'The number or metric (e.g. "40%", "3x")' },
-            { name: 'description', title: 'Description', type: 'string', description: 'What the stat represents' },
-          ],
-        },
-      ],
-    }),
-    defineField({
-      name: 'references',
-      title: 'References',
-      type: 'array',
-      description: 'Sources, articles, or related links shown at the bottom',
-      of: [
-        {
-          type: 'object',
-          fields: [
-            { name: 'title', title: 'Title', type: 'string', description: 'Display text for the link' },
-            { name: 'link', title: 'URL', type: 'url', description: 'Full URL to the reference' },
-          ],
-        },
-      ],
-    }),
-    defineField({
       name: 'upNext',
       title: 'Up Next',
       type: 'array',
