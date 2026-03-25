@@ -57,7 +57,7 @@ export const heroConfigs: Record<string, HeroConfig> = {
       <>
         Our shared purpose:<br />
         better systems +<br />
-        better lives thru design<span className="text-primary font-serif">.</span>
+        better lives thru <span className="whitespace-nowrap">design<span className="text-primary font-serif">.</span></span>
       </>
     ),
   },
