@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useReducedMotion } from '@/lib/motion'
@@ -100,6 +100,15 @@ function TransitionContent({
   const ctx = usePageTransition()
   const prefersReducedMotion = useReducedMotion()
   const isCard = !!ctx?.cardRect
+
+  // Scroll to top on navigation (unless card/morph transitions handle it)
+  const prevPathRef = useRef(pathname)
+  useEffect(() => {
+    if (prevPathRef.current !== pathname && !ctx?.cardRect) {
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    }
+    prevPathRef.current = pathname
+  }, [pathname, ctx?.cardRect])
 
   // Track the page that was visible when the card transition started.
   // Only THAT page should collapse — not the target page, not pages
