@@ -166,11 +166,11 @@ export default function OpenSourceHealthDesignPage() {
         <div className="max-width content-padding">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
             <div>
-              <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary">
                 We envision a world where patients can be cared for with
                 technology that can be trusted
                 <span className="font-serif text-primary">.</span>
-              </h1>
+              </h2>
               <Button href="/contact" variant="primary" size="lg" className="mt-6">
                 Get Involved
               </Button>

@@ -61,9 +61,6 @@ export default async function WorkPage() {
 
   return (
     <div>
-      <div className="sr-only">
-        <h1>Design that Delivers — Healthcare UX Case Studies</h1>
-      </div>
       {/* Case Studies with Filter */}
       <ProjectSearch caseStudies={caseStudies} draftCaseStudies={draftCaseStudies} />
 
