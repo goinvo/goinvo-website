@@ -73,7 +73,7 @@ const upNext = [
 
 function TeamMemberCard({ member }: { member: TeamMember }) {
   const imageUrl = member.image
-    ? urlForImage(member.image).width(400).height(600).fit('crop').url()
+    ? urlForImage(member.image).width(800).height(500).fit('crop').url()
     : null
 
   return (
@@ -84,8 +84,8 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
             <Image
               src={imageUrl}
               alt={member.name}
-              width={400}
-              height={600}
+              width={800}
+              height={500}
               className="w-full h-auto"
             />
           )}
@@ -190,7 +190,7 @@ export default async function AboutPage() {
               </p>
               <Link
                 href="/about/open-office-hours"
-                className="block w-full text-center border border-primary-light text-primary no-underline font-semibold uppercase tracking-wider text-sm py-3 mt-4 hover:bg-primary-lightest transition-colors"
+                className="block w-full text-center border border-primary-light text-primary no-underline font-semibold uppercase tracking-[2px] text-sm py-3 mt-4 hover:bg-primary-lightest transition-colors"
               >
                 Schedule a chat
               </Link>
@@ -212,7 +212,7 @@ export default async function AboutPage() {
               </p>
               <Link
                 href="/about/careers"
-                className="block w-full text-center border border-primary-light text-primary no-underline font-semibold uppercase tracking-wider text-sm py-3 mt-4 hover:bg-primary-lightest transition-colors"
+                className="block w-full text-center border border-primary-light text-primary no-underline font-semibold uppercase tracking-[2px] text-sm py-3 mt-4 hover:bg-primary-lightest transition-colors"
               >
                 Careers
               </Link>
