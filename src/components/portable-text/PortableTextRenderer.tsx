@@ -6,6 +6,7 @@ import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
 import Image from 'next/image'
 import { urlForImage } from '@/sanity/lib/image'
+import { cn } from '@/lib/utils'
 import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 
@@ -91,25 +92,40 @@ const components: PortableTextComponents = {
         <Quote text={value.text} author={value.author} role={value.role} />
       </ArticleReveal>
     ),
-    results: ({ value }) => (
-      <ArticleReveal intensity="visual">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 my-12">
-          {value.items?.map(
-            (item: { stat: string; description: string }, i: number) => (
-              <div key={i} className="text-center">
+    results: ({ value }) => {
+      const items: { stat: string; description: string }[] = value.items || []
+      const count = items.length
+      return (
+        <ArticleReveal intensity="visual">
+          <div
+            className={cn(
+              'grid gap-8 my-12',
+              count === 1
+                ? 'grid-cols-1 max-w-md mx-auto'
+                : count === 2
+                  ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+                  : count === 4
+                    ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto'
+                    : count % 3 === 0
+                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+            )}
+          >
+            {items.map((item, i) => (
+              <div key={i} className={count === 1 ? 'text-left' : 'text-center'}>
                 <div className="font-serif text-3xl text-primary mb-2">
                   {item.stat}
                 </div>
                 <p className="text-gray text-md">{item.description}</p>
               </div>
-            )
-          )}
-        </div>
-      </ArticleReveal>
-    ),
+            ))}
+          </div>
+        </ArticleReveal>
+      )
+    },
     references: ({ value }) => (
       <ArticleReveal intensity="text">
-        <section className="my-12 border-t border-gray-medium pt-8">
+        <section id="references" className="my-12 border-t border-gray-medium pt-8">
           <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-gray mb-4">References</h3>
           <ol className="list-none pl-0 space-y-3 text-sm">
             {value.items?.map(
