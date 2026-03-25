@@ -140,8 +140,9 @@ type HeroAction =
   | { type: 'SLIDE_DONE' }
   | { type: 'SET_CASE_STUDY_HERO'; image: string; bgPosition?: string }
 
-function isCaseStudyRoute(pathname: string): boolean {
-  return pathname.startsWith('/work/') && pathname.length > 6
+function isDynamicHeroRoute(pathname: string): boolean {
+  return (pathname.startsWith('/work/') && pathname.length > 6) ||
+    (pathname.startsWith('/vision/') && pathname.length > 8 && pathname !== '/vision/experiments')
 }
 
 function heroReducer(state: HeroState, action: HeroAction): HeroState {
@@ -150,7 +151,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
       const config = heroConfigs[action.pathname] ?? null
 
       // Case study route — /work/[slug]
-      if (!config && isCaseStudyRoute(action.pathname)) {
+      if (!config && isDynamicHeroRoute(action.pathname)) {
         if (state.caseStudyHero) {
           // Card-click flow: hero image was pre-set before navigation
           const csConfig: HeroConfig = {
@@ -208,7 +209,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
       const bgPosition = action.bgPosition ?? 'center top'
 
       // Direct access: already on a case study route but hero is hidden
-      if (state.phase === 'hidden' && isCaseStudyRoute(state.pathname)) {
+      if (state.phase === 'hidden' && isDynamicHeroRoute(state.pathname)) {
         const csConfig: HeroConfig = {
           image,
           bgPosition,

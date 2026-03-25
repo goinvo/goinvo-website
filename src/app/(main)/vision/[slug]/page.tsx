@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
@@ -7,6 +6,8 @@ import { featureBySlugQuery, allFeaturesQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
 import { AuthorSection } from '@/components/ui/AuthorSection'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { Reveal } from '@/components/ui/Reveal'
 import { stripAuthorHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
 
@@ -66,33 +67,38 @@ export default async function VisionFeaturePage({ params }: Props) {
     : null
 
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        {heroImageUrl && (
-          <Image
-            src={heroImageUrl}
-            alt={feature.title}
-            fill
-            className="object-cover"
-            priority
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          {feature.categories && feature.categories.length > 0 && (
-            <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-              {feature.categories.join(' / ')}
-            </span>
-          )}
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
+    <div>
+      {heroImageUrl && <SetCaseStudyHero image={heroImageUrl} />}
+
+      <Reveal style="slide-up" duration={0.5}>
+        <div className="max-width max-width-md content-padding mx-auto">
+          <h1
+            className="font-serif text-3xl md:text-4xl mt-8 mb-2"
+            style={{ viewTransitionName: 'page-title' }}
+          >
             {feature.title}
           </h1>
-          {feature.date && (
-            <span className="text-white/70 text-sm">{feature.date}</span>
+          {(feature.categories?.length || feature.date) && (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
+              {feature.categories && feature.categories.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {feature.categories.map((cat) => (
+                    <span
+                      key={cat}
+                      className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1"
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {feature.date && (
+                <span className="text-gray text-sm">{feature.date}</span>
+              )}
+            </div>
           )}
         </div>
-      </section>
+      </Reveal>
 
       {/* Content */}
       {feature.content && (
