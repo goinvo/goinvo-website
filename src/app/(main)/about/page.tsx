@@ -151,7 +151,7 @@ export default async function AboutPage() {
               software through strategy, creativity, and vision.
             </h2>
             <p className="text-gray lg:pl-4">
-              With backgrounds in engineering, illustration, design, and software development, we share a foundational technical and creative expertise in the shared pursuit of impact for good.
+              With backgrounds in engineering, illustration, design, and software development, we share a foundational technical and creative expertise in the shared pursuit of{' '}<span className="whitespace-nowrap">impact for good.</span>
             </p>
           </div>
         </div>
