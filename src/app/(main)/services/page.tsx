@@ -51,7 +51,7 @@ const services = [
   {
     title: 'Design for Enterprise',
     description:
-      'We redesign the internal tools and systems that power big organizations. We work with large teams to improve platforms, simplify workflows, and align business and user goals. Better tools, faster.',
+      'We streamline internal tools and systems that power big organizations for better alignment, efficiency, and insight. We work with large teams to improve internal platforms, streamline complex workflows, and align business and user goals — delivering better tools quickly and collaboratively to reduce friction and boost efficiency.',
     methods: [
       'Internal platforms & dashboards',
       'Enterprise UX audits & redesigns',
@@ -68,7 +68,7 @@ const services = [
   {
     title: 'Design for AI',
     description:
-      'We design AI-powered tools that people actually trust and use. Our focus: making intelligent systems clear, explainable, and useful. Not just technically impressive.',
+      'We design AI-powered tools that connect humans and machines, ensuring they work together seamlessly. We create human-centered interactions that make intelligent tools clear, explainable, and usable, aligned with human needs from day one.',
     methods: [
       'UX for ML-powered products',
       'Human-AI interaction design',
@@ -124,7 +124,7 @@ const whatWeDo = [
   {
     title: 'Deliver & ship',
     description:
-      'Our team <strong>embeds with yours to ship better tools, improve performance, and keep strategy on track</strong>. Through launch and beyond.',
+      'Our dedicated team will <strong>integrate seamlessly with yours to ship better tools, improve performance, and keep strategy evolving</strong> — from concept to launch to impact.',
     links: [
       { href: '/work/all-of-us', title: 'All of Us Research Program' },
       { href: '/work/3m-coderyte', title: '3M Coderyte' },
@@ -134,7 +134,22 @@ const whatWeDo = [
 
 export default function ServicesPage() {
   return (
-    <div>
+    <div className="pt-[var(--spacing-header-height)]">
+      {/* Hero */}
+      <section
+        className="relative min-h-[70vh] flex items-center bg-cover bg-center-top"
+        style={{ backgroundImage: `url(${cloudfrontImage('/images/services/hand-drawing.jpg')})` }}
+      >
+        <div className="absolute inset-0 bg-black/50" />
+        <div className="relative z-10 max-width content-padding py-16">
+          <h1 className="font-serif text-3xl md:text-4xl text-white mb-4">
+            Disrupt from within,<br />
+            Reinvent your product,<br />
+            Change the market<span className="text-primary font-serif">.</span>
+          </h1>
+        </div>
+      </section>
+
       {/* Main content wrapper — matches Gatsby single max-width block */}
       <div className="max-width content-padding lg:py-8">
 
@@ -196,6 +211,25 @@ export default function ServicesPage() {
           <Divider />
         </div>
 
+        {/* Certifications */}
+        <div className="py-8">
+          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-2">
+            Our certifications and contracts
+          </h3>
+          <p className="text-gray text-md">
+            Our contracts prequalify us for IT professional services as a
+            trusted vendor for state and federal agencies.
+          </p>
+          <ul className="ul text-gray mb-8">
+            <li>State of MA: <strong>ITS81</strong></li>
+            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
+          </ul>
+          <p className="text-gray text-md">
+            <Link href="/government">Learn more about our government work</Link>.
+          </p>
+          <Divider />
+        </div>
+
         {/* Service Categories */}
         <div>
           {services.map((service) => (
@@ -235,26 +269,6 @@ export default function ServicesPage() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Certifications */}
-        <div className="py-8">
-          <Divider />
-          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-2">
-            Our certifications and contracts
-          </h3>
-          <p className="text-gray text-md">
-            Our contracts prequalify us for IT professional services as a
-            trusted vendor for state and federal agencies.
-          </p>
-          <ul className="ul text-gray mb-8">
-            <li>State of MA: <strong>ITS81</strong></li>
-            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
-          </ul>
-          <p className="text-gray text-md">
-            <Link href="/government">Learn more about our government work</Link>.
-          </p>
-          <Divider />
         </div>
       </div>
 

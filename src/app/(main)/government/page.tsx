@@ -16,14 +16,17 @@ const reasons = [
   {
     title: 'Long Term Mission Support',
     description: 'We support your long term mission and objectives with digital tools that are scalable and increase accessibility.',
+    image: '/images/open_source/innovation.png',
   },
   {
     title: 'Transformative Change for the Public Good',
     description: 'We design seamless, human-centered experiences that transform complex needs into seamless and equitable services, reducing burden and building trust.',
+    image: '/images/open_source/public-good.png',
   },
   {
     title: 'Rapid Iteration and Testing',
     description: "Validated design, research, and rapid prototyping to showcase your agency's vision, build support, and prove value before investing time and budget.",
+    image: '/images/open_source/trust.png',
   },
 ]
 
@@ -81,6 +84,13 @@ export default function GovernmentPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             {reasons.map((reason) => (
               <div key={reason.title}>
+                <Image
+                  src={cloudfrontImage(reason.image)}
+                  alt={reason.title}
+                  width={200}
+                  height={200}
+                  className="mx-auto mb-4 max-w-[80%]"
+                />
                 <h4 className="font-semibold mb-2">{reason.title}</h4>
                 <p className="text-gray text-md">{reason.description}</p>
               </div>
@@ -103,12 +113,12 @@ export default function GovernmentPage() {
           <p className="font-semibold mb-4">
             Trusted by ambitious state agencies and for-public partners
           </p>
-          <ClientLogos />
+          <ClientLogos variant="government" />
           <p className="text-gray text-md mt-4">
             Our <strong>ITS81</strong> and <strong>GSA 47QTCA26D001W</strong> contracts
             prequalify us for IT professional services&mdash;streamlining government
             procurement and validating our expertise as a trusted vendor for both
-            Massachusetts state agencies and federal programs.
+            Massachusetts state and federal agencies.
           </p>
         </div>
       </section>
@@ -197,24 +207,6 @@ export default function GovernmentPage() {
         </div>
       </section>
 
-      {/* Contracts and Certifications */}
-      <section className="py-16">
-        <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-4">
-            Contracts and Certifications
-          </h2>
-          <p className="text-gray mb-4">
-            Our contracts prequalify us for IT professional services&mdash;streamlining
-            government procurement and validating our expertise as a trusted vendor for
-            both Massachusetts state agencies and federal programs.
-          </p>
-          <ul className="list-disc list-inside text-gray space-y-2">
-            <li>State of MA: <strong>ITS81</strong></li>
-            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
-          </ul>
-        </div>
-      </section>
-
       {/* CTA + Contact */}
       <section className="bg-blue-light py-16">
         <div className="max-width-md content-padding mx-auto text-center">
@@ -224,6 +216,19 @@ export default function GovernmentPage() {
           </h2>
           <p className="text-gray mb-8">Reach out to learn how GoInvo can help.</p>
           <ContactFormEmbed />
+        </div>
+      </section>
+
+      {/* Contracts and Certifications */}
+      <section className="py-16">
+        <div className="max-width content-padding">
+          <h2 className="font-serif text-2xl mb-4">
+            Contracts and Certifications
+          </h2>
+          <ul className="list-disc list-inside text-gray space-y-2">
+            <li>State of MA: <strong>ITS81</strong></li>
+            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
+          </ul>
         </div>
       </section>
     </div>

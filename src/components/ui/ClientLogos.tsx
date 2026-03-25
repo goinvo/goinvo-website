@@ -8,6 +8,14 @@ interface Logo {
   hiddenOnMobile?: boolean
 }
 
+const governmentLogos: Logo[] = [
+  { name: 'NIH', file: 'logo-nih-2.svg' },
+  { name: 'Commonwealth of Massachusetts', file: 'logo-mass.svg' },
+  { name: 'DTA Connect', file: 'logo-dtaconnect.svg' },
+  { name: 'CMS', file: 'logo-cms.svg' },
+  { name: 'MITRE', file: 'logo-mitre.svg' },
+]
+
 const homepageLogos: Logo[] = [
   { name: '3M', file: 'logo-3m.svg' },
   { name: 'Partners Healthcare', file: 'logo-partners.svg' },
@@ -28,12 +36,14 @@ const homepageLogos: Logo[] = [
 
 interface ClientLogosProps {
   className?: string
+  variant?: 'default' | 'government'
 }
 
-export function ClientLogos({ className }: ClientLogosProps) {
+export function ClientLogos({ className, variant = 'default' }: ClientLogosProps) {
+  const logos = variant === 'government' ? governmentLogos : homepageLogos
   return (
     <ul className={cn('list-none m-0 p-0 flex flex-wrap', className)}>
-      {homepageLogos.map((logo) => (
+      {logos.map((logo) => (
         <li
           key={logo.name}
           className={cn(
