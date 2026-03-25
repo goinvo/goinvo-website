@@ -134,22 +134,7 @@ const whatWeDo = [
 
 export default function ServicesPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section
-        className="relative min-h-[70vh] flex items-center bg-cover bg-center-top"
-        style={{ backgroundImage: `url(${cloudfrontImage('/images/services/hand-drawing.jpg')})` }}
-      >
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative z-10 max-width content-padding py-16">
-          <h1 className="font-serif text-3xl md:text-4xl text-white mb-4">
-            Disrupt from within,<br />
-            Reinvent your product,<br />
-            Change the market<span className="text-primary font-serif">.</span>
-          </h1>
-        </div>
-      </section>
-
+    <div>
       {/* Main content wrapper — matches Gatsby single max-width block */}
       <div className="max-width content-padding lg:py-8">
 

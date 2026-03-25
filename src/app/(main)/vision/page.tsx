@@ -148,8 +148,7 @@ export default async function VisionPage() {
 
       {/* Spotlight */}
       <div className="max-width content-padding py-8 lg:py-16">
-        <h1 className="sr-only">Our Vision on the Future of Health</h1>
-        <h2 className="font-serif text-xl mb-8">Spotlight</h2>
+        <h3 className="font-serif text-xl mb-8">Spotlight</h3>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
           {/* Spotlight feature (2/3) */}
           <a
