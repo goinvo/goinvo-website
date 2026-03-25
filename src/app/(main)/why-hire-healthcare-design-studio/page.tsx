@@ -87,9 +87,9 @@ export default function WhyHirePage() {
             and within budget.
           </p>
 
-          <h1 className="font-serif text-3xl md:text-4xl mt-16 mb-6">
+          <h2 className="font-serif text-3xl md:text-4xl mt-16 mb-6">
             Why hire a design firm focused on digital health?
-          </h1>
+          </h2>
 
           <h2 className="font-serif text-2xl mb-4">
             Deep design experience across the digital health continuum
