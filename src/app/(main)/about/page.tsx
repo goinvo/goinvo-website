@@ -146,10 +146,10 @@ export default async function AboutPage() {
       <Reveal style="slide-up">
         <div className="max-width content-padding py-8 lg:py-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light lg:pr-4">
+            <h1 className="font-serif text-[1.5rem] leading-[2.125rem] font-light lg:pr-4">
               GoInvo is a digital design studio in Boston, crafting the future of
               software through strategy, creativity, and vision.
-            </h2>
+            </h1>
             <p className="text-gray lg:pl-4">
               With backgrounds in engineering, illustration, design, and software development, we share a foundational technical and creative expertise in the shared pursuit of impact for good.
             </p>

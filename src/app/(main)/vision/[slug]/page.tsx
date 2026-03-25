@@ -38,9 +38,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Vision Project Not Found' }
   }
 
+  const ogImage = feature.image
+    ? urlForImage(feature.image).width(1200).height(630).url()
+    : undefined
+
   return {
     title: feature.title,
     description: feature.metaDescription || feature.description,
+    openGraph: ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : undefined,
+    twitter: ogImage ? { images: [ogImage] } : undefined,
   }
 }
 
