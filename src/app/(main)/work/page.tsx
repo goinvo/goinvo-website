@@ -61,6 +61,9 @@ export default async function WorkPage() {
 
   return (
     <div>
+      <div className="sr-only">
+        <h1>Design that Delivers — Healthcare UX Case Studies</h1>
+      </div>
       {/* Case Studies with Filter */}
       <ProjectSearch caseStudies={caseStudies} draftCaseStudies={draftCaseStudies} />
 
@@ -87,7 +90,7 @@ export default async function WorkPage() {
             <div className="relative lg:w-1/2 h-[300px] lg:h-auto lg:absolute lg:top-0 lg:bottom-0 lg:right-0 lg:left-1/2 -mx-4 lg:mx-0">
               <Image
                 src={cloudfrontImage('/images/work/eric-comp.jpg')}
-                alt=""
+                alt="GoInvo team collaborating on healthcare design"
                 fill
                 className="object-cover"
               />

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
 import { caseStudyBySlugQuery, allCaseStudiesQuery } from '@/sanity/lib/queries'
+import { urlForImage } from '@/sanity/lib/image'
 import { CaseStudyContent } from '@/components/work/CaseStudyContent'
 import type { CaseStudy } from '@/types'
 
@@ -29,9 +30,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Case Study Not Found' }
   }
 
+  const ogImage = caseStudy.image
+    ? urlForImage(caseStudy.image).width(1200).height(630).url()
+    : undefined
+
   return {
     title: caseStudy.title,
     description: caseStudy.metaDescription || caseStudy.caption || undefined,
+    openGraph: ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : undefined,
+    twitter: ogImage ? { images: [ogImage] } : undefined,
   }
 }
 
