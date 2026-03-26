@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
+import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { PregnancyCarousel } from './PregnancyCarousel'
@@ -166,7 +167,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
 
           <h2 className="font-serif text-2xl mt-8 mb-4">Process Maps</h2>
 
-          <h3 className="font-serif text-xl mt-6 mb-4">Pregnancy Process</h3>
+          <h3 className="header-md mt-6 mb-4">Pregnancy Process</h3>
           <Image
             src={cloudfrontImage(
               '/images/features/augmented-clinical-decision-support/augmented-cds-process-map-pregnancy.jpg'
@@ -235,11 +236,25 @@ export default function AugmentedClinicalDecisionSupportPage() {
           <Author name="Mollie Williams" company="Harvard Medical School" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">
             Massachusetts General Hospital Family Van, John Brownstein and Sarah
             Scalia (Boston Children&apos;s Hospital), Eric Benoit (GoInvo)
           </p>
+
+          <Divider />
+
+          <h2 className="font-serif text-2xl mt-8 mb-4">
+            Let&apos;s build the future of healthcare together!
+          </h2>
+          <p className="text-gray mb-4">
+            Interested in working with us on augmented clinical decision
+            support?{' '}
+            <a href="mailto:hello@goinvo.com">Reach out to us</a> to learn
+            more.
+          </p>
+
+          <AboutGoInvo />
         </div>
       </section>
 

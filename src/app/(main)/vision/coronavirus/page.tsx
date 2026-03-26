@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { CovidChart } from './CovidChart'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { References } from '@/components/ui/References'
+import refs from '@/data/vision/coronavirus/references.json'
 
 export const metadata: Metadata = {
   title: 'Understanding the Novel Coronavirus (COVID-19)',
@@ -712,7 +714,7 @@ export default function CoronavirusPage() {
             these masks to prevent the spread of germs.
           </p>
 
-          <h3 className="font-serif text-xl mt-6 mb-4">
+          <h3 className="header-md mt-6 mb-4">
             Making your own mask to wear in public
           </h3>
           <p className="leading-relaxed mb-4">
@@ -899,7 +901,7 @@ export default function CoronavirusPage() {
             className="w-full h-auto mb-4 md:hidden"
           />
 
-          <h3 className="font-serif text-xl mt-6 mb-4">Local Ground Team</h3>
+          <h3 className="header-md mt-6 mb-4">Local Ground Team</h3>
           <Image
             src={cloudfrontImage(
               '/images/features/coronavirus/local-ground-team-2.jpg'
@@ -992,12 +994,12 @@ export default function CoronavirusPage() {
           <Author name="Parsuree Vatanasirisuk" company="GoInvo" />
           <Author name="Craig McGinley" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">
             Jen Patel, Meghana Karande, Juhan Sonin
           </p>
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Special Thanks</h3>
+          <h3 className="header-md mt-6 mb-3">Special Thanks</h3>
           <p className="text-gray text-sm">
             Jan Benway, Grace Cordovano, Dorian Freeman, Eric Moreno, Joey
             Nichols MD, Martin Pitt, Corinne Pritchard, James Rini MD,
@@ -1025,6 +1027,13 @@ export default function CoronavirusPage() {
             </a>
             .
           </p>
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <References items={refs} />
         </div>
       </section>
 

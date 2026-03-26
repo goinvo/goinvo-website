@@ -666,7 +666,7 @@ export default function HealthcareAIPage() {
           <Author name="Sharon Lee" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">
             Eric Benoit
             <br />

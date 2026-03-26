@@ -6,6 +6,8 @@ import { Author } from '@/components/ui/Author'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { PscaAlgorithms } from './PscaAlgorithms'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { References } from '@/components/ui/References'
+import refs from '@/data/vision/primary-self-care-algorithms/references.json'
 
 export const metadata: Metadata = {
   title: 'Primary Self Care Algorithms',
@@ -270,10 +272,17 @@ export default function PrimarySelfCareAlgorithmsPage() {
           <Author name="Chloe Ma" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">
             Samantha Wuu, Huahua Zhu, Eric Benoit, Craig McGinley
           </p>
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <References items={refs} />
         </div>
       </section>
 

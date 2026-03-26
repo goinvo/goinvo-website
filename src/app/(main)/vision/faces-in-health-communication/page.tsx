@@ -6,6 +6,8 @@ import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { References } from '@/components/ui/References'
+import refs from '@/data/vision/faces-in-health-communication/references.json'
 
 export const metadata: Metadata = {
   title: 'Faces in Health Communication',
@@ -638,11 +640,18 @@ export default function FacesInHealthCommunicationPage() {
           <Author name="Vickie Hua" company="GoInvo" />
           <Author name="Sharon Lee" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">
             Jen Patel, Colleen Tang Poy, Jon Follett, Craig McGinley, Eric
             Benoit, Juhan Sonin
           </p>
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <References items={refs} />
         </div>
       </section>
 
