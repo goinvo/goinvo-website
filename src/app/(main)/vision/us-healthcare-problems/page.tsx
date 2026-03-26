@@ -6,6 +6,8 @@ import problems from '@/data/vision/problems.json'
 import { cloudfrontImage } from '@/lib/utils'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { References } from '@/components/ui/References'
+import refs from '@/data/vision/us-healthcare-problems/references.json'
 
 export const metadata: Metadata = {
   title: 'US Healthcare Problems',
@@ -88,6 +90,13 @@ export default function USHealthcareProblemsPage() {
               new problems, and revised rankings.
             </p>
           </section>
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <References items={refs} />
         </div>
       </section>
 
