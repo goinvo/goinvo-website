@@ -59,7 +59,7 @@ export default function HistoryOfHealthDesignPage() {
               href="https://docs.google.com/spreadsheets/d/1qa0ZwX09I8ON2YuHXaigZ8M7p_wnImQALPFyd8fVN98/edit#gid=301364053"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider"
+              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
             >
               Timeline Events and References
             </a>

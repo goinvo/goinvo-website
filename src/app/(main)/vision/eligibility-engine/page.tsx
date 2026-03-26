@@ -151,7 +151,7 @@ export default function EligibilityEnginePage() {
                 href="https://docs.google.com/spreadsheets/d/1SRI5Tz5pJLIEr_ibwOj32J4cwN0Ry1cgbXNAXfiBWfk/edit?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-block px-6 py-3 border border-secondary text-secondary rounded hover:bg-secondary hover:text-white transition-colors"
+                className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
               >
                 View Common data for MA services
               </a>
