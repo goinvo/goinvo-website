@@ -31,9 +31,7 @@ export default function NationalCancerNavigationPage() {
             <a
               href="https://bidenwhitehouse.archives.gov/briefing-room/statements-releases/2023/02/02/fact-sheet-on-one-year-anniversary-of-reignited-cancer-moonshot-biden-harris-administration-announces-new-actions-to-end-cancer-as-we-know-it/"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               announced (archived link)
             </a>{' '}
             a handful of new actions relating to the Cancer Moonshot goals
@@ -57,9 +55,7 @@ export default function NationalCancerNavigationPage() {
             <a
               href="https://nationalcancerplan.cancer.gov/national-cancer-plan.pdf"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               National Cancer Plan
             </a>
             . Although their efforts and strategies are primarily focused on
@@ -77,7 +73,7 @@ export default function NationalCancerNavigationPage() {
             what our team has learned so far and is not a comprehensive
             representation of all aspects of the cancer experience. Feedback
             and suggestions are welcome at{' '}
-            <a href="mailto:CancerNavigator@goinvo.com" className="text-link">
+            <a href="mailto:CancerNavigator@goinvo.com" className="">
               CancerNavigator@goinvo.com
             </a>
             .
@@ -233,9 +229,7 @@ export default function NationalCancerNavigationPage() {
             <a
               href="https://www.goinvo.com/pdf/vision/national-cancer-navigation/cancer_nav_process_highlevel_v1.pdf"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               Cancer Navigation Process High Level V1 pdf
             </a>
           </div>
@@ -259,9 +253,7 @@ export default function NationalCancerNavigationPage() {
             <a
               href="https://www.goinvo.com/pdf/vision/national-cancer-navigation/cancer_nav_process_breakdown_v1.pdf"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               Cancer Navigation Process Breakdown V1 pdf
             </a>
           </div>
@@ -270,15 +262,13 @@ export default function NationalCancerNavigationPage() {
             <a
               href="https://github.com/goinvo/cancernavigator"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               Github Repo
             </a>
           </p>
           <p className="leading-relaxed mb-4">
             Have feedback? Send it to{' '}
-            <a href="mailto:CancerNavigator@goinvo.com" className="text-link">
+            <a href="mailto:CancerNavigator@goinvo.com" className="">
               CancerNavigator@goinvo.com
             </a>
           </p>
@@ -298,27 +288,21 @@ export default function NationalCancerNavigationPage() {
             <a
               href="https://www.linkedin.com/in/gcordovano/"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               Grace Cordovano, PhD
             </a>
             <br />
             <a
               href="https://www.linkedin.com/in/wendi-cross-98153519/"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               Wendi Cross, PhD
             </a>
             <br />
             <a
               href="https://www.linkedin.com/in/daniel-ngo-41953232/"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-link"
-            >
+              rel="noopener noreferrer"            >
               Daniel Ngo
             </a>
           </p>
@@ -333,7 +317,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://link.springer.com/article/10.1186/1472-6963-10-132"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Walsh, Jennifer, et al. &ldquo;What Are the Current Barriers to Effective Cancer Care Coordination? A Qualitative Study.&rdquo; BMC Health Services Research, vol. 10, no. 1, 20 May 2010
               </a>
@@ -343,7 +327,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://pubmed.ncbi.nlm.nih.gov/36622062/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Delamare Fauvel, Alix, et al. &ldquo;Diagnosis of Cancer in the Emergency Department: A Scoping Review.&rdquo; Cancer Medicine, vol. 12, no. 7, 9 Jan. 2023. Accessed 16 Apr. 2023
               </a>
@@ -353,7 +337,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://epi.grants.cancer.gov/emergency-medicine/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 &ldquo;Cancer and Emergency Medicine | EGRP/DCCPS/NCI/NIH.&rdquo; Accessed 31 May 2023
               </a>
@@ -363,7 +347,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.kff.org/racial-equity-and-health-policy/issue-brief/racial-disparities-in-cancer-outcomes-screening-and-treatment/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Tong, Michelle, and 2022. &ldquo;Racial Disparities in Cancer Outcomes, Screening, and Treatment.&rdquo; KFF, 3 Feb. 2022
               </a>
@@ -373,7 +357,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.1093/annonc/mdx265"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Zhu, J., et al. &ldquo;First-Onset Mental Disorders after Cancer Diagnosis and Cancer-Specific Mortality: A Nationwide Cohort Study.&rdquo; Annals of Oncology, vol. 28, no. 8, 19 May 2017, pp. 1964-1969
               </a>
@@ -383,7 +367,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.3322/caac.21443"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Carrera, Pricivel M., et al. &ldquo;The Financial Burden and Distress of Patients with Cancer: Understanding and Stepping-up Action on the Financial Toxicity of Cancer Treatment.&rdquo; CA: A Cancer Journal for Clinicians, vol. 68, no. 2, 16 Jan. 2018, pp. 153-165
               </a>
@@ -393,7 +377,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.ncbi.nlm.nih.gov/pubmed/14751707"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Fallowfield, Lesley, and Valerie Jenkins. &ldquo;Communicating Sad, Bad, and Difficult News in Medicine.&rdquo; Lancet (London, England), vol. 363, no. 9405, 2004, pp. 312-9
               </a>
@@ -403,7 +387,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://pubmed.ncbi.nlm.nih.gov/19646649/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Nazemi, Kellie J., and Suman Malempati. &ldquo;Emergency Department Presentation of Childhood Cancer.&rdquo; Emergency Medicine Clinics of North America, vol. 27, no. 3, 1 Aug. 2009, pp. 477-495. Accessed 31 May 2023
               </a>
@@ -413,7 +397,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.1016/s0027-9684(15)30409-0"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Hendren, Samantha, et al. &ldquo;Patients&apos; Barriers to Receipt of Cancer Care, and Factors Associated with Needing More Assistance from a Patient Navigator.&rdquo; Journal of the National Medical Association, vol. 103, no. 8, July 2011, pp. 701-710
               </a>
@@ -423,7 +407,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://gis.cancer.gov/mapstory/rural-urban/index.html"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 &ldquo;Rural Urban Disparities in Cancer.&rdquo; Gis.cancer.gov
               </a>
@@ -433,7 +417,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.1002/cncr.23229"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Onega, Tracy, et al. &ldquo;Geographic Access to Cancer Care in the U.S.&rdquo; Cancer, vol. 112, no. 4, 2008, pp. 909-918
               </a>
@@ -443,7 +427,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.3322/ca.2007.0011"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Ward, E., et al. &ldquo;Association of Insurance with Cancer Care Utilization and Outcomes.&rdquo; CA: A Cancer Journal for Clinicians, vol. 58, no. 1, 1 Jan. 2008, pp. 9-31
               </a>
@@ -453,7 +437,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.ncbi.nlm.nih.gov/books/NBK542737/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Marlow, Nicole M., et al. The Relationship between Insurance Coverage and Cancer Care: A Literature Synthesis. PubMed, Research Triangle Park (NC), RTI Press, 2009
               </a>
@@ -463,7 +447,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3833882/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Meijer, Anna, et al. &ldquo;Effects of Screening for Psychological Distress on Patient Outcomes in Cancer: A Systematic Review.&rdquo; Journal of Psychosomatic Research, vol. 75, no. 1, July 2013, pp. 1-17
               </a>
@@ -473,7 +457,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.mdedge.com/hematology-oncology/article/257891/breast-cancer/time-cancer-diagnoses-us-averages-5-months"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Kling, Jim. &ldquo;Time to Cancer Diagnoses in U.S. Averages 5 Months.&rdquo; www.mdedge.com, 15 Sept. 2022. Accessed 31 May 2023
               </a>
@@ -483,7 +467,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0219971"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Handtke, Oriana, et al. &ldquo;Culturally Competent Healthcare - a Scoping Review of Strategies Implemented in Healthcare Organizations and a Model of Culturally Competent Healthcare Provision.&rdquo; PLOS ONE, vol. 14, no. 7, 30 July 2019, pp. 1-24
               </a>
@@ -493,7 +477,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.3322/caac.21249"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Nekhlyudov, Larissa, et al. &ldquo;Patient-Centered, Evidence-Based, and Cost-Conscious Cancer Care across the Continuum: Translating the Institute of Medicine Report into Clinical Practice.&rdquo; CA: A Cancer Journal for Clinicians, vol. 64, no. 6, 9 Sept. 2014, pp. 408-421
               </a>
@@ -503,7 +487,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC539473/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Kessels, Roy P C. &ldquo;Patients&apos; Memory for Medical Information.&rdquo; Journal of the Royal Society of Medicine, vol. 96, no. 5, May 2003, pp. 219-22
               </a>
@@ -513,7 +497,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://pubmed.ncbi.nlm.nih.gov/32023121/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Rosenkrantz, Andrew B., et al. &ldquo;Perceptions of Radiologists and Emergency Medicine Providers Regarding the Quality, Value, and Challenges of Outside Image Sharing in the Emergency Department Setting.&rdquo; AJR. American Journal of Roentgenology, vol. 214, no. 4, 1 Apr. 2020, pp. 843-852. Accessed 28 June 2021
               </a>
@@ -523,7 +507,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.1377/hlthaff.28.1.160"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Virnig, Beth A., et al. &ldquo;A Matter of Race: Early-versus Late-Stage Cancer Diagnosis.&rdquo; Health Affairs, vol. 28, no. 1, Jan. 2009, pp. 160-168
               </a>
@@ -533,7 +517,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.fightcancer.org/releases/survey-majority-cancer-patients-struggle-afford-cancer-care"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 &ldquo;Survey: Majority of Cancer Patients Struggle to Afford Cancer Care.&rdquo; American Cancer Society Cancer Action Network, 15 Dec. 2021
               </a>
@@ -543,7 +527,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://www.jons-online.com/issues/2022/may-2022-vol-13-no-5/4518-availability-and-accessibility-of-cancer-care-delivery-approaches-to-reduce-financial-toxicity-of-rural-and-urban-cancer-patients-in-kentucky"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Robin Vanderpool, DrPH. &ldquo;Availability and Accessibility of Cancer Care Delivery Approaches to Reduce Financial Toxicity of Rural and Urban Cancer Patients in Kentucky.&rdquo; Www.jons-Online.com, vol. 13, no. 5, 1 June 2022. Accessed 31 May 2023
               </a>
@@ -553,7 +537,7 @@ export default function NationalCancerNavigationPage() {
                 href="https://doi.org/10.1200/op.21.00001"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-link"
+                className=""
               >
                 Awidi, Muhammad, and Samer Al Hadidi. &ldquo;Participation of Black Americans in Cancer Clinical Trials: Current Challenges and Proposed Solutions.&rdquo; JCO Oncology Practice, vol. 17, no. 5, May 2021, pp. 265-271
               </a>

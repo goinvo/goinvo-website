@@ -83,7 +83,6 @@ export default function HealthcareAIPage() {
             can be trained on data sets like{' '}
             <a
               href="https://www.tensorflow.org/text/tutorials/text_generation"
-              className="text-link"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -94,7 +93,6 @@ export default function HealthcareAIPage() {
             November 2022, ChatGPT gained more than{' '}
             <a
               href="https://www.demandsage.com/chatgpt-statistics/"
-              className="text-link"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -604,8 +602,7 @@ export default function HealthcareAIPage() {
               questions&quot; can still be achieved by phrasing as a{' '}
               <a
                 href="https://twitter.com/zswitten/status/1598197802676682752"
-                className="text-link"
-                target="_blank"
+                  target="_blank"
                 rel="noopener noreferrer"
               >
                 print function question
@@ -636,8 +633,7 @@ export default function HealthcareAIPage() {
               style and even their signature show up in Stable Diffusion (
               <a
                 href="https://www.cbc.ca/radio/asithappens/artificial-intelligence-ai-art-ethics-greg-rutkowski-1.6679466"
-                className="text-link"
-                target="_blank"
+                  target="_blank"
                 rel="noopener noreferrer"
               >
                 article
