@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
+import { Button } from '@/components/ui/Button'
 import { Video } from '@/components/ui/Video'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
@@ -31,7 +32,7 @@ export default function PrecisionAutismPage() {
               href="https://www.handsfilm.org/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider text-center"
+              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
             >
               Check out the Documentary
             </a>
@@ -56,7 +57,7 @@ export default function PrecisionAutismPage() {
               href="https://github.com/openAutism/openautism.github.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider text-center"
+              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
             >
               Github
             </a>
@@ -64,7 +65,7 @@ export default function PrecisionAutismPage() {
               href="https://openautism.github.io/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider text-center"
+              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
             >
               Concepts and Sketches
             </a>
@@ -91,7 +92,7 @@ export default function PrecisionAutismPage() {
               href="https://www.goinvo.com/pdf/vision/precision-autism/Precision-Autism-25.Aug.2020.pdf"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider"
+              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
             >
               Download Poster
             </a>
@@ -116,7 +117,7 @@ export default function PrecisionAutismPage() {
               href="https://docs.google.com/spreadsheets/d/1UaJB6GqmCOJ9mAaNzEark9Of4AIb7wTx346E7gNlhGE/edit?ts=5c6f2046"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-secondary text-secondary hover:bg-secondary hover:text-white transition-colors uppercase text-sm tracking-wider"
+              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
             >
               Timeline Events and References
             </a>
@@ -143,7 +144,7 @@ export default function PrecisionAutismPage() {
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card px-10 py-4">
+          <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
         </div>
