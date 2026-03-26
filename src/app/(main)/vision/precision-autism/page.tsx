@@ -131,7 +131,7 @@ export default function PrecisionAutismPage() {
           <Author name="Sharon Lee" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-8 mb-3">Special thanks to...</h3>
+          <h3 className="header-md mt-8 mb-3">Special thanks to...</h3>
           <ul className="list-disc list-outside pl-6 space-y-1 mb-8">
             <li>Elizabeth Horn</li>
             <li>Clare Southern</li>

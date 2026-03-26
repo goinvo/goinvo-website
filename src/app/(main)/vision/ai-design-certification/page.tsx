@@ -77,28 +77,28 @@ export default function AIDesignCertificationPage() {
       <SetCaseStudyHero image={cloudfrontImage('/images/features/ai-design-certification/ai-design-certification-hero.jpg')} />
 
       {/* Content */}
-      <div className="pt-8 pb-8">
+      <div className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mb-6">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-6">
             Human-Assisted AI Design Certification for Healthcare
           </h1>
 
           {/* What is AI design certification? */}
-          <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-8 mb-6">
+          <h2 className="font-serif text-2xl mt-8 mb-4">
             What is AI design certification?
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             We certify outputs: discrete, versioned, viewable artifacts —
             screens, flows, diagrams, data visualizations. We are not certifying
             that &quot;this AI is good,&quot; but that &quot;this specific artifact is fit for
             purpose under these conditions.&quot;
           </p>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             What passes and what fails is defined by a shared standard: safety,
             data integrity, regulatory fit, usability, language, bias, and how
             the flow works together. This is the certifiable surface layer.
           </p>
-          <p className="bg-[#faf6f4] border-l-4 border-primary my-4 py-4 pr-4 pl-5 leading-[1.625rem]">
+          <p className="bg-[#faf6f4] border-l-4 border-primary my-4 py-4 pr-4 pl-5 leading-relaxed">
             The key distinction: Certification attaches to a specific artifact
             version and its intended use — not to the AI system that produced
             it. A screen, a flow, a piece of copy. Not a model.
@@ -108,24 +108,24 @@ export default function AIDesignCertificationPage() {
               href="mailto:hello@goinvo.com?subject=Certify%20Health%20AI"
               target="_blank"
               rel="noopener noreferrer"
-              className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-[1.625rem] py-1.5 px-4 hover:bg-[#fff6f1] transition-colors"
+              className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-relaxed py-1.5 px-4 hover:bg-[#fff6f1] transition-colors"
             >
               Certify Your Health AI Today
             </a>
           </div>
 
           {/* Product vision */}
-          <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-8 mb-6">
+          <h2 className="font-serif text-2xl mt-8 mb-4">
             Product vision
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             We certify AI-generated design outputs — screens, flows, copy, and
             visuals — through non-negotiable human review for safety,
             accessibility, bias, provenance, and regulatory fit. The result is a
             trusted design health layer that turns fast AI output into
             production-ready work teams can ship, defend, and buy.
           </p>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             That requires four things: a shared standard, human judgment at the
             right moment, verifiable proof, and tight integration into existing
             workflows.
@@ -137,7 +137,7 @@ export default function AIDesignCertificationPage() {
               <span className="text-primary text-xs leading-[1.5] shrink-0">&#9670;</span>
               Design Health Schema
             </h3>
-            <p className="leading-[1.625rem] mb-[1.625rem]">
+            <p className="leading-relaxed mb-4">
               A machine-readable rule set (YAML/JSON) defining the non-negotiables:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
@@ -147,7 +147,7 @@ export default function AIDesignCertificationPage() {
                   className="bg-white border border-[#e4e3e3] rounded-[6px] p-4"
                 >
                   <strong className="block mb-2 font-sans font-bold">{item.title}</strong>
-                  <p className="text-[0.9375rem] leading-[1.625rem] m-0">{item.desc}</p>
+                  <p className="text-[0.9375rem] leading-relaxed m-0">{item.desc}</p>
                 </div>
               ))}
             </div>
@@ -160,22 +160,22 @@ export default function AIDesignCertificationPage() {
                 <span className="text-primary text-xs leading-[1.5] shrink-0">&#9670;</span>
                 {principle.title}
               </h3>
-              <p className="leading-[1.625rem] m-0">{principle.desc}</p>
+              <p className="leading-relaxed m-0">{principle.desc}</p>
             </div>
           ))}
 
           {/* Why it matters now */}
-          <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-8 mb-6">
+          <h2 className="font-serif text-2xl mt-8 mb-4">
             Why it matters now
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             AI tools are generating healthcare UX at unprecedented speed. Cursor,
             Claude, and similar systems can produce working screens in minutes.
             But speed without accountability is dangerous in healthcare — where a
             single poorly-worded insight could prompt a patient to ignore symptoms
             that need clinical attention.
           </p>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Existing review processes weren&apos;t designed for artifact-level AI
             output. They assume a human designer made intentional choices about
             language, logic, and display. When AI produces the artifact, those
@@ -183,10 +183,10 @@ export default function AIDesignCertificationPage() {
           </p>
 
           {/* Real-world example: Apple Health */}
-          <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-8 mb-6">
+          <h2 className="font-serif text-2xl mt-8 mb-4">
             Real-world example: Apple Health
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Using Apple Health as a concrete summary.
           </p>
 
@@ -194,16 +194,16 @@ export default function AIDesignCertificationPage() {
           <h2 className="font-sans text-[15px] leading-[1.375rem] font-semibold uppercase tracking-[2px] text-primary mt-8 mb-[1.625rem] md:-ml-6">
             1. What the AI does
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             The app generates short health insight cards from your data (sleep,
             heart rate, activity). It&apos;s making clinical guidance from patient
             data.
           </p>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Example: &quot;Your resting heart rate is higher this week and your sleep
             is down. Consider resting today.&quot;
           </p>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             This is copy + logic + UI, not &quot;the model.&quot; And, this is medical
             advice delivered by software.
           </p>
@@ -212,7 +212,7 @@ export default function AIDesignCertificationPage() {
           <h2 className="font-sans text-[15px] leading-[1.375rem] font-semibold uppercase tracking-[2px] text-primary mt-8 mb-[1.625rem] md:-ml-6">
             2. What gets certified
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Before shipping, the team submits the actual outputs:
           </p>
           <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
@@ -221,7 +221,7 @@ export default function AIDesignCertificationPage() {
             <li className="leading-[1.5rem] py-[0.2rem]">The data sources used</li>
             <li className="leading-[1.5rem] py-[0.2rem]">How it&apos;s shown (color, urgency, notifications)</li>
           </ul>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             In this case, it&apos;s the medical artifact being approved.
           </p>
 
@@ -229,7 +229,7 @@ export default function AIDesignCertificationPage() {
           <h2 className="font-sans text-[15px] leading-[1.375rem] font-semibold uppercase tracking-[2px] text-primary mt-8 mb-[1.625rem] md:-ml-6">
             3. Non-negotiable checks
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Each output is reviewed against a standard schema:
           </p>
           <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
@@ -265,7 +265,7 @@ export default function AIDesignCertificationPage() {
             </div>
           </div>
 
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             If we&apos;re in the wellness world, this must be rewritten to a safe,
             non-diagnostic version before approval. If we&apos;re in the medical
             world, we&apos;ll need to:
@@ -280,7 +280,7 @@ export default function AIDesignCertificationPage() {
           <h2 className="font-sans text-[15px] leading-[1.375rem] font-semibold uppercase tracking-[2px] text-primary mt-8 mb-[1.625rem] md:-ml-6">
             5. What &quot;Certified&quot; means
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Approval issues a verifiable medical certificate tied to:
           </p>
           <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
@@ -289,7 +289,7 @@ export default function AIDesignCertificationPage() {
             <li className="leading-[1.5rem] py-[0.2rem]">The UI shown</li>
             <li className="leading-[1.5rem] py-[0.2rem]">The regulatory claim made</li>
           </ul>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Once approved, the insight gets a verifiable certificate tied to that
             exact copy, logic, and UI.
           </p>
@@ -342,7 +342,7 @@ export default function AIDesignCertificationPage() {
               />
             </div>
             <div className="w-full lg:w-1/2 pt-8 lg:pt-0 lg:pl-12">
-              <p className="leading-[1.625rem]">
+              <p className="leading-relaxed">
                 Any meaningful artifact change
                 <br />
                 invalidates the certificate
@@ -362,7 +362,7 @@ export default function AIDesignCertificationPage() {
           <h2 className="font-sans text-[15px] leading-[1.375rem] font-semibold uppercase tracking-[2px] text-primary mt-8 mb-[1.625rem] md:-ml-6">
             7. The point
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Treat AI outputs as the medical devices at the UI layer.
             <br />
             You&apos;re not trusting an AI model.
@@ -375,20 +375,20 @@ export default function AIDesignCertificationPage() {
           </p>
 
           {/* How it works in your workflow */}
-          <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-8 mb-6">
+          <h2 className="font-serif text-2xl mt-8 mb-4">
             How it works in your workflow
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Certification lives where work happens. A &quot;Request Certification&quot;
             button embedded in GitHub pull requests, Figma, design systems, and
             CMSs. Certification as a button, not a process.
           </p>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             Risk-based gates scale thresholds with context: a marketing site and
             a clinical intake form are not the same artifact. Higher risk means
             stricter gates, named reviewers, and shorter certificate lifetimes.
           </p>
-          <p className="bg-[#faf6f4] border-l-4 border-primary my-4 py-4 pr-4 pl-5 leading-[1.625rem]">
+          <p className="bg-[#faf6f4] border-l-4 border-primary my-4 py-4 pr-4 pl-5 leading-relaxed">
             Landing zone:{' '}
             <a
               href="https://github.com/goinvo/AIDesignCertification"
@@ -401,10 +401,10 @@ export default function AIDesignCertificationPage() {
           </p>
 
           {/* CTA */}
-          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-16 mb-6">
+          <h2 className="font-serif text-2xl mt-12 mb-4">
             We&apos;re building this in the open:
           </h2>
-          <p className="leading-[1.625rem] mb-[1.625rem]">
+          <p className="leading-relaxed mb-4">
             If you&apos;ve got a real or prototype healthcare product, let&apos;s together
             run it through the cert so we can pressure-test it on reality.
           </p>
@@ -414,7 +414,7 @@ export default function AIDesignCertificationPage() {
                 href="mailto:hello@goinvo.com?subject=Certify%20Health%20AI"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-[1.625rem] py-1.5 px-4 mt-8 mb-2 hover:bg-[#fff6f1] transition-colors"
+                className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-relaxed py-1.5 px-4 mt-8 mb-2 hover:bg-[#fff6f1] transition-colors"
               >
                 Certify Your Health AI Today
               </a>
@@ -422,7 +422,7 @@ export default function AIDesignCertificationPage() {
             <div className="w-full lg:w-1/2 lg:pr-4">
               <a
                 href="tel:617-504-3390"
-                className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-[1.625rem] py-1.5 px-4 mt-8 mb-2 hover:bg-[#fff6f1] transition-colors"
+                className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-relaxed py-1.5 px-4 mt-8 mb-2 hover:bg-[#fff6f1] transition-colors"
               >
                 Call Juhan @ 617-504-3390
               </a>
@@ -434,19 +434,19 @@ export default function AIDesignCertificationPage() {
       {/* Authors */}
       <div className="py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light text-center mb-6">
+          <h2 className="font-serif text-2xl mt-8 mb-4">
             Authors
           </h2>
           <Author name="Chloe Ma" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
-          <h3 className="font-sans text-base font-semibold mt-8 mb-3">Contributors</h3>
+          <h3 className="header-md mt-8 mb-3">Contributors</h3>
           <Author name="Eric Benoit" company="GoInvo" />
 
-          <h3 className="font-sans text-base font-semibold mt-8 mb-3">
+          <h3 className="header-md mt-8 mb-3">
             Special thanks to...
           </h3>
-          <p className="leading-[1.625rem]">
+          <p className="leading-relaxed">
             ...
             <a
               href="https://www.linkedin.com/in/mark-begale-7ab25814/"
