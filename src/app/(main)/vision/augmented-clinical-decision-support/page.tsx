@@ -186,7 +186,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download (PDF)
           </Button>
 
-          <h3 className="font-serif text-xl mt-8 mb-4">
+          <h3 className="header-md mt-8 mb-4">
             Head Injury Process
           </h3>
           <Image
@@ -207,7 +207,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download (PDF)
           </Button>
 
-          <h3 className="font-serif text-xl mt-8 mb-4">Cancer Process</h3>
+          <h3 className="header-md mt-8 mb-4">Cancer Process</h3>
           <Image
             src={cloudfrontImage(
               '/images/features/augmented-clinical-decision-support/augmented-cds-process-map-cancer.jpg'
