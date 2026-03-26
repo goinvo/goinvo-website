@@ -1,5 +1,19 @@
 [
   {
+    "id": "ai-design-certification",
+    "title": "Human-Assisted AI Design Certification for Healthcare",
+    "date": "Mar.2026",
+    "client": "Feature",
+    "categories": [
+      "healthcare",
+      "AI"
+    ],
+    "caption": "We certify AI-generated design outputs through non-negotiable human review for safety, accessibility, bias, provenance, and regulatory fit.",
+    "image": "/images/features/ai-design-certification/ai-design-certification-hero.jpg",
+    "link": "/vision/ai-design-certification/",
+    "hiddenWorkPage": true
+  },
+  {
     "id": "rethinking-ai-beyond-chat",
     "title": "Rethinking AI Beyond Chat",
     "date": "Feb.2026",
