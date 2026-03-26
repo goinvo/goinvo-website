@@ -96,7 +96,7 @@ export default function LivingHealthLabPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
             <Img src="living-health-lab-workbook.jpg" alt="Living Health Lab Workbook" />
             <div>
-              <h3 className="font-serif text-xl mb-3">Get the Workbook</h3>
+              <h3 className="header-md mb-3">Get the Workbook</h3>
               <p className="leading-relaxed mb-4">
                 We created this printable to demonstrate what a Living
                 Health Lab app could support in the future. The workbook
@@ -239,7 +239,7 @@ export default function LivingHealthLabPage() {
 
           <Img src="LHL_project_timeline.jpg" alt="Living Health Lab project timeline" className="mb-8" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">1) Design Principles</h3>
+          <h3 className="header-md mt-6 mb-3">1) Design Principles</h3>
 
           <p className="leading-relaxed mb-4">
             The following design principles are based on findings and
@@ -320,7 +320,7 @@ export default function LivingHealthLabPage() {
             </li>
           </ul>
 
-          <h3 className="font-serif text-xl mt-6 mb-3">
+          <h3 className="header-md mt-6 mb-3">
             2) Visualizing the Patient Experience
           </h3>
           <p className="leading-relaxed mb-4">
@@ -343,7 +343,7 @@ export default function LivingHealthLabPage() {
             Making Living Health Lab Real
           </h2>
 
-          <h3 className="font-serif text-xl mt-6 mb-3">
+          <h3 className="header-md mt-6 mb-3">
             Broader application for patients and providers
           </h3>
           <p className="leading-relaxed mb-4">
@@ -415,7 +415,7 @@ export default function LivingHealthLabPage() {
             people to explore their own health and seek answers.
           </p>
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Open Source Health Design</h3>
+          <h3 className="header-md mt-6 mb-3">Open Source Health Design</h3>
           <p className="leading-relaxed mb-4">
             As an Open Source Health Design project, Living Health Lab content
             will be available to the public for free use under the Creative
@@ -426,7 +426,7 @@ export default function LivingHealthLabPage() {
             for the public good.
           </p>
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Get Involved</h3>
+          <h3 className="header-md mt-6 mb-3">Get Involved</h3>
           <p className="leading-relaxed mb-4">
             We are in the early stages of design and funding will be a vital
             component for continuing this project. If you&apos;re interested in
@@ -454,7 +454,7 @@ export default function LivingHealthLabPage() {
           <div className="max-width content-padding mx-auto">
             <h2 className="font-serif text-2xl mb-4 text-center">Appendix</h2>
 
-            <h3 className="font-serif text-xl mt-6 mb-4">
+            <h3 className="header-md mt-6 mb-4">
               i - Non-medicine Pain Relief
             </h3>
 
@@ -485,7 +485,7 @@ export default function LivingHealthLabPage() {
           <Author name="Samantha Wuu" company="GoInvo" />
           <Author name="Arpna Ghanshani" company="GoInvo" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">Jenny Yi</p>
         </div>
       </section>

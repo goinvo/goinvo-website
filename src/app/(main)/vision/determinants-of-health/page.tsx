@@ -3,10 +3,13 @@ import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
+import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { DeterminantsChart } from './DeterminantsChart'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { References } from '@/components/ui/References'
+import refs from '@/data/vision/determinants-of-health/references.json'
 
 export const metadata: Metadata = {
   title: 'Determinants of Health Visualized',
@@ -184,7 +187,7 @@ export default function DeterminantsOfHealthPage() {
             and others to arrive at consensus figures.
           </p>
 
-          <h3 className="font-serif text-xl mt-6 mb-3">
+          <h3 className="header-md mt-6 mb-3">
             Version 3 (Nov 2018) — Current
           </h3>
           <p className="leading-relaxed mb-4">
@@ -217,7 +220,7 @@ export default function DeterminantsOfHealthPage() {
           <Author name="Edwin Choi" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo, MIT" />
 
-          <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+          <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <Author name="Hrothgar" company="GoInvo" />
           <Author name="Kelsey Kittelsen" company="Dartmouth College" />
           <p className="text-gray mt-4">
@@ -226,6 +229,15 @@ export default function DeterminantsOfHealthPage() {
           <p className="text-gray">
             <strong>Spanish translation:</strong> Roberto Laureles
           </p>
+
+          <AboutGoInvo className="mt-12" />
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <References items={refs} />
         </div>
       </section>
 
