@@ -424,10 +424,48 @@ const components: PortableTextComponents = {
   },
 }
 
+/**
+ * Pre-process content to group consecutive standalone images into
+ * 2-column grids. The migration script extracted images flat, losing
+ * the original Gatsby `pure-g` grid wrappers. This restores the
+ * side-by-side layout for pairs of consecutive images.
+ */
+function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[] {
+  const result: PortableTextBlock[] = []
+  let i = 0
+
+  while (i < blocks.length) {
+    const current = blocks[i] as any // eslint-disable-line @typescript-eslint/no-explicit-any
+    const next = blocks[i + 1] as any // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    // If two consecutive image blocks, group them into a columns block
+    if (
+      current?._type === 'image' &&
+      current?.asset &&
+      next?._type === 'image' &&
+      next?.asset
+    ) {
+      result.push({
+        _type: 'columns',
+        _key: `autogrid-${current._key || i}`,
+        layout: '2',
+        content: [current, next],
+      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      i += 2
+    } else {
+      result.push(current)
+      i++
+    }
+  }
+
+  return result
+}
+
 interface PortableTextRendererProps {
   content: PortableTextBlock[]
 }
 
 export function PortableTextRenderer({ content }: PortableTextRendererProps) {
-  return <PortableText value={content} components={components} />
+  const processed = groupConsecutiveImages(content)
+  return <PortableText value={processed} components={components} />
 }
