@@ -4,6 +4,7 @@ import { ProblemCard } from '@/components/vision/ProblemCard'
 import { Divider } from '@/components/ui/Divider'
 import problems from '@/data/vision/problems.json'
 import { cloudfrontImage } from '@/lib/utils'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 
 export const metadata: Metadata = {
   title: 'US Healthcare Problems',
@@ -105,6 +106,15 @@ export default function USHealthcareProblemsPage() {
               new problems, and revised rankings.
             </p>
           </section>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
         </div>
       </section>
     </div>

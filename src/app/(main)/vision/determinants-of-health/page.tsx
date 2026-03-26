@@ -4,6 +4,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { DeterminantsChart } from './DeterminantsChart'
 
 export const metadata: Metadata = {
@@ -244,6 +245,15 @@ export default function DeterminantsOfHealthPage() {
           <p className="text-gray">
             <strong>Spanish translation:</strong> Roberto Laureles
           </p>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
         </div>
       </section>
     </div>

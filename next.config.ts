@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import redirectsJson from './redirects.json'
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -15,6 +16,13 @@ const nextConfig: NextConfig = {
         hostname: 'dd17w042cevyt.cloudfront.net',
       },
     ],
+  },
+  async redirects() {
+    return Object.entries(redirectsJson).map(([source, destination]) => ({
+      source: source.startsWith('/') ? source : `/${source}`,
+      destination: destination as string,
+      permanent: true,
+    }))
   },
 }
 

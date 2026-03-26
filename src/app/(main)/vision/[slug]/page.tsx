@@ -8,6 +8,7 @@ import { PortableTextRenderer } from '@/components/portable-text/PortableTextRen
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { stripAuthorHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
 
@@ -121,6 +122,15 @@ export default async function VisionFeaturePage({ params }: Props) {
           </div>
         </section>
       )}
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

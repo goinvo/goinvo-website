@@ -25,15 +25,15 @@ export function Author({
   const bio = children || teamBios[name] || undefined
 
   return (
-    <div className={cn('grid grid-cols-1 gap-6 my-8', resolvedImage ? 'lg:grid-cols-[200px_1fr]' : '', className)}>
+    <div className={cn('grid grid-cols-1 gap-6 my-8 items-start', resolvedImage ? 'lg:grid-cols-2' : '', className)}>
       {resolvedImage && (
         <div>
           <Image
             src={resolvedImage}
             alt={name}
-            width={200}
-            height={200}
-            className="w-[200px] h-[200px] object-cover rounded"
+            width={400}
+            height={300}
+            className="w-full h-auto object-cover"
           />
         </div>
       )}

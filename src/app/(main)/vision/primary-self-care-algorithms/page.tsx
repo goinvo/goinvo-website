@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { PscaAlgorithms } from './PscaAlgorithms'
 
 export const metadata: Metadata = {
@@ -295,6 +296,15 @@ export default function PrimarySelfCareAlgorithmsPage() {
           <p className="text-gray">
             Samantha Wuu, Huahua Zhu, Eric Benoit, Craig McGinley
           </p>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
         </div>
       </section>
     </div>

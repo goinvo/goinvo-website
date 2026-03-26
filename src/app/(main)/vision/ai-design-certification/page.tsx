@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Author } from '@/components/ui/Author'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 
 export const metadata: Metadata = {
   title: 'Human-Assisted AI Design Certification for Healthcare',
@@ -478,6 +479,15 @@ export default function AIDesignCertificationPage() {
           </p>
         </div>
       </div>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
