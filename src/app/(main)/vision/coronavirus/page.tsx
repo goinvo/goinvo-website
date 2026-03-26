@@ -127,7 +127,7 @@ export default function CoronavirusPage() {
             </TimelineItem>
             <TimelineItem date="7 Jan 2020">
               <>
-                <ul className="list-disc ml-5 mt-1">
+                <ul className="list-disc list-outside pl-6 mt-1">
                   <li>New virus identified as a coronavirus</li>
                   <li>Europe&apos;s first case confirmed in France</li>
                 </ul>
@@ -145,7 +145,7 @@ export default function CoronavirusPage() {
             </TimelineItem>
             <TimelineItem date="30 Jan 2020">
               <>
-                <ul className="list-disc ml-5 mt-1">
+                <ul className="list-disc list-outside pl-6 mt-1">
                   <li>
                     WHO declares the outbreak a global public-health emergency
                     (PHE)
@@ -159,7 +159,7 @@ export default function CoronavirusPage() {
             </TimelineItem>
             <TimelineItem date="31 Jan 2020">
               <>
-                <ul className="list-disc ml-5 mt-1">
+                <ul className="list-disc list-outside pl-6 mt-1">
                   <li>HHS Secretary declares a PHE for the US</li>
                   <li>
                     President Trump enforces a 14-day quarantine preceding the
@@ -370,7 +370,7 @@ export default function CoronavirusPage() {
             <br />
             <strong>here&apos;s what you can do to stay well:</strong>
           </p>
-          <ul className="list-disc ml-6 mb-4 leading-relaxed">
+          <ul className="list-disc list-outside pl-6 mb-4 leading-relaxed">
             <li>
               <strong>Monitor your health</strong> for at least{' '}
               <strong>14 days</strong> after your last contact with the infected
@@ -1040,7 +1040,7 @@ export default function CoronavirusPage() {
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card px-10 py-4">
+          <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
         </div>

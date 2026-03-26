@@ -10,9 +10,9 @@ interface AuthorSectionProps {
 function extractText(blocks: unknown): string {
   if (!Array.isArray(blocks)) return ''
   return blocks
-    .filter((b: any) => b._type === 'block')
-    .map((b: any) =>
-      (b.children || []).map((c: any) => c.text || '').join('')
+    .filter((b: any) => b._type === 'block') // eslint-disable-line @typescript-eslint/no-explicit-any
+    .map((b: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+      (b.children || []).map((c: any) => c.text || '').join('') // eslint-disable-line @typescript-eslint/no-explicit-any
     )
     .join(' ')
 }
@@ -22,26 +22,26 @@ export function AuthorSection({ authors }: AuthorSectionProps) {
 
   return (
     <section className="my-12">
-      <h2 className="font-serif text-2xl mb-8">{authors.length === 1 ? 'Author' : 'Authors'}</h2>
+      <h2 className="font-serif text-2xl mt-8 mb-4">{authors.length === 1 ? 'Author' : 'Authors'}</h2>
       {authors.map((author) => {
         const imageUrl = author.image
-          ? urlForImage(author.image).width(200).height(300).fit('crop').url()
+          ? urlForImage(author.image).width(400).url()
           : null
         const bio = author.bio ? extractText(author.bio) : ''
 
         return (
           <div
             key={author._id}
-            className={`grid grid-cols-1 gap-6 my-8 ${imageUrl ? 'lg:grid-cols-[200px_1fr]' : ''}`}
+            className={`grid grid-cols-1 gap-6 my-8 items-start ${imageUrl ? 'lg:grid-cols-2' : ''}`}
           >
             {imageUrl && (
               <div>
                 <Image
                   src={imageUrl}
                   alt={author.name}
-                  width={200}
+                  width={400}
                   height={300}
-                  className="w-[200px] h-[300px] object-cover"
+                  className="w-full h-auto object-cover"
                 />
               </div>
             )}

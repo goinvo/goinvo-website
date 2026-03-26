@@ -5,6 +5,8 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { References } from '@/components/ui/References'
+import refs from '@/data/vision/living-health-lab/references.json'
 import { LivingHealthLabCarousels, LivingHealthLabAppendixCarousel } from './LivingHealthLabCarousels'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
@@ -490,10 +492,17 @@ export default function LivingHealthLabPage() {
         </div>
       </section>
 
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width content-padding mx-auto">
+          <References items={refs} />
+        </div>
+      </section>
+
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card px-10 py-4">
+          <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
         </div>

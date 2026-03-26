@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Author } from '@/components/ui/Author'
+import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
@@ -104,14 +105,9 @@ export default function AIDesignCertificationPage() {
             it. A screen, a flow, a piece of copy. Not a model.
           </p>
           <div className="lg:w-1/2 mt-8 mb-2">
-            <a
-              href="mailto:hello@goinvo.com?subject=Certify%20Health%20AI"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-relaxed py-1.5 px-4 hover:bg-[#fff6f1] transition-colors"
-            >
+            <Button href="mailto:hello@goinvo.com?subject=Certify%20Health%20AI" variant="secondary" external className="w-full">
               Certify Your Health AI Today
-            </a>
+            </Button>
           </div>
 
           {/* Product vision */}
@@ -408,25 +404,13 @@ export default function AIDesignCertificationPage() {
             If you&apos;ve got a real or prototype healthcare product, let&apos;s together
             run it through the cert so we can pressure-test it on reality.
           </p>
-          <div className="flex flex-wrap mb-4">
-            <div className="w-full lg:w-1/2 lg:pr-4">
-              <a
-                href="mailto:hello@goinvo.com?subject=Certify%20Health%20AI"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-relaxed py-1.5 px-4 mt-8 mb-2 hover:bg-[#fff6f1] transition-colors"
-              >
-                Certify Your Health AI Today
-              </a>
-            </div>
-            <div className="w-full lg:w-1/2 lg:pr-4">
-              <a
-                href="tel:617-504-3390"
-                className="block w-full text-center border border-[#ffb992] text-primary no-underline uppercase tracking-[2px] text-[15px] font-semibold leading-relaxed py-1.5 px-4 mt-8 mb-2 hover:bg-[#fff6f1] transition-colors"
-              >
-                Call Juhan @ 617-504-3390
-              </a>
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 mb-4">
+            <Button href="mailto:hello@goinvo.com?subject=Certify%20Health%20AI" variant="secondary" external className="w-full">
+              Certify Your Health AI Today
+            </Button>
+            <Button href="tel:617-504-3390" variant="secondary" className="w-full">
+              Call Juhan @ 617-504-3390
+            </Button>
           </div>
         </div>
       </div>
@@ -473,7 +457,7 @@ export default function AIDesignCertificationPage() {
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card px-10 py-4">
+          <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
         </div>
