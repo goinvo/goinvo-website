@@ -16,12 +16,6 @@ import { Divider } from '@/components/ui/Divider'
 
 const EASE = [0.25, 0.1, 0.25, 1] as const
 
-/**
- * Lightweight scroll-reveal for article blocks.
- * - "visual" (images, columns, videos, quotes): pronounced slide-up
- * - "heading": moderate slide-up
- * - "text": gentle fade + slight lift
- */
 function ArticleReveal({
   children,
   intensity = 'text',
@@ -54,10 +48,29 @@ function ArticleReveal({
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Check if a URL points to a direct video file (not an embed like YouTube). */
 function isDirectVideoUrl(url: string) {
   if (!url) return false
   return /\.(webm|mp4|mov|ogv)(\?|$)/i.test(url)
+}
+
+const imageSizeClasses: Record<string, string> = {
+  small: 'max-w-[25%]',
+  medium: 'max-w-[50%]',
+  large: 'max-w-[75%]',
+  full: 'max-w-full',
+}
+
+const imageAlignClasses: Record<string, string> = {
+  left: '',
+  center: 'mx-auto',
+  right: 'ml-auto',
+}
+
+const bgSectionColors: Record<string, string> = {
+  gray: 'bg-gray-lightest',
+  teal: 'bg-secondary text-white',
+  warm: 'bg-[#faf6f4]',
+  orange: 'bg-primary/5',
 }
 
 /* ------------------------------------------------------------------ */
@@ -68,10 +81,13 @@ const components: PortableTextComponents = {
   types: {
     image: ({ value }) => {
       if (!value?.asset) return null
-      const imageUrl = urlForImage(value).width(800).url()
+      const size = value.size || 'full'
+      const align = value.align || 'center'
+      const width = size === 'small' ? 400 : size === 'medium' ? 600 : 800
+      const imageUrl = urlForImage(value).width(width).url()
       return (
         <ArticleReveal intensity="visual">
-          <figure className="my-8">
+          <figure className={cn('my-8', imageSizeClasses[size], imageAlignClasses[align])}>
             <img
               src={imageUrl}
               alt={value.alt || ''}
@@ -95,11 +111,14 @@ const components: PortableTextComponents = {
     results: ({ value }) => {
       const items: { stat: string; description: string }[] = value.items || []
       const count = items.length
+      const bg = value.background || 'none'
+      const bgClass = bg !== 'none' ? (bg === 'gray' ? 'bg-gray-lightest' : 'bg-secondary/10') : ''
       return (
         <ArticleReveal intensity="visual">
           <div
             className={cn(
               'grid gap-8 my-12',
+              bgClass && `${bgClass} p-8 rounded`,
               count === 1
                 ? 'grid-cols-1 max-w-md mx-auto'
                 : count === 2
@@ -130,7 +149,6 @@ const components: PortableTextComponents = {
           <ol className="list-none pl-0 space-y-3 text-sm">
             {value.items?.map(
               (item: { title: string; link?: string }, i: number) => {
-                // Strip redundant URL from title if it ends with the link
                 let displayTitle = item.title || ''
                 if (item.link && displayTitle.includes(item.link)) {
                   displayTitle = displayTitle.replace(item.link, '').replace(/:\s*$/, '').trim()
@@ -164,36 +182,39 @@ const components: PortableTextComponents = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
 
-      // Group items: pair each image with any immediately following text block (caption)
-      const groups: { image: any; caption?: string }[] = []
+      const groups: { image: any; caption?: string }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
         if (item._type === 'image' && item.asset?._ref) {
-          // Check for caption: image's own caption field, or a text block immediately after
           let caption = item.caption || ''
           const next = items[i + 1]
           if (next && next._type === 'block' && next.children) {
             const text = next.children.map((c: { text: string }) => c.text).join('')
             if (text.trim()) {
               caption = caption || text.trim()
-              i++ // skip the text block since we consumed it as a caption
+              i++
             }
           }
           groups.push({ image: item, caption })
         }
       }
 
+      const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2
+
       return (
         <ArticleReveal intensity="visual">
           <figure className="my-8">
             <div
-              className={`grid gap-4 ${
-                groups.length >= 3 || value.layout === '3'
-                  ? 'grid-cols-1 md:grid-cols-3'
-                  : groups.length === 2
-                    ? 'grid-cols-1 md:grid-cols-2'
-                    : 'grid-cols-1'
-              }`}
+              className={cn(
+                'grid gap-4',
+                colCount === 4
+                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                  : colCount === 3
+                    ? 'grid-cols-1 md:grid-cols-3'
+                    : groups.length === 2
+                      ? 'grid-cols-1 md:grid-cols-2'
+                      : 'grid-cols-1'
+              )}
             >
               {groups.map((group) => {
                 const imgUrl = urlForImage(group.image).width(800).url()
@@ -221,6 +242,18 @@ const components: PortableTextComponents = {
               </figcaption>
             )}
           </figure>
+        </ArticleReveal>
+      )
+    },
+    backgroundSection: ({ value }) => {
+      const bgClass = bgSectionColors[value.color] || bgSectionColors.gray
+      return (
+        <ArticleReveal intensity="visual">
+          <div className={cn('-mx-4 md:-mx-8 px-4 md:px-8 py-8 my-8', bgClass)}>
+            {value.content && (
+              <PortableText value={value.content} components={components} />
+            )}
+          </div>
         </ArticleReveal>
       )
     },
@@ -329,11 +362,34 @@ const components: PortableTextComponents = {
         </a>
       )
     },
+    sup: ({ children }) => <sup>{children}</sup>,
+    teal: ({ children }) => <span className="text-secondary">{children}</span>,
+    orange: ({ children }) => <span className="text-primary">{children}</span>,
+    refCitation: ({ children, value }) => (
+      <sup>
+        <a
+          href="#references"
+          className="text-secondary hover:text-primary text-xs no-underline"
+        >
+          {value?.refNumber || children}
+        </a>
+      </sup>
+    ),
   },
   block: {
     h2: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h2 className="font-serif text-2xl mt-12 mb-4">{children}</h2>
+      </ArticleReveal>
+    ),
+    h2Center: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="font-serif text-2xl mt-12 mb-4 text-center">{children}</h2>
+      </ArticleReveal>
+    ),
+    sectionTitle: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-16 mb-6 text-center">{children}</h2>
       </ArticleReveal>
     ),
     h3: ({ children }) => (
@@ -351,6 +407,13 @@ const components: PortableTextComponents = {
         <blockquote className="border-l-4 border-primary pl-6 my-6 italic text-gray">
           {children}
         </blockquote>
+      </ArticleReveal>
+    ),
+    callout: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <div className="bg-[#faf6f4] border-l-4 border-primary my-6 py-4 pr-4 pl-5 leading-[1.625rem]">
+          {children}
+        </div>
       </ArticleReveal>
     ),
     normal: ({ children }) => (

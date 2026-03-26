@@ -10,15 +10,21 @@ export default defineType({
       styles: [
         { title: 'Normal', value: 'normal' },
         { title: 'H2', value: 'h2' },
+        { title: 'H2 (centered)', value: 'h2Center' },
         { title: 'H3', value: 'h3' },
         { title: 'H4', value: 'h4' },
         { title: 'Quote', value: 'blockquote' },
+        { title: 'Section Title', value: 'sectionTitle' },
+        { title: 'Callout', value: 'callout' },
       ],
       marks: {
         decorators: [
           { title: 'Bold', value: 'strong' },
           { title: 'Italic', value: 'em' },
           { title: 'Underline', value: 'underline' },
+          { title: 'Superscript', value: 'sup' },
+          { title: 'Teal', value: 'teal' },
+          { title: 'Orange', value: 'orange' },
         ],
         annotations: [
           {
@@ -40,6 +46,20 @@ export default defineType({
                 type: 'boolean',
                 description: 'Check for external links so users stay on the site',
                 initialValue: false,
+              },
+            ],
+          },
+          {
+            title: 'Reference Citation',
+            name: 'refCitation',
+            type: 'object',
+            description: 'Superscript number linking to #references section',
+            fields: [
+              {
+                title: 'Reference number',
+                name: 'refNumber',
+                type: 'string',
+                description: 'The citation label (e.g. "1", "A1")',
               },
             ],
           },
@@ -70,13 +90,27 @@ export default defineType({
           description: 'Controls image width in the page layout',
           options: {
             list: [
-              { title: 'Small', value: 'small' },
-              { title: 'Medium', value: 'medium' },
-              { title: 'Large', value: 'large' },
+              { title: 'Small (25%)', value: 'small' },
+              { title: 'Medium (50%)', value: 'medium' },
+              { title: 'Large (75%)', value: 'large' },
               { title: 'Full width', value: 'full' },
             ],
           },
-          initialValue: 'large',
+          initialValue: 'full',
+        },
+        {
+          name: 'align',
+          type: 'string',
+          title: 'Alignment',
+          description: 'Horizontal alignment when size is less than full',
+          options: {
+            list: [
+              { title: 'Left', value: 'left' },
+              { title: 'Center', value: 'center' },
+              { title: 'Right', value: 'right' },
+            ],
+          },
+          initialValue: 'center',
         },
       ],
     }),
@@ -94,6 +128,7 @@ export default defineType({
             list: [
               { title: '2 columns', value: '2' },
               { title: '3 columns', value: '3' },
+              { title: '4 columns', value: '4' },
             ],
           },
           initialValue: '2',
@@ -158,6 +193,20 @@ export default defineType({
             },
           ],
         },
+        {
+          name: 'background',
+          title: 'Background',
+          type: 'string',
+          description: 'Background color for the stats row',
+          options: {
+            list: [
+              { title: 'None', value: 'none' },
+              { title: 'Light gray', value: 'gray' },
+              { title: 'Light teal', value: 'teal' },
+            ],
+          },
+          initialValue: 'none',
+        },
       ],
     }),
     defineArrayMember({
@@ -178,6 +227,37 @@ export default defineType({
                 { name: 'link', title: 'URL', type: 'url', description: 'Full URL to the source' },
               ],
             },
+          ],
+        },
+      ],
+    }),
+    defineArrayMember({
+      name: 'backgroundSection',
+      title: 'Background Section',
+      type: 'object',
+      description: 'Full-width colored background wrapper for content',
+      fields: [
+        {
+          name: 'color',
+          title: 'Background Color',
+          type: 'string',
+          options: {
+            list: [
+              { title: 'Light gray', value: 'gray' },
+              { title: 'Teal / Blue', value: 'teal' },
+              { title: 'Warm (beige)', value: 'warm' },
+              { title: 'Orange (light)', value: 'orange' },
+            ],
+          },
+          initialValue: 'gray',
+        },
+        {
+          name: 'content',
+          title: 'Content',
+          type: 'array',
+          of: [
+            { type: 'block' },
+            { type: 'image', options: { hotspot: true } },
           ],
         },
       ],
