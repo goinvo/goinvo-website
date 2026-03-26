@@ -152,7 +152,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         <div className="max-width flex justify-start w-full">
           <Reveal style="slide-right">
             <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] md:w-[380px]">
-              <h2 className="font-serif text-2xl md:text-3xl mb-4">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-4">
                 Backlog: Zero
               </h2>
               <p className="font-serif text-lg text-gray italic font-bold mb-4">
@@ -226,7 +226,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         <div className="max-width content-padding flex md:justify-end w-full">
           <Reveal style="slide-left">
             <div data-morph-card className="bg-white p-6 md:p-10 w-[85vw] md:w-[380px]">
-              <h2 className="font-serif text-2xl md:text-3xl mb-4">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-4">
                 Weeks to Hours
               </h2>
               <p className="text-gray mb-4">
@@ -264,7 +264,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       <section className="py-12 md:py-20">
         <div className="max-width content-padding">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-12 items-start">
-            <h2 className="font-serif text-2xl md:text-3xl">
+            <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold">
               Our designs in healthcare are used every day<span className="text-primary font-serif">.</span>
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
@@ -310,7 +310,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         <div className="max-width flex justify-start w-full">
           <Reveal style="slide-right">
             <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] md:w-[380px]">
-              <h2 className="font-serif text-2xl md:text-3xl mb-6">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-6">
                 10x increase<span className="text-primary font-serif">.</span>
               </h2>
               <div className="text-gray space-y-4">
@@ -381,7 +381,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         <div className="max-width content-padding py-8 md:py-12">
           <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-center">
             <div>
-              <h2 className="font-serif text-2xl md:text-3xl mb-0">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-0">
                 We are <span className="text-primary font-serif">GoInvo</span>
                 <span className="text-primary font-serif">.</span>
               </h2>

@@ -7,6 +7,7 @@ import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Reveal } from '@/components/ui/Reveal'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import type { HealthVisualization } from '@/types'
 
 export const metadata: Metadata = {
@@ -177,6 +178,15 @@ export default async function HealthVisualizationsPage() {
         <Reveal style="slide-up">
           <SubscribeForm />
         </Reveal>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
+        </div>
       </section>
     </div>
   )

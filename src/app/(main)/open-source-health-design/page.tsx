@@ -104,7 +104,7 @@ function ProjectCard({
   const isExternal = project.link.startsWith('http')
   const textBlock = (
     <div className="flex flex-col justify-center p-8 lg:p-12">
-      <h4 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary mb-4">
+      <h4 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary text-left mb-4">
         {project.title}
       </h4>
       <p className="text-tertiary">{project.description}</p>

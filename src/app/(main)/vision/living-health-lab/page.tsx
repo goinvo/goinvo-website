@@ -4,6 +4,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { LivingHealthLabCarousels, LivingHealthLabAppendixCarousel } from './LivingHealthLabCarousels'
 
 export const metadata: Metadata = {
@@ -506,6 +507,15 @@ export default function LivingHealthLabPage() {
 
           <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
           <p className="text-gray">Jenny Yi</p>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
         </div>
       </section>
     </div>

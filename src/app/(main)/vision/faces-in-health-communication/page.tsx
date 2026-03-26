@@ -4,6 +4,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
 
 export const metadata: Metadata = {
   title: 'Faces in Health Communication',
@@ -664,6 +665,15 @@ export default function FacesInHealthCommunicationPage() {
             Jen Patel, Colleen Tang Poy, Jon Follett, Craig McGinley, Eric
             Benoit, Juhan Sonin
           </p>
+        </div>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card px-10 py-4">
+            <NewsletterForm />
+          </div>
         </div>
       </section>
     </div>
