@@ -8,6 +8,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import { Reveal } from '@/components/ui/Reveal'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import type { HealthVisualization } from '@/types'
 
 export const metadata: Metadata = {
@@ -111,32 +112,12 @@ export default async function HealthVisualizationsPage() {
       : normalizeFallbackItems()
 
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative h-[50vh] min-h-[320px]">
-        <Image
-          src={cloudfrontImage('/images/features/posters/health-visualizations-hero-2.jpg')}
-          alt="Health Visualizations"
-          fill
-          className="object-cover"
-          priority
-          style={{ viewTransitionName: 'hero-image' }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="relative z-10 flex h-full items-end">
-          <div className="max-width content-padding pb-12 w-full">
-            <h1
-              className="font-serif text-3xl md:text-4xl text-white"
-              style={{ viewTransitionName: 'page-title' }}
-            >
-              Health Visualizations
-            </h1>
-          </div>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/posters/health-visualizations-hero-2.jpg')} />
 
       {/* Intro */}
       <section className="max-width max-width-md content-padding py-12">
+        <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Health Visualizations</h1>
         <Reveal style="slide-up">
           <p className="text-gray leading-relaxed">
             These infographics are open source, available to all under a{' '}

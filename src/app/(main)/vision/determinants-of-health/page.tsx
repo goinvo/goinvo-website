@@ -6,6 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { DeterminantsChart } from './DeterminantsChart'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'Determinants of Health Visualized',
@@ -15,33 +16,13 @@ export const metadata: Metadata = {
 
 export default function DeterminantsOfHealthPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage('/images/services/doh-preview.jpg')}
-          alt="Determinants of Health"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-            Healthcare / Open Source
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            Determinants of Health
-          </h1>
-          <p className="text-white/80 text-md mt-2">
-            Health is more than medical care
-          </p>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/services/doh-preview.jpg')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Determinants of Health</h1>
           <p className="leading-relaxed mb-4">
             89% of health occurs outside of the clinical space through our
             genetics, behavior, environment and social circumstances. These

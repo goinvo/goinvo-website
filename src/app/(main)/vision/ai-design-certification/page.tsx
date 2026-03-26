@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Author } from '@/components/ui/Author'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'Human-Assisted AI Design Certification for Healthcare',
@@ -72,19 +73,8 @@ const nonNegotiableChecks = [
 
 export default function AIDesignCertificationPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <div className="h-[450px]">
-        <Image
-          src={cloudfrontImage(
-            '/images/features/ai-design-certification/ai-design-certification-hero.jpg'
-          )}
-          alt="Human-Assisted AI Design Certification for Healthcare"
-          fill
-          className="object-cover !relative h-full"
-          priority
-        />
-      </div>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/ai-design-certification/ai-design-certification-hero.jpg')} />
 
       {/* Content */}
       <div className="pt-8 pb-8">

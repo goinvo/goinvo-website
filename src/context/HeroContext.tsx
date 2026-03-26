@@ -142,7 +142,7 @@ type HeroAction =
 
 function isDynamicHeroRoute(pathname: string): boolean {
   return (pathname.startsWith('/work/') && pathname.length > 6) ||
-    (pathname.startsWith('/vision/') && pathname.length > 8 && pathname !== '/vision/experiments')
+    (pathname.startsWith('/vision/') && pathname.length > 8)
 }
 
 function heroReducer(state: HeroState, action: HeroAction): HeroState {

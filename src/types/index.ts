@@ -47,7 +47,7 @@ export interface Result {
 
 export interface Reference {
   title: string
-  link: string
+  link?: string
 }
 
 export interface TeamMember {

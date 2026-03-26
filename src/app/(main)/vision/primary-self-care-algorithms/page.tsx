@@ -5,6 +5,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { PscaAlgorithms } from './PscaAlgorithms'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'Primary Self Care Algorithms',
@@ -14,36 +15,13 @@ export const metadata: Metadata = {
 
 export default function PrimarySelfCareAlgorithmsPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage(
-            '/images/features/primary-self-care-algorithms/primary-self-care-algorithms-hero.jpg'
-          )}
-          alt="Primary Self Care Algorithms"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-            Healthcare / Open Source
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            Primary Self Care Algorithms
-          </h1>
-          <p className="text-white/80 text-md mt-2">
-            Decision support tools for individuals to better understand their
-            health
-          </p>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/primary-self-care-algorithms/primary-self-care-algorithms-hero.jpg')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Primary Self Care Algorithms</h1>
           <h2 className="font-serif text-2xl mb-4">
             What is Primary Self Care?
           </h2>
