@@ -132,6 +132,24 @@
 
 /* Utility classes matching existing site */
 @layer utilities {
+  /* Gatsby header--md equivalent: small uppercase bold gray subheading */
+  .header-md {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--color-gray);
+    line-height: 1.1875rem;
+  }
+
+  @media (min-width: 864px) {
+    .header-md {
+      font-size: 0.9375rem;
+      line-height: 1.375rem;
+    }
+  }
+
   .max-width {
     max-width: 1020px;
     margin-left: auto;

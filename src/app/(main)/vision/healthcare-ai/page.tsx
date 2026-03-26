@@ -5,6 +5,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { Video } from '@/components/ui/Video'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'The AI Healthcare Future We Need',
@@ -14,32 +15,13 @@ export const metadata: Metadata = {
 
 export default function HealthcareAIPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage(
-            '/images/features/healthcare-ai/healthcare-ai-hero-4.jpg'
-          )}
-          alt="The AI Healthcare Future We Need"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-            Healthcare / AI
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            The AI Healthcare Future We Need
-          </h1>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/healthcare-ai/healthcare-ai-hero-4.jpg')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">The AI Healthcare Future We Need</h1>
           <p className="leading-relaxed mb-4">
             <strong>Melanoma AI Healthcare Assistant</strong>
           </p>

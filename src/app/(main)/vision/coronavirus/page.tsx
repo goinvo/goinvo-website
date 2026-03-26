@@ -6,6 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { CovidChart } from './CovidChart'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'Understanding the Novel Coronavirus (COVID-19)',
@@ -51,33 +52,13 @@ function TimelineItem({
 
 export default function CoronavirusPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage('/images/features/coronavirus/hero-2.jpg')}
-          alt="Understanding the Novel Coronavirus"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-[#D6D2EA] text-sm uppercase tracking-wider font-semibold">
-            Public Health
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            Understanding the Novel Coronavirus (COVID-19)
-          </h1>
-          <p className="text-white/80 text-md mt-2">
-            Last updated: 31 March 2020
-          </p>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/coronavirus/hero-2.jpg')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Understanding the Novel Coronavirus (COVID-19)</h1>
           {/* 1. What is COVID-19? - exact Gatsby text */}
           <h2 className="font-serif text-2xl mb-4">What is COVID-19?</h2>
           <p className="leading-relaxed mb-4">

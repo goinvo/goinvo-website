@@ -6,6 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Quote } from '@/components/ui/Quote'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { EligibilityVideos } from './EligibilityVideos'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'Transforming Service Access in Massachusetts',
@@ -15,33 +16,13 @@ export const metadata: Metadata = {
 
 export default function EligibilityEnginePage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage('/images/features/eligibility/hero-image.jpg')}
-          alt="Transforming Service Access in Massachusetts"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-            Healthcare / Public Health & Policy
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            Transforming Service Access in Massachusetts
-          </h1>
-          <p className="text-white/80 text-md mt-2">
-            A centralized MA resident database for better service accessibility
-          </p>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/eligibility/hero-image.jpg')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Transforming Service Access in Massachusetts</h1>
           {/* Opening paragraphs */}
           <p className="leading-relaxed mb-4">
             The current benefit system in Massachusetts is fragmented and inefficient, leading to low utilization rates. Residents struggle to navigate the complex application process, while caseworkers are overwhelmed.

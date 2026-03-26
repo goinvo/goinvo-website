@@ -6,6 +6,7 @@ import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { LivingHealthLabCarousels, LivingHealthLabAppendixCarousel } from './LivingHealthLabCarousels'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'Living Health Lab',
@@ -35,34 +36,13 @@ function Img({
 
 export default function LivingHealthLabPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage('/images/features/living-health-lab/hero.jpg')}
-          alt="Living Health Lab"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-            Healthcare / Open Source
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            Living Health Lab
-          </h1>
-          <p className="text-white/80 text-md mt-2">
-            Guided exploration, self-tracking, and behavior change for chronic
-            conditions
-          </p>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/living-health-lab/hero.jpg')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Living Health Lab</h1>
           <h4 className="font-serif text-lg leading-relaxed mb-6">
             An open source project to help people examine, understand, and
             improve their day-to-day health through guided exploration,

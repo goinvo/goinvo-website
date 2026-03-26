@@ -4,6 +4,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
   title: 'National Cancer Navigation',
@@ -15,38 +16,13 @@ const images = Array.from(Array(7), (_x, i) => i + 1)
 
 export default function NationalCancerNavigationPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-end">
-        <Image
-          src={cloudfrontImage(
-            '/images/features/national-cancer-navigation/hero.png'
-          )}
-          alt="National Cancer Navigation"
-          fill
-          className="object-cover object-top"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-        <div className="relative z-10 max-width content-padding py-12 w-full">
-          <span className="text-primary-light text-sm uppercase tracking-wider font-semibold">
-            Healthcare / Public Health &amp; Policy
-          </span>
-          <h1 className="font-serif text-3xl md:text-4xl text-white mt-2">
-            National Cancer Navigation
-          </h1>
-          <p className="text-white/80 text-md mt-2">
-            The White House Calls for a Childhood Cancer Service
-          </p>
-        </div>
-      </section>
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/national-cancer-navigation/hero.png')} />
 
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-3xl md:text-4xl mb-4">
-            National Cancer Navigation
-          </h1>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">National Cancer Navigation</h1>
           <h2 className="font-serif text-2xl mb-4">
             The White House Calls for a Childhood Cancer Service
           </h2>
