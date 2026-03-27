@@ -56,14 +56,14 @@ export default function StudioTimelinePage() {
       <Reveal style="slide-up">
         <section className="py-16">
           <div className="max-width content-padding">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <a
                 href="https://ChurchOfDesign.org"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+                className="block no-underline"
               >
-                <div className="aspect-[16/10] overflow-hidden">
+                <div className="h-[260px] overflow-hidden">
                   <Image
                     src={cloudfrontImage(
                       '/images/about/studio-timeline/goInvo_projects_timeline.jpg'
@@ -74,21 +74,21 @@ export default function StudioTimelinePage() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-6">
-                  <h3 className="font-semibold mb-2 transition-colors">
+                <div className="py-4">
+                  <p className="font-serif font-light text-[1.5rem] leading-[2.125rem] text-black mb-1">
                     GoInvo Project Timeline
-                  </h3>
-                  <p className="text-gray text-md mb-2">
+                  </p>
+                  <p className="text-gray mb-1">
                     The landscape of open and closed source projects since 2009.
                   </p>
-                  <span className="text-secondary text-sm">Download</span>
+                  <span className="text-secondary underline mt-4 inline-block">Download</span>
                 </div>
               </a>
               <Link
                 href="/vision/an-oral-history"
-                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+                className="block no-underline"
               >
-                <div className="aspect-[16/10] overflow-hidden">
+                <div className="h-[260px] overflow-hidden">
                   <Image
                     src={cloudfrontImage(
                       '/images/features/oral-history-goinvo/oral-history-goinvo-featured.jpg'
@@ -99,15 +99,15 @@ export default function StudioTimelinePage() {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <div className="p-6">
-                  <h3 className="font-semibold mb-2 transition-colors">
+                <div className="py-4">
+                  <p className="font-serif font-light text-[1.5rem] leading-[2.125rem] text-black mb-1">
                     Oral History
-                  </h3>
-                  <p className="text-gray text-md mb-2">
+                  </p>
+                  <p className="text-gray mb-1">
                     Inside the early days of GoInvo from 2004-2014, from the
                     people who lived it.
                   </p>
-                  <span className="text-secondary text-sm">Oral History</span>
+                  <span className="text-secondary underline mt-4 inline-block">Oral History</span>
                 </div>
               </Link>
             </div>
