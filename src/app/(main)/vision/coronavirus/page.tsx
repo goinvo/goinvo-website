@@ -75,6 +75,49 @@ export default function CoronavirusPage() {
           <h4 className="font-serif text-lg mb-4">
             Quick look : How does COVID-19 compare to the other coronaviruses?
           </h4>
+
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="text-center">
+              <p className="text-[#563C8D] font-bold text-lg">SARS</p>
+              <p>2002</p>
+              <p className="text-lg">
+                In <strong>8 mo</strong>
+                <br />
+                <strong>8,000</strong>
+              </p>
+              <p>confirmed cases</p>
+              <p className="text-lg">
+                <strong>9.6%</strong>
+              </p>
+              <p>death rate</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[#563C8D] font-bold text-lg">MERS</p>
+              <p>2012</p>
+              <p className="text-lg">
+                In <strong>36 mo</strong>
+                <br />
+                <strong>2,484</strong>
+              </p>
+              <p>confirmed cases</p>
+              <p className="text-lg">
+                <strong>34.4%</strong>
+              </p>
+              <p>death rate</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[#563C8D] font-bold text-lg">COVID-19</p>
+              <p>2019&ndash;Present</p>
+              <p className="text-lg">
+                <strong>680M+</strong>
+              </p>
+              <p>confirmed cases</p>
+              <p className="text-lg">
+                <strong>~1.2%</strong>
+              </p>
+              <p>death rate</p>
+            </div>
+          </div>
         </div>
 
         <div className="max-width max-width-md content-padding mx-auto">
@@ -718,7 +761,10 @@ export default function CoronavirusPage() {
             these masks to prevent the spread of germs.
           </p>
 
-          <p className="font-serif text-lg font-bold mt-6 mb-4">
+          <p className="text-[#563C8D] uppercase font-bold mt-6 mb-2">
+            Stay safe, stay well
+          </p>
+          <p className="font-serif text-lg font-bold mb-4">
             Making your own mask to wear in public<sup>21</sup>
           </p>
           <p className="leading-relaxed mb-4">
@@ -808,59 +854,116 @@ export default function CoronavirusPage() {
           <h2 className="font-serif text-2xl mt-8 mb-4">
             Action Plan: How the World Responds
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <Image
-              src={cloudfrontImage(
-                '/images/features/coronavirus/response-airport.jpg'
-              )}
-              alt="Airport response"
-              width={400}
-              height={300}
-              className="w-full h-auto"
-            />
-            <Image
-              src={cloudfrontImage(
-                '/images/features/coronavirus/response-hospital-2.jpg'
-              )}
-              alt="Hospital response"
-              width={400}
-              height={300}
-              className="w-full h-auto"
-            />
-            <Image
-              src={cloudfrontImage(
-                '/images/features/coronavirus/response-city-2.jpg'
-              )}
-              alt="City lockdown response"
-              width={400}
-              height={300}
-              className="w-full h-auto"
-            />
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
+
+          {/* Airport Response */}
+          <Image
+            src={cloudfrontImage(
+              '/images/features/coronavirus/response-airport.jpg'
+            )}
+            alt="Airport response comic showing border screening process"
+            width={1200}
+            height={800}
+            className="w-full h-auto mb-4"
+          />
+          <div className="text-center mb-4">
             <Button
               href="https://github.com/goinvo/COVID19/raw/master/understandingcoronavirus_airports.pdf"
               variant="secondary"
               external
               size="sm"
             >
-              Airport (PDF)
+              Download PDF
             </Button>
+          </div>
+          <p className="leading-relaxed mb-4">
+            <strong className="text-[#563C8D]">
+              At the national level, our first line of defense is monitoring
+              ports-of-entry<sup>11,14</sup>
+            </strong>
+            <br />
+            Since the virus outbreak began outside of the US, the first line
+            of defense is to manage places where the disease could enter.
+            The CDC has ordered airlines to find out which passengers have
+            traveled to China in the last 14 days and for major
+            international airports to screen all incoming travelers.
+          </p>
+          <p className="leading-relaxed mb-8">
+            The three-part process begins with Customs and Border Protection
+            agents questioning travelers. Next, those at-risk are sent to a
+            secondary screening by health workers where their temperature is
+            taken. Then, those showing symptoms are evaluated and monitored
+            by the CDC &mdash;which may involve a 14-day quarantine. Travelers who
+            have been to China in the last 14 days are advised to stay home
+            and monitor their symptoms.
+          </p>
+
+          {/* Hospital Response */}
+          <Image
+            src={cloudfrontImage(
+              '/images/features/coronavirus/response-hospital-2.jpg'
+            )}
+            alt="Hospital response comic showing quarantine procedures"
+            width={1200}
+            height={800}
+            className="w-full h-auto mb-4"
+          />
+          <div className="text-center mb-4">
             <Button
               href="https://github.com/goinvo/COVID19/raw/master/understandingcoronavirus_hospitals.pdf"
               variant="secondary"
               external
               size="sm"
             >
-              Hospital (PDF)
+              Download PDF
             </Button>
+          </div>
+          <p className="leading-relaxed mb-4">
+            <strong className="text-[#563C8D]">
+              If the virus enters a state, hospitals need to be prepared to
+              respond<sup>2,12,15</sup>
+            </strong>
+            <br />
+            If there is a suspected case of COVID-19 in the region,
+            hospitals and local clinics should be trained in how to deal
+            with the virus. Massachusetts General Hospital (MGH) is 1 of 10
+            CDC designated &ldquo;regional ebola and special pathogen treatment
+            centers&rdquo; in the US &mdash;meaning that they have expert knowledge in
+            how to deal with something like an outbreak. Many other
+            hospitals have turned to MGH as they update their emergency
+            plans.
+          </p>
+
+          {/* City Response */}
+          <p className="leading-relaxed mt-8 mb-4">
+            <strong className="text-[#563C8D]">
+              If a city shuts down, what happens?<sup>10,7</sup>
+            </strong>
+            <br />
+            In the US, it is very unlikely that the CDC would mandate an
+            entire city be quarantined. US policy is actually to avoid
+            location-based mass quarantines. Many experts have noted that
+            the effectiveness of a mass quarantine for disease may not be
+            worth the significant psychological and economic costs. However,
+            in the case that a mass quarantine is ordered, cities have a
+            plan to manage the situation.
+          </p>
+          <Image
+            src={cloudfrontImage(
+              '/images/features/coronavirus/response-city-2.jpg'
+            )}
+            alt="City lockdown response comic"
+            width={1200}
+            height={800}
+            className="w-full h-auto mb-4"
+          />
+          <div className="text-center mb-8">
             <Button
               href="https://github.com/goinvo/COVID19/raw/master/understandingcoronavirus_cities.pdf"
               variant="secondary"
               external
               size="sm"
             >
-              City Lockdown (PDF)
+              Download PDF
             </Button>
           </div>
 
@@ -870,14 +973,14 @@ export default function CoronavirusPage() {
               variant="secondary"
               external
             >
-              Full Booklet (PDF)
+              Download Booklet PDF
             </Button>
             <Button
               href="https://github.com/goinvo/COVID19/raw/master/understandingcoronavirus_poster.pdf"
               variant="secondary"
               external
             >
-              Poster (PDF)
+              Download Poster PDF
             </Button>
           </div>
 
@@ -886,6 +989,10 @@ export default function CoronavirusPage() {
           <h3 className="font-serif text-xl mt-8 mb-4">
             How does the world respond to a pandemic?<sup>16</sup>
           </h3>
+          <p className="leading-relaxed mb-4">
+            A pandemic in the world is pretty scary. But the good news is
+            that we have a plan on how to deal with situations like these.
+          </p>
           <Image
             src={cloudfrontImage(
               '/images/features/coronavirus/line-of-command.jpg'
@@ -904,6 +1011,47 @@ export default function CoronavirusPage() {
             height={800}
             className="w-full h-auto mb-4 md:hidden"
           />
+
+          <div className="mb-8">
+            <p className="leading-relaxed mb-4">
+              <strong className="text-[#563C8D]">World Health Organization (WHO)</strong>
+              <br />
+              Their primary role is to direct international health and
+              provide global leadership and guidance on how to manage. Its
+              headquarters are located in Geneva, Switzerland.
+            </p>
+            <p className="leading-relaxed mb-4">
+              <strong className="text-[#563C8D]">Each country has a Regional WHO Office</strong>
+              <br />
+              The US Regional Office is in Washington, DC. Here, teams
+              can communicate with the WHO headquarters and get up-to-date
+              information about the emerging situation and consequently
+              manage the outbreak response.
+            </p>
+            <p className="leading-relaxed mb-4">
+              <strong className="text-[#563C8D]">The WHO uses its international network of collaborating
+              centers to collect information</strong>
+              <br />
+              In the US, the Centers for Disease and Control (CDC) in
+              Atlanta, Georgia collects international and national data,
+              analyzes that data, and synthesizes recommendations.
+            </p>
+            <p className="leading-relaxed mb-4">
+              <strong className="text-[#563C8D]">Our world is more connected than ever</strong>
+              <br />
+              This means that there are plenty of ways for diseases to
+              spread to other people and places. There is a fine balance
+              between protecting borders by quarantine and overreactions
+              (that cause panic).
+            </p>
+            <p className="leading-relaxed mb-4">
+              <strong className="text-[#563C8D]">Local Emergency Operations Centers</strong>
+              <br />
+              Day-to-day operations are managed by a local ground team.
+              These centers have a set of experts that work together to
+              control the local situation.
+            </p>
+          </div>
 
           <Image
             src={cloudfrontImage(
@@ -947,48 +1095,152 @@ export default function CoronavirusPage() {
             height={800}
             className="w-full h-auto mb-4 md:hidden"
           />
+          <div className="mb-8">
+            <p className="leading-relaxed mb-4">
+              However, more extreme measures like this have not been
+              required to deal with COVID-19 in the US.
+            </p>
+            <p className="leading-relaxed mb-4">
+              For now, <strong>keep calm</strong>, follow regular flu
+              season <strong>preventative measures</strong>, and{' '}
+              <strong>keep up to date</strong> on the news for updates on
+              protocols and treatment development.
+            </p>
+            <p className="leading-relaxed mb-4">
+              While you may not see it, a lot of people are working to
+              contain this virus so you can stay well.
+            </p>
+          </div>
 
           <Divider />
 
           <h2 className="font-serif text-2xl mt-8 mb-4">Important Resources</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center mb-8">
-            {[
-              {
-                src: '/images/features/coronavirus/logo-who.jpg',
-                alt: 'WHO',
-                href: 'https://www.who.int/emergencies/diseases/novel-coronavirus-2019',
-              },
-              {
-                src: '/images/features/coronavirus/logo-cdc.jpg',
-                alt: 'CDC',
-                href: 'https://www.cdc.gov/coronavirus/2019-ncov/',
-              },
-              {
-                src: '/images/features/coronavirus/logo-nih.jpg',
-                alt: 'NIH',
-                href: 'https://www.nih.gov/health-information/coronavirus',
-              },
-              {
-                src: '/images/features/coronavirus/logo-fda.jpg',
-                alt: 'FDA',
-                href: 'https://www.fda.gov/emergency-preparedness-and-response/counterterrorism-and-emerging-threats/coronavirus-disease-2019-covid-19',
-              },
-            ].map((resource) => (
+          <div className="space-y-6 mb-8">
+            <div className="flex items-start gap-6">
               <a
-                key={resource.alt}
-                href={resource.href}
+                href="https://www.who.int/emergencies/diseases/novel-coronavirus-2019"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="flex-shrink-0 w-24 md:w-32"
               >
                 <Image
-                  src={cloudfrontImage(resource.src)}
-                  alt={resource.alt}
+                  src={cloudfrontImage('/images/features/coronavirus/logo-who.jpg')}
+                  alt="WHO"
                   width={200}
                   height={100}
                   className="w-full h-auto"
                 />
               </a>
-            ))}
+              <div className="hidden md:block">
+                <p className="leading-relaxed">
+                  <strong className="text-[#563C8D]">World Health Organization</strong>
+                  <br />
+                  Information and guidance for the general public.
+                  <br />
+                  <a
+                    href="https://www.who.int/emergencies/diseases/novel-coronavirus-2019"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm"
+                  >
+                    https://www.who.int/emergencies/diseases/novel-coronavirus-2019
+                  </a>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-6">
+              <a
+                href="https://www.cdc.gov/coronavirus/2019-ncov/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 w-24 md:w-32"
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/coronavirus/logo-cdc.jpg')}
+                  alt="CDC"
+                  width={200}
+                  height={100}
+                  className="w-full h-auto"
+                />
+              </a>
+              <div className="hidden md:block">
+                <p className="leading-relaxed">
+                  <strong className="text-[#563C8D]">Centers for Disease Control and Prevention</strong>
+                  <br />
+                  Information and guidance for the general public and
+                  healthcare professionals.
+                  <br />
+                  <a
+                    href="https://www.cdc.gov/coronavirus/2019-ncov/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm"
+                  >
+                    https://www.cdc.gov/coronavirus/2019-ncov/
+                  </a>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-6">
+              <a
+                href="https://www.niaid.nih.gov/diseases-conditions/coronaviruses"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 w-24 md:w-32"
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/coronavirus/logo-nih.jpg')}
+                  alt="NIH"
+                  width={200}
+                  height={100}
+                  className="w-full h-auto"
+                />
+              </a>
+              <div className="hidden md:block">
+                <p className="leading-relaxed">
+                  <strong className="text-[#563C8D]">National Institute of Allergy and Infectious Diseases</strong>
+                  <br />
+                  <a
+                    href="https://www.niaid.nih.gov/diseases-conditions/coronaviruses"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm"
+                  >
+                    https://www.niaid.nih.gov/diseases-conditions/coronaviruses
+                  </a>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-6">
+              <a
+                href="https://www.fda.gov/emergency-preparedness-and-response/counterterrorism-and-emerging-threats/coronavirus-disease-2019-covid-19"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0 w-24 md:w-32"
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/coronavirus/logo-fda.jpg')}
+                  alt="FDA"
+                  width={200}
+                  height={100}
+                  className="w-full h-auto"
+                />
+              </a>
+              <div className="hidden md:block">
+                <p className="leading-relaxed">
+                  <strong className="text-[#563C8D]">US Food and Drug Administration</strong>
+                  <br />
+                  <a
+                    href="https://www.fda.gov/emergency-preparedness-and-response/counterterrorism-and-emerging-threats/coronavirus-disease-2019-covid-19"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm"
+                  >
+                    https://www.fda.gov/emergency-preparedness-and-response/mcm-issues/novel-coronavirus-2019-ncov
+                  </a>
+                </p>
+              </div>
+            </div>
           </div>
 
           <Divider />

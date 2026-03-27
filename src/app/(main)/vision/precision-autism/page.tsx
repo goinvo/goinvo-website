@@ -123,12 +123,12 @@ export default function PrecisionAutismPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-center mt-8 mb-4">Authors</h2>
           <Author name="Parsuree Vatanasirisuk" company="GoInvo" />
           <Author name="Sharon Lee" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
-          <h3 className="header-md mt-8 mb-3">Special thanks to...</h3>
+          <h2 className="font-serif text-2xl text-center mt-16 mb-3">Special thanks to...</h2>
           <ul className="list-disc list-outside pl-6 space-y-1 mb-8">
             <li>Elizabeth Horn</li>
             <li>Clare Southern</li>
