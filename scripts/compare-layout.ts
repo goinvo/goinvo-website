@@ -238,15 +238,9 @@ async function compareReviewSection() {
     return { tag: el.tagName.toLowerCase(), text: (el.textContent||'').trim().substring(0,60), rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
   })
 
-  // Image - find the large image in the gray section
+  // Image - find by data attribute
   nextjsMetricsOverride['review-image'] = await nextjsPage.evaluate(() => {
-    const grayBg = Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
-    if (!grayBg) return null
-    const imgs = grayBg.querySelectorAll('img')
-    let largest: Element | null = null; let maxArea = 0
-    imgs.forEach(img => { const r = img.getBoundingClientRect(); if (r.width * r.height > maxArea) { maxArea = r.width * r.height; largest = img } })
-    if (!largest) return null
-    const el = (largest as Element).parentElement // the container div
+    const el = document.querySelector('[data-review-image]')
     if (!el) return null
     const rect = el.getBoundingClientRect()
     const cs = getComputedStyle(el)

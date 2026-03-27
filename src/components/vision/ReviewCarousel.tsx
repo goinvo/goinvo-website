@@ -39,7 +39,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
     <div>
       {/* Heading */}
       <div className="max-width content-padding pt-8">
-        <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light m-0">
+        <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light" style={{ margin: '30px 0' }}>
           Reviews for<span className="text-primary font-serif">...</span>
         </h2>
       </div>
@@ -91,7 +91,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
           </div>
 
           {/* Desktop image: absolute, full left half, height matches content */}
-          <div className="hidden lg:block absolute top-0 bottom-0 left-0 right-[50%] overflow-hidden">
+          <div className="hidden lg:block absolute top-0 bottom-0 left-0 right-[50%] overflow-hidden" data-review-image>
             <Image src={cloudfrontImage(active.image)} alt="" fill className="object-cover object-center" />
           </div>
 
@@ -110,7 +110,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
                 </div>
                 <div style={{ marginTop: '2rem' }}><Divider /></div>
               </div>
-              <Button href={active.ctaLink} variant="primary" external={active.ctaExternal} className="block w-full">
+              <Button href={active.ctaLink} variant="primary" external={active.ctaExternal} className="!flex w-full justify-center">
                 {active.ctaText}
               </Button>
             </div>
