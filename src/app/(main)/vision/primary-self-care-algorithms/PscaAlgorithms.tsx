@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 const ALGORITHMS = {
@@ -17,16 +18,16 @@ const ALGORITHMS = {
 }
 
 const algorithms = [
-  { id: ALGORITHMS.VACCINE_DECISION_AIDS, title: 'Vaccine Decision Aids', icon: '\uD83D\uDC89' },
-  { id: ALGORITHMS.BLOOD_PRESSURE_MONITORING, title: 'Blood Pressure Monitoring', icon: '\u2764\uFE0F' },
-  { id: ALGORITHMS.AT_HOME_URINALYSIS, title: 'At-Home Urinalysis', icon: '\uD83D\uDD2C' },
-  { id: ALGORITHMS.MENTAL_HEALTH_ASSESSMENTS, title: 'Mental Health Assessments', icon: '\uD83E\uDDE0' },
-  { id: ALGORITHMS.VISION_TESTS, title: 'Vision Tests', icon: '\uD83D\uDC41\uFE0F' },
-  { id: ALGORITHMS.BLOOD_GLUCOSE_MONITORING, title: 'Blood Glucose Monitoring', icon: '\uD83E\uDE78' },
-  { id: ALGORITHMS.BREAST_SELF_EXAM, title: 'Breast Self-Exam', icon: '\uD83C\uDF80' },
-  { id: ALGORITHMS.BIRTH_CONTROL_DECISION_AID, title: 'Birth Control Decision Aid', icon: '\uD83D\uDCCB' },
-  { id: ALGORITHMS.AIR_QUALITY_MONITOR, title: 'Air Quality Monitor', icon: '\uD83C\uDF2C\uFE0F' },
-  { id: ALGORITHMS.PULSE_OXIMETRY, title: 'Pulse Oximetry', icon: '\uD83D\uDCCA' },
+  { id: ALGORITHMS.VACCINE_DECISION_AIDS, title: 'Vaccine Decision Aids', icon: '/images/vision/primary-self-care-algorithms/vaccine-decision-aids.svg' },
+  { id: ALGORITHMS.BLOOD_PRESSURE_MONITORING, title: 'Blood Pressure Monitoring', icon: '/images/vision/primary-self-care-algorithms/blood-pressure-monitoring.svg' },
+  { id: ALGORITHMS.AT_HOME_URINALYSIS, title: 'At-Home Urinalysis', icon: '/images/vision/primary-self-care-algorithms/at-home-urinalysis.svg' },
+  { id: ALGORITHMS.MENTAL_HEALTH_ASSESSMENTS, title: 'Mental Health Assessments', icon: '/images/vision/primary-self-care-algorithms/mental-health-assessments.svg' },
+  { id: ALGORITHMS.VISION_TESTS, title: 'Vision Tests', icon: '/images/vision/primary-self-care-algorithms/vision-tests.svg' },
+  { id: ALGORITHMS.BLOOD_GLUCOSE_MONITORING, title: 'Blood Glucose Monitoring', icon: '/images/vision/primary-self-care-algorithms/blood-glucose-monitoring.svg' },
+  { id: ALGORITHMS.BREAST_SELF_EXAM, title: 'Breast Self-Exam', icon: '/images/vision/primary-self-care-algorithms/breast-self-exam.svg' },
+  { id: ALGORITHMS.BIRTH_CONTROL_DECISION_AID, title: 'Birth Control Decision Aid', icon: '/images/vision/primary-self-care-algorithms/birth-control-decision-aid.svg' },
+  { id: ALGORITHMS.AIR_QUALITY_MONITOR, title: 'Air Quality Monitor', icon: '/images/vision/primary-self-care-algorithms/air-quality-monitor.svg' },
+  { id: ALGORITHMS.PULSE_OXIMETRY, title: 'Pulse Oximetry', icon: '/images/vision/primary-self-care-algorithms/pulse-oximetry.svg' },
 ]
 
 export function PscaAlgorithms() {
@@ -88,7 +89,7 @@ export function PscaAlgorithms() {
                 : 'border-gray-light bg-white hover:border-gray-medium'
             )}
           >
-            <span className="text-3xl">{alg.icon}</span>
+            <Image src={alg.icon} alt="" width={60} height={60} className="w-[60px] h-[60px]" />
             <span className="text-sm font-medium leading-tight">
               {alg.title}
             </span>
