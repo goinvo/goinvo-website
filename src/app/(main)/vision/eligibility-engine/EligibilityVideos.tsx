@@ -35,7 +35,7 @@ export function EligibilityVideos() {
     <div className="max-width content-padding mx-auto space-y-12 my-8">
       {features.map((feat) => (
         <div key={feat.title}>
-          <h3 className="font-serif text-xl mb-2">{feat.title}</h3>
+          <p className="leading-relaxed mb-4 max-width-md"><strong>{feat.title}</strong></p>
           <p className="leading-relaxed mb-4 max-width-md">{feat.description}</p>
           <Video
             sources={[

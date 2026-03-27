@@ -105,8 +105,8 @@ export function DeterminantsChart() {
 
   return (
     <div className="max-width content-padding mx-auto my-12">
-      <h2 className="font-serif text-2xl mb-8 text-center">
-        What Determines Our Health?
+      <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center mb-2">
+        Tap the categories to explore
       </h2>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

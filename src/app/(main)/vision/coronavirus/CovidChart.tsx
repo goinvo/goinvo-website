@@ -37,9 +37,6 @@ export function CovidChart() {
 
   return (
     <div className="max-width content-padding mx-auto my-8">
-      <h3 className="font-serif text-xl mb-4 text-center">
-        Coronavirus Compared to SARS & MERS
-      </h3>
       <p className="text-sm text-gray text-center mb-6">
         Data as of early March 2020 (snapshot)
       </p>

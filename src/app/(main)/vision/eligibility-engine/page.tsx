@@ -200,12 +200,6 @@ export default function EligibilityEnginePage() {
             </p>
           </div>
 
-          <p className="leading-relaxed mb-4">
-            <strong>Proactive Service Recommendations</strong>
-          </p>
-          <p className="leading-relaxed mb-4">
-            The system would actively analyze the information about residents in the database. By doing so, it could identify and suggest benefits they might be eligible for but haven&apos;t yet applied to. This saves residents the time and effort of having to search for programs themselves.
-          </p>
         </div>
 
         {/* Video Features */}

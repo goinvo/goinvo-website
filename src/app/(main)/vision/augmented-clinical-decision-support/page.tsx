@@ -23,7 +23,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Augmented Clinical Decision Support</h1>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Real-time clinical guidance for mobile health workers</h1>
           <p className="leading-relaxed mb-1">
             Across the rural US, healthcare is
           </p>
@@ -70,10 +70,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             <li>With a phone, 24-365 access to primary care, broadband everywhere</li>
           </ul>
 
-          <Divider />
-
-          <h2 className="font-serif text-2xl mt-8 mb-4">Downloads</h2>
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row gap-4 mb-8 mt-8">
             <Button
               href="https://github.com/goinvo/arpa-h/blob/main/TA5/arpa-h-paradigm-field-guider-proposal.pdf"
               variant="secondary"
