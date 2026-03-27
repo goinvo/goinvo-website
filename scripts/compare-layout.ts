@@ -165,26 +165,134 @@ async function compareReviewSection() {
     'subscribe-heading': '.form-subscribe-wrapper h2',
   }
 
-  const nextjsSelectors: Record<string, string> = {
-    // Try to find equivalent elements
-    'reviews-heading': 'h2:has(span.text-primary)',
-    'tab-first': 'ul.list-none li:first-child',
-    'tab-first-button': 'ul.list-none li:first-child button',
-    'tab-list': 'ul.list-none',
-    'review-image': '.bg-gray-light img, .bg-gray-light [class*="overflow-hidden"]',
-    'review-quote': '.font-serif.text-\\[1\\.5rem\\], p[class*="font-serif"][class*="font-light"]',
-    'review-cta': 'a[class*="bg-primary"][class*="uppercase"]',
-    'review-dots': '.bg-gray-light .flex.justify-center',
-    'review-dot-first': '.bg-gray-light .flex.justify-center button:first-child',
-    'review-container': '.bg-gray-light',
-    'subscribe-heading': 'h4[class*="font-serif"]',
+  // For Next.js, use a smarter approach: find elements by text content
+  const nextjsSelectorsViaJS: Record<string, string> = {}
+  const nextjsMetricsOverride: Record<string, ElementMetrics | null> = {}
+
+  // We'll query Next.js elements by text content instead of CSS selectors
+  const nextjsTextQueries: Record<string, { text: string; tag?: string; nth?: number }> = {
+    'reviews-heading': { text: 'Reviews for', tag: 'h2' },
+    'tab-first-button': { text: 'Inspired EHRs', tag: 'button' },
+    'review-quote': { text: 'I sent this around', tag: 'p' },
+    'subscribe-heading': { text: 'Subscribe to our newsletter' },
   }
+
+  for (const [label, query] of Object.entries(nextjsTextQueries)) {
+    nextjsMetricsOverride[label] = await nextjsPage.evaluate((q) => {
+      const allEls = document.querySelectorAll(q.tag || '*')
+      for (const el of allEls) {
+        if (el.textContent?.includes(q.text)) {
+          const rect = el.getBoundingClientRect()
+          const cs = getComputedStyle(el)
+          return {
+            tag: el.tagName.toLowerCase(),
+            text: (el.textContent || '').trim().substring(0, 60),
+            rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) },
+            styles: {
+              fontSize: cs.fontSize, fontWeight: cs.fontWeight,
+              fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(),
+              lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor,
+              padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom,
+              paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight,
+              margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom,
+              textAlign: cs.textAlign, display: cs.display, position: cs.position,
+              borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor,
+              borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor,
+              boxShadow: cs.boxShadow, borderRadius: cs.borderRadius,
+              width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth,
+              gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform,
+              letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration,
+            },
+          }
+        }
+      }
+      return null
+    }, query)
+  }
+
+  // For structural elements, use position-based queries
+  nextjsMetricsOverride['tab-first'] = await nextjsPage.evaluate(() => {
+    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Inspired EHRs'))
+    const el = btn?.parentElement
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: 'tab-first', rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  nextjsMetricsOverride['tab-list'] = await nextjsPage.evaluate(() => {
+    const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Inspired EHRs'))
+    const el = btn?.parentElement?.parentElement
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: 'tab-list', rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  // CTA button - find by text
+  nextjsMetricsOverride['review-cta'] = await nextjsPage.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('a')).find(a => a.textContent?.trim().includes('READ THE CASE STUDY') || a.textContent?.trim().includes('Read the Case Study') || a.textContent?.trim().includes('CASE STUDY'))
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: (el.textContent||'').trim().substring(0,60), rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  // Image - find the large image in the gray section
+  nextjsMetricsOverride['review-image'] = await nextjsPage.evaluate(() => {
+    const grayBg = Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
+    if (!grayBg) return null
+    const imgs = grayBg.querySelectorAll('img')
+    let largest: Element | null = null; let maxArea = 0
+    imgs.forEach(img => { const r = img.getBoundingClientRect(); if (r.width * r.height > maxArea) { maxArea = r.width * r.height; largest = img } })
+    if (!largest) return null
+    const el = (largest as Element).parentElement // the container div
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: 'review-image-container', rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  // Gray container
+  nextjsMetricsOverride['review-container'] = await nextjsPage.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: 'review-container', rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  // Dots container
+  nextjsMetricsOverride['review-dots'] = await nextjsPage.evaluate(() => {
+    const grayBg = Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
+    if (!grayBg) return null
+    const btns = grayBg.querySelectorAll('button[aria-label^="Review"]')
+    if (btns.length === 0) return null
+    const el = btns[0].parentElement
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: 'review-dots', rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  nextjsMetricsOverride['review-dot-first'] = await nextjsPage.evaluate(() => {
+    const grayBg = Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
+    if (!grayBg) return null
+    const el = grayBg.querySelector('button[aria-label^="Review"]')
+    if (!el) return null
+    const rect = el.getBoundingClientRect()
+    const cs = getComputedStyle(el)
+    return { tag: el.tagName.toLowerCase(), text: 'review-dot-first', rect: { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height) }, styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, fontFamily: cs.fontFamily.split(',')[0].replace(/"/g, '').trim(), lineHeight: cs.lineHeight, color: cs.color, backgroundColor: cs.backgroundColor, padding: cs.padding, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, paddingLeft: cs.paddingLeft, paddingRight: cs.paddingRight, margin: cs.margin, marginTop: cs.marginTop, marginBottom: cs.marginBottom, textAlign: cs.textAlign, display: cs.display, position: cs.position, borderTop: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, borderBottom: cs.borderBottomWidth + ' ' + cs.borderBottomStyle + ' ' + cs.borderBottomColor, boxShadow: cs.boxShadow, borderRadius: cs.borderRadius, width: cs.width, maxWidth: cs.maxWidth, minWidth: cs.minWidth, gap: cs.gap, opacity: cs.opacity, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, textDecoration: cs.textDecorationLine || cs.textDecoration } }
+  })
+
+  const nextjsSelectors: Record<string, string> = {}
 
   console.log('\n  Querying Gatsby elements...')
   const gatsbyMetrics = await getAllMetrics(gatsbyPage, gatsbySelectors)
 
   console.log('  Querying Next.js elements...')
-  const nextjsMetrics = await getAllMetrics(nextjsPage, nextjsSelectors)
+  const nextjsMetricsFromSelectors = await getAllMetrics(nextjsPage, nextjsSelectors)
+  const nextjsMetrics = { ...nextjsMetricsFromSelectors, ...nextjsMetricsOverride }
 
   console.log('\n' + '─'.repeat(70))
   console.log('REVIEW SECTION — PIXEL COMPARISON')
