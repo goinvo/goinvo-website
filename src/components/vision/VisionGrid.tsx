@@ -120,6 +120,12 @@ export function VisionGrid({ features }: VisionGridProps) {
 
   return (
     <>
+      <h3 className="header-md pb-8">
+        Features{' '}
+        <span className="text-gray text-sm font-sans">
+          ({visibleFeatures.length} of {features.length})
+        </span>
+      </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {visibleFeatures.map((feature) => (
           <FeatureCard key={feature.id} feature={feature} />

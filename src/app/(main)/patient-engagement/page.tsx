@@ -113,7 +113,7 @@ export default function PatientEngagementPage() {
       {/* Client Logos */}
       <section className="py-8">
         <div className="max-width content-padding text-center">
-          <p className="font-semibold mb-4">Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</p>
+          <h3 className="font-semibold mb-4">Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</h3>
           <ClientLogos />
         </div>
       </section>
@@ -156,10 +156,10 @@ export default function PatientEngagementPage() {
       {/* Contact Form */}
       <section className="bg-blue-light py-16">
         <div className="max-width-md content-padding mx-auto text-center">
-          <h2 className="font-serif text-2xl mb-2">
+          <p className="font-serif text-2xl mb-2">
             We ship software that works.<br />
             Let&apos;s build together!
-          </h2>
+          </p>
           <p className="text-gray mb-8">Reach out to learn how GoInvo can help.</p>
           <ContactFormEmbed />
         </div>

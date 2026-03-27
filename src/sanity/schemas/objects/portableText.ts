@@ -348,5 +348,20 @@ export default defineType({
         },
       ],
     }),
+    defineArrayMember({
+      name: 'contactForm',
+      title: 'Contact Form',
+      type: 'object',
+      description: 'Embeds the "Get in touch" contact form (JotForm)',
+      fields: [
+        {
+          name: 'showHeader',
+          title: 'Show header',
+          type: 'boolean',
+          description: 'Show "Get in touch" heading and email link above the form',
+          initialValue: true,
+        },
+      ],
+    }),
   ],
 })

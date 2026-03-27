@@ -9,6 +9,7 @@ import { urlForImage } from '@/sanity/lib/image'
 import { cn } from '@/lib/utils'
 import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
+import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -329,6 +330,13 @@ const components: PortableTextComponents = {
     ),
     divider: ({ value }) => (
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
+    ),
+    contactForm: ({ value }) => (
+      <ArticleReveal intensity="visual">
+        <div className="my-12">
+          <ContactFormEmbed showHeader={value?.showHeader !== false} />
+        </div>
+      </ArticleReveal>
     ),
   },
   list: {
