@@ -124,7 +124,7 @@ interface Issue {
   message: string
 }
 
-interface Element {
+interface PageElement {
   tag: string
   text: string
   classes: string
@@ -132,7 +132,7 @@ interface Element {
 }
 
 interface PageAnalysis {
-  headings: Element[]
+  headings: PageElement[]
   images: number
   videos: number
   iframes: number
@@ -141,8 +141,8 @@ interface PageAnalysis {
   sups: number
   quotes: number
   paragraphs: number
-  buttons: Element[]
-  links: Element[]
+  buttons: PageElement[]
+  links: PageElement[]
   hasReferences: boolean
   hasAuthors: boolean
   hasNewsletter: boolean
@@ -159,8 +159,8 @@ function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 }
 
-function extractElements(html: string, tagName: string): Element[] {
-  const results: Element[] = []
+function extractElements(html: string, tagName: string): PageElement[] {
+  const results: PageElement[] = []
   const regex = new RegExp(`<${tagName}([^>]*)>([\\s\\S]*?)<\\/${tagName}>`, 'gi')
   let match
   while ((match = regex.exec(html)) !== null) {
@@ -185,7 +185,7 @@ function getContentArea(html: string): string {
 function analyzeHtml(html: string): PageAnalysis {
   const content = getContentArea(html)
 
-  const headings: Element[] = []
+  const headings: PageElement[] = []
   for (let level = 1; level <= 4; level++) {
     headings.push(...extractElements(content, `h${level}`))
   }

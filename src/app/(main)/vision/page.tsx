@@ -148,7 +148,7 @@ export default async function VisionPage() {
 
       {/* Spotlight */}
       <div className="max-width content-padding py-8 lg:py-16">
-        <h3 className="font-serif text-xl mb-8">Spotlight</h3>
+        <h3 className="header-md py-8">Spotlight</h3>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
           {/* Spotlight feature (2/3) */}
           <a
@@ -224,7 +224,7 @@ export default async function VisionPage() {
       {/* Features Grid */}
       <div className="bg-blue-light py-4 lg:py-16">
         <div className="max-width content-padding">
-          <h3 className="font-serif text-xl mb-8">
+          <h3 className="header-md pb-8">
             Features{' '}
             <span className="text-gray text-sm font-sans">
               ({gridFeatures.length})
@@ -247,7 +247,7 @@ export default async function VisionPage() {
             />
           </div>
           <div>
-            <h2 className="font-serif text-3xl mb-4">
+            <h2 id="books" className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
               Design and Tech Publications
             </h2>
             <p className="text-gray mb-6">
@@ -316,7 +316,7 @@ export default async function VisionPage() {
       <div className="bg-gray-light">
         <div className="max-width content-padding py-8 lg:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8 items-center">
-            <h2 className="font-serif text-2xl m-0 lg:pr-8">
+            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light m-0 lg:pr-8">
               Our design and analysis has been featured in
               <span className="text-primary font-serif">...</span>
             </h2>
