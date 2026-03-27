@@ -150,6 +150,29 @@
     }
   }
 
+  /* Gatsby header--lg equivalent: medium serif light section heading */
+  .header-lg {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 300;
+    line-height: 2.125rem;
+  }
+
+  /* Gatsby header--xl equivalent: large serif light page heading */
+  .header-xl {
+    font-family: var(--font-serif);
+    font-size: 1.75rem;
+    font-weight: 300;
+    line-height: 2.0625rem;
+  }
+
+  @media (min-width: 864px) {
+    .header-xl {
+      font-size: 2.25rem;
+      line-height: 2.625rem;
+    }
+  }
+
   .max-width {
     max-width: 1020px;
     margin-left: auto;

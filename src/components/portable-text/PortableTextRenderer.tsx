@@ -387,12 +387,12 @@ const components: PortableTextComponents = {
   block: {
     h2: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h2 className="font-serif text-2xl mt-12 mb-4">{children}</h2>
+        <h2 className="header-lg mt-12 mb-4">{children}</h2>
       </ArticleReveal>
     ),
     h2Center: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h2 className="font-serif text-2xl mt-12 mb-4 text-center">{children}</h2>
+        <h2 className="header-lg mt-12 mb-4 text-center">{children}</h2>
       </ArticleReveal>
     ),
     sectionTitle: ({ children }) => (
