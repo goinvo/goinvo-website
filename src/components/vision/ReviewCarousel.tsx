@@ -43,15 +43,15 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
 
       {/* Tab selector */}
       <div className="max-width content-padding">
-        <div className="flex flex-wrap gap-0 border-b border-gray-medium">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 py-2">
           {reviews.map((review, index) => (
             <button
               key={review.id}
               onClick={() => setActiveIndex(index)}
-              className={`py-3 px-4 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+              className={`text-sm transition-colors cursor-pointer bg-transparent border-0 p-0 ${
                 index === activeIndex
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray hover:text-black'
+                  ? 'text-primary font-semibold'
+                  : 'text-gray hover:text-black'
               }`}
             >
               {menuLabels[review.id] || review.id}

@@ -20,7 +20,7 @@ export function SubscribeForm() {
   }, [])
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-8">
+    <div className="bg-white shadow-card p-8">
       <h4 className="font-serif text-lg mb-2">Subscribe to our newsletter</h4>
       <p className="text-gray text-md mb-6">
         You&apos;ll receive our latest ideas, visualizations, and studio news delivered to your
