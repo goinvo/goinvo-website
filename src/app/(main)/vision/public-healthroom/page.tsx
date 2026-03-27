@@ -14,21 +14,6 @@ export const metadata: Metadata = {
     'Preventative Health Infrastructure for cities and towns.',
 }
 
-const prototypeRoomImages = [
-  { id: 'entry', label: 'Entry' },
-  { id: 'entry-open-door', label: 'Entry - Open Door' },
-  { id: 'entry-lidar', label: 'Entry - LiDAR Scan' },
-  { id: 'body-scan', label: 'Body Scan' },
-  { id: 'body-scan-active', label: 'Body Scan - Active' },
-  { id: 'body-scan-open-door', label: 'Body Scan - Open Door' },
-  { id: 'toilet', label: 'Toilet Area' },
-  { id: 'using-toilet', label: 'Using Toilet' },
-  { id: 'toilet-door-open', label: 'Toilet - Door Open' },
-  { id: 'blood-vision', label: 'Blood / Vision Test' },
-  { id: 'exit', label: 'Exit' },
-]
-
-const prototypeLogicFrames = Array.from({ length: 28 }, (_, i) => i + 1)
 
 export default function PublicHealthroomPage() {
   return (
@@ -236,10 +221,7 @@ export default function PublicHealthroomPage() {
         </div>
 
         {/* Interactive Prototype Viewer */}
-        <PrototypeViewer
-          roomImages={prototypeRoomImages}
-          logicFrames={prototypeLogicFrames}
-        />
+        <PrototypeViewer />
 
         {/* Final Thoughts */}
         <div className="max-width max-width-md content-padding mx-auto mt-12 pt-4">
