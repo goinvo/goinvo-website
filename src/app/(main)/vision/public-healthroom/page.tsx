@@ -112,7 +112,7 @@ export default function PublicHealthroomPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto mt-8 mb-6">
+          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center mt-8 mb-6">
             Who benefits from a Public Healthroom?
           </h2>
 
@@ -156,7 +156,7 @@ export default function PublicHealthroomPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto mt-8 mb-6">
+          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center mt-8 mb-6">
             How does the Public Healthroom help?
           </h2>
 
@@ -189,7 +189,7 @@ export default function PublicHealthroomPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto mt-8 mb-6">
+          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center mt-8 mb-6">
             What should the Public Healthroom measure?
           </h2>
         </div>
@@ -208,7 +208,7 @@ export default function PublicHealthroomPage() {
         {/* Design Vision section */}
         <div className="max-width max-width-sm content-padding mx-auto mt-12 pt-4">
           <Divider />
-          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto mt-8 mb-6">
+          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center mt-8 mb-6">
             Exploring Health Futures: Public Healthroom Design Vision
           </h2>
           <p className="leading-relaxed mb-4">
@@ -244,7 +244,7 @@ export default function PublicHealthroomPage() {
         {/* Final Thoughts */}
         <div className="max-width max-width-md content-padding mx-auto mt-12 pt-4">
           <Divider />
-          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto mt-8 mb-6">
+          <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center mt-8 mb-6">
             Final Thoughts
           </h2>
           <p className="leading-relaxed mb-4">

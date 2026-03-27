@@ -10,8 +10,8 @@
  *   npx tsx scripts/compare-all-pages.ts --section main  # main pages only
  */
 
-const GATSBY_BASE = 'https://goinvo.com'
-const NEXTJS_BASE = 'http://localhost:3000'
+const GATSBY_BASE_URL = 'https://goinvo.com'
+const NEXTJS_BASE_URL = 'http://localhost:3000'
 
 const CASE_STUDY_SLUGS = [
   '3m-coderyte', 'ahrq-cds', 'all-of-us', 'care-cards',
@@ -168,8 +168,8 @@ async function main() {
     process.stdout.write(`  ${page.label}... `)
 
     const [gh, nh] = await Promise.all([
-      fetchPage(`${GATSBY_BASE}${page.path}/`),
-      fetchPage(`${NEXTJS_BASE}${page.path}/`),
+      fetchPage(`${GATSBY_BASE_URL}${page.path}/`),
+      fetchPage(`${NEXTJS_BASE_URL}${page.path}/`),
     ])
 
     if (!gh) { console.log('⚠️  Gatsby not found'); continue }
