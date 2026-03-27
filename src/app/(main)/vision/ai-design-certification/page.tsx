@@ -86,7 +86,7 @@ export default function AIDesignCertificationPage() {
           </h1>
 
           {/* What is AI design certification? */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             What is AI design certification?
           </h2>
           <p className="leading-relaxed mb-4">
@@ -112,7 +112,7 @@ export default function AIDesignCertificationPage() {
           </div>
 
           {/* Product vision */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Product vision
           </h2>
           <p className="leading-relaxed mb-4">
@@ -160,7 +160,7 @@ export default function AIDesignCertificationPage() {
           ))}
 
           {/* Why it matters now */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Why it matters now
           </h2>
           <p className="leading-relaxed mb-4">
@@ -178,7 +178,7 @@ export default function AIDesignCertificationPage() {
           </p>
 
           {/* Real-world example: Apple Health */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Real-world example: Apple Health
           </h2>
           <p className="leading-relaxed mb-4">
@@ -370,7 +370,7 @@ export default function AIDesignCertificationPage() {
           </p>
 
           {/* How it works in your workflow */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             How it works in your workflow
           </h2>
           <p className="leading-relaxed mb-4">
@@ -396,7 +396,7 @@ export default function AIDesignCertificationPage() {
           </p>
 
           {/* CTA */}
-          <h2 className="font-serif text-2xl mt-12 mb-4">
+          <h2 className="header-lg mt-12 mb-4">
             We&apos;re building this in the open:
           </h2>
           <p className="leading-relaxed mb-4">
@@ -417,7 +417,7 @@ export default function AIDesignCertificationPage() {
       {/* Authors */}
       <div className="py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Authors
           </h2>
           <Author name="Chloe Ma" company="GoInvo" />

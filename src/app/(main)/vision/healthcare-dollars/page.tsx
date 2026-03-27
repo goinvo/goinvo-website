@@ -132,7 +132,7 @@ export default function HealthcareDollarsPage() {
             development that aligns with our patient health values.
           </p>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             We&apos;d love your feedback
           </h2>
           <p className="text-gray">

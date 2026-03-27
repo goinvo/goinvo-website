@@ -313,7 +313,7 @@ export default function UnderstandingZikaPage() {
       {/* Detailed Transmission */}
       <section className="py-12" id="transmission-detail">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-4">Transmission</h2>
+          <h2 className="header-lg mb-4">Transmission</h2>
           <p className="text-gray leading-relaxed mb-6">
             The Zika virus is not yet fully understood. However, there are 4 known ways to transmit the Zika virus.
           </p>
@@ -357,7 +357,7 @@ export default function UnderstandingZikaPage() {
       {/* Comprehensive Prevention */}
       <section className="py-12" id="prevention-detail">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-4">Prevention</h2>
+          <h2 className="header-lg mb-4">Prevention</h2>
           <p className="text-gray leading-relaxed mb-6">
             Currently no vaccinations exist to prevent Zika. The best way to prevent infection is to avoid mosquito bites.
           </p>
@@ -491,7 +491,7 @@ export default function UnderstandingZikaPage() {
           <Divider />
 
           {/* Microcephaly */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">Symptoms of Microcephaly</h2>
+          <h2 className="header-lg mt-8 mb-4">Symptoms of Microcephaly</h2>
           <p className="text-gray leading-relaxed mb-4">
             There is an unconfirmed link between birth complications such as microcephaly and Zika infection during pregnancy.
           </p>
@@ -521,7 +521,7 @@ export default function UnderstandingZikaPage() {
       {/* Guillain-Barre */}
       <section className="py-12" id="gbs">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-4">Guillain-Barr&eacute; Syndrome (GBS)</h2>
+          <h2 className="header-lg mb-4">Guillain-Barr&eacute; Syndrome (GBS)</h2>
           <p className="text-gray leading-relaxed mb-4">
             Guillain-Barr&eacute; Syndrome (GBS) is an uncommon illness of the nervous system in which the person&apos;s own immune system damages nerve cells. It usually occurs after an infection.
           </p>

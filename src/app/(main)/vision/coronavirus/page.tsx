@@ -61,7 +61,7 @@ export default function CoronavirusPage() {
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           {/* 1. What is COVID-19? - exact Gatsby text */}
-          <h2 className="font-serif text-2xl mb-4">What is COVID-19?</h2>
+          <h2 className="header-lg mb-4">What is COVID-19?</h2>
           <p className="leading-relaxed mb-4">
             The 2019 Novel Coronavirus, also known as{' '}
             <strong>SARS-CoV-2</strong>, caused an outbreak of respiratory
@@ -251,7 +251,7 @@ export default function CoronavirusPage() {
           <Divider />
 
           {/* 5. How is it spreading? - with full text */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             How is it spreading?<sup>6</sup>
           </h2>
           <p className="leading-relaxed mb-4">
@@ -341,7 +341,7 @@ export default function CoronavirusPage() {
             className="w-full h-auto mb-8"
           />
 
-          <h2 className="font-serif text-2xl mb-4">Your Part</h2>
+          <h2 className="header-lg mb-4">Your Part</h2>
           <p className="leading-relaxed mb-4">
             Outbreaks at this scale can be scary, but besides staying up to date
             on the news, there are still a lot of things that you can do to stay
@@ -349,7 +349,7 @@ export default function CoronavirusPage() {
           </p>
 
           {/* 8. Prevention - exact Gatsby 9 steps */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">Prevention<sup>4</sup></h2>
+          <h2 className="header-lg mt-8 mb-4">Prevention<sup>4</sup></h2>
           <p className="leading-relaxed mb-4">
             Here&apos;s what you can do{' '}
             <strong>to prevent COVID-19 from spreading to others:</strong>
@@ -410,7 +410,7 @@ export default function CoronavirusPage() {
           <Divider />
 
           {/* 9. Close Contact - full original text */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">Close Contact<sup>3</sup></h2>
+          <h2 className="header-lg mt-8 mb-4">Close Contact<sup>3</sup></h2>
           <p className="leading-relaxed mb-4">
             If you come into close contact with someone who is confirmed to have
             COVID-19,
@@ -494,7 +494,7 @@ export default function CoronavirusPage() {
           <Divider />
 
           {/* 10. Caring for Patients - full text */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Caring for Patients<sup>5</sup>
           </h2>
           <p className="leading-relaxed mb-4">
@@ -655,7 +655,7 @@ export default function CoronavirusPage() {
           <Divider />
 
           {/* 7. Masks section with pros/cons */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Hospitals Desperately Need Masks
           </h2>
           <p className="font-serif text-lg font-bold mb-4">
@@ -851,7 +851,7 @@ export default function CoronavirusPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Action Plan: How the World Responds
           </h2>
 
@@ -1114,7 +1114,7 @@ export default function CoronavirusPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Important Resources</h2>
+          <h2 className="header-lg mt-8 mb-4">Important Resources</h2>
           <div className="space-y-6 mb-8">
             <div className="flex items-start gap-6">
               <a
@@ -1245,7 +1245,7 @@ export default function CoronavirusPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4">Authors</h2>
           <Author name="Patricia Nguyen" company="GoInvo" />
           <Author name="Colleen Tang Poy" company="GoInvo" />
           <Author name="Parsuree Vatanasirisuk" company="GoInvo" />

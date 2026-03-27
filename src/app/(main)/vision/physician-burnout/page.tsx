@@ -373,7 +373,7 @@ export default function PhysicianBurnoutPage() {
       {/* What we can do about it */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-2">
+          <h2 className="header-lg mb-2">
             What we can do about it <strong>now</strong>
           </h2>
           <p className="leading-relaxed mb-4">
@@ -607,7 +607,7 @@ export default function PhysicianBurnoutPage() {
       {/* The time to act is now */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-2">
+          <h2 className="header-lg mb-2">
             The time to act is now
           </h2>
           <p className="leading-relaxed mb-4">

@@ -61,7 +61,7 @@ export default function EbolaCareGuidelinePage() {
       {/* Related: Understanding Ebola */}
       <section className="py-12 bg-gray-lightest">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-4 text-center">Related</h2>
+          <h2 className="header-lg mb-4 text-center">Related</h2>
           <Link href="/vision/understanding-ebola" className="block group">
             <div className="bg-white p-6 rounded shadow-card hover:shadow-lg transition-shadow">
               <h3 className="font-serif text-xl mb-2 text-primary group-hover:underline">

@@ -69,7 +69,7 @@ export default function HistoryOfHealthDesignPage() {
         <div className="max-width max-width-md content-padding mx-auto mt-12">
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4">Authors</h2>
           <Author name="Samantha Wuu" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
         </div>

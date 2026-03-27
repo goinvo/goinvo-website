@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'dd17w042cevyt.cloudfront.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.goinvo.com',
+      },
     ],
   },
   async redirects() {

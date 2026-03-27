@@ -43,7 +43,7 @@ export default function PatientCenteredConsentPage() {
           <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-center mt-16 mb-2">
             Background
           </h2>
-          <h2 className="font-serif text-2xl mb-2">
+          <h2 className="header-lg mb-2">
             What is Informed Consent?
           </h2>
           <p className="leading-relaxed mb-4">

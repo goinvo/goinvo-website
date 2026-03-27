@@ -71,7 +71,7 @@ export default function PrecisionAutismPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">A Brief History of Precision Medicine and Autism</h2>
+          <h2 className="header-lg mt-8 mb-4">A Brief History of Precision Medicine and Autism</h2>
           <a
             href="https://www.goinvo.com/pdf/vision/precision-autism/Precision-Autism-25.Aug.2020.pdf"
             target="_blank"
