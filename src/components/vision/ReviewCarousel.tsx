@@ -177,36 +177,25 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
              text-align center, list items inline-block margin 0 5px
              buttons: 20x20 with 5px padding, font-size 0 (hidden text)
              dot color: #e36216, opacity 0.5 inactive, 1 active */}
-        <ul
-          className="absolute left-0 right-0 text-center list-none m-0 p-0"
-          style={{ bottom: 6 }}
+        <div
+          className="absolute left-0 right-0 flex justify-center items-center"
+          style={{ bottom: 0, height: 50, gap: 14 }}
         >
           {reviews.map((_, index) => (
-            <li
+            <button
               key={index}
-              className="inline-block cursor-pointer"
-              style={{ margin: '0 5px', width: 20, height: 20, position: 'relative' }}
               onClick={() => setActiveIndex(index)}
-            >
-              <span
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: 20,
-                  height: 20,
-                  lineHeight: '20px',
-                  textAlign: 'center',
-                  fontSize: 16,
-                  color: '#e36216',
-                  opacity: index === activeIndex ? 1 : 0.5,
-                }}
-              >
-                •
-              </span>
-            </li>
+              className="border-0 cursor-pointer p-0 rounded-full"
+              style={{
+                width: 10,
+                height: 10,
+                backgroundColor: '#e36216',
+                opacity: index === activeIndex ? 1 : 0.4,
+              }}
+              aria-label={`Review ${index + 1}`}
+            />
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   )
