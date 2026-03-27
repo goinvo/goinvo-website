@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import { Button } from '@/components/ui/Button'
 import { Divider } from '@/components/ui/Divider'
 import { cloudfrontImage } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -109,15 +110,9 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
                 </div>
                 <div style={{ marginTop: '2rem' }}><Divider /></div>
               </div>
-              <a
-                href={active.ctaLink}
-                target={active.ctaExternal ? '_blank' : undefined}
-                rel={active.ctaExternal ? 'noopener noreferrer' : undefined}
-                className="no-underline transition-colors hover:bg-primary-dark hover:border-primary-dark"
-                style={{ display: 'block', width: '100%', textAlign: 'center', backgroundColor: '#e36216', color: '#fff', border: '1px solid #e36216', fontSize: 15, fontWeight: 600, lineHeight: '26px', padding: '6px 16px', textTransform: 'uppercase', letterSpacing: '2px', textDecoration: 'none' }}
-              >
+              <Button href={active.ctaLink} variant="primary" size="lg" external={active.ctaExternal} className="w-full">
                 {active.ctaText}
-              </a>
+              </Button>
             </div>
           </div>
         </div>
