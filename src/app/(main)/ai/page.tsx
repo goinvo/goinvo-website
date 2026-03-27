@@ -13,26 +13,11 @@ export const metadata: Metadata = {
 }
 
 const results = [
-  {
-    title: 'Efficiency & savings',
-    description: 'Streamline workflows, reduce manual effort, and drive measurable cost reductions.',
-  },
-  {
-    title: 'Innovation',
-    description: 'Quickly generate more out-of-the-box ideas that work and elevate product vision.',
-  },
-  {
-    title: 'Rapid experimentation',
-    description: 'Validate ideas quickly before committing major resources.',
-  },
-  {
-    title: 'Risk Reduction',
-    description: 'Early-stage design and testing uncover challenges before they escalate.',
-  },
-  {
-    title: 'Seamless integration',
-    description: 'AI experiences for real-world use.',
-  },
+  { label: 'Efficiency & savings:', text: 'Streamline workflows, reduce manual effort, and drive measurable cost reductions.' },
+  { label: 'Innovation:', text: 'Quickly generate more out-of-the-box ideas that work and elevate product vision.' },
+  { label: 'Rapid experimentation:', text: 'Validate ideas quickly before committing major resources.' },
+  { label: 'Risk Reduction:', text: 'Early-stage design and testing uncover challenges before they escalate.' },
+  { label: 'Seamless integration:', text: 'AI experiences for real-world use.' },
 ]
 
 const caseStudies = [
@@ -105,12 +90,11 @@ export default function AIPage() {
       <section className="py-16">
         <div className="max-width content-padding">
           <h2 className="font-serif text-2xl mb-8">What results are you looking for?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {results.map((result) => (
-              <div key={result.title}>
-                <h3 className="font-semibold mb-2">{result.title}</h3>
-                <p className="text-gray text-md">{result.description}</p>
-              </div>
+              <p key={result.label} className="font-semibold">
+                <strong>{result.label}</strong> {result.text}
+              </p>
             ))}
           </div>
         </div>

@@ -91,7 +91,7 @@ export default function GovernmentPage() {
                   height={200}
                   className="mx-auto mb-4 max-w-[80%]"
                 />
-                <h4 className="font-semibold mb-2">{reason.title}</h4>
+                <p className="font-semibold mb-2">{reason.title}</p>
                 <p className="text-gray text-md">{reason.description}</p>
               </div>
             ))}
@@ -210,10 +210,10 @@ export default function GovernmentPage() {
       {/* CTA + Contact */}
       <section className="bg-blue-light py-16">
         <div className="max-width-md content-padding mx-auto text-center">
-          <h2 className="font-serif text-2xl mb-2">
+          <p className="font-serif text-2xl mb-2">
             We ship software that works.<br />
             Let&apos;s build together!
-          </h2>
+          </p>
           <p className="text-gray mb-8">Reach out to learn how GoInvo can help.</p>
           <ContactFormEmbed />
         </div>
