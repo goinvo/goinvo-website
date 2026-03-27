@@ -40,7 +40,7 @@ export default function EligibilityEnginePage() {
 
           {/* Challenges section */}
           <div className="py-2 px-4 mb-8">
-            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto">
+            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center">
               Challenges of Accessing Services in Massachusetts
             </h2>
           </div>
@@ -85,11 +85,12 @@ export default function EligibilityEnginePage() {
               className="w-full h-auto"
             />
           </a>
-          <div className="text-center mt-8 mb-8">
+          <div className="mt-8 mb-8">
             <Button
               href="https://www.goinvo.com/pdf/vision/eligibility/journey-map.pdf"
               variant="secondary"
               external
+              className="w-full"
             >
               Download full applicant journey map
             </Button>
@@ -109,7 +110,7 @@ export default function EligibilityEnginePage() {
 
           {/* Common Data Elements section */}
           <div className="py-2 px-4 mb-8">
-            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto">
+            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center">
               Common Data Elements for MA Residents
             </h2>
           </div>
@@ -152,12 +153,12 @@ export default function EligibilityEnginePage() {
               loading="lazy"
               title="Eligibility Engine Research Table"
             />
-            <div className="text-center mt-8 mb-2">
+            <div className="mt-8 mb-2">
               <Button
                 href="https://docs.google.com/spreadsheets/d/1SRI5Tz5pJLIEr_ibwOj32J4cwN0Ry1cgbXNAXfiBWfk/edit?usp=sharing"
                 variant="secondary"
-                size="lg"
                 external
+                className="w-full"
               >
                 View Common data for MA services
               </Button>
@@ -168,7 +169,7 @@ export default function EligibilityEnginePage() {
 
           {/* The Power of a Centralized Resident Database */}
           <div className="py-2 px-4 mb-8">
-            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto">
+            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center">
               The Power of a Centralized Resident Database
             </h2>
           </div>
@@ -215,7 +216,7 @@ export default function EligibilityEnginePage() {
 
           {/* Anticipated Impact */}
           <div className="py-2 px-4 mb-8">
-            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto">
+            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center">
               Anticipated Impact
             </h2>
           </div>
@@ -251,7 +252,7 @@ export default function EligibilityEnginePage() {
 
           {/* Footnotes */}
           <div className="py-2 px-4 mb-8">
-            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center max-w-sm mx-auto">
+            <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center">
               Footnotes
             </h2>
           </div>
