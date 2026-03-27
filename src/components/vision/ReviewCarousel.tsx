@@ -118,7 +118,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
         </div>
 
         {/* Dots: OUTSIDE the relative div so they don't affect image height */}
-        <div className="flex justify-center items-center" style={{ gap: 14 }}>
+        <div className="flex justify-center items-center py-4" style={{ gap: 14 }}>
           {reviews.map((_, index) => (
             <button
               key={index}
