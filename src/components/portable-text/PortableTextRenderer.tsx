@@ -415,8 +415,20 @@ const components: PortableTextComponents = {
       )
     },
     sup: ({ children }) => <sup>{children}</sup>,
+    // Legacy decorators (backward compat)
     teal: ({ children }) => <span className="text-secondary">{children}</span>,
     orange: ({ children }) => <span className="text-primary">{children}</span>,
+    // New unified text color annotation
+    textColor: ({ children, value }) => {
+      const colorMap: Record<string, string> = {
+        teal: 'text-secondary',
+        orange: 'text-primary',
+        charcoal: 'text-[#263238]',
+        gray: 'text-gray',
+        blue: 'text-blue',
+      }
+      return <span className={colorMap[value?.color] || 'text-secondary'}>{children}</span>
+    },
     refCitation: ({ children, value }) => (
       <sup>
         <a

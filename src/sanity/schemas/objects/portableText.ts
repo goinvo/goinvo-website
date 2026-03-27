@@ -22,9 +22,11 @@ export default defineType({
           { title: 'Bold', value: 'strong' },
           { title: 'Italic', value: 'em' },
           { title: 'Underline', value: 'underline' },
-          { title: 'Superscript', value: 'sup' },
-          { title: 'Teal', value: 'teal' },
-          { title: 'Orange', value: 'orange' },
+          {
+            title: 'Superscript',
+            value: 'sup',
+            icon: () => 'X²',
+          },
         ],
         annotations: [
           {
@@ -46,6 +48,30 @@ export default defineType({
                 type: 'boolean',
                 description: 'Check for external links so users stay on the site',
                 initialValue: false,
+              },
+            ],
+          },
+          {
+            title: 'Text Color',
+            name: 'textColor',
+            type: 'object',
+            icon: () => 'A',
+            fields: [
+              {
+                title: 'Color',
+                name: 'color',
+                type: 'string',
+                description: 'Select a brand color',
+                options: {
+                  list: [
+                    { title: 'Emerald Teal (#007385)', value: 'teal' },
+                    { title: 'Vibrant Orange (#E36216)', value: 'orange' },
+                    { title: 'Deep Charcoal (#263238)', value: 'charcoal' },
+                    { title: 'Warm Gray (#787473)', value: 'gray' },
+                    { title: 'Ocean Blue (#486393)', value: 'blue' },
+                  ],
+                },
+                initialValue: 'teal',
               },
             ],
           },
