@@ -224,12 +224,6 @@ export default async function VisionPage() {
       {/* Features Grid */}
       <div className="bg-blue-light py-4 lg:py-16">
         <div className="max-width content-padding">
-          <h3 className="header-md pb-8">
-            Features{' '}
-            <span className="text-gray text-sm font-sans">
-              ({gridFeatures.length})
-            </span>
-          </h3>
           <VisionGrid features={gridFeatures} />
         </div>
       </div>
