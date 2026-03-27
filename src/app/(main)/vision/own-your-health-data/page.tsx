@@ -79,6 +79,7 @@ export default function OwnYourHealthDataPage() {
                     '/pdf/vision/own-your-health-data/Own-Your-Health-Data.pdf'
                   )}
                   variant="secondary"
+                  external
                   className="w-full mt-8 mb-2"
                 >
                   Download Comic

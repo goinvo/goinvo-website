@@ -44,6 +44,9 @@ export const teamHeadshots: Record<string, string> = {
   'Patricia Nguyen': '/images/about/headshot-patricia-nguyen.jpg',
   'Farah Hamade': '/images/about/headshot-farah-hamade.jpg',
 
+  'Annie Lakey Becker': '/images/about/headshot-annie-becker.jpg',
+  'Kim Nipp': '/images/about/headshot-kim-nipp.jpg',
+
   // External collaborators (from vision pages)
   'Cagri Zaman': '/images/about/headshot-cagri-zaman.jpg',
   'Mollie Williams': '/images/about/headshot-mollie-williams.jpg',
