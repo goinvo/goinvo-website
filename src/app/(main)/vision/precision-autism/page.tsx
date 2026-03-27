@@ -23,19 +23,19 @@ export default function PrecisionAutismPage() {
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Precision Autism</h1>
+          <h3 className="header-md">Dynamic Tracking Concept for Families</h3>
           <p className="leading-relaxed mb-4">
             Living with autism looks different for every family. By capturing real-world data and tailoring insights to the individual, a thoughtfully designed tool can support more personalized care, better communication with caregivers, educators, and providers. And ultimately, provide families with a more empowered and proactive approach for living with autism.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <a
+            <Button
               href="https://www.handsfilm.org/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
+              variant="secondary"
+              external
             >
               Check out the Documentary
-            </a>
+            </Button>
           </div>
         </div>
 
@@ -53,22 +53,20 @@ export default function PrecisionAutismPage() {
 
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <a
+            <Button
               href="https://github.com/openAutism/openautism.github.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
+              variant="secondary"
+              external
             >
               Github
-            </a>
-            <a
+            </Button>
+            <Button
               href="https://openautism.github.io/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
+              variant="secondary"
+              external
             >
               Concepts and Sketches
-            </a>
+            </Button>
           </div>
 
           <Divider />
@@ -88,14 +86,13 @@ export default function PrecisionAutismPage() {
             />
           </a>
           <div className="text-center mt-4 mb-4">
-            <a
+            <Button
               href="https://www.goinvo.com/pdf/vision/precision-autism/Precision-Autism-25.Aug.2020.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
+              variant="secondary"
+              external
             >
               Download Poster
-            </a>
+            </Button>
           </div>
           <p className="text-center text-sm text-gray mb-8">
             Licensed under Creative Commons Attribution v4
@@ -113,14 +110,13 @@ export default function PrecisionAutismPage() {
             title="Precision Autism Timeline"
           />
           <div className="text-center mt-6">
-            <a
+            <Button
               href="https://docs.google.com/spreadsheets/d/1UaJB6GqmCOJ9mAaNzEark9Of4AIb7wTx346E7gNlhGE/edit?ts=5c6f2046"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 border border-primary-light text-primary hover:bg-primary-lightest transition-colors uppercase text-sm tracking-[2px] font-semibold no-underline"
+              variant="secondary"
+              external
             >
               Timeline Events and References
-            </a>
+            </Button>
           </div>
         </div>
 

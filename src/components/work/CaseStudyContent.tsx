@@ -32,7 +32,7 @@ export function CaseStudyContent({ initialData, slug }: Props) {
             className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mt-8 mb-2"
             style={{ viewTransitionName: 'page-title' }}
           >
-            {caseStudy.title}
+            {caseStudy.heading || caseStudy.title}
           </h1>
           {(caseStudy.categories?.length || caseStudy.time) && (
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">

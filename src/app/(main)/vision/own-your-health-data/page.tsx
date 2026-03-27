@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
+import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { References } from '@/components/ui/References'
@@ -73,15 +74,15 @@ export default function OwnYourHealthDataPage() {
                     className="w-full h-auto"
                   />
                 </a>
-                <a
+                <Button
                   href={cloudfrontImage(
                     '/pdf/vision/own-your-health-data/Own-Your-Health-Data.pdf'
                   )}
-                  rel="noopener noreferrer"
-                  className="block mt-8 mb-2 text-center py-3 px-6 bg-secondary text-white hover:bg-secondary/90 transition-colors"
+                  variant="secondary"
+                  className="w-full mt-8 mb-2"
                 >
                   Download Comic
-                </a>
+                </Button>
                 <div className="mt-4 text-center">
                   <a
                     href="https://github.com/goinvo/OwnYourHealthData"
@@ -109,14 +110,14 @@ export default function OwnYourHealthDataPage() {
                     className="w-full h-auto"
                   />
                 </a>
-                <a
+                <Button
                   href="https://docs.google.com/document/d/13j03-beeoOZujMK6smdjcicKAb1Jh_L6tn_NG91Nq4M/edit"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block mt-8 mb-2 text-center py-3 px-6 bg-secondary text-white hover:bg-secondary/90 transition-colors"
+                  variant="secondary"
+                  external
+                  className="w-full mt-8 mb-2"
                 >
                   View Whitepaper
-                </a>
+                </Button>
               </div>
             </div>
           </div>

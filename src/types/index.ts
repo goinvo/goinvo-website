@@ -26,6 +26,7 @@ export interface Category {
 export interface CaseStudy {
   _id: string
   title: string
+  heading?: string
   slug: { current: string }
   client?: string
   image?: SanityImage

@@ -13,6 +13,12 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'heading',
+      title: 'Page Heading',
+      type: 'string',
+      description: 'Override title for the page h1 (defaults to title if empty)',
+    }),
+    defineField({
       name: 'slug',
       title: 'Slug',
       type: 'slug',
