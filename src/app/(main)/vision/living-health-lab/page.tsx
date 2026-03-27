@@ -456,15 +456,15 @@ export default function LivingHealthLabPage() {
           <div className="max-width content-padding mx-auto">
             <h2 className="font-serif text-2xl mb-4 text-center">Appendix</h2>
 
-            <h3 className="header-md mt-6 mb-4">
+            <h2 className="header-md mt-6 mb-4">
               i - Non-medicine Pain Relief
-            </h3>
+            </h2>
 
             <LivingHealthLabAppendixCarousel />
 
-            <h3 className="font-serif text-xl mt-8 mb-4">
+            <h2 className="font-serif text-xl mt-8 mb-4">
               ii - Research Table
-            </h3>
+            </h2>
             <iframe
               src="https://docs.google.com/spreadsheets/d/e/2PACX-1vQCH-qmx5UMmEqMI74LUNS8rhSKT9mi1pjqDGrkNPLdOXyRQTZVYCjlmwpzxDdq1ZMqdgE2F1XeoqrE/pubhtml?widget=true&headers=false"
               className="w-full border border-gray-medium rounded"
