@@ -66,7 +66,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             </Button>
           </div>
 
-          <h2 className="font-serif text-2xl mt-12 mb-4">
+          <h2 className="header-lg mt-12 mb-4">
             The future of rural healthcare is...
           </h2>
           <ul className="list-disc list-outside pl-6 space-y-2 mb-8 leading-relaxed">
@@ -78,7 +78,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             <li>With a phone, 24-365 access to primary care, broadband everywhere</li>
           </ul>
 
-          <h2 className="font-serif text-2xl mt-12 mb-4">
+          <h2 className="header-lg mt-12 mb-4">
             Primary Care Process
           </h2>
           <a
@@ -104,7 +104,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Primary Care Process
           </Button>
 
-          <h2 className="font-serif text-2xl mt-12 mb-4">
+          <h2 className="header-lg mt-12 mb-4">
             Clinical Task Guidance System Diagram
           </h2>
           <a
@@ -130,7 +130,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Clinical Task Guidance System Diagram
           </Button>
 
-          <h2 className="font-serif text-2xl mt-12 mb-4">
+          <h2 className="header-lg mt-12 mb-4">
             Pregnancy Storyboard
           </h2>
         </div>
@@ -149,7 +149,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             </Button>
           </div>
 
-          <h2 className="font-serif text-2xl mt-12 mb-4">Process Maps</h2>
+          <h2 className="header-lg mt-12 mb-4">Process Maps</h2>
 
           <h3 className="font-serif text-xl mt-6 mb-4">Pregnancy Process Map</h3>
           <a

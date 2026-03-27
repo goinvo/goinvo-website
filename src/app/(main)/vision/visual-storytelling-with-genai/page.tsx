@@ -44,7 +44,7 @@ export default function VisualStorytellingPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             A Faster, Smarter Workflow
           </h2>
           <p className="leading-relaxed mb-4">
@@ -228,7 +228,7 @@ export default function VisualStorytellingPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             GenAI Motivates Creative Experimentation
           </h2>
           <p className="leading-relaxed mb-4">
@@ -248,7 +248,7 @@ export default function VisualStorytellingPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Why Does This Matter?
           </h2>
           <p className="leading-relaxed mb-4">
@@ -281,7 +281,7 @@ export default function VisualStorytellingPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4">Authors</h2>
           <Author name="Maverick Chan" company="GoInvo" />
           <Author name="Claire Lin" company="GoInvo" />
           <Author name="Shirley Xu" company="GoInvo" />

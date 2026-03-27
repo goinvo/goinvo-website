@@ -117,7 +117,7 @@ export default function LivingHealthLabPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Introduction</h2>
+          <h2 className="header-lg mt-8 mb-4">Introduction</h2>
 
           <p className="leading-relaxed mb-4">
             Chronic pain is a condition that affects over 50 million adults in
@@ -237,7 +237,7 @@ export default function LivingHealthLabPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Design</h2>
+          <h2 className="header-lg mt-8 mb-4">Design</h2>
 
           <Img src="LHL_project_timeline.jpg" alt="Living Health Lab project timeline" className="mb-8" />
 
@@ -341,7 +341,7 @@ export default function LivingHealthLabPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Making Living Health Lab Real
           </h2>
 
@@ -454,7 +454,7 @@ export default function LivingHealthLabPage() {
         {/* Appendix */}
         <div className="bg-secondary/10 py-12 mt-8">
           <div className="max-width content-padding mx-auto">
-            <h2 className="font-serif text-2xl mb-4 text-center">Appendix</h2>
+            <h2 className="header-lg mb-4 text-center">Appendix</h2>
 
             <h2 className="header-md mt-6 mb-4">
               i - Non-medicine Pain Relief
@@ -478,7 +478,7 @@ export default function LivingHealthLabPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4">Authors</h2>
           <Author name="Sharon Lee" company="GoInvo" />
           <Author name="Shayla Nettey" company="GoInvo" />
           <Author name="Huahua Zhu" company="GoInvo" />

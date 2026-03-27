@@ -349,6 +349,77 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'ctaButton',
+      title: 'CTA Button',
+      type: 'object',
+      description: 'A styled button link (download, external link, etc.)',
+      fields: [
+        {
+          name: 'label',
+          title: 'Label',
+          type: 'string',
+          description: 'Button text (e.g., "Download PDF", "View on Github")',
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: 'url',
+          title: 'URL',
+          type: 'url',
+          description: 'Link destination',
+          validation: (Rule) => Rule.required().uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }),
+        },
+        {
+          name: 'variant',
+          title: 'Variant',
+          type: 'string',
+          options: {
+            list: [
+              { title: 'Primary (filled orange)', value: 'primary' },
+              { title: 'Secondary (outline)', value: 'secondary' },
+            ],
+          },
+          initialValue: 'secondary',
+        },
+        {
+          name: 'fullWidth',
+          title: 'Full width',
+          type: 'boolean',
+          description: 'Make button stretch to full container width',
+          initialValue: false,
+        },
+        {
+          name: 'external',
+          title: 'Open in new tab',
+          type: 'boolean',
+          initialValue: true,
+        },
+      ],
+    }),
+    defineArrayMember({
+      name: 'buttonGroup',
+      title: 'Button Group',
+      type: 'object',
+      description: 'Two or more buttons side by side',
+      fields: [
+        {
+          name: 'buttons',
+          title: 'Buttons',
+          type: 'array',
+          of: [
+            {
+              type: 'object',
+              fields: [
+                { name: 'label', title: 'Label', type: 'string', validation: (Rule) => Rule.required() },
+                { name: 'url', title: 'URL', type: 'url', validation: (Rule) => Rule.required().uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }) },
+                { name: 'variant', title: 'Variant', type: 'string', options: { list: [{ title: 'Primary', value: 'primary' }, { title: 'Secondary', value: 'secondary' }] }, initialValue: 'secondary' },
+                { name: 'external', title: 'New tab', type: 'boolean', initialValue: true },
+              ],
+            },
+          ],
+        },
+      ],
+    }),
+    defineArrayMember({
       name: 'contactForm',
       title: 'Contact Form',
       type: 'object',

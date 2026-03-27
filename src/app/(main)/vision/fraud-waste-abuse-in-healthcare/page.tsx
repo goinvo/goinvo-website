@@ -59,7 +59,7 @@ export default function FraudWasteAbuseHealthcarePage() {
 
           {/* What is FWA? */}
           <div className="pt-4 pb-4 px-4 mb-8">
-            <h2 className="font-serif text-2xl mt-12 mb-4 text-center">
+            <h2 className="header-lg mt-12 mb-4 text-center">
               What is Fraud, Waste, and Abuse?
             </h2>
           </div>
@@ -106,7 +106,7 @@ export default function FraudWasteAbuseHealthcarePage() {
 
           {/* The Cost of FWA */}
           <div className="pt-4 pb-4 px-4 mb-8">
-            <h2 className="font-serif text-2xl mt-12 mb-4 text-center">
+            <h2 className="header-lg mt-12 mb-4 text-center">
               The Cost of FWA, $1 Trillion
             </h2>
           </div>
@@ -166,7 +166,7 @@ export default function FraudWasteAbuseHealthcarePage() {
 
           {/* Recovering FWA */}
           <div className="pt-4 pb-4 px-4 mb-8">
-            <h2 className="font-serif text-2xl mt-12 mb-4 text-center">
+            <h2 className="header-lg mt-12 mb-4 text-center">
               Recovering FWA
             </h2>
           </div>
@@ -264,7 +264,7 @@ export default function FraudWasteAbuseHealthcarePage() {
 
           {/* Proposed Solutions */}
           <div className="pt-4 pb-4 px-4 mb-8">
-            <h2 className="font-serif text-2xl mt-12 mb-4 text-center">
+            <h2 className="header-lg mt-12 mb-4 text-center">
               Proposed Solutions
             </h2>
           </div>

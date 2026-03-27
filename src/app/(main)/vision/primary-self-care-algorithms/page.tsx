@@ -24,7 +24,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Primary Self Care Algorithms</h1>
-          <h2 className="font-serif text-2xl mb-4">
+          <h2 className="header-lg mb-4">
             What is Primary Self Care?
           </h2>
           <p className="leading-relaxed mb-4">
@@ -38,7 +38,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
             outcomes at various stages of life<sup><a href="#references">1</a></sup>.
           </p>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Why Primary Self Care?
           </h2>
           <p className="leading-relaxed mb-4">
@@ -55,7 +55,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
             decision making power in their health.
           </p>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             What is a Primary Self Care algorithm?
           </h2>
           <p className="leading-relaxed mb-4">
@@ -66,7 +66,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
             health assessments, and screening and testing services.
           </p>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Why does the PSC Algorithms Project matter?
           </h2>
           <p className="leading-relaxed mb-4">
@@ -168,7 +168,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
         <div className="bg-secondary/10 py-12">
           <div className="max-width max-width-md content-padding mx-auto">
             <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mt-8">Methods</h1>
-            <h2 className="font-serif text-2xl mt-8 mb-4">
+            <h2 className="header-lg mt-8 mb-4">
               Decision Matrix
             </h2>
             <p className="leading-relaxed mb-4">
@@ -249,7 +249,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
               </table>
             </div>
 
-            <h2 className="font-serif text-2xl mt-8 mb-4">
+            <h2 className="header-lg mt-8 mb-4">
               Ranking of Top 10 Algorithms
             </h2>
             <div className="overflow-x-auto">

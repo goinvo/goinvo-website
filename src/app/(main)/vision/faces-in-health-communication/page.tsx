@@ -73,7 +73,7 @@ export default function FacesInHealthCommunicationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             Problem: The High Cost of Low Health Literacy
           </h2>
           <Img src="02-HHS-defines-health-literacy.jpg" alt="HHS defines health literacy" />
@@ -142,7 +142,7 @@ export default function FacesInHealthCommunicationPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             The Benefits of Visual Healthcare Communication
           </h2>
           <p className="leading-relaxed mb-4">
@@ -221,7 +221,7 @@ export default function FacesInHealthCommunicationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             Human Faces and Communication
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -405,7 +405,7 @@ export default function FacesInHealthCommunicationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             Healthcare Graphics, Persuasion, and Emotion
           </h2>
 
@@ -507,7 +507,7 @@ export default function FacesInHealthCommunicationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">Conclusion</h2>
+          <h2 className="header-lg mt-8 mb-4 text-center">Conclusion</h2>
           <div className="space-y-8 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-4 items-center">
               <Img src="19-conclusion1.jpg" alt="Conclusion 1: Prioritize higher engagement" />
@@ -540,7 +540,7 @@ export default function FacesInHealthCommunicationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             Appendix.<br />A Lean Experiment Evaluating Healthcare Information
             Graphics
           </h2>
@@ -631,7 +631,7 @@ export default function FacesInHealthCommunicationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4">Authors</h2>
           <Author name="Chloe Ma" company="GoInvo" />
           <Author name="Vickie Hua" company="GoInvo" />
           <Author name="Sharon Lee" company="GoInvo" />

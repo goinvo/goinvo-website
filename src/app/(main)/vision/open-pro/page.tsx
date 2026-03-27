@@ -37,7 +37,7 @@ export default function OpenProPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             What is PRO and why is it important?
           </h2>
 
@@ -175,7 +175,7 @@ export default function OpenProPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">The current landscape</h2>
+          <h2 className="header-lg mt-8 mb-4 text-center">The current landscape</h2>
           <p className="text-gray leading-relaxed mb-4">
             <em>Patient portals</em> offer communication between the patient
             and care team. Some EHR vendors offer the ability to send PRO
@@ -282,7 +282,7 @@ export default function OpenProPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">Our solution: openPRO</h2>
+          <h2 className="header-lg mt-8 mb-4 text-center">Our solution: openPRO</h2>
 
           <h4 className="header-md text-center">
             An open source project capturing the patient&apos;s voice,

@@ -22,7 +22,7 @@ export default function NationalCancerNavigationPage() {
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">National Cancer Navigation</h1>
-          <h2 className="font-serif text-2xl mb-4">
+          <h2 className="header-lg mb-4">
             The White House Calls for a Childhood Cancer Service
           </h2>
           <p className="leading-relaxed mb-4">
@@ -62,7 +62,7 @@ export default function NationalCancerNavigationPage() {
             from across different sectors.
           </p>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             7 Underlying Problems in the US Cancer Space
           </h2>
           <p className="leading-relaxed mb-4">
@@ -143,7 +143,7 @@ export default function NationalCancerNavigationPage() {
             scalability of patient navigation.
           </p>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Reimagining Patient Navigation for Cancer
           </h2>
         </div>
@@ -274,7 +274,7 @@ export default function NationalCancerNavigationPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mb-2">Authors</h2>
+          <h2 className="header-lg mb-2">Authors</h2>
           <p className="mt-0">
             Claire Lin<br />
             Tala Habbab<br />
@@ -284,7 +284,7 @@ export default function NationalCancerNavigationPage() {
             Juhan Sonin
           </p>
 
-          <h2 className="font-serif text-2xl mb-2 mt-8">Contributors</h2>
+          <h2 className="header-lg mb-2 mt-8">Contributors</h2>
           <p className="mt-0">
             <a
               href="https://www.linkedin.com/in/gcordovano/"
@@ -324,7 +324,7 @@ export default function NationalCancerNavigationPage() {
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           <div id="references">
-            <h2 className="font-serif text-2xl mt-8 mb-4">References</h2>
+            <h2 className="header-lg mt-8 mb-4">References</h2>
             <ol className="list-decimal list-outside pl-6 space-y-2 text-sm text-gray">
               <li>
                 <a

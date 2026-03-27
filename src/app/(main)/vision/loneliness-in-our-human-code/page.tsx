@@ -240,7 +240,7 @@ export default function LonelinessInOurHumanCodePage() {
           </div>
 
           {/* Stat Grid */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Social isolation costs us...
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -457,7 +457,7 @@ export default function LonelinessInOurHumanCodePage() {
           <Divider />
 
           {/* Resilience / Closing */}
-          <h2 className="font-serif text-2xl mt-8 mb-4 text-center">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             Resilience in Our Human Code
           </h2>
           <p className="text-gray mb-6">

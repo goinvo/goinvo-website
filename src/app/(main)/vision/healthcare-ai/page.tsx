@@ -125,7 +125,7 @@ export default function HealthcareAIPage() {
           <Divider />
 
           {/* Expectations for the Future */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Expectations for the Future
           </h2>
           <p className="leading-relaxed mb-4">
@@ -242,7 +242,7 @@ export default function HealthcareAIPage() {
           <Divider />
 
           {/* Patient Tool Concepts */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Patient Tool Concepts
           </h2>
 
@@ -430,7 +430,7 @@ export default function HealthcareAIPage() {
           <Divider />
 
           {/* What purposes could an AI patient tool serve? */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             What purposes could an AI patient tool serve?
           </h2>
           <p className="leading-relaxed mb-4">Here&apos;s how we imagine it:</p>
@@ -580,7 +580,7 @@ export default function HealthcareAIPage() {
           <Divider />
 
           {/* Ripple Effects and Unintended Outcomes */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4">
             Ripple Effects and Unintended Outcomes
           </h2>
           <p className="leading-relaxed mb-4">
@@ -658,7 +658,7 @@ export default function HealthcareAIPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4">Authors</h2>
           <Author name="Sharon Lee" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 

@@ -328,6 +328,50 @@ const components: PortableTextComponents = {
         </figure>
       </ArticleReveal>
     ),
+    ctaButton: ({ value }) => (
+      <ArticleReveal intensity="visual">
+        <div className={cn('my-4', value.fullWidth ? '' : 'inline-block')}>
+          <a
+            href={value.url}
+            target={value.external ? '_blank' : undefined}
+            rel={value.external ? 'noopener noreferrer' : undefined}
+            className={cn(
+              'inline-flex items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border',
+              'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
+              value.fullWidth && 'w-full',
+              value.variant === 'primary'
+                ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
+                : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
+            )}
+          >
+            {value.label}
+          </a>
+        </div>
+      </ArticleReveal>
+    ),
+    buttonGroup: ({ value }) => (
+      <ArticleReveal intensity="visual">
+        <div className="flex flex-wrap gap-4 my-6">
+          {value.buttons?.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
+            <a
+              key={i}
+              href={btn.url}
+              target={btn.external ? '_blank' : undefined}
+              rel={btn.external ? 'noopener noreferrer' : undefined}
+              className={cn(
+                'inline-flex items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border',
+                'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
+                btn.variant === 'primary'
+                  ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
+                  : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
+              )}
+            >
+              {btn.label}
+            </a>
+          ))}
+        </div>
+      </ArticleReveal>
+    ),
     divider: ({ value }) => (
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     ),

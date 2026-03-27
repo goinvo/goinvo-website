@@ -133,7 +133,7 @@ export default function CarePlansPage() {
       {/* Goals */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-4">Our Goals</h2>
+          <h2 className="header-lg mb-4">Our Goals</h2>
           <p className="text-gray leading-relaxed mb-4">
             Our feature series has three goals. We aim to spread both awareness to the general public about the benefit of care planning, as well as empowerment to demand such practices from doctors. We aim to inspire healthcare professionals, designers, and entrepreneurs to prioritize care plans when innovating healthcare products and services. And we aim to encourage policymakers to establish care plan databases and evaluate the costs of implementation.
           </p>
