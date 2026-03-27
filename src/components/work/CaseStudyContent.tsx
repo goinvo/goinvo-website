@@ -29,7 +29,7 @@ export function CaseStudyContent({ initialData, slug }: Props) {
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">
           <h1
-            className="font-serif text-3xl md:text-4xl mt-8 mb-2"
+            className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mt-8 mb-2"
             style={{ viewTransitionName: 'page-title' }}
           >
             {caseStudy.title}
