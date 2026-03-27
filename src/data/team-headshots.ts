@@ -49,4 +49,8 @@ export const teamHeadshots: Record<string, string> = {
   'Mollie Williams': '/images/about/headshot-mollie-williams.jpg',
   'Hrothgar': '/images/features/determinants-of-health/headshot-hrothgar.jpg',
   'Kelsey Kittelsen': '/images/features/determinants-of-health/headshot-kelsey-kittelsen.jpg',
+  'Cecile Lu': '/old/images/features/us-healthcare/Cecile.jpg',
+  'Neil Rens': '/old/images/features/us-healthcare/Neil.jpg',
+  'Beckett Rucker': '/old/images/features/digital-healthcare/contrib/beckett.jpg',
+  'Courtney McGorrill': '/old/images/features/digital-healthcare/contrib/courtney.jpg',
 }

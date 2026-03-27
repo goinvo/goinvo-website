@@ -270,7 +270,7 @@ export default async function CareersPage() {
                   height={300}
                   className="w-full h-auto mb-4"
                 />
-                <h4 className="font-semibold mb-2">{perk.title}</h4>
+                <p className="font-semibold mb-2">{perk.title}</p>
                 <p className="text-gray text-md">{perk.caption}</p>
               </div>
             ))}

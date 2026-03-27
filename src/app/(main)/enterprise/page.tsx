@@ -84,7 +84,7 @@ export default function EnterprisePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {reasons.map((reason) => (
               <div key={reason.title}>
-                <h4 className="font-semibold mb-2">{reason.title}</h4>
+                <p className="font-semibold mb-2">{reason.title}</p>
                 <p className="text-gray text-md mb-4">{reason.description}</p>
                 <div className="font-serif text-3xl text-primary">{reason.stat}</div>
                 <p className="text-gray text-sm">{reason.statLabel}</p>
@@ -169,10 +169,10 @@ export default function EnterprisePage() {
       {/* CTA + Contact */}
       <section className="bg-primary-lightest py-16">
         <div className="max-width-md content-padding mx-auto text-center">
-          <h2 className="font-serif text-2xl mb-2">
+          <p className="font-serif text-2xl mb-2">
             We ship software that works.<br />
             Let&apos;s build together!
-          </h2>
+          </p>
           <p className="text-gray mb-8">Reach out to learn how GoInvo can help.</p>
           <ContactFormEmbed />
         </div>
