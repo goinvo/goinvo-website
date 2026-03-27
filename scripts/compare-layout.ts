@@ -255,7 +255,7 @@ async function compareReviewSection() {
 
   // Gray container
   nextjsMetricsOverride['review-container'] = await nextjsPage.evaluate(() => {
-    const el = Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
+    const el = document.querySelector('[data-review-container]') || Array.from(document.querySelectorAll('div')).find(d => d.classList.contains('bg-gray-light'))
     if (!el) return null
     const rect = el.getBoundingClientRect()
     const cs = getComputedStyle(el)

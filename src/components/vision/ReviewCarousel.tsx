@@ -80,7 +80,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
       </div>
 
       {/* Gray area */}
-      <div className="bg-gray-light">
+      <div className="bg-gray-light" data-review-container style={{ paddingBottom: 50 }}>
         {/* Content wrapper: position relative so image can use top:0 bottom:0
              The HEIGHT of this div = content flow only (no dots).
              Image matches this height exactly via absolute positioning. */}
@@ -110,7 +110,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
                 </div>
                 <div style={{ marginTop: '2rem' }}><Divider /></div>
               </div>
-              <Button href={active.ctaLink} variant="primary" size="lg" external={active.ctaExternal} className="w-full">
+              <Button href={active.ctaLink} variant="primary" external={active.ctaExternal} className="block w-full">
                 {active.ctaText}
               </Button>
             </div>
@@ -118,7 +118,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
         </div>
 
         {/* Dots: OUTSIDE the relative div so they don't affect image height */}
-        <div className="flex justify-center items-center" style={{ height: 50, gap: 14 }}>
+        <div className="flex justify-center items-center" style={{ gap: 14 }}>
           {reviews.map((_, index) => (
             <button
               key={index}
