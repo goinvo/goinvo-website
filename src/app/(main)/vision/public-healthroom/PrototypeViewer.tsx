@@ -58,10 +58,6 @@ export function PrototypeViewer({
     <div className="mt-12">
       {/* Room Prototype Carousel */}
       <div className="max-width mx-auto px-4">
-        <h3 className="header-md text-center mb-6">
-          Prototype Room Views
-        </h3>
-
         {/* Main carousel view */}
         <div className="relative overflow-hidden bg-gray-light rounded-lg aspect-[16/10]">
           <AnimatePresence initial={false} custom={direction} mode="wait">
@@ -161,9 +157,6 @@ export function PrototypeViewer({
 
       {/* Overlay UI images */}
       <div className="max-width mx-auto px-4 mt-12">
-        <h3 className="header-md text-center mb-6">
-          Healthroom UI Overlays
-        </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
             { src: 'menu-1.png', label: 'Entry Menu - Step 1' },
@@ -196,9 +189,6 @@ export function PrototypeViewer({
 
       {/* System Logic Frames */}
       <div className="max-width mx-auto px-4 mt-12">
-        <h3 className="header-md text-center mb-6">
-          System Logic: Step-by-Step Sequence
-        </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {logicFrames.map((frameId) => (
             <div

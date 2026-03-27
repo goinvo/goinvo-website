@@ -35,7 +35,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
             interventions. While some PSC methods invite collaboration with
             clinical providers and others are entirely independent of
             healthcare systems, all can be applied to improve health
-            outcomes at various stages of life.
+            outcomes at various stages of life<sup><a href="#references">1</a></sup>.
           </p>
 
           <h2 className="font-serif text-2xl mt-8 mb-4">
@@ -56,7 +56,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
           </p>
 
           <h2 className="font-serif text-2xl mt-8 mb-4">
-            What is a Primary Self Care Algorithm?
+            What is a Primary Self Care algorithm?
           </h2>
           <p className="leading-relaxed mb-4">
             Primary self care algorithms are decision support tools for
@@ -67,14 +67,14 @@ export default function PrimarySelfCareAlgorithmsPage() {
           </p>
 
           <h2 className="font-serif text-2xl mt-8 mb-4">
-            Why Does This Project Matter?
+            Why does the PSC Algorithms Project matter?
           </h2>
           <p className="leading-relaxed mb-4">
             Despite being at the core of self care interventions, primary
             self care has been inconsistently defined. In light of the
             growing number of at-home healthcare technologies and services,
             there is a &quot;pressing need for a clearer conceptualization of
-            self care&quot; as well as what self-care is not. A publicly-available
+            self care&quot; as well as what self-care is not<sup><a href="#references">1</a></sup>. A publicly-available
             knowledge base of PSC algorithms can serve as an instrumental
             resource for patients, policy makers, and healthcare workers.
             This project will also reveal the current gaps in research and
@@ -83,41 +83,25 @@ export default function PrimarySelfCareAlgorithmsPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mt-8">
             Top 10 Primary Self Care Algorithms
-          </h2>
+          </h1>
         </div>
 
         {/* Interactive Algorithm Section */}
         <PscaAlgorithms />
 
-        {/* Airtable Embed */}
-        <div className="max-width content-padding mx-auto my-12">
-          <h2 className="font-serif text-2xl mb-4 max-width-md mx-auto">
-            Full Algorithm Database
-          </h2>
-          <div className="max-w-[85%] mx-auto">
-            <iframe
-              src="https://airtable.com/embed/shrWdnWlNj0SIuUzl?backgroundColor=blue&viewControls=on"
-              className="w-full border-0"
-              style={{ height: 500 }}
-              loading="lazy"
-              title="Airtable Primary Self Care Algorithms"
-            />
-          </div>
-        </div>
-
         {/* Life Stage Table */}
         <div className="max-width content-padding mx-auto my-12">
-          <h2 className="font-serif text-2xl mb-4 max-width-md mx-auto">
-            Application by Life Stage
-          </h2>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4 max-width-md mx-auto">
+            Application of Primary Self Care Across Life
+          </h1>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-medium">
                   <th className="text-left p-2 min-w-[150px]">Algorithm</th>
-                  {['0-5', '6-12', '13-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '90+'].map(
+                  {['0-5 years old', '6-12', '13-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '90+'].map(
                     (age) => (
                       <th key={age} className="p-2 text-center min-w-[55px]">
                         {age}
@@ -128,16 +112,15 @@ export default function PrimarySelfCareAlgorithmsPage() {
               </thead>
               <tbody>
                 {[
-                  { name: 'Vaccine Decision Aids', ages: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'Blood Pressure Monitoring', ages: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'At-Home Urinalysis', ages: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'Mental Health Assessments', ages: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'Vision Tests', ages: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'Blood Glucose Monitoring', ages: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'Breast Self-Exam', ages: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0] },
-                  { name: 'Birth Control Decision Aid', ages: [0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0] },
+                  { name: 'Vaccinations', ages: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+                  { name: 'Blood Pressure', ages: [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1] },
+                  { name: 'Urinalysis', ages: [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1] },
+                  { name: 'Mental Health', ages: [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+                  { name: 'Vision Test', ages: [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+                  { name: 'Glucose Monitoring', ages: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1] },
+                  { name: 'Breast Self-Exam', ages: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1] },
                   { name: 'Air Quality Monitor', ages: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
-                  { name: 'Pulse Oximetry', ages: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
+                  { name: 'Pulse Oximetry', ages: [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1] },
                 ].map((row) => (
                   <tr key={row.name} className="border-b border-gray-light">
                     <td className="p-2 font-medium">{row.name}</td>
@@ -155,77 +138,265 @@ export default function PrimarySelfCareAlgorithmsPage() {
           </div>
         </div>
 
+        {/* Airtable Embed */}
+        <div className="max-width content-padding mx-auto my-12">
+          <div className="max-width-md mx-auto">
+            <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
+              Database of Primary Self Care Algorithms
+            </h1>
+            <p className="leading-relaxed mb-4">
+              The AirTable below contains a database of Primary Self Care
+              algorithms organized by the impacted bodily health system, the
+              relevant social determinants of health, and the type of test or
+              assessment. Relevant resources and information about each model
+              are provided as well as the most prevalent health condition
+              addressed.
+            </p>
+          </div>
+          <div className="max-w-[85%] mx-auto">
+            <iframe
+              src="https://airtable.com/embed/shrWdnWlNj0SIuUzl?backgroundColor=blue&viewControls=on"
+              className="w-full border-0"
+              style={{ height: 500 }}
+              loading="lazy"
+              title="Airtable Primary Self Care Algorithms"
+            />
+          </div>
+        </div>
+
         {/* Methods */}
         <div className="bg-secondary/10 py-12">
           <div className="max-width max-width-md content-padding mx-auto">
-            <h2 className="font-serif text-2xl mb-4">
-              Methods: Decision Matrix
+            <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mt-8">Methods</h1>
+            <h2 className="font-serif text-2xl mt-8 mb-4">
+              Decision Matrix
             </h2>
             <p className="leading-relaxed mb-4">
-              We evaluated each algorithm against 8 criteria, weighted by
-              importance to public health impact:
+              The ranking of the 10 top Primary Self Care algorithms were
+              determined by rating each algorithm against the following
+              decision matrix adapted from methods of evaluating clinical
+              decision support<sup><a href="#references">38</a></sup>.
             </p>
             <div className="overflow-x-auto mb-8">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-gray-medium">
-                    <th className="text-left p-2">Criterion</th>
-                    <th className="p-2 text-center">Weight</th>
-                    <th className="text-left p-2">Description</th>
+                  <tr className="border-b-2 border-gray-medium text-gray">
+                    <th className="text-left p-2" style={{ width: '25%' }}>Criteria</th>
+                    <th className="p-2 text-center" style={{ width: '15%' }}>Weight (1-4)</th>
+                    <th className="text-left p-2" style={{ width: '20%' }}>1</th>
+                    <th className="text-left p-2" style={{ width: '20%' }}>0</th>
+                    <th className="text-left p-2" style={{ width: '20%' }}>-1</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { criterion: 'Audience', weight: 2, desc: 'Breadth of applicable population' },
-                    { criterion: 'Effectiveness', weight: 4, desc: 'Clinical evidence of impact' },
-                    { criterion: 'Validity & Reliability', weight: 4, desc: 'Accuracy and consistency of results' },
-                    { criterion: 'Complexity', weight: 2, desc: 'Ease of use for non-clinical users' },
-                    { criterion: 'Cost', weight: 3, desc: 'Financial accessibility' },
-                    { criterion: 'Availability', weight: 1, desc: 'Market availability of tools' },
-                    { criterion: 'Support', weight: 2, desc: 'Availability of guidance and education' },
-                    { criterion: 'Licensing', weight: 2, desc: 'Open source or open access' },
-                  ].map((row) => (
-                    <tr key={row.criterion} className="border-b border-gray-light">
-                      <td className="p-2 font-medium">{row.criterion}</td>
-                      <td className="p-2 text-center">{row.weight}</td>
-                      <td className="p-2 text-gray">{row.desc}</td>
-                    </tr>
-                  ))}
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Audience</strong><br />How many patients &amp; clinicians do/or can utilize this algorithm?</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2">can be utilized by the majority of people, regardless of health status</td>
+                    <td className="p-2">utilized for common or highly prevalent conditions</td>
+                    <td className="p-2">utilized for only rare conditions</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Effectiveness</strong><br />How much of a difference can the algorithm make on someone&apos;s health status regardless of condition progression?</td>
+                    <td className="p-2 text-center">4</td>
+                    <td className="p-2">high impact at many stages in disease progression</td>
+                    <td className="p-2">moderate impact at some stages in disease progression</td>
+                    <td className="p-2">low or no impact at many stages of disease progression</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Validity &amp; Reliability</strong><br />Has this algorithm been rigorously tested and have results been replicated?</td>
+                    <td className="p-2 text-center">4</td>
+                    <td className="p-2">validated and replicated by many credible institutions</td>
+                    <td className="p-2">validated by some credible sources, limited replication studies</td>
+                    <td className="p-2">not validated or replicated by credible sources</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Complexity</strong><br />How easy is it to learn to use and understand results from an algorithm?</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2">almost no learning curve, easy to implement and learn from results</td>
+                    <td className="p-2">moderate learning curve and results are mostly manageable to interpret</td>
+                    <td className="p-2">high learning curve to use and results are difficult to interpret</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Cost</strong><br />How expensive are any necessary tools/services?</td>
+                    <td className="p-2 text-center">3</td>
+                    <td className="p-2">$ low cost or free</td>
+                    <td className="p-2">$$</td>
+                    <td className="p-2">$$$</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Availability</strong><br />How readily available and accessible is this tool?</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2">over the counter or diy</td>
+                    <td className="p-2">some barrier to access (clinical treatment or prescription, specially ordered, etc.)</td>
+                    <td className="p-2">still in development, not openly available</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Support</strong><br />How much clinical support or guidance is required?</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2">completely independent</td>
+                    <td className="p-2">minimal community or clinical involvement</td>
+                    <td className="p-2">requires clinical support or intervention</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2"><strong>Licensing</strong><br />Is the algorithm open or closed source?</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2">open</td>
+                    <td className="p-2">unknown licensing</td>
+                    <td className="p-2">closed</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
 
-            <h3 className="font-serif text-xl mt-8 mb-4">
-              Weighted Rankings
-            </h3>
+            <h2 className="font-serif text-2xl mt-8 mb-4">
+              Ranking of Top 10 Algorithms
+            </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="border-b-2 border-gray-medium">
-                    <th className="text-left p-2">Rank</th>
-                    <th className="text-left p-2">Algorithm</th>
-                    <th className="p-2 text-center">Score</th>
+                  <tr className="border-b-2 border-gray-medium text-gray">
+                    <th className="text-left p-2">Criteria</th>
+                    <th className="p-2 text-center">Weight (1-4)</th>
+                    <th className="p-2 text-center">Vaccinations</th>
+                    <th className="p-2 text-center">Blood Pressure</th>
+                    <th className="p-2 text-center">Urinalysis</th>
+                    <th className="p-2 text-center">Mental Health</th>
+                    <th className="p-2 text-center">Vision Test</th>
+                    <th className="p-2 text-center">Glucose Monitoring</th>
+                    <th className="p-2 text-center">Breast Self-Exam</th>
+                    <th className="p-2 text-center">Birth Control</th>
+                    <th className="p-2 text-center">Air Quality Monitor</th>
+                    <th className="p-2 text-center">Pulse Oximetry</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { rank: 1, name: 'Vaccine Decision Aids', score: 17 },
-                    { rank: 2, name: 'Blood Pressure Monitoring', score: 16 },
-                    { rank: 3, name: 'At-Home Urinalysis', score: 15 },
-                    { rank: 4, name: 'Mental Health Assessments', score: 15 },
-                    { rank: 5, name: 'Vision Tests', score: 11 },
-                    { rank: 6, name: 'Blood Glucose Monitoring', score: 11 },
-                    { rank: 7, name: 'Breast Self-Exam', score: 9 },
-                    { rank: 8, name: 'Birth Control Decision Aid', score: 8 },
-                    { rank: 9, name: 'Air Quality Monitor', score: 7 },
-                    { rank: 10, name: 'Pulse Oximetry', score: -1 },
-                  ].map((row) => (
-                    <tr key={row.rank} className="border-b border-gray-light">
-                      <td className="p-2">{row.rank}</td>
-                      <td className="p-2 font-medium">{row.name}</td>
-                      <td className="p-2 text-center">{row.score}</td>
-                    </tr>
-                  ))}
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Audience</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Effectiveness</td>
+                    <td className="p-2 text-center">4</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">-1</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Validity/Reliability</td>
+                    <td className="p-2 text-center">4</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">-1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">0</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Complexity</td>
+                    <td className="p-2 text-center">3</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">-1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">-1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">0</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Cost</td>
+                    <td className="p-2 text-center">3</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">0</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Availability</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Support</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2 text-center">-1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">-1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                  </tr>
+                  <tr className="border-b border-gray-light">
+                    <td className="p-2">Licensing</td>
+                    <td className="p-2 text-center">2</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">0</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">1</td>
+                    <td className="p-2 text-center">0</td>
+                  </tr>
+                  <tr className="border-b border-gray-light font-bold">
+                    <td className="p-2">Weighted Totals</td>
+                    <td className="p-2 text-center"></td>
+                    <td className="p-2 text-center">17</td>
+                    <td className="p-2 text-center">16</td>
+                    <td className="p-2 text-center">15</td>
+                    <td className="p-2 text-center">15</td>
+                    <td className="p-2 text-center">11</td>
+                    <td className="p-2 text-center">11</td>
+                    <td className="p-2 text-center">9</td>
+                    <td className="p-2 text-center">8</td>
+                    <td className="p-2 text-center">7</td>
+                    <td className="p-2 text-center">-1</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -233,7 +404,7 @@ export default function PrimarySelfCareAlgorithmsPage() {
         </div>
 
         <div className="max-width max-width-md content-padding mx-auto py-12">
-          <h2 className="font-serif text-2xl mb-4">Next Steps</h2>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mt-8 mb-4">Next Steps</h1>
           <p className="leading-relaxed mb-4">
             Future iterations of the PSC Algorithms Project will include an
             even more comprehensive database and an updated ranking of the
@@ -267,14 +438,17 @@ export default function PrimarySelfCareAlgorithmsPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Authors</h2>
+          <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] text-center mt-8 mb-4">Authors</h2>
           <Author name="Arpna Ghanshani" company="GoInvo" />
           <Author name="Chloe Ma" company="GoInvo" />
           <Author name="Juhan Sonin" company="GoInvo" />
 
           <h3 className="header-md mt-6 mb-3">Contributors</h3>
           <p className="text-gray">
-            Samantha Wuu, Huahua Zhu, Eric Benoit, Craig McGinley
+            Samantha Wuu<br />
+            Huahua Zhu<br />
+            Eric Benoit<br />
+            Craig McGinley
           </p>
         </div>
       </section>

@@ -108,9 +108,9 @@ export default function HealthDesignThinkingPage() {
                     className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
-                <h4 className="font-semibold mt-2 group-hover:text-primary transition-colors">
+                <p className="font-semibold mt-2 group-hover:text-primary transition-colors">
                   {item.title}
-                </h4>
+                </p>
                 <p className="text-gray text-sm">{item.caption}</p>
               </Link>
             ))}
