@@ -2,17 +2,13 @@
   "healthcare/index.html": "/work/",
   "enterprise/index.html": "/work/",
   "products/index.html": "/work/",
-
   "practice-area/enterprise/index.html": "/work/",
   "practice-area/healthcare/index.html": "/work/",
   "practice-area/big-data-infovis/index.html": "/work/",
   "practice-area/social-software/index.html": "/work/",
-
   "articles/index.html": "/vision/",
-
   "features/the-10-best-nations-in-world-cup-history": "/vision/",
   "features/design-for-life/index.html": "/features/from-bathroom-to-healthroom/",
-
   "team/index.html": "/about/",
   "careers/index.html": "/about/careers/",
   "about/code-of-ethics/index.html": "/about/",
@@ -27,12 +23,6 @@
   "studio/open-office-hours/index.html": "/about/open-office-hours/",
   "studio/vui-open-office-hours/index.html": "/about/open-office-hours/",
   "studio/history/index.html": "/about/studio-timeline/",
-
-  "work/raptr-gaming-platform-ui-design/index.html": "/work/",
-  "work/yahoo-site-solution-ui-design/index.html": "/work/",
-  "work/shutterfly-studio-photo-management-ui-design/index.html": "/work/",
-  "work/lithium-social-crm-ui-design/index.html": "/work/",
-  "work/nomee-social-network-aggregator-ui-design/index.html": "/work/",
   "work/raptr-gaming-platform-ui-design/index.html": "/work/",
   "work/yahoo-site-solution-ui-design/index.html": "/work/",
   "work/shutterfly-studio-photo-management-ui-design/index.html": "/work/",
@@ -41,7 +31,6 @@
   "work/affinnova/index.html": "/work/",
   "work/dnc/index.html": "/work/",
   "work/mcafee/index.html": "/work/",
-
   "work/3m/index.html": "/work/3m-coderyte/",
   "work/personalgenomeproject/index.html": "/work/personal-genome-project-vision/",
   "work/personal-genome-project-open-humans/index.html": "/work/personal-genome-project-vision/",
@@ -50,7 +39,6 @@
   "work/3m-natural-language-processing-application/index.html": "/work/3m-coderyte/",
   "work/hgraph-dares-to-revolutionize-health-and-healthcare-with-big-data-analytics/index.html": "/work/hgraph/",
   "work/mt-sinai-consent/index.html": "/work/mount-sinai-consent/",
-
   "healthcare/health-axioms/index.html": "/work/care-cards/",
   "healthcare/3m/index.html": "/work/3m-coderyte/",
   "healthcare/infobionic/index.html": "/work/infobionic-heart-monitoring/",
@@ -65,7 +53,6 @@
   "healthcare/diabetes/index.html": "/work/",
   "healthcare/segterra/index.html": "/work/",
   "healthcare/enterprise/index.html": "/work/",
-
   "enterprise/dataxu/index.html": "/work/",
   "enterprise/dnc/index.html": "/work/",
   "enterprise/mcafee/index.html": "/work/",
@@ -75,7 +62,6 @@
   "enterprise/ruelala/index.html": "/work/",
   "enterprise/scskcorporation/index.html": "/work/",
   "enterprise/telerik/index.html": "/work/",
-
   "products/health-axioms/index.html": "/work/care-cards/",
   "products/care-cards/index.html": "/work/care-cards/",
   "products/design-axioms/index.html": "/work/",
@@ -83,18 +69,13 @@
   "products/paintrackr/index.html": "/work/paintrackr/",
   "products/staff-plan/index.html": "/work/",
   "products/visual-government/index.html": "/work/",
-
   "process/index.html": "/about/",
-
   "thankyou/index.html": "/thank-you/",
   "thankyou/index.html#career": "/thank-you/#career",
-
   "images/features/careplans/CarePlans_Whitepaper_Involution_Studios.pdf": "/old/images/features/careplans/CarePlans_Whitepaper_Involution_Studios.pdf",
   "images/features/zika/understanding_zika.pdf": "/old/images/features/zika/understanding_zika.pdf",
-
   "index.php/index.html": "/",
   "baseball/index.html": "/",
-
   "category/events/index.html": "http://yes.goinvo.com/articles/topic/events",
   "category/analysis/index.html": "http://yes.goinvo.com/articles/topic/analysis",
   "category/design/index.html": "http://yes.goinvo.com/articles/topic/design",
@@ -332,7 +313,6 @@
   "planting-seeds-and-tilling-soil/index.html": "https://yes.goinvo.com/articles/planting-seeds-and-tilling-soil",
   "the-internet-of-things-seeding-boston-start-ups-and-one-user-experience-for-all/index.html": "https://yes.goinvo.com/articles/the-internet-of-things-seeding-boston-start-ups-and-one-user-experience-for-all",
   "blog/2013/03/helping-hires-excel/index.html": "/",
-  "blog/2013/03/helping-hires-excel/index.html": "/",
   "blog/2012/07/applying-facio-behavioural-part-1-self-satisfaction-2/index.html": "/",
   "blog/2012/07/on-thinking-and-feeling/index.html": "/",
   "blog/2012/08/applying-facio-behavioural-part-3-behavioural-gap-2/index.html": "/",
@@ -340,5 +320,29 @@
   "blog/2012/11/being-mindful-and-present/index.html": "/",
   "blog/2012/10/living-is-growing/index.html": "/",
   "blog/2013/01/getting-a-better-start-introduction/index.html": "/",
-  "blog/2012/11/virtues-of-friction/index.html": "/"
+  "blog/2012/11/virtues-of-friction/index.html": "/",
+  "/features/print-big": "/vision/print-big/",
+  "/features/print-big/": "/vision/print-big/",
+  "/features/killer-truths": "/vision/killer-truths/",
+  "/features/killer-truths/": "/vision/killer-truths/",
+  "/features/careplans": "/vision/care-plans/",
+  "/features/careplans/": "/vision/care-plans/",
+  "/features/zika": "/vision/understanding-zika/",
+  "/features/zika/": "/vision/understanding-zika/",
+  "/features/digital-healthcare": "/vision/digital-healthcare/",
+  "/features/digital-healthcare/": "/vision/digital-healthcare/",
+  "/features/us-healthcare": "/vision/healing-us-healthcare/",
+  "/features/us-healthcare/": "/vision/healing-us-healthcare/",
+  "/features/disrupt": "/vision/disrupt/",
+  "/features/disrupt/": "/vision/disrupt/",
+  "/features/from-bathroom-to-healthroom": "/vision/bathroom-to-healthroom/",
+  "/features/from-bathroom-to-healthroom/": "/vision/bathroom-to-healthroom/",
+  "/features/an-oral-history": "/vision/oral-history-goinvo/",
+  "/features/an-oral-history/": "/vision/oral-history-goinvo/",
+  "/features/redesign-democracy": "/vision/redesign-democracy/",
+  "/features/redesign-democracy/": "/vision/redesign-democracy/",
+  "/features/ebola": "/vision/understanding-ebola/",
+  "/features/ebola/": "/vision/understanding-ebola/",
+  "/features/ebola-care-guideline": "/vision/ebola-care-guideline/",
+  "/features/ebola-care-guideline/": "/vision/ebola-care-guideline/"
 }
