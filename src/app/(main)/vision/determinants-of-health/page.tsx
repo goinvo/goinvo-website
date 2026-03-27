@@ -69,6 +69,23 @@ export default function DeterminantsOfHealthPage() {
             </Button>
           </div>
 
+          <div className="flex justify-center gap-8 mb-8 text-sm">
+            <a
+              href="https://github.com/goinvo/HealthDeterminants"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              On Github
+            </a>
+            <a href="#methodology" className="text-primary hover:underline">
+              Methodology
+            </a>
+            <a href="#references" className="text-primary hover:underline">
+              References
+            </a>
+          </div>
+
           <Divider />
         </div>
 
@@ -123,6 +140,29 @@ export default function DeterminantsOfHealthPage() {
             The Determinants of Health is available as a poster, an
             installation, a download, and an interactive visualization.
           </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <Button
+              href="https://www.amazon.com/Determinants-Health-Poster-24-35-75/dp/B06X1GFDH1/"
+              variant="secondary"
+              external
+            >
+              Buy Print
+            </Button>
+            <Button
+              href="https://github.com/goinvo/HealthDeterminants"
+              variant="secondary"
+              external
+            >
+              On Github
+            </Button>
+            <Button
+              href="#methodology"
+              variant="secondary"
+            >
+              Methodology
+            </Button>
+          </div>
 
           <Divider />
 
