@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { cloudfrontImage } from '@/lib/utils'
-import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { Button } from '@/components/ui/Button'
@@ -131,8 +130,6 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Clinical Task Guidance System Diagram
           </Button>
 
-          <Divider />
-
           <h2 className="font-serif text-2xl mt-12 mb-4">
             Pregnancy Storyboard
           </h2>
@@ -228,8 +225,6 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Cancer Process Map
           </Button>
 
-          <Divider />
-
           <h2 className="font-serif text-2xl mt-8 mb-2">
             Let&apos;s build the future of healthcare together!
           </h2>
@@ -240,9 +235,12 @@ export default function AugmentedClinicalDecisionSupportPage() {
           </p>
 
           <AboutGoInvo />
+        </div>
+      </section>
 
-          <Divider />
-
+      {/* Authors */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
           <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] text-center mt-8 mb-4">Authors</h2>
           <Author name="Katerina Labrou" company="GoInvo" />
           <Author name="Mandy Liu" company="GoInvo" />

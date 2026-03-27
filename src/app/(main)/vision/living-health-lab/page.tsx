@@ -56,7 +56,7 @@ export default function LivingHealthLabPage() {
             <br />
             With over 350,000 digital health applications available worldwide,
             there&apos;s no shortage of options when it comes to individual health
-            data tracking. However, accurately
+            data tracking.<sup><a href="#references">1</a></sup> However, accurately
             interpreting this data to address specific questions and create an
             effective health plan can be a challenge. Individuals within the
             Quantified Self community have established a systematic approach
@@ -121,21 +121,21 @@ export default function LivingHealthLabPage() {
 
           <p className="leading-relaxed mb-4">
             Chronic pain is a condition that affects over 50 million adults in
-            the United States. For many, managing
+            the United States.<sup><a href="#references">2</a></sup> For many, managing
             chronic conditions is a difficult process that involves a complex
             jumble of biological, physical, emotional, mental, social, and
             cultural factors. With more than 350,000 health and
             wellness-related applications available to download worldwide,
             patients can easily monitor their health, yet very few of these
             services help patients with chronic health problems interpret
-            their data or offer insights to improve everyday health.
+            their data or offer insights to improve everyday health.<sup><a href="#references">1</a></sup>
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
             <Img src="viz_one_in_five.png" alt="1 in 5 adults experience chronic pain" />
             <div>
               <h3 className="font-serif text-xl">
-                At least 1 in 5 adults in the U.S. live with chronic pain
+                At least 1 in 5 adults in the U.S. live with chronic pain<sup><a href="#references">3</a></sup>
               </h3>
             </div>
           </div>
@@ -145,21 +145,21 @@ export default function LivingHealthLabPage() {
               <Img src="viz_migraines.png" alt="Migraines statistics" className="mb-2" />
               <p className="leading-relaxed">
                 <span className="text-xl font-semibold">3-4</span>% globally experience{' '}
-                <strong>chronic daily headaches</strong>
+                <strong>chronic daily headaches</strong><sup><a href="#references">4</a></sup>
               </p>
             </div>
             <div>
               <Img src="viz_arthritis.png" alt="Arthritis statistics" className="mb-2" />
               <p className="leading-relaxed">
                 <span className="text-xl font-semibold">15</span> million experience{' '}
-                <strong>arthritis pain</strong>
+                <strong>arthritis pain</strong><sup><a href="#references">5</a></sup>
               </p>
             </div>
             <div>
               <Img src="viz_ibs.png" alt="IBS statistics" className="mb-2" />
               <p className="leading-relaxed">
                 <span className="text-xl font-semibold">24-45</span> million experience{' '}
-                <strong>IBS symptoms</strong>
+                <strong>IBS symptoms</strong><sup><a href="#references">6</a></sup>
               </p>
             </div>
           </div>
@@ -167,19 +167,19 @@ export default function LivingHealthLabPage() {
           <p className="leading-relaxed mb-4">
             Out of all chronic pain patients, one in three individuals faces
             frequent limitations in daily life due to the severity and
-            frequency of their symptoms. These
+            frequency of their symptoms.<sup><a href="#references">2</a></sup> These
             patients often undergo repeated attempts to manage their
             conditions. This can mean frequent visits to the doctor&apos;s office
             and ER, several trials of different medications, and multiple days
             of missed work due to disability, all of which take a toll on
             their interpersonal relationships, financial stability, and
-            overall quality of life. Members of a
+            overall quality of life.<sup><a href="#references">7</a></sup> Members of a
             community called Quantified Self found inspiration in this
             disheartening cycle through a self-tracking approach now known as
             personal science: they became &quot;active investigators&quot; of their own
-            health. This method encourages patients to
+            health.<sup><a href="#references">8</a></sup> This method encourages patients to
             seek answers to their own difficult health questions and concerns
-            through five key actions of self-research:
+            through five key actions of self-research<sup><a href="#references">9</a></sup>:
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
@@ -223,11 +223,11 @@ export default function LivingHealthLabPage() {
             and self-tracking, we found that this approach has helped
             individuals with specific chronic conditions, including patients
             with Parkinson&apos;s disease in identifying personalized sleep and
-            medication routines to improve symptoms of rigidity,
+            medication routines to improve symptoms of rigidity,<sup><a href="#references">10</a></sup>{' '}
             patients with irritable bowel syndrome
-            in determining possible food triggers,
+            in determining possible food triggers,<sup><a href="#references">11</a></sup><sup>,</sup><sup><a href="#references">12</a></sup>{' '}
             and patients trying to understand and
-            better manage their migraines. Living
+            better manage their migraines.<sup><a href="#references">13</a></sup> Living
             Health Lab&apos;s mission is to build on this research and broadly
             apply the process of personal science to patients with all types
             of health conditions, habits, and concerns. It will help anyone
@@ -355,7 +355,7 @@ export default function LivingHealthLabPage() {
             difficult, like fibromyalgia, arthritis, and migraines. Research
             has shown those with chronic conditions are often the most
             motivated to start the tracking process as any insight can
-            directly affect their day-to-day health.{' '}
+            directly affect their day-to-day health.<sup><a href="#references">11</a></sup>{' '}
             Patients who are <strong>highly motivated</strong> to answer their health
             questions and have <strong>much to gain</strong> may be the easiest to
             reach, but many others could also benefit from Living Health Lab:
@@ -368,12 +368,12 @@ export default function LivingHealthLabPage() {
             their doctors as they &quot;identify new trends, hypothesize about
             symptom contributors, generate action plans, and identify new
             information needs&quot; for chronic condition management and healthy
-            lifestyle promotion. This type of
+            lifestyle promotion.<sup><a href="#references">13</a></sup> This type of
             collaboration is most successful when both parties share their
             clearly defined goals. Access to high-quality, patient-generated
             data might free up the office visit to discuss more targeted
             concerns as patients come in to share their findings and receive
-            personalized interpretation and direction.
+            personalized interpretation and direction.<sup><a href="#references">16</a></sup>{' '}
             We see the opportunity for Living Health
             Lab to facilitate higher levels of patient engagement in their
             healthcare and make it easier for providers to obtain data on
@@ -385,7 +385,7 @@ export default function LivingHealthLabPage() {
             understanding their unique, necessary lifestyle changes and the
             ideal way to implement them. Lifestyle changes could prevent one
             out of every three premature deaths related to heart disease,
-            stroke, and chronic lung disease. &quot;Eat
+            stroke, and chronic lung disease.<sup><a href="#references">17</a></sup> &quot;Eat
             better,&quot; &quot;Move more,&quot; and &quot;Smoke less&quot; are just a few of the most
             common generic lifestyle recommendations. Though accurate, simply
             dispensing this advice is rarely sufficient in effecting change.
