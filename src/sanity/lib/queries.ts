@@ -19,6 +19,7 @@ export const caseStudyBySlugQuery = groq`
   *[_type == "caseStudy" && slug.current == $slug][0] {
     _id,
     title,
+    heading,
     slug,
     client,
     image,
