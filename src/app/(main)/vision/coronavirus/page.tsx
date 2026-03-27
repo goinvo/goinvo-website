@@ -60,7 +60,6 @@ export default function CoronavirusPage() {
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Understanding the Novel Coronavirus (COVID-19)</h1>
           {/* 1. What is COVID-19? - exact Gatsby text */}
           <h2 className="font-serif text-2xl mb-4">What is COVID-19?</h2>
           <p className="leading-relaxed mb-4">
@@ -78,13 +77,17 @@ export default function CoronavirusPage() {
           </h4>
         </div>
 
+        <div className="max-width max-width-md content-padding mx-auto">
+          <h4 className="font-serif text-lg mb-4">Live update of COVID-19 numbers</h4>
+        </div>
+
         {/* Comparison Chart */}
         <CovidChart />
 
         <div className="max-width max-width-md content-padding mx-auto">
           {/* 2. How deadly is COVID-19? */}
           <h4 className="font-serif text-lg mt-8 mb-4">
-            How deadly is COVID-19?
+            How deadly is COVID-19?<sup>19,20</sup>
           </h4>
           <p className="leading-relaxed mb-4">
             While COVID-19 is much more infectious, it appears to be less deadly
@@ -95,7 +98,7 @@ export default function CoronavirusPage() {
             the spread of germs and COVID-19 to the people around you.
           </p>
           <h4 className="font-serif text-lg mb-4">
-            China&apos;s COVID-19 death rate by age as of 11 Feb 2020
+            China&apos;s COVID-19 death rate by age as of 11 Feb 2020<sup>19,20</sup>
           </h4>
           <Image
             src={cloudfrontImage(
@@ -115,7 +118,7 @@ export default function CoronavirusPage() {
 
           {/* 3. COVID-19 Timeline */}
           <h2 className="font-serif text-2xl mt-8 mb-6">
-            The first few months of COVID-19
+            The first few months of COVID-19<sup>18</sup>
           </h2>
           <div className="ml-2 mb-8">
             <TimelineItem date="1 Dec 2019">
@@ -206,7 +209,7 @@ export default function CoronavirusPage() {
 
           {/* 5. How is it spreading? - with full text */}
           <h2 className="font-serif text-2xl mt-8 mb-4">
-            How is it spreading?
+            How is it spreading?<sup>6</sup>
           </h2>
           <p className="leading-relaxed mb-4">
             At this time, we don&apos;t know how fast or easily this virus is
@@ -276,7 +279,7 @@ export default function CoronavirusPage() {
             </NumberItem>
           </div>
 
-          <h4 className="font-serif text-lg mb-2">Incubation Period</h4>
+          <h4 className="font-serif text-lg mb-2">Incubation Period<sup>9</sup></h4>
           <p className="leading-relaxed mb-8">
             The time between exposure to the virus and the start of symptoms is
             between 5.2 - 12.5 days.
@@ -295,6 +298,7 @@ export default function CoronavirusPage() {
             className="w-full h-auto mb-8"
           />
 
+          <h2 className="font-serif text-2xl mb-4">Your Part</h2>
           <p className="leading-relaxed mb-4">
             Outbreaks at this scale can be scary, but besides staying up to date
             on the news, there are still a lot of things that you can do to stay
@@ -302,7 +306,7 @@ export default function CoronavirusPage() {
           </p>
 
           {/* 8. Prevention - exact Gatsby 9 steps */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">Prevention</h2>
+          <h2 className="font-serif text-2xl mt-8 mb-4">Prevention<sup>4</sup></h2>
           <p className="leading-relaxed mb-4">
             Here&apos;s what you can do{' '}
             <strong>to prevent COVID-19 from spreading to others:</strong>
@@ -363,7 +367,7 @@ export default function CoronavirusPage() {
           <Divider />
 
           {/* 9. Close Contact - full original text */}
-          <h2 className="font-serif text-2xl mt-8 mb-4">Close Contact</h2>
+          <h2 className="font-serif text-2xl mt-8 mb-4">Close Contact<sup>3</sup></h2>
           <p className="leading-relaxed mb-4">
             If you come into close contact with someone who is confirmed to have
             COVID-19,
@@ -448,7 +452,7 @@ export default function CoronavirusPage() {
 
           {/* 10. Caring for Patients - full text */}
           <h2 className="font-serif text-2xl mt-8 mb-4">
-            Caring for Patients
+            Caring for Patients<sup>5</sup>
           </h2>
           <p className="leading-relaxed mb-4">
             If you or someone you know becomes sick with COVID-19 and does not
@@ -470,9 +474,9 @@ export default function CoronavirusPage() {
           />
 
           <div className="md:hidden">
-            <h3 className="font-serif text-xl text-[#563C8D] mb-4">
+            <p className="font-serif text-xl text-[#563C8D] mb-4">
               For <strong>Patients</strong>
-            </h3>
+            </p>
             <Image
               src={cloudfrontImage(
                 '/images/features/coronavirus/mobile-care-1.jpg'
@@ -505,9 +509,9 @@ export default function CoronavirusPage() {
               better!
             </p>
 
-            <h3 className="font-serif text-xl text-[#563C8D] mb-4">
+            <p className="font-serif text-xl text-[#563C8D] mb-4">
               For <strong>Caregivers</strong>
-            </h3>
+            </p>
             <Image
               src={cloudfrontImage(
                 '/images/features/coronavirus/mobile-care-2.jpg'
@@ -551,9 +555,9 @@ export default function CoronavirusPage() {
             </NumberItem>
           </div>
 
-          <h3 className="font-serif text-xl text-[#563C8D] mb-4">
+          <p className="font-serif text-xl text-[#563C8D] mb-4">
             For <strong>Both Patients and Caregivers</strong>
-          </h3>
+          </p>
           <NumberItem number={1}>
             <strong>Wash your hands often</strong> with soap and water for 20
             seconds. If unable to and your hands are not visibly dirty, use an
@@ -587,7 +591,7 @@ export default function CoronavirusPage() {
           {/* 6. End the prejudice! - highlighted callout */}
           <div className="bg-[#FFF3E0] border-l-4 border-[#E36216] rounded-lg p-6 my-8">
             <h3 className="font-serif text-xl text-[#E36216] uppercase mb-4">
-              End the prejudice!
+              End the prejudice!<sup>4</sup>
             </h3>
             <p className="leading-relaxed mb-3">
               Asian people <strong>are not</strong> at a higher risk than other
@@ -611,9 +615,9 @@ export default function CoronavirusPage() {
           <h2 className="font-serif text-2xl mt-8 mb-4">
             Hospitals Desperately Need Masks
           </h2>
-          <h3 className="font-serif text-lg mb-4">
-            Save the masks for those who need them most!
-          </h3>
+          <p className="font-serif text-lg font-bold mb-4">
+            Save the masks for those who need them most!<sup>1</sup>
+          </p>
           <p className="leading-relaxed mb-4">
             In light of the outbreak, two kinds of facemasks have been flying
             off American shelves:
@@ -714,9 +718,9 @@ export default function CoronavirusPage() {
             these masks to prevent the spread of germs.
           </p>
 
-          <h3 className="header-md mt-6 mb-4">
-            Making your own mask to wear in public
-          </h3>
+          <p className="font-serif text-lg font-bold mt-6 mb-4">
+            Making your own mask to wear in public<sup>21</sup>
+          </p>
           <p className="leading-relaxed mb-4">
             If you <strong>need to go out in public</strong>, the CDC recommends
             wearing a <strong>cloth face covering</strong> which can be easily
@@ -879,9 +883,9 @@ export default function CoronavirusPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
-            Line of Command
-          </h2>
+          <h3 className="font-serif text-xl mt-8 mb-4">
+            How does the world respond to a pandemic?<sup>16</sup>
+          </h3>
           <Image
             src={cloudfrontImage(
               '/images/features/coronavirus/line-of-command.jpg'
@@ -901,7 +905,6 @@ export default function CoronavirusPage() {
             className="w-full h-auto mb-4 md:hidden"
           />
 
-          <h3 className="header-md mt-6 mb-4">Local Ground Team</h3>
           <Image
             src={cloudfrontImage(
               '/images/features/coronavirus/local-ground-team-2.jpg'
@@ -921,9 +924,11 @@ export default function CoronavirusPage() {
             className="w-full h-auto mb-4 md:hidden"
           />
 
-          <Divider />
+          <h3 className="font-serif text-xl mt-8 mb-4 text-center">
+            So what does this look like in practice?
+          </h3>
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">Conclusion</h2>
+          <Divider />
           <Image
             src={cloudfrontImage(
               '/images/features/coronavirus/conclusion.jpg'

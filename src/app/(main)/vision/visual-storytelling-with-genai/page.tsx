@@ -76,10 +76,6 @@ export default function VisualStorytellingPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
-            The Process: From 3D to Final Image
-          </h2>
-
           {/* Scene pairs: 3D render → Midjourney output */}
           {[
             {
@@ -124,9 +120,9 @@ export default function VisualStorytellingPage() {
             },
           ].map((scene) => (
             <div key={scene.num} className="mb-12">
-              <h3 className="font-serif text-xl mb-4">
-                Scene {scene.num}: {scene.title}
-              </h3>
+              <p className="font-serif text-xl mb-4">
+                <strong>Scene {scene.num}: {scene.title}</strong>
+              </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                 <div>
                   <Image
@@ -163,13 +159,6 @@ export default function VisualStorytellingPage() {
 
           <Divider />
 
-          <h2 className="font-serif text-2xl mt-8 mb-4">
-            Trauma Room Deep Dive
-          </h2>
-          <p className="leading-relaxed mb-4">
-            Here&apos;s a closer look at how a single 3D model render can be
-            transformed through different stages of post-processing.
-          </p>
           <div className="space-y-4 mb-4">
             <div>
               <Image
