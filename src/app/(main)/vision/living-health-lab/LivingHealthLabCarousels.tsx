@@ -44,9 +44,6 @@ export function LivingHealthLabCarousels() {
     <div className="max-width content-padding mx-auto space-y-12 my-8">
       {/* Comic Carousel */}
       <div>
-        <h3 className="font-serif text-xl mb-4 max-width-md mx-auto">
-          Patty&apos;s Story
-        </h3>
         <Carousel dots>
           {comicSlides.map((slide) => (
             <SlideImage key={slide.src} src={slide.src} alt={slide.alt} />

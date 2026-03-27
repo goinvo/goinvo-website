@@ -353,9 +353,6 @@ export default function FacesInHealthCommunicationPage() {
             </span><sup>20</sup>
           </p>
 
-          <h3 className="font-serif text-xl mt-8 mb-4">
-            How We Look at Faces
-          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 text-center">
             <div>
               <Img src="11-how-we-look-at-face-triangle.jpg" alt="Face scanning triangle pattern" />
@@ -373,7 +370,6 @@ export default function FacesInHealthCommunicationPage() {
             </div>
           </div>
 
-          <h3 className="font-serif text-xl mt-8 mb-4">Own-Race Bias (ORB)</h3>
           <p className="leading-relaxed mb-4">
             Unsurprisingly, humans tend to gravitate towards faces similar to
             their own. Infants have shown the <strong>own-race bias (ORB)</strong><sup>21</sup>, recognizing their own faces better than the faces of another

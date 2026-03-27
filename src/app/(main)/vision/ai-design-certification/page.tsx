@@ -4,6 +4,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
@@ -129,8 +130,7 @@ export default function AIDesignCertificationPage() {
 
           {/* Design Health Schema */}
           <div className="mt-8">
-            <h3 className="font-sans flex items-start gap-2 -ml-5 text-base font-semibold leading-[1.1875rem] mb-2">
-              <span className="text-primary text-xs leading-[1.5] shrink-0">&#9670;</span>
+            <h3 className="font-sans -ml-5 text-base font-semibold leading-[1.1875rem] mb-2 before:content-['◆'] before:text-primary before:text-xs before:mr-2">
               Design Health Schema
             </h3>
             <p className="leading-relaxed mb-4">
@@ -152,8 +152,7 @@ export default function AIDesignCertificationPage() {
           {/* Certification Principles */}
           {certPrinciples.map((principle) => (
             <div key={principle.title} className="mt-8">
-              <h3 className="font-sans flex items-start gap-2 -ml-5 text-base font-semibold leading-[1.1875rem] mb-2">
-                <span className="text-primary text-xs leading-[1.5] shrink-0">&#9670;</span>
+              <h3 className="font-sans -ml-5 text-base font-semibold leading-[1.1875rem] mb-2 before:content-['◆'] before:text-primary before:text-xs before:mr-2">
                 {principle.title}
               </h3>
               <p className="leading-relaxed m-0">{principle.desc}</p>
@@ -451,6 +450,8 @@ export default function AIDesignCertificationPage() {
             to Venus Wong for volunteering as the brave first test subject.
             They&apos;re both continuing to poke holes in it... to make it better.
           </p>
+
+          <AboutGoInvo className="mt-12" />
         </div>
       </div>
 
