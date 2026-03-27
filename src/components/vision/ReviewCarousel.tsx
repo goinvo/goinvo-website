@@ -88,31 +88,26 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
         </ul>
       </div>
 
-      {/* Content: background--gray, padding-bottom 50px for dots
-           Image: 300px mobile (full-bleed), absolute left half desktop
-           Content: margin-left 2rem on desktop */}
+      {/* Content: gradient-image-columns wrapper is FULL WIDTH (position relative)
+           Image absolute positions relative to THIS full-width div, not max-width
+           So image goes left:0 right:50% of the FULL page width */}
       <div className="bg-gray-light relative" style={{ paddingBottom: 50 }}>
-        <div className="max-width content-padding">
-          <div className="relative">
-            {/* Image: gradient-image-columns__image
-                 mobile: h-300, width calc(100% + 2rem), margin-left -1rem
-                 desktop: absolute top:0 bottom:0 left:0 right:50% */}
-            <div
-              className="review-slide-image relative overflow-hidden h-[300px] lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:right-[50%] lg:h-auto lg:!w-auto lg:!ml-0"
-              style={{ width: 'calc(100% + 2rem)', marginLeft: '-1rem' }}
-            >
-              <Image
-                src={cloudfrontImage(active.image)}
-                alt=""
-                fill
-                className="object-cover object-center"
-                sizes="(min-width: 864px) 50vw, 100vw"
-              />
-            </div>
+        {/* Image: absolute to this full-width container on desktop */}
+        <div
+          className="relative overflow-hidden h-[300px] lg:absolute lg:top-0 lg:bottom-0 lg:left-0 lg:right-[50%] lg:h-auto"
+        >
+          <Image
+            src={cloudfrontImage(active.image)}
+            alt=""
+            fill
+            className="object-cover object-center"
+            sizes="(min-width: 864px) 50vw, 100vw"
+          />
+        </div>
 
-            {/* Right column: content
-                 desktop: margin-left ~50% + 2rem padding */}
-            <div className="lg:ml-[50%] lg:pl-8">
+        {/* Content in max-width container, right half on desktop */}
+        <div className="max-width content-padding">
+          <div className="lg:ml-[50%] lg:pl-8">
               <div className="p-4">
                 {/* Divider: margin-bottom 3rem */}
                 <div style={{ marginBottom: '3rem' }}>
@@ -176,51 +171,42 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
               </a>
             </div>
           </div>
-        </div>
 
         {/* Dots: slick-dots
              full width, absolute bottom -37px (inside 50px padding)
              text-align center, list items inline-block margin 0 5px
              buttons: 20x20 with 5px padding, font-size 0 (hidden text)
              dot color: #e36216, opacity 0.5 inactive, 1 active */}
-        <div
-          className="absolute left-0 right-0 text-center"
-          style={{ bottom: 13 }}
+        <ul
+          className="absolute left-0 right-0 text-center list-none m-0 p-0"
+          style={{ bottom: 6 }}
         >
           {reviews.map((_, index) => (
-            <span
+            <li
               key={index}
-              className="inline-block"
-              style={{ margin: '0 5px' }}
+              className="inline-block cursor-pointer"
+              style={{ margin: '0 5px', width: 20, height: 20, position: 'relative' }}
+              onClick={() => setActiveIndex(index)}
             >
-              <button
-                onClick={() => setActiveIndex(index)}
-                className="cursor-pointer border-0 bg-transparent block"
+              <span
                 style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
                   width: 20,
                   height: 20,
-                  padding: 5,
-                  fontSize: 0,
-                  lineHeight: 0,
-                  color: 'transparent',
-                  position: 'relative',
+                  lineHeight: '20px',
+                  textAlign: 'center',
+                  fontSize: 16,
+                  color: '#e36216',
+                  opacity: index === activeIndex ? 1 : 0.5,
                 }}
-                aria-label={`Review ${index + 1}`}
               >
-                <span
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{
-                    fontSize: 12,
-                    color: '#e36216',
-                    opacity: index === activeIndex ? 1 : 0.5,
-                  }}
-                >
-                  •
-                </span>
-              </button>
-            </span>
+                •
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </div>
   )
