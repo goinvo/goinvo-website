@@ -1,214 +1,333 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
-import { motion, AnimatePresence } from 'framer-motion'
 import { cn, cloudfrontImage } from '@/lib/utils'
 
-interface RoomImage {
-  id: string
-  label: string
+/**
+ * Each prototype frame defines:
+ * - id: frame number (1-28)
+ * - image: which room image to show (maps to a .jpg file)
+ * - transform: CSS transform for zooming/panning the room image
+ * - backgroundPosition: CSS background-position override
+ * - overlay: 'enter' | 'exit' | 'default' | undefined — controls overlay transition timing
+ */
+interface PrototypeFrame {
+  id: number
+  image: string
+  transform?: string
+  backgroundPosition?: string
+  overlay?: 'enter' | 'exit' | 'default'
 }
 
-interface PrototypeViewerProps {
-  roomImages: RoomImage[]
-  logicFrames: number[]
-}
+const prototypeFrames: PrototypeFrame[] = [
+  { id: 1, image: 'entry', transform: 'scale(1)' },
+  { id: 2, image: 'entry', transform: 'scale(2.5) translate(0px, -8%)', overlay: 'enter' },
+  { id: 3, image: 'entry', transform: 'scale(2.5) translate(0px, -8%)', overlay: 'default' },
+  { id: 4, image: 'entry', transform: 'scale(2.5) translate(0px, -8%)', overlay: 'exit' },
+  { id: 5, image: 'entry', transform: 'scale(1) translate(0px, 0px)' },
+  { id: 6, image: 'entry-open-door' },
+  { id: 7, image: 'entry-lidar' },
+  { id: 8, image: 'body-scan', overlay: 'default' },
+  { id: 9, image: 'body-scan-active' },
+  { id: 10, image: 'body-scan', overlay: 'default' },
+  { id: 11, image: 'body-scan-open-door' },
+  { id: 12, image: 'toilet', backgroundPosition: 'right 10% bottom 0vw', transform: 'scale(1)' },
+  { id: 13, image: 'toilet', backgroundPosition: 'right 40% bottom 2vw', transform: 'scale(1.5)' },
+  { id: 14, image: 'using-toilet' },
+  { id: 15, image: 'toilet', backgroundPosition: 'left 30% top 3vw', transform: 'scale(1.2)', overlay: 'default' },
+  { id: 16, image: 'toilet', backgroundPosition: 'left 0% bottom 0vw', transform: 'scale(2) translate(0%, -24%)' },
+  { id: 17, image: 'toilet-door-open' },
+  { id: 18, image: 'blood-vision' },
+  { id: 19, image: 'blood-vision' },
+  { id: 20, image: 'blood-vision', backgroundPosition: 'right -75% top -3vw', transform: 'scale(1.8)' },
+  { id: 21, image: 'blood-vision', backgroundPosition: 'right 31% top 0vw', transform: 'scale(1.8)' },
+  { id: 22, image: 'blood-vision', backgroundPosition: 'left -40% top -5vw', transform: 'scale(1.8)' },
+  { id: 23, image: 'blood-vision', backgroundPosition: 'left -40% top -5vw', transform: 'scale(1.8)' },
+  { id: 24, image: 'blood-vision', backgroundPosition: 'left -66% top -3vw', transform: 'scale(1.8)', overlay: 'enter' },
+  { id: 25, image: 'exit' },
+  { id: 26, image: 'exit', transform: 'scale(3) translate(-32%, -9%)', overlay: 'default' },
+  { id: 27, image: 'exit' },
+  { id: 28, image: 'none', overlay: 'default' },
+]
 
-export function PrototypeViewer({
-  roomImages,
-  logicFrames,
-}: PrototypeViewerProps) {
-  const [activeRoomIndex, setActiveRoomIndex] = useState(0)
-  const [direction, setDirection] = useState(0)
+/** Unique room images in order (used for preloading) */
+const uniqueRoomImages = [
+  'entry',
+  'entry-open-door',
+  'entry-lidar',
+  'body-scan',
+  'body-scan-active',
+  'body-scan-open-door',
+  'toilet',
+  'using-toilet',
+  'toilet-door-open',
+  'blood-vision',
+  'exit',
+]
 
-  const goToRoom = (index: number) => {
-    setDirection(index > activeRoomIndex ? 1 : -1)
-    setActiveRoomIndex(index)
-  }
+export function PrototypeViewer() {
+  const [currentFrame, setCurrentFrame] = useState<PrototypeFrame>(prototypeFrames[0])
+  const [prevFrameId, setPrevFrameId] = useState(1)
+  const frameRefs = useRef<(HTMLLIElement | null)[]>([])
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
-  const goNext = () => {
-    setDirection(1)
-    setActiveRoomIndex((prev) => (prev + 1) % roomImages.length)
-  }
+  const isBackwards = currentFrame.id < prevFrameId
 
-  const goPrev = () => {
-    setDirection(-1)
-    setActiveRoomIndex(
-      (prev) => (prev - 1 + roomImages.length) % roomImages.length
+  // Determine overlay transition class
+  const getOverlayTimingClass = useCallback(() => {
+    if (!currentFrame.overlay) return ''
+    if (currentFrame.overlay === 'default') return ''
+    if (currentFrame.overlay === 'enter') {
+      return isBackwards ? 'exit-timing' : 'enter-timing'
+    }
+    if (currentFrame.overlay === 'exit') {
+      return isBackwards ? 'enter-timing' : 'exit-timing'
+    }
+    return ''
+  }, [currentFrame, isBackwards])
+
+  // Setup IntersectionObserver to detect which logic frame is in the viewport center
+  useEffect(() => {
+    // Calculate rootMargin so that the "trigger line" is at ~50% of viewport on desktop,
+    // ~75% on mobile (matching Gatsby's offset calculation)
+    const isLarge = window.innerWidth >= 864
+    const percentage = isLarge ? 0.5 : 0.75
+    const topMargin = -Math.round(window.innerHeight * percentage)
+    const bottomMargin = -(window.innerHeight - Math.round(window.innerHeight * percentage) - 1)
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const frameId = parseInt(entry.target.getAttribute('data-frame-id') || '1', 10)
+            const frame = prototypeFrames.find((f) => f.id === frameId)
+            if (frame) {
+              setCurrentFrame((prev) => {
+                setPrevFrameId(prev.id)
+                return frame
+              })
+            }
+          }
+        }
+      },
+      {
+        rootMargin: `${topMargin}px 0px ${bottomMargin}px 0px`,
+        threshold: 0,
+      }
     )
+
+    const currentRefs = frameRefs.current
+    currentRefs.forEach((el) => {
+      if (el) observer.observe(el)
+    })
+
+    return () => {
+      currentRefs.forEach((el) => {
+        if (el) observer.unobserve(el)
+      })
+    }
+  }, [])
+
+  // Build the room image URL
+  const roomImageUrl =
+    currentFrame.image === 'none'
+      ? ''
+      : cloudfrontImage(`/images/features/public-healthroom/${currentFrame.image}.jpg`)
+
+  // Build inline styles for the room image div
+  const roomImageStyle: React.CSSProperties = {
+    backgroundImage: roomImageUrl ? `url(${roomImageUrl})` : 'none',
+    backgroundSize: 'cover',
+    backgroundPosition: currentFrame.backgroundPosition || 'center',
+    transform: currentFrame.transform || 'scale(1) translate(0, 0)',
+    transition: 'all 0.5s',
+    width: '100%',
+    height: '100%',
   }
 
-  const variants = {
-    enter: (dir: number) => ({
-      x: dir > 0 ? 300 : -300,
-      opacity: 0,
-    }),
-    center: {
-      x: 0,
-      opacity: 1,
-    },
-    exit: (dir: number) => ({
-      x: dir > 0 ? -300 : 300,
-      opacity: 0,
-    }),
-  }
+  const overlayTimingClass = getOverlayTimingClass()
+  const frameId = currentFrame.id
 
   return (
     <div className="mt-12">
-      {/* Room Prototype Carousel */}
-      <div className="max-width mx-auto px-4">
-        {/* Main carousel view */}
-        <div className="relative overflow-hidden bg-gray-light rounded-lg aspect-[16/10]">
-          <AnimatePresence initial={false} custom={direction} mode="wait">
-            <motion.div
-              key={activeRoomIndex}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-              className="w-full h-full"
-            >
-              {roomImages[activeRoomIndex].id !== 'none' && (
-                <Image
-                  src={cloudfrontImage(
-                    `/images/features/public-healthroom/${roomImages[activeRoomIndex].id}.jpg`
-                  )}
-                  alt={roomImages[activeRoomIndex].label}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1020px) 100vw, 1020px"
-                />
+      {/* Preload room images */}
+      <div className="hidden">
+        {uniqueRoomImages.map((img) => (
+          <Image
+            key={img}
+            src={cloudfrontImage(`/images/features/public-healthroom/${img}.jpg`)}
+            alt=""
+            width={1}
+            height={1}
+            priority
+          />
+        ))}
+      </div>
+
+      {/* Scrollspy wrapper: side-by-side on large screens */}
+      <div ref={wrapperRef} className="relative p-4 lg:flex">
+        {/* LEFT: Sticky room image */}
+        <div
+          className={cn(
+            'sticky z-[1] bg-white flex items-center justify-center',
+            'top-[var(--spacing-header-height,50px)] h-[calc(50vh-var(--spacing-header-height,50px))]',
+            'w-full lg:w-1/2 lg:h-[calc(100vh-var(--spacing-header-height,50px))]',
+            overlayTimingClass
+          )}
+        >
+          {/* Room image container - square aspect ratio with overflow hidden */}
+          <div
+            className={cn(
+              'relative overflow-hidden mx-auto aspect-square',
+              'w-full max-w-[calc(50vh-var(--spacing-header-height,50px))]',
+              'lg:w-[90%] lg:max-w-[75vh]'
+            )}
+          >
+            <div style={roomImageStyle} />
+
+            {/* Overlay container */}
+            <div
+              className={cn(
+                'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
+                'w-full aspect-square transition-colors duration-500',
+                'lg:w-[90%] lg:max-w-[75vh]',
+                frameId === 28 ? 'bg-black/20' : 'bg-transparent'
               )}
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Prev/Next arrows */}
-          <button
-            onClick={goPrev}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/80 hover:bg-white rounded-full shadow-card cursor-pointer transition-colors z-10"
-            aria-label="Previous room view"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+              style={{ maxWidth: '100%' }}
             >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
-          <button
-            onClick={goNext}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white/80 hover:bg-white rounded-full shadow-card cursor-pointer transition-colors z-10"
-            aria-label="Next room view"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </button>
+              {/* Entry menu overlays */}
+              <div
+                className={cn(
+                  'absolute transition-opacity',
+                  'w-[44.2%] top-1/2 left-[51.5%] -translate-x-1/2 -translate-y-1/2',
+                  frameId === 2 ? 'opacity-100' : 'opacity-0',
+                  overlayTimingClass === 'enter-timing' ? 'duration-250 delay-500' : 'duration-250'
+                )}
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/public-healthroom/menu-1.png')}
+                  alt="Entry menu step 1"
+                  width={400}
+                  height={400}
+                  className="block w-full h-auto"
+                />
+              </div>
+              <div
+                className={cn(
+                  'absolute transition-opacity',
+                  'w-[44.2%] top-1/2 left-[51.5%] -translate-x-1/2 -translate-y-1/2',
+                  frameId === 3 ? 'opacity-100' : 'opacity-0',
+                  overlayTimingClass === 'enter-timing' ? 'duration-250 delay-500' : 'duration-250'
+                )}
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/public-healthroom/menu-2.png')}
+                  alt="Entry menu step 2"
+                  width={400}
+                  height={400}
+                  className="block w-full h-auto"
+                />
+              </div>
+              <div
+                className={cn(
+                  'absolute transition-opacity',
+                  'w-[44.2%] top-1/2 left-[51.5%] -translate-x-1/2 -translate-y-1/2',
+                  frameId === 4 ? 'opacity-100' : 'opacity-0',
+                  overlayTimingClass === 'enter-timing' ? 'duration-250 delay-500' : 'duration-250'
+                )}
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/public-healthroom/menu-3.png')}
+                  alt="Entry menu step 3"
+                  width={400}
+                  height={400}
+                  className="block w-full h-auto"
+                />
+              </div>
 
-          {/* Label overlay */}
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-4 py-3">
-            <p className="text-white text-sm font-semibold">
-              {roomImages[activeRoomIndex].label}
-            </p>
+              {/* Holding phone overlay */}
+              <div
+                className={cn(
+                  'absolute transition-opacity bottom-0 right-0 w-[40%]',
+                  [4, 8, 10, 15, 26, 28].includes(frameId) ? 'opacity-100' : 'opacity-0',
+                  frameId === 28 ? 'right-auto left-1/2 -translate-x-1/2' : '',
+                  overlayTimingClass === 'enter-timing' ? 'duration-250 delay-500' : 'duration-250'
+                )}
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/public-healthroom/holding-phone.png')}
+                  alt="Holding phone"
+                  width={400}
+                  height={600}
+                  className="block w-full h-auto"
+                />
+              </div>
+
+              {/* Vision results overlay */}
+              <div
+                className={cn(
+                  'absolute transition-opacity w-[55%] top-[9%] left-[-8%]',
+                  frameId === 24 ? 'opacity-100' : 'opacity-0',
+                  overlayTimingClass === 'enter-timing' ? 'duration-250 delay-500' : 'duration-250'
+                )}
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/public-healthroom/vision-results.png')}
+                  alt="Vision test results"
+                  width={500}
+                  height={400}
+                  className="block w-full h-auto"
+                />
+              </div>
+
+              {/* Health message overlay */}
+              <div
+                className={cn(
+                  'absolute transition-opacity w-[32%] top-[23%] left-1/2 -translate-x-1/2',
+                  frameId === 28 ? 'opacity-100' : 'opacity-0',
+                  overlayTimingClass === 'enter-timing' ? 'duration-250 delay-500' : 'duration-250'
+                )}
+              >
+                <Image
+                  src={cloudfrontImage('/images/features/public-healthroom/message-2.png')}
+                  alt="Health message"
+                  width={300}
+                  height={400}
+                  className="block w-full h-auto"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Thumbnail strip */}
-        <div className="flex gap-2 mt-4 overflow-x-auto pb-2">
-          {roomImages.map((img, i) => (
-            <button
-              key={img.id}
-              onClick={() => goToRoom(i)}
-              className={cn(
-                'shrink-0 w-20 h-14 relative rounded overflow-hidden cursor-pointer border-2 transition-all',
-                i === activeRoomIndex
-                  ? 'border-primary ring-2 ring-primary/30'
-                  : 'border-transparent opacity-70 hover:opacity-100'
-              )}
-              aria-label={`View ${img.label}`}
-            >
-              <Image
-                src={cloudfrontImage(
-                  `/images/features/public-healthroom/${img.id}.jpg`
-                )}
-                alt={img.label}
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            </button>
-          ))}
-        </div>
-      </div>
+        {/* RIGHT: Scrolling logic frames */}
+        <div className="relative z-0 w-full lg:w-1/2 lg:ml-auto mt-[8vh]">
+          {/* Indicator line showing the scroll trigger point */}
+          <div className="sticky top-[75vh] lg:top-[50vh] w-full h-0 border-b border-dashed border-black/25 z-[2]" />
 
-      {/* Overlay UI images */}
-      <div className="max-width mx-auto px-4 mt-12">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {[
-            { src: 'menu-1.png', label: 'Entry Menu - Step 1' },
-            { src: 'menu-2.png', label: 'Entry Menu - Step 2' },
-            { src: 'menu-3.png', label: 'Entry Menu - Step 3' },
-            { src: 'holding-phone.png', label: 'Holding Phone' },
-            { src: 'vision-results.png', label: 'Vision Results' },
-            { src: 'message-2.png', label: 'Health Message' },
-          ].map((overlay) => (
-            <div
-              key={overlay.src}
-              className="bg-gray-light rounded-lg overflow-hidden"
-            >
-              <Image
-                src={cloudfrontImage(
-                  `/images/features/public-healthroom/${overlay.src}`
-                )}
-                alt={overlay.label}
-                width={600}
-                height={400}
-                className="w-full h-auto"
-              />
-              <p className="text-xs text-gray text-center py-2">
-                {overlay.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* System Logic Frames */}
-      <div className="max-width mx-auto px-4 mt-12">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {logicFrames.map((frameId) => (
-            <div
-              key={frameId}
-              className="bg-gray-light rounded-lg overflow-hidden"
-            >
-              <Image
-                src={cloudfrontImage(
-                  `/images/features/public-healthroom/logic/${frameId}.jpg`
-                )}
-                alt={`System logic frame ${frameId}`}
-                width={400}
-                height={300}
-                className="w-full h-auto"
-              />
-              <p className="text-xs text-gray text-center py-1">
-                Step {frameId}
-              </p>
-            </div>
-          ))}
+          <ul className="list-none p-0 m-0">
+            {prototypeFrames.map((frame, i) => (
+              <li
+                key={frame.id}
+                data-frame-id={frame.id}
+                ref={(el) => {
+                  frameRefs.current[i] = el
+                }}
+              >
+                <Image
+                  src={cloudfrontImage(
+                    `/images/features/public-healthroom/logic/${frame.id}.jpg`
+                  )}
+                  alt={`System logic step ${frame.id}`}
+                  width={800}
+                  height={600}
+                  className="block w-full h-auto"
+                  sizes="(max-width: 864px) 100vw, 50vw"
+                />
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
