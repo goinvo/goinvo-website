@@ -164,33 +164,26 @@ const components: PortableTextComponents = {
       <ArticleReveal intensity="text">
         <section id="references" className="my-12 border-t border-gray-medium pt-8">
           <h2 className="header-lg text-center mt-8 mb-4">References</h2>
-          <ol className="list-none pl-0 space-y-3 text-sm">
+          <ol className="list-none pl-0 space-y-4 text-sm">
             {value.items?.map(
-              (item: { title: string; link?: string }, i: number) => {
-                let displayTitle = item.title || ''
-                if (item.link && displayTitle.includes(item.link)) {
-                  displayTitle = displayTitle.replace(item.link, '').replace(/:\s*$/, '').trim()
-                }
-                return (
-                  <li key={i} className="text-gray flex gap-2">
-                    <span className="text-gray/50 font-semibold shrink-0">{i + 1}.</span>
+              (item: { title: string; link?: string }, i: number) => (
+                <li key={i} className="text-gray mb-4" id={`ref-${i + 1}`}>
+                  <span>{item.title || ''}</span>
+                  {item.link && (
                     <span>
-                      {item.link ? (
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-secondary hover:text-primary underline underline-offset-2"
-                        >
-                          {displayTitle || item.link}
-                        </a>
-                      ) : (
-                        displayTitle
-                      )}
+                      :{' '}
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-secondary hover:text-primary break-all"
+                      >
+                        {item.link}
+                      </a>
                     </span>
-                  </li>
-                )
-              }
+                  )}
+                </li>
+              )
             )}
           </ol>
         </section>
