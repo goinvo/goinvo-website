@@ -17,8 +17,11 @@ visual-storytelling-with-genai, who-uses-my-health-data
 **Restored to static overrides (need Sanity content migration first):**
 - `us-healthcare-problems` — 50 numbered headings missing from Sanity, interactive infographic
 - `primary-self-care-algorithms` — 10+ expand/collapse interactive buttons not in Sanity
+- `augmented-clinical-decision-support` — 21-slide SlickCarousel pregnancy storyboard
+- `public-healthroom` — scroll-driven sticky prototype with react-scrollspy
+- `loneliness-in-our-human-code` — 29 SVG icon imports in custom grid/timeline layouts
 
-**Status**: Audit complete. 0 critical issues. 7/27 clean. Remaining issues are Sanity content gaps (not code bugs). `us-healthcare-problems` and `primary-self-care-algorithms` restored to static overrides (need Sanity content migration first).
+**Status**: Audit complete. 0 critical, 9/27 clean. Remaining issues are Sanity content gaps (missing images in interactive sections, mid-span superscripts, missing headings) that need manual editing in Sanity Studio.
 
 ### Audit Results (2026-03-29)
 
