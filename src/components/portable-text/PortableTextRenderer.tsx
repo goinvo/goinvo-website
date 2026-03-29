@@ -199,6 +199,13 @@ const components: PortableTextComponents = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
       const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2
+      const bg = value.background || 'none'
+      const bgClasses: Record<string, string> = {
+        none: '',
+        gray: 'bg-[#f1f6f6] rounded-sm',
+        teal: 'bg-[#cbe1df] rounded-sm',
+        warm: 'bg-[#faf6f3] rounded-sm',
+      }
 
       const images = items.filter(i => i._type === 'image' && i.asset?._ref)
       const textBlocks = items.filter(i => i._type === 'block')
@@ -207,50 +214,49 @@ const components: PortableTextComponents = {
 
       // Mixed content: text + image side by side
       if (hasText && hasImages && colCount === 2) {
-        // Split at the first image — text before forms column 1, image forms column 2
         const firstImageIdx = items.findIndex(i => i._type === 'image' && i.asset?._ref)
-        const col1Items = items.slice(0, firstImageIdx)
-        const col2Items = items.slice(firstImageIdx)
+        const firstTextIdx = items.findIndex(i => i._type === 'block')
+        const imageFirst = firstImageIdx < firstTextIdx
+
+        // Split: images go to one column, text to the other
+        const imageItems = items.filter(i => i._type === 'image' && i.asset?._ref)
+        const textItems = items.filter(i => i._type !== 'image' || !i.asset?._ref)
+
+        const renderImages = () => (
+          <div className="flex flex-col items-center justify-center">
+            {imageItems.map((item) => {
+              const imgSize = item.size || 'full'
+              const imgWidth = imgSize === 'small' ? 400 : imgSize === 'medium' ? 600 : 800
+              const colImageSizeClasses: Record<string, string> = {
+                small: 'max-w-[250px]',
+                medium: 'max-w-[400px]',
+                large: 'max-w-[600px]',
+                full: 'max-w-full',
+              }
+              const imgUrl = urlForImage(item).width(imgWidth).url()
+              return (
+                <figure key={item._key} className={cn('m-0 mx-auto', colImageSizeClasses[imgSize])}>
+                  <img src={imgUrl} alt={item.alt || ''} loading="lazy" className="max-w-full h-auto" />
+                  {item.caption && (
+                    <figcaption className="mt-2 text-sm text-gray italic text-center">{item.caption}</figcaption>
+                  )}
+                </figure>
+              )
+            })}
+          </div>
+        )
+
+        const renderText = () => (
+          <div>
+            <PortableText value={textItems} components={components} />
+          </div>
+        )
 
         return (
           <ArticleReveal intensity="visual">
-            <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-              {/* Column 1: text content */}
-              <div>
-                <PortableText value={col1Items} components={components} />
-              </div>
-              {/* Column 2: image(s) + remaining text */}
-              <div className="flex flex-col items-center justify-center">
-                {col2Items.map((item) => {
-                  if (item._type === 'image' && item.asset?._ref) {
-                    const imgSize = item.size || 'full'
-                    const imgWidth = imgSize === 'small' ? 400 : imgSize === 'medium' ? 600 : 800
-                    const colImageSizeClasses: Record<string, string> = {
-                      small: 'max-w-[250px]',
-                      medium: 'max-w-[400px]',
-                      large: 'max-w-[600px]',
-                      full: 'max-w-full',
-                    }
-                    const imgUrl = urlForImage(item).width(imgWidth).url()
-                    return (
-                      <figure key={item._key} className={cn('m-0 mx-auto', colImageSizeClasses[imgSize])}>
-                        <img
-                          src={imgUrl}
-                          alt={item.alt || ''}
-                          loading="lazy"
-                          className="max-w-full h-auto"
-                        />
-                        {item.caption && (
-                          <figcaption className="mt-2 text-sm text-gray italic text-center">
-                            {item.caption}
-                          </figcaption>
-                        )}
-                      </figure>
-                    )
-                  }
-                  return <PortableText key={item._key} value={[item]} components={components} />
-                })}
-              </div>
+            <div className={cn("my-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start", bg !== 'none' && 'p-5', bgClasses[bg])}>
+              {imageFirst ? renderImages() : renderText()}
+              {imageFirst ? renderText() : renderImages()}
             </div>
           </ArticleReveal>
         )
@@ -277,7 +283,7 @@ const components: PortableTextComponents = {
 
         return (
           <ArticleReveal intensity="visual">
-            <figure className="my-8">
+            <figure className={cn("my-8", bg !== 'none' && 'p-5', bgClasses[bg])}>
               <div
                 className={cn(
                   'grid gap-4',
@@ -536,7 +542,7 @@ const components: PortableTextComponents = {
         <ArticleReveal intensity="heading">
           <h2 className={isNumbered
             ? 'font-sans text-base font-bold text-gray mt-6 mb-2 numeral-gutter'
-            : 'header-lg mt-5 mb-0'
+            : 'header-lg mt-5 mb-4'
           }>{children}</h2>
         </ArticleReveal>
       )
