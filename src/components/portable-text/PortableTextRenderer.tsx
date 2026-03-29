@@ -59,6 +59,7 @@ const imageSizeClasses: Record<string, string> = {
   medium: 'max-w-[50%]',
   large: 'max-w-[75%]',
   full: 'max-w-full',
+  bleed: 'w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] max-w-none',
 }
 
 const imageAlignClasses: Record<string, string> = {
@@ -84,7 +85,7 @@ const components: PortableTextComponents = {
       if (!value?.asset) return null
       const size = value.size || 'full'
       const align = value.align || 'center'
-      const width = size === 'small' ? 400 : size === 'medium' ? 600 : 800
+      const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 800
       const imageUrl = urlForImage(value).width(width).url()
       return (
         <ArticleReveal intensity="visual">

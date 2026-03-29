@@ -120,6 +120,7 @@ export default defineType({
               { title: 'Medium (50%)', value: 'medium' },
               { title: 'Large (75%)', value: 'large' },
               { title: 'Full width', value: 'full' },
+              { title: 'Full bleed (viewport width)', value: 'bleed' },
             ],
           },
           initialValue: 'full',
