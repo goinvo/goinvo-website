@@ -35,6 +35,12 @@ async function fixSpaces() {
         const cm = JSON.stringify(curr.marks || [])
 
         if (pm !== cm) {
+          // Don't add spaces to/from superscript spans — sups attach
+          // directly to the preceding word with no space
+          const prevIsSup = prev.marks?.includes('sup')
+          const currIsSup = curr.marks?.includes('sup')
+          if (prevIsSup || currIsSup) continue
+
           const prevEnd = prev.text?.slice(-1)
           const currStart = curr.text?.[0]
           if (prevEnd && currStart && prevEnd !== ' ' && currStart !== ' ') {
