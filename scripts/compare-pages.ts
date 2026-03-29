@@ -104,7 +104,7 @@ const INTERACTIVE_OVERRIDE_SLUGS = new Set([
   'us-healthcare-problems',              // 50 numbered interactive headings
   'primary-self-care-algorithms',         // expand/collapse interactive buttons
   'determinants-of-health',               // static override with interactive chart
-  'digital-healthcare',                   // static override with numbered sections
+  'digital-healthcare',                    // Sanity: Gatsby has 2x images (responsive duplicates) + contributor photos
   'disrupt',                              // static override with multi-part layout
   'healing-us-healthcare',                // static override with infographic
   'oral-history-goinvo',                  // static override with interview layout
