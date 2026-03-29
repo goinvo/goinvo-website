@@ -172,6 +172,20 @@ export default defineType({
           type: 'string',
           description: 'Optional caption displayed below the columns',
         },
+        {
+          name: 'background',
+          title: 'Background',
+          type: 'string',
+          description: 'Optional background color for the columns container',
+          options: {
+            list: [
+              { title: 'None', value: 'none' },
+              { title: 'Gray', value: 'gray' },
+              { title: 'Teal', value: 'teal' },
+              { title: 'Warm', value: 'warm' },
+            ],
+          },
+        },
       ],
     }),
     defineArrayMember({
