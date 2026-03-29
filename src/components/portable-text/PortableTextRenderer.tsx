@@ -162,13 +162,13 @@ const components: PortableTextComponents = {
     },
     references: ({ value }) => (
       <ArticleReveal intensity="text">
-        <section id="references" className="my-12 border-t border-gray-medium pt-8">
+        <section id="references" className="my-12 pt-8">
           <h2 className="header-lg text-center mt-8 mb-4">References</h2>
-          <ol className="list-none pl-0 space-y-4 text-sm">
+          <ol className="pl-0 ml-0" style={{ listStylePosition: 'inside' }}>
             {value.items?.map(
               (item: { title: string; link?: string }, i: number) => (
-                <li key={i} className="text-gray mb-4" id={`ref-${i + 1}`}>
-                  <span>{item.title || ''}</span>
+                <li key={i} className="text-gray mb-4 break-words" id={`ref-${i + 1}`}>
+                  <span id={`fn-${i + 1}`}>{item.title || ''}</span>
                   {item.link && (
                     <span>
                       :{' '}
