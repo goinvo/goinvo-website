@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function USHealthcareProblemsPage() {
   return (
     <div>
-      <SetCaseStudyHero image={cloudfrontImage('/images/features/us-healthcare-problems/us-healthcare-problems-hero3.jpg')} />
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/us-healthcare-problems/us_healthcare_problems_hero_v01.jpg')} />
 
       {/* Intro */}
       <section className="py-12">

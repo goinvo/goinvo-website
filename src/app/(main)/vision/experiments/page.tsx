@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function ExperimentsPage() {
   return (
     <div>
-      <SetCaseStudyHero image={cloudfrontImage('/images/features/rethinking-ai-beyond-chat/design-experiments-hero.jpg')} />
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/rethinking-ai-beyond-chat/hero.jpg')} />
 
       {/* Grid */}
       <section className="py-12">
