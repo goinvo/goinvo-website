@@ -89,12 +89,12 @@ const components: PortableTextComponents = {
       const imageUrl = urlForImage(value).width(width).url()
       return (
         <ArticleReveal intensity="visual">
-          <figure className={cn('my-8', imageSizeClasses[size], imageAlignClasses[align])}>
+          <figure className={cn('my-8', imageSizeClasses[size], size !== 'bleed' && imageAlignClasses[align])}>
             <img
               src={imageUrl}
               alt={value.alt || ''}
               loading="lazy"
-              className="max-w-full h-auto"
+              className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full')}
             />
             {value.caption && (
               <figcaption className="mt-2 text-sm text-gray italic">
