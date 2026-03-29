@@ -106,37 +106,53 @@ const components: PortableTextComponents = {
     },
     quote: ({ value }) => (
       <ArticleReveal intensity="visual">
-        <Quote text={value.text} author={value.author} role={value.role} />
+        <Quote text={value.text} author={value.author} role={value.role} refNumber={value.refNumber} refTarget={value.refTarget} />
       </ArticleReveal>
     ),
     results: ({ value }) => {
-      const items: { stat: string; description: string }[] = value.items || []
+      const items: { stat: string; description: string; refNumber?: string; refTarget?: string }[] = value.items || []
       const count = items.length
       const bg = value.background || 'none'
-      const bgClass = bg !== 'none' ? (bg === 'gray' ? 'bg-gray-lightest' : 'bg-secondary/10') : ''
+      const perItemBg = bg === 'gray' ? 'bg-gray-lightest' : bg === 'teal' ? 'bg-secondary/10' : ''
       return (
         <ArticleReveal intensity="visual">
           <div
             className={cn(
-              'grid gap-8 my-12',
-              bgClass && `${bgClass} p-8 rounded`,
+              'grid gap-4 my-12',
               count === 1
                 ? 'grid-cols-1 max-w-md mx-auto'
                 : count === 2
                   ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
                   : count === 4
-                    ? 'grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto'
+                    ? 'grid-cols-2 lg:grid-cols-4'
                     : count % 3 === 0
                       ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
                       : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
             )}
           >
             {items.map((item, i) => (
-              <div key={i} className={count === 1 ? 'text-left' : 'text-center'}>
-                <div className="font-serif text-3xl text-primary mb-2">
+              <div key={i} className="text-center">
+                <div className={cn(
+                  'font-serif text-xl p-4 mb-2',
+                  perItemBg || 'bg-gray-lightest',
+                )}>
                   {item.stat}
                 </div>
-                <p className="text-gray text-md">{item.description}</p>
+                <p className="text-sm px-1">
+                  {item.description}
+                  {item.refNumber && (
+                    <>
+                      <sup>
+                        <a
+                          href={`#${item.refTarget || 'references'}`}
+                          className="!text-primary !no-underline hover:!underline text-xs"
+                        >
+                          {' '}{item.refNumber}
+                        </a>
+                      </sup>{' '}
+                    </>
+                  )}
+                </p>
               </div>
             ))}
           </div>
@@ -146,7 +162,7 @@ const components: PortableTextComponents = {
     references: ({ value }) => (
       <ArticleReveal intensity="text">
         <section id="references" className="my-12 border-t border-gray-medium pt-8">
-          <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-gray mb-4">References</h3>
+          <h2 className="header-lg text-center mt-8 mb-4">References</h2>
           <ol className="list-none pl-0 space-y-3 text-sm">
             {value.items?.map(
               (item: { title: string; link?: string }, i: number) => {
@@ -182,67 +198,134 @@ const components: PortableTextComponents = {
     columns: ({ value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
-
-      const groups: { image: any; caption?: string }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i]
-        if (item._type === 'image' && item.asset?._ref) {
-          let caption = item.caption || ''
-          const next = items[i + 1]
-          if (next && next._type === 'block' && next.children) {
-            const text = next.children.map((c: { text: string }) => c.text).join('')
-            if (text.trim()) {
-              caption = caption || text.trim()
-              i++
-            }
-          }
-          groups.push({ image: item, caption })
-        }
-      }
-
       const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2
 
+      const images = items.filter(i => i._type === 'image' && i.asset?._ref)
+      const textBlocks = items.filter(i => i._type === 'block')
+      const hasText = textBlocks.length > 0
+      const hasImages = images.length > 0
+
+      // Mixed content: text + image side by side
+      if (hasText && hasImages && colCount === 2) {
+        // Split at the first image — text before forms column 1, image forms column 2
+        const firstImageIdx = items.findIndex(i => i._type === 'image' && i.asset?._ref)
+        const col1Items = items.slice(0, firstImageIdx)
+        const col2Items = items.slice(firstImageIdx)
+
+        return (
+          <ArticleReveal intensity="visual">
+            <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              {/* Column 1: text content */}
+              <div>
+                <PortableText value={col1Items} components={components} />
+              </div>
+              {/* Column 2: image(s) + remaining text */}
+              <div className="flex flex-col items-center justify-center">
+                {col2Items.map((item) => {
+                  if (item._type === 'image' && item.asset?._ref) {
+                    const imgSize = item.size || 'full'
+                    const imgWidth = imgSize === 'small' ? 400 : imgSize === 'medium' ? 600 : 800
+                    const colImageSizeClasses: Record<string, string> = {
+                      small: 'max-w-[250px]',
+                      medium: 'max-w-[400px]',
+                      large: 'max-w-[600px]',
+                      full: 'max-w-full',
+                    }
+                    const imgUrl = urlForImage(item).width(imgWidth).url()
+                    return (
+                      <figure key={item._key} className={cn('m-0 mx-auto', colImageSizeClasses[imgSize])}>
+                        <img
+                          src={imgUrl}
+                          alt={item.alt || ''}
+                          loading="lazy"
+                          className="max-w-full h-auto"
+                        />
+                        {item.caption && (
+                          <figcaption className="mt-2 text-sm text-gray italic text-center">
+                            {item.caption}
+                          </figcaption>
+                        )}
+                      </figure>
+                    )
+                  }
+                  return <PortableText key={item._key} value={[item]} components={components} />
+                })}
+              </div>
+            </div>
+          </ArticleReveal>
+        )
+      }
+
+      // Image-only: grid of images (original behavior)
+      if (hasImages) {
+        const groups: { image: any; caption?: string }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i]
+          if (item._type === 'image' && item.asset?._ref) {
+            let caption = item.caption || ''
+            const next = items[i + 1]
+            if (next && next._type === 'block' && next.children) {
+              const text = next.children.map((c: { text: string }) => c.text).join('')
+              if (text.trim()) {
+                caption = caption || text.trim()
+                i++
+              }
+            }
+            groups.push({ image: item, caption })
+          }
+        }
+
+        return (
+          <ArticleReveal intensity="visual">
+            <figure className="my-8">
+              <div
+                className={cn(
+                  'grid gap-4',
+                  colCount === 4
+                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+                    : colCount === 3
+                      ? 'grid-cols-1 md:grid-cols-3'
+                      : groups.length === 2
+                        ? 'grid-cols-1 md:grid-cols-2'
+                        : 'grid-cols-1'
+                )}
+              >
+                {groups.map((group) => {
+                  const imgUrl = urlForImage(group.image).width(800).url()
+                  return (
+                    <figure key={group.image._key} className="m-0">
+                      <Image
+                        src={imgUrl}
+                        alt={group.image.alt || ''}
+                        width={800}
+                        height={600}
+                        className="w-full h-auto"
+                      />
+                      {group.caption && (
+                        <figcaption className="mt-2 text-sm text-gray italic text-center">
+                          {group.caption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  )
+                })}
+              </div>
+              {value.caption && (
+                <figcaption className="mt-2 text-sm text-gray italic text-center">
+                  {value.caption}
+                </figcaption>
+              )}
+            </figure>
+          </ArticleReveal>
+        )
+      }
+
+      // Text-only: render in grid columns
       return (
         <ArticleReveal intensity="visual">
-          <figure className="my-8">
-            <div
-              className={cn(
-                'grid gap-4',
-                colCount === 4
-                  ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-                  : colCount === 3
-                    ? 'grid-cols-1 md:grid-cols-3'
-                    : groups.length === 2
-                      ? 'grid-cols-1 md:grid-cols-2'
-                      : 'grid-cols-1'
-              )}
-            >
-              {groups.map((group) => {
-                const imgUrl = urlForImage(group.image).width(800).url()
-                return (
-                  <figure key={group.image._key} className="m-0">
-                    <Image
-                      src={imgUrl}
-                      alt={group.image.alt || ''}
-                      width={800}
-                      height={600}
-                      className="w-full h-auto"
-                    />
-                    {group.caption && (
-                      <figcaption className="mt-2 text-sm text-gray italic text-center">
-                        {group.caption}
-                      </figcaption>
-                    )}
-                  </figure>
-                )
-              })}
-            </div>
-            {value.caption && (
-              <figcaption className="mt-2 text-sm text-gray italic text-center">
-                {value.caption}
-              </figcaption>
-            )}
-          </figure>
+          <div className={cn('my-8 grid gap-4', colCount === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
+            <PortableText value={items} components={components} />
+          </div>
         </ArticleReveal>
       )
     },
@@ -386,12 +469,12 @@ const components: PortableTextComponents = {
   list: {
     bullet: ({ children }) => (
       <ArticleReveal intensity="text">
-        <ul className="ul text-gray mb-8">{children}</ul>
+        <ul className="ul mb-8">{children}</ul>
       </ArticleReveal>
     ),
     number: ({ children }) => (
       <ArticleReveal intensity="text">
-        <ol className="list-decimal pl-6 text-gray mb-8 space-y-2">{children}</ol>
+        <ol className="list-decimal pl-6 mb-8 space-y-2">{children}</ol>
       </ArticleReveal>
     ),
   },
@@ -401,20 +484,22 @@ const components: PortableTextComponents = {
   },
   marks: {
     link: ({ children, value }) => {
+      const href = value?.href || ''
+      const isRefLink = href === '#references' || href === '#methodology'
       const rel = value?.blank ? 'noopener noreferrer' : undefined
       const target = value?.blank ? '_blank' : undefined
       return (
         <a
-          href={value?.href}
+          href={href}
           rel={rel}
           target={target}
-          className="hover:text-primary"
+          className={isRefLink ? '!text-primary !no-underline hover:!underline hover:!text-black' : 'hover:text-primary'}
         >
           {children}
         </a>
       )
     },
-    sup: ({ children }) => <sup>{children}</sup>,
+    sup: ({ children }) => <><sup>{children}</sup>{' '}</>,
     // Legacy decorators (backward compat)
     teal: ({ children }) => <span className="text-secondary">{children}</span>,
     orange: ({ children }) => <span className="text-primary">{children}</span>,
@@ -423,49 +508,79 @@ const components: PortableTextComponents = {
       const colorMap: Record<string, string> = {
         teal: 'text-secondary',
         orange: 'text-primary',
-        charcoal: 'text-[#263238]',
+        charcoal: 'text-tertiary',
         gray: 'text-gray',
         blue: 'text-blue',
       }
       return <span className={colorMap[value?.color] || 'text-secondary'}>{children}</span>
     },
     refCitation: ({ children, value }) => (
-      <sup>
+      <><sup>
         <a
           href="#references"
-          className="text-secondary hover:text-primary text-xs no-underline"
+          className="!text-primary !no-underline hover:!underline hover:!text-black text-xs"
         >
           {value?.refNumber || children}
         </a>
-      </sup>
+      </sup>{' '}</>
     ),
   },
   block: {
-    h2: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h2 className="header-lg mt-12 mb-4">{children}</h2>
-      </ArticleReveal>
-    ),
+    h2: ({ children, value }) => {
+      // Detect numbered headings (e.g. "1. The race for...")
+      // These should render as bold sans with numeral-gutter, not large serif
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const isNumbered = /^\d+\.\s/.test(text)
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 className={isNumbered
+            ? 'font-sans text-base font-bold text-gray mt-6 mb-2 numeral-gutter'
+            : 'header-lg mt-5 mb-0'
+          }>{children}</h2>
+        </ArticleReveal>
+      )
+    },
     h2Center: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h2 className="header-lg mt-12 mb-4 text-center">{children}</h2>
+        <h2 className="header-lg mt-5 mb-0 text-center">{children}</h2>
       </ArticleReveal>
     ),
     sectionTitle: ({ children }) => (
       <ArticleReveal intensity="heading">
-        <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-16 mb-6 text-center">{children}</h2>
+        <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-4 mb-2 text-center">{children}</h2>
       </ArticleReveal>
     ),
-    h3: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
-      </ArticleReveal>
-    ),
-    h4: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h4 className="font-sans text-base font-bold mt-6 mb-2">{children}</h4>
-      </ArticleReveal>
-    ),
+    h3: ({ children, value }) => {
+      // Detect numbered headings (e.g. "1. Explain just enough...")
+      // These should render as bold sans with numeral-gutter, not uppercase tracking
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const isNumbered = /^\d+\.\s/.test(text)
+      return (
+        <ArticleReveal intensity="heading">
+          <h3 className={isNumbered
+            ? 'font-sans text-base font-bold text-gray mt-6 mb-2 numeral-gutter'
+            : 'font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3'
+          }>{children}</h3>
+        </ArticleReveal>
+      )
+    },
+    h4: ({ children, value }) => {
+      // Detect numbered headings (e.g. "1. Explain just enough...")
+      // and apply gray color + hanging indent for the numeral gutter
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const isNumbered = /^\d+\.\s/.test(text)
+      return (
+        <ArticleReveal intensity="heading">
+          <h4 className={cn(
+            'font-sans text-base font-bold mt-6 mb-2',
+            isNumbered && 'text-gray numeral-gutter'
+          )}>{children}</h4>
+        </ArticleReveal>
+      )
+    },
     blockquote: ({ children }) => (
       <ArticleReveal intensity="text">
         <blockquote className="border-l-4 border-primary pl-6 my-6 italic text-gray">
@@ -482,7 +597,7 @@ const components: PortableTextComponents = {
     ),
     normal: ({ children }) => (
       <ArticleReveal intensity="text">
-        <p className="text-gray mb-4 leading-relaxed">{children}</p>
+        <p className="mb-4 leading-relaxed">{children}</p>
       </ArticleReveal>
     ),
   },

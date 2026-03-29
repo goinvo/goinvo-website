@@ -230,9 +230,20 @@
     padding-left: 21px;
   }
 
+  @media (min-width: 864px) {
+    .ul {
+      padding-left: 0;
+    }
+  }
+
   .ul li {
     padding-left: 4px;
     margin-bottom: 0.5rem;
+  }
+
+  /* Hanging indent for numbered headings — pushes the number into the gutter */
+  .numeral-gutter {
+    margin-left: -1rem;
   }
 }
 

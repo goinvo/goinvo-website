@@ -303,8 +303,8 @@ export default function ServicesPage() {
             <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light mb-1">Emerging technology</p>
             <p className="text-gray mb-3">We&apos;ve worked on projects across the spectrum of emerging technology from artificial intelligence for medical coding to self-documenting voice encounters and wearable devices.</p>
             <div className="space-y-1">
-              <div><Link href="/vision/from-bathroom-to-healthroom" >From bathroom to healthroom</Link></div>
-              <div><Link href="/work/wuxi-nextcode">WuXi NextCODE</Link></div>
+              <div><Link href="/vision/bathroom-to-healthroom">From bathroom to healthroom</Link></div>
+              <div><Link href="/work/wuxi-nextcode-familycode">WuXi NextCODE</Link></div>
             </div>
           </div>
           <div>
@@ -320,7 +320,7 @@ export default function ServicesPage() {
             <p className="text-gray mb-3">We create beautiful printed and interactive health-related data visualizations that span payment dashboards to visualizing the social determinants of health to clinical practice guidelines for Zika.</p>
             <div className="space-y-1">
               <div><Link href="/vision/determinants-of-health">Determinants of Health</Link></div>
-              <div><Link href="/vision/clinical-practice-guidelines-for-zika">Clinical Practice Guidelines for Zika</Link></div>
+              <div><Link href="/vision/understanding-zika">Clinical Practice Guidelines for Zika</Link></div>
             </div>
           </div>
           <div>

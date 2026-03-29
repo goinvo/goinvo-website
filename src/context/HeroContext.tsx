@@ -206,7 +206,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
 
     case 'SET_CASE_STUDY_HERO': {
       const image = action.image
-      const bgPosition = action.bgPosition ?? 'center top'
+      const bgPosition = action.bgPosition ?? 'center'
 
       // Direct access: already on a case study route but hero is hidden
       if (state.phase === 'hidden' && isDynamicHeroRoute(state.pathname)) {

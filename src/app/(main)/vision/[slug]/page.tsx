@@ -9,7 +9,7 @@ import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { stripAuthorHeading } from '@/lib/utils'
+import { stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
 
 interface Props {
@@ -54,6 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function VisionFeaturePage({ params }: Props) {
   const { slug } = await params
+
   const { data: feature } = (await sanityFetch({
     query: featureBySlugQuery,
     params: { slug },
@@ -103,12 +104,17 @@ export default async function VisionFeaturePage({ params }: Props) {
 
       {/* Content */}
       {feature.content && (
-        <section className="py-12">
+        <section className="pb-12">
           <div className="max-width max-width-md content-padding mx-auto">
             <PortableTextRenderer
-              content={feature.authors && feature.authors.length > 0
-                ? stripAuthorHeading(feature.content)
-                : feature.content}
+              content={(() => {
+                let content = feature.content
+                content = stripTitleHeading(content, feature.title)
+                if (feature.authors && feature.authors.length > 0) {
+                  content = stripAuthorHeading(content)
+                }
+                return content
+              })()}
             />
           </div>
         </section>

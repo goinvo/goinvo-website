@@ -9,6 +9,8 @@ interface QuoteProps {
   role?: string
   background?: 'gray' | 'white'
   className?: string
+  refNumber?: string
+  refTarget?: string
 }
 
 function EkgDivider() {
@@ -31,7 +33,7 @@ function EkgDivider() {
   )
 }
 
-export function Quote({ text, author, role, background, className }: QuoteProps) {
+export function Quote({ text, author, role, background, className, refNumber, refTarget }: QuoteProps) {
   return (
     <motion.div
       className={cn(
@@ -61,6 +63,16 @@ export function Quote({ text, author, role, background, className }: QuoteProps)
           </svg>
           <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light">
             {text}
+            {refNumber && (
+              <sup>
+                <a
+                  href={`#${refTarget || 'references'}`}
+                  className="!text-primary !no-underline hover:!underline text-xs"
+                >
+                  {refNumber}
+                </a>
+              </sup>
+            )}
           </p>
           <svg
             viewBox="0 0 31 22"

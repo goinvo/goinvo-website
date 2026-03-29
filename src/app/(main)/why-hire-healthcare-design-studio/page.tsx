@@ -177,9 +177,9 @@ export default function WhyHirePage() {
               <h4 className="font-semibold mb-2">Emerging technology</h4>
               <p className="text-gray text-md mb-3">We&apos;ve worked on projects across the spectrum of emerging technology from artificial intelligence for medical coding to self-documenting voice encounters and wearable devices.</p>
               <div className="flex flex-col gap-1">
-                <a href="https://www.goinvo.com/features/from-bathroom-to-healthroom/" className="text-sm">
+                <Link href="/vision/bathroom-to-healthroom" className="text-sm">
                   From bathroom to healthroom
-                </a>
+                </Link>
                 <Link href="/work/wuxi-nextcode-familycode" className="text-sm">
                   WuXi NextCODE
                 </Link>
@@ -199,7 +199,7 @@ export default function WhyHirePage() {
                 <Link href="/vision/determinants-of-health" className="text-sm">
                   Determinants of Health
                 </Link>
-                <Link href="/vision/clinical-practice-guidelines-for-zika" className="text-sm">
+                <Link href="/vision/understanding-zika" className="text-sm">
                   Clinical Practice Guidelines for Zika
                 </Link>
               </div>
