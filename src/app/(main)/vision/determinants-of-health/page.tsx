@@ -65,7 +65,7 @@ export default function DeterminantsOfHealthPage() {
               variant="secondary"
               external
             >
-              Spanish Version (PDF)
+              en Español
             </Button>
           </div>
 
@@ -90,7 +90,9 @@ export default function DeterminantsOfHealthPage() {
         </div>
 
         {/* Interactive Chart */}
-        <DeterminantsChart />
+        <div id="determinants-chart">
+          <DeterminantsChart />
+        </div>
 
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
