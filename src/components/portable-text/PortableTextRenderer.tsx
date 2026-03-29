@@ -218,10 +218,35 @@ const components: PortableTextComponents = {
         const firstTextIdx = items.findIndex(i => i._type === 'block')
         const imageFirst = firstImageIdx < firstTextIdx
 
-        // Split: images go to one column, text to the other
         const imageItems = items.filter(i => i._type === 'image' && i.asset?._ref)
         const textItems = items.filter(i => i._type !== 'image' || !i.asset?._ref)
 
+        // Card layout: image in narrow tinted column, text in wider column
+        // Matches Gatsby's research-chunk pattern (260px image area + text)
+        if (bg !== 'none') {
+          const imgUrl = imageItems[0] ? urlForImage(imageItems[0]).width(400).url() : ''
+          return (
+            <ArticleReveal intensity="visual">
+              <div className={cn('my-5 flex flex-col md:flex-row', bgClasses[bg])}>
+                {imageFirst && imgUrl && (
+                  <div className="bg-[#cbe1df] p-3 md:w-[260px] shrink-0 flex items-center justify-center">
+                    <img src={imgUrl} alt={imageItems[0]?.alt || ''} loading="lazy" className="max-w-full h-auto max-h-[195px] object-contain" />
+                  </div>
+                )}
+                <div className="p-5 pb-2 flex-1 [&_h4:first-of-type]:mt-0 [&_h3:first-of-type]:mt-0 [&_p]:mt-0">
+                  <PortableText value={textItems} components={components} />
+                </div>
+                {!imageFirst && imgUrl && (
+                  <div className="bg-[#cbe1df] p-3 md:w-[260px] shrink-0 flex items-center justify-center">
+                    <img src={imgUrl} alt={imageItems[0]?.alt || ''} loading="lazy" className="max-w-full h-auto max-h-[195px] object-contain" />
+                  </div>
+                )}
+              </div>
+            </ArticleReveal>
+          )
+        }
+
+        // Default: equal 50/50 grid (no background)
         const renderImages = () => (
           <div className="flex flex-col items-center justify-center">
             {imageItems.map((item) => {
@@ -254,7 +279,7 @@ const components: PortableTextComponents = {
 
         return (
           <ArticleReveal intensity="visual">
-            <div className={cn("my-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start", bg !== 'none' && 'p-5', bgClasses[bg])}>
+            <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
               {imageFirst ? renderImages() : renderText()}
               {imageFirst ? renderText() : renderImages()}
             </div>
