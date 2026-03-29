@@ -647,16 +647,25 @@ function crossReferenceGatsbySource(
   }
 
   // ---- SECTION ORDERING ----
-  // The template renders: content (which may include inline authors + references)
-  // → AuthorSection (if linked authors exist) → Newsletter
-  // Only flag if the template's AuthorSection appears after Newsletter
-  const templateAuthorIdx = content.search(/AuthorSection|class="author-section"/i)
-  const newsIdx = content.search(/subscribe.*newsletter|newsletter.*form/i)
-  if (templateAuthorIdx > 0 && newsIdx > 0 && templateAuthorIdx > newsIdx) {
+  // Gatsby order: content → authors → newsletter/subscribe → references
+  // Check that Authors comes before Newsletter, and Newsletter before References
+  const authorsIdx = content.search(/Authors<\/h2>/i)
+  const newsIdx = content.search(/subscribe.*newsletter|newsletter/i)
+  const refsIdx = content.search(/id="references"/i)
+
+  if (authorsIdx > 0 && newsIdx > 0 && authorsIdx > newsIdx) {
     issues.push({
       severity: 'high',
       category: 'SECTION_ORDER',
-      message: 'AuthorSection component appears after Newsletter — expected order: content → authors → newsletter',
+      message: 'Authors section appears after Newsletter — expected order: content → authors → newsletter → references',
+    })
+  }
+  if (newsIdx > 0 && refsIdx > 0 && newsIdx > refsIdx) {
+    const isOverride = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
+    issues.push({
+      severity: isOverride ? 'low' : 'high',
+      category: 'SECTION_ORDER',
+      message: 'Newsletter appears after References — expected order: content → authors → newsletter → references',
     })
   }
 
