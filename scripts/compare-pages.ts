@@ -758,7 +758,7 @@ function analyzeHtml(html: string): PageAnalysis {
     uls: (content.match(/<ul\b/gi) || []).length,
     ols: (content.match(/<ol\b/gi) || []).length,
     sups: (content.match(/<sup\b/gi) || []).length,
-    quotes: (content.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length,
+    quotes: (content.match(/<blockquote\b/gi) || []).length,
     paragraphs: (content.match(/<p\b/gi) || []).length,
     buttons,
     links,

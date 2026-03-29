@@ -541,16 +541,27 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
-    h2Center: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h2 className="header-lg mt-5 mb-0 text-center">{children}</h2>
-      </ArticleReveal>
-    ),
-    sectionTitle: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-4 mb-2 text-center">{children}</h2>
-      </ArticleReveal>
-    ),
+    h2Center: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 id={anchorId} className="header-lg mt-5 mb-0 text-center">{children}</h2>
+        </ArticleReveal>
+      )
+    },
+    sectionTitle: ({ children, value }) => {
+      // Auto-generate anchor ID from heading text (e.g. "Methodology" → id="methodology")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 id={anchorId} className="font-serif text-[2.25rem] leading-[2.625rem] font-light mt-4 mb-2 text-center">{children}</h2>
+        </ArticleReveal>
+      )
+    },
     h3: ({ children, value }) => {
       // Detect numbered headings (e.g. "1. Explain just enough...")
       // These should render as bold sans with numeral-gutter, not uppercase tracking
