@@ -164,7 +164,7 @@ const components: PortableTextComponents = {
       <ArticleReveal intensity="text">
         <section id="references" className="my-12 pt-8">
           <h2 className="header-lg text-center mt-8 mb-4">References</h2>
-          <ol className="pl-0 ml-0" style={{ listStylePosition: 'inside' }}>
+          <ol className="pl-0 ml-0 list-decimal" style={{ listStylePosition: 'inside' }}>
             {value.items?.map(
               (item: { title: string; link?: string }, i: number) => (
                 <li key={i} className="text-gray mb-4 break-words" id={`ref-${i + 1}`}>
