@@ -390,6 +390,7 @@ interface GatsbySourceAnalysis {
   anchorIds: string[]
   quoteCount: number
   supCount: number
+  fullBleedImageCount: number
 }
 
 /** Read and analyze the Gatsby JSX source for a vision page */
@@ -398,7 +399,7 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
     exists: false, imageClasses: [], textColorClasses: [],
     columnsCount: 0, columnItems: [], headingTexts: [],
     hasMethodology: false, hasReferences: false, hasAuthors: false,
-    anchorIds: [], quoteCount: 0, supCount: 0,
+    anchorIds: [], quoteCount: 0, supCount: 0, fullBleedImageCount: 0,
   }
 
   // Try various path patterns
@@ -490,6 +491,29 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
   const quoteCount = (src.match(/<Quote\b/g) || []).length
   const supCount = (src.match(/<sup/g) || []).length
 
+  // Detect full-bleed images: <Image tags NOT inside ANY max-width container.
+  // These are truly viewport-width and should use size='bleed' in Sanity.
+  // Approach: track open/close of divs with max-width classes using a depth counter.
+  let fullBleedImageCount = 0
+  let maxWidthDepth = 0
+  const lines = src.split('\n')
+  for (const line of lines) {
+    // Track max-width container opens/closes
+    if (/className="[^"]*\bmax-width\b/.test(line)) maxWidthDepth++
+    const closeDivs = (line.match(/<\/div>/g) || []).length
+    // Rough: each </div> closes one level (imperfect but good enough)
+    if (closeDivs > 0 && maxWidthDepth > 0) {
+      maxWidthDepth = Math.max(0, maxWidthDepth - closeDivs)
+    }
+    // Check if this line has an <Image and we're NOT inside any max-width container
+    if (/<Image\b/.test(line) && maxWidthDepth === 0) {
+      // Exclude SVG icons and small inline images
+      if (!/icon|svg|logo/i.test(line)) {
+        fullBleedImageCount++
+      }
+    }
+  }
+
   return {
     exists: true,
     imageClasses,
@@ -503,6 +527,7 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
     anchorIds,
     quoteCount,
     supCount,
+    fullBleedImageCount,
   }
 }
 
@@ -606,6 +631,48 @@ function crossReferenceGatsbySource(
         severity: 'high',
         category: 'SRC_MISSING_SECTION',
         message: 'Gatsby source has Authors section but it is missing from Next.js',
+      })
+    }
+  }
+
+  // ---- DUPLICATE AUTHORS ----
+  // Check if "Authors" heading appears more than once (content duplicate + template)
+  const authorHeadingMatches = content.match(/Authors?<\/h[234]/gi) || []
+  if (authorHeadingMatches.length > 1) {
+    issues.push({
+      severity: 'high',
+      category: 'DUPLICATE_SECTION',
+      message: `"Authors" heading appears ${authorHeadingMatches.length} times — content likely has an Authors heading that should be stripped (template already renders AuthorSection)`,
+    })
+  }
+
+  // ---- SECTION ORDERING ----
+  // The template renders: content (which may include inline authors + references)
+  // → AuthorSection (if linked authors exist) → Newsletter
+  // Only flag if the template's AuthorSection appears after Newsletter
+  const templateAuthorIdx = content.search(/AuthorSection|class="author-section"/i)
+  const newsIdx = content.search(/subscribe.*newsletter|newsletter.*form/i)
+  if (templateAuthorIdx > 0 && newsIdx > 0 && templateAuthorIdx > newsIdx) {
+    issues.push({
+      severity: 'high',
+      category: 'SECTION_ORDER',
+      message: 'AuthorSection component appears after Newsletter — expected order: content → authors → newsletter',
+    })
+  }
+
+  // ---- FULL-BLEED IMAGE CHECK ----
+  // Detect if Gatsby has images outside max-width--md containers (full-bleed)
+  // and Next.js doesn't have corresponding bleed-width images
+  // Full-bleed detection is heuristic (JSX nesting is hard to parse reliably).
+  // Only flag as HIGH for physician-burnout which is the confirmed case.
+  // For other pages, images outside max-width are typically 1020px-wide (not viewport-bleed).
+  if (gatsbySrc.fullBleedImageCount > 0) {
+    const nextBleedImages = (content.match(/w-screen|50vw|-ml-\[50vw\]/g) || []).length
+    if (nextBleedImages === 0) {
+      issues.push({
+        severity: 'low',
+        category: 'IMAGE_BLEED',
+        message: `Gatsby has ${gatsbySrc.fullBleedImageCount} image(s) outside max-width containers — check if any should use size='bleed'`,
       })
     }
   }
