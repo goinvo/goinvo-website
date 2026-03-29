@@ -68,6 +68,21 @@ understanding-ebola, understanding-zika
 
 ---
 
+## Critical Rules
+
+### ALWAYS visually compare against the live Gatsby site before assuming anything is correct
+Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby page (goinvo.com/vision/{slug}/) AND the Next.js page (localhost:3000/vision/{slug}) side by side and visually compare. Check:
+- Section order — varies by article, verify against the Gatsby source/live site for each page
+- Image sizing (full-bleed vs constrained, Gatsby uses different containers)
+- Reference formatting (citation text + separate URL link, not entire text as link)
+- Author section presence and layout
+- Newsletter/subscribe section background color and position
+- Bold text spacing (no missing spaces around `<strong>` tags)
+- Heading styles (serif vs sans, weights, uppercase)
+
+### Do not assume section ordering — check the Gatsby source for each page
+The most common Gatsby order is content → authors → subscribe → references, but this varies. Always check `C:\Users\quest\Programming\GoInvo\goinvo.com\src\pages\vision\{slug}\index.js` for the actual order before making template changes.
+
 ## Known Gotchas
 
 ### ALWAYS clean build before auditing or debugging rendering

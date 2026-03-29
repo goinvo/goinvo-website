@@ -102,41 +102,53 @@ export default async function VisionFeaturePage({ params }: Props) {
         </div>
       </Reveal>
 
-      {/* Content */}
-      {feature.content && (
-        <section className="pb-12">
-          <div className="max-width max-width-md content-padding mx-auto">
-            <PortableTextRenderer
-              content={(() => {
-                let content = feature.content
-                content = stripTitleHeading(content, feature.title)
-                if (feature.authors && feature.authors.length > 0) {
-                  content = stripAuthorHeading(content)
-                }
-                return content
-              })()}
-            />
-          </div>
-        </section>
-      )}
+      {/* Content (without references — rendered separately after newsletter) */}
+      {feature.content && (() => {
+        let content = feature.content
+        content = stripTitleHeading(content, feature.title)
+        if (feature.authors && feature.authors.length > 0) {
+          content = stripAuthorHeading(content)
+        }
+        const mainContent = content.filter((b: any) => b._type !== 'references')
+        const referencesContent = content.filter((b: any) => b._type === 'references')
 
-      {/* Authors */}
-      {feature.authors && feature.authors.length > 0 && (
-        <section className="pb-12">
-          <div className="max-width max-width-md content-padding mx-auto">
-            <AuthorSection authors={feature.authors} />
-          </div>
-        </section>
-      )}
+        return (
+          <>
+            <section className="pb-12">
+              <div className="max-width max-width-md content-padding mx-auto">
+                <PortableTextRenderer content={mainContent} />
+              </div>
+            </section>
 
-      {/* Newsletter */}
-      <section className="bg-gray-lightest py-8">
-        <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card py-6 px-4 md:px-8">
-            <NewsletterForm />
-          </div>
-        </div>
-      </section>
+            {/* Authors */}
+            {feature.authors && feature.authors.length > 0 && (
+              <section className="pb-12">
+                <div className="max-width max-width-md content-padding mx-auto">
+                  <AuthorSection authors={feature.authors} />
+                </div>
+              </section>
+            )}
+
+            {/* Newsletter */}
+            <section className="bg-gray-lightest py-8">
+              <div className="max-width max-width-md content-padding mx-auto">
+                <div className="bg-white shadow-card py-6 px-4 md:px-8">
+                  <NewsletterForm />
+                </div>
+              </div>
+            </section>
+
+            {/* References (after newsletter, matching Gatsby order) */}
+            {referencesContent.length > 0 && (
+              <section className="pb-12">
+                <div className="max-width max-width-md content-padding mx-auto">
+                  <PortableTextRenderer content={referencesContent} />
+                </div>
+              </section>
+            )}
+          </>
+        )
+      })()}
     </div>
   )
 }
