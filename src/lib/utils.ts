@@ -14,13 +14,28 @@ export function cn(...classes: (string | false | undefined | null)[]): string {
  * to avoid duplication when AuthorSection renders its own heading.
  */
 export function stripAuthorHeading(blocks: any[]): any[] {
+  let skipNextNormal = false
   return blocks.filter((block) => {
-    if (block._type !== 'block' || block.style !== 'h2') return true
-    const text = (block.children || [])
-      .map((c: any) => c.text || '')
-      .join('')
-      .trim()
-    return text !== 'Authors' && text !== 'Author'
+    if (block._type !== 'block') { skipNextNormal = false; return true }
+    // Strip "Authors"/"Author" heading in any heading style
+    if (['h2', 'h2Center', 'sectionTitle'].includes(block.style)) {
+      const text = (block.children || [])
+        .map((c: any) => c.text || '')
+        .join('')
+        .trim()
+      if (text === 'Authors' || text === 'Author') {
+        skipNextNormal = true
+        return false
+      }
+    }
+    // Also strip the plain text block immediately after the author heading
+    // (contains inline author names like "Claire Lin Tala Habbab...")
+    if (skipNextNormal && block.style === 'normal') {
+      skipNextNormal = false
+      return false
+    }
+    skipNextNormal = false
+    return true
   })
 }
 
