@@ -23,3 +23,30 @@ export function stripAuthorHeading(blocks: any[]): any[] {
     return text !== 'Authors' && text !== 'Author'
   })
 }
+
+/**
+ * Strip the first content block if it's a heading that duplicates the document title.
+ * The [slug] route already renders feature.title as h1, so a matching heading
+ * in the content creates a visual duplicate.
+ */
+export function stripTitleHeading(blocks: any[], title: string): any[] {
+  if (!blocks.length || !title) return blocks
+  const first = blocks[0]
+  if (first._type !== 'block' || !['h1', 'h2', 'sectionTitle'].includes(first.style)) return blocks
+  const text = (first.children || [])
+    .map((c: any) => c.text || '')
+    .join('')
+    .trim()
+    .toLowerCase()
+  // Word-overlap match: only strip near-exact duplicates.
+  // Threshold 0.85 avoids stripping subtly different sub-headings
+  // (e.g. "Fraud, Waste, and Abuse in Healthcare" vs title "Fraud, Waste, Abuse in US Healthcare")
+  const titleWords = title.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w: string) => w.length > 2)
+  const textWords = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w: string) => w.length > 2)
+  const overlap = titleWords.filter((w: string) => textWords.includes(w)).length
+  const overlapRatio = overlap / Math.max(titleWords.length, textWords.length)
+  if (overlapRatio >= 0.85) {
+    return blocks.slice(1)
+  }
+  return blocks
+}

@@ -197,6 +197,19 @@ export default defineType({
           type: 'string',
           description: 'Job title or affiliation of the quoted person',
         },
+        {
+          name: 'refNumber',
+          title: 'Reference citation',
+          type: 'string',
+          description: 'Optional superscript citation appended to quote text (e.g. "5", "A1")',
+        },
+        {
+          name: 'refTarget',
+          title: 'Reference target',
+          type: 'string',
+          description: 'Anchor target for the citation link',
+          options: { list: [{ title: 'References', value: 'references' }, { title: 'Methodology', value: 'methodology' }] },
+        },
       ],
     }),
     defineArrayMember({
@@ -215,6 +228,8 @@ export default defineType({
               fields: [
                 { name: 'stat', title: 'Statistic', type: 'string', description: 'The number or metric (e.g. "40%", "3x")' },
                 { name: 'description', title: 'Description', type: 'string', description: 'What the stat represents' },
+                { name: 'refNumber', title: 'Reference citation', type: 'string', description: 'Optional superscript citation (e.g. "4", "A3") — links to #references or #methodology' },
+                { name: 'refTarget', title: 'Reference target', type: 'string', description: 'Anchor target for the citation link', options: { list: [{ title: 'References', value: 'references' }, { title: 'Methodology', value: 'methodology' }] } },
               ],
             },
           ],
