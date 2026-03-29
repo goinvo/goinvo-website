@@ -1043,26 +1043,6 @@ export default function DisruptPage() {
               </div>
             </div>
 
-            <h4 className="font-serif text-base font-light mt-6 mb-2">
-              References
-            </h4>
-            <ul className="text-gray text-sm space-y-1 list-disc pl-5">
-              <li>
-                DRC. DARPA Robotics Challenge, DARPA.
-              </li>
-              <li>
-                Koren, Marina. &ldquo;3 Robots That Braved Fukushima,&rdquo;
-                Popular Mechanics, March 9, 2012
-              </li>
-              <li>
-                McKinsey Global Institute. &ldquo;Disruptive technologies:
-                Advances that will transform life, business and the global
-                economy&rdquo;
-              </li>
-              <li>
-                UN. &ldquo;World Population Prospects: The 2012 Revision&rdquo;
-              </li>
-            </ul>
           </div>
         </div>
       </section>
@@ -1073,6 +1053,32 @@ export default function DisruptPage() {
           <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <h4 className="font-serif text-base font-light mt-6 mb-2">
+            References
+          </h4>
+          <ul className="text-gray text-sm space-y-1 list-disc pl-5">
+            <li>
+              DRC. DARPA Robotics Challenge, DARPA.
+            </li>
+            <li>
+              Koren, Marina. &ldquo;3 Robots That Braved Fukushima,&rdquo;
+              Popular Mechanics, March 9, 2012
+            </li>
+            <li>
+              McKinsey Global Institute. &ldquo;Disruptive technologies:
+              Advances that will transform life, business and the global
+              economy&rdquo;
+            </li>
+            <li>
+              UN. &ldquo;World Population Prospects: The 2012 Revision&rdquo;
+            </li>
+          </ul>
         </div>
       </section>
     </div>

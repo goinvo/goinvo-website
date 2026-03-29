@@ -203,19 +203,19 @@ export default function USHealthcareProblemsPage() {
         </div>
       </section>
 
-      {/* References */}
-      <section className="py-12">
-        <div className="max-width max-width-md content-padding mx-auto">
-          <References items={refs} />
-        </div>
-      </section>
-
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
+        </div>
+      </section>
+
+      {/* References */}
+      <section className="py-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <References items={refs} />
         </div>
       </section>
     </div>
