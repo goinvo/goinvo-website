@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:content": "vitest run tests/sanity-content.test.ts",
+    "test:media": "vitest run tests/media-integrity.test.ts",
+    "test:pages": "vitest run tests/page-render.test.ts"
   },
   "dependencies": {
     "@portabletext/react": "^4.0.3",
@@ -36,12 +41,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4.7.0",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "playwright": "^1.58.2",
     "puppeteer": "^24.40.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.2"
   }
 }
