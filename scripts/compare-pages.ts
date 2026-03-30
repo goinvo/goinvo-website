@@ -1008,7 +1008,8 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
   // Template/structural headings that Next.js adds but Gatsby doesn't have
   const templateHeadings = ['subscribetoournewsletter', 'contributors', 'related', 'author', 'authors', 'sources', 'editor', 'designteam', 'votingsystemuis', 'onlinedesign', 'audioengineer']
 
-  for (const nh of nextjs.headings) {
+  for (let hi = 0; hi < nextjs.headings.length; hi++) {
+    const nh = nextjs.headings[hi]
     const norm = normalizeHeading(nh.text)
     if (templateHeadings.some(t => norm.includes(t))) continue
     // h1 page titles differ between Sanity and Gatsby — skip (not a content issue)
@@ -1016,8 +1017,14 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
     const found = gatsby.headings.some(gh => headingsMatch(gh.text, nh.text))
     if (!found) {
       const isOverridePage = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
+      // Author name h2 from AuthorSection — expected addition, not a content issue
+      // Detect by checking: h2 with serif font, following an "Author" h3, or short person-name text
+      const prevH = hi > 0 ? nextjs.headings[hi - 1] : null
+      const prevIsAuthorLabel = prevH && /^author$/i.test(prevH.text.trim())
+      const hasAuthorStyle = nh.classes.includes('font-serif') && nh.attrs?.includes('font-weight:400')
+      const isAuthorName = nh.tag === 'h2' && (prevIsAuthorLabel || hasAuthorStyle)
       issues.push({
-        severity: isOverridePage ? 'low' : 'critical',
+        severity: isOverridePage || isAuthorName ? 'low' : 'critical',
         category: 'EXTRA_HEADING',
         message: `<${nh.tag}> "${nh.text}" in Next.js but NOT in Gatsby`,
       })
