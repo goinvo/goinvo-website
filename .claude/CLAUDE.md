@@ -80,6 +80,21 @@ Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby
 - Bold text spacing (no missing spaces around `<strong>` tags)
 - Heading styles (serif vs sans, weights, uppercase)
 
+### ALWAYS verify rendered output after making component changes
+Do NOT assume a code change worked. After editing any component or page:
+1. Rebuild (`rm -rf .next && npx next build`)
+2. Fetch the rendered HTML and verify the change is present in the actual output
+3. For client-rendered components ('use client'), check both SSR HTML and the bundled JS
+4. Compare element counts, class names, and structure against the Gatsby reference
+5. Never mark a visual fix as done until you've confirmed it renders correctly
+
+When fixing a visual component to match Gatsby:
+- Fetch the Gatsby page HTML first
+- Identify EVERY difference, not just the obvious ones
+- Fix ALL differences, not just the easy ones
+- Verify the fix renders correctly before moving on
+- Do NOT delegate component fixes to agents without verifying their work
+
 ### Do not assume section ordering — check the Gatsby source for each page
 The most common Gatsby order is content → authors → subscribe → references, but this varies. Always check `C:\Users\quest\Programming\GoInvo\goinvo.com\src\pages\vision\{slug}\index.js` for the actual order before making template changes.
 

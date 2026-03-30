@@ -5,6 +5,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { PscaAlgorithms } from './PscaAlgorithms'
+import { PscaTable } from './PscaTable'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { References } from '@/components/ui/References'
 import refs from '@/data/vision/primary-self-care-algorithms/references.json'
@@ -92,18 +93,18 @@ export default function PrimarySelfCareAlgorithmsPage() {
         <PscaAlgorithms />
 
         {/* Life Stage Table */}
-        <div className="max-width content-padding mx-auto my-12">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4 max-width-md mx-auto">
+        <div className="my-12">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4 max-width-md mx-auto content-padding">
             Application of Primary Self Care Across Life
           </h1>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
+          <PscaTable>
+            <table className="table-fixed text-sm w-full" style={{ borderCollapse: 'unset' }}>
               <thead>
-                <tr className="border-b-2 border-gray-medium">
-                  <th className="text-left p-2 min-w-[150px]">Algorithm</th>
+                <tr>
+                  <th className="text-left py-[5px] px-[10px] w-[150px] bg-white sticky left-0 z-10 align-top font-normal"> </th>
                   {['0-5 years old', '6-12', '13-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '90+'].map(
                     (age) => (
-                      <th key={age} className="p-2 text-center min-w-[55px]">
+                      <th key={age} className="py-[5px] px-[10px] w-[65px] text-left align-top font-normal">
                         {age}
                       </th>
                     )
@@ -121,13 +122,17 @@ export default function PrimarySelfCareAlgorithmsPage() {
                   { name: 'Breast Self-Exam', ages: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1] },
                   { name: 'Air Quality Monitor', ages: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
                   { name: 'Pulse Oximetry', ages: [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1] },
-                ].map((row) => (
-                  <tr key={row.name} className="border-b border-gray-light">
-                    <td className="p-2 font-medium">{row.name}</td>
+                ].map((row, rowIdx) => (
+                  <tr key={row.name} className={rowIdx % 2 === 0 ? 'bg-[#f9f9f9]' : 'bg-white'}>
+                    <td className="py-[5px] px-[10px] sticky left-0 z-10 bg-inherit align-top">{row.name}</td>
                     {row.ages.map((applicable, i) => (
-                      <td key={i} className="p-2 text-center">
+                      <td key={i} className="py-[5px] px-[10px] text-left align-top">
                         {applicable ? (
-                          <span className="text-primary font-bold">&#10003;</span>
+                          <img
+                            src="/images/vision/primary-self-care-algorithms/checkmark-required.svg"
+                            alt="Required"
+                            className="w-5 h-5"
+                          />
                         ) : null}
                       </td>
                     ))}
@@ -135,12 +140,12 @@ export default function PrimarySelfCareAlgorithmsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </PscaTable>
         </div>
 
         {/* Airtable Embed */}
-        <div className="max-width content-padding mx-auto my-12">
-          <div className="max-width-md mx-auto">
+        <div className="my-12">
+          <div className="max-width-md mx-auto content-padding">
             <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
               Database of Primary Self Care Algorithms
             </h1>

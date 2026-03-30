@@ -175,6 +175,16 @@ function checkClassMatch(gatsbyClasses: string, nextjsClasses: string): string[]
     }
   }
 
+  // header--sm should be sans + bold + normal case (NOT uppercase)
+  if (gc.includes('header--sm')) {
+    if (nc.includes('uppercase') || nc.includes('header-md') || nc.includes('tracking-')) {
+      issues.push('should be normal case bold (header--sm) but has uppercase/header-md styling')
+    }
+    if (nc.includes('font-serif')) {
+      issues.push('should be sans-serif (header--sm) but has font-serif')
+    }
+  }
+
   // text--center should be centered
   if (gc.includes('text--center') && !nc.includes('text-center')) {
     issues.push('should be centered (text--center) but missing text-center')
