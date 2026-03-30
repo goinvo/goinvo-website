@@ -225,7 +225,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Cancer Process Map
           </Button>
 
-          <h2 className="font-serif text-2xl mt-8 mb-2">
+          <h2 className="header-lg mt-8 mb-2">
             Let&apos;s build the future of healthcare together!
           </h2>
           <p className="text-gray">

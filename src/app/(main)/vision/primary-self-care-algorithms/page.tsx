@@ -93,18 +93,18 @@ export default function PrimarySelfCareAlgorithmsPage() {
         <PscaAlgorithms />
 
         {/* Life Stage Table */}
-        <div className="my-12">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4 max-width-md mx-auto content-padding">
+        <div className="my-12 px-4 lg:px-16">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-8 max-width-md mx-auto">
             Application of Primary Self Care Across Life
           </h1>
           <PscaTable>
             <table className="table-fixed text-sm w-full" style={{ borderCollapse: 'unset' }}>
               <thead>
                 <tr>
-                  <th className="text-left py-[5px] px-[10px] w-[150px] bg-white sticky left-0 z-10 align-top font-normal"> </th>
+                  <th className="text-left py-2 px-3 w-[180px] bg-white sticky left-0 z-10 align-top font-normal"> </th>
                   {['0-5 years old', '6-12', '13-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '90+'].map(
                     (age) => (
-                      <th key={age} className="py-[5px] px-[10px] w-[65px] text-left align-top font-normal">
+                      <th key={age} className="py-2 px-3 w-[80px] text-left align-top font-normal">
                         {age}
                       </th>
                     )
@@ -124,9 +124,9 @@ export default function PrimarySelfCareAlgorithmsPage() {
                   { name: 'Pulse Oximetry', ages: [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1] },
                 ].map((row, rowIdx) => (
                   <tr key={row.name} className={rowIdx % 2 === 0 ? 'bg-[#f9f9f9]' : 'bg-white'}>
-                    <td className="py-[5px] px-[10px] sticky left-0 z-10 bg-inherit align-top">{row.name}</td>
+                    <td className="py-2 px-3 sticky left-0 z-10 bg-inherit align-top">{row.name}</td>
                     {row.ages.map((applicable, i) => (
-                      <td key={i} className="py-[5px] px-[10px] text-left align-top">
+                      <td key={i} className="py-2 px-3 text-left align-top">
                         {applicable ? (
                           <img
                             src="/images/vision/primary-self-care-algorithms/checkmark-required.svg"
@@ -144,8 +144,8 @@ export default function PrimarySelfCareAlgorithmsPage() {
         </div>
 
         {/* Airtable Embed */}
-        <div className="my-12">
-          <div className="max-width-md mx-auto content-padding">
+        <div className="my-12 px-4 lg:px-16">
+          <div className="max-width-md mx-auto">
             <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
               Database of Primary Self Care Algorithms
             </h1>
@@ -158,15 +158,13 @@ export default function PrimarySelfCareAlgorithmsPage() {
               addressed.
             </p>
           </div>
-          <div className="max-w-[85%] mx-auto">
-            <iframe
-              src="https://airtable.com/embed/shrWdnWlNj0SIuUzl?backgroundColor=blue&viewControls=on"
-              className="w-full border-0"
-              style={{ height: 500 }}
-              loading="lazy"
-              title="Airtable Primary Self Care Algorithms"
-            />
-          </div>
+          <iframe
+            src="https://airtable.com/embed/shrWdnWlNj0SIuUzl?backgroundColor=blue&viewControls=on"
+            className="w-full border-0 max-w-full lg:max-w-none"
+            style={{ height: 500 }}
+            loading="lazy"
+            title="Airtable Primary Self Care Algorithms"
+          />
         </div>
 
         {/* Methods */}
@@ -182,229 +180,234 @@ export default function PrimarySelfCareAlgorithmsPage() {
               decision matrix adapted from methods of evaluating clinical
               decision support<sup><a href="#references">38</a></sup>.
             </p>
-            <div className="overflow-x-auto mb-8">
-              <table className="w-full text-sm border-collapse">
+          </div>
+          <div className="px-4 lg:px-16">
+            <PscaTable>
+              <table className="w-full text-sm" style={{ borderCollapse: "unset" }}>
                 <thead>
-                  <tr className="border-b-2 border-gray-medium text-gray">
-                    <th className="text-left p-2" style={{ width: '25%' }}>Criteria</th>
-                    <th className="p-2 text-center" style={{ width: '15%' }}>Weight (1-4)</th>
-                    <th className="text-left p-2" style={{ width: '20%' }}>1</th>
-                    <th className="text-left p-2" style={{ width: '20%' }}>0</th>
-                    <th className="text-left p-2" style={{ width: '20%' }}>-1</th>
+                  <tr className="text-gray">
+                    <th className="text-left py-[5px] px-[10px] align-top font-normal" style={{ width: '25%' }}>Criteria</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal" style={{ width: '15%' }}>Weight (1-4)</th>
+                    <th className="text-left py-[5px] px-[10px] align-top font-normal" style={{ width: '20%' }}>1</th>
+                    <th className="text-left py-[5px] px-[10px] align-top font-normal" style={{ width: '20%' }}>0</th>
+                    <th className="text-left py-[5px] px-[10px] align-top font-normal" style={{ width: '20%' }}>-1</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Audience</strong><br />How many patients &amp; clinicians do/or can utilize this algorithm?</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2">can be utilized by the majority of people, regardless of health status</td>
-                    <td className="p-2">utilized for common or highly prevalent conditions</td>
-                    <td className="p-2">utilized for only rare conditions</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Audience</strong><br />How many patients &amp; clinicians do/or can utilize this algorithm?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] align-top">can be utilized by the majority of people, regardless of health status</td>
+                    <td className="py-[5px] px-[10px] align-top">utilized for common or highly prevalent conditions</td>
+                    <td className="py-[5px] px-[10px] align-top">utilized for only rare conditions</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Effectiveness</strong><br />How much of a difference can the algorithm make on someone&apos;s health status regardless of condition progression?</td>
-                    <td className="p-2 text-center">4</td>
-                    <td className="p-2">high impact at many stages in disease progression</td>
-                    <td className="p-2">moderate impact at some stages in disease progression</td>
-                    <td className="p-2">low or no impact at many stages of disease progression</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Effectiveness</strong><br />How much of a difference can the algorithm make on someone&apos;s health status regardless of condition progression?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">4</td>
+                    <td className="py-[5px] px-[10px] align-top">high impact at many stages in disease progression</td>
+                    <td className="py-[5px] px-[10px] align-top">moderate impact at some stages in disease progression</td>
+                    <td className="py-[5px] px-[10px] align-top">low or no impact at many stages of disease progression</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Validity &amp; Reliability</strong><br />Has this algorithm been rigorously tested and have results been replicated?</td>
-                    <td className="p-2 text-center">4</td>
-                    <td className="p-2">validated and replicated by many credible institutions</td>
-                    <td className="p-2">validated by some credible sources, limited replication studies</td>
-                    <td className="p-2">not validated or replicated by credible sources</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Validity &amp; Reliability</strong><br />Has this algorithm been rigorously tested and have results been replicated?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">4</td>
+                    <td className="py-[5px] px-[10px] align-top">validated and replicated by many credible institutions</td>
+                    <td className="py-[5px] px-[10px] align-top">validated by some credible sources, limited replication studies</td>
+                    <td className="py-[5px] px-[10px] align-top">not validated or replicated by credible sources</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Complexity</strong><br />How easy is it to learn to use and understand results from an algorithm?</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2">almost no learning curve, easy to implement and learn from results</td>
-                    <td className="p-2">moderate learning curve and results are mostly manageable to interpret</td>
-                    <td className="p-2">high learning curve to use and results are difficult to interpret</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Complexity</strong><br />How easy is it to learn to use and understand results from an algorithm?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] align-top">almost no learning curve, easy to implement and learn from results</td>
+                    <td className="py-[5px] px-[10px] align-top">moderate learning curve and results are mostly manageable to interpret</td>
+                    <td className="py-[5px] px-[10px] align-top">high learning curve to use and results are difficult to interpret</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Cost</strong><br />How expensive are any necessary tools/services?</td>
-                    <td className="p-2 text-center">3</td>
-                    <td className="p-2">$ low cost or free</td>
-                    <td className="p-2">$$</td>
-                    <td className="p-2">$$$</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Cost</strong><br />How expensive are any necessary tools/services?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">3</td>
+                    <td className="py-[5px] px-[10px] align-top">$ low cost or free</td>
+                    <td className="py-[5px] px-[10px] align-top">$$</td>
+                    <td className="py-[5px] px-[10px] align-top">$$$</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Availability</strong><br />How readily available and accessible is this tool?</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2">over the counter or diy</td>
-                    <td className="p-2">some barrier to access (clinical treatment or prescription, specially ordered, etc.)</td>
-                    <td className="p-2">still in development, not openly available</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Availability</strong><br />How readily available and accessible is this tool?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] align-top">over the counter or diy</td>
+                    <td className="py-[5px] px-[10px] align-top">some barrier to access (clinical treatment or prescription, specially ordered, etc.)</td>
+                    <td className="py-[5px] px-[10px] align-top">still in development, not openly available</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Support</strong><br />How much clinical support or guidance is required?</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2">completely independent</td>
-                    <td className="p-2">minimal community or clinical involvement</td>
-                    <td className="p-2">requires clinical support or intervention</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Support</strong><br />How much clinical support or guidance is required?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] align-top">completely independent</td>
+                    <td className="py-[5px] px-[10px] align-top">minimal community or clinical involvement</td>
+                    <td className="py-[5px] px-[10px] align-top">requires clinical support or intervention</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2"><strong>Licensing</strong><br />Is the algorithm open or closed source?</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2">open</td>
-                    <td className="p-2">unknown licensing</td>
-                    <td className="p-2">closed</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top"><strong>Licensing</strong><br />Is the algorithm open or closed source?</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] align-top">open</td>
+                    <td className="py-[5px] px-[10px] align-top">unknown licensing</td>
+                    <td className="py-[5px] px-[10px] align-top">closed</td>
                   </tr>
                 </tbody>
               </table>
-            </div>
-
+            </PscaTable>
+          </div>
+          <div className="max-width max-width-md content-padding mx-auto">
             <h2 className="header-lg mt-8 mb-4">
               Ranking of Top 10 Algorithms
             </h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+          </div>
+          <div className="px-4 lg:px-16">
+            <PscaTable>
+              <table className="w-full text-sm" style={{ borderCollapse: "unset" }}>
                 <thead>
-                  <tr className="border-b-2 border-gray-medium text-gray">
-                    <th className="text-left p-2">Criteria</th>
-                    <th className="p-2 text-center">Weight (1-4)</th>
-                    <th className="p-2 text-center">Vaccinations</th>
-                    <th className="p-2 text-center">Blood Pressure</th>
-                    <th className="p-2 text-center">Urinalysis</th>
-                    <th className="p-2 text-center">Mental Health</th>
-                    <th className="p-2 text-center">Vision Test</th>
-                    <th className="p-2 text-center">Glucose Monitoring</th>
-                    <th className="p-2 text-center">Breast Self-Exam</th>
-                    <th className="p-2 text-center">Birth Control</th>
-                    <th className="p-2 text-center">Air Quality Monitor</th>
-                    <th className="p-2 text-center">Pulse Oximetry</th>
+                  <tr className="text-gray">
+                    <th className="text-left py-[5px] px-[10px] align-top font-normal">Criteria</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Weight (1-4)</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Vaccinations</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Blood Pressure</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Urinalysis</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Mental Health</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Vision Test</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Glucose Monitoring</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Breast Self-Exam</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Birth Control</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Air Quality Monitor</th>
+                    <th className="py-[5px] px-[10px] text-left align-top font-normal">Pulse Oximetry</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Audience</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Audience</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Effectiveness</td>
-                    <td className="p-2 text-center">4</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">-1</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Effectiveness</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">4</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Validity/Reliability</td>
-                    <td className="p-2 text-center">4</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">-1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">0</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Validity/Reliability</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">4</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Complexity</td>
-                    <td className="p-2 text-center">3</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">-1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">-1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">0</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Complexity</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">3</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Cost</td>
-                    <td className="p-2 text-center">3</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">0</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Cost</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">3</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Availability</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Availability</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Support</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2 text-center">-1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">-1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Support</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
                   </tr>
-                  <tr className="border-b border-gray-light">
-                    <td className="p-2">Licensing</td>
-                    <td className="p-2 text-center">2</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">0</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">1</td>
-                    <td className="p-2 text-center">0</td>
+                  <tr className="">
+                    <td className="py-[5px] px-[10px] align-top">Licensing</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">2</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">1</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">0</td>
                   </tr>
                   <tr className="border-b border-gray-light font-bold">
-                    <td className="p-2">Weighted Totals</td>
-                    <td className="p-2 text-center"></td>
-                    <td className="p-2 text-center">17</td>
-                    <td className="p-2 text-center">16</td>
-                    <td className="p-2 text-center">15</td>
-                    <td className="p-2 text-center">15</td>
-                    <td className="p-2 text-center">11</td>
-                    <td className="p-2 text-center">11</td>
-                    <td className="p-2 text-center">9</td>
-                    <td className="p-2 text-center">8</td>
-                    <td className="p-2 text-center">7</td>
-                    <td className="p-2 text-center">-1</td>
+                    <td className="py-[5px] px-[10px] align-top">Weighted Totals</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal"></td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">17</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">16</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">15</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">15</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">11</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">11</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">9</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">8</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">7</td>
+                    <td className="py-[5px] px-[10px] text-left align-top font-normal">-1</td>
                   </tr>
                 </tbody>
               </table>
-            </div>
+            </PscaTable>
           </div>
         </div>
 
