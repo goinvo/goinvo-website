@@ -138,7 +138,14 @@ export const featureBySlugQuery = groq`
     categories,
     date,
     client,
-    authors[]-> { _id, name, role, bio, image },
+    "authors": authors[] {
+      roleOverride,
+      "author": coalesce(
+        author-> { _id, name, role, bio, image },
+        // Backward compat: plain references (no roleOverride wrapper)
+        @ -> { _id, name, role, bio, image }
+      )
+    },
     content,
     metaDescription
   }

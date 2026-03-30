@@ -70,7 +70,7 @@ const imageAlignClasses: Record<string, string> = {
 
 const bgSectionColors: Record<string, string> = {
   gray: 'bg-gray-lightest',
-  teal: 'bg-secondary text-white',
+  teal: 'bg-[#e5f5f5]',
   warm: 'bg-[#faf6f4]',
   orange: 'bg-primary/5',
 }
@@ -625,6 +625,16 @@ const components: PortableTextComponents = {
  * the original Gatsby `pure-g` grid wrappers. This restores the
  * side-by-side layout for pairs of consecutive images.
  */
+function isGroupableImage(block: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+  return block?._type === 'image' && block?.asset && block?.size !== 'bleed'
+}
+
+function isShortTextBlock(block: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (block?._type !== 'block') return false
+  const text = (block.children || []).map((c: any) => c.text || '').join('') // eslint-disable-line @typescript-eslint/no-explicit-any
+  return text.length > 0 && text.length < 200
+}
+
 function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[] {
   const result: PortableTextBlock[] = []
   let i = 0
@@ -632,14 +642,52 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
   while (i < blocks.length) {
     const current = blocks[i] as any // eslint-disable-line @typescript-eslint/no-explicit-any
     const next = blocks[i + 1] as any // eslint-disable-line @typescript-eslint/no-explicit-any
+    const afterNext = blocks[i + 2] as any // eslint-disable-line @typescript-eslint/no-explicit-any
 
-    // If two consecutive image blocks, group them into a columns block
+    // Skip bleed images — they should always render standalone at full viewport width
+    if (current?._type === 'image' && current?.size === 'bleed') {
+      result.push(current)
+      i++
+      continue
+    }
+
+    // Pattern: image, caption, image, caption, image, caption → 3-column grid with captions
     if (
-      current?._type === 'image' &&
-      current?.asset &&
-      next?._type === 'image' &&
-      next?.asset
+      isGroupableImage(current) && isShortTextBlock(next) &&
+      isGroupableImage(afterNext) && isShortTextBlock(blocks[i + 3] as any) &&
+      isGroupableImage(blocks[i + 4] as any) && isShortTextBlock(blocks[i + 5] as any)
     ) {
+      result.push({
+        _type: 'columns',
+        _key: `autogrid-${current._key || i}`,
+        layout: '3',
+        content: [current, next, afterNext, blocks[i + 3], blocks[i + 4], blocks[i + 5]],
+      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      i += 6
+    // Pattern: image, caption, image, caption → 2-column grid with captions
+    } else if (
+      isGroupableImage(current) && isShortTextBlock(next) &&
+      isGroupableImage(afterNext) && isShortTextBlock(blocks[i + 3] as any) &&
+      !isGroupableImage(blocks[i + 4] as any)
+    ) {
+      result.push({
+        _type: 'columns',
+        _key: `autogrid-${current._key || i}`,
+        layout: '2',
+        content: [current, next, afterNext, blocks[i + 3]],
+      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      i += 4
+    // Three consecutive bare images → 3-column grid
+    } else if (isGroupableImage(current) && isGroupableImage(next) && isGroupableImage(afterNext)) {
+      result.push({
+        _type: 'columns',
+        _key: `autogrid-${current._key || i}`,
+        layout: '3',
+        content: [current, next, afterNext],
+      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      i += 3
+    // Two consecutive bare images → 2-column grid
+    } else if (isGroupableImage(current) && isGroupableImage(next)) {
       result.push({
         _type: 'columns',
         _key: `autogrid-${current._key || i}`,
