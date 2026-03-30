@@ -171,11 +171,10 @@ When content needs a visual treatment the renderer doesn't support yet:
 - `references` — fields: `items[]` (title, link)
 - `columns` — fields: `layout` (2/3/4), `content[]`
 - `backgroundSection` — fields: `color` (gray/teal/warm/orange), `content[]`
-- `ctaButton` — fields: `url`, `label`, `variant` (primary/secondary), `external`, `fullWidth`
-- `buttonGroup` — fields: `buttons[]`
+- `buttonGroup` — fields: `buttons[]` (label, url, variant, external). Use for single or multiple buttons.
 - `divider` — fields: `style` (default/thick)
 - `contactForm` — fields: `showHeader`
-- Text styles: `h2`, `h2Center`, `sectionTitle`, `h3`, `h4`, `blockquote`, `callout`, `normal`
+- Text styles: `h2`, `sectionTitle` (centered h2), `h3`, `h4`, `blockquote`, `callout`, `normal`
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
 
 ### Verification Scripts
