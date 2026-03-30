@@ -129,7 +129,7 @@ export default function DisruptPage() {
           <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-1">
             Disrupt!
           </h1>
-          <h3 className="font-serif text-base font-light text-gray mb-6">
+          <h3 className="header-md text-gray mb-6">
             Emerging technologies from robotics to synthetic biology to the
             Internet of Things
           </h3>

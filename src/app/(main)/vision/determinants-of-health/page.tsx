@@ -168,7 +168,7 @@ export default function DeterminantsOfHealthPage() {
 
           <Divider />
 
-          <h2 className="header-lg mt-8 mb-4">
+          <h2 className="header-lg text-center mt-8 mb-4">
             Determinants Compared to Spending
           </h2>
           <Image
@@ -199,7 +199,7 @@ export default function DeterminantsOfHealthPage() {
             </Button>
           </div>
 
-          <h2 className="header-lg mt-8 mb-4">
+          <h2 className="header-lg text-center mt-8 mb-4">
             We&apos;d Like Your Feedback
           </h2>
           <p className="leading-relaxed mb-4 text-gray">

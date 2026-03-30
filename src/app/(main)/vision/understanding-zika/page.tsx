@@ -407,7 +407,7 @@ export default function UnderstandingZikaPage() {
           {/* Bug Spray Guide */}
           <h3 className="font-serif text-xl mt-8 mb-4">Choosing the Right Bug Spray</h3>
 
-          <h4 className="font-semibold text-sm uppercase tracking-wider mb-3">DEET-containing products</h4>
+          <h4 className="font-sans text-base font-bold mb-3">DEET-containing products</h4>
           <div className="flex flex-wrap gap-4 mb-6 items-center">
             <Image src={cloudfrontImage('/old/images/features/zika/off.png')} alt="OFF" width={60} height={60} className="h-10 w-auto object-contain" />
             <Image src={cloudfrontImage('/old/images/features/zika/Sawyer-logo1.jpg')} alt="Sawyer" width={60} height={60} className="h-10 w-auto object-contain" />
@@ -415,18 +415,18 @@ export default function UnderstandingZikaPage() {
             <Image src={cloudfrontImage('/old/images/features/zika/ultrathon_logo.png')} alt="Ultrathon" width={60} height={60} className="h-10 w-auto object-contain" />
           </div>
 
-          <h4 className="font-semibold text-sm uppercase tracking-wider mb-3">Picaridin / KBR 3023 / Bayrepel / Icaridin</h4>
+          <h4 className="font-sans text-base font-bold mb-3">Picaridin / KBR 3023 / Bayrepel / Icaridin</h4>
           <div className="flex flex-wrap gap-4 mb-6 items-center">
             <Image src={cloudfrontImage('/old/images/features/zika/sss.png')} alt="SSS" width={60} height={60} className="h-10 w-auto object-contain" />
             <Image src={cloudfrontImage('/old/images/features/zika/autan_logo_m.png')} alt="Autan" width={60} height={60} className="h-10 w-auto object-contain" />
           </div>
 
-          <h4 className="font-semibold text-sm uppercase tracking-wider mb-3">Oil of Lemon Eucalyptus (OLE) or PMD</h4>
+          <h4 className="font-sans text-base font-bold mb-3">Oil of Lemon Eucalyptus (OLE) or PMD</h4>
           <div className="flex flex-wrap gap-4 mb-6 items-center">
             <Image src={cloudfrontImage('/old/images/features/zika/repel-logo.png')} alt="Repel" width={60} height={60} className="h-10 w-auto object-contain" />
           </div>
 
-          <h4 className="font-semibold text-sm uppercase tracking-wider mb-3">IR3535</h4>
+          <h4 className="font-sans text-base font-bold mb-3">IR3535</h4>
           <div className="flex flex-wrap gap-4 mb-6 items-center">
             <Image src={cloudfrontImage('/old/images/features/zika/sss.png')} alt="SSS" width={60} height={60} className="h-10 w-auto object-contain" />
             <Image src={cloudfrontImage('/old/images/features/zika/skinsmart.png')} alt="Skinsmart" width={60} height={60} className="h-10 w-auto object-contain" />

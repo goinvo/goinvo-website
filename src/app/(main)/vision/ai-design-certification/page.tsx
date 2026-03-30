@@ -426,7 +426,7 @@ export default function AIDesignCertificationPage() {
           <h3 className="header-md mt-8 mb-3">Contributors</h3>
           <Author name="Eric Benoit" company="GoInvo" />
 
-          <h3 className="header-md mt-8 mb-3">
+          <h3 className="header-lg text-center mt-8 mb-3">
             Special thanks to...
           </h3>
           <p className="leading-relaxed">

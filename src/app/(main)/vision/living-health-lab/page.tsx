@@ -98,7 +98,7 @@ export default function LivingHealthLabPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
             <Img src="living-health-lab-workbook.jpg" alt="Living Health Lab Workbook" />
             <div>
-              <h3 className="header-md mb-3">Get the Workbook</h3>
+              <h3 className="header-lg mb-3">Get the Workbook</h3>
               <p className="leading-relaxed mb-4">
                 We created this printable to demonstrate what a Living
                 Health Lab app could support in the future. The workbook
@@ -456,7 +456,7 @@ export default function LivingHealthLabPage() {
           <div className="max-width content-padding mx-auto">
             <h2 id="appendix" className="header-lg mb-4 text-center">Appendix</h2>
 
-            <h2 className="header-md mt-6 mb-4">
+            <h2 className="header-lg mt-6 mb-4">
               i - Non-medicine Pain Relief
             </h2>
 
