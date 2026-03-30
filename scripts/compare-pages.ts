@@ -105,9 +105,10 @@ const INTERACTIVE_OVERRIDE_SLUGS = new Set([
   'primary-self-care-algorithms',         // expand/collapse interactive buttons
   'determinants-of-health',               // static override with interactive chart
   'digital-healthcare',                    // Sanity: Gatsby has 2x images (responsive duplicates) + contributor photos
-  'disrupt',                              // static override with multi-part layout
+  'disrupt',                              // Sanity: 6-part article, Gatsby renders tech cards differently
   'healing-us-healthcare',                // Sanity: complex article with choice points, Gatsby has inline images
-  'oral-history-goinvo',                  // static override with interview layout
+  'oral-history-goinvo',                  // Sanity: interview with speaker quotes, Gatsby has different heading structure
+  'bathroom-to-healthroom',              // Sanity: 19 images were 404 in source, long article with timeline
   'understanding-zika',                   // static override with visual guide
   'redesign-democracy',                   // Sanity: voting UI section structured differently from Gatsby
   'loneliness-in-our-human-code',         // Sanity: icon grids as text not images, heading structure differs
