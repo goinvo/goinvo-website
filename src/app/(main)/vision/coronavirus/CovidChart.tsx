@@ -1,150 +1,317 @@
 'use client'
 
+import { useRef, useState, useEffect, useCallback } from 'react'
+
 const data = [
   {
     id: 'sars',
     title: 'SARS',
-    date: 'Nov 2002 – Jul 2003',
+    date: 'Nov 2002 - July 2003',
     cases: 8098,
     deaths: 774,
   },
   {
     id: 'mers',
     title: 'MERS',
-    date: 'Sep 2012 – 2015',
+    date: 'Sep 2012 - 2015',
     cases: 2494,
     deaths: 858,
   },
   {
     id: 'covid-19',
     title: 'COVID-19',
-    date: 'Dec 2019 – Present',
+    date: 'Dec 2019 - Present',
     cases: 111363,
     deaths: 3892,
   },
 ]
 
+const xAxisRows = [
+  { key: 'cases' as const, title: 'Confirmed cases' },
+  { key: 'deaths' as const, title: 'Deaths' },
+  { key: null, title: 'Death rate' },
+]
+
 function formatNumber(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k`
+  return n.toLocaleString('en-US')
+}
+
+function formatCompact(n: number): string {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+  if (n >= 10000) return `${Math.round(n / 1000)}k`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return n.toString()
 }
 
+function barColor(id: string, valueKey: 'cases' | 'deaths'): string {
+  if (id === 'covid-19') {
+    return valueKey === 'cases' ? '#D6D2EA' : '#563C8D'
+  }
+  return valueKey === 'cases' ? '#E2E2E2' : '#747070'
+}
+
 export function CovidChart() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
+
+  const fitContainer = useCallback(() => {
+    if (containerRef.current) {
+      const w = containerRef.current.getBoundingClientRect().width
+      setContainerWidth(w)
+    }
+  }, [])
+
+  useEffect(() => {
+    fitContainer()
+    window.addEventListener('resize', fitContainer)
+    return () => window.removeEventListener('resize', fitContainer)
+  }, [fitContainer])
+
+  if (containerWidth === null) {
+    return <div ref={containerRef} className="w-full" />
+  }
+
+  const isMobile = containerWidth < 500
+
+  // Margins
+  const margins = {
+    top: isMobile ? 45 : 75,
+    right: 20,
+    bottom: 200,
+    left: isMobile ? 80 : 140,
+  }
+
+  const width = containerWidth
+  const height = isMobile ? 500 : 700
+
+  const chartWidth = width - margins.left - margins.right
+  const chartHeight = height - margins.top - margins.bottom
+
+  // Compute scales
   const maxValue = Math.max(...data.map((d) => d.cases))
-  const chartHeight = 300
-  const barWidth = 50
-  const groupGap = 60
+  const yDomainMax = maxValue + 10000
+
+  // Band scale: distribute disease groups across horizontal space
+  const bandPadOuter = 0.25
+  const bandPadInner = 0.5
+  const totalBands = data.length
+  const rangeWidth = chartWidth
+  // Compute band positions manually (mimics d3 scaleBand)
+  const step =
+    rangeWidth / (totalBands + (totalBands - 1) * bandPadInner + 2 * bandPadOuter)
+  const bandwidth = step * (1 - bandPadInner)
+
+  function xScale(index: number): number {
+    return margins.left + bandPadOuter * step + index * step * (1 + bandPadInner)
+  }
+
+  function yScale(value: number): number {
+    return margins.top + chartHeight * (1 - value / yDomainMax)
+  }
+
+  // Y axis ticks
+  const tickCount = 8
+  const yTicks: number[] = []
+  const tickStep = Math.ceil(yDomainMax / tickCount / 10000) * 10000
+  for (let v = 0; v <= yDomainMax; v += tickStep) {
+    yTicks.push(v)
+  }
+
+  const rowHeight = 50
+  const tableY = height - margins.bottom + 40
 
   return (
-    <div className="max-width content-padding mx-auto my-8">
-      <p className="text-sm text-gray text-center mb-6">
-        Data as of early March 2020 (snapshot)
-      </p>
-
-      <div className="overflow-x-auto">
+    <div ref={containerRef} className="max-width content-padding mx-auto my-8">
+      <div className="w-full">
         <svg
-          viewBox={`0 0 ${data.length * (barWidth * 2 + groupGap) + 80} ${chartHeight + 100}`}
-          className="w-full max-w-[700px] mx-auto"
+          width={width}
+          height={height}
           role="img"
-          aria-label="Bar chart comparing SARS, MERS, and COVID-19 cases and deaths"
+          aria-label="Bar chart comparing SARS, MERS, and COVID-19 confirmed cases and deaths"
+          style={{ fontFamily: "'Open Sans', sans-serif" }}
         >
-          {/* Y-axis gridlines */}
-          {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-            const y = chartHeight - chartHeight * pct + 20
-            const val = Math.round(maxValue * pct)
+          {/* Y axis gridlines + labels */}
+          {yTicks.map((val) => {
+            const y = yScale(val)
             return (
-              <g key={pct}>
+              <g key={val}>
                 <line
-                  x1={70}
-                  x2={data.length * (barWidth * 2 + groupGap) + 50}
+                  x1={margins.left}
+                  x2={width - margins.right}
                   y1={y}
                   y2={y}
                   stroke="#e2e2e2"
                   strokeWidth={1}
                 />
                 <text
-                  x={65}
+                  x={margins.left - 12}
                   y={y + 4}
                   textAnchor="end"
-                  className="text-[11px] fill-gray"
+                  fill="#747070"
+                  fontSize={isMobile ? 12 : 14}
                 >
-                  {formatNumber(val)}
+                  {formatCompact(val)}
                 </text>
               </g>
             )
           })}
 
-          {/* Bars */}
+          {/* Y axis line */}
+          <line
+            x1={margins.left}
+            x2={margins.left}
+            y1={margins.top}
+            y2={margins.top + chartHeight}
+            stroke="#e2e2e2"
+            strokeWidth={1}
+          />
+
+          {/* Disease title labels above chart */}
           {data.map((d, i) => {
-            const x = i * (barWidth * 2 + groupGap) + 80
-            const casesHeight = (d.cases / maxValue) * chartHeight
-            const deathsHeight = (d.deaths / maxValue) * chartHeight
+            const cx = xScale(i) + bandwidth / 2
             const isCovid = d.id === 'covid-19'
-
             return (
-              <g key={d.id}>
-                {/* Cases bar */}
-                <rect
-                  x={x}
-                  y={chartHeight - casesHeight + 20}
-                  width={barWidth}
-                  height={casesHeight}
-                  fill={isCovid ? '#D6D2EA' : '#E2E2E2'}
-                  rx={2}
-                />
+              <g key={d.id} textAnchor="middle">
                 <text
-                  x={x + barWidth / 2}
-                  y={chartHeight - casesHeight + 14}
-                  textAnchor="middle"
-                  className="text-[10px] fill-gray-dark font-semibold"
-                >
-                  {formatNumber(d.cases)}
-                </text>
-
-                {/* Deaths bar */}
-                <rect
-                  x={x + barWidth + 4}
-                  y={chartHeight - deathsHeight + 20}
-                  width={barWidth}
-                  height={deathsHeight}
-                  fill={isCovid ? '#563C8D' : '#747070'}
-                  rx={2}
-                />
-                <text
-                  x={x + barWidth + 4 + barWidth / 2}
-                  y={chartHeight - deathsHeight + 14}
-                  textAnchor="middle"
-                  className="text-[10px] fill-gray-dark font-semibold"
-                >
-                  {formatNumber(d.deaths)}
-                </text>
-
-                {/* Label */}
-                <text
-                  x={x + barWidth + 2}
-                  y={chartHeight + 40}
-                  textAnchor="middle"
-                  className={`text-[13px] font-semibold ${isCovid ? 'fill-[#563C8D]' : 'fill-gray-dark'}`}
+                  x={cx}
+                  y={30}
+                  fill={isCovid ? '#563C8D' : '#424242'}
+                  fontWeight={isCovid ? 600 : 400}
+                  fontSize={isMobile ? 14 : 16}
                 >
                   {d.title}
                 </text>
-                <text
-                  x={x + barWidth + 2}
-                  y={chartHeight + 55}
-                  textAnchor="middle"
-                  className="text-[10px] fill-gray"
-                >
-                  {d.date}
-                </text>
-                <text
-                  x={x + barWidth + 2}
-                  y={chartHeight + 70}
-                  textAnchor="middle"
-                  className="text-[10px] fill-gray"
-                >
-                  Death rate:{' '}
-                  {((d.deaths / d.cases) * 100).toFixed(1)}%
-                </text>
+                {!isMobile && (
+                  <text
+                    x={cx}
+                    y={52}
+                    fill={isCovid ? '#563C8D' : '#747070'}
+                    fontSize={14}
+                  >
+                    {d.date}
+                  </text>
+                )}
+              </g>
+            )
+          })}
+
+          {/* Cases bars */}
+          {data.map((d, i) => {
+            const x = xScale(i)
+            const barH = (d.cases / yDomainMax) * chartHeight
+            const y = margins.top + chartHeight - barH
+            return (
+              <rect
+                key={`cases-${d.id}`}
+                x={x}
+                y={y}
+                width={bandwidth}
+                height={barH}
+                fill={barColor(d.id, 'cases')}
+              />
+            )
+          })}
+
+          {/* Deaths bars (drawn on top of cases bars, same x position) */}
+          {data.map((d, i) => {
+            const x = xScale(i)
+            const barH = (d.deaths / yDomainMax) * chartHeight
+            const y = margins.top + chartHeight - barH
+            return (
+              <rect
+                key={`deaths-${d.id}`}
+                x={x}
+                y={y}
+                width={bandwidth}
+                height={barH}
+                fill={barColor(d.id, 'deaths')}
+              />
+            )
+          })}
+
+          {/* Data table below chart */}
+          {xAxisRows.map((row, ri) => {
+            const gy = tableY + ri * rowHeight
+            return (
+              <g key={row.title} transform={`translate(0, ${gy})`}>
+                {/* Row label */}
+                {row.key === 'cases' && isMobile ? (
+                  <g>
+                    <text
+                      x={margins.left - 12}
+                      textAnchor="end"
+                      dy="-0.2em"
+                      fill="#424242"
+                      fontSize={isMobile ? 12 : 14}
+                    >
+                      Confirmed
+                    </text>
+                    <text
+                      x={margins.left - 12}
+                      textAnchor="end"
+                      dy="1em"
+                      fill="#424242"
+                      fontSize={isMobile ? 12 : 14}
+                    >
+                      cases
+                    </text>
+                  </g>
+                ) : (
+                  <text
+                    x={margins.left - 12}
+                    dy="0.4em"
+                    textAnchor="end"
+                    fill="#424242"
+                    fontWeight={row.key === null ? 600 : 400}
+                    fontSize={isMobile ? 12 : 14}
+                  >
+                    {row.title}
+                  </text>
+                )}
+
+                {/* Colored cells + values */}
+                {data.map((d, di) => {
+                  const cellX = xScale(di) - bandwidth / 2
+                  const cellW = bandwidth * 2
+                  const cx = xScale(di) + bandwidth / 2
+
+                  let cellFill = 'transparent'
+                  let textFill = '#424242'
+
+                  if (row.key === 'cases') {
+                    cellFill = barColor(d.id, 'cases')
+                  } else if (row.key === 'deaths') {
+                    cellFill = barColor(d.id, 'deaths')
+                    textFill = '#ffffff'
+                  }
+
+                  const displayValue =
+                    row.key
+                      ? formatNumber(d[row.key])
+                      : ((d.deaths / d.cases) * 100).toFixed(1) + '%'
+
+                  return (
+                    <g key={d.id}>
+                      <rect
+                        x={cellX}
+                        y={-(rowHeight / 2)}
+                        width={cellW}
+                        height={rowHeight}
+                        fill={cellFill}
+                      />
+                      <text
+                        x={cx}
+                        dy="0.4em"
+                        textAnchor="middle"
+                        fill={textFill}
+                        fontWeight={row.key === null ? 600 : 400}
+                        fontSize={isMobile ? 12 : 14}
+                      >
+                        {displayValue}
+                      </text>
+                    </g>
+                  )
+                })}
               </g>
             )
           })}
@@ -154,14 +321,19 @@ export function CovidChart() {
       {/* Legend */}
       <div className="flex justify-center gap-6 mt-4 text-sm">
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 bg-[#D6D2EA] rounded-sm inline-block" />
+          <span className="w-4 h-4 rounded-sm inline-block" style={{ backgroundColor: '#D6D2EA' }} />
           <span className="text-gray">Confirmed Cases</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 bg-[#563C8D] rounded-sm inline-block" />
+          <span className="w-4 h-4 rounded-sm inline-block" style={{ backgroundColor: '#563C8D' }} />
           <span className="text-gray">Deaths</span>
         </div>
       </div>
+
+      {/* Source note */}
+      <p className="text-sm text-gray text-center mt-4 italic">
+        Data snapshot from March 2020. Source: Johns Hopkins CSSE (now retired).
+      </p>
     </div>
   )
 }

@@ -41,7 +41,6 @@ export function HealthcareAIVideos() {
             poster={cloudfrontImage(vid.poster)}
             autoPlay={false}
             controls
-            loop
           />
         </div>
       ))}

@@ -5,7 +5,20 @@ import { cn } from '@/lib/utils'
 import determinants from '@/data/vision/determinants-of-health/chart-data.json'
 
 const colors = ['#F9D7A7', '#B2E5E9', '#E8ED9D', '#F8CBC5', '#90EED4']
-const icons = ['🏃', '👥', '🧬', '🏥', '🌍']
+const iconPaths = [
+  '/images/vision/determinants-of-health/individual-behavior.svg',
+  '/images/vision/determinants-of-health/social-circumstances.svg',
+  '/images/vision/determinants-of-health/genetics-biology.svg',
+  '/images/vision/determinants-of-health/medical-care.svg',
+  '/images/vision/determinants-of-health/environment.svg',
+]
+const iconAlts = [
+  'Individual Behavior',
+  'Social Circumstances',
+  'Genetics & Biology',
+  'Medical Care',
+  'Environment',
+]
 
 interface Division {
   title: string
@@ -135,7 +148,7 @@ export function DeterminantsChart() {
                   className="w-4 h-4 rounded-sm inline-block flex-shrink-0"
                   style={{ backgroundColor: colors[i] }}
                 />
-                <span className="hidden sm:inline">{icons[i]}</span>
+                <img src={iconPaths[i]} alt={iconAlts[i]} className="hidden sm:inline w-6 h-6" />
                 <span className="font-medium">{d.percentage}%</span>
                 <span className="hidden md:inline text-gray">
                   {d.shortTitle}
@@ -151,7 +164,8 @@ export function DeterminantsChart() {
           style={{ backgroundColor: `${colors[activeIndex]}40` }}
         >
           <h3 className="font-serif text-xl mb-2">
-            {icons[activeIndex]} {selected.title}
+            <img src={iconPaths[activeIndex]} alt={iconAlts[activeIndex]} className="w-6 h-6 inline-block mr-2" />
+            {selected.title}
             <span className="text-gray ml-2">({selected.percentage}%)</span>
           </h3>
           <p className="leading-relaxed mb-6 text-sm">{selected.description}</p>

@@ -99,7 +99,7 @@ export function PscaAlgorithms() {
 
       {/* Algorithm Content */}
       <div className={cn(!isVisible(ALGORITHMS.VACCINE_DECISION_AIDS) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           1. Vaccine Decision Aids
         </h2>
         <p className="mt-0">
@@ -113,7 +113,7 @@ export function PscaAlgorithms() {
           mistrust in the scientific community, lack of education, and
           insufficient access.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             COVID-19: Vaccine Options (Original source no longer available)<sup><a href="#references">5</a></sup>
@@ -142,7 +142,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.BLOOD_PRESSURE_MONITORING) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           2. Blood Pressure Monitoring
         </h2>
         <p className="mt-0">
@@ -156,7 +156,7 @@ export function PscaAlgorithms() {
           consumption; early detection and promotion of healthy
           behaviors can prevent 34% of deaths due to heart disease<sup><a href="#references">11</a></sup>.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/hypertension-in-adults-screening" className="text-primary underline">
@@ -186,7 +186,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.AT_HOME_URINALYSIS) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           3. At-Home Urinalysis
         </h2>
         <p className="mt-0">
@@ -204,7 +204,7 @@ export function PscaAlgorithms() {
           preventative care measures or receive pre-dialysis treatment
           options.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://link.springer.com/article/10.1007/s00467-022-05556-8" className="text-primary underline">
@@ -237,7 +237,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.MENTAL_HEALTH_ASSESSMENTS) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           4. Mental Health Assessments
         </h2>
         <p className="mt-0">
@@ -251,7 +251,7 @@ export function PscaAlgorithms() {
           of 24, early identification and treatment are essential to
           lowering suicide and suicide attempt rates.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://www.psychiatrist.com/jcp/bipolar/computer-assisted-self-assessment-persons-severe-mental/" className="text-primary underline">
@@ -275,7 +275,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.VISION_TESTS) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           5. Vision Tests
         </h2>
         <p className="mt-0">
@@ -290,7 +290,7 @@ export function PscaAlgorithms() {
           self-management of comorbidities can prevent further vision
           loss.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://pubmed.ncbi.nlm.nih.gov/6175935/" className="text-primary underline">
@@ -310,7 +310,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.BLOOD_GLUCOSE_MONITORING) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           6. Blood Glucose Monitoring
         </h2>
         <p className="mt-0">
@@ -325,7 +325,7 @@ export function PscaAlgorithms() {
           disease, which means that early diagnosis, treatment, and
           lifestyle interventions are crucial.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://pubmed.ncbi.nlm.nih.gov/33441946/" className="text-primary underline">
@@ -346,7 +346,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.BREAST_SELF_EXAM) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           7. Breast Self-Exam
         </h2>
         <p className="mt-0">
@@ -360,7 +360,7 @@ export function PscaAlgorithms() {
           years, though deaths have been slowly decreasing, likely due
           to improved screening and early detection<sup><a href="#references">18</a></sup>.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://www.breastcancer.org/screening-testing/breast-self-exam-bse" className="text-primary underline">
@@ -386,7 +386,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.BIRTH_CONTROL_DECISION_AID) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           8. Birth Control Decision Aid
         </h2>
         <p className="mt-0">
@@ -404,7 +404,7 @@ export function PscaAlgorithms() {
           as a reason for not using contraception, but concerns about
           side effects and lack of knowledge are also barriers to access<sup><a href="#references">30</a></sup>.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://www.pcori.org/research-results/2013/decision-aid-help-women-choose-and-use-method-birth-control" className="text-primary underline">
@@ -432,7 +432,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.AIR_QUALITY_MONITOR) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           9. Air Quality Monitor
         </h2>
         <p className="mt-0">
@@ -448,7 +448,7 @@ export function PscaAlgorithms() {
           formed in adolescence, making it especially crucial that CRD
           risk factors are addressed early on.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://sustainenvironres.biomedcentral.com/articles/10.1186/s42834-020-0047-y" className="text-primary underline">
@@ -465,7 +465,7 @@ export function PscaAlgorithms() {
       </div>
 
       <div className={cn(!isVisible(ALGORITHMS.PULSE_OXIMETRY) && 'hidden')}>
-        <h2 className="font-serif text-2xl mt-0 mb-0">
+        <h2 className="header-lg mt-0 mb-0">
           10. Pulse Oximetry
         </h2>
         <p className="mt-0">
@@ -476,7 +476,7 @@ export function PscaAlgorithms() {
           it is used for routine screenings of pulmonary health,
           diabetes, and sleep disorders.
         </p>
-        <h4 className="font-serif text-base font-semibold mb-0">Models</h4>
+        <h4 className="header-md mb-0">Models</h4>
         <ul className="mt-0 mb-8">
           <li>
             <a href="https://pubmed.ncbi.nlm.nih.gov/25880649/" className="text-primary underline">
