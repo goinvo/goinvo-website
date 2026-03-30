@@ -112,7 +112,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
   return (
     <div ref={containerRef}>
       {/* 1. Hero Section */}
-      <section className="relative flex flex-col justify-end min-h-[250px] min-h-[60vh]">
+      <section className="relative flex flex-col justify-end min-h-[max(250px,30vh)]">
         <Image
           src={cloudfrontImage('/images/homepage/bg-wavy-lines.jpg')}
           alt=""
@@ -122,7 +122,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         />
         <div className="relative z-10 max-width content-padding w-full pb-10 pt-[calc(var(--spacing-header-height)+2rem)]">
           <h1
-            className="font-serif text-2xl md:text-[3rem] md:leading-[3.25rem] mb-0"
+            className="font-serif text-[2rem] leading-[2.5rem] md:text-[3rem] md:leading-[3.25rem] mb-0"
             style={{ viewTransitionName: 'page-title' }}
           >
             <strong>We design the future of software</strong>
@@ -130,7 +130,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
             <br />
             <span className="text-gray">For complex systems and real constraints.</span>
           </h1>
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-4 mt-6">
             <Button href="/contact" variant="primary">
               Start a Convo
             </Button>

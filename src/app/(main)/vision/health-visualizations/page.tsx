@@ -48,7 +48,7 @@ const fallbackPosters = [
   { id: 'sources-of-data', title: 'Sources of Your Personal Health Data', image: '/images/features/posters/sources-of-data.jpg', downloadLink: '/pdf/vision/posters/sources-of-data.pdf', learnMoreLink: '/work/fastercures-health-data-basics' },
   { id: 'sdoh-spend', title: 'Spending within the Determinants of Health', image: '/images/features/determinants-of-health/sdoh-spend-mockup.jpg', downloadLink: '/pdf/vision/posters/sdoh-spend-v12.pdf', learnMoreLink: '/vision/determinants-of-health/#determinants-spending' },
   { id: 'critical-mass', title: 'Critical MASS', image: '/images/features/posters/critical-mass.jpg', downloadLink: '/pdf/vision/posters/critical-mass.pdf', learnMoreLink: '' },
-  { id: 'ebola', title: 'Ebola Care Guideline', image: '/images/features/posters/ebola-care-guideline.jpg', downloadLink: '/pdf/vision/posters/ebola-care-guideline.pdf', learnMoreLink: 'https://www.goinvo.com/features/ebola-care-guideline/' },
+  { id: 'ebola', title: 'Ebola Care Guideline', image: '/images/features/posters/ebola-care-guideline.jpg', downloadLink: '/pdf/vision/posters/ebola-care-guideline.pdf', learnMoreLink: '/vision/ebola-care-guideline/' },
   { id: 'data-interop', title: 'Standardized Data for Interoperability', image: '/images/features/posters/standard-health-data.jpg', downloadLink: '/pdf/vision/posters/standard-health-data.pdf', learnMoreLink: 'https://yes.goinvo.com/articles/a-path-towards-standardized-health' },
   { id: 'healthcare-is-a-human-right', title: 'Healthcare is a Human Right', image: '/images/features/posters/care-card-healthcare-is-a-human-right.jpg', downloadLink: '/pdf/vision/posters/care-card-healthcare-is-a-human-right.pdf', learnMoreLink: 'http://carecards.me/#healthcare-human-right' },
   { id: 'examine-yourself', title: 'Examine Yourself', image: '/images/features/posters/care-card-examine-yourself-2.jpg', downloadLink: '/pdf/vision/posters/care-card-examine-yourself.pdf', learnMoreLink: 'http://carecards.me/#examine-yourself' },
@@ -56,9 +56,9 @@ const fallbackPosters = [
   { id: 'make-things', title: 'Make Things', image: '/images/features/posters/design-axiom-make-things.jpg', downloadLink: '/pdf/vision/posters/design-axiom-make-things.pdf', learnMoreLink: 'http://designaxioms.com/' },
   { id: 'let-data-scream', title: 'Let Data Scream', image: '/images/features/posters/design-axiom-let-data-scream.jpg', downloadLink: '/pdf/vision/posters/design-axiom-let-data-scream.pdf', learnMoreLink: 'http://designaxioms.com/' },
   { id: 'prototype-like-crazy', title: 'Prototype Like Crazy', image: '/images/features/posters/design-axiom-prototype-like-crazy.jpg', downloadLink: '/pdf/vision/posters/design-axiom-prototype-like-crazy-2.pdf', learnMoreLink: 'http://designaxioms.com/' },
-  { id: 'care-plans-process', title: 'Care Planning Process', image: '/images/features/posters/careplans-process.jpg', downloadLink: '/pdf/vision/posters/careplans-process.pdf', learnMoreLink: 'https://www.goinvo.com/features/careplans/' },
+  { id: 'care-plans-process', title: 'Care Planning Process', image: '/images/features/posters/careplans-process.jpg', downloadLink: '/pdf/vision/posters/careplans-process.pdf', learnMoreLink: '/vision/care-plans/' },
   { id: 'shr-medical-encounter', title: 'SHR Medical Encounter Journey Map', image: '/images/features/posters/shr-medical-encounter-journey-map.jpg', downloadLink: '/pdf/vision/posters/shr-medical-encounter-journey-map.pdf', learnMoreLink: '/work/mitre-shr' },
-  { id: 'care-plans-ecosystem', title: 'Care Plans Ecosystem', image: '/images/features/posters/careplans-ecosystem.jpg', downloadLink: '/pdf/vision/posters/careplans-ecosystem.pdf', learnMoreLink: 'https://www.goinvo.com/features/careplans/' },
+  { id: 'care-plans-ecosystem', title: 'Care Plans Ecosystem', image: '/images/features/posters/careplans-ecosystem.jpg', downloadLink: '/pdf/vision/posters/careplans-ecosystem.pdf', learnMoreLink: '/vision/care-plans/' },
 ]
 
 // Slug-to-CloudFront-image lookup so Sanity items without uploaded images still render
@@ -69,6 +69,15 @@ const slugToImage: Record<string, string> = Object.fromEntries(
 function resolveDownloadUrl(link: string): string {
   if (!link) return ''
   return link.startsWith('http') ? link : `https://www.goinvo.com${link}`
+}
+
+/** Rewrite legacy goinvo.com/features/ URLs to local /vision/ paths */
+function normalizeLearnMoreLink(link: string): string {
+  if (!link) return ''
+  // Convert absolute goinvo.com/features/ URLs to local /vision/ paths
+  const m = link.match(/(?:https?:\/\/)?(?:www\.)?goinvo\.com\/features\/([^/?#]+)/)
+  if (m) return `/vision/${m[1]}`
+  return link
 }
 
 function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
@@ -86,7 +95,7 @@ function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
       title: viz.title,
       imageUrl: sanityImageUrl || fallbackImageUrl,
       downloadUrl: resolveDownloadUrl(viz.downloadLink ?? ''),
-      learnMoreLink: viz.learnMoreLink ?? '',
+      learnMoreLink: normalizeLearnMoreLink(viz.learnMoreLink ?? ''),
     }
   })
 }
