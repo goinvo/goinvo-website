@@ -27,7 +27,7 @@ export default function PublicHealthroomPage() {
       {/* Intro */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
             Public Restroom to Public Healthroom
           </h1>
           <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-4 mb-6">

@@ -156,7 +156,7 @@ export default function UnderstandingZikaPage() {
       {/* What is Zika */}
       <section className="py-12" id="what-is-zika">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
             Understanding Zika
           </h1>
           <h4 className="font-serif text-base font-light mb-6">

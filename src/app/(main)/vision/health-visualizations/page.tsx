@@ -117,7 +117,7 @@ export default async function HealthVisualizationsPage() {
 
       {/* Intro */}
       <section className="max-width max-width-md content-padding py-12">
-        <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Health Visualizations</h1>
+        <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Health Visualizations</h1>
         <Reveal style="slide-up">
           <p className="text-gray leading-relaxed">
             These infographics are open source, available to all under a{' '}
