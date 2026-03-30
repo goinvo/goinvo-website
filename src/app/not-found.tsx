@@ -1,17 +1,25 @@
-import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import Image from 'next/image'
+import { cloudfrontImage } from '@/lib/utils'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center max-width content-padding">
-        <h1 className="font-serif text-4xl mb-4">Page Not Found</h1>
+    <div className="pt-[var(--spacing-header-height)]">
+      <div className="max-width content-padding mx-auto py-12 text-center">
+        <h1 className="header-xl mb-4" style={{ fontWeight: 700 }}>
+          NOT FOUND...
+        </h1>
         <p className="text-gray text-lg mb-8">
-          Sorry, we couldn&apos;t find the page you&apos;re looking for.
+          You just hit a route that doesn&apos;t exist... the sadness.
         </p>
-        <Button href="/" variant="primary" size="lg">
-          Go Home
-        </Button>
+        <Image
+          src={cloudfrontImage('/images/404/404-website.png')}
+          alt="Page not found"
+          width={956}
+          height={464}
+          className="w-full max-w-[600px] h-auto mx-auto"
+          style={{ clipPath: 'inset(24px 3px 0 0)' }}
+          priority
+        />
       </div>
     </div>
   )
