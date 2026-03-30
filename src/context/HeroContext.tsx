@@ -131,7 +131,7 @@ interface HeroState {
   direction: number
   imageKey: number
   /** Pending case study hero set before navigation (card click flow) */
-  caseStudyHero: { image: string; bgPosition: string } | null
+  caseStudyHero: { image: string; bgPosition: string; expandAfterSlide?: boolean } | null
 }
 
 type HeroAction =
@@ -159,6 +159,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
             bgPosition: state.caseStudyHero.bgPosition,
             title: null,
             hideTextBox: true,
+            expandAfterSlide: state.caseStudyHero.expandAfterSlide,
           }
           return {
             ...state,
@@ -224,7 +225,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
           config: csConfig,
           displayImage: image,
           bgPosition,
-          caseStudyHero: { image, bgPosition },
+          caseStudyHero: { image, bgPosition, expandAfterSlide },
           imageKey: state.imageKey + 1,
         }
       }
@@ -232,7 +233,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
       // Card-click: store for when NAVIGATE fires after router.push
       return {
         ...state,
-        caseStudyHero: { image, bgPosition },
+        caseStudyHero: { image, bgPosition, expandAfterSlide },
       }
     }
 

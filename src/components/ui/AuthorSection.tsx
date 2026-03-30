@@ -64,35 +64,37 @@ export function AuthorSection({ authors, heading }: AuthorSectionProps) {
 
   const sectionHeading = heading || 'Author'
 
-  // Contributors layout: simpler grid without primary/sidebar distinction
+  // Contributors layout: same as authors — photo + name + bio per person
   if (heading === 'Contributors') {
     return (
       <section className="my-12">
         <h2 className="header-lg text-center mt-8 mb-6">Contributors</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {resolved.map((r) => {
-            const img = r.member.image
-              ? urlForImage(r.member.image).width(400).height(400).url()
-              : null
-            return (
-              <div key={r.member._id} className="text-center">
-                {img && (
+        {resolved.map((r) => {
+          const img = r.member.image
+            ? urlForImage(r.member.image).width(600).url()
+            : null
+          const bio = r.member.bio ? extractText(r.member.bio) : ''
+          return (
+            <div key={r.member._id} className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-8 items-start">
+              {img && (
+                <div>
                   <Image
                     src={img}
                     alt={r.member.name}
-                    width={120}
-                    height={120}
-                    className="rounded-none object-cover mx-auto mb-3"
+                    width={600}
+                    height={400}
+                    className="w-full h-auto object-cover"
                   />
-                )}
-                <p className="font-sans font-bold mb-0">{r.member.name}</p>
-                {r.displayRole && (
-                  <p className="text-gray text-sm mb-0">{r.displayRole}</p>
-                )}
+                </div>
+              )}
+              <div>
+                <p className="text-gray text-sm mb-0">GoInvo</p>
+                <h3 className="font-serif text-2xl mt-1 mb-2">{r.member.name}</h3>
+                {bio && <p className="text-gray leading-relaxed">{bio}</p>}
               </div>
-            )
-          })}
-        </div>
+            </div>
+          )
+        })}
       </section>
     )
   }
