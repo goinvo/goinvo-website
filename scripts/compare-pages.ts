@@ -224,7 +224,7 @@ function checkStandaloneHeadingStyle(el: PageElement): string[] {
     // Card titles and numbered headings — skip
     const isCardTitle = cls.includes('font-serif') && cls.includes('text-xl') && !cls.includes('uppercase')
     if (!isNumbered && !isCardTitle) {
-      const hasCorrectStyle = cls.includes('header-md') || cls.includes('uppercase') || cls.includes('font-semibold')
+      const hasCorrectStyle = cls.includes('header-md') || cls.includes('header-lg') || cls.includes('uppercase') || cls.includes('font-semibold')
       if (!hasCorrectStyle) {
         issues.push(`h3 missing header-md or uppercase styling (has: "${cls.substring(0, 60)}")`)
       }
@@ -959,9 +959,12 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
     const nb = normalizeHeading(b)
     if (na.length < 3 || nb.length < 3) return na === nb
     // Use longer substring and stripped-whitespace matching
+    // Require at least 50% length overlap to prevent short words matching long headings
     const sa = na.substring(0, 35)
     const sb = nb.substring(0, 35)
-    if (sa.includes(sb) || sb.includes(sa)) return true
+    const shorter = Math.min(sa.length, sb.length)
+    const longer = Math.max(sa.length, sb.length)
+    if ((sa.includes(sb) || sb.includes(sa)) && shorter / longer > 0.5) return true
     // Check synonyms
     for (const [x, y] of headingSynonyms) {
       if ((na.includes(x) && nb.includes(y)) || (na.includes(y) && nb.includes(x))) return true
