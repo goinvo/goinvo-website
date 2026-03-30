@@ -66,8 +66,8 @@ const upNext = [
     caption:
       'In strategy, the pieces and parts are typically nested in different documents that do not allow everything to be seen at once. The ability to see everything at once, at anytime, is core to our approach.',
     image: '/images/features/print-big-print-often/print-big-print-often-featured.jpg',
-    link: 'https://www.goinvo.com/features/print-big',
-    external: true,
+    link: '/vision/print-big',
+    external: false,
   },
 ]
 
@@ -296,7 +296,7 @@ export default async function AboutPage() {
                 <Link href="/about/studio-timeline">
                   Studio timeline
                 </Link>
-                <a href="https://www.goinvo.com/features/an-oral-history">
+                <a href="/vision/oral-history-goinvo">
                   Oral history
                 </a>
               </div>

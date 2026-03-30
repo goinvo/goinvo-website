@@ -114,9 +114,8 @@ const reviews = [
     image:
       '/images/features/bathroom-to-healthroom/bathroom-to-healthroom-featured.jpg',
     ctaText: 'Read the Feature',
-    ctaLink:
-      'https://www.goinvo.com/features/from-bathroom-to-healthroom/',
-    ctaExternal: true,
+    ctaLink: '/vision/bathroom-to-healthroom',
+    ctaExternal: false,
   },
 ]
 
