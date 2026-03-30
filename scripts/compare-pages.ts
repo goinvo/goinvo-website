@@ -519,7 +519,7 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
 
   // Check for key sections
   const hasMethodology = /id="methodology"|Methodology<\/h/i.test(src)
-  const hasReferences = /<References|id="references"/i.test(src)
+  const hasReferences = /<References|id="references"|sources-wrapper|Sources<\/h/i.test(src)
   const hasAuthors = /<Author |id="authors"/i.test(src)
 
   // Extract anchor IDs (id="...")
@@ -657,7 +657,7 @@ function crossReferenceGatsbySource(
     }
   }
   if (gatsbySrc.hasReferences) {
-    const hasRefsInNext = /id="references"|References<\/h/i.test(content)
+    const hasRefsInNext = /id="references"|References<\/h|Sources<\/h|class="references"/i.test(content)
     if (!hasRefsInNext) {
       issues.push({
         severity: 'critical',
@@ -940,7 +940,7 @@ function analyzeHtml(html: string): PageAnalysis {
     paragraphs: (content.match(/<p\b/gi) || []).length,
     buttons,
     links,
-    hasReferences: /id="references"|<References|class="references"/i.test(content),
+    hasReferences: /id="references"|<References|class="references"|Sources<\/h|References<\/h/i.test(content),
     hasAuthors: /<Author|class="author"/i.test(content) || /Authors?<\/h/i.test(content),
     hasNewsletter: /subscribe|newsletter/i.test(content),
     hasShadowCards: /shadow-card|shadow.*rgba.*0\.08/i.test(content),

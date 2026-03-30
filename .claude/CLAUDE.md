@@ -1,6 +1,12 @@
 # GoInvo Website - Next.js Migration
 
-## Current Task (2026-03-29): Vision Page Static Override Removal
+## Current Task (2026-03-30): Full Image Cover + Contributors
+
+**Goal**: Two enhancements to the Sanity-driven vision page template:
+1. Add `fullImageCover` boolean toggle to feature schema. When enabled, the hero image expands to show the full image (like the /vision page panorama) instead of cropping to 1600×900.
+2. Add `contributors` field to feature schema (same format as `authors` with roleOverride). Renders below authors in a separate "Contributors" section.
+
+### Previous Task (2026-03-29): Vision Page Static Override Removal
 
 **Goal**: Delete all static vision page overrides so pages are served by the Sanity-driven `[slug]` route.
 

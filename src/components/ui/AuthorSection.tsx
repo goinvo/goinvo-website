@@ -16,6 +16,8 @@ interface AuthorCredit {
 
 interface AuthorSectionProps {
   authors: AuthorCredit[]
+  /** Section heading — defaults to "Author" for single, layout changes for multi */
+  heading?: string
 }
 
 /** Normalize both old (plain ref) and new (authorCredit object) shapes */
@@ -47,7 +49,7 @@ function extractText(blocks: unknown): string {
     .join(' ')
 }
 
-export function AuthorSection({ authors }: AuthorSectionProps) {
+export function AuthorSection({ authors, heading }: AuthorSectionProps) {
   if (!authors || authors.length === 0) return null
 
   const resolved = authors.map(resolveAuthor).filter(Boolean) as { member: TeamMember; displayRole: string }[]
@@ -60,11 +62,46 @@ export function AuthorSection({ authors }: AuthorSectionProps) {
     : null
   const primaryBio = primary.member.bio ? extractText(primary.member.bio) : ''
 
+  const sectionHeading = heading || 'Author'
+
+  // Contributors layout: simpler grid without primary/sidebar distinction
+  if (heading === 'Contributors') {
+    return (
+      <section className="my-12">
+        <h2 className="header-lg text-center mt-8 mb-6">Contributors</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {resolved.map((r) => {
+            const img = r.member.image
+              ? urlForImage(r.member.image).width(400).height(400).url()
+              : null
+            return (
+              <div key={r.member._id} className="text-center">
+                {img && (
+                  <Image
+                    src={img}
+                    alt={r.member.name}
+                    width={120}
+                    height={120}
+                    className="rounded-none object-cover mx-auto mb-3"
+                  />
+                )}
+                <p className="font-sans font-bold mb-0">{r.member.name}</p>
+                {r.displayRole && (
+                  <p className="text-gray text-sm mb-0">{r.displayRole}</p>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </section>
+    )
+  }
+
   // Single author: simple centered layout
   if (resolved.length === 1) {
     return (
       <section className="my-12">
-        <h2 className="font-serif text-2xl mt-8 mb-4 text-center">Author</h2>
+        <h2 className="font-serif text-2xl mt-8 mb-4 text-center">{sectionHeading}</h2>
         <div className={`grid grid-cols-1 gap-6 my-8 items-start ${primaryImage ? 'lg:grid-cols-2' : ''}`}>
           {primaryImage && (
             <div>

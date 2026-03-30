@@ -138,7 +138,7 @@ type HeroAction =
   | { type: 'NAVIGATE'; pathname: string; prevPathname: string | null }
   | { type: 'OVERRIDE'; image: string; bgPosition?: string; direction?: number }
   | { type: 'SLIDE_DONE' }
-  | { type: 'SET_CASE_STUDY_HERO'; image: string; bgPosition?: string }
+  | { type: 'SET_CASE_STUDY_HERO'; image: string; bgPosition?: string; expandAfterSlide?: boolean }
 
 function isDynamicHeroRoute(pathname: string): boolean {
   return (pathname.startsWith('/work/') && pathname.length > 6) ||
@@ -207,6 +207,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
     case 'SET_CASE_STUDY_HERO': {
       const image = action.image
       const bgPosition = action.bgPosition ?? 'center'
+      const expandAfterSlide = action.expandAfterSlide ?? false
 
       // Direct access: already on a case study route but hero is hidden
       if (state.phase === 'hidden' && isDynamicHeroRoute(state.pathname)) {
@@ -215,6 +216,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
           bgPosition,
           title: null,
           hideTextBox: true,
+          expandAfterSlide,
         }
         return {
           ...state,
@@ -277,7 +279,7 @@ interface HeroContextValue {
   state: HeroState
   overrideImage: (image: string, bgPosition?: string, direction?: number) => void
   slideDone: () => void
-  setCaseStudyHero: (image: string, bgPosition?: string) => void
+  setCaseStudyHero: (image: string, bgPosition?: string, expandAfterSlide?: boolean) => void
 }
 
 const HeroCtx = createContext<HeroContextValue | null>(null)
@@ -315,8 +317,8 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const setCaseStudyHero = useCallback(
-    (image: string, bgPosition?: string) => {
-      dispatch({ type: 'SET_CASE_STUDY_HERO', image, bgPosition })
+    (image: string, bgPosition?: string, expandAfterSlide?: boolean) => {
+      dispatch({ type: 'SET_CASE_STUDY_HERO', image, bgPosition, expandAfterSlide })
     },
     [],
   )

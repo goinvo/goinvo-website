@@ -27,6 +27,13 @@ export default defineType({
       options: { hotspot: true },
     }),
     defineField({
+      name: 'fullImageCover',
+      title: 'Full Image Cover',
+      type: 'boolean',
+      description: 'Show the full hero image instead of cropping to 16:9. Use for infographic posters (e.g. Killer Truths) where the image IS the content.',
+      initialValue: false,
+    }),
+    defineField({
       name: 'video',
       title: 'Video URL',
       type: 'url',
@@ -97,6 +104,25 @@ export default defineType({
           fields: [
             { name: 'author', type: 'reference', to: [{ type: 'teamMember' }] },
             { name: 'roleOverride', type: 'string', title: 'Role Override', description: 'Article-specific role (e.g., "Editor"). Leave blank to use the team member\'s default role.' },
+          ],
+          preview: {
+            select: { title: 'author.name', subtitle: 'roleOverride' },
+          },
+        },
+      ],
+    }),
+    defineField({
+      name: 'contributors',
+      title: 'Contributors',
+      type: 'array',
+      description: 'Additional contributors (shown in a separate "Contributors" section below authors).',
+      of: [
+        {
+          type: 'object',
+          name: 'contributorCredit',
+          fields: [
+            { name: 'author', type: 'reference', to: [{ type: 'teamMember' }] },
+            { name: 'roleOverride', type: 'string', title: 'Role Override', description: 'Contributor-specific role. Leave blank to use default.' },
           ],
           preview: {
             select: { title: 'author.name', subtitle: 'roleOverride' },

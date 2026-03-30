@@ -133,6 +133,7 @@ export const featureBySlugQuery = groq`
     title,
     slug,
     image,
+    fullImageCover,
     video,
     description,
     categories,
@@ -145,6 +146,10 @@ export const featureBySlugQuery = groq`
         // Backward compat: plain references (no roleOverride wrapper)
         @ -> { _id, name, role, bio, image }
       )
+    },
+    "contributors": contributors[] {
+      roleOverride,
+      "author": author-> { _id, name, role, bio, image }
     },
     content,
     metaDescription
