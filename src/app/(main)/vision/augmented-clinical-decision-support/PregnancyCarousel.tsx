@@ -66,11 +66,11 @@ export function PregnancyCarousel() {
       </div>
 
       {/* Thumbnail navigation */}
-      <div className="flex justify-center items-center mt-4 gap-1">
+      <div className="flex items-center mt-4 gap-1 max-w-[750px] mx-auto">
         {/* Prev button */}
         <button
           className={cn(
-            'w-10 h-10 flex-shrink-0 flex items-center justify-center cursor-pointer transition-opacity mr-2',
+            'w-10 h-10 flex-shrink-0 flex items-center justify-center cursor-pointer transition-opacity',
             activeIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'
           )}
           onClick={() => goTo(activeIndex - 1)}
@@ -81,33 +81,37 @@ export function PregnancyCarousel() {
           </svg>
         </button>
 
-        {/* Thumbnails */}
-        {slides.map((slide, i) => (
-          <button
-            key={slide.src}
-            className={cn(
-              'w-[100px] flex-shrink-0 p-0.5 mr-1 cursor-pointer border-2 transition-colors',
-              activeIndex === i
-                ? 'border-primary bg-primary'
-                : 'border-transparent hover:border-gray-medium'
-            )}
-            onClick={() => goTo(i)}
-            aria-label={`Go to panel ${i + 1}`}
-          >
-            <Image
-              src={cloudfrontImage(slide.src)}
-              alt=""
-              width={100}
-              height={67}
-              className="w-full h-auto block"
-            />
-          </button>
-        ))}
+        {/* Scrollable thumbnails */}
+        <div className="flex-1 overflow-x-auto overflow-y-hidden">
+          <div className="flex gap-1">
+            {slides.map((slide, i) => (
+              <button
+                key={slide.src}
+                className={cn(
+                  'w-[100px] flex-shrink-0 p-0.5 cursor-pointer border-2 transition-colors',
+                  activeIndex === i
+                    ? 'border-primary bg-primary'
+                    : 'border-transparent hover:border-gray-medium'
+                )}
+                onClick={() => goTo(i)}
+                aria-label={`Go to panel ${i + 1}`}
+              >
+                <Image
+                  src={cloudfrontImage(slide.src)}
+                  alt=""
+                  width={100}
+                  height={67}
+                  className="w-full h-auto block"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Next button */}
         <button
           className={cn(
-            'w-10 h-10 flex-shrink-0 flex items-center justify-center cursor-pointer transition-opacity ml-2',
+            'w-10 h-10 flex-shrink-0 flex items-center justify-center cursor-pointer transition-opacity',
             activeIndex === slides.length - 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'
           )}
           onClick={() => goTo(activeIndex + 1)}

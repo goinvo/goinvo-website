@@ -95,6 +95,41 @@ When fixing a visual component to match Gatsby:
 - Verify the fix renders correctly before moving on
 - Do NOT delegate component fixes to agents without verifying their work
 
+### ALWAYS use Puppeteer to verify visual/spacing changes
+Do NOT rely on reading CSS classes or source code to confirm spacing, sizing, or layout matches. Tailwind classes can conflict, be overridden, or not apply as expected (e.g., two `min-h-*` classes on the same element in Tailwind v4). The only reliable verification is measuring **actual rendered dimensions**.
+
+After any spacing, sizing, or layout change:
+1. Start the Next.js server (`npx next start -p 3000`)
+2. Use Puppeteer to measure the actual rendered dimensions on BOTH sites:
+```js
+node -e "
+const puppeteer = require('puppeteer');
+(async () => {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1920, height: 1080 });
+  await page.goto(url, { waitUntil: 'networkidle2' });
+  const metrics = await page.evaluate(() => {
+    const el = document.querySelector('selector');
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    return {
+      width: rect.width, height: rect.height,
+      padding: style.padding, margin: style.margin,
+      fontSize: style.fontSize, lineHeight: style.lineHeight,
+    };
+  });
+  console.log(metrics);
+  await browser.close();
+})();
+"
+```
+3. Compare rendered values between localhost and goinvo.com
+4. Report PASS/FAIL for each metric with actual vs target values
+5. Do NOT consider a fix complete until all metrics pass (within ~3px tolerance)
+
+This catches issues that reading CSS cannot: class conflicts, specificity overrides, computed value differences, and Tailwind v4 ordering edge cases.
+
 ### Do not assume section ordering — check the Gatsby source for each page
 The most common Gatsby order is content → authors → subscribe → references, but this varies. Always check `C:\Users\quest\Programming\GoInvo\goinvo.com\src\pages\vision\{slug}\index.js` for the actual order before making template changes.
 
@@ -218,6 +253,14 @@ When content needs a visual treatment the renderer doesn't support yet:
 - Framer Motion for animations (fade-in, slide-up, hover effects)
 - Named exports for components
 - PascalCase component files, camelCase utility files
+
+### Tests must NEVER fail silently
+Tests that silently skip or pass when they should be checking things are worse than no tests — they create false confidence. When writing tests:
+- If a precondition isn't met (e.g., server not running), **throw an error**, don't silently skip with `return`
+- Never swallow errors in catch blocks — at minimum log them, prefer re-throwing
+- Every test must assert something meaningful — a test that "passes" by doing no work is a bug
+- Report counts: log how many items were checked so silent degradation is visible (e.g., "Checked 43 pages" vs "Checked 0 pages")
+- If a test discovers N items to check, assert N > 0 before proceeding
 
 ## Transition & Animation Framework
 

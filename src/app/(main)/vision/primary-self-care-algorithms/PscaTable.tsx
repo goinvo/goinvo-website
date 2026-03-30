@@ -31,7 +31,7 @@ export function PscaTable({ children }: { children: React.ReactNode }) {
     <div
       ref={containerRef}
       className={cn(
-        'relative w-full overflow-x-auto',
+        'psca-table-wrap relative w-full overflow-x-auto mb-8',
         scrolling && 'psca-table--shadow'
       )}
     >
@@ -40,6 +40,23 @@ export function PscaTable({ children }: { children: React.ReactNode }) {
         .psca-table--shadow td:first-child,
         .psca-table--shadow th:first-child {
           box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.1);
+        }
+        /* Alternating row colors matching Gatsby psca-table-container */
+        .psca-table-wrap table tbody tr:nth-child(odd),
+        .psca-table-wrap table tbody tr:nth-child(odd) td {
+          background-color: #f9f9f9;
+        }
+        .psca-table-wrap table tbody tr:nth-child(even),
+        .psca-table-wrap table tbody tr:nth-child(even) td {
+          background-color: #fff;
+        }
+        /* Sticky first column for all tables */
+        .psca-table-wrap table tr > th:first-child,
+        .psca-table-wrap table tr > td:first-child {
+          position: sticky;
+          left: 0;
+          z-index: 1;
+          background-color: inherit;
         }
       `}</style>
     </div>

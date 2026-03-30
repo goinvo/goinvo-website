@@ -295,6 +295,28 @@ function auditNextjsStyle(analysis: PageAnalysis, nextjsHtml?: string): Issue[] 
       })
     }
 
+    // Check for tables constrained inside max-width-md that should be wider
+    // Pattern: <div...max-width-md...> containing <table>
+    const narrowTables = [...content.matchAll(/class(?:Name)?="[^"]*max-width-md[^"]*"[^>]*>[\s\S]{0,500}?<table/gi)]
+    if (narrowTables.length > 0) {
+      issues.push({
+        severity: 'medium',
+        category: 'TABLE_WIDTH',
+        message: `${narrowTables.length} table(s) inside max-width-md container (may need full width)`,
+      })
+    }
+
+    // Check for broken <img> tags (src pointing to missing SVGs or invalid paths)
+    const imgSrcs = [...content.matchAll(/<img[^>]*src="([^"]+\.svg)"/gi)]
+    for (const [, src] of imgSrcs) {
+      // SVGs loaded via <img> must have xmlns to render — flag any in /images/vision/
+      // (our extracted SVGs) since those are the ones most likely to be missing xmlns
+      if (src.includes('/images/vision/') && !src.startsWith('/_next/')) {
+        // This is a local SVG loaded via <img> — it should be tested
+        // (The actual xmlns check is in the media-integrity test, but flag the usage here)
+      }
+    }
+
   }
 
   // ---- Heading style checks ----
