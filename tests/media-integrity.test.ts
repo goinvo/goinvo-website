@@ -170,4 +170,32 @@ describe('Media Integrity', () => {
     )
     expect(failures).toEqual([])
   })
+
+  it('should have all public SVG files valid (with xmlns attribute)', () => {
+    const { readdirSync, readFileSync } = require('fs')
+    const { join } = require('path')
+
+    function findSvgs(dir: string): string[] {
+      const results: string[] = []
+      try {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const full = join(dir, entry.name)
+          if (entry.isDirectory()) results.push(...findSvgs(full))
+          else if (entry.name.endsWith('.svg')) results.push(full)
+        }
+      } catch { /* dir doesn't exist */ }
+      return results
+    }
+
+    const svgs = findSvgs('public')
+    const failures: string[] = []
+
+    for (const svgPath of svgs) {
+      const content = readFileSync(svgPath, 'utf-8')
+      if (!content.includes('xmlns=')) {
+        failures.push(`${svgPath}: missing xmlns attribute (will not render in <img> tags)`)
+      }
+    }
+    expect(failures).toEqual([])
+  })
 })
