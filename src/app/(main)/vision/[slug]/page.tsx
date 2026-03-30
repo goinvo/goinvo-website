@@ -79,35 +79,38 @@ export default async function VisionFeaturePage({ params }: Props) {
         />
       )}
 
-      <Reveal style="slide-up" duration={0.5}>
-        <div className="max-width max-width-md content-padding mx-auto">
-          <h1
-            className="header-xl mt-8 mb-6"
-            style={{ viewTransitionName: 'page-title' }}
-          >
-            {feature.title}
-          </h1>
-          {(feature.categories?.length || feature.date) && (
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
-              {feature.categories && feature.categories.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {feature.categories.map((cat) => (
-                    <span
-                      key={cat}
-                      className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1"
-                    >
-                      {cat}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {feature.date && (
-                <span className="text-gray text-sm">{feature.date}</span>
-              )}
-            </div>
-          )}
-        </div>
-      </Reveal>
+      {/* Title + meta — hidden for fullImageCover pages where the image IS the content */}
+      {!feature.fullImageCover && (
+        <Reveal style="slide-up" duration={0.5}>
+          <div className="max-width max-width-md content-padding mx-auto">
+            <h1
+              className="header-xl mt-8 mb-6"
+              style={{ viewTransitionName: 'page-title' }}
+            >
+              {feature.title}
+            </h1>
+            {(feature.categories?.length || feature.date) && (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
+                {feature.categories && feature.categories.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {feature.categories.map((cat) => (
+                      <span
+                        key={cat}
+                        className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {feature.date && (
+                  <span className="text-gray text-sm">{feature.date}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </Reveal>
+      )}
 
       {/* Content (without references — rendered separately after newsletter) */}
       {feature.content && (() => {
