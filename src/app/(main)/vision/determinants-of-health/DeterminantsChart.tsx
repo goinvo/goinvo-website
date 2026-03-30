@@ -162,7 +162,7 @@ export function DeterminantsChart() {
                 <div key={div.title}>
                   <h4 className="font-semibold text-sm mb-1">{div.title}</h4>
                   {div.factors && div.factors.length > 0 && (
-                    <ul className="list-disc list-outside pl-4 text-xs text-gray-dark space-y-0.5">
+                    <ul className="ul list-outside pl-4 text-xs text-gray-dark space-y-0.5">
                       {div.factors.map((f) => (
                         <li key={f}>{f}</li>
                       ))}

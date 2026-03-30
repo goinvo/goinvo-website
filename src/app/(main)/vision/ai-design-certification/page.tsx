@@ -210,7 +210,7 @@ export default function AIDesignCertificationPage() {
           <p className="leading-relaxed mb-4">
             Before shipping, the team submits the actual outputs:
           </p>
-          <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
+          <ul className="ul mb-[1.625rem]">
             <li className="leading-[1.5rem] py-[0.2rem]">The text users will read</li>
             <li className="leading-[1.5rem] py-[0.2rem]">The rules that trigger it</li>
             <li className="leading-[1.5rem] py-[0.2rem]">The data sources used</li>
@@ -227,7 +227,7 @@ export default function AIDesignCertificationPage() {
           <p className="leading-relaxed mb-4">
             Each output is reviewed against a standard schema:
           </p>
-          <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
+          <ul className="ul mb-[1.625rem]">
             {nonNegotiableChecks.map((check) => (
               <li key={check} className="leading-[1.5rem] py-[0.2rem]">{check}</li>
             ))}
@@ -265,7 +265,7 @@ export default function AIDesignCertificationPage() {
             non-diagnostic version before approval. If we&apos;re in the medical
             world, we&apos;ll need to:
           </p>
-          <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
+          <ul className="ul mb-[1.625rem]">
             <li className="leading-[1.5rem] py-[0.2rem]">Narrow scope</li>
             <li className="leading-[1.5rem] py-[0.2rem]">Add uncertainty</li>
             <li className="leading-[1.5rem] py-[0.2rem]">Trigger clinical follow-up — not just self-action</li>
@@ -278,7 +278,7 @@ export default function AIDesignCertificationPage() {
           <p className="leading-relaxed mb-4">
             Approval issues a verifiable medical certificate tied to:
           </p>
-          <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
+          <ul className="ul mb-[1.625rem]">
             <li className="leading-[1.5rem] py-[0.2rem]">The exact wording</li>
             <li className="leading-[1.5rem] py-[0.2rem]">The logic used</li>
             <li className="leading-[1.5rem] py-[0.2rem]">The UI shown</li>
@@ -288,7 +288,7 @@ export default function AIDesignCertificationPage() {
             Once approved, the insight gets a verifiable certificate tied to that
             exact copy, logic, and UI.
           </p>
-          <ul className="list-disc list-outside pl-6 mb-[1.625rem]">
+          <ul className="ul mb-[1.625rem]">
             <li className="leading-[1.5rem] py-[0.2rem]">It ships with the app</li>
             <li className="leading-[1.5rem] py-[0.2rem]">It&apos;s auditable later</li>
             <li className="leading-[1.5rem] py-[0.2rem]">
@@ -417,7 +417,7 @@ export default function AIDesignCertificationPage() {
       {/* Authors */}
       <div className="py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="header-lg mt-8 mb-4">
+          <h2 className="header-lg mt-8 mb-4 text-center">
             Authors
           </h2>
           <Author name="Chloe Ma" company="GoInvo" />

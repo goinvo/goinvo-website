@@ -245,7 +245,7 @@ export default function DeterminantsOfHealthPage() {
             were chosen due to their consistency across the following 7
             out of 8 organizations:
           </p>
-          <ul className="list-disc list-outside pl-6 space-y-1 mb-4 text-gray">
+          <ul className="ul space-y-1 mb-4 text-gray">
             <li>NCHHSTP<sup><a href="#references">1</a></sup></li>
             <li>WHO<sup><a href="#references">2</a></sup></li>
             <li>Healthy People<sup><a href="#references">3</a></sup></li>
@@ -275,7 +275,7 @@ export default function DeterminantsOfHealthPage() {
             categories to one&apos;s health was found using the estimated
             values referenced by the seven primary sources listed below.
           </p>
-          <ul className="list-disc list-outside pl-6 space-y-1 mb-4 text-gray">
+          <ul className="ul space-y-1 mb-4 text-gray">
             <li>DHHS<sup><a href="#references">9</a></sup></li>
             <li>JAMA<sup><a href="#references">10, 12</a></sup></li>
             <li>Health Affairs<sup><a href="#references">11</a></sup></li>
@@ -364,7 +364,7 @@ export default function DeterminantsOfHealthPage() {
             one&apos;s health was found using the values referenced from the
             six sources listed below.
           </p>
-          <ul className="list-disc list-outside pl-6 space-y-1 mb-4 text-gray">
+          <ul className="ul space-y-1 mb-4 text-gray">
             <li>DHHS<sup><a href="#references">9</a></sup></li>
             <li>JAMA<sup><a href="#references">10, 12</a></sup></li>
             <li>Health Affairs<sup><a href="#references">11</a></sup></li>
@@ -551,7 +551,7 @@ export default function DeterminantsOfHealthPage() {
             groups based on similar characteristics. View the following
             literature for additional detail:
           </p>
-          <ul className="list-disc list-outside pl-6 space-y-1 mb-4 text-gray">
+          <ul className="ul space-y-1 mb-4 text-gray">
             <li>
               Fujimura, J. H., &amp; Rajagopalan, R. (2010). Different
               differences: The use of &apos;genetic ancestry&apos; versus race in

@@ -567,7 +567,7 @@ export default function UnderstandingZikaPage() {
             <div>
               <h3 className="font-serif text-xl mb-2">For Adults</h3>
               <p className="text-gray leading-relaxed mb-2">If you have Zika symptoms within 2 weeks of traveling to a Zika-infected area:</p>
-              <ul className="list-disc list-outside pl-6 space-y-1 text-gray">
+              <ul className="ul space-y-1 text-gray">
                 <li>Contact your doctor.</li>
                 <li>Take medicine (acetaminophen or paracetamol) to relieve fever and pain.</li>
                 <li>To reduce the risk of bleeding, do NOT take aspirin, aspirin products, or other non-steroidal anti-inflammatory drugs such as ibuprofen until Dengue can be ruled out.</li>
@@ -588,7 +588,7 @@ export default function UnderstandingZikaPage() {
             <div>
               <h3 className="font-serif text-xl mb-2">For Pregnant Women</h3>
               <p className="text-gray leading-relaxed mb-2">There is no cure for Zika virus. If you are pregnant, your doctor will treat you for the virus, while also monitoring your baby. The next steps will most likely be:</p>
-              <ul className="list-disc list-outside pl-6 space-y-1 text-gray">
+              <ul className="ul space-y-1 text-gray">
                 <li>An ultrasound to test for microcephaly or calcium deposits in your baby&apos;s brain.</li>
                 <li>You may get an amniocentesis (also called amnio) to check the amniotic fluid that surrounds your baby in the womb for Zika.</li>
                 <li>The placenta and umbilical cord may also be tested after birth.</li>
@@ -646,7 +646,7 @@ export default function UnderstandingZikaPage() {
               height={80}
               className="w-16 h-16 object-contain flex-shrink-0"
             />
-            <ul className="list-disc list-outside pl-6 space-y-3 text-gray">
+            <ul className="ul space-y-3 text-gray">
               <li>We don&apos;t know for sure if Zika is the cause of the increased microcephaly in Brazil. We don&apos;t know for sure how many of the more than 4,700 reported cases of microcephaly in Brazil are related to Zika, as it is difficult to diagnose and can have other causes.</li>
               <li>Though we know that Zika was the cause of a Guillain-Barr&eacute; Syndrome surge in French Polynesia in 2013-14, we don&apos;t yet know definitively if the current Zika outbreak is the cause of the increase of GBS in South American countries.</li>
               <li>The possible connection of Zika with microcephaly and GBS suggest mutation in the virus to become more pathogenic to humans. We don&apos;t know what exactly has changed about Zika virus and why.</li>

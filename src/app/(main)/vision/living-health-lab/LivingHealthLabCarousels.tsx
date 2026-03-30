@@ -171,7 +171,7 @@ export function LivingHealthLabCarousels() {
             research and review of similar tools:
           </p>
 
-          <ul className="list-disc list-outside pl-6 space-y-1 mb-6 leading-relaxed">
+          <ul className="ul space-y-1 mb-6 leading-relaxed">
             <li>a) Helping the patient set up the right exploration</li>
             <li>b) Reducing the Tracking Burden</li>
             <li>c) Making Personal Science Accessible and Understandable</li>
