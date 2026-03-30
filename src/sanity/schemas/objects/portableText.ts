@@ -10,11 +10,10 @@ export default defineType({
       styles: [
         { title: 'Normal', value: 'normal' },
         { title: 'H2', value: 'h2' },
-        { title: 'H2 (centered)', value: 'h2Center' },
+        { title: 'H2 (centered)', value: 'sectionTitle' },
         { title: 'H3', value: 'h3' },
         { title: 'H4', value: 'h4' },
         { title: 'Quote', value: 'blockquote' },
-        { title: 'Section Title', value: 'sectionTitle' },
         { title: 'Callout', value: 'callout' },
       ],
       marks: {
@@ -405,55 +404,8 @@ export default defineType({
       ],
     }),
     defineArrayMember({
-      name: 'ctaButton',
-      title: 'CTA Button',
-      type: 'object',
-      description: 'A styled button link (download, external link, etc.)',
-      fields: [
-        {
-          name: 'label',
-          title: 'Label',
-          type: 'string',
-          description: 'Button text (e.g., "Download PDF", "View on Github")',
-          validation: (Rule) => Rule.required(),
-        },
-        {
-          name: 'url',
-          title: 'URL',
-          type: 'url',
-          description: 'Link destination',
-          validation: (Rule) => Rule.required().uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }),
-        },
-        {
-          name: 'variant',
-          title: 'Variant',
-          type: 'string',
-          options: {
-            list: [
-              { title: 'Primary (filled orange)', value: 'primary' },
-              { title: 'Secondary (outline)', value: 'secondary' },
-            ],
-          },
-          initialValue: 'secondary',
-        },
-        {
-          name: 'fullWidth',
-          title: 'Full width',
-          type: 'boolean',
-          description: 'Make button stretch to full container width',
-          initialValue: false,
-        },
-        {
-          name: 'external',
-          title: 'Open in new tab',
-          type: 'boolean',
-          initialValue: true,
-        },
-      ],
-    }),
-    defineArrayMember({
       name: 'buttonGroup',
-      title: 'Button Group',
+      title: 'Buttons',
       type: 'object',
       description: 'Two or more buttons side by side',
       fields: [
