@@ -9,6 +9,8 @@ interface CarouselProps {
   children: React.ReactNode
   className?: string
   dots?: boolean
+  /** Array of thumbnail image URLs. When provided, replaces dots with a thumbnail strip. */
+  thumbnails?: string[]
 }
 
 export function Carousel({
@@ -16,6 +18,7 @@ export function Carousel({
   children,
   className,
   dots = true,
+  thumbnails,
 }: CarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState(0)
@@ -126,8 +129,27 @@ export function Carousel({
         )}
       </div>
 
-      {/* Dots */}
-      {dots && slides.length > 1 && (
+      {/* Thumbnail strip */}
+      {thumbnails && thumbnails.length > 1 && (
+        <div className="flex gap-1 mt-3 overflow-x-auto pb-1">
+          {thumbnails.map((src, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              className={cn(
+                'flex-shrink-0 w-[80px] h-[50px] border-2 cursor-pointer transition-all overflow-hidden bg-gray-light',
+                i === activeIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-80'
+              )}
+              aria-label={`Go to slide ${i + 1}`}
+            >
+              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Dots (shown when no thumbnails) */}
+      {!thumbnails && dots && slides.length > 1 && (
         <div className="flex justify-center gap-2 mt-4">
           {slides.map((_, i) => (
             <button

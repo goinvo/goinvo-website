@@ -44,7 +44,7 @@ export function LivingHealthLabCarousels() {
     <div className="max-width content-padding mx-auto space-y-12 my-8">
       {/* Comic Carousel */}
       <div>
-        <Carousel dots>
+        <Carousel thumbnails={comicSlides.map(s => cloudfrontImage(s.src))}>
           {comicSlides.map((slide) => (
             <SlideImage key={slide.src} src={slide.src} alt={slide.alt} />
           ))}
@@ -72,7 +72,7 @@ export function LivingHealthLabCarousels() {
             draft into this current iteration.
           </p>
         </div>
-        <Carousel dots>
+        <Carousel thumbnails={paperSlides.map(s => cloudfrontImage(s.src))}>
           {paperSlides.map((slide) => (
             <SlideImage key={slide.src} src={slide.src} alt={slide.alt} />
           ))}
@@ -159,7 +159,7 @@ export function LivingHealthLabCarousels() {
             began mocking up the screens.
           </p>
         </div>
-        <Carousel dots>
+        <Carousel thumbnails={digitalSlides.map(s => cloudfrontImage(s.src))}>
           {digitalSlides.map((slide) => (
             <SlideImage key={slide.src} src={slide.src} alt={slide.alt} />
           ))}
@@ -290,7 +290,7 @@ export function LivingHealthLabCarousels() {
 
 export function LivingHealthLabAppendixCarousel() {
   return (
-    <Carousel dots>
+    <Carousel thumbnails={appendixSlides.map(s => cloudfrontImage(s.src))}>
       {appendixSlides.map((slide) => (
         <SlideImage key={slide.src} src={slide.src} alt={slide.alt} />
       ))}

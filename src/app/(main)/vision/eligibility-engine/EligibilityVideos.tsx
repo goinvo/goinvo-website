@@ -45,7 +45,6 @@ export function EligibilityVideos() {
             poster={cloudfrontImage(feat.poster)}
             autoPlay={false}
             controls
-            loop
           />
         </div>
       ))}
