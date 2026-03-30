@@ -89,8 +89,20 @@ export default defineType({
       name: 'authors',
       title: 'Authors',
       type: 'array',
-      description: 'Team members who authored this feature',
-      of: [{ type: 'reference', to: [{ type: 'teamMember' }] }],
+      description: 'Team members who authored this feature. Use roleOverride for article-specific roles (e.g., "Editor" instead of the team member\'s default role).',
+      of: [
+        {
+          type: 'object',
+          name: 'authorCredit',
+          fields: [
+            { name: 'author', type: 'reference', to: [{ type: 'teamMember' }] },
+            { name: 'roleOverride', type: 'string', title: 'Role Override', description: 'Article-specific role (e.g., "Editor"). Leave blank to use the team member\'s default role.' },
+          ],
+          preview: {
+            select: { title: 'author.name', subtitle: 'roleOverride' },
+          },
+        },
+      ],
     }),
     defineField({
       name: 'content',
