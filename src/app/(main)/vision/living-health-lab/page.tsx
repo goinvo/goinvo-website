@@ -251,10 +251,10 @@ export default function LivingHealthLabPage() {
             begin designing and prototyping Living Health Lab.
           </p>
 
-          <ul className="list-disc list-outside pl-6 space-y-2 mb-8 leading-relaxed">
+          <ul className="ul space-y-2 mb-8 leading-relaxed">
             <li>
               Purposeful Exploration
-              <ul className="list-disc list-outside pl-6 mt-1 space-y-1">
+              <ul className="ul mt-1 space-y-1">
                 <li>
                   Figure out where the individual is in their Health Journey
                   and where they want to go
@@ -268,7 +268,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Guided, Informed Experience
-              <ul className="list-disc list-outside pl-6 mt-1 space-y-1">
+              <ul className="ul mt-1 space-y-1">
                 <li>
                   Ensure that designing the exploration is a clear, easy
                   process
@@ -287,7 +287,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Collaborative Health
-              <ul className="list-disc list-outside pl-6 mt-1 space-y-1">
+              <ul className="ul mt-1 space-y-1">
                 <li>
                   &quot;Do health together&quot; with a network of support by including
                   the person&apos;s care team: PCP, other providers, accountability
@@ -297,7 +297,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Actionable Insights
-              <ul className="list-disc list-outside pl-6 mt-1 space-y-1">
+              <ul className="ul mt-1 space-y-1">
                 <li>Identify factors impacting their health</li>
                 <li>Provide meaningful data visualization</li>
                 <li>
@@ -308,7 +308,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Sense of Agency
-              <ul className="list-disc list-outside pl-6 mt-1 space-y-1">
+              <ul className="ul mt-1 space-y-1">
                 <li>Support self-reflection and self-learning</li>
                 <li>
                   Empower patients to be in the driver&apos;s seat of their own
@@ -478,7 +478,7 @@ export default function LivingHealthLabPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <Divider />
 
-          <h2 className="header-lg mt-8 mb-4">Authors</h2>
+          <h2 className="header-lg mt-8 mb-4 text-center">Authors</h2>
           <Author name="Sharon Lee" company="GoInvo" />
           <Author name="Shayla Nettey" company="GoInvo" />
           <Author name="Huahua Zhu" company="GoInvo" />

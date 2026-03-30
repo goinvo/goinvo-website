@@ -43,7 +43,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Our concept for an onboard truck assistant is <strong>Field Guider</strong>, an open source software service that:
           </p>
 
-          <ul className="list-disc list-outside pl-6 space-y-2 mb-8 leading-relaxed">
+          <ul className="ul space-y-2 mb-8 leading-relaxed">
             <li>lives on the mobile health truck, phone, and AR goggles,</li>
             <li>works with healthcare workers in real-time to co-diagnose, co-treat patients for better health outcomes,</li>
             <li>and provides in-encounter training, through visual and aural clinical decision support nudges to up-skill staff.</li>
@@ -69,7 +69,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
           <h2 className="header-lg mt-12 mb-4">
             The future of rural healthcare is...
           </h2>
-          <ul className="list-disc list-outside pl-6 space-y-2 mb-8 leading-relaxed">
+          <ul className="ul space-y-2 mb-8 leading-relaxed">
             <li>Care at home, in your neighborhood</li>
             <li>The clinician comes to you</li>
             <li>Worry-free, urgent care</li>
@@ -151,7 +151,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
 
           <h2 className="header-lg mt-12 mb-4">Process Maps</h2>
 
-          <h3 className="font-serif text-xl mt-6 mb-4">Pregnancy Process Map</h3>
+          <h3 className="header-md mt-6 mb-4">Pregnancy Process Map</h3>
           <a
             href="https://github.com/goinvo/arpa-h/blob/main/TA5/augmented-cds-process-map-pregnancy.pdf"
             target="_blank"
@@ -175,7 +175,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Pregnancy Process Map
           </Button>
 
-          <h3 className="font-serif text-xl mt-8 mb-4">
+          <h3 className="header-md mt-8 mb-4">
             Head Injury Process Map
           </h3>
           <a
@@ -201,7 +201,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
             Download Head Injury Process Map
           </Button>
 
-          <h3 className="font-serif text-xl mt-8 mb-4">Cancer Process Map</h3>
+          <h3 className="header-md mt-8 mb-4">Cancer Process Map</h3>
           <a
             href="https://github.com/goinvo/arpa-h/blob/main/TA5/augmented-cds-process-map-cancer.pdf"
             target="_blank"
@@ -254,7 +254,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
           <Author name="Juhan Sonin" company="GoInvo" />
 
           <div className="mt-8">
-            <h3 className="font-serif text-xl mt-6 mb-3">Contributors</h3>
+            <h3 className="header-md mt-6 mb-3">Contributors</h3>
             <p className="text-gray">
               Massachusetts General Hospital Family Van<br />
               John Brownstein and Sarah Scalia, Boston Children&apos;s Hospital<br />

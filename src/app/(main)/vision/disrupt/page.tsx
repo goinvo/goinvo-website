@@ -1062,7 +1062,7 @@ export default function DisruptPage() {
           <h4 className="font-serif text-base font-light mt-6 mb-2">
             References
           </h4>
-          <ul className="text-gray text-sm space-y-1 list-disc pl-5">
+          <ul className="text-gray text-sm space-y-1 ul">
             <li>
               DRC. DARPA Robotics Challenge, DARPA.
             </li>

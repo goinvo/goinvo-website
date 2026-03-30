@@ -148,7 +148,7 @@ export default function PublicHealthroomPage() {
           <h3 className="header-md mt-8 mb-3">
             Health Screening as Daily Encounters:
           </h3>
-          <ul className="list-disc list-outside pl-6 space-y-2 mb-8 leading-relaxed">
+          <ul className="ul space-y-2 mb-8 leading-relaxed">
             <li>
               Conducts primary care checkups in adherence to state guidelines
             </li>
@@ -162,7 +162,7 @@ export default function PublicHealthroomPage() {
           <h3 className="header-md mt-8 mb-3">
             Increase Awareness for Preventative Health:
           </h3>
-          <ul className="list-disc list-outside pl-6 space-y-2 mb-8 leading-relaxed">
+          <ul className="ul space-y-2 mb-8 leading-relaxed">
             <li>
               Informs individuals about next steps after health screening
             </li>
@@ -246,7 +246,7 @@ export default function PublicHealthroomPage() {
             that aggregates current off-the-shelf technologies but maximizes
             ease of use. Another is to develop each tool separately:
           </p>
-          <ul className="list-disc list-outside pl-6 space-y-3 mb-8 leading-relaxed">
+          <ul className="ul space-y-3 mb-8 leading-relaxed">
             <li>
               Refurbish public or community center (YMCA, Student Centers,
               retail toilets) restrooms with urine/stool analysis toilets

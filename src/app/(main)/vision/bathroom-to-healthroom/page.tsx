@@ -67,7 +67,7 @@ export default function BathroomToHealthroomPage() {
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 1. Bloodletting to bloodless.
               </h2>
-              <h3 className="font-serif text-lg leading-relaxed mt-2">
+              <h3 className="header-md mt-2">
                 Technological and societal trends are converging and pushing
                 design to the forefront of health.
               </h3>
@@ -300,7 +300,7 @@ export default function BathroomToHealthroomPage() {
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 2. The surveillance invasion.
               </h2>
-              <h3 className="font-serif text-lg leading-relaxed mt-2">
+              <h3 className="header-md mt-2">
                 Wearable sensors impressively track personal health metrics, but
                 the bands are still as easy to take off as they are to put on.
               </h3>
@@ -415,7 +415,7 @@ export default function BathroomToHealthroomPage() {
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 3. Life first. Health a distant second.
               </h2>
-              <h3 className="font-serif text-lg leading-relaxed mt-2">
+              <h3 className="header-md mt-2">
                 The next challenges for designers and engineers in healthcare
                 involve data&hellip; collected invisibly.
               </h3>
@@ -465,7 +465,7 @@ export default function BathroomToHealthroomPage() {
             institutional and corporate healthcare:
           </p>
 
-          <ul className="list-disc list-outside pl-6 space-y-3 mb-8 leading-relaxed">
+          <ul className="ul space-y-3 mb-8 leading-relaxed">
             <li>
               Patient safety is a monster issue. There are 180,000 deaths by
               accident per year in US hospitals. That&rsquo;s 500 deaths per
@@ -585,7 +585,7 @@ export default function BathroomToHealthroomPage() {
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 4. Stage Zero Detection.
               </h2>
-              <h3 className="font-serif text-lg leading-relaxed mt-2">
+              <h3 className="header-md mt-2">
                 Continuous assessments make real-time adjustments not only
                 possible but desirable and doable.
               </h3>
@@ -619,7 +619,7 @@ export default function BathroomToHealthroomPage() {
             Next, here&rsquo;s what&rsquo;s on the horizon:
           </p>
 
-          <ul className="list-disc list-outside pl-6 space-y-3 mb-8 leading-relaxed">
+          <ul className="ul space-y-3 mb-8 leading-relaxed">
             <li>
               Scanadu, a hockey-puck-sized, 10-major-metric, non-invasive data
               collector;
@@ -866,7 +866,7 @@ export default function BathroomToHealthroomPage() {
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 5. From protein to pixel to policy.
               </h2>
-              <h3 className="font-serif text-lg leading-relaxed mt-2">
+              <h3 className="header-md mt-2">
                 Design-for-health possibilities and responsibilities are
                 immense.
               </h3>
