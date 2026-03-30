@@ -131,18 +131,18 @@ export function Carousel({
 
       {/* Thumbnail strip */}
       {thumbnails && thumbnails.length > 1 && (
-        <div className="flex gap-1 mt-3 overflow-x-auto pb-1">
+        <div className="flex justify-center gap-1 mt-3 overflow-x-auto pb-1">
           {thumbnails.map((src, i) => (
             <button
               key={i}
               onClick={() => goTo(i)}
               className={cn(
-                'flex-shrink-0 w-[80px] h-[50px] border-2 cursor-pointer transition-all overflow-hidden bg-gray-light',
+                'flex-shrink-0 w-[80px] h-[60px] border-2 cursor-pointer transition-all overflow-hidden bg-gray-light',
                 i === activeIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-80'
               )}
               aria-label={`Go to slide ${i + 1}`}
             >
-              <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+              <img src={src} alt="" className="w-full h-full object-contain" loading="lazy" />
             </button>
           ))}
         </div>
