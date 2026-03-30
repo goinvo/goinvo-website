@@ -106,7 +106,7 @@ const INTERACTIVE_OVERRIDE_SLUGS = new Set([
   'determinants-of-health',               // static override with interactive chart
   'digital-healthcare',                    // Sanity: Gatsby has 2x images (responsive duplicates) + contributor photos
   'disrupt',                              // static override with multi-part layout
-  'healing-us-healthcare',                // static override with infographic
+  'healing-us-healthcare',                // Sanity: complex article with choice points, Gatsby has inline images
   'oral-history-goinvo',                  // static override with interview layout
   'understanding-zika',                   // static override with visual guide
   'redesign-democracy',                   // Sanity: voting UI section structured differently from Gatsby
