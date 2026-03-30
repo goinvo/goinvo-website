@@ -65,12 +65,19 @@ export default async function VisionFeaturePage({ params }: Props) {
   }
 
   const heroImageUrl = feature.image
-    ? urlForImage(feature.image).width(1600).height(900).url()
+    ? feature.fullImageCover
+      ? urlForImage(feature.image).width(1920).url()  // Full aspect ratio, no crop
+      : urlForImage(feature.image).width(1600).height(900).url()
     : null
 
   return (
     <div>
-      {heroImageUrl && <SetCaseStudyHero image={heroImageUrl} />}
+      {heroImageUrl && (
+        <SetCaseStudyHero
+          image={heroImageUrl}
+          expandAfterSlide={feature.fullImageCover}
+        />
+      )}
 
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">
@@ -125,6 +132,15 @@ export default async function VisionFeaturePage({ params }: Props) {
               <section className="pb-12">
                 <div className="max-width max-width-md content-padding mx-auto">
                   <AuthorSection authors={feature.authors} />
+                </div>
+              </section>
+            )}
+
+            {/* Contributors */}
+            {feature.contributors && feature.contributors.length > 0 && (
+              <section className="pb-12">
+                <div className="max-width max-width-md content-padding mx-auto">
+                  <AuthorSection authors={feature.contributors} heading="Contributors" />
                 </div>
               </section>
             )}

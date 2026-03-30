@@ -73,12 +73,16 @@ export interface Feature {
   title: string
   slug: { current: string }
   image?: SanityImage
+  fullImageCover?: boolean
   video?: string
   description?: string
   categories?: string[]
   date?: string
   client?: string
-  authors?: TeamMember[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  authors?: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  contributors?: any[]
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
