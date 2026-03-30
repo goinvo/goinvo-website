@@ -100,7 +100,12 @@ async function main() {
   const authorRefs = []
   for (const author of EBOLA_AUTHORS) {
     const id = await ensureTeamMember(author.name, author.role)
-    authorRefs.push({ _type: 'reference', _ref: id, _key: `author-${id}` })
+    authorRefs.push({
+      _type: 'authorCredit',
+      _key: `author-${id}`,
+      author: { _type: 'reference', _ref: id },
+      roleOverride: author.role !== 'Designer' ? author.role : '',
+    })
   }
 
   // 4. Apply patches
