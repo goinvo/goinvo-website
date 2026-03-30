@@ -107,7 +107,7 @@ export default function LivingHealthLabPage() {
               </p>
               <Button
                 href="https://www.dropbox.com/s/rw3u29f73v0wfpk/living-health-lab-workbook.pdf?dl=0"
-                variant="secondary"
+                variant="primary"
                 external
               >
                 View The Workbook
