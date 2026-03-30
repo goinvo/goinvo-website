@@ -129,22 +129,49 @@ export function Carousel({
         )}
       </div>
 
-      {/* Thumbnail strip */}
+      {/* Thumbnail strip with scroll arrows */}
       {thumbnails && thumbnails.length > 1 && (
-        <div className="flex justify-center gap-1 mt-3 overflow-x-auto pb-1">
-          {thumbnails.map((src, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className={cn(
-                'flex-shrink-0 w-[80px] h-[60px] border-2 cursor-pointer transition-all overflow-hidden bg-gray-light',
-                i === activeIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-80'
-              )}
-              aria-label={`Go to slide ${i + 1}`}
-            >
-              <img src={src} alt="" className="w-full h-full object-contain" loading="lazy" />
-            </button>
-          ))}
+        <div className="relative flex items-center justify-center mt-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 px-8">
+            {thumbnails.map((src, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                className={cn(
+                  'flex-shrink-0 w-[100px] h-[70px] border-2 cursor-pointer transition-all overflow-hidden bg-gray-light',
+                  i === activeIndex ? 'border-primary opacity-100' : 'border-transparent opacity-60 hover:opacity-90'
+                )}
+                aria-label={`Go to slide ${i + 1}`}
+              >
+                <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+          {/* Scroll arrows for thumbnail strip */}
+          <button
+            onClick={() => {
+              const prev = (activeIndex - 1 + slides.length) % slides.length
+              goTo(prev)
+            }}
+            className="absolute left-0 w-6 h-6 flex items-center justify-center text-primary hover:text-primary-dark cursor-pointer bg-transparent border-none"
+            aria-label="Previous thumbnail"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              const next = (activeIndex + 1) % slides.length
+              goTo(next)
+            }}
+            className="absolute right-0 w-6 h-6 flex items-center justify-center text-primary hover:text-primary-dark cursor-pointer bg-transparent border-none"
+            aria-label="Next thumbnail"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
         </div>
       )}
 
