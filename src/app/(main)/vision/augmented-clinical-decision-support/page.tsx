@@ -22,7 +22,7 @@ export default function AugmentedClinicalDecisionSupportPage() {
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Real-time clinical guidance for mobile health workers</h1>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Real-time clinical guidance for mobile health workers</h1>
           <p className="leading-relaxed mb-4">
             Across the rural US, healthcare is<br />
             sometimes overlooked,<br />

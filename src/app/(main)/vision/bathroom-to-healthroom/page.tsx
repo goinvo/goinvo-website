@@ -44,7 +44,7 @@ export default function BathroomToHealthroomPage() {
       {/* Intro */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
             From Bathroom to Healthroom
           </h1>
           <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-4 mb-2">
@@ -64,7 +64,7 @@ export default function BathroomToHealthroomPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 1. Bloodletting to bloodless.
               </h2>
               <h3 className="font-serif text-lg leading-relaxed mt-2">
@@ -297,7 +297,7 @@ export default function BathroomToHealthroomPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 2. The surveillance invasion.
               </h2>
               <h3 className="font-serif text-lg leading-relaxed mt-2">
@@ -412,7 +412,7 @@ export default function BathroomToHealthroomPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 3. Life first. Health a distant second.
               </h2>
               <h3 className="font-serif text-lg leading-relaxed mt-2">
@@ -582,7 +582,7 @@ export default function BathroomToHealthroomPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 4. Stage Zero Detection.
               </h2>
               <h3 className="font-serif text-lg leading-relaxed mt-2">
@@ -863,7 +863,7 @@ export default function BathroomToHealthroomPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 5. From protein to pixel to policy.
               </h2>
               <h3 className="font-serif text-lg leading-relaxed mt-2">
@@ -942,7 +942,7 @@ export default function BathroomToHealthroomPage() {
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex items-start gap-4 mb-8">
             <div className="flex-1">
-              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">
+              <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 6. Final Thoughts
               </h2>
             </div>

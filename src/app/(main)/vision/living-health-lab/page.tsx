@@ -44,7 +44,7 @@ export default function LivingHealthLabPage() {
       {/* Content */}
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Living Health Lab</h1>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Living Health Lab</h1>
           <h4 className="font-serif text-lg leading-relaxed mb-6">
             An open source project to help people examine, understand, and
             improve their day-to-day health through guided exploration,

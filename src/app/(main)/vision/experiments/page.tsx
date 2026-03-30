@@ -19,7 +19,7 @@ export default function ExperimentsPage() {
       {/* Grid */}
       <section className="py-12">
         <div className="max-width content-padding mx-auto">
-          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light">Experiments in Design</h1>
+          <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Experiments in Design</h1>
         </div>
         <div className="max-width content-padding mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
