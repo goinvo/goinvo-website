@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import './disrupt.css'
 
@@ -31,8 +31,29 @@ export const metadata: Metadata = {
 
 export default function DisruptPage() {
   return (
-    <div id="disrupt-legacy">
-      <SetCaseStudyHero image={img('video_fallbacks/section-1-top.jpg')} />
+    <div id="disrupt-legacy" className="pt-[var(--spacing-header-height)]">
+      {/* Hero with title overlay — matches Gatsby's 600px header with giant letterSpaced h1 */}
+      <div
+        className="relative w-full flex items-center justify-center"
+        style={{
+          height: '600px',
+          backgroundImage: `url(${img('video_fallbacks/section-1-top.jpg')})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <h1
+          className="text-white text-center font-serif"
+          style={{
+            fontSize: 'clamp(4rem, 10vw, 9.6rem)',
+            letterSpacing: 'clamp(1rem, 6vw, 5.76rem)',
+            textTransform: 'uppercase',
+            fontWeight: 300,
+          }}
+        >
+          Disrupt!
+        </h1>
+      </div>
 
       {/* ===== Section Navigation Bar ===== */}
       <div className="navigation" id="article-nav">
