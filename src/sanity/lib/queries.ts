@@ -139,6 +139,7 @@ export const featureBySlugQuery = groq`
     categories,
     date,
     client,
+    authorLayout,
     "authors": authors[] {
       roleOverride,
       "author": coalesce(

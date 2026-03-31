@@ -18,6 +18,8 @@ interface AuthorSectionProps {
   authors: AuthorCredit[]
   /** Section heading — defaults to "Author"/"Authors" based on count */
   heading?: string
+  /** Layout variant — "equal" renders all authors the same, "primary-sidebar" highlights the first author with a large photo and shows others in a bordered sidebar */
+  variant?: 'equal' | 'primary-sidebar'
 }
 
 /** Normalize both old (plain ref) and new (authorCredit object) shapes */
@@ -49,7 +51,7 @@ function extractText(blocks: unknown): string {
     .join(' ')
 }
 
-export function AuthorSection({ authors, heading }: AuthorSectionProps) {
+export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSectionProps) {
   if (!authors || authors.length === 0) return null
 
   const resolved = authors.map(resolveAuthor).filter(Boolean) as { member: TeamMember; displayRole: string }[]
@@ -58,6 +60,90 @@ export function AuthorSection({ authors, heading }: AuthorSectionProps) {
   // Determine section heading
   const sectionHeading = heading || (resolved.length === 1 ? 'Author' : 'Authors')
 
+  // ── Variant: primary-sidebar ──────────────────────────────────────────
+  // First author gets a large photo + bio, remaining authors show in a
+  // bordered sidebar with small thumbnails and role labels (matches Gatsby
+  // pages like understanding-ebola)
+  if (variant === 'primary-sidebar' && resolved.length > 1) {
+    const primary = resolved[0]
+    const sidebar = resolved.slice(1)
+    const primaryImage = primary.member.image
+      ? urlForImage(primary.member.image).width(720).height(480).url()
+      : null
+    const primaryBio = primary.member.bio ? extractText(primary.member.bio) : ''
+
+    return (
+      <section className="my-12">
+        <h2 className="font-serif text-2xl mt-8 mb-4 text-center">{sectionHeading}</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
+          {/* Primary author */}
+          <div>
+            {primaryImage && (
+              <Image
+                src={primaryImage}
+                alt={primary.member.name}
+                width={720}
+                height={480}
+                className="w-full h-auto object-cover mb-4"
+              />
+            )}
+            <p>
+              <strong>{primary.member.name}</strong>
+              <span className="text-gray">, {primary.displayRole}</span>
+            </p>
+            {primaryBio && <p className="text-gray mt-1">{primaryBio}</p>}
+          </div>
+
+          {/* Sidebar with remaining authors */}
+          <div
+            className="lg:w-[320px]"
+            style={{ border: '3px solid rgb(81, 105, 123)', padding: '32px' }}
+          >
+            {sidebar.map((contrib, i) => {
+              const contribImage = contrib.member.image
+                ? urlForImage(contrib.member.image).width(140).height(140).url()
+                : null
+              return (
+                <div key={contrib.member._id} className={i > 0 ? 'mt-6' : ''}>
+                  <div className="flex items-start gap-3">
+                    {contribImage && (
+                      <Image
+                        src={contribImage}
+                        alt={contrib.member.name}
+                        width={69}
+                        height={69}
+                        className="rounded-none object-cover shrink-0"
+                      />
+                    )}
+                    <div>
+                      <p
+                        className="mb-0"
+                        style={{ fontSize: '22px', color: 'rgb(136, 136, 136)', fontFamily: 'var(--font-serif)' }}
+                      >
+                        {contrib.displayRole}
+                      </p>
+                      <p className="font-sans mb-0" style={{ fontSize: '28px' }}>
+                        {contrib.member.name}
+                      </p>
+                    </div>
+                  </div>
+                  {i < sidebar.length - 1 && (
+                    <hr
+                      className="mt-6"
+                      style={{ width: '32px', border: 'none', borderTop: '5px solid rgb(81, 105, 123)', marginLeft: 0 }}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  // ── Variant: equal (default) ──────────────────────────────────────────
+  // Every author rendered with the same image + name + bio layout
   return (
     <section className="my-12">
       <h2 className="font-serif text-2xl mt-8 mb-4 text-center">{sectionHeading}</h2>

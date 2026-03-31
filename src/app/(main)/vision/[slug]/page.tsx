@@ -150,7 +150,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {feature.authors && feature.authors.length > 0 && (
               <section className="pb-12">
                 <div className="max-width max-width-md content-padding mx-auto">
-                  <AuthorSection authors={feature.authors} />
+                  <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined} />
                 </div>
               </section>
             )}
