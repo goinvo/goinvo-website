@@ -1,10 +1,48 @@
 # GoInvo Website - Next.js Migration
 
-## Current Task (2026-03-30): Full Image Cover + Contributors
+## Current Task (2026-03-31): Port Legacy /features/ Pages to Next.js
 
-**Goal**: Two enhancements to the Sanity-driven vision page template:
-1. Add `fullImageCover` boolean toggle to feature schema. When enabled, the hero image expands to show the full image (like the /vision page panorama) instead of cropping to 1600×900.
-2. Add `contributors` field to feature schema (same format as `authors` with roleOverride). Renders below authors in a separate "Contributors" section.
+**Goal**: Port all 12 legacy `/features/` pages from their original HTML/CSS to Next.js static override pages. These are NOT Gatsby pages — they are standalone legacy HTML pages with custom CSS served from `goinvo.com/old/`. They were never built from React/Gatsby.
+
+### CRITICAL FINDING: All 12 /features/ pages are LEGACY HTML
+These pages are **not** in the Gatsby source repo. They are standalone HTML pages with custom CSS/JS served from the `/old/` directory on goinvo.com. The Gatsby `features.json` links to them as external URLs. They each have:
+- Custom CSS (10-66KB) at `/old/stylesheets/features/<slug>.css`
+- Custom HTML layouts (dark backgrounds, multi-column grids, inline SVGs)
+- Some have custom JS at `/old/javascripts/features/<slug>/`
+
+**Source files downloaded to**: `/c/tmp/legacy-features/<slug>/` (page.html + styles.css)
+
+### The 12 legacy features pages
+
+| Gatsby slug | Next.js slug | HTML | CSS | Porting Status |
+|---|---|---|---|---|
+| zika | understanding-zika | 74KB | 16KB | **BROKEN** — needs port from legacy HTML |
+| an-oral-history | oral-history-goinvo | 235KB | 22KB | Sanity content partial, needs legacy port |
+| from-bathroom-to-healthroom | bathroom-to-healthroom | 70KB | 19KB | Sanity content partial, needs legacy port |
+| careplans | care-plans | 40KB | 67KB | Sanity content OK for now |
+| digital-healthcare | digital-healthcare | 43KB | 14KB | Sanity content partial |
+| us-healthcare | healing-us-healthcare | 99KB | 22KB | Interactive, needs legacy port |
+| disrupt | disrupt | 39KB | 33KB | Sanity content, heading differences |
+| ebola | understanding-ebola | 33KB | 10KB | Sanity content OK |
+| ebola-care-guideline | ebola-care-guideline | 32KB | 12KB | Sanity content OK |
+| killer-truths | killer-truths | 43KB | 11KB | Full image cover done |
+| print-big | print-big | 40KB | 3KB | Clean |
+| redesign-democracy | redesign-democracy | 101KB | 22KB | Sanity content, heading/image gaps |
+
+### Porting approach
+1. Download the legacy HTML + CSS from `goinvo.com/old/`
+2. Read the Gatsby source HTML to understand layout structure
+3. Translate section by section into a Next.js `page.tsx` static override
+4. Port custom CSS to Tailwind classes or scoped `<style>` blocks
+5. Verify with Puppeteer side-by-side screenshots at multiple scroll positions
+6. Images: use `cloudfrontImage()` for CDN paths or upload to Sanity
+
+### Also pending: Studio UX fixes
+- Quote block preview only shows first letter
+- H2 (centered) / sectionTitle preview wrong in editor
+- Rich text header preview formatting doesn't match live
+
+### Previous Task (2026-03-30): Full Image Cover + Contributors (DONE)
 
 ### Previous Task (2026-03-29): Vision Page Static Override Removal
 
