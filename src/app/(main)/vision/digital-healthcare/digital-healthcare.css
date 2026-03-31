@@ -1,0 +1,476 @@
+/* Scoped styles for legacy digital-healthcare feature page */
+
+.digital-healthcare {
+  color: #58504a;
+  line-height: 1.25;
+}
+
+/* ===== HERO ===== */
+.digital-healthcare .overall-header {
+  width: 100%;
+  font-size: 3.5em;
+  padding: 17% 60px 5%;
+  color: #0b5e94;
+  background-color: white;
+  background-image: url('https://www.goinvo.com/old/images/features/digital-healthcare/digital_health_cover_transp.gif');
+  background-size: auto 100%;
+  background-repeat: no-repeat;
+  background-position: right;
+  line-height: 1.2em;
+  height: 80vh;
+  max-height: 600px;
+  min-height: 500px;
+}
+
+@media only screen and (max-width: 1129px) {
+  .digital-healthcare .overall-header {
+    font-size: 3em;
+    color: white;
+    background-color: #0b5e94;
+    background-image: none;
+    padding: 5%;
+    text-align: center;
+    height: inherit;
+    min-height: 0;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .overall-header {
+    font-size: 3em;
+  }
+}
+
+.digital-healthcare .overall-header .title {
+  width: calc(100% - 600px);
+  font-family: 'adobe-jenson-pro', Georgia, 'Times New Roman', Times, serif;
+}
+
+@media only screen and (max-width: 1129px) {
+  .digital-healthcare .overall-header .title {
+    width: 100%;
+    padding: 0.25em;
+    font-size: 0.9em;
+    text-align: center;
+  }
+}
+
+/* ===== HEADER QUOTE ===== */
+.digital-healthcare .header-quote {
+  font-size: 0.45em;
+  line-height: 1.5em;
+  color: #0b5e94;
+  font-weight: 200;
+  margin-top: 10px;
+}
+
+@media only screen and (max-width: 1129px) {
+  .digital-healthcare .header-quote {
+    color: white;
+    font-size: 0.5em;
+  }
+}
+
+/* ===== SMALL SCREEN COVER ===== */
+.digital-healthcare .small-screen-cover {
+  display: none;
+}
+
+@media only screen and (max-width: 1129px) {
+  .digital-healthcare .small-screen-cover {
+    display: block;
+  }
+}
+
+.digital-healthcare .small-screen-cover .desktop-cover {
+  display: none;
+  width: 100%;
+}
+
+@media only screen and (max-width: 1129px) {
+  .digital-healthcare .small-screen-cover .desktop-cover {
+    display: block;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .small-screen-cover .desktop-cover {
+    display: none;
+  }
+}
+
+.digital-healthcare .small-screen-cover .mobile-cover {
+  display: none;
+  width: 100%;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .small-screen-cover .mobile-cover {
+    display: block;
+  }
+}
+
+/* ===== NAV WRAPPER ===== */
+.digital-healthcare .nav-wrapper {
+  background-color: rgba(11, 94, 148, 0.95);
+  z-index: 100;
+  width: 100%;
+  border-bottom: 0;
+  font-size: 1em;
+  padding: 0 15px;
+  min-height: 0;
+  height: auto;
+  text-align: center;
+}
+
+@media only screen and (max-width: 1130px) {
+  .digital-healthcare .nav-wrapper {
+    padding: 0 31px;
+    padding-right: 10px;
+  }
+}
+
+@media only screen and (max-width: 750px) {
+  .digital-healthcare .nav-wrapper {
+    padding: 0 25px;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .nav-wrapper {
+    display: none;
+  }
+}
+
+.digital-healthcare .nav-wrapper a {
+  display: inline-block;
+  padding-top: 10px;
+  padding-bottom: 8px;
+  color: white;
+  font-weight: 100;
+  margin-right: 10px;
+  margin-left: 10px;
+  transition: 300ms ease-in-out;
+  text-decoration: none;
+  font-size: 1em;
+}
+
+.digital-healthcare .nav-wrapper a:hover,
+.digital-healthcare .nav-wrapper a.active {
+  color: rgba(255, 255, 255, 0.65);
+  text-decoration: underline;
+}
+
+/* ===== ROW / ITEMS ===== */
+.digital-healthcare .row {
+  margin: 0 auto;
+  max-width: 1080px;
+  width: 90%;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .row {
+    width: 100%;
+  }
+}
+
+.digital-healthcare .item {
+  min-height: 400px;
+  margin-bottom: 20%;
+}
+
+/* ===== ITEM WRAPPER ===== */
+.digital-healthcare .item-img-container {
+  max-width: 430px;
+}
+
+.digital-healthcare .item-img-container.right {
+  float: right;
+  margin: 0 10px 0 40px;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-img-container.right {
+    margin: 8px 1% 8px 1%;
+    float: none;
+  }
+}
+
+.digital-healthcare .item-img-container.left {
+  float: left;
+  margin: 0 40px 0 10px;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-img-container.left {
+    margin: 8px 1% 8px 1%;
+    float: none;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-img-container {
+    max-width: 100%;
+  }
+}
+
+.digital-healthcare .item-img-container img {
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.digital-healthcare .caption {
+  padding-top: 5px;
+  font-size: 1.1rem;
+  line-height: 1.42rem;
+  color: #aaaaaa;
+  margin-left: 5%;
+}
+
+.digital-healthcare .caption a {
+  color: #6195cf;
+  text-decoration: none;
+}
+
+.digital-healthcare .caption a:hover {
+  text-decoration: underline;
+}
+
+/* Desktop vs mobile images */
+.digital-healthcare .computer-image {
+  display: none;
+}
+
+@media only screen and (min-width: 769px) {
+  .digital-healthcare .computer-image {
+    display: inherit;
+  }
+}
+
+.digital-healthcare .phone-image {
+  display: none;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .phone-image {
+    display: inherit;
+    margin: 10px 0 20px 0;
+  }
+}
+
+/* ===== ITEM CONTENT ===== */
+.digital-healthcare .item-content {
+  min-height: 300px;
+  position: relative;
+  font-size: 1.5em;
+  line-height: 1.5em;
+  z-index: 1;
+}
+
+.digital-healthcare .item-content.left {
+  text-align: right;
+}
+
+@media only screen and (max-width: 1240px) {
+  .digital-healthcare .item-content.left {
+    text-align: left;
+  }
+}
+
+/* Section headers */
+.digital-healthcare .item-content .section-header {
+  color: black;
+  font-size: 2.2em;
+  line-height: 1em;
+  margin-bottom: 10px;
+  font-family: 'adobe-jenson-pro', Georgia, 'Times New Roman', Times, serif;
+}
+
+.digital-healthcare .item-content .section-header.left {
+  text-align: right;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-content .section-header.left {
+    text-align: center;
+  }
+}
+
+.digital-healthcare .item-content .section-header.right {
+  text-align: left;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-content .section-header.right {
+    text-align: center;
+  }
+}
+
+@media only screen and (max-width: 960px) {
+  .digital-healthcare .item-content .section-header {
+    font-size: 1.8em;
+    line-height: 1.2em;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-content .section-header {
+    width: 90%;
+    margin: 0 auto 3px auto;
+    font-size: 1.15em;
+    line-height: 1.2em;
+    text-align: center;
+  }
+}
+
+/* Intro quote */
+.digital-healthcare .intro-quote {
+  color: #849caa;
+  font-size: 1.5em;
+  font-weight: 200;
+  margin-bottom: 20px;
+  margin-top: 10px;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .intro-quote {
+    width: 90%;
+    margin: auto;
+    text-align: center;
+    font-size: 0.9em;
+    line-height: 1.25em;
+  }
+}
+
+/* Item text */
+.digital-healthcare .item-text {
+  font-size: 1em;
+  line-height: 1.5em;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .item-text {
+    font-size: 0.75em;
+    line-height: 1.5em;
+    width: 90%;
+    margin: 0 auto;
+  }
+}
+
+.digital-healthcare .item-text a {
+  color: #6195cf;
+  text-decoration: none;
+}
+
+.digital-healthcare .item-text a:hover {
+  text-decoration: underline;
+}
+
+/* ===== CREDITS ===== */
+.digital-healthcare .credit-wrapper {
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 60px 0;
+  border-top: 3px solid rgba(0, 0, 0, 0.4);
+}
+
+.digital-healthcare .credits {
+  margin: 0 auto;
+  max-width: 645px;
+  width: 60%;
+  overflow: hidden;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .credits {
+    width: 100%;
+  }
+}
+
+.digital-healthcare .credits .contributors-box {
+  padding: 2em;
+  border: 3px solid #0b5e94;
+}
+
+.digital-healthcare .credits .contributors-box h3 {
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1em;
+  color: #888;
+  margin-bottom: 0;
+  padding-bottom: 0.5em;
+  font-family: 'adobe-jenson-pro', Georgia, 'Times New Roman', Times, serif;
+}
+
+.digital-healthcare .credits .contributors-box p {
+  font-size: 34px;
+  line-height: 1em;
+  margin-bottom: 0;
+  font-family: 'adobe-jenson-pro', Georgia, 'Times New Roman', Times, serif;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .credits .contributors-box p {
+    font-size: 28px;
+  }
+}
+
+.digital-healthcare .credits .contributors-box small {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.digital-healthcare .credits .contributors-box small a {
+  color: #aaaaaa;
+  text-decoration: none;
+}
+
+.digital-healthcare .credits .contributors-box small a:hover {
+  color: #e0e0e0;
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .credits .contributors-box small a {
+    font-size: 16px;
+  }
+}
+
+.digital-healthcare .credits .contributors-box hr {
+  width: 2em;
+  margin: 1.5em 0;
+  border-width: 5px;
+  border-color: #0b5e94;
+  border-style: solid;
+}
+
+.digital-healthcare .credits .contributor {
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+}
+
+.digital-healthcare .credits .contributor .contributor-image {
+  width: 20%;
+  flex-shrink: 0;
+}
+
+.digital-healthcare .credits .contributor .contributor-image img {
+  width: 100%;
+  height: auto;
+}
+
+.digital-healthcare .credits .contributor .contributor-info {
+  padding-left: 1em;
+  width: 80%;
+}
+
+@media only screen and (max-width: 978px) {
+  .digital-healthcare .credits {
+    padding-left: 3em;
+    padding-right: 3em;
+  }
+
+  .digital-healthcare .credits .contributor {
+    margin-bottom: 1.5em;
+  }
+}
