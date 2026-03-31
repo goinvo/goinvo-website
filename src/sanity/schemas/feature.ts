@@ -27,6 +27,23 @@ export default defineType({
       options: { hotspot: true },
     }),
     defineField({
+      name: 'heroPosition',
+      title: 'Hero Image Position',
+      type: 'string',
+      description: 'Where the focal point of the hero image is. Controls cropping on cards and mobile. Default is "center".',
+      options: {
+        list: [
+          { title: 'Center (default)', value: 'center' },
+          { title: 'Top center', value: 'top center' },
+          { title: 'Bottom center', value: 'bottom center' },
+          { title: 'Center top', value: 'center top' },
+          { title: 'Left center', value: 'left center' },
+          { title: 'Right center', value: 'right center' },
+        ],
+      },
+      initialValue: 'center',
+    }),
+    defineField({
       name: 'fullImageCover',
       title: 'Full Image Cover',
       type: 'boolean',
