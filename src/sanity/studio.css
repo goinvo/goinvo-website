@@ -1,0 +1,16 @@
+/**
+ * GoInvo Sanity Studio custom styles.
+ *
+ * Feedback: "possible to make the content container when editing a little bigger?"
+ * This widens the form panel and the portable text editor.
+ */
+
+/* Widen the document form panel */
+[data-testid="document-panel-scroller"] {
+  max-width: 960px !important;
+}
+
+/* Widen the portable text editor area */
+[data-testid="pt-editor"] {
+  max-width: 100% !important;
+}

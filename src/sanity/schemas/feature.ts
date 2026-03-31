@@ -23,7 +23,7 @@ export default defineType({
       name: 'image',
       title: 'Image',
       type: 'image',
-      description: 'Hero/card image. Recommended: 1600×900 px.',
+      description: 'Hero/card image. Recommended: 1600×900 px. Use the hotspot (crosshair) to mark the focal point — when the image is cropped for cards or mobile, this area stays visible.',
       options: { hotspot: true },
     }),
     defineField({
