@@ -44,30 +44,16 @@ export default function BathroomToHealthroomPage() {
   return (
     <div className="healthroom-legacy">
       <SetCaseStudyHero
-        image={legacyImage('bathroom-header.jpg')}
+        image="https://www.goinvo.com/old/videos/dfl/header.jpg"
       />
 
       <article className="design-for-life" id="feature-article">
-        {/* ============================================================
-            Header
-        ============================================================ */}
-        <header
-          className="bathroom-header"
-          style={{
-            backgroundImage: `url(${legacyImage('bathroom-header.jpg')})`,
-          }}
-        >
-          <div className="header-contents">
-            <h1>From Bathroom to Healthroom</h1>
-            <h2 className="byline">
-              How magical technology will revolutionize human health
-            </h2>
-            <p className="author">By Juhan Sonin</p>
-            <p className="email">
-              <a href="mailto:juhan@goinvo.com">juhan@goinvo.com</a>
-            </p>
-          </div>
-        </header>
+        {/* Title section — cover image is now the hero above */}
+        <div className="max-width max-width-md content-padding mx-auto py-8">
+          <h1 className="header-xl mb-2">From Bathroom to Healthroom</h1>
+          <p className="font-serif text-lg text-gray mb-1">How magical technology will revolutionize human health</p>
+          <p className="text-gray text-sm">By Juhan Sonin · <a href="mailto:juhan@goinvo.com" className="text-primary">juhan@goinvo.com</a></p>
+        </div>
 
         {/* ============================================================
             Section 1 — Bloodletting to bloodless
