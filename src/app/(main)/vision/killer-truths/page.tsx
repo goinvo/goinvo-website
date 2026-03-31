@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import './killer-truths.css'
 
 export const metadata: Metadata = {
@@ -25,8 +24,7 @@ export const metadata: Metadata = {
 
 export default function KillerTruthsPage() {
   return (
-    <div className="killer-truths">
-      <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/killer-truths/killer_truths_title.png" />
+    <div className="killer-truths pt-[var(--spacing-header-height)]">
 
       {/* Hero */}
       <header className="kt-hero">
