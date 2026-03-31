@@ -139,6 +139,68 @@ function fixH3ToH4(content, gatsbyH4Texts) {
   return { content: result, fixed }
 }
 
+// ── Fix 3: Detect images with wrong size ──────────────────────────────
+// Small images that should be medium/large based on their Sanity asset dimensions
+
+async function fixImageSizes(content) {
+  let fixed = 0
+  // Images with size='full' or 'default' that are actually small illustrations
+  // should be 'medium' or 'large' — but we can't determine this without
+  // fetching the asset, so skip for now (needs Puppeteer comparison)
+  return { content, fixed }
+}
+
+// ── Fix 4: Detect missing authors/contributors ───────────────────────
+
+async function checkAuthors(slug) {
+  const feature = await client.fetch(
+    `*[_type == "feature" && slug.current == $slug][0]{
+      "authorCount": count(authors),
+      "contribCount": count(contributors)
+    }`,
+    { slug }
+  )
+  if (!feature) return []
+  const issues = []
+  if (feature.authorCount === 0) issues.push('no authors')
+  return issues
+}
+
+// ── Fix 5: Detect empty references blocks ────────────────────────────
+
+function checkReferences(content) {
+  const issues = []
+  const refs = content.filter(b => b._type === 'references')
+  for (const ref of refs) {
+    if (!ref.items || ref.items.length === 0) {
+      issues.push('empty references block')
+    }
+  }
+  return issues
+}
+
+// ── Fix 6: Detect consecutive duplicate blocks ───────────────────────
+
+function fixConsecutiveDuplicates(content) {
+  let fixed = 0
+  const result = []
+  for (let i = 0; i < content.length; i++) {
+    const current = content[i]
+    const next = content[i + 1]
+    // Skip duplicate text blocks
+    if (current._type === 'block' && next?._type === 'block') {
+      const curText = getBlockText(current)
+      const nextText = getBlockText(next)
+      if (curText && curText === nextText && curText.length > 20) {
+        fixed++
+        continue // Skip the duplicate
+      }
+    }
+    result.push(current)
+  }
+  return { content: result, fixed }
+}
+
 // ── Main ──────────────────────────────────────────────────────────────
 
 async function fixPage(slug) {
@@ -155,16 +217,28 @@ async function fixPage(slug) {
   const colFix = fixImageTextColumns(content)
   if (colFix.fixed > 0) {
     content = colFix.content
-    fixes.push(`${colFix.fixed} image+text → 2-column`)
+    fixes.push(`${colFix.fixed} image+text → columns`)
   }
 
-  if (fixes.length === 0) return null
+  // Fix 6: Remove consecutive duplicate blocks
+  const dupFix = fixConsecutiveDuplicates(content)
+  if (dupFix.fixed > 0) {
+    content = dupFix.content
+    fixes.push(`${dupFix.fixed} duplicate blocks removed`)
+  }
 
-  if (WRITE) {
+  // Checks (reported but not auto-fixed)
+  const authorIssues = await checkAuthors(slug)
+  const refIssues = checkReferences(content)
+  const warnings = [...authorIssues, ...refIssues]
+
+  if (fixes.length === 0 && warnings.length === 0) return null
+
+  if (WRITE && fixes.length > 0) {
     await client.patch(feature._id).set({ content }).commit()
   }
 
-  return { slug, title: feature.title, fixes }
+  return { slug, title: feature.title, fixes, warnings }
 }
 
 async function main() {
@@ -182,15 +256,20 @@ async function main() {
   console.log(`Scanning ${slugs.length} pages...\n`)
 
   let totalFixes = 0
+  let totalWarnings = 0
   for (const slug of slugs) {
     const result = await fixPage(slug)
     if (result) {
-      console.log(`  ${result.slug}: ${result.fixes.join(', ')}`)
+      const parts = []
+      if (result.fixes.length > 0) parts.push(result.fixes.join(', '))
+      if (result.warnings?.length > 0) parts.push('⚠ ' + result.warnings.join(', '))
+      console.log(`  ${result.slug}: ${parts.join(' | ')}`)
       totalFixes += result.fixes.length
+      totalWarnings += (result.warnings?.length || 0)
     }
   }
 
-  console.log(`\nTotal: ${totalFixes} fixes across ${slugs.length} pages`)
+  console.log(`\nTotal: ${totalFixes} fixes, ${totalWarnings} warnings across ${slugs.length} pages`)
   if (!WRITE && totalFixes > 0) console.log('Run with --write to apply.')
 }
 
