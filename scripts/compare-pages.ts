@@ -392,6 +392,8 @@ interface PageElement {
 interface PageAnalysis {
   headings: PageElement[]
   images: number
+  contentImages?: number
+  authorImages?: number
   videos: number
   iframes: number
   uls: number
@@ -940,9 +942,19 @@ function analyzeHtml(html: string): PageAnalysis {
     videoWidthClasses.push(vm[1])
   }
 
+  // Split images into content vs author/contributor
+  const allImgs = (content.match(/<img\b/gi) || []).length
+  // Author section images: inside a section with "Author" heading or contributor grid
+  // Heuristic: count imgs that appear after the last content section and before newsletter
+  const authorSectionMatch = content.match(/(?:Authors?|Contributors?)<\/h[23]>[\s\S]*$/i)
+  const authorImgs = authorSectionMatch ? (authorSectionMatch[0].match(/<img\b/gi) || []).length : 0
+  const contentImgs = allImgs - authorImgs
+
   return {
     headings,
-    images: (content.match(/<img\b/gi) || []).length,
+    images: allImgs,
+    contentImages: contentImgs,
+    authorImages: authorImgs,
     videos: (content.match(/<video\b/gi) || []).length,
     iframes: (content.match(/<iframe\b/gi) || []).length,
     uls: (content.match(/<ul\b/gi) || []).length,
@@ -1100,15 +1112,23 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
   const adjustedNextjsIframes = videoIframeSwap ? 0 : nextjs.iframes
 
   // ---- IMAGE COUNT THRESHOLD ----
-  // Flag images as HIGH only when Next.js has fewer than 50% of Gatsby's images.
-  // If Next.js has at least half, it's low severity (template differences account for the rest).
-  const imgDiff = Math.abs(gatsby.images - nextjs.images)
-  if (imgDiff >= 5) {
-    // Only high if Next.js has less than 50% of Gatsby's count AND page is not an interactive override
-    const isInteractive = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
-    const imgSeverity: 'high' | 'low' = !isInteractive && nextjs.images < gatsby.images * 0.5 ? 'high' : 'low'
-    const dir = nextjs.images > gatsby.images ? 'MORE' : 'FEWER'
-    issues.push({ severity: imgSeverity, category: 'COUNT', message: `images: Gatsby=${gatsby.images} Next.js=${nextjs.images} (${dir} by ${imgDiff})` })
+  // Compare content images separately from author/contributor photos
+  const contentImgDiff = Math.abs((gatsby.contentImages ?? gatsby.images) - (nextjs.contentImages ?? nextjs.images))
+  const authorImgDiff = Math.abs((gatsby.authorImages ?? 0) - (nextjs.authorImages ?? 0))
+  const isInteractive = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
+
+  if (contentImgDiff >= 5) {
+    const gContent = gatsby.contentImages ?? gatsby.images
+    const nContent = nextjs.contentImages ?? nextjs.images
+    const imgSeverity: 'high' | 'low' = !isInteractive && nContent < gContent * 0.5 ? 'high' : 'low'
+    const dir = nContent > gContent ? 'MORE' : 'FEWER'
+    issues.push({ severity: imgSeverity, category: 'COUNT', message: `content images: Gatsby=${gContent} Next.js=${nContent} (${dir} by ${contentImgDiff})` })
+  }
+  if (authorImgDiff >= 3) {
+    const gAuthor = gatsby.authorImages ?? 0
+    const nAuthor = nextjs.authorImages ?? 0
+    const dir = nAuthor > gAuthor ? 'MORE' : 'FEWER'
+    issues.push({ severity: 'low', category: 'COUNT', message: `author/contributor images: Gatsby=${gAuthor} Next.js=${nAuthor} (${dir} by ${authorImgDiff})` })
   }
 
   const checks: [string, number, number, number, 'critical' | 'high' | 'medium'][] = [
