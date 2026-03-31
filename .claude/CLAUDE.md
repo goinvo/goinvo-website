@@ -76,6 +76,21 @@ understanding-ebola, understanding-zika
 
 ## Critical Rules
 
+### NEVER replace entire code blocks when adding variants
+When adding new variants, options, cases, or entries to existing code structures (switch statements, if/else chains, lookup objects, config maps, component variants), **NEVER rewrite the entire block**. Only ADD the new code alongside existing code. Replacing the full block removes existing working variants and causes regressions. This is the single most important rule — violating it destroys existing functionality.
+
+**Example of WRONG approach:**
+```
+// Replacing the entire logoVariants object to add 'ai':
+const logoVariants = { ai: [...], default: [...] }  // ← LOST enterprise, government, etc.
+```
+
+**Example of CORRECT approach:**
+```
+// Adding 'ai' to the existing object:
+const logoVariants = { default: [...], enterprise: [...], government: [...], ai: [...] }
+```
+
 ### ALWAYS visually compare against the live Gatsby site before assuming anything is correct
 Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby page (goinvo.com/vision/{slug}/) AND the Next.js page (localhost:3000/vision/{slug}) side by side and visually compare. Check:
 - Section order — varies by article, verify against the Gatsby source/live site for each page
