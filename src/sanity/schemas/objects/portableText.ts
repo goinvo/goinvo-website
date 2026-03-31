@@ -242,9 +242,10 @@ export default defineType({
       ],
       preview: {
         select: { text: 'text', author: 'author' },
-        prepare({ text, author }) {
+        prepare({ text, author }: { text?: string; author?: string }) {
+          const quoteText = typeof text === 'string' ? text : String(text || '')
           return {
-            title: text ? `"${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"` : 'Empty quote',
+            title: quoteText.length > 0 ? `"${quoteText.substring(0, 80)}${quoteText.length > 80 ? '...' : ''}"` : 'Empty quote',
             subtitle: author ? `— ${author}` : undefined,
           }
         },
