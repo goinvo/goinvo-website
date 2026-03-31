@@ -1,4 +1,5 @@
 import { defineType, defineArrayMember } from 'sanity'
+import { SectionTitleStyle, CalloutStyle } from '../../components/BlockStyleComponents'
 
 export default defineType({
   title: 'Portable Text',
@@ -10,11 +11,19 @@ export default defineType({
       styles: [
         { title: 'Normal', value: 'normal' },
         { title: 'H2', value: 'h2' },
-        { title: 'H2 (centered)', value: 'sectionTitle' },
+        {
+          title: 'H2 (centered)',
+          value: 'sectionTitle',
+          component: SectionTitleStyle,
+        },
         { title: 'H3', value: 'h3' },
         { title: 'H4', value: 'h4' },
         { title: 'Quote', value: 'blockquote' },
-        { title: 'Callout', value: 'callout' },
+        {
+          title: 'Callout',
+          value: 'callout',
+          component: CalloutStyle,
+        },
       ],
       marks: {
         decorators: [
