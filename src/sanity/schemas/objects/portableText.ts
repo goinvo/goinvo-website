@@ -1,9 +1,13 @@
 import { defineType, defineArrayMember } from 'sanity'
+import { PortableTextInput } from '../../components/PortableTextInput'
 
 export default defineType({
   title: 'Portable Text',
   name: 'portableText',
   type: 'array',
+  components: {
+    input: PortableTextInput,
+  },
   of: [
     defineArrayMember({
       type: 'block',
