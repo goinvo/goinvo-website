@@ -133,6 +133,7 @@ export const featureBySlugQuery = groq`
     title,
     slug,
     image,
+    heroPosition,
     fullImageCover,
     video,
     description,

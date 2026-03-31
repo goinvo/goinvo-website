@@ -73,6 +73,7 @@ export interface Feature {
   title: string
   slug: { current: string }
   image?: SanityImage
+  heroPosition?: string
   fullImageCover?: boolean
   video?: string
   description?: string

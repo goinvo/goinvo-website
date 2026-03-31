@@ -11,15 +11,18 @@ import { useHero } from '@/context/HeroContext'
 export function SetCaseStudyHero({
   image,
   expandAfterSlide,
+  bgPosition,
 }: {
   image: string
   expandAfterSlide?: boolean
+  /** CSS object-position value (e.g. "top center", "bottom center", "center") */
+  bgPosition?: string
 }) {
   const { setCaseStudyHero } = useHero()
 
   useEffect(() => {
-    setCaseStudyHero(image, undefined, expandAfterSlide)
-  }, [image, expandAfterSlide, setCaseStudyHero])
+    setCaseStudyHero(image, bgPosition, expandAfterSlide)
+  }, [image, bgPosition, expandAfterSlide, setCaseStudyHero])
 
   return null
 }

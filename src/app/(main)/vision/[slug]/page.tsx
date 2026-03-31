@@ -78,7 +78,7 @@ export default async function VisionFeaturePage({ params }: Props) {
     <div>
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
       {!feature.fullImageCover && heroImageUrl && (
-        <SetCaseStudyHero image={heroImageUrl} />
+        <SetCaseStudyHero image={heroImageUrl} bgPosition={feature.heroPosition} />
       )}
 
       {/* Full image cover — render inline so the full image shows without cropping */}
