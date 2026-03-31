@@ -36,7 +36,7 @@ export default defineType({
       name: 'image',
       title: 'Hero Image',
       type: 'image',
-      description: 'Primary image used on the card and page hero. Recommended: 1600×900 px.',
+      description: 'Primary image used on the card and page hero. Recommended: 1600×900 px. The hotspot (crosshair) marks the focal point that stays visible when cropped for cards or mobile.',
       options: { hotspot: true },
     }),
     defineField({

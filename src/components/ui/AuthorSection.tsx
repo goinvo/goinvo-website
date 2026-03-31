@@ -58,7 +58,7 @@ export function AuthorSection({ authors, heading }: AuthorSectionProps) {
   const primary = resolved[0]
   const contributors = resolved.slice(1)
   const primaryImage = primary.member.image
-    ? urlForImage(primary.member.image).width(600).url()
+    ? urlForImage(primary.member.image).width(720).height(480).url()
     : null
   const primaryBio = primary.member.bio ? extractText(primary.member.bio) : ''
 
@@ -71,7 +71,7 @@ export function AuthorSection({ authors, heading }: AuthorSectionProps) {
         <h2 className="header-lg text-center mt-8 mb-6">Contributors</h2>
         {resolved.map((r) => {
           const img = r.member.image
-            ? urlForImage(r.member.image).width(600).url()
+            ? urlForImage(r.member.image).width(720).height(480).url()
             : null
           const bio = r.member.bio ? extractText(r.member.bio) : ''
           return (

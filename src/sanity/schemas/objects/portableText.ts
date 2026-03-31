@@ -225,6 +225,15 @@ export default defineType({
           options: { list: [{ title: 'References', value: 'references' }, { title: 'Methodology', value: 'methodology' }] },
         },
       ],
+      preview: {
+        select: { text: 'text', author: 'author' },
+        prepare({ text, author }) {
+          return {
+            title: text ? `"${text.substring(0, 60)}${text.length > 60 ? '...' : ''}"` : 'Empty quote',
+            subtitle: author ? `— ${author}` : undefined,
+          }
+        },
+      },
     }),
     defineArrayMember({
       name: 'results',

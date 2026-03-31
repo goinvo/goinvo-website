@@ -5,6 +5,7 @@ import { schemaTypes } from './schemas'
 import { apiVersion, dataset, projectId } from './env'
 import { gettingStartedPlugin } from './tools/gettingStarted'
 import { feedbackPlugin } from './tools/feedbackTool'
+import './studio.css'
 
 export default defineConfig({
   name: 'goinvo',
