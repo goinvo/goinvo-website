@@ -114,7 +114,7 @@ export default function PatientEngagementPage() {
       <section className="py-8">
         <div className="max-width content-padding text-center">
           <h3 className="font-semibold mb-4">Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</h3>
-          <ClientLogos />
+          <ClientLogos variant="patient-engagement" />
         </div>
       </section>
 
