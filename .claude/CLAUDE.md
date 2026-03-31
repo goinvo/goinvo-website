@@ -29,13 +29,23 @@ These pages are **not** in the Gatsby source repo. They are standalone HTML page
 | print-big | print-big | 40KB | 3KB | Clean |
 | redesign-democracy | redesign-democracy | 101KB | 22KB | Sanity content, heading/image gaps |
 
+### Multi-page features (have separate part pages on Gatsby)
+- **disrupt**: 6 parts (`/features/disrupt/`, `part-2.html` through `part-6.html`)
+  - Each part has its own hero image and color theme
+  - Routes: `/vision/disrupt`, `/vision/disrupt/part-2`, etc.
+- **care-plans**: 3 parts (`/features/careplans/`, `part-2.html`, `part-3.html`)
+  - Part 2: "The Current Landscape" (166KB)
+  - Part 3: "The Future" (73KB)
+  - Routes: `/vision/care-plans`, `/vision/care-plans/part-2`, `/vision/care-plans/part-3`
+
 ### Porting approach
 1. Download the legacy HTML + CSS from `goinvo.com/old/`
-2. Read the Gatsby source HTML to understand layout structure
+2. Read the legacy HTML to understand layout structure
 3. Translate section by section into a Next.js `page.tsx` static override
-4. Port custom CSS to Tailwind classes or scoped `<style>` blocks
-5. Verify with Puppeteer side-by-side screenshots at multiple scroll positions
-6. Images: use `cloudfrontImage()` for CDN paths or upload to Sanity
+4. Port custom CSS to scoped CSS files alongside the page
+5. Use `https://www.goinvo.com/old/images/features/<slug>/` for image URLs (NOT cloudfrontImage — CloudFront returns 404 for `/old/` paths)
+6. Verify with Puppeteer side-by-side screenshots at multiple scroll positions
+7. Check for multi-page structure (parts) — create separate routes for each part
 
 ### Also pending: Studio UX fixes
 - Quote block preview only shows first letter
