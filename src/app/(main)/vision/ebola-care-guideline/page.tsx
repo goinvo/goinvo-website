@@ -15,19 +15,14 @@ export default function EbolaCareGuidelinePage() {
       <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/ebola-care-guideline/haz_zoom_bg.png" />
 
       <div className="bg-white">
-        {/* Hero Header */}
-        <header className="ebola-care-hero">
-          <div className="headline">
-            <div className="head-container">
-              <hr />
-              <h1>Ebola Care Guideline</h1>
-              <h2>An Illustrated Process on Personal Protective Equipment</h2>
-            </div>
-          </div>
-        </header>
+        {/* Title — cover image is the hero above */}
+        <div className="max-w-[1238px] mx-auto pt-8 px-4">
+          <h1 className="header-xl mb-2">Ebola Care Guideline</h1>
+          <p className="font-serif text-lg text-gray">An Illustrated Process on Personal Protective Equipment</p>
+        </div>
 
         {/* Intro */}
-        <section className="max-w-[1238px] mx-auto mt-[60px] px-4 mb-8">
+        <section className="max-w-[1238px] mx-auto mt-6 px-4 mb-8">
           <p className="leading-[1.4em] text-[#58504a] mb-4">
             The recommended Personal Protective Equipment (PPE) that healthcare workers wear in Ebola treatment areas&mdash;waterproof apron, surgical gown, surgical cap, respirator, face shield, boots, and two layers of gloves&mdash;significantly reduces the body&apos;s normal way of getting rid of heat by sweating. The PPE holds excess heat and moisture inside, making the worker&apos;s body even hotter. In addition, the increased physical effort to perform duties while carrying the extra weight of the PPE can lead to the healthcare worker getting hotter faster. Wearing PPE increases the risk for heat-related illnesses.
           </p>
@@ -63,7 +58,7 @@ export default function EbolaCareGuidelinePage() {
           <img
             src="https://www.goinvo.com/old/images/team_photos/xinyu_liu.jpg"
             alt="Xinyu Liu"
-            className="w-full max-w-[200px] mb-4"
+            className="w-full mb-4"
           />
           <div className="author-content">
             <h3 className="font-serif text-lg font-light text-[#888] mb-1">Author</h3>
