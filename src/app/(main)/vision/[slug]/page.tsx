@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
@@ -65,18 +66,33 @@ export default async function VisionFeaturePage({ params }: Props) {
   }
 
   const heroImageUrl = feature.image
-    ? feature.fullImageCover
-      ? urlForImage(feature.image).width(1920).url()  // Full aspect ratio, no crop
-      : urlForImage(feature.image).width(1600).height(900).url()
+    ? urlForImage(feature.image).width(1600).height(900).url()
+    : null
+
+  // Full image cover: show the complete image as page content, no hero crop
+  const fullCoverUrl = feature.fullImageCover && feature.image
+    ? urlForImage(feature.image).width(1920).url()
     : null
 
   return (
     <div>
-      {heroImageUrl && (
-        <SetCaseStudyHero
-          image={heroImageUrl}
-          expandAfterSlide={feature.fullImageCover}
-        />
+      {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
+      {!feature.fullImageCover && heroImageUrl && (
+        <SetCaseStudyHero image={heroImageUrl} />
+      )}
+
+      {/* Full image cover — render inline so the full image shows without cropping */}
+      {fullCoverUrl && (
+        <div className="pt-[var(--spacing-header-height)]">
+          <Image
+            src={fullCoverUrl}
+            alt={feature.title}
+            width={1920}
+            height={992}
+            className="w-full h-auto"
+            priority
+          />
+        </div>
       )}
 
       {/* Title + meta — hidden for fullImageCover pages where the image IS the content */}

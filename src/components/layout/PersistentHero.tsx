@@ -94,14 +94,12 @@ function MultiImageContent({
 
 export function PersistentHero() {
   const { state, slideDone } = useHero()
-  const { config, displayImage, bgPosition, direction, imageKey, pathname, phase } = state
+  const { config, displayImage, bgPosition, direction, imageKey, pathname } = state
   const [expanded, setExpanded] = useState(false)
   const expandTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
   // Height (in px) that shows the full image at the container's current width
   const [fullImageHeight, setFullImageHeight] = useState<number | null>(null)
-  // Ref to the loaded image element for re-measuring after config arrives
-  const loadedImgRef = useRef<HTMLImageElement | null>(null)
 
   const isMultiImage = !!(config?.desktopImages && config.desktopImages.length > 0)
 
@@ -116,38 +114,9 @@ export function PersistentHero() {
   useEffect(() => {
     setExpanded(false)
     setFullImageHeight(null)
-    loadedImgRef.current = null
     clearTimeout(expandTimerRef.current)
     expandTimerRef.current = undefined
   }, [pathname])
-
-  // Compute full image height from a loaded image element
-  function computeFullHeight(img: HTMLImageElement) {
-    if (!containerRef.current || !img.naturalWidth) return
-    const containerWidth = containerRef.current.clientWidth
-    const imageCount = config?.desktopImages?.length ?? 1
-    const effectiveWidth = containerWidth / imageCount
-    const aspect = img.naturalWidth / img.naturalHeight
-    setFullImageHeight(Math.round(effectiveWidth / aspect))
-  }
-
-  // When expandAfterSlide becomes true and we already have a loaded image,
-  // re-measure (handles race condition where image loads before config arrives)
-  useEffect(() => {
-    if (config?.expandAfterSlide && loadedImgRef.current && !fullImageHeight) {
-      computeFullHeight(loadedImgRef.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config?.expandAfterSlide])
-
-  // Expand when conditions are met: idle phase, expandAfterSlide, and height computed
-  useEffect(() => {
-    if (phase === 'idle' && config?.expandAfterSlide && fullImageHeight && !expanded) {
-      expandTimerRef.current = setTimeout(() => {
-        setExpanded(true)
-      }, 300)
-    }
-  }, [phase, config?.expandAfterSlide, fullImageHeight, expanded])
 
   function handleSlideComplete() {
     slideDone()
@@ -160,13 +129,16 @@ export function PersistentHero() {
     }
   }
 
-  // Measure natural image dimensions on load. Always stores the ref so we
-  // can re-measure later if expandAfterSlide arrives after the image loads.
+  // Measure natural image dimensions to compute the exact expanded height.
+  // For multi-image heroes, each image occupies 1/N of the container width.
   function handleImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
-    const img = e.currentTarget
-    loadedImgRef.current = img
-    if (containerRef.current && shouldExpandRef.current) {
-      computeFullHeight(img)
+    if (config?.expandAfterSlide && containerRef.current) {
+      const img = e.currentTarget
+      const containerWidth = containerRef.current.clientWidth
+      const imageCount = config.desktopImages?.length ?? 1
+      const effectiveWidth = containerWidth / imageCount
+      const aspect = img.naturalWidth / img.naturalHeight
+      setFullImageHeight(Math.round(effectiveWidth / aspect))
     }
   }
 
@@ -187,11 +159,8 @@ export function PersistentHero() {
           <div
             ref={containerRef}
             className={cn(
-              'overflow-hidden relative',
-              config.expandAfterSlide
-                ? '' // Full-height: no fixed height, sized by content/aspect-ratio
-                : 'h-[220px] lg:h-[450px]', // Standard: fixed crop heights
-              !config.expandAfterSlide && 'transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
+              'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
+              'h-[220px] lg:h-[450px]',
             )}
             style={{
               viewTransitionName: 'hero-image',
@@ -212,24 +181,12 @@ export function PersistentHero() {
                 exit="exit"
                 transition={{ duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
                 onAnimationComplete={handleSlideComplete}
-                className={config.expandAfterSlide && !isMultiImage ? 'relative' : 'absolute inset-0'}
+                className="absolute inset-0"
               >
                 {isMultiImage ? (
                   <MultiImageContent
                     config={config}
                     onImageLoad={handleImageLoad}
-                  />
-                ) : config.expandAfterSlide ? (
-                  /* Full image cover: render as block image, not fill, so container sizes naturally */
-                  <Image
-                    src={cloudfrontImage(displayImage)}
-                    alt=""
-                    width={1920}
-                    height={0}
-                    className="w-full h-auto"
-                    onLoad={handleImageLoad}
-                    priority
-                    unoptimized
                   />
                 ) : (
                   <Image
