@@ -403,7 +403,7 @@ export default function UnderstandingZikaPage() {
             </li>
             <li>
               <div className="timeline-image">
-                <img alt="" className="scale-with-grid" src="#" />
+                <img alt="Map showing spread of Zika cases" className="scale-with-grid" src={`${IMG}/map.svg`} />
               </div>
               <span className="year">2 Feb 2016</span>
               <div className="description">
