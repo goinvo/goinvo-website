@@ -1,11 +1,8 @@
 /**
  * GoInvo Sanity Studio custom styles.
- *
- * Feedback: "possible to make the content container when editing a little bigger?"
- * This widens the form panel and the portable text editor.
  */
 
-/* Widen the document form panel */
+/* Widen the document form panel (feedback: "content container too narrow") */
 [data-testid="document-panel-scroller"] {
   max-width: 960px !important;
 }
@@ -13,4 +10,15 @@
 /* Widen the portable text editor area */
 [data-testid="pt-editor"] {
   max-width: 100% !important;
+}
+
+/* Make insertion points between blocks more visible
+ * (feedback: "can't get a space between components to add more text") */
+[data-testid="pt-editor"] [data-testid="block-extras"] {
+  min-height: 8px;
+}
+
+/* Add visible gap between adjacent custom blocks */
+[data-testid="pt-editor"] [data-testid="pt-block"] + [data-testid="pt-block"] {
+  margin-top: 4px;
 }

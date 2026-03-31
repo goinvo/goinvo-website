@@ -1,13 +1,9 @@
 import { defineType, defineArrayMember } from 'sanity'
-import { PortableTextInput } from '../../components/PortableTextInput'
 
 export default defineType({
   title: 'Portable Text',
   name: 'portableText',
   type: 'array',
-  components: {
-    input: PortableTextInput,
-  },
   of: [
     defineArrayMember({
       type: 'block',
@@ -148,6 +144,12 @@ export default defineType({
       name: 'columns',
       title: 'Columns',
       type: 'object',
+      preview: {
+        select: { layout: 'layout', caption: 'caption' },
+        prepare({ layout, caption }) {
+          return { title: caption || `${layout || '2'}-column layout`, subtitle: 'Columns' }
+        },
+      },
       fields: [
         {
           name: 'layout',
@@ -243,6 +245,13 @@ export default defineType({
       name: 'results',
       title: 'Results',
       type: 'object',
+      preview: {
+        select: { items: 'items' },
+        prepare({ items }) {
+          const count = items?.length || 0
+          return { title: `${count} result${count !== 1 ? 's' : ''}`, subtitle: 'Results / Stats' }
+        },
+      },
       fields: [
         {
           name: 'items',
@@ -281,6 +290,13 @@ export default defineType({
       name: 'references',
       title: 'References',
       type: 'object',
+      preview: {
+        select: { items: 'items' },
+        prepare({ items }) {
+          const count = items?.length || 0
+          return { title: `${count} reference${count !== 1 ? 's' : ''}`, subtitle: 'References' }
+        },
+      },
       fields: [
         {
           name: 'items',
@@ -304,6 +320,12 @@ export default defineType({
       title: 'Background Section',
       type: 'object',
       description: 'Full-width colored background wrapper for content',
+      preview: {
+        select: { color: 'color' },
+        prepare({ color }) {
+          return { title: `${color || 'gray'} background`, subtitle: 'Background Section' }
+        },
+      },
       fields: [
         {
           name: 'color',
@@ -334,6 +356,12 @@ export default defineType({
       name: 'videoEmbed',
       title: 'Video Embed',
       type: 'object',
+      preview: {
+        select: { url: 'url', caption: 'caption' },
+        prepare({ url, caption }) {
+          return { title: caption || url || 'Video', subtitle: 'Video Embed' }
+        },
+      },
       fields: [
         {
           name: 'url',
@@ -359,6 +387,12 @@ export default defineType({
       name: 'iframeEmbed',
       title: 'Iframe Embed',
       type: 'object',
+      preview: {
+        select: { url: 'url', caption: 'caption' },
+        prepare({ url, caption }) {
+          return { title: caption || url || 'Embed', subtitle: 'Iframe Embed' }
+        },
+      },
       fields: [
         {
           name: 'url',
@@ -400,6 +434,11 @@ export default defineType({
       name: 'divider',
       title: 'Divider',
       type: 'object',
+      preview: {
+        prepare() {
+          return { title: '— Divider —', subtitle: 'Horizontal rule' }
+        },
+      },
       fields: [
         {
           name: 'style',
@@ -420,7 +459,14 @@ export default defineType({
       name: 'buttonGroup',
       title: 'Buttons',
       type: 'object',
-      description: 'Two or more buttons side by side',
+      description: 'One or more buttons side by side',
+      preview: {
+        select: { buttons: 'buttons' },
+        prepare({ buttons }) {
+          const labels = (buttons || []).map((b: any) => b.label).filter(Boolean).join(', ') // eslint-disable-line @typescript-eslint/no-explicit-any
+          return { title: labels || 'Buttons', subtitle: 'Button Group' }
+        },
+      },
       fields: [
         {
           name: 'buttons',
@@ -445,6 +491,11 @@ export default defineType({
       title: 'Contact Form',
       type: 'object',
       description: 'Embeds the "Get in touch" contact form (JotForm)',
+      preview: {
+        prepare() {
+          return { title: 'Contact Form', subtitle: 'JotForm embed' }
+        },
+      },
       fields: [
         {
           name: 'showHeader',
