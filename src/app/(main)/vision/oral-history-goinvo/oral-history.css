@@ -1,0 +1,439 @@
+#oral-history-legacy{color:#58504A}
+
+#oral-history-legacy a{display:inline}
+
+#oral-history-legacy .sidebar a{display:inline}
+
+#oral-history-legacy #main-container{margin-top:50px}
+
+#oral-history-legacy .bold{font-weight:800}
+
+#oral-history-legacy .scroll-nav{box-shadow:0 5px 15px -8px #000}
+
+#oral-history-legacy h4.intro-quote{margin:0 auto;margin-bottom:2.5em;color:#776e6a;text-align:center;max-width:1080px;padding:0px 10px}
+
+#oral-history-legacy .rslides{position:relative;list-style:none;overflow:hidden;width:100%;padding:0;margin:0}
+
+#oral-history-legacy .rslides li{-webkit-backface-visibility:hidden;position:absolute;display:none;width:100%;left:0;top:0}
+
+#oral-history-legacy .rslides li:first-child{position:relative;display:block;float:left}
+
+#oral-history-legacy .rslides img{display:block;height:auto;float:left;width:100%;border:0}
+
+#oral-history-legacy .rslides-container{position:relative;max-width:1280px;margin:0 auto;margin-top:40px;margin-bottom:60px;width:100%;padding:0px 30px 0px 60px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .rslides-container{padding:0px 20px}
+}
+
+#oral-history-legacy .rslides-container .caption{font-size:18px;line-height:28px;margin-bottom:0px;color:rgba(0,0,0,0.45);padding:10px 0px}
+
+#oral-history-legacy .rslides1_nav{position:absolute;-webkit-tap-highlight-color:transparent;top:calc(50% - 18px);left:70px;z-index:99;opacity:0.8;text-indent:-9999px;overflow:hidden;text-decoration:none;height:38px;width:38px;background:transparent url("https://www.goinvo.com/old/images/features/an-oral-history/slides/arrows.gif") no-repeat left center;margin-top:-45px;border-radius:50%}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .rslides1_nav{left:25px}
+}
+
+@media only screen and (max-width: 400px){
+#oral-history-legacy .rslides1_nav{visibility:hidden}
+}
+
+#oral-history-legacy a.rslides1_nav.next{left:auto;background-position:right center;right:40px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy a.rslides1_nav.next{right:25px}
+}
+
+#oral-history-legacy .rslides1_nav:active{opacity:1.0}
+
+#oral-history-legacy #feature-article{width:100%}
+
+#oral-history-legacy #feature-article .overall-header{width:100%;height:188px;color:#6d6e6a;font-size:62px;text-align:center;vertical-align:middle;padding-top:65px}
+
+@media only screen and (max-width: 910px){
+#oral-history-legacy #feature-article .overall-header{font-size:50px;padding-top:75px}
+}
+
+@media only screen and (max-width: 740px){
+#oral-history-legacy #feature-article .overall-header{font-size:40px;padding-top:80px}
+}
+
+@media only screen and (max-width: 590px){
+#oral-history-legacy #feature-article .overall-header{padding-top:60px}
+}
+
+#oral-history-legacy #feature-article header{width:100%;background-color:gray;color:white;min-height:640px;position:relative;background-size:cover;background-position:center}
+
+#oral-history-legacy #feature-article header#section1-origins{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_1.jpg")}
+
+#oral-history-legacy #feature-article header#section2-silicon{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_2.jpg")}
+
+#oral-history-legacy #feature-article header#section3-interesting-times{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_3.jpg");background-position:top}
+
+#oral-history-legacy #feature-article header#section4-boston{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_4.jpg")}
+
+#oral-history-legacy #feature-article header#section5-todaytomorrow{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_5.jpg");background-position:top}
+
+#oral-history-legacy #feature-article header .header-wrapper{position:absolute;bottom:40px;left:0px;width:100%}
+
+#oral-history-legacy #feature-article header .header-wrapper .inner-header-wrapper{max-width:1280px;margin:0 auto;width:100%;padding:0px 0px 0px 60px}
+
+@media only screen and (max-width: 960px){
+#oral-history-legacy #feature-article header .header-wrapper .inner-header-wrapper{width:100%;max-width:100%}
+}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #feature-article header .header-wrapper .inner-header-wrapper{width:100%;max-width:100%;padding:0px 15px}
+}
+
+#oral-history-legacy #feature-article header .main-header-content{display:inline-block;width:100%;min-width:730px}
+
+#oral-history-legacy #feature-article header .main-header-content.two-col{width:calc(100% - 330px);min-width:0px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #feature-article header .main-header-content.two-col{width:100%;display:block}
+}
+
+@media only screen and (max-width: 960px){
+#oral-history-legacy #feature-article header .main-header-content{width:100%;padding-left:10px;padding-right:10px;min-width:0px}
+}
+
+#oral-history-legacy #feature-article header .main-header-content .header-title{font-size:65px;line-height:85px}
+
+@media only screen and (max-width: 560px){
+#oral-history-legacy #feature-article header .main-header-content .header-title{font-size:45px;line-height:65px}
+}
+
+#oral-history-legacy #feature-article header .main-header-content .header-content{padding-left:0px;font-size:22px;line-height:32px}
+
+@media only screen and (max-width: 560px){
+#oral-history-legacy #feature-article header .main-header-content .header-content{font-size:18px;line-height:26px}
+}
+
+#oral-history-legacy #feature-article header .right-header-content{display:inline-block;width:300px;border:none;border-left:1.5px dotted #fff;padding-left:20px;padding-top:20px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #feature-article header .right-header-content{width:100%;display:block;padding-left:0px;border-left:none;padding:0px 10px;padding-top:30px}
+}
+
+#oral-history-legacy #feature-article header .right-header-content .two-images img{display:inline-block;width:45%;height:auto}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #feature-article header .right-header-content .two-images img{display:none}
+}
+
+#oral-history-legacy #feature-article header .right-header-content .two-images img:first-child{margin-right:10px}
+
+#oral-history-legacy #feature-article header .right-header-content .content{margin-top:.5em;font-size:18px;line-height:28px}
+
+#oral-history-legacy #feature-article header.nav-wrapper{background-color:white;z-index:100;width:100%;border-bottom:0;font-size:18px;padding:0px 48px;border-bottom:1px solid #000;min-height:0;height:auto}
+
+@media only screen and (max-width: 1130px){
+#oral-history-legacy #feature-article header.nav-wrapper{padding:0px 31px;padding-right:10px}
+}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #feature-article header.nav-wrapper{padding:0px 25px}
+}
+
+#oral-history-legacy #feature-article header.nav-wrapper .nav-button{display:none}
+
+#oral-history-legacy #feature-article header.nav-wrapper .title{display:inline-block;color:#6d6e6a;margin-right:60px;padding-top:10px;padding-bottom:8px}
+
+#oral-history-legacy #feature-article header.nav-wrapper a{display:inline-block;padding-top:10px;padding-bottom:8px;color:#a6a7a2;font-weight:100;margin-right:30px;transition:300ms ease-in-out}
+
+#oral-history-legacy #feature-article header.nav-wrapper a.active{text-decoration:underline;color:#6d6e6a}
+
+#oral-history-legacy #feature-article header.nav-wrapper a:hover{color:#6d6e6a}
+
+#oral-history-legacy #feature-article header.nav-wrapper.scroll-nav{position:fixed;top:50px;left:0;display:none}
+
+#oral-history-legacy #feature-article header.nav-wrapper.middle-nav{display:none}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #feature-article header.nav-wrapper.middle-nav{display:block}
+}
+
+#oral-history-legacy section.interview-content{margin-top:63px;margin-bottom:120px;padding-top:30px}
+
+#oral-history-legacy .row{vertical-align:top;margin:0 auto;max-width:1280px}
+
+#oral-history-legacy .row .sidebar{display:inline-block;max-width:325px;line-height:initial;padding:0px;color:#000}
+
+@media only screen and (max-width: 1080px){
+#oral-history-legacy .row .sidebar{max-width:300px}
+}
+
+@media only screen and (max-width: 900px){
+#oral-history-legacy .row .sidebar{max-width:250px}
+}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .sidebar{display:block;max-width:100%;width:100%;margin-bottom:40px}
+}
+
+#oral-history-legacy .row .sidebar .sidebar-box{padding:40px 20px;color:rgba(0,0,0,0.45)}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .sidebar .sidebar-box.mobile-hide{display:none}
+}
+
+#oral-history-legacy .row .sidebar .sidebar-box p{font-size:18px;line-height:28px;margin-bottom:0px}
+
+#oral-history-legacy .row .sidebar .sidebar-box img{width:100%;margin-bottom:15px;height:auto;min-width:216px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .sidebar .sidebar-box img{width:100%}
+}
+
+#oral-history-legacy .row .sidebar .sidebar-box img.center{margin:0 auto;margin-bottom:15px}
+
+#oral-history-legacy .row .sidebar .sidebar-box img.small-size{width:50%}
+
+#oral-history-legacy .row .sidebar .sidebar-box.solid{background-color:#f9f9f8}
+
+#oral-history-legacy .row .sidebar .sidebar-box.blank{height:300px}
+
+@media only screen and (max-width: 900px){
+#oral-history-legacy .row .sidebar .sidebar-box.blank{height:250px}
+}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .sidebar .sidebar-box.blank{display:none}
+}
+
+#oral-history-legacy .row .sidebar .sidebar-box.dotted{border-left:2px dotted #9dc3b6;padding:20px 20px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .sidebar .sidebar-box.dotted{border-left:none}
+}
+
+#oral-history-legacy .row .sidebar .sidebar-box.extra-top-margin{margin-top:50px}
+
+#oral-history-legacy .row .sidebar .sidebar-box.extra-top-margin.double-top{margin-top:100px}
+
+#oral-history-legacy .row .interview-wrapper{width:calc(100% - 340px);display:inline-block;vertical-align:top;padding:0px 60px}
+
+@media only screen and (max-width: 1080px){
+#oral-history-legacy .row .interview-wrapper{width:calc(100% - 330px)}
+}
+
+@media only screen and (max-width: 900px){
+#oral-history-legacy .row .interview-wrapper{width:calc(100% - 280px)}
+}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .interview-wrapper{width:100%;display:block;padding:0px 15px}
+}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-speaks{display:inline-block;vertical-align:top}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-speaks{display:block}
+}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar{width:40px;height:40px;margin-bottom:10px;margin-right:10px;border-radius:50%;background-size:41px 41px}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar{margin-bottom:0px;float:left;width:0px;height:0px}
+}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.dirk{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-dirk.jpg");background-size:42px 42px}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.andrei{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-andrei.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.juhan{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-juhan.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.donna{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-donna.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.ben{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-ben.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.uday{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-uday.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.eric{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-eric.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jon{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-jon.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.sarah{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-sarah.jpg")}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jen{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-jen.jpg")}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.dirk,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.andrei,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.juhan,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.donna,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.ben,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.uday,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.eric,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jon,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.sarah,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jen{width:50px;height:50px;background-size:51px 51px}
+}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-speaks{width:calc(100% - 70px);padding-top:10px;margin-bottom:10px;color:#776e6a;font-size:18px;line-height:28px;font-weight:100}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-speaks{width:100%;margin-bottom:30px;padding-top:0px}
+}
+
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-speaks .full-name{font-weight:700}
+
+#oral-history-legacy .social-buttons{margin-top:20px;padding:0 0 3em 5em}
+
+#oral-history-legacy .social-buttons p{padding:0;margin-bottom:0.5em}
+
+#oral-history-legacy .social-buttons a{font-size:1em;padding:0.5em 1em 0.4em;color:#FFF;margin-top:10px}
+
+#oral-history-legacy .social-buttons a.fb{background-color:#3b5998;border-bottom:3px solid #263961}
+
+#oral-history-legacy .social-buttons a.fb:hover{background-color:#344e86}
+
+#oral-history-legacy .social-buttons a.twitter{background-color:#00aced;border-bottom:3px solid #0074a1}
+
+#oral-history-legacy .social-buttons a.twitter:hover{background-color:#0099d4}
+
+#oral-history-legacy .social-buttons a.plus{background-color:#dd4b39;border-bottom:3px solid #ac2d1e}
+
+#oral-history-legacy .social-buttons a.plus:hover{background-color:#d73925}
+
+#oral-history-legacy .social-buttons a.in{background-color:#007bb6;border-bottom:3px solid #00476a}
+
+#oral-history-legacy .social-buttons a.in:hover{background-color:#006a9d}
+
+#oral-history-legacy .social-buttons a.mail{color:#FFF;background-color:#888888;border-bottom:3px solid #626262}
+
+#oral-history-legacy .social-buttons a.mail:hover{background-color:#7b7b7b}
+
+#oral-history-legacy .social-buttons.centered{padding-left:0;text-align:center}
+
+#oral-history-legacy .fb-comments{margin:0 auto;max-width:90rem;text-align:center}
+
+#oral-history-legacy .credit-wrapper{background-color:rgba(0,0,0,0.03);padding:60px 0px;border-top:3px solid rgba(0,0,0,0.4)}
+
+#oral-history-legacy #credits{padding:2em 8em 4em;max-width:900px;max-width:90rem;margin:0 auto;overflow:hidden}
+
+#oral-history-legacy #credits .author,#oral-history-legacy #credits .contributors{float:left}
+
+#oral-history-legacy #credits h2{margin-bottom:0;font-weight:400}
+
+#oral-history-legacy #credits h3{font-weight:400;font-size:24px;line-height:1em;color:#888;margin-bottom:0;padding-bottom:0.25em}
+
+#oral-history-legacy #credits small{font-size:20px}
+
+#oral-history-legacy #credits p{font-size:20px;line-height:1.3em}
+
+#oral-history-legacy #credits a{color:#AAAAAA}
+
+#oral-history-legacy #credits a:hover{color:#E0E0E0}
+
+#oral-history-legacy #credits .authors{margin-bottom:50px}
+
+#oral-history-legacy #credits .authors h1{font-weight:100;font-size:65px;line-height:75px;color:rgba(0,0,0,0.6)}
+
+@media only screen and (max-width: 620px){
+#oral-history-legacy #credits .authors h1{font-size:55px;line-height:65px}
+}
+
+@media only screen and (max-width: 542px){
+#oral-history-legacy #credits .authors h1{font-size:50px;line-height:55px;margin-bottom:1em}
+}
+
+#oral-history-legacy #credits .authors .person{margin-bottom:50px}
+
+#oral-history-legacy #credits .authors .person .image,#oral-history-legacy #credits .authors .person .content{display:inline-block;vertical-align:top}
+
+#oral-history-legacy #credits .authors .person .image{width:150px;height:auto}
+
+@media only screen and (max-width: 1170px){
+#oral-history-legacy #credits .authors .person .image{width:125px}
+}
+
+#oral-history-legacy #credits .authors .person p.mobile{padding-top:10px;color:rgba(0,0,0,0.6);display:none}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #credits .authors .person p.mobile{display:block}
+}
+
+#oral-history-legacy #credits .authors .person .content{padding-left:15px;width:calc(100% - 155px)}
+
+@media only screen and (max-width: 1170px){
+#oral-history-legacy #credits .authors .person .content{width:calc(100% - 135px)}
+}
+
+#oral-history-legacy #credits .authors .person .content h2{color:rgba(0,0,0,0.6)}
+
+@media only screen and (max-width: 680px){
+#oral-history-legacy #credits .authors .person .content h2{font-size:35px}
+}
+
+@media only screen and (max-width: 597px){
+#oral-history-legacy #credits .authors .person .content h2{font-size:30px}
+}
+
+#oral-history-legacy #credits .authors .person .content p{padding-top:5px;color:rgba(0,0,0,0.6)}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #credits .authors .person .content p{display:none}
+}
+
+@media only screen and (max-width: 1170px){
+#oral-history-legacy #credits .authors .person .content small{display:block;margin-top:3px}
+}
+
+#oral-history-legacy #credits .contributors.download-links{margin-top:20px;font-size:24px}
+
+#oral-history-legacy #credits .contributors{width:100%;padding:2em;border:2px solid rgba(0,0,0,0.4);background:#fff}
+
+@media only screen and (max-width: 1170px){
+#oral-history-legacy #credits .contributors{max-width:375px;width:auto;margin:0 auto;float:none}
+}
+
+#oral-history-legacy #credits .contributors .cont-wrapper{width:906px;margin:0 auto}
+
+@media only screen and (max-width: 400px){
+#oral-history-legacy #credits .contributors .cont-wrapper{padding-left:calc(50% - 80px)}
+}
+
+#oral-history-legacy #credits .contributors .cont-wrapper h2{text-align:center;font-size:28px;line-height:22px;width:100%;margin:0 auto;margin-bottom:30px;color:rgba(0,0,0,0.6)}
+
+@media only screen and (max-width: 750px){
+#oral-history-legacy #credits .contributors .cont-wrapper h2{text-align:left}
+}
+
+@media only screen and (max-width: 1170px){
+#oral-history-legacy #credits .contributors .cont-wrapper{max-width:305px;width:100%}
+}
+
+#oral-history-legacy #credits .contributors h3{font-size:18px;padding-bottom:0.4em;font-weight:100}
+
+#oral-history-legacy #credits .contributors p{font-size:24px;line-height:26px;margin-bottom:0;color:rgba(0,0,0,0.6)}
+
+#oral-history-legacy #credits .contributors hr{width:2em;margin:1.5em 0;border-width:5px;border-color:#51697b}
+
+#oral-history-legacy #credits .contributors small{font-size:18px;padding-top:0px;margin-top:0px;font-weight:100}
+
+#oral-history-legacy #credits .contributors .contributor{display:inline-block;width:300px}
+
+@media only screen and (max-width: 1170px){
+#oral-history-legacy #credits .contributors .contributor{display:block;height:100px}
+}
+
+@media only screen and (max-width: 400px){
+#oral-history-legacy #credits .contributors .contributor{height:auto}
+}
+
+#oral-history-legacy #credits .contributors .contributor .image,#oral-history-legacy #credits .contributors .contributor .info{float:left}
+
+@media only screen and (max-width: 400px){
+#oral-history-legacy #credits .contributors .contributor .image,#oral-history-legacy #credits .contributors .contributor .info{float:none;display:block}
+}
+
+#oral-history-legacy #credits .contributors .contributor .image{width:75px;height:auto}
+
+@media only screen and (max-width: 400px){
+#oral-history-legacy #credits .contributors .contributor .image{width:90px}
+}
+
+#oral-history-legacy #credits .contributors .contributor .info{padding-left:1em;width:225px}
+
+@media only screen and (max-width: 400px){
+#oral-history-legacy #credits .contributors .contributor .info{padding-left:0;width:100%;padding:10px 0px 25px 0px;max-width:100%}
+}
+
+@media only screen and (max-width: 978px){
+#oral-history-legacy #credits{padding-left:3em;padding-right:3em}
+#oral-history-legacy #credits .author{padding-right:0;margin-bottom:2em}
+#oral-history-legacy #credits .author,#oral-history-legacy #credits .contributors{width:100%}
+}
