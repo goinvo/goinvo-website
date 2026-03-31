@@ -1,0 +1,744 @@
+/*
+ * Legacy CSS for "From Bathroom to Healthroom"
+ * Scoped under .healthroom-legacy to prevent style leaks.
+ * Ported from: /old/stylesheets/features/from-bathroom-to-healthroom.css
+ */
+
+/* ---- Article container ---- */
+.healthroom-legacy article.design-for-life {
+  font-family: "Open Sans", "Lato", Helvetica, Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  border-left: 1px solid rgba(0, 0, 0, 0.21);
+  border-right: 1px solid rgba(0, 0, 0, 0.21);
+  background-color: white;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.25;
+  color: #0d0d0d;
+}
+
+.healthroom-legacy article.design-for-life h1,
+.healthroom-legacy article.design-for-life h2,
+.healthroom-legacy article.design-for-life h3 {
+  font-family: "adobe-jenson-pro", Georgia, "Times New Roman", Times, serif;
+}
+
+.healthroom-legacy article.design-for-life h1 {
+  font-size: 2.75rem;
+  line-height: 1.07;
+}
+@media (min-width: 530px) {
+  .healthroom-legacy article.design-for-life h1 {
+    font-size: 3.75rem;
+  }
+}
+
+.healthroom-legacy article.design-for-life h2 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+@media (min-width: 530px) {
+  .healthroom-legacy article.design-for-life h2 {
+    font-size: 2.25rem;
+  }
+}
+
+.healthroom-legacy article.design-for-life h3 {
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+@media (min-width: 530px) {
+  .healthroom-legacy article.design-for-life h3 {
+    font-size: 1.75rem;
+  }
+}
+
+.healthroom-legacy article.design-for-life h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+@media (min-width: 530px) {
+  .healthroom-legacy article.design-for-life h4 {
+    font-size: 1.25rem;
+  }
+}
+
+.healthroom-legacy article.design-for-life a {
+  text-decoration: none;
+  color: #6195cf;
+}
+
+.healthroom-legacy article.design-for-life p {
+  margin-bottom: 1em;
+}
+.healthroom-legacy article.design-for-life p em {
+  font-style: italic;
+}
+.healthroom-legacy article.design-for-life p strong {
+  font-weight: 600;
+}
+
+.healthroom-legacy article.design-for-life ul {
+  list-style: disc;
+}
+.healthroom-legacy article.design-for-life ol {
+  list-style: decimal;
+}
+
+.healthroom-legacy article.design-for-life img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---- Header / hero ---- */
+.healthroom-legacy .header-contents,
+.healthroom-legacy .sec-header {
+  font-family: "adobe-jenson-pro", Georgia, "Times New Roman", Times, serif;
+}
+
+.healthroom-legacy .bathroom-header {
+  padding-top: 50px;
+  padding-bottom: calc(24em - 10px);
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+@media only screen and (min-width: 1200px) {
+  .healthroom-legacy .bathroom-header {
+    padding-bottom: 16em;
+  }
+}
+
+.healthroom-legacy .bathroom-header .byline {
+  color: #939598;
+}
+
+.healthroom-legacy .bathroom-header .header-contents {
+  padding: 5.5em 6em 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.8) 47%,
+    rgba(255, 255, 255, 0.8) 81%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+.healthroom-legacy .bathroom-header .header-contents h1 {
+  font-size: 3em;
+  margin-bottom: 0;
+}
+.healthroom-legacy .bathroom-header .header-contents h2 {
+  font-size: 1.5em;
+  font-weight: 400;
+}
+.healthroom-legacy .bathroom-header .header-contents .email,
+.healthroom-legacy .bathroom-header .header-contents .author {
+  font-size: 1.2em;
+  font-weight: 400;
+}
+.healthroom-legacy .bathroom-header .header-contents .email a,
+.healthroom-legacy .bathroom-header .header-contents .author a {
+  color: black;
+}
+.healthroom-legacy .bathroom-header .header-contents .email a:hover,
+.healthroom-legacy .bathroom-header .header-contents .author a:hover {
+  text-decoration: underline;
+}
+.healthroom-legacy .bathroom-header .header-contents .author {
+  margin-bottom: 0.3em;
+}
+.healthroom-legacy .bathroom-header .header-contents .email {
+  margin-bottom: 0.75em;
+}
+
+/* ---- Section headers ---- */
+.healthroom-legacy .sec-header {
+  margin: 5em 0;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
+  padding: 2em 0em 2em 6em;
+  background: #f2f2f2;
+  z-index: 1;
+  overflow: hidden;
+}
+.healthroom-legacy .sec-header .title {
+  float: left;
+}
+.healthroom-legacy .sec-header .title h3,
+.healthroom-legacy .sec-header .title h4 {
+  font-weight: 500;
+}
+.healthroom-legacy .sec-header .title h3 {
+  font-size: 1.8em;
+  margin-bottom: 0.2em;
+}
+.healthroom-legacy .sec-header .title h4 {
+  font-size: 1em;
+  margin-bottom: 0;
+  color: #939598;
+}
+.healthroom-legacy .sec-header .number {
+  float: right;
+  width: 100px;
+  font-weight: 400;
+  font-size: 3em;
+  color: #5d5d5d;
+}
+
+.healthroom-legacy .article-section.one .sec-header {
+  margin-top: 0;
+}
+.healthroom-legacy .article-section.two .sec-header {
+  margin-bottom: 0;
+}
+.healthroom-legacy .article-section.six .sec-header .title {
+  padding-top: 0.5em;
+}
+
+/* ---- Section content ---- */
+.healthroom-legacy .section-content h1,
+.healthroom-legacy .section-content h2,
+.healthroom-legacy .section-content h3,
+.healthroom-legacy .section-content h4,
+.healthroom-legacy .section-content h5,
+.healthroom-legacy .section-content h6,
+.healthroom-legacy .section-content p,
+.healthroom-legacy .section-content ul,
+.healthroom-legacy .section-content ol,
+.healthroom-legacy .section-content .div {
+  max-width: 800px;
+  margin: 0 auto 1em;
+}
+
+.healthroom-legacy .section-content p,
+.healthroom-legacy .section-content ul,
+.healthroom-legacy .section-content ol {
+  font-size: 1.1em;
+  line-height: 1.3em;
+}
+
+.healthroom-legacy .section-content ul li,
+.healthroom-legacy .section-content ol li {
+  margin-bottom: 0.5em;
+  margin-left: 1.5em;
+}
+
+.healthroom-legacy .section-content .full {
+  width: 100%;
+  margin: 2em 0;
+}
+
+.healthroom-legacy .section-content .caption {
+  font-size: 85%;
+  color: #939598;
+}
+
+/* ---- Aside media / slider ---- */
+.healthroom-legacy .aside-media,
+.healthroom-legacy .slider {
+  max-width: 950px;
+  margin: 3em auto;
+  overflow: hidden;
+}
+.healthroom-legacy .aside-media .caption,
+.healthroom-legacy .aside-media .slider-aside,
+.healthroom-legacy .slider .caption,
+.healthroom-legacy .slider .slider-aside {
+  margin-top: 3em;
+  width: 25%;
+  float: left;
+}
+.healthroom-legacy .aside-media .video,
+.healthroom-legacy .slider .video {
+  width: 65%;
+  height: 30em;
+  float: right;
+  z-index: 1;
+}
+
+.healthroom-legacy .aside-media .caption.initial-margin {
+  margin-left: 0;
+}
+
+/* ---- Expanded graphic (timeline) ---- */
+.healthroom-legacy .expanded-graphic {
+  position: relative;
+  max-width: 950px;
+  margin: 0 auto;
+}
+.healthroom-legacy .expanded-graphic img {
+  margin: 0;
+}
+.healthroom-legacy .expanded-graphic .seamless {
+  margin-bottom: 0;
+}
+
+/* ---- Timeline slides ---- */
+.healthroom-legacy #timechart {
+  max-width: 978px;
+  margin: 0 auto;
+}
+.healthroom-legacy #timechart img {
+  position: relative;
+  left: 3px;
+}
+.healthroom-legacy #timechart:after {
+  display: block;
+  height: 10px;
+  content: "";
+  border: 3px solid #000;
+  border-top-width: 2px;
+  margin: 0 14px;
+}
+
+.healthroom-legacy #timeline {
+  position: relative;
+  margin-top: -10px;
+  max-width: 950px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.healthroom-legacy #timeline .byline {
+  position: absolute;
+  bottom: 1.5em;
+  left: 1.5em;
+  color: #939598;
+  z-index: 1000;
+  font-size: 0.7em;
+}
+
+.healthroom-legacy #timeline .slide {
+  height: 25em;
+  position: relative;
+  border-top: 0;
+  border-radius: 0 0 7px 7px;
+  background-color: #eeefef;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+  border: 3px solid #000;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+}
+.healthroom-legacy #timeline .slide .slide-content {
+  position: absolute;
+  font-size: 0.7em;
+  line-height: 1.25em;
+  padding: 0.5em;
+}
+.healthroom-legacy #timeline .slide .slide-content h6 {
+  margin-bottom: 0;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+.healthroom-legacy #timeline .slide .slide-content p {
+  margin-bottom: 0;
+}
+.healthroom-legacy #timeline .slide .slide-content .source {
+  color: #939598;
+}
+.healthroom-legacy #timeline .slide .slide-content .source a {
+  color: #939598;
+}
+
+.healthroom-legacy #timeline .slide.one {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide1.png");
+}
+.healthroom-legacy #timeline .slide.one .slide-content {
+  bottom: 4%;
+  right: 2%;
+  width: 58%;
+}
+
+.healthroom-legacy #timeline .slide.two {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide2.png");
+}
+.healthroom-legacy #timeline .slide.two .slide-content {
+  bottom: 8%;
+  left: 4%;
+  width: 60%;
+}
+
+.healthroom-legacy #timeline .slide.three {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide3.png");
+}
+.healthroom-legacy #timeline .slide.three .slide-content {
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  bottom: 8%;
+  width: 60%;
+}
+
+.healthroom-legacy #timeline .slide.four {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide4.png");
+}
+.healthroom-legacy #timeline .slide.four .slide-content {
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  bottom: 8%;
+  width: 60%;
+}
+
+.healthroom-legacy #timeline .slide.five {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide5.png");
+}
+.healthroom-legacy #timeline .slide.five .slide-content {
+  margin-top: 15%;
+  width: 50%;
+  left: 8%;
+}
+
+.healthroom-legacy #timeline .slide.six {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide6.png");
+}
+.healthroom-legacy #timeline .slide.six .slide-content {
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  bottom: 2.5em;
+  width: 60%;
+}
+
+.healthroom-legacy #timeline .slide.seven {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide7.png");
+}
+.healthroom-legacy #timeline .slide.seven .slide-content {
+  top: 70%;
+  left: 12%;
+}
+
+.healthroom-legacy #timeline .slide.eight {
+  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide8.png");
+}
+.healthroom-legacy #timeline .slide.eight .slide-content {
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+  bottom: 10%;
+  width: 26%;
+}
+
+/* ---- Eye tracking / Blade Runner overlay ---- */
+.healthroom-legacy #eye-tracking {
+  margin-top: 0;
+  padding: 6em;
+  z-index: 1;
+  background-color: #333;
+  background-size: cover;
+  background-position: center;
+}
+.healthroom-legacy #eye-tracking p {
+  max-width: 250px;
+  margin: 0;
+  color: #f2f2f2;
+}
+
+/* ---- Date slider ---- */
+.healthroom-legacy #dates.slider .slider-contents {
+  width: 65%;
+  float: right;
+}
+.healthroom-legacy #dates .slider-aside {
+  width: 30%;
+}
+.healthroom-legacy #dates .slider-aside p {
+  padding-left: 22px;
+  padding-right: 89px;
+}
+.healthroom-legacy #dates .slider-aside .slider-controls {
+  position: relative;
+  display: table;
+  table-layout: fixed;
+  width: 100%;
+}
+.healthroom-legacy #dates .slider-aside .slider-controls a {
+  display: table-cell;
+  text-align: center;
+  color: #000;
+}
+.healthroom-legacy #dates .slider-aside .slider-controls a .button {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #000;
+  border-radius: 50%;
+  margin: 0 auto 5px;
+  background-color: white;
+  transition: background-color 300ms ease;
+}
+.healthroom-legacy #dates .slider-aside .slider-controls a.active .button {
+  background-color: #f4d37b;
+}
+.healthroom-legacy #dates .slider-aside .slider-controls:after {
+  content: "";
+  position: absolute;
+  top: calc(25% - 2px);
+  height: 1px;
+  width: 50%;
+  left: 13%;
+  border-top: 3px dotted black;
+  z-index: 5;
+}
+
+/* ---- Locations interactive ---- */
+.healthroom-legacy #locations {
+  position: relative;
+}
+.healthroom-legacy #locations .slider-controls {
+  overflow: hidden;
+  border: 2px solid black;
+  border-left: 0px;
+  border-right: 0px;
+}
+.healthroom-legacy #locations .slider-controls a {
+  display: block;
+  float: left;
+  margin: 4px 0;
+  padding: 4px;
+  color: #000;
+  text-align: center;
+  text-transform: uppercase;
+  border-right: 2px solid #000;
+  transition: background 300ms ease;
+  cursor: pointer;
+}
+.healthroom-legacy #locations .slider-controls a:last-child {
+  border-right: 0;
+}
+.healthroom-legacy #locations .slider-controls a.slide0,
+.healthroom-legacy #locations .slider-controls a.slide1 {
+  width: 12%;
+}
+.healthroom-legacy #locations .slider-controls a.slide2,
+.healthroom-legacy #locations .slider-controls a.slide3,
+.healthroom-legacy #locations .slider-controls a.slide4 {
+  width: 18%;
+}
+.healthroom-legacy #locations .slider-controls a.slide5 {
+  width: 22%;
+}
+.healthroom-legacy #locations .slider-controls a.active {
+  background: #f4d37b;
+}
+
+/* ---- Media blocks ---- */
+.healthroom-legacy .media-block p,
+.healthroom-legacy .media-block ul,
+.healthroom-legacy .media-block ol {
+  font-size: 1.1em;
+  line-height: 1.3em;
+}
+.healthroom-legacy .media-block.inline {
+  max-width: 800px;
+  margin: 0 auto 2em;
+}
+.healthroom-legacy .media-block.inline img {
+  margin-bottom: 0.5em;
+}
+.healthroom-legacy .media-block.wide {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto 2em;
+}
+.healthroom-legacy .media-block.wide img {
+  margin-bottom: 3em;
+  margin-top: 3em;
+}
+.healthroom-legacy .media-block.relative {
+  position: relative;
+}
+.healthroom-legacy .media-block.relative .axiom-link {
+  position: absolute;
+  left: 10px;
+  bottom: 20px;
+}
+
+/* ---- Contributions footer ---- */
+.healthroom-legacy .contributions {
+  width: 100%;
+  background-color: #2a2d33;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+.healthroom-legacy .contributions .cont-wrapper {
+  font-family: "Open Sans", "Lato", Helvetica, Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.healthroom-legacy .contributions table {
+  margin: 0 auto;
+  width: 100%;
+  margin-top: 40px;
+  margin-bottom: 20px;
+  border-collapse: collapse;
+}
+.healthroom-legacy .contributions table tbody tr td table.column {
+  width: 32.5%;
+}
+.healthroom-legacy .contributions table tbody tr td table.column td {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.healthroom-legacy .contributions table tbody tr td table.column td.label {
+  color: #7a7b7e;
+  text-align: left;
+  padding-right: 10px;
+}
+.healthroom-legacy .contributions table tbody tr td table.column td.person {
+  color: #ffffff;
+  text-align: left;
+  white-space: nowrap;
+}
+.healthroom-legacy .contributions .footer-logo {
+  width: 100%;
+  padding-left: 9%;
+}
+.healthroom-legacy .contributions .footer-logo .logo,
+.healthroom-legacy .contributions .footer-logo a {
+  display: inline-block;
+}
+.healthroom-legacy .contributions .footer-logo .logo {
+  margin-right: 25px;
+}
+.healthroom-legacy .contributions .footer-logo a {
+  color: #fff;
+  transition: color 250ms ease-in-out;
+}
+.healthroom-legacy .contributions .footer-logo a:hover {
+  color: #dbdbdb;
+}
+
+/* ---- Utility ---- */
+.healthroom-legacy p.margin-bottom {
+  margin-bottom: 4em;
+}
+.healthroom-legacy .light {
+  font-weight: 300;
+}
+.healthroom-legacy .caption {
+  font-size: 85%;
+  color: #939598;
+}
+
+/* ---- Responsive (max-width: 1000px) ---- */
+@media only screen and (max-width: 1000px) {
+  .healthroom-legacy .section-content p,
+  .healthroom-legacy .section-content ul,
+  .healthroom-legacy .section-content ol,
+  .healthroom-legacy .media-block p,
+  .healthroom-legacy .media-block ul,
+  .healthroom-legacy .media-block ol {
+    font-size: 0.8em;
+    padding: 0px 20px;
+  }
+
+  .healthroom-legacy .bathroom-header {
+    padding-bottom: 4em;
+  }
+  .healthroom-legacy .bathroom-header .header-contents {
+    padding-bottom: 62px;
+    padding-right: 20px;
+    padding-left: 20px;
+    padding-top: calc(5.5em + 220px);
+  }
+  .healthroom-legacy .bathroom-header .header-contents h1 {
+    font-size: 2em;
+  }
+  .healthroom-legacy .bathroom-header .header-contents h2 {
+    font-size: 1.25em;
+  }
+  .healthroom-legacy .bathroom-header .header-contents .email,
+  .healthroom-legacy .bathroom-header .header-contents .author {
+    font-size: 1em;
+  }
+
+  .healthroom-legacy .sec-header {
+    padding-left: 20px;
+  }
+
+  .healthroom-legacy #eye-tracking {
+    padding: 6em 0;
+  }
+
+  .healthroom-legacy #timeline {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+  .healthroom-legacy #timeline .byline {
+    bottom: 2em;
+    left: 4em;
+    font-size: 0.45em;
+  }
+  .healthroom-legacy #timechart {
+    padding: 0px 10px;
+    padding-right: 7px;
+  }
+  .healthroom-legacy #timechart img {
+    left: 0px;
+  }
+
+  .healthroom-legacy #locations {
+    display: none;
+  }
+
+  .healthroom-legacy .aside-media .video,
+  .healthroom-legacy .slider .video {
+    margin-right: 20px;
+  }
+  .healthroom-legacy .aside-media .caption,
+  .healthroom-legacy .aside-media .slider-aside,
+  .healthroom-legacy .slider .caption,
+  .healthroom-legacy .slider .slider-aside {
+    width: 27%;
+  }
+
+  .healthroom-legacy #dates.slider {
+    max-width: 100%;
+    margin: 0px;
+    padding-left: 20px;
+    padding-right: 20px;
+    float: none;
+    margin-bottom: 20px;
+  }
+  .healthroom-legacy #dates .slider-aside {
+    width: 100%;
+    float: none;
+  }
+  .healthroom-legacy #dates .slider-aside .slider-controls {
+    width: 300px;
+    margin: 0 auto;
+    margin-bottom: 20px;
+    margin-left: 26px;
+  }
+  .healthroom-legacy #dates .slider-aside p {
+    padding: 0px 65px;
+    margin-bottom: 10px;
+  }
+  .healthroom-legacy #dates.slider .slider-contents {
+    width: 100%;
+    float: none;
+  }
+
+  .healthroom-legacy .media-block.relative .axiom-link {
+    font-size: 0.65em;
+  }
+
+  .healthroom-legacy .contributions table td {
+    font-size: 0.725em;
+  }
+  .healthroom-legacy .contributions .footer-logo {
+    padding: 0px 20px;
+  }
+  .healthroom-legacy .contributions .footer-logo .logo {
+    max-width: 100px;
+  }
+  .healthroom-legacy .contributions .footer-logo a {
+    font-size: 0.8em;
+  }
+}
