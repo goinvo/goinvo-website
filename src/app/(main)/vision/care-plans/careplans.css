@@ -1,456 +1,546 @@
-/*
- * Legacy Care Plans intro page styles
- * Ported from goinvo.com/old/stylesheets/features/careplans.css
- * Scoped under .careplans-legacy to avoid conflicts with site styles
- */
+/* Care Plans Series - Shared Styles */
 
-/* ===== Fonts ===== */
-@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;600;700&display=swap');
-
-/* ===== Base article styles ===== */
-.careplans-legacy {
+/* ===== Hero ===== */
+.careplans-hero {
+  position: relative;
   width: 100%;
-  font-family: 'Work Sans', sans-serif;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
 }
 
-.careplans-legacy p,
-.careplans-legacy a,
-.careplans-legacy span,
-.careplans-legacy label,
-.careplans-legacy td {
-  font-size: 1rem;
-  line-height: 1.5em;
-  margin-bottom: 0;
-  font-weight: lighter;
+.careplans-hero .hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
-.careplans-legacy a {
-  display: inline-block;
-  color: inherit;
-  text-decoration: none;
+.careplans-hero .hero-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.careplans-legacy a:hover {
-  text-decoration: underline;
+.careplans-hero .hero-content {
+  position: relative;
+  z-index: 2;
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.careplans-legacy strong {
-  font-weight: normal;
-}
-
-.careplans-legacy h1 {
-  margin-bottom: 0.5em;
-  font-size: 2.2rem;
-  font-weight: normal;
-  color: #676767;
-}
-
-.careplans-legacy h1 strong {
-  font-weight: bold;
-}
-
-.careplans-legacy h4 {
-  font-size: 1rem;
-  font-weight: normal;
+.careplans-hero .big-title {
+  font-family: var(--font-serif), serif;
+  font-size: 4rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.1em;
   margin: 0;
+  color: white;
 }
 
-.careplans-legacy img {
-  max-width: 100%;
-  height: auto;
-  display: block;
+.careplans-hero .sub-title {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  margin-top: 0.75rem;
+  color: white;
+  text-transform: uppercase;
 }
 
-/* ===== Hero image ===== */
-.careplans-legacy .hero-image {
-  width: 100%;
-  height: auto;
-  display: block;
+@media (min-width: 768px) {
+  .careplans-hero {
+    min-height: 500px;
+  }
+  .careplans-hero .big-title {
+    font-size: 5.5rem;
+  }
+  .careplans-hero .sub-title {
+    font-size: 1.25rem;
+  }
 }
 
-/* ===== Navigation wrapper (stuck + scroll) ===== */
-.careplans-legacy header.nav-wrapper {
-  background-color: rgba(255, 255, 255, 0.95);
-  z-index: 100;
-  width: 100%;
-  padding: 0 5%;
-  height: auto;
+/* ===== Section Navigation ===== */
+.careplans-nav {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  background: #3c3c3b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.careplans-legacy header.nav-wrapper nav {
-  width: 100%;
-  text-align: center;
-}
-
-.careplans-legacy header.nav-wrapper a {
-  padding: 10px 5px;
-  color: black;
-  font-weight: 100;
-  width: 23%;
-  display: inline-block;
-  text-align: center;
-  transition: 300ms ease-in-out;
-}
-
-.careplans-legacy header.nav-wrapper a:hover {
-  text-decoration: none;
-  background-color: #f5f5f5;
-}
-
-.careplans-legacy header.nav-wrapper a img {
-  width: 30px;
-  display: inline-block;
-}
-
-/* Stuck nav (visible by default) */
-.careplans-legacy header.nav-wrapper.stuck {
-  border-bottom: 1px solid #e1e1e1;
-}
-
-.careplans-legacy header.nav-wrapper.stuck .desktop {
-  display: block;
-}
-
-.careplans-legacy header.nav-wrapper.stuck .mobile {
-  display: none;
-}
-
-.careplans-legacy header.nav-wrapper.stuck .desktop nav {
+.careplans-nav nav {
+  max-width: 1020px;
+  margin: 0 auto;
   display: flex;
   justify-content: center;
-  align-items: center;
+  gap: 0;
 }
 
-.careplans-legacy header.nav-wrapper.stuck .desktop nav a {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.careplans-legacy header.nav-wrapper.stuck .desktop nav a span {
-  font-size: 0.75rem;
+.careplans-nav nav a {
+  display: block;
+  padding: 14px 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #999;
+  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
 }
 
-/* Scroll nav (hidden by default - activates on scroll via JS) */
-.careplans-legacy header.nav-wrapper.scroll-nav {
-  position: fixed;
-  top: 50px;
-  left: 0;
-  display: none;
-  box-shadow: 0 5px 15px -8px #000;
+.careplans-nav nav a:hover,
+.careplans-nav nav a.active {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* ===== Mobile nav overrides ===== */
-@media only screen and (max-width: 768px) {
-  .careplans-legacy header.nav-wrapper.stuck .desktop {
-    display: none;
+@media (max-width: 767px) {
+  .careplans-nav nav {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
   }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile {
-    display: block;
-  }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile nav {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile nav > div {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile nav a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    font-size: 0.7rem;
-    padding: 8px 4px;
-  }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile nav a span {
-    font-size: 0.65rem;
-  }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile nav a img {
-    width: 24px;
-  }
-
-  .careplans-legacy header.nav-wrapper.stuck .mobile nav a p {
-    font-size: 0.6rem;
-    text-align: center;
-    line-height: 1.2;
-    margin: 0;
-  }
-
-  .careplans-legacy header.nav-wrapper a {
-    font-size: 0.7rem;
+  .careplans-nav nav a {
+    padding: 12px 14px;
+    font-size: 0.75rem;
   }
 }
 
-@media only screen and (min-width: 769px) {
-  .careplans-legacy header.nav-wrapper a {
-    font-size: 1rem;
-  }
+/* ===== Process Journey (Part 2) ===== */
+.process-journey {
+  padding: 3rem 0;
 }
 
-/* ===== Part sections ===== */
-.careplans-legacy .part {
-  width: 100%;
-  padding: 40px 10%;
-}
-
-/* ===== Download eBook links ===== */
-.careplans-legacy .download-ebook {
-  float: right;
-  text-align: center;
-  margin-left: 15px;
-  margin-bottom: 10px;
-}
-
-.careplans-legacy .download-ebook img {
-  width: 40px;
-  margin: 0 auto 5px;
-  display: block;
-}
-
-.careplans-legacy .download-ebook p {
-  font-size: 0.7rem;
-  line-height: 1.2;
-  color: #676767;
-}
-
-/* ===== Feature intro grid (3 parts) ===== */
-.careplans-legacy .feature-intro {
-  margin: 30px 0;
-  padding: 0;
-}
-
-.careplans-legacy .feature-intro .row {
+.process-step {
   display: flex;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-  align-items: center;
-}
-
-.careplans-legacy .feature-intro .col-sm-6 {
-  flex: 0 0 50%;
-  max-width: 50%;
-  padding: 0 10px;
-}
-
-.careplans-legacy .feature-intro .col-sm-6 img {
-  width: 100%;
-  border-radius: 4px;
-}
-
-.careplans-legacy .feature-intro a {
-  display: block;
-  width: 100%;
-}
-
-.careplans-legacy .feature-intro a:hover {
-  text-decoration: none;
-  opacity: 0.9;
-}
-
-.careplans-legacy .feature-intro p {
-  color: #676767;
-}
-
-.careplans-legacy .feature-intro p strong {
-  font-weight: 600;
-}
-
-@media only screen and (max-width: 576px) {
-  .careplans-legacy .feature-intro .col-sm-6 {
-    flex: 0 0 100%;
-    max-width: 100%;
-    margin-bottom: 10px;
-  }
-}
-
-/* ===== Work with us section ===== */
-.careplans-legacy .work-with-us {
-  margin: 20px 0 30px;
-  padding: 0;
-}
-
-.careplans-legacy .work-with-us .row {
-  display: flex;
-  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
   align-items: flex-start;
 }
 
-.careplans-legacy .work-with-us .col-sm-6 {
-  flex: 0 0 50%;
-  max-width: 50%;
-  padding: 0 10px;
-}
-
-.careplans-legacy .work-with-us .col-sm-6:last-child img:last-child {
-  display: none;
-}
-
-.careplans-legacy .work-with-us .clearfix {
+.process-step .step-number {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #007385;
+  color: white;
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
-.careplans-legacy .work-with-us .clearfix img {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
+.process-step .step-content h3 {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+  color: #24434d;
 }
 
-.careplans-legacy .work-with-us .clearfix p {
-  margin: 0;
-  color: #676767;
+.process-step .step-content p {
+  color: #666;
+  line-height: 1.7;
+  font-size: 0.9375rem;
 }
 
-@media only screen and (max-width: 576px) {
-  .careplans-legacy .work-with-us .col-sm-6 {
-    flex: 0 0 100%;
-    max-width: 100%;
-    margin-bottom: 15px;
-  }
-
-  .careplans-legacy .work-with-us .col-sm-6:last-child img:last-child {
-    display: block;
-    margin-top: 20px;
-  }
+/* ===== Product Matrix (Part 2) ===== */
+.product-matrix-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 2rem 0;
 }
 
-/* ===== Credits wrapper ===== */
-.careplans-legacy .credit-wrapper {
+.product-matrix {
   width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  min-width: 1100px;
 }
 
-.careplans-legacy #credits {
-  padding: 40px 10%;
-  background-color: #f5f5f5;
-  border-top: 2px solid #e1e1e1;
+.product-matrix th,
+.product-matrix td {
+  padding: 8px 6px;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+  vertical-align: middle;
 }
 
-.careplans-legacy #credits h1 {
-  color: #676767;
+.product-matrix th {
+  background: #f5f5f5;
+  font-weight: 600;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #24434d;
+  white-space: nowrap;
 }
 
-/* ===== Authors ===== */
-.careplans-legacy #credits .authors,
-.careplans-legacy #credits .contributors {
-  margin-bottom: 60px;
+.product-matrix td:first-child {
+  text-align: left;
+  min-width: 120px;
 }
 
-.careplans-legacy #credits .authors .row,
-.careplans-legacy #credits .contributors .row {
+.product-matrix td:first-child img {
+  max-width: 100px;
+  height: auto;
+}
+
+.product-matrix td:last-child {
+  font-weight: 700;
+  background: #f9f9f9;
+}
+
+.product-matrix tr:hover {
+  background: #fafafa;
+}
+
+/* ===== Barriers Carousel (Part 2) ===== */
+.barriers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.barrier-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s;
+}
+
+.barrier-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.barrier-card h3 {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+  color: #007385;
+}
+
+.barrier-card p {
+  color: #666;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+}
+
+/* ===== Part 3 Specific ===== */
+.part3-section {
+  padding: 3rem 0;
+}
+
+.part3-section h2 {
+  font-family: var(--font-serif), serif;
+  font-size: 1.75rem;
+  font-weight: 300;
+  margin-bottom: 1.5rem;
+  line-height: 1.3;
+}
+
+.part3-section h2 strong {
+  font-weight: 700;
+}
+
+.part3-quote {
+  font-style: italic;
+  color: #007385;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  border-left: 3px solid #007385;
+  padding-left: 1rem;
+  margin: 1.5rem 0;
+}
+
+/* ===== Tabbed Content (Part 3) ===== */
+.careplans-tabs {
+  margin: 2rem 0;
+}
+
+.careplans-tabs .tab-buttons {
   display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
 
-.careplans-legacy #credits .author,
-.careplans-legacy #credits .contributor {
-  margin-bottom: 20px;
-  padding: 0;
+.careplans-tabs .tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 50px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #666;
+  text-align: center;
+  transition: all 0.2s;
 }
 
-.careplans-legacy #credits .col-md-6 {
-  flex: 0 0 50%;
-  max-width: 50%;
-  padding: 0 10px;
+.careplans-tabs .tab-btn:hover {
+  border-color: #007385;
+  color: #007385;
 }
 
-.careplans-legacy #credits .author .image,
-.careplans-legacy #credits .contributor .image {
-  width: 100px;
-  display: inline-block;
-  margin-right: 20px;
-  vertical-align: top;
+.careplans-tabs .tab-btn.active {
+  border-color: #007385;
+  background: #007385;
+  color: white;
 }
 
-.careplans-legacy #credits .author .image {
-  width: 190px;
+.careplans-tabs .tab-panel {
+  display: none;
 }
 
-.careplans-legacy #credits .author .image img,
-.careplans-legacy #credits .contributor .image img {
+.careplans-tabs .tab-panel.active {
+  display: block;
+}
+
+.careplans-tabs .tab-panel img {
   width: 100%;
+  height: auto;
+}
+
+/* ===== Call to Action Cards (Part 3) ===== */
+.cta-card {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: white;
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
 }
 
-.careplans-legacy #credits .author .info,
-.careplans-legacy #credits .contributor .info {
-  display: inline-block;
-  vertical-align: top;
-  color: #676767;
-  width: calc(100% - 220px);
+.cta-card .cta-icon {
+  flex-shrink: 0;
+  width: 80px;
 }
 
-.careplans-legacy #credits .contributor .info {
+.cta-card .cta-icon img {
   width: 100%;
+  height: auto;
 }
 
-.careplans-legacy #credits .author p,
-.careplans-legacy #credits .contributor p {
-  line-height: 1.5rem;
+.cta-card h3 {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+  color: #24434d;
 }
 
-.careplans-legacy #credits .author p.name,
-.careplans-legacy #credits .contributor p.name {
-  font-size: 1.8rem;
-  line-height: 2rem;
-  font-weight: normal;
+.cta-card ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  color: #666;
+  line-height: 1.7;
+  font-size: 0.9375rem;
 }
 
-.careplans-legacy #credits .author p.bio {
-  margin-top: 10px;
+.cta-card ul li {
+  margin-bottom: 0.5rem;
 }
 
-.careplans-legacy #credits .author a,
-.careplans-legacy #credits .contributor a {
-  color: #0b5e94;
-}
-
-.careplans-legacy #credits small {
-  font-size: 0.85rem;
-}
-
-.careplans-legacy #credits small a {
-  font-size: 0.85rem;
-}
-
-@media only screen and (max-width: 768px) {
-  .careplans-legacy #credits .col-md-6 {
-    flex: 0 0 100%;
-    max-width: 100%;
+@media (max-width: 640px) {
+  .cta-card {
+    flex-direction: column;
   }
-
-  .careplans-legacy #credits .author .image {
-    width: 120px;
-  }
-
-  .careplans-legacy #credits .author .info {
-    width: calc(100% - 150px);
+  .cta-card .cta-icon {
+    width: 60px;
   }
 }
 
-@media only screen and (max-width: 576px) {
-  .careplans-legacy #credits .author .image {
-    width: 100%;
-    margin-bottom: 10px;
-    margin-right: 0;
-  }
+/* ===== Navigation Links (Part 2/3) ===== */
+.coming-soon-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
 
-  .careplans-legacy #credits .author .info {
-    width: 100%;
+.coming-soon-link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #24434d;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.coming-soon-link:hover {
+  background: #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.coming-soon-link .link-title {
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.coming-soon-link .link-subtitle {
+  color: #666;
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+/* ===== Authors / Contributors ===== */
+.careplans-author {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: flex-start;
+}
+
+.careplans-author .author-image {
+  flex-shrink: 0;
+}
+
+.careplans-author .author-image img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.careplans-author .author-info .org {
+  font-size: 0.75rem;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.25rem;
+}
+
+.careplans-author .author-info .name {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.careplans-author .author-info .name a {
+  color: #007385;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  margin-left: 0.5rem;
+}
+
+.careplans-author .author-info .bio {
+  color: #666;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+}
+
+/* ===== References ===== */
+.careplans-references {
+  padding: 2rem 0;
+}
+
+.careplans-references h2 {
+  font-family: var(--font-serif), serif;
+  font-size: 1.75rem;
+  font-weight: 300;
+  margin-bottom: 1.5rem;
+}
+
+.careplans-references ol {
+  list-style: none;
+  padding: 0;
+  counter-reset: ref-counter;
+}
+
+.careplans-references ol li {
+  counter-increment: ref-counter;
+  padding: 0.5rem 0;
+  padding-left: 2rem;
+  position: relative;
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.6;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.careplans-references ol li::before {
+  content: counter(ref-counter) ".";
+  position: absolute;
+  left: 0;
+  font-weight: 600;
+  color: #24434d;
+}
+
+.careplans-references ol li a {
+  color: #007385;
+  text-decoration: none;
+}
+
+.careplans-references ol li a:hover {
+  text-decoration: underline;
+}
+
+/* ===== Superscript ===== */
+.superscript {
+  font-size: 0.65em;
+  vertical-align: super;
+  line-height: 0;
+  color: #007385;
+}
+
+/* ===== Three Column Layout (Part 3) ===== */
+.three-col-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+@media (min-width: 768px) {
+  .three-col-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
+}
+
+.three-col-grid .col-title {
+  font-family: var(--font-sans), sans-serif;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  color: #007385;
+  margin-bottom: 0.75rem;
+}
+
+.three-col-grid ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  color: #666;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+}
+
+.three-col-grid ul li {
+  margin-bottom: 0.5rem;
 }
