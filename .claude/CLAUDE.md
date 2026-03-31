@@ -129,6 +129,9 @@ const logoVariants = { ai: [...], default: [...] }  // ← LOST enterprise, gove
 const logoVariants = { default: [...], enterprise: [...], government: [...], ai: [...] }
 ```
 
+### Killer Truths is an exception — uses fullImageCover
+The killer-truths page uses `fullImageCover: true` in Sanity to display the poster image in full size as the hero. This was explicitly requested. The static override renders the dark-themed content (title, poster, download bar, refs) directly without SetCaseStudyHero.
+
 ### Don't duplicate cover images in page content
 When porting legacy pages, the cover/hero image should be used ONLY as the `SetCaseStudyHero` image. Do NOT repeat it in the page content body. If the legacy HTML has a header section with the same background image as the hero, remove the duplicate header and keep only the title text below the hero.
 
