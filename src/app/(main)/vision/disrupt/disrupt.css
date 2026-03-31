@@ -1,0 +1,1071 @@
+/*
+ * Legacy CSS for the Disrupt feature article.
+ * Ported from goinvo.com/old/stylesheets/features/disrupt.css
+ * All selectors scoped under #disrupt-legacy to prevent global leakage.
+ */
+
+/* ===== Base typography within the legacy wrapper ===== */
+#disrupt-legacy {
+  font-size: 16px;
+  font-family: "Open Sans", sans-serif;
+  color: #0d0d0d;
+  text-rendering: optimizeLegibility;
+  font-weight: 400;
+  line-height: 1.25;
+  position: relative;
+  background-color: white;
+}
+
+#disrupt-legacy h1,
+#disrupt-legacy h2,
+#disrupt-legacy h3 {
+  font-family: "adobe-jenson-pro", Georgia, "Times New Roman", Times, serif;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#disrupt-legacy h1 {
+  font-size: 2.75rem;
+  line-height: 1.07;
+}
+@media (min-width: 530px) {
+  #disrupt-legacy h1 {
+    font-size: 3.75rem;
+  }
+}
+
+#disrupt-legacy h2 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+@media (min-width: 530px) {
+  #disrupt-legacy h2 {
+    font-size: 2.25rem;
+  }
+}
+
+#disrupt-legacy h3 {
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+@media (min-width: 530px) {
+  #disrupt-legacy h3 {
+    font-size: 1.75rem;
+  }
+}
+
+#disrupt-legacy h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+}
+@media (min-width: 530px) {
+  #disrupt-legacy h4 {
+    font-size: 1.25rem;
+  }
+}
+
+#disrupt-legacy a {
+  text-decoration: none;
+  color: #6195cf;
+}
+
+#disrupt-legacy p {
+  margin-bottom: 1em;
+}
+
+#disrupt-legacy p em {
+  font-style: italic;
+}
+
+#disrupt-legacy p strong {
+  font-weight: 600;
+}
+
+#disrupt-legacy sup {
+  vertical-align: super;
+  font-size: smaller;
+}
+
+#disrupt-legacy ul {
+  list-style: disc;
+}
+
+#disrupt-legacy ol {
+  list-style: decimal;
+}
+
+/* ===== Article Navigation Bar ===== */
+#disrupt-legacy #article-nav {
+  position: fixed;
+  top: 50px;
+  left: 0;
+  width: 100%;
+  z-index: 999;
+  background-color: rgba(3, 150, 170, 0.95);
+  font-family: "adobe-jenson-pro", serif;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.21);
+  padding: 0px 26px;
+  backface-visibility: hidden;
+}
+@media only screen and (max-width: 1240px) {
+  #disrupt-legacy #article-nav {
+    padding: 0px 150px !important;
+  }
+}
+@media only screen and (max-width: 1105px) {
+  #disrupt-legacy #article-nav {
+    padding: 0px 80px !important;
+  }
+}
+@media only screen and (max-width: 1035px) {
+  #disrupt-legacy #article-nav {
+    padding: 0px 26px !important;
+  }
+}
+
+#disrupt-legacy #article-nav ul,
+#disrupt-legacy #article-nav ol {
+  text-align: center;
+  margin: 0 auto;
+  list-style: none;
+}
+
+#disrupt-legacy #article-nav ul li,
+#disrupt-legacy #article-nav ol li {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 8px;
+  padding-right: 20px;
+  font-size: 15px;
+}
+
+#disrupt-legacy #article-nav ul li a,
+#disrupt-legacy #article-nav ol li a {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 150ms ease-in-out;
+  cursor: pointer;
+}
+
+#disrupt-legacy #article-nav ul li a:hover,
+#disrupt-legacy #article-nav ol li a:hover {
+  color: white;
+}
+
+#disrupt-legacy #article-nav .mobile-menu {
+  display: none;
+  width: 100%;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy #article-nav {
+    width: 100%;
+    height: auto;
+  }
+  #disrupt-legacy #article-nav .mobile-menu {
+    display: block;
+    height: 30px;
+  }
+  #disrupt-legacy #article-nav .mobile-menu:hover {
+    cursor: pointer;
+  }
+  #disrupt-legacy #article-nav .mobile-menu .title {
+    position: absolute;
+    top: 7px;
+    right: 0;
+    left: 0;
+    font-family: "proxima-nova", sans-serif;
+    font-size: 1em;
+    letter-spacing: 1em;
+    font-weight: bold;
+    text-align: center;
+    color: white;
+    text-transform: uppercase;
+  }
+  #disrupt-legacy #article-nav .mobile-menu .toggle-arrow {
+    position: absolute;
+    top: 8px;
+    right: 29px;
+    width: 30px;
+    transition: transform 250ms ease-in-out;
+  }
+  #disrupt-legacy #article-nav .mobile-menu .toggle-arrow.open {
+    transform: scaleY(-1);
+  }
+  #disrupt-legacy #article-nav ol {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 250ms ease-in-out;
+  }
+  #disrupt-legacy #article-nav ol.open {
+    max-height: 500px;
+  }
+}
+@media only screen and (max-width: 800px) and (max-width: 500px) {
+  #disrupt-legacy #article-nav ol li {
+    display: block;
+  }
+}
+
+/* ===== Video / Hero Containers ===== */
+#disrupt-legacy .video-container {
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+#disrupt-legacy .video-container .placeholder {
+  visibility: hidden;
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+#disrupt-legacy .video-container video {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ===== Article Header ===== */
+#disrupt-legacy header.article-header .header-contents {
+  position: relative;
+}
+
+#disrupt-legacy header.article-header .header-contents .title-container {
+  position: absolute;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
+}
+
+#disrupt-legacy header.article-header .header-contents .title-container h1 {
+  font-family: "proxima-nova", sans-serif;
+  font-size: 6em;
+  font-size: 8vw;
+  color: white;
+  letter-spacing: 0.6em;
+  margin: 0;
+  padding-left: 0.5em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+@media only screen and (min-width: 1200px) {
+  #disrupt-legacy header.article-header .header-contents .title-container h1 {
+    font-size: 6em;
+  }
+}
+
+/* ===== Section Headers ===== */
+#disrupt-legacy header.sec-header {
+  position: relative;
+  font-family: "proxima-nova", sans-serif;
+}
+
+#disrupt-legacy header.sec-header .title-container {
+  position: absolute;
+  left: 0;
+  bottom: 6%;
+  width: 100%;
+  color: white;
+  text-align: center;
+}
+
+#disrupt-legacy header.sec-header .title-container h3 {
+  font-family: "proxima-nova", sans-serif;
+  margin: 10px 0 0 0;
+  width: 100%;
+  font-size: 3em;
+  font-size: 4vw;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em;
+  color: white;
+  text-transform: uppercase;
+}
+
+#disrupt-legacy header.sec-header .title-container h4 {
+  margin: 0.5% 0%;
+  width: 100%;
+  font-size: 2em;
+  font-size: 2vw;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  text-transform: uppercase;
+}
+
+/* ===== Article Content ===== */
+#disrupt-legacy article.disrupt {
+  font-family: "adobe-jenson-pro", serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: transparent;
+}
+
+#disrupt-legacy article .article-section {
+  margin: 8em 0 8em 0;
+}
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy article .article-section {
+    margin: 5vw 0 5vw 0;
+  }
+}
+
+/* Section color themes */
+#disrupt-legacy article .article-section#section-1 h3 {
+  color: #0282c1;
+}
+#disrupt-legacy article .article-section#section-1 a {
+  color: #0282c1;
+}
+#disrupt-legacy article .article-section#section-2 a {
+  color: #e68b35;
+}
+#disrupt-legacy article .article-section#section-3 h3 {
+  color: #82659b;
+}
+#disrupt-legacy article .article-section#section-3 a {
+  color: #dd2e64;
+}
+#disrupt-legacy article .article-section#section-4 a {
+  color: #82659b;
+}
+#disrupt-legacy article .article-section#section-5 h3 {
+  color: #0396aa;
+}
+#disrupt-legacy article .article-section#section-5 a {
+  color: #0282c1;
+}
+#disrupt-legacy article .article-section#section-6 h3 {
+  color: #82659b;
+}
+#disrupt-legacy article .article-section#section-6 a {
+  color: #0396aa;
+}
+#disrupt-legacy article .article-section#closer h3 {
+  color: #e68b35;
+}
+#disrupt-legacy article .article-section header {
+  margin-left: 5%;
+}
+
+/* ===== Section Content ===== */
+#disrupt-legacy .section-content {
+  width: 100%;
+}
+
+#disrupt-legacy .section-content p,
+#disrupt-legacy .section-content ul,
+#disrupt-legacy .section-content ol {
+  font-size: 1.5em;
+  line-height: 1.5em;
+}
+
+#disrupt-legacy .section-content ul li,
+#disrupt-legacy .section-content ol li {
+  margin-bottom: 0.5em;
+}
+
+#disrupt-legacy .section-content .content {
+  display: inline-block;
+  vertical-align: top;
+  width: 90%;
+  margin: 0 5%;
+}
+
+#disrupt-legacy .section-content .content .sub-sec {
+  margin: 3em 0;
+}
+
+#disrupt-legacy .section-content .content .sub-sec:first-of-type {
+  margin-top: 0;
+}
+
+#disrupt-legacy .section-content .content .sub-sec:last-of-type {
+  margin-bottom: 0;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .sub-sec {
+    margin: 5vw 0;
+  }
+  #disrupt-legacy .section-content .content .sub-sec:first-of-type {
+    margin-top: 0;
+  }
+  #disrupt-legacy .section-content .content .sub-sec:last-of-type {
+    margin-bottom: 0;
+  }
+}
+
+#disrupt-legacy .section-content .content .sub-sec.book {
+  margin: 0 0 3em 0;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .sub-sec.book {
+    margin: 0 0 5vw 0;
+  }
+}
+
+#disrupt-legacy .section-content .content .sub-sec h3 {
+  font-family: "proxima-nova", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+@media only screen and (min-width: 1201px) {
+  #disrupt-legacy .section-content .content .sub-sec h3 {
+    font-size: 1.5em;
+    letter-spacing: 0.5em;
+    margin-bottom: 0.7em;
+    line-height: 1.4em;
+  }
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .sub-sec h3 {
+    font-size: 1.9vw;
+    letter-spacing: 1.1vw;
+    margin-bottom: 0.6vw;
+    line-height: 3.6vw;
+  }
+}
+
+@media only screen and (max-width: 700px) {
+  #disrupt-legacy .section-content .content .sub-sec h3 {
+    font-size: 0.8em;
+    letter-spacing: 0.5em;
+    margin-bottom: 0.2em;
+    line-height: 1.2em;
+  }
+}
+
+#disrupt-legacy .section-content .content p {
+  margin: 0 16% 2em 0;
+}
+
+#disrupt-legacy .section-content .content p.no-margin {
+  margin: 0 16% 0 0;
+}
+
+#disrupt-legacy .section-content .content p:last-of-type {
+  margin: 0 16% 0 0;
+}
+
+#disrupt-legacy .section-content .content p.quote {
+  padding: 0 4em 0 2em;
+  font-style: italic;
+}
+
+#disrupt-legacy .section-content .content p .italics {
+  font-style: italic;
+}
+
+#disrupt-legacy .section-content .content p a {
+  display: inline;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content p {
+    margin: 0 0 4vw 0;
+  }
+  #disrupt-legacy .section-content .content p:last-of-type {
+    margin: 0;
+  }
+  #disrupt-legacy .section-content .content p.no-margin {
+    margin: 0;
+  }
+}
+
+/* References */
+#disrupt-legacy .section-content .content ul.refs {
+  list-style: none;
+}
+
+#disrupt-legacy .section-content .content ul.refs li {
+  color: #939598;
+  font-size: 0.8em;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content ul.refs li {
+    font-size: 1.6vw;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content ul.refs li {
+    font-size: 0.8em;
+  }
+}
+
+#disrupt-legacy .section-content .content ul.refs li a {
+  color: #939598;
+  font-style: italic;
+}
+
+/* ===== Images ===== */
+#disrupt-legacy .section-content .content .images.center {
+  width: 100%;
+  margin: 3em 0;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .images.center {
+    margin: 5vw 0;
+  }
+}
+
+#disrupt-legacy .section-content .content .images.center img {
+  width: 80%;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .images.center img {
+    width: 100%;
+  }
+}
+
+#disrupt-legacy .section-content .content .images.center .caption {
+  font-size: 1.5em;
+  padding-top: 0.9em;
+  color: #93969a;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .images.center .caption {
+    font-size: 2vw;
+    padding-top: 1.5vw;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .images.center .caption {
+    font-size: 1em;
+    padding-top: 0.6em;
+  }
+}
+
+/* Sidebar images (right float on desktop) */
+#disrupt-legacy .section-content .content .images.sidebar.right {
+  float: right;
+  width: 40%;
+  height: auto;
+  margin: 0.45em 0 0 0;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .images.sidebar.right {
+    display: none;
+  }
+}
+
+/* Sidebar images (shown on mobile instead of float) */
+#disrupt-legacy .section-content .content .images.sidebar.middle {
+  width: 100%;
+  margin: 3em auto;
+}
+
+@media only screen and (min-width: 801px) {
+  #disrupt-legacy .section-content .content .images.sidebar.middle {
+    display: none;
+  }
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .images.sidebar.middle {
+    margin: 5vw 0;
+  }
+}
+
+#disrupt-legacy .section-content .content .images.sidebar.middle .image {
+  width: 75%;
+  margin: auto;
+}
+
+#disrupt-legacy
+  .section-content
+  .content
+  .images.sidebar.middle
+  .image:not(:last-of-type) {
+  margin-bottom: 3.5vw;
+}
+
+#disrupt-legacy .section-content .content .images.sidebar.middle .caption {
+  font-size: 1.5em;
+  padding-top: 0.9em;
+  color: #93969a;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .images.sidebar.middle .caption {
+    font-size: 2vw;
+    padding-top: 1.5vw;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .images.sidebar.middle .caption {
+    font-size: 1em;
+    padding-top: 0.8vw;
+  }
+}
+
+#disrupt-legacy .section-content .content .images .image {
+  margin-bottom: 1.5em;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .images .image {
+    margin-bottom: 1.7vw;
+  }
+}
+
+#disrupt-legacy .section-content .content .images .image:last-of-type {
+  margin-bottom: 0;
+}
+
+#disrupt-legacy .section-content .content .images .image .caption {
+  color: #93969a;
+}
+
+@media only screen and (min-width: 1201px) {
+  #disrupt-legacy .section-content .content .images .image .caption {
+    font-size: 1.1em;
+    margin: 0.4em;
+    margin-left: 0.6em;
+  }
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .section-content .content .images .image .caption {
+    font-size: 1.47vw;
+    margin: 0.45vw;
+    margin-left: 0.9vw;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .section-content .content .images .image .caption {
+    font-size: 1em;
+    margin: 0.2em;
+  }
+}
+
+#disrupt-legacy .section-content .content .images .image img {
+  width: 100%;
+  height: auto;
+}
+
+/* Full-width images */
+#disrupt-legacy .section-content .full {
+  width: 100%;
+  margin: 2em 0;
+}
+
+/* Sci-fi caption image */
+#disrupt-legacy .sci-fi {
+  width: 100%;
+  height: auto;
+}
+
+#disrupt-legacy .sci-fi img {
+  width: 100%;
+  height: auto;
+}
+
+#disrupt-legacy .sci-fi .caption {
+  width: 90%;
+  margin: 1.2em 5% 0 5%;
+  text-align: left;
+  padding: 0 16% 0 0;
+  font-size: 1.3em;
+  color: #93969a;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .sci-fi .caption {
+    padding: 0;
+    font-size: 1em;
+  }
+}
+
+/* ===== Bottom Navigation ===== */
+#disrupt-legacy #bottom-nav {
+  position: relative;
+  width: 100%;
+  height: 70px;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+@media only screen and (max-width: 1000px) {
+  #disrupt-legacy #bottom-nav {
+    height: 60px;
+  }
+}
+
+@media only screen and (max-width: 850px) {
+  #disrupt-legacy #bottom-nav {
+    height: 50px;
+  }
+}
+
+@media only screen and (max-width: 650px) {
+  #disrupt-legacy #bottom-nav {
+    height: 30px;
+  }
+}
+
+#disrupt-legacy #bottom-nav .link-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#disrupt-legacy #bottom-nav .text-container {
+  position: absolute;
+  font-family: "proxima-nova", sans-serif;
+  text-transform: uppercase;
+  padding-top: 0.95em;
+  top: 0px;
+  right: 50px;
+}
+
+#disrupt-legacy #bottom-nav .text-container .next-part {
+  text-align: right;
+  color: #666;
+  font-weight: 400;
+  font-size: 0.9em;
+  letter-spacing: 0.6em;
+  padding: 0 0.8em 0.4em 0;
+}
+
+#disrupt-legacy #bottom-nav .text-container .title {
+  font-weight: bold;
+  font-size: 1.5em;
+  letter-spacing: 0.8em;
+}
+
+@media only screen and (max-width: 1000px) {
+  #disrupt-legacy #bottom-nav .text-container {
+    padding-top: 0.75em;
+    right: 42px;
+  }
+  #disrupt-legacy #bottom-nav .text-container .next-part {
+    font-size: 0.8em;
+    letter-spacing: 0.5em;
+    padding: 0 0.6em 0.3em 0;
+  }
+  #disrupt-legacy #bottom-nav .text-container .title {
+    font-size: 1.4em;
+    letter-spacing: 0.7em;
+  }
+}
+
+@media only screen and (max-width: 650px) {
+  #disrupt-legacy #bottom-nav .text-container {
+    padding-top: 0.25em;
+    right: 12px;
+  }
+  #disrupt-legacy #bottom-nav .text-container .next-part {
+    font-size: 0.5em;
+    letter-spacing: 0.2em;
+    padding: 0 0.6em 0.1em 0;
+  }
+  #disrupt-legacy #bottom-nav .text-container .title {
+    font-size: 1em;
+    letter-spacing: 0.4em;
+  }
+}
+
+/* ===== Tomato image ===== */
+#disrupt-legacy #tomato {
+  width: 80%;
+  max-width: 1050px;
+  height: auto;
+  overflow: hidden;
+  margin-bottom: 3em;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy #tomato {
+    width: 100%;
+    margin: auto auto 4vw auto;
+  }
+}
+
+#disrupt-legacy #tomato img {
+  width: 100%;
+  height: auto;
+}
+
+/* ===== Contributions / Credits ===== */
+#disrupt-legacy .contributions {
+  width: 100%;
+  background-color: #82659b;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+#disrupt-legacy .contributions .cont-wrapper {
+  font-family: "proxima-nova", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  color: white;
+  max-width: 1200px;
+  margin: 4em auto 0 auto;
+  font-weight: 400;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .contributions .cont-wrapper {
+    margin-top: 0;
+  }
+}
+
+#disrupt-legacy .contributions .main-credits {
+  list-style: none;
+  width: 80%;
+  margin: auto;
+  max-width: 1050px;
+}
+
+#disrupt-legacy .contributions .main-credits li {
+  width: 100%;
+}
+
+#disrupt-legacy .contributions .main-credits li img {
+  display: inline-block;
+  width: 25%;
+  height: auto;
+}
+
+#disrupt-legacy .contributions .main-credits li .title-container {
+  display: inline-block;
+  vertical-align: top;
+  margin-top: 4em;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .contributions .main-credits li .title-container {
+    margin-top: 5vw;
+  }
+}
+
+#disrupt-legacy .contributions .main-credits li .title-container .person {
+  line-height: 1.7em;
+}
+
+#disrupt-legacy .contributions .main-credits li .title-container .title {
+  line-height: 1.7em;
+  color: #e68b35;
+}
+
+#disrupt-legacy .contributions .main-credits li.author img {
+  margin-left: 0;
+}
+
+#disrupt-legacy .contributions .main-credits li.author .title-container {
+  width: 55%;
+}
+
+#disrupt-legacy .contributions .main-credits li.designer img {
+  margin-left: 10%;
+}
+
+#disrupt-legacy .contributions .main-credits li.designer .title-container {
+  width: 60%;
+}
+
+#disrupt-legacy .contributions .main-credits li.developer img {
+  margin-left: 20%;
+}
+
+#disrupt-legacy .contributions .main-credits li.developer .title-container {
+  width: 50%;
+}
+
+#disrupt-legacy .contributions .main-credits li.editor img {
+  margin-left: 35%;
+}
+
+#disrupt-legacy .contributions .main-credits li.editor .title-container {
+  width: 35%;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .contributions .main-credits li img {
+    margin-left: 0 !important;
+  }
+  #disrupt-legacy .contributions .main-credits li .title-container {
+    width: 70% !important;
+  }
+}
+
+#disrupt-legacy .contributions .main-credits li.main {
+  margin-bottom: 2.5em;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .contributions .main-credits {
+    font-size: 1.3vw;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy .contributions .main-credits {
+    font-size: 2.2vw;
+  }
+  #disrupt-legacy .contributions .main-credits li {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}
+
+/* Extra credits toggle */
+#disrupt-legacy .contributions .main-credits #thanks {
+  line-height: 1.7em;
+}
+
+#disrupt-legacy .contributions .main-credits .extra-credits {
+  list-style: none;
+  line-height: 1.7em;
+}
+
+#disrupt-legacy .contributions .main-credits .extra-credits li {
+  width: 100%;
+  margin-top: 0.7em;
+}
+
+#disrupt-legacy .contributions .main-credits .extra-credits li .credit {
+  color: white;
+}
+
+#disrupt-legacy .contributions .main-credits .extra-credits li .link a {
+  color: #e68b35;
+}
+
+#disrupt-legacy .contributions .main-credits .extra-credits li .link a:hover {
+  text-decoration: underline;
+}
+
+/* Footer logo inside contributions */
+#disrupt-legacy .contributions .footer-logo {
+  width: 100%;
+  padding-left: 9%;
+}
+
+#disrupt-legacy .contributions .footer-logo .logo,
+#disrupt-legacy .contributions .footer-logo a {
+  display: inline-block;
+}
+
+#disrupt-legacy .contributions .footer-logo .logo {
+  margin-right: 25px;
+}
+
+#disrupt-legacy .contributions .footer-logo a {
+  color: #fff;
+  transition: color 250ms ease-in-out;
+}
+
+#disrupt-legacy .contributions .footer-logo a:hover {
+  color: #dbdbdb;
+}
+
+@media only screen and (max-width: 1000px) {
+  #disrupt-legacy .section-content p,
+  #disrupt-legacy .section-content ul,
+  #disrupt-legacy .section-content ol {
+    font-size: 1.2em;
+  }
+  #disrupt-legacy .contributions .footer-logo {
+    padding: 0px 20px;
+  }
+  #disrupt-legacy .contributions .footer-logo .logo {
+    max-width: 100px;
+  }
+  #disrupt-legacy .contributions .footer-logo a {
+    font-size: 0.8em;
+  }
+}
+
+/* ===== Social Buttons ===== */
+#disrupt-legacy .social-buttons svg {
+  width: 28px;
+  height: 28px;
+  background: #474751;
+  padding: 6px;
+  fill: #f2f2f2;
+  transition: background 250ms ease-in-out;
+}
+
+#disrupt-legacy .social-buttons svg:hover {
+  background: #83838e;
+}
+
+@media only screen and (max-width: 600px) {
+  #disrupt-legacy .social-buttons svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+#disrupt-legacy .social-buttons.end {
+  text-align: center;
+  margin-bottom: 3em;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .social-buttons.end {
+    margin-bottom: 4vw;
+  }
+}
+
+/* ===== Technology Grid (20 topics) ===== */
+#disrupt-legacy #grid-section-container {
+  width: 100%;
+  background-color: #f2f1f1 !important;
+}
+
+#disrupt-legacy #grid-section-container #grid-section {
+  width: 65%;
+  margin: 0 17.5%;
+  padding: 5em 0;
+}
+
+@media only screen and (max-width: 800px) {
+  #disrupt-legacy #grid-section-container #grid-section {
+    display: none;
+  }
+}
+
+#disrupt-legacy #grid-area {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  background-color: #f2f1f1;
+}
+
+/* ===== Disqus container ===== */
+#disrupt-legacy .disqus-container {
+  width: 100%;
+  height: auto;
+  max-width: 1050px;
+  margin: auto auto 3em auto;
+  padding: 10px;
+}
+
+@media only screen and (max-width: 1200px) {
+  #disrupt-legacy .disqus-container {
+    width: 85%;
+    max-width: 1050px;
+  }
+}
