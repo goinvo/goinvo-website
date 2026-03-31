@@ -79,6 +79,7 @@ export interface Feature {
   categories?: string[]
   date?: string
   client?: string
+  authorLayout?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   authors?: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

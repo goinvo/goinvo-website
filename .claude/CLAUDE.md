@@ -91,6 +91,9 @@ const logoVariants = { ai: [...], default: [...] }  // ← LOST enterprise, gove
 const logoVariants = { default: [...], enterprise: [...], government: [...], ai: [...] }
 ```
 
+### Prefer adding VARIANTS to existing components over creating new ones
+When a page needs a different visual treatment, add a `variant` prop or dropdown to the existing component rather than creating a new component. This keeps the Sanity Studio UX simple (one block type with a variant selector) and prevents component sprawl. If a component doesn't support the needed layout, ADD a variant to it — don't replace the component or create a parallel one.
+
 ### ALWAYS visually compare against the live Gatsby site before assuming anything is correct
 Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby page (goinvo.com/vision/{slug}/) AND the Next.js page (localhost:3000/vision/{slug}) side by side and visually compare. Check:
 - Section order — varies by article, verify against the Gatsby source/live site for each page

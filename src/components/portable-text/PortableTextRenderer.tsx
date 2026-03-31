@@ -114,21 +114,34 @@ const components: PortableTextComponents = {
       const items: { stat: string; description: string; refNumber?: string; refTarget?: string }[] = value.items || []
       const count = items.length
       const bg = value.background || 'none'
+      const variant = value.variant || 'row'
       const perItemBg = bg === 'gray' ? 'bg-gray-lightest' : bg === 'teal' ? 'bg-secondary/10' : ''
+
+      // Determine grid classes based on variant
+      let gridClasses: string
+      if (variant === 'stacked') {
+        gridClasses = 'grid-cols-1 max-w-md mx-auto'
+      } else if (variant === 'grid') {
+        gridClasses = 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+      } else {
+        // "row" (default) — auto-detect columns from item count
+        gridClasses = count === 1
+          ? 'grid-cols-1 max-w-md mx-auto'
+          : count === 2
+            ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+            : count === 4
+              ? 'grid-cols-2 lg:grid-cols-4'
+              : count % 3 === 0
+                ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+      }
+
       return (
         <ArticleReveal intensity="visual">
           <div
             className={cn(
               'grid gap-4 my-12',
-              count === 1
-                ? 'grid-cols-1 max-w-md mx-auto'
-                : count === 2
-                  ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
-                  : count === 4
-                    ? 'grid-cols-2 lg:grid-cols-4'
-                    : count % 3 === 0
-                      ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
-                      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+              gridClasses,
             )}
           >
             {items.map((item, i) => (

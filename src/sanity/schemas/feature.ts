@@ -112,6 +112,19 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'authorLayout',
+      title: 'Author Layout',
+      type: 'string',
+      description: 'How to display the author section. "Equal" shows all authors the same size. "Primary + sidebar" highlights the first author and shows the rest in a bordered sidebar.',
+      options: {
+        list: [
+          { title: 'Equal (all same size)', value: 'equal' },
+          { title: 'Primary + sidebar', value: 'primary-sidebar' },
+        ],
+      },
+      initialValue: 'equal',
+    }),
+    defineField({
       name: 'contributors',
       title: 'Contributors',
       type: 'array',

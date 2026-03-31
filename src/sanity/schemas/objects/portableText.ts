@@ -246,13 +246,27 @@ export default defineType({
       title: 'Results',
       type: 'object',
       preview: {
-        select: { items: 'items' },
-        prepare({ items }) {
+        select: { items: 'items', variant: 'variant' },
+        prepare({ items, variant }) {
           const count = items?.length || 0
-          return { title: `${count} result${count !== 1 ? 's' : ''}`, subtitle: 'Results / Stats' }
+          return { title: `${count} result${count !== 1 ? 's' : ''} (${variant || 'row'})`, subtitle: 'Results / Stats' }
         },
       },
       fields: [
+        {
+          name: 'variant',
+          title: 'Layout',
+          type: 'string',
+          description: 'How to arrange the stats.',
+          options: {
+            list: [
+              { title: 'Horizontal row', value: 'row' },
+              { title: '2-column grid', value: 'grid' },
+              { title: 'Stacked (vertical)', value: 'stacked' },
+            ],
+          },
+          initialValue: 'row',
+        },
         {
           name: 'items',
           title: 'Result items',
