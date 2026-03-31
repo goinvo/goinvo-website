@@ -282,18 +282,26 @@ When content needs a visual treatment the renderer doesn't support yet:
 - `results` — fields: `items[]` (stat, description), `background` (none/gray/teal)
 - `references` — fields: `items[]` (title, link)
 - `columns` — fields: `layout` (2/3/4), `content[]`
-- `backgroundSection` — fields: `color` (gray/teal/warm/orange), `content[]`
+- `backgroundSection` — fields: `color` (gray/teal/warm/orange/dark/red), `content[]`
 - `buttonGroup` — fields: `buttons[]` (label, url, variant, external). Use for single or multiple buttons.
 - `divider` — fields: `style` (default/thick)
 - `contactForm` — fields: `showHeader`
 - Text styles: `h2`, `sectionTitle` (centered h2), `h3`, `h4`, `blockquote`, `callout`, `normal`
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
 
-### Verification Scripts
+### Verification & Fix Scripts
 - **`scripts/compare-visual.ts`** — Puppeteer visual comparison (computed styles, screenshots). Use this FIRST when migrating pages.
 - **`scripts/compare-pages.ts`** — HTML structural comparison (headings, counts, classes). Use this for batch audits.
+- **`scripts/auto-fix-content.mjs`** — **AUTO-FIX** common Sanity content issues across all pages. Detects image+text pairs that should be 2-column layouts and fixes them automatically. Run with `--write` to apply. Always run this after content migrations.
 - **`scripts/audit-content.mjs`** — Sanity document quality (empty blocks, missing assets, duplicate titles).
 - **`scripts/audit-site-integrity.mjs`** — Route/redirect/link/SEO validation.
+
+### ALWAYS run auto-fix after content migrations
+After migrating content to Sanity or patching content blocks, ALWAYS run:
+```bash
+node scripts/auto-fix-content.mjs --write
+```
+This catches image+text pairs that should be side-by-side columns, heading level mismatches, and other structural issues that can't be caught by the simple element-count audit.
 
 ## Component Guidelines
 - Server Components by default; add `"use client"` only when needed (interactivity, hooks, browser APIs)
