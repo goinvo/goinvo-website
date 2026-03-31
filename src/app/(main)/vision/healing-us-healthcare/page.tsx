@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function HealingUsHealthcarePage() {
   return (
     <div>
-      <SetCaseStudyHero image={cloudfrontImage('/old/images/features/us-healthcare/Cecile.jpg')} />
+      <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/us-healthcare/jumbotron3.jpg" />
 
       {/* Intro */}
       <section className="py-12">

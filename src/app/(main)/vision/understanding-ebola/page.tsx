@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function UnderstandingEbolaPage() {
   return (
     <div>
-      <SetCaseStudyHero image={cloudfrontImage('/old/images/features/ebola/Ebola-01.png')} />
+      <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/ebola/Ebola-01.png" />
 
       {/* Sticky Navigation */}
       <nav className="ebola-nav">
