@@ -1,0 +1,824 @@
+/*
+ * Legacy styles for the Healing U.S. Healthcare feature page.
+ * Scoped under .us-healthcare-legacy to avoid conflicts with site globals.
+ */
+
+@import url(https://fonts.googleapis.com/css?family=Lato:400,900);
+
+/* ── Base typography (scoped) ─────────────────────────── */
+.us-healthcare-legacy {
+  font-size: 16px;
+  font-family: "Open Sans", sans-serif;
+  color: #0d0d0d;
+  text-rendering: optimizeLegibility;
+  font-weight: 400;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+.us-healthcare-legacy h1,
+.us-healthcare-legacy h2,
+.us-healthcare-legacy h3 {
+  font-family: "adobe-jenson-pro", Georgia, "Times New Roman", Times, serif;
+}
+
+.us-healthcare-legacy h1 {
+  font-family: "Lato", sans-serif;
+  font-weight: 900;
+  font-size: 3em;
+  letter-spacing: 0.03em;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy h1 { font-size: 2em; }
+}
+
+.us-healthcare-legacy h2 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+@media (min-width: 530px) {
+  .us-healthcare-legacy h2 { font-size: 2.25rem; }
+}
+
+.us-healthcare-legacy h3 {
+  font-size: 1.25rem;
+  line-height: 1.15;
+  text-align: center;
+  font-size: 1.25em;
+}
+@media (min-width: 530px) {
+  .us-healthcare-legacy h3 { font-size: 1.75rem; }
+}
+
+.us-healthcare-legacy h4 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+@media (min-width: 530px) {
+  .us-healthcare-legacy h4 { font-size: 1.25rem; }
+}
+
+.us-healthcare-legacy h5 {
+  font-size: 1.25em;
+}
+
+.us-healthcare-legacy a {
+  text-decoration: none;
+  color: #6195CF;
+}
+
+.us-healthcare-legacy p {
+  font-size: 1.25em;
+  display: block;
+  margin: 1em 0;
+  line-height: 150%;
+  text-align: left;
+}
+.us-healthcare-legacy p em { font-style: italic; }
+.us-healthcare-legacy p strong { font-weight: 600; }
+
+.us-healthcare-legacy small {
+  line-height: 1;
+  font-size: smaller;
+}
+
+.us-healthcare-legacy sup {
+  vertical-align: baseline;
+  position: relative;
+  top: -0.6em;
+  font-size: 0.5em;
+}
+
+.us-healthcare-legacy sub {
+  vertical-align: sub;
+  font-size: smaller;
+}
+
+.us-healthcare-legacy strong {
+  font-weight: 800;
+}
+
+/* ── Content link colors ─────────────────────────── */
+.us-healthcare-legacy .content-wrapper a:link,
+.us-healthcare-legacy .content-wrapper a:visited {
+  color: #585858;
+  text-decoration: none;
+}
+.us-healthcare-legacy .content-wrapper a:active { text-decoration: none; }
+.us-healthcare-legacy .content-wrapper a:hover {
+  color: #383838;
+  text-decoration: none;
+}
+
+/* ── Article / section wrappers ─────────────────── */
+.us-healthcare-legacy article,
+.us-healthcare-legacy .us-footer-section {
+  width: 70%;
+  margin: 0 auto;
+  padding: 40px 0;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy article,
+  .us-healthcare-legacy .us-footer-section {
+    padding: 20px 0;
+    width: 85%;
+  }
+}
+@media only screen and (min-width: 1200px) {
+  .us-healthcare-legacy article,
+  .us-healthcare-legacy .us-footer-section {
+    padding: 40px 0;
+    width: 840px;
+  }
+}
+
+.us-healthcare-legacy article h2,
+.us-healthcare-legacy article h1 {
+  text-align: center;
+  font-family: "Lato", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 1.5em;
+}
+
+/* ── Jumbotron / Hero ────────────────────────────── */
+.us-healthcare-legacy .jumbotron {
+  color: white;
+  height: 80vh;
+  text-align: center;
+  background: url("https://www.goinvo.com/old/images/features/us-healthcare/jumbotron3.jpg");
+  background-size: cover;
+  background-position: top center;
+  position: relative;
+}
+.us-healthcare-legacy .jumbotron h1 { margin-bottom: 10px; }
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .jumbotron { margin-bottom: 10px; }
+}
+.us-healthcare-legacy .jumbotron .footnote { font-size: 0px; }
+
+.us-healthcare-legacy .layer {
+  background-color: rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 80vh;
+  top: 0;
+  left: 0;
+  padding-top: 35vh;
+  position: absolute;
+}
+.us-healthcare-legacy header p { text-align: center; }
+
+/* ── Article navigation ──────────────────────────── */
+.us-healthcare-legacy #article-nav {
+  position: sticky;
+  left: 0;
+  width: 100%;
+  top: 60px;
+  background-color: rgba(0, 0, 0, 0.81);
+  text-align: center;
+  z-index: 100;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy #article-nav { display: none; }
+}
+.us-healthcare-legacy #article-nav ul {
+  margin: 0 auto;
+  list-style: none;
+  padding: 0;
+}
+.us-healthcare-legacy #article-nav ul li {
+  display: inline-block;
+  white-space: nowrap;
+  width: calc(100% / 8);
+  text-align: center;
+  margin: auto;
+  padding: 8px;
+  cursor: pointer;
+}
+.us-healthcare-legacy #article-nav ul li a {
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+}
+.us-healthcare-legacy #article-nav ul li a:hover {
+  color: white;
+  text-decoration: none;
+}
+
+/* ── Medical bill sidebar ────────────────────────── */
+.us-healthcare-legacy #medical-bill {
+  width: 180px;
+  position: fixed;
+  top: 30%;
+  right: 5px;
+  background-color: white;
+  padding: 5px;
+  z-index: 1000;
+  transition: all 350ms ease-in-out;
+  border-radius: 8px;
+  border: 1px solid #9a9a9a;
+  opacity: 0;
+  pointer-events: none;
+}
+.us-healthcare-legacy #medical-bill td {
+  transition: inherit;
+  padding: 6px;
+}
+.us-healthcare-legacy #medical-bill td:first-of-type { min-width: 96px; }
+.us-healthcare-legacy #medical-bill.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media only screen and (max-width: 1150px) {
+  .us-healthcare-legacy #medical-bill {
+    top: auto;
+    bottom: 1%;
+    width: 80px;
+    height: 60px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.3);
+    color: rgba(0, 0, 0, 0.5);
+  }
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy #medical-bill {
+    display: none;
+    pointer-events: none;
+  }
+}
+@media only screen and (max-width: 1150px) {
+  .us-healthcare-legacy #medical-bill:hover {
+    width: 180px;
+    height: auto;
+    color: black;
+    background-color: white;
+  }
+}
+.us-healthcare-legacy [data-reason="total"] { font-weight: bold; }
+
+/* ── Slide panels (expandable sections) ──────────── */
+.us-healthcare-legacy .slide-panel {
+  display: none;
+  background-color: #fff;
+  margin: auto;
+  text-align: left;
+  padding: 0 5%;
+  padding-top: 10px;
+  padding-bottom: 75px;
+}
+.us-healthcare-legacy .slide-panel.is-open {
+  display: block;
+}
+.us-healthcare-legacy .slide-panel p { font-size: 1em; }
+.us-healthcare-legacy .slide-panel sup {
+  vertical-align: baseline;
+  position: relative;
+  top: -0.5em;
+  font-size: 0.5em;
+}
+
+.us-healthcare-legacy span.slide {
+  font-weight: 600;
+  background-color: rgba(242, 224, 84, 0.55);
+  cursor: pointer;
+  padding: 0 5px;
+}
+.us-healthcare-legacy span.slide:hover {
+  background-color: #f2e054;
+}
+
+/* ── Decision points (choose-your-path) ──────────── */
+.us-healthcare-legacy .decision-point {
+  background-color: #fff;
+}
+.us-healthcare-legacy .decision-container {
+  display: flex;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .decision-container {
+    display: table;
+    width: 100%;
+  }
+}
+.us-healthcare-legacy .decision-container .decision {
+  cursor: pointer;
+  flex: 1;
+  background-color: #dedede;
+  display: inline-block;
+  width: calc(50% - 10px);
+  padding: 25px;
+  border-radius: 8px;
+  transition: 0.2s ease-in-out;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .decision-container .decision {
+    width: 100% !important;
+    display: block;
+    margin-bottom: 1.25em;
+  }
+}
+.us-healthcare-legacy .decision-container .decision:hover {
+  background-color: #bebebe !important;
+}
+.us-healthcare-legacy .decision-container .decision[data-selected="yes"] {
+  background-color: #9a9a9a;
+}
+.us-healthcare-legacy .decision-container .decision[data-selected="no"] {
+  background-color: #ffffff;
+}
+.us-healthcare-legacy .decision-container .decision h3 {
+  height: 2em;
+  vertical-align: middle;
+  font-size: 1em;
+  text-transform: uppercase;
+}
+.us-healthcare-legacy .decision-container .decision p {
+  font-size: 1em;
+  text-align: center;
+  padding: 0 5px;
+  margin: 0 0 5px;
+}
+.us-healthcare-legacy .decision,
+.us-healthcare-legacy .next,
+.us-healthcare-legacy .outcome {
+  margin: 10px;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .decision,
+  .us-healthcare-legacy .next,
+  .us-healthcare-legacy .outcome {
+    margin: 10px 0;
+  }
+}
+.us-healthcare-legacy .next {
+  font-size: 1em;
+  padding: 0 20px 3em;
+  margin-bottom: 0;
+}
+.us-healthcare-legacy .outcome-container {
+  display: none;
+  border-radius: 10px;
+  margin-bottom: 2em;
+  transition: background-color 150ms ease-in-out;
+}
+.us-healthcare-legacy .outcome-container.is-open {
+  display: block;
+}
+.us-healthcare-legacy .outcome-container.done-transitioning[data-outcome="positive"] {
+  background-color: rgba(76, 214, 51, 0.09);
+}
+.us-healthcare-legacy .outcome-container.done-transitioning[data-outcome="negative"] {
+  background-color: rgba(255, 0, 0, 0.05);
+}
+.us-healthcare-legacy .outcome-container .outcome {
+  font-size: 1em;
+  padding: 5px 20px;
+  padding-top: 1em;
+}
+
+/* ── Chart containers ────────────────────────────── */
+.us-healthcare-legacy .chart-container {
+  width: 100%;
+}
+.us-healthcare-legacy .chart-container h4 { font-weight: bold; }
+.us-healthcare-legacy .chart-container div { margin: 0 auto; }
+.us-healthcare-legacy .chart-container p {
+  width: 70%;
+  margin: 0 auto;
+  margin-bottom: 1em;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .chart-container p {
+    padding: 20px 0;
+    width: 85%;
+    margin-bottom: 0;
+  }
+}
+.us-healthcare-legacy .chart-container .row,
+.us-healthcare-legacy .tabs .row {
+  width: 70%;
+  margin: 0 auto !important;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .chart-container .row,
+  .us-healthcare-legacy .tabs .row {
+    padding: 20px 0;
+    width: 85%;
+  }
+  .us-healthcare-legacy .chart-container .row .col-sm-4,
+  .us-healthcare-legacy .tabs .row .col-sm-4 {
+    margin-bottom: 0.5em !important;
+  }
+}
+
+/* ── Triple graph tabs ───────────────────────────── */
+.us-healthcare-legacy #triple-graph {
+  width: 100%;
+  max-height: 70%;
+}
+.us-healthcare-legacy #triple-graph .tab-link {
+  padding: 10px;
+  background-color: #dedede;
+  width: 100%;
+  text-align: center;
+  border: solid 1px #fff;
+  vertical-align: center;
+  border-radius: 8px;
+  color: black;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+.us-healthcare-legacy #triple-graph .col-sm-4 { padding: 0; }
+.us-healthcare-legacy #triple-graph .row { margin: 0; }
+.us-healthcare-legacy #triple-graph .tab-link.current {
+  background-color: #9a9a9a;
+}
+.us-healthcare-legacy #triple-graph .tab-link:hover {
+  background-color: #bebebe !important;
+}
+.us-healthcare-legacy .tab-content {
+  display: none;
+  background: #fff;
+}
+.us-healthcare-legacy .tab-content.current { display: inherit; }
+.us-healthcare-legacy .tab-content p {
+  width: 70%;
+  margin: 0 auto;
+  margin-bottom: 1em;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .tab-content p {
+    padding: 20px 0;
+    width: 85%;
+    margin-bottom: 0;
+  }
+}
+.us-healthcare-legacy p.tab_p {
+  text-align: center;
+  padding-top: 1em;
+}
+
+/* ── Waste chart toggle buttons ──────────────────── */
+.us-healthcare-legacy .toggle-btn {
+  text-align: center;
+  margin: 0 auto;
+  padding: 10px;
+  color: #000;
+  background-color: #dedede;
+  border: solid 1px #fff;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: 0.2s ease-in-out;
+}
+@media only screen and (min-width: 769px) {
+  .us-healthcare-legacy .toggle-rect { padding: 5px; }
+}
+.us-healthcare-legacy .toggle-btn-grp.cssonly {
+  margin: 0 auto;
+  padding-bottom: 30px;
+}
+.us-healthcare-legacy .toggle-btn-grp.cssonly div label {
+  width: 100%;
+  margin: 0 auto;
+  vertical-align: middle;
+  text-align: center;
+  font-weight: normal;
+  border-radius: 8px;
+  display: block;
+  padding: 10px;
+  cursor: pointer;
+}
+.us-healthcare-legacy .toggle-btn-grp.cssonly div input {
+  position: absolute;
+  opacity: 0;
+}
+.us-healthcare-legacy .toggle-btn-grp.cssonly div input:checked + label {
+  background-color: #9a9a9a;
+}
+.us-healthcare-legacy .toggle-btn:hover {
+  z-index: 1000;
+  background-color: #bebebe !important;
+}
+.us-healthcare-legacy .note1 {
+  padding-bottom: 0;
+  margin-bottom: 0 !important;
+}
+.us-healthcare-legacy .note2 {
+  font-size: 15px;
+  margin-bottom: 10px !important;
+}
+
+/* ── Waste chart container ───────────────────────── */
+.us-healthcare-legacy #waste-container .row { margin: 0; }
+.us-healthcare-legacy #waste-container .col-sm-4 { padding: 0; }
+.us-healthcare-legacy #waste-container p { text-align: center; }
+
+/* ── Sankey diagram ──────────────────────────────── */
+.us-healthcare-legacy .sankey-wrapper {
+  width: 100%;
+  height: auto;
+}
+.us-healthcare-legacy #sankey-chart {
+  display: none; /* D3 chart placeholder - hidden without JS */
+}
+.us-healthcare-legacy #sankeyGUI {
+  position: relative;
+  margin: auto;
+  width: 250px;
+  display: inline-block;
+  vertical-align: top;
+  padding: 10px;
+  padding-top: 0;
+  font-family: "Lato", sans-serif;
+  text-transform: uppercase;
+  font-size: 20px;
+  line-height: 26px;
+  height: 100%;
+  overflow: visible;
+}
+.us-healthcare-legacy #sankeyGUI .sankey-menu {
+  text-align: right;
+  vertical-align: top;
+}
+.us-healthcare-legacy #sankeyGUI .sankey-menu .sankey-menu-wrapper:not(:first-child) {
+  margin-top: 1em;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives,
+.us-healthcare-legacy #sankeyGUI .action-container {
+  display: inline;
+  width: auto;
+  list-style: none;
+  padding: 0;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives li,
+.us-healthcare-legacy #sankeyGUI .action-container li {
+  cursor: pointer;
+  width: auto;
+  display: block;
+  color: #000;
+  text-align: right;
+  font-size: 16px;
+  margin-top: 1px;
+  list-style: none;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives li:first-child,
+.us-healthcare-legacy #sankeyGUI .action-container li:first-child {
+  display: inline-block;
+  margin-top: 0;
+}
+.us-healthcare-legacy #sankeyGUI .action-container li:first-child {
+  display: block;
+  margin-top: 1px;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives li:hover,
+.us-healthcare-legacy #sankeyGUI .action-container li:hover {
+  color: #9a9a9a;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives li:hover .perspective,
+.us-healthcare-legacy #sankeyGUI .perspectives li:hover .individual-action,
+.us-healthcare-legacy #sankeyGUI .action-container li:hover .perspective,
+.us-healthcare-legacy #sankeyGUI .action-container li:hover .individual-action {
+  background-color: rgba(133, 137, 186, 0.15);
+  color: #404040;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives li .perspective,
+.us-healthcare-legacy #sankeyGUI .perspectives li .individual-action,
+.us-healthcare-legacy #sankeyGUI .action-container li .perspective,
+.us-healthcare-legacy #sankeyGUI .action-container li .individual-action {
+  transition: all 250ms ease-in-out;
+  padding: 1px 3px 2px 5px;
+  display: inline-block;
+  color: #737373;
+}
+.us-healthcare-legacy #sankeyGUI .perspectives li .perspective.selected,
+.us-healthcare-legacy #sankeyGUI .perspectives li .individual-action.selected,
+.us-healthcare-legacy #sankeyGUI .action-container li .perspective.selected,
+.us-healthcare-legacy #sankeyGUI .action-container li .individual-action.selected {
+  background-color: rgba(133, 137, 186, 0.35);
+  color: black;
+}
+
+/* ── Individual results (sankey details) ─────────── */
+.us-healthcare-legacy .individual-result {
+  text-align: center;
+  display: none;
+  padding: 40px;
+  font-weight: 200;
+}
+.us-healthcare-legacy .individual-result.is-open {
+  display: block;
+}
+.us-healthcare-legacy #results {
+  padding-top: 0;
+}
+.us-healthcare-legacy #results li {
+  list-style-type: none;
+}
+
+/* ── Timeline ────────────────────────────────────── */
+.us-healthcare-legacy .timeline-wrapper {
+  padding: 30px 0 50px 0;
+  border-top: 1px solid #dedede;
+  border-bottom: 1px solid #dedede;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .timeline-wrapper { padding: 30px 0; }
+}
+
+/* ── Cost comparison ─────────────────────────────── */
+.us-healthcare-legacy #cost-comparison-boston-chart { position: relative; }
+.us-healthcare-legacy #cost-comparison-boston-container { text-align: center; }
+.us-healthcare-legacy #cost-comparison-boston-container p { text-align: center; }
+
+/* ── Social buttons ──────────────────────────────── */
+.us-healthcare-legacy .social-buttons svg {
+  width: 28px;
+  height: 28px;
+  background: #474751;
+  padding: 6px;
+  fill: white;
+  transition: background 250ms ease-in-out;
+}
+.us-healthcare-legacy .social-buttons svg:hover { background: #83838E; }
+@media only screen and (max-width: 600px) {
+  .us-healthcare-legacy .social-buttons svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+.us-healthcare-legacy .social-buttons.end {
+  text-align: center;
+  margin-bottom: 3em;
+}
+.us-healthcare-legacy .social-buttons.authors {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* ── Participate / Open table ────────────────────── */
+.us-healthcare-legacy #open-table {
+  background-color: #fff;
+  padding: 20px;
+}
+.us-healthcare-legacy #open-table p { text-align: center; }
+.us-healthcare-legacy #open-table .row-item { margin: 0 0 30px; }
+
+/* ── Authors table ───────────────────────────────── */
+.us-healthcare-legacy #authors-table {
+  background-color: #fff;
+  margin: 0 0 120px;
+  border-radius: 8px;
+}
+.us-healthcare-legacy #authors-table .author-col { padding: 10px; }
+.us-healthcare-legacy #authors-table .box {
+  background-color: #dedede;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+.us-healthcare-legacy #authors-table .centeredImage {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  text-align: center;
+  margin: 0 auto;
+}
+.us-healthcare-legacy #authors-table h3 { padding: 30px 0 0; }
+.us-healthcare-legacy #authors-table p {
+  text-align: center;
+  margin-left: 15px;
+  margin-right: 15px;
+  margin-bottom: 10px;
+}
+
+/* ── Contributors table ──────────────────────────── */
+.us-healthcare-legacy #contributors-table {
+  margin: 40px 10px 30px;
+  border-radius: 8px;
+}
+.us-healthcare-legacy #contributors-table .contributors-row {
+  background-color: #dedede;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.us-healthcare-legacy #contributors-table .contributor-col {
+  width: 50%;
+  padding: 0;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy #contributors-table .contributor-col {
+    width: 100%;
+  }
+}
+.us-healthcare-legacy #contributors-table .contributor {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.us-healthcare-legacy #contributors-table .contributor .image {
+  width: 20%;
+  flex-shrink: 0;
+}
+.us-healthcare-legacy #contributors-table .contributor .image img {
+  border-radius: 8px;
+  width: 100%;
+}
+.us-healthcare-legacy #contributors-table .contributor .info {
+  padding-left: 1em;
+  width: 80%;
+}
+.us-healthcare-legacy #contributors-table .contributor .info h3 {
+  text-transform: lowercase;
+  font-style: italic;
+  font-weight: 300;
+  text-align: left;
+  font-size: 1em;
+  margin: 0;
+}
+.us-healthcare-legacy #contributors-table .contributor .info p {
+  text-align: left;
+  margin: 5px 0;
+}
+.us-healthcare-legacy #contributors-table .contributor .small {
+  font-size: 16px;
+}
+
+/* ── Bibliography / references ───────────────────── */
+.us-healthcare-legacy #bibliography {
+  text-align: left;
+  line-height: 125%;
+}
+.us-healthcare-legacy .ref {
+  display: inline;
+  font-size: 16px;
+}
+.us-healthcare-legacy .references {
+  padding-left: 1.5em;
+}
+.us-healthcare-legacy .references a { font-size: 16px; }
+.us-healthcare-legacy .references li {
+  margin-bottom: 0.75em;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.us-healthcare-legacy .references .up_link {
+  margin-right: 0.5em;
+}
+
+/* ── Centered image utility ──────────────────────── */
+.us-healthcare-legacy .centeredImage {
+  text-align: center;
+  margin: 0 auto;
+}
+
+/* ── Bootstrap-like grid helpers (lightweight) ────── */
+.us-healthcare-legacy .row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+}
+.us-healthcare-legacy .col-sm-4 {
+  flex: 0 0 33.333%;
+  max-width: 33.333%;
+}
+.us-healthcare-legacy .col-sm-6 {
+  flex: 0 0 50%;
+  max-width: 50%;
+}
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy .col-sm-4,
+  .us-healthcare-legacy .col-sm-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}
+
+/* ── Chart placeholder styling ───────────────────── */
+.us-healthcare-legacy .chart-placeholder {
+  background-color: #f5f5f5;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  margin: 20px auto;
+  color: #999;
+  font-style: italic;
+  max-width: 840px;
+}
+
+/* ── Responsive adjustments for embedded content ─── */
+.us-healthcare-legacy .embed-extra-info {
+  position: relative;
+  padding-bottom: 75%;
+  padding-top: 35px;
+  overflow: hidden;
+  margin: 0 auto;
+}
+.us-healthcare-legacy .embed-extra-info iframe {
+  position: absolute;
+  top: 20px;
+  left: 12.5%;
+  height: 75%;
+  width: 75%;
+}
