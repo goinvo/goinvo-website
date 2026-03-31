@@ -129,10 +129,11 @@ export function AuthorSection({ authors, heading }: AuthorSectionProps) {
   }
 
   // Multiple authors: primary author (large photo + bio) + contributor sidebar
-  // Layout matches Gatsby: photo → "Author" label → name → bio on left,
-  // bordered box with contributor cards on right
+  // Layout matches Gatsby: centered "Authors" heading, then
+  // photo → "Author" label → name → bio on left, bordered box on right
   return (
     <section className="my-12">
+      <h2 className="header-lg text-center mt-8 mb-6">Authors</h2>
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
         {/* Primary author */}
         <div>
@@ -146,17 +147,11 @@ export function AuthorSection({ authors, heading }: AuthorSectionProps) {
             />
           )}
           <h3
-            className="font-serif mb-0"
-            style={{ fontSize: '24px', color: 'rgb(136, 136, 136)' }}
-          >
-            Author
-          </h3>
-          <h2
             className="font-serif mb-4"
             style={{ fontSize: '36px', fontWeight: 400 }}
           >
             {primary.member.name}
-          </h2>
+          </h3>
           {primaryBio && <p className="text-gray leading-relaxed">{primaryBio}</p>}
         </div>
 

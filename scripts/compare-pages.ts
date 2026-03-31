@@ -229,12 +229,14 @@ function checkStandaloneHeadingStyle(el: PageElement): string[] {
     }
   }
 
-  // h3 should use header-md or small uppercase sans (unless it's a card title)
+  // h3 should use header-md or small uppercase sans (unless it's a card title or author label)
   if (tag === 'h3') {
     const isNumbered = /^\d+\.\s/.test(el.text)
     // Card titles and numbered headings — skip
     const isCardTitle = cls.includes('font-serif') && cls.includes('text-xl') && !cls.includes('uppercase')
-    if (!isNumbered && !isCardTitle) {
+    // AuthorSection "Author" label — intentionally gray serif, not uppercase
+    const isAuthorLabel = /^author$/i.test(el.text.trim())
+    if (!isNumbered && !isCardTitle && !isAuthorLabel) {
       const hasCorrectStyle = cls.includes('header-md') || cls.includes('header-lg') || cls.includes('uppercase') || cls.includes('font-semibold')
       if (!hasCorrectStyle) {
         issues.push(`h3 missing header-md or uppercase styling (has: "${cls.substring(0, 60)}")`)
@@ -261,13 +263,23 @@ function checkSpacingIssues(html: string): Issue[] {
   const content = getContentArea(html)
 
   // Check for adjacent headings (h2 followed immediately by h3 with no content)
-  const adjacentHeadings = /<\/h([1-4])>\s*<h([1-4])\b/gi
+  // Exclude AuthorSection pattern: h3 "Author" → h2 "Name"
+  const adjacentHeadings = /<\/h([1-4])>\s*<h([1-4])\b[^>]*>([^<]*)</gi
   let match
   while ((match = adjacentHeadings.exec(content)) !== null) {
+    const prevLevel = match[1]
+    const nextLevel = match[2]
+    const nextText = match[3].trim()
+    // Skip h3→h2 in AuthorSection (h3 "Author" followed by h2 author name)
+    if (prevLevel === '3' && nextLevel === '2') {
+      // Check if the h3 before was "Author"
+      const beforeMatch = content.substring(Math.max(0, match.index - 200), match.index)
+      if (/>\s*Author\s*<\/h3>\s*$/i.test(beforeMatch)) continue
+    }
     issues.push({
       severity: 'medium',
       category: 'SPACING',
-      message: `Adjacent headings (h${match[1]} → h${match[2]}) with no content between them`,
+      message: `Adjacent headings (h${prevLevel} → h${nextLevel}) with no content between them`,
     })
   }
 
@@ -1006,7 +1018,7 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
   }
 
   // Template/structural headings that Next.js adds but Gatsby doesn't have
-  const templateHeadings = ['subscribetoournewsletter', 'contributors', 'related', 'author', 'authors', 'sources', 'editor', 'designteam', 'votingsystemuis', 'onlinedesign', 'audioengineer']
+  const templateHeadings = ['subscribetoournewsletter', 'contributors', 'related', 'author', 'authors', 'sources', 'editor', 'designteam', 'votingsystemuis', 'onlinedesign', 'audioengineer', 'references']
 
   for (let hi = 0; hi < nextjs.headings.length; hi++) {
     const nh = nextjs.headings[hi]
@@ -1017,12 +1029,13 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
     const found = gatsby.headings.some(gh => headingsMatch(gh.text, nh.text))
     if (!found) {
       const isOverridePage = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
-      // Author name h2 from AuthorSection — expected addition, not a content issue
-      // Detect by checking: h2 with serif font, following an "Author" h3, or short person-name text
-      const prevH = hi > 0 ? nextjs.headings[hi - 1] : null
-      const prevIsAuthorLabel = prevH && /^author$/i.test(prevH.text.trim())
+      // Author/contributor name heading from AuthorSection — expected addition, not a content issue
+      // Detect by: follows an "Authors"/"Contributors" h2 heading, or has serif font-weight:400 style
       const hasAuthorStyle = nh.classes.includes('font-serif') && nh.attrs?.includes('font-weight:400')
-      const isAuthorName = nh.tag === 'h2' && (prevIsAuthorLabel || hasAuthorStyle)
+      // Check if any recent heading (within last 5) is an "Authors"/"Contributors" label
+      const recentHeadings = nextjs.headings.slice(Math.max(0, hi - 5), hi)
+      const nearAuthorsSection = recentHeadings.some(h => /^(authors?|contributors?)$/i.test(h.text.trim()))
+      const isAuthorName = (nh.tag === 'h2' || nh.tag === 'h3') && (nearAuthorsSection || hasAuthorStyle)
       issues.push({
         severity: isOverridePage || isAuthorName ? 'low' : 'critical',
         category: 'EXTRA_HEADING',

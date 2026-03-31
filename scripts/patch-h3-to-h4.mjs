@@ -68,6 +68,21 @@ const PAGES_TO_FIX = {
   'patient-centered-consent': [
     'Bonus: 9.',
   ],
+  'health-design-thinking': [
+    'Creating products and services for bette',
+    'Featured In The Book',
+    'About GoInvo',
+  ],
+  'healthcare-dollars': [
+    'To Understand the Healthcare system',
+    'v1 -',
+  ],
+  'healthcare-dollars-redux': [
+    'To Understand the Healthcare system',
+  ],
+  'fraud-waste-abuse-in-healthcare': [
+    'Fraud 10%',
+  ],
 }
 
 function getBlockText(block) {
