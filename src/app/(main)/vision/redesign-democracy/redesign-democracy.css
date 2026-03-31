@@ -1,0 +1,549 @@
+/* Scoped styles for Redesign Democracy legacy page */
+
+.redesign-democracy {
+  color: #58504a;
+  line-height: 1.8em;
+}
+
+/* Hero header */
+.redesign-democracy .hero-header {
+  max-width: 100%;
+  padding: 30% 5rem 5%;
+  margin-bottom: 2em;
+  background: url('https://www.goinvo.com/old/images/features/democracy/flag-hero.jpg') no-repeat center / cover;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (max-width: 540px) {
+  .redesign-democracy .hero-header {
+    padding: 40% 2em 2em;
+  }
+  .redesign-democracy .hero-header .headline {
+    font-size: 0.75em;
+  }
+}
+
+.redesign-democracy .hero-header .headline {
+  max-width: 480px;
+  padding: 1.5em;
+  border: 2px solid #51697b;
+  background: #fff;
+  color: #51697b;
+}
+
+.redesign-democracy .hero-header .headline h1 {
+  padding-bottom: 1rem;
+  letter-spacing: 1px;
+}
+
+.redesign-democracy .hero-header .headline h2 {
+  padding-top: 1.5rem;
+  font-size: 1.375em;
+  font-weight: 400;
+  max-width: 540px;
+}
+
+.redesign-democracy .hero-header .headline hr {
+  border-top: 3px solid #51697b;
+  width: 60px;
+  margin: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
+/* Section horizontal rules */
+.redesign-democracy .section-hr {
+  margin: 2em 0;
+  width: 40px;
+  border-top: 5px solid #58504a;
+  border-bottom: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
+.redesign-democracy .section-hr.orange { border-color: #bc743e; }
+.redesign-democracy .section-hr.red { border-color: #d65f4d; }
+.redesign-democracy .section-hr.teal { border-color: #9ec2b7; }
+.redesign-democracy .section-hr.green { border-color: #7f8732; }
+.redesign-democracy .section-hr.blue { border-color: #51697b; }
+.redesign-democracy .section-hr.yellow { border-color: #ddb40a; }
+
+/* Caption borders */
+.redesign-democracy .caption-box {
+  max-width: 100%;
+  padding: 1.5em;
+  font-size: 1.1em;
+  line-height: 1.5em;
+  border: 3px solid #e0e0e0;
+  margin: 0;
+}
+
+.redesign-democracy .caption-box.orange { border-color: #bc743e; }
+.redesign-democracy .caption-box.red { border-color: #d65f4d; }
+.redesign-democracy .caption-box.teal { border-color: #9ec2b7; }
+.redesign-democracy .caption-box.green { border-color: #7f8732; }
+.redesign-democracy .caption-box.blue { border-color: #51697b; }
+.redesign-democracy .caption-box.yellow { border-color: #ddb40a; }
+.redesign-democracy .caption-box.tan { border-color: #dfd6c3; }
+.redesign-democracy .caption-box.gray { border-color: #aaa; }
+
+/* Social buttons */
+.redesign-democracy .social-buttons a {
+  display: inline-block;
+  font-size: 1em;
+  padding: 0.5em 1em 0.4em;
+  color: #fff;
+  text-decoration: none;
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+
+.redesign-democracy .social-buttons a.fb { background-color: #3b5998; border-bottom: 3px solid #263961; }
+.redesign-democracy .social-buttons a.fb:hover { background-color: #344e86; }
+.redesign-democracy .social-buttons a.twitter { background-color: #00aced; border-bottom: 3px solid #0074a1; }
+.redesign-democracy .social-buttons a.twitter:hover { background-color: #0099d4; }
+.redesign-democracy .social-buttons a.in { background-color: #007bb6; border-bottom: 3px solid #00476a; }
+.redesign-democracy .social-buttons a.in:hover { background-color: #006a9d; }
+.redesign-democracy .social-buttons a.mail { background-color: #888; border-bottom: 3px solid #626262; }
+.redesign-democracy .social-buttons a.mail:hover { background-color: #7b7b7b; }
+
+/* Action / CTA section */
+.redesign-democracy .action-section {
+  padding: 3em 5em;
+  margin-bottom: 2em;
+  color: #fff;
+  background: linear-gradient(to bottom, rgba(126, 138, 147, 0.8), rgba(126, 138, 147, 0.8)),
+    url('https://www.goinvo.com/old/images/features/democracy/ipad.jpg') center / cover no-repeat;
+  text-align: center;
+  box-shadow: inset 0 20px 20px -20px #000, inset 0 -20px 20px -20px #000;
+}
+
+@media (max-width: 540px) {
+  .redesign-democracy .action-section {
+    padding: 2em;
+  }
+}
+
+.redesign-democracy .action-section .icons svg {
+  width: 72px;
+  height: 72px;
+  display: inline-block;
+  fill: #fff;
+  margin: 0 8px;
+}
+
+.redesign-democracy .action-section .action-button {
+  display: block;
+  max-width: 240px;
+  margin: 1em auto;
+  line-height: 1;
+  padding: 1em 1.5em;
+  text-transform: uppercase;
+  background: #51697b;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 1px 0 #394a56, 0 2px 0 #394a56, 0 3px 0 #394a56, 0 4px 0 #394a56, 0 5px 0 #394a56, 0 5px 5px #000;
+}
+
+.redesign-democracy .action-section .action-button:active {
+  transform: translateY(5px);
+  box-shadow: 0 -1px 0 #394a56, 0 -2px 0 #394a56, 0 -3px 0 #394a56, 0 -4px 0 #394a56, 0 -5px 0 #394a56,
+    inset 0 0 5px #000;
+}
+
+/* Government slides / alternative forms */
+.redesign-democracy .govt-slide {
+  background-color: #f5f5f5;
+  border-top: 3px solid #bc743e;
+  border-bottom: 3px solid #bc743e;
+  overflow: hidden;
+  margin: 2em 0;
+}
+
+.redesign-democracy .govt-slide .slide-text {
+  padding: 2em;
+}
+
+@media (min-width: 1024px) {
+  .redesign-democracy .govt-slide .slide-text {
+    padding: 2em 8em;
+  }
+}
+
+.redesign-democracy .govt-slide h4 {
+  font-weight: 400;
+  font-size: 2em;
+  line-height: 1;
+  margin-bottom: 0.5em;
+}
+
+@media (max-width: 787px) {
+  .redesign-democracy .govt-slide h4 {
+    font-size: 1.5em;
+  }
+}
+
+/* Visual nav tabs */
+.redesign-democracy .visual-nav {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.redesign-democracy .visual-nav a {
+  flex: 1 1 calc(100% / 6);
+  min-width: calc(100% / 6);
+  padding: 1em;
+  font-size: 1.1em;
+  font-weight: 700;
+  text-align: center;
+  color: #aaa;
+  background: #eee;
+  transition: color 300ms ease, background 300ms ease;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+}
+
+@media (max-width: 787px) {
+  .redesign-democracy .visual-nav a {
+    flex: 1 1 50%;
+    min-width: 50%;
+  }
+}
+
+@media (max-width: 500px) {
+  .redesign-democracy .visual-nav a {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}
+
+.redesign-democracy .visual-nav a:hover { color: #555; }
+.redesign-democracy .visual-nav a.active { color: #fff; }
+.redesign-democracy .visual-nav a.active.slide0 { background-color: #bc743e; }
+.redesign-democracy .visual-nav a.active.slide1 { background-color: #d65f4d; }
+.redesign-democracy .visual-nav a.active.slide2 { background-color: #9ec2b7; }
+.redesign-democracy .visual-nav a.active.slide3 { background-color: #7f8732; }
+.redesign-democracy .visual-nav a.active.slide4 { background-color: #51697b; }
+.redesign-democracy .visual-nav a.active.slide5 { background-color: #ddb40a; }
+
+/* Government slide border colors */
+.redesign-democracy .govt-slide.theocracy { border-color: #bc743e; }
+.redesign-democracy .govt-slide.oligarchy { border-color: #d65f4d; }
+.redesign-democracy .govt-slide.feudalism { border-color: #9ec2b7; }
+.redesign-democracy .govt-slide.a-monarchy { border-color: #7f8732; }
+.redesign-democracy .govt-slide.p-monarchy { border-color: #51697b; }
+.redesign-democracy .govt-slide.sps { border-color: #ddb40a; }
+
+.redesign-democracy .govt-slide .section-hr.theocracy { border-color: #bc743e; }
+.redesign-democracy .govt-slide .section-hr.oligarchy { border-color: #d65f4d; }
+.redesign-democracy .govt-slide .section-hr.feudalism { border-color: #9ec2b7; }
+.redesign-democracy .govt-slide .section-hr.a-monarchy { border-color: #7f8732; }
+.redesign-democracy .govt-slide .section-hr.p-monarchy { border-color: #51697b; }
+.redesign-democracy .govt-slide .section-hr.sps { border-color: #ddb40a; }
+
+/* Congress Chart */
+.redesign-democracy .congress-chart {
+  margin: 3em 0;
+  overflow: hidden;
+}
+
+.redesign-democracy .congress-chart h4 {
+  margin-bottom: 1em;
+  padding: 0.35em 0 0.6em;
+  border: 2px solid #58504a;
+  font-weight: 400;
+  font-size: 1.5em;
+  text-align: center;
+}
+
+.redesign-democracy .congress-chart table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.redesign-democracy .congress-chart table td {
+  padding: 0.5em 0 0;
+  border-bottom: 1px solid #aaa;
+  vertical-align: bottom;
+}
+
+.redesign-democracy .congress-chart table td:nth-child(2) {
+  text-align: right;
+}
+
+.redesign-democracy .congress-chart tr.one { font-size: 1.5em; }
+.redesign-democracy .congress-chart tr.two { font-size: 1.3em; }
+.redesign-democracy .congress-chart tr.three { font-size: 1.18em; }
+.redesign-democracy .congress-chart tr.four { font-size: 1.1em; }
+.redesign-democracy .congress-chart tr.five { font-size: 0.8em; }
+
+.redesign-democracy .congress-chart small {
+  display: block;
+  font-size: 0.75em;
+  padding-top: 0.5em;
+  text-align: right;
+}
+
+/* Faded / gray section */
+.redesign-democracy .faded-section {
+  padding: 3em 0 4em;
+  border-top: 2px solid #d2d2d2;
+  border-bottom: 2px solid #d2d2d2;
+  background-color: #f5f5f5;
+  margin: 2em 0;
+}
+
+.redesign-democracy .faded-section ul {
+  list-style: none;
+  padding-left: 1.5em;
+}
+
+.redesign-democracy .faded-section ul li {
+  position: relative;
+  margin-bottom: 1em;
+}
+
+.redesign-democracy .faded-section ul li::before {
+  content: '\2022';
+  position: absolute;
+  left: -1em;
+  font-size: 1.375em;
+  line-height: 1;
+}
+
+/* Emphasized text */
+.redesign-democracy .emphasized {
+  font-size: 2em;
+  line-height: 1.4;
+}
+
+.redesign-democracy .emphasized.italic {
+  font-style: italic;
+}
+
+/* Big line */
+.redesign-democracy .big-line {
+  margin-top: 1.5em;
+  font-size: 3.5em;
+  line-height: 1.1;
+  font-weight: 400;
+}
+
+@media (max-width: 540px) {
+  .redesign-democracy .big-line {
+    font-size: 2em;
+  }
+}
+
+/* Voting slider section */
+.redesign-democracy .voting-section {
+  position: relative;
+  margin: 2em 0;
+}
+
+.redesign-democracy .voting-slide {
+  padding: 2em;
+  overflow: hidden;
+  margin-bottom: 1em;
+}
+
+.redesign-democracy .voting-slide .section-hr {
+  border-color: #aaa;
+}
+
+.redesign-democracy .voting-slide .image-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  margin: 1em 0;
+}
+
+.redesign-democracy .voting-slide .image-group img {
+  flex: 1 1 45%;
+  max-width: 48%;
+  height: auto;
+}
+
+@media (max-width: 640px) {
+  .redesign-democracy .voting-slide .image-group img {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+.redesign-democracy .voting-slide .image-group.three img {
+  flex: 1 1 30%;
+  max-width: 32%;
+}
+
+@media (max-width: 640px) {
+  .redesign-democracy .voting-slide .image-group.three img {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+/* Credits section */
+.redesign-democracy .credits-section {
+  padding: 2em 0 4em;
+  max-width: 900px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.redesign-democracy .credits-section h2 {
+  margin-bottom: 0;
+  font-weight: 400;
+}
+
+.redesign-democracy .credits-section h3 {
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1em;
+  color: #888;
+  margin-bottom: 0;
+  padding-bottom: 0.25em;
+}
+
+.redesign-democracy .credits-section .author-content {
+  position: relative;
+  margin-top: -25%;
+  background: #fff;
+  padding: 2em;
+  border-color: #51697b;
+  border-width: 0 3px 3px;
+  border-style: solid;
+}
+
+.redesign-democracy .credits-section .contributors-box {
+  padding: 2em;
+  border: 3px solid #d65f4d;
+}
+
+.redesign-democracy .credits-section .contributors-box h3 {
+  font-size: 22px;
+  padding-bottom: 0.5em;
+}
+
+.redesign-democracy .credits-section .contributors-box .contributor-hr {
+  width: 2em;
+  margin: 1.5em 0;
+  border-width: 5px;
+  border-color: #d65f4d;
+  border-style: solid;
+  border-bottom: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
+.redesign-democracy .credits-section .contributor {
+  display: flex;
+  align-items: flex-start;
+  gap: 1em;
+  margin-bottom: 1.5em;
+}
+
+.redesign-democracy .credits-section .contributor .contributor-image {
+  width: 20%;
+  flex-shrink: 0;
+}
+
+.redesign-democracy .credits-section .contributor .contributor-info {
+  flex: 1;
+}
+
+.redesign-democracy .credits-section .contributor .contributor-info p {
+  font-size: 20px;
+  line-height: 1em;
+  margin-bottom: 0;
+}
+
+.redesign-democracy .credits-section .contributor .contributor-info a {
+  color: #aaa;
+}
+
+.redesign-democracy .credits-section .contributor .contributor-info a:hover {
+  color: #e0e0e0;
+}
+
+/* Aside image pattern */
+.redesign-democracy .aside-image {
+  float: right;
+  width: 40%;
+  padding-left: 2em;
+  margin-bottom: 2em;
+}
+
+@media (max-width: 860px) {
+  .redesign-democracy .aside-image {
+    float: none;
+    width: 80%;
+    margin: 0 auto 2em;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .redesign-democracy .aside-image {
+    width: 100%;
+  }
+}
+
+/* Inline image with side caption */
+.redesign-democracy .image-caption-side {
+  display: flex;
+  align-items: stretch;
+  margin: 2em 0;
+}
+
+.redesign-democracy .image-caption-side .image-side {
+  width: 65%;
+}
+
+.redesign-democracy .image-caption-side .caption-side {
+  width: 35%;
+}
+
+@media (max-width: 768px) {
+  .redesign-democracy .image-caption-side {
+    flex-direction: column;
+  }
+  .redesign-democracy .image-caption-side .image-side,
+  .redesign-democracy .image-caption-side .caption-side {
+    width: 100%;
+  }
+}
+
+/* Centered social buttons */
+.redesign-democracy .social-buttons.centered {
+  text-align: center;
+  padding: 0 0 3em;
+}
+
+/* Clearfix utility */
+.redesign-democracy .clearfix::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+/* Numbered ordered lists inside sections */
+.redesign-democracy .content-section ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+
+.redesign-democracy .content-section ol li {
+  margin-bottom: 1em;
+}
+
+/* Upper alpha ordered list */
+.redesign-democracy .upper-alpha-list {
+  list-style: upper-alpha;
+  padding-left: 1.5em;
+}
