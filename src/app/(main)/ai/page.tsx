@@ -203,7 +203,7 @@ export default function AIPage() {
       <section className="py-8">
         <div className="max-width content-padding text-center">
           <p className="font-semibold mb-4">Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</p>
-          <ClientLogos />
+          <ClientLogos variant="ai" />
         </div>
       </section>
 

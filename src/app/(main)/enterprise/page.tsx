@@ -98,7 +98,7 @@ export default function EnterprisePage() {
       <section className="py-8">
         <div className="max-width content-padding text-center">
           <p className="font-semibold mb-4">Trusted by ambitious startups and Fortune 500&apos;s</p>
-          <ClientLogos />
+          <ClientLogos variant="enterprise" />
         </div>
       </section>
 

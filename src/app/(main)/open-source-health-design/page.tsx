@@ -273,7 +273,7 @@ export default function OpenSourceHealthDesignPage() {
             <h4 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.1875rem] lg:leading-[1.375rem] mb-4">
               We&apos;ve worked with...
             </h4>
-            <ClientLogos />
+            <ClientLogos variant="open-source" />
           </div>
         </div>
       </section>

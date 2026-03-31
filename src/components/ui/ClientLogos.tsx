@@ -8,14 +8,6 @@ interface Logo {
   hiddenOnMobile?: boolean
 }
 
-const governmentLogos: Logo[] = [
-  { name: 'NIH', file: 'logo-nih-2.svg' },
-  { name: 'Commonwealth of Massachusetts', file: 'logo-mass.svg' },
-  { name: 'DTA Connect', file: 'logo-dtaconnect.svg' },
-  { name: 'CMS', file: 'logo-cms.svg' },
-  { name: 'MITRE', file: 'logo-mitre.svg' },
-]
-
 const homepageLogos: Logo[] = [
   { name: '3M', file: 'logo-3m.svg' },
   { name: 'Partners Healthcare', file: 'logo-partners.svg' },
@@ -34,13 +26,62 @@ const homepageLogos: Logo[] = [
   { name: 'Commonwealth of Massachusetts', file: 'logo-mass.svg', hiddenOnMobile: true },
 ]
 
+const aiLogos: Logo[] = [
+  { name: '3M', file: 'logo-3m.svg' },
+  { name: 'MITRE', file: 'logo-mitre.svg' },
+  { name: 'White House', file: 'logo-whitehouse.svg' },
+  { name: 'NCI', file: 'logo-nci.svg' },
+  { name: 'Ipsos', file: 'logo-ipsos.svg' },
+  { name: 'Codametrix', file: 'logo-codametrix.svg' },
+]
+
+const enterpriseLogos: Logo[] = [
+  { name: 'Walgreens', file: 'logo-walgreens.svg' },
+  { name: 'NIH', file: 'logo-nih.svg' },
+  { name: '3M', file: 'logo-3m.svg' },
+  { name: 'MITRE', file: 'logo-mitre.svg' },
+  { name: 'Crossover Health', file: 'logo-crossover.svg', hiddenOnMobile: true },
+]
+
+const governmentLogos: Logo[] = [
+  { name: 'NIH', file: 'logo-nih-2.svg' },
+  { name: 'Commonwealth of Massachusetts', file: 'logo-mass.svg' },
+  { name: 'DTA Connect', file: 'logo-dtaconnect.svg' },
+  { name: 'CMS', file: 'logo-cms.svg' },
+  { name: 'MITRE', file: 'logo-mitre.svg' },
+]
+
+const openSourceLogos: Logo[] = [
+  { name: 'Walgreens', file: 'logo-walgreens.svg' },
+  { name: 'NIH', file: 'logo-nih.svg' },
+  { name: 'Personal Genome Project', file: 'logo-pgp.svg' },
+  { name: 'MITRE', file: 'logo-mitre.svg' },
+  { name: 'Crossover Health', file: 'logo-crossover.svg', hiddenOnMobile: true },
+]
+
+const patientEngagementLogos: Logo[] = [
+  { name: 'NIH', file: 'logo-nih-2.svg' },
+  { name: 'Milken Institute', file: 'logo-milken.svg' },
+  { name: 'WuXi NextCODE', file: 'logo-wuxinextcode.svg' },
+  { name: 'CMS', file: 'logo-cms.svg' },
+]
+
+const logoVariants: Record<string, Logo[]> = {
+  default: homepageLogos,
+  ai: aiLogos,
+  enterprise: enterpriseLogos,
+  government: governmentLogos,
+  'open-source': openSourceLogos,
+  'patient-engagement': patientEngagementLogos,
+}
+
 interface ClientLogosProps {
   className?: string
-  variant?: 'default' | 'government'
+  variant?: keyof typeof logoVariants
 }
 
 export function ClientLogos({ className, variant = 'default' }: ClientLogosProps) {
-  const logos = variant === 'government' ? governmentLogos : homepageLogos
+  const logos = logoVariants[variant] || homepageLogos
   return (
     <ul className={cn('list-none m-0 p-0 flex flex-wrap', className)}>
       {logos.map((logo) => (
