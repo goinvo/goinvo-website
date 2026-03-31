@@ -129,6 +129,9 @@ const logoVariants = { ai: [...], default: [...] }  // ← LOST enterprise, gove
 const logoVariants = { default: [...], enterprise: [...], government: [...], ai: [...] }
 ```
 
+### Don't duplicate cover images in page content
+When porting legacy pages, the cover/hero image should be used ONLY as the `SetCaseStudyHero` image. Do NOT repeat it in the page content body. If the legacy HTML has a header section with the same background image as the hero, remove the duplicate header and keep only the title text below the hero.
+
 ### Prefer adding VARIANTS to existing components over creating new ones
 When a page needs a different visual treatment, add a `variant` prop or dropdown to the existing component rather than creating a new component. This keeps the Sanity Studio UX simple (one block type with a variant selector) and prevents component sprawl. If a component doesn't support the needed layout, ADD a variant to it — don't replace the component or create a parallel one.
 
