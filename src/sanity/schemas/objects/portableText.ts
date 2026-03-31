@@ -351,6 +351,8 @@ export default defineType({
               { title: 'Teal / Blue', value: 'teal' },
               { title: 'Warm (beige)', value: 'warm' },
               { title: 'Orange (light)', value: 'orange' },
+              { title: 'Dark (charcoal)', value: 'dark' },
+              { title: 'Red / Maroon', value: 'red' },
             ],
           },
           initialValue: 'gray',

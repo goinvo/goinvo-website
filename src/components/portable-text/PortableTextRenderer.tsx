@@ -73,6 +73,8 @@ const bgSectionColors: Record<string, string> = {
   teal: 'bg-[#e5f5f5]',
   warm: 'bg-[#faf6f4]',
   orange: 'bg-primary/5',
+  dark: 'bg-[#2e2e2e] text-white',
+  red: 'bg-[#6b2337] text-white',
 }
 
 /* ------------------------------------------------------------------ */
