@@ -175,6 +175,24 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    cardGrid: ({ value }) => {
+      const items: { label: string; description: string }[] = value.items || []
+      const cols = value.columns || '4'
+      const gridCols = cols === '2' ? 'sm:grid-cols-2' : cols === '3' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'
+
+      return (
+        <ArticleReveal intensity="visual">
+          <div className={cn('grid grid-cols-1 gap-4 my-8', gridCols)}>
+            {items.map((item, i) => (
+              <div key={i} className="border border-gray-medium rounded-lg p-4">
+                <strong className="block text-xs uppercase tracking-[2px] text-black mb-2">{item.label}</strong>
+                <p className="text-sm text-gray leading-relaxed m-0">{item.description}</p>
+              </div>
+            ))}
+          </div>
+        </ArticleReveal>
+      )
+    },
     references: ({ value }) => (
       <ArticleReveal intensity="text">
         <section id="references" className="my-12 pt-8">

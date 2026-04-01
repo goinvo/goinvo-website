@@ -311,6 +311,66 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'cardGrid',
+      title: 'Card Grid',
+      type: 'object',
+      preview: {
+        select: { items: 'items', columns: 'columns' },
+        prepare({ items, columns }) {
+          const count = items?.length || 0
+          return { title: `${count} card${count !== 1 ? 's' : ''} (${columns || '4'}-col)`, subtitle: 'Card Grid' }
+        },
+      },
+      fields: [
+        {
+          name: 'columns',
+          title: 'Columns',
+          type: 'string',
+          description: 'Number of columns in the grid',
+          options: {
+            list: [
+              { title: '2 columns', value: '2' },
+              { title: '3 columns', value: '3' },
+              { title: '4 columns', value: '4' },
+            ],
+          },
+          initialValue: '4',
+        },
+        {
+          name: 'items',
+          title: 'Cards',
+          type: 'array',
+          description: 'Cards displayed in a grid layout',
+          of: [
+            {
+              type: 'object',
+              fields: [
+                { name: 'label', title: 'Label', type: 'string', description: 'Bold uppercase label (e.g. "SAFETY")' },
+                { name: 'description', title: 'Description', type: 'text', rows: 2, description: 'Card body text' },
+              ],
+              preview: {
+                select: { title: 'label', subtitle: 'description' },
+              },
+            },
+          ],
+        },
+        {
+          name: 'background',
+          title: 'Background',
+          type: 'string',
+          description: 'Optional background color',
+          options: {
+            list: [
+              { title: 'None (white cards)', value: 'none' },
+              { title: 'Gray', value: 'gray' },
+              { title: 'Teal', value: 'teal' },
+            ],
+          },
+          initialValue: 'none',
+        },
+      ],
+    }),
+    defineArrayMember({
       name: 'references',
       title: 'References',
       type: 'object',

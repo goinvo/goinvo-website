@@ -88,8 +88,7 @@
   }
 
   h2 {
-    font-size: 1.75rem;
-    line-height: 1.15;
+    font-size: var(--text-2xl);
   }
 
   h3 {
@@ -97,10 +96,7 @@
   }
 
   h4 {
-    font-family: var(--font-sans);
-    font-size: var(--text-base);
-    font-weight: 600;
-    line-height: 1.1875rem;
+    font-size: var(--text-lg);
   }
 
   a {
@@ -124,20 +120,12 @@
   }
 
   p {
-    margin-top: 1rem;
     margin-bottom: 1rem;
   }
 
-  /* Reset Tailwind preflight img overrides to match Gatsby defaults */
   img {
     max-width: 100%;
     height: auto;
-  }
-
-  /* Override Tailwind preflight border-style to match Gatsby (no visible effect
-     since border-width is 0, but eliminates audit noise) */
-  *, *::before, *::after {
-    border-style: none;
   }
 
   *:focus-visible {
