@@ -304,11 +304,12 @@ When content needs a visual treatment the renderer doesn't support yet:
 - `reviewCard` — fields: `title`, `status` (rejected/certified), `quote`, `reason`, `description`. Dark header + status badge card.
 - `divider` — fields: `style` (default/thick)
 - `contactForm` — fields: `showHeader`
-- Text styles: `h2`, `sectionTitle` (centered h2), `h3`, `h3Orange` (orange uppercase — for numbered section headings), `h4`, `h4Bullet` (with orange ◆ diamond), `blockquote`, `callout`, `normal`
+- Text styles: `h2`, `h2Large` (header-xl 36px — for pages needing bigger section headings), `sectionTitle` (centered h2), `h3`, `h3Orange` (orange uppercase — for numbered section headings), `h4`, `h4Bullet` (with orange ◆ diamond), `blockquote`, `callout`, `normal`
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
 
 ### Feature Schema Fields (beyond content)
 - `specialThanks` — optional rich text field rendered after Authors/Contributors, before Newsletter. Used for acknowledging non-author/contributor individuals.
+- `showAboutGoInvo` — boolean field that renders the standard AboutGoInvo component after Special Thanks, before Newsletter.
 
 ### Verification & Fix Scripts
 - **`scripts/page-tree.ts`** — **PRIMARY TOOL**. Dumps a page's component tree with computed styles, dimensions, and interactivity. Supports `--diff <url2>` to compare Gatsby vs Next.js side by side. Use this to identify every element difference on a page. Catches heading levels, font sizes, colors, margins, bullet styles, numbering gutter, missing elements, and structural mismatches.
