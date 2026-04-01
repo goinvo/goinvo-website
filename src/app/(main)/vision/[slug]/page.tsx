@@ -134,7 +134,9 @@ export default async function VisionFeaturePage({ params }: Props) {
         let content = feature.content
         content = stripTitleHeading(content, feature.title)
         if (feature.authors && feature.authors.length > 0) {
-          content = stripAuthorHeading(content)
+          content = stripAuthorHeading(content, {
+            stripContributors: (feature.contributors?.length ?? 0) > 0,
+          })
         }
         const mainContent = content.filter((b: any) => b._type !== 'references')
         const referencesContent = content.filter((b: any) => b._type === 'references')
