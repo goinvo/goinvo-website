@@ -1141,7 +1141,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 8356,
+    "pageHeight": 8653,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1169,11 +1169,11 @@
         "samples": [
           {
             "text": "What is AI design certification?",
-            "fontSize": "24px",
+            "fontSize": "36px",
             "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",
-            "marginTop": "20px",
+            "marginTop": "32px",
             "marginBottom": "16px",
             "textTransform": "none",
             "letterSpacing": "normal",
@@ -1183,11 +1183,11 @@
           },
           {
             "text": "Product vision",
-            "fontSize": "24px",
+            "fontSize": "36px",
             "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",
-            "marginTop": "20px",
+            "marginTop": "32px",
             "marginBottom": "16px",
             "textTransform": "none",
             "letterSpacing": "normal",
@@ -1197,11 +1197,11 @@
           },
           {
             "text": "Why it matters now",
-            "fontSize": "24px",
+            "fontSize": "36px",
             "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",
-            "marginTop": "20px",
+            "marginTop": "32px",
             "marginBottom": "16px",
             "textTransform": "none",
             "letterSpacing": "normal",
@@ -1261,7 +1261,7 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 8,
+        "count": 9,
         "samples": [
           {
             "text": "Design Health Schema",
@@ -1309,7 +1309,7 @@
       },
       "p": {
         "selector": "p",
-        "count": 53,
+        "count": 54,
         "samples": [
           {
             "text": "We certify outputs: discrete, versioned, viewable ",
@@ -1568,7 +1568,7 @@
     "url": "/vision/health-design-thinking",
     "label": "Vision: health-design-thinking",
     "heroImageExists": true,
-    "pageHeight": 2694,
+    "pageHeight": 2693,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1667,7 +1667,7 @@
             "fontWeight": "600",
             "fontFamily": "Open Sans",
             "color": "rgb(29, 27, 26)",
-            "marginTop": "24px",
+            "marginTop": "0px",
             "marginBottom": "8px",
             "textTransform": "none",
             "letterSpacing": "normal",
