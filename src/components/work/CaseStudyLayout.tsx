@@ -11,13 +11,20 @@ interface CaseStudyLayoutProps {
 
 export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
   const hasAuthors = caseStudy.authors && caseStudy.authors.length > 0
-  const content = hasAuthors && caseStudy.content
+  const rawContent = hasAuthors && caseStudy.content
     ? stripAuthorHeading(caseStudy.content)
     : caseStudy.content
 
+  // Gatsby order: content → Up Next → References
+  // Split references out of content so we can render them after Up Next
+  const referencesBlock = rawContent?.find((b: any) => b._type === 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
+  const content = referencesBlock
+    ? rawContent?.filter((b: any) => b._type !== 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
+    : rawContent
+
   return (
     <article>
-      {/* Content */}
+      {/* Content (without references) */}
       {content && (
         <div className="max-width max-width-md content-padding mx-auto py-12">
           <PortableTextRenderer content={content} variant="case-study" />
@@ -56,6 +63,15 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
             </div>
           </section>
         </Reveal>
+      )}
+
+      {/* References (after Up Next, matching Gatsby order) */}
+      {referencesBlock && (
+        <div className="bg-gray-lightest py-8">
+          <div className="max-width max-width-md content-padding mx-auto">
+            <PortableTextRenderer content={[referencesBlock]} variant="case-study" />
+          </div>
+        </div>
       )}
     </article>
   )

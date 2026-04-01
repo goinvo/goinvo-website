@@ -437,7 +437,8 @@ const components: PortableTextComponents = {
               <video
                 src={value.url}
                 poster={value.poster || undefined}
-                controls
+                controls={!value.autoPlay}
+                autoPlay={value.autoPlay || undefined}
                 loop
                 muted
                 playsInline

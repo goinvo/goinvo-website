@@ -292,7 +292,7 @@ When content needs a visual treatment the renderer doesn't support yet:
 
 ### Existing PortableText Block Types & Parameters
 - `image` — fields: `size` (small/medium/large/full), `align` (left/center/right), `caption`, `alt`
-- `videoEmbed` — fields: `url`, `poster`, `caption`
+- `videoEmbed` — fields: `url`, `poster`, `caption`, `autoPlay` (boolean). When autoPlay=true, video plays muted+looping without controls. Use for ambient/demo videos that autoplay on Gatsby.
 - `iframeEmbed` — fields: `url`, `height`, `aspectRatio`, `caption`
 - `quote` — fields: `text`, `author`, `role`
 - `results` — fields: `items[]` (stat, description), `background` (none/gray/teal)
@@ -328,6 +328,11 @@ When content needs a visual treatment the renderer doesn't support yet:
 - **`scripts/audit-content.mjs`** — Sanity document quality (empty blocks, missing assets, duplicate titles).
 - **`scripts/audit-site-integrity.mjs`** — Route/redirect/link/SEO validation.
 - **`scripts/generate-verification.mjs`** — Generates VERIFICATION.md with all 101 pages and side-by-side URLs for manual review.
+- **`scripts/batch-verify.ts`** — Runs page-tree diff on all 55 Sanity-driven pages (vision + case studies), reports button variant/position mismatches, video autoplay mismatches, heading tag differences, and element count gaps. Use `--section vision` or `--section work` to filter.
+  ```bash
+  npx tsx scripts/batch-verify.ts                    # all pages
+  npx tsx scripts/batch-verify.ts --section vision   # vision only
+  ```
 
 ### ALWAYS run auto-fix after content migrations
 After migrating content to Sanity or patching content blocks, ALWAYS run:

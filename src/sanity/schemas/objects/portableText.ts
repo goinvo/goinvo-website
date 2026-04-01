@@ -491,6 +491,13 @@ export default defineType({
           type: 'string',
           description: 'Optional caption displayed below the video',
         },
+        {
+          name: 'autoPlay',
+          title: 'Auto-play',
+          type: 'boolean',
+          description: 'Auto-play the video (muted, looping). Enable for ambient/demo videos.',
+          initialValue: false,
+        },
       ],
     }),
     defineArrayMember({
