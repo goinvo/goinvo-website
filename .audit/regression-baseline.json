@@ -1,0 +1,6200 @@
+[
+  {
+    "url": "/vision/vapepocolypse",
+    "label": "Vision: vapepocolypse",
+    "heroImageExists": true,
+    "pageHeight": 3377,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Vapepocolypse",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 2,
+        "samples": [
+          {
+            "text": "Author",
+            "fontSize": "36px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "References",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 0,
+        "samples": []
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 6,
+        "samples": [
+          {
+            "text": "Colleen Tang Poy, Designer",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Colleen is a designer at the intersection of art a",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "4px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "You'll receive our latest ideas, visualizations, a",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 4,
+        "samples": [
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Vision",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 10,
+        "samples": [
+          {
+            "text": "Home",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Services",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 3,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 32,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/healthcare-ai",
+    "label": "Vision: healthcare-ai",
+    "heroImageExists": true,
+    "pageHeight": 9102,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "The AI Healthcare Future We Need",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 5,
+        "samples": [
+          {
+            "text": "Expectations for the Future",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Patient Tool Concepts",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "What purposes could an AI patient tool serve?",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Contributors",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 39,
+        "samples": [
+          {
+            "text": "Melanoma AI Healthcare Assistant",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Ankle Pain AI Healthcare Assistant",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Artificial intelligence (AI) has undergone tremend",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 22,
+        "samples": [
+          {
+            "text": "Context awarenessIt should provide insight grounde",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "It should provide insight grounded in the historic",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "The mode of communication could be personalized by",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 62,
+        "samples": [
+          {
+            "text": "Context awarenessIt should provide insight grounde",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "It should provide insight grounded in the historic",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "With my consent, it could gather this data from my",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 15,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 27,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 2,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/coronavirus",
+    "label": "Vision: coronavirus",
+    "heroImageExists": true,
+    "pageHeight": 17364,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 0,
+        "samples": []
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 8,
+        "samples": [
+          {
+            "text": "Understanding the Novel Coronavirus",
+            "fontSize": "30px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "uppercase",
+            "letterSpacing": "3px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "COVID-19",
+            "fontSize": "30px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "uppercase",
+            "letterSpacing": "3px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Your Part",
+            "fontSize": "30px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "uppercase",
+            "letterSpacing": "3px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 12,
+        "samples": [
+          {
+            "text": "What is COVID-19?",
+            "fontSize": "20.8px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2.08px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "The first few months of COVID-19 18",
+            "fontSize": "20.8px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2.08px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "How is it spreading? 6",
+            "fontSize": "20.8px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2.08px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 11,
+        "samples": [
+          {
+            "text": "Quick look : How does COVID-19 compare to the othe",
+            "fontSize": "18px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(86, 60, 141)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Live update of COVID-19 numbers",
+            "fontSize": "18px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(86, 60, 141)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "How deadly is COVID-19? 19,20",
+            "fontSize": "18px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(86, 60, 141)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 100,
+        "samples": [
+          {
+            "text": "last update 31 March 2020",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "The 2019 Novel Coronavirus, also known as SARS-CoV",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "SARS 2002 In 8 mo 8,000 confirmed cases 9.6% death",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 8,
+        "samples": [
+          {
+            "text": "New virus identified as a coronavirusEurope's firs",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "WHO declares the outbreak a global public-health e",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "HHS Secretary declares a PHE for the USPresident T",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 18,
+        "samples": [
+          {
+            "text": "New virus identified as a coronavirus",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Europe's first case confirmed in France",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "WHO declares the outbreak a global public-health e",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 44,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Montserrat",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 50,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/ai-design-certification",
+    "label": "Vision: ai-design-cert",
+    "heroImageExists": true,
+    "pageHeight": 7916,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Human-Assisted AI Design Certification for Healthc",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 14,
+        "samples": [
+          {
+            "text": "What is AI design certification?",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Product vision",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Why it matters now",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 0,
+        "samples": []
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 9,
+        "samples": [
+          {
+            "text": "Design Health Schema",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Certify outputs, not models",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Human-in-the-loop tuning",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 53,
+        "samples": [
+          {
+            "text": "We certify outputs: discrete, versioned, viewable ",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "What passes and what fails is defined by a shared ",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "We certify AI-generated design outputs — screens, ",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 8,
+        "samples": [
+          {
+            "text": "The text users will readThe rules that trigger itT",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Safety: No diagnosis, clear uncertainty, calm tone",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "The exact wordingThe logic usedThe UI shownThe reg",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 29,
+        "samples": [
+          {
+            "text": "The text users will read",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "The rules that trigger it",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "The data sources used",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 5,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 31,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/health-design-thinking",
+    "label": "Vision: health-design-thinking",
+    "heroImageExists": true,
+    "pageHeight": 2697,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Health Design Thinking Book",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Health Design Thinking",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 0,
+        "samples": []
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Creating products and services for better health.",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Featured In The Book",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "About GoInvo",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 12,
+        "samples": [
+          {
+            "text": "Work from the past decade of the GoInvo Studio's p",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "These include artifacts and examples from GoInvo's",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "hGraph, page 46 — Your health in one picture.",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 4,
+        "samples": [
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Vision",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 10,
+        "samples": [
+          {
+            "text": "Home",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Services",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 1,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 1,
+        "samples": [
+          {
+            "text": "GoInvo's influential user experience work and visu",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "48px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "a": {
+        "selector": "a",
+        "count": 32,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/fraud-waste-abuse-in-healthcare",
+    "label": "Vision: fraud-waste-abuse",
+    "heroImageExists": true,
+    "pageHeight": 7065,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Fraud, Waste, Abuse in US Healthcare",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 16,
+        "samples": [
+          {
+            "text": "Fraud, Waste, and Abuse in Healthcare",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "30% of US Healthcare spending is lost to Fraud, Wa",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "What is Fraud, Waste, and Abuse?",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 3,
+        "samples": [
+          {
+            "text": "v1 - 1.Jul.2024",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Calculations",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Contributors",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 32,
+        "samples": [
+          {
+            "text": "Fraud, Waste, and Abuse (FWA) is a challenge in ev",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Our research in 2024 explores identifying the size",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "We looked into FWA a decade ago. Sadly, there is s",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 4,
+        "samples": [
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Vision",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 10,
+        "samples": [
+          {
+            "text": "Home",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Services",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 7,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 2,
+        "samples": [
+          {
+            "text": "30 percent of U.S. health spending (public and pri",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "48px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Estimates of fraudulent billings to health care pr",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "48px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "a": {
+        "selector": "a",
+        "count": 40,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/work/hgraph",
+    "label": "Case Study: hgraph",
+    "heroImageExists": true,
+    "pageHeight": 7399,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "hGraph",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 3,
+        "samples": [
+          {
+            "text": "The Design",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "A Growing need",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Results",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Problem",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Solution",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Results",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 8,
+        "samples": [
+          {
+            "text": "Visualizing a patient’s complete range of health m",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Keeping the big picture in mind wherever you go",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Visually identify patterns",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 26,
+        "samples": [
+          {
+            "text": "Time: 1 designer for 9 months",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Healthcare data is expected to grow between 1.2 to",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "hGraph displays a considerable amount of health in",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 5,
+        "samples": [
+          {
+            "text": "MITX Innovation Award Finalist, Most Insightful: B",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 17,
+        "samples": [
+          {
+            "text": "MITX Innovation Award Finalist, Most Insightful: B",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Wired, How Restyling the Mundane Medical Record Co",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "National Health Datapalooza, Featured Entrant",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 9,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 33,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/work/maya-ehr",
+    "label": "Case Study: maya-ehr",
+    "heroImageExists": true,
+    "pageHeight": 5303,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Care Over Clicks: Refocusing Nursing on What Matte",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 5,
+        "samples": [
+          {
+            "text": "Overview",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "The process",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Insights and recommendations",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Problem",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Solution",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Results",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 9,
+        "samples": [
+          {
+            "text": "Home health is growing. And it's challenging.",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Nurses need to drive the process and care.",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Nail scheduling and intake first.",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 25,
+        "samples": [
+          {
+            "text": "Time: 2 designers/engineers for 6 months",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "The home health industry needs compelling digital ",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Design and ship a clinically relevant and rules-co",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 6,
+        "samples": [
+          {
+            "text": "Smooth handoffs and communication.Clear visibility",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Flexibility. They use a combination of laptops & m",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 16,
+        "samples": [
+          {
+            "text": "Smooth handoffs and communication.",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Clear visibility of which patients need appointmen",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Clear overview of clinical staff credentials, loca",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 7,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 27,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/work/tabeeb-diagnostics",
+    "label": "Case Study: tabeeb",
+    "heroImageExists": true,
+    "pageHeight": 4280,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Connecting Rural Clinics with Expert Diagnostician",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "32px",
+            "marginBottom": "24px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 1,
+        "samples": [
+          {
+            "text": "The Process",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "20px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Problem",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Solution",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Results",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Harnessing the power of the smartphone to rural ne",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Kickstarting Tabeeb’s product vision",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Rapid testing with clinicians leads to an iterativ",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 14,
+        "samples": [
+          {
+            "text": "Time: 1 designer for 5 months",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Doctors and nurses living and practicing in distan",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "GoInvo helped Tabeeb identify and create a first g",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 4,
+        "samples": [
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Vision",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 10,
+        "samples": [
+          {
+            "text": "Home",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Services",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 5,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 26,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/disrupt",
+    "label": "Legacy: disrupt",
+    "heroImageExists": true,
+    "pageHeight": 3550,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Disrupt!",
+            "fontSize": "102.4px",
+            "fontWeight": "400",
+            "fontFamily": "proxima-nova",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "30.72px",
+            "borderStyle": "none",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 0,
+        "samples": []
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Emerging Technologies",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "proxima-nova",
+            "color": "rgb(2, 130, 193)",
+            "marginTop": "0px",
+            "marginBottom": "16.8px",
+            "textTransform": "uppercase",
+            "letterSpacing": "12px",
+            "borderStyle": "none",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 0,
+        "samples": []
+      },
+      "p": {
+        "selector": "p",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Over the next 30 years, there is little that human",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Today, emerging technologies from robotics to synt",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "What does it mean to create products and services ",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 4,
+        "samples": [
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Vision",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 10,
+        "samples": [
+          {
+            "text": "Home",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Services",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 5,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 31,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 2,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "proxima-nova",
+            "color": "rgb(13, 13, 13)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/understanding-zika",
+    "label": "Legacy: zika",
+    "heroImageExists": true,
+    "pageHeight": 18053,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 0,
+        "samples": []
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 19,
+        "samples": [
+          {
+            "text": "What is Zika",
+            "fontSize": "40px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans Condensed",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "20px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "How it Spreads",
+            "fontSize": "40px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans Condensed",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "20px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "How to Prevent it",
+            "fontSize": "40px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans Condensed",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "20px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 15,
+        "samples": [
+          {
+            "text": "Americas",
+            "fontSize": "25.6px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans Condensed",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Oceania/Pacific Is.",
+            "fontSize": "25.6px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans Condensed",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Africa",
+            "fontSize": "25.6px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans Condensed",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 76,
+        "samples": [
+          {
+            "text": "Zika is a virus spreading quickly throughout Latin",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Person → mosquito → person",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Mother → unborn child",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 20,
+        "samples": [
+          {
+            "text": "≡ZIKAOverviewInfected AreasTransmissionPreventionS",
+            "fontSize": "12.8px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "inline-block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Avoid travel to areas with confirmed Zika cases, e",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "1947The name comes from the Zika Forest in Uganda ",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 92,
+        "samples": [
+          {
+            "text": "≡",
+            "fontSize": "12.8px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "none",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "ZIKA",
+            "fontSize": "12.8px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "inline-block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Overview",
+            "fontSize": "12.8px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "inline-block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 63,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 173,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "19.2px",
+            "fontWeight": "300",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/vision/killer-truths",
+    "label": "Legacy: killer-truths",
+    "heroImageExists": true,
+    "pageHeight": 5580,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 0,
+        "samples": []
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 3,
+        "samples": [
+          {
+            "text": "Authors",
+            "fontSize": "32px",
+            "fontWeight": "700",
+            "fontFamily": "Raleway",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "uppercase",
+            "letterSpacing": "1.6px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Contributors",
+            "fontSize": "32px",
+            "fontWeight": "700",
+            "fontFamily": "Raleway",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "uppercase",
+            "letterSpacing": "1.6px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Sources",
+            "fontSize": "32px",
+            "fontWeight": "700",
+            "fontFamily": "Raleway",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "uppercase",
+            "letterSpacing": "1.6px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 3,
+        "samples": [
+          {
+            "text": "Sharon Lee",
+            "fontSize": "24px",
+            "fontWeight": "700",
+            "fontFamily": "Ropa Sans",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "10px",
+            "textTransform": "uppercase",
+            "letterSpacing": "-0.8px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Jennifer Patel",
+            "fontSize": "24px",
+            "fontWeight": "700",
+            "fontFamily": "Ropa Sans",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "10px",
+            "textTransform": "uppercase",
+            "letterSpacing": "-0.8px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Juhan Sonin",
+            "fontSize": "24px",
+            "fontWeight": "700",
+            "fontFamily": "Ropa Sans",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "10px",
+            "textTransform": "uppercase",
+            "letterSpacing": "-0.8px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "700",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(34, 34, 34)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "uppercase",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 11,
+        "samples": [
+          {
+            "text": "Estimated number of deaths in USA from 2007-2014.",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(229, 229, 229)",
+            "marginTop": "0px",
+            "marginBottom": "20px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "GoInvo",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "5px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Sharon is a designer with an eclectic background i",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "15px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 5,
+        "samples": [
+          {
+            "text": "GitHubDownloadRaw DataConnect",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(34, 34, 34)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 14,
+        "samples": [
+          {
+            "text": "GitHub",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(34, 34, 34)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Download",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(34, 34, 34)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Raw Data",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(34, 34, 34)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 5,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Raleway",
+            "color": "rgb(101, 101, 101)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 55,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/",
+    "label": "Home",
+    "heroImageExists": true,
+    "pageHeight": 5270,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "We design the future of software.For complex syste",
+            "fontSize": "48px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 5,
+        "samples": [
+          {
+            "text": "Backlog: Zero",
+            "fontSize": "36px",
+            "fontWeight": "600",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Weeks to Hours",
+            "fontSize": "36px",
+            "fontWeight": "600",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Our designs in healthcare are used every day.",
+            "fontSize": "36px",
+            "fontWeight": "600",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 0,
+        "samples": []
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 31,
+        "samples": [
+          {
+            "text": "“The system is down.”",
+            "fontSize": "24px",
+            "fontWeight": "700",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "That was the call we got two weeks after launch, f",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "30 minutes later, we found the issue. The new syst",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 5,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 25,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 36,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 32,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/work",
+    "label": "Work listing",
+    "heroImageExists": true,
+    "pageHeight": 9197,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Design that Delivers.",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 2,
+        "samples": [
+          {
+            "text": "Want to take your healthcare product to the next l",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Get in touch",
+            "fontSize": "36px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "4px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 0,
+        "samples": []
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Up next",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 91,
+        "samples": [
+          {
+            "text": "Real projects, real users, real business outcomes.",
+            "fontSize": "24px",
+            "fontWeight": "400",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "12px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Open Visual Government Budget",
+            "fontSize": "16px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "4px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Town of Arlington, MA",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "4px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 4,
+        "samples": [
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "AboutCareersOpen Office Hours",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Vision",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 10,
+        "samples": [
+          {
+            "text": "Home",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "12px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Services",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 32,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Invo beautifully helped shape our next generation ",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "48px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "a": {
+        "selector": "a",
+        "count": 55,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 1,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "url": "/vision",
+    "label": "Vision listing",
+    "heroImageExists": true,
+    "pageHeight": 5764,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 0,
+        "samples": []
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 5,
+        "samples": [
+          {
+            "text": "Design and Tech Publications",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Our design and analysis has been featured in...",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Reviews for...",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "30px",
+            "marginBottom": "30px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 2,
+        "samples": [
+          {
+            "text": "Spotlight",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Features (12 of 51)",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 0,
+        "samples": []
+      },
+      "p": {
+        "selector": "p",
+        "count": 49,
+        "samples": [
+          {
+            "text": "Doodle to Demo",
+            "fontSize": "16px",
+            "fontWeight": "700",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "4px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Feature | Dec.2025",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "4px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Using generative AI as our storytelling partner",
+            "fontSize": "14px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 6,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Inspired EHRsDesigning for Emerging TechnologiesDe",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "16px",
+            "marginBottom": "32px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 21,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 26,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 54,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 1,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 0,
+        "samples": []
+      }
+    }
+  },
+  {
+    "url": "/about",
+    "label": "About",
+    "heroImageExists": true,
+    "pageHeight": 8493,
+    "elements": {
+      "h1": {
+        "selector": "h1",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Our shared purpose:better systems +better lives th",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h2": {
+        "selector": "h2",
+        "count": 3,
+        "samples": [
+          {
+            "text": "GoInvo is a digital design studio in Boston, craft",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Our team",
+            "fontSize": "36px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "48px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h3": {
+        "selector": "h3",
+        "count": 4,
+        "samples": [
+          {
+            "text": "Open office hours",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Join the team",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Code of Ethics",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "h4": {
+        "selector": "h4",
+        "count": 1,
+        "samples": [
+          {
+            "text": "Up next",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "p": {
+        "selector": "p",
+        "count": 54,
+        "samples": [
+          {
+            "text": "With backgrounds in engineering, illustration, des",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Receive design advice on your product's strategy, ",
+            "fontSize": "15px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "If you're an independent thinker and passionate ma",
+            "fontSize": "15px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul": {
+        "selector": "ul",
+        "count": 6,
+        "samples": [
+          {
+            "text": "Speak the TruthWe will be honest and objective. We",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Commit to CommunityWe protect the public by holdin",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "HomeWorkServices",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(255, 255, 255)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "ul li": {
+        "selector": "ul li",
+        "count": 15,
+        "samples": [
+          {
+            "text": "Speak the TruthWe will be honest and objective. We",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Make the World Useful, Beautiful, and DelightfulWe",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          },
+          {
+            "text": "Learn, Build, and ShareWe are curious, open creato",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "list-item",
+            "listStyleImage": "custom"
+          }
+        ]
+      },
+      "img": {
+        "selector": "img",
+        "count": 17,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgba(0, 0, 0, 0)",
+            "marginTop": "0px",
+            "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "blockquote": {
+        "selector": "blockquote",
+        "count": 0,
+        "samples": []
+      },
+      "a": {
+        "selector": "a",
+        "count": 54,
+        "samples": [
+          {
+            "text": "Skip to content",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "-1px",
+            "marginBottom": "-1px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(0, 115, 133)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Work",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "flex",
+            "listStyleImage": "none"
+          }
+        ]
+      },
+      "video": {
+        "selector": "video",
+        "count": 0,
+        "samples": []
+      },
+      "iframe": {
+        "selector": "iframe",
+        "count": 2,
+        "samples": [
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "",
+            "fontSize": "16px",
+            "fontWeight": "400",
+            "fontFamily": "Open Sans",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "0px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
+      }
+    }
+  }
+]
