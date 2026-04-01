@@ -563,13 +563,18 @@ const components: PortableTextComponents = {
     ),
   },
   block: {
-    h2: ({ children }) => {
-      // h2 headings are always major section headings — render as large serif.
-      // Numbered h2s (e.g. "1. The race for...") are section headings with
-      // ordinal prefixes, NOT list items — they should still use header-lg.
+    h2: ({ children, value }) => {
+      // Detect numbered headings (e.g. "1. What the AI does")
+      // These use header-md style with orange color (matching Gatsby's h2.header--md)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const isNumbered = /^\d+\.\s/.test(text)
       return (
         <ArticleReveal intensity="heading">
-          <h2 className="header-lg mt-5 mb-4">{children}</h2>
+          <h2 className={isNumbered
+            ? 'font-sans text-sm font-semibold uppercase tracking-[2px] text-primary leading-[1.1875rem] mt-8 mb-3'
+            : 'header-lg mt-5 mb-4'
+          }>{children}</h2>
         </ArticleReveal>
       )
     },
@@ -595,21 +600,11 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
-    h3: ({ children, value }) => {
-      // Detect numbered headings (e.g. "1. Explain just enough...")
-      // These should render as bold sans with numeral-gutter, not uppercase tracking
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const isNumbered = /^\d+\.\s/.test(text)
-      return (
-        <ArticleReveal intensity="heading">
-          <h3 className={isNumbered
-            ? 'font-sans text-base font-bold text-gray mt-6 mb-2 numeral-gutter'
-            : 'font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3'
-          }>{children}</h3>
-        </ArticleReveal>
-      )
-    },
+    h3: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
+      </ArticleReveal>
+    ),
     h4: ({ children, value }) => {
       // Detect numbered headings (e.g. "1. Explain just enough...")
       // and apply gray color + hanging indent for the numeral gutter
