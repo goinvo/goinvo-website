@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { ScrollNav } from './ScrollNav'
 import './oral-history.css'
 
 export const metadata: Metadata = {
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function OralHistoryGoinvoPage() {
   return (
     <div id="oral-history-legacy">
+      <ScrollNav />
       <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/an-oral-history/hero-part_2.jpg" />
 
 <article className='oral-history' id='feature-article'>

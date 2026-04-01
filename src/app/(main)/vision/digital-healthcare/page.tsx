@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { ScrollNav, SectionFadeIn } from './ScrollNav'
 import './digital-healthcare.css'
 
 const IMG_BASE = 'https://www.goinvo.com/old/images/features/digital-healthcare'
@@ -60,17 +61,11 @@ export default function DigitalHealthcarePage() {
         />
       </div>
 
-      {/* ===== SECTION NAV ===== */}
-      <nav className="nav-wrapper">
-        <a href="#section1-medication">1. Medication</a>
-        <a href="#section2-interfaces">2. Talking to Tech</a>
-        <a href="#section3-predictive">3. Prediction</a>
-        <a href="#section4-disease">4. Detection</a>
-        <a href="#section5-careplan">5. Care Planning</a>
-        <a href="#section6-records">6. Computable Records</a>
-        <a href="#section7-patient">7. Engagement</a>
-        <a href="#section8-companion">8. Virtual Helpers</a>
-      </nav>
+      {/* ===== SECTION NAV (sticky + scroll-spy) ===== */}
+      <ScrollNav />
+
+      {/* Fade-in observer for section entry animations */}
+      <SectionFadeIn />
 
       {/* ===== 1. MEDICATION ADHERENCE ===== */}
       <div className="item one" id="section1-medication">

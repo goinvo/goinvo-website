@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { GovernmentCarousel } from './GovernmentCarousel'
+import { VotingCarousel } from './VotingCarousel'
 import './redesign-democracy.css'
 
 const IMG = (path: string) =>
@@ -282,53 +284,6 @@ function ActionSection() {
 }
 
 /* ================================================================== */
-/*  Government Slide Component                                         */
-/* ================================================================== */
-function GovernmentSlide({
-  govt,
-}: {
-  govt: (typeof govtTypes)[number]
-}) {
-  return (
-    <div className={`govt-slide ${govt.id}`}>
-      <div className="slide-text">
-        <header>
-          <h4 className="font-serif">{govt.label}</h4>
-          <p>{govt.description}</p>
-        </header>
-        <hr className={`section-hr ${govt.id}`} />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <div className="mb-4">
-              <h5 className="font-semibold mb-1">Key Strength</h5>
-              <p>{govt.strength}</p>
-            </div>
-            <div className="mb-4">
-              <h5 className="font-semibold mb-1">Crippling Weakness</h5>
-              <p>{govt.weakness}</p>
-            </div>
-            <div className="mb-4">
-              <h5 className="font-semibold mb-1">Historical Example</h5>
-              <p>{govt.example}</p>
-            </div>
-          </div>
-          <div>
-            <div className="mb-4">
-              <h5 className="font-semibold mb-1">Downfall</h5>
-              <p>{govt.downfall}</p>
-            </div>
-            <div className="mb-4">
-              <h5 className="font-semibold mb-1">Lessons Learned</h5>
-              <p>{govt.lessons}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ================================================================== */
 /*  Page Component                                                     */
 /* ================================================================== */
 export default function RedesignDemocracyPage() {
@@ -526,20 +481,9 @@ export default function RedesignDemocracyPage() {
         </section>
       </div>
 
-      {/* Government Types Slides */}
+      {/* Government Types Slides (carousel) */}
       <div className="my-8">
-        <nav className="visual-nav">
-          {govtTypes.map((g, i) => (
-            <a key={g.id} className={`${g.color}${i === 0 ? ' active' : ''}`} href={`#govt-${g.id}`}>
-              {g.label}
-            </a>
-          ))}
-        </nav>
-        {govtTypes.map((g) => (
-          <div key={g.id} id={`govt-${g.id}`}>
-            <GovernmentSlide govt={g} />
-          </div>
-        ))}
+        <GovernmentCarousel govtTypes={govtTypes} />
       </div>
 
       <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem]">
@@ -1390,42 +1334,10 @@ export default function RedesignDemocracyPage() {
       </div>
 
       {/* ============================================================ */}
-      {/*  VOTING SYSTEM SLIDES (mobile layout)                         */}
+      {/*  VOTING SYSTEM SLIDES (carousel)                              */}
       {/* ============================================================ */}
-      <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem]">
-        <div className="voting-section">
-          {votingSlides.map((slide, idx) => (
-            <div key={idx} className="voting-slide">
-              <header>
-                <h3 className="font-serif text-[1.25rem] leading-tight sm:text-[1.75rem]">
-                  {slide.title}
-                </h3>
-                <hr className="section-hr" style={{ borderColor: '#aaa' }} />
-              </header>
-              {slide.subtitle && (
-                <h5 className="font-semibold mb-2">{slide.subtitle}</h5>
-              )}
-              <p>{slide.text}</p>
-              {slide.text2 && <p>{slide.text2}</p>}
-              {slide.images.length > 0 && (
-                <div
-                  className={`image-group${slide.images.length === 3 ? ' three' : ''}`}
-                >
-                  {slide.images.map((img, i) => (
-                    <Image
-                      key={i}
-                      src={IMG(img)}
-                      alt={slide.title}
-                      width={400}
-                      height={700}
-                      className="h-auto"
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      <div className="my-8">
+        <VotingCarousel slides={votingSlides} />
       </div>
 
       {/* ============================================================ */}

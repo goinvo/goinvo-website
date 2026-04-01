@@ -161,6 +161,20 @@
   text-decoration: underline;
 }
 
+/* Fixed copy of the nav — sticks to viewport top when scrolled past inline nav */
+.digital-healthcare .nav-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none; /* toggled by JS */
+}
+
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .nav-fixed {
+    display: none !important;
+  }
+}
+
 /* ===== ROW / ITEMS ===== */
 .digital-healthcare .row {
   margin: 0 auto;
@@ -177,6 +191,15 @@
 .digital-healthcare .item {
   min-height: 400px;
   margin-bottom: 20%;
+  /* Fade-in animation — starts hidden, revealed by IntersectionObserver */
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.digital-healthcare .item.visible {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ===== ITEM WRAPPER ===== */
