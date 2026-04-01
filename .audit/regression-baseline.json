@@ -3,7 +3,7 @@
     "url": "/vision/vapepocolypse",
     "label": "Vision: vapepocolypse",
     "heroImageExists": true,
-    "pageHeight": 3377,
+    "pageHeight": 3374,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -27,7 +27,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 2,
+        "count": 3,
         "samples": [
           {
             "text": "Author",
@@ -37,6 +37,20 @@
             "color": "rgb(29, 27, 26)",
             "marginTop": "32px",
             "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
             "textTransform": "none",
             "letterSpacing": "normal",
             "borderStyle": "solid",
@@ -66,23 +80,8 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Subscribe to our newsletter",
-            "fontSize": "24px",
-            "fontWeight": "400",
-            "fontFamily": "adobe-jenson-pro",
-            "color": "rgb(29, 27, 26)",
-            "marginTop": "0px",
-            "marginBottom": "8px",
-            "textTransform": "none",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "p": {
         "selector": "p",
@@ -345,7 +344,7 @@
     "url": "/vision/healthcare-ai",
     "label": "Vision: healthcare-ai",
     "heroImageExists": true,
-    "pageHeight": 9102,
+    "pageHeight": 9099,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -369,7 +368,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 5,
+        "count": 6,
         "samples": [
           {
             "text": "Expectations for the Future",
@@ -437,23 +436,8 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Subscribe to our newsletter",
-            "fontSize": "24px",
-            "fontWeight": "400",
-            "fontFamily": "adobe-jenson-pro",
-            "color": "rgb(29, 27, 26)",
-            "marginTop": "0px",
-            "marginBottom": "8px",
-            "textTransform": "none",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "p": {
         "selector": "p",
@@ -745,7 +729,7 @@
     "url": "/vision/coronavirus",
     "label": "Vision: coronavirus",
     "heroImageExists": true,
-    "pageHeight": 17364,
+    "pageHeight": 17370,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -754,7 +738,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 8,
+        "count": 9,
         "samples": [
           {
             "text": "Understanding the Novel Coronavirus",
@@ -850,7 +834,7 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 11,
+        "count": 10,
         "samples": [
           {
             "text": "Quick look : How does COVID-19 compare to the othe",
@@ -1157,7 +1141,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 8280,
+    "pageHeight": 8276,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1181,7 +1165,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 16,
+        "count": 17,
         "samples": [
           {
             "text": "What is AI design certification?",
@@ -1234,7 +1218,7 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 9,
+        "count": 8,
         "samples": [
           {
             "text": "Design Health Schema",
@@ -1541,7 +1525,7 @@
     "url": "/vision/health-design-thinking",
     "label": "Vision: health-design-thinking",
     "heroImageExists": true,
-    "pageHeight": 2697,
+    "pageHeight": 2694,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1565,7 +1549,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 1,
+        "count": 2,
         "samples": [
           {
             "text": "Health Design Thinking",
@@ -1575,6 +1559,20 @@
             "color": "rgb(29, 27, 26)",
             "marginTop": "20px",
             "marginBottom": "16px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "Subscribe to our newsletter",
+            "fontSize": "24px",
+            "fontWeight": "300",
+            "fontFamily": "adobe-jenson-pro",
+            "color": "rgb(29, 27, 26)",
+            "marginTop": "0px",
+            "marginBottom": "8px",
             "textTransform": "none",
             "letterSpacing": "normal",
             "borderStyle": "solid",
@@ -1590,7 +1588,7 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 4,
+        "count": 3,
         "samples": [
           {
             "text": "Creating products and services for better health.",
@@ -1884,7 +1882,7 @@
     "url": "/vision/fraud-waste-abuse-in-healthcare",
     "label": "Vision: fraud-waste-abuse",
     "heroImageExists": true,
-    "pageHeight": 7065,
+    "pageHeight": 7061,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1908,7 +1906,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 16,
+        "count": 17,
         "samples": [
           {
             "text": "Fraud, Waste, and Abuse in Healthcare",
@@ -2004,23 +2002,8 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Subscribe to our newsletter",
-            "fontSize": "24px",
-            "fontWeight": "400",
-            "fontFamily": "adobe-jenson-pro",
-            "color": "rgb(29, 27, 26)",
-            "marginTop": "0px",
-            "marginBottom": "8px",
-            "textTransform": "none",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "p": {
         "selector": "p",
@@ -3907,7 +3890,7 @@
     "url": "/vision/understanding-zika",
     "label": "Legacy: zika",
     "heroImageExists": true,
-    "pageHeight": 18053,
+    "pageHeight": 18069,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -3916,7 +3899,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 19,
+        "count": 20,
         "samples": [
           {
             "text": "What is Zika",
@@ -4012,23 +3995,8 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Subscribe to our newsletter",
-            "fontSize": "24px",
-            "fontWeight": "400",
-            "fontFamily": "adobe-jenson-pro",
-            "color": "rgb(255, 255, 255)",
-            "marginTop": "0px",
-            "marginBottom": "8px",
-            "textTransform": "none",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "p": {
         "selector": "p",
@@ -4291,7 +4259,7 @@
     "url": "/vision/killer-truths",
     "label": "Legacy: killer-truths",
     "heroImageExists": true,
-    "pageHeight": 5580,
+    "pageHeight": 5576,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -4300,7 +4268,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 3,
+        "count": 4,
         "samples": [
           {
             "text": "Authors",
@@ -4396,23 +4364,8 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Subscribe to our newsletter",
-            "fontSize": "24px",
-            "fontWeight": "700",
-            "fontFamily": "adobe-jenson-pro",
-            "color": "rgb(34, 34, 34)",
-            "marginTop": "0px",
-            "marginBottom": "8px",
-            "textTransform": "uppercase",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "p": {
         "selector": "p",
@@ -4675,7 +4628,7 @@
     "url": "/",
     "label": "Home",
     "heroImageExists": true,
-    "pageHeight": 5270,
+    "pageHeight": 5266,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -4699,7 +4652,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 5,
+        "count": 6,
         "samples": [
           {
             "text": "Backlog: Zero",
@@ -4752,23 +4705,8 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Subscribe to our newsletter",
-            "fontSize": "24px",
-            "fontWeight": "400",
-            "fontFamily": "adobe-jenson-pro",
-            "color": "rgb(29, 27, 26)",
-            "marginTop": "0px",
-            "marginBottom": "8px",
-            "textTransform": "none",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "p": {
         "selector": "p",

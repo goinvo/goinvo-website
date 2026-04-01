@@ -74,7 +74,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
 
     return (
       <section className="my-12">
-        <h2 className="font-serif text-2xl mt-8 mb-4 text-center">{sectionHeading}</h2>
+        <h2 className="header-xl mt-8 mb-4 text-center">{sectionHeading}</h2>
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           {/* Primary author */}
           <div>

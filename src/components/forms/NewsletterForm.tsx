@@ -20,7 +20,7 @@ export function NewsletterForm() {
 
   return (
     <div>
-      <h4 className="font-serif text-lg mb-2">Subscribe to our newsletter</h4>
+      <h2 className="header-lg mb-2">Subscribe to our newsletter</h2>
       <p className="text-gray mb-6">
         You&apos;ll receive our latest ideas, visualizations, and studio news
         delivered to your inbox twice a month.
