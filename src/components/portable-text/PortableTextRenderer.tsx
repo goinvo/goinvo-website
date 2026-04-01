@@ -593,21 +593,11 @@ const components: PortableTextComponents = {
     ),
   },
   block: {
-    h2: ({ children, value }) => {
-      // Detect numbered headings (e.g. "1. What the AI does")
-      // These use header-md style with orange color (matching Gatsby's h2.header--md)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const isNumbered = /^\d+\.\s/.test(text)
-      return (
-        <ArticleReveal intensity="heading">
-          <h2 className={isNumbered
-            ? 'font-sans text-sm font-semibold uppercase tracking-[2px] text-primary leading-[1.1875rem] mt-8 mb-3'
-            : 'header-lg mt-5 mb-4'
-          }>{children}</h2>
-        </ArticleReveal>
-      )
-    },
+    h2: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="header-lg mt-5 mb-4">{children}</h2>
+      </ArticleReveal>
+    ),
     // h2Center is deprecated — use sectionTitle instead. Kept as alias for backwards compat.
     h2Center: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

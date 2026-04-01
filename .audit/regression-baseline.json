@@ -1141,7 +1141,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 8276,
+    "pageHeight": 8297,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1165,7 +1165,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 17,
+        "count": 10,
         "samples": [
           {
             "text": "What is AI design certification?",
@@ -1213,8 +1213,51 @@
       },
       "h3": {
         "selector": "h3",
-        "count": 0,
-        "samples": []
+        "count": 7,
+        "samples": [
+          {
+            "text": "1. What the AI does",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "2. What gets certified",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
+          {
+            "text": "3. Non-negotiable checks",
+            "fontSize": "15px",
+            "fontWeight": "600",
+            "fontFamily": "Open Sans",
+            "color": "rgb(120, 116, 115)",
+            "marginTop": "32px",
+            "marginBottom": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "2px",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          }
+        ]
       },
       "h4": {
         "selector": "h4",
