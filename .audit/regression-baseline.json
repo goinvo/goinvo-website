@@ -1141,7 +1141,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 8621,
+    "pageHeight": 8671,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1925,7 +1925,7 @@
     "url": "/vision/fraud-waste-abuse-in-healthcare",
     "label": "Vision: fraud-waste-abuse",
     "heroImageExists": true,
-    "pageHeight": 7061,
+    "pageHeight": 7183,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1953,7 +1953,7 @@
         "samples": [
           {
             "text": "Fraud, Waste, and Abuse in Healthcare",
-            "fontSize": "24px",
+            "fontSize": "36px",
             "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",
@@ -1967,7 +1967,7 @@
           },
           {
             "text": "30% of US Healthcare spending is lost to Fraud, Wa",
-            "fontSize": "24px",
+            "fontSize": "36px",
             "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",
@@ -1981,7 +1981,7 @@
           },
           {
             "text": "What is Fraud, Waste, and Abuse?",
-            "fontSize": "24px",
+            "fontSize": "36px",
             "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",

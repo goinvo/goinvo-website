@@ -16,7 +16,7 @@ Gatsby (live): https://www.goinvo.com
 
 | # | Title | Next.js | Gatsby | Type | Audit | ✓ |
 |---|-------|---------|--------|------|-------|---|
-| 1 | Human-Assisted AI Design Certification for Healthcare | [/vision/ai-design-certification](http://localhost:3000/vision/ai-design-certification) | [Live](https://www.goinvo.com/vision/ai-design-certification/) | Sanity | 186 (19C 14H) | 🔲 |
+| 1 | Human-Assisted AI Design Certification for Healthcare | [/vision/ai-design-certification](http://localhost:3000/vision/ai-design-certification) | [Live](https://www.goinvo.com/vision/ai-design-certification/) | Sanity | 186 (19C 14H) | ✅ |
 | 2 | Rethinking AI Beyond Chat | [/vision/rethinking-ai-beyond-chat](http://localhost:3000/vision/rethinking-ai-beyond-chat) | [Live](https://www.goinvo.com/vision/rethinking-ai-beyond-chat/) | Sanity | 81 (16C 6H) | 🔲 |
 | 3 | The Human-Centered Design Behind AI Clinicians Can Trust | [/vision/human-centered-design-for-ai](http://localhost:3000/vision/human-centered-design-for-ai) | [Live](https://www.goinvo.com/vision/human-centered-design-for-ai/) | Sanity | 97 (6C 4H) | 🔲 |
 | 4 | Reimagining Visual Storytelling with GenAI | [/vision/visual-storytelling-with-genai](http://localhost:3000/vision/visual-storytelling-with-genai) | [Live](https://www.goinvo.com/vision/visual-storytelling-with-genai/) | Static | 209 (30C 22H) | 🔲 |

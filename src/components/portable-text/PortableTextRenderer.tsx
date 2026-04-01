@@ -610,7 +610,7 @@ const components: PortableTextComponents = {
       const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className="header-lg mt-5 mb-4 text-center">{children}</h2>
+          <h2 id={anchorId} className="header-xl font-light mt-5 mb-4 text-center">{children}</h2>
         </ArticleReveal>
       )
     },
@@ -621,7 +621,7 @@ const components: PortableTextComponents = {
       const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className="header-lg mt-5 mb-4 text-center">{children}</h2>
+          <h2 id={anchorId} className="header-xl font-light mt-5 mb-4 text-center">{children}</h2>
         </ArticleReveal>
       )
     },
