@@ -164,6 +164,16 @@ export default async function VisionFeaturePage({ params }: Props) {
               </section>
             )}
 
+            {/* Special Thanks */}
+            {feature.specialThanks && feature.specialThanks.length > 0 && (
+              <section className="pb-12">
+                <div className="max-width max-width-md content-padding mx-auto">
+                  <h2 className="header-lg mt-8 mb-4 text-center">Special thanks to...</h2>
+                  <PortableTextRenderer content={feature.specialThanks} />
+                </div>
+              </section>
+            )}
+
             {/* Newsletter */}
             <section className="bg-gray-lightest py-8">
               <div className="max-width max-width-md content-padding mx-auto">

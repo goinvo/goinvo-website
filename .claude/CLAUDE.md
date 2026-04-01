@@ -300,17 +300,33 @@ When content needs a visual treatment the renderer doesn't support yet:
 - `columns` — fields: `layout` (2/3/4), `content[]`
 - `backgroundSection` — fields: `color` (gray/teal/warm/orange/dark/red), `content[]`
 - `buttonGroup` — fields: `buttons[]` (label, url, variant, external). Use for single or multiple buttons.
+- `cardGrid` — fields: `columns` (2/3/4), `items[]` (label, description). Bordered cards in a grid layout.
+- `reviewCard` — fields: `title`, `status` (rejected/certified), `quote`, `reason`, `description`. Dark header + status badge card.
 - `divider` — fields: `style` (default/thick)
 - `contactForm` — fields: `showHeader`
-- Text styles: `h2`, `sectionTitle` (centered h2), `h3`, `h4`, `blockquote`, `callout`, `normal`
+- Text styles: `h2`, `sectionTitle` (centered h2), `h3`, `h3Orange` (orange uppercase — for numbered section headings), `h4`, `h4Bullet` (with orange ◆ diamond), `blockquote`, `callout`, `normal`
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
 
+### Feature Schema Fields (beyond content)
+- `specialThanks` — optional rich text field rendered after Authors/Contributors, before Newsletter. Used for acknowledging non-author/contributor individuals.
+
 ### Verification & Fix Scripts
-- **`scripts/compare-visual.ts`** — Puppeteer visual comparison (computed styles, screenshots). Use this FIRST when migrating pages.
-- **`scripts/compare-pages.ts`** — HTML structural comparison (headings, counts, classes). Use this for batch audits.
+- **`scripts/page-tree.ts`** — **PRIMARY TOOL**. Dumps a page's component tree with computed styles, dimensions, and interactivity. Supports `--diff <url2>` to compare Gatsby vs Next.js side by side. Use this to identify every element difference on a page. Catches heading levels, font sizes, colors, margins, bullet styles, numbering gutter, missing elements, and structural mismatches.
+  ```bash
+  npx tsx scripts/page-tree.ts https://www.goinvo.com/vision/slug/ --diff http://localhost:3000/vision/slug
+  ```
+- **`scripts/deep-audit.ts`** — Puppeteer element-level style comparison across all pages. Detects videos, iframes, canvas, fixed/sticky, CSS animations. Outputs JSON reports to `.audit/deep-reports/`.
+- **`scripts/regression-test.ts`** — Snapshots key CSS properties on 16 sample pages and compares against a saved baseline. Run `--baseline` to save, then run without flags to compare. Catches heading size/weight/font changes, border removal, spacing changes, hero disappearance. **MUST be run before any global CSS or renderer change.**
+  ```bash
+  npx tsx scripts/regression-test.ts --baseline  # save baseline
+  npx tsx scripts/regression-test.ts             # check for regressions
+  ```
+- **`scripts/compare-visual.ts`** — Puppeteer visual comparison (computed styles, screenshots).
+- **`scripts/compare-pages.ts`** — HTML structural comparison (headings, counts, classes). Use for batch audits.
 - **`scripts/auto-fix-content.mjs`** — **AUTO-FIX** common Sanity content issues across all pages. Detects image+text pairs that should be 2-column layouts and fixes them automatically. Run with `--write` to apply. Always run this after content migrations.
 - **`scripts/audit-content.mjs`** — Sanity document quality (empty blocks, missing assets, duplicate titles).
 - **`scripts/audit-site-integrity.mjs`** — Route/redirect/link/SEO validation.
+- **`scripts/generate-verification.mjs`** — Generates VERIFICATION.md with all 101 pages and side-by-side URLs for manual review.
 
 ### ALWAYS run auto-fix after content migrations
 After migrating content to Sanity or patching content blocks, ALWAYS run:

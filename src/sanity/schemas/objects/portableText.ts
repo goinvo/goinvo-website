@@ -17,6 +17,7 @@ export default defineType({
           component: SectionTitleStyle,
         },
         { title: 'H3', value: 'h3' },
+        { title: 'H3 (orange)', value: 'h3Orange' },
         { title: 'H4', value: 'h4' },
         { title: 'H4 (with bullet)', value: 'h4Bullet' },
         { title: 'Quote', value: 'blockquote' },

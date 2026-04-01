@@ -620,6 +620,11 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    h3Orange: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-primary leading-[1.1875rem] mt-8 mb-3 numeral-gutter">{children}</h3>
+      </ArticleReveal>
+    ),
     h3: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
