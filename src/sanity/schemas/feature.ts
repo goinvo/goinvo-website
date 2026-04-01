@@ -168,6 +168,13 @@ export default defineType({
       of: [{ type: 'block' }],
     }),
     defineField({
+      name: 'showAboutGoInvo',
+      title: 'Show "About GoInvo" Section',
+      type: 'boolean',
+      description: 'Show the standard "About GoInvo" blurb after the author/contributor sections.',
+      initialValue: false,
+    }),
+    defineField({
       name: 'content',
       title: 'Content',
       type: 'portableText',

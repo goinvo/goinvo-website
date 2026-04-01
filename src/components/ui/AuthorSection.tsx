@@ -59,6 +59,11 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
 
   // Determine section heading
   const sectionHeading = heading || (resolved.length === 1 ? 'Author' : 'Authors')
+  // Contributors use smaller header-md style (matching Gatsby h3.header--md)
+  const isContributors = sectionHeading === 'Contributors'
+  const headingEl = isContributors
+    ? <h3 className="header-md mt-8 mb-4">{sectionHeading}</h3>
+    : <h2 className="header-xl font-light mt-8 mb-4 text-center">{sectionHeading}</h2>
 
   // ── Variant: primary-sidebar ──────────────────────────────────────────
   // First author gets a large photo + bio, remaining authors show in a
@@ -74,7 +79,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
 
     return (
       <section className="my-12">
-        <h2 className="header-xl mt-8 mb-4 text-center">{sectionHeading}</h2>
+        {headingEl}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           {/* Primary author */}
           <div>

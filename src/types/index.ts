@@ -86,6 +86,7 @@ export interface Feature {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contributors?: any[]
   specialThanks?: PortableTextBlock[]
+  showAboutGoInvo?: boolean
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
