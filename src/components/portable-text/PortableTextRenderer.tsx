@@ -598,6 +598,11 @@ const components: PortableTextComponents = {
         <h2 className="header-lg mt-5 mb-4">{children}</h2>
       </ArticleReveal>
     ),
+    h2Large: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="header-xl font-light mt-8 mb-4">{children}</h2>
+      </ArticleReveal>
+    ),
     // h2Center is deprecated — use sectionTitle instead. Kept as alias for backwards compat.
     h2Center: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
