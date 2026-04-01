@@ -606,7 +606,7 @@ const components: PortableTextComponents = {
       return (
         <ArticleReveal intensity="heading">
           <h4 className={cn(
-            'font-sans text-base font-bold mt-6 mb-2',
+            'font-sans text-base font-semibold mt-6 mb-2',
             isNumbered && 'text-gray numeral-gutter'
           )}>{children}</h4>
         </ArticleReveal>
@@ -721,9 +721,20 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
 
 interface PortableTextRendererProps {
   content: PortableTextBlock[]
+  /** Content variant: 'case-study' applies gray text + double paragraph spacing to match Gatsby */
+  variant?: 'default' | 'case-study'
 }
 
-export function PortableTextRenderer({ content }: PortableTextRendererProps) {
+export function PortableTextRenderer({ content, variant = 'default' }: PortableTextRendererProps) {
   const processed = groupConsecutiveImages(content)
+
+  if (variant === 'case-study') {
+    return (
+      <div className="case-study-content">
+        <PortableText value={processed} components={components} />
+      </div>
+    )
+  }
+
   return <PortableText value={processed} components={components} />
 }

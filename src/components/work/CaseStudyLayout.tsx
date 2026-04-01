@@ -20,7 +20,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
       {/* Content */}
       {content && (
         <div className="max-width max-width-md content-padding mx-auto py-12">
-          <PortableTextRenderer content={content} />
+          <PortableTextRenderer content={content} variant="case-study" />
         </div>
       )}
 
