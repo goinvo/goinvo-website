@@ -214,7 +214,7 @@ const components: PortableTextComponents = {
         <ArticleReveal intensity="visual">
           <div className={cn('grid grid-cols-1 gap-4 my-8', gridCols)}>
             {items.map((item, i) => (
-              <div key={i} className="border border-gray-medium rounded-lg p-4">
+              <div key={i} className="border border-gray-medium rounded-md bg-white p-4">
                 <strong className="block text-xs uppercase tracking-[2px] text-black mb-2">{item.label}</strong>
                 <p className="text-sm text-gray leading-relaxed m-0">{item.description}</p>
               </div>
