@@ -13,17 +13,25 @@ export function cn(...classes: (string | false | undefined | null)[]): string {
  * Remove an "Authors" or "Author" h2 heading from portable text blocks
  * to avoid duplication when AuthorSection renders its own heading.
  */
-export function stripAuthorHeading(blocks: any[]): any[] {
+export function stripAuthorHeading(blocks: any[], opts?: { stripContributors?: boolean }): any[] {
   let skipNextNormal = false
+  const stripContrib = opts?.stripContributors ?? false
   return blocks.filter((block) => {
     if (block._type !== 'block') { skipNextNormal = false; return true }
     // Strip "Authors"/"Author" heading in any heading style
-    if (['h2', 'h2Center', 'sectionTitle'].includes(block.style)) {
+    // These are rendered separately by the template from the authors field
+    const headingStyles = ['h2', 'h2Center', 'h2Large', 'sectionTitle', 'h3']
+    if (headingStyles.includes(block.style)) {
       const text = (block.children || [])
         .map((c: any) => c.text || '')
         .join('')
         .trim()
       if (text === 'Authors' || text === 'Author') {
+        skipNextNormal = true
+        return false
+      }
+      // Only strip Contributors heading if the page has a contributors field
+      if (stripContrib && text === 'Contributors') {
         skipNextNormal = true
         return false
       }
