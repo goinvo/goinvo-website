@@ -145,28 +145,9 @@
     outline-offset: 2px;
   }
 
-  /* Restore list bullet styling inside article content areas.
-     Tailwind preflight sets list-style: none on all ul/ol.
-     This re-applies the orange star bullet for ul and decimal for ol
-     inside the max-width-md content containers used by vision/work pages. */
-  .max-width-md ul:not(.list-none):not(.list--unstyled):not([class*="flex"]) {
-    list-style-position: outside;
-    list-style-type: none;
-    list-style-image: url('/images/bullet.svg');
-    padding-left: 21px;
-  }
-
-  @media (min-width: 864px) {
-    .max-width-md ul:not(.list-none):not(.list--unstyled):not([class*="flex"]) {
-      padding-left: 0;
-    }
-  }
-
-  .max-width-md ul:not(.list-none):not(.list--unstyled):not([class*="flex"]) li {
-    padding-left: 4px;
-    margin-bottom: 0.5rem;
-  }
-
+  /* Restore basic list bullets inside article content (Tailwind preflight strips them).
+     Only applies disc bullets as a fallback. The .ul class handles star bullets
+     for Sanity PortableText content. */
   .max-width-md ol:not(.list-none) {
     list-style-type: decimal;
     padding-left: 1.5rem;
@@ -320,8 +301,21 @@
     font-weight: 600;
   }
 
+  .font-coronavirus h2 {
+    font-size: 1.875rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .font-coronavirus h3 {
+    font-size: 1.3rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
   .font-coronavirus h4 {
     color: #563c8d;
+    font-size: 1.125rem;
   }
 }
 
