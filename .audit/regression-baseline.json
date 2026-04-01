@@ -1157,7 +1157,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 7916,
+    "pageHeight": 8280,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1181,7 +1181,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 14,
+        "count": 16,
         "samples": [
           {
             "text": "What is AI design certification?",
