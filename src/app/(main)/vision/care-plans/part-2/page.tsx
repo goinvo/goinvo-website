@@ -175,17 +175,17 @@ export default function CarePlansPart2Page() {
               <thead>
                 <tr>
                   <th>Service</th>
-                  <th>Interoperability</th>
-                  <th>Patient Summary</th>
-                  <th>Education</th>
-                  <th>Goal Setting</th>
-                  <th>Vitals Tracking</th>
-                  <th>Dynamic Intervention</th>
-                  <th>Data Ownership</th>
-                  <th>Prof. Team Comm.</th>
-                  <th>Non-prof. Team Comm.</th>
-                  <th>Clinical Validity</th>
-                  <th>Content Breadth</th>
+                  <th title="Complies with meaningful use requirements. Meets CDA and/or FHIR data standards. CQM standard compliance. HIPAA compliant. Integrates with clinical workflows.">Interoperability</th>
+                  <th title="Provides overview of general health condition. Takes into account individual health concerns. Provides comprehensive medical history. Ease of obtaining medical record information.">Patient Summary</th>
+                  <th title="Personalized, time-based instructions from care providers. Dynamic instructions based on assessment. Education reinforcement through reminders. Links to external resources. Accounts for demographics.">Education</th>
+                  <th title="Education-facilitated goal setting with or without clinician input. Editable and shareable plan of time-based goals. Patient encouragement and incentive. Feedback on progress. Projected outcomes.">Goal Setting</th>
+                  <th title="Tracks progress towards care plan goals manually or through sensors. Collects biometric data (heart rate, blood pressure, etc.). Connects with health apps (HealthKit, Fitbit, etc.). Ability to view trends.">Vitals Tracking</th>
+                  <th title="Provides summative insights about health status and actionable recommendations. Provides projected outcome of intervention. Communicates trends to providers. Incorporates provider input.">Dynamic Intervention</th>
+                  <th title="Provides secure access and proxy rights to view/edit health information. Ability to export health information. Accessibility from many devices. Real-time updating.">Data Ownership</th>
+                  <th title="Stores contact info for professional providers. Search engine for new providers. Schedule physical or virtual appointments. Call or message care providers. Virtual consults. Communication stored for review.">Prof. Team Comm.</th>
+                  <th title="Stores contact info for non-professional caregivers. Call or message caregivers. Virtual consults. Communication stored for review. Collaborate on health tasks. Provide access to health info.">Non-prof. Team Comm.</th>
+                  <th title="Clinical trials or studies conducted. Involves vetted care professionals. Integration with clinical workflows. Reputable organizations behind product development.">Clinical Validity</th>
+                  <th title="Covers: Nutrition, Physical activity, Sleep, Mental resilience, Medication management, Bad habit cessation, Sexual health, Managing activities of daily living.">Content Breadth</th>
                   <th>Average</th>
                 </tr>
               </thead>
