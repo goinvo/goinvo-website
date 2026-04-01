@@ -121,21 +121,21 @@ Gatsby (live): https://www.goinvo.com
 
 | #  | Page                      | Next.js                                                                    | Gatsby                                                 | ✓ |
 | -- | ------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------ | -- |
-| 1  | Home                      | [/](http://localhost:3000/)                                                   | [Live](https://www.goinvo.com/)                           | 🔲 |
-| 2  | Work (listing)            | [/work](http://localhost:3000/work)                                           | [Live](https://www.goinvo.com/work/)                      | 🔲 |
-| 3  | Services                  | [/services](http://localhost:3000/services)                                   | [Live](https://www.goinvo.com/services/)                  | 🔲 |
-| 4  | About                     | [/about](http://localhost:3000/about)                                         | [Live](https://www.goinvo.com/about/)                     | 🔲 |
-| 5  | About > Careers           | [/about/careers](http://localhost:3000/about/careers)                         | [Live](https://www.goinvo.com/about/careers/)             | 🔲 |
-| 6  | About > Open Office Hours | [/about/open-office-hours](http://localhost:3000/about/open-office-hours)     | [Live](https://www.goinvo.com/about/open-office-hours/)   | 🔲 |
-| 7  | About > Studio Timeline   | [/about/studio-timeline](http://localhost:3000/about/studio-timeline)         | [Live](https://www.goinvo.com/about/studio-timeline/)     | 🔲 |
-| 8  | Vision (listing)          | [/vision](http://localhost:3000/vision)                                       | [Live](https://www.goinvo.com/vision/)                    | 🔲 |
-| 9  | Contact                   | [/contact](http://localhost:3000/contact)                                     | [Live](https://www.goinvo.com/contact/)                   | 🔲 |
-| 10 | AI                        | [/ai](http://localhost:3000/ai)                                               | [Live](https://www.goinvo.com/ai/)                        | 🔲 |
-| 11 | Enterprise                | [/enterprise](http://localhost:3000/enterprise)                               | [Live](https://www.goinvo.com/enterprise/)                | 🔲 |
-| 12 | Government                | [/government](http://localhost:3000/government)                               | [Live](https://www.goinvo.com/government/)                | 🔲 |
-| 13 | Patient Engagement        | [/patient-engagement](http://localhost:3000/patient-engagement)               | [Live](https://www.goinvo.com/patient-engagement/)        | 🔲 |
-| 14 | Open Source Health Design | [/open-source-health-design](http://localhost:3000/open-source-health-design) | [Live](https://www.goinvo.com/open-source-health-design/) | 🔲 |
-| 15 | 404 Page                  | [/nonexistent-page-test](http://localhost:3000/nonexistent-page-test)         | [Live](https://www.goinvo.com/nonexistent-page-test/)     | 🔲 |
+| 1  | Home                      | [/](http://localhost:3000/)                                                   | [Live](https://www.goinvo.com/)                           | 👤 |
+| 2  | Work (listing)            | [/work](http://localhost:3000/work)                                           | [Live](https://www.goinvo.com/work/)                      | ⚠️ |
+| 3  | Services                  | [/services](http://localhost:3000/services)                                   | [Live](https://www.goinvo.com/services/)                  | 👤 |
+| 4  | About                     | [/about](http://localhost:3000/about)                                         | [Live](https://www.goinvo.com/about/)                     | 👤 |
+| 5  | About > Careers           | [/about/careers](http://localhost:3000/about/careers)                         | [Live](https://www.goinvo.com/about/careers/)             | ⚠️ |
+| 6  | About > Open Office Hours | [/about/open-office-hours](http://localhost:3000/about/open-office-hours)     | [Live](https://www.goinvo.com/about/open-office-hours/)   | 👤 |
+| 7  | About > Studio Timeline   | [/about/studio-timeline](http://localhost:3000/about/studio-timeline)         | [Live](https://www.goinvo.com/about/studio-timeline/)     | 👤 |
+| 8  | Vision (listing)          | [/vision](http://localhost:3000/vision)                                       | [Live](https://www.goinvo.com/vision/)                    | 👤 |
+| 9  | Contact                   | [/contact](http://localhost:3000/contact)                                     | [Live](https://www.goinvo.com/contact/)                   | 👤 |
+| 10 | AI                        | [/ai](http://localhost:3000/ai)                                               | [Live](https://www.goinvo.com/ai/)                        | 👤 |
+| 11 | Enterprise                | [/enterprise](http://localhost:3000/enterprise)                               | [Live](https://www.goinvo.com/enterprise/)                | 👤 |
+| 12 | Government                | [/government](http://localhost:3000/government)                               | [Live](https://www.goinvo.com/government/)                | 👤 |
+| 13 | Patient Engagement        | [/patient-engagement](http://localhost:3000/patient-engagement)               | [Live](https://www.goinvo.com/patient-engagement/)        | 👤 |
+| 14 | Open Source Health Design | [/open-source-health-design](http://localhost:3000/open-source-health-design) | [Live](https://www.goinvo.com/open-source-health-design/) | 👤 |
+| 15 | 404 Page                  | [/nonexistent-page-test](http://localhost:3000/nonexistent-page-test)         | [Live](https://www.goinvo.com/nonexistent-page-test/)     | 👤 |
 
 **Main pages total: 15 pages**
 
