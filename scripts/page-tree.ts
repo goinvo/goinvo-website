@@ -17,7 +17,6 @@
  */
 
 import puppeteer, { type Page } from 'puppeteer'
-import { writeFileSync } from 'fs'
 
 interface TreeNode {
   tag: string
@@ -49,6 +48,9 @@ interface TreeNode {
     boxShadow: string
     listStyleType: string
     listStyleImage: string
+    borderTopWidth: string
+    borderTopColor: string
+    borderTopStyle: string
   }
   rect: { x: number; y: number; width: number; height: number }
   interactive: string | null   // 'link', 'button', 'input', 'onclick', etc.
@@ -100,14 +102,29 @@ async function extractTree(page: Page): Promise<TreeNode> {
       }
 
       var inter = null;
-      if (tag === 'a' && el.hasAttribute('href')) inter = 'link';
-      else if (tag === 'button') inter = 'button';
+      if (tag === 'a' && el.hasAttribute('href')) {
+        if (cs.textTransform === 'uppercase' && parseFloat(cs.letterSpacing) > 0) {
+          var bgcA = cs.backgroundColor;
+          inter = 'button-link:' + (bgcA !== 'rgba(0, 0, 0, 0)' && bgcA !== 'rgb(255, 255, 255)' && bgcA !== 'transparent' ? 'primary' : 'secondary');
+        } else {
+          inter = 'link';
+        }
+      }
+      else if (tag === 'button') {
+        var bgcB = cs.backgroundColor;
+        inter = 'button:' + (bgcB !== 'rgba(0, 0, 0, 0)' && bgcB !== 'rgb(255, 255, 255)' && bgcB !== 'transparent' ? 'primary' : 'secondary');
+      }
       else if (['input','select','textarea'].indexOf(tag) >= 0) inter = tag;
       else if (el.hasAttribute('onclick')) inter = 'onclick';
 
       var src = null;
       if (tag === 'img') src = (el.src || '').split('/').pop().split('?')[0];
-      else if (tag === 'video') { var s = el.querySelector('source'); src = s ? s.src.split('/').pop() : 'video'; }
+      else if (tag === 'video') {
+        var s = el.querySelector('source');
+        src = s ? s.src.split('/').pop() : (el.src ? el.src.split('/').pop().split('?')[0] : 'video');
+        if (el.autoplay || el.hasAttribute('autoplay')) inter = 'video:autoplay';
+        else inter = 'video:controls';
+      }
       else if (tag === 'iframe') src = (el.src || '').substring(0, 80);
 
       return {
@@ -140,6 +157,9 @@ async function extractTree(page: Page): Promise<TreeNode> {
           boxShadow: cs.boxShadow === 'none' ? '' : cs.boxShadow.substring(0, 60),
           listStyleType: cs.listStyleType,
           listStyleImage: cs.listStyleImage === 'none' ? '' : 'custom',
+          borderTopWidth: cs.borderTopWidth,
+          borderTopColor: cs.borderTopColor,
+          borderTopStyle: cs.borderTopStyle,
         },
         rect: { x:Math.round(rect.x), y:Math.round(rect.y), width:Math.round(rect.width), height:Math.round(rect.height) },
         interactive: inter,
@@ -208,6 +228,15 @@ function printTree(node: TreeNode, indent: string = '', lines: string[] = []): s
   }
   if (styles.listStyleImage === 'custom') {
     styleParts.push('bullet:custom')
+  }
+  // Background and border for button-like elements (CTA detection)
+  if (interactive && interactive.includes('button')) {
+    if (styles.backgroundColor && styles.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+      styleParts.push(`bg:${normalizeColor(styles.backgroundColor)}`)
+    }
+    if (styles.borderTopWidth && styles.borderTopWidth !== '0px') {
+      styleParts.push(`border:${styles.borderTopWidth} ${normalizeColor(styles.borderTopColor)}`)
+    }
   }
 
   // Dimensions for significant elements
@@ -370,6 +399,82 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   const bFixed = flatB.filter(f => f.node.styles.position === 'fixed' || f.node.styles.position === 'sticky')
   if (aFixed.length !== bFixed.length) {
     lines.push(`  Fixed/sticky: ${aFixed.length} → ${bFixed.length}`)
+  }
+
+  // ── Button / CTA Comparison ──────────────────────────────────────────
+  lines.push('')
+  lines.push('=== Button / CTA Differences ===')
+  const isBtn = (f: { node: TreeNode }) => f.node.interactive && f.node.interactive.includes('button')
+  const aButtons = flatA.filter(isBtn)
+  const bButtons = flatB.filter(isBtn)
+  if (aButtons.length !== bButtons.length) {
+    lines.push(`  Count: ${aButtons.length} → ${bButtons.length}`)
+  }
+  for (let i = 0; i < Math.min(aButtons.length, bButtons.length); i++) {
+    const a = aButtons[i].node
+    const b = bButtons[i].node
+    const diffs: string[] = []
+    // Variant (primary vs secondary)
+    if (a.interactive !== b.interactive) diffs.push(`variant: ${a.interactive} → ${b.interactive}`)
+    // Background color
+    if (normalizeColor(a.styles.backgroundColor) !== normalizeColor(b.styles.backgroundColor)) {
+      diffs.push(`bg: ${normalizeColor(a.styles.backgroundColor)} → ${normalizeColor(b.styles.backgroundColor)}`)
+    }
+    // Text color
+    if (normalizeColor(a.styles.color) !== normalizeColor(b.styles.color)) {
+      diffs.push(`color: ${normalizeColor(a.styles.color)} → ${normalizeColor(b.styles.color)}`)
+    }
+    // Font size
+    if (a.styles.fontSize !== b.styles.fontSize) diffs.push(`fontSize: ${a.styles.fontSize} → ${b.styles.fontSize}`)
+    // Border
+    if (a.styles.borderTopWidth !== b.styles.borderTopWidth || normalizeColor(a.styles.borderTopColor) !== normalizeColor(b.styles.borderTopColor)) {
+      diffs.push(`border: ${a.styles.borderTopWidth} ${normalizeColor(a.styles.borderTopColor)} → ${b.styles.borderTopWidth} ${normalizeColor(b.styles.borderTopColor)}`)
+    }
+    // Position (vertical placement relative to page)
+    const yDiff = Math.abs(a.rect.y - b.rect.y)
+    if (yDiff > 50) diffs.push(`Y position: ${a.rect.y}px → ${b.rect.y}px (${yDiff}px off)`)
+    // Width
+    const wDiff = Math.abs(a.rect.width - b.rect.width)
+    if (wDiff > 20) diffs.push(`width: ${a.rect.width}px → ${b.rect.width}px`)
+    // Text content
+    const aLabel = a.text || ''
+    const bLabel = b.text || ''
+    if (aLabel.toLowerCase() !== bLabel.toLowerCase() && aLabel && bLabel) {
+      diffs.push(`label: "${aLabel}" → "${bLabel}"`)
+    }
+
+    if (diffs.length) {
+      lines.push(`  <${a.tag}> "${aLabel || bLabel}"`)
+      for (const d of diffs) lines.push(`    ${d}`)
+    }
+  }
+  // ── Video autoplay comparison ─────────────────────────────────────────
+  lines.push('')
+  lines.push('=== Video Autoplay ===')
+  const aVideos = flatA.filter(f => f.node.tag === 'video')
+  const bVideos = flatB.filter(f => f.node.tag === 'video')
+  if (aVideos.length !== bVideos.length) {
+    lines.push(`  Count: ${aVideos.length} → ${bVideos.length}`)
+  }
+  for (let i = 0; i < Math.min(aVideos.length, bVideos.length); i++) {
+    const a = aVideos[i].node
+    const b = bVideos[i].node
+    if (a.interactive !== b.interactive) {
+      lines.push(`  <video> "${a.src || b.src}"`)
+      lines.push(`    autoplay: ${a.interactive} → ${b.interactive}`)
+    }
+  }
+
+  // Report unmatched buttons
+  if (aButtons.length > bButtons.length) {
+    for (let i = bButtons.length; i < aButtons.length; i++) {
+      lines.push(`  MISSING in B: <${aButtons[i].node.tag}> "${aButtons[i].node.text}" (${aButtons[i].node.interactive})`)
+    }
+  }
+  if (bButtons.length > aButtons.length) {
+    for (let i = aButtons.length; i < bButtons.length; i++) {
+      lines.push(`  EXTRA in B: <${bButtons[i].node.tag}> "${bButtons[i].node.text}" (${bButtons[i].node.interactive})`)
+    }
   }
 
   return lines
