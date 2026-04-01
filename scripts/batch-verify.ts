@@ -281,8 +281,10 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
 
   // ── Content text comparison ─────────────────────────────────────
   // Check headings by text to find content from wrong pages
-  const aHTexts = new Set(aH.map(n => n.text.toLowerCase().trim()).filter(t => t.length > 10))
-  const bHTexts = new Set(bH.map(n => n.text.toLowerCase().trim()).filter(t => t.length > 10))
+  // Normalize: lowercase, collapse whitespace, trim
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').replace(/[\u201c\u201d\u2018\u2019\u0027\u2032\u0060]/g, "'").replace(/"/g, "'").trim()
+  const aHTexts = new Set(aH.map(n => norm(n.text)).filter(t => t.length > 10))
+  const bHTexts = new Set(bH.map(n => norm(n.text)).filter(t => t.length > 10))
   // Headings in B that don't exist in A = potentially wrong content
   for (const bText of bHTexts) {
     if (!aHTexts.has(bText)) {
@@ -332,11 +334,17 @@ async function main() {
     process.stderr.write(`[${results.length + 1}/${pages.length}] ${pd.slug}...`)
     try {
       await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await new Promise(r => setTimeout(r, 500))
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await new Promise(r => setTimeout(r, 1000))
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await new Promise(r => setTimeout(r, 300))
       const treeA = await extractTree(page)
 
       await page.goto(nextUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await new Promise(r => setTimeout(r, 500))
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await new Promise(r => setTimeout(r, 1000))
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await new Promise(r => setTimeout(r, 300))
       const treeB = await extractTree(page)
 
       const issues = compareTrees(treeA, treeB)

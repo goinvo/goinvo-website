@@ -2,7 +2,7 @@ import { PortableTextRenderer } from '@/components/portable-text/PortableTextRen
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { Reveal } from '@/components/ui/Reveal'
 import { CaseStudyCard } from './CaseStudyCard'
-import { cn, stripAuthorHeading } from '@/lib/utils'
+import { cn, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { CaseStudy } from '@/types'
 
 interface CaseStudyLayoutProps {
@@ -11,9 +11,9 @@ interface CaseStudyLayoutProps {
 
 export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
   const hasAuthors = caseStudy.authors && caseStudy.authors.length > 0
-  const rawContent = hasAuthors && caseStudy.content
-    ? stripAuthorHeading(caseStudy.content)
-    : caseStudy.content
+  let rawContent = caseStudy.content
+  if (rawContent) rawContent = stripTitleHeading(rawContent, caseStudy.title)
+  if (hasAuthors && rawContent) rawContent = stripAuthorHeading(rawContent)
 
   // Gatsby order: content → Up Next → References
   // Split references out of content so we can render them after Up Next

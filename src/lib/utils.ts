@@ -55,7 +55,7 @@ export function stripAuthorHeading(blocks: any[], opts?: { stripContributors?: b
 export function stripTitleHeading(blocks: any[], title: string): any[] {
   if (!blocks.length || !title) return blocks
   const first = blocks[0]
-  if (first._type !== 'block' || !['h1', 'h2', 'sectionTitle'].includes(first.style)) return blocks
+  if (first._type !== 'block' || !['h1', 'h2', 'h2Large', 'sectionTitle'].includes(first.style)) return blocks
   const text = (first.children || [])
     .map((c: any) => c.text || '')
     .join('')
@@ -68,7 +68,7 @@ export function stripTitleHeading(blocks: any[], title: string): any[] {
   const textWords = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w: string) => w.length > 2)
   const overlap = titleWords.filter((w: string) => textWords.includes(w)).length
   const overlapRatio = overlap / Math.max(titleWords.length, textWords.length)
-  if (overlapRatio >= 0.85) {
+  if (overlapRatio >= 0.7) {
     return blocks.slice(1)
   }
   return blocks
