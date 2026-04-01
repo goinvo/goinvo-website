@@ -151,7 +151,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
   // Every author rendered with the same image + name + bio layout
   return (
     <section className="my-12">
-      <h2 className="font-serif text-2xl mt-8 mb-4 text-center">{sectionHeading}</h2>
+      {headingEl}
       {resolved.map((r) => {
         const imageUrl = r.member.image
           ? urlForImage(r.member.image).width(400).url()

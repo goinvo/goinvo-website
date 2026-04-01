@@ -3,7 +3,7 @@
     "url": "/vision/vapepocolypse",
     "label": "Vision: vapepocolypse",
     "heroImageExists": true,
-    "pageHeight": 3374,
+    "pageHeight": 3368,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -32,7 +32,7 @@
           {
             "text": "Author",
             "fontSize": "36px",
-            "fontWeight": "400",
+            "fontWeight": "300",
             "fontFamily": "adobe-jenson-pro",
             "color": "rgb(29, 27, 26)",
             "marginTop": "32px",
@@ -344,7 +344,7 @@
     "url": "/vision/healthcare-ai",
     "label": "Vision: healthcare-ai",
     "heroImageExists": true,
-    "pageHeight": 9099,
+    "pageHeight": 9093,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -729,7 +729,7 @@
     "url": "/vision/coronavirus",
     "label": "Vision: coronavirus",
     "heroImageExists": true,
-    "pageHeight": 17357,
+    "pageHeight": 17341,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -738,7 +738,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 9,
+        "count": 8,
         "samples": [
           {
             "text": "Understanding the Novel Coronavirus",
@@ -786,7 +786,7 @@
       },
       "h3": {
         "selector": "h3",
-        "count": 9,
+        "count": 10,
         "samples": [
           {
             "text": "Prevention 4",
@@ -1141,7 +1141,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 8653,
+    "pageHeight": 8621,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1165,7 +1165,7 @@
       },
       "h2": {
         "selector": "h2",
-        "count": 10,
+        "count": 9,
         "samples": [
           {
             "text": "What is AI design certification?",
@@ -1213,7 +1213,7 @@
       },
       "h3": {
         "selector": "h3",
-        "count": 7,
+        "count": 8,
         "samples": [
           {
             "text": "1. What the AI does",
