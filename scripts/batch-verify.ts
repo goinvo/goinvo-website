@@ -201,7 +201,7 @@ function normalizeColor(c: string): string {
 }
 
 interface Issue {
-  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT'
+  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'EXTRA_CONTENT'
   severity: 'high' | 'medium' | 'low'
   detail: string
 }
@@ -276,6 +276,30 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     const diff = Math.abs(a - b)
     if (diff > 0) {
       issues.push({ type: 'ELEMENT_COUNT', severity: diff > 3 ? 'medium' : 'low', detail: `<${tag}>: ${a} → ${b} (${b - a > 0 ? '+' : ''}${b - a})` })
+    }
+  }
+
+  // ── Content text comparison ─────────────────────────────────────
+  // Check headings by text to find content from wrong pages
+  const aHTexts = new Set(aH.map(n => n.text.toLowerCase().trim()).filter(t => t.length > 10))
+  const bHTexts = new Set(bH.map(n => n.text.toLowerCase().trim()).filter(t => t.length > 10))
+  // Headings in B that don't exist in A = potentially wrong content
+  for (const bText of bHTexts) {
+    if (!aHTexts.has(bText)) {
+      // Check if it's a template heading (Authors, Contributors, Subscribe, References, Up next, About GoInvo)
+      const templateHeadings = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...']
+      if (!templateHeadings.includes(bText)) {
+        issues.push({ type: 'EXTRA_CONTENT', severity: 'high', detail: `Heading not in Gatsby: "${bText.substring(0, 50)}"` })
+      }
+    }
+  }
+  // Headings in A that don't exist in B = missing content
+  for (const aText of aHTexts) {
+    if (!bHTexts.has(aText)) {
+      const templateHeadings = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo']
+      if (!templateHeadings.includes(aText)) {
+        issues.push({ type: 'CONTENT_MISMATCH', severity: 'medium', detail: `Heading missing from Next.js: "${aText.substring(0, 50)}"` })
+      }
     }
   }
 
