@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { ZikaNav } from './ZikaNav'
 import './zika.css'
 
 export const metadata: Metadata = {
@@ -39,6 +40,8 @@ export default function UnderstandingZikaPage() {
       <SetCaseStudyHero
         image={`${IMG}/header.png`}
       />
+
+      <ZikaNav />
 
       <div className="header">
         <div className="title">

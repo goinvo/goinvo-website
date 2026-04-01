@@ -547,3 +547,161 @@
   list-style: upper-alpha;
   padding-left: 1.5em;
 }
+
+/* ================================================================== */
+/*  Legacy Carousel (Embla)                                            */
+/* ================================================================== */
+
+.legacy-carousel__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.legacy-carousel__tabs .legacy-carousel__tab {
+  flex: 1 1 calc(100% / 6);
+  min-width: calc(100% / 6);
+  padding: 1em;
+  font-size: 1.1em;
+  font-weight: 700;
+  text-align: center;
+  color: #aaa;
+  background: #eee;
+  border: none;
+  cursor: pointer;
+  transition: color 300ms ease, background 300ms ease;
+  line-height: 1.2;
+}
+
+.legacy-carousel__tabs .legacy-carousel__tab:hover {
+  color: #555;
+}
+
+.legacy-carousel__tabs .legacy-carousel__tab.active {
+  color: #fff;
+}
+
+/* Government carousel tab active colors */
+.govt-carousel .legacy-carousel__tab.active.slide0 { background-color: #bc743e; }
+.govt-carousel .legacy-carousel__tab.active.slide1 { background-color: #d65f4d; }
+.govt-carousel .legacy-carousel__tab.active.slide2 { background-color: #9ec2b7; }
+.govt-carousel .legacy-carousel__tab.active.slide3 { background-color: #7f8732; }
+.govt-carousel .legacy-carousel__tab.active.slide4 { background-color: #51697b; }
+.govt-carousel .legacy-carousel__tab.active.slide5 { background-color: #ddb40a; }
+
+/* Voting carousel tab active colors */
+.voting-carousel .legacy-carousel__tabs {
+  position: relative;
+  z-index: 2;
+}
+
+.voting-carousel .legacy-carousel__tab {
+  color: #fff;
+  background: rgba(97, 1, 1, 0.75);
+}
+
+.voting-carousel .legacy-carousel__tab:hover {
+  color: #fff;
+  background: rgba(97, 1, 1, 0.9);
+}
+
+.voting-carousel .legacy-carousel__tab.active {
+  background: #610101;
+}
+
+/* Viewport and container */
+.legacy-carousel__viewport-wrapper {
+  position: relative;
+}
+
+.legacy-carousel__viewport {
+  overflow: hidden;
+}
+
+.legacy-carousel__container {
+  display: flex;
+}
+
+.legacy-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+/* Arrow buttons */
+.legacy-carousel__arrow {
+  position: absolute;
+  z-index: 10;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #333;
+  transition: background 200ms ease, opacity 200ms ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.legacy-carousel__arrow:hover {
+  background: #fff;
+}
+
+.legacy-carousel__arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.legacy-carousel__arrow--prev {
+  left: 12px;
+}
+
+.legacy-carousel__arrow--next {
+  right: 12px;
+}
+
+/* Dot indicators */
+.legacy-carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 1em 0;
+}
+
+.legacy-carousel__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #aaa;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 200ms ease, border-color 200ms ease;
+}
+
+.legacy-carousel__dot.active {
+  background: #555;
+  border-color: #555;
+}
+
+/* Responsive tab layout */
+@media (max-width: 787px) {
+  .legacy-carousel__tabs .legacy-carousel__tab {
+    flex: 1 1 50%;
+    min-width: 50%;
+  }
+}
+
+@media (max-width: 500px) {
+  .legacy-carousel__tabs .legacy-carousel__tab {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+  .legacy-carousel__arrow {
+    display: none;
+  }
+}

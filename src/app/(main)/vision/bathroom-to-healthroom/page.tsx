@@ -2,10 +2,12 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { BackgroundVideo } from './BackgroundVideo'
 import './healthroom.css'
 
 const IMG_BASE =
   'https://www.goinvo.com/old/images/features/design-for-life'
+const VID_BASE = 'https://www.goinvo.com/old/videos/dfl'
 
 const legacyImage = (path: string) => `${IMG_BASE}/${path}`
 
@@ -48,12 +50,23 @@ export default function BathroomToHealthroomPage() {
       />
 
       <article className="design-for-life" id="feature-article">
-        {/* Title section — cover image is now the hero above */}
-        <div className="max-width max-width-md content-padding mx-auto py-8">
-          <h1 className="header-xl mb-2">From Bathroom to Healthroom</h1>
-          <p className="font-serif text-lg text-gray mb-1">How magical technology will revolutionize human health</p>
-          <p className="text-gray text-sm">By Juhan Sonin · <a href="mailto:juhan@goinvo.com" className="text-primary">juhan@goinvo.com</a></p>
-        </div>
+        {/* Title section with background video matching legacy header */}
+        <header className="bathroom-header relative overflow-hidden flex items-center justify-center text-white text-center"
+          style={{ minHeight: '70vh' }}
+        >
+          <BackgroundVideo
+            mp4Src={`${VID_BASE}/header.mp4`}
+            webmSrc={`${VID_BASE}/header.webm`}
+            posterSrc="https://www.goinvo.com/old/videos/dfl/header.jpg"
+          />
+          {/* Dark overlay for text readability */}
+          <div className="absolute inset-0 bg-black/40 z-[1]" />
+          <div className="relative z-[2] max-width max-width-md content-padding mx-auto py-8">
+            <h1 className="header-xl mb-2" style={{ color: '#fff' }}>From Bathroom to Healthroom</h1>
+            <p className="font-serif text-lg mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>How magical technology will revolutionize human health</p>
+            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>By Juhan Sonin · <a href="mailto:juhan@goinvo.com" style={{ color: '#E36216' }}>juhan@goinvo.com</a></p>
+          </div>
+        </header>
 
         {/* ============================================================
             Section 1 — Bloodletting to bloodless
@@ -317,15 +330,13 @@ export default function BathroomToHealthroomPage() {
                   small, and enables people to recognize patterns.
                 </p>
               </div>
-              <div className="video" id="hgraph">
-                <Image
-                  src={legacyImage('hgraph-poster.jpg')}
-                  alt="hGraph visualization"
-                  width={600}
-                  height={400}
-                  className="w-full h-full object-cover"
-                  unoptimized
+              <div className="video relative overflow-hidden" id="hgraph">
+                <BackgroundVideo
+                  mp4Src={`${VID_BASE}/hgraph.mp4`}
+                  posterSrc={legacyImage('hgraph-poster.jpg')}
                 />
+                {/* Spacer to maintain aspect ratio */}
+                <div className="relative z-[1]" style={{ paddingTop: '66.67%' }} />
               </div>
             </div>
 
@@ -377,8 +388,12 @@ export default function BathroomToHealthroomPage() {
           </header>
           <div className="section-content">
             {/* Blade Runner eye-tracking overlay */}
-            <div id="eye-tracking">
-              <p className="caption">
+            <div className="relative overflow-hidden" id="eye-tracking">
+              <BackgroundVideo
+                mp4Src={`${VID_BASE}/blade_runner.mp4`}
+                posterSrc={legacyImage('blade-runner-poster.jpg')}
+              />
+              <p className="caption relative z-[1]">
                 These days, my thoughts turn pretty frequently to the image of
                 the Voight-Kampff interrogation machine in the movie Blade Runner
                 (1982). It was a tabletop apparatus with a mechanical eye that
@@ -619,16 +634,14 @@ export default function BathroomToHealthroomPage() {
               </p>
             </div>
 
-            {/* Crane / healthroom video still */}
-            <div className="full" style={{ margin: '2em 0' }}>
-              <Image
-                src={legacyImage('crane-poster.jpg')}
-                alt="Healthroom prefab unit being installed"
-                width={1200}
-                height={600}
-                className="w-full h-auto"
-                unoptimized
+            {/* Crane / healthroom video */}
+            <div className="full relative overflow-hidden" id="crane" style={{ margin: '2em 0' }}>
+              <BackgroundVideo
+                mp4Src={`${VID_BASE}/crane.mp4`}
+                posterSrc={legacyImage('crane-poster.jpg')}
               />
+              {/* Spacer to maintain aspect ratio */}
+              <div className="relative z-[1]" style={{ paddingTop: '50%' }} />
             </div>
 
             <p>
@@ -670,15 +683,13 @@ export default function BathroomToHealthroomPage() {
                   Image from Woody Allen&rsquo;s movie, Sleeper, 1973
                 </p>
               </div>
-              <div className="video" id="sleeper-video">
-                <Image
-                  src={legacyImage('sleeper-poster.jpg')}
-                  alt="Sleeper movie still"
-                  width={600}
-                  height={400}
-                  className="w-full h-full object-cover"
-                  unoptimized
+              <div className="video relative overflow-hidden" id="sleeper-video">
+                <BackgroundVideo
+                  mp4Src={`${VID_BASE}/sleeper.mp4`}
+                  posterSrc={legacyImage('sleeper-poster.jpg')}
                 />
+                {/* Spacer to maintain aspect ratio */}
+                <div className="relative z-[1]" style={{ paddingTop: '66.67%' }} />
               </div>
             </div>
           </div>
