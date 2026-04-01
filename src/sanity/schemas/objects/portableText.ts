@@ -371,6 +371,27 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'reviewCard',
+      title: 'Review Card',
+      type: 'object',
+      preview: {
+        select: { title: 'title', status: 'status' },
+        prepare({ title, status }) {
+          return { title: `${status?.toUpperCase() || 'REVIEW'}: ${title || 'Untitled'}`, subtitle: 'Review Card' }
+        },
+      },
+      fields: [
+        { name: 'title', title: 'Title', type: 'string', description: 'Card header (e.g. "Review result — cardiac insight v1.2")' },
+        {
+          name: 'status', title: 'Status', type: 'string',
+          options: { list: [{ title: 'Rejected', value: 'rejected' }, { title: 'Certified', value: 'certified' }] },
+        },
+        { name: 'quote', title: 'Quote', type: 'text', rows: 2, description: 'The quoted AI output text' },
+        { name: 'reason', title: 'Reason Label', type: 'string', description: 'e.g. "Why it fails" (optional)' },
+        { name: 'description', title: 'Description', type: 'text', rows: 3, description: 'Explanation text' },
+      ],
+    }),
+    defineArrayMember({
       name: 'references',
       title: 'References',
       type: 'object',

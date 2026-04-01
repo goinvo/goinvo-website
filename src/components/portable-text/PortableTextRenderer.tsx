@@ -175,6 +175,36 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    reviewCard: ({ value }) => {
+      const isRejected = value.status === 'rejected'
+      const badgeColor = isRejected ? 'text-[#d62e17] bg-[#fdeaea]' : 'text-[#00a000] bg-[#e0ffef]'
+      return (
+        <ArticleReveal intensity="visual">
+          <div className="rounded-lg overflow-hidden shadow-card my-8 max-w-xl">
+            <div className="bg-[#2e2e2e] text-white px-5 py-3 flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${isRejected ? 'bg-[#d62e17]' : 'bg-[#00a000]'}`} />
+              <span className="text-sm font-medium">{value.title}</span>
+            </div>
+            <div className="bg-white px-5 py-5">
+              <span className={`inline-block text-sm font-semibold uppercase rounded-full px-3 py-1 mb-4 ${badgeColor}`}>
+                {value.status === 'rejected' ? 'Rejected' : 'Certified'}
+              </span>
+              {value.quote && (
+                <p className="font-serif italic text-[1.5rem] leading-[1.35] text-black mb-3">
+                  &quot;{value.quote}&quot;
+                </p>
+              )}
+              {value.reason && (
+                <p className="text-gray text-sm font-semibold mb-1">{value.reason}</p>
+              )}
+              {value.description && (
+                <p className="text-[#8c8887] text-sm m-0">{value.description}</p>
+              )}
+            </div>
+          </div>
+        </ArticleReveal>
+      )
+    },
     cardGrid: ({ value }) => {
       const items: { label: string; description: string }[] = value.items || []
       const cols = value.columns || '4'
