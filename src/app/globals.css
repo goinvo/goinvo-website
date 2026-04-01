@@ -259,7 +259,7 @@
 
   /* Hanging indent for numbered headings — pushes the number into the gutter */
   .numeral-gutter {
-    margin-left: -1rem;
+    margin-left: -1.5rem;
   }
 
   /* Case study content: gray text + double paragraph spacing (matching Gatsby) */

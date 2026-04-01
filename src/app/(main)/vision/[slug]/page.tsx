@@ -10,6 +10,7 @@ import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
 
@@ -170,6 +171,15 @@ export default async function VisionFeaturePage({ params }: Props) {
                 <div className="max-width max-width-md content-padding mx-auto">
                   <h2 className="header-lg mt-8 mb-4 text-center">Special thanks to...</h2>
                   <PortableTextRenderer content={feature.specialThanks} />
+                </div>
+              </section>
+            )}
+
+            {/* About GoInvo */}
+            {feature.showAboutGoInvo && (
+              <section className="pb-12">
+                <div className="max-width max-width-md content-padding mx-auto">
+                  <AboutGoInvo />
                 </div>
               </section>
             )}

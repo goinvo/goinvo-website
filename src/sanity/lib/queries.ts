@@ -154,6 +154,7 @@ export const featureBySlugQuery = groq`
       "author": author-> { _id, name, role, bio, image }
     },
     specialThanks,
+    showAboutGoInvo,
     content,
     metaDescription
   }
