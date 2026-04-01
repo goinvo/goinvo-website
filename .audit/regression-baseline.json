@@ -729,7 +729,7 @@
     "url": "/vision/coronavirus",
     "label": "Vision: coronavirus",
     "heroImageExists": true,
-    "pageHeight": 17370,
+    "pageHeight": 17357,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -786,10 +786,10 @@
       },
       "h3": {
         "selector": "h3",
-        "count": 12,
+        "count": 9,
         "samples": [
           {
-            "text": "What is COVID-19?",
+            "text": "Prevention 4",
             "fontSize": "20.8px",
             "fontWeight": "600",
             "fontFamily": "Montserrat",
@@ -803,7 +803,7 @@
             "listStyleImage": "none"
           },
           {
-            "text": "The first few months of COVID-19 18",
+            "text": "Close Contact 3",
             "fontSize": "20.8px",
             "fontWeight": "600",
             "fontFamily": "Montserrat",
@@ -817,7 +817,7 @@
             "listStyleImage": "none"
           },
           {
-            "text": "How is it spreading? 6",
+            "text": "Caring for Patients 5",
             "fontSize": "20.8px",
             "fontWeight": "600",
             "fontFamily": "Montserrat",
@@ -834,8 +834,22 @@
       },
       "h4": {
         "selector": "h4",
-        "count": 10,
+        "count": 13,
         "samples": [
+          {
+            "text": "What is COVID-19?",
+            "fontSize": "18px",
+            "fontWeight": "600",
+            "fontFamily": "Montserrat",
+            "color": "rgb(86, 60, 141)",
+            "marginTop": "24px",
+            "marginBottom": "8px",
+            "textTransform": "none",
+            "letterSpacing": "normal",
+            "borderStyle": "solid",
+            "display": "block",
+            "listStyleImage": "none"
+          },
           {
             "text": "Quick look : How does COVID-19 compare to the othe",
             "fontSize": "18px",
@@ -852,20 +866,6 @@
           },
           {
             "text": "Live update of COVID-19 numbers",
-            "fontSize": "18px",
-            "fontWeight": "600",
-            "fontFamily": "Montserrat",
-            "color": "rgb(86, 60, 141)",
-            "marginTop": "24px",
-            "marginBottom": "8px",
-            "textTransform": "none",
-            "letterSpacing": "normal",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          },
-          {
-            "text": "How deadly is COVID-19? 19,20",
             "fontSize": "18px",
             "fontWeight": "600",
             "fontFamily": "Montserrat",
@@ -1141,7 +1141,7 @@
     "url": "/vision/ai-design-certification",
     "label": "Vision: ai-design-cert",
     "heroImageExists": true,
-    "pageHeight": 8297,
+    "pageHeight": 8356,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -1220,7 +1220,7 @@
             "fontSize": "15px",
             "fontWeight": "600",
             "fontFamily": "Open Sans",
-            "color": "rgb(120, 116, 115)",
+            "color": "rgb(227, 98, 22)",
             "marginTop": "32px",
             "marginBottom": "12px",
             "textTransform": "uppercase",
@@ -1234,7 +1234,7 @@
             "fontSize": "15px",
             "fontWeight": "600",
             "fontFamily": "Open Sans",
-            "color": "rgb(120, 116, 115)",
+            "color": "rgb(227, 98, 22)",
             "marginTop": "32px",
             "marginBottom": "12px",
             "textTransform": "uppercase",
@@ -1248,7 +1248,7 @@
             "fontSize": "15px",
             "fontWeight": "600",
             "fontFamily": "Open Sans",
-            "color": "rgb(120, 116, 115)",
+            "color": "rgb(227, 98, 22)",
             "marginTop": "32px",
             "marginBottom": "12px",
             "textTransform": "uppercase",
