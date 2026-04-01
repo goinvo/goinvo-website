@@ -625,6 +625,11 @@ const components: PortableTextComponents = {
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
       </ArticleReveal>
     ),
+    h4Bullet: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h4 className="font-sans text-base font-semibold mt-6 mb-2 -ml-5 before:content-['◆'] before:text-primary before:text-xs before:mr-2">{children}</h4>
+      </ArticleReveal>
+    ),
     h4: ({ children, value }) => {
       // Detect numbered headings (e.g. "1. Explain just enough...")
       // and apply gray color + hanging indent for the numeral gutter

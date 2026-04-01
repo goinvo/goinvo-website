@@ -18,6 +18,7 @@ export default defineType({
         },
         { title: 'H3', value: 'h3' },
         { title: 'H4', value: 'h4' },
+        { title: 'H4 (with bullet)', value: 'h4Bullet' },
         { title: 'Quote', value: 'blockquote' },
         {
           title: 'Callout',
