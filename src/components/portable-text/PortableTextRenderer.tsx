@@ -545,18 +545,13 @@ const components: PortableTextComponents = {
     ),
   },
   block: {
-    h2: ({ children, value }) => {
-      // Detect numbered headings (e.g. "1. The race for...")
-      // These should render as bold sans with numeral-gutter, not large serif
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const isNumbered = /^\d+\.\s/.test(text)
+    h2: ({ children }) => {
+      // h2 headings are always major section headings — render as large serif.
+      // Numbered h2s (e.g. "1. The race for...") are section headings with
+      // ordinal prefixes, NOT list items — they should still use header-lg.
       return (
         <ArticleReveal intensity="heading">
-          <h2 className={isNumbered
-            ? 'font-sans text-base font-bold text-gray mt-6 mb-2 numeral-gutter'
-            : 'header-lg mt-5 mb-4'
-          }>{children}</h2>
+          <h2 className="header-lg mt-5 mb-4">{children}</h2>
         </ArticleReveal>
       )
     },
