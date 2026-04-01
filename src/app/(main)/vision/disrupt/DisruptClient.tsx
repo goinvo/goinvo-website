@@ -68,9 +68,8 @@ interface ColorScrollProps {
  */
 export function ColorScrollWrapper({ partIndex, children }: ColorScrollProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const topHeroRef = useRef<HTMLDivElement>(null)
-  const bottomHeroRef = useRef<HTMLDivElement>(null)
   const colors = COLOR_PAIRS[partIndex] || COLOR_PAIRS[0]
+  const rafRef = useRef<number>(0)
 
   useEffect(() => {
     const container = containerRef.current
@@ -79,59 +78,89 @@ export function ColorScrollWrapper({ partIndex, children }: ColorScrollProps) {
     // Start with the top color
     container.style.backgroundColor = colors.top
 
-    function onScroll() {
+    /**
+     * Legacy colorScroll behavior (from jquery.colorscroll.min.js):
+     * - Defines 4 color stops at specific scroll positions
+     * - Smoothly interpolates between them as user scrolls
+     *
+     * Color stops from legacy disrupt.js:
+     *   position 0:                    colors.top
+     *   position topHeroBottom:        #ffffff
+     *   position bottomHeroTop - vh:   #ffffff
+     *   position bottomHeroBottom - vh: colors.bottom
+     */
+    function updateColor() {
       if (!container) return
 
-      const scrollY = window.scrollY
-      const windowHeight = window.innerHeight
-      const docHeight = document.documentElement.scrollHeight
-
-      const topHero = topHeroRef.current
-      const bottomHero = bottomHeroRef.current
-
-      // Calculate color stops (matching legacy behavior)
-      const topEnd = topHero ? topHero.offsetTop + topHero.offsetHeight : 400
-      const bottomStart = bottomHero ? bottomHero.offsetTop - windowHeight : docHeight - windowHeight * 2
-
       if (window.innerWidth <= 800) {
-        // Mobile: solid white background (legacy behavior)
         container.style.backgroundColor = 'white'
         return
       }
 
-      if (scrollY <= 0) {
+      const scrollY = window.scrollY
+      const windowHeight = window.innerHeight
+
+      // Find the actual hero elements by ID (matching legacy #top and #bottom)
+      const topHero = document.getElementById('top')
+      const bottomHero = document.getElementById('bottom')
+
+      // Color stop positions (matching legacy colorScroll plugin)
+      const stop1 = 0
+      const stop2 = topHero ? topHero.offsetTop + topHero.offsetHeight : 600
+      const stop3 = bottomHero ? bottomHero.offsetTop - windowHeight : document.documentElement.scrollHeight - windowHeight * 1.5
+      const stop4 = bottomHero ? bottomHero.offsetTop + bottomHero.offsetHeight - windowHeight : document.documentElement.scrollHeight - windowHeight
+
+      if (scrollY <= stop1) {
         container.style.backgroundColor = colors.top
-      } else if (scrollY < topEnd) {
-        // Transition from top color to white
-        const t = scrollY / topEnd
+      } else if (scrollY < stop2) {
+        const t = (scrollY - stop1) / (stop2 - stop1)
         container.style.backgroundColor = interpolateColor(colors.top, '#ffffff', t)
-      } else if (scrollY < bottomStart) {
-        // White in the article area
+      } else if (scrollY < stop3) {
         container.style.backgroundColor = '#ffffff'
-      } else if (scrollY < docHeight - windowHeight) {
-        // Transition from white to bottom color
-        const t = (scrollY - bottomStart) / (docHeight - windowHeight - bottomStart)
+      } else if (scrollY < stop4) {
+        const t = (scrollY - stop3) / (stop4 - stop3)
         container.style.backgroundColor = interpolateColor('#ffffff', colors.bottom, Math.min(1, t))
       } else {
         container.style.backgroundColor = colors.bottom
       }
+
+      // Parallax opacity on hero sections (legacy behavior)
+      if (topHero) {
+        const heroBottom = topHero.offsetTop + topHero.offsetHeight
+        const opacity = Math.max(0, Math.min(1, (heroBottom - scrollY) / heroBottom))
+        topHero.style.opacity = String(opacity)
+      }
+      if (bottomHero) {
+        const viewportBottom = scrollY + windowHeight
+        const docHeight = document.documentElement.scrollHeight
+        const heroTop = bottomHero.offsetTop
+        const opacity = Math.max(0, Math.min(1, (viewportBottom - heroTop) / (docHeight - heroTop) + 0.1))
+        bottomHero.style.opacity = String(opacity)
+      }
+    }
+
+    function onScroll() {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = requestAnimationFrame(updateColor)
     }
 
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('resize', onScroll, { passive: true })
-    onScroll()
+    // Initial update after layout settles
+    requestAnimationFrame(() => {
+      requestAnimationFrame(updateColor)
+    })
 
     return () => {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
+      cancelAnimationFrame(rafRef.current)
     }
   }, [colors])
 
   return (
     <div ref={containerRef} id="disrupt-legacy">
-      <div ref={topHeroRef} data-role="top-hero" />
       {children}
-      <div ref={bottomHeroRef} data-role="bottom-hero" />
     </div>
   )
 }
