@@ -186,6 +186,12 @@
   white-space: nowrap;
 }
 
+.product-matrix th[title] {
+  cursor: help;
+  text-decoration: underline dotted #999;
+  text-underline-offset: 2px;
+}
+
 .product-matrix td:first-child {
   text-align: left;
   min-width: 120px;
@@ -543,4 +549,135 @@
 
 .three-col-grid ul li {
   margin-bottom: 0.5rem;
+}
+
+/* ===== CarePlans Carousel ===== */
+.cp-carousel {
+  margin: 2rem 0;
+}
+
+.cp-carousel__viewport-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cp-carousel__viewport {
+  overflow: hidden;
+  flex: 1;
+}
+
+.cp-carousel__container {
+  display: flex;
+}
+
+.cp-carousel__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 0 0.25rem;
+}
+
+.cp-carousel__arrow {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #24434d;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+  z-index: 2;
+}
+
+.cp-carousel__arrow:hover {
+  background: #f5f5f5;
+  border-color: #007385;
+  color: #007385;
+}
+
+.cp-carousel__arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cp-carousel__dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.cp-carousel__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+}
+
+.cp-carousel__dot:hover {
+  border-color: #007385;
+}
+
+.cp-carousel__dot.active {
+  background: #007385;
+  border-color: #007385;
+}
+
+.cp-carousel__counter {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.5rem;
+}
+
+/* Carousel slide content styling */
+.cp-carousel .slide-card {
+  background: #f5f5f5;
+  border-radius: 4px;
+  padding: 1.5rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.cp-carousel .slide-card img {
+  width: 100%;
+  height: auto;
+  margin-bottom: 1rem;
+}
+
+.cp-carousel .slide-card p {
+  color: #666;
+  line-height: 1.7;
+  font-size: 0.9375rem;
+}
+
+/* Tabbed image carousel (sections 4 and 6) */
+.cp-carousel .slide-image-card {
+  text-align: center;
+}
+
+.cp-carousel .slide-image-card img {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  margin: 0 auto;
+}
+
+.cp-carousel .slide-image-card h3 {
+  font-family: var(--font-sans), sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 0.75rem;
+  color: #24434d;
 }

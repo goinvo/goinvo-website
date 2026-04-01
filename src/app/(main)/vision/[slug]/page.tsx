@@ -75,7 +75,7 @@ export default async function VisionFeaturePage({ params }: Props) {
     : null
 
   return (
-    <div>
+    <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
       {!feature.fullImageCover && heroImageUrl && (
         <SetCaseStudyHero image={heroImageUrl} bgPosition={feature.heroPosition} />

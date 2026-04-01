@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
+import { CarePlansCarousel } from '../CarePlansCarousel'
 import '../careplans.css'
 
 const IMG = 'https://www.goinvo.com/old/images/features/careplans'
@@ -57,9 +58,9 @@ export default function CarePlansPart3Page() {
             <strong className="font-bold">Digital</strong> is Better
           </h1>
 
-          {/* Slide content as cards instead of carousel */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-gray-lightest p-6 rounded">
+          {/* Carousel: 5 slides matching legacy Bootstrap carousel */}
+          <CarePlansCarousel>
+            <div className="slide-card">
               <Image src={`${IMG}/part3/part1_slide1.png`} alt="Magic Mirror health monitoring" width={500} height={400} className="w-full h-auto mb-4" />
               <p className="text-gray leading-relaxed text-sm">
                 The &quot;Magic Mirror&quot; on the wall is not just a fantasy anymore. Using facial recognition and mood sensing, blood pressure and heart rate sensing through skin pigmentation, and other technology, we can imbue the ordinary bathroom mirror with interactive qualities to help monitor our health.
@@ -67,7 +68,7 @@ export default function CarePlansPart3Page() {
               <a href="http://mobihealthnews.com/content/digital-healthcare-services-2016-and-beyond" target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline mt-2 inline-block">Learn More &rarr;</a>
             </div>
 
-            <div className="bg-gray-lightest p-6 rounded">
+            <div className="slide-card">
               <Image src={`${IMG}/part3/part1_slide2.png`} alt="Conversational user interfaces" width={500} height={400} className="w-full h-auto mb-4" />
               <p className="text-gray leading-relaxed text-sm">
                 Conversational user interfaces, driven by advances in voice recognition technology and artificial intelligence, are capable of understanding the content and context of patient concerns. These can be incorporated into mHealth apps for motivating health and fitness engagement, digital prescription treatment plans, or interactive systems for outpatient education.
@@ -75,7 +76,7 @@ export default function CarePlansPart3Page() {
               <a href="http://mobihealthnews.com/content/digital-healthcare-services-2016-and-beyond" target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline mt-2 inline-block">Learn More &rarr;</a>
             </div>
 
-            <div className="bg-gray-lightest p-6 rounded">
+            <div className="slide-card">
               <Image src={`${IMG}/part3/part1_slide3.png`} alt="Contextual engagement sensors" width={500} height={400} className="w-full h-auto mb-4" />
               <p className="text-gray leading-relaxed text-sm">
                 Contextual engagement breeds adherence to self care goals. Using mobile phone sensors like the gyroscope, accelerometer, light sensor, camera, microphone, GPS, wifi, and other connected devices, we can start to provide realtime education and recommendations based on current behavior and the environment.
@@ -83,7 +84,7 @@ export default function CarePlansPart3Page() {
               <a href="http://mobihealthnews.com/content/digital-healthcare-services-2016-and-beyond" target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline mt-2 inline-block">Learn More &rarr;</a>
             </div>
 
-            <div className="bg-gray-lightest p-6 rounded">
+            <div className="slide-card">
               <Image src={`${IMG}/part3/part1_slide4.png`} alt="Virtual helpers and AI coaching" width={500} height={400} className="w-full h-auto mb-4" />
               <p className="text-gray leading-relaxed text-sm">
                 Virtual helpers will leverage human-modeled artificial intelligence to provide both health coaching and resources to motivate patients. Such mHealth companions will assist people in adhering to their care plans, their prescription regimens, and even outpatient treatment for complex, chronic conditions. These helpers might expand past the 2D mobile platform, seeping into other more physical services such as Echo, Nest, and Jibo.
@@ -91,16 +92,14 @@ export default function CarePlansPart3Page() {
               <a href="http://mobihealthnews.com/content/digital-healthcare-services-2016-and-beyond" target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline mt-2 inline-block">Learn More &rarr;</a>
             </div>
 
-            <div className="bg-gray-lightest p-6 rounded md:col-span-2">
-              <Image src={`${IMG}/part3/part1_slide5.png`} alt="Digital medication adherence" width={500} height={400} className="w-full max-w-md h-auto mb-4 mx-auto" />
-              <p className="text-gray leading-relaxed text-sm max-w-2xl mx-auto">
+            <div className="slide-card">
+              <Image src={`${IMG}/part3/part1_slide5.png`} alt="Digital medication adherence" width={500} height={400} className="w-full h-auto mb-4" />
+              <p className="text-gray leading-relaxed text-sm">
                 Solving the complex problem of medication adherence could have a huge impact on lowering cost of care. The basics of digital adherence -- self-reporting, tracking refills and chronic disease outcomes, etc. -- will receive a boost from the use of sensors to collect confirming data, whether it&apos;s via breath analysis, urine sampling, or another non-invasive method.
               </p>
-              <div className="text-center">
-                <a href="http://mobihealthnews.com/content/digital-healthcare-services-2016-and-beyond" target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline mt-2 inline-block">Learn More &rarr;</a>
-              </div>
+              <a href="http://mobihealthnews.com/content/digital-healthcare-services-2016-and-beyond" target="_blank" rel="noopener noreferrer" className="text-primary text-sm hover:underline mt-2 inline-block">Learn More &rarr;</a>
             </div>
-          </div>
+          </CarePlansCarousel>
 
           <p className="text-gray leading-relaxed mb-4">
             Distance and remote based care is growing with the continuing expansion of smartphone device consumption and installation of broadband services into homes and businesses.<span className="superscript">1,2</span> Expansion of free internet services, such as in the UK, where the National Health Service (NHS) will be converted into a free wi-fi zone, are also a driver of this digitization trend.<span className="superscript">3</span> With better connectivity, internet speeds, and smart monitoring devices, there may soon be a shift from the traditionally episodic, face-to-face care to a model where the immediate, remote, and individualized care plan is possible.<span className="superscript">4</span> Patients will be able to more consistently access, collaborate on, and adjust their care plans at home, work, school, while traveling, and in mobile clinics.<span className="superscript">5</span> This shift is especially important for less mobile and more vulnerable demographics such as new borns, physically disabled people, or seniors.<span className="superscript">6,7</span>
@@ -179,21 +178,21 @@ export default function CarePlansPart3Page() {
             Empowered Patients are<br /><strong className="font-bold">Activated</strong> Patients
           </h1>
 
-          {/* Goal Setting / Execution / Adjustment images as grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part3_goal_setting.png`} alt="Goal Setting" width={400} height={500} className="w-full h-auto mb-3" />
+          {/* Goal Setting / Execution / Adjustment carousel */}
+          <CarePlansCarousel>
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part3_goal_setting.png`} alt="Goal Setting" width={400} height={500} className="w-full max-w-md h-auto mx-auto mb-3" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Goal Setting</h3>
             </div>
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part3_goal_exec.png`} alt="Goal Execution" width={400} height={500} className="w-full h-auto mb-3" />
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part3_goal_exec.png`} alt="Goal Execution" width={400} height={500} className="w-full max-w-md h-auto mx-auto mb-3" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Goal Execution</h3>
             </div>
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part3_adjustment.png`} alt="Insight & Adjustment" width={400} height={500} className="w-full h-auto mb-3" />
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part3_adjustment.png`} alt="Insight & Adjustment" width={400} height={500} className="w-full max-w-md h-auto mx-auto mb-3" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Insight &amp; Adjustment</h3>
             </div>
-          </div>
+          </CarePlansCarousel>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
@@ -261,25 +260,25 @@ export default function CarePlansPart3Page() {
             Download Full Poster
           </a>
 
-          {/* Intervention System images */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part6_intervention_system.png`} alt="Intervention System" width={500} height={400} className="w-full h-auto mb-2" />
+          {/* Intervention System carousel */}
+          <CarePlansCarousel>
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part6_intervention_system.png`} alt="Intervention System" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Intervention System</h3>
             </div>
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part6_patient_intervention.png`} alt="Patient Intervention" width={500} height={400} className="w-full h-auto mb-2" />
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part6_patient_intervention.png`} alt="Patient Intervention" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Patient Intervention</h3>
             </div>
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part6_clinician_intervention.png`} alt="Clinician Intervention" width={500} height={400} className="w-full h-auto mb-2" />
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part6_clinician_intervention.png`} alt="Clinician Intervention" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Clinician Intervention</h3>
             </div>
-            <div className="text-center">
-              <Image src={`${IMG}/part3/part6_national_intervention.png`} alt="National Intervention" width={500} height={400} className="w-full h-auto mb-2" />
+            <div className="slide-image-card">
+              <Image src={`${IMG}/part3/part6_national_intervention.png`} alt="National Intervention" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">National Intervention</h3>
             </div>
-          </div>
+          </CarePlansCarousel>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>

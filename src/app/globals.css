@@ -58,6 +58,9 @@
   --spacing-header-height: 50px;
 }
 
+/* Google Fonts for page-specific overrides */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
+
 /* Base typography */
 @layer base {
   html {
@@ -140,6 +143,37 @@
   *:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+
+  /* Restore list bullet styling inside article content areas.
+     Tailwind preflight sets list-style: none on all ul/ol.
+     This re-applies the orange star bullet for ul and decimal for ol
+     inside the max-width-md content containers used by vision/work pages. */
+  .max-width-md ul:not(.list-none):not(.list--unstyled):not([class*="flex"]) {
+    list-style-position: outside;
+    list-style-type: none;
+    list-style-image: url('/images/bullet.svg');
+    padding-left: 21px;
+  }
+
+  @media (min-width: 864px) {
+    .max-width-md ul:not(.list-none):not(.list--unstyled):not([class*="flex"]) {
+      padding-left: 0;
+    }
+  }
+
+  .max-width-md ul:not(.list-none):not(.list--unstyled):not([class*="flex"]) li {
+    padding-left: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .max-width-md ol:not(.list-none) {
+    list-style-type: decimal;
+    padding-left: 1.5rem;
+  }
+
+  .max-width-md ol:not(.list-none) li {
+    margin-bottom: 0.5rem;
   }
 }
 
@@ -269,6 +303,25 @@
   .case-study-content ol,
   .case-study-content ul {
     color: var(--color-gray);
+  }
+
+
+  /* Coronavirus page: uses Montserrat instead of global serif/sans (Gatsby _coronavirus.scss) */
+  .font-coronavirus {
+    font-family: 'Montserrat', 'Open Sans', sans-serif;
+    font-weight: 400;
+  }
+
+  .font-coronavirus h1,
+  .font-coronavirus h2,
+  .font-coronavirus h3,
+  .font-coronavirus h4 {
+    font-family: 'Montserrat', 'Open Sans', sans-serif;
+    font-weight: 600;
+  }
+
+  .font-coronavirus h4 {
+    color: #563c8d;
   }
 }
 
