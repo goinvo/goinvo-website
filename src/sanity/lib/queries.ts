@@ -153,6 +153,7 @@ export const featureBySlugQuery = groq`
       roleOverride,
       "author": author-> { _id, name, role, bio, image }
     },
+    specialThanks,
     content,
     metaDescription
   }

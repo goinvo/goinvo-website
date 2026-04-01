@@ -161,6 +161,13 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'specialThanks',
+      title: 'Special Thanks',
+      type: 'array',
+      description: 'Optional "Special thanks to..." section shown after Authors/Contributors. Use for acknowledging people who are not formal authors or contributors.',
+      of: [{ type: 'block' }],
+    }),
+    defineField({
       name: 'content',
       title: 'Content',
       type: 'portableText',

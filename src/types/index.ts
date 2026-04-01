@@ -85,6 +85,7 @@ export interface Feature {
   authors?: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contributors?: any[]
+  specialThanks?: PortableTextBlock[]
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
