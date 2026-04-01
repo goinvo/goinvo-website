@@ -12,17 +12,15 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
+      {/* Hero — full studio image, no gradient overlay */}
       <section
-        className="relative min-h-[40vh] flex items-end bg-cover bg-center"
+        className="relative min-h-[60vh] bg-cover bg-center"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/contact/studio.jpg')})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-light/90 to-transparent" />
-      </section>
+      />
 
-      {/* Contact Form */}
-      <section className="bg-blue-light py-16 -mt-8">
-        <div className="max-width-sm content-padding mx-auto">
+      {/* Contact Form — overlaps hero with negative margin */}
+      <section className="bg-blue-light py-16">
+        <div className="max-width max-width-sm content-padding mx-auto" style={{ marginTop: '-7rem' }}>
           <ContactFormEmbed />
           <div className="mt-8 space-y-3">
             <a href={`mailto:${siteConfig.email.info}`} className="block">
@@ -34,8 +32,8 @@ export default function ContactPage() {
               rel="noopener noreferrer"
               className="block"
             >
-              661 Massachusetts Ave, 3rd Floor,<br />
-              Arlington, MA 02476
+              <div>661 Massachusetts Ave, 3rd Floor,</div>
+              <div>Arlington, MA 02476</div>
             </a>
             <a href="tel:617-803-7043" className="block">
               617-803-7043
