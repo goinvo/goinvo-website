@@ -266,9 +266,9 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     }
   }
 
-  // Compare matching elements by tag + text
+  // Compare matching headings by text similarity
   lines.push('')
-  lines.push('=== Style Differences ===')
+  lines.push('=== Heading Differences ===')
 
   const headingTags = new Set(['h1', 'h2', 'h3', 'h4'])
   const aHeadings = flatA.filter(f => headingTags.has(f.node.tag))
@@ -285,11 +285,91 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
         diffs.push(`${prop}: ${a.styles[prop]} → ${b.styles[prop]}`)
       }
     }
+    // Check numbering gutter — numbered headings should have negative left margin
+    const aText = a.text || ''
+    const bText = b.text || ''
+    const isNumbered = /^\d+[\.\)]\s/.test(aText) || /^\d+[\.\)]\s/.test(bText)
+    if (isNumbered) {
+      const aMl = parseFloat(a.styles.marginLeft || '0')
+      const bMl = parseFloat(b.styles.marginLeft || '0')
+      if (aMl < 0 && bMl >= 0) diffs.push(`GUTTER MISSING: marginLeft: ${a.styles.marginLeft} → ${b.styles.marginLeft}`)
+      if (aMl >= 0 && bMl < 0) diffs.push(`GUTTER EXTRA: marginLeft: ${a.styles.marginLeft} → ${b.styles.marginLeft}`)
+    }
 
     if (diffs.length) {
-      lines.push(`  <${a.tag}> "${a.text?.substring(0, 40) || b.text?.substring(0, 40)}"`)
+      lines.push(`  <${a.tag}> "${aText.substring(0, 40) || bText.substring(0, 40)}"`)
       for (const d of diffs) lines.push(`    ${d}`)
     }
+  }
+
+  // Compare paragraphs (first 5)
+  lines.push('')
+  lines.push('=== Paragraph Differences (first 5) ===')
+  const aParagraphs = flatA.filter(f => f.node.tag === 'p').slice(0, 5)
+  const bParagraphs = flatB.filter(f => f.node.tag === 'p').slice(0, 5)
+  for (let i = 0; i < Math.min(aParagraphs.length, bParagraphs.length); i++) {
+    const a = aParagraphs[i].node
+    const b = bParagraphs[i].node
+    const diffs: string[] = []
+    if (a.styles.color !== b.styles.color) diffs.push(`color: ${normalizeColor(a.styles.color)} → ${normalizeColor(b.styles.color)}`)
+    if (a.styles.marginBottom !== b.styles.marginBottom) diffs.push(`marginBottom: ${a.styles.marginBottom} → ${b.styles.marginBottom}`)
+    if (a.styles.marginTop !== b.styles.marginTop) diffs.push(`marginTop: ${a.styles.marginTop} → ${b.styles.marginTop}`)
+    if (diffs.length) {
+      lines.push(`  <p> "${a.text?.substring(0, 40)}"`)
+      for (const d of diffs) lines.push(`    ${d}`)
+    }
+  }
+
+  // Compare lists
+  lines.push('')
+  lines.push('=== List Differences ===')
+  const aLists = flatA.filter(f => f.node.tag === 'ul' || f.node.tag === 'ol')
+  const bLists = flatB.filter(f => f.node.tag === 'ul' || f.node.tag === 'ol')
+  if (aLists.length !== bLists.length) {
+    lines.push(`  Count: ${aLists.length} → ${bLists.length}`)
+  }
+  for (let i = 0; i < Math.min(aLists.length, bLists.length); i++) {
+    const a = aLists[i].node
+    const b = bLists[i].node
+    const diffs: string[] = []
+    if (a.styles.listStyleImage !== b.styles.listStyleImage) diffs.push(`bullet: ${a.styles.listStyleImage || 'default'} → ${b.styles.listStyleImage || 'default'}`)
+    if (a.children.length !== b.children.length) diffs.push(`items: ${a.children.length} → ${b.children.length}`)
+    if (diffs.length) {
+      lines.push(`  <${a.tag}> (${a.children.length} items)`)
+      for (const d of diffs) lines.push(`    ${d}`)
+    }
+  }
+
+  // Check for background-colored sections
+  lines.push('')
+  lines.push('=== Background Sections ===')
+  const aBg = flatA.filter(f => f.node.styles.backgroundColor && f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && f.node.styles.backgroundColor !== 'rgb(255, 255, 255)')
+  const bBg = flatB.filter(f => f.node.styles.backgroundColor && f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && f.node.styles.backgroundColor !== 'rgb(255, 255, 255)')
+  if (aBg.length !== bBg.length) {
+    lines.push(`  Count: ${aBg.length} → ${bBg.length}`)
+  }
+
+  // Check for missing/extra interactive elements
+  lines.push('')
+  lines.push('=== Interactive Elements ===')
+  const aInteractive = flatA.filter(f => f.node.interactive).map(f => `${f.node.tag}:${f.node.interactive}`)
+  const bInteractive = flatB.filter(f => f.node.interactive).map(f => `${f.node.tag}:${f.node.interactive}`)
+  if (aInteractive.length !== bInteractive.length) {
+    lines.push(`  Count: ${aInteractive.length} → ${bInteractive.length}`)
+  }
+
+  // Check for videos, iframes
+  const aMedia = flatA.filter(f => ['video', 'iframe', 'canvas'].includes(f.node.tag))
+  const bMedia = flatB.filter(f => ['video', 'iframe', 'canvas'].includes(f.node.tag))
+  if (aMedia.length !== bMedia.length) {
+    lines.push(`  Media (video/iframe/canvas): ${aMedia.length} → ${bMedia.length}`)
+  }
+
+  // Check for fixed/sticky elements
+  const aFixed = flatA.filter(f => f.node.styles.position === 'fixed' || f.node.styles.position === 'sticky')
+  const bFixed = flatB.filter(f => f.node.styles.position === 'fixed' || f.node.styles.position === 'sticky')
+  if (aFixed.length !== bFixed.length) {
+    lines.push(`  Fixed/sticky: ${aFixed.length} → ${bFixed.length}`)
   }
 
   return lines
