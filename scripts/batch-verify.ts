@@ -395,6 +395,40 @@ async function main() {
         issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `<sup>: ${supsA} → ${supsB} (missing ${supsA - supsB})` })
       }
 
+      // Check grid layouts (card grids, column layouts)
+      const gridsB = await page.evaluate(() => {
+        const m = document.querySelector('main') || document.body
+        return Array.from(m.querySelectorAll('[class*=grid]')).filter(el => {
+          const cs = getComputedStyle(el)
+          return cs.display === 'grid' && el.children.length >= 4
+        }).map(el => ({
+          kids: el.children.length,
+          cols: getComputedStyle(el).gridTemplateColumns.split(' ').length,
+          kidW: Math.round(el.children[0].getBoundingClientRect().width),
+        }))
+      })
+      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await new Promise(r => setTimeout(r, 800))
+      const gridsA = await page.evaluate(() => {
+        const m = document.querySelector('.app__body') || document.body
+        return Array.from(m.querySelectorAll('[class*=grid],[style*=grid]')).filter(el => {
+          const cs = getComputedStyle(el)
+          return cs.display === 'grid' && el.children.length >= 4
+        }).map(el => ({
+          kids: el.children.length,
+          cols: getComputedStyle(el).gridTemplateColumns.split(' ').length,
+          kidW: Math.round(el.children[0].getBoundingClientRect().width),
+        }))
+      })
+      // Compare grids with same item count
+      for (const gA of gridsA) {
+        const gB = gridsB.find(g => g.kids === gA.kids)
+        if (gB && gA.cols !== gB.cols) {
+          issues.push({ type: 'ELEMENT_COUNT', severity: 'high', detail: `Grid ${gA.kids} items: ${gA.cols} cols → ${gB.cols} cols (width ${gA.kidW}px → ${gB.kidW}px)` })
+        }
+      }
+
       results.push({ slug: pd.slug, section: pd.section, issues })
 
       const high = issues.filter(i => i.severity === 'high').length
