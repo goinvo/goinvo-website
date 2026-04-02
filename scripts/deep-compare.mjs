@@ -114,7 +114,9 @@ async function extractPageData(page, url) {
     const images = main.querySelectorAll('img').length
     const imgWidths = Array.from(main.querySelectorAll('img')).filter(i => {
       const r = i.getBoundingClientRect()
-      return r.width > 100 && r.height > 50 && !i.closest('header,nav,.bg-blue-light,.background--blue')
+      // Skip hero images (full-bleed >1000px or at top of page), nav, and Up Next section
+      return r.width > 100 && r.width < 1000 && r.height > 50 && r.y > 200 &&
+        !i.closest('header,nav,.bg-blue-light,.background--blue')
     }).slice(0, 5).map(i => Math.round(i.getBoundingClientRect().width))
 
     return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths }
