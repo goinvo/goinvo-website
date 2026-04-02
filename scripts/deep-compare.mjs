@@ -119,7 +119,10 @@ async function extractPageData(page, url) {
         !i.closest('header,nav,.bg-blue-light,.background--blue,section')
     }).slice(0, 3).map(i => Math.round(i.getBoundingClientRect().width))
 
-    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths }
+    // Total visible text length (excluding nav/header/footer)
+    const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
+
+    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths, textLen }
   })
 }
 
@@ -221,6 +224,18 @@ function comparePage(slug, dataA, dataB) {
     const gB = dataB.grids.find(g => g.items === gA.items)
     if (gB && gA.cols !== gB.cols) {
       issues.push({ sev: 'HIGH', msg: `Grid ${gA.items} items: ${gA.cols} cols → ${gB.cols} cols` })
+    }
+  }
+
+  // ── Total text length comparison ────────────────────────────────
+  // Catches pages with large missing/extra content chunks
+  if (dataA.textLen > 0 && dataB.textLen > 0) {
+    const lenDiff = dataA.textLen - dataB.textLen
+    const pctDiff = Math.abs(lenDiff) / Math.max(dataA.textLen, 1) * 100
+    if (pctDiff > 30) {
+      issues.push({ sev: 'HIGH', msg: `Text length: ${dataA.textLen} → ${dataB.textLen} (${lenDiff > 0 ? '-' : '+'}${Math.abs(lenDiff)} chars, ${Math.round(pctDiff)}% diff)` })
+    } else if (pctDiff > 15) {
+      issues.push({ sev: 'MED', msg: `Text length: ${dataA.textLen} → ${dataB.textLen} (${lenDiff > 0 ? '-' : '+'}${Math.abs(lenDiff)} chars, ${Math.round(pctDiff)}% diff)` })
     }
   }
 
