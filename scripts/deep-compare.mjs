@@ -65,6 +65,7 @@ async function extractPageData(page, url) {
         fontWeight: s.fontWeight,
         fontFamily: s.fontFamily.split(',')[0].replace(/"/g, '').trim(),
         textTransform: s.textTransform,
+        textAlign: s.textAlign,
         color: s.color,
       }
     })
@@ -119,10 +120,18 @@ async function extractPageData(page, url) {
         !i.closest('header,nav,.bg-blue-light,.background--blue,section')
     }).slice(0, 3).map(i => Math.round(i.getBoundingClientRect().width))
 
+    // List bullet styles
+    const listStyles = Array.from(main.querySelectorAll('ul')).filter(ul => !ul.closest('header,nav,form')).map(ul => {
+      const li = ul.querySelector('li')
+      if (!li) return null
+      const liCs = getComputedStyle(li)
+      return { items: ul.children.length, bullet: liCs.listStyleImage === 'none' ? 'disc' : 'custom' }
+    }).filter(Boolean)
+
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths, textLen }
+    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths, listStyles, textLen }
   })
 }
 
@@ -168,6 +177,10 @@ function comparePage(slug, dataA, dataB) {
     // Font family mismatch
     if (aH.fontFamily !== bH.fontFamily) {
       issues.push({ sev: 'LOW', msg: `Heading font: "${bH.text.substring(0, 30)}" ${aH.fontFamily} → ${bH.fontFamily}` })
+    }
+    // Text alignment mismatch (center vs start/left)
+    if (aH.textAlign === 'center' && bH.textAlign !== 'center') {
+      issues.push({ sev: 'MED', msg: `Heading alignment: "${bH.text.substring(0, 30)}" center → ${bH.textAlign}` })
     }
   }
   // Missing headings
@@ -224,6 +237,13 @@ function comparePage(slug, dataA, dataB) {
     const gB = dataB.grids.find(g => g.items === gA.items)
     if (gB && gA.cols !== gB.cols) {
       issues.push({ sev: 'HIGH', msg: `Grid ${gA.items} items: ${gA.cols} cols → ${gB.cols} cols` })
+    }
+  }
+
+  // ── List bullet style comparison ────────────────────────────────
+  for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
+    if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
+      issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
     }
   }
 
