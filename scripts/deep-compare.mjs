@@ -110,10 +110,14 @@ async function extractPageData(page, url) {
       firstChildW: Math.round(el.children[0].getBoundingClientRect().width),
     }))
 
-    // Images
+    // Images — widths of content images (not nav/hero)
     const images = main.querySelectorAll('img').length
+    const imgWidths = Array.from(main.querySelectorAll('img')).filter(i => {
+      const r = i.getBoundingClientRect()
+      return r.width > 100 && r.height > 50 && !i.closest('header,nav,.bg-blue-light,.background--blue')
+    }).slice(0, 5).map(i => Math.round(i.getBoundingClientRect().width))
 
-    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images }
+    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths }
   })
 }
 
@@ -219,6 +223,16 @@ function comparePage(slug, dataA, dataB) {
   const imgDiff = Math.abs(dataA.images - dataB.images)
   if (imgDiff > 3) {
     issues.push({ sev: 'LOW', msg: `Images: ${dataA.images} → ${dataB.images} (${dataB.images > dataA.images ? '+' : ''}${dataB.images - dataA.images})` })
+  }
+
+  // ── Image width comparison ──────────────────────────────────
+  if (dataA.imgWidths.length > 0 && dataB.imgWidths.length > 0) {
+    for (let i = 0; i < Math.min(dataA.imgWidths.length, dataB.imgWidths.length); i++) {
+      const diff = Math.abs(dataA.imgWidths[i] - dataB.imgWidths[i])
+      if (diff > 50) {
+        issues.push({ sev: 'MED', msg: `Image ${i + 1} width: ${dataA.imgWidths[i]}px → ${dataB.imgWidths[i]}px (${diff}px off)` })
+      }
+    }
   }
 
   return issues
