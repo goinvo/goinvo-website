@@ -128,10 +128,18 @@ async function extractPageData(page, url) {
       return { items: ul.children.length, bullet: liCs.listStyleImage === 'none' ? 'disc' : 'custom' }
     }).filter(Boolean)
 
+    // Interactive elements (canvas, model-viewer, iframes in content)
+    const interactives = {
+      canvas: main.querySelectorAll('canvas').length,
+      iframes: Array.from(main.querySelectorAll('iframe')).filter(f => !f.closest('header,nav,form')).length,
+      videos: main.querySelectorAll('video').length,
+      modelViewer: main.querySelectorAll('model-viewer').length,
+    }
+
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths, listStyles, textLen }
+    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths, listStyles, interactives, textLen }
   })
 }
 
@@ -237,6 +245,15 @@ function comparePage(slug, dataA, dataB) {
     const gB = dataB.grids.find(g => g.items === gA.items)
     if (gB && gA.cols !== gB.cols) {
       issues.push({ sev: 'HIGH', msg: `Grid ${gA.items} items: ${gA.cols} cols → ${gB.cols} cols` })
+    }
+  }
+
+  // ── Interactive elements comparison ─────────────────────────────
+  for (const key of ['canvas', 'iframes', 'videos', 'modelViewer'] as const) {
+    const a = dataA.interactives[key] || 0
+    const b = dataB.interactives[key] || 0
+    if (a > b) {
+      issues.push({ sev: 'HIGH', msg: `Missing ${key}: ${a} on Gatsby → ${b} on Next.js` })
     }
   }
 
