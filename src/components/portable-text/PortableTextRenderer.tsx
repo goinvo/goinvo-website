@@ -790,7 +790,8 @@ export function PortableTextRenderer({ content, variant = 'default' }: PortableT
   }
 
   // Vision articles use standard disc bullets (matching Gatsby)
-  const visionComponents = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const visionComponents: any = {
     ...components,
     list: {
       ...components.list,
