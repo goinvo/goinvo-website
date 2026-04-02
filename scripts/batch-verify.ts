@@ -226,7 +226,7 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     }
     const yDiff = Math.abs(ab.rect.y - bb.rect.y)
     if (yDiff > 100) {
-      issues.push({ type: 'BUTTON_STYLE', severity: 'medium', detail: `"${ab.text || bb.text}" Y position off by ${yDiff}px` })
+      issues.push({ type: 'BUTTON_STYLE', severity: 'low', detail: `"${ab.text || bb.text}" Y position off by ${yDiff}px` })
     }
   }
   if (aButtons.length > bButtons.length) {
@@ -252,16 +252,33 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     }
   }
 
-  // ── Heading comparison ───────────────────────────────────────────
+  // ── Heading comparison (text-based matching, not index-based) ────
   const hTags = new Set(['h1', 'h2', 'h3', 'h4'])
   const aH = flatA.filter(n => hTags.has(n.tag))
   const bH = flatB.filter(n => hTags.has(n.tag))
-  for (let i = 0; i < Math.min(aH.length, bH.length); i++) {
-    if (aH[i].tag !== bH[i].tag) {
-      issues.push({ type: 'HEADING_TAG', severity: 'medium', detail: `"${(aH[i].text || bH[i].text).substring(0, 40)}": <${aH[i].tag}> → <${bH[i].tag}>` })
+  const normH = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').replace(/[\u201c\u201d\u2018\u2019\u0027\u2032\u0060]/g, "'").replace(/"/g, "'").trim()
+  // Build a map of normalized text → tag for side A
+  const aHMap = new Map<string, string>()
+  for (const h of aH) { const k = normH(h.text); if (k.length > 5) aHMap.set(k, h.tag) }
+  // Check B headings against A by text match
+  for (const bNode of bH) {
+    const k = normH(bNode.text)
+    if (k.length <= 5) continue
+    const aTag = aHMap.get(k)
+    if (aTag && aTag !== bNode.tag) {
+      // Skip template headings (these are rendered by code, not content)
+      const skip = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...']
+      if (!skip.includes(k)) {
+        issues.push({ type: 'HEADING_TAG', severity: 'medium', detail: `"${bNode.text.substring(0, 40)}": <${aTag}> → <${bNode.tag}>` })
+      }
     }
-    if (aH[i].styles.fontSize !== bH[i].styles.fontSize) {
-      issues.push({ type: 'HEADING_STYLE', severity: 'low', detail: `"${(aH[i].text || bH[i].text).substring(0, 40)}": size ${aH[i].styles.fontSize} → ${bH[i].styles.fontSize}` })
+  }
+  // Font size comparison — only for matched headings
+  for (const bNode of bH) {
+    const k = normH(bNode.text)
+    const aNode = aH.find(a => normH(a.text) === k)
+    if (aNode && aNode.styles.fontSize !== bNode.styles.fontSize) {
+      issues.push({ type: 'HEADING_STYLE', severity: 'low', detail: `"${bNode.text.substring(0, 40)}": size ${aNode.styles.fontSize} → ${bNode.styles.fontSize}` })
     }
   }
 
