@@ -180,7 +180,7 @@ const components: PortableTextComponents = {
       const badgeColor = isRejected ? 'text-[#d62e17] bg-[#fdeaea]' : 'text-[#00a000] bg-[#e0ffef]'
       return (
         <ArticleReveal intensity="visual">
-          <div className="rounded-lg overflow-hidden shadow-card my-8 max-w-xl">
+          <div className="rounded-lg overflow-hidden shadow-card my-8">
             <div className="bg-[#2e2e2e] text-white px-5 py-3 flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${isRejected ? 'bg-[#d62e17]' : 'bg-[#00a000]'}`} />
               <span className="text-sm font-medium">{value.title}</span>
