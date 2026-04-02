@@ -267,9 +267,11 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     const aTag = aHMap.get(k)
     if (aTag && aTag !== bNode.tag) {
       // Skip template headings (these are rendered by code, not content)
-      const skip = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...']
+      const skip = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...', 'problem', 'solution', 'results']
       if (!skip.includes(k)) {
-        issues.push({ type: 'HEADING_TAG', severity: 'medium', detail: `"${bNode.text.substring(0, 40)}": <${aTag}> → <${bNode.tag}>` })
+        // h1→h2 is intentional (SEO: only one h1 per page) — demote to LOW
+        const sev = (aTag === 'h1' && bNode.tag === 'h2') ? 'low' : 'medium'
+        issues.push({ type: 'HEADING_TAG', severity: sev as 'medium' | 'low', detail: `"${bNode.text.substring(0, 40)}": <${aTag}> → <${bNode.tag}>` })
       }
     }
   }
