@@ -690,6 +690,8 @@ function isGroupableImage(block: any): boolean { // eslint-disable-line @typescr
 
 function isShortTextBlock(block: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (block?._type !== 'block') return false
+  // Headings are NOT captions — don't group them with images
+  if (block.style && block.style !== 'normal') return false
   const text = (block.children || []).map((c: any) => c.text || '').join('') // eslint-disable-line @typescript-eslint/no-explicit-any
   return text.length > 0 && text.length < 200
 }
