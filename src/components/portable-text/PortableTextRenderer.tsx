@@ -57,7 +57,7 @@ function isDirectVideoUrl(url: string) {
 const imageSizeClasses: Record<string, string> = {
   small: 'max-w-[25%]',
   medium: 'max-w-[50%]',
-  large: 'max-w-[75%]',
+  large: 'max-w-full',
   full: 'max-w-full',
   bleed: 'w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] max-w-none',
 }
@@ -87,7 +87,7 @@ const components: PortableTextComponents = {
       if (!value?.asset) return null
       const size = value.size || 'full'
       const align = value.align || 'center'
-      const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 800
+      const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
       const imageUrl = urlForImage(value).width(width).url()
       return (
         <ArticleReveal intensity="visual">
