@@ -1,111 +1,192 @@
 /**
- * Batch add 'sup' marks to reference citation spans across all vision pages.
+ * Patch Missing Superscripts
  *
- * Finds spans that have a link to #references or #methodology and short
- * reference-like text (e.g. "1", "A2", "5,6") but are missing the 'sup' mark.
+ * Compares Gatsby rendered HTML against Sanity content to find
+ * superscript reference numbers missing from the Sanity document,
+ * then patches them in via CLI.
  *
  * Usage:
- *   node scripts/patch-superscripts.mjs          # dry run
- *   node scripts/patch-superscripts.mjs --write   # apply
+ *   node scripts/patch-superscripts.mjs                 # all pages
+ *   node scripts/patch-superscripts.mjs prior-auth      # single page
+ *   node scripts/patch-superscripts.mjs --dry-run       # preview only
  */
+
 import { createClient } from '@sanity/client'
-import dotenv from 'dotenv'
-dotenv.config({ path: '.env.local' })
+import puppeteer from 'puppeteer'
 
 const client = createClient({
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
-  dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
-  token: process.env.SANITY_WRITE_TOKEN,
+  projectId: 'a1wsimxr',
+  dataset: 'production',
   apiVersion: '2024-01-01',
+  token: process.env.SANITY_WRITE_TOKEN || 'sk193iVVrPLplMQlWPjZuFNuvIjtYY0hYw4Jfv7zGvzg4bX1xtm5WC9fbZtnEWVdWk3Ft4CGvOqg058qJBXv9ybliMn1TUnv6INGxFPXNRLlsKFGjOUIQFcPnTZ6y6BO1kfkytu4rvnJ0dWIizHd5U5kp3UTEj3MNCsnKB9BSvF1ryQ5Whmu',
   useCdn: false,
 })
 
-const WRITE = process.argv.includes('--write')
+const dryRun = process.argv.includes('--dry-run')
+const singleSlug = process.argv.slice(2).find(a => !a.startsWith('-'))
 
-async function main() {
-  console.log(`${WRITE ? '🔴 WRITE MODE' : '🟡 DRY RUN'}\n`)
+// Pages with known missing superscripts
+const PAGES = [
+  { slug: 'prior-auth', type: 'caseStudy', gatsbyPath: '/work/prior-auth/' },
+  { slug: 'all-of-us', type: 'caseStudy', gatsbyPath: '/work/all-of-us/' },
+  { slug: 'wuxi-nextcode-familycode', type: 'caseStudy', gatsbyPath: '/work/wuxi-nextcode-familycode/' },
+  { slug: 'commonhealth-smart-health-cards', type: 'caseStudy', gatsbyPath: '/work/commonhealth-smart-health-cards/' },
+  { slug: 'mount-sinai-consent', type: 'caseStudy', gatsbyPath: '/work/mount-sinai-consent/' },
+  { slug: 'virtual-diabetes-care', type: 'feature', gatsbyPath: '/vision/virtual-diabetes-care/' },
+  { slug: 'faces-in-health-communication', type: 'feature', gatsbyPath: '/vision/faces-in-health-communication/' },
+  { slug: 'eligibility-engine', type: 'feature', gatsbyPath: '/vision/eligibility-engine/' },
+  { slug: 'virtual-care', type: 'feature', gatsbyPath: '/vision/virtual-care/' },
+  { slug: 'healthcare-dollars', type: 'feature', gatsbyPath: '/vision/healthcare-dollars/' },
+]
 
-  const docs = await client.fetch(
-    `*[_type == 'feature']{ _id, slug, title, content }`
-  )
-  console.log(`Found ${docs.length} feature documents\n`)
+async function getGatsbySuperscripts(page, url) {
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await new Promise(r => setTimeout(r, 1500))
 
-  let totalChanges = 0
-  let totalPages = 0
+  return page.evaluate(() => {
+    const main = document.querySelector('.app__body') || document.body
+    const sups = main.querySelectorAll('sup')
+    return Array.from(sups).map(sup => {
+      const supText = sup.textContent.trim()
+      const parent = sup.closest('p, li, h1, h2, h3, h4, td, div')
+      if (!parent) return null
 
-  for (const doc of docs) {
-    const slug = doc.slug?.current
-    if (!slug) continue
+      // Get text before the sup in the same parent
+      const range = document.createRange()
+      range.setStart(parent, 0)
+      range.setEndBefore(sup)
+      const textBefore = range.toString().trim()
+      const context = textBefore.slice(-40).trim()
 
-    let content = JSON.parse(JSON.stringify(doc.content || []))
-    let changes = 0
+      return { supText, context }
+    }).filter(Boolean)
+  })
+}
 
-    function fixBlocks(blocks) {
-      for (const block of blocks) {
-        // Recurse into backgroundSection and columns content
-        if (block._type === 'backgroundSection' && block.content) {
-          fixBlocks(block.content)
-        }
-        if (block._type === 'columns' && block.content) {
-          fixBlocks(block.content)
-        }
+function patchContent(content, gatsbySupInfo) {
+  let patched = 0
 
-        if (block._type !== 'block' || !block.children) continue
+  for (const sup of gatsbySupInfo) {
+    const { supText, context } = sup
+    if (!supText || !context) continue
 
-        const markDefs = block.markDefs || []
-        // Find link marks that point to #references or #methodology
-        const refLinkKeys = new Set(
-          markDefs
-            .filter(md => md._type === 'link' && (
-              md.href === '#references' ||
-              md.href === '#methodology' ||
-              md.href?.startsWith('#ref') ||
-              md.href?.startsWith('#fn')
-            ))
-            .map(md => md._key)
-        )
+    let found = false
+    for (let bi = 0; bi < content.length && !found; bi++) {
+      const block = content[bi]
+      if (block._type !== 'block') continue
 
-        if (refLinkKeys.size === 0) continue
+      for (let ci = 0; ci < (block.children || []).length && !found; ci++) {
+        const child = block.children[ci]
+        const childText = child.text || ''
 
-        for (const span of block.children) {
-          if (span._type !== 'span') continue
-          const marks = span.marks || []
+        // Try several context lengths for matching
+        for (const ctxLen of [20, 15, 10, 7, 5]) {
+          const contextEnd = context.slice(-ctxLen)
+          if (!contextEnd) continue
 
-          // Check if this span has a reference link mark
-          const hasRefLink = marks.some(m => refLinkKeys.has(m))
-          if (!hasRefLink) continue
+          // Pattern 1: sup text already in the span (e.g., "sentence.1")
+          const needle = contextEnd + supText
+          const idx1 = childText.indexOf(needle)
+          if (idx1 >= 0 && !child.marks?.includes('sup')) {
+            const splitPoint = idx1 + contextEnd.length
+            const textBefore = childText.substring(0, splitPoint)
+            const textSup = supText
+            const textAfter = childText.substring(splitPoint + supText.length)
 
-          // Check if the text looks like a reference number/label
-          const text = (span.text || '').trim()
-          // Match: numbers (1, 12), letter+numbers (A1, A2), comma lists (1,2,3),
-          // or short ref labels
-          if (!text.match(/^[A-Z]?\d[\d,\s]*$/i) && text.length > 10) continue
+            const newChildren = []
+            if (textBefore) newChildren.push({ ...child, text: textBefore, _key: child._key })
+            newChildren.push({
+              _type: 'span', _key: child._key + 's' + patched,
+              text: textSup, marks: [...(child.marks || []).filter(m => m !== 'sup'), 'sup'],
+            })
+            if (textAfter) newChildren.push({ ...child, text: textAfter, _key: child._key + 'a' + patched })
 
-          // Add 'sup' mark if not already present
-          if (!marks.includes('sup')) {
-            span.marks = [...marks, 'sup']
-            changes++
+            block.children.splice(ci, 1, ...newChildren)
+            patched++; found = true
+            console.log(`  ${dryRun ? '[DRY]' : '✓'} Block ${bi}: split "...${contextEnd}${supText}"`)
+            break
+          }
+
+          // Pattern 2: sup text NOT in span — need to INSERT it after the context
+          const idx2 = childText.indexOf(contextEnd)
+          if (idx2 >= 0) {
+            const insertPoint = idx2 + contextEnd.length
+            const textBefore = childText.substring(0, insertPoint)
+            const textAfter = childText.substring(insertPoint)
+
+            const newChildren = []
+            if (textBefore) newChildren.push({ ...child, text: textBefore, _key: child._key })
+            newChildren.push({
+              _type: 'span', _key: child._key + 's' + patched,
+              text: supText, marks: [...(child.marks || []).filter(m => m !== 'sup'), 'sup'],
+            })
+            if (textAfter) newChildren.push({ ...child, text: textAfter, _key: child._key + 'a' + patched })
+
+            block.children.splice(ci, 1, ...newChildren)
+            patched++; found = true
+            console.log(`  ${dryRun ? '[DRY]' : '✓'} Block ${bi}: insert sup "${supText}" after "...${contextEnd}"`)
+            break
           }
         }
       }
     }
 
-    fixBlocks(content)
-
-    if (changes > 0) {
-      totalChanges += changes
-      totalPages++
-      console.log(`  ${slug}: ${changes} sup mark(s) added`)
-
-      if (WRITE) {
-        await client.patch(doc._id).set({ content }).commit()
-      }
+    if (!found) {
+      console.log(`  ⚠ Not found: sup "${supText}" after "...${context.slice(-20)}"`)
     }
   }
 
-  console.log(`\n${totalChanges} sup mark(s) added across ${totalPages} page(s).`)
-  if (!WRITE && totalChanges > 0) console.log('Run with --write to apply.')
-  if (WRITE && totalChanges > 0) console.log('✅ All patched.')
+  return patched
+}
+
+async function main() {
+  if (dryRun) console.log('=== DRY RUN ===\n')
+
+  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+  const bPage = await browser.newPage()
+  await bPage.setViewport({ width: 1280, height: 900 })
+
+  const pages = singleSlug ? PAGES.filter(p => p.slug === singleSlug) : PAGES
+  if (singleSlug && pages.length === 0) {
+    console.log(`Slug "${singleSlug}" not in PAGES list`)
+    await browser.close()
+    return
+  }
+
+  let totalPatched = 0
+
+  for (const p of pages) {
+    console.log(`\n=== ${p.slug} ===`)
+
+    // Get superscript positions from Gatsby
+    const sups = await getGatsbySuperscripts(bPage, `https://www.goinvo.com${p.gatsbyPath}`)
+    console.log(`  Gatsby has ${sups.length} superscripts`)
+    if (sups.length === 0) continue
+
+    // Get Sanity document
+    const doc = await client.fetch(
+      `*[_type=="${p.type}" && slug.current=="${p.slug}"][0]{_id, content}`
+    )
+    if (!doc) { console.log(`  NOT FOUND`); continue }
+
+    // Deep clone content
+    const content = JSON.parse(JSON.stringify(doc.content))
+
+    // Patch
+    const patched = patchContent(content, sups)
+    totalPatched += patched
+
+    if (patched > 0 && !dryRun) {
+      await client.patch(doc._id).set({ content }).commit()
+      console.log(`  Saved ${patched} superscripts`)
+    } else {
+      console.log(`  ${dryRun ? 'Would patch' : 'Patched'}: ${patched}/${sups.length}`)
+    }
+  }
+
+  await browser.close()
+  console.log(`\nTotal patched: ${totalPatched}`)
 }
 
 main().catch(console.error)
