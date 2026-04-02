@@ -41,16 +41,21 @@ export default async function VisualStorytellingPage() {
     })
   }
 
-  // Split content: find where the 3D model viewer should go
-  // It goes after the paragraph mentioning "3D and GenAI-assisted workflow"
-  const splitIdx = content.findIndex((b: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  // Split content: find the 3D model overview image (right before the model viewer)
+  // Skip this image since the ModelViewerSection renders its own version
+  const splitIdx = content.findIndex((b: any, i: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     if (b._type !== 'block') return false
     const text = (b.children || []).map((c: any) => c.text || '').join('') // eslint-disable-line @typescript-eslint/no-explicit-any
-    return text.includes('Model images are then styled')
+    return text.includes('developing a digital library of 3D environments')
   })
+  // Split after the "developing a digital library" paragraph
+  const actualSplit = splitIdx >= 0 ? splitIdx + 1 : -1
 
-  const beforeModel = splitIdx > 0 ? content.slice(0, splitIdx) : content
-  const afterModel = splitIdx > 0 ? content.slice(splitIdx) : []
+  // Skip the 3D overview image (shown by ModelViewerSection) — it's right after the split
+  let afterStart = actualSplit
+  if (afterStart >= 0 && content[afterStart]?._type === 'image') afterStart++ // skip duplicate image
+  const beforeModel = actualSplit > 0 ? content.slice(0, actualSplit) : content
+  const afterModel = actualSplit > 0 ? content.slice(afterStart) : []
   const mainBefore = beforeModel.filter((b: any) => b._type !== 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
   const mainAfter = afterModel.filter((b: any) => b._type !== 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
   const referencesContent = content.filter((b: any) => b._type === 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
