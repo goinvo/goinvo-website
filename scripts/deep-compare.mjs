@@ -249,7 +249,7 @@ function comparePage(slug, dataA, dataB) {
   }
 
   // ── Interactive elements comparison ─────────────────────────────
-  for (const key of ['canvas', 'iframes', 'videos', 'modelViewer'] as const) {
+  for (const key of ['canvas', 'iframes', 'videos', 'modelViewer']) {
     const a = dataA.interactives[key] || 0
     const b = dataB.interactives[key] || 0
     if (a > b) {
