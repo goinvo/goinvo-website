@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -58,8 +59,7 @@
   --spacing-header-height: 50px;
 }
 
-/* Google Fonts for page-specific overrides */
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
+/* Montserrat import moved to top of file (CSS requires @import before rules) */
 
 /* Base typography */
 @layer base {
