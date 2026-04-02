@@ -286,13 +286,17 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
   const aHTexts = new Set(aH.map(n => norm(n.text)).filter(t => t.length > 10))
   const bHTexts = new Set(bH.map(n => norm(n.text)).filter(t => t.length > 10))
   // Headings in B that don't exist in A = potentially wrong content
+  // Get the page title (h1) to exclude from comparison — both sides render it
+  const bH1Text = bH.find(n => n.tag === 'h1')?.text || ''
+  const bH1Norm = norm(bH1Text)
   for (const bText of bHTexts) {
     if (!aHTexts.has(bText)) {
-      // Check if it's a template heading (Authors, Contributors, Subscribe, References, Up next, About GoInvo)
+      // Skip template headings and the page title (h1)
       const templateHeadings = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...']
-      if (!templateHeadings.includes(bText)) {
-        issues.push({ type: 'EXTRA_CONTENT', severity: 'high', detail: `Heading not in Gatsby: "${bText.substring(0, 50)}"` })
-      }
+      if (templateHeadings.includes(bText)) continue
+      // Skip if it matches the page h1 title (rendered by template, may not be in Gatsby's extractable tree)
+      if (bText === bH1Norm) continue
+      issues.push({ type: 'EXTRA_CONTENT', severity: 'high', detail: `Heading not in Gatsby: "${bText.substring(0, 50)}"` })
     }
   }
   // Headings in A that don't exist in B = missing content
