@@ -45,7 +45,20 @@ const WORK = [
 ]
 
 async function extractPageData(page, url) {
+  // Dismiss client-side errors (e.g. WebGL not available in headless)
+  page.on('pageerror', () => {})
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+  // Check for error overlay and dismiss it
+  await page.evaluate(() => {
+    const overlay = document.querySelector('nextjs-portal, [data-nextjs-dialog]')
+    if (overlay) overlay.remove()
+    // Also check for Next.js error boundary
+    const errH2 = Array.from(document.querySelectorAll('h2')).find(h => h.textContent?.includes('Application error'))
+    if (errH2) {
+      const errParent = errH2.closest('div')
+      if (errParent) errParent.remove()
+    }
+  })
   await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
   await new Promise(r => setTimeout(r, 1500))
   await page.evaluate(() => window.scrollTo(0, 0))
@@ -277,9 +290,13 @@ function comparePage(slug, dataA, dataB) {
   }
 
   // ── Image count ────────────────────────────────────────────────
-  const imgDiff = Math.abs(dataA.images - dataB.images)
-  if (imgDiff > 3) {
-    issues.push({ sev: 'LOW', msg: `Images: ${dataA.images} → ${dataB.images} (${dataB.images > dataA.images ? '+' : ''}${dataB.images - dataA.images})` })
+  const imgDiff = dataA.images - dataB.images // positive = missing from Next.js
+  if (imgDiff > 5) {
+    issues.push({ sev: 'HIGH', msg: `Missing ${imgDiff} images: ${dataA.images} on Gatsby → ${dataB.images} on Next.js` })
+  } else if (imgDiff > 2) {
+    issues.push({ sev: 'MED', msg: `Image count: ${dataA.images} → ${dataB.images} (${imgDiff > 0 ? '-' : '+'}${Math.abs(imgDiff)})` })
+  } else if (Math.abs(imgDiff) > 2) {
+    issues.push({ sev: 'LOW', msg: `Image count: ${dataA.images} → ${dataB.images} (${imgDiff > 0 ? '-' : '+'}${Math.abs(imgDiff)})` })
   }
 
   // ── Image width comparison ──────────────────────────────────
