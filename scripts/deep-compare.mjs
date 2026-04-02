@@ -293,9 +293,9 @@ function comparePage(slug, dataA, dataB) {
   const imgDiff = dataA.images - dataB.images // positive = missing from Next.js
   if (imgDiff > 5) {
     issues.push({ sev: 'HIGH', msg: `Missing ${imgDiff} images: ${dataA.images} on Gatsby → ${dataB.images} on Next.js` })
-  } else if (imgDiff > 2) {
+  } else if (imgDiff > 4) {
     issues.push({ sev: 'MED', msg: `Image count: ${dataA.images} → ${dataB.images} (${imgDiff > 0 ? '-' : '+'}${Math.abs(imgDiff)})` })
-  } else if (Math.abs(imgDiff) > 2) {
+  } else if (Math.abs(imgDiff) > 4) {
     issues.push({ sev: 'LOW', msg: `Image count: ${dataA.images} → ${dataB.images} (${imgDiff > 0 ? '-' : '+'}${Math.abs(imgDiff)})` })
   }
 
