@@ -68,7 +68,7 @@ export function stripTitleHeading(blocks: any[], title: string): any[] {
   const textWords = text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter((w: string) => w.length > 2)
   const overlap = titleWords.filter((w: string) => textWords.includes(w)).length
   const overlapRatio = overlap / Math.max(titleWords.length, textWords.length)
-  if (overlapRatio >= 0.7) {
+  if (overlapRatio >= 0.6) {
     return blocks.slice(1)
   }
   return blocks
