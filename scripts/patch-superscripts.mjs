@@ -109,6 +109,12 @@ function patchContent(content, gatsbySupInfo) {
           }
 
           // Pattern 2: sup text NOT in span — need to INSERT it after the context
+          // But only if the next span isn't already a sup with the same text
+          const nextChild = block.children[ci + 1]
+          if (nextChild?.marks?.includes('sup') && nextChild?.text === supText) {
+            found = true // already patched
+            break
+          }
           const idx2 = childText.indexOf(contextEnd)
           if (idx2 >= 0) {
             const insertPoint = idx2 + contextEnd.length
