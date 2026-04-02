@@ -777,7 +777,8 @@ interface PortableTextRendererProps {
 }
 
 export function PortableTextRenderer({ content, variant = 'default' }: PortableTextRendererProps) {
-  const processed = groupConsecutiveImages(content)
+  // Case studies render images full-width stacked — no auto-grouping into columns
+  const processed = variant === 'case-study' ? content : groupConsecutiveImages(content)
 
   if (variant === 'case-study') {
     return (
