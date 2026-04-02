@@ -789,19 +789,5 @@ export function PortableTextRenderer({ content, variant = 'default' }: PortableT
     )
   }
 
-  // Vision articles use standard disc bullets (matching Gatsby)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const visionComponents: any = {
-    ...components,
-    list: {
-      ...components.list,
-      bullet: ({ children }: { children: React.ReactNode }) => (
-        <ArticleReveal intensity="text">
-          <ul className="list-disc pl-6 mb-8">{children}</ul>
-        </ArticleReveal>
-      ),
-    },
-  }
-
-  return <PortableText value={processed} components={visionComponents} />
+  return <PortableText value={processed} components={components} />
 }
