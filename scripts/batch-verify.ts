@@ -289,7 +289,7 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
   const countB: Record<string, number> = {}
   for (const n of flatA) countA[n.tag] = (countA[n.tag] || 0) + 1
   for (const n of flatB) countB[n.tag] = (countB[n.tag] || 0) + 1
-  for (const tag of ['img', 'ul', 'ol', 'iframe', 'video', 'blockquote']) {
+  for (const tag of ['img', 'ul', 'ol', 'iframe', 'video', 'blockquote', 'sup']) {
     const a = countA[tag] || 0
     const b = countB[tag] || 0
     const diff = Math.abs(a - b)
@@ -371,6 +371,30 @@ async function main() {
       const treeB = await extractTree(page)
 
       const issues = compareTrees(treeA, treeB)
+
+      // Additional inline element checks (sup/blockquote not reliably in tree)
+      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await new Promise(r => setTimeout(r, 800))
+      // Check superscripts (not reliably in tree)
+      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await new Promise(r => setTimeout(r, 800))
+      const supsA = await page.evaluate(() => {
+        const m = document.querySelector('main') || document.querySelector('.app__body') || document.body
+        return m.querySelectorAll('sup').length
+      })
+      await page.goto(nextUrl, { waitUntil: 'networkidle2', timeout: 30000 })
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+      await new Promise(r => setTimeout(r, 800))
+      const supsB = await page.evaluate(() => {
+        const m = document.querySelector('main') || document.body
+        return m.querySelectorAll('sup').length
+      })
+      if (supsA > supsB + 1) {
+        issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `<sup>: ${supsA} → ${supsB} (missing ${supsA - supsB})` })
+      }
+
       results.push({ slug: pd.slug, section: pd.section, issues })
 
       const high = issues.filter(i => i.severity === 'high').length
