@@ -12,6 +12,7 @@ export default defineType({
         { title: 'Normal', value: 'normal' },
         { title: 'H2', value: 'h2' },
         { title: 'H2 (large)', value: 'h2Large' },
+        { title: 'H2 (large centered)', value: 'h2LargeCentered' },
         {
           title: 'H2 (centered)',
           value: 'sectionTitle',
