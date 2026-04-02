@@ -781,6 +781,7 @@ export function PortableTextRenderer({ content, variant = 'default' }: PortableT
   const processed = variant === 'case-study' ? content : groupConsecutiveImages(content)
 
   if (variant === 'case-study') {
+    // Case studies use custom star bullets (matching Gatsby)
     return (
       <div className="case-study-content">
         <PortableText value={processed} components={components} />
@@ -788,5 +789,18 @@ export function PortableTextRenderer({ content, variant = 'default' }: PortableT
     )
   }
 
-  return <PortableText value={processed} components={components} />
+  // Vision articles use standard disc bullets (matching Gatsby)
+  const visionComponents = {
+    ...components,
+    list: {
+      ...components.list,
+      bullet: ({ children }: { children: React.ReactNode }) => (
+        <ArticleReveal intensity="text">
+          <ul className="list-disc pl-6 mb-8">{children}</ul>
+        </ArticleReveal>
+      ),
+    },
+  }
+
+  return <PortableText value={processed} components={visionComponents} />
 }
