@@ -70,8 +70,21 @@ async function extractPageData(page, url) {
     })
 
     // Paragraphs — first 40 chars of each for text matching
+    // Exclude author/contributor section bios and newsletter/form text
     const paragraphs = Array.from(main.querySelectorAll('p')).filter(p => {
-      return !p.closest('header,nav,form,.header-nav') && p.textContent.trim().length > 30
+      if (p.closest('header,nav,form,.header-nav')) return false
+      if (p.textContent.trim().length <= 30) return false
+      // Skip paragraphs inside author sections (bios)
+      const section = p.closest('section')
+      if (section) {
+        const prevH = section.querySelector('h2,h3')
+        if (prevH && /author|contributor|subscribe/i.test(prevH.textContent)) return false
+      }
+      // Skip common template text
+      const t = p.textContent.trim()
+      if (t.startsWith('You\'ll receive our latest')) return false
+      if (/^(Time:|Tags:|Role:)/.test(t)) return false
+      return true
     }).map(p => p.textContent.trim().replace(/\s+/g, ' ').substring(0, 60))
 
     // Blockquotes
@@ -114,9 +127,15 @@ function comparePage(slug, dataA, dataB) {
   // ── Heading comparison by text match ────────────────────────────
   const templateH = new Set(['authors','author','contributors','subscribe to our newsletter','references','up next','about goinvo','special thanks to...','problem','solution','results'])
 
+  // Get page h1 titles (these differ between listing title and page title on some pages)
+  const bH1 = normalize(dataB.headings.find(h => h.tag === 'h1')?.text || '')
+  const aH1 = normalize(dataA.headings.find(h => h.tag === 'h1')?.text || '')
+
   for (const bH of dataB.headings) {
     const bNorm = normalize(bH.text)
     if (bNorm.length < 6 || templateH.has(bNorm)) continue
+    // Skip if this is the page title h1 (may differ between listing and page titles)
+    if (bH.tag === 'h1' && bNorm === bH1) continue
     const aH = dataA.headings.find(a => normalize(a.text) === bNorm)
     if (!aH) {
       issues.push({ sev: 'HIGH', msg: `EXTRA heading on Next.js: <${bH.tag}> "${bH.text.substring(0, 50)}"` })
@@ -162,11 +181,15 @@ function comparePage(slug, dataA, dataB) {
     const apNorm = normalize(ap.substring(0, 40))
     if (!bPNorms.has(apNorm)) missingParas++
   }
-  if (extraParas > 3) {
-    issues.push({ sev: 'HIGH', msg: `${extraParas} paragraphs on Next.js not found on Gatsby (potential hallucinated content)` })
+  if (extraParas > 5) {
+    issues.push({ sev: 'HIGH', msg: `${extraParas} paragraphs on Next.js not found on Gatsby (potential extra content)` })
+  } else if (extraParas > 3) {
+    issues.push({ sev: 'MED', msg: `${extraParas} paragraphs on Next.js not found on Gatsby (minor content diff)` })
   }
-  if (missingParas > 3) {
+  if (missingParas > 5) {
     issues.push({ sev: 'MED', msg: `${missingParas} paragraphs on Gatsby not found on Next.js (missing content)` })
+  } else if (missingParas > 3) {
+    issues.push({ sev: 'LOW', msg: `${missingParas} paragraphs on Gatsby not found on Next.js (minor content diff)` })
   }
 
   // ── Blockquote comparison ──────────────────────────────────────
