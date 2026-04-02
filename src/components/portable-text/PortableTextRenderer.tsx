@@ -99,7 +99,7 @@ const components: PortableTextComponents = {
               className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full')}
             />
             {value.caption && (
-              <figcaption className="mt-2 text-sm text-gray italic">
+              <figcaption className="mt-2 text-base text-gray">
                 {value.caption}
               </figcaption>
             )}
@@ -320,7 +320,7 @@ const components: PortableTextComponents = {
                 <figure key={item._key} className={cn('m-0 mx-auto', colImageSizeClasses[imgSize])}>
                   <img src={imgUrl} alt={item.alt || ''} loading="lazy" className="max-w-full h-auto" />
                   {item.caption && (
-                    <figcaption className="mt-2 text-sm text-gray italic text-center">{item.caption}</figcaption>
+                    <figcaption className="mt-2 text-base text-gray text-center">{item.caption}</figcaption>
                   )}
                 </figure>
               )
@@ -390,7 +390,7 @@ const components: PortableTextComponents = {
                         className="w-full h-auto"
                       />
                       {group.caption && (
-                        <figcaption className="mt-2 text-sm text-gray italic text-center">
+                        <figcaption className="mt-2 text-base text-gray text-center">
                           {group.caption}
                         </figcaption>
                       )}
@@ -399,7 +399,7 @@ const components: PortableTextComponents = {
                 })}
               </div>
               {value.caption && (
-                <figcaption className="mt-2 text-sm text-gray italic text-center">
+                <figcaption className="mt-2 text-base text-gray text-center">
                   {value.caption}
                 </figcaption>
               )}
@@ -445,7 +445,7 @@ const components: PortableTextComponents = {
                 className="w-full"
               />
               {value.caption && (
-                <figcaption className="mt-2 text-sm text-gray italic text-center">
+                <figcaption className="mt-2 text-base text-gray text-center">
                   {value.caption}
                 </figcaption>
               )}
@@ -465,7 +465,7 @@ const components: PortableTextComponents = {
               />
             </div>
             {value.caption && (
-              <figcaption className="mt-2 text-sm text-gray italic text-center">
+              <figcaption className="mt-2 text-base text-gray text-center">
                 {value.caption}
               </figcaption>
             )}
@@ -493,36 +493,41 @@ const components: PortableTextComponents = {
             />
           </div>
           {value.caption && (
-            <figcaption className="mt-2 text-sm text-gray italic text-center">
+            <figcaption className="mt-2 text-base text-gray text-center">
               {value.caption}
             </figcaption>
           )}
         </figure>
       </ArticleReveal>
     ),
-    buttonGroup: ({ value }) => (
-      <ArticleReveal intensity="visual">
-        <div className="flex flex-wrap gap-4 my-6">
-          {value.buttons?.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
-            <a
-              key={i}
-              href={btn.url}
-              target={btn.external ? '_blank' : undefined}
-              rel={btn.external ? 'noopener noreferrer' : undefined}
-              className={cn(
-                'inline-flex items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border',
-                'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
-                btn.variant === 'primary'
-                  ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
-                  : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
-              )}
-            >
-              {btn.label}
-            </a>
-          ))}
-        </div>
-      </ArticleReveal>
-    ),
+    buttonGroup: ({ value }) => {
+      const buttons = value.buttons || []
+      const isSinglePrimary = buttons.length === 1 && buttons[0].variant === 'primary'
+      return (
+        <ArticleReveal intensity="visual">
+          <div className={cn('my-6', isSinglePrimary ? 'block' : 'flex flex-wrap gap-4')}>
+            {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
+              <a
+                key={i}
+                href={btn.url}
+                target={btn.external ? '_blank' : undefined}
+                rel={btn.external ? 'noopener noreferrer' : undefined}
+                className={cn(
+                  'items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
+                  'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
+                  isSinglePrimary ? 'block w-full py-3' : 'inline-flex',
+                  btn.variant === 'primary'
+                    ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
+                    : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
+                )}
+              >
+                {btn.label}
+              </a>
+            ))}
+          </div>
+        </ArticleReveal>
+      )
+    },
     divider: ({ value }) => (
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     ),
