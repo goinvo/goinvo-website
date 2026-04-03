@@ -369,7 +369,7 @@ function comparePage(slug, dataA, dataB) {
   const bCtxs = getImgContexts(dataB.contentOrder)
   for (let i = 0; i < Math.min(aCtxs.length, bCtxs.length, 3); i++) {
     if (normalize(aCtxs[i]) !== normalize(bCtxs[i])) {
-      issues.push({ sev: 'MED', msg: `Image ${i + 1} position: after "${aCtxs[i].substring(0, 25)}" → after "${bCtxs[i].substring(0, 25)}"` })
+      issues.push({ sev: 'LOW', msg: `Image ${i + 1} position: after "${aCtxs[i].substring(0, 25)}" → after "${bCtxs[i].substring(0, 25)}"` })
     }
   }
 
