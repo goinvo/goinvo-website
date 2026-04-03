@@ -30,7 +30,9 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
     ? urlForImage(caseStudy.image).width(1600).height(900).url()
     : undefined
 
-  const href = `/work/${caseStudy.slug.current}`
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const section = (caseStudy as any)._type === 'feature' ? 'vision' : 'work'
+  const href = `/${section}/${caseStudy.slug.current}`
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
