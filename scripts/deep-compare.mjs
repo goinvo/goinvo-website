@@ -124,6 +124,19 @@ async function extractPageData(page, url) {
       isFullWidth: Math.abs(a.getBoundingClientRect().width - (a.parentElement?.getBoundingClientRect().width || 0)) < 20,
     }))
 
+    // Content order — sequence of headings and images for position comparison
+    const contentOrder = Array.from(main.querySelectorAll('h2,h3,h4,img')).filter(el => {
+      if (el.closest('header,nav,form,.bg-blue-light,.background--blue')) return false
+      if (el.tagName === 'IMG') {
+        const r = el.getBoundingClientRect()
+        return r.width > 200 && r.height > 50 && r.y > 200
+      }
+      return true
+    }).sort((a, b) => a.getBoundingClientRect().y - b.getBoundingClientRect().y).map(el => {
+      if (el.tagName === 'IMG') return 'IMG'
+      return el.textContent.trim().replace(/\s+/g, ' ').substring(0, 30)
+    })
+
     // Superscripts
     const sups = main.querySelectorAll('sup').length
 
@@ -171,7 +184,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, contentWidth, textLen }
+    return { headings, paragraphs, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -334,6 +347,29 @@ function comparePage(slug, dataA, dataB) {
   for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
+    }
+  }
+
+  // ── Content order comparison ────────────────────────────────────
+  // Compare the first 3 content images' heading context (skip author images)
+  const getImgContexts = (order) => {
+    const skip = new Set(['authors', 'author', 'contributors', 'subscribe to our newsletter', '(start)'])
+    const result = []
+    let lastHeading = '(start)'
+    for (const item of order) {
+      if (item === 'IMG') {
+        if (!skip.has(normalize(lastHeading))) result.push(lastHeading)
+      } else {
+        lastHeading = item
+      }
+    }
+    return result
+  }
+  const aCtxs = getImgContexts(dataA.contentOrder)
+  const bCtxs = getImgContexts(dataB.contentOrder)
+  for (let i = 0; i < Math.min(aCtxs.length, bCtxs.length, 3); i++) {
+    if (normalize(aCtxs[i]) !== normalize(bCtxs[i])) {
+      issues.push({ sev: 'MED', msg: `Image ${i + 1} position: after "${aCtxs[i].substring(0, 25)}" → after "${bCtxs[i].substring(0, 25)}"` })
     }
   }
 
