@@ -292,12 +292,13 @@ function comparePage(slug, dataA, dataB) {
 
   // ── Button comparison ──────────────────────────────────────────
   const norm2 = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim()
-  for (const aBtn of dataA.buttons) {
+  for (let ai = 0; ai < dataA.buttons.length; ai++) {
+    const aBtn = dataA.buttons[ai]
     const bBtn = dataB.buttons.find(b => norm2(b.text) === norm2(aBtn.text))
     if (!bBtn) {
       issues.push({ sev: 'MED', msg: `Missing button: "${aBtn.text}"` })
     } else {
-      // Only flag width mismatch if it's significant (>200px diff and different full-width state)
+      // Check width mismatch
       const wDiff = Math.abs(aBtn.w - bBtn.w)
       if (wDiff > 200 && aBtn.isFullWidth !== bBtn.isFullWidth) {
         issues.push({ sev: 'LOW', msg: `Button "${aBtn.text.substring(0, 25)}" width: ${aBtn.w}px → ${bBtn.w}px` })
