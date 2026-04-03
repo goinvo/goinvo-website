@@ -561,6 +561,13 @@ export default defineType({
           type: 'number',
           description: 'Override aspect ratio with a fixed pixel height (e.g. 650 for timelines)',
         },
+        {
+          name: 'fullWidth',
+          title: 'Full width',
+          type: 'boolean',
+          description: 'Break out of the article container to fill the full viewport width',
+          initialValue: false,
+        },
       ],
     }),
     defineArrayMember({
