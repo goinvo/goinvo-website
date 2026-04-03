@@ -180,6 +180,20 @@ export default defineType({
           initialValue: '2',
         },
         {
+          name: 'size',
+          title: 'Width',
+          type: 'string',
+          description: 'Override the column container width',
+          options: {
+            list: [
+              { title: 'Default (follow article width)', value: 'default' },
+              { title: 'Wide (1020px)', value: 'wide' },
+              { title: 'Full bleed', value: 'bleed' },
+            ],
+          },
+          initialValue: 'default',
+        },
+        {
           name: 'content',
           title: 'Content',
           type: 'array',
