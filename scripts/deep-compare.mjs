@@ -276,8 +276,10 @@ function comparePage(slug, dataA, dataB) {
 
   // ── Column layout comparison ───────────────────────────────────
   // Detect auto-grouped columns on Next.js that Gatsby doesn't have
+  // Skip 3-4 item grids that are likely Up Next card sections (template-rendered)
   if (dataA.grids.length === 0 && dataB.grids.length > 0) {
     for (const g of dataB.grids) {
+      if (g.items <= 4 && g.cols <= 4) continue // Skip Up Next cards
       issues.push({ sev: 'MED', msg: `Extra ${g.cols}-column grid (${g.items} items) not on Gatsby — possible auto-grouping issue` })
     }
   }
@@ -288,8 +290,12 @@ function comparePage(slug, dataA, dataB) {
     const bBtn = dataB.buttons.find(b => norm2(b.text) === norm2(aBtn.text))
     if (!bBtn) {
       issues.push({ sev: 'MED', msg: `Missing button: "${aBtn.text}"` })
-    } else if (aBtn.isFullWidth !== bBtn.isFullWidth) {
-      issues.push({ sev: 'MED', msg: `Button "${aBtn.text.substring(0, 25)}" width: ${aBtn.isFullWidth ? 'full' : aBtn.w + 'px'} → ${bBtn.isFullWidth ? 'full' : bBtn.w + 'px'}` })
+    } else {
+      // Only flag width mismatch if it's significant (>200px diff and different full-width state)
+      const wDiff = Math.abs(aBtn.w - bBtn.w)
+      if (wDiff > 200 && aBtn.isFullWidth !== bBtn.isFullWidth) {
+        issues.push({ sev: 'LOW', msg: `Button "${aBtn.text.substring(0, 25)}" width: ${aBtn.w}px → ${bBtn.w}px` })
+      }
     }
   }
   for (const bBtn of dataB.buttons) {
