@@ -162,11 +162,11 @@ async function extractPageData(page, url) {
       modelViewer: main.querySelectorAll('model-viewer').length,
     }
 
-    // Content container width
+    // Content container width — use the widest paragraph (not the first, which may be in a column)
     const contentParas = Array.from(main.querySelectorAll('p')).filter(p =>
       !p.closest('header,nav,form') && p.textContent.trim().length > 50
-    )
-    const contentWidth = contentParas.length > 0 ? Math.round(contentParas[0].getBoundingClientRect().width) : 0
+    ).map(p => Math.round(p.getBoundingClientRect().width))
+    const contentWidth = contentParas.length > 0 ? Math.max(...contentParas) : 0
 
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
