@@ -502,10 +502,10 @@ const components: PortableTextComponents = {
     ),
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
-      const isSinglePrimary = buttons.length === 1 && buttons[0].variant === 'primary'
+      const isFullWidth = value.layout === 'fullWidth'
       return (
         <ArticleReveal intensity="visual">
-          <div className={cn('my-6', isSinglePrimary ? 'block' : 'flex flex-wrap gap-4')}>
+          <div className={cn('my-6', isFullWidth ? 'flex flex-col gap-4' : 'flex flex-wrap gap-4')}>
             {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
               <a
                 key={i}
@@ -515,7 +515,7 @@ const components: PortableTextComponents = {
                 className={cn(
                   'items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
                   'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
-                  isSinglePrimary ? 'block w-full py-3' : 'inline-flex',
+                  isFullWidth ? 'block w-full py-3' : 'inline-flex',
                   btn.variant === 'primary'
                     ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
                     : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'

@@ -602,6 +602,19 @@ export default defineType({
             },
           ],
         },
+        {
+          name: 'layout',
+          title: 'Layout',
+          type: 'string',
+          description: 'How the buttons are displayed',
+          options: {
+            list: [
+              { title: 'Inline (side by side)', value: 'inline' },
+              { title: 'Full width (stacked)', value: 'fullWidth' },
+            ],
+          },
+          initialValue: 'inline',
+        },
       ],
     }),
     defineArrayMember({

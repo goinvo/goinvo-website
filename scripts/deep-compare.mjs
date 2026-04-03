@@ -111,6 +111,19 @@ async function extractPageData(page, url) {
       q.textContent.trim().replace(/\s+/g, ' ').substring(0, 60)
     )
 
+    // Buttons — detect CTA-styled links (uppercase + letter-spacing)
+    const buttons = Array.from(main.querySelectorAll('a')).filter(a => {
+      const s = cs(a)
+      return s.textTransform === 'uppercase' && parseFloat(s.letterSpacing) > 0 &&
+        a.textContent.trim().length > 2 && a.getBoundingClientRect().width > 30 &&
+        !a.closest('header,nav')
+    }).map(a => ({
+      text: a.textContent.trim(),
+      w: Math.round(a.getBoundingClientRect().width),
+      containerW: Math.round(a.parentElement?.getBoundingClientRect().width || 0),
+      isFullWidth: Math.abs(a.getBoundingClientRect().width - (a.parentElement?.getBoundingClientRect().width || 0)) < 20,
+    }))
+
     // Superscripts
     const sups = main.querySelectorAll('sup').length
 
@@ -152,7 +165,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, blockquotes, styledQuotes, sups, grids, images, imgWidths, listStyles, interactives, textLen }
+    return { headings, paragraphs, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, textLen }
   })
 }
 
@@ -258,6 +271,29 @@ function comparePage(slug, dataA, dataB) {
     const gB = dataB.grids.find(g => g.items === gA.items)
     if (gB && gA.cols !== gB.cols) {
       issues.push({ sev: 'HIGH', msg: `Grid ${gA.items} items: ${gA.cols} cols → ${gB.cols} cols` })
+    }
+  }
+
+  // ── Button comparison ──────────────────────────────────────────
+  const norm2 = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+  for (const aBtn of dataA.buttons) {
+    const bBtn = dataB.buttons.find(b => norm2(b.text) === norm2(aBtn.text))
+    if (!bBtn) {
+      issues.push({ sev: 'MED', msg: `Missing button: "${aBtn.text}"` })
+    } else if (aBtn.isFullWidth !== bBtn.isFullWidth) {
+      issues.push({ sev: 'MED', msg: `Button "${aBtn.text.substring(0, 25)}" width: ${aBtn.isFullWidth ? 'full' : aBtn.w + 'px'} → ${bBtn.isFullWidth ? 'full' : bBtn.w + 'px'}` })
+    }
+  }
+  for (const bBtn of dataB.buttons) {
+    if (!dataA.buttons.find(a => norm2(a.text) === norm2(bBtn.text))) {
+      issues.push({ sev: 'MED', msg: `Extra button on Next.js: "${bBtn.text}"` })
+    }
+  }
+  // Check for paragraphs that duplicate button labels (superfluous links)
+  const btnLabels = new Set(dataB.buttons.map(b => norm2(b.text)))
+  for (const p of dataB.paragraphs) {
+    if (btnLabels.has(norm2(p.substring(0, 40)))) {
+      issues.push({ sev: 'MED', msg: `Superfluous link duplicating button: "${p.substring(0, 40)}"` })
     }
   }
 
