@@ -189,6 +189,13 @@ async function extractPageData(page, url) {
     // Up Next card count
     const upNextCards = main.querySelectorAll('.bg-blue-light img, .background--blue img').length
 
+    // Iframe sizes
+    const iframeSizes = Array.from(main.querySelectorAll('iframe')).filter(f => !f.closest('header,nav,form')).map(f => ({
+      w: Math.round(f.getBoundingClientRect().width),
+      h: Math.round(f.getBoundingClientRect().height),
+      src: (f.src || '').substring(0, 40),
+    }))
+
     // Interactive elements (canvas, model-viewer, iframes in content)
     const interactives = {
       canvas: main.querySelectorAll('canvas').length,
@@ -206,7 +213,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -404,6 +411,14 @@ function comparePage(slug, dataA, dataB) {
   for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
+    }
+  }
+
+  // ── Iframe size comparison ──────────────────────────────────────
+  for (let i = 0; i < Math.min(dataA.iframeSizes.length, dataB.iframeSizes.length); i++) {
+    const wDiff = Math.abs(dataA.iframeSizes[i].w - dataB.iframeSizes[i].w)
+    if (wDiff > 200) {
+      issues.push({ sev: 'MED', msg: `Iframe ${i + 1} width: ${dataA.iframeSizes[i].w}px → ${dataB.iframeSizes[i].w}px (should ${dataA.iframeSizes[i].w > 900 ? 'be full-width' : 'match'})` })
     }
   }
 

@@ -480,7 +480,7 @@ const components: PortableTextComponents = {
     },
     iframeEmbed: ({ value }) => (
       <ArticleReveal intensity="visual">
-        <figure className="my-8">
+        <figure className={cn('my-8', value.fullWidth && 'w-screen relative left-1/2 -ml-[50vw]')}>
           <div
             className="relative w-full overflow-hidden"
             style={
