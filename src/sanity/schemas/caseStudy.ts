@@ -70,8 +70,8 @@ export default defineType({
       name: 'upNext',
       title: 'Up Next',
       type: 'array',
-      description: 'Related case studies shown at the bottom of the page',
-      of: [{ type: 'reference', to: [{ type: 'caseStudy' }] }],
+      description: 'Related case studies or vision articles shown at the bottom',
+      of: [{ type: 'reference', to: [{ type: 'caseStudy' }, { type: 'feature' }] }],
     }),
     defineField({
       name: 'time',
