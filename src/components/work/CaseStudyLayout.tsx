@@ -56,7 +56,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
                       : 'md:grid-cols-2 lg:grid-cols-3'
                 )}
               >
-                {caseStudy.upNext.map((study) => (
+                {caseStudy.upNext.filter(Boolean).map((study) => (
                   <CaseStudyCard key={study._id} caseStudy={study} />
                 ))}
               </div>
