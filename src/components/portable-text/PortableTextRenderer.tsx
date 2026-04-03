@@ -505,7 +505,7 @@ const components: PortableTextComponents = {
       const isFullWidth = value.layout === 'fullWidth'
       return (
         <ArticleReveal intensity="visual">
-          <div className={cn('my-6', isFullWidth ? 'flex flex-col gap-4' : 'flex flex-wrap gap-4')}>
+          <div className={cn('my-6', isFullWidth ? 'flex gap-4' : 'flex flex-wrap gap-4')}>
             {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
               <a
                 key={i}
@@ -515,7 +515,7 @@ const components: PortableTextComponents = {
                 className={cn(
                   'items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
                   'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
-                  isFullWidth ? 'block w-full py-3' : 'inline-flex',
+                  isFullWidth ? 'flex-1 block py-3' : 'inline-flex',
                   btn.variant === 'primary'
                     ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
                     : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
