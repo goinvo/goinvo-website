@@ -275,6 +275,15 @@
   }
 
 
+  /* Columns wide breakout: expands beyond article container to ~1020px */
+  .columns-wide {
+    width: calc(100vw - 64px);
+    max-width: 1020px;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   /* Coronavirus page: uses Montserrat instead of global serif/sans (Gatsby _coronavirus.scss) */
   .font-coronavirus {
     font-family: 'Montserrat', 'Open Sans', sans-serif;
