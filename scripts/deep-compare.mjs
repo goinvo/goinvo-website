@@ -274,6 +274,14 @@ function comparePage(slug, dataA, dataB) {
     }
   }
 
+  // ── Column layout comparison ───────────────────────────────────
+  // Detect auto-grouped columns on Next.js that Gatsby doesn't have
+  if (dataA.grids.length === 0 && dataB.grids.length > 0) {
+    for (const g of dataB.grids) {
+      issues.push({ sev: 'MED', msg: `Extra ${g.cols}-column grid (${g.items} items) not on Gatsby — possible auto-grouping issue` })
+    }
+  }
+
   // ── Button comparison ──────────────────────────────────────────
   const norm2 = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim()
   for (const aBtn of dataA.buttons) {
