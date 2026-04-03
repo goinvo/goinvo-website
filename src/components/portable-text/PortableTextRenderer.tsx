@@ -528,6 +528,10 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    spacer: ({ value }) => {
+      const sizes: Record<string, string> = { sm: 'h-4', md: 'h-8', lg: 'h-12', xl: 'h-16' }
+      return <div className={sizes[value?.size || 'md']} aria-hidden="true" />
+    },
     divider: ({ value }) => (
       <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     ),

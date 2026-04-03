@@ -574,6 +574,31 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'spacer',
+      title: 'Spacer',
+      type: 'object',
+      description: 'Adds vertical spacing between content blocks',
+      preview: {
+        prepare() { return { title: '↕ Spacer', subtitle: 'Vertical space' } },
+      },
+      fields: [
+        {
+          name: 'size',
+          title: 'Size',
+          type: 'string',
+          options: {
+            list: [
+              { title: 'Small (16px)', value: 'sm' },
+              { title: 'Medium (32px)', value: 'md' },
+              { title: 'Large (48px)', value: 'lg' },
+              { title: 'Extra Large (64px)', value: 'xl' },
+            ],
+          },
+          initialValue: 'md',
+        },
+      ],
+    }),
+    defineArrayMember({
       name: 'buttonGroup',
       title: 'Buttons',
       type: 'object',
