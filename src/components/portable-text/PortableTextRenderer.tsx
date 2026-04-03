@@ -823,8 +823,9 @@ interface PortableTextRendererProps {
 }
 
 export function PortableTextRenderer({ content, variant = 'default', noGrouping = false }: PortableTextRendererProps) {
-  // Case studies and noGrouping pages render images full-width stacked
-  const processed = (variant === 'case-study' || noGrouping) ? content : groupConsecutiveImages(content)
+  // Disable auto-grouping — images render full-width stacked by default.
+  // Use explicit 'columns' blocks in Sanity for side-by-side layouts.
+  const processed = content
 
   if (variant === 'case-study') {
     // Case studies use custom star bullets (matching Gatsby)
