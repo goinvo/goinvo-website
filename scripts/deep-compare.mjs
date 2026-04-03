@@ -124,12 +124,18 @@ async function extractPageData(page, url) {
       return s.textTransform === 'uppercase' && parseFloat(s.letterSpacing) > 0 &&
         a.textContent.trim().length > 2 && a.getBoundingClientRect().width > 30 &&
         !a.closest('header,nav')
-    }).map(a => ({
-      text: a.textContent.trim(),
-      w: Math.round(a.getBoundingClientRect().width),
-      containerW: Math.round(a.parentElement?.getBoundingClientRect().width || 0),
-      isFullWidth: Math.abs(a.getBoundingClientRect().width - (a.parentElement?.getBoundingClientRect().width || 0)) < 20,
-    }))
+    }).map(a => {
+      const parent = a.parentElement
+      const pcs = parent ? cs(parent) : {}
+      const isCentered = pcs.justifyContent === 'center' || pcs.textAlign === 'center'
+      return {
+        text: a.textContent.trim(),
+        w: Math.round(a.getBoundingClientRect().width),
+        containerW: Math.round(parent?.getBoundingClientRect().width || 0),
+        isFullWidth: Math.abs(a.getBoundingClientRect().width - (parent?.getBoundingClientRect().width || 0)) < 20,
+        isCentered,
+      }
+    })
 
     // Content order — sequence of headings and images for position comparison
     const contentOrder = Array.from(main.querySelectorAll('h2,h3,h4,img')).filter(el => {
@@ -341,6 +347,10 @@ function comparePage(slug, dataA, dataB) {
       const wDiff = Math.abs(aBtn.w - bBtn.w)
       if (wDiff > 200 && aBtn.isFullWidth !== bBtn.isFullWidth) {
         issues.push({ sev: 'LOW', msg: `Button "${aBtn.text.substring(0, 25)}" width: ${aBtn.w}px → ${bBtn.w}px` })
+      }
+      // Check centering mismatch
+      if (aBtn.isCentered && !bBtn.isCentered) {
+        issues.push({ sev: 'MED', msg: `Button "${aBtn.text.substring(0, 25)}" should be centered` })
       }
     }
   }
