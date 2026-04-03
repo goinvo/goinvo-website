@@ -712,6 +712,11 @@ const components: PortableTextComponents = {
         </blockquote>
       </ArticleReveal>
     ),
+    textCenter: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <p className="text-center mb-4">{children}</p>
+      </ArticleReveal>
+    ),
     callout: ({ children }) => (
       <ArticleReveal intensity="text">
         <div className="bg-[#faf6f4] border-l-4 border-primary my-6 py-4 pr-4 pl-5 leading-[1.625rem]">

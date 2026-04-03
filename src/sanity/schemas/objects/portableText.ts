@@ -22,6 +22,7 @@ export default defineType({
         { title: 'H3 (orange)', value: 'h3Orange' },
         { title: 'H4', value: 'h4' },
         { title: 'H4 (with bullet)', value: 'h4Bullet' },
+        { title: 'Centered', value: 'textCenter' },
         { title: 'Quote', value: 'blockquote' },
         {
           title: 'Callout',
