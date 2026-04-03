@@ -257,7 +257,9 @@ const components: PortableTextComponents = {
       const items: any[] = value.content || []
       const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2
       const bg = value.background || 'none'
-      const sizeClass = value.size === 'wide' ? 'max-w-[1020px] mx-auto -mx-4 sm:-mx-8 md:mx-auto' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
+      const sizeClass = value.size === 'wide' ? 'max-w-[1020px] -mx-4 sm:-mx-8 md:mx-auto' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
+      // Wrapper function to apply size override
+      const Wrap = ({ children }: { children: React.ReactNode }) => sizeClass ? <div className={sizeClass}>{children}</div> : <>{children}</>
       const bgClasses: Record<string, string> = {
         none: '',
         gray: 'bg-[#f1f6f6] rounded-sm',
@@ -365,6 +367,7 @@ const components: PortableTextComponents = {
         }
 
         return (
+          <Wrap>
           <ArticleReveal intensity="visual">
             <figure className={cn("my-8", bg !== 'none' && 'p-5', bgClasses[bg])}>
               <div
@@ -406,6 +409,7 @@ const components: PortableTextComponents = {
               )}
             </figure>
           </ArticleReveal>
+          </Wrap>
         )
       }
 
