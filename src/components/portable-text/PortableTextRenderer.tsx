@@ -818,11 +818,13 @@ interface PortableTextRendererProps {
   content: PortableTextBlock[]
   /** Content variant: 'case-study' applies gray text + double paragraph spacing to match Gatsby */
   variant?: 'default' | 'case-study'
+  /** Disable automatic grouping of consecutive images into columns */
+  noGrouping?: boolean
 }
 
-export function PortableTextRenderer({ content, variant = 'default' }: PortableTextRendererProps) {
-  // Case studies render images full-width stacked — no auto-grouping into columns
-  const processed = variant === 'case-study' ? content : groupConsecutiveImages(content)
+export function PortableTextRenderer({ content, variant = 'default', noGrouping = false }: PortableTextRendererProps) {
+  // Case studies and noGrouping pages render images full-width stacked
+  const processed = (variant === 'case-study' || noGrouping) ? content : groupConsecutiveImages(content)
 
   if (variant === 'case-study') {
     // Case studies use custom star bullets (matching Gatsby)
