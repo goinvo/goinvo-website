@@ -180,6 +180,15 @@ async function extractPageData(page, url) {
       return { items: ul.children.length, bullet: liCs.listStyleImage === 'none' ? 'disc' : 'custom' }
     }).filter(Boolean)
 
+    // Video sizes
+    const videoSizes = Array.from(main.querySelectorAll('video')).filter(v => v.getBoundingClientRect().height > 50).map(v => ({
+      w: Math.round(v.getBoundingClientRect().width),
+      h: Math.round(v.getBoundingClientRect().height),
+    }))
+
+    // Up Next card count
+    const upNextCards = main.querySelectorAll('.bg-blue-light img, .background--blue img').length
+
     // Interactive elements (canvas, model-viewer, iframes in content)
     const interactives = {
       canvas: main.querySelectorAll('canvas').length,
@@ -197,7 +206,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, contentOrder, contentWidth, textLen }
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -396,6 +405,19 @@ function comparePage(slug, dataA, dataB) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
     }
+  }
+
+  // ── Video size comparison ───────────────────────────────────────
+  for (let i = 0; i < Math.min(dataA.videoSizes.length, dataB.videoSizes.length); i++) {
+    const hDiff = Math.abs(dataA.videoSizes[i].h - dataB.videoSizes[i].h)
+    if (hDiff > 200) {
+      issues.push({ sev: 'MED', msg: `Video ${i + 1} height: ${dataA.videoSizes[i].h}px → ${dataB.videoSizes[i].h}px (${hDiff}px diff)` })
+    }
+  }
+
+  // ── Up Next card count comparison ─────────────────────────────
+  if (dataA.upNextCards > dataB.upNextCards + 1) {
+    issues.push({ sev: 'MED', msg: `Up Next cards: ${dataA.upNextCards} → ${dataB.upNextCards}` })
   }
 
   // ── Content order comparison ────────────────────────────────────

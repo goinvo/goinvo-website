@@ -442,7 +442,7 @@ const components: PortableTextComponents = {
                 loop
                 muted
                 playsInline
-                className="w-full"
+                className="w-full max-h-[80vh]"
               />
               {value.caption && (
                 <figcaption className="mt-2 text-base text-gray text-center">
