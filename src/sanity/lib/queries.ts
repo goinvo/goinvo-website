@@ -30,11 +30,13 @@ export const caseStudyBySlugQuery = groq`
     content,
     upNext[]-> {
       _id,
+      _type,
       title,
       slug,
       client,
       image,
-      caption
+      caption,
+      description
     },
     metaDescription
   }
