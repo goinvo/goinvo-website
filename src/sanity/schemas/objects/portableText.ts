@@ -676,7 +676,8 @@ export default defineType({
           options: {
             list: [
               { title: 'Inline (side by side)', value: 'inline' },
-              { title: 'Full width (stacked)', value: 'fullWidth' },
+              { title: 'Full width (equal share)', value: 'fullWidth' },
+              { title: 'Centered', value: 'centered' },
             ],
           },
           initialValue: 'inline',

@@ -502,10 +502,14 @@ const components: PortableTextComponents = {
     ),
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
-      const isFullWidth = value.layout === 'fullWidth'
+      const layout = value.layout || 'inline'
+      const containerClass = layout === 'fullWidth' ? 'flex gap-4'
+        : layout === 'centered' ? 'flex flex-wrap gap-4 justify-center'
+        : 'flex flex-wrap gap-4'
+      const btnClass = layout === 'fullWidth' ? 'flex-1 block py-3' : 'inline-flex'
       return (
         <ArticleReveal intensity="visual">
-          <div className={cn('my-6', isFullWidth ? 'flex gap-4' : 'flex flex-wrap gap-4')}>
+          <div className={cn('my-6', containerClass)}>
             {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
               <a
                 key={i}
@@ -515,7 +519,7 @@ const components: PortableTextComponents = {
                 className={cn(
                   'items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
                   'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
-                  isFullWidth ? 'flex-1 block py-3' : 'inline-flex',
+                  btnClass,
                   btn.variant === 'primary'
                     ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
                     : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
