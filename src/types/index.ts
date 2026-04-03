@@ -75,6 +75,7 @@ export interface Feature {
   image?: SanityImage
   heroPosition?: string
   fullImageCover?: boolean
+  contentWidth?: 'narrow' | 'medium' | 'wide'
   video?: string
   description?: string
   categories?: string[]

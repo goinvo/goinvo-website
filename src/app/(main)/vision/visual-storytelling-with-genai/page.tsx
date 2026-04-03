@@ -67,7 +67,7 @@ export default async function VisualStorytellingPage() {
       )}
 
       <Reveal style="slide-up" duration={0.5}>
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <h1 className="header-xl mt-8 mb-6" style={{ viewTransitionName: 'page-title' }}>
             {feature.title}
           </h1>
@@ -86,7 +86,7 @@ export default async function VisualStorytellingPage() {
 
       {/* Content before 3D model viewer */}
       <section className="pb-6">
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <PortableTextRenderer content={mainBefore} noGrouping />
         </div>
       </section>
@@ -97,7 +97,7 @@ export default async function VisualStorytellingPage() {
       {/* Content after 3D model viewer */}
       {mainAfter.length > 0 && (
         <section className="pb-12">
-          <div className="max-width max-width-md content-padding mx-auto">
+          <div className="max-width content-padding mx-auto">
             <PortableTextRenderer content={mainAfter} noGrouping />
           </div>
         </section>
@@ -106,7 +106,7 @@ export default async function VisualStorytellingPage() {
       {/* Authors */}
       {feature.authors && feature.authors.length > 0 && (
         <section className="pb-12">
-          <div className="max-width max-width-md content-padding mx-auto">
+          <div className="max-width content-padding mx-auto">
             <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined} />
           </div>
         </section>
@@ -114,7 +114,7 @@ export default async function VisualStorytellingPage() {
 
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
@@ -124,7 +124,7 @@ export default async function VisualStorytellingPage() {
       {/* References */}
       {referencesContent.length > 0 && (
         <section className="pb-12">
-          <div className="max-width max-width-md content-padding mx-auto">
+          <div className="max-width content-padding mx-auto">
             <PortableTextRenderer content={referencesContent} />
           </div>
         </section>
