@@ -72,6 +72,7 @@ function CameraController({
   return (
     <OrbitControls
       ref={controlsRef}
+      target={[8, 0, -10]}
       rotateSpeed={0.6}
       zoomSpeed={0.2}
       panSpeed={0.6}

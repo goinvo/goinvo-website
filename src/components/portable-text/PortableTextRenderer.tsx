@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, Fragment } from 'react'
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
@@ -524,6 +524,41 @@ const components: PortableTextComponents = {
                 {btn.label}
               </a>
             ))}
+          </div>
+        </ArticleReveal>
+      )
+    },
+    imageEquationList: ({ value }) => {
+      const headings: string[] = value.headings || []
+      const rows: { inputImage?: any; prompt?: string; outputImage?: any }[] = value.rows || [] // eslint-disable-line @typescript-eslint/no-explicit-any
+      return (
+        <ArticleReveal intensity="visual">
+          <div className="my-8">
+            {headings.length > 0 && (
+              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4">
+                {headings.map((h, i) => (
+                  <Fragment key={i}>
+                    <p className="font-serif text-lg m-0">{h}</p>
+                    {i < headings.length - 1 && <span />}
+                  </Fragment>
+                ))}
+              </div>
+            )}
+            {rows.map((row, i) => {
+              const inputUrl = row.inputImage?.asset ? urlForImage(row.inputImage).width(400).url() : ''
+              const outputUrl = row.outputImage?.asset ? urlForImage(row.outputImage).width(400).url() : ''
+              return (
+                <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-6">
+                  {inputUrl && <img src={inputUrl} alt="" loading="lazy" className="w-full h-auto" />}
+                  <span className="text-2xl text-gray font-light">+</span>
+                  <div className="bg-[#faf6f4] p-4 font-serif italic text-sm leading-relaxed">
+                    &ldquo;{row.prompt}&rdquo;
+                  </div>
+                  <span className="text-2xl text-gray font-light">=</span>
+                  {outputUrl && <img src={outputUrl} alt="" loading="lazy" className="w-full h-auto" />}
+                </div>
+              )
+            })}
           </div>
         </ArticleReveal>
       )
