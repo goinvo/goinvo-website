@@ -574,6 +574,46 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'imageEquationList',
+      title: 'Image Equation List',
+      type: 'object',
+      description: 'Rows of [Image] + [Text] = [Image] (e.g., 3D render + prompt = output)',
+      preview: {
+        select: { heading1: 'headings.0', heading2: 'headings.1', heading3: 'headings.2' },
+        prepare({ heading1, heading2, heading3 }) {
+          return { title: [heading1, heading2, heading3].filter(Boolean).join(' + ') || 'Image Equation List', subtitle: 'Image + Text = Image rows' }
+        },
+      },
+      fields: [
+        {
+          name: 'headings',
+          title: 'Column Headings',
+          type: 'array',
+          of: [{ type: 'string' }],
+          description: 'e.g. "Rhino 3d Model Render", "Midjourney Re-texturizing Prompt", "Midjourney Output"',
+        },
+        {
+          name: 'rows',
+          title: 'Rows',
+          type: 'array',
+          of: [
+            {
+              type: 'object',
+              fields: [
+                { name: 'inputImage', title: 'Input Image', type: 'image' },
+                { name: 'prompt', title: 'Prompt Text', type: 'text', rows: 3 },
+                { name: 'outputImage', title: 'Output Image', type: 'image' },
+              ],
+              preview: {
+                select: { prompt: 'prompt' },
+                prepare({ prompt }) { return { title: (prompt || '').substring(0, 50) } },
+              },
+            },
+          ],
+        },
+      ],
+    }),
+    defineArrayMember({
       name: 'spacer',
       title: 'Spacer',
       type: 'object',
