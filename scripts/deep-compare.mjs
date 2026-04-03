@@ -79,9 +79,16 @@ async function extractPageData(page, url) {
         fontFamily: s.fontFamily.split(',')[0].replace(/"/g, '').trim(),
         textTransform: s.textTransform,
         textAlign: s.textAlign,
+        fontStyle: s.fontStyle,
         color: s.color,
       }
     })
+
+    // Centered paragraphs (for detecting centered text that should stay centered)
+    const centeredParas = Array.from(main.querySelectorAll('p')).filter(p => {
+      if (p.closest('header,nav,form')) return false
+      return cs(p).textAlign === 'center' || cs(p.parentElement).textAlign === 'center'
+    }).map(p => p.textContent.trim().replace(/\s+/g, ' ').substring(0, 40))
 
     // Paragraphs — first 40 chars of each for text matching
     // Exclude author/contributor section bios and newsletter/form text
@@ -184,7 +191,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, contentOrder, contentWidth, textLen }
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -234,6 +241,10 @@ function comparePage(slug, dataA, dataB) {
     // Text alignment mismatch (center vs start/left)
     if (aH.textAlign === 'center' && bH.textAlign !== 'center') {
       issues.push({ sev: 'MED', msg: `Heading alignment: "${bH.text.substring(0, 30)}" center → ${bH.textAlign}` })
+    }
+    // Font style mismatch (italic on one side but not the other)
+    if (aH.fontStyle !== bH.fontStyle) {
+      issues.push({ sev: 'MED', msg: `Heading italic: "${bH.text.substring(0, 30)}" ${aH.fontStyle} → ${bH.fontStyle}` })
     }
   }
   // Missing headings
@@ -303,6 +314,21 @@ function comparePage(slug, dataA, dataB) {
     }
   }
 
+  // ── Centered paragraph comparison ──────────────────────────────
+  // Check if paragraphs centered on Gatsby are also centered on Next.js
+  if (dataA.centeredParas.length > 0) {
+    const bParaNorms = new Set(dataB.centeredParas.map(p => normalize(p)))
+    for (const ap of dataA.centeredParas) {
+      if (!bParaNorms.has(normalize(ap))) {
+        // Check if the text exists on Next.js but isn't centered
+        const bHasText = dataB.paragraphs.some(bp => normalize(bp.substring(0, 30)) === normalize(ap.substring(0, 30)))
+        if (bHasText) {
+          issues.push({ sev: 'MED', msg: `Centered text not centered on Next.js: "${ap.substring(0, 40)}"` })
+        }
+      }
+    }
+  }
+
   // ── Button comparison ──────────────────────────────────────────
   const norm2 = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim()
   for (let ai = 0; ai < dataA.buttons.length; ai++) {
@@ -323,6 +349,18 @@ function comparePage(slug, dataA, dataB) {
       issues.push({ sev: 'MED', msg: `Extra button on Next.js: "${bBtn.text}"` })
     }
   }
+  // Check for duplicate buttons on Next.js (same label appears more times than on Gatsby)
+  const aBtnCounts = {}
+  const bBtnCounts = {}
+  for (const b of dataA.buttons) { const k = norm2(b.text); aBtnCounts[k] = (aBtnCounts[k] || 0) + 1 }
+  for (const b of dataB.buttons) { const k = norm2(b.text); bBtnCounts[k] = (bBtnCounts[k] || 0) + 1 }
+  for (const [label, count] of Object.entries(bBtnCounts)) {
+    const aCount = aBtnCounts[label] || 0
+    if (count > aCount) {
+      issues.push({ sev: 'MED', msg: `Duplicate button "${label.substring(0, 25)}": ${aCount} on Gatsby → ${count} on Next.js` })
+    }
+  }
+
   // Check for paragraphs on Next.js that duplicate button labels (superfluous standalone links)
   // Only flag if the paragraph is on Next.js but NOT on Gatsby (truly extra content)
   const aBtnLabels = new Set(dataA.buttons.map(b => norm2(b.text)))
