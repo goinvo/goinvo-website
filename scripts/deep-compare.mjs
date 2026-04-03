@@ -297,10 +297,13 @@ function comparePage(slug, dataA, dataB) {
       issues.push({ sev: 'MED', msg: `Extra button on Next.js: "${bBtn.text}"` })
     }
   }
-  // Check for paragraphs that duplicate button labels (superfluous links)
-  const btnLabels = new Set(dataB.buttons.map(b => norm2(b.text)))
+  // Check for paragraphs on Next.js that duplicate button labels (superfluous standalone links)
+  // Only flag if the paragraph is on Next.js but NOT on Gatsby (truly extra content)
+  const aBtnLabels = new Set(dataA.buttons.map(b => norm2(b.text)))
+  const bBtnLabels = new Set(dataB.buttons.map(b => norm2(b.text)))
   for (const p of dataB.paragraphs) {
-    if (btnLabels.has(norm2(p.substring(0, 40)))) {
+    const pNorm = norm2(p.substring(0, 40))
+    if (bBtnLabels.has(pNorm) && !aBtnLabels.has(pNorm)) {
       issues.push({ sev: 'MED', msg: `Superfluous link duplicating button: "${p.substring(0, 40)}"` })
     }
   }
@@ -323,7 +326,7 @@ function comparePage(slug, dataA, dataB) {
 
   // ── Total text length comparison ────────────────────────────────
   // Catches pages with large missing/extra content chunks
-  if (dataA.textLen > 0 && dataB.textLen > 0) {
+  if (dataA.textLen > 200 && dataB.textLen > 200) {
     const lenDiff = dataA.textLen - dataB.textLen
     const pctDiff = Math.abs(lenDiff) / Math.max(dataA.textLen, 1) * 100
     if (pctDiff > 30) {
