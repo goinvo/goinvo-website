@@ -162,10 +162,16 @@ async function extractPageData(page, url) {
       modelViewer: main.querySelectorAll('model-viewer').length,
     }
 
+    // Content container width
+    const contentParas = Array.from(main.querySelectorAll('p')).filter(p =>
+      !p.closest('header,nav,form') && p.textContent.trim().length > 50
+    )
+    const contentWidth = contentParas.length > 0 ? Math.round(contentParas[0].getBoundingClientRect().width) : 0
+
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, textLen }
+    return { headings, paragraphs, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, contentWidth, textLen }
   })
 }
 
@@ -327,6 +333,14 @@ function comparePage(slug, dataA, dataB) {
   for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
+    }
+  }
+
+  // ── Content width comparison ────────────────────────────────────
+  if (dataA.contentWidth > 0 && dataB.contentWidth > 0) {
+    const wDiff = Math.abs(dataA.contentWidth - dataB.contentWidth)
+    if (wDiff > 100) {
+      issues.push({ sev: 'MED', msg: `Content width: ${dataA.contentWidth}px → ${dataB.contentWidth}px (${wDiff}px diff)` })
     }
   }
 

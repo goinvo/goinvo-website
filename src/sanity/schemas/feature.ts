@@ -51,6 +51,20 @@ export default defineType({
       initialValue: false,
     }),
     defineField({
+      name: 'contentWidth',
+      title: 'Content Width',
+      type: 'string',
+      description: 'Max width of the article content area. Most articles use Medium (711px). Use Wide for pages with larger images/diagrams.',
+      options: {
+        list: [
+          { title: 'Narrow (648px)', value: 'narrow' },
+          { title: 'Medium (711px) — default', value: 'medium' },
+          { title: 'Wide (988px)', value: 'wide' },
+        ],
+      },
+      initialValue: 'medium',
+    }),
+    defineField({
       name: 'video',
       title: 'Video URL',
       type: 'url',

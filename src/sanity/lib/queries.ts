@@ -135,6 +135,7 @@ export const featureBySlugQuery = groq`
     image,
     heroPosition,
     fullImageCover,
+    contentWidth,
     video,
     description,
     categories,

@@ -75,6 +75,8 @@ export default async function VisionFeaturePage({ params }: Props) {
     ? urlForImage(feature.image).width(1920).url()
     : null
 
+  const widthClass = feature.contentWidth === 'wide' ? '' : feature.contentWidth === 'narrow' ? 'max-width-sm' : 'max-width-md'
+
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
@@ -99,7 +101,7 @@ export default async function VisionFeaturePage({ params }: Props) {
       {/* Title + meta — hidden for fullImageCover pages where the image IS the content */}
       {!feature.fullImageCover && (
         <Reveal style="slide-up" duration={0.5}>
-          <div className="max-width max-width-md content-padding mx-auto">
+          <div className={`max-width ${widthClass} content-padding mx-auto`}>
             <h1
               className="header-xl mt-8 mb-6"
               style={{ viewTransitionName: 'page-title' }}
@@ -144,7 +146,7 @@ export default async function VisionFeaturePage({ params }: Props) {
         return (
           <>
             <section className="pb-12">
-              <div className="max-width max-width-md content-padding mx-auto">
+              <div className={`max-width ${widthClass} content-padding mx-auto`}>
                 <PortableTextRenderer content={mainContent} />
               </div>
             </section>
@@ -152,7 +154,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* About GoInvo (before Authors, matching Gatsby order) */}
             {feature.showAboutGoInvo && (
               <section className="pb-12">
-                <div className="max-width max-width-md content-padding mx-auto">
+                <div className={`max-width ${widthClass} content-padding mx-auto`}>
                   <AboutGoInvo />
                 </div>
               </section>
@@ -161,7 +163,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* Authors */}
             {feature.authors && feature.authors.length > 0 && (
               <section className="pb-12">
-                <div className="max-width max-width-md content-padding mx-auto">
+                <div className={`max-width ${widthClass} content-padding mx-auto`}>
                   <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined} />
                 </div>
               </section>
@@ -170,7 +172,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* Contributors */}
             {feature.contributors && feature.contributors.length > 0 && (
               <section className="pb-12">
-                <div className="max-width max-width-md content-padding mx-auto">
+                <div className={`max-width ${widthClass} content-padding mx-auto`}>
                   <AuthorSection authors={feature.contributors} heading="Contributors" />
                 </div>
               </section>
@@ -179,7 +181,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* Special Thanks */}
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
-                <div className="max-width max-width-md content-padding mx-auto">
+                <div className={`max-width ${widthClass} content-padding mx-auto`}>
                   <h2 className="header-lg mt-8 mb-4 text-center">Special thanks to...</h2>
                   <PortableTextRenderer content={feature.specialThanks} />
                 </div>
@@ -188,7 +190,7 @@ export default async function VisionFeaturePage({ params }: Props) {
 
             {/* Newsletter */}
             <section className="bg-gray-lightest py-8">
-              <div className="max-width max-width-md content-padding mx-auto">
+              <div className={`max-width ${widthClass} content-padding mx-auto`}>
                 <div className="bg-white shadow-card py-6 px-4 md:px-8">
                   <NewsletterForm />
                 </div>
@@ -198,7 +200,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* References (after newsletter, matching Gatsby order) */}
             {referencesContent.length > 0 && (
               <section className="pb-12">
-                <div className="max-width max-width-md content-padding mx-auto">
+                <div className={`max-width ${widthClass} content-padding mx-auto`}>
                   <PortableTextRenderer content={referencesContent} />
                 </div>
               </section>
