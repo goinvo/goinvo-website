@@ -147,14 +147,14 @@ const components: PortableTextComponents = {
             )}
           >
             {items.map((item, i) => (
-              <div key={i} className="text-center">
-                <div className={cn(
-                  'font-serif text-xl p-4 mb-2',
-                  perItemBg || 'bg-gray-lightest',
+              <div key={i} className={cn('text-center', perItemBg && 'p-4')}>
+                <span className={cn(
+                  'block font-serif text-4xl mb-2',
+                  perItemBg ? '' : 'text-primary',
                 )}>
                   {item.stat}
-                </div>
-                <p className="text-sm px-1">
+                </span>
+                <p className="text-sm text-gray px-1">
                   {item.description}
                   {item.refNumber && (
                     <>
