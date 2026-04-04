@@ -119,6 +119,23 @@ async function extractPageData(page, url) {
     )
 
     // Buttons — detect CTA-styled links (uppercase + letter-spacing)
+    // Button position context — which heading precedes each button
+    const buttonContexts = Array.from(main.querySelectorAll('a')).filter(a => {
+      const s = cs(a)
+      return s.textTransform === 'uppercase' && parseFloat(s.letterSpacing) > 0 &&
+        a.textContent.trim().length > 2 && a.getBoundingClientRect().width > 30 &&
+        !a.closest('header,nav')
+    }).map(a => {
+      const btnY = a.getBoundingClientRect().y
+      // Find the closest heading above this button
+      const headings = Array.from(main.querySelectorAll('h2,h3,h4')).filter(h => !h.closest('header,nav'))
+      let closestH = ''
+      for (const h of headings) {
+        if (h.getBoundingClientRect().y < btnY) closestH = h.textContent.trim().replace(/\s+/g, ' ').substring(0, 25)
+      }
+      return { text: a.textContent.trim(), afterHeading: closestH }
+    })
+
     const buttons = Array.from(main.querySelectorAll('a')).filter(a => {
       const s = cs(a)
       return s.textTransform === 'uppercase' && parseFloat(s.letterSpacing) > 0 &&
@@ -213,7 +230,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -375,6 +392,15 @@ function comparePage(slug, dataA, dataB) {
       issues.push({ sev: 'MED', msg: `Extra button on Next.js: "${bBtn.text}"` })
     }
   }
+  // Check button position — which heading each button appears after
+  for (const aCtx of dataA.buttonContexts) {
+    const bCtx = dataB.buttonContexts.find(b => norm2(b.text) === norm2(aCtx.text))
+    if (!bCtx) continue
+    if (aCtx.afterHeading && bCtx.afterHeading && normalize(aCtx.afterHeading) !== normalize(bCtx.afterHeading)) {
+      issues.push({ sev: 'MED', msg: `Button "${aCtx.text.substring(0, 20)}" position: after "${aCtx.afterHeading}" → after "${bCtx.afterHeading}"` })
+    }
+  }
+
   // Check for duplicate buttons on Next.js (same label appears more times than on Gatsby)
   const aBtnCounts = {}
   const bBtnCounts = {}
