@@ -19,7 +19,7 @@ export function ProblemCard({
 }: ProblemCardProps) {
   return (
     <div className="mb-8 pb-8 border-b border-gray-medium last:border-b-0">
-      <h2 className="font-serif text-xl mb-2">
+      <h2 className="font-sans text-2xl font-bold mb-2">
         {number}.&nbsp;{title}
         {references && (
           <a href="#references" className="no-underline">
