@@ -114,10 +114,10 @@ export function PscaAlgorithms() {
           insufficient access.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             COVID-19: Vaccine Options (Original source no longer available)<sup><a href="#references">5</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>Copyright &copy; 2022 EBSCO Publishing, Inc.</li>
             </ul>
           </li>
@@ -125,7 +125,7 @@ export function PscaAlgorithms() {
             <a href="https://cds.ahrq.gov/cdsconnect/artifact/immunization-calculation-engine-ice-0" className="text-primary underline">
               Immunization Calculation Engine (ICE)
             </a><sup><a href="#references">39</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>LGPLv3, open source</li>
             </ul>
           </li>
@@ -134,7 +134,7 @@ export function PscaAlgorithms() {
               Patient decision aid in vaccination: a systematic review
               of the literature
             </a><sup><a href="#references">4</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>License not found, likely closed</li>
             </ul>
           </li>
@@ -157,14 +157,14 @@ export function PscaAlgorithms() {
           behaviors can prevent 34% of deaths due to heart disease<sup><a href="#references">11</a></sup>.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://www.uspreventiveservicestaskforce.org/uspstf/recommendation/hypertension-in-adults-screening" className="text-primary underline">
               The USPSTF provides an A grade recommendation for
               screening for hypertension in adults 18 years or older
               without hypertension
             </a><sup><a href="#references">12</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>
                 Copyright Notice. U.S. Preventative Task Force.
                 September 2017
@@ -177,7 +177,7 @@ export function PscaAlgorithms() {
               clinical support in patients with hypertension yields
               significant BP reductions
             </a><sup><a href="#references">13</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>Copyright &copy; 2017 Tucker et al.</li>
               <li>Creative Commons Attribution License, open source</li>
             </ul>
@@ -205,13 +205,13 @@ export function PscaAlgorithms() {
           options.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://link.springer.com/article/10.1007/s00467-022-05556-8" className="text-primary underline">
               Healthy.io home-based urinalysis test kit and smartphone
               app
             </a><sup><a href="#references">15</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>
                 <a href="https://old.healthy.io/licenses" className="text-primary underline">
                   Alamofire, version number 4.7.3, under the MIT License
@@ -223,7 +223,7 @@ export function PscaAlgorithms() {
             <a href="https://www.diagnoxhealth.com/blog/10-parameter-urinalysis-test-at-home" className="text-primary underline">
               10 parameter urinalysis dipstick test
             </a><sup><a href="#references">16</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>Lab Tests Online&reg;</li>
               <li>Copyright &copy; 2022 Regenstrief Institute, Inc</li>
             </ul>
@@ -252,13 +252,13 @@ export function PscaAlgorithms() {
           lowering suicide and suicide attempt rates.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://www.psychiatrist.com/jcp/bipolar/computer-assisted-self-assessment-persons-severe-mental/" className="text-primary underline">
               Computer Assisted Self Assessment (CART) in persons with
               severe mental illness (SMI)
             </a><sup><a href="#references">8</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>License not found, likely closed</li>
             </ul>
           </li>
@@ -267,7 +267,7 @@ export function PscaAlgorithms() {
               Ecological momentary assessment (EMA) to assess and
               support self-management in serious mental illness
             </a><sup><a href="#references">9</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>Copyright &copy; 2006 CMA Media Inc.</li>
             </ul>
           </li>
@@ -291,7 +291,7 @@ export function PscaAlgorithms() {
           loss.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://pubmed.ncbi.nlm.nih.gov/6175935/" className="text-primary underline">
               A modified Amsler Grid test: self-assessment test for
@@ -302,7 +302,7 @@ export function PscaAlgorithms() {
             <a href="https://www.homeacuitytest.org/" className="text-primary underline">
               Home Acuity Test
             </a><sup><a href="#references">24</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>License not found</li>
             </ul>
           </li>
@@ -326,7 +326,7 @@ export function PscaAlgorithms() {
           lifestyle interventions are crucial.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://pubmed.ncbi.nlm.nih.gov/33441946/" className="text-primary underline">
               Self monitored blood glucose in association with glycemic
@@ -338,7 +338,7 @@ export function PscaAlgorithms() {
             <a href="https://nightscout.github.io/#:~:text=Nightscout" className="text-primary underline">
               Nightscout, &quot;CGM in the Cloud&quot;
             </a><sup><a href="#references">27</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>Open source</li>
             </ul>
           </li>
@@ -361,12 +361,12 @@ export function PscaAlgorithms() {
           to improved screening and early detection<sup><a href="#references">18</a></sup>.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://www.breastcancer.org/screening-testing/breast-self-exam-bse" className="text-primary underline">
               Breast Self-Exam (BSE)
             </a><sup><a href="#references">19</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>Copyright &copy; 2022. BreastCancer.org</li>
             </ul>
           </li>
@@ -374,7 +374,7 @@ export function PscaAlgorithms() {
             <a href="https://bcrisktool.cancer.gov/index.html" className="text-primary underline">
               Breast Cancer Risk Assessment Tool
             </a><sup><a href="#references">20</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>
                 <a href="https://dceg.cancer.gov/tools/risk-assessment/bcrasasmacro/license" className="text-primary underline">
                   BrCa RAM License Agreement
@@ -405,13 +405,13 @@ export function PscaAlgorithms() {
           side effects and lack of knowledge are also barriers to access<sup><a href="#references">30</a></sup>.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://www.pcori.org/research-results/2013/decision-aid-help-women-choose-and-use-method-birth-control" className="text-primary underline">
               A Decision Aid to Help Women Choose and Use a Method of
               Birth Control, PCORI
             </a><sup><a href="#references">31</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>
                 Copyright 2019. University of California San Francisco
               </li>
@@ -421,7 +421,7 @@ export function PscaAlgorithms() {
             <a href="https://www.reproductiveaccess.org/wp-content/uploads/2014/06/2020-09-contra-choices.pdf" className="text-primary underline">
               Your Birth Control Choices
             </a><sup><a href="#references">32</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>
                 Creative Commons Attribution-NonCommercial-ShareAlike
                 4.0 International License, Open source
@@ -449,12 +449,12 @@ export function PscaAlgorithms() {
           risk factors are addressed early on.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://sustainenvironres.biomedcentral.com/articles/10.1186/s42834-020-0047-y" className="text-primary underline">
               Indoor air quality monitoring systems for public health
             </a><sup><a href="#references">34</a></sup>
-            <ul>
+            <ul className="list-[circle] pl-6 mt-1 space-y-1">
               <li>
                 Creative Commons Attribution 4.0 International License,
                 Open source
@@ -477,7 +477,7 @@ export function PscaAlgorithms() {
           diabetes, and sleep disorders.
         </p>
         <h4 className="font-sans text-base font-bold mb-0">Models</h4>
-        <ul className="mt-0 mb-8">
+        <ul className="list-disc pl-6 mt-0 mb-8 space-y-1">
           <li>
             <a href="https://pubmed.ncbi.nlm.nih.gov/25880649/" className="text-primary underline">
               Overnight Pulse Oximetry to diagnose patients with
