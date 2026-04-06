@@ -78,7 +78,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
     const primaryBio = primary.member.bio ? extractText(primary.member.bio) : ''
 
     return (
-      <section className="my-12">
+      <section className="mt-12">
         {headingEl}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           {/* Primary author */}
@@ -150,7 +150,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
   // ── Variant: equal (default) ──────────────────────────────────────────
   // Every author rendered with the same image + name + bio layout
   return (
-    <section className="my-12">
+    <section className="mt-12">
       {headingEl}
       {resolved.map((r) => {
         const imageUrl = r.member.image

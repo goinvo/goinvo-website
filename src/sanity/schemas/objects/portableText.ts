@@ -19,6 +19,7 @@ export default defineType({
           component: SectionTitleStyle,
         },
         { title: 'H3', value: 'h3' },
+        { title: 'H3 (centered)', value: 'h3Centered' },
         { title: 'H3 (orange)', value: 'h3Orange' },
         { title: 'H4', value: 'h4' },
         { title: 'H4 (with bullet)', value: 'h4Bullet' },
@@ -152,6 +153,21 @@ export default defineType({
           },
           initialValue: 'center',
         },
+        {
+          name: 'border',
+          type: 'string',
+          title: 'Border',
+          description: 'Optional colored border around the image',
+          options: {
+            list: [
+              { title: 'None', value: 'none' },
+              { title: 'Peach (#FFEEE4)', value: 'peach' },
+              { title: 'Gray (#e0e0e0)', value: 'gray' },
+              { title: 'Teal (#007385)', value: 'teal' },
+            ],
+          },
+          initialValue: 'none',
+        },
       ],
     }),
     defineArrayMember({
@@ -169,10 +185,12 @@ export default defineType({
           name: 'layout',
           title: 'Layout',
           type: 'string',
-          description: 'Number of equal-width columns',
+          description: 'Column layout — equal or asymmetric widths',
           options: {
             list: [
-              { title: '2 columns', value: '2' },
+              { title: '2 columns (equal)', value: '2' },
+              { title: '2 columns (2:1 ratio)', value: '2:1' },
+              { title: '2 columns (1:2 ratio)', value: '1:2' },
               { title: '3 columns', value: '3' },
               { title: '4 columns', value: '4' },
             ],
@@ -458,7 +476,8 @@ export default defineType({
           options: {
             list: [
               { title: 'Light gray', value: 'gray' },
-              { title: 'Teal / Blue', value: 'teal' },
+              { title: 'Teal', value: 'teal' },
+              { title: 'Blue (pale)', value: 'blue' },
               { title: 'Warm (beige)', value: 'warm' },
               { title: 'Orange (light)', value: 'orange' },
               { title: 'Dark (charcoal)', value: 'dark' },
@@ -513,6 +532,20 @@ export default defineType({
           type: 'boolean',
           description: 'Auto-play the video (muted, looping). Enable for ambient/demo videos.',
           initialValue: false,
+        },
+        {
+          name: 'size',
+          title: 'Size',
+          type: 'string',
+          description: 'Video width. Default fits the article column. Use "Wide (75%)" for larger videos like healthcare-ai mockups.',
+          options: {
+            list: [
+              { title: 'Default (article width)', value: 'default' },
+              { title: 'Wide (75% viewport)', value: 'wide' },
+              { title: 'Full width', value: 'full' },
+            ],
+          },
+          initialValue: 'default',
         },
       ],
     }),
@@ -589,6 +622,7 @@ export default defineType({
             list: [
               { title: 'Default', value: 'default' },
               { title: 'Thick', value: 'thick' },
+              { title: 'Arrow down', value: 'arrow' },
             ],
           },
           initialValue: 'default',

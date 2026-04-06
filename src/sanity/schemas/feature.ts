@@ -65,6 +65,19 @@ export default defineType({
       initialValue: 'medium',
     }),
     defineField({
+      name: 'bulletStyle',
+      title: 'Bullet Style',
+      type: 'string',
+      description: 'List bullet style. Star (default) uses a custom star image. Disc uses standard round bullets (matching some Gatsby pages like healthcare-ai, eligibility-engine).',
+      options: {
+        list: [
+          { title: 'Star (default)', value: 'star' },
+          { title: 'Disc (standard)', value: 'disc' },
+        ],
+      },
+      initialValue: 'star',
+    }),
+    defineField({
       name: 'video',
       title: 'Video URL',
       type: 'url',

@@ -76,6 +76,7 @@ export interface Feature {
   heroPosition?: string
   fullImageCover?: boolean
   contentWidth?: 'narrow' | 'medium' | 'wide'
+  bulletStyle?: 'star' | 'disc'
   video?: string
   description?: string
   categories?: string[]

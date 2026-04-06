@@ -147,7 +147,7 @@ export default async function VisionFeaturePage({ params }: Props) {
           <>
             <section className="pb-12">
               <div className={`max-width ${widthClass} content-padding mx-auto`}>
-                <PortableTextRenderer content={mainContent} />
+                <PortableTextRenderer content={mainContent} bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined} />
               </div>
             </section>
 
@@ -178,11 +178,11 @@ export default async function VisionFeaturePage({ params }: Props) {
               </section>
             )}
 
-            {/* Special Thanks */}
+            {/* Special Thanks / Contributors (plain text) */}
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
                 <div className={`max-width ${widthClass} content-padding mx-auto`}>
-                  <h2 className="header-lg mt-8 mb-4 text-center">Special thanks to...</h2>
+                  <h3 className="header-md mt-8 mb-4">{feature.contributors && feature.contributors.length > 0 ? 'Special thanks to...' : 'Contributors'}</h3>
                   <PortableTextRenderer content={feature.specialThanks} />
                 </div>
               </section>

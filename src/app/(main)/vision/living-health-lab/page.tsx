@@ -45,7 +45,7 @@ export default function LivingHealthLabPage() {
       <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Living Health Lab</h1>
-          <h4 className="font-serif text-lg leading-relaxed mb-6">
+          <h4 className="font-sans text-base font-bold leading-relaxed mb-6">
             An open source project to help people examine, understand, and
             improve their day-to-day health through guided exploration,
             self-tracking, and behavior change.
@@ -98,7 +98,7 @@ export default function LivingHealthLabPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
             <Img src="living-health-lab-workbook.jpg" alt="Living Health Lab Workbook" />
             <div>
-              <h3 className="header-lg mb-3">Get the Workbook</h3>
+              <h2 className="header-lg mb-3">Get the Workbook</h2>
               <p className="leading-relaxed mb-4">
                 We created this printable to demonstrate what a Living
                 Health Lab app could support in the future. The workbook
@@ -134,9 +134,9 @@ export default function LivingHealthLabPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-8">
             <Img src="viz_one_in_five.png" alt="1 in 5 adults experience chronic pain" />
             <div>
-              <h3 className="font-serif text-xl">
+              <h2 className="header-lg">
                 At least 1 in 5 adults in the U.S. live with chronic pain<sup><a href="#references">3</a></sup>
-              </h3>
+              </h2>
             </div>
           </div>
 
@@ -452,7 +452,7 @@ export default function LivingHealthLabPage() {
         </div>
 
         {/* Appendix */}
-        <div className="bg-secondary/10 py-12 mt-8">
+        <div className="bg-[#f8fafe] py-12 mt-8">
           <div className="max-width content-padding mx-auto">
             <h2 id="appendix" className="header-lg mb-4 text-center">Appendix</h2>
 
@@ -462,7 +462,7 @@ export default function LivingHealthLabPage() {
 
             <LivingHealthLabAppendixCarousel />
 
-            <h2 className="font-serif text-xl mt-8 mb-4">
+            <h2 className="header-lg mt-8 mb-4">
               ii - Research Table
             </h2>
             <iframe
