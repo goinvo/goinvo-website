@@ -412,6 +412,37 @@ function comparePage(slug, dataA, dataB) {
     }
   }
 
+  // Check button group composition — each group should have the same buttons
+  // Match groups by their first button label
+  const aGroups = {}
+  const bGroups = {}
+  for (const ctx of dataA.buttonContexts) {
+    const key = norm2(ctx.afterHeading || '(start)')
+    if (!aGroups[key]) aGroups[key] = []
+    aGroups[key].push(norm2(ctx.text))
+  }
+  for (const ctx of dataB.buttonContexts) {
+    const key = norm2(ctx.afterHeading || '(start)')
+    if (!bGroups[key]) bGroups[key] = []
+    bGroups[key].push(norm2(ctx.text))
+  }
+  for (const [key, aLabels] of Object.entries(aGroups)) {
+    const bLabels = bGroups[key]
+    if (!bLabels) continue
+    // Check for missing buttons in this position
+    for (const label of aLabels) {
+      if (!bLabels.includes(label)) {
+        issues.push({ sev: 'MED', msg: `Button "${label.substring(0, 20)}" missing after "${key.substring(0, 20)}" (Gatsby has it, Next.js doesn't)` })
+      }
+    }
+    // Check for extra buttons
+    for (const label of bLabels) {
+      if (!aLabels.includes(label)) {
+        issues.push({ sev: 'MED', msg: `Extra button "${label.substring(0, 20)}" after "${key.substring(0, 20)}" (not on Gatsby)` })
+      }
+    }
+  }
+
   // Check for duplicate buttons on Next.js (same label appears more times than on Gatsby)
   const aBtnCounts = {}
   const bBtnCounts = {}
