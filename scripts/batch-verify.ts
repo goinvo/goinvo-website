@@ -254,8 +254,16 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
 
   // ── Image column placement comparison ────────────────────────────
   // Detect images that are standalone on Gatsby but in a grid on Next.js (or vice versa)
-  const aImgs = flatA.filter(n => n.tag === 'img' && n.rect.width > 100 && n.rect.y > 200)
-  const bImgs = flatB.filter(n => n.tag === 'img' && n.rect.width > 100 && n.rect.y > 200)
+  // Filter: skip hero (y < 300), unloaded (height 0), author headshots (width < 400 AND y > 80% of page)
+  const filterContentImgs = (nodes: TreeNode[]) => {
+    const maxY = Math.max(...nodes.map(n => n.rect.y), 1)
+    return nodes.filter(n =>
+      n.tag === 'img' && n.rect.width > 100 && n.rect.height > 10 && n.rect.y > 300 &&
+      !(n.rect.width < 400 && n.rect.y > maxY * 0.75) // Skip author headshots near bottom
+    )
+  }
+  const aImgs = filterContentImgs(flatA)
+  const bImgs = filterContentImgs(flatB)
   const imgWidthMismatches = Math.min(aImgs.length, bImgs.length, 8)
   for (let i = 0; i < imgWidthMismatches; i++) {
     const wDiff = Math.abs(aImgs[i].rect.width - bImgs[i].rect.width)
