@@ -14,7 +14,7 @@ export default function ContactPage() {
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero — full studio image, no gradient overlay */}
       <section
-        className="relative min-h-[60vh] bg-cover bg-center"
+        className="relative h-[450px] bg-cover bg-center"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/contact/studio.jpg')})` }}
       />
 

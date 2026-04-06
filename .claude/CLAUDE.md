@@ -292,19 +292,19 @@ When content needs a visual treatment the renderer doesn't support yet:
 
 ### Existing PortableText Block Types & Parameters
 - `image` — fields: `size` (small/medium/large/full), `align` (left/center/right), `caption`, `alt`
-- `videoEmbed` — fields: `url`, `poster`, `caption`, `autoPlay` (boolean). When autoPlay=true, video plays muted+looping without controls. Use for ambient/demo videos that autoplay on Gatsby.
+- `videoEmbed` — fields: `url`, `poster`, `caption`, `autoPlay` (boolean), `size` (default/wide/full). When autoPlay=true, video plays muted+looping without controls. `size: wide` renders at 75% viewport width (breaks out of article container). Use for ambient/demo videos that autoplay on Gatsby.
 - `iframeEmbed` — fields: `url`, `height`, `aspectRatio`, `caption`
 - `quote` — fields: `text`, `author`, `role`
 - `results` — fields: `items[]` (stat, description), `background` (none/gray/teal)
 - `references` — fields: `items[]` (title, link)
-- `columns` — fields: `layout` (2/3/4), `content[]`
-- `backgroundSection` — fields: `color` (gray/teal/warm/orange/dark/red), `content[]`
+- `columns` — fields: `layout` (2/2:1/1:2/3/4), `content[]`
+- `backgroundSection` — fields: `color` (gray/teal/blue/warm/orange/dark/red), `content[]`
 - `buttonGroup` — fields: `buttons[]` (label, url, variant, external). Use for single or multiple buttons.
 - `cardGrid` — fields: `columns` (2/3/4), `items[]` (label, description). Bordered cards in a grid layout.
 - `reviewCard` — fields: `title`, `status` (rejected/certified), `quote`, `reason`, `description`. Dark header + status badge card.
 - `divider` — fields: `style` (default/thick)
 - `contactForm` — fields: `showHeader`
-- Text styles: `h2`, `h2Large` (header-xl 36px — for pages needing bigger section headings), `sectionTitle` (centered h2), `h3`, `h3Orange` (orange uppercase — for numbered section headings), `h4`, `h4Bullet` (with orange ◆ diamond), `blockquote`, `callout`, `normal`
+- Text styles: `h2`, `h2Large` (header-xl 36px — for pages needing bigger section headings), `sectionTitle` (centered h2), `h3`, `h3Centered` (centered uppercase sans), `h3Orange` (orange uppercase — for numbered section headings), `h4`, `h4Bullet` (with orange ◆ diamond), `blockquote`, `callout`, `normal`
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
 
 ### Feature Schema Fields (beyond content)

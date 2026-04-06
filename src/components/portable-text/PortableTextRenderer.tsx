@@ -57,7 +57,7 @@ function isDirectVideoUrl(url: string) {
 const imageSizeClasses: Record<string, string> = {
   small: 'max-w-[25%]',
   medium: 'max-w-[50%]',
-  large: 'max-w-full',
+  large: 'max-w-[75%]',
   full: 'max-w-full',
   bleed: 'w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] max-w-none',
 }
@@ -71,6 +71,7 @@ const imageAlignClasses: Record<string, string> = {
 const bgSectionColors: Record<string, string> = {
   gray: 'bg-gray-lightest',
   teal: 'bg-[#e5f5f5]',
+  blue: 'bg-[#f8fafe]',
   warm: 'bg-[#faf6f4]',
   orange: 'bg-primary/5',
   dark: 'bg-[#2e2e2e] text-white',
@@ -87,6 +88,13 @@ const components: PortableTextComponents = {
       if (!value?.asset) return null
       const size = value.size || 'full'
       const align = value.align || 'center'
+      const border = value.border || 'none'
+      const borderClasses: Record<string, string> = {
+        none: '',
+        peach: 'border-[8px] border-[#FFEEE4]',
+        gray: 'border-[8px] border-[#e0e0e0]',
+        teal: 'border-[8px] border-secondary',
+      }
       const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
       const imageUrl = urlForImage(value).width(width).url()
       return (
@@ -96,7 +104,7 @@ const components: PortableTextComponents = {
               src={imageUrl}
               alt={value.alt || ''}
               loading="lazy"
-              className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full')}
+              className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
             />
             {value.caption && (
               <figcaption className="mt-2 text-base text-gray">
@@ -147,13 +155,18 @@ const components: PortableTextComponents = {
             )}
           >
             {items.map((item, i) => (
-              <div key={i} className={cn('text-center', perItemBg && 'p-4')}>
-                <span className={cn(
-                  'block font-serif text-[2.25rem] mb-2',
-                  perItemBg ? '' : 'text-primary',
+              <div key={i} className="text-center">
+                <div className={cn(
+                  'p-4 mb-2',
+                  perItemBg || '',
                 )}>
-                  {item.stat}
-                </span>
+                  <span className={cn(
+                    'block font-serif text-[2.25rem]',
+                    perItemBg ? '' : 'text-primary',
+                  )}>
+                    {item.stat}
+                  </span>
+                </div>
                 <p className="text-sm text-gray px-1">
                   {item.description}
                   {item.refNumber && (
@@ -255,7 +268,7 @@ const components: PortableTextComponents = {
     columns: ({ value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
-      const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2
+      const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2 // 2:1 and 1:2 also count as 2
       const bg = value.background || 'none'
       const sizeClass = value.size === 'wide' ? 'columns-wide' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
       // Wrapper function to apply size override
@@ -272,8 +285,22 @@ const components: PortableTextComponents = {
       const hasText = textBlocks.length > 0
       const hasImages = images.length > 0
 
-      // Mixed content: text + image side by side
-      if (hasText && hasImages && colCount === 2) {
+      // Detect alternating image-text pairs (gallery with captions below each image)
+      // Pattern: [image, text, image, text, ...] → render as image grid with captions
+      const isGalleryPattern = hasText && hasImages && items.length >= 2 && (() => {
+        // Check if items alternate: image, text, image, text...
+        // or start with text (title), then image, text pairs
+        let pairStart = 0
+        if (items[0]._type === 'block') pairStart = 1 // Skip leading title block
+        for (let j = pairStart; j < items.length - 1; j += 2) {
+          if (items[j]._type !== 'image') return false
+          if (j + 1 < items.length && items[j + 1]._type !== 'block') return false
+        }
+        return items.filter(i => i._type === 'image').length >= 2
+      })()
+
+      // Mixed content: text + image side by side (NOT gallery pattern)
+      if (hasText && hasImages && colCount === 2 && !isGalleryPattern) {
         const firstImageIdx = items.findIndex(i => i._type === 'image' && i.asset?._ref)
         const firstTextIdx = items.findIndex(i => i._type === 'block')
         const imageFirst = firstImageIdx < firstTextIdx
@@ -306,7 +333,13 @@ const components: PortableTextComponents = {
           )
         }
 
-        // Default: equal 50/50 grid (no background)
+        // Asymmetric layout: 2:1 or 1:2 ratio
+        const isAsymmetric = value.layout === '2:1' || value.layout === '1:2'
+        const gridClass = isAsymmetric
+          ? (value.layout === '2:1' ? 'grid-cols-1 md:grid-cols-[2fr_1fr]' : 'grid-cols-1 md:grid-cols-[1fr_2fr]')
+          : 'grid-cols-1 md:grid-cols-2'
+
+        // Side-by-side grid (50/50 or asymmetric)
         const renderImages = () => (
           <div className="flex flex-col items-center justify-center">
             {imageItems.map((item) => {
@@ -339,7 +372,7 @@ const components: PortableTextComponents = {
 
         return (
           <ArticleReveal intensity="visual">
-            <div className="my-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className={cn('my-8 grid gap-8 items-start', gridClass)}>
               {imageFirst ? renderImages() : renderText()}
               {imageFirst ? renderText() : renderImages()}
             </div>
@@ -426,19 +459,28 @@ const components: PortableTextComponents = {
       const bgClass = bgSectionColors[value.color] || bgSectionColors.gray
       return (
         <ArticleReveal intensity="visual">
-          <div className={cn('-mx-4 md:-mx-8 px-4 md:px-8 py-8 my-8', bgClass)}>
-            {value.content && (
-              <PortableText value={value.content} components={components} />
-            )}
+          <div className={cn('w-screen relative left-1/2 -ml-[50vw] py-12 my-8', bgClass)}>
+            <div className="max-width max-width-md content-padding mx-auto">
+              {value.content && (
+                <PortableText value={value.content} components={components} />
+              )}
+            </div>
           </div>
         </ArticleReveal>
       )
     },
     videoEmbed: ({ value }) => {
+      const videoSize = value.size || 'default'
+      // wide = 75% of viewport (breaks out of article container), full = 100% viewport
+      const sizeClass = videoSize === 'wide'
+        ? 'w-[75vw] relative left-1/2 -translate-x-1/2'
+        : videoSize === 'full'
+          ? 'w-screen relative left-1/2 -ml-[50vw]'
+          : ''
       if (isDirectVideoUrl(value.url)) {
         return (
           <ArticleReveal intensity="visual">
-            <figure className="my-8">
+            <figure className={cn('my-8', sizeClass)}>
               <video
                 src={value.url}
                 poster={value.poster || undefined}
@@ -447,7 +489,7 @@ const components: PortableTextComponents = {
                 loop
                 muted
                 playsInline
-                className="w-full max-h-[480px] object-contain"
+                className={cn('w-full', videoSize === 'default' && 'max-h-[480px] object-contain')}
               />
               {value.caption && (
                 <figcaption className="mt-2 text-base text-gray text-center">
@@ -542,12 +584,12 @@ const components: PortableTextComponents = {
       const rows: { inputImage?: any; prompt?: string; outputImage?: any }[] = value.rows || [] // eslint-disable-line @typescript-eslint/no-explicit-any
       return (
         <ArticleReveal intensity="visual">
-          <div className="my-8">
+          <div className="my-8 bg-[#f6f6f6] py-5">
             {headings.length > 0 && (
-              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4">
+              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4 items-end max-width content-padding mx-auto">
                 {headings.map((h, i) => (
                   <Fragment key={i}>
-                    <p className="font-sans text-[1.2rem] m-0">{h}</p>
+                    <div className="font-serif text-[1.2rem] font-normal m-0">{h}</div>
                     {i < headings.length - 1 && <span />}
                   </Fragment>
                 ))}
@@ -557,13 +599,13 @@ const components: PortableTextComponents = {
               const inputUrl = row.inputImage?.asset ? urlForImage(row.inputImage).width(400).url() : ''
               const outputUrl = row.outputImage?.asset ? urlForImage(row.outputImage).width(400).url() : ''
               return (
-                <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-6">
+                <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-4 max-width content-padding mx-auto">
                   {inputUrl && <img src={inputUrl} alt="" loading="lazy" className="w-full h-auto" />}
-                  <span className="text-2xl text-gray font-light">+</span>
-                  <div className="bg-[#f6f6f6] p-4 text-base leading-relaxed">
+                  <span className="text-2xl font-normal">+</span>
+                  <p className="font-serif text-base leading-relaxed m-0">
                     &ldquo;{row.prompt}&rdquo;
-                  </div>
-                  <span className="text-2xl text-gray font-light">=</span>
+                  </p>
+                  <span className="text-2xl font-normal">=</span>
                   {outputUrl && <img src={outputUrl} alt="" loading="lazy" className="w-full h-auto" />}
                 </div>
               )
@@ -576,9 +618,18 @@ const components: PortableTextComponents = {
       const sizes: Record<string, string> = { sm: 'h-4', md: 'h-8', lg: 'h-12', xl: 'h-16' }
       return <div className={sizes[value?.size || 'md']} aria-hidden="true" />
     },
-    divider: ({ value }) => (
-      <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
-    ),
+    divider: ({ value }) => {
+      if (value?.style === 'arrow') {
+        return (
+          <div className="flex justify-center my-4">
+            <svg width="38" height="56" viewBox="0 0 38 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.4999 3C16.4999 1.61929 17.6192 0.5 18.9999 0.5C20.3806 0.5 21.4999 1.61929 21.4999 3L21.4999 46.9648L33.1425 35.3223C34.1188 34.3462 35.7014 34.346 36.6777 35.3223C37.6539 36.2985 37.6537 37.8811 36.6777 38.8574L20.7675 54.7676C19.7912 55.7439 18.2087 55.7439 17.2323 54.7676L1.32219 38.8574C0.346137 37.8811 0.345968 36.2985 1.32219 35.3223C2.29842 34.346 3.88102 34.3462 4.85735 35.3223L16.4999 46.9648L16.4999 3Z" fill="#D27A64"/>
+            </svg>
+          </div>
+        )
+      }
+      return <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
+    },
     contactForm: ({ value }) => (
       <ArticleReveal intensity="visual">
         <div className="my-12">
@@ -687,6 +738,11 @@ const components: PortableTextComponents = {
     h3Orange: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-primary leading-[1.1875rem] mt-8 mb-3 numeral-gutter">{children}</h3>
+      </ArticleReveal>
+    ),
+    h3Centered: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3 text-center">{children}</h3>
       </ArticleReveal>
     ),
     h3: ({ children }) => (
@@ -834,9 +890,11 @@ interface PortableTextRendererProps {
   variant?: 'default' | 'case-study'
   /** Disable automatic grouping of consecutive images into columns */
   noGrouping?: boolean
+  /** Bullet style: 'star' (default custom image) or 'disc' (standard round bullets) */
+  bulletStyle?: 'star' | 'disc'
 }
 
-export function PortableTextRenderer({ content, variant = 'default', noGrouping = false }: PortableTextRendererProps) {
+export function PortableTextRenderer({ content, variant = 'default', noGrouping = false, bulletStyle = 'star' }: PortableTextRendererProps) {
   // Disable auto-grouping — images render full-width stacked by default.
   // Use explicit 'columns' blocks in Sanity for side-by-side layouts.
   const processed = content
@@ -845,6 +903,15 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
     // Case studies use custom star bullets (matching Gatsby)
     return (
       <div className="case-study-content">
+        <PortableText value={processed} components={components} />
+      </div>
+    )
+  }
+
+  // Disc bullet style: override .ul star bullets with standard disc
+  if (bulletStyle === 'disc') {
+    return (
+      <div className="disc-bullets">
         <PortableText value={processed} components={components} />
       </div>
     )

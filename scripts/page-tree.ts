@@ -363,6 +363,11 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     const diffs: string[] = []
     if (a.styles.listStyleImage !== b.styles.listStyleImage) diffs.push(`bullet: ${a.styles.listStyleImage || 'default'} → ${b.styles.listStyleImage || 'default'}`)
     if (a.children.length !== b.children.length) diffs.push(`items: ${a.children.length} → ${b.children.length}`)
+    // Check nesting: count nested ul/ol inside list items
+    const countNested = (node: TreeNode): number => node.children.reduce((sum, c) => sum + (c.tag === 'ul' || c.tag === 'ol' ? 1 : 0) + countNested(c), 0)
+    const aNested = countNested(a)
+    const bNested = countNested(b)
+    if (aNested !== bNested) diffs.push(`nested lists: ${aNested} → ${bNested} (sub-bullet hierarchy differs)`)
     if (diffs.length) {
       lines.push(`  <${a.tag}> (${a.children.length} items)`)
       for (const d of diffs) lines.push(`    ${d}`)

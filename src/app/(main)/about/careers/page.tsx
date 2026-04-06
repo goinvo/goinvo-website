@@ -58,14 +58,15 @@ export default async function CareersPage() {
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section
-        className="relative min-h-[60vh] flex items-center bg-cover bg-center"
+        className="relative h-[450px] bg-cover bg-center"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/about/careers/jen-journeymap-2.jpg')})` }}
       >
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative z-10 max-width content-padding py-16">
-          <h1 className="font-serif text-3xl md:text-4xl text-white">
-            This is our job<span className="text-primary font-serif">!</span>
-          </h1>
+        <div className="relative h-full max-width">
+          <div className="absolute bottom-0 left-0 w-full lg:w-[385px] bg-white/80 content-padding py-8">
+            <h1 className="header-xl m-0">
+              This is our job<span className="text-primary font-serif">!</span>
+            </h1>
+          </div>
         </div>
       </section>
 
@@ -75,7 +76,7 @@ export default async function CareersPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {values.map((value) => (
               <div key={value.title}>
-                <h3 className="font-semibold mb-2">{value.title}</h3>
+                <h3 className="font-sans text-base font-bold mb-2">{value.title}</h3>
                 <p className="text-gray text-md">{value.description}</p>
               </div>
             ))}

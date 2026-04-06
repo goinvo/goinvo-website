@@ -1,15 +1,20 @@
 /**
- * Deep Page Comparison
+ * ⚠️  DEPRECATED — Use scripts/page-tree.ts instead.
  *
- * Extracts structured content from both Gatsby and Next.js pages and
- * does a thorough comparison that catches:
- * - Extra/missing paragraphs (hallucinated or dropped content)
- * - Quote blocks that should be plain paragraphs (or vice versa)
- * - Heading text, tag, and style mismatches
- * - Grid column count mismatches
- * - Missing/extra blockquotes
- * - Superscript count differences
- * - Font size/weight/family mismatches on headings
+ * page-tree.ts does a far more thorough element-level comparison with
+ * computed styles (font size/weight/color, margins, backgrounds, etc.)
+ * and catches differences this script misses (color mismatches, full-bleed
+ * backgrounds, heading style details, etc.).
+ *
+ * Usage of page-tree.ts:
+ *   npx tsx scripts/page-tree.ts https://www.goinvo.com/vision/slug/ --diff http://localhost:3000/vision/slug
+ *
+ * This script is kept only for batch element-count summaries.
+ * For actual visual parity verification, ALWAYS use page-tree.ts.
+ *
+ * ---
+ *
+ * Deep Page Comparison (legacy batch tool)
  *
  * Usage:
  *   node scripts/deep-compare.mjs                           # all Sanity pages
@@ -19,8 +24,9 @@
 
 import puppeteer from 'puppeteer'
 
-const singleSlug = process.argv.slice(2).find(a => !a.startsWith('-'))
 const sectionFilter = process.argv.includes('--section') ? process.argv[process.argv.indexOf('--section') + 1] : null
+const sectionArgIdx = process.argv.indexOf('--section')
+const singleSlug = process.argv.slice(2).find((a, i) => !a.startsWith('-') && (sectionArgIdx < 0 || i + 2 !== sectionArgIdx + 1))
 
 const VISION = [
   'rethinking-ai-beyond-chat','human-centered-design-for-ai','healthcare-dollars-redux',
@@ -190,13 +196,33 @@ async function extractPageData(page, url) {
     const images = main.querySelectorAll('img').length
     const imgWidths = Array.from(main.querySelectorAll('img')).filter(i => {
       const r = i.getBoundingClientRect()
-      // Skip: hero images (>1000px or top), nav, Up Next, author section, small icons (<200px)
-      return r.width >= 200 && r.width < 1000 && r.height > 50 && r.y > 300 &&
-        !i.closest('header,nav,.bg-blue-light,.background--blue,section')
-    }).slice(0, 3).map(i => Math.round(i.getBoundingClientRect().width))
+      // Skip: hero images (>1000px or top <300), nav, Up Next, author headshots, tiny (<100px)
+      if (r.width < 100 || r.width >= 1200 || r.height < 50 || r.y < 300) return false
+      if (i.closest('header,nav,.bg-blue-light,.background--blue,footer')) return false
+      // Skip author section images (headshots)
+      const sec = i.closest('section,div')
+      if (sec) {
+        const h = sec.querySelector('h2,h3')
+        if (h && /author|contributor/i.test(h.textContent)) return false
+      }
+      return true
+    }).slice(0, 8).map(i => {
+      const r = i.getBoundingClientRect()
+      // Check if image is inside a multi-column grid
+      let inGrid = false
+      let el = i.parentElement
+      for (let d = 0; d < 5 && el; d++) {
+        const display = cs(el).display
+        const gridCols = cs(el).gridTemplateColumns
+        if (display === 'grid' && gridCols && gridCols.split(' ').length >= 2) { inGrid = true; break }
+        if (display === 'flex' && el.children.length >= 2) { inGrid = true; break }
+        el = el.parentElement
+      }
+      return { w: Math.round(r.width), inGrid }
+    })
 
     // List bullet styles
-    const listStyles = Array.from(main.querySelectorAll('ul')).filter(ul => !ul.closest('header,nav,form')).map(ul => {
+    const listStyles = Array.from(main.querySelectorAll('ul')).filter(ul => !ul.closest('header,nav,form,footer')).map(ul => {
       const li = ul.querySelector('li')
       if (!li) return null
       const liCs = getComputedStyle(li)
@@ -247,7 +273,63 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, statNumbers, rawHtmlParas, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
+    // Author names — extract from the Authors section
+    const authorH = Array.from(main.querySelectorAll('h2,h3')).find(h => /^Authors?$/i.test(h.textContent.trim()))
+    let authorNames = []
+    if (authorH) {
+      const container = authorH.closest('section') || authorH.parentElement
+      if (container) {
+        authorNames = Array.from(container.querySelectorAll('p')).filter(p => {
+          const t = p.textContent.trim()
+          return t.includes(',') && t.length < 60 && t.length > 5
+        }).map(p => p.textContent.trim().split(',')[0].trim())
+      }
+    }
+
+    // Duplicate images — detect same src appearing multiple times
+    const imgSrcs = Array.from(main.querySelectorAll('img')).filter(i => {
+      const r = i.getBoundingClientRect()
+      return r.width > 100 && r.height > 50 && !i.closest('header,nav,footer')
+    }).map(i => {
+      // Decode URL-encoded src (Next.js image optimization encodes Sanity URLs)
+      const src = decodeURIComponent(i.src || '')
+      // Extract Sanity asset ID
+      const match = src.match(/images\/[^/]+\/[^/]+\/([a-f0-9]{20,})/)
+      return match ? match[1] : src.split('/').pop()?.split('?')[0] || src
+    })
+    const duplicateImgs = imgSrcs.filter((s, i) => s.length > 10 && imgSrcs.indexOf(s) !== i).length
+
+    // Quote-styled content — text inside elements with quote marks (SVG or ::before)
+    const quoteTexts = Array.from(main.querySelectorAll('blockquote, .quote, .quote__content')).map(q =>
+      q.textContent.trim().replace(/\s+/g, ' ').substring(0, 60)
+    )
+
+    // Stat citation colors — check if superscript links in stats have wrong colors
+    const statCitationColors = Array.from(main.querySelectorAll('sup a')).filter(a => {
+      // Only check citations near stat numbers (inside stat containers)
+      const parent = a.closest('div,p')
+      if (!parent) return false
+      const siblings = parent.parentElement?.querySelectorAll('span') || []
+      return Array.from(siblings).some(s => parseFloat(cs(s).fontSize) > 20)
+    }).slice(0, 4).map(a => cs(a).color)
+
+    // Stat backgrounds — check if Results stat items have colored backgrounds
+    // Walk up to 5 ancestors to find a background (Gatsby uses deep wrapper divs)
+    const statBgs = Array.from(main.querySelectorAll('span,div')).filter(el => {
+      const text = el.textContent.trim()
+      return /^\$?\d+[\d,.%]*$/.test(text) && parseFloat(cs(el).fontSize) > 20 && el.children.length === 0
+    }).slice(0, 4).map(el => {
+      let node = el
+      for (let d = 0; d < 5; d++) {
+        node = node.parentElement
+        if (!node) break
+        const bg = cs(node).backgroundColor
+        if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'rgb(255, 255, 255)') return 'colored'
+      }
+      return 'none'
+    })
+
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, statNumbers, rawHtmlParas, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen, authorNames, duplicateImgs, quoteTexts, statBgs, statCitationColors }
   })
 }
 
@@ -549,7 +631,7 @@ function comparePage(slug, dataA, dataB) {
   }
 
   // ── Content order comparison ────────────────────────────────────
-  // Compare the first 3 content images' heading context (skip author images)
+  // Compare content images' heading context (skip author/template images)
   const getImgContexts = (order) => {
     const skip = new Set(['authors', 'author', 'contributors', 'subscribe to our newsletter', '(start)'])
     const result = []
@@ -565,9 +647,26 @@ function comparePage(slug, dataA, dataB) {
   }
   const aCtxs = getImgContexts(dataA.contentOrder)
   const bCtxs = getImgContexts(dataB.contentOrder)
-  for (let i = 0; i < Math.min(aCtxs.length, bCtxs.length, 3); i++) {
+  for (let i = 0; i < Math.min(aCtxs.length, bCtxs.length, 5); i++) {
     if (normalize(aCtxs[i]) !== normalize(bCtxs[i])) {
-      issues.push({ sev: 'LOW', msg: `Image ${i + 1} position: after "${aCtxs[i].substring(0, 25)}" → after "${bCtxs[i].substring(0, 25)}"` })
+      issues.push({ sev: 'MED', msg: `Image ${i + 1} position: after "${aCtxs[i].substring(0, 25)}" → after "${bCtxs[i].substring(0, 25)}"` })
+    }
+  }
+
+  // ── Heading-to-heading content sequence ────────────────────────
+  // Check if headings appear in the same order on both pages
+  const templateHSet = new Set(['authors','author','contributors','subscribe to our newsletter','references','up next','about goinvo','special thanks to...','problem','solution','results'])
+  const aOrder = dataA.contentOrder.filter(i => i !== 'IMG' && !templateHSet.has(normalize(i)))
+  const bOrder = dataB.contentOrder.filter(i => i !== 'IMG' && !templateHSet.has(normalize(i)))
+  // Find headings that appear in different positions (off by more than 1 slot)
+  for (let i = 0; i < Math.min(aOrder.length, bOrder.length); i++) {
+    if (normalize(aOrder[i]) !== normalize(bOrder[i])) {
+      // Check if it's just a position swap (nearby heading shifted)
+      const bIdx = bOrder.findIndex(b => normalize(b) === normalize(aOrder[i]))
+      if (bIdx >= 0 && Math.abs(i - bIdx) > 1) {
+        issues.push({ sev: 'MED', msg: `Section order: "${aOrder[i].substring(0, 30)}" at position ${i} → ${bIdx}` })
+      }
+      break // Only report the first out-of-order section
     }
   }
 
@@ -604,9 +703,75 @@ function comparePage(slug, dataA, dataB) {
   // ── Image width comparison ──────────────────────────────────
   if (dataA.imgWidths.length > 0 && dataB.imgWidths.length > 0) {
     for (let i = 0; i < Math.min(dataA.imgWidths.length, dataB.imgWidths.length); i++) {
-      const diff = Math.abs(dataA.imgWidths[i] - dataB.imgWidths[i])
+      const aW = dataA.imgWidths[i].w || dataA.imgWidths[i]
+      const bW = dataB.imgWidths[i].w || dataB.imgWidths[i]
+      const aGrid = dataA.imgWidths[i].inGrid
+      const bGrid = dataB.imgWidths[i].inGrid
+      const diff = Math.abs(aW - bW)
       if (diff > 100) {
-        issues.push({ sev: 'MED', msg: `Image ${i + 1} width: ${dataA.imgWidths[i]}px → ${dataB.imgWidths[i]}px (${diff}px off)` })
+        let extra = ''
+        if (!aGrid && bGrid) extra = ' (standalone on Gatsby but in grid on Next.js — wrong layout)'
+        if (aGrid && !bGrid) extra = ' (in grid on Gatsby but standalone on Next.js)'
+        issues.push({ sev: 'MED', msg: `Image ${i + 1} width: ${aW}px → ${bW}px (${diff}px off)${extra}` })
+      }
+    }
+  }
+
+  // ── Duplicate images ─────────────────────────────────────────
+  if (dataB.duplicateImgs > 0 && dataA.duplicateImgs === 0) {
+    issues.push({ sev: 'HIGH', msg: `${dataB.duplicateImgs} duplicate image(s) on Next.js (same image rendered multiple times)` })
+  }
+
+  // ── Author comparison ──────────────────────────────────────────
+  if (dataA.authorNames.length > 0) {
+    if (dataB.authorNames.length === 0) {
+      issues.push({ sev: 'HIGH', msg: `Authors missing: Gatsby has ${dataA.authorNames.join(', ')}` })
+    } else {
+      for (const aName of dataA.authorNames) {
+        if (!dataB.authorNames.some(b => normalize(b) === normalize(aName))) {
+          issues.push({ sev: 'MED', msg: `Missing author: "${aName}"` })
+        }
+      }
+      for (const bName of dataB.authorNames) {
+        if (!dataA.authorNames.some(a => normalize(a) === normalize(bName))) {
+          issues.push({ sev: 'MED', msg: `Extra author on Next.js: "${bName}"` })
+        }
+      }
+    }
+  }
+
+  // ── Stat background comparison ─────────────────────────────────
+  // Note: Gatsby wraps stats in deep DOM structures where background detection
+  // is unreliable. Only flag when Next.js has NO background and Gatsby clearly has one.
+  if (dataA.statBgs.length > 0 && dataB.statBgs.length > 0) {
+    const aHasColor = dataA.statBgs.some(b => b === 'colored')
+    const bHasColor = dataB.statBgs.some(b => b === 'colored')
+    if (aHasColor && !bHasColor) {
+      issues.push({ sev: 'MED', msg: `Results stats missing background color (Gatsby has colored boxes)` })
+    }
+  }
+
+  // ── Stat citation color comparison ──────────────────────────────
+  if (dataA.statCitationColors.length > 0 && dataB.statCitationColors.length > 0) {
+    for (let i = 0; i < Math.min(dataA.statCitationColors.length, dataB.statCitationColors.length); i++) {
+      if (dataA.statCitationColors[i] !== dataB.statCitationColors[i]) {
+        issues.push({ sev: 'MED', msg: `Stat citation ${i + 1} color: ${dataA.statCitationColors[i]} → ${dataB.statCitationColors[i]}` })
+        break // Only report once
+      }
+    }
+  }
+
+  // ── Quote text comparison ──────────────────────────────────────
+  // Check if Gatsby has quote-styled text that Next.js is missing as a quote
+  for (const gqt of dataA.quoteTexts) {
+    const gNorm = normalize(gqt.substring(0, 40))
+    const bHasQuote = dataB.quoteTexts.some(q => normalize(q.substring(0, 40)) === gNorm) ||
+                      dataB.blockquotes.some(q => normalize(q.substring(0, 40)) === gNorm)
+    if (!bHasQuote) {
+      // Check if it exists as a plain paragraph instead
+      const bHasPara = dataB.paragraphs.some(p => normalize(p.substring(0, 40)) === gNorm)
+      if (bHasPara) {
+        issues.push({ sev: 'MED', msg: `Quote rendered as plain text: "${gqt.substring(0, 40)}"` })
       }
     }
   }

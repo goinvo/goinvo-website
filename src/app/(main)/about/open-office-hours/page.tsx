@@ -25,14 +25,15 @@ export default function OpenOfficeHoursPage() {
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section
-        className="relative min-h-[60vh] flex items-center bg-cover bg-right-center"
+        className="relative h-[450px] bg-cover bg-right-center"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/about/open-office-hours/whiteboard.jpg')})` }}
       >
-        <div className="absolute inset-0 bg-black/40" />
-        <div className="relative z-10 max-width content-padding py-16">
-          <h1 className="font-serif text-3xl md:text-4xl text-white">
-            Enjoy fresh ideas with a side of coffee<span className="text-primary font-serif">.</span>
-          </h1>
+        <div className="relative h-full max-width">
+          <div className="absolute bottom-0 left-0 w-full lg:w-[385px] bg-white/80 content-padding py-8">
+            <h1 className="header-xl m-0">
+              Enjoy fresh ideas with a side of coffee<span className="text-primary font-serif">.</span>
+            </h1>
+          </div>
         </div>
       </section>
 
@@ -49,7 +50,7 @@ export default function OpenOfficeHoursPage() {
               </p>
               <a
                 href="#calendly"
-                className="inline-flex items-center bg-secondary text-white font-semibold uppercase tracking-wider px-6 py-3 hover:bg-tertiary transition-colors"
+                className="inline-flex items-center bg-transparent text-secondary border border-secondary font-semibold uppercase tracking-wider px-6 py-3 hover:bg-secondary/10 transition-colors"
               >
                 Choose a time to chat
               </a>
