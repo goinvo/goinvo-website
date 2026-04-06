@@ -43,7 +43,7 @@ export default function LivingHealthLabPage() {
 
       {/* Content */}
       <section className="py-12">
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Living Health Lab</h1>
           <h4 className="font-sans text-base font-bold leading-relaxed mb-6">
             An open source project to help people examine, understand, and
@@ -251,10 +251,10 @@ export default function LivingHealthLabPage() {
             begin designing and prototyping Living Health Lab.
           </p>
 
-          <ul className="ul space-y-2 mb-8 leading-relaxed">
+          <ul className="list-disc pl-6 space-y-2 mb-8 leading-relaxed">
             <li>
               Purposeful Exploration
-              <ul className="ul mt-1 space-y-1">
+              <ul className="list-[circle] pl-6 mt-1 space-y-1">
                 <li>
                   Figure out where the individual is in their Health Journey
                   and where they want to go
@@ -268,7 +268,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Guided, Informed Experience
-              <ul className="ul mt-1 space-y-1">
+              <ul className="list-[circle] pl-6 mt-1 space-y-1">
                 <li>
                   Ensure that designing the exploration is a clear, easy
                   process
@@ -287,7 +287,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Collaborative Health
-              <ul className="ul mt-1 space-y-1">
+              <ul className="list-[circle] pl-6 mt-1 space-y-1">
                 <li>
                   &quot;Do health together&quot; with a network of support by including
                   the person&apos;s care team: PCP, other providers, accountability
@@ -297,7 +297,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Actionable Insights
-              <ul className="ul mt-1 space-y-1">
+              <ul className="list-[circle] pl-6 mt-1 space-y-1">
                 <li>Identify factors impacting their health</li>
                 <li>Provide meaningful data visualization</li>
                 <li>
@@ -308,7 +308,7 @@ export default function LivingHealthLabPage() {
             </li>
             <li>
               Sense of Agency
-              <ul className="ul mt-1 space-y-1">
+              <ul className="list-[circle] pl-6 mt-1 space-y-1">
                 <li>Support self-reflection and self-learning</li>
                 <li>
                   Empower patients to be in the driver&apos;s seat of their own
@@ -338,7 +338,7 @@ export default function LivingHealthLabPage() {
         {/* Carousels Section */}
         <LivingHealthLabCarousels />
 
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <Divider />
 
           <h2 className="header-lg mt-8 mb-4">
@@ -475,7 +475,7 @@ export default function LivingHealthLabPage() {
           </div>
         </div>
 
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <Divider />
 
           <h2 className="header-lg mt-8 mb-4 text-center">Authors</h2>
@@ -494,7 +494,7 @@ export default function LivingHealthLabPage() {
 
       {/* Newsletter */}
       <section className="bg-gray-lightest py-8">
-        <div className="max-width max-width-md content-padding mx-auto">
+        <div className="max-width content-padding mx-auto">
           <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
