@@ -106,17 +106,17 @@ export default function USHealthcareProblemsPage() {
       </section>
 
       {/* Methodology */}
-      <section className="bg-blue text-white py-12">
+      <section className="bg-[#f8fafe] py-12">
         <div className="max-width max-width-md content-padding mx-auto">
           <div id="methodology">
             <h2 className="font-serif text-[2.25rem] leading-[2.625rem] font-light text-center">
               Methodology
             </h2>
 
-            <h3 className="header-md mt-8 mb-2 !text-white/70">
+            <h3 className="header-md mt-8 mb-2 text-gray">
               v3 - 1.Apr.2021
             </h3>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               The list has been expanded to include the top 50 US healthcare
               problems. We have started linking resources to organizations
               that are tackling these problems, and are exploring an API
@@ -124,31 +124,31 @@ export default function USHealthcareProblemsPage() {
               we make changes.
             </p>
 
-            <h3 className="header-md mt-8 mb-2 !text-white/70">
+            <h3 className="header-md mt-8 mb-2 text-gray">
               v2 - 17.Feb.2021
             </h3>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               The list has been expanded to include the top 40 US healthcare
               problems. We have updated the ranking algorithm to consider a
               weighted average of each of the quantitative metrics.
             </p>
-            <p className="text-white/80 text-sm mb-4 font-mono break-all">
+            <p className="text-gray text-sm mb-4 font-mono break-all">
               =0.25*(deaths/max(deaths))+0.25*(spending/max(spending))+0.25*(peopleimpacted/max(peopleimpacted))+0.25*(relatedprobs/max(relatedprobs))
             </p>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               The equal (0.25) weighting may be adjusted over time with
               supporting literature.
             </p>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               Stay tuned for V03 where we will include a visual
               representation of the connectedness of these problems, and
               showcase the current status of each problem being addressed.
             </p>
 
-            <h3 className="header-md mt-8 mb-2 !text-white/70">
+            <h3 className="header-md mt-8 mb-2 text-gray">
               v1 - 11.Feb.2021
             </h3>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               The US Healthcare Problems list began as a google spreadsheet
               research effort, with sources including &ldquo;The Long Fix&rdquo; by
               Vivian Lee, CDC, and CMS. Our team aimed to pool relevant
@@ -158,13 +158,13 @@ export default function USHealthcareProblemsPage() {
               system and towards a value-based approach would alleviate some
               of this burden.
             </p>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               Fee-for-service: payment is dependent on the quantity of care
             </p>
-            <p className="text-white/80 mb-4">
+            <p className="text-gray mb-4">
               Value-based: payment is dependent on the quality of care
             </p>
-            <p className="text-white/80">
+            <p className="text-gray">
               The initial ranking is based on the quantitative data as well
               as the prevalence of the problem as explained in research.
             </p>
