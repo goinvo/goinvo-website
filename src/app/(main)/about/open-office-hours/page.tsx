@@ -37,12 +37,12 @@ export default function OpenOfficeHoursPage() {
         </div>
       </section>
 
-      {/* Info */}
-      <section className="py-16">
-        <div className="max-width content-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div>
-              <h2 className="font-serif text-2xl mb-4">Open office hours</h2>
+      {/* Info — full-width split: text left, blue right (matching Gatsby pure-g layout) */}
+      <section>
+        <div className="flex flex-col lg:flex-row">
+          <div className="lg:w-1/2 py-12 lg:py-16">
+            <div className="max-w-[510px] ml-auto content-padding">
+              <h2 className="header-lg mb-4">Open office hours</h2>
               <p className="text-gray mb-6">
                 Our studio is open to anyone seeking advice on design, from students to
                 startups, or chat with our passionate team on design for good on spaceship
@@ -55,7 +55,9 @@ export default function OpenOfficeHoursPage() {
                 Choose a time to chat
               </a>
             </div>
-            <div className="bg-blue-light p-8">
+          </div>
+          <div className="lg:w-1/2 bg-blue-light py-12 lg:py-16">
+            <div className="max-w-[510px] mr-auto content-padding">
               <a
                 href={siteConfig.address.mapUrl}
                 target="_blank"
@@ -73,21 +75,21 @@ export default function OpenOfficeHoursPage() {
         </div>
       </section>
 
-      {/* How Can We Help */}
-      <section className="py-16">
-        <div className="max-width content-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            <div>
-              <Image
-                src={cloudfrontImage('/images/about/beckett-working.jpg')}
-                alt="Beckett working"
-                width={600}
-                height={400}
-                className="w-full h-auto"
-              />
-            </div>
-            <div className="bg-blue-light p-8">
-              <h2 className="font-serif text-2xl mb-6">
+      {/* How Can We Help — full-width split: image left, blue right (GradientImageColumns reverse) */}
+      <section>
+        <div className="flex flex-col lg:flex-row">
+          <div className="lg:w-1/2">
+            <Image
+              src={cloudfrontImage('/images/about/beckett-working.jpg')}
+              alt="Beckett working"
+              width={960}
+              height={640}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <div className="lg:w-1/2 bg-blue-light py-12 lg:py-16">
+            <div className="max-w-[510px] mr-auto content-padding">
+              <h2 className="header-lg mb-6">
                 How can we help<span className="text-primary font-serif">?</span>
               </h2>
               <ul className="space-y-3">
