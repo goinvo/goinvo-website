@@ -68,21 +68,22 @@ export default function AIPage() {
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section
-        className="relative min-h-[60vh] flex items-center bg-cover bg-center"
+        className="relative h-[450px] bg-cover bg-center"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/ai/ai_hero_2_sm.jpg')})` }}
       >
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative z-10 max-width content-padding py-16">
-          <h1 className="font-serif text-3xl md:text-4xl text-white mb-4">
-            Designing AI-Powered Experiences for People and Organizations<span className="text-primary font-serif">.</span>
-          </h1>
-          <p className="text-white/80 text-lg mb-8 max-w-2xl">
-            We design tools and experiences with AI so people and machines can
-            skillfully work together.
-          </p>
-          <Button href="/contact" variant="primary" size="lg">
-            Let&apos;s discuss your project
-          </Button>
+        <div className="relative h-full max-width">
+          <div className="absolute bottom-0 left-0 w-full lg:w-[800px] bg-white/90 content-padding py-8">
+            <h1 className="header-xl m-0 mb-4">
+              Designing AI-Powered Experiences for People and Organizations<span className="text-primary font-serif">.</span>
+            </h1>
+            <p className="text-gray text-lg mb-6 max-w-2xl">
+              We design tools and experiences with AI so people and machines can
+              skillfully work together.
+            </p>
+            <Button href="/contact" variant="primary" size="lg">
+              Let&apos;s discuss your project
+            </Button>
+          </div>
         </div>
       </section>
 
