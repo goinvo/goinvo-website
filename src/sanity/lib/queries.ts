@@ -159,6 +159,7 @@ export const featureBySlugQuery = groq`
     specialThanks,
     showAboutGoInvo,
     bulletStyle,
+    specialThanksHeading,
     content,
     metaDescription
   }

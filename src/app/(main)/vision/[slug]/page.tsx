@@ -182,7 +182,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
                 <div className={`max-width ${widthClass} content-padding mx-auto`}>
-                  <h3 className="header-md mt-8 mb-4">{feature.contributors && feature.contributors.length > 0 ? 'Special thanks to...' : 'Contributors'}</h3>
+                  <h3 className="header-md mt-8 mb-4">{(feature as any).specialThanksHeading || (feature.contributors && feature.contributors.length > 0 ? 'Special thanks to...' : 'Contributors')}</h3>
                   <PortableTextRenderer content={feature.specialThanks} />
                 </div>
               </section>

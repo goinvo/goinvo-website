@@ -301,7 +301,7 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     const aTag = aHMap.get(k)
     if (aTag && aTag !== bNode.tag) {
       // Skip template headings (these are rendered by code, not content)
-      const skip = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...', 'problem', 'solution', 'results']
+      const skip = ['authors', 'author', 'contributors', 'subscribe to our newsletter', 'references', 'up next', 'about goinvo', 'special thanks to...', 'thank you for the feedback from...', 'problem', 'solution', 'results']
       if (!skip.includes(k)) {
         // h1→h2 is intentional (SEO: only one h1 per page) — demote to LOW
         const sev = (aTag === 'h1' && bNode.tag === 'h2') ? 'low' : 'medium'
