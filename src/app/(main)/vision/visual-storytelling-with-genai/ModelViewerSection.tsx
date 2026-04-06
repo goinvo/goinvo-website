@@ -168,7 +168,7 @@ export function ModelViewerSection() {
   }
 
   return (
-    <div className="max-width max-width-md content-padding mx-auto my-12">
+    <div className="max-width content-padding mx-auto my-12">
       <p className="leading-relaxed mb-4">
         Navigate through our 3D hospital model — the virtual sandbox we use to
         capture compositions for GenAI styling. Click a hotspot or orbit freely.

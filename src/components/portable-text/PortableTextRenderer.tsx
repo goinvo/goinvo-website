@@ -547,7 +547,7 @@ const components: PortableTextComponents = {
               <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4">
                 {headings.map((h, i) => (
                   <Fragment key={i}>
-                    <p className="font-serif text-lg m-0">{h}</p>
+                    <p className="font-sans text-[1.2rem] m-0">{h}</p>
                     {i < headings.length - 1 && <span />}
                   </Fragment>
                 ))}
@@ -560,7 +560,7 @@ const components: PortableTextComponents = {
                 <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-6">
                   {inputUrl && <img src={inputUrl} alt="" loading="lazy" className="w-full h-auto" />}
                   <span className="text-2xl text-gray font-light">+</span>
-                  <div className="bg-[#faf6f4] p-4 font-serif italic text-sm leading-relaxed">
+                  <div className="bg-[#f6f6f6] p-4 text-base leading-relaxed">
                     &ldquo;{row.prompt}&rdquo;
                   </div>
                   <span className="text-2xl text-gray font-light">=</span>
