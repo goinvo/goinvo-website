@@ -411,7 +411,7 @@ const components: PortableTextComponents = {
                     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
                     : colCount === 3
                       ? 'grid-cols-1 md:grid-cols-3'
-                      : groups.length === 2
+                      : groups.length >= 2
                         ? 'grid-cols-1 md:grid-cols-2'
                         : 'grid-cols-1'
                 )}
