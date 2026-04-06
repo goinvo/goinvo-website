@@ -188,6 +188,12 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'specialThanksHeading',
+      title: 'Special Thanks Heading',
+      type: 'string',
+      description: 'Custom heading for the special thanks section. Defaults to "Contributors" or "Special thanks to..." based on context.',
+    }),
+    defineField({
       name: 'specialThanks',
       title: 'Special Thanks',
       type: 'array',
