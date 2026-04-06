@@ -252,6 +252,40 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     }
   }
 
+  // ── Image column placement comparison ────────────────────────────
+  // Detect images that are standalone on Gatsby but in a grid on Next.js (or vice versa)
+  const aImgs = flatA.filter(n => n.tag === 'img' && n.rect.width > 100 && n.rect.y > 200)
+  const bImgs = flatB.filter(n => n.tag === 'img' && n.rect.width > 100 && n.rect.y > 200)
+  const imgWidthMismatches = Math.min(aImgs.length, bImgs.length, 8)
+  for (let i = 0; i < imgWidthMismatches; i++) {
+    const wDiff = Math.abs(aImgs[i].rect.width - bImgs[i].rect.width)
+    if (wDiff > 150) {
+      // Large width difference suggests wrong column placement
+      const aInGrid = aImgs[i].rect.width < 400
+      const bInGrid = bImgs[i].rect.width < 400
+      if (aInGrid !== bInGrid) {
+        issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `Image ${i + 1} layout: ${aInGrid ? 'in grid' : 'standalone'} (${aImgs[i].rect.width}px) → ${bInGrid ? 'in grid' : 'standalone'} (${bImgs[i].rect.width}px)` })
+      }
+    }
+  }
+
+  // ── Button position relative to media ───────────────────────────
+  // Check if buttons move from before to after a video/iframe
+  for (let i = 0; i < Math.min(aButtons.length, bButtons.length); i++) {
+    const ab = aButtons[i], bb = bButtons[i]
+    for (const mediaTag of ['video', 'iframe']) {
+      const aMedia = flatA.filter(n => n.tag === mediaTag)
+      const bMedia = flatB.filter(n => n.tag === mediaTag)
+      for (let m = 0; m < Math.min(aMedia.length, bMedia.length); m++) {
+        const aBefore = ab.rect.y < aMedia[m].rect.y
+        const bBefore = bb.rect.y < bMedia[m].rect.y
+        if (aBefore !== bBefore) {
+          issues.push({ type: 'BUTTON_STYLE', severity: 'medium', detail: `"${(ab.text || '').substring(0, 25)}" is ${aBefore ? 'before' : 'after'} ${mediaTag} on Gatsby but ${bBefore ? 'before' : 'after'} on Next.js` })
+        }
+      }
+    }
+  }
+
   // ── Heading comparison (text-based matching, not index-based) ────
   const hTags = new Set(['h1', 'h2', 'h3', 'h4'])
   const aH = flatA.filter(n => hTags.has(n.tag))

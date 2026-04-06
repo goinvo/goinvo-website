@@ -453,6 +453,31 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
       for (const d of diffs) lines.push(`    ${d}`)
     }
   }
+
+  // ── Button position relative to media (videos, iframes, images) ──────
+  // Check if a button that's BEFORE a video on Gatsby ends up AFTER it on Next.js (or vice versa)
+  const aAllElements = flatA.filter(f => f.node.rect.y > 0)
+  const bAllElements = flatB.filter(f => f.node.rect.y > 0)
+  for (let i = 0; i < Math.min(aButtons.length, bButtons.length); i++) {
+    const aBtn = aButtons[i].node
+    const bBtn = bButtons[i].node
+    const aLabel = (aBtn.text || '').substring(0, 25)
+    // Find nearest video/iframe on each site relative to this button
+    for (const mediaTag of ['video', 'iframe']) {
+      const aMedia = aAllElements.filter(f => f.node.tag === mediaTag)
+      const bMedia = bAllElements.filter(f => f.node.tag === mediaTag)
+      for (let m = 0; m < Math.min(aMedia.length, bMedia.length); m++) {
+        const aBefore = aBtn.rect.y < aMedia[m].node.rect.y
+        const bBefore = bBtn.rect.y < bMedia[m].node.rect.y
+        if (aBefore !== bBefore) {
+          const aPos = aBefore ? 'before' : 'after'
+          const bPos = bBefore ? 'before' : 'after'
+          lines.push(`  POSITION: "${aLabel}" is ${aPos} ${mediaTag} on Gatsby but ${bPos} on Next.js`)
+        }
+      }
+    }
+  }
+
   // ── Video autoplay comparison ─────────────────────────────────────────
   lines.push('')
   lines.push('=== Video Autoplay ===')
