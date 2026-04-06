@@ -383,20 +383,22 @@ const components: PortableTextComponents = {
 
       // Image-only: grid of images (original behavior)
       if (hasImages) {
-        const groups: { image: any; caption?: string }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+        const groups: { image: any; caption?: string; captionBold?: boolean }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
         for (let i = 0; i < items.length; i++) {
           const item = items[i]
           if (item._type === 'image' && item.asset?._ref) {
             let caption = item.caption || ''
+            let captionBold = false
             const next = items[i + 1]
             if (next && next._type === 'block' && next.children) {
               const text = next.children.map((c: { text: string }) => c.text).join('')
+              captionBold = next.children.some((c: { marks?: string[] }) => c.marks?.includes('strong'))
               if (text.trim()) {
                 caption = caption || text.trim()
                 i++
               }
             }
-            groups.push({ image: item, caption })
+            groups.push({ image: item, caption, captionBold })
           }
         }
 
@@ -428,7 +430,7 @@ const components: PortableTextComponents = {
                         className="w-full h-auto"
                       />
                       {group.caption && (
-                        <figcaption className="mt-2 text-base text-gray text-center">
+                        <figcaption className={cn('mt-2 text-base text-center', group.captionBold ? 'font-semibold uppercase' : 'text-gray')}>
                           {group.caption}
                         </figcaption>
                       )}
