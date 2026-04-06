@@ -443,6 +443,21 @@ function comparePage(slug, dataA, dataB) {
     }
   }
 
+  // Check for redundant link paragraphs before buttons (short linked text that duplicates a button)
+  const bBtnTexts = new Set(dataB.buttons.map(b => norm2(b.text)))
+  for (const p of dataB.paragraphs) {
+    const pNorm = norm2(p.substring(0, 30))
+    // Check if paragraph text starts with "Visit", "View", "Try", "Download", "Read" and matches a button
+    if (/^(visit|view|try|download|read|open|get|join) /i.test(p)) {
+      for (const btnText of bBtnTexts) {
+        if (pNorm.includes(btnText.substring(0, 10)) || btnText.includes(pNorm.substring(0, 10))) {
+          issues.push({ sev: 'MED', msg: `Redundant link before button: "${p.substring(0, 30)}"` })
+          break
+        }
+      }
+    }
+  }
+
   // Check for duplicate buttons on Next.js (same label appears more times than on Gatsby)
   const aBtnCounts = {}
   const bBtnCounts = {}
