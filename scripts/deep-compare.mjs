@@ -154,6 +154,12 @@ async function extractPageData(page, url) {
       }
     })
 
+    // Raw HTML detection — text containing HTML tags that should have been converted
+    const rawHtmlParas = Array.from(main.querySelectorAll('p')).filter(p => {
+      const text = p.textContent.trim()
+      return text.match(/<[a-z]+[\s>]|href=|class="/i) && text.length < 200
+    }).map(p => p.textContent.trim().substring(0, 50))
+
     // Content order — sequence of headings and images for position comparison
     const contentOrder = Array.from(main.querySelectorAll('h2,h3,h4,img')).filter(el => {
       if (el.closest('header,nav,form,.bg-blue-light,.background--blue')) return false
@@ -241,7 +247,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, statNumbers, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, statNumbers, rawHtmlParas, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -494,6 +500,13 @@ function comparePage(slug, dataA, dataB) {
   for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
+    }
+  }
+
+  // ── Raw HTML detection ─────────────────────────────────────────
+  if (dataB.rawHtmlParas.length > 0) {
+    for (const html of dataB.rawHtmlParas) {
+      issues.push({ sev: 'HIGH', msg: `Raw HTML in content: "${html}"` })
     }
   }
 
