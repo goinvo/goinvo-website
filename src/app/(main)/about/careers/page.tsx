@@ -4,6 +4,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { activeJobsQuery } from '@/sanity/lib/queries'
 import { Quote } from '@/components/ui/Quote'
 import { cloudfrontImage } from '@/lib/utils'
+import { TestimonialCarousel } from './TestimonialCarousel'
 import type { Job } from '@/types'
 
 export const metadata: Metadata = {
@@ -84,74 +85,9 @@ export default async function CareersPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials — tabbed carousel with full-width split (matching Gatsby GradientImageColumns) */}
       <section className="py-16">
-        <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-8">
-            Experiencing GoInvo for<span className="text-primary font-serif">...</span>
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div>
-              <Image
-                src={cloudfrontImage('/images/about/careers/lily-lunch.jpg')}
-                alt="Lily Fan"
-                width={400}
-                height={300}
-                className="w-full h-auto mb-4"
-              />
-              <p className="font-semibold mb-1">A summer internship</p>
-              <p className="text-gray text-md italic mb-3">
-                &ldquo;Interning at Invo made me realize the importance of not only working at an
-                awesome company to help transform software in healthcare but the value of spending
-                your every day in an extremely inclusive environment with a diverse range of people
-                who genuinely want to see you succeed.&rdquo;
-              </p>
-              <p className="text-sm font-semibold">Lily Fan</p>
-              <p className="text-gray text-sm">Design Intern</p>
-            </div>
-            <div>
-              <Image
-                src={cloudfrontImage('/images/about/bai-laughing.jpg')}
-                alt="Eric Bai"
-                width={400}
-                height={300}
-                className="w-full h-auto mb-4"
-              />
-              <p className="font-semibold mb-1">1 year</p>
-              <p className="text-gray text-md italic mb-3">
-                &ldquo;I started working at Invo as an engineer and gradually took on a
-                greater design focus. My friends at Invo mentored and supported me
-                as I learned design basics. But beyond just aiming for design
-                competency, I was also challenged to consider the broader impact
-                of the work &mdash;its effect on patients, on access to
-                healthcare, and on health as a whole. If you want to work at a
-                place that challenges you, supports you, and infuses your work
-                with a sense of purpose, come to Invo.&rdquo;
-              </p>
-              <p className="text-sm font-semibold">Eric Bai</p>
-              <p className="text-gray text-sm">Designer & Engineer</p>
-            </div>
-            <div>
-              <Image
-                src={cloudfrontImage('/images/about/careers/beckett-presentation.jpg')}
-                alt="Beckett Rucker"
-                width={400}
-                height={300}
-                className="w-full h-auto mb-4"
-              />
-              <p className="font-semibold mb-1">3 years</p>
-              <p className="text-gray text-md italic mb-3">
-                &ldquo;GoInvo provided a incubator-like space to expand my toolbox of
-                skills and practices while also giving me a kick in the pants to
-                cultivate my own design principles, passions, and ethics. It was
-                an inspiring environment to do meaningful work with a family of
-                driven, talented people.&rdquo;
-              </p>
-              <p className="text-sm font-semibold">Beckett Rucker</p>
-              <p className="text-gray text-sm">Designer</p>
-            </div>
-          </div>
-        </div>
+        <TestimonialCarousel />
       </section>
 
       {/* Job Description */}
