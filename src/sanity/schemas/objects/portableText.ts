@@ -630,6 +630,42 @@ export default defineType({
       ],
     }),
     defineArrayMember({
+      name: 'imageCarousel',
+      title: 'Image Carousel',
+      type: 'object',
+      description: 'Slideshow with thumbnail navigation. Use for storyboards, step-by-step visuals, or multi-image galleries.',
+      preview: {
+        select: { caption: 'caption', images: 'images' },
+        prepare({ caption, images }) {
+          const count = images?.length || 0
+          return { title: caption || `${count} image carousel`, subtitle: 'Image Carousel' }
+        },
+      },
+      fields: [
+        {
+          name: 'images',
+          title: 'Images',
+          type: 'array',
+          of: [
+            {
+              type: 'image',
+              options: { hotspot: true },
+              fields: [
+                { name: 'alt', type: 'string', title: 'Alt text' },
+              ],
+            },
+          ],
+          description: 'Upload or select images for the carousel slides',
+        },
+        {
+          name: 'caption',
+          title: 'Caption',
+          type: 'string',
+          description: 'Optional caption displayed below the carousel',
+        },
+      ],
+    }),
+    defineArrayMember({
       name: 'imageEquationList',
       title: 'Image Equation List',
       type: 'object',

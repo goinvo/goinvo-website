@@ -302,7 +302,8 @@ When content needs a visual treatment the renderer doesn't support yet:
 - `buttonGroup` — fields: `buttons[]` (label, url, variant, external). Use for single or multiple buttons.
 - `cardGrid` — fields: `columns` (2/3/4), `items[]` (label, description). Bordered cards in a grid layout.
 - `reviewCard` — fields: `title`, `status` (rejected/certified), `quote`, `reason`, `description`. Dark header + status badge card.
-- `divider` — fields: `style` (default/thick)
+- `imageCarousel` — fields: `images[]` (image array with alt text), `caption`. Slideshow with thumbnail navigation for storyboards and galleries.
+- `divider` — fields: `style` (default/thick/arrow)
 - `contactForm` — fields: `showHeader`
 - Text styles: `h2`, `h2Large` (header-xl 36px — for pages needing bigger section headings), `sectionTitle` (centered h2), `h3`, `h3Centered` (centered uppercase sans), `h3Orange` (orange uppercase — for numbered section headings), `h4`, `h4Bullet` (with orange ◆ diamond), `blockquote`, `callout`, `normal`
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
