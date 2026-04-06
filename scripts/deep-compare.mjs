@@ -206,6 +206,17 @@ async function extractPageData(page, url) {
     // Up Next card count
     const upNextCards = main.querySelectorAll('.bg-blue-light img, .background--blue img').length
 
+    // Stat numbers (Results component)
+    const statNumbers = Array.from(main.querySelectorAll('span,div')).filter(el => {
+      const text = el.textContent.trim()
+      return /^\d+%?$/.test(text) && parseFloat(cs(el).fontSize) > 20 && el.children.length === 0
+    }).slice(0, 4).map(el => ({
+      text: el.textContent.trim(),
+      fontSize: cs(el).fontSize,
+      color: cs(el).color,
+      bg: cs(el.parentElement || el).backgroundColor,
+    }))
+
     // Iframe sizes
     const iframeSizes = Array.from(main.querySelectorAll('iframe')).filter(f => !f.closest('header,nav,form')).map(f => ({
       w: Math.round(f.getBoundingClientRect().width),
@@ -230,7 +241,7 @@ async function extractPageData(page, url) {
     // Total visible text length (excluding nav/header/footer)
     const textLen = main.textContent.replace(/\s+/g, ' ').trim().length
 
-    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
+    return { headings, paragraphs, centeredParas, blockquotes, styledQuotes, buttons, buttonContexts, statNumbers, sups, grids, images, imgWidths, listStyles, interactives, iframeSizes, videoSizes, upNextCards, contentOrder, contentWidth, textLen }
   })
 }
 
@@ -437,6 +448,17 @@ function comparePage(slug, dataA, dataB) {
   for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
+    }
+  }
+
+  // ── Stat number comparison (Results component) ─────────────────
+  for (let i = 0; i < Math.min(dataA.statNumbers.length, dataB.statNumbers.length); i++) {
+    const a = dataA.statNumbers[i], b = dataB.statNumbers[i]
+    if (Math.abs(parseFloat(a.fontSize) - parseFloat(b.fontSize)) > 4) {
+      issues.push({ sev: 'MED', msg: `Stat "${a.text}" size: ${a.fontSize} → ${b.fontSize}` })
+    }
+    if (a.color !== b.color) {
+      issues.push({ sev: 'MED', msg: `Stat "${a.text}" color: ${a.color} → ${b.color}` })
     }
   }
 
