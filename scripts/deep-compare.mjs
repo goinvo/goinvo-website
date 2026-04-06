@@ -496,7 +496,13 @@ function comparePage(slug, dataA, dataB) {
     }
   }
 
-  // ── List bullet style comparison ────────────────────────────────
+  // ── List comparison ─────────────────────────────────────────────
+  // Detect extra lists on Next.js that Gatsby doesn't have
+  if (dataB.listStyles.length > dataA.listStyles.length) {
+    const extra = dataB.listStyles.length - dataA.listStyles.length
+    issues.push({ sev: 'MED', msg: `${extra} extra list(s) on Next.js not on Gatsby (${dataA.listStyles.length} → ${dataB.listStyles.length})` })
+  }
+  // Bullet style comparison for matched lists
   for (let i = 0; i < Math.min(dataA.listStyles.length, dataB.listStyles.length); i++) {
     if (dataA.listStyles[i].bullet !== dataB.listStyles[i].bullet) {
       issues.push({ sev: 'MED', msg: `List ${i + 1} bullet: ${dataA.listStyles[i].bullet} → ${dataB.listStyles[i].bullet}` })
