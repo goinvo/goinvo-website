@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
+import { ImageCarousel } from '@/components/ui/ImageCarousel'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -611,6 +612,19 @@ const components: PortableTextComponents = {
               )
             })}
           </div>
+        </ArticleReveal>
+      )
+    },
+    imageCarousel: ({ value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const images = (value.images || []).map((img: any) => ({
+        url: img?.asset ? urlForImage(img).width(1200).url() : '',
+        alt: img?.alt || '',
+      })).filter((img: { url: string }) => img.url)
+
+      return (
+        <ArticleReveal intensity="visual">
+          <ImageCarousel images={images} caption={value.caption} />
         </ArticleReveal>
       )
     },
