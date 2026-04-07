@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 interface NewDraftCardProps {
   type: 'caseStudy' | 'feature'
@@ -10,7 +9,6 @@ interface NewDraftCardProps {
 
 export function NewDraftCard({ type, label }: NewDraftCardProps) {
   const [creating, setCreating] = useState(false)
-  const router = useRouter()
 
   const handleCreate = async () => {
     if (creating) return
@@ -25,8 +23,11 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
 
       if (!res.ok) throw new Error('Failed to create draft')
 
-      const { studioUrl } = await res.json()
-      window.location.href = studioUrl
+      const { slug } = await res.json()
+      // Navigate the preview iframe to the new article page
+      // The Presentation tool will detect the document and show the editor panel
+      const previewPath = type === 'feature' ? `/vision/${slug}` : `/work/${slug}`
+      window.location.href = previewPath
     } catch (e) {
       console.error('Failed to create draft:', e)
       setCreating(false)
