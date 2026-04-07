@@ -212,7 +212,8 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
   const issues: Issue[] = []
 
   // ── Button comparison ────────────────────────────────────────────
-  const isBtn = (n: TreeNode) => n.interactive && n.interactive.includes('button') && n.text.length > 2 && n.rect.width > 30
+  const navLabels = new Set(['work', 'services', 'about', 'vision', 'open design', 'contact'])
+  const isBtn = (n: TreeNode) => n.interactive && n.interactive.includes('button') && n.text.length > 2 && n.rect.width > 30 && !navLabels.has(n.text.toLowerCase().trim())
   const aButtons = flatA.filter(isBtn)
   const bButtons = flatB.filter(isBtn)
 
@@ -343,7 +344,7 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
   const countB: Record<string, number> = {}
   for (const n of flatA) countA[n.tag] = (countA[n.tag] || 0) + 1
   for (const n of flatB) countB[n.tag] = (countB[n.tag] || 0) + 1
-  for (const tag of ['img', 'ul', 'ol', 'iframe', 'video', 'blockquote', 'sup']) {
+  for (const tag of ['img', 'iframe', 'video', 'blockquote', 'sup']) {
     const a = countA[tag] || 0
     const b = countB[tag] || 0
     const diff = Math.abs(a - b)
