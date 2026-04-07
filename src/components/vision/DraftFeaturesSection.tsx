@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { urlForImage } from '@/sanity/lib/image'
+import { NewDraftCard } from '@/components/ui/NewDraftCard'
 import type { Feature } from '@/types'
 
 function DraftFeatureCard({ feature }: { feature: Feature }) {
@@ -97,19 +98,7 @@ export function DraftFeaturesSection({ features }: DraftFeaturesSectionProps) {
             <DraftFeatureCard key={feature._id} feature={feature} />
           ))}
           {/* New draft card */}
-          <a
-            href="/studio/structure/feature"
-            className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
-          >
-            <div className="h-full min-h-[200px] flex flex-col justify-center items-center text-center p-8">
-              <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-medium flex items-center justify-center mb-3">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-              </div>
-              <p className="text-gray font-semibold text-sm">New Vision Article</p>
-            </div>
-          </a>
+          <NewDraftCard type="feature" label="New Vision Article" />
         </div>
       </div>
     </div>
