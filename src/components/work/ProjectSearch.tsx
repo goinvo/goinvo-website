@@ -63,7 +63,7 @@ export function ProjectSearch({ caseStudies, draftCaseStudies = [] }: ProjectSea
   return (
     <div>
       {/* Draft-only case studies — visible only in preview mode */}
-      {draftCaseStudies.length > 0 && (
+      {draftCaseStudies.length >= 0 && (
         <div className="relative border-b border-gray-medium">
           <div
             className="absolute left-0 top-0 bottom-0 w-3"
@@ -90,6 +90,20 @@ export function ProjectSearch({ caseStudies, draftCaseStudies = [] }: ProjectSea
                   )}
                 </div>
               ))}
+              {/* New draft card */}
+              <a
+                href="/studio/structure/caseStudy"
+                className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+              >
+                <div className="h-full min-h-[200px] flex flex-col justify-center items-center text-center p-8">
+                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-medium flex items-center justify-center mb-3">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </div>
+                  <p className="text-gray font-semibold text-sm">New Case Study</p>
+                </div>
+              </a>
             </div>
           </div>
         </div>
