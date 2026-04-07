@@ -290,6 +290,16 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     }
   }
 
+  // ── Grid layout count comparison ────────────────────────────────
+  // Detect when Next.js has side-by-side grids that Gatsby doesn't (wrong column layouts)
+  const aGrids = flatA.filter(n => n.styles.display === 'grid' || n.styles.display === 'flex')
+    .filter(n => n.children.length >= 2 && n.rect.width > 400 && n.rect.y > 300)
+  const bGrids = flatB.filter(n => n.styles.display === 'grid' || n.styles.display === 'flex')
+    .filter(n => n.children.length >= 2 && n.rect.width > 400 && n.rect.y > 300)
+  if (bGrids.length > aGrids.length + 3) {
+    issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `Grid layouts: ${aGrids.length} on Gatsby → ${bGrids.length} on Next.js (possible side-by-side vs stacked mismatch)` })
+  }
+
   // ── Button position relative to media ───────────────────────────
   // Check if buttons move from before to after a video/iframe
   for (let i = 0; i < Math.min(aButtons.length, bButtons.length); i++) {
