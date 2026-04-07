@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react'
 import { CategoriesList } from '@/components/ui/CategoriesList'
 import { CaseStudyCard } from './CaseStudyCard'
+import { NewDraftCard } from '@/components/ui/NewDraftCard'
 import { useHero } from '@/context/HeroContext'
 import type { CaseStudy } from '@/types'
 
@@ -91,19 +92,7 @@ export function ProjectSearch({ caseStudies, draftCaseStudies = [] }: ProjectSea
                 </div>
               ))}
               {/* New draft card */}
-              <a
-                href="/studio/structure/caseStudy"
-                className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
-              >
-                <div className="h-full min-h-[200px] flex flex-col justify-center items-center text-center p-8">
-                  <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-medium flex items-center justify-center mb-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray">
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
-                  </div>
-                  <p className="text-gray font-semibold text-sm">New Case Study</p>
-                </div>
-              </a>
+              <NewDraftCard type="caseStudy" label="New Case Study" />
             </div>
           </div>
         </div>
