@@ -26,8 +26,9 @@ export async function POST(request: NextRequest) {
     slug: { _type: 'slug', current: slug },
   })
 
-  // Redirect to the Studio editor for this document
-  const studioUrl = `/studio/structure/${type};${doc._id}`
+  // Open in Presentation tool with live preview of the new article
+  const previewPath = type === 'feature' ? `/vision/${slug}` : `/work/${slug}`
+  const studioUrl = `/studio/presentation?preview=${encodeURIComponent(previewPath)}`
 
   return NextResponse.json({ id: doc._id, slug, studioUrl })
 }
