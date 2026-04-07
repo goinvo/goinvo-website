@@ -26,7 +26,7 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
       if (!res.ok) throw new Error('Failed to create draft')
 
       const { studioUrl } = await res.json()
-      router.push(studioUrl)
+      window.location.href = studioUrl
     } catch (e) {
       console.error('Failed to create draft:', e)
       setCreating(false)
