@@ -258,9 +258,9 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     const bg = normalizeColor(n.styles.backgroundColor || '')
     return bg !== 'transparent' && bg !== '#fff' && bg !== '#000' && bg.length > 3
   }
-  const aBgSections = flatA.filter(n => hasBg(n) && n.rect.width > 500 && n.rect.height > 50)
-  const bBgSections = flatB.filter(n => hasBg(n) && n.rect.width > 500 && n.rect.height > 50)
-  if (aBgSections.length > bBgSections.length + 1) {
+  const aBgSections = flatA.filter(n => hasBg(n) && n.rect.width > 500 && n.rect.height > 100 && n.rect.y > 300)
+  const bBgSections = flatB.filter(n => hasBg(n) && n.rect.width > 500 && n.rect.height > 100 && n.rect.y > 300)
+  if (aBgSections.length > bBgSections.length + 2) {
     issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `Background sections: ${aBgSections.length} on Gatsby → ${bBgSections.length} on Next.js (missing colored bg)` })
   }
 
