@@ -47,21 +47,22 @@ export default function EnterprisePage() {
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section
-        className="relative min-h-[70vh] flex items-center bg-cover bg-top-center"
+        className="relative h-[450px] bg-cover bg-top-center"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/enterprise/enterprise-hero-1.jpg')})` }}
       >
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative z-10 max-width content-padding py-16">
-          <h1 className="font-serif text-3xl md:text-4xl text-white mb-4">
-            Enterprise software is complicated.<br />
-            We know how to do it<span className="text-primary font-serif">.</span>
-          </h1>
-          <p className="text-white/80 text-lg mb-8">
-            Beautiful software design for the Enterprise to catapult your business forward.
-          </p>
-          <Button href="/contact" variant="primary" size="lg">
-            Let&apos;s discuss your project
-          </Button>
+        <div className="relative h-full max-width">
+          <div className="absolute bottom-0 left-0 w-full lg:w-[800px] bg-white/90 content-padding py-8">
+            <h1 className="header-xl m-0 mb-4">
+              Enterprise software is complicated.<br />
+              We know how to do it<span className="text-primary font-serif">.</span>
+            </h1>
+            <p className="text-gray text-lg mb-8">
+              Beautiful software design for the Enterprise to catapult your business forward.
+            </p>
+            <Button href="/contact" variant="primary" size="lg">
+              Let&apos;s discuss your project
+            </Button>
+          </div>
         </div>
       </section>
 
