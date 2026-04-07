@@ -383,24 +383,19 @@ const components: PortableTextComponents = {
 
       // Image-only: grid of images (original behavior)
       if (hasImages) {
-        const groups: { image: any; caption?: string; captionBold?: boolean }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i]
+        // Group items into image + following content blocks
+        // Each group: one image followed by zero or more text/list blocks until the next image
+        const groups: { image: any; content: any[] }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+        let currentGroup: { image: any; content: any[] } | null = null // eslint-disable-line @typescript-eslint/no-explicit-any
+        for (const item of items) {
           if (item._type === 'image' && item.asset?._ref) {
-            let caption = item.caption || ''
-            let captionBold = false
-            const next = items[i + 1]
-            if (next && next._type === 'block' && next.children) {
-              const text = next.children.map((c: { text: string }) => c.text).join('')
-              captionBold = next.children.some((c: { marks?: string[] }) => c.marks?.includes('strong'))
-              if (text.trim()) {
-                caption = caption || text.trim()
-                i++
-              }
-            }
-            groups.push({ image: item, caption, captionBold })
+            if (currentGroup) groups.push(currentGroup)
+            currentGroup = { image: item, content: [] }
+          } else if (currentGroup) {
+            currentGroup.content.push(item)
           }
         }
+        if (currentGroup) groups.push(currentGroup)
 
         return (
           <Wrap>
@@ -420,8 +415,14 @@ const components: PortableTextComponents = {
               >
                 {groups.map((group) => {
                   const imgUrl = urlForImage(group.image).width(800).url()
+                  const caption = group.image.caption || ''
+                  const hasRichContent = group.content.length > 0
+                  // Check if content is just a short caption (bold text < 60 chars)
+                  const isShortCaption = group.content.length === 1 && group.content[0]._type === 'block' &&
+                    (group.content[0].children || []).map((c: {text: string}) => c.text).join('').length < 60
+                  const isBoldCaption = isShortCaption && (group.content[0].children || []).some((c: {marks?: string[]}) => c.marks?.includes('strong'))
                   return (
-                    <figure key={group.image._key} className="m-0">
+                    <div key={group.image._key} className="m-0">
                       <Image
                         src={imgUrl}
                         alt={group.image.alt || ''}
@@ -429,12 +430,20 @@ const components: PortableTextComponents = {
                         height={600}
                         className="w-full h-auto"
                       />
-                      {group.caption && (
-                        <figcaption className={cn('mt-2 text-base text-center', group.captionBold ? 'font-semibold uppercase' : 'text-gray')}>
-                          {group.caption}
-                        </figcaption>
+                      {caption && !hasRichContent && (
+                        <p className="mt-2 text-base text-gray text-center">{caption}</p>
                       )}
-                    </figure>
+                      {isShortCaption && (
+                        <p className={cn('mt-2 text-base text-center', isBoldCaption ? 'font-semibold uppercase' : 'text-gray')}>
+                          {(group.content[0].children || []).map((c: {text: string}) => c.text).join('')}
+                        </p>
+                      )}
+                      {hasRichContent && !isShortCaption && (
+                        <div className="mt-2">
+                          <PortableText value={group.content} components={components} />
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>
