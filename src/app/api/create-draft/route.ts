@@ -26,10 +26,5 @@ export async function POST(request: NextRequest) {
     slug: { _type: 'slug', current: slug },
   })
 
-  // Open in Structure tool editor for immediate editing
-  // The Presentation tool requires draft mode which needs a separate enable step.
-  // Structure tool opens the document editor directly — user can switch to Presentation later.
-  const studioUrl = `/studio/structure/${type};${doc._id}`
-
-  return NextResponse.json({ id: doc._id, slug, studioUrl })
+  return NextResponse.json({ id: doc._id, slug, type })
 }
