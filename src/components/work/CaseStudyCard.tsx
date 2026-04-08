@@ -81,12 +81,12 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
           transition={{ duration: 0.3 }}
         >
           {imageUrl && (
-            <div data-card-image className="relative h-[260px] overflow-hidden">
+            <div data-card-image className="relative h-[260px] overflow-hidden [backface-visibility:hidden]">
               <Image
                 src={imageUrl}
                 alt={caseStudy.title}
                 fill
-                className="object-cover group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+                className="object-cover [backface-visibility:hidden] group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
                 style={{ objectPosition: 'center top' }}
               />
             </div>
