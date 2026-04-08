@@ -58,7 +58,7 @@ export default function DeterminantsOfHealthPage() {
               variant="secondary"
               external
             >
-              Order Print on Amazon
+              Buy Print
             </Button>
             <Button
               href="https://www.goinvo.com/pdf/vision/posters/determinantes_de_la_salud_42x50.pdf"
