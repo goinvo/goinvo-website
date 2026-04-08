@@ -13,9 +13,9 @@ interface ImageCarouselProps {
 }
 
 const thumbSizes = {
-  sm: { w: 30, h: 20, cls: 'w-[30px] h-[20px]' },
-  md: { w: 60, h: 40, cls: 'w-[60px] h-[40px]' },
-  lg: { w: 100, h: 65, cls: 'w-[100px] h-[65px]' },
+  sm: { w: 30, h: 20, cls: 'w-[30px] h-[20px]', cover: true },
+  md: { w: 60, h: 40, cls: 'w-[60px] h-[40px]', cover: true },
+  lg: { w: 100, h: 65, cls: 'w-[100px]', cover: false },
 }
 
 export function ImageCarousel({ images, caption, thumbnailSize = 'sm' }: ImageCarouselProps) {
@@ -90,13 +90,21 @@ export function ImageCarousel({ images, caption, thumbnailSize = 'sm' }: ImageCa
               onClick={() => goTo(i)}
               aria-label={`Go to slide ${i + 1}`}
             >
-              <Image
-                src={img.url}
-                alt=""
-                width={thumbSizes[thumbnailSize].w}
-                height={thumbSizes[thumbnailSize].h}
-                className="w-full h-full object-cover block"
-              />
+              {thumbSizes[thumbnailSize].cover ? (
+                <Image
+                  src={img.url}
+                  alt=""
+                  width={thumbSizes[thumbnailSize].w}
+                  height={thumbSizes[thumbnailSize].h}
+                  className="w-full h-full object-cover block"
+                />
+              ) : (
+                <img
+                  src={img.url}
+                  alt=""
+                  className="w-full h-auto block"
+                />
+              )}
             </button>
           ))}
         </div>
