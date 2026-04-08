@@ -345,7 +345,10 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     const k = normH(bNode.text)
     const aNode = aH.find(a => normH(a.text) === k)
     if (aNode && aNode.styles.fontSize !== bNode.styles.fontSize) {
-      issues.push({ type: 'HEADING_STYLE', severity: 'low', detail: `"${bNode.text.substring(0, 40)}": size ${aNode.styles.fontSize} → ${bNode.styles.fontSize}` })
+      const aSize = parseFloat(aNode.styles.fontSize)
+      const bSize = parseFloat(bNode.styles.fontSize)
+      const sizeDiff = Math.abs(aSize - bSize)
+      issues.push({ type: 'HEADING_STYLE', severity: sizeDiff > 4 ? 'medium' : 'low', detail: `"${bNode.text.substring(0, 40)}": size ${aNode.styles.fontSize} → ${bNode.styles.fontSize}` })
     }
     // Text alignment comparison (catches centered vs left-aligned headings)
     if (aNode && aNode.styles.textAlign !== bNode.styles.textAlign && (aNode.styles.textAlign === 'center' || bNode.styles.textAlign === 'center')) {
