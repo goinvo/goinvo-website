@@ -23,11 +23,13 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
 
       if (!res.ok) throw new Error('Failed to create draft')
 
-      const { slug } = await res.json()
-      // Navigate the preview iframe to the new article page
-      // The Presentation tool will detect the document and show the editor panel
-      const previewPath = type === 'feature' ? `/vision/${slug}` : `/work/${slug}`
-      window.location.href = previewPath
+      const { id } = await res.json()
+      // Navigate the top-level window to the Studio Structure tool
+      // to edit the newly created document. We use window.top because
+      // this component runs inside the Presentation tool's preview iframe.
+      const studioPath = `/studio/structure/${type};${id}`
+      const target = window.top || window
+      target.location.href = studioPath
     } catch (e) {
       console.error('Failed to create draft:', e)
       setCreating(false)
