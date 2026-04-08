@@ -1,0 +1,69 @@
+/* ACDS page styles — converted from Gatsby SCSS */
+
+/* --- Gatsby global utility classes --- */
+.augmented-clinical-decision-support-feature .max-width { max-width: 1020px; margin: 0 auto; }
+.augmented-clinical-decision-support-feature .max-width--md { max-width: 775px; margin: 0 auto; }
+.augmented-clinical-decision-support-feature .content-padding { padding-left: 1rem; padding-right: 1rem; }
+@media (min-width: 864px) { .augmented-clinical-decision-support-feature .content-padding { padding-left: 2rem; padding-right: 2rem; } }
+
+.augmented-clinical-decision-support-feature .pad-vertical--double { padding-top: 2rem; padding-bottom: 2rem; }
+.augmented-clinical-decision-support-feature .margin-top--double { margin-top: 2rem; }
+.augmented-clinical-decision-support-feature .margin-top--trip { margin-top: 3rem; }
+.augmented-clinical-decision-support-feature .margin-bottom { margin-bottom: 1rem; }
+.augmented-clinical-decision-support-feature .margin-bottom--half { margin-bottom: 0.5rem; }
+.augmented-clinical-decision-support-feature .margin-right { margin-right: 1rem; }
+
+.augmented-clinical-decision-support-feature .text--center { text-align: center; }
+.augmented-clinical-decision-support-feature .text--gray { color: #757575; }
+
+.augmented-clinical-decision-support-feature .header--xl { font-family: adobe-jenson-pro, Georgia, serif; font-size: 1.75rem; font-weight: 300; line-height: 1.2; margin-bottom: 1rem; }
+@media (min-width: 864px) { .augmented-clinical-decision-support-feature .header--xl { font-size: 2.25rem; } }
+.augmented-clinical-decision-support-feature .header--lg { font-family: adobe-jenson-pro, Georgia, serif; font-size: 1.5rem; font-weight: 300; margin-bottom: 0.5rem; }
+.augmented-clinical-decision-support-feature .header--md { font-family: 'Open Sans', sans-serif; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #757575; margin-top: 2rem; }
+.augmented-clinical-decision-support-feature .header--sm { font-family: 'Open Sans', sans-serif; font-size: 1rem; font-weight: 700; }
+
+.augmented-clinical-decision-support-feature .image--max-width { width: 100%; height: auto; }
+
+.augmented-clinical-decision-support-feature .button { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; text-align: center; border: 2px solid #E36216; color: #E36216; background: transparent; cursor: pointer; transition: all 0.2s; }
+.augmented-clinical-decision-support-feature .button:hover { background: #E36216; color: #fff; }
+.augmented-clinical-decision-support-feature .button--secondary { border-color: #007385; color: #007385; }
+.augmented-clinical-decision-support-feature .button--secondary:hover { background: #007385; color: #fff; }
+.augmented-clinical-decision-support-feature .button--block { display: block; width: 100%; }
+.augmented-clinical-decision-support-feature .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+.augmented-clinical-decision-support-feature .pure-g { display: flex; flex-wrap: wrap; }
+.augmented-clinical-decision-support-feature .pure-u-1 { width: 100%; }
+@media (min-width: 864px) {
+  .augmented-clinical-decision-support-feature .pure-u-lg-1-2 { width: 50%; }
+}
+
+.augmented-clinical-decision-support-feature .background--gray { background-color: #f5f5f5; }
+
+/* --- Page-specific styles --- */
+.augmented-clinical-decision-support-feature .list-steps li {
+  max-width: 300px;
+  text-align: center;
+  margin: 2rem auto 0;
+}
+.augmented-clinical-decision-support-feature .list-steps li img {
+  display: block;
+  margin: 0 auto;
+  max-width: 150px;
+}
+
+.augmented-clinical-decision-support-feature .acds-image-max-width {
+  display: block;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.augmented-clinical-decision-support-feature .acds-user-chart {
+  max-width: 100%;
+}
+
+.augmented-clinical-decision-support-feature h4 {
+  margin-bottom: 0.5rem;
+}
+.augmented-clinical-decision-support-feature h4 + p {
+  margin-top: 0.5rem;
+}
