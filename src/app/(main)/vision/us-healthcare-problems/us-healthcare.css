@@ -1,0 +1,29 @@
+/* US Healthcare Problems — converted from Gatsby SCSS */
+
+/* Gatsby utility classes */
+.us-healthcare-problems .max-width { max-width: 1020px; margin: 0 auto; }
+.us-healthcare-problems .max-width--md { max-width: 775px; margin: 0 auto; }
+.us-healthcare-problems .content-padding { padding-left: 1rem; padding-right: 1rem; }
+@media (min-width: 864px) { .us-healthcare-problems .content-padding { padding-left: 2rem; padding-right: 2rem; } }
+
+.us-healthcare-problems .pad-vertical--double { padding-top: 2rem; padding-bottom: 2rem; }
+.us-healthcare-problems .margin-top--double { margin-top: 2rem; }
+.us-healthcare-problems .text--center { text-align: center; }
+.us-healthcare-problems .background--gray { background-color: #f5f5f5; }
+
+.us-healthcare-problems .header--xl { font-family: adobe-jenson-pro, Georgia, serif; font-size: 1.75rem; font-weight: 300; line-height: 1.2; margin-bottom: 1rem; }
+@media (min-width: 864px) { .us-healthcare-problems .header--xl { font-size: 2.25rem; } }
+.us-healthcare-problems .header--lg { font-family: adobe-jenson-pro, Georgia, serif; font-size: 1.5rem; font-weight: 300; }
+.us-healthcare-problems .header--md { font-family: 'Open Sans', sans-serif; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: #757575; }
+
+.us-healthcare-problems .image--max-width { width: 100%; height: auto; }
+
+.us-healthcare-problems .button { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; border: 2px solid #007385; color: #007385; background: transparent; }
+.us-healthcare-problems .button:hover { background: #007385; color: #fff; }
+.us-healthcare-problems .button--secondary { border-color: #007385; color: #007385; }
+.us-healthcare-problems .button--block { display: block; width: 100%; text-align: center; }
+
+/* Page-specific */
+.us-healthcare-problems .problem { padding: 1rem; margin: 10px 0; }
+.us-healthcare-problems .airtable { max-width: 85%; text-align: center; display: block; margin: 0 auto; }
+@media (max-width: 768px) { .us-healthcare-problems .airtable { max-width: 100%; padding: 0 1rem; } }
