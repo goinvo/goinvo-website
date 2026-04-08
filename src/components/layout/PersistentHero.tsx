@@ -188,6 +188,28 @@ export function PersistentHero() {
                     config={config}
                     onImageLoad={handleImageLoad}
                   />
+                ) : config?.mobileImages && config.mobileImages.length > 0 ? (
+                  <>
+                    {/* Desktop: single wide image */}
+                    <Image
+                      src={cloudfrontImage(displayImage)}
+                      alt=""
+                      fill
+                      className="object-cover hidden sm:block"
+                      style={{ objectPosition: bgPosition }}
+                      onLoad={handleImageLoad}
+                      priority
+                    />
+                    {/* Mobile: first mobile image */}
+                    <Image
+                      src={cloudfrontImage(config.mobileImages[0])}
+                      alt=""
+                      fill
+                      className="object-cover sm:hidden"
+                      style={{ objectPosition: 'center' }}
+                      priority
+                    />
+                  </>
                 ) : (
                   <Image
                     src={cloudfrontImage(displayImage)}
