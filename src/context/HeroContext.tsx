@@ -67,6 +67,11 @@ export const heroConfigs: Record<string, HeroConfig> = {
     title: null,
     hideTextBox: true,
     expandAfterSlide: true,
+    mobileImages: [
+      '/images/vision/vision-illustration-mobile-home.jpg',
+      '/images/vision/vision-illustration-mobile-practice.jpg',
+      '/images/vision/vision-illustration-mobile-country.jpg',
+    ],
   },
   '/open-source-health-design': {
     image: '/images/open_source/open-source-bgd.png',
