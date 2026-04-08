@@ -230,7 +230,7 @@ const references = [
 export default function CoronavirusPage() {
   return (
     <>
-      <div className="coronavirus">
+      <div className="coronavirus pt-[var(--spacing-header-height)]">
         <div className="hero">
           <div className="hero__image-container">
             <img
