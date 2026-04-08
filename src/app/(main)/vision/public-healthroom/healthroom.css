@@ -1,0 +1,369 @@
+/* Public Healthroom — scoped styles ported from Gatsby SCSS */
+
+.public-healthroom .hero__image-container {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 200 / 51;
+  max-height: 500px;
+  overflow: hidden;
+}
+
+.public-healthroom .header--md {
+  margin-top: 2rem; /* $spacing * 2 */
+}
+
+.public-healthroom__prototype-frame-sticky {
+  position: sticky;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: 50px; /* $header-height */
+  height: calc(50vh - 50px);
+  width: 100%;
+  min-width: 0;
+  z-index: 1;
+  background-color: #fff;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom__prototype-frame-sticky {
+    height: calc(100vh - 70px);
+    width: 50%;
+  }
+}
+
+.public-healthroom__prototype-frame-sticky .slick-slider {
+  width: 100%;
+  min-width: 0;
+}
+
+.public-healthroom__prototype-frame-container {
+  width: 100%;
+}
+
+.public-healthroom__prototype-frame {
+  position: relative;
+  width: 100%;
+  max-width: calc(50vh - 50px);
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+.public-healthroom__prototype-frame__image {
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+  transition: all 0.5s;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom__prototype-frame {
+    width: 90%;
+    max-width: 75vh;
+  }
+}
+
+.public-healthroom__overlay-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  max-width: calc(50vh - 50px);
+  aspect-ratio: 1 / 1;
+  background-color: rgba(0, 0, 0, 0);
+  transform: translate(-50%, -50%);
+  transition: background-color 0.5s;
+}
+
+.public-healthroom__overlay-container--dimmed {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+@media (min-width: 864px) {
+  .public-healthroom__overlay-container {
+    width: 90%;
+    max-width: 75vh;
+  }
+}
+
+.public-healthroom__overlay-image {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.public-healthroom__overlay-image img {
+  display: block;
+}
+
+.public-healthroom__overlay-image--visible {
+  opacity: 1;
+}
+
+.public-healthroom__entry-menu {
+  width: 44.2%;
+  top: 50%;
+  left: 51.5%;
+  transform: translate(-50%, -50%);
+}
+
+.public-healthroom__holding-phone {
+  width: 40%;
+  bottom: 0;
+  right: 0;
+}
+
+.public-healthroom__holding-phone--center {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.public-healthroom__vision-results {
+  width: 55%;
+  top: 9%;
+  left: -8%;
+}
+
+.public-healthroom__message-1 {
+  width: 32%;
+  top: 23%;
+  right: 4%;
+}
+
+.public-healthroom__message-2 {
+  width: 32%;
+  top: 23%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.public-healthroom__system-logic {
+  position: relative;
+  width: 100%;
+  z-index: 0;
+  margin-top: 8vh;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom__system-logic {
+    width: 50%;
+    margin-left: auto;
+  }
+}
+
+.public-healthroom__section-container {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.public-healthroom__section img {
+  display: block;
+}
+
+.public-healthroom .public-healthroom__prototype-frame--enter .public-healthroom__prototype-frame__image {
+  transition: all 0.5s;
+}
+
+.public-healthroom .public-healthroom__prototype-frame--enter .public-healthroom__overlay-image {
+  transition: opacity 0.25s 0.5s;
+}
+
+.public-healthroom .public-healthroom__prototype-frame--exit .public-healthroom__prototype-frame__image {
+  transition: all 0.5s 0.25s;
+}
+
+.public-healthroom .public-healthroom__prototype-frame--exit .public-healthroom__overlay-image {
+  transition: opacity 0.25s;
+}
+
+.public-healthroom__prototype-wrapper {
+  position: relative;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom__prototype-wrapper {
+    display: flex;
+  }
+}
+
+.public-healthroom__indicator {
+  position: sticky;
+  top: 75vh;
+  width: 100%;
+  height: 0;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.25);
+  z-index: 2;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom__indicator {
+    top: 50vh;
+    left: 50%;
+    width: 100%;
+  }
+}
+
+/* Gatsby utility classes replicated for this page */
+
+.public-healthroom .max-width {
+  max-width: 1020px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.public-healthroom .max-width-- {
+  max-width: none;
+}
+
+.public-healthroom .max-width--md {
+  max-width: 775px;
+}
+
+.public-healthroom .max-width--sm {
+  max-width: 600px;
+}
+
+.public-healthroom .max-width--80 {
+  max-width: 80%;
+}
+
+.public-healthroom .content-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom .content-padding {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.public-healthroom .margin-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.public-healthroom .margin-top {
+  margin-top: 1rem;
+}
+
+.public-healthroom .margin-top--double {
+  margin-top: 2rem;
+}
+
+.public-healthroom .margin-bottom {
+  margin-bottom: 1rem;
+}
+
+.public-healthroom .pad-top {
+  padding-top: 1rem;
+}
+
+.public-healthroom .pad-horizontal {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.public-healthroom .pad-horizontal--double {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.public-healthroom .pad-all {
+  box-sizing: border-box;
+  padding: 1rem;
+}
+
+.public-healthroom .pad-vertical--double {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.public-healthroom .background--gray {
+  background-color: #f6f6f6;
+}
+
+.public-healthroom .text--center {
+  text-align: center;
+}
+
+.public-healthroom .text--gray {
+  color: #787473;
+}
+
+.public-healthroom .image--max-width {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.public-healthroom .image--max-width img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* header--xl: serif, light, 1.75rem/2.0625rem → lg: 2.25rem/2.625rem */
+.public-healthroom .header--xl {
+  font-family: var(--font-serif, 'Adobe-Jenson-Pro', Georgia, serif);
+  font-weight: 300;
+  font-size: 1.75rem;
+  line-height: 2.0625rem;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom .header--xl {
+    font-size: 2.25rem;
+    line-height: 2.625rem;
+  }
+}
+
+/* header--lg: serif, light, 1.5rem/2.125rem */
+.public-healthroom .header--lg {
+  font-family: var(--font-serif, 'Adobe-Jenson-Pro', Georgia, serif);
+  font-weight: 300;
+  font-size: 1.5rem;
+  line-height: 2.125rem;
+}
+
+/* header--md: uppercase, tracking 2px, gray, bold, 0.875rem/1.1875rem → lg: 15px/1.375rem */
+.public-healthroom .header--md {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #787473;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.1875rem;
+}
+
+@media (min-width: 864px) {
+  .public-healthroom .header--md {
+    font-size: 15px;
+    line-height: 1.375rem;
+  }
+}
+
+/* sup reference links */
+.public-healthroom sup a {
+  color: #e36216;
+  text-decoration: none;
+}
+
+.public-healthroom sup a:hover {
+  color: #000;
+  text-decoration: underline;
+}
+
+/* references ordered list */
+.public-healthroom .references {
+  padding-left: 1.5rem;
+}
+
+.public-healthroom .references li {
+  margin-bottom: 1rem;
+}
