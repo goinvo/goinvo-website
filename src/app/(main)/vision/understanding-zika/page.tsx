@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { ZikaNav } from './ZikaNav'
 import './zika.css'
 
@@ -36,11 +35,7 @@ const IMG = 'https://www.goinvo.com/old/images/features/zika'
 
 export default function UnderstandingZikaPage() {
   return (
-    <div id="feature-article">
-      <SetCaseStudyHero
-        image={`${IMG}/header.png`}
-      />
-
+    <div id="feature-article" className="pt-[var(--spacing-header-height)]">
       <ZikaNav />
 
       <div className="header">
