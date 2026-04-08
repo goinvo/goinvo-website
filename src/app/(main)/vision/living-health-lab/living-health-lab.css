@@ -1,1 +1,257 @@
-/* TODO: convert from SCSS */
+/* Living Health Lab — scoped styles ported from Gatsby SCSS */
+
+.living-health-lab .list-steps li {
+  max-width: 300px;
+  text-align: center;
+  margin: 2rem auto 0;
+}
+
+.living-health-lab .list-steps li img {
+  display: block;
+  margin: 0 auto;
+  max-width: 150px;
+}
+
+.living-health-lab .lhl-image-max-width {
+  display: block;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.living-health-lab .lhl-user-chart {
+  max-width: 100%;
+}
+
+.living-health-lab .lhl-carousel-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.living-health-lab .lhl-carousel-button {
+  max-width: 100px;
+  padding: 2px;
+  margin-right: 5px;
+}
+
+.living-health-lab .lhl-carousel-button img {
+  display: block;
+}
+
+.living-health-lab .lhl-carousel-button.active {
+  background-color: #E36216;
+}
+
+.living-health-lab .lhl-carousel-prev,
+.living-health-lab .lhl-carousel-next {
+  width: 40px;
+  height: 40px;
+  opacity: 1;
+  transition: opacity 200ms ease-in-out;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.living-health-lab .lhl-carousel-prev:before,
+.living-health-lab .lhl-carousel-next:before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.living-health-lab .lhl-carousel-prev.disabled,
+.living-health-lab .lhl-carousel-next.disabled {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.living-health-lab .lhl-carousel-prev {
+  margin-right: 10px;
+}
+
+.living-health-lab .lhl-carousel-prev:before {
+  transform: rotate(90deg);
+}
+
+.living-health-lab .lhl-carousel-next {
+  margin-left: 10px;
+}
+
+.living-health-lab .lhl-carousel-next:before {
+  transform: rotate(-90deg);
+}
+
+.living-health-lab .header--md {
+  margin-top: 2rem;
+}
+
+.living-health-lab h4 {
+  margin-bottom: 0.5rem;
+}
+
+.living-health-lab h4 + p {
+  margin-top: 0.5rem;
+}
+
+/* Gatsby utility classes scoped under page wrapper */
+.living-health-lab .max-width {
+  max-width: 1020px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.living-health-lab .max-width--48 {
+  max-width: 48%;
+}
+
+.living-health-lab .max-width--60--only-lg {
+  max-width: 48%;
+}
+
+@media (min-width: 864px) {
+  .living-health-lab .max-width--60--only-lg {
+    max-width: 60%;
+  }
+}
+
+.living-health-lab .image--max-width {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.living-health-lab .text--xl {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.living-health-lab .text--center {
+  text-align: center;
+}
+
+.living-health-lab .margin-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.living-health-lab .margin-top--trip {
+  margin-top: 4rem;
+}
+
+.living-health-lab .margin-top--double {
+  margin-top: 2rem;
+}
+
+.living-health-lab .margin-top--quad {
+  margin-top: 6rem;
+}
+
+.living-health-lab .margin-bottom--none {
+  margin-bottom: 0;
+}
+
+.living-health-lab .margin-bottom--double {
+  margin-bottom: 2rem;
+}
+
+.living-health-lab .margin-vertical--double {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.living-health-lab .margin-right {
+  margin-right: 1rem;
+}
+
+.living-health-lab .margin-left {
+  margin-left: 1rem;
+}
+
+.living-health-lab .pad-all {
+  padding: 2rem;
+}
+
+.living-health-lab .content-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.living-health-lab .button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.living-health-lab .button--primary {
+  background-color: #E36216;
+  color: #fff;
+  border: none;
+}
+
+.living-health-lab .button--primary:hover {
+  background-color: #c95510;
+}
+
+.living-health-lab .button--block {
+  display: block;
+  width: 100%;
+}
+
+.living-health-lab .button--link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.living-health-lab .button-group {
+  margin-bottom: 1rem;
+}
+
+.living-health-lab .background--blue {
+  background-color: #dff0f5;
+}
+
+.living-health-lab .background--gray {
+  background-color: #f7f7f7;
+}
+
+/* Pure Grid */
+.living-health-lab .pure-g {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.living-health-lab .pure-u-1 {
+  width: 100%;
+}
+
+.living-health-lab .pure-u-1-1 {
+  width: 100%;
+}
+
+.living-health-lab .pure-u-1-2 {
+  width: 50%;
+}
+
+@media (min-width: 864px) {
+  .living-health-lab .pure-u-lg-1-2 {
+    width: 50%;
+  }
+  .living-health-lab .pure-u-lg-1-3 {
+    width: 33.333%;
+  }
+  .living-health-lab .pure-u-lg-1-5 {
+    width: 20%;
+  }
+}
