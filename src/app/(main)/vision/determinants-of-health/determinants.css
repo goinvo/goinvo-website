@@ -1,1 +1,237 @@
-/* TODO: convert from SCSS */
+/* Determinants of Health — scoped styles ported from Gatsby SCSS */
+
+.determinants-of-health .poster {
+  border: 15px #ffeee4 solid;
+}
+
+.determinants-of-health .divisions {
+  display: block;
+  box-sizing: border-box;
+  column-count: 2;
+  column-gap: 0px;
+  column-fill: balance;
+  margin: 30px 0;
+}
+
+.determinants-of-health .divisions h4 {
+  margin: 0 0 5px 0;
+}
+
+.determinants-of-health .divisions ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.determinants-of-health .divisions .divisionSection {
+  margin-bottom: 30px;
+  break-inside: avoid-column;
+}
+
+h3.determinant {
+  margin-top: 0;
+}
+
+.doh__chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+
+.doh__chart-legend button {
+  text-align: left;
+}
+
+.doh__chart-legend li {
+  flex-basis: 50%;
+}
+
+.doh__chart-legend img {
+  display: inline-block;
+  max-width: 1.5rem;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@media (min-width: 568px) {
+  .doh__chart-legend {
+    flex-wrap: nowrap;
+  }
+  .doh__chart-legend li {
+    flex: 1;
+  }
+  .doh__chart-legend button {
+    text-align: center;
+  }
+  .doh__chart-legend img {
+    display: block;
+    max-width: 60px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 864px) {
+  .doh__chart-legend__label {
+    display: none;
+  }
+}
+
+.doh__determinant-button {
+  width: 100%;
+}
+
+/* Gatsby utility classes scoped under page wrapper */
+.determinants-of-health .max-width {
+  max-width: 1020px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.determinants-of-health .max-width--md {
+  max-width: 840px;
+}
+
+.determinants-of-health .content-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.determinants-of-health .image--max-width {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.determinants-of-health .text--grey,
+.determinants-of-health .text--gray {
+  color: #6d6d6d;
+}
+
+.determinants-of-health .text--black {
+  color: #1a1a1a;
+}
+
+.determinants-of-health .text--center {
+  text-align: center;
+}
+
+.determinants-of-health .text--sm {
+  font-size: 0.875rem;
+}
+
+.determinants-of-health .margin-top--double {
+  margin-top: 2rem;
+}
+
+.determinants-of-health .margin-top--half {
+  margin-top: 0.5rem;
+}
+
+.determinants-of-health .margin-bottom {
+  margin-bottom: 1rem;
+}
+
+.determinants-of-health .margin-bottom--half {
+  margin-bottom: 0.5rem;
+}
+
+.determinants-of-health .margin-bottom--double {
+  margin-bottom: 2rem;
+}
+
+.determinants-of-health .margin-right {
+  margin-right: 1rem;
+}
+
+.determinants-of-health .margin-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.determinants-of-health .pad-vertical--double {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.determinants-of-health .pad-bottom {
+  padding-bottom: 1rem;
+}
+
+.determinants-of-health .pad-top {
+  padding-top: 1rem;
+}
+
+.determinants-of-health .button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 150ms;
+}
+
+.determinants-of-health .button--secondary {
+  background-color: #007385;
+  color: #fff;
+  border: none;
+}
+
+.determinants-of-health .button--secondary:hover {
+  background-color: #005c6a;
+}
+
+.determinants-of-health .button--lg {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+}
+
+.determinants-of-health .button--block {
+  display: block;
+  width: 100%;
+}
+
+.determinants-of-health .button-group {
+  margin-bottom: 1rem;
+}
+
+.determinants-of-health .background--gray {
+  background-color: #f7f7f7;
+}
+
+.determinants-of-health .background--blue {
+  background-color: #dff0f5;
+}
+
+.determinants-of-health .ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+
+.determinants-of-health .link--wrap {
+  word-break: break-all;
+}
+
+/* Pure Grid */
+.determinants-of-health .pure-g {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.determinants-of-health .pure-u-1 {
+  width: 100%;
+}
+
+@media (min-width: 864px) {
+  .determinants-of-health .pure-u-lg-1-2 {
+    width: 50%;
+  }
+  .determinants-of-health .pure-u-lg-1-3 {
+    width: 33.333%;
+  }
+  .determinants-of-health .pad-right--only-lg {
+    padding-right: 1rem;
+  }
+}

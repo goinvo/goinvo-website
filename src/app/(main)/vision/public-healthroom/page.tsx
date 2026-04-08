@@ -7,6 +7,7 @@ import { References } from '@/components/ui/References'
 import { PrototypeViewer } from './PrototypeViewer'
 import { cloudfrontImage } from '@/lib/utils'
 import './public-healthroom.css'
+import './healthroom.css'
 
 const heroImage = '/images/features/public-healthroom/pubhrm-hero-1.jpg'
 

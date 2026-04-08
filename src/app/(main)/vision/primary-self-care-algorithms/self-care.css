@@ -1,0 +1,255 @@
+/* Primary Self Care Algorithms — scoped styles ported from Gatsby SCSS */
+
+.primary-self-care-algorithms .algorithm-icons {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-auto-rows: 1fr;
+  grid-column-gap: 1rem;
+  grid-row-gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.primary-self-care-algorithms .algorithm-icons svg {
+  height: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.primary-self-care-algorithms .algorithm-icons__algorithm {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 1rem;
+  background-color: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  box-shadow: 1px 1px 10px 0px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  transition: box-shadow 150ms, border-color 150ms;
+  cursor: pointer;
+}
+
+.primary-self-care-algorithms .algorithm-icons__algorithm:hover,
+.primary-self-care-algorithms .algorithm-icons__algorithm:focus {
+  box-shadow: 1px 1px 12px 0px rgba(0, 0, 0, 0.15);
+}
+
+.primary-self-care-algorithms .algorithm-icons__algorithm--active {
+  border-color: #E36216;
+  background-color: rgba(227, 98, 22, 0.02);
+}
+
+.primary-self-care-algorithms .algorithm {
+  display: none;
+  margin-bottom: 3rem;
+}
+
+.primary-self-care-algorithms .algorithm--visible {
+  display: block;
+}
+
+.primary-self-care-algorithms .airtable {
+  max-width: 85%;
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+}
+
+.primary-self-care-algorithms .psca-table-applications {
+  table-layout: fixed;
+}
+
+.primary-self-care-algorithms .psca-table-applications tr > th,
+.primary-self-care-algorithms .psca-table-applications tr > td {
+  width: 65px;
+}
+
+.primary-self-care-algorithms .psca-table-applications tr > th:first-of-type,
+.primary-self-care-algorithms .psca-table-applications tr > td:first-of-type {
+  width: 150px;
+}
+
+@media (max-width: 863px) {
+  .primary-self-care-algorithms .airtable {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+}
+
+/* PscaTable container styles */
+.psca-table-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.psca-table-container table {
+  width: 100%;
+}
+
+.psca-table-container tr,
+.psca-table-container th,
+.psca-table-container td {
+  vertical-align: top;
+  text-align: left;
+  background-color: #fff;
+}
+
+.psca-table-container th,
+.psca-table-container td {
+  padding: 5px 10px;
+  border-collapse: unset;
+}
+
+.psca-table-container th {
+  font-weight: normal;
+}
+
+.psca-table-container table tbody tr:nth-child(odd),
+.psca-table-container table tbody tr:nth-child(odd) td {
+  background-color: #f9f9f9;
+}
+
+.psca-table-container tr > th:first-child,
+.psca-table-container tr > td:first-child {
+  position: sticky;
+  left: 0;
+}
+
+.psca-table-container--shadow tr > th:first-child:after,
+.psca-table-container--shadow tr > td:first-child:after {
+  content: '';
+  box-shadow: 5px 0 5px -5px inset rgba(0, 0, 0, 0.25);
+  height: 100%;
+  top: 0;
+  right: -5px;
+  position: absolute;
+  width: 5px;
+}
+
+/* Gatsby utility classes scoped under page wrapper */
+.primary-self-care-algorithms .max-width {
+  max-width: 1020px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.primary-self-care-algorithms .max-width--md {
+  max-width: 840px;
+}
+
+.primary-self-care-algorithms .content-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.primary-self-care-algorithms .content-padding--double {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.primary-self-care-algorithms .image--max-width {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.primary-self-care-algorithms .pad-vertical--double {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.primary-self-care-algorithms .pad-bottom--none {
+  padding-bottom: 0;
+}
+
+.primary-self-care-algorithms .margin-top--double {
+  margin-top: 2rem;
+}
+
+.primary-self-care-algorithms .margin-top--none {
+  margin-top: 0;
+}
+
+.primary-self-care-algorithms .margin-bottom--none {
+  margin-bottom: 0;
+}
+
+.primary-self-care-algorithms .margin-bottom--double {
+  margin-bottom: 2rem;
+}
+
+.primary-self-care-algorithms .margin-bottom--half {
+  margin-bottom: 0.5rem;
+}
+
+.primary-self-care-algorithms .text--center {
+  text-align: center;
+}
+
+.primary-self-care-algorithms .text--gray {
+  color: #6d6d6d;
+}
+
+.primary-self-care-algorithms .background--gray {
+  background-color: #f7f7f7;
+}
+
+.primary-self-care-algorithms .background--blue {
+  background-color: #dff0f5;
+}
+
+.primary-self-care-algorithms .button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.primary-self-care-algorithms .button--link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #E36216;
+  text-decoration: underline;
+}
+
+.primary-self-care-algorithms .hidden--until-lg {
+  display: none;
+}
+
+@media (min-width: 864px) {
+  .primary-self-care-algorithms .hidden--until-lg {
+    display: initial;
+  }
+}
+
+.primary-self-care-algorithms .list--unstyled {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.primary-self-care-algorithms .display--flex {
+  display: flex;
+}
+
+.primary-self-care-algorithms .display--flex--justify-space-between {
+  justify-content: space-between;
+}
+
+.primary-self-care-algorithms .display--flex--align-baseline {
+  align-items: baseline;
+}
+
+.primary-self-care-algorithms .icon {
+  display: inline-block;
+  vertical-align: middle;
+}
