@@ -363,6 +363,15 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     }
   }
 
+  // ── Content link count comparison ──────────────────────────────────
+  // Count non-nav, non-button links (text links, PDF links, etc.)
+  const isContentLink = (n: TreeNode) => n.interactive === 'link' && n.text.length > 3 && n.rect.y > 300
+  const aLinks = flatA.filter(isContentLink).length
+  const bLinks = flatB.filter(isContentLink).length
+  if (aLinks > bLinks + 3) {
+    issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `Content links: ${aLinks} → ${bLinks} (missing ${aLinks - bLinks} links)` })
+  }
+
   // ── Content text comparison ─────────────────────────────────────
   // Check headings by text to find content from wrong pages
   // Normalize: lowercase, collapse whitespace, trim
