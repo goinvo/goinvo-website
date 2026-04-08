@@ -57,18 +57,10 @@ function MultiImageContent({
           'hidden sm:grid w-full h-full',
           `grid-cols-${desktop.length}`,
         )}
-        style={{ gridTemplateColumns: `repeat(${desktop.length}, 1fr)`, transform: 'translateZ(0)' }}
+        style={{ gridTemplateColumns: `repeat(${desktop.length}, 1fr)` }}
       >
         {desktop.map((src, i) => (
-          <div
-            key={src}
-            className="relative h-full overflow-hidden"
-            style={{
-              /* Extend 1px into adjacent cell to cover Firefox subpixel gap */
-              marginRight: i < desktop.length - 1 ? '-1px' : undefined,
-              paddingRight: i < desktop.length - 1 ? '1px' : undefined,
-            }}
-          >
+          <div key={src} className="relative h-full">
             <Image
               src={cloudfrontImage(src)}
               alt=""
@@ -167,7 +159,7 @@ export function PersistentHero() {
           <div
             ref={containerRef}
             className={cn(
-              'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)] [transform:translateZ(0)]',
+              'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
               'h-[220px] lg:h-[450px]',
             )}
             style={{
