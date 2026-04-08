@@ -155,12 +155,27 @@ export function PersistentHero() {
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
           className="relative pt-[var(--spacing-header-height)]"
         >
+          {/* Mobile stacked images — rendered outside animation container */}
+          {config?.mobileImages && config.mobileImages.length > 0 && (
+            <div className="sm:hidden">
+              {config.mobileImages.map((src, i) => (
+                <img
+                  key={src}
+                  src={cloudfrontImage(src)}
+                  alt=""
+                  className="w-full h-auto block"
+                  loading={i === 0 ? 'eager' : 'lazy'}
+                />
+              ))}
+            </div>
+          )}
+
           {/* Image container — directional slide, optionally expands */}
           <div
             ref={containerRef}
             className={cn(
               'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
-              config?.mobileImages ? 'h-[500px] sm:h-[220px] lg:h-[450px]' : 'h-[220px] lg:h-[450px]',
+              config?.mobileImages ? 'hidden sm:block sm:h-[220px] lg:h-[450px]' : 'h-[220px] lg:h-[450px]',
             )}
             style={{
               viewTransitionName: 'hero-image',
@@ -188,38 +203,6 @@ export function PersistentHero() {
                     config={config}
                     onImageLoad={handleImageLoad}
                   />
-                ) : config?.mobileImages && config.mobileImages.length > 0 ? (
-                  <>
-                    {/* Desktop: single wide image */}
-                    <Image
-                      src={cloudfrontImage(displayImage)}
-                      alt=""
-                      fill
-                      className="object-cover hidden sm:block"
-                      style={{ objectPosition: bgPosition }}
-                      onLoad={handleImageLoad}
-                      priority
-                    />
-                    {/* Mobile: first mobile image */}
-                    <Image
-                      src={cloudfrontImage(config.mobileImages[0])}
-                      alt=""
-                      fill
-                      className="object-cover sm:hidden"
-                      style={{ objectPosition: 'center top' }}
-                      onLoad={(e) => {
-                        // Calculate expanded height from mobile image aspect ratio
-                        if (config?.expandAfterSlide && containerRef.current) {
-                          const img = e.currentTarget
-                          const w = containerRef.current.clientWidth
-                          const aspect = img.naturalWidth / img.naturalHeight
-                          // Only set if we're on mobile (< 640px)
-                          if (w < 640) setFullImageHeight(Math.round(w / aspect))
-                        }
-                      }}
-                      priority
-                    />
-                  </>
                 ) : (
                   <Image
                     src={cloudfrontImage(displayImage)}
