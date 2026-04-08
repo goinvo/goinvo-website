@@ -92,9 +92,9 @@ const components: PortableTextComponents = {
       const border = value.border || 'none'
       const borderClasses: Record<string, string> = {
         none: '',
-        peach: 'border-[8px] border-[#FFEEE4]',
-        gray: 'border-[8px] border-[#e0e0e0]',
-        teal: 'border-[8px] border-secondary',
+        peach: 'border-[15px] border-[#FFEEE4]',
+        gray: 'border-[15px] border-[#e0e0e0]',
+        teal: 'border-[15px] border-secondary',
       }
       const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
       const imageUrl = urlForImage(value).width(width).url()
