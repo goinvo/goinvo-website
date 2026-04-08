@@ -156,7 +156,7 @@ export default async function VisionPage() {
             rel="noopener noreferrer"
             className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
           >
-            <div className="relative h-[260px] overflow-hidden bg-gray-medium">
+            <div className="h-[260px] overflow-hidden bg-gray-medium">
               {spotlightFeature.video ? (
                 <video
                   src={cloudfrontImage(spotlightFeature.video)}
@@ -164,14 +164,15 @@ export default async function VisionPage() {
                   muted
                   loop
                   playsInline
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <Image
                   src={cloudfrontImage(spotlightFeature.image)}
                   alt={spotlightFeature.title}
-                  fill
-                  className="object-cover"
+                  width={680}
+                  height={260}
+                  className="w-full h-full object-cover"
                 />
               )}
             </div>
@@ -195,14 +196,15 @@ export default async function VisionPage() {
             href="/vision/health-visualizations"
             className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
           >
-            <div className="relative h-[260px] overflow-hidden">
+            <div className="h-[260px] overflow-hidden">
               <Image
                 src={cloudfrontImage(
                   '/images/features/posters/health-viz-vision-preview-2.jpg'
                 )}
                 alt="Health Visualizations"
-                fill
-                className="object-cover"
+                width={400}
+                height={260}
+                className="w-full h-full object-cover"
               />
             </div>
             <div className="p-4">

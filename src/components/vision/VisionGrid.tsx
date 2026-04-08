@@ -21,7 +21,7 @@ function FeatureCard({ feature }: { feature: StaticFeature }) {
 
   const cardContent = (
     <>
-      <div className="relative h-[260px] overflow-hidden bg-gray-medium">
+      <div className="h-[260px] overflow-hidden bg-gray-medium [backface-visibility:hidden]">
         {feature.video || isVideo(feature.image) ? (
           <video
             src={cloudfrontImage(feature.video || feature.image)}
@@ -29,7 +29,7 @@ function FeatureCard({ feature }: { feature: StaticFeature }) {
             muted
             loop
             playsInline
-            className="absolute inset-0 w-full h-full object-cover"
+            className="w-full h-full object-cover [backface-visibility:hidden]"
             style={{
               objectPosition: feature.imagePosition || 'center center',
             }}
@@ -38,8 +38,9 @@ function FeatureCard({ feature }: { feature: StaticFeature }) {
           <Image
             src={cloudfrontImage(feature.image)}
             alt={feature.title}
-            fill
-            className="object-cover"
+            width={400}
+            height={260}
+            className="w-full h-full object-cover [backface-visibility:hidden]"
             style={{
               objectPosition: feature.imagePosition || 'center center',
             }}
