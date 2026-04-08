@@ -1,9 +1,15 @@
 import type { Metadata } from 'next'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import Image from 'next/image'
+import Link from 'next/link'
+import { sanityFetch } from '@/sanity/lib/live'
+import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
+import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
-
-const heroImage = '/images/features/posters/health-visualizations-hero-2.jpg'
+import { Reveal } from '@/components/ui/Reveal'
+import { SubscribeForm } from '@/components/forms/SubscribeForm'
+import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import type { HealthVisualization } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Open Source Healthcare Visualizations',
@@ -11,7 +17,17 @@ export const metadata: Metadata = {
     'A repo of open source health visualizations and graphics available to all for use or modification, under a Creative Commons Attribution v3 license or MIT license.',
 }
 
-const posters = [
+// Normalized card data shared by both Sanity and fallback paths
+interface PosterCard {
+  id: string
+  title: string
+  imageUrl: string
+  downloadUrl: string
+  learnMoreLink: string
+}
+
+// Fallback data from the old Gatsby site
+const fallbackPosters = [
   { id: 'own-your-health-data', title: 'Own Your Health Data', image: '/images/features/own-your-health-data/patient-data-ownership.jpg', downloadLink: '/pdf/vision/own-your-health-data/OwnYourHealthData.pdf', learnMoreLink: '/vision/own-your-health-data/' },
   { id: 'how-to-vote-early', title: 'How To Vote Early', image: '/images/features/posters/how-to-vote-early.jpg', downloadLink: '/pdf/vision/posters/how-to-vote-early.pdf', learnMoreLink: '' },
   { id: 'precision-autism', title: 'Precision Autism', image: '/images/features/precision-autism/precision-autism.jpg', downloadLink: '/pdf/vision/precision-autism/Precision-Autism-25.Aug.2020.pdf', learnMoreLink: '/vision/precision-autism/' },
@@ -33,89 +49,194 @@ const posters = [
   { id: 'sdoh-spend', title: 'Spending within the Determinants of Health', image: '/images/features/determinants-of-health/sdoh-spend-mockup.jpg', downloadLink: '/pdf/vision/posters/sdoh-spend-v12.pdf', learnMoreLink: '/vision/determinants-of-health/#determinants-spending' },
   { id: 'critical-mass', title: 'Critical MASS', image: '/images/features/posters/critical-mass.jpg', downloadLink: '/pdf/vision/posters/critical-mass.pdf', learnMoreLink: '' },
   { id: 'ebola', title: 'Ebola Care Guideline', image: '/images/features/posters/ebola-care-guideline.jpg', downloadLink: '/pdf/vision/posters/ebola-care-guideline.pdf', learnMoreLink: '/vision/ebola-care-guideline/' },
-  { id: 'data-interop', title: 'Standardized Data for Interoperability', image: '/images/features/posters/standard-health-data.jpg', downloadLink: '/pdf/vision/posters/standard-health-data.pdf', learnMoreLink: '' },
-  { id: 'healthcare-is-a-human-right', title: 'Healthcare is a Human Right', image: '/images/features/posters/care-card-healthcare-is-a-human-right.jpg', downloadLink: '/pdf/vision/posters/care-card-healthcare-is-a-human-right.pdf', learnMoreLink: '' },
-  { id: 'examine-yourself', title: 'Examine Yourself', image: '/images/features/posters/care-card-examine-yourself-2.jpg', downloadLink: '/pdf/vision/posters/care-card-examine-yourself.pdf', learnMoreLink: '' },
-  { id: 'sugar-kills', title: 'Sugar Kills', image: '/images/features/posters/care-card-sugar-kills.jpg', downloadLink: '/pdf/vision/posters/care-card-sugar-kills-2.pdf', learnMoreLink: '' },
-  { id: 'make-things', title: 'Make Things', image: '/images/features/posters/design-axiom-make-things.jpg', downloadLink: '/pdf/vision/posters/design-axiom-make-things.pdf', learnMoreLink: '' },
-  { id: 'let-data-scream', title: 'Let Data Scream', image: '/images/features/posters/design-axiom-let-data-scream.jpg', downloadLink: '/pdf/vision/posters/design-axiom-let-data-scream.pdf', learnMoreLink: '' },
-  { id: 'prototype-like-crazy', title: 'Prototype Like Crazy', image: '/images/features/posters/design-axiom-prototype-like-crazy.jpg', downloadLink: '/pdf/vision/posters/design-axiom-prototype-like-crazy-2.pdf', learnMoreLink: '' },
-  { id: 'care-plans-process', title: 'Care Planning Process', image: '/images/features/posters/careplans-process.jpg', downloadLink: '/pdf/vision/posters/careplans-process.pdf', learnMoreLink: '' },
+  { id: 'data-interop', title: 'Standardized Data for Interoperability', image: '/images/features/posters/standard-health-data.jpg', downloadLink: '/pdf/vision/posters/standard-health-data.pdf', learnMoreLink: 'https://yes.goinvo.com/articles/a-path-towards-standardized-health' },
+  { id: 'healthcare-is-a-human-right', title: 'Healthcare is a Human Right', image: '/images/features/posters/care-card-healthcare-is-a-human-right.jpg', downloadLink: '/pdf/vision/posters/care-card-healthcare-is-a-human-right.pdf', learnMoreLink: 'http://carecards.me/#healthcare-human-right' },
+  { id: 'examine-yourself', title: 'Examine Yourself', image: '/images/features/posters/care-card-examine-yourself-2.jpg', downloadLink: '/pdf/vision/posters/care-card-examine-yourself.pdf', learnMoreLink: 'http://carecards.me/#examine-yourself' },
+  { id: 'sugar-kills', title: 'Sugar Kills', image: '/images/features/posters/care-card-sugar-kills.jpg', downloadLink: '/pdf/vision/posters/care-card-sugar-kills-2.pdf', learnMoreLink: 'http://carecards.me/#sugar-kills' },
+  { id: 'make-things', title: 'Make Things', image: '/images/features/posters/design-axiom-make-things.jpg', downloadLink: '/pdf/vision/posters/design-axiom-make-things.pdf', learnMoreLink: 'http://designaxioms.com/' },
+  { id: 'let-data-scream', title: 'Let Data Scream', image: '/images/features/posters/design-axiom-let-data-scream.jpg', downloadLink: '/pdf/vision/posters/design-axiom-let-data-scream.pdf', learnMoreLink: 'http://designaxioms.com/' },
+  { id: 'prototype-like-crazy', title: 'Prototype Like Crazy', image: '/images/features/posters/design-axiom-prototype-like-crazy.jpg', downloadLink: '/pdf/vision/posters/design-axiom-prototype-like-crazy-2.pdf', learnMoreLink: 'http://designaxioms.com/' },
+  { id: 'care-plans-process', title: 'Care Planning Process', image: '/images/features/posters/careplans-process.jpg', downloadLink: '/pdf/vision/posters/careplans-process.pdf', learnMoreLink: '/vision/care-plans/' },
   { id: 'shr-medical-encounter', title: 'SHR Medical Encounter Journey Map', image: '/images/features/posters/shr-medical-encounter-journey-map.jpg', downloadLink: '/pdf/vision/posters/shr-medical-encounter-journey-map.pdf', learnMoreLink: '/work/mitre-shr' },
-  { id: 'care-plans-ecosystem', title: 'Care Plans Ecosystem', image: '/images/features/posters/careplans-ecosystem.jpg', downloadLink: '/pdf/vision/posters/careplans-ecosystem.pdf', learnMoreLink: '' },
+  { id: 'care-plans-ecosystem', title: 'Care Plans Ecosystem', image: '/images/features/posters/careplans-ecosystem.jpg', downloadLink: '/pdf/vision/posters/careplans-ecosystem.pdf', learnMoreLink: '/vision/care-plans/' },
 ]
 
-export default function HealthVisualizationsPage() {
-  return (
-    <>
-      <SetCaseStudyHero image={cloudfrontImage(heroImage)} />
-      <div className="poster-feature">
-        <div className="pad-vertical--double">
-          <div className="max-width max-width--md content-padding">
-            <h1 className="header--xl margin-bottom--none">
-              Health Visualizations
-            </h1>
-            <p className="text--gray text--sm margin-top--none margin-bottom--double">
-              These infographics are open source, available to all under a{' '}
-              <a
-                href="https://creativecommons.org/licenses/by/3.0/us/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Creative Commons Attribution v3
-              </a>{' '}
-              license or for the SHR Journey Map and HIE diagram, under a{' '}
-              <a
-                href="https://opensource.org/licenses/MIT"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                MIT
-              </a>{' '}
-              license.
-            </p>
+// Slug-to-CloudFront-image lookup so Sanity items without uploaded images still render
+const slugToImage: Record<string, string> = Object.fromEntries(
+  fallbackPosters.map((p) => [p.id, p.image])
+)
 
-            <div className="pure-g">
-              {posters.map((poster) => (
-                <div key={poster.id} className="pure-u-1 pure-u-md-1-2 pure-u-lg-1-3">
-                  <div className="poster-card margin-top--double content-padding">
-                    <div className="poster-preview">
-                      <a href={cloudfrontImage(poster.downloadLink)}>
-                        <div className="image-block image-block--hoverable margin-top--none">
-                          <div className="image-block__image-container">
-                            <img
-                              src={cloudfrontImage(poster.image)}
-                              className="image--max-width"
-                              alt={poster.title}
-                            />
-                          </div>
-                        </div>
-                      </a>
-                    </div>
-                    <div className="posterInfo">
-                      <h4 className="header--sm margin-top--none">{poster.title}</h4>
-                      <a
-                        href={cloudfrontImage(poster.downloadLink)}
-                        className="button button--secondary button--block"
-                      >
-                        Download
-                      </a>
-                      <p className="text--center">
-                        {poster.learnMoreLink ? <a href={poster.learnMoreLink}>Learn More</a> : null}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+function resolveDownloadUrl(link: string): string {
+  if (!link) return ''
+  return link.startsWith('http') ? link : `https://www.goinvo.com${link}`
+}
+
+/** Rewrite legacy goinvo.com/features/ URLs to local /vision/ paths */
+function normalizeLearnMoreLink(link: string): string {
+  if (!link) return ''
+  // Convert absolute goinvo.com/features/ URLs to local /vision/ paths
+  const m = link.match(/(?:https?:\/\/)?(?:www\.)?goinvo\.com\/features\/([^/?#]+)/)
+  if (m) return `/vision/${m[1]}`
+  return link
+}
+
+function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
+  return items.map((viz) => {
+    const slug = viz.slug?.current ?? ''
+    const sanityImageUrl = viz.image
+      ? urlForImage(viz.image).width(600).height(450).url()
+      : null
+    const fallbackImageUrl = slugToImage[slug]
+      ? cloudfrontImage(slugToImage[slug])
+      : ''
+
+    return {
+      id: viz._id,
+      title: viz.title,
+      imageUrl: sanityImageUrl || fallbackImageUrl,
+      downloadUrl: resolveDownloadUrl(viz.downloadLink ?? ''),
+      learnMoreLink: normalizeLearnMoreLink(viz.learnMoreLink ?? ''),
+    }
+  })
+}
+
+function normalizeFallbackItems(): PosterCard[] {
+  return fallbackPosters.map((p) => ({
+    id: p.id,
+    title: p.title,
+    imageUrl: cloudfrontImage(p.image),
+    downloadUrl: resolveDownloadUrl(p.downloadLink),
+    learnMoreLink: p.learnMoreLink,
+  }))
+}
+
+export default async function HealthVisualizationsPage() {
+  const { data: sanityVizItems } = (await sanityFetch({
+    query: allHealthVisualizationsQuery,
+  })) as { data: HealthVisualization[] }
+
+  const cards =
+    sanityVizItems && sanityVizItems.length > 0
+      ? normalizeSanityItems(sanityVizItems)
+      : normalizeFallbackItems()
+
+  return (
+    <div>
+      <SetCaseStudyHero image={cloudfrontImage('/images/features/posters/health-visualizations-hero-2.jpg')} />
+
+      {/* Intro */}
+      <section className="max-width max-width-md content-padding py-12">
+        <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Health Visualizations</h1>
+        <Reveal style="slide-up">
+          <p className="text-gray leading-relaxed">
+            These infographics are open source, available to all under a{' '}
+            <a
+              href="https://creativecommons.org/licenses/by/3.0/us/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-secondary hover:underline"
+            >
+              Creative Commons Attribution v3
+            </a>{' '}
+            license or for the SHR Journey Map and HIE diagram, under a{' '}
+            <a
+              href="https://opensource.org/licenses/MIT"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-secondary hover:underline"
+            >
+              MIT
+            </a>{' '}
+            license.
+          </p>
+        </Reveal>
+      </section>
+
+      {/* Poster Grid */}
+      <section className="max-width max-width-md content-padding pb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {cards.map((card, i) => (
+            <Reveal key={card.id} style="slide-up" delay={Math.min(i * 0.05, 0.3)} className="h-full">
+              <PosterCardComponent card={card} />
+            </Reveal>
+          ))}
         </div>
-        <div className="background--gray pad-vertical--double">
-          <div className="max-width max-width--md content-padding">
+      </section>
+
+      {/* Subscribe */}
+      <section className="max-width max-width-md content-padding pb-16">
+        <Reveal style="slide-up">
+          <SubscribeForm />
+        </Reveal>
+      </section>
+
+      {/* Newsletter */}
+      <section className="bg-gray-lightest py-8">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <div className="bg-white shadow-card py-6 px-4 md:px-8">
             <NewsletterForm />
           </div>
         </div>
+      </section>
+    </div>
+  )
+}
+
+function PosterCardComponent({ card }: { card: PosterCard }) {
+  const imageBlock = card.imageUrl ? (
+    <div className="h-[250px] overflow-hidden">
+      <Image
+        src={card.imageUrl}
+        alt={card.title}
+        width={600}
+        height={450}
+        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+      />
+    </div>
+  ) : (
+    <div className="h-[250px] bg-gray-light" />
+  )
+
+  return (
+    <div className="flex h-full flex-col bg-white rounded shadow-card hover:shadow-card-hover transition-shadow overflow-hidden">
+      {card.downloadUrl ? (
+        <a href={card.downloadUrl} target="_blank" rel="noopener noreferrer">
+          {imageBlock}
+        </a>
+      ) : (
+        imageBlock
+      )}
+      <div className="p-4">
+        <h4 className="font-semibold text-black mb-4 leading-snug text-base">{card.title}</h4>
+        {card.downloadUrl && (
+          <a
+            href={card.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full text-center border border-primary text-primary font-semibold py-2 text-sm uppercase tracking-[2px] no-underline hover:bg-primary hover:text-white transition-colors"
+          >
+            Download
+          </a>
+        )}
+        {card.learnMoreLink && (
+          <p className="text-center mt-3 text-sm">
+            {card.learnMoreLink.startsWith('http') ? (
+              <a
+                href={card.learnMoreLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-secondary hover:underline"
+              >
+                Learn More
+              </a>
+            ) : (
+              <Link href={card.learnMoreLink} className="text-secondary hover:underline">
+                Learn More
+              </Link>
+            )}
+          </p>
+        )}
       </div>
-    </>
+    </div>
   )
 }
