@@ -410,7 +410,8 @@ function selfAuditTree(tree: TreeNode): Issue[] {
   let consecutiveH3 = 0
   let firstH3Text = ''
   for (const h of headings) {
-    if (h.tag === 'h3' && h.styles.textTransform === 'uppercase' && !standardH3.has(h.text.toLowerCase().trim())) {
+    const isOrangeH3 = h.styles.color?.includes('227') || h.styles.color?.includes('rgb(227')
+    if (h.tag === 'h3' && h.styles.textTransform === 'uppercase' && !standardH3.has(h.text.toLowerCase().trim()) && !isOrangeH3) {
       if (consecutiveH3 === 0) firstH3Text = h.text
       consecutiveH3++
     } else {
