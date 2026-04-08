@@ -201,7 +201,7 @@ function normalizeColor(c: string): string {
 }
 
 interface Issue {
-  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'EXTRA_CONTENT'
+  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'EXTRA_CONTENT' | 'SPACING'
   severity: 'high' | 'medium' | 'low'
   detail: string
 }
@@ -396,6 +396,58 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
   return issues
 }
 
+// ── Self-audit (Next.js only, no Gatsby reference needed) ─────────────
+
+function selfAuditTree(tree: TreeNode): Issue[] {
+  const issues: Issue[] = []
+  const flat = flatten(tree)
+  const headings = flat.filter(n => /^h[1-6]$/.test(n.tag))
+
+  // Detect consecutive h3 headings (4+) that look like a bullet list
+  // These should likely be h4Bullet (orange diamond) not h3 (uppercase sans)
+  // Exclude standard case study sections (Problem/Solution/Results) which are correctly h3
+  const standardH3 = new Set(['problem', 'solution', 'results', 'outcome', 'process', 'background', 'approach', 'impact', 'challenge', 'authors', 'contributors', 'references'])
+  let consecutiveH3 = 0
+  let firstH3Text = ''
+  for (const h of headings) {
+    if (h.tag === 'h3' && h.styles.textTransform === 'uppercase' && !standardH3.has(h.text.toLowerCase().trim())) {
+      if (consecutiveH3 === 0) firstH3Text = h.text
+      consecutiveH3++
+    } else {
+      if (consecutiveH3 >= 4) {
+        issues.push({
+          type: 'HEADING_STYLE',
+          severity: 'medium',
+          detail: `${consecutiveH3} consecutive uppercase h3 starting at "${firstH3Text.substring(0, 40)}" — may need h4Bullet (orange ◆) style instead`
+        })
+      }
+      consecutiveH3 = 0
+    }
+  }
+  if (consecutiveH3 >= 4) {
+    issues.push({
+      type: 'HEADING_STYLE',
+      severity: 'medium',
+      detail: `${consecutiveH3} consecutive uppercase h3 starting at "${firstH3Text.substring(0, 40)}" — may need h4Bullet (orange ◆) style instead`
+    })
+  }
+
+  // Detect headings with no content between them (empty sections)
+  for (let i = 0; i < headings.length - 1; i++) {
+    const a = headings[i], b = headings[i + 1]
+    const gap = b.rect.y - (a.rect.y + a.rect.height)
+    if (gap < 5 && a.tag <= b.tag) {
+      issues.push({
+        type: 'SPACING',
+        severity: 'low',
+        detail: `Adjacent headings with no content: "${a.text.substring(0, 30)}" → "${b.text.substring(0, 30)}"`
+      })
+    }
+  }
+
+  return issues
+}
+
 // ── Main ──────────────────────────────────────────────────────────────
 
 async function main() {
@@ -493,6 +545,9 @@ async function main() {
           issues.push({ type: 'ELEMENT_COUNT', severity: 'high', detail: `Grid ${gA.kids} items: ${gA.cols} cols → ${gB.cols} cols (width ${gA.kidW}px → ${gB.kidW}px)` })
         }
       }
+
+      // Self-audit: style consistency checks on Next.js page alone
+      issues.push(...selfAuditTree(treeB))
 
       results.push({ slug: pd.slug, section: pd.section, issues })
 
