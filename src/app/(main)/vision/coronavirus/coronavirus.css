@@ -1,0 +1,678 @@
+/* ============================================================
+   Coronavirus page — converted from Gatsby SCSS
+   Scoped under .coronavirus
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,600&display=swap');
+
+/* --- Gatsby global utility classes scoped inside .coronavirus --- */
+
+.coronavirus .max-width {
+  max-width: 1020px;
+  margin: 0 auto;
+}
+.coronavirus .max-width--md {
+  max-width: 775px;
+  margin: 0 auto;
+}
+
+.coronavirus .content-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+@media (min-width: 864px) {
+  .coronavirus .content-padding {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.coronavirus .pad-bottom {
+  padding-bottom: 1rem;
+}
+.coronavirus .pad-vertical {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+.coronavirus .pad-vertical--double {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+.coronavirus .pad-bottom--double {
+  padding-bottom: 2rem;
+}
+.coronavirus .pad-horizontal--double {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.coronavirus .margin-top--double {
+  margin-top: 2rem;
+}
+.coronavirus .margin-top--quad {
+  margin-top: 4rem;
+}
+.coronavirus .margin-top--none {
+  margin-top: 0;
+}
+.coronavirus .margin-bottom {
+  margin-bottom: 1rem;
+}
+.coronavirus .margin-bottom--none {
+  margin-bottom: 0;
+}
+.coronavirus .margin-bottom--double {
+  margin-bottom: 2rem;
+}
+.coronavirus .margin-bottom--quad {
+  margin-bottom: 4rem;
+}
+
+.coronavirus .text--bold {
+  font-weight: 600;
+}
+.coronavirus .text--lg {
+  font-size: 1.5rem;
+  line-height: 2.125rem;
+}
+.coronavirus .text--xl {
+  font-size: 1.75rem;
+  line-height: 2.0625rem;
+}
+@media (min-width: 864px) {
+  .coronavirus .text--xl {
+    font-size: 2.25rem;
+    line-height: 2.625rem;
+  }
+}
+.coronavirus .text--sm {
+  font-size: 0.875rem;
+}
+.coronavirus .text--uppercase {
+  text-transform: uppercase;
+}
+.coronavirus .text--center {
+  text-align: center;
+}
+.coronavirus .text--gray {
+  color: #787473;
+}
+
+.coronavirus .header--md {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #787473;
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1.1875rem;
+}
+@media (min-width: 864px) {
+  .coronavirus .header--md {
+    font-size: 15px;
+    line-height: 1.375rem;
+  }
+}
+
+/* hidden--lg: hidden at 864px+ */
+.coronavirus .hidden--lg {
+  display: block;
+}
+@media (min-width: 864px) {
+  .coronavirus .hidden--lg {
+    display: none !important;
+  }
+}
+
+/* hidden--until-lg: hidden below 864px */
+.coronavirus .hidden--until-lg {
+  display: none;
+}
+@media (min-width: 864px) {
+  .coronavirus .hidden--until-lg {
+    display: block;
+  }
+}
+
+.coronavirus .image--max-width {
+  width: 100%;
+  height: auto;
+}
+
+/* --- Main .coronavirus styles --- */
+
+.coronavirus {
+  overflow-x: hidden;
+  font-family: 'Montserrat', 'Open Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+}
+@media (min-width: 864px) {
+  .coronavirus {
+    font-size: 18px;
+  }
+}
+
+.coronavirus .chart {
+  display: block;
+  width: 100%;
+}
+
+.coronavirus .Axis {
+  font-size: 16px;
+  font-family: 'Montserrat', 'Open Sans', sans-serif;
+}
+.coronavirus .Axis path,
+.coronavirus .Axis line {
+  stroke: #e2e2e2;
+}
+.coronavirus .Axis text {
+  fill: #747070;
+}
+@media (min-width: 864px) {
+  .coronavirus .Axis {
+    font-size: 18px;
+  }
+}
+
+.coronavirus a {
+  color: #563c8d;
+}
+.coronavirus a:hover,
+.coronavirus a:focus {
+  color: #3b4e98;
+}
+
+.coronavirus h1,
+.coronavirus h2,
+.coronavirus h3,
+.coronavirus h4 {
+  font-weight: 600;
+}
+
+.coronavirus h4 {
+  color: #563c8d;
+  font-size: 16px;
+  margin-bottom: 0;
+}
+@media (min-width: 864px) {
+  .coronavirus h4 {
+    font-size: 18px;
+  }
+}
+
+.coronavirus h4 + p {
+  margin-top: 0;
+}
+
+.coronavirus ul {
+  padding-left: 18px;
+}
+@media (min-width: 864px) {
+  .coronavirus ul {
+    padding-left: 0;
+  }
+}
+.coronavirus ul li {
+  padding: 0 0 1rem 0;
+}
+
+.coronavirus strong {
+  font-weight: 600 !important;
+}
+
+.coronavirus .button {
+  display: inline-block;
+  text-decoration: none;
+  background-color: #563c8d;
+  color: #fff;
+  font-size: 24px;
+  padding: 2rem 4rem;
+  margin: 3rem auto;
+  border-radius: 4px;
+}
+.coronavirus .button.button--sm {
+  font-size: 18px;
+  padding: 1.2rem 3.2rem;
+}
+.coronavirus .button:hover,
+.coronavirus .button:focus {
+  color: #fff;
+  background-color: #7054a5;
+}
+
+/* coronavirus-text utility classes */
+.coronavirus-text--primary {
+  color: #563c8d;
+  fill: #563c8d;
+}
+.coronavirus-text--lg {
+  font-size: 28px;
+  line-height: 40px;
+}
+.coronavirus-text--bold {
+  font-weight: 600 !important;
+}
+.coronavirus-text--regular {
+  font-weight: 400 !important;
+}
+
+/* --- Number list item --- */
+.coronavirus .number-list-item {
+  display: flex;
+}
+.coronavirus .number-list-item--number-container {
+  flex: 0 0 12%;
+}
+.coronavirus .number-list-item--number {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  margin: 0 auto;
+  margin-top: calc(1em - 8px);
+  color: #fff;
+  background-color: #563c8d;
+  border-radius: 100%;
+}
+.coronavirus .number-list-item--number span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 600;
+}
+.coronavirus .number-list-item--content {
+  flex: 1;
+  margin-top: -5px;
+}
+
+/* --- Hero --- */
+.coronavirus .hero {
+  position: relative;
+}
+.coronavirus .hero__image-container {
+  min-height: 300px;
+  overflow: hidden;
+}
+@media (min-width: 864px) {
+  .coronavirus .hero__image-container {
+    height: 530px;
+  }
+}
+.coronavirus .hero__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.coronavirus .hero--small .hero__image-container {
+  height: 150px;
+  min-height: 0;
+}
+.coronavirus .hero--small .coronavirus-header-container {
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+.coronavirus .hero--small h2 {
+  margin: 0;
+  color: #563c8d;
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 49px;
+  text-shadow: 0px 0px 30px rgba(81, 67, 111, 0.2);
+}
+@media (min-width: 864px) {
+  .coronavirus .hero--small h2 {
+    font-size: 48px;
+    line-height: 78px;
+  }
+}
+
+/* --- Section header pill --- */
+.coronavirus-section-header {
+  display: inline-block;
+  min-width: 200px;
+  background-color: #563c8d;
+  color: #fff;
+  padding: 0.5em 1em;
+  font-size: 16px;
+  text-align: center;
+  border-radius: 50px;
+}
+@media (min-width: 864px) {
+  .coronavirus-section-header {
+    margin-left: -1em;
+    font-size: 18px;
+  }
+}
+
+/* --- Header container (overlay on hero) --- */
+.coronavirus-header-container {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.coronavirus-header-container h1,
+.coronavirus-header-container h2 {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.coronavirus-header-container h1 {
+  color: #563c8d;
+  font-size: 30px;
+  line-height: 49px;
+  text-shadow: 0px 0px 30px rgba(81, 67, 111, 0.2);
+}
+@media (min-width: 864px) {
+  .coronavirus-header-container h1 {
+    font-size: 48px;
+    line-height: 78px;
+  }
+}
+.coronavirus-header-container h2 {
+  margin-bottom: 0;
+  font-size: 25px;
+  font-weight: 400;
+}
+@media (min-width: 864px) {
+  .coronavirus-header-container h2 {
+    font-size: 35px;
+  }
+}
+.coronavirus-header-container p {
+  margin-top: 0.5em;
+}
+.coronavirus-header-container h2,
+.coronavirus-header-container p {
+  color: #424242;
+}
+
+/* --- Corona comparison (SARS / MERS / COVID-19) --- */
+.coronavirus .corona-comparison .corona {
+  display: block;
+  width: 100%;
+}
+@media (min-width: 420px) {
+  .coronavirus .corona-comparison .corona {
+    display: inline-block;
+    width: 50%;
+  }
+}
+@media (min-width: 590px) {
+  .coronavirus .corona-comparison .corona {
+    display: inline-block;
+    width: 30%;
+  }
+}
+.coronavirus .corona-comparison .corona .title {
+  background: #424242;
+  font-weight: 600;
+  color: #fff;
+  padding: 5px;
+  margin: -5px 0 5px -5px;
+  line-height: 2.5rem;
+}
+.coronavirus .corona-comparison .corona .title.covid19 {
+  background: #563c8d;
+}
+
+/* --- Timeline --- */
+.coronavirus .corona-timeline {
+  border-left: #d6d2ea solid 3px;
+}
+.coronavirus .corona-timeline.timeline-dotted {
+  display: block;
+  height: 90px;
+  border-left: #d6d2ea dotted 3px;
+}
+.coronavirus .corona-timeline .timepoint.time-highlight p {
+  background: #d6d2ea;
+  border-radius: 5px;
+}
+.coronavirus .corona-timeline .timepoint.time-highlight .dot {
+  height: 24px;
+  width: 24px;
+  border-radius: 12px;
+  box-shadow: inset 0px 0px 0px 3px white;
+  border: 1px solid;
+  margin: 8px 10px 0 -14px;
+}
+.coronavirus .corona-timeline .timepoint p {
+  display: inline-block;
+  margin-top: -2px;
+  margin-bottom: 24px;
+  padding: 10px;
+  width: 90%;
+}
+.coronavirus .corona-timeline .timepoint .dot {
+  display: inline-block;
+  vertical-align: top;
+  margin: 10px 10px 0 -12px;
+  background: #563c8d;
+  height: 20px;
+  width: 20px;
+  border-radius: 10px;
+}
+.coronavirus .corona-timeline .timepoint .dot.dotted {
+  background: #fff;
+  border: #563c8d dashed 1px;
+}
+.coronavirus .corona-timeline .timepoint ul {
+  margin: 0 0 0 15px;
+}
+.coronavirus .corona-timeline .timepoint ul li {
+  margin: 0;
+  padding: 0;
+}
+
+/* --- Close contact offset --- */
+.coronavirus .close-contact {
+}
+@media (min-width: 864px) {
+  .coronavirus .close-contact {
+    margin-top: -250px;
+    margin-left: 20vw;
+  }
+}
+@media (min-width: 1035px) {
+  .coronavirus .close-contact {
+    margin-top: -300px;
+    margin-left: calc(20vw - ((100vw - 1020px) / 2));
+    margin-bottom: 50px;
+  }
+}
+
+/* --- Stay calm box --- */
+.coronavirus .stay-calm {
+  background-color: #fbf9ff;
+  transform: translate3d(0, 0, 0);
+}
+@media (min-width: 864px) {
+  .coronavirus .stay-calm {
+    max-width: 400px;
+    margin-top: -400px;
+  }
+}
+
+/* --- Prejudice / Masks sections --- */
+.coronavirus-prejudice,
+.coronavirus-masks {
+  margin-bottom: 1em;
+}
+@media (min-width: 864px) {
+  .coronavirus-prejudice,
+  .coronavirus-masks {
+    background-color: #fbf9ff;
+  }
+}
+
+/* --- Mask halves --- */
+.coronavirus .mask-half {
+  display: inline-block;
+  width: 50%;
+  vertical-align: top;
+}
+.coronavirus .mask-half .pro-con p {
+  display: inline-block;
+  width: 75%;
+}
+.coronavirus .mask-half .pro-con .pro-con-icon {
+  display: inline-block;
+  height: 44px;
+  width: 44px;
+  margin-right: 20px;
+}
+
+/* --- Action Plan background --- */
+.coronavirus-action-plan {
+  position: relative;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+@media (max-width: 1023px) {
+  .coronavirus-action-plan {
+    background-position: 100vw 0;
+  }
+}
+@media (min-width: 1024px) {
+  .coronavirus-action-plan {
+    min-height: 130vw;
+  }
+}
+
+/* --- Around the world --- */
+@media (min-width: 1024px) {
+  .coronavirus-around-the-world {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 0;
+  }
+  .coronavirus-around-the-world p {
+    position: absolute;
+    max-width: 400px;
+    padding: 1em;
+  }
+  .coronavirus-around-the-world p:not(:first-of-type):not(:last-of-type) {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  .coronavirus-around-the-world p:first-of-type {
+    bottom: 80%;
+    left: calc(23vw - ((100vw - 1020px) / 2));
+    max-width: 600px;
+  }
+  .coronavirus-around-the-world p:nth-of-type(2) {
+    bottom: 55%;
+    left: calc(60vw - ((100vw - 1020px) / 2));
+  }
+  .coronavirus-around-the-world p:nth-of-type(3) {
+    bottom: 35%;
+    left: calc(65vw - ((100vw - 1020px) / 2));
+  }
+  .coronavirus-around-the-world p:nth-of-type(4) {
+    bottom: 20%;
+    left: calc(58vw - ((100vw - 1020px) / 2));
+  }
+  .coronavirus-around-the-world p:nth-of-type(5) {
+    bottom: 0;
+    left: calc(23vw - ((100vw - 1020px) / 2));
+    max-width: 750px;
+  }
+}
+
+.coronavirus-around-the-world-mobile {
+}
+@media (min-width: 1024px) {
+  .coronavirus-around-the-world-mobile {
+    display: none;
+  }
+}
+
+/* --- Action end --- */
+.coronavirus-action-end {
+  position: relative;
+  height: 185vw;
+}
+.coronavirus-action-end .background-image {
+  background-position: center bottom;
+}
+.coronavirus-action-end .content {
+  position: absolute;
+  top: 50px;
+  left: 0;
+  width: 100vw;
+}
+.coronavirus-action-end::after {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  content: '';
+  width: 100vw;
+  height: 80px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+@media (max-width: 863px) {
+  .coronavirus-action-end::after {
+    display: block;
+  }
+}
+@media (max-width: 400px) {
+  .coronavirus-action-end {
+    height: 300vw;
+  }
+}
+@media (min-width: 401px) {
+  .coronavirus-action-end {
+    height: 250vw;
+  }
+}
+@media (min-width: 450px) {
+  .coronavirus-action-end {
+    height: 200vw;
+  }
+}
+@media (min-width: 620px) {
+  .coronavirus-action-end {
+    height: 165vw;
+  }
+}
+@media (min-width: 780px) {
+  .coronavirus-action-end {
+    height: 160vw;
+  }
+}
+@media (min-width: 864px) {
+  .coronavirus-action-end {
+    height: 83.3vw;
+  }
+}
+
+/* --- Logo section --- */
+.coronavirus-logo {
+  display: flex;
+  margin-bottom: 2em;
+}
+.coronavirus-logo--left {
+}
+@media (min-width: 864px) {
+  .coronavirus-logo--left {
+    flex: 0 0 40%;
+  }
+}
+.coronavirus-logo .hidden--until-lg {
+  padding-left: 2em;
+}
+
+/* --- Conclusion/action-end images --- */
+.coronavirus-action-end .conclusion-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
