@@ -8,9 +8,17 @@ interface ImageCarouselProps {
   images: { url: string; alt?: string }[]
   /** Optional caption displayed below the carousel */
   caption?: string
+  /** Thumbnail size: 'sm' (30x20), 'md' (60x40), 'lg' (100x65) */
+  thumbnailSize?: 'sm' | 'md' | 'lg'
 }
 
-export function ImageCarousel({ images, caption }: ImageCarouselProps) {
+const thumbSizes = {
+  sm: { w: 30, h: 20, cls: 'w-[30px] h-[20px]' },
+  md: { w: 60, h: 40, cls: 'w-[60px] h-[40px]' },
+  lg: { w: 100, h: 65, cls: 'w-[100px] h-[65px]' },
+}
+
+export function ImageCarousel({ images, caption, thumbnailSize = 'sm' }: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
 
   const goTo = useCallback((i: number) => {
@@ -74,7 +82,7 @@ export function ImageCarousel({ images, caption }: ImageCarouselProps) {
             <button
               key={img.url}
               className={cn(
-                'w-[30px] h-[20px] flex-shrink-0 p-0 cursor-pointer border transition-colors overflow-hidden',
+                `${thumbSizes[thumbnailSize].cls} flex-shrink-0 p-0 cursor-pointer border transition-colors overflow-hidden`,
                 activeIndex === i
                   ? 'border-primary'
                   : 'border-gray-light hover:border-gray-medium'
@@ -85,8 +93,8 @@ export function ImageCarousel({ images, caption }: ImageCarouselProps) {
               <Image
                 src={img.url}
                 alt=""
-                width={30}
-                height={20}
+                width={thumbSizes[thumbnailSize].w}
+                height={thumbSizes[thumbnailSize].h}
                 className="w-full h-full object-cover block"
               />
             </button>

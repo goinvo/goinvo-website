@@ -663,6 +663,20 @@ export default defineType({
           type: 'string',
           description: 'Optional caption displayed below the carousel',
         },
+        {
+          name: 'thumbnailSize',
+          title: 'Thumbnail Size',
+          type: 'string',
+          description: 'Size of the navigation thumbnails below the main image',
+          options: {
+            list: [
+              { title: 'Small (30px)', value: 'sm' },
+              { title: 'Medium (60px)', value: 'md' },
+              { title: 'Large (100px)', value: 'lg' },
+            ],
+          },
+          initialValue: 'sm',
+        },
       ],
     }),
     defineArrayMember({

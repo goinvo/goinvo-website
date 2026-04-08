@@ -635,7 +635,7 @@ const components: PortableTextComponents = {
 
       return (
         <ArticleReveal intensity="visual">
-          <ImageCarousel images={images} caption={value.caption} />
+          <ImageCarousel images={images} caption={value.caption} thumbnailSize={value.thumbnailSize || 'sm'} />
         </ArticleReveal>
       )
     },
