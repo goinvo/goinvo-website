@@ -57,16 +57,16 @@ function MultiImageContent({
           'hidden sm:grid w-full h-full',
           `grid-cols-${desktop.length}`,
         )}
-        style={{ gridTemplateColumns: `repeat(${desktop.length}, 1fr)` }}
+        style={{ gridTemplateColumns: `repeat(${desktop.length}, 1fr)`, transform: 'translateZ(0)' }}
       >
         {desktop.map((src, i) => (
-          <div key={src} className="relative h-full">
+          <div key={src} className="relative h-full overflow-hidden" style={{ transform: 'translateZ(0)' }}>
             <Image
               src={cloudfrontImage(src)}
               alt=""
               fill
               className="object-cover"
-              style={{ objectPosition: 'center' }}
+              style={{ objectPosition: 'center', transform: 'scale(1.002)' }}
               onLoad={i === 0 ? onImageLoad : undefined}
               priority
             />
@@ -159,7 +159,7 @@ export function PersistentHero() {
           <div
             ref={containerRef}
             className={cn(
-              'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
+              'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)] [transform:translateZ(0)]',
               'h-[220px] lg:h-[450px]',
             )}
             style={{
