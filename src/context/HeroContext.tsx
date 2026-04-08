@@ -62,7 +62,7 @@ export const heroConfigs: Record<string, HeroConfig> = {
     ),
   },
   '/vision': {
-    image: '/images/vision/vision-illustration-desktop.jpg',
+    image: 'https://cdn.sanity.io/images/a1wsimxr/production/3a08d155020800e26d90159045c8c422b22aa33c-4000x1528.jpg',
     bgPosition: 'center',
     title: null,
     hideTextBox: true,
