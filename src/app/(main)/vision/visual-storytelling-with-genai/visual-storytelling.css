@@ -1,0 +1,214 @@
+.visual-storytelling .arrow-down {
+  margin: 15px auto;
+  display: block;
+}
+
+.visual-storytelling .overlay-text-container {
+  position: relative;
+}
+
+.visual-storytelling .overlay-text {
+  max-width: 500px;
+  margin: 0 0 20px 0;
+  background: rgb(246, 246, 246, 0.8);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+@media (min-width: 768px) {
+  .visual-storytelling .overlay-text {
+    position: absolute;
+    bottom: 0;
+    margin: 0 20px 20px 20px;
+    background: rgba(255, 255, 255, 0.8);
+  }
+}
+
+.visual-storytelling .model-viewport {
+  border: solid var(--color-gray-medium) 1px;
+  border-radius: 8px;
+  margin: 0 20px 15px 20px;
+}
+
+@media (min-width: 768px) {
+  .visual-storytelling .model-viewport {
+    margin: 0 0 15px 0;
+  }
+}
+
+.visual-storytelling .hotspot-image-container {
+  position: relative;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .visual-storytelling .hotspot-image-container {
+    width: 50%;
+  }
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay {
+  position: absolute;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background-color: rgba(197, 62, 32, 0);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button:hover {
+  background: rgba(197, 62, 32, 0.25);
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button.button-one {
+  left: 25%;
+  top: 52%;
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button.button-two {
+  left: 41%;
+  top: 47%;
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button.button-three {
+  left: 50.5%;
+  top: 23%;
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button.button-four {
+  left: 75.5%;
+  top: 56%;
+}
+
+.visual-storytelling .hotspot-image-container .hotspot-overlay .hotspot-button.button-five {
+  left: 37.25%;
+  top: 72.5%;
+}
+
+.visual-storytelling .process-diagram {
+  font-family: var(--font-serif);
+  background-color: var(--color-gray-light);
+  padding: 20px 0;
+}
+
+.visual-storytelling .process-diagram .col-spacer {
+  font-family: var(--font-sans);
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row {
+  display: flex;
+  flex-wrap: wrap;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+  border-bottom: solid var(--color-gray-medium) 2px;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row.title-row {
+  font-size: 1rem;
+  padding: 15px 0;
+  display: none;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .prompt {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col {
+  flex-direction: row;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-3 {
+  width: 46%;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-3:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-3:first-child .image-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-spacer {
+  width: 5%;
+  font-size: 1.5rem;
+  align-self: center;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-spacer.equal-sign {
+  display: none;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-full {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.visual-storytelling .process-diagram .diagram-large .diagram-row .col.sm-only {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .visual-storytelling .process-diagram .diagram-large .diagram-row {
+    flex-wrap: nowrap;
+    border-bottom: none;
+    margin-bottom: 10px;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row.title-row {
+    font-size: 1.2rem;
+    display: flex;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col {
+    align-self: center;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col .label {
+    display: none;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-3 {
+    width: 30%;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-full {
+    margin-top: 0;
+    width: 30%;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-spacer {
+    width: 5%;
+    font-size: 1.5rem;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col.col-spacer.equal-sign {
+    display: inline-block;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col.lg-only {
+    display: inline-block;
+  }
+
+  .visual-storytelling .process-diagram .diagram-large .diagram-row .col.sm-only {
+    display: none;
+  }
+}
