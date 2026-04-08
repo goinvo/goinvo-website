@@ -189,6 +189,21 @@
     }
   }
 
+  /* Gatsby-ported static pages: restore default paragraph/heading margins
+     that Tailwind preflight resets to 0 */
+  .gatsby-article p {
+    margin-top: 1em;
+    margin-bottom: 1em;
+  }
+  .gatsby-article ul, .gatsby-article ol {
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding-left: 2em;
+  }
+  .gatsby-article li {
+    margin-bottom: 0.25em;
+  }
+
   .max-width {
     max-width: 1020px;
     margin-left: auto;

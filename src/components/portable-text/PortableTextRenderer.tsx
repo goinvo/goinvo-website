@@ -816,7 +816,7 @@ const components: PortableTextComponents = {
     ),
     normal: ({ children }) => (
       <ArticleReveal intensity="text">
-        <p className="mb-4 leading-relaxed">{children}</p>
+        <p className="my-4 leading-relaxed">{children}</p>
       </ArticleReveal>
     ),
   },
