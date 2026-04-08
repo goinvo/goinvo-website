@@ -60,13 +60,21 @@ function MultiImageContent({
         style={{ gridTemplateColumns: `repeat(${desktop.length}, 1fr)`, transform: 'translateZ(0)' }}
       >
         {desktop.map((src, i) => (
-          <div key={src} className="relative h-full overflow-hidden" style={{ transform: 'translateZ(0)' }}>
+          <div
+            key={src}
+            className="relative h-full overflow-hidden"
+            style={{
+              /* Extend 1px into adjacent cell to cover Firefox subpixel gap */
+              marginRight: i < desktop.length - 1 ? '-1px' : undefined,
+              paddingRight: i < desktop.length - 1 ? '1px' : undefined,
+            }}
+          >
             <Image
               src={cloudfrontImage(src)}
               alt=""
               fill
               className="object-cover"
-              style={{ objectPosition: 'center', transform: 'scale(1.002)' }}
+              style={{ objectPosition: 'center' }}
               onLoad={i === 0 ? onImageLoad : undefined}
               priority
             />
