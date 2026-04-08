@@ -29,7 +29,7 @@ export function LivingHealthLabCarousels() {
   return (
     <div className="max-width content-padding mx-auto space-y-12 my-8">
       {/* Comic Carousel */}
-      <ImageCarousel images={comicSlides} />
+      <ImageCarousel images={comicSlides} thumbnailSize="lg" />
 
       {/* Paper Prototype Carousel */}
       <div>
@@ -48,7 +48,7 @@ export function LivingHealthLabCarousels() {
           our own experiences and feedback from colleagues, we refined the
           draft into this current iteration.
         </p>
-        <ImageCarousel images={paperSlides} />
+        <ImageCarousel images={paperSlides} thumbnailSize="lg" />
         <div className="mt-6">
           <p className="leading-relaxed mb-4">
             <strong>Early results</strong>
@@ -85,12 +85,12 @@ export function LivingHealthLabCarousels() {
           key challenges we faced: remembering to track, being creative in
           testing, and turning data into insights.
         </p>
-        <ImageCarousel images={digitalSlides} />
+        <ImageCarousel images={digitalSlides} thumbnailSize="lg" />
       </div>
     </div>
   )
 }
 
 export function LivingHealthLabAppendixCarousel() {
-  return <ImageCarousel images={appendixSlides} />
+  return <ImageCarousel images={appendixSlides} thumbnailSize="lg" />
 }
