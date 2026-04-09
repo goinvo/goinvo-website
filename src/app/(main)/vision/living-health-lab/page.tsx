@@ -339,6 +339,120 @@ export default function LivingHealthLabPage() {
         <LivingHealthLabCarousels />
 
         <div className="max-width content-padding mx-auto">
+          <p className="my-4 leading-relaxed">
+            Making personal science accessible is no small task. Here are the
+            top four challenges with this type of digital service based on our
+            research and review of similar tools:
+          </p>
+
+          <ul className="ul mb-8">
+            <li>a) Helping the patient set up the right exploration</li>
+            <li>b) Reducing the Tracking Burden</li>
+            <li>c) Making Personal Science Accessible and Understandable</li>
+            <li>d) Providing Actionable Insights and Appropriate Analysis</li>
+          </ul>
+
+          <h4 className="font-sans text-base font-bold mt-6 mb-2">a) Helping the patient set up the right exploration</h4>
+          <p className="my-4 leading-relaxed">
+            Tracking a wide range of factors without clear goals runs the risk
+            of overburdening; this is why it is critical to ensure that each
+            exploration is designed to closely align with patient goals.
+            Setting up the right exploration is no simple task. With so many
+            different health concerns and questions, there is no
+            one-size-fits-all exploration. Researchers Munson et al. explore
+            how crafting the exploration around the patient&apos;s goals leads to
+            the best results.<sup><a href="#references">14</a></sup> These goals can be
+            distinct from those of their doctor or the intentions of the
+            tool&apos;s designers, and they can change over time as the patient
+            learns more. Additionally, patients may need support to clarify
+            and define their goals, as their goals may initially be undefined
+            or unachievable. Through simple questions, Living Health Lab will
+            direct individuals toward the self-tracking strategy that best
+            aligns with where they are in their own &ldquo;Health Journey.&rdquo;
+          </p>
+          <img
+            src={cloudfrontImage('/images/features/living-health-lab/health-journey.png')}
+            alt="The Health Journey"
+            className="image--max-width my-4"
+          />
+          <p className="my-4 leading-relaxed">
+            We propose the Health Journey as a general framework for how an
+            individual can shift from a lack of awareness of a health problem
+            to finding healthy habits to manage that problem daily. Our
+            research is only just beginning, and we want to recognize that
+            this framework would not have been possible without the research
+            that&apos;s already been done—we are particularly grateful to those in
+            the Quantified Self as well as all the researchers in the patient
+            self-tracking space for their foundational work.<sup><a href="#references">8</a></sup><sup>,</sup><sup><a href="#references">14</a></sup><sup>,</sup><sup><a href="#references">11</a></sup><sup>,</sup><sup><a href="#references">12</a></sup>
+          </p>
+
+          <h4 className="font-sans text-base font-bold mt-6 mb-2">b) Reducing the Tracking Burden</h4>
+          <p className="my-4 leading-relaxed">
+            Any given individual is more likely to reach their tracking goal
+            if it fits easily into their life. A purposeful, well-defined
+            exploration reduces the burden by keeping tracking focused. While
+            factors like mood or symptom reporting may need to be manually
+            reported, other data can be automatically gathered. With the
+            patient&apos;s consent, Living Health Lab can gather data from their
+            phone, wearables, smart devices, health apps, and more. Living
+            Health Lab will likely suggest automated options wherever possible
+            and limit manually reported factors to minimize the tracking
+            burden.
+          </p>
+          <p className="my-4 leading-relaxed">
+            Living Health Lab can also reduce the tracking burden by providing
+            timely insight and options as the user sets up their exploration.
+            As they choose what to track, they will be given an estimate of
+            how many minutes tracking will take daily to prevent
+            overcommitment. The individual can also designate the duration of
+            the exploration, with options ranging from one to three weeks. We
+            hope to reduce the tracking burden and make health explorations
+            feasible for many people. However, we also will need to validate
+            this hypothesis and develop additional measures through user
+            testing.
+          </p>
+
+          <h4 className="font-sans text-base font-bold mt-6 mb-2">c) Making Personal Science Accessible and Understandable</h4>
+          <p className="my-4 leading-relaxed">
+            Living Health Lab will use multiple approaches to make the
+            experience accessible to a wide range of patients. Assuming that
+            the individual has no prior knowledge of science or statistics,
+            Living Health Lab will infuse clear science tips and ways to learn
+            more, provide clarity into the process, and integrate animation
+            and other visual aids to support understanding. Additionally,
+            content should be written at a fifth-grade reading level.<sup><a href="#references">15</a></sup> Balancing thorough patient education
+            with simplicity is a primary challenge that we acknowledge.
+          </p>
+
+          <h4 className="font-sans text-base font-bold mt-6 mb-2">d) Providing Actionable Insights and Appropriate Analysis</h4>
+          <p className="my-4 leading-relaxed">
+            Living Health Lab can become a space for patients to engage in
+            activities that strengthen their knowledge, skills, attitudes, and
+            confidence in managing their health. The Health Journey framework
+            supports a progression from noticing to testing new habits, which
+            leads to valuable insight and meaningful behavior change. Much of
+            the value of the personal science process comes from the patient&apos;s
+            own reflection, drawn out by good questions and bolstered by the
+            support of others. However, Living Health Lab will also need to
+            provide insight into the data to help patients avoid incorrect
+            conclusions and make sense of what they have tracked. Any analysis
+            that Living Health Lab provides must be clear without
+            over-reaching. We recognize that this balance will be a key
+            challenge to overcome.
+          </p>
+          <p className="my-4 leading-relaxed">
+            Even when an exploration doesn&apos;t produce clear findings or show a
+            correlation between factors, an individual can still come to new
+            realizations about their Health Journey. Wolf et al. found that
+            &ldquo;ancillary benefits include deeper learning about a health topic;
+            generation of new ideas for improving their own care; productive
+            engagement with clinicians; and providing a sense of agency while
+            dealing with the stress of disease and treatment.&rdquo;<sup><a href="#references">9</a></sup> Regardless of the results for any given
+            exploration, a person can still learn in the process. Ultimately,
+            the goal is for Living Health Lab to help patients see their
+            health and take action to improve their day-to-day health.
+          </p>
+
           <Divider />
 
           <h2 className="header-lg mt-8 mb-4">
