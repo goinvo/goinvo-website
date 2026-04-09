@@ -151,15 +151,6 @@ export default async function VisionFeaturePage({ params }: Props) {
               </div>
             </section>
 
-            {/* About GoInvo (before Authors, matching Gatsby order) */}
-            {feature.showAboutGoInvo && (
-              <section className="pb-12">
-                <div className={`max-width ${widthClass} content-padding mx-auto`}>
-                  <AboutGoInvo />
-                </div>
-              </section>
-            )}
-
             {/* Authors */}
             {feature.authors && feature.authors.length > 0 && (
               <section className="pb-12">
@@ -184,6 +175,15 @@ export default async function VisionFeaturePage({ params }: Props) {
                 <div className={`max-width ${widthClass} content-padding mx-auto`}>
                   <h3 className="header-md mt-8 mb-4">{(feature as any).specialThanksHeading || (feature.contributors && feature.contributors.length > 0 ? 'Special thanks to...' : 'Contributors')}</h3>
                   <PortableTextRenderer content={feature.specialThanks} />
+                </div>
+              </section>
+            )}
+
+            {/* About GoInvo (after Special Thanks) */}
+            {feature.showAboutGoInvo && (
+              <section className="pb-12">
+                <div className={`max-width ${widthClass} content-padding mx-auto`}>
+                  <AboutGoInvo />
                 </div>
               </section>
             )}
