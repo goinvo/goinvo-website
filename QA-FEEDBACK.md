@@ -136,6 +136,15 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
 - [ ] Authors should be listed as Contributors (wrong section label)
 
+## 35. Killer Truths
+- [ ] Using an image but screen readers can't read it (accessibility concern)
+- [ ] Missing some of the stats (content not fully ported)
+- [ ] Icons are misaligned
+
+## 33. Open Source Healthcare
+- [ ] Different headers? (header style mismatch between Gatsby and Next.js)
+- [ ] Lost the Juhan haiku-ness (missing line breaks in intro text)
+
 ## 32. Loneliness in Our Human Code
 - [ ] Missing stats and images and layout (hero section has stats/numbers on Gatsby)
 - [ ] Images exist but are displaced/wrong position (found lower on page)
@@ -149,6 +158,8 @@ Feedback from Jen Patel via FigJam board review.
 ## Script Improvements Needed
 - [ ] batch-verify should also compare MOBILE viewport (375px) not just desktop
 - [ ] page-tree.ts should detect broken/unloaded images (naturalWidth === 0)
+- [ ] page-tree.ts should detect missing line breaks (text has \n on Gatsby but not on Next.js)
+- [ ] page-tree.ts should compare button padding and border-width (added to batch-verify but not page-tree)
 
 ## Pages with Major Remaining Work
 1. **Faces in Health Communication** — extensive layout issues throughout, image+text pairing broken in multiple sections. This page needs a deep re-port from the Gatsby source.
