@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { GovernmentCarousel } from './GovernmentCarousel'
 import { VotingCarousel } from './VotingCarousel'
 import './redesign-democracy.css'
@@ -288,9 +287,7 @@ function ActionSection() {
 /* ================================================================== */
 export default function RedesignDemocracyPage() {
   return (
-    <div className="redesign-democracy">
-      <SetCaseStudyHero image={IMG('flag-hero.jpg')} />
-
+    <div className="redesign-democracy pt-[var(--spacing-header-height)]">
       {/* ============================================================ */}
       {/*  HERO HEADER                                                  */}
       {/* ============================================================ */}
