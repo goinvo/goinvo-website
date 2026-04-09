@@ -136,6 +136,16 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
 - [ ] Authors should be listed as Contributors (wrong section label)
 
+## 32. Loneliness in Our Human Code
+- [ ] Missing stats and images and layout (hero section has stats/numbers on Gatsby)
+- [ ] Images exist but are displaced/wrong position (found lower on page)
+
+## 31. Virtual Care
+- [ ] Missing the stats, missing the Top 15 encounters breakdown chart
+- [ ] Missing time to diagnosis chart
+- [ ] Missing bullets under "care must go virtual"
+- [ ] Cameron missing from authors
+
 ## Script Improvements Needed
 - [ ] batch-verify should also compare MOBILE viewport (375px) not just desktop
 - [ ] page-tree.ts should detect broken/unloaded images (naturalWidth === 0)
