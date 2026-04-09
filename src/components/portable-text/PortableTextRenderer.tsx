@@ -598,7 +598,7 @@ const components: PortableTextComponents = {
         <ArticleReveal intensity="visual">
           <div className="my-8 bg-[#f6f6f6] py-5">
             {headings.length > 0 && (
-              <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4 items-end max-width content-padding mx-auto">
+              <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4 items-end max-width content-padding mx-auto">
                 {headings.map((h, i) => (
                   <Fragment key={i}>
                     <div className="font-serif text-[1.2rem] font-normal m-0">{h}</div>
@@ -611,7 +611,7 @@ const components: PortableTextComponents = {
               const inputUrl = row.inputImage?.asset ? urlForImage(row.inputImage).width(400).url() : ''
               const outputUrl = row.outputImage?.asset ? urlForImage(row.outputImage).width(400).url() : ''
               return (
-                <div key={i} className="grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-4 max-width content-padding mx-auto">
+                <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-4 max-width content-padding mx-auto">
                   {inputUrl && <img src={inputUrl} alt="" loading="lazy" className="w-full h-auto" />}
                   <span className="text-2xl font-normal">+</span>
                   <p className="font-serif text-base leading-relaxed m-0">
