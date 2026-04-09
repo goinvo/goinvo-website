@@ -70,11 +70,11 @@ export default function EnterprisePage() {
       <section className="bg-primary-lightest py-16">
         <div className="max-width content-padding">
           <h2 className="font-serif text-2xl mb-8">What results are you looking for?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ul className="ul grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 list-none pl-0">
             {results.map((result) => (
-              <p key={result} className="font-semibold">{result}</p>
+              <li key={result} className="font-semibold">{result}</li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
