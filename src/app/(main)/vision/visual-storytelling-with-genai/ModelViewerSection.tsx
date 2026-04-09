@@ -175,8 +175,8 @@ export function ModelViewerSection() {
       </p>
 
       <div className="grid grid-cols-1 gap-8 items-start">
-        {/* Hotspot Image */}
-        <div className="relative">
+        {/* Hotspot Image — w-fit shrink-wraps to image so overlay % positions match */}
+        <div className="relative w-fit">
           <Image
             src={cloudfrontImage(
               '/images/features/visual-storytelling-with-genai/genai-3d-model-3.jpg'
@@ -201,7 +201,7 @@ export function ModelViewerSection() {
                   key={pos.id}
                   onClick={() => handleHotspot(hotspot)}
                   className={cn(
-                    'absolute w-10 h-10 rounded-lg cursor-pointer transition-all',
+                    'absolute w-10 h-10 rounded-lg cursor-pointer transition-colors',
                     activeHotspot === hotspot.title
                       ? 'bg-[#c53e20]'
                       : 'bg-transparent hover:bg-[#c53e20]/30'
