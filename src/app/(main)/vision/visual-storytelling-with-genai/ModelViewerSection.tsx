@@ -201,15 +201,15 @@ export function ModelViewerSection() {
                   key={pos.id}
                   onClick={() => handleHotspot(hotspot)}
                   className={cn(
-                    'absolute w-10 h-10 rounded-full border-2 cursor-pointer transition-all flex items-center justify-center text-xs font-bold',
+                    'absolute w-10 h-10 rounded-lg cursor-pointer transition-all',
                     activeHotspot === hotspot.title
-                      ? 'border-primary bg-primary/30 text-white'
-                      : 'border-white/60 bg-white/10 text-white hover:bg-primary/25 hover:border-primary'
+                      ? 'bg-[#c53e20]'
+                      : 'bg-[#c53e20]/0 hover:bg-[#c53e20]/30'
                   )}
-                  style={{ left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)' }}
+                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -20px)' }}
                   title={hotspot.title}
+                  aria-label={hotspot.title}
                 >
-                  {pos.id}
                 </button>
               )
             })}
