@@ -206,7 +206,7 @@ export function ModelViewerSection() {
                       ? 'bg-[#c53e20]'
                       : 'bg-transparent hover:bg-[#c53e20]/30'
                   )}
-                  style={{ left: pos.left, top: pos.top, transform: 'translate(-50%, -65%)' }}
+                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -26px)' }}
                   title={hotspot.title}
                   aria-label={`Scene ${pos.id}`}
                 >
