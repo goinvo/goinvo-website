@@ -136,6 +136,61 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
 - [ ] Authors should be listed as Contributors (wrong section label)
 
+## 52. MASS SNAP
+- [ ] Missing solution header
+- [ ] Missing results header
+- [ ] Missing care plans feature card for "up next" (if available)
+
+## 51. Maya EHR
+- [ ] Missing solution and results headers (may be extraneous at this point — pattern across case studies)
+
+## 50. MITRE SHR
+- [ ] Missing solution header
+- [ ] Missing results header
+
+## 49. All of Us
+- [ ] Not a fan of how header images are cropped — losing a lot at any browser size
+- [ ] Missing an image
+- [ ] Could images make use of more of the width?
+- [ ] Missing results header
+- [ ] References have duplicated link text
+
+## 46. Ipsos Facto
+- [ ] Missing image
+- [ ] Feature cards — instead of just "Feature" label, can we show the description?
+
+## 47. Prior Auth
+- [ ] Bigger images needed
+- [ ] Missing solution header
+
+## 44. Understanding Ebola
+- [ ] Header duplication (same SetCaseStudyHero + own header pattern as other legacy pages)
+
+## 43. Redesign Democracy
+- [ ] Really thin callouts are painful to read
+- [ ] Columns get thinner and text doesn't really fit
+- [ ] Need more graceful breakpoint — maybe max-width and margins then layout change? Wide margins on mobile is abrupt
+- [ ] Missing image (blank space where Handheld Voting System image should be)
+- [ ] Image overlay can't be done — use image first then text, or side by side
+- [ ] Text too wide and image too big in one section
+
+## 41. Bathroom to Healthroom
+- [ ] Long scroll of images vs slider makes you lose timeline context and takes forever to get to text
+- [ ] Needs horizontal padding (text running edge to edge)
+- [ ] Missing interactive piece (interactive element from Gatsby not ported)
+- [ ] Another piece doesn't work as-is (layout/interactive section broken)
+
+## 40. Disrupt
+- [ ] Sometimes clicking "Next part" link goes back to top of current part instead of next part (intermittent — couldn't reproduce consistently)
+
+## 39. Healing US Healthcare (MAJOR — interactive charts missing)
+- [ ] Chart didn't make it over (map/spending chart)
+- [ ] Another chart bites the dust (healthcare spending bar chart)
+- [ ] The OG timeline is broken anyway (shows error on Gatsby too)
+- [ ] This chart is gone gone gone (another chart completely missing)
+- [ ] Missing content section (PARTICIPATE / Give Feedback section)
+- [ ] Also missing content (PARTICIPATE section + CREATING section)
+
 ## 38. Digital Healthcare 2016
 - [ ] Duplication of the header (same duplicate banner issue as other legacy pages)
 - [ ] Spacing at the top is too tight (not critical)
@@ -187,6 +242,9 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Missing time to diagnosis chart
 - [ ] Missing bullets under "care must go virtual"
 - [ ] Cameron missing from authors
+
+## 78. Studio Timeline
+- [ ] Link to oral history doesn't work — points to `/vision/an-oral-history` but should be `/vision/oral-history-goinvo`
 
 ## Script Improvements Needed
 - [ ] batch-verify should also compare MOBILE viewport (375px) not just desktop
