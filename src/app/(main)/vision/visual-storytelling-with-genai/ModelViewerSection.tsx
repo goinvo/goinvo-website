@@ -203,10 +203,10 @@ export function ModelViewerSection() {
                   className={cn(
                     'absolute w-10 h-10 rounded-lg cursor-pointer transition-colors',
                     activeHotspot === hotspot.title
-                      ? 'bg-[#c53e20]'
+                      ? 'bg-transparent'
                       : 'bg-transparent hover:bg-[#c53e20]/30'
                   )}
-                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -45px)' }}
+                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -20px)' }}
                   title={hotspot.title}
                   aria-label={`Scene ${pos.id}`}
                 >
