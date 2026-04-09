@@ -44,13 +44,34 @@ Use Puppeteer `getComputedStyle()` to get exact values from BOTH pages for the e
 
 ## Step 4: Make the fix
 
-Now make the MINIMAL change needed. Before changing anything:
-- If it's a Sanity content fix, check the EXACT current value first
-- If it's a CSS fix, check the EXACT current class/style first  
-- If it's a code fix, READ the file first
-- NEVER guess — always verify the current state before changing
+**BEFORE making ANY change, verify the current state:**
 
-Make the fix.
+### For Sanity content fixes:
+1. Dump the EXACT current block structure around the area you're changing
+2. Identify the EXACT block key, style, and children of what you're modifying
+3. State clearly: "I am changing block [key] from [X] to [Y]"
+4. **NEVER modify blocks you weren't asked to modify**
+5. **NEVER delete blocks unless explicitly asked to delete them**
+6. **If adding content, find the EXACT insertion point by examining surrounding blocks**
+
+### For adding missing content:
+1. Find the correct position by reading BOTH the Gatsby source AND the current Sanity content
+2. State: "Inserting new block AFTER block [key] which contains '[text...]'"
+3. **NEVER replace existing content with the new content**
+4. **ADD the new block alongside existing blocks**
+
+### For changing block styles:
+1. State the block key, current style, and target style
+2. **Only change the style field — do NOT modify children, marks, or text**
+3. **Use the correct component variant:**
+   - `blockquote` style = italic text with orange left border (inline callout)
+   - `quote` block type = large quote marks with author attribution (standalone featured quote)
+   - `callout` style = highlighted box
+   - Check the Gatsby reference page to see WHICH variant is actually used
+
+### For CSS/code fixes:
+- READ the file first
+- Make the MINIMAL change needed
 
 ## Step 5: Rebuild
 
@@ -68,10 +89,14 @@ http://localhost:3000/vision/{slug}
 ```
 Save to `c:/tmp/fix-{slug}-after.png` and READ the image.
 
-Compare the AFTER screenshot against the Gatsby screenshot from Step 1:
-- Does the fix match? List remaining differences.
-- If it does NOT match, go back to Step 4 and fix again.
-- Do NOT proceed to Step 7 until the after screenshot matches Gatsby.
+**Critical verification checklist:**
+- Does the changed element match the Gatsby reference?
+- Did any OTHER elements change that shouldn't have? (Compare before vs after carefully)
+- Is the element in the correct POSITION on the page?
+- If you added content, is it in the right place relative to surrounding content?
+- If you changed a style, did you use the correct variant?
+
+If ANY check fails, UNDO the change and redo Step 4.
 
 ## Step 7: Commit
 
@@ -85,5 +110,9 @@ git add <changed files> && git commit -m "..." && git push
 - NEVER commit without completing Step 6
 - NEVER assume a fix worked — always screenshot and verify
 - NEVER change more than what the issue describes
+- NEVER modify blocks you weren't asked to modify
+- NEVER replace existing content when adding new content
+- NEVER delete content unless explicitly asked to
 - If you notice other issues while fixing, note them but do NOT fix them in this commit
 - One issue per commit, verified visually
+- When the issue says "should be a quote" — check the Gatsby reference to determine WHICH quote variant (blockquote with left border vs quote block with quotation marks vs callout box)
