@@ -136,6 +136,39 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
 - [ ] Authors should be listed as Contributors (wrong section label)
 
+## 38. Digital Healthcare 2016
+- [ ] Duplication of the header (same duplicate banner issue as other legacy pages)
+- [ ] Spacing at the top is too tight (not critical)
+- [ ] For legacy features, use the standard Authors component instead of custom author layouts each time
+
+## 37. Understanding Zika
+- [ ] Header heights for "Conditions" / "Treatment" sections don't line up — could use empty line break + nonbreaking space to match heights
+- [ ] Number the references (currently unnumbered list)
+
+## 36. Care Plans Series (MAJOR — multi-part page with extensive issues)
+### Part 1 (Overview)
+- [ ] Different header, lots of white space
+- [ ] Lost the original design, kind of blah
+- [ ] Broken "Work Together" section
+- [ ] Missing author images
+- [ ] Link to first part overview is missing — shouldn't be hash #part-1, should be its own page
+
+### Part 2 (Current Landscape)
+- [ ] Missing header
+- [ ] Images are too far from the text — advocate for custom pages instead of CMS, or at least put text next to images
+- [ ] Missing some columns
+- [ ] Missing the context/position the hotspots provide (interactive elements lost)
+- [ ] Can't do image text overlay but cycle image could be bigger
+- [ ] Table doesn't work on mobile
+- [ ] Image removed on mobile (not worth keeping gears without overlay)
+
+### Part 3 (The Future)
+- [ ] Different header
+- [ ] Can remove "Photo by Philips Communications" since bg photo wasn't pulled in — move caption elsewhere
+- [ ] Text below can be wider, or use 2-column layout like sections above/below
+- [ ] Images could be bigger — slider works but doesn't look as nice as original
+- [ ] "Doesn't work on white bg" — dark-themed sections losing their background color (2 instances)
+
 ## 35. Killer Truths
 - [ ] Using an image but screen readers can't read it (accessibility concern)
 - [ ] Missing some of the stats (content not fully ported)
