@@ -806,7 +806,7 @@ const components: PortableTextComponents = {
     ),
     textCenter: ({ children }) => (
       <ArticleReveal intensity="text">
-        <p className="text-center mb-4 text-black">{children}</p>
+        <p className="font-serif text-[1.5rem] leading-[2.125rem] text-center mb-4 text-black">{children}</p>
       </ArticleReveal>
     ),
     callout: ({ children }) => (
