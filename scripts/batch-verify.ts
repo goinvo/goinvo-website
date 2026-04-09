@@ -172,7 +172,7 @@ async function extractTree(page: Page): Promise<TreeNode> {
       return {
         tag: tag, id: el.id || '', classes: cls ? cls.split(/\\s+/) : [],
         text: dt,
-        styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, color: cs.color, backgroundColor: cs.backgroundColor, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, position: cs.position },
+        styles: { fontSize: cs.fontSize, fontWeight: cs.fontWeight, color: cs.color, backgroundColor: cs.backgroundColor, textTransform: cs.textTransform, letterSpacing: cs.letterSpacing, position: cs.position, padding: cs.padding, borderWidth: cs.borderWidth, textAlign: cs.textAlign, display: cs.display },
         rect: { x:Math.round(rect.x), y:Math.round(rect.y), width:Math.round(rect.width), height:Math.round(rect.height) },
         interactive: inter, src: src, children: children,
       };
@@ -224,6 +224,14 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
     }
     if (normalizeColor(ab.styles.backgroundColor || '') !== normalizeColor(bb.styles.backgroundColor || '')) {
       issues.push({ type: 'BUTTON_STYLE', severity: 'medium', detail: `"${ab.text || bb.text}" bg: ${normalizeColor(ab.styles.backgroundColor || '')} → ${normalizeColor(bb.styles.backgroundColor || '')}` })
+    }
+    // Button padding comparison
+    if (ab.styles.padding !== bb.styles.padding) {
+      issues.push({ type: 'BUTTON_STYLE', severity: 'medium', detail: `"${ab.text || bb.text}" padding: ${ab.styles.padding} → ${bb.styles.padding}` })
+    }
+    // Button border comparison
+    if (ab.styles.borderWidth !== bb.styles.borderWidth) {
+      issues.push({ type: 'BUTTON_STYLE', severity: 'medium', detail: `"${ab.text || bb.text}" border-width: ${ab.styles.borderWidth} → ${bb.styles.borderWidth}` })
     }
     const yDiff = Math.abs(ab.rect.y - bb.rect.y)
     if (yDiff > 100) {

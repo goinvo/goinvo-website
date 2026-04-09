@@ -31,16 +31,23 @@ http://localhost:3000/vision/{slug}   (or /work/{slug})
 ```
 Save to `c:/tmp/fix-{slug}-before.png` and READ the image.
 
-## Step 3: Identify the EXACT difference
+## Step 3: Run the page-tree diff script
 
-Compare both screenshots side-by-side. List every specific difference you see:
+Run the tree comparison to get a structured diff:
+```bash
+npx tsx scripts/page-tree.ts https://www.goinvo.com/vision/{slug}/ --diff http://localhost:3000/vision/{slug}
+```
+
+Review the output for heading, button, element count, and style differences. Then compare both screenshots side-by-side. List every specific difference:
 - Font size/weight/family
 - Colors (exact hex values from computed styles)
-- Spacing/margins/padding (exact px values)
+- Spacing/margins/padding (exact px values from tree diff)
 - Missing/extra elements
 - Layout differences (grid vs stack, alignment)
+- Button border width and padding (tree diff catches these)
+- Missing or broken images
 
-Use Puppeteer `getComputedStyle()` to get exact values from BOTH pages for the elements in question. Report: "Gatsby has X, we have Y" for each difference.
+Report: "Gatsby has X, we have Y" for each difference.
 
 ## Step 4: Make the fix
 
@@ -83,16 +90,23 @@ rm -rf .next && npx next build
 
 If the build fails, fix the error and rebuild. Do NOT proceed until build passes.
 
-## Step 6: Screenshot AFTER the fix
+## Step 6: Verify with BOTH tree script AND screenshot
 
-Start the server and take another screenshot at the same position:
+**6a. Run the tree diff again:**
+```bash
+npx tsx scripts/page-tree.ts https://www.goinvo.com/vision/{slug}/ --diff http://localhost:3000/vision/{slug}
+```
+Confirm the specific issue from Step 3 no longer appears in the diff.
+
+**6b. Take a screenshot:**
 ```
 http://localhost:3000/vision/{slug}
 ```
 Save to `c:/tmp/fix-{slug}-after.png` and READ the image.
 
 **Critical verification checklist:**
-- Does the changed element match the Gatsby reference?
+- Does the tree diff show the issue is resolved?
+- Does the changed element match the Gatsby reference in the screenshot?
 - Did any OTHER elements change that shouldn't have? (Compare before vs after carefully)
 - Is the element in the correct POSITION on the page?
 - If you added content, is it in the right place relative to surrounding content?
