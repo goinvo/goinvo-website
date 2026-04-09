@@ -24,7 +24,7 @@
 
 .augmented-clinical-decision-support-feature .image--max-width { width: 100%; height: auto; }
 
-.augmented-clinical-decision-support-feature .button { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; text-align: center; border: 1px solid #FFB992; color: #E36216; background: transparent; cursor: pointer; transition: all 0.2s; }
+.augmented-clinical-decision-support-feature .button { display: inline-block; padding: 6px 16px; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; text-align: center; border: 1px solid #FFB992; color: #E36216; background: transparent; cursor: pointer; transition: all 0.2s; }
 .augmented-clinical-decision-support-feature .button:hover { background: #E36216; color: #fff; }
 .augmented-clinical-decision-support-feature .button--secondary { border-color: #FFB992; color: #E36216; }
 .augmented-clinical-decision-support-feature .button--secondary:hover { background: #E36216; color: #fff; }
