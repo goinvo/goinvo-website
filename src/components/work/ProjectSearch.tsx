@@ -64,7 +64,7 @@ export function ProjectSearch({ caseStudies, draftCaseStudies = [] }: ProjectSea
   return (
     <div>
       {/* Draft-only case studies — visible only in preview mode */}
-      {draftCaseStudies.length >= 0 && (
+      {draftCaseStudies.length > 0 && (
         <div className="relative border-b border-gray-medium">
           <div
             className="absolute left-0 top-0 bottom-0 w-3"
