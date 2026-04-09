@@ -139,23 +139,46 @@ function ModelCanvas({
   )
 }
 
+// Gatsby calibrated hotspots at 494px wide with 40px buttons and translate(-20px, -20px).
+// Scale the offset proportionally to the current image width.
+const GATSBY_WIDTH = 494
+const GATSBY_OFFSET = 20 // px offset at reference size
+
 export function ModelViewerSection() {
   const [activeHotspot, setActiveHotspot] = useState<string>('')
   const [cameraTarget, setCameraTarget] = useState<{
     position: [number, number, number]
     rotation: [number, number, number]
   } | null>(null)
-  const [isSupported, setIsSupported] = useState(true)
+  const imgContainerRef = useRef<HTMLDivElement>(null)
+  const [hotspotOffset, setHotspotOffset] = useState(GATSBY_OFFSET)
 
-  useEffect(() => {
-    // Check WebGL support
+  // Check WebGL support synchronously (safe — only reads, doesn't cause cascading renders)
+  const isSupported = (() => {
+    if (typeof window === 'undefined') return true
     try {
       const canvas = document.createElement('canvas')
-      const gl =
-        canvas.getContext('webgl2') || canvas.getContext('webgl')
-      if (!gl) setIsSupported(false)
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
+      return !!gl
     } catch {
-      setIsSupported(false)
+      return false
+    }
+  })()
+
+  useEffect(() => {
+    // Scale hotspot offset based on actual image width
+    const updateOffset = () => {
+      if (imgContainerRef.current) {
+        const w = imgContainerRef.current.offsetWidth
+        setHotspotOffset(Math.round(GATSBY_OFFSET * (w / GATSBY_WIDTH)))
+      }
+    }
+    // Wait for image to load before measuring
+    const timer = setTimeout(updateOffset, 100)
+    window.addEventListener('resize', updateOffset)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', updateOffset)
     }
   }, [])
 
@@ -176,7 +199,7 @@ export function ModelViewerSection() {
 
       <div className="grid grid-cols-1 gap-8 items-start">
         {/* Hotspot Image — w-fit shrink-wraps to image so overlay % positions match */}
-        <div className="relative w-fit">
+        <div className="relative w-fit" ref={imgContainerRef}>
           <Image
             src={cloudfrontImage(
               '/images/features/visual-storytelling-with-genai/genai-3d-model-3.jpg'
@@ -206,7 +229,7 @@ export function ModelViewerSection() {
                       ? 'bg-transparent'
                       : 'bg-transparent hover:bg-[#c53e20]/30'
                   )}
-                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -20px)' }}
+                  style={{ left: pos.left, top: pos.top, transform: `translate(-${hotspotOffset}px, -${hotspotOffset}px)` }}
                   title={hotspot.title}
                   aria-label={`Scene ${pos.id}`}
                 >
