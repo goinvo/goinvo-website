@@ -683,8 +683,9 @@ const components: PortableTextComponents = {
     link: ({ children, value }) => {
       const href = value?.href || ''
       const isRefLink = href === '#references' || href === '#methodology'
-      const rel = value?.blank ? 'noopener noreferrer' : undefined
-      const target = value?.blank ? '_blank' : undefined
+      const isExternal = value?.blank || href.startsWith('http')
+      const rel = isExternal ? 'noopener noreferrer' : undefined
+      const target = isExternal ? '_blank' : undefined
       return (
         <a
           href={href}
