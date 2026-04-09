@@ -175,8 +175,8 @@ export function ModelViewerSection() {
       </p>
 
       <div className="grid grid-cols-1 gap-8 items-start">
-        {/* Hotspot Image */}
-        <div className="relative">
+        {/* Hotspot Image — constrained to ~500px like Gatsby */}
+        <div className="relative max-w-[500px] mx-auto">
           <Image
             src={cloudfrontImage(
               '/images/features/visual-storytelling-with-genai/genai-3d-model-3.jpg'
@@ -184,16 +184,16 @@ export function ModelViewerSection() {
             alt="Hospital 3D model overview with hotspots"
             width={800}
             height={500}
-            className="w-full h-auto rounded-lg"
+            className="image--max-width rounded"
           />
-          {/* Hotspot buttons positioned on the image */}
+          {/* Transparent hotspot overlays — numbered markers are baked into the image PNG */}
           <div className="absolute inset-0">
             {[
-              { id: 1, left: '25%', top: '52%' },
-              { id: 2, left: '41%', top: '47%' },
-              { id: 3, left: '50.5%', top: '23%' },
-              { id: 4, left: '75.5%', top: '56%' },
-              { id: 5, left: '37.25%', top: '72.5%' },
+              { id: 1, left: '24.5%', top: '50.5%' },
+              { id: 2, left: '40.5%', top: '45.5%' },
+              { id: 3, left: '50%', top: '21.5%' },
+              { id: 4, left: '75%', top: '54.5%' },
+              { id: 5, left: '36.75%', top: '71%' },
             ].map((pos) => {
               const hotspot = hotspots.find((h) => h.id === pos.id)!
               return (
@@ -204,11 +204,11 @@ export function ModelViewerSection() {
                     'absolute w-10 h-10 rounded-lg cursor-pointer transition-all',
                     activeHotspot === hotspot.title
                       ? 'bg-[#c53e20]'
-                      : 'bg-[#c53e20]/0 hover:bg-[#c53e20]/30'
+                      : 'bg-transparent hover:bg-[#c53e20]/30'
                   )}
                   style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -20px)' }}
                   title={hotspot.title}
-                  aria-label={hotspot.title}
+                  aria-label={`Scene ${pos.id}`}
                 >
                 </button>
               )
