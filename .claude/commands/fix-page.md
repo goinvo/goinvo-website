@@ -56,9 +56,11 @@ Use Puppeteer `getComputedStyle()` to get exact values from BOTH pages for the e
 
 ### For adding missing content:
 1. Find the correct position by reading BOTH the Gatsby source AND the current Sanity content
-2. State: "Inserting new block AFTER block [key] which contains '[text...]'"
-3. **NEVER replace existing content with the new content**
-4. **ADD the new block alongside existing blocks**
+2. **Search the Gatsby source for ALL occurrences of the text** — it may appear multiple times in different forms (e.g., once as inline prose AND once as a standalone featured quote). Both instances need to exist in Sanity.
+3. State: "Inserting new block AFTER block [key] which contains '[text...]'"
+4. **NEVER replace existing content with the new content**
+5. **ADD the new block alongside existing blocks**
+6. **If text already exists inline in a paragraph, do NOT remove it** — the new quote/callout is a SECOND rendering of the same text, not a replacement
 
 ### For changing block styles:
 1. State the block key, current style, and target style
