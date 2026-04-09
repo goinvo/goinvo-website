@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import './print-big.css'
 
 export const metadata: Metadata = {
@@ -19,9 +18,7 @@ export const metadata: Metadata = {
 
 export default function PrintBigPage() {
   return (
-    <div className="print-big">
-      <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/print-big/hero.jpg" />
-
+    <div className="print-big pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section className="print-big__hero">
         <div className="print-big__hero-text-wrapper">

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { BackgroundVideo } from './BackgroundVideo'
 import './healthroom.css'
 
@@ -44,11 +43,7 @@ function Img({
 
 export default function BathroomToHealthroomPage() {
   return (
-    <div className="healthroom-legacy">
-      <SetCaseStudyHero
-        image="https://www.goinvo.com/old/videos/dfl/header.jpg"
-      />
-
+    <div className="healthroom-legacy pt-[var(--spacing-header-height)]">
       <article className="design-for-life" id="feature-article">
         {/* Title section with background video matching legacy header */}
         <header className="bathroom-header relative overflow-hidden flex items-center justify-center text-white text-center"
