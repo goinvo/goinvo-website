@@ -24,12 +24,12 @@
 
 .augmented-clinical-decision-support-feature .image--max-width { width: 100%; height: auto; }
 
-.augmented-clinical-decision-support-feature .button { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; text-align: center; border: 2px solid #E36216; color: #E36216; background: transparent; cursor: pointer; transition: all 0.2s; }
+.augmented-clinical-decision-support-feature .button { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; text-align: center; border: 1px solid #FFB992; color: #E36216; background: transparent; cursor: pointer; transition: all 0.2s; }
 .augmented-clinical-decision-support-feature .button:hover { background: #E36216; color: #fff; }
 .augmented-clinical-decision-support-feature .button--secondary { border-color: #FFB992; color: #E36216; }
 .augmented-clinical-decision-support-feature .button--secondary:hover { background: #E36216; color: #fff; }
 .augmented-clinical-decision-support-feature .button--block { display: block; width: 100%; }
-.augmented-clinical-decision-support-feature .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+/* button-group is just a wrapper — pure-g handles the flex layout */
 
 .augmented-clinical-decision-support-feature .pure-g { display: flex; flex-wrap: wrap; }
 .augmented-clinical-decision-support-feature .pure-u-1 { width: 100%; }
