@@ -189,11 +189,11 @@ export function ModelViewerSection() {
           {/* Transparent hotspot overlays — numbered markers are baked into the image PNG */}
           <div className="absolute inset-0">
             {[
-              { id: 1, left: '25%', top: '53.1%' },
-              { id: 2, left: '41%', top: '48%' },
-              { id: 3, left: '50.5%', top: '23.5%' },
-              { id: 4, left: '75.5%', top: '57.2%' },
-              { id: 5, left: '37.25%', top: '74%' },
+              { id: 1, left: '25%', top: '52.7%' },
+              { id: 2, left: '41%', top: '47.6%' },
+              { id: 3, left: '50.5%', top: '23.1%' },
+              { id: 4, left: '75.5%', top: '56.8%' },
+              { id: 5, left: '37.25%', top: '73.6%' },
             ].map((pos) => {
               const hotspot = hotspots.find((h) => h.id === pos.id)!
               return (
