@@ -206,7 +206,7 @@ export function ModelViewerSection() {
                       ? 'bg-[#c53e20]'
                       : 'bg-transparent hover:bg-[#c53e20]/30'
                   )}
-                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -50px)' }}
+                  style={{ left: pos.left, top: pos.top, transform: 'translate(-20px, -45px)' }}
                   title={hotspot.title}
                   aria-label={`Scene ${pos.id}`}
                 >
@@ -222,7 +222,7 @@ export function ModelViewerSection() {
         </div>
 
         {/* 3D Model Viewer */}
-        <div className="border border-gray-medium rounded-lg overflow-hidden">
+        <div className="border border-gray-medium overflow-hidden">
           {isSupported ? (
             <ModelCanvas cameraTarget={cameraTarget} />
           ) : (
@@ -240,18 +240,18 @@ export function ModelViewerSection() {
         </div>
       </div>
 
-      {/* Hotspot list for mobile */}
-      <div className="mt-4 lg:hidden">
-        <div className="flex flex-wrap gap-2">
+      {/* Scene tabs */}
+      <div className="mt-4">
+        <div className="flex border-b border-gray-light">
           {hotspots.map((h) => (
             <button
               key={h.id}
               onClick={() => handleHotspot(h)}
               className={cn(
-                'px-3 py-1.5 text-sm rounded border cursor-pointer transition-colors',
+                'px-4 py-2 text-sm font-semibold uppercase tracking-[1px] cursor-pointer transition-colors border-b-2 -mb-px',
                 activeHotspot === h.title
-                  ? 'border-primary bg-primary-lightest text-primary'
-                  : 'border-gray-light text-gray hover:border-gray-medium'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray hover:text-black'
               )}
             >
               Scene {h.id}
