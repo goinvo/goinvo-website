@@ -126,6 +126,16 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Image could be wider
 - [ ] Consider removing orange border for consistency
 
+## 29. openPRO
+- [ ] Some extra text bopping around (layout shifts)
+- [ ] Left-aligned icons works better (currently centered?)
+- [ ] Bullets for "limitations" got misplaced — under "current landscape" and above "progress"
+- [ ] "this 18 is not necessary" — extra/unnecessary content
+- [ ] Button in the wrong spot
+- [ ] Text styling reads better originally — use soft line breaks instead of new paragraphs
+- [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
+- [ ] Authors should be listed as Contributors (wrong section label)
+
 ## Script Improvements Needed
 - [ ] batch-verify should also compare MOBILE viewport (375px) not just desktop
 - [ ] page-tree.ts should detect broken/unloaded images (naturalWidth === 0)
