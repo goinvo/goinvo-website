@@ -26,8 +26,8 @@
 
 .augmented-clinical-decision-support-feature .button { display: inline-block; padding: 0.75rem 1.5rem; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; text-decoration: none; text-align: center; border: 2px solid #E36216; color: #E36216; background: transparent; cursor: pointer; transition: all 0.2s; }
 .augmented-clinical-decision-support-feature .button:hover { background: #E36216; color: #fff; }
-.augmented-clinical-decision-support-feature .button--secondary { border-color: #007385; color: #007385; }
-.augmented-clinical-decision-support-feature .button--secondary:hover { background: #007385; color: #fff; }
+.augmented-clinical-decision-support-feature .button--secondary { border-color: #FFB992; color: #E36216; }
+.augmented-clinical-decision-support-feature .button--secondary:hover { background: #E36216; color: #fff; }
 .augmented-clinical-decision-support-feature .button--block { display: block; width: 100%; }
 .augmented-clinical-decision-support-feature .button-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
@@ -67,3 +67,7 @@
 .augmented-clinical-decision-support-feature h4 + p {
   margin-top: 0.5rem;
 }
+
+/* List styles */
+.augmented-clinical-decision-support-feature ul { list-style-type: disc; padding-left: 1.5em; margin: 1em 0; }
+.augmented-clinical-decision-support-feature li { margin-bottom: 0.25em; }
