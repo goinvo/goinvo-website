@@ -17,9 +17,7 @@ export const metadata: Metadata = {
 
 export default function UnderstandingEbolaPage() {
   return (
-    <div>
-      <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/ebola/Ebola-01.png" />
-
+    <div className="pt-[var(--spacing-header-height)]">
       {/* Sticky Navigation */}
       <nav className="ebola-nav">
         <div className="max-width content-padding mx-auto flex">

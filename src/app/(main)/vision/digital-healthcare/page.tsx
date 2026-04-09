@@ -29,11 +29,7 @@ export const metadata: Metadata = {
 
 export default function DigitalHealthcarePage() {
   return (
-    <div className="digital-healthcare">
-      <SetCaseStudyHero
-        image={`${IMG_BASE}/digital_health_cover_transp.gif`}
-      />
-
+    <div className="digital-healthcare pt-[var(--spacing-header-height)]">
       {/* ===== HERO ===== */}
       <div className="overall-header">
         <div className="title">

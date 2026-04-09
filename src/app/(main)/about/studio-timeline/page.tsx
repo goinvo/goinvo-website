@@ -86,7 +86,7 @@ export default function StudioTimelinePage() {
                 </div>
               </a>
               <Link
-                href="/vision/an-oral-history"
+                href="/vision/oral-history-goinvo"
                 className="block no-underline"
               >
                 <div className="h-[260px] overflow-hidden">
