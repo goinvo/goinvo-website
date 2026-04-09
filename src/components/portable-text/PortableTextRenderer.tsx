@@ -300,8 +300,9 @@ const components: PortableTextComponents = {
         return items.filter(i => i._type === 'image').length >= 2
       })()
 
-      // Mixed content: text + image side by side (NOT gallery pattern)
-      if (hasText && hasImages && colCount === 2 && !isGalleryPattern) {
+      // Mixed content: text + image side by side
+      // For 2-column layout with exactly [image, text] or [text, image], always use side-by-side
+      if (hasText && hasImages && colCount === 2 && (items.length === 2 || !isGalleryPattern)) {
         const firstImageIdx = items.findIndex(i => i._type === 'image' && i.asset?._ref)
         const firstTextIdx = items.findIndex(i => i._type === 'block')
         const imageFirst = firstImageIdx < firstTextIdx
