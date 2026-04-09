@@ -206,7 +206,7 @@ export function ModelViewerSection() {
                       ? 'border-primary bg-primary/30 text-white'
                       : 'border-white/60 bg-white/10 text-white hover:bg-primary/25 hover:border-primary'
                   )}
-                  style={{ left: pos.left, top: pos.top }}
+                  style={{ left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)' }}
                   title={hotspot.title}
                 >
                   {pos.id}
