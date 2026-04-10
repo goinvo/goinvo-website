@@ -86,7 +86,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Orange bullets on enterprise/government results sections
 
 ## 18. Health Design Thinking
-- [ ] All-caps issue — text rendering in all uppercase that shouldn't be
+- [x] All-caps issue — PortableTextRenderer columns gallery was rendering bold-caption text as `font-semibold uppercase`. Gatsby has `font-weight: 400, text-transform: none`. Changed to render through PortableText component (preserving link marks) with just bold styling, no uppercase.
 
 ## 23. Physician Burnout
 - [ ] Mobile version of contributors/burnout illustration should show text list of contributors (desktop image reveals names that mobile crops)
