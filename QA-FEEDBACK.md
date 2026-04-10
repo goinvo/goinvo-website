@@ -124,8 +124,8 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Authors should be listed as Contributors (wrong section label)
 
 ## 52. MASS SNAP
-- [ ] Missing solution header
-- [ ] Missing results header
+- [x] Missing solution header — inserted sectionTitle "Solution" before "Simple and accessible" block
+- [x] Missing results header — inserted sectionTitle "Results" before "The redesigned application was deployed..." block
 - [ ] Missing care plans feature card for "up next" (if available)
 
 ## 51. Maya EHR
