@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import Link from 'next/link'
 
 /**
  * Color pairs for each part's scroll-based background gradient.
@@ -373,16 +374,22 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ nextHref, nextTitle, color }: BottomNavProps) {
+  // Force scroll to top after navigation to prevent landing mid-page
+  const handleClick = () => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    })
+  }
   return (
     <div id="bottom-nav">
-      <a href={nextHref}>
+      <Link href={nextHref} onClick={handleClick}>
         <span className="link-fill">
           <div className="text-container">
             <div className="next-part">next part</div>
             <div className="title" style={{ color }}>{nextTitle}</div>
           </div>
         </span>
-      </a>
+      </Link>
     </div>
   )
 }
