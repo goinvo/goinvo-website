@@ -95,7 +95,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] All-caps too much — category tags were rendered as uppercase pills ("PATIENT ENGAGEMENT", "OPEN SOURCE", "HEALTHCARE"). Gatsby renders them as plain comma-separated text after "Tags:" label. Changed CaseStudyContent to match.
 
 ## 24. Determinants of Health
-- [ ] Why different style of buttons? (should match Gatsby button style)
+- [x] Why different style of buttons? — changed `.determinants-of-health .button--secondary` from filled teal `#007385` to outlined orange (transparent bg, `#E36216` text, `1px solid #FFB992` border, `6px 16px` padding, 15px font) matching Gatsby exactly
 - [ ] Wrong icons for the chart (not the right icons we want)
 - [ ] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts)
 - [x] Big sans-serif header "Individual Behavior" — reduced from text-xl (20px) to 1.17em (~18.72px matching Gatsby's h3 default)

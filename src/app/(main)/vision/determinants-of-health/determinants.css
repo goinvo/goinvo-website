@@ -163,29 +163,32 @@ h3.determinant {
 
 .determinants-of-health .button {
   display: inline-block;
-  padding: 0.75rem 1.5rem;
+  padding: 6px 16px;
   text-decoration: none;
-  border-radius: 4px;
-  font-size: 0.875rem;
+  font-size: 15px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
-  transition: background-color 150ms;
+  transition: background-color 150ms, color 150ms;
+  background-color: transparent;
+  border: 1px solid #FFB992;
+  color: #E36216;
 }
 
 .determinants-of-health .button--secondary {
-  background-color: #007385;
-  color: #fff;
-  border: none;
+  background-color: transparent;
+  color: #E36216;
+  border: 1px solid #FFB992;
 }
 
 .determinants-of-health .button--secondary:hover {
-  background-color: #005c6a;
+  background-color: #E36216;
+  color: #fff;
 }
 
 .determinants-of-health .button--lg {
-  padding: 1rem 2rem;
-  font-size: 1rem;
+  padding: 6px 16px;
+  font-size: 15px;
 }
 
 .determinants-of-health .button--block {
