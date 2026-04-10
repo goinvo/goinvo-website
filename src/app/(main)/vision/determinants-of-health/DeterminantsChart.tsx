@@ -143,14 +143,14 @@ export function DeterminantsChart() {
 
       {/* Details panel (below chart, not side-by-side) */}
       <div className="mt-8">
-        <h3 className="font-sans text-xl font-bold mb-2">{selected.title}</h3>
+        <h3 className="font-sans text-[1.17em] font-bold mb-2">{selected.title}</h3>
         <p className="leading-relaxed mb-6">{selected.description}</p>
 
         {selected.divisions && selected.divisions.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
             {selected.divisions.map((div) => (
               <div key={div.title}>
-                <h4 className="font-semibold mb-1">{div.title}</h4>
+                <h4 className="font-sans text-base font-bold mb-1">{div.title}</h4>
                 {div.factors && div.factors.length > 0 && (
                   <ul className="ul list-outside pl-4 text-sm text-gray-dark space-y-0.5">
                     {div.factors.map((f) => (
