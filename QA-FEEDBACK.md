@@ -139,7 +139,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Missing results header — inserted sectionTitle Results before "HL7/FHIR adoption" h4
 
 ## 49. All of Us
-- [ ] Not a fan of how header images are cropped — losing a lot at any browser size (global hero crop issue, would need hero component redesign)
+- [x] Not a fan of how header images are cropped — losing a lot at any browser size — root cause: Sanity image URLs forced to 1600×900 (16:9) but PersistentHero displays at ~1280×450 (2.84:1). The aspect mismatch caused object-cover to crop ~37% of the image height. Fix: changed all 4 hero image URL builders (CaseStudyContent, CaseStudyCard, vision/[slug] page, visual-storytelling-with-genai page) from `width(1600).height(900)` to `width(1600).height(564)` (matching the container's 2.84:1 aspect). Sanity now crops at the correct aspect, no further cropping happens at display time. For All of Us specifically: Sanity rect went from `332,0,1337,752` (lost 663px of width) to `0,24,2000,705` (lost only 47px of height — preserved nearly the entire panoramic source).
 - [x] Missing an image — inserted "02-where-goinvo-fits-in-the-aou.jpg" between "The program is an ambitious..." paragraph and "Participants who join contribute..." (image existed in Sanity asset library but no block referenced it)
 - [x] Could images make use of more of the width? — changed all 6 (now 7) body images from size=large (533px) to size=full (711px) matching Gatsby
 - [x] Missing results header — inserted sectionTitle Results before "Impacting 750k..." paragraph
