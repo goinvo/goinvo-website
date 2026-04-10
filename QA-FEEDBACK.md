@@ -163,7 +163,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 41. Bathroom to Healthroom
 - [ ] Long scroll of images vs slider makes you lose timeline context and takes forever to get to text
-- [ ] Needs horizontal padding (text running edge to edge)
+- [x] Needs horizontal padding (text running edge to edge) — added 1.5rem (mobile) / 3rem (desktop) horizontal padding to article paragraphs and list items
 - [ ] Missing interactive piece (interactive element from Gatsby not ported)
 - [ ] Another piece doesn't work as-is (layout/interactive section broken)
 

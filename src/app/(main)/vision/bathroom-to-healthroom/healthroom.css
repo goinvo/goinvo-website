@@ -71,6 +71,26 @@
 
 .healthroom-legacy article.design-for-life p {
   margin-bottom: 1em;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+@media (min-width: 768px) {
+  .healthroom-legacy article.design-for-life p {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+.healthroom-legacy article.design-for-life ul,
+.healthroom-legacy article.design-for-life ol {
+  padding-left: 3rem;
+  padding-right: 1.5rem;
+}
+@media (min-width: 768px) {
+  .healthroom-legacy article.design-for-life ul,
+  .healthroom-legacy article.design-for-life ol {
+    padding-left: 4.5rem;
+    padding-right: 3rem;
+  }
 }
 .healthroom-legacy article.design-for-life p em {
   font-style: italic;
