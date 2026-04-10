@@ -35,7 +35,7 @@ export default function CarePlansPage() {
       <section className="bg-white py-8 border-b border-gray-200">
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
-            <a href="#part1" className="font-semibold text-primary hover:underline">Part 1: Overview</a>
+            <Link href="/vision/care-plans" className="font-semibold text-primary hover:underline">Part 1: Overview</Link>
             <Link href="/vision/care-plans/part-2" className="font-semibold text-primary hover:underline">Part 2: Landscape</Link>
             <Link href="/vision/care-plans/part-3" className="font-semibold text-primary hover:underline">Part 3: Future</Link>
           </div>
