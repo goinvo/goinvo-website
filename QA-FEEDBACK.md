@@ -146,7 +146,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] References had duplicated link text — cleaned URL from title text
 
 ## 46. Ipsos Facto
-- [ ] Missing image (image counts ~match Gatsby; videos vs poster images may explain the diff)
+- [x] Missing image — verified image counts match (11 images on both Gatsby and Next.js). The previous "missing" was a poster-image counting artifact resolved by the auto-derived video poster fix.
 - [x] Feature cards — instead of just "Feature" label — for vision features, the `client` field is the literal string "Feature". CaseStudyCard now hides client for vision section and falls back to `description` when caption is empty. Affects all upNext sections globally.
 
 ## 47. Prior Auth
