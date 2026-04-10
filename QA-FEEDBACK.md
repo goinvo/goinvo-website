@@ -181,7 +181,7 @@ Feedback from Jen Patel via FigJam board review.
 ![1775847221250](image/QA-FEEDBACK/1775847221250.png)
 ## 38. Digital Healthcare 2016
 - [x] Duplication of the header — fixed in commit 652de04 (removed SetCaseStudyHero)
-- [ ] Spacing at the top is too tight (not critical)
+- [x] Spacing at the top is too tight — added mt-8 (md:mt-12) to the top of the page wrapper for breathing room above the title
 - [x] Use standard Authors component — replaced custom .contributor / .contributors-box layout (4 contributors with hardcoded images, h3 roles, twitter handles) with the shared `<Author>` component (passes role via `company` prop, twitter link via children). Added section heading "Contributors" for consistency.
 
 ## 37. Understanding Zika
