@@ -171,12 +171,12 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Sometimes clicking "Next part" link goes back to top of current part — changed BottomNav from plain `<a>` to Next.js `<Link>` with explicit `window.scrollTo({ top: 0 })` onClick to force scroll-to-top after navigation. The intermittent behavior was likely the transition system preserving scroll position from the previous page.
 
 ## 39. Healing US Healthcare (MAJOR — interactive charts missing)
-- [ ] Chart didn't make it over (map/spending chart)
-- [ ] Another chart bites the dust (healthcare spending bar chart)
+- [ ] Chart didn't make it over (map/spending chart) — major rebuild needed
+- [ ] Another chart bites the dust (healthcare spending bar chart) — major rebuild needed
 - [ ] The OG timeline is broken anyway (shows error on Gatsby too)
-- [ ] This chart is gone gone gone (another chart completely missing)
-- [ ] Missing content section (PARTICIPATE / Give Feedback section)
-- [ ] Also missing content (PARTICIPATE section + CREATING section)
+- [ ] This chart is gone gone gone (another chart completely missing) — major rebuild needed
+- [~] Missing content section (PARTICIPATE / Give Feedback section) — section already exists in code; added social share links (Facebook/Twitter/LinkedIn) that were missing from the Share row
+- [~] Also missing content (PARTICIPATE section + CREATING section) — Participate section exists; Creating section may refer to "Creators" h2 which also exists
 
 ## 38. Digital Healthcare 2016
 - [x] Duplication of the header — fixed in commit 652de04 (removed SetCaseStudyHero)
