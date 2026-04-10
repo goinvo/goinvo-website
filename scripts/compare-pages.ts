@@ -1161,29 +1161,40 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
 
   // ---- BUTTONS vs LINKS ----
 
+  // Count duplicates by normalized text. If Gatsby has N copies of "Foo"
+  // but Next.js only has M < N, report (N - M) missing.
+  const normalizeBtn = (s: string) => s.toLowerCase().trim().substring(0, 30)
+  const gatsbyBtnCounts = new Map<string, number>()
   for (const gb of gatsby.buttons) {
-    const inNextButtons = nextjs.buttons.some(nb => {
-      const g = gb.text.toLowerCase().substring(0, 20)
-      const n = nb.text.toLowerCase().substring(0, 20)
-      return g.includes(n) || n.includes(g)
-    })
-    if (!inNextButtons) {
-      const inNextLinks = nextjs.links.some(nl => {
-        const g = gb.text.toLowerCase().substring(0, 20)
-        const n = nl.text.toLowerCase().substring(0, 20)
-        return g.includes(n) || n.includes(g)
-      })
-      if (inNextLinks) {
+    const k = normalizeBtn(gb.text)
+    gatsbyBtnCounts.set(k, (gatsbyBtnCounts.get(k) || 0) + 1)
+  }
+  const nextBtnCounts = new Map<string, number>()
+  for (const nb of nextjs.buttons) {
+    const k = normalizeBtn(nb.text)
+    nextBtnCounts.set(k, (nextBtnCounts.get(k) || 0) + 1)
+  }
+  for (const [key, gCount] of gatsbyBtnCounts.entries()) {
+    const nCount = nextBtnCounts.get(key) || 0
+    if (nCount < gCount) {
+      // Find the original text for the message
+      const original = gatsby.buttons.find((b) => normalizeBtn(b.text) === key)?.text || key
+      // Check if it became a plain link
+      const linkExists = nextjs.links.some((l) => normalizeBtn(l.text) === key)
+      if (linkExists && nCount === 0) {
         issues.push({
           severity: 'high',
           category: 'LINK_NOT_BUTTON',
-          message: `"${gb.text}" is a BUTTON in Gatsby but a plain LINK in Next.js`,
+          message: `"${original}" is a BUTTON in Gatsby but a plain LINK in Next.js`,
         })
       } else {
+        const missing = gCount - nCount
         issues.push({
           severity: 'high',
           category: 'MISSING_BUTTON',
-          message: `"${gb.text}" button in Gatsby but not found in Next.js`,
+          message: missing === gCount
+            ? `"${original}" button in Gatsby but not found in Next.js`
+            : `"${original}" button: Gatsby has ${gCount}, Next.js has ${nCount} (missing ${missing})`,
         })
       }
     }
