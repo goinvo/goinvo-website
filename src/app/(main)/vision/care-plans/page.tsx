@@ -164,52 +164,53 @@ export default function CarePlansPage() {
       </section>
 
       {/* Contact / Work Together */}
-      <section className="py-12 bg-gray-lightest">
+      <section className="py-12">
         <div className="max-width max-width-md content-padding mx-auto">
+          <h2 className="font-serif text-2xl mb-3">Want to Work Together?</h2>
+          <p className="text-gray mb-6">
+            Want to take your healthcare or care plan product to the next level? Contact the authors at GoInvo:
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="font-serif text-2xl mb-6">Want to Work Together?</h2>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="https://www.goinvo.com/old/images/features/careplans/intro_icons/email.png"
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="w-5 h-5 object-contain"
-                  />
-                  <a href="mailto:info@goinvo.com" className="text-primary hover:underline">info@goinvo.com</a>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="https://www.goinvo.com/old/images/features/careplans/intro_icons/phone.png"
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="w-5 h-5 object-contain"
-                  />
-                  <a href="tel:6178037043" className="text-primary hover:underline">617-803-7043</a>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Image
-                    src="https://www.goinvo.com/old/images/features/careplans/intro_icons/address.png"
-                    alt=""
-                    width={24}
-                    height={24}
-                    className="w-5 h-5 object-contain"
-                  />
-                  <span className="text-gray">661 Massachusetts Ave, 3rd Floor, Arlington MA, 02476</span>
-                </div>
-              </div>
-            </div>
             <div>
               <Image
                 src="https://www.goinvo.com/old/images/features/careplans/work_together.jpg"
                 alt="GoInvo studio"
                 width={600}
                 height={400}
-                className="w-full h-auto rounded"
+                className="w-full h-auto"
               />
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Image
+                  src="https://www.goinvo.com/old/images/features/careplans/intro_icons/email.png"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="w-5 h-5 object-contain"
+                />
+                <a href="mailto:info@goinvo.com" className="text-primary hover:underline">info@goinvo.com</a>
+              </div>
+              <div className="flex items-center gap-3">
+                <Image
+                  src="https://www.goinvo.com/old/images/features/careplans/intro_icons/phone.png"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="w-5 h-5 object-contain"
+                />
+                <a href="tel:6178037043" className="text-primary hover:underline">617-803-7043</a>
+              </div>
+              <div className="flex items-start gap-3">
+                <Image
+                  src="https://www.goinvo.com/old/images/features/careplans/intro_icons/address.png"
+                  alt=""
+                  width={24}
+                  height={24}
+                  className="w-5 h-5 object-contain mt-1"
+                />
+                <span className="text-gray">661 Massachusetts Ave, 3rd Floor, Arlington MA, 02476</span>
+              </div>
             </div>
           </div>
         </div>
