@@ -20,8 +20,8 @@ export default function CarePlansPart2Page() {
       <div className="careplans-hero" style={{ minHeight: 480, background: '#8DB8C6' }}>
         <div className="hero-bg">
           <Image
-            src={`${IMG}/part2/hero_bg.jpg`}
-            alt="Care Plans Part 2 background"
+            src={`${IMG}/FeatureBanner_v02_back.jpg`}
+            alt=""
             fill
             className="object-cover"
             priority

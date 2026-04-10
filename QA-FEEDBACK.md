@@ -196,7 +196,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Link to first part overview — changed nav from `#part1` hash anchor (which scrolled within the same page) to `/vision/care-plans` (the root page IS the Part 1 overview content, so it links to itself as a real route). Part 2 and Part 3 already link here correctly.
 
 ### Part 2 (Current Landscape)
-- [ ] Missing header
+- [x] Missing header — hero background was pointing to non-existent `/part2/hero_bg.jpg`. Changed to the actual file `/FeatureBanner_v02_back.jpg` (the brick scene with care plan flow chart). Hero now displays correctly.
 - [ ] Images are too far from the text — advocate for custom pages instead of CMS, or at least put text next to images
 - [ ] Missing some columns
 - [ ] Missing the context/position the hotspots provide (interactive elements lost)
@@ -205,7 +205,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Image removed on mobile (not worth keeping gears without overlay)
 
 ### Part 3 (The Future)
-- [ ] Different header
+- [x] Different header — hero background was pointing to non-existent `/part3/hero_bg.jpg`. Changed to the actual file `/part3/hero_image.jpg` (the illustrated street scene). Hero now displays correctly.
 - [ ] Can remove "Photo by Philips Communications" since bg photo wasn't pulled in — move caption elsewhere
 - [ ] Text below can be wider, or use 2-column layout like sections above/below
 - [ ] Images could be bigger — slider works but doesn't look as nice as original
