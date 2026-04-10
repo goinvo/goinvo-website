@@ -118,7 +118,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Left-aligned icons works better (currently centered?)
 - [x] Bullets for "limitations" got misplaced — 3 limitations bullets (Limited portal integration, Siloed PRO platforms, No data standards) were positioned under "The current landscape" intro instead of under "Limitations" h4. Moved them to right after the Limitations heading. Sanity content patch.
 - [x] "this 18 is not necessary" — removed sup "18" from "Lack of resources... Boston:" bullet (was hanging awkwardly between bullet text and the following blockquote)
-- [ ] Button in the wrong spot
+- [x] Button in the wrong spot — moved "Contribute on GitHub" buttonGroup from position 58 (after the numbered list of projects) to position 52 (directly after the openPRO main graphic image) matching Gatsby
 - [ ] Text styling reads better originally — use soft line breaks instead of new paragraphs
 - [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
 - [x] Authors should be listed as Contributors — Daniel Reeves stays as sole Author; Sharon Lee, Jen Patel, Juhan Sonin moved to contributors field (matches Gatsby which lists Daniel as Author and the other three as Contributors).
