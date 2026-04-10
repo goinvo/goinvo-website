@@ -73,7 +73,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Image sizes and layouts vary — prefer original design for balance
 - [ ] Next section also doesn't work (Healthcare Graphics section)
 - [ ] Some more layout issues in later sections
-- [ ] "Appendix. A Lean Experiment Evaluating Healthcare Information Graphics" should be a header
+- [x] "Appendix. A Lean Experiment..." — added missing space after "Appendix." (was "Appendix.A Lean..."). Block was already an h2 header.
 
 ## Global Issues
 - [x] Paragraph margin-top: 0 → my-4 (matching Gatsby 1em)
