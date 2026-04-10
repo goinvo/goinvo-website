@@ -52,7 +52,11 @@ export default function CarePlansPart3Page() {
       </div>
 
       {/* ===== SECTION 1: Digital is Better ===== */}
-      <section id="digitized" className="py-12">
+      <section
+        id="digitized"
+        className="py-12 bg-cover bg-bottom-right"
+        style={{ backgroundImage: `url(${IMG}/part3/part1_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] lg:text-[2.25rem] font-light mb-6">
             <strong className="font-bold">Digital</strong> is Better
@@ -108,7 +112,11 @@ export default function CarePlansPart3Page() {
       </section>
 
       {/* ===== SECTION 2: Standardized ===== */}
-      <section id="standardized" className="py-12 bg-gray-lightest">
+      <section
+        id="standardized"
+        className="py-12 bg-cover bg-bottom-right"
+        style={{ backgroundImage: `url(${IMG}/part3/part2_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] lg:text-[2.25rem] font-light mb-6">
             <strong className="font-bold">Standardized</strong>, Interoperable Content
@@ -142,9 +150,12 @@ export default function CarePlansPart3Page() {
       </section>
 
       {/* ===== SECTION 3: Data-Rich ===== */}
-      <section id="data-rich" className="py-12">
+      <section
+        id="data-rich"
+        className="py-12 bg-cover bg-center"
+        style={{ backgroundImage: `url(${IMG}/part3/part3_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
-          <p className="text-xs text-gray mb-1">Photo by Philips Communications</p>
           <h1 className="font-serif text-[1.75rem] lg:text-[2.25rem] font-light mb-6">
             &quot;Give <em>Me</em> <em>My</em> <strong className="font-bold">Data</strong>&quot;
           </h1>
@@ -172,7 +183,11 @@ export default function CarePlansPart3Page() {
       </section>
 
       {/* ===== SECTION 4: Empowering ===== */}
-      <section id="empowering" className="py-12 bg-gray-lightest">
+      <section
+        id="empowering"
+        className="py-12 bg-cover bg-center"
+        style={{ backgroundImage: `url(${IMG}/part3/part4_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] lg:text-[2.25rem] font-light mb-6">
             Empowered Patients are<br /><strong className="font-bold">Activated</strong> Patients
@@ -210,7 +225,11 @@ export default function CarePlansPart3Page() {
       </section>
 
       {/* ===== SECTION 5: Care Team ===== */}
-      <section id="care-team" className="py-12">
+      <section
+        id="care-team"
+        className="py-12 bg-cover bg-center"
+        style={{ backgroundImage: `url(${IMG}/part3/part5_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
@@ -245,7 +264,11 @@ export default function CarePlansPart3Page() {
       </section>
 
       {/* ===== SECTION 6: Dynamic ===== */}
-      <section id="dynamic" className="py-12 bg-gray-lightest">
+      <section
+        id="dynamic"
+        className="py-12 bg-cover bg-center"
+        style={{ backgroundImage: `url(${IMG}/part3/part6_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] lg:text-[2.25rem] font-light mb-4">
             Dynamic Plans Evolve<br /><strong className="font-bold">With the Patient</strong>
@@ -296,7 +319,11 @@ export default function CarePlansPart3Page() {
       </section>
 
       {/* ===== SECTION 7: Health Shift ===== */}
-      <section id="health-shift" className="py-12">
+      <section
+        id="health-shift"
+        className="py-12 bg-cover bg-center"
+        style={{ backgroundImage: `url(${IMG}/part3/part7_bg.png)` }}
+      >
         <div className="max-width max-width-md content-padding mx-auto">
           <h1 className="font-serif text-[1.75rem] lg:text-[2.25rem] font-light mb-6">
             Health Care is <strong className="font-bold">Shifting</strong>

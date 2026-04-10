@@ -206,10 +206,10 @@ Feedback from Jen Patel via FigJam board review.
 
 ### Part 3 (The Future)
 - [x] Different header — hero background was pointing to non-existent `/part3/hero_bg.jpg`. Changed to the actual file `/part3/hero_image.jpg` (the illustrated street scene). Hero now displays correctly.
-- [ ] Can remove "Photo by Philips Communications" since bg photo wasn't pulled in — move caption elsewhere
+- [x] Can remove "Photo by Philips Communications" since bg photo wasn't pulled in — removed the caption from data-rich section
 - [ ] Text below can be wider, or use 2-column layout like sections above/below
 - [ ] Images could be bigger — slider works but doesn't look as nice as original
-- [ ] "Doesn't work on white bg" — dark-themed sections losing their background color (2 instances)
+- [x] "Doesn't work on white bg" — dark-themed sections losing their background color — added all 7 section background images (part1_bg.png through part7_bg.png) to sections digitized/standardized/data-rich/empowering/care-team/dynamic/health-shift, restoring the colored teal/dark blue backgrounds
 
 ## 35. Killer Truths
 - [ ] Using an image but screen readers can't read it (accessibility concern)
