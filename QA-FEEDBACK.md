@@ -98,8 +98,8 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Why different style of buttons? (should match Gatsby button style)
 - [ ] Wrong icons for the chart (not the right icons we want)
 - [ ] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts)
-- [ ] Big sans-serif header "Individual Behavior" is weird — should be serif like Gatsby
-- [ ] Little sub-headers (Psychological Assets, etc.) weird as serif — font mismatch
+- [x] Big sans-serif header "Individual Behavior" — reduced from text-xl (20px) to 1.17em (~18.72px matching Gatsby's h3 default)
+- [x] Little sub-headers (Psychological Assets, etc.) — changed from default serif 24px to font-sans text-base font-bold (16px, matching Gatsby's h4)
 - [ ] Blue-on-blue contrast issue: grey text on blue background doesn't have good contrast
 - [x] Missing Edwin's and Bryson's headshots — added 'Edwin Choi' and 'Bryson Wong' mappings to team-headshots.ts (both CloudFront images exist: headshot-edwin-choi.jpg and headshot-bryson-wong.jpg).
 
@@ -151,7 +151,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Missing solution header — inserted sectionTitle Solution before "Patient Information Upfront" h4 (also removed erroneous mid-page "Results" h3 that was added in commit 652de04 but isn't in Gatsby)
 
 ## 44. Understanding Ebola
-- [ ] Header duplication (same SetCaseStudyHero + own header pattern as other legacy pages)
+- [x] Header duplication — fixed in commit 652de04 (removed SetCaseStudyHero since page has own header)
 
 ## 43. Redesign Democracy
 - [ ] Really thin callouts are painful to read
