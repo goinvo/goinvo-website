@@ -20,9 +20,9 @@ const data = [
   {
     id: 'covid-19',
     title: 'COVID-19',
-    date: 'Dec 2019 - Present',
-    cases: 111363,
-    deaths: 3892,
+    date: 'Dec 2019 - 2024',
+    cases: 704753890,
+    deaths: 7010681,
   },
 ]
 
@@ -37,7 +37,8 @@ function formatNumber(n: number): string {
 }
 
 function formatCompact(n: number): string {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`
+  if (n >= 1000000000) return `${(n / 1000000000).toFixed(1)}B`
+  if (n >= 1000000) return `${(n / 1000000).toFixed(0)}M`
   if (n >= 10000) return `${Math.round(n / 1000)}k`
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return n.toString()
@@ -89,7 +90,9 @@ export function CovidChart() {
 
   // Compute scales
   const maxValue = Math.max(...data.map((d) => d.cases))
-  const yDomainMax = maxValue + 10000
+  // Round up to a clean order-of-magnitude tick boundary
+  const orderOfMag = Math.pow(10, Math.floor(Math.log10(maxValue)))
+  const yDomainMax = Math.ceil(maxValue / orderOfMag) * orderOfMag
 
   // Band scale: distribute disease groups across horizontal space
   const bandPadOuter = 0.25
@@ -112,7 +115,10 @@ export function CovidChart() {
   // Y axis ticks
   const tickCount = 8
   const yTicks: number[] = []
-  const tickStep = Math.ceil(yDomainMax / tickCount / 10000) * 10000
+  // Snap tick step to a "nice" round number based on order of magnitude
+  const rawStep = yDomainMax / tickCount
+  const stepMag = Math.pow(10, Math.floor(Math.log10(rawStep)))
+  const tickStep = Math.ceil(rawStep / stepMag) * stepMag
   for (let v = 0; v <= yDomainMax; v += tickStep) {
     yTicks.push(v)
   }
@@ -332,7 +338,7 @@ export function CovidChart() {
 
       {/* Source note */}
       <p className="text-sm text-gray text-center mt-4 italic">
-        Data snapshot from March 2020. Source: Johns Hopkins CSSE (now retired).
+        Data through 2024. Source: WHO COVID-19 Dashboard.
       </p>
     </div>
   )

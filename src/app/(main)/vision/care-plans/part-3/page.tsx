@@ -65,7 +65,7 @@ export default function CarePlansPart3Page() {
           {/* Carousel: 5 slides matching legacy Bootstrap carousel */}
           <CarePlansCarousel>
             <div className="slide-card">
-              <Image src={`${IMG}/part3/part1_slide1.png`} alt="Magic Mirror health monitoring" width={500} height={400} className="w-full h-auto mb-4" />
+              <Image src={`${IMG}/part3/part1_slide1.png`} alt="Magic Mirror health monitoring" width={500} height={400} className="w-full h-auto mb-4" loading="eager" unoptimized />
               <p className="text-gray leading-relaxed text-sm">
                 The &quot;Magic Mirror&quot; on the wall is not just a fantasy anymore. Using facial recognition and mood sensing, blood pressure and heart rate sensing through skin pigmentation, and other technology, we can imbue the ordinary bathroom mirror with interactive qualities to help monitor our health.
               </p>
@@ -73,7 +73,7 @@ export default function CarePlansPart3Page() {
             </div>
 
             <div className="slide-card">
-              <Image src={`${IMG}/part3/part1_slide2.png`} alt="Conversational user interfaces" width={500} height={400} className="w-full h-auto mb-4" />
+              <Image src={`${IMG}/part3/part1_slide2.png`} alt="Conversational user interfaces" width={500} height={400} className="w-full h-auto mb-4" loading="eager" unoptimized />
               <p className="text-gray leading-relaxed text-sm">
                 Conversational user interfaces, driven by advances in voice recognition technology and artificial intelligence, are capable of understanding the content and context of patient concerns. These can be incorporated into mHealth apps for motivating health and fitness engagement, digital prescription treatment plans, or interactive systems for outpatient education.
               </p>
@@ -81,7 +81,7 @@ export default function CarePlansPart3Page() {
             </div>
 
             <div className="slide-card">
-              <Image src={`${IMG}/part3/part1_slide3.png`} alt="Contextual engagement sensors" width={500} height={400} className="w-full h-auto mb-4" />
+              <Image src={`${IMG}/part3/part1_slide3.png`} alt="Contextual engagement sensors" width={500} height={400} className="w-full h-auto mb-4" loading="eager" unoptimized />
               <p className="text-gray leading-relaxed text-sm">
                 Contextual engagement breeds adherence to self care goals. Using mobile phone sensors like the gyroscope, accelerometer, light sensor, camera, microphone, GPS, wifi, and other connected devices, we can start to provide realtime education and recommendations based on current behavior and the environment.
               </p>
@@ -89,7 +89,7 @@ export default function CarePlansPart3Page() {
             </div>
 
             <div className="slide-card">
-              <Image src={`${IMG}/part3/part1_slide4.png`} alt="Virtual helpers and AI coaching" width={500} height={400} className="w-full h-auto mb-4" />
+              <Image src={`${IMG}/part3/part1_slide4.png`} alt="Virtual helpers and AI coaching" width={500} height={400} className="w-full h-auto mb-4" loading="eager" unoptimized />
               <p className="text-gray leading-relaxed text-sm">
                 Virtual helpers will leverage human-modeled artificial intelligence to provide both health coaching and resources to motivate patients. Such mHealth companions will assist people in adhering to their care plans, their prescription regimens, and even outpatient treatment for complex, chronic conditions. These helpers might expand past the 2D mobile platform, seeping into other more physical services such as Echo, Nest, and Jibo.
               </p>
@@ -97,7 +97,7 @@ export default function CarePlansPart3Page() {
             </div>
 
             <div className="slide-card">
-              <Image src={`${IMG}/part3/part1_slide5.png`} alt="Digital medication adherence" width={500} height={400} className="w-full h-auto mb-4" />
+              <Image src={`${IMG}/part3/part1_slide5.png`} alt="Digital medication adherence" width={500} height={400} className="w-full h-auto mb-4" loading="eager" unoptimized />
               <p className="text-gray leading-relaxed text-sm">
                 Solving the complex problem of medication adherence could have a huge impact on lowering cost of care. The basics of digital adherence -- self-reporting, tracking refills and chronic disease outcomes, etc. -- will receive a boost from the use of sensors to collect confirming data, whether it&apos;s via breath analysis, urine sampling, or another non-invasive method.
               </p>
@@ -169,15 +169,16 @@ export default function CarePlansPart3Page() {
           />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-2">
-              <p className="part3-quote mb-4">
+            <div>
+              <p className="part3-quote">
                 There needs to be an EMR system that can aggregate medical records, lab tests and scans, genomic data, and all other health data (including patient-generated) and analyze them in a meaningful way.
               </p>
+            </div>
+            <div className="md:col-span-2">
               <p className="text-gray leading-relaxed">
                 Patients will have an unlimited and ever-evolving reservoir of data collected from embedded devices, mobile phones, and other sensors that is then synthesized into an understandable personal health score.<span className="superscript">13</span> Predictive analytics will help identify patterns in this data to create actionable insights and recommendations for care plan adjustments. With the advent of human genome mapping, we can further fine tune care plans according to patient&apos;s family medical history and genetic predispositions. In a broader context, we can look at the population&apos;s genetic data comparatively to differentially diagnose various health conditions.<span className="superscript">14</span> Once we can move past the stigma of sharing health record information with patients and the complexity of securing the information from harm, we can approach the ideal world where patients are the rightful owner of their health data, using it to maintain a holistic view of their health.<span className="superscript">6,13,15</span>
               </p>
             </div>
-            <div className="hidden md:block" />
           </div>
         </div>
       </section>
@@ -196,15 +197,15 @@ export default function CarePlansPart3Page() {
           {/* Goal Setting / Execution / Adjustment carousel */}
           <CarePlansCarousel>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part3_goal_setting.png`} alt="Goal Setting" width={400} height={500} className="w-full max-w-md h-auto mx-auto mb-3" />
+              <Image src={`${IMG}/part3/part3_goal_setting.png`} alt="Goal Setting" width={400} height={500} className="w-full max-w-2xl h-auto mx-auto mb-3" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Goal Setting</h3>
             </div>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part3_goal_exec.png`} alt="Goal Execution" width={400} height={500} className="w-full max-w-md h-auto mx-auto mb-3" />
+              <Image src={`${IMG}/part3/part3_goal_exec.png`} alt="Goal Execution" width={400} height={500} className="w-full max-w-2xl h-auto mx-auto mb-3" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Goal Execution</h3>
             </div>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part3_adjustment.png`} alt="Insight & Adjustment" width={400} height={500} className="w-full max-w-md h-auto mx-auto mb-3" />
+              <Image src={`${IMG}/part3/part3_adjustment.png`} alt="Insight & Adjustment" width={400} height={500} className="w-full max-w-2xl h-auto mx-auto mb-3" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Insight &amp; Adjustment</h3>
             </div>
           </CarePlansCarousel>
@@ -286,19 +287,19 @@ export default function CarePlansPart3Page() {
           {/* Intervention System carousel */}
           <CarePlansCarousel>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part6_intervention_system.png`} alt="Intervention System" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
+              <Image src={`${IMG}/part3/part6_intervention_system.png`} alt="Intervention System" width={500} height={400} className="w-full max-w-3xl h-auto mx-auto mb-2" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Intervention System</h3>
             </div>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part6_patient_intervention.png`} alt="Patient Intervention" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
+              <Image src={`${IMG}/part3/part6_patient_intervention.png`} alt="Patient Intervention" width={500} height={400} className="w-full max-w-3xl h-auto mx-auto mb-2" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Patient Intervention</h3>
             </div>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part6_clinician_intervention.png`} alt="Clinician Intervention" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
+              <Image src={`${IMG}/part3/part6_clinician_intervention.png`} alt="Clinician Intervention" width={500} height={400} className="w-full max-w-3xl h-auto mx-auto mb-2" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">Clinician Intervention</h3>
             </div>
             <div className="slide-image-card">
-              <Image src={`${IMG}/part3/part6_national_intervention.png`} alt="National Intervention" width={500} height={400} className="w-full max-w-lg h-auto mx-auto mb-2" />
+              <Image src={`${IMG}/part3/part6_national_intervention.png`} alt="National Intervention" width={500} height={400} className="w-full max-w-3xl h-auto mx-auto mb-2" loading="eager" unoptimized />
               <h3 className="font-sans font-bold text-sm uppercase tracking-wide">National Intervention</h3>
             </div>
           </CarePlansCarousel>
