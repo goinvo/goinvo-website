@@ -56,6 +56,7 @@ interface TreeNode {
   interactive: string | null   // 'link', 'button', 'input', 'onclick', etc.
   src: string | null           // for img, video, iframe
   broken?: boolean             // true if image element failed to load
+  brCount?: number             // count of <br> elements inside (for line break diff)
   children: TreeNode[]
 }
 
@@ -178,6 +179,7 @@ async function extractTree(page: Page): Promise<TreeNode> {
         interactive: inter,
         src: src,
         broken: broken,
+        brCount: (tag === 'p' || tag === 'div' || tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4') ? el.querySelectorAll(':scope > br').length : 0,
         children: children,
       };
     }
@@ -413,6 +415,32 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   if (aMedia.length !== bMedia.length) {
     lines.push(`  Media (video/iframe/canvas): ${aMedia.length} → ${bMedia.length}`)
   }
+
+  // Check for line break differences in paragraph text (haiku/poetry blocks)
+  lines.push('')
+  lines.push('=== Line Break Differences ===')
+  // Compare brCount on paragraphs that exist on both sides
+  const aPars = flatA.filter(f => f.node.tag === 'p' && (f.node.brCount || 0) > 0)
+  const bPars = flatB.filter(f => f.node.tag === 'p' && (f.node.brCount || 0) > 0)
+  const allBPars = flatB.filter(f => f.node.tag === 'p')
+  const normalize = (s: string) => s.replace(/\s+/g, ' ').trim().substring(0, 30)
+  let lineBreakDiffs = 0
+  for (const { node: a } of aPars) {
+    const key = normalize(a.text || '')
+    if (key.length < 10) continue
+    // Find a fuzzy match in B paragraphs (any, not just those with BR)
+    const matchB = allBPars.find(f => normalize(f.node.text || '') === key)
+    if (matchB) {
+      const aCount = a.brCount || 0
+      const bCount = matchB.node.brCount || 0
+      if (aCount !== bCount) {
+        lineBreakDiffs++
+        if (lineBreakDiffs <= 5) lines.push(`  ⚠ "${key}…" — ${labelA}: ${aCount} BR, ${labelB}: ${bCount} BR`)
+      }
+    }
+  }
+  if (lineBreakDiffs === 0) lines.push(`  No line break differences found`)
+  else if (lineBreakDiffs > 5) lines.push(`  …and ${lineBreakDiffs - 5} more`)
 
   // Check for broken images (failed to load)
   lines.push('')

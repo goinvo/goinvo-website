@@ -240,7 +240,7 @@ Feedback from Jen Patel via FigJam board review.
 ## Script Improvements Needed
 - [ ] batch-verify should also compare MOBILE viewport (375px) not just desktop
 - [x] page-tree.ts should detect broken/unloaded images (naturalWidth === 0) — added a `broken` flag to TreeNode that's set true when an `<img>` is `complete` but `naturalWidth === 0` (failed to load) OR when it's `!complete` and not `loading=lazy` (never started). Tree printing flags it with `⚠ BROKEN-IMAGE`. Diff section adds a "Broken Images" report listing all failures by side. Skips spacer/pixel images (<20px).
-- [ ] page-tree.ts should detect missing line breaks (text has \n on Gatsby but not on Next.js)
+- [x] page-tree.ts should detect missing line breaks (text has \n on Gatsby but not on Next.js) — added a `brCount` field on TreeNode counting `<br>` direct children of p/div/h1-h4 elements. Diff section adds "Line Break Differences" reporting paragraphs whose BR counts differ (matched by first 30 chars of text). Doesn't catch the case where Gatsby uses 1 paragraph with N BRs vs Next.js using N+1 separate paragraphs (use the standalone check-linebreaks.ts script for that).
 - [ ] page-tree.ts should compare button padding and border-width (added to batch-verify but not page-tree)
 
 ## Pages with Major Remaining Work
