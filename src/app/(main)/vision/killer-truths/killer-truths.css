@@ -73,6 +73,69 @@
   display: block;
 }
 
+/* Accessible bar chart table */
+.kt-chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #e5e5e5;
+  font-size: 14px;
+}
+.kt-chart-table tbody tr {
+  border-bottom: 1px solid #444;
+}
+.kt-chart-table .kt-chart-name {
+  text-align: right;
+  padding: 8px 12px;
+  white-space: nowrap;
+  font-weight: normal;
+  width: 200px;
+  vertical-align: middle;
+}
+.kt-chart-table .kt-chart-value {
+  padding: 8px 12px;
+  white-space: nowrap;
+  text-align: right;
+  width: 90px;
+  vertical-align: middle;
+}
+.kt-chart-table .kt-chart-bar-cell {
+  padding: 8px 12px 8px 0;
+  vertical-align: middle;
+}
+.kt-chart-table .kt-chart-bar {
+  height: 28px;
+  background: #e65b47;
+  min-width: 1px;
+}
+@media (max-width: 640px) {
+  .kt-chart-table {
+    font-size: 12px;
+  }
+  .kt-chart-table .kt-chart-name {
+    width: auto;
+    padding: 6px 8px;
+    white-space: normal;
+  }
+  .kt-chart-table .kt-chart-value {
+    width: auto;
+    padding: 6px 8px;
+  }
+  .kt-chart-table .kt-chart-bar {
+    height: 20px;
+  }
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Download bar */
 .kt-download-wrapper {
   background-color: #000;
