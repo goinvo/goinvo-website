@@ -118,7 +118,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 29. openPRO
 - [ ] Some extra text bopping around (layout shifts)
-- [ ] Left-aligned icons works better (currently centered?)
+- [x] Left-aligned icons works better (currently centered?) — 5 small "PRO enables" icon images had align=center in Sanity (rendering with `mx-auto` so they centered within their 25%-width container). Gatsby left-aligns them via `.open-pro__enables { text-align: start }`. Patched all 5 to align=left via fix-openpro-icon-align.mjs script.
 - [x] Bullets for "limitations" got misplaced — 3 limitations bullets (Limited portal integration, Siloed PRO platforms, No data standards) were positioned under "The current landscape" intro instead of under "Limitations" h4. Moved them to right after the Limitations heading. Sanity content patch.
 - [x] "this 18 is not necessary" — removed sup "18" from "Lack of resources... Boston:" bullet (was hanging awkwardly between bullet text and the following blockquote)
 - [x] Button in the wrong spot — moved "Contribute on GitHub" buttonGroup from position 58 (after the numbered list of projects) to position 52 (directly after the openPRO main graphic image) matching Gatsby
