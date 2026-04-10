@@ -136,9 +136,9 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Missing results header — inserted sectionTitle Results before "HL7/FHIR adoption" h4
 
 ## 49. All of Us
-- [ ] Not a fan of how header images are cropped — losing a lot at any browser size
-- [ ] Missing an image
-- [ ] Could images make use of more of the width?
+- [ ] Not a fan of how header images are cropped — losing a lot at any browser size (global hero crop issue, would need hero component redesign)
+- [x] Missing an image — inserted "02-where-goinvo-fits-in-the-aou.jpg" between "The program is an ambitious..." paragraph and "Participants who join contribute..." (image existed in Sanity asset library but no block referenced it)
+- [x] Could images make use of more of the width? — changed all 6 (now 7) body images from size=large (533px) to size=full (711px) matching Gatsby
 - [x] Missing results header — inserted sectionTitle Results before "Impacting 750k..." paragraph
 - [x] References had duplicated link text — cleaned URL from title text
 
