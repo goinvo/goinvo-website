@@ -55,7 +55,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
                     href="https://github.com/goinvo/arpa-h/blob/main/TA5/arpa-h-paradigm-field-guider-proposal.pdf"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="button button--secondary margin-top--double margin-bottom--half margin-right"
+                    className="button button--secondary button--block margin-top--double margin-bottom--half margin-right"
                   >
                     Download ARPHA-H Proposal
                   </a>
@@ -65,7 +65,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
                     href="https://github.com/goinvo/arpa-h"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="button button--secondary margin-top--double margin-bottom--half  button--block margin-right"
+                    className="button button--secondary button--block margin-top--double margin-bottom--half margin-right"
                   >
                     Github
                   </a>

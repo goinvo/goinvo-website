@@ -45,7 +45,8 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Button padding: 12px 24px → 6px 16px
 - [x] Button-group flex override removed (pure-g side-by-side works)
 - [x] Missing disc bullet list styles added
-- [ ] Cagri Zaman and Mollie Williams author images broken (path needs cloudfrontImage)
+- [x] Cagri Zaman and Mollie Williams author images broken (path needs cloudfrontImage)
+- [x] Button hierarchy/spacing/uneven sizes — bumped font-size from 14px to 15px (matching Gatsby), added `button--block` to the ARPHA-H/Github button pair so both buttons fill their column to 50% width (were 320px vs 356px), and added 0.5rem column padding for a 16px gap between adjacent buttons.
 
 ## 9. Healthcare AI
 - [x] Storyboard images rendering stacked instead of side-by-side — fixed columns renderer
@@ -177,7 +178,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] This chart is gone gone gone (another chart completely missing) — major rebuild needed
 - [~] Missing content section (PARTICIPATE / Give Feedback section) — section already exists in code; added social share links (Facebook/Twitter/LinkedIn) that were missing from the Share row
 - [~] Also missing content (PARTICIPATE section + CREATING section) — Participate section exists; Creating section may refer to "Creators" h2 which also exists
-
+![1775847221250](image/QA-FEEDBACK/1775847221250.png)
 ## 38. Digital Healthcare 2016
 - [x] Duplication of the header — fixed in commit 652de04 (removed SetCaseStudyHero)
 - [ ] Spacing at the top is too tight (not critical)
