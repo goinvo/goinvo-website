@@ -600,9 +600,10 @@ export default function LivingHealthLabPage() {
           <Author name="Chloe Ma" company="GoInvo" />
           <Author name="Samantha Wuu" company="GoInvo" />
           <Author name="Arpna Ghanshani" company="GoInvo" />
+          <Author name="Jenny Yi" company="GoInvo" />
 
           <h3 className="header-md mt-6 mb-3">Contributors</h3>
-          <p className="text-gray">Jenny Yi</p>
+          <Author name="Jenny Yi" company="GoInvo" />
         </div>
       </section>
 

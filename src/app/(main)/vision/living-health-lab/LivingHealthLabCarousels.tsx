@@ -68,9 +68,54 @@ export function LivingHealthLabCarousels() {
             log our data daily. Even with the guide, it can still be
             challenging to find creative ways to test hypotheses in our
             fast-paced lives. In general, it is challenging to take the
-            learning and distill it into something actionable in our everyday
-            lives.
+            initiative to focus on our health and prioritize this kind of
+            exploration.
           </p>
+          <p className="leading-relaxed mb-4">
+            How might we address these problems in the future?
+          </p>
+          <ol className="ol mb-4">
+            <li>
+              Integration of technology: a conveniently-timed text prompt
+              might improve consistency of day-to-day tracking.
+            </li>
+            <li>
+              Professional Support: increasing personal motivation to
+              prioritize health and utilize the workbook can be difficult.
+              Ideally, a professional (e.g., health coach or therapist) could
+              use Living Health Lab to guide the patient through the process.
+            </li>
+            <li>
+              Accessibility: we can also make the workbook easier to use by
+              lowering the reading level, simplifying the workbook further,
+              or translating it into other languages. We will continue to
+              brainstorm new ways to make personal science more accessible.
+            </li>
+          </ol>
+          <p className="leading-relaxed mb-4">
+            <strong>Try it out</strong>
+            <br />
+            This is still an early version, and we recognize that it is not
+            fully accessible to all as it requires comfort level with science
+            and significant self-motivation and bandwidth to use on one&apos;s
+            own. However, we&apos;re excited to share the workbook with you
+            all. Please take a look and share your feedback with us at{' '}
+            <a
+              href="mailto:LivingHealthLab@goinvo.com"
+              className="text-secondary hover:text-primary"
+            >
+              LivingHealthLab@goinvo.com
+            </a>
+          </p>
+          <div className="mt-6 mb-8">
+            <Button
+              href="https://www.dropbox.com/s/rw3u29f73v0wfpk/living-health-lab-workbook.pdf?dl=0"
+              variant="secondary"
+              external
+            >
+              View The Workbook
+            </Button>
+          </div>
         </div>
       </div>
 
