@@ -47,6 +47,8 @@ export function VotingCarousel({ slides }: { slides: VotingSlide[] }) {
                   width={400}
                   height={700}
                   className="h-auto"
+                  loading="eager"
+                  unoptimized
                 />
               ))}
             </div>

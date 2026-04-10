@@ -107,9 +107,9 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Missing Edwin's and Bryson's headshots — added 'Edwin Choi' and 'Bryson Wong' mappings to team-headshots.ts (both CloudFront images exist: headshot-edwin-choi.jpg and headshot-bryson-wong.jpg).
 
 ## 25. Coronavirus (COVID-19)
-- [ ] Chart shows massive difference/undercount (static data vs Gatsby's live data — our 704M is final but chart component may show old March 2020 snapshot)
+- [x] Chart shows massive difference/undercount — replaced March 2020 snapshot data (111k cases) with WHO final figures (704,753,890 cases / 7,010,681 deaths). Updated y-axis tick logic to handle large numbers (auto-scales to 800M with "M" suffix), updated formatCompact to handle billions, updated source caption to "Data through 2024. Source: WHO COVID-19 Dashboard."
 - [x] Missing bullets from timeline — Tailwind reset was setting list-style-type: none on `.corona-timeline .timepoint ul`. Added `list-style-type: disc` and `display: list-item` to restore bullets on 7 Jan / 30 Jan / 31 Jan timeline entries.
-- [ ] Icons should be vertically centered with text, with extra space below (subtle alignment)
+- [x] Icons should be vertically centered with text, with extra space below — added `vertical-align: middle` to both `.pro-con-icon` and `.pro-con p` (was defaulting to baseline, making icons appear above text). Added `margin-bottom: 1.5rem` to `.pro-con` for breathing room between rows.
 
 ## 28. Who Uses My Health Data
 - [x] Missing download poster link (moved buttonGroup from index 10 to right after poster image)
@@ -160,7 +160,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Really thin callouts are painful to read — raised stack-breakpoint for `.image-caption-side` from 768px to 1024px so the 35%-width caption stacks below the image earlier instead of getting squeezed
 - [x] Columns get thinner and text doesn't really fit — same fix; also raised `.aside-image` breakpoint from 860px to 1100px so the 40% sidebar stacks earlier
 - [~] Need more graceful breakpoint — addressed above with earlier stack breakpoints
-- [ ] Missing image (blank space where Handheld Voting System image should be)
+- [x] Missing image (blank space where Handheld Voting System image should be) — root cause: VotingCarousel uses Embla horizontal scroll where off-screen slides are translated outside the viewport. Next.js `<Image>` lazy-loads via IntersectionObserver and never fired for transformed slides, so the 11 voting screenshot images (p1.1, p1.2, p2.1...p5.phone) never requested. Added `loading="eager"` and `unoptimized` to the carousel images so they load immediately.
 - [ ] Image overlay can't be done — use image first then text, or side by side
 - [ ] Text too wide and image too big in one section
 
@@ -210,8 +210,8 @@ Feedback from Jen Patel via FigJam board review.
 ### Part 3 (The Future)
 - [x] Different header — hero background was pointing to non-existent `/part3/hero_bg.jpg`. Changed to the actual file `/part3/hero_image.jpg` (the illustrated street scene). Hero now displays correctly.
 - [x] Can remove "Photo by Philips Communications" since bg photo wasn't pulled in — removed the caption from data-rich section
-- [ ] Text below can be wider, or use 2-column layout like sections above/below
-- [ ] Images could be bigger — slider works but doesn't look as nice as original
+- [x] Text below can be wider, or use 2-column layout like sections above/below — restructured the data-rich section to use the same 1+2 column grid pattern as sections above/below: quote in left column, body text in right 2-column span (was previously col-span-2 with empty hidden md:block sidebar, leaving an awkward gap on the right).
+- [x] Images could be bigger — slider works but doesn't look as nice as original — bumped slide-image-card max-width from 500px to 760px in careplans.css and individual image max-w from md/lg to 2xl/3xl in part-3 page. Slides now display closer to original poster sizes. Also fixed an Embla carousel lazy-loading bug: only 2/12 carousel images were actually loading because Next.js `<Image>` IntersectionObserver doesn't fire for slides translated outside the viewport. Added `loading="eager"` and `unoptimized` to all 12 carousel `<Image>` components in part-3 (Digital is Better, Empowering, Dynamic carousels). Now all 12 images load.
 - [x] "Doesn't work on white bg" — dark-themed sections losing their background color — added all 7 section background images (part1_bg.png through part7_bg.png) to sections digitized/standardized/data-rich/empowering/care-team/dynamic/health-shift, restoring the colored teal/dark blue backgrounds
 
 ## 35. Killer Truths
