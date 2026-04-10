@@ -55,6 +55,7 @@ interface TreeNode {
   rect: { x: number; y: number; width: number; height: number }
   interactive: string | null   // 'link', 'button', 'input', 'onclick', etc.
   src: string | null           // for img, video, iframe
+  broken?: boolean             // true if image element failed to load
   children: TreeNode[]
 }
 
@@ -118,7 +119,19 @@ async function extractTree(page: Page): Promise<TreeNode> {
       else if (el.hasAttribute('onclick')) inter = 'onclick';
 
       var src = null;
-      if (tag === 'img') src = (el.src || '').split('/').pop().split('?')[0];
+      var broken = false;
+      if (tag === 'img') {
+        src = (el.src || '').split('/').pop().split('?')[0];
+        // Detect broken/unloaded images: complete=true but naturalWidth=0 means
+        // the image failed to load. complete=false means it never started.
+        // Skip pixel/spacer images (very small natural dimensions) and lazy
+        // images that are below the fold (loading=lazy + not yet loaded).
+        var loading = el.getAttribute('loading') || 'eager';
+        if (rect.width > 20 && rect.height > 20) {
+          if (el.complete && el.naturalWidth === 0) broken = true;
+          else if (!el.complete && loading !== 'lazy') broken = true;
+        }
+      }
       else if (tag === 'video') {
         var s = el.querySelector('source');
         src = s ? s.src.split('/').pop() : (el.src ? el.src.split('/').pop().split('?')[0] : 'video');
@@ -164,6 +177,7 @@ async function extractTree(page: Page): Promise<TreeNode> {
         rect: { x:Math.round(rect.x), y:Math.round(rect.y), width:Math.round(rect.width), height:Math.round(rect.height) },
         interactive: inter,
         src: src,
+        broken: broken,
         children: children,
       };
     }
@@ -185,7 +199,7 @@ function normalizeColor(c: string): string {
 }
 
 function printTree(node: TreeNode, indent: string = '', lines: string[] = []): string[] {
-  const { tag, id, classes, text, styles, rect, interactive, src, children } = node
+  const { tag, id, classes, text, styles, rect, interactive, src, broken, children } = node
 
   // Build the element line
   let line = `${indent}<${tag}`
@@ -196,6 +210,7 @@ function printTree(node: TreeNode, indent: string = '', lines: string[] = []): s
 
   // Content
   if (src) line += ` [${src}]`
+  if (broken) line += ` ⚠ BROKEN-IMAGE`
   if (text) line += ` "${text.substring(0, 70)}${text.length > 70 ? '...' : ''}"`
   if (interactive) line += ` (${interactive})`
 
@@ -397,6 +412,24 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   const bMedia = flatB.filter(f => ['video', 'iframe', 'canvas'].includes(f.node.tag))
   if (aMedia.length !== bMedia.length) {
     lines.push(`  Media (video/iframe/canvas): ${aMedia.length} → ${bMedia.length}`)
+  }
+
+  // Check for broken images (failed to load)
+  lines.push('')
+  lines.push('=== Broken Images ===')
+  const aBroken = flatA.filter(f => f.node.broken).map(f => f.node.src || '(unknown)')
+  const bBroken = flatB.filter(f => f.node.broken).map(f => f.node.src || '(unknown)')
+  if (aBroken.length || bBroken.length) {
+    if (aBroken.length) {
+      lines.push(`  ${labelA} has ${aBroken.length} broken image(s):`)
+      for (const s of aBroken.slice(0, 10)) lines.push(`    ⚠ ${s}`)
+    }
+    if (bBroken.length) {
+      lines.push(`  ${labelB} has ${bBroken.length} broken image(s):`)
+      for (const s of bBroken.slice(0, 10)) lines.push(`    ⚠ ${s}`)
+    }
+  } else {
+    lines.push(`  All images loaded successfully on both sides`)
   }
 
   // Check for fixed/sticky elements
