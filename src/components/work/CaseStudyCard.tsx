@@ -93,11 +93,17 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
           )}
           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
             <p className="font-semibold text-black">{caseStudy.title}</p>
-            {caseStudy.client && (
+            {/* For vision features, "client" is just the literal "Feature" — skip it and show description instead */}
+            {section === 'work' && caseStudy.client && (
               <p className="text-gray">{caseStudy.client}</p>
             )}
             {caseStudy.caption && (
               <p className="text-gray">{caseStudy.caption}</p>
+            )}
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {!caseStudy.caption && (caseStudy as any).description && (
+              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+              <p className="text-gray">{(caseStudy as any).description}</p>
             )}
           </div>
         </motion.article>
