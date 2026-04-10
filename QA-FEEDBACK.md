@@ -197,7 +197,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] For legacy features, use the standard Authors component instead of custom author layouts each time
 
 ## 37. Understanding Zika
-- [ ] Header heights for "Conditions" / "Treatment" sections don't line up — could use empty line break + nonbreaking space to match heights
+- [x] Header heights for "Treatment" sections — added br+nbsp to "Treatment for Adults" to match "Treatment for Pregnant Women" wrap height
 - [x] Number the references (added list-decimal class to ol)
 
 ## 36. Care Plans Series (MAJOR — multi-part page with extensive issues)
@@ -244,7 +244,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Cameron missing from authors
 
 ## 78. Studio Timeline
-- [ ] Link to oral history doesn't work — points to `/vision/an-oral-history` but should be `/vision/oral-history-goinvo`
+- [x] Link to oral history doesn't work — fixed in commit 652de04 (/an-oral-history → /oral-history-goinvo)
 
 ## Script Improvements Needed
 - [ ] batch-verify should also compare MOBILE viewport (375px) not just desktop

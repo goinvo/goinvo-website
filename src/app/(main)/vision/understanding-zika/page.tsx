@@ -1131,7 +1131,11 @@ export default function UnderstandingZikaPage() {
         <div className="row" id="treatments">
           <div className="column one-half" id="treatment-adults">
             <div className="treatment-header">
-              <h2>Treatment for Adults</h2>
+              <h2>
+                Treatment for Adults
+                <br />
+                &nbsp;
+              </h2>
               <div className="treatment-image">
                 <img alt="adult" src={`${IMG}/treatment-adults.png`} />
               </div>
