@@ -51,7 +51,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Storyboard images rendering stacked instead of side-by-side — fixed columns renderer
 - [ ] Not using same preview images for videos
 - [x] Chat image too narrow — converted columns(2) wrapper to standalone image block with caption (Sanity content patch)
-- [ ] Text content differences
+- [x] Text content differences — removed trailing space from "AI Image Generation" and "AI Text Generation" bold labels (was rendering as "Generation : One" instead of "Generation: One")
 - [x] Authors + contributors ordering — moved Contributors block from content to specialThanks field (Authors now render BEFORE Contributors, matching Gatsby)
 
 ## 10. National Cancer Navigation
