@@ -22,7 +22,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Both instances preserved (inline prose + featured quote)
 
 ## 4. Visual Storytelling with GenAI
-- [ ] Not using same preview images for videos (noted, not critical)
+- [x] Not using same preview images for videos — videoEmbed renderer now auto-derives the poster URL from the video URL by swapping the file extension (mp4/webm/mov/ogv → jpg). Matches Gatsby's pattern of co-locating poster JPGs next to video files on CloudFront. Affects all videos site-wide.
 - [x] Hotspots off — fixed with translate(-50%,-50%) + w-fit container
 - [x] Hotspots move after click — fixed transition-colors
 - [x] Mobile equation layout — responsive grid + spacing
@@ -52,7 +52,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Text rendered right of images instead of under — added a new `storyboard` layout option to the columns Sanity schema and updated the renderer to render storyboard items as a 2-column grid where each cell is image-on-top text-below. Consolidated the 6 separate storyboard columns blocks + 9 interleaved narrative paragraphs into a single columns(storyboard) block with 21 alternating image+text children. Each image groups with its following paragraphs as one cell, matching Gatsby's 2-column comic-strip layout.
 
 - [x] Storyboard images rendering stacked instead of side-by-side — fixed columns renderer
-- [ ] Not using same preview images for videos
+- [x] Not using same preview images for videos — videoEmbed renderer auto-derives poster URL from video URL (mp4 → jpg) matching Gatsby's CDN pattern. Affects all videos site-wide.
 - [x] Chat image too narrow — converted columns(2) wrapper to standalone image block with caption (Sanity content patch)
 - [x] Text content differences — removed trailing space from "AI Image Generation" and "AI Text Generation" bold labels (was rendering as "Generation : One" instead of "Generation: One")
 - [x] Authors + contributors ordering — moved Contributors block from content to specialThanks field (Authors now render BEFORE Contributors, matching Gatsby)

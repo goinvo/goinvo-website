@@ -540,12 +540,15 @@ const components: PortableTextComponents = {
           ? 'w-screen relative left-1/2 -ml-[50vw]'
           : ''
       if (isDirectVideoUrl(value.url)) {
+        // Auto-derive poster from video URL by swapping the extension
+        // (matches Gatsby pattern: video.mp4 → video.jpg next to it on CDN)
+        const derivedPoster = value.poster || value.url.replace(/\.(mp4|webm|mov|ogv)(\?|$)/i, '.jpg$2')
         return (
           <ArticleReveal intensity="visual">
             <figure className={cn('my-8', sizeClass)}>
               <video
                 src={value.url}
-                poster={value.poster || undefined}
+                poster={derivedPoster}
                 controls={!value.autoPlay}
                 autoPlay={value.autoPlay || undefined}
                 loop
