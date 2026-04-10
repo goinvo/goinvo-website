@@ -153,7 +153,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Missing an image
 - [ ] Could images make use of more of the width?
 - [ ] Missing results header
-- [ ] References have duplicated link text
+- [x] References had duplicated link text — cleaned URL from title text
 
 ## 46. Ipsos Facto
 - [ ] Missing image
@@ -231,7 +231,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 33. Open Source Healthcare
 - [ ] Different headers? (header style mismatch between Gatsby and Next.js)
-- [ ] Lost the Juhan haiku-ness (missing line breaks in intro text)
+- [x] Lost the Juhan haiku-ness — added line breaks to "Here in the US, healthcare is..."
 
 ## 32. Loneliness in Our Human Code
 - [ ] Missing stats and images and layout (hero section has stats/numbers on Gatsby)
