@@ -179,9 +179,9 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Also missing content (PARTICIPATE section + CREATING section)
 
 ## 38. Digital Healthcare 2016
-- [ ] Duplication of the header (same duplicate banner issue as other legacy pages)
+- [x] Duplication of the header — fixed in commit 652de04 (removed SetCaseStudyHero)
 - [ ] Spacing at the top is too tight (not critical)
-- [ ] For legacy features, use the standard Authors component instead of custom author layouts each time
+- [x] Use standard Authors component — replaced custom .contributor / .contributors-box layout (4 contributors with hardcoded images, h3 roles, twitter handles) with the shared `<Author>` component (passes role via `company` prop, twitter link via children). Added section heading "Contributors" for consistency.
 
 ## 37. Understanding Zika
 - [x] Header heights for "Treatment" sections — added br+nbsp to "Treatment for Adults" to match "Treatment for Pregnant Women" wrap height
