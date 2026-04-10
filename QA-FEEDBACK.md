@@ -168,7 +168,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Another piece doesn't work as-is (layout/interactive section broken)
 
 ## 40. Disrupt
-- [ ] Sometimes clicking "Next part" link goes back to top of current part instead of next part (intermittent — couldn't reproduce consistently)
+- [x] Sometimes clicking "Next part" link goes back to top of current part — changed BottomNav from plain `<a>` to Next.js `<Link>` with explicit `window.scrollTo({ top: 0 })` onClick to force scroll-to-top after navigation. The intermittent behavior was likely the transition system preserving scroll position from the previous page.
 
 ## 39. Healing US Healthcare (MAJOR — interactive charts missing)
 - [ ] Chart didn't make it over (map/spending chart)
