@@ -122,7 +122,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Icons should be vertically centered with text, with extra space below (subtle alignment)
 
 ## 28. Who Uses My Health Data
-- [ ] Missing download poster link
+- [x] Missing download poster link (moved buttonGroup from index 10 to right after poster image)
 - [ ] Image could be wider
 - [ ] Consider removing orange border for consistency
 
