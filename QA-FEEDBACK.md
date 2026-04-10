@@ -110,8 +110,8 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 28. Who Uses My Health Data
 - [x] Missing download poster link (moved buttonGroup from index 10 to right after poster image)
-- [ ] Image could be wider
-- [ ] Consider removing orange border for consistency
+- [x] Image could be wider — changed poster image size from default to `bleed` (full viewport width, matching Gatsby 1250px)
+- [x] Consider removing orange border for consistency — changed border from `peach` to `none`
 
 ## 29. openPRO
 - [ ] Some extra text bopping around (layout shifts)
