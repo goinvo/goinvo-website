@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { Author } from '@/components/ui/Author'
 import { ScrollNav, SectionFadeIn } from './ScrollNav'
 import './digital-healthcare.css'
 
@@ -501,105 +502,24 @@ export default function DigitalHealthcarePage() {
         </section>
       </div>
 
-      {/* ===== CREDITS / CONTRIBUTORS ===== */}
-      <div className="credit-wrapper">
-        <div className="row" />
-        <div className="credits">
-          <div className="contributors-box">
-            {/* Contributor 1: Beckett Rucker */}
-            <div className="contributor">
-              <div className="contributor-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`${IMG_BASE}/contrib/beckett.jpg`}
-                  alt="Beckett Rucker"
-                />
-              </div>
-              <div className="contributor-info">
-                <h3>Contributing Author &amp; Illustrator</h3>
-                <p>
-                  Beckett Rucker
-                  <br />
-                  <small>
-                    <a href="https://twitter.com/beckettrucker">
-                      @beckettrucker
-                    </a>
-                  </small>
-                </p>
-              </div>
-            </div>
-
-            <hr />
-
-            {/* Contributor 2: Jon Follett */}
-            <div className="contributor">
-              <div className="contributor-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`${IMG_BASE}/contrib/jon.jpg`}
-                  alt="Jon Follett"
-                />
-              </div>
-              <div className="contributor-info">
-                <h3>Contributing Author</h3>
-                <p>
-                  Jon Follett
-                  <br />
-                  <small>
-                    <a href="https://twitter.com/jonfollett">@jonfollett</a>
-                  </small>
-                </p>
-              </div>
-            </div>
-
-            <hr />
-
-            {/* Contributor 3: Courtney McGorrill */}
-            <div className="contributor">
-              <div className="contributor-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`${IMG_BASE}/contrib/courtney.jpg`}
-                  alt="Courtney McGorrill"
-                />
-              </div>
-              <div className="contributor-info">
-                <h3>Web Developer &amp; Designer</h3>
-                <p>
-                  Courtney McGorrill
-                  <br />
-                  <small>
-                    <a href="http://twitter.com/court_mcgort">@court_mcgort</a>
-                  </small>
-                </p>
-              </div>
-            </div>
-
-            <hr />
-
-            {/* Contributor 4: Juhan Sonin */}
-            <div className="contributor">
-              <div className="contributor-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="https://www.goinvo.com/old/images/features/democracy/contrib/juhan.jpg"
-                  alt="Juhan Sonin"
-                />
-              </div>
-              <div className="contributor-info">
-                <h3>Contributing Author</h3>
-                <p>
-                  Juhan Sonin
-                  <br />
-                  <small>
-                    <a href="http://twitter.com/jsonin">@jsonin</a>
-                  </small>
-                </p>
-              </div>
-            </div>
-          </div>
+      {/* ===== CREDITS / CONTRIBUTORS (standard Author component) ===== */}
+      <section className="pb-12">
+        <div className="max-width max-width-md content-padding mx-auto">
+          <h2 className="header-xl font-light mt-8 mb-4 text-center">Contributors</h2>
+          <Author name="Beckett Rucker" company="Contributing Author & Illustrator" image={`${IMG_BASE}/contrib/beckett.jpg`}>
+            <a href="https://twitter.com/beckettrucker" target="_blank" rel="noopener noreferrer">@beckettrucker</a>
+          </Author>
+          <Author name="Jon Follett" company="Contributing Author" image={`${IMG_BASE}/contrib/jon.jpg`}>
+            <a href="https://twitter.com/jonfollett" target="_blank" rel="noopener noreferrer">@jonfollett</a>
+          </Author>
+          <Author name="Courtney McGorrill" company="Web Developer & Designer" image={`${IMG_BASE}/contrib/courtney.jpg`}>
+            <a href="http://twitter.com/court_mcgort" target="_blank" rel="noopener noreferrer">@court_mcgort</a>
+          </Author>
+          <Author name="Juhan Sonin" company="Contributing Author" image="https://www.goinvo.com/old/images/features/democracy/contrib/juhan.jpg">
+            <a href="http://twitter.com/jsonin" target="_blank" rel="noopener noreferrer">@jsonin</a>
+          </Author>
         </div>
-      </div>
+      </section>
 
       {/* ===== NEWSLETTER ===== */}
       <section className="bg-gray-lightest py-8">
