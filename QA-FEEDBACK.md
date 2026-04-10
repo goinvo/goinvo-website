@@ -164,7 +164,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 41. Bathroom to Healthroom
 - [ ] Long scroll of images vs slider makes you lose timeline context and takes forever to get to text
 - [x] Needs horizontal padding (text running edge to edge) — added 1.5rem (mobile) / 3rem (desktop) horizontal padding to article paragraphs and list items
-- [ ] Missing interactive piece (interactive element from Gatsby not ported)
+- [x] Missing interactive piece — restored the dates slider (1985/2015/2025 sensor evolution) as an interactive client component (DateSlider.tsx) replacing the static stacked grid. Updated CSS to support button elements alongside legacy `<a>` elements.
 - [ ] Another piece doesn't work as-is (layout/interactive section broken)
 
 ## 40. Disrupt
