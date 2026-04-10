@@ -344,7 +344,7 @@
     "url": "/vision/healthcare-ai",
     "label": "Vision: healthcare-ai",
     "heroImageExists": true,
-    "pageHeight": 9644,
+    "pageHeight": 9682,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -425,7 +425,7 @@
             "fontFamily": "Open Sans",
             "color": "rgb(120, 116, 115)",
             "marginTop": "32px",
-            "marginBottom": "12px",
+            "marginBottom": "16px",
             "textTransform": "uppercase",
             "letterSpacing": "2px",
             "borderStyle": "solid",
@@ -441,7 +441,7 @@
       },
       "p": {
         "selector": "p",
-        "count": 39,
+        "count": 38,
         "samples": [
           {
             "text": "Melanoma AI Healthcare Assistant",
@@ -1713,12 +1713,12 @@
           {
             "text": "hGraph, page 46 — Your health in one picture.",
             "fontSize": "16px",
-            "fontWeight": "600",
+            "fontWeight": "400",
             "fontFamily": "Open Sans",
             "color": "rgb(29, 27, 26)",
-            "marginTop": "8px",
+            "marginTop": "16px",
             "marginBottom": "16px",
-            "textTransform": "uppercase",
+            "textTransform": "none",
             "letterSpacing": "normal",
             "borderStyle": "solid",
             "display": "block",
@@ -1892,7 +1892,7 @@
       },
       "a": {
         "selector": "a",
-        "count": 31,
+        "count": 32,
         "samples": [
           {
             "text": "Skip to content",
@@ -5027,7 +5027,7 @@
     "url": "/work",
     "label": "Work listing",
     "heroImageExists": true,
-    "pageHeight": 9532,
+    "pageHeight": 9223,
     "elements": {
       "h1": {
         "selector": "h1",
@@ -5085,23 +5085,8 @@
       },
       "h3": {
         "selector": "h3",
-        "count": 1,
-        "samples": [
-          {
-            "text": "Drafts (0)",
-            "fontSize": "14px",
-            "fontWeight": "600",
-            "fontFamily": "Open Sans",
-            "color": "rgb(36, 67, 77)",
-            "marginTop": "0px",
-            "marginBottom": "24px",
-            "textTransform": "uppercase",
-            "letterSpacing": "2px",
-            "borderStyle": "solid",
-            "display": "block",
-            "listStyleImage": "none"
-          }
-        ]
+        "count": 0,
+        "samples": []
       },
       "h4": {
         "selector": "h4",
@@ -5125,7 +5110,7 @@
       },
       "p": {
         "selector": "p",
-        "count": 92,
+        "count": 91,
         "samples": [
           {
             "text": "Real projects, real users, real business outcomes.",
@@ -5142,13 +5127,13 @@
             "listStyleImage": "none"
           },
           {
-            "text": "New Case Study",
-            "fontSize": "14px",
+            "text": "Open Visual Government Budget",
+            "fontSize": "16px",
             "fontWeight": "600",
             "fontFamily": "Open Sans",
-            "color": "rgb(120, 116, 115)",
+            "color": "rgb(29, 27, 26)",
             "marginTop": "0px",
-            "marginBottom": "16px",
+            "marginBottom": "4px",
             "textTransform": "none",
             "letterSpacing": "normal",
             "borderStyle": "solid",
@@ -5156,11 +5141,11 @@
             "listStyleImage": "none"
           },
           {
-            "text": "Open Visual Government Budget",
+            "text": "Town of Arlington, MA",
             "fontSize": "16px",
-            "fontWeight": "600",
+            "fontWeight": "400",
             "fontFamily": "Open Sans",
-            "color": "rgb(29, 27, 26)",
+            "color": "rgb(120, 116, 115)",
             "marginTop": "0px",
             "marginBottom": "4px",
             "textTransform": "none",

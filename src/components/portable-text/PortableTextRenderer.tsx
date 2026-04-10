@@ -435,9 +435,9 @@ const components: PortableTextComponents = {
                         <p className="mt-2 text-base text-gray text-center">{caption}</p>
                       )}
                       {isShortCaption && (
-                        <p className={cn('mt-2 text-base text-center', isBoldCaption ? 'font-semibold uppercase' : 'text-gray')}>
-                          {(group.content[0].children || []).map((c: {text: string}) => c.text).join('')}
-                        </p>
+                        <div className={cn('mt-2 text-base text-center', isBoldCaption ? '' : 'text-gray')}>
+                          <PortableText value={group.content} components={components} />
+                        </div>
                       )}
                       {hasRichContent && !isShortCaption && (
                         <div className="mt-2">
