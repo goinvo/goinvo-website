@@ -22,7 +22,7 @@ export default function CarePlansPage() {
       {/* Hero Image */}
       <section>
         <Image
-          src={cloudfrontImage('/old/images/features/careplans/home_hero.jpg')}
+          src="https://www.goinvo.com/old/images/features/careplans/home_hero.jpg"
           alt="The Care Plan Series"
           width={1400}
           height={600}
@@ -86,7 +86,7 @@ export default function CarePlansPage() {
             {/* Part 1 */}
             <div>
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/twitter_CP1.jpg')}
+                src="https://www.goinvo.com/old/images/features/careplans/twitter_CP1.jpg"
                 alt="Care Plans Part 1: Overview"
                 width={600}
                 height={400}
@@ -101,7 +101,7 @@ export default function CarePlansPage() {
             {/* Part 2 */}
             <Link href="/vision/care-plans/part-2" id="part2" className="block group">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/twitter_CP2.jpg')}
+                src="https://www.goinvo.com/old/images/features/careplans/twitter_CP2.jpg"
                 alt="Care Plans Part 2: Landscape"
                 width={600}
                 height={400}
@@ -116,7 +116,7 @@ export default function CarePlansPage() {
             {/* Part 3 */}
             <Link href="/vision/care-plans/part-3" id="part3" className="block group">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/twitter_CP3.jpg')}
+                src="https://www.goinvo.com/old/images/features/careplans/twitter_CP3.jpg"
                 alt="Care Plans Part 3: Future"
                 width={600}
                 height={400}
@@ -172,7 +172,7 @@ export default function CarePlansPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <Image
-                    src={cloudfrontImage('/old/images/features/careplans/intro_icons/email.png')}
+                    src="https://www.goinvo.com/old/images/features/careplans/intro_icons/email.png"
                     alt=""
                     width={24}
                     height={24}
@@ -182,7 +182,7 @@ export default function CarePlansPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <Image
-                    src={cloudfrontImage('/old/images/features/careplans/intro_icons/phone.png')}
+                    src="https://www.goinvo.com/old/images/features/careplans/intro_icons/phone.png"
                     alt=""
                     width={24}
                     height={24}
@@ -192,7 +192,7 @@ export default function CarePlansPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <Image
-                    src={cloudfrontImage('/old/images/features/careplans/intro_icons/address.png')}
+                    src="https://www.goinvo.com/old/images/features/careplans/intro_icons/address.png"
                     alt=""
                     width={24}
                     height={24}
@@ -204,7 +204,7 @@ export default function CarePlansPage() {
             </div>
             <div>
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/work_together.jpg')}
+                src="https://www.goinvo.com/old/images/features/careplans/work_together.jpg"
                 alt="GoInvo studio"
                 width={600}
                 height={400}
