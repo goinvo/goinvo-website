@@ -121,7 +121,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Button in the wrong spot
 - [ ] Text styling reads better originally — use soft line breaks instead of new paragraphs
 - [ ] Nested bullet styles too slight/glitchy — not noticeable or effective
-- [ ] Authors should be listed as Contributors (wrong section label)
+- [x] Authors should be listed as Contributors — Daniel Reeves stays as sole Author; Sharon Lee, Jen Patel, Juhan Sonin moved to contributors field (matches Gatsby which lists Daniel as Author and the other three as Contributors).
 
 ## 52. MASS SNAP
 - [x] Missing solution header — inserted sectionTitle "Solution" before "Simple and accessible" block
