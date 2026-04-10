@@ -116,7 +116,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 29. openPRO
 - [ ] Some extra text bopping around (layout shifts)
 - [ ] Left-aligned icons works better (currently centered?)
-- [ ] Bullets for "limitations" got misplaced — under "current landscape" and above "progress"
+- [x] Bullets for "limitations" got misplaced — 3 limitations bullets (Limited portal integration, Siloed PRO platforms, No data standards) were positioned under "The current landscape" intro instead of under "Limitations" h4. Moved them to right after the Limitations heading. Sanity content patch.
 - [ ] "this 18 is not necessary" — extra/unnecessary content
 - [ ] Button in the wrong spot
 - [ ] Text styling reads better originally — use soft line breaks instead of new paragraphs
