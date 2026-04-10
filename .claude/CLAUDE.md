@@ -1,155 +1,56 @@
 # GoInvo Website - Next.js Migration
 
-## Current Task (2026-03-31): Port Legacy /features/ Pages to Next.js
-
-**Goal**: Port all 12 legacy `/features/` pages from their original HTML/CSS to Next.js static override pages. These are NOT Gatsby pages — they are standalone legacy HTML pages with custom CSS served from `goinvo.com/old/`. They were never built from React/Gatsby.
-
-### CRITICAL FINDING: All 12 /features/ pages are LEGACY HTML
-These pages are **not** in the Gatsby source repo. They are standalone HTML pages with custom CSS/JS served from the `/old/` directory on goinvo.com. The Gatsby `features.json` links to them as external URLs. They each have:
-- Custom CSS (10-66KB) at `/old/stylesheets/features/<slug>.css`
-- Custom HTML layouts (dark backgrounds, multi-column grids, inline SVGs)
-- Some have custom JS at `/old/javascripts/features/<slug>/`
-
-**Source files downloaded to**: `/c/tmp/legacy-features/<slug>/` (page.html + styles.css)
-
-### The 12 legacy features pages
-
-| Gatsby slug | Next.js slug | HTML | CSS | Porting Status |
-|---|---|---|---|---|
-| zika | understanding-zika | 74KB | 16KB | **BROKEN** — needs port from legacy HTML |
-| an-oral-history | oral-history-goinvo | 235KB | 22KB | Sanity content partial, needs legacy port |
-| from-bathroom-to-healthroom | bathroom-to-healthroom | 70KB | 19KB | Sanity content partial, needs legacy port |
-| careplans | care-plans | 40KB | 67KB | Sanity content OK for now |
-| digital-healthcare | digital-healthcare | 43KB | 14KB | Sanity content partial |
-| us-healthcare | healing-us-healthcare | 99KB | 22KB | Interactive, needs legacy port |
-| disrupt | disrupt | 39KB | 33KB | Sanity content, heading differences |
-| ebola | understanding-ebola | 33KB | 10KB | Sanity content OK |
-| ebola-care-guideline | ebola-care-guideline | 32KB | 12KB | Sanity content OK |
-| killer-truths | killer-truths | 43KB | 11KB | Full image cover done |
-| print-big | print-big | 40KB | 3KB | Clean |
-| redesign-democracy | redesign-democracy | 101KB | 22KB | Sanity content, heading/image gaps |
-
-### Multi-page features (have separate part pages on Gatsby)
-- **disrupt**: 6 parts (`/features/disrupt/`, `part-2.html` through `part-6.html`)
-  - Each part has its own hero image and color theme
-  - Routes: `/vision/disrupt`, `/vision/disrupt/part-2`, etc.
-- **care-plans**: 3 parts (`/features/careplans/`, `part-2.html`, `part-3.html`)
-  - Part 2: "The Current Landscape" (166KB)
-  - Part 3: "The Future" (73KB)
-  - Routes: `/vision/care-plans`, `/vision/care-plans/part-2`, `/vision/care-plans/part-3`
-
-### Porting approach
-1. Download the legacy HTML + CSS from `goinvo.com/old/`
-2. Read the legacy HTML to understand layout structure
-3. Translate section by section into a Next.js `page.tsx` static override
-4. Port custom CSS to scoped CSS files alongside the page
-5. Use `https://www.goinvo.com/old/images/features/<slug>/` for image URLs (NOT cloudfrontImage — CloudFront returns 404 for `/old/` paths)
-6. Verify with Puppeteer side-by-side screenshots at multiple scroll positions
-7. Check for multi-page structure (parts) — create separate routes for each part
-
-### Also pending: Studio UX fixes
-- Quote block preview only shows first letter
-- H2 (centered) / sectionTitle preview wrong in editor
-- Rich text header preview formatting doesn't match live
-
-### Previous Task (2026-03-30): Full Image Cover + Contributors (DONE)
-
-### Previous Task (2026-03-29): Vision Page Static Override Removal
-
-**Goal**: Delete all static vision page overrides so pages are served by the Sanity-driven `[slug]` route.
-
-### Batch 1 — Deleted (27 pages, pending commit)
-These 27 static overrides have been deleted in the working tree but NOT yet committed:
-augmented-clinical-decision-support, coronavirus, digital-health-trends-2022, eligibility-engine,
-faces-in-health-communication, fraud-waste-abuse-in-healthcare, health-design-thinking, healthcare-ai,
-healthcare-dollars, history-of-health-design, human-centered-design-for-ai, living-health-lab,
-loneliness-in-our-human-code, national-cancer-navigation, open-pro, open-source-healthcare,
-own-your-health-data, patient-centered-consent, physician-burnout, precision-autism,
-public-healthroom, test-treat-trace, vapepocolypse, virtual-care, virtual-diabetes-care,
-visual-storytelling-with-genai, who-uses-my-health-data
-
-**Restored to static overrides (need Sanity content migration first):**
-- `us-healthcare-problems` — 50 numbered headings missing from Sanity, interactive infographic
-- `primary-self-care-algorithms` — 10+ expand/collapse interactive buttons not in Sanity
-- `augmented-clinical-decision-support` — 21-slide SlickCarousel pregnancy storyboard
-- `public-healthroom` — scroll-driven sticky prototype with react-scrollspy
-- `loneliness-in-our-human-code` — 29 SVG icon imports in custom grid/timeline layouts
-
-**Status**: Audit complete. 0 critical, 9/27 clean. Remaining issues are Sanity content gaps (missing images in interactive sections, mid-span superscripts, missing headings) that need manual editing in Sanity Studio.
-
-### Audit Results (2026-03-29)
-
-**CRITICAL — RESOLVED (stale .next cache)**
-- 4 pages (national-cancer-navigation, open-pro, public-healthroom, virtual-care) appeared to have missing references. Fixed by `rm -rf .next && npx next build`.
-
-**Clean audit after clean build (7/29 pages pass):**
-digital-health-trends-2022, faces-in-health-communication, open-source-healthcare, test-treat-trace, vapepocolypse, virtual-diabetes-care, who-uses-my-health-data
-
-**Pages that should KEEP static overrides (need content migration to Sanity first):**
-- `us-healthcare-problems` — 50 numbered headings are NOT in Sanity (only 26 blocks total). Interactive infographic. Needs massive content migration.
-- `primary-self-care-algorithms` — 10+ expand/collapse interactive buttons not in Sanity. Needs custom block type or content migration.
-
-**Remaining HIGH issues (Sanity content gaps, not code bugs):**
-- Missing images: augmented-clinical-decision-support (-45), public-healthroom (-36), loneliness (-33), living-health-lab (-32), national-cancer (-9), visual-storytelling (-8), open-pro (-6)
-- Missing superscripts: living-health-lab (-30), primary-self-care (-21), coronavirus (-16), open-pro (-7), virtual-care (-3), patient-centered-consent (-3), public-healthroom (-3)
-- Missing quotes: human-centered-design-for-ai (-6), fraud-waste-abuse (-4), health-design-thinking (-2), eligibility-engine (-2), open-pro (-1)
-- Missing iframes: 6 pages (these are embedded videos/prototypes in Gatsby, likely missing `iframeEmbed` blocks in Sanity)
-- Missing headings: fraud-waste-abuse (title stripped by overlap matcher), coronavirus (concatenated title), public-healthroom (title stripped), human-centered-design-for-ai (1 heading)
-- Missing anchors: fraud-waste-abuse (#methodology), healthcare-dollars (#methodology), living-health-lab (#appendix), virtual-care (#methodology)
-- Missing videos: healthcare-ai (-2 but has +2 iframes, likely converted), visual-storytelling (-1)
-
-**Issues that are FALSE POSITIVES or acceptable:**
-- healthcare-ai: 2 videos vs 2 iframes — videos were converted to iframe embeds, equivalent
-- SRC_MISSING_HEADING for titles that got stripped by `stripTitleHeading` (expected behavior)
-
-### Batch 2 — Still have static overrides (future work)
-ai-design-certification, bathroom-to-healthroom, care-plans, determinants-of-health,
-digital-healthcare, disrupt, ebola-care-guideline, experiments, healing-us-healthcare,
-health-visualizations, killer-truths, oral-history-goinvo, print-big, redesign-democracy,
-understanding-ebola, understanding-zika
-
-### Supporting changes in this batch
-- `PortableTextRenderer.tsx` — extended with new block types/variants
-- `compare-pages.ts` — enhanced audit script
-- `globals.css` — new utility classes (header-lg, header-xl)
-- `Quote.tsx`, `utils.ts`, `portableText.ts` — supporting improvements
-
-### Process for each page
-1. Run `npx tsx scripts/compare-pages.ts <slug> --verbose`
-2. Fix any CRITICAL/HIGH issues (heading mismatches, missing elements, style problems)
-3. Re-run audit to confirm fixes
-4. Delete static override & commit
-
----
-
 ## Critical Rules
 
+If...:
+
+1. There are still items in the task list
+2. We are in the middle of a task
+
+...do NOT stop the task and ask if we want to continue. Just continue the task until all assigned tasks are done.
+
+### Static page overrides take priority over Sanity content
+
+**ALWAYS check `src/app/(main)/vision/<slug>/page.tsx` BEFORE editing Sanity content.** If a static `page.tsx` exists for the slug AND it doesn't call `sanityFetch({ query: featureBySlugQuery })`, the page renders from the static file and Sanity edits will have NO EFFECT.
+
+To check:
+```bash
+find "src/app/(main)/vision/<slug>" -name page.tsx 2>/dev/null
+grep -l "featureBySlugQuery\|sanityFetch" "src/app/(main)/vision/<slug>/page.tsx"
+```
+
+If `featureBySlugQuery` is NOT in the file → it's a fully static override → edit the page.tsx directly. The Sanity Studio is still useful for tracking the canonical content but won't drive what users see.
+
 ### NEVER replace entire code blocks when adding variants
+
 When adding new variants, options, cases, or entries to existing code structures (switch statements, if/else chains, lookup objects, config maps, component variants), **NEVER rewrite the entire block**. Only ADD the new code alongside existing code. Replacing the full block removes existing working variants and causes regressions. This is the single most important rule — violating it destroys existing functionality.
 
 **Example of WRONG approach:**
+
 ```
 // Replacing the entire logoVariants object to add 'ai':
 const logoVariants = { ai: [...], default: [...] }  // ← LOST enterprise, government, etc.
 ```
 
 **Example of CORRECT approach:**
+
 ```
 // Adding 'ai' to the existing object:
 const logoVariants = { default: [...], enterprise: [...], government: [...], ai: [...] }
 ```
 
-### Killer Truths is an exception — uses fullImageCover
-The killer-truths page uses `fullImageCover: true` in Sanity to display the poster image in full size as the hero. This was explicitly requested. The static override renders the dark-themed content (title, poster, download bar, refs) directly without SetCaseStudyHero.
-
 ### Don't duplicate cover images in page content
+
 When porting legacy pages, the cover/hero image should be used ONLY as the `SetCaseStudyHero` image. Do NOT repeat it in the page content body. If the legacy HTML has a header section with the same background image as the hero, remove the duplicate header and keep only the title text below the hero.
 
 ### Prefer adding VARIANTS to existing components over creating new ones
+
 When a page needs a different visual treatment, add a `variant` prop or dropdown to the existing component rather than creating a new component. This keeps the Sanity Studio UX simple (one block type with a variant selector) and prevents component sprawl. If a component doesn't support the needed layout, ADD a variant to it — don't replace the component or create a parallel one.
 
 ### ALWAYS visually compare against the live Gatsby site before assuming anything is correct
+
 Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby page (goinvo.com/vision/{slug}/) AND the Next.js page (localhost:3000/vision/{slug}) side by side and visually compare. Check:
+
 - Section order — varies by article, verify against the Gatsby source/live site for each page
 - Image sizing (full-bleed vs constrained, Gatsby uses different containers)
 - Reference formatting (citation text + separate URL link, not entire text as link)
@@ -159,7 +60,9 @@ Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby
 - Heading styles (serif vs sans, weights, uppercase)
 
 ### ALWAYS verify rendered output after making component changes
+
 Do NOT assume a code change worked. After editing any component or page:
+
 1. Rebuild (`rm -rf .next && npx next build`)
 2. Fetch the rendered HTML and verify the change is present in the actual output
 3. For client-rendered components ('use client'), check both SSR HTML and the bundled JS
@@ -167,6 +70,7 @@ Do NOT assume a code change worked. After editing any component or page:
 5. Never mark a visual fix as done until you've confirmed it renders correctly
 
 When fixing a visual component to match Gatsby:
+
 - Fetch the Gatsby page HTML first
 - Identify EVERY difference, not just the obvious ones
 - Fix ALL differences, not just the easy ones
@@ -174,11 +78,14 @@ When fixing a visual component to match Gatsby:
 - Do NOT delegate component fixes to agents without verifying their work
 
 ### ALWAYS use Puppeteer to verify visual/spacing changes
+
 Do NOT rely on reading CSS classes or source code to confirm spacing, sizing, or layout matches. Tailwind classes can conflict, be overridden, or not apply as expected (e.g., two `min-h-*` classes on the same element in Tailwind v4). The only reliable verification is measuring **actual rendered dimensions**.
 
 After any spacing, sizing, or layout change:
+
 1. Start the Next.js server (`npx next start -p 3000`)
 2. Use Puppeteer to measure the actual rendered dimensions on BOTH sites:
+
 ```js
 node -e "
 const puppeteer = require('puppeteer');
@@ -202,6 +109,7 @@ const puppeteer = require('puppeteer');
 })();
 "
 ```
+
 3. Compare rendered values between localhost and goinvo.com
 4. Report PASS/FAIL for each metric with actual vs target values
 5. Do NOT consider a fix complete until all metrics pass (within ~3px tolerance)
@@ -209,45 +117,56 @@ const puppeteer = require('puppeteer');
 This catches issues that reading CSS cannot: class conflicts, specificity overrides, computed value differences, and Tailwind v4 ordering edge cases.
 
 ### Do not assume section ordering — check the Gatsby source for each page
+
 The most common Gatsby order is content → authors → subscribe → references, but this varies. Always check `C:\Users\quest\Programming\GoInvo\goinvo.com\src\pages\vision\{slug}\index.js` for the actual order before making template changes.
 
 ## Known Gotchas
 
 ### ALWAYS clean build before auditing or debugging rendering
+
 Run `rm -rf .next` before `npx next build`. The `.next` cache can serve stale SSG pages even after code changes. If content appears missing (e.g., PortableText custom blocks like `references` not rendering), 99% chance it's stale cache. Never waste time debugging rendering without cleaning first.
+
 ```bash
 rm -rf .next && npx next build
 ```
 
 ### ALWAYS kill previous node servers before starting new ones
+
 On Windows, `npx next start` or `npx next dev` won't error if port 3000 is already in use — it silently serves the old instance. Kill all node processes first:
+
 ```bash
 taskkill //f //im node.exe 2>/dev/null
 ```
 
 ### Audit script only accepts one slug argument
+
 `compare-pages.ts` uses `args.find()` — only the first positional slug is processed. Loop for multiple:
+
 ```bash
 for slug in page1 page2 page3; do npx tsx scripts/compare-pages.ts $slug --verbose; done
 ```
 
 ### Sanity returns empty data silently when env vars are missing
+
 `.env.local` must exist with valid tokens. If `NEXT_PUBLIC_SANITY_PROJECT_ID` is missing, `sanityFetch` returns empty arrays with no error — pages will render blank with no warning. Check `.env.local` if pages are completely empty.
 
 ---
 
 ## Gatsby Source Code
+
 - **Path**: `C:\Users\quest\Programming\GoInvo\goinvo.com`
 - Always check the Gatsby source when investigating visual parity issues
 - Page sources in `src/pages/vision/<slug>/index.js`
 - Styles in `src/styles/` (SCSS, component-scoped files like `_columns.scss`, `_images.scss`)
 
 ## Environment Variables
+
 - Sanity write token: `SANITY_WRITE_TOKEN` (NOT `SANITY_API_WRITE_TOKEN`)
 - Sanity read token: `SANITY_API_READ_TOKEN`
 - All env vars are in `.env.local`
 
 ## Tech Stack
+
 - **Framework**: Next.js 16+ (App Router) with React Server Components
 - **CMS**: Sanity (embedded studio at /studio)
 - **Styling**: Tailwind CSS v4 (CSS-based config via `@theme` in globals.css)
@@ -255,6 +174,7 @@ for slug in page1 page2 page3; do npx tsx scripts/compare-pages.ts $slug --verbo
 - **Fonts**: Adobe Jenson Pro (serif headings) + Open Sans (sans body) via TypeKit
 
 ## Design System
+
 - Colors defined in `src/app/globals.css` under `@theme`
 - Primary: `#E36216` (orange), Secondary: `#007385` (teal), Tertiary: `#24434d`
 - Use `font-serif` for headings, `font-sans` for body text
@@ -266,6 +186,7 @@ for slug in page1 page2 page3; do npx tsx scripts/compare-pages.ts $slug --verbo
 **All page content MUST live in Sanity whenever possible.** Do NOT create static page.tsx files with hardcoded content. The CMS is the source of truth.
 
 ### Rules
+
 1. **Use the dynamic `[slug]` route** — Vision pages use `/vision/[slug]/page.tsx`, case studies use `/work/[slug]/page.tsx`. Content is authored in Sanity and rendered via `PortableTextRenderer`.
 2. **Never hardcode article content in .tsx files.** If a page is just headings, text, images, lists, quotes, references, and author bios, it belongs in Sanity — no static override needed.
 3. **When you need a new visual element**, add a variant or parameter to an existing Sanity block type, or create a new block type + PortableText component. **Do NOT create a static page override to work around renderer limitations.** Fix the renderer instead.
@@ -284,13 +205,16 @@ When removing a static page override to let the Sanity `[slug]` route take over,
 5. **Only then delete the override** — After confirming the Sanity version visually matches the original.
 
 ### Adding New Block Types / Variants
+
 When content needs a visual treatment the renderer doesn't support yet:
+
 1. **Prefer extending existing block types** — e.g., add `size` field to images, `color` to backgrounds, `variant` to headings. Don't create new types when a parameter on an existing type works.
 2. Add the schema field to `src/sanity/schemas/` (or extend the `portableTextContent` definition)
 3. Add the renderer handling to `src/components/portable-text/PortableTextRenderer.tsx`
 4. The variant is now available to ALL articles — no per-page code needed
 
 ### Existing PortableText Block Types & Parameters
+
 - `image` — fields: `size` (small/medium/large/full), `align` (left/center/right), `caption`, `alt`
 - `videoEmbed` — fields: `url`, `poster`, `caption`, `autoPlay` (boolean), `size` (default/wide/full). When autoPlay=true, video plays muted+looping without controls. `size: wide` renders at 75% viewport width (breaks out of article container). Use for ambient/demo videos that autoplay on Gatsby.
 - `iframeEmbed` — fields: `url`, `height`, `aspectRatio`, `caption`
@@ -309,10 +233,12 @@ When content needs a visual treatment the renderer doesn't support yet:
 - Marks: `link`, `sup`, `textColor` (teal/orange/charcoal/gray/blue), `refCitation` (refNumber)
 
 ### Feature Schema Fields (beyond content)
+
 - `specialThanks` — optional rich text field rendered after Authors/Contributors, before Newsletter. Used for acknowledging non-author/contributor individuals.
 - `showAboutGoInvo` — boolean field that renders the standard AboutGoInvo component after Special Thanks, before Newsletter.
 
 ### Verification & Fix Scripts
+
 - **`scripts/page-tree.ts`** — **PRIMARY TOOL**. Dumps a page's component tree with computed styles, dimensions, and interactivity. Supports `--diff <url2>` to compare Gatsby vs Next.js side by side. Use this to identify every element difference on a page. Catches heading levels, font sizes, colors, margins, bullet styles, numbering gutter, missing elements, and structural mismatches.
   ```bash
   npx tsx scripts/page-tree.ts https://www.goinvo.com/vision/slug/ --diff http://localhost:3000/vision/slug
@@ -336,13 +262,17 @@ When content needs a visual treatment the renderer doesn't support yet:
   ```
 
 ### ALWAYS run auto-fix after content migrations
+
 After migrating content to Sanity or patching content blocks, ALWAYS run:
+
 ```bash
 node scripts/auto-fix-content.mjs --write
 ```
+
 This catches image+text pairs that should be side-by-side columns, heading level mismatches, and other structural issues that can't be caught by the simple element-count audit.
 
 ## Component Guidelines
+
 - Server Components by default; add `"use client"` only when needed (interactivity, hooks, browser APIs)
 - Use `@/` import alias (maps to `./src/`)
 - Use `cn()` from `@/lib/utils` for conditional class joining
@@ -351,6 +281,7 @@ This catches image+text pairs that should be side-by-side columns, heading level
 - Use `cloudfrontImage()` from `@/lib/utils` for legacy CDN images
 
 ## File Structure
+
 - `src/app/` - Pages (App Router)
 - `src/components/` - Reusable components (layout/, ui/, work/, forms/, etc.)
 - `src/lib/` - Utilities and config
@@ -358,13 +289,16 @@ This catches image+text pairs that should be side-by-side columns, heading level
 - `src/sanity/` - Sanity schemas, client, queries
 
 ## Conventions
+
 - Tailwind classes for all styling (no SCSS)
 - Framer Motion for animations (fade-in, slide-up, hover effects)
 - Named exports for components
 - PascalCase component files, camelCase utility files
 
 ### Tests must NEVER fail silently
+
 Tests that silently skip or pass when they should be checking things are worse than no tests — they create false confidence. When writing tests:
+
 - If a precondition isn't met (e.g., server not running), **throw an error**, don't silently skip with `return`
 - Never swallow errors in catch blocks — at minimum log them, prefer re-throwing
 - Every test must assert something meaningful — a test that "passes" by doing no work is a bug
@@ -409,6 +343,7 @@ User clicks case study card
 ### Homepage Section Morph Flow (Planned)
 
 When clicking a case study on the homepage:
+
 1. Elements sharing the same background color with the destination page morph (position/size change to match destination)
 2. All other content collapses vertically
 3. Text on morphing elements crossfades in/out
@@ -438,6 +373,7 @@ When clicking a case study on the homepage:
 ### Section Visibility (Future State Machine)
 
 When the homepage section morph is implemented:
+
 - `idle` — all sections visible at rest
 - `collapsing` — card clicked, non-target sections collapse, target section morphs
 - `open` — navigated to case study, overlay visible
@@ -469,6 +405,7 @@ npx tsx scripts/compare-pages.ts --json
 ```
 
 **What it catches:**
+
 - Fabricated or missing headings (EXTRA_HEADING / MISSING_HEADING)
 - Heading font/weight mismatches — e.g., `header--lg` (serif light) rendered as bold sans (HEADING_STYLE)
 - Wrong font on headings — h1/h2 must use `font-serif` or `header-lg`/`header-xl` (NEXT_STYLE)
@@ -496,6 +433,7 @@ npx tsx scripts/compare-all-pages.ts --section main  # main pages only
 ### Sanity Content Audit: `scripts/audit-content.mjs`
 
 Checks Sanity documents (case studies + features) for structural issues:
+
 - Duplicate title blocks, empty paragraphs, missing video URLs
 - Image blocks without assets, empty references blocks
 - Consecutive duplicate blocks
@@ -515,9 +453,9 @@ node scripts/audit-site-integrity.mjs --base=http://localhost:3099
 
 ### Heading Style Reference
 
-| Gatsby Class | Next.js Equivalent | Font | Weight | Size | Case |
-|---|---|---|---|---|---|
-| `header--xl` | `header-xl` or `font-serif text-[1.75rem] lg:text-[2.25rem] font-light` | Serif | 300 (light) | 1.75–2.25rem | Normal |
-| `header--lg` | `header-lg` or `font-serif text-[1.5rem] font-light` | Serif | 300 (light) | 1.5rem | Normal |
-| `header--md` | `header-md` or `font-sans text-sm font-semibold uppercase tracking-[2px]` | Sans | 600 (semibold) | 0.875rem | UPPERCASE |
-| `header--sm` | `font-sans text-base font-bold` (h4 default) | Sans | 700 (bold) | 1rem | Normal |
+| Gatsby Class   | Next.js Equivalent                                                            | Font  | Weight         | Size          | Case      |
+| -------------- | ----------------------------------------------------------------------------- | ----- | -------------- | ------------- | --------- |
+| `header--xl` | `header-xl` or `font-serif text-[1.75rem] lg:text-[2.25rem] font-light`   | Serif | 300 (light)    | 1.75–2.25rem | Normal    |
+| `header--lg` | `header-lg` or `font-serif text-[1.5rem] font-light`                      | Serif | 300 (light)    | 1.5rem        | Normal    |
+| `header--md` | `header-md` or `font-sans text-sm font-semibold uppercase tracking-[2px]` | Sans  | 600 (semibold) | 0.875rem      | UPPERCASE |
+| `header--sm` | `font-sans text-base font-bold` (h4 default)                                | Sans  | 700 (bold)     | 1rem          | Normal    |
