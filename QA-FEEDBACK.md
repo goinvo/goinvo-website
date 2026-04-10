@@ -105,7 +105,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 25. Coronavirus (COVID-19)
 - [ ] Chart shows massive difference/undercount (static data vs Gatsby's live data — our 704M is final but chart component may show old March 2020 snapshot)
-- [ ] Missing bullets from timeline (some timeline events have sub-bullets on Gatsby)
+- [x] Missing bullets from timeline — Tailwind reset was setting list-style-type: none on `.corona-timeline .timepoint ul`. Added `list-style-type: disc` and `display: list-item` to restore bullets on 7 Jan / 30 Jan / 31 Jan timeline entries.
 - [ ] Icons should be vertically centered with text, with extra space below (subtle alignment)
 
 ## 28. Who Uses My Health Data
