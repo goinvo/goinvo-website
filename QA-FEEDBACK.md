@@ -198,7 +198,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 37. Understanding Zika
 - [ ] Header heights for "Conditions" / "Treatment" sections don't line up — could use empty line break + nonbreaking space to match heights
-- [ ] Number the references (currently unnumbered list)
+- [x] Number the references (added list-decimal class to ol)
 
 ## 36. Care Plans Series (MAJOR — multi-part page with extensive issues)
 ### Part 1 (Overview)

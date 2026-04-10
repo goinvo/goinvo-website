@@ -1466,7 +1466,7 @@ export default function UnderstandingZikaPage() {
         <div className="row" id="references">
           <div className="column">
             <h2>References</h2>
-            <ol>
+            <ol className="list-decimal pl-8">
               <li id="ref-1">
                 <span className="li-color">
                   Roberts, M. (2016. Feb, 1). &quot;
