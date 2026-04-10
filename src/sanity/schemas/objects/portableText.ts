@@ -193,6 +193,7 @@ export default defineType({
               { title: '2 columns (1:2 ratio)', value: '1:2' },
               { title: '3 columns', value: '3' },
               { title: '4 columns', value: '4' },
+              { title: 'Storyboard (image above text, vertically stacked)', value: 'storyboard' },
             ],
           },
           initialValue: '2',
