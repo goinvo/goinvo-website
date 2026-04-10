@@ -28,8 +28,8 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Mobile equation layout — responsive grid + spacing
 - [x] Scene buttons — changed to tab style
 - [x] 3D viewer border rounding removed
-- [ ] Text differences from Gatsby (needs investigation)
-- [ ] Authors + contributors ordering consistency
+- [x] Text differences from Gatsby — removed extra "Navigate through our 3D hospital model..." paragraph from ModelViewerSection (not in Gatsby)
+- [ ] Authors + contributors ordering consistency (no contributors on this page; AuthorSection secondary label "Designer/Engineer" vs Gatsby "GoInvo" is a global pattern, not VSG-specific)
 
 ## 6. Eligibility Engine
 - [x] Doubled superscripts (sup "1" and "4") — removed duplicates
@@ -73,6 +73,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Image sizes and layouts vary — prefer original design for balance
 - [ ] Next section also doesn't work (Healthcare Graphics section)
 - [ ] Some more layout issues in later sections
+- [ ] "Appendix. A Lean Experiment Evaluating Healthcare Information Graphics" should be a header
 
 ## Global Issues
 - [x] Paragraph margin-top: 0 → my-4 (matching Gatsby 1em)
@@ -83,20 +84,6 @@ Feedback from Jen Patel via FigJam board review.
 - [x] 32 duplicate sectionTitle headings removed from case studies
 - [x] Drafts section showing on public site — fixed condition
 - [x] Orange bullets on enterprise/government results sections
-
----
-
-## 17. Faces in Health Communication (MAJOR — extensive issues)
-- [ ] Layout differences make circles + text harder to follow/see they're related
-- [ ] Weird amount of superscripts where there were originally no references
-- [ ] Another weird layout (Human Faces and Communication section)
-- [ ] "Humans are born to look at faces." should be a header
-- [ ] Next sections became "salad" (broken layout)
-- [ ] More layout, image + text mismatch
-- [ ] Image sizes and layouts vary — prefer original design for balance/readability
-- [ ] Healthcare Graphics section doesn't work
-- [ ] More layout issues in later sections
-- [ ] "Appendix. A Lean Experiment Evaluating Healthcare Information Graphics" should be a header
 
 ## 18. Health Design Thinking
 - [ ] All-caps issue — text rendering in all uppercase that shouldn't be
