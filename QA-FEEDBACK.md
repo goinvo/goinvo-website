@@ -67,7 +67,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Layout differences make circles + text harder to follow
 - [ ] Weird amount of superscripts where there were originally no references
 - [ ] Another weird layout (Human Faces and Communication section)
-- [ ] "Humans are born to look at faces." should be a header
+- [x] "Humans are born to look at faces." — removed duplicate (text was inside a columns(2) image+text block AND as a standalone textCenter block; kept the textCenter block which already matches Gatsby's serif-center styling, removed the columns sidecar)
 - [ ] Next sections became "salad" (broken layout)
 - [ ] More layout, image + text mismatch
 - [ ] Image sizes and layouts vary — prefer original design for balance
