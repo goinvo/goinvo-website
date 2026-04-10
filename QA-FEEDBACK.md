@@ -99,7 +99,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 24. Determinants of Health
 - [x] Why different style of buttons? — changed `.determinants-of-health .button--secondary` from filled teal `#007385` to outlined orange (transparent bg, `#E36216` text, `1px solid #FFB992` border, `6px 16px` padding, 15px font) matching Gatsby exactly
-- [ ] Wrong icons for the chart (not the right icons we want)
+- [x] Wrong icons for the chart — replaced 5 placeholder generic icons with the actual Gatsby SVGs (Individual Behavior, Social Circumstances, Genetics & Biology, Medical Care, Environment). Decoded from base64 in Gatsby HTML and saved to public/images/vision/determinants-of-health/.
 - [ ] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts)
 - [x] Big sans-serif header "Individual Behavior" — reduced from text-xl (20px) to 1.17em (~18.72px matching Gatsby's h3 default)
 - [x] Little sub-headers (Psychological Assets, etc.) — changed from default serif 24px to font-sans text-base font-bold (16px, matching Gatsby's h4)
@@ -129,7 +129,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 52. MASS SNAP
 - [x] Missing solution header — inserted sectionTitle "Solution" before "Simple and accessible" block
 - [x] Missing results header — inserted sectionTitle "Results" before "The redesigned application was deployed..." block
-- [ ] Missing care plans feature card for "up next" (if available)
+- [x] Missing care plans feature card for "up next" — added Care Plans feature reference to MASS SNAP upNext array (now has 3 cards: Inspired EHRs, Determinants of Health, Care Plans)
 
 ## 51. Maya EHR
 - [x] Missing solution and results headers — inserted sectionTitle Solution before "End-to-end workflow designed" h4 and Results before "Shipped software" h4
