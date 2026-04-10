@@ -200,11 +200,11 @@ Feedback from Jen Patel via FigJam board review.
 
 ### Part 2 (Current Landscape)
 - [x] Missing header — hero background was pointing to non-existent `/part2/hero_bg.jpg`. Changed to the actual file `/FeatureBanner_v02_back.jpg` (the brick scene with care plan flow chart). Hero now displays correctly.
-- [ ] Images are too far from the text — advocate for custom pages instead of CMS, or at least put text next to images
+- [x] Images are too far from the text — removed the separate desktop journey map image strip (which stacked all 7 images above the text steps). Each process-step now displays its image inline directly above its description. Added `.step-image` CSS for inline rendering and `loading="eager"` + `unoptimized` to bypass Next.js image lazy loading.
 - [ ] Missing some columns
 - [ ] Missing the context/position the hotspots provide (interactive elements lost)
 - [ ] Can't do image text overlay but cycle image could be bigger
-- [ ] Table doesn't work on mobile
+- [x] Table doesn't work on mobile — `.product-matrix-wrapper` already had horizontal scroll. Added gradient fade hints on edges and a "↔ Scroll" hint above the table on mobile screens (≤768px) to indicate the table scrolls horizontally.
 - [ ] Image removed on mobile (not worth keeping gears without overlay)
 
 ### Part 3 (The Future)
