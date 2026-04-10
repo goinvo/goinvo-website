@@ -50,7 +50,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 9. Healthcare AI
 - [x] Storyboard images rendering stacked instead of side-by-side — fixed columns renderer
 - [ ] Not using same preview images for videos
-- [ ] Chat image too narrow (should be full width with caption)
+- [x] Chat image too narrow — converted columns(2) wrapper to standalone image block with caption (Sanity content patch)
 - [ ] Text content differences
 - [x] Authors + contributors ordering — moved Contributors block from content to specialThanks field (Authors now render BEFORE Contributors, matching Gatsby)
 
