@@ -192,7 +192,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Different header, lots of white space
 - [ ] Lost the original design, kind of blah
 - [ ] Broken "Work Together" section
-- [ ] Missing author images
+- [x] Missing author images — author/contributor images use `/old/images/...` paths but cloudfrontImage() prepends the CloudFront CDN domain which 404s for `/old/` paths. Changed all 3 author images and 7 contributor images to use direct `https://www.goinvo.com/old/...` URLs.
 - [ ] Link to first part overview is missing — shouldn't be hash #part-1, should be its own page
 
 ### Part 2 (Current Landscape)

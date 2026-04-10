@@ -234,7 +234,7 @@ export default function CarePlansPage() {
           <Author
             name="Beckett Rucker"
             company="GoInvo"
-            image={cloudfrontImage('/old/images/features/careplans/contrib/beckett.jpg')}
+            image="https://www.goinvo.com/old/images/features/careplans/contrib/beckett.jpg"
           >
             <p>
               <strong>Beckett Rucker, MPD</strong> is a designer, product strategist, and researcher concentrating on health services and systems design. She holds a BA in psychology and studio art from Rice University and a Master of Product Development from Carnegie Mellon University. She has previously worked with Seniorlink, Johnson &amp; Johnson, and Updox Patient Portals.
@@ -244,7 +244,7 @@ export default function CarePlansPage() {
           <Author
             name="Edwin Choi"
             company="GoInvo"
-            image={cloudfrontImage('/old/images/features/careplans/contrib/edwin.jpg')}
+            image="https://www.goinvo.com/old/images/features/careplans/contrib/edwin.jpg"
           >
             <p>
               <strong>Edwin Choi, MA</strong> is a biologist-turned-designer orchestrating beautiful, clinically refined healthcare software. He is a graduate of Washington University with a Master&apos;s in biomedical design from Johns Hopkins. His project experience includes Partners Healthcare and Notovox.
@@ -254,7 +254,7 @@ export default function CarePlansPage() {
           <Author
             name="Danny van Leeuwen"
             company="Health Hats"
-            image={cloudfrontImage('/old/images/features/careplans/contrib/danny.jpg')}
+            image="https://www.goinvo.com/old/images/features/careplans/contrib/danny.jpg"
           >
             <p>
               <strong>Danny van Leeuwen, RN, MPH, CPHQ</strong> is an action catalyst with 40+ years of nursing experience. He is a patient with MS and care partner for family end-of-life care. As an informaticist and quality improvement leader, he focuses on care transitions, person-centered health planning, and informed decision-making. He has collaborated with PCORI, AHRQ, and MassHealth.
@@ -268,7 +268,7 @@ export default function CarePlansPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/yanyang.jpg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/yanyang.jpg'}
                 alt="Yanyang Zhou"
                 width={64}
                 height={64}
@@ -282,7 +282,7 @@ export default function CarePlansPage() {
 
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/jenn.jpg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/jenn.jpg'}
                 alt="Jennifer Patel"
                 width={64}
                 height={64}
@@ -296,7 +296,7 @@ export default function CarePlansPage() {
 
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/juhan.jpg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/juhan.jpg'}
                 alt="Juhan Sonin"
                 width={64}
                 height={64}
@@ -310,7 +310,7 @@ export default function CarePlansPage() {
 
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/jeffbelden.jpg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/jeffbelden.jpg'}
                 alt="Jeff Belden, MD"
                 width={64}
                 height={64}
@@ -324,7 +324,7 @@ export default function CarePlansPage() {
 
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/joycelee.jpeg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/joycelee.jpeg'}
                 alt="Joyce Lee, MD, MPH"
                 width={64}
                 height={64}
@@ -338,7 +338,7 @@ export default function CarePlansPage() {
 
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/janesarasohnkahn.jpg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/janesarasohnkahn.jpg'}
                 alt="Jane Sarasohn-Kahn"
                 width={64}
                 height={64}
@@ -352,7 +352,7 @@ export default function CarePlansPage() {
 
             <div className="flex gap-3 items-start">
               <Image
-                src={cloudfrontImage('/old/images/features/careplans/contrib/harrysleeper.jpg')}
+                src={'https://www.goinvo.com/old/images/features/careplans/contrib/harrysleeper.jpg'}
                 alt="Harry Sleeper"
                 width={64}
                 height={64}
