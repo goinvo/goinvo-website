@@ -154,11 +154,44 @@
   font-size: 0.9375rem;
 }
 
+.process-step .step-content .step-image {
+  width: 100%;
+  height: auto;
+  margin-bottom: 0.75rem;
+  border-radius: 4px;
+}
+
 /* ===== Product Matrix (Part 2) ===== */
 .product-matrix-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   margin: 2rem 0;
+  position: relative;
+  /* Subtle gradient hint that the table is horizontally scrollable */
+  background:
+    linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+    linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+    radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.15), rgba(0,0,0,0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.15), rgba(0,0,0,0)) 0 100%;
+  background-repeat: no-repeat;
+  background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+.product-matrix-wrapper::before {
+  content: '↔ Scroll';
+  display: none;
+  font-size: 0.75rem;
+  color: #888;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .product-matrix-wrapper::before {
+    display: block;
+  }
 }
 
 .product-matrix {

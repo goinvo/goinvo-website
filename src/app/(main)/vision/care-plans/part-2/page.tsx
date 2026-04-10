@@ -70,24 +70,13 @@ export default function CarePlansPart2Page() {
             The journey begins with a patient visiting his primary care doctor.
           </p>
 
-          {/* Journey Map Images (Desktop) */}
-          <div className="hidden md:block space-y-1 mb-8">
-            <Image src={`${IMG}/part2/careplan_journey_health_history_web.png`} alt="Understand Health History" width={1000} height={200} className="w-full h-auto" />
-            <Image src={`${IMG}/part2/careplan_journey_identify_health_concerns_web.png`} alt="Identify Health Concerns" width={1000} height={200} className="w-full h-auto" />
-            <Image src={`${IMG}/part2/careplan_journey_set_goals_web.png`} alt="Set Goals" width={1000} height={200} className="w-full h-auto" />
-            <Image src={`${IMG}/part2/careplan_journey_instruct_web.png`} alt="Instruct and Intervene" width={1000} height={200} className="w-full h-auto" />
-            <Image src={`${IMG}/part2/careplan_journey_care_team_web.png`} alt="Enlist Care Team" width={1000} height={200} className="w-full h-auto" />
-            <Image src={`${IMG}/part2/careplan_journey_specify_review_web.png`} alt="Specify Outcomes to Review" width={1000} height={200} className="w-full h-auto" />
-            <Image src={`${IMG}/part2/careplan_journey_live_care_plan_web.png`} alt="Live the Care Plan" width={1000} height={200} className="w-full h-auto" />
-          </div>
-
-          {/* Process Steps */}
+          {/* Process Steps — image inline next to text */}
           <div className="process-journey">
             <div className="process-step">
               <div className="step-number">1</div>
               <div className="step-content">
                 <h3>Understand Health History</h3>
-                <Image src={`${IMG}/part2/careplan_journey_health_history_mobile.png`} alt="Understand Health History" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_health_history_web.png`} alt="Understand Health History" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>The beginning of any care plan process, whether creation or review, requires an understanding of the patient&apos;s health history. This should be summative in nature, and include basic information such as demographics, care team, vitals, problems, allergies, medications, therapies, notable encounters or procedures, and an indication of whether an advance care plan is in place. It is important to keep a patient summary up to date so that any care professional can reference it in an emergency.</p>
               </div>
             </div>
@@ -96,7 +85,7 @@ export default function CarePlansPart2Page() {
               <div className="step-number">2</div>
               <div className="step-content">
                 <h3>Identify Health Concerns</h3>
-                <Image src={`${IMG}/part2/careplan_journey_identify_health_concerns_mobile.png`} alt="Identify Health Concerns" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_identify_health_concerns_web.png`} alt="Identify Health Concerns" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>The next step is to identify what the current problems or health concerns are. This can involve reviewing symptomology, eating habits, physical activity, sleep habits, psychological issues, management of medication, sexual health, cessation of bad habits, management of any other daily activity, or any social or environmental factors on health. Collection of vitals might also be involved in the identification of health concerns.</p>
               </div>
             </div>
@@ -105,7 +94,7 @@ export default function CarePlansPart2Page() {
               <div className="step-number">3</div>
               <div className="step-content">
                 <h3>Set Goals</h3>
-                <Image src={`${IMG}/part2/careplan_journey_set_goals_mobile.png`} alt="Set Goals" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_set_goals_web.png`} alt="Set Goals" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>Goals are set to improve or resolve the identified health problems by the next review period. SMART goals (specific, measurable, achievable, realistic, time oriented) help break down goals into smaller specific steps. Goals should also be measured in a way that&apos;s quantifiable so that changes can be seen over a practice timeframe. These can include both patient defined goals such as longevity, function, comfort, etc., and clinician defined goals.</p>
               </div>
             </div>
@@ -114,7 +103,7 @@ export default function CarePlansPart2Page() {
               <div className="step-number">4</div>
               <div className="step-content">
                 <h3>Instruct and Intervene</h3>
-                <Image src={`${IMG}/part2/careplan_journey_instruct_mobile.png`} alt="Instruct and Intervene" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_instruct_web.png`} alt="Instruct and Intervene" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>After the desired outcomes are specified, the interventions and instructions on how to achieve those goals can be delivered. Instructions are educational directions to the patient/other providers about how to care for the patient&apos;s condition, what to do at home, when to call for help, additional appointments, testing, medication changes/instructions, among others. Interventions are specified actions taken as steps toward achieving care plan goals. This can include administration of physical treatment, creation or adjustment to the medication plan, prescribed activities or community/social services, or removal of barriers to success.</p>
               </div>
             </div>
@@ -123,7 +112,7 @@ export default function CarePlansPart2Page() {
               <div className="step-number">5</div>
               <div className="step-content">
                 <h3>Enlist Care Team</h3>
-                <Image src={`${IMG}/part2/careplan_journey_care_team_mobile.png`} alt="Enlist Care Team" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_care_team_web.png`} alt="Enlist Care Team" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>A team of individuals should be enlisted in the care of the patient. The care team includes both professional parties who manage and/or provide care, including medical practitioners, nurses, allied health practitioners (physiotherapist, speech therapist psychologist, pharmacist, etc.), social workers, and care managers; as well as non-professional members such as caregivers, family, friends, and the patient themselves. It should be determined by the patient which care team members are granted access to his or her health information.</p>
               </div>
             </div>
@@ -132,7 +121,7 @@ export default function CarePlansPart2Page() {
               <div className="step-number">6</div>
               <div className="step-content">
                 <h3>Specify Outcomes to Review</h3>
-                <Image src={`${IMG}/part2/careplan_journey_specify_review_mobile.png`} alt="Specify Outcomes to Review" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_specify_review_web.png`} alt="Specify Outcomes to Review" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>It is important to set a specific time for review of the care plan to determine whether patient needs are being met and if adjustments need to be made. Low level, relatively healthy individuals may only need an annual review of the care plan, whereas those with more severe chronic illnesses may need a much more frequent checkup. Specific metrics for followup should be determined based on the health concerns and goals set.</p>
               </div>
             </div>
@@ -141,7 +130,7 @@ export default function CarePlansPart2Page() {
               <div className="step-number">7</div>
               <div className="step-content">
                 <h3>Live the Care Plan</h3>
-                <Image src={`${IMG}/part2/careplan_journey_live_care_plan_mobile.png`} alt="Live the Care Plan" width={600} height={150} className="w-full h-auto mb-3 md:hidden" />
+                <Image src={`${IMG}/part2/careplan_journey_live_care_plan_web.png`} alt="Live the Care Plan" width={600} height={150} className="step-image" loading="eager" unoptimized />
                 <p>The most important part of the care plan process is how the patient implements it. They must translate guidance from their brief interactions with clinicians into sustained lifestyle behaviors to improve their own health. Self care makes up over 99% of healthcare, and it is only successful with a good care plan.</p>
               </div>
             </div>
