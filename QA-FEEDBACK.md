@@ -154,9 +154,9 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Header duplication — fixed in commit 652de04 (removed SetCaseStudyHero since page has own header)
 
 ## 43. Redesign Democracy
-- [ ] Really thin callouts are painful to read
-- [ ] Columns get thinner and text doesn't really fit
-- [ ] Need more graceful breakpoint — maybe max-width and margins then layout change? Wide margins on mobile is abrupt
+- [x] Really thin callouts are painful to read — raised stack-breakpoint for `.image-caption-side` from 768px to 1024px so the 35%-width caption stacks below the image earlier instead of getting squeezed
+- [x] Columns get thinner and text doesn't really fit — same fix; also raised `.aside-image` breakpoint from 860px to 1100px so the 40% sidebar stacks earlier
+- [~] Need more graceful breakpoint — addressed above with earlier stack breakpoints
 - [ ] Missing image (blank space where Handheld Voting System image should be)
 - [ ] Image overlay can't be done — use image first then text, or side by side
 - [ ] Text too wide and image too big in one section
