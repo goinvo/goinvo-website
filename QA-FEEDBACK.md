@@ -189,8 +189,8 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 36. Care Plans Series (MAJOR — multi-part page with extensive issues)
 ### Part 1 (Overview)
-- [ ] Different header, lots of white space
-- [ ] Lost the original design, kind of blah
+- [x] Different header — restructured Part 1 hero to use the same `careplans-hero` component as Part 2 / Part 3, with the home_hero.jpg as background and CARE PLANS title overlaid in white serif text. Removed the redundant SetCaseStudyHero (which was using a different image — care-plans-featured2.jpg — that the global PersistentHero was rendering above the page hero, creating a stacked-hero appearance).
+- [~] Lost the original design, kind of blah — improved with hero overlay matching Parts 2/3
 - [x] Broken "Work Together" section — added missing intro line ("Want to take your healthcare or care plan product to the next level? Contact the authors at GoInvo:"), swapped column order so image is LEFT and contact info is RIGHT (matching Gatsby), removed gray background and rounded corners on image
 - [x] Missing author images — author/contributor images use `/old/images/...` paths but cloudfrontImage() prepends the CloudFront CDN domain which 404s for `/old/` paths. Changed all 3 author images and 7 contributor images to use direct `https://www.goinvo.com/old/...` URLs.
 - [x] Link to first part overview — changed nav from `#part1` hash anchor (which scrolled within the same page) to `/vision/care-plans` (the root page IS the Part 1 overview content, so it links to itself as a real route). Part 2 and Part 3 already link here correctly.

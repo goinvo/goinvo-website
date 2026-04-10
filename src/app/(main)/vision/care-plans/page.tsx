@@ -6,7 +6,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Author } from '@/components/ui/Author'
 import { Button } from '@/components/ui/Button'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import './careplans.css'
 
 export const metadata: Metadata = {
   title: 'The Care Plan Series',
@@ -17,18 +17,21 @@ export const metadata: Metadata = {
 export default function CarePlansPage() {
   return (
     <div>
-      <SetCaseStudyHero image={cloudfrontImage('/images/features/care-plans/care-plans-featured2.jpg')} />
-
-      {/* Hero Image */}
-      <section>
-        <Image
-          src="https://www.goinvo.com/old/images/features/careplans/home_hero.jpg"
-          alt="The Care Plan Series"
-          width={1400}
-          height={600}
-          className="w-full h-auto"
-          priority
-        />
+      {/* Hero Image with title overlay */}
+      <section className="careplans-hero" style={{ minHeight: 480 }}>
+        <div className="hero-bg">
+          <Image
+            src="https://www.goinvo.com/old/images/features/careplans/home_hero.jpg"
+            alt=""
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+        <div className="hero-content">
+          <p className="big-title">CARE</p>
+          <p className="big-title">PLANS</p>
+        </div>
       </section>
 
       {/* Series Navigation */}
