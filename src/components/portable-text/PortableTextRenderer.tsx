@@ -287,27 +287,48 @@ const components: PortableTextComponents = {
       const hasText = textBlocks.length > 0
       const hasImages = images.length > 0
 
-      // Storyboard layout: image on top, text below (for comic-strip-style sequences)
+      // Storyboard layout: image-on-top text-below cells in a 2-column grid
+      // Items should alternate: image, text, image, text, ...
+      // Each [image, text] pair becomes one cell in the 2-col grid
       if (isStoryboard && hasText && hasImages) {
-        const imageItems = items.filter(i => i._type === 'image' && i.asset?._ref)
-        const textItems = items.filter(i => i._type !== 'image' || !i.asset?._ref)
+        // Group items into [image, text] cells
+        const cells: { image: any; text: any[] }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+        let currentCell: { image: any; text: any[] } | null = null // eslint-disable-line @typescript-eslint/no-explicit-any
+        for (const item of items) {
+          if (item._type === 'image' && item.asset?._ref) {
+            if (currentCell) cells.push(currentCell)
+            currentCell = { image: item, text: [] }
+          } else if (currentCell) {
+            currentCell.text.push(item)
+          }
+        }
+        if (currentCell) cells.push(currentCell)
+
+        // Single cell: render image full-width with text below (single-image storyboard)
+        // Multiple cells: render as 2-col grid
+        const isMulti = cells.length >= 2
         return (
           <ArticleReveal intensity="visual">
             <figure className={cn('my-8', bgClasses[bg])}>
-              {imageItems.map((item) => {
-                const imgUrl = urlForImage(item).width(800).url()
-                return (
-                  <img
-                    key={item._key}
-                    src={imgUrl}
-                    alt={item.alt || ''}
-                    loading="lazy"
-                    className="w-full h-auto mb-4"
-                  />
-                )
-              })}
-              <div className="[&_p]:my-2">
-                <PortableText value={textItems} components={components} />
+              <div className={cn('grid gap-6', isMulti ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
+                {cells.map((cell) => {
+                  const imgUrl = urlForImage(cell.image).width(800).url()
+                  return (
+                    <div key={cell.image._key} className="m-0">
+                      <img
+                        src={imgUrl}
+                        alt={cell.image.alt || ''}
+                        loading="lazy"
+                        className="w-full h-auto"
+                      />
+                      {cell.text.length > 0 && (
+                        <div className="mt-2 [&_p]:my-2 [&_p]:text-base [&_p]:text-gray">
+                          <PortableText value={cell.text} components={components} />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </figure>
           </ArticleReveal>
