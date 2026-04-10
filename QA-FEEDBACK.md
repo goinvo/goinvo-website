@@ -147,7 +147,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Feature cards — instead of just "Feature" label — for vision features, the `client` field is the literal string "Feature". CaseStudyCard now hides client for vision section and falls back to `description` when caption is empty. Affects all upNext sections globally.
 
 ## 47. Prior Auth
-- [ ] Bigger images needed
+- [x] Bigger images needed — changed all 6 body images from size=large (75% of container = 533px) to size=full (100% = 711px), matching Gatsby exactly. Sanity content patch.
 - [x] Missing solution header — inserted sectionTitle Solution before "Patient Information Upfront" h4 (also removed erroneous mid-page "Results" h3 that was added in commit 652de04 but isn't in Gatsby)
 
 ## 44. Understanding Ebola
