@@ -26,8 +26,10 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
     : undefined
 
   // Higher-res URL for the hero (overlay morph + PersistentHero)
+  // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
+  // minimize top/bottom cropping at desktop widths
   const heroImageUrl = caseStudy.image?.asset
-    ? urlForImage(caseStudy.image).width(1600).height(900).url()
+    ? urlForImage(caseStudy.image).width(1600).height(564).url()
     : undefined
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -29,8 +29,10 @@ export default async function VisualStorytellingPage() {
 
   if (!feature) notFound()
 
+  // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
+  // minimize top/bottom cropping at desktop widths
   const heroImageUrl = feature.image
-    ? urlForImage(feature.image).width(1600).height(900).url()
+    ? urlForImage(feature.image).width(1600).height(564).url()
     : null
 
   let content = feature.content || []
