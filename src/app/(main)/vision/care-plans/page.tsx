@@ -181,6 +181,8 @@ export default function CarePlansPage() {
                 width={600}
                 height={400}
                 className="w-full h-auto"
+                loading="eager"
+                unoptimized
               />
             </div>
             <div className="space-y-3">
@@ -191,6 +193,8 @@ export default function CarePlansPage() {
                   width={24}
                   height={24}
                   className="w-5 h-5 object-contain"
+                  loading="eager"
+                  unoptimized
                 />
                 <a href="mailto:info@goinvo.com" className="text-primary hover:underline">info@goinvo.com</a>
               </div>
@@ -201,6 +205,8 @@ export default function CarePlansPage() {
                   width={24}
                   height={24}
                   className="w-5 h-5 object-contain"
+                  loading="eager"
+                  unoptimized
                 />
                 <a href="tel:6178037043" className="text-primary hover:underline">617-803-7043</a>
               </div>
@@ -211,6 +217,8 @@ export default function CarePlansPage() {
                   width={24}
                   height={24}
                   className="w-5 h-5 object-contain mt-1"
+                  loading="eager"
+                  unoptimized
                 />
                 <span className="text-gray">661 Massachusetts Ave, 3rd Floor, Arlington MA, 02476</span>
               </div>
