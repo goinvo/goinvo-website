@@ -270,6 +270,7 @@ const components: PortableTextComponents = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
       const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2 // 2:1 and 1:2 also count as 2
+      const isStoryboard = value.layout === 'storyboard'
       const bg = value.background || 'none'
       const sizeClass = value.size === 'wide' ? 'columns-wide' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
       // Wrapper function to apply size override
@@ -285,6 +286,33 @@ const components: PortableTextComponents = {
       const textBlocks = items.filter(i => i._type === 'block')
       const hasText = textBlocks.length > 0
       const hasImages = images.length > 0
+
+      // Storyboard layout: image on top, text below (for comic-strip-style sequences)
+      if (isStoryboard && hasText && hasImages) {
+        const imageItems = items.filter(i => i._type === 'image' && i.asset?._ref)
+        const textItems = items.filter(i => i._type !== 'image' || !i.asset?._ref)
+        return (
+          <ArticleReveal intensity="visual">
+            <figure className={cn('my-8', bgClasses[bg])}>
+              {imageItems.map((item) => {
+                const imgUrl = urlForImage(item).width(800).url()
+                return (
+                  <img
+                    key={item._key}
+                    src={imgUrl}
+                    alt={item.alt || ''}
+                    loading="lazy"
+                    className="w-full h-auto mb-4"
+                  />
+                )
+              })}
+              <div className="[&_p]:my-2">
+                <PortableText value={textItems} components={components} />
+              </div>
+            </figure>
+          </ArticleReveal>
+        )
+      }
 
       // Detect alternating image-text pairs (gallery with captions below each image)
       // Pattern: [image, text, image, text, ...] → render as image grid with captions

@@ -49,6 +49,8 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Button hierarchy/spacing/uneven sizes — bumped font-size from 14px to 15px (matching Gatsby), added `button--block` to the ARPHA-H/Github button pair so both buttons fill their column to 50% width (were 320px vs 356px), and added 0.5rem column padding for a 16px gap between adjacent buttons.
 
 ## 9. Healthcare AI
+- [x] Text rendered right of images instead of under — added a new `storyboard` layout option to the columns Sanity schema. The renderer treats it as a vertical stack: image full-width on top, text below as caption. Applied to all 6 storyboard columns blocks (Mental Health Support sequence). Now matches Gatsby's image-above-text caption style.
+
 - [x] Storyboard images rendering stacked instead of side-by-side — fixed columns renderer
 - [ ] Not using same preview images for videos
 - [x] Chat image too narrow — converted columns(2) wrapper to standalone image block with caption (Sanity content patch)
