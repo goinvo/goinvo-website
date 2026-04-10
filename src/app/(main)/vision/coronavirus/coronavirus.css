@@ -586,15 +586,20 @@
   width: 50%;
   vertical-align: top;
 }
+.coronavirus .mask-half .pro-con {
+  margin-bottom: 1.5rem;
+}
 .coronavirus .mask-half .pro-con p {
   display: inline-block;
   width: 75%;
+  vertical-align: middle;
 }
 .coronavirus .mask-half .pro-con .pro-con-icon {
   display: inline-block;
   height: 44px;
   width: 44px;
   margin-right: 20px;
+  vertical-align: middle;
 }
 
 /* --- Action Plan background --- */
