@@ -92,7 +92,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Mobile version of contributors/burnout illustration should show text list of contributors (desktop image reveals names that mobile crops)
 
 ## hGraph (Case Study)
-- [ ] All-caps too much
+- [x] All-caps too much — category tags were rendered as uppercase pills ("PATIENT ENGAGEMENT", "OPEN SOURCE", "HEALTHCARE"). Gatsby renders them as plain comma-separated text after "Tags:" label. Changed CaseStudyContent to match.
 
 ## 24. Determinants of Health
 - [ ] Why different style of buttons? (should match Gatsby button style)
