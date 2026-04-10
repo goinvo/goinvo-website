@@ -30,7 +30,7 @@ console.log(`Scanning ${features.length} features...\n`)
 let totalFixed = 0
 let pagesFixed = 0
 
-const isStrong = (c) => c.marks?.includes('strong')
+const isStrong = (c) => c.marks?.includes('strong') || c.marks?.includes('em')
 const isPlain = (c) => !c.marks?.length || (c.marks?.length === 1 && c.marks[0] === 'em')
 
 for (const doc of features) {
