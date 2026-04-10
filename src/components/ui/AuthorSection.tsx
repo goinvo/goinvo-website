@@ -5,7 +5,8 @@ import type { TeamMember } from '@/types'
 /** Author credit — either a plain TeamMember or a wrapper with roleOverride */
 interface AuthorCredit {
   roleOverride?: string
-  author?: TeamMember
+  link?: string
+  author?: TeamMember & { social?: { linkedin?: string; twitter?: string; website?: string } }
   // Backward compat: plain TeamMember fields
   _id?: string
   name?: string
@@ -23,11 +24,14 @@ interface AuthorSectionProps {
 }
 
 /** Normalize both old (plain ref) and new (authorCredit object) shapes */
-function resolveAuthor(credit: AuthorCredit): { member: TeamMember; displayRole: string } | null {
+function resolveAuthor(credit: AuthorCredit): { member: TeamMember; displayRole: string; link?: string } | null {
   if (credit.author) {
+    // Use credit-level link if present, otherwise fall back to author's social.linkedin
+    const link = credit.link || credit.author.social?.linkedin || undefined
     return {
       member: credit.author,
       displayRole: credit.roleOverride || credit.author.role || 'GoInvo',
+      link,
     }
   }
   if (credit._id && credit.name) {
@@ -54,7 +58,7 @@ function extractText(blocks: unknown): string {
 export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSectionProps) {
   if (!authors || authors.length === 0) return null
 
-  const resolved = authors.map(resolveAuthor).filter(Boolean) as { member: TeamMember; displayRole: string }[]
+  const resolved = authors.map(resolveAuthor).filter(Boolean) as { member: TeamMember; displayRole: string; link?: string }[]
   if (resolved.length === 0) return null
 
   // Determine section heading
@@ -176,7 +180,13 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
             )}
             <div>
               <p>
-                <strong>{r.member.name}</strong>
+                {r.link ? (
+                  <a href={r.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                    <strong>{r.member.name}</strong>
+                  </a>
+                ) : (
+                  <strong>{r.member.name}</strong>
+                )}
                 <span className="text-gray">, {r.displayRole}</span>
               </p>
               {bio && <p className="text-gray mt-1">{bio}</p>}

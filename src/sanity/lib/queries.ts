@@ -154,7 +154,8 @@ export const featureBySlugQuery = groq`
     },
     "contributors": contributors[] {
       roleOverride,
-      "author": author-> { _id, name, role, bio, image }
+      link,
+      "author": author-> { _id, name, role, bio, image, social }
     },
     specialThanks,
     showAboutGoInvo,

@@ -180,6 +180,7 @@ export default defineType({
           fields: [
             { name: 'author', type: 'reference', to: [{ type: 'teamMember' }] },
             { name: 'roleOverride', type: 'string', title: 'Role Override', description: 'Contributor-specific role. Leave blank to use default.' },
+            { name: 'link', type: 'url', title: 'External Link', description: 'Optional link to LinkedIn / website for this contributor.' },
           ],
           preview: {
             select: { title: 'author.name', subtitle: 'roleOverride' },

@@ -59,7 +59,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Links open in new tabs (global fix)
 - [x] Authors listed vertically (linebreaks added)
 - [x] Spaces between links and periods — stripped trailing space from "National Cancer Plan " and "CancerNavigator@goinvo.com " link spans (Sanity content patch)
-- [ ] Missing contributor links (not critical per Jen)
+- [x] Missing contributor links — root cause: the contributor block already had `markDefs` with the LinkedIn URLs but the spans weren't tagged with the marks. Applied the existing markDefs to Grace Cordovano / Wendi Cross / Daniel Ngo spans. Also added an optional `link` field to the `contributorCredit` schema and the AuthorSection now respects per-contributor `link` or falls back to `social.linkedin`.
 
 ## 12. Living Health Lab
 - [x] Missing content after "Next Steps: Digital Design" (114 lines added)
