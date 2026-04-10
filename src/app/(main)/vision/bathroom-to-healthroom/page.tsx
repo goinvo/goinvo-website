@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { BackgroundVideo } from './BackgroundVideo'
+import { DateSlider } from './DateSlider'
 import './healthroom.css'
 
 const IMG_BASE =
@@ -509,45 +510,15 @@ export default function BathroomToHealthroomPage() {
               data, and design crash together.
             </p>
 
-            {/* Sensor date images — static grid instead of slider */}
-            <div className="slider" id="dates">
-              <div className="slider-aside caption">
-                <p>
-                  Sensors are exploding. They&rsquo;re everywhere and
-                  proliferating in my house. The DARPA line from the 1980s is
-                  catching up: smart dust is all around us.
-                </p>
-              </div>
-              <div className="slider-contents">
-                <div style={{ marginBottom: '2em' }}>
-                  <Img src="dates/1985.png" alt="Sensors in 1985" />
-                  <p
-                    className="caption"
-                    style={{ textAlign: 'center', marginTop: '0.5em' }}
-                  >
-                    1985
-                  </p>
-                </div>
-                <div style={{ marginBottom: '2em' }}>
-                  <Img src="dates/2015.png" alt="Sensors in 2015" />
-                  <p
-                    className="caption"
-                    style={{ textAlign: 'center', marginTop: '0.5em' }}
-                  >
-                    2015
-                  </p>
-                </div>
-                <div style={{ marginBottom: '2em' }}>
-                  <Img src="dates/2025.png" alt="Sensors in 2025" />
-                  <p
-                    className="caption"
-                    style={{ textAlign: 'center', marginTop: '0.5em' }}
-                  >
-                    2025
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Sensor date images — interactive slider matching legacy */}
+            <DateSlider
+              caption="Sensors are exploding. They’re everywhere and proliferating in my house. The DARPA line from the 1980s is catching up: smart dust is all around us."
+              slides={[
+                { year: '1985', src: legacyImage('dates/1985.png'), alt: 'Sensors in 1985' },
+                { year: '2015', src: legacyImage('dates/2015.png'), alt: 'Sensors in 2015' },
+                { year: '2025', src: legacyImage('dates/2025.png'), alt: 'Sensors in 2025' },
+              ]}
+            />
 
             <p>
               What we learn from the design of personal wearable sensors will
