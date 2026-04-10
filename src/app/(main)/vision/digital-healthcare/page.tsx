@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function DigitalHealthcarePage() {
   return (
-    <div className="digital-healthcare pt-[var(--spacing-header-height)]">
+    <div className="digital-healthcare pt-[var(--spacing-header-height)] mt-8 md:mt-12">
       {/* ===== HERO ===== */}
       <div className="overall-header">
         <div className="title">
