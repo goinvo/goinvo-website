@@ -129,17 +129,17 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Missing care plans feature card for "up next" (if available)
 
 ## 51. Maya EHR
-- [ ] Missing solution and results headers (may be extraneous at this point — pattern across case studies)
+- [x] Missing solution and results headers — inserted sectionTitle Solution before "End-to-end workflow designed" h4 and Results before "Shipped software" h4
 
 ## 50. MITRE SHR
-- [ ] Missing solution header
-- [ ] Missing results header
+- [x] Missing solution header — inserted sectionTitle Solution before "Create a visual language for the SHR" h4
+- [x] Missing results header — inserted sectionTitle Results before "HL7/FHIR adoption" h4
 
 ## 49. All of Us
 - [ ] Not a fan of how header images are cropped — losing a lot at any browser size
 - [ ] Missing an image
 - [ ] Could images make use of more of the width?
-- [ ] Missing results header
+- [x] Missing results header — inserted sectionTitle Results before "Impacting 750k..." paragraph
 - [x] References had duplicated link text — cleaned URL from title text
 
 ## 46. Ipsos Facto
@@ -148,7 +148,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 47. Prior Auth
 - [ ] Bigger images needed
-- [ ] Missing solution header
+- [x] Missing solution header — inserted sectionTitle Solution before "Patient Information Upfront" h4 (also removed erroneous mid-page "Results" h3 that was added in commit 652de04 but isn't in Gatsby)
 
 ## 44. Understanding Ebola
 - [ ] Header duplication (same SetCaseStudyHero + own header pattern as other legacy pages)
