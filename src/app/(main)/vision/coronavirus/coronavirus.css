@@ -531,10 +531,12 @@
 }
 .coronavirus .corona-timeline .timepoint ul {
   margin: 0 0 0 15px;
+  list-style-type: disc;
 }
 .coronavirus .corona-timeline .timepoint ul li {
   margin: 0;
   padding: 0;
+  display: list-item;
 }
 
 /* --- Close contact offset --- */
