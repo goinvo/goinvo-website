@@ -19,6 +19,8 @@ export const teamHeadshots: Record<string, string> = {
 
   // Alumni
   'Daniel Reeves': '/images/about/headshot-daniel-reeves.jpg',
+  'Edwin Choi': '/images/about/headshot-edwin-choi.jpg',
+  'Bryson Wong': '/images/about/headshot-bryson-wong.jpg',
   'Samantha Wuu': '/images/about/headshot-samantha-wuu.jpeg',
   'Shayla Nettey': '/images/about/headshot-shayla-nettey.jpg',
   'Amelia Luo': '/images/about/headshot-amelia.jpg',

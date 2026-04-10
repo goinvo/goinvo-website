@@ -101,7 +101,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Big sans-serif header "Individual Behavior" is weird — should be serif like Gatsby
 - [ ] Little sub-headers (Psychological Assets, etc.) weird as serif — font mismatch
 - [ ] Blue-on-blue contrast issue: grey text on blue background doesn't have good contrast
-- [ ] Missing Edwin's and Bryson's headshots
+- [x] Missing Edwin's and Bryson's headshots — added 'Edwin Choi' and 'Bryson Wong' mappings to team-headshots.ts (both CloudFront images exist: headshot-edwin-choi.jpg and headshot-bryson-wong.jpg).
 
 ## 25. Coronavirus (COVID-19)
 - [ ] Chart shows massive difference/undercount (static data vs Gatsby's live data — our 704M is final but chart component may show old March 2020 snapshot)
