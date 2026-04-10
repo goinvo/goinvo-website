@@ -52,7 +52,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Not using same preview images for videos
 - [ ] Chat image too narrow (should be full width with caption)
 - [ ] Text content differences
-- [ ] Authors + contributors ordering
+- [x] Authors + contributors ordering — moved Contributors block from content to specialThanks field (Authors now render BEFORE Contributors, matching Gatsby)
 
 ## 10. National Cancer Navigation
 - [x] Links open in new tabs (global fix)
