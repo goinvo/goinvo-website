@@ -1072,7 +1072,37 @@ export function UsHealthcareContent() {
             </div>
             <div className="row-item">
               <h3>3. Share</h3>
-              <p>Help spread the word by sharing this article with your network.</p>
+              <p>
+                <span className="social-buttons end">
+                  <a
+                    className="fb"
+                    href="https://www.facebook.com/sharer/sharer.php?u=http://www.goinvo.com/vision/healing-us-healthcare/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Share on Facebook"
+                  >
+                    Facebook
+                  </a>{' '}
+                  <a
+                    className="twitter"
+                    href="https://twitter.com/intent/tweet?url=http%3A%2F%2Fgoinvo.com%2Fvision%2Fhealing-us-healthcare%2F&hashtags=healthcare,design&via=goinvo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Share on Twitter"
+                  >
+                    Twitter
+                  </a>{' '}
+                  <a
+                    className="in"
+                    href="http://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Fgoinvo.com%2Fvision%2Fhealing-us-healthcare%2F&title=Healing%20U.S.%20Healthcare"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Share on LinkedIn"
+                  >
+                    LinkedIn
+                  </a>
+                </span>
+              </p>
             </div>
           </div>
         </article>
