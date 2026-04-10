@@ -57,7 +57,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 10. National Cancer Navigation
 - [x] Links open in new tabs (global fix)
 - [x] Authors listed vertically (linebreaks added)
-- [ ] Spaces between links and periods
+- [x] Spaces between links and periods — stripped trailing space from "National Cancer Plan " and "CancerNavigator@goinvo.com " link spans (Sanity content patch)
 - [ ] Missing contributor links (not critical per Jen)
 
 ## 12. Living Health Lab
