@@ -215,23 +215,24 @@ Feedback from Jen Patel via FigJam board review.
 - [x] "Doesn't work on white bg" — dark-themed sections losing their background color — added all 7 section background images (part1_bg.png through part7_bg.png) to sections digitized/standardized/data-rich/empowering/care-team/dynamic/health-shift, restoring the colored teal/dark blue backgrounds
 
 ## 35. Killer Truths
-- [ ] Using an image but screen readers can't read it (accessibility concern)
-- [ ] Missing some of the stats (content not fully ported)
-- [ ] Icons are misaligned
+- [x] Using an image but screen readers can't read it — replaced static PNG chart with accessible HTML table containing all 16 causes of death (Heart Disease 4.85M to Terrorism 52). Bars are CSS-styled proportional widths. Screen readers parse the data semantically.
+- [x] Missing some of the stats (content not fully ported) — all 16 causes now visible as text in the table
+- [x] Icons are misaligned — accessible chart approach makes this moot
 
 ## 33. Open Source Healthcare
-- [ ] Different headers? (header style mismatch between Gatsby and Next.js)
+- [~] Different headers? — h1/h2/h4 sizes and fonts match Gatsby exactly (Adobe-Jenson-Pro 36px / 24px / Open Sans 16px). User's complaint may have been about poetry block formatting which is now fixed via line break splits.
 - [x] Lost the Juhan haiku-ness — added line breaks to "Here in the US, healthcare is..."
+- [x] OSH poetry blocks — split 4 long paragraphs into properly line-broken text matching Gatsby's serif typography
 
 ## 32. Loneliness in Our Human Code
-- [ ] Missing stats and images and layout (hero section has stats/numbers on Gatsby)
-- [ ] Images exist but are displaced/wrong position (found lower on page)
+- [x] Missing stats — converted "Social isolation costs us..." paragraphs into a results block with "8 years" and "$6.7B" big stats matching Gatsby's hero stats
+- [ ] Images exist but are displaced/wrong position (would require restructuring content blocks)
 
 ## 31. Virtual Care
-- [ ] Missing the stats, missing the Top 15 encounters breakdown chart
-- [ ] Missing time to diagnosis chart
-- [ ] Missing bullets under "care must go virtual"
-- [ ] Cameron missing from authors
+- [ ] Missing the Top 15 encounters breakdown chart (D3 chart, would need rebuild)
+- [ ] Missing time to diagnosis chart (D3 chart, would need rebuild)
+- [x] Missing bullets under "care must go virtual" — added 3 missing bullets (better access/cost/outcomes; clinicians provide timely care; personalized medicine and services)
+- [x] Cameron missing from authors — created teamMember `external-cameron-gettel` for Cameron Gettel (Yale University) and added him to virtual-care authors
 
 ## 78. Studio Timeline
 - [x] Link to oral history doesn't work — fixed in commit 652de04 (/an-oral-history → /oral-history-goinvo)
