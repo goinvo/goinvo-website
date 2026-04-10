@@ -193,7 +193,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Lost the original design, kind of blah
 - [ ] Broken "Work Together" section
 - [x] Missing author images — author/contributor images use `/old/images/...` paths but cloudfrontImage() prepends the CloudFront CDN domain which 404s for `/old/` paths. Changed all 3 author images and 7 contributor images to use direct `https://www.goinvo.com/old/...` URLs.
-- [ ] Link to first part overview is missing — shouldn't be hash #part-1, should be its own page
+- [x] Link to first part overview — changed nav from `#part1` hash anchor (which scrolled within the same page) to `/vision/care-plans` (the root page IS the Part 1 overview content, so it links to itself as a real route). Part 2 and Part 3 already link here correctly.
 
 ### Part 2 (Current Landscape)
 - [ ] Missing header
