@@ -100,7 +100,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts)
 - [x] Big sans-serif header "Individual Behavior" — reduced from text-xl (20px) to 1.17em (~18.72px matching Gatsby's h3 default)
 - [x] Little sub-headers (Psychological Assets, etc.) — changed from default serif 24px to font-sans text-base font-bold (16px, matching Gatsby's h4)
-- [ ] Blue-on-blue contrast issue: grey text on blue background doesn't have good contrast
+- [x] Blue-on-blue contrast — `.background--blue` was `#dff0f5` (distinctly blue); Gatsby uses `#f8fafe` (nearly white). Changed to match. The gray text now has proper contrast.
 - [x] Missing Edwin's and Bryson's headshots — added 'Edwin Choi' and 'Bryson Wong' mappings to team-headshots.ts (both CloudFront images exist: headshot-edwin-choi.jpg and headshot-bryson-wong.jpg).
 
 ## 25. Coronavirus (COVID-19)
