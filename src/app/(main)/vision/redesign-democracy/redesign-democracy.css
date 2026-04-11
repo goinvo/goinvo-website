@@ -165,11 +165,13 @@
 
 .redesign-democracy .govt-slide .slide-text {
   padding: 2em;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 @media (min-width: 1024px) {
   .redesign-democracy .govt-slide .slide-text {
-    padding: 2em 8em;
+    padding: 2em 4em;
   }
 }
 
@@ -348,8 +350,9 @@
 
 .redesign-democracy .voting-slide {
   padding: 2em;
+  max-width: 900px;
+  margin: 0 auto 1em;
   overflow: hidden;
-  margin-bottom: 1em;
 }
 
 .redesign-democracy .voting-slide .section-hr {
