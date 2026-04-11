@@ -3,6 +3,12 @@
 import { useCallback, useState, useRef, useEffect } from 'react'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { BostonCostComparisonChart } from './BostonCostComparisonChart'
+import {
+  SpendingOverTimeChart,
+  GdpVsCapitaChart,
+  QualityVsCapitaChart,
+  HealthcareWasteChart,
+} from './HuhCharts'
 
 /* ── Image helpers ──────────────────────────────── */
 const IMG = 'https://www.goinvo.com/old/images/features/us-healthcare'
@@ -638,9 +644,7 @@ export function UsHealthcareContent() {
             <a href="#s27" id="s27_ref"><sup>[27]</sup></a>
           </p>
           <p className="note2">*data are presented on a log scale</p>
-          <div className="chart-placeholder">
-            Interactive chart: Healthcare waste by category (requires D3.js)
-          </div>
+          <HealthcareWasteChart />
         </div>
 
         {/* ── Symptoms continued (hospital) ──────── */}
@@ -809,10 +813,7 @@ export function UsHealthcareContent() {
               growing at a faster rate than in other countries.
               <a href="#s41" id="s41_ref"><sup>[41]</sup></a>
             </p>
-            <div className="chart-placeholder">
-              Interactive chart: Health spending per capita over time by country
-              (requires D3.js)
-            </div>
+            {activeTab === 'tab-1' && <SpendingOverTimeChart />}
           </div>
 
           <div className={`tab-content${activeTab === 'tab-2' ? ' current' : ''}`} id="tab-2">
@@ -821,10 +822,7 @@ export function UsHealthcareContent() {
               UK spent less than 10%.
               <a href="#s42" id="s42_ref"><sup>[42]</sup></a>
             </p>
-            <div className="chart-placeholder">
-              Interactive chart: GDP vs health spending per capita (requires
-              D3.js)
-            </div>
+            {activeTab === 'tab-2' && <GdpVsCapitaChart />}
           </div>
 
           <div className={`tab-content${activeTab === 'tab-3' ? ' current' : ''}`} id="tab-3">
@@ -832,10 +830,7 @@ export function UsHealthcareContent() {
               The U.S. spends the most money but ranks last in quality.
               <a href="#s43" id="s43_ref"><sup>[43]</sup></a>
             </p>
-            <div className="chart-placeholder">
-              Interactive chart: Quality vs health spending per capita (requires
-              D3.js)
-            </div>
+            {activeTab === 'tab-3' && <QualityVsCapitaChart />}
           </div>
         </div>
 

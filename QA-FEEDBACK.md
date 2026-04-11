@@ -176,15 +176,12 @@ Feedback from Jen Patel via FigJam board review.
 ## 39. Healing US Healthcare (MAJOR — interactive charts missing)
 **Live URL: https://www.goinvo.com/features/us-healthcare/** (legacy `/features/` path, never migrated to `/vision/` URL scheme — that's why our staging gets 404 from `goinvo.com/vision/healing-us-healthcare/`).
 - [x] Chart didn't make it over (map/spending chart) — restored the **Boston pneumonia treatment cost comparison map** in the Symptoms section. The original was a D3 geo projection of Boston with 9 hospital circles sized by treatment cost ($9,736 St Elizabeth's → $31,168 Mass General). Built a hand-rolled SVG version (no D3 dependency, ~6KB) with hover tooltip and `<details>` accessibility table.
-- [~] Source data for the other 4 missing visualizations is now available — downloaded all 5 chart CSVs from the live `/features/us-healthcare/data/` path into `public/data/healing-us-healthcare/`:
-  - `data_capita.csv` — health spending per capita over time, 55 years × 43 countries (Spending Over Time tab)
-  - `gdpvcapita.csv` — country capita vs GDP scatter (Spending vs. GDP tab)
-  - `qualityvcapita.csv` — country quality rank vs spending (Quality tab)
-  - `sankey.csv` — 51 rows for the Prescription action sankey diagram
-  - `data-waste.csv` — healthcare waste by category bar chart
-- [ ] Another chart bites the dust (healthcare spending bar chart) — data ready in `data_capita.csv`, follow-up component build needed
+- [x] Another chart bites the dust (healthcare spending bar chart) — restored as **SpendingOverTimeChart** in HuhCharts.tsx. Multi-line chart of healthcare spending per capita 1960–2014 across all 43 OECD countries from `data_capita.csv`. Hover any line to highlight a country and show its name + latest value at the line's tail. Default highlight: United States ($8,713 in 2013). 43 path elements, hand-rolled SVG with linear scales.
+- [x] This chart is gone gone gone (another chart completely missing) — restored as **HealthcareWasteChart** in HuhCharts.tsx. Bar chart with log-scale y-axis for the 10 procedures in `data-waste.csv` (Brand-Name Statins through Bone Density Scans). Three radio toggles already in the static page (`#dollarsWasted`, `#unnecessaryProcedures`, `#totalProcedures`) wire into a useEffect listener that switches the displayed metric. Default highlight: Brand-Name Statins ($5.8B wasted, 35% nonrecommended).
+- [x] **Bonus: also restored** the GDP-vs-capita and Quality-vs-capita scatter plots in tabs 2 and 3 of the Diagnosis section. Same `GenericScatterChart` component, configured differently:
+  - **GdpVsCapitaChart**: 39 countries from `gdpvcapita.csv`, x = % GDP, y = $/capita, circle radius = population. Default highlight: US.
+  - **QualityVsCapitaChart**: 11 countries from `qualityvcapita.csv` (Commonwealth Fund 2014 ranking), x = $/capita, y = quality rank (1 = best, integer y-ticks via new `yIntegerTicks` prop, y-axis inverted so #1 sits at top). UK is at the top (#1, ~$3,235), US is at bottom-right (#11, ~$8,713) — perfectly visualizing "spends the most but ranks last".
 - [ ] The OG timeline is broken anyway (shows error on Gatsby too) — Knight Lab Timeline JS pulling from a Google Spreadsheet. The QA explicitly says "broken anyway" so this is lowest priority. May need a static React timeline rebuilt from the spreadsheet content if recoverable.
-- [ ] This chart is gone gone gone (another chart completely missing) — refers to the **Healthcare Waste by category** chart, data ready in `data-waste.csv`, follow-up component build needed
 - [~] Missing content section (PARTICIPATE / Give Feedback section) — section already exists in code; added social share links (Facebook/Twitter/LinkedIn) that were missing from the Share row
 - [~] Also missing content (PARTICIPATE section + CREATING section) — Participate section exists; Creating section may refer to "Creators" h2 which also exists
 ![1775847221250](image/QA-FEEDBACK/1775847221250.png)
