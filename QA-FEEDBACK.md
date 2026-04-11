@@ -100,7 +100,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 24. Determinants of Health
 - [x] Why different style of buttons? — changed `.determinants-of-health .button--secondary` from filled teal `#007385` to outlined orange (transparent bg, `#E36216` text, `1px solid #FFB992` border, `6px 16px` padding, 15px font) matching Gatsby exactly
 - [x] Wrong icons for the chart — replaced 5 placeholder generic icons with the actual Gatsby SVGs (Individual Behavior, Social Circumstances, Genetics & Biology, Medical Care, Environment). Decoded from base64 in Gatsby HTML and saved to public/images/vision/determinants-of-health/.
-- [ ] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts)
+- [~] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts) — kept the custom SVG donut (works well, no library needed) but fixed the legend mismatch: removed duplicate "Tap the categories to explore" h2 (was rendered by both `page.tsx` and `DeterminantsChart.tsx`); switched the icon legend from a vertical-stacked 32×32 icon+label list to a horizontal row of 60×60 icon-only buttons matching Gatsby exactly. Active state is now `scale-110` instead of opacity dimming.
 - [x] Big sans-serif header "Individual Behavior" — reduced from text-xl (20px) to 1.17em (~18.72px matching Gatsby's h3 default)
 - [x] Little sub-headers (Psychological Assets, etc.) — changed from default serif 24px to font-sans text-base font-bold (16px, matching Gatsby's h4)
 - [x] Blue-on-blue contrast — `.background--blue` was `#dff0f5` (distinctly blue); Gatsby uses `#f8fafe` (nearly white). Changed to match. The gray text now has proper contrast.

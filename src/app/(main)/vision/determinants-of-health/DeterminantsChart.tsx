@@ -111,25 +111,22 @@ export function DeterminantsChart() {
 
   return (
     <div className="max-width max-width--md content-padding mx-auto my-12">
-      <h2 className="header-lg text-center mb-4">
-        Tap the categories to explore
-      </h2>
-
-      {/* Legend buttons (vertical list, matching Gatsby) */}
-      <div className="flex flex-col sm:flex-row sm:justify-center gap-1 mb-6">
+      {/* Legend buttons — 60×60 icon-only horizontal row, matching Gatsby
+          (no labels next to icons; the donut chart segments are themselves
+          labeled). Hover/active is a subtle scale + opacity nudge so users
+          still discover the buttons are interactive. */}
+      <div className="flex flex-row justify-center items-center gap-6 mb-6 flex-wrap">
         {data.map((d, i) => (
           <button
             key={d.id}
             onClick={() => setActiveIndex(i)}
+            aria-label={d.title}
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg border-0 cursor-pointer transition-all bg-transparent',
-              activeIndex === i ? 'opacity-100' : 'opacity-60 hover:opacity-80'
+              'border-0 cursor-pointer transition-transform bg-transparent p-0',
+              activeIndex === i ? 'scale-110' : 'hover:scale-105'
             )}
           >
-            <img src={iconPaths[i]} alt={d.title} className="w-8 h-8" />
-            <span className="text-gray text-sm" style={{ textTransform: 'none', letterSpacing: 0 }}>
-              {d.shortTitle}
-            </span>
+            <img src={iconPaths[i]} alt={d.title} width={60} height={60} className="w-[60px] h-[60px]" />
           </button>
         ))}
       </div>
