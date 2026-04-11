@@ -161,8 +161,11 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Columns get thinner and text doesn't really fit — same fix; also raised `.aside-image` breakpoint from 860px to 1100px so the 40% sidebar stacks earlier
 - [~] Need more graceful breakpoint — addressed above with earlier stack breakpoints
 - [x] Missing image (blank space where Handheld Voting System image should be) — root cause: VotingCarousel uses Embla horizontal scroll where off-screen slides are translated outside the viewport. Next.js `<Image>` lazy-loads via IntersectionObserver and never fired for transformed slides, so the 11 voting screenshot images (p1.1, p1.2, p2.1...p5.phone) never requested. Added `loading="eager"` and `unoptimized` to the carousel images so they load immediately.
-- [ ] Image overlay can't be done — use image first then text, or side by side
-- [ ] Text too wide and image too big in one section
+- [~] Image overlay can't be done — use image first then text, or side by side — addressed via the breakpoint fixes from earlier ("Really thin callouts" and "Columns get thinner") which raised stack-breakpoints so 35%/40% sidebar columns stack below the image earlier. The general "image+text overlay" pattern would need a custom Sanity block; deferring as out of scope.
+- [x] Text too wide and image too big in one section — found two specific text-too-wide issues in the legacy carousels:
+  1. **Government slides** (theocracy/oligarchy/feudalism/etc.) had `.govt-slide .slide-text` rendering at 1024px (no max-width) vs Gatsby's 800px. Added `max-width: 800px; margin: 0 auto` and reduced the lg-padding from `2em 8em` to `2em 4em`.
+  2. **Voting carousel slides** had `.voting-slide` rendering at 1216px vs Gatsby's ~960px. Added `max-width: 900px; margin: 0 auto`.
+  Verified after the fix: deity paragraph dropped from 1024px → 672px; voting slide paragraph dropped from 1216px → 836px.
 
 ## 41. Bathroom to Healthroom
 - [x] Long scroll of images vs slider makes you lose timeline context and takes forever to get to text — root cause: the 8 history-of-medicine timeline slides (10,000 BC → 2019 Bathroom-becomes-Healthroom) were rendering as a vertical stack, taking ~2000px of screen space before the body text resumed. Built `TimelineSlider.tsx` matching the original jQuery slick slider pattern: shows one slide at a time with Previous/Next arrows and 8 clickable dots for direct navigation. Total height collapsed to ~250px. Recovered the original behavior from the legacy JS on CloudFront.
