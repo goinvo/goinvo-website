@@ -226,7 +226,7 @@ Feedback from Jen Patel via FigJam board review.
 
 ## 32. Loneliness in Our Human Code
 - [x] Missing stats — converted "Social isolation costs us..." paragraphs into a results block with "8 years" and "$6.7B" big stats matching Gatsby's hero stats
-- [ ] Images exist but are displaced/wrong position (would require restructuring content blocks)
+- [x] Images exist but are displaced/wrong position — root cause was a missing primary author. Gatsby has 4 authors (Vanessa Li, Jen Patel, Juhan Sonin, Parsuree Vatanasirisuk) but Sanity only had 3 (missing Vanessa Li, who is the FIRST author with affiliation "University of Washington"). Created `external-vanessa-li` teamMember (with bio + uploaded headshot from CloudFront), prepended her ref to the loneliness feature's authors array. The "displaced images" symptom was the 4th author headshot being absent — the entire authors block was off-by-one.
 
 ## 31. Virtual Care
 - [ ] Missing the Top 15 encounters breakdown chart (D3 chart, would need rebuild)
