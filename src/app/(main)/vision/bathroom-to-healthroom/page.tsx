@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { BackgroundVideo } from './BackgroundVideo'
 import { DateSlider } from './DateSlider'
+import { LocationsSlider } from './LocationsSlider'
 import './healthroom.css'
 
 const IMG_BASE =
@@ -722,114 +723,48 @@ export default function BathroomToHealthroomPage() {
               </li>
             </ul>
 
-            {/* Locations interactive — static version */}
-            <div className="full" id="locations">
-              <div className="slider-graphic">
-                <Img
-                  src="locations/location-head.png"
-                  alt="Health sensing locations"
-                />
-              </div>
-              <div
-                id="locations-slider-controls"
-                style={{
-                  overflow: 'hidden',
-                  border: '2px solid black',
-                  borderLeft: 0,
-                  borderRight: 0,
-                  display: 'flex',
-                }}
-              >
-                {[
-                  'Market',
-                  'Bathroom',
-                  'Bedroom',
-                  'Dining Room',
-                  'Living Room',
-                  'Work',
-                ].map((label, i) => (
-                  <span
-                    key={label}
-                    style={{
-                      flex: 1,
-                      textAlign: 'center',
-                      padding: '4px',
-                      textTransform: 'uppercase',
-                      borderRight:
-                        i < 5 ? '2px solid #000' : 'none',
-                      fontSize: '0.8em',
-                    }}
-                  >
-                    {label}
-                  </span>
-                ))}
-              </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '1em',
-                  marginTop: '1em',
-                }}
-              >
-                <Img src="locations/market.png" alt="Market health sensing" />
-                <Img
-                  src="locations/bathroom.png"
-                  alt="Bathroom health sensing"
-                />
-                <Img src="locations/bedroom.png" alt="Bedroom health sensing" />
-                <Img
-                  src="locations/dining_room.png"
-                  alt="Dining room health sensing"
-                />
-                <Img
-                  src="locations/living_room.png"
-                  alt="Living room health sensing"
-                />
-                <Img src="locations/work.png" alt="Work health sensing" />
-              </div>
-              {/* Location cards */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '1em',
-                  marginTop: '1em',
-                }}
-              >
-                <Img
-                  src="locations/cards/market.png"
-                  alt="Market card"
-                  width={300}
-                  height={200}
-                />
-                <Img
-                  src="locations/cards/bathroom.png"
-                  alt="Bathroom card"
-                  width={300}
-                  height={200}
-                />
-                <Img
-                  src="locations/cards/bedroom.png"
-                  alt="Bedroom card"
-                  width={300}
-                  height={200}
-                />
-                <Img
-                  src="locations/cards/diningroom.png"
-                  alt="Dining room card"
-                  width={300}
-                  height={200}
-                />
-                <div>{/* Living room has no card in original */}</div>
-                <Img
-                  src="locations/cards/work.png"
-                  alt="Work card"
-                  width={300}
-                  height={200}
-                />
-              </div>
-            </div>
+            {/* Locations interactive — slider with popover cards, matching legacy */}
+            <LocationsSlider
+              headImage={legacyImage('locations/location-head.png')}
+              locations={[
+                {
+                  key: 'market',
+                  label: 'Market',
+                  scene: legacyImage('locations/market.png'),
+                  card: legacyImage('locations/cards/market.png'),
+                },
+                {
+                  key: 'bathroom',
+                  label: 'Bathroom',
+                  scene: legacyImage('locations/bathroom.png'),
+                  card: legacyImage('locations/cards/bathroom.png'),
+                },
+                {
+                  key: 'bedroom',
+                  label: 'Bedroom',
+                  scene: legacyImage('locations/bedroom.png'),
+                  card: legacyImage('locations/cards/bedroom.png'),
+                },
+                {
+                  key: 'dining',
+                  label: 'Dining Room',
+                  scene: legacyImage('locations/dining_room.png'),
+                  card: legacyImage('locations/cards/diningroom.png'),
+                },
+                {
+                  key: 'living',
+                  label: 'Living Room',
+                  scene: legacyImage('locations/living_room.png'),
+                  // Living room has no card in the original
+                },
+                {
+                  key: 'work',
+                  label: 'Work',
+                  scene: legacyImage('locations/work.png'),
+                  card: legacyImage('locations/cards/work.png'),
+                },
+              ]}
+            />
 
             <p>
               These are neat. Designers and engineers, we can do more, and we
