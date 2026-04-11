@@ -810,5 +810,26 @@ export default defineType({
         },
       ],
     }),
+    defineArrayMember({
+      name: 'customComponent',
+      title: 'Custom Component',
+      type: 'object',
+      description: 'Renders a hard-coded React component by name. Used for page-specific tables and visualizations that don\'t fit the generic block types.',
+      preview: {
+        select: { name: 'name' },
+        prepare({ name }) {
+          return { title: name || 'Custom Component', subtitle: 'Custom Component' }
+        },
+      },
+      fields: [
+        {
+          name: 'name',
+          title: 'Component name',
+          type: 'string',
+          description: 'Identifier the renderer dispatches on. Must match a known component (e.g. "virtualCareTop15Table").',
+          validation: (Rule) => Rule.required(),
+        },
+      ],
+    }),
   ],
 })

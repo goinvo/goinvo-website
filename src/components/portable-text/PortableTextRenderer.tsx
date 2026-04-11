@@ -11,6 +11,7 @@ import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
+import { VirtualCareTop15Table } from '@/components/portable-text/VirtualCareTop15Table'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -715,6 +716,25 @@ const components: PortableTextComponents = {
         </div>
       </ArticleReveal>
     ),
+    customComponent: ({ value }) => {
+      // Dispatch by name to a hard-coded React component. Used for
+      // page-specific tables and visualizations that don't fit the
+      // generic block types.
+      switch (value?.name) {
+        case 'virtualCareTop15Table':
+          return (
+            <ArticleReveal intensity="visual">
+              <VirtualCareTop15Table />
+            </ArticleReveal>
+          )
+        default:
+          return (
+            <div className="my-4 p-3 bg-yellow-50 border border-yellow-300 text-sm text-gray-700">
+              Unknown custom component: <code>{value?.name || '(no name)'}</code>
+            </div>
+          )
+      }
+    },
   },
   list: {
     bullet: ({ children }) => (
