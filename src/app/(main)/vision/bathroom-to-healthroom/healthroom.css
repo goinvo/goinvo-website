@@ -513,6 +513,63 @@
   z-index: 5;
 }
 
+/* ---- Timeline slider nav ---- */
+.healthroom-legacy #timeline {
+  position: relative;
+  margin-bottom: 2em;
+}
+.healthroom-legacy #timeline .slider-contents {
+  min-height: 240px;
+}
+.healthroom-legacy #timeline .slide-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1em 1.5rem;
+}
+.healthroom-legacy #timeline .timeline-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5em;
+  margin-top: 1em;
+  padding: 0 1.5rem;
+}
+.healthroom-legacy #timeline .timeline-arrow {
+  background: transparent;
+  border: 1px solid #999;
+  padding: 0.4em 1em;
+  font-size: 0.85em;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+.healthroom-legacy #timeline .timeline-arrow:hover:not(:disabled) {
+  background: #f4d37b;
+  border-color: #000;
+}
+.healthroom-legacy #timeline .timeline-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.healthroom-legacy #timeline .timeline-dots {
+  display: flex;
+  gap: 0.5em;
+}
+.healthroom-legacy #timeline .timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #666;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: all 200ms ease;
+}
+.healthroom-legacy #timeline .timeline-dot.active {
+  background: #f4d37b;
+  border-color: #000;
+  transform: scale(1.2);
+}
+
 /* ---- Locations interactive ---- */
 .healthroom-legacy #locations {
   position: relative;
