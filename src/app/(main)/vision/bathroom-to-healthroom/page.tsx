@@ -4,6 +4,7 @@ import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { BackgroundVideo } from './BackgroundVideo'
 import { DateSlider } from './DateSlider'
 import { LocationsSlider } from './LocationsSlider'
+import { TimelineSlider } from './TimelineSlider'
 import './healthroom.css'
 
 const IMG_BASE =
@@ -99,141 +100,140 @@ export default function BathroomToHealthroomPage() {
               <Img src="svg/timeline.svg" alt="Timeline" />
             </div>
 
-            {/* Timeline slides — static rendering of the 8 slides */}
-            <div id="timeline">
-              <span className="byline">Illustration By Sarah Kaiser</span>
-
-              <div className="slide one">
-                <div className="slide-content">
-                  <p>
-                    10,000 B.C.: The transition to agriculture was made necessary
-                    by gradually increasing population pressures due to the
-                    success of Homo sapiens&apos; prior hunting and gathering way
-                    of life. Also, at about the time population pressures were
-                    increasing, the last Ice Age ended, and many species of large
-                    game became extinct. Wild grasses and cereals began
-                    flourishing, making them prime candidates for the staple
-                    foods to be domesticated, given our previous familiarity with
-                    them.
-                  </p>
-                  <p className="source">
-                    Resource:{' '}
-                    <a href="http://www.beyondveg.com/nicholson-w/hb/hb-interview1c.shtml">
-                      beyondveg.com
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide two">
-                <div className="slide-content">
-                  <p>
-                    4000 B.C.: Environmental opportunities and challenges led to
-                    the formation of human groups. Sharing food, caring for
-                    infants, and building social networks helped our ancestors
-                    meet the daily challenges of their environments.
-                  </p>
-                  <p className="source">
-                    Resource:{' '}
-                    <a href="http://www2.sunysuffolk.edu/westn/humangroups.html">
-                      sunysuffolk.edu
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide three">
-                <div className="slide-content">
-                  <p>
-                    3000 B.C.: The earliest reports of surgical suture date back
-                    to 3000 BC in ancient Egypt, where physicians used stitches
-                    to close injuries, incisions and mummies.
-                  </p>
-                  <p className="source">
-                    Resource:{' '}
-                    <a href="http://en.wikipedia.org/wiki/Surgical_suture">
-                      wikipedia.org
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide four">
-                <div className="slide-content">
-                  <p>
-                    400 B.C.: Hippocrates emphasizes the importance of water
-                    quality to health and recommends boiling and straining water.
-                  </p>
-                  <p className="source">
-                    Resource:{' '}
-                    <a href="http://dec.alaska.gov/eh/dw/publications/historic.html">
-                      dec.alaska.gov
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide five">
-                <div className="slide-content">
-                  <h6 className="bold-title">1920: Modern medicine begins</h6>
-                  <p>
-                    Physicians no longer needed to ask permission of the church
-                    before starting their practice or performing surgery. Finally,
-                    reliable prescription drugs, and penicillin began to curb
-                    sickness before surgery or other last resorts were necessary.
-                    Modern surgery was coming of age. The last lobotomy to treat
-                    schizophrenia was done in 1970.
-                  </p>
-                  <p className="source">
-                    Resource:{' '}
-                    <a href="http://blog.soliant.com/careers-in-healthcare/the-history-of-physicians-doctors/">
-                      soliant.com
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide six">
-                <div className="slide-content">
-                  <h6 className="bold-title">The modern doctor</h6>
-                  <p>
-                    To be sure, modern medicine is all the things people expect
-                    when they visit a hospital, but a modern doctor in the
-                    developed world is as much of a super hero or science fiction
-                    character as friendly sawbones. The &ldquo;utility
-                    belt&rdquo; of tools at a modern doctor&rsquo;s disposal
-                    includes surgical lasers and robots, high-powered magnetic
-                    imagers and networked data streams.
-                  </p>
-                  <p className="source">
-                    Resource:{' '}
-                    <a href="http://blog.soliant.com/careers-in-healthcare/the-history-of-physicians-doctors/">
-                      soliant.com
-                    </a>
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide seven">
-                <div className="slide-content">
-                  <p>
-                    2018: EHR data on subdermal chip (standard care plan option).
-                  </p>
-                  <p className="source">
-                    Design For Life: Next 25 years of Healthcare
-                  </p>
-                </div>
-              </div>
-
-              <div className="slide eight">
-                <div className="slide-content">
-                  <p>2019: Bathroom becomes Healthroom</p>
-                  <p className="source">
-                    Design For Life: Next 25 years of Healthcare
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Timeline slider — interactive 8-slide history of medicine */}
+            <TimelineSlider
+              slides={[
+                {
+                  body: (
+                    <p>
+                      10,000 B.C.: The transition to agriculture was made necessary
+                      by gradually increasing population pressures due to the
+                      success of Homo sapiens&apos; prior hunting and gathering way
+                      of life. Also, at about the time population pressures were
+                      increasing, the last Ice Age ended, and many species of large
+                      game became extinct. Wild grasses and cereals began
+                      flourishing, making them prime candidates for the staple
+                      foods to be domesticated, given our previous familiarity with
+                      them.
+                    </p>
+                  ),
+                  source: (
+                    <>
+                      Resource:{' '}
+                      <a href="http://www.beyondveg.com/nicholson-w/hb/hb-interview1c.shtml">
+                        beyondveg.com
+                      </a>
+                    </>
+                  ),
+                },
+                {
+                  body: (
+                    <p>
+                      4000 B.C.: Environmental opportunities and challenges led to
+                      the formation of human groups. Sharing food, caring for
+                      infants, and building social networks helped our ancestors
+                      meet the daily challenges of their environments.
+                    </p>
+                  ),
+                  source: (
+                    <>
+                      Resource:{' '}
+                      <a href="http://www2.sunysuffolk.edu/westn/humangroups.html">
+                        sunysuffolk.edu
+                      </a>
+                    </>
+                  ),
+                },
+                {
+                  body: (
+                    <p>
+                      3000 B.C.: The earliest reports of surgical suture date back
+                      to 3000 BC in ancient Egypt, where physicians used stitches
+                      to close injuries, incisions and mummies.
+                    </p>
+                  ),
+                  source: (
+                    <>
+                      Resource:{' '}
+                      <a href="http://en.wikipedia.org/wiki/Surgical_suture">
+                        wikipedia.org
+                      </a>
+                    </>
+                  ),
+                },
+                {
+                  body: (
+                    <p>
+                      400 B.C.: Hippocrates emphasizes the importance of water
+                      quality to health and recommends boiling and straining water.
+                    </p>
+                  ),
+                  source: (
+                    <>
+                      Resource:{' '}
+                      <a href="http://dec.alaska.gov/eh/dw/publications/historic.html">
+                        dec.alaska.gov
+                      </a>
+                    </>
+                  ),
+                },
+                {
+                  title: '1920: Modern medicine begins',
+                  body: (
+                    <p>
+                      Physicians no longer needed to ask permission of the church
+                      before starting their practice or performing surgery. Finally,
+                      reliable prescription drugs, and penicillin began to curb
+                      sickness before surgery or other last resorts were necessary.
+                      Modern surgery was coming of age. The last lobotomy to treat
+                      schizophrenia was done in 1970.
+                    </p>
+                  ),
+                  source: (
+                    <>
+                      Resource:{' '}
+                      <a href="http://blog.soliant.com/careers-in-healthcare/the-history-of-physicians-doctors/">
+                        soliant.com
+                      </a>
+                    </>
+                  ),
+                },
+                {
+                  title: 'The modern doctor',
+                  body: (
+                    <p>
+                      To be sure, modern medicine is all the things people expect
+                      when they visit a hospital, but a modern doctor in the
+                      developed world is as much of a super hero or science fiction
+                      character as friendly sawbones. The &ldquo;utility
+                      belt&rdquo; of tools at a modern doctor&rsquo;s disposal
+                      includes surgical lasers and robots, high-powered magnetic
+                      imagers and networked data streams.
+                    </p>
+                  ),
+                  source: (
+                    <>
+                      Resource:{' '}
+                      <a href="http://blog.soliant.com/careers-in-healthcare/the-history-of-physicians-doctors/">
+                        soliant.com
+                      </a>
+                    </>
+                  ),
+                },
+                {
+                  body: (
+                    <p>
+                      2018: EHR data on subdermal chip (standard care plan option).
+                    </p>
+                  ),
+                  source: 'Design For Life: Next 25 years of Healthcare',
+                },
+                {
+                  body: <p>2019: Bathroom becomes Healthroom</p>,
+                  source: 'Design For Life: Next 25 years of Healthcare',
+                },
+              ]}
+            />
 
             <p>
               And as long as we&rsquo;re feeling okay, we think we&rsquo;re
