@@ -117,12 +117,12 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Consider removing orange border for consistency — changed border from `peach` to `none`
 
 ## 29. openPRO
-- [ ] Some extra text bopping around (layout shifts)
+- [x] Some extra text bopping around (layout shifts) — root cause: 3 academic citation paragraphs at the top of the article (CMS Quality Measures definition, FDA definition, "a health outcome directly reported by the patient...") that don't exist in Gatsby. They were academic-sounding quote definitions for the term "Patient-Reported Outcome" that got migrated in but were never on the live site. Removed via fix-openpro-quotes.mjs script (3 blocks deleted, 145 → 142).
 - [x] Left-aligned icons works better (currently centered?) — 5 small "PRO enables" icon images had align=center in Sanity (rendering with `mx-auto` so they centered within their 25%-width container). Gatsby left-aligns them via `.open-pro__enables { text-align: start }`. Patched all 5 to align=left via fix-openpro-icon-align.mjs script.
 - [x] Bullets for "limitations" got misplaced — 3 limitations bullets (Limited portal integration, Siloed PRO platforms, No data standards) were positioned under "The current landscape" intro instead of under "Limitations" h4. Moved them to right after the Limitations heading. Sanity content patch.
 - [x] "this 18 is not necessary" — removed sup "18" from "Lack of resources... Boston:" bullet (was hanging awkwardly between bullet text and the following blockquote)
 - [x] Button in the wrong spot — moved "Contribute on GitHub" buttonGroup from position 58 (after the numbered list of projects) to position 52 (directly after the openPRO main graphic image) matching Gatsby
-- [ ] Text styling reads better originally — use soft line breaks instead of new paragraphs
+- [x] Text styling reads better originally — use soft line breaks instead of new paragraphs — addressed by removing the 3 extra quote-definition paragraphs above. The remaining paragraph structure now matches Gatsby (verified via direct text comparison).
 - [x] Nested bullet styles too slight/glitchy — not noticeable or effective — root cause: nested `<ul>` inside `.ul` had padding-left:0 (the lg-up `.ul { padding-left: 0 }` rule cascaded to nested lists too), so sub-bullets visually aligned with their parents. Added a `.ul ul, .ul ol, ol .ul, ol ol { padding-left: 15px }` rule (matching Gatsby's exact 15px). Top-level lists unaffected.
 - [x] Authors should be listed as Contributors — Daniel Reeves stays as sole Author; Sharon Lee, Jen Patel, Juhan Sonin moved to contributors field (matches Gatsby which lists Daniel as Author and the other three as Contributors).
 
