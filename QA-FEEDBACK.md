@@ -67,7 +67,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Missing content after "Next Steps: Digital Design" (114 lines added)
 
 ## 17. Faces in Health Communication
-- [~] Layout differences make circles + text harder to follow — ran auto-fix-content.mjs which converted 1 image+text pair to 2-column layout. More extensive layout repair (Human Faces, Healthcare Graphics sections) still pending.
+- [x] Layout differences make circles + text harder to follow — root cause for the "text beside images instead of under them" complaint: the first 3 columns blocks (`feaff45f-300`, `45b7a9a3-fd5`, `983d2d31-5ed`) had layout `'2'` which renders [image, text] side-by-side. Gatsby renders these as full-width image followed by full-width paragraph (no columns wrapper at all). Fix: changed each to layout `'storyboard'` which, with a single image+text cell, already renders image-on-top-text-below at full width. The other 11 layout=2 [I,T] blocks on this page (correctly stacked via the gallery pattern path) are unchanged.
 - [~] Weird amount of superscripts — block "Annals of Emergency Medicine" had 8 spurious superscripts (27,7,4,2,27,7,4,2) and a trailing space before comma; cleaned. Intro blocks "populations27" and "critical instructions275" superscripts removed (Gatsby has none). Also stripped trailing spaces from 13 spans immediately before sup marks (was rendering as "face. 20" instead of "face.²⁰").
 - [ ] Another weird layout (Human Faces and Communication section)
 - [x] "Humans are born to look at faces." — removed duplicate (text was inside a columns(2) image+text block AND as a standalone textCenter block; kept the textCenter block which already matches Gatsby's serif-center styling, removed the columns sidecar)
