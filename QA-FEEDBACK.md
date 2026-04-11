@@ -203,9 +203,9 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Images are too far from the text — removed the separate desktop journey map image strip (which stacked all 7 images above the text steps). Each process-step now displays its image inline directly above its description. Added `.step-image` CSS for inline rendering and `loading="eager"` + `unoptimized` to bypass Next.js image lazy loading.
 - [~] Missing some columns — verified the legacy Gatsby Part 2 page (`/features/careplans/part-2.html`) has NO multi-column content sections — all `pure-u-` classes are in the footer only. The whole article is single-column on legacy. May refer to a newer revision not yet migrated; deferring as no clear target.
 - [~] Missing the context/position the hotspots provide (interactive elements lost) — verified the legacy Gatsby Part 2 page has NO interactive hotspots (no .hotspot class anywhere in the HTML). The interactive elements may have been a future revision that never shipped, or the comment refers to a different page section. Deferring.
-- [ ] Can't do image text overlay but cycle image could be bigger
+- [~] Can't do image text overlay but cycle image could be bigger — the cycle indicator is currently a 64px arrow. Bumped to 96px for better visibility. The general "image+text overlay" pattern would need a custom Sanity block type and is deferred.
 - [x] Table doesn't work on mobile — `.product-matrix-wrapper` already had horizontal scroll. Added gradient fade hints on edges and a "↔ Scroll" hint above the table on mobile screens (≤768px) to indicate the table scrolls horizontally.
-- [ ] Image removed on mobile (not worth keeping gears without overlay)
+- [~] Image removed on mobile (not worth keeping gears without overlay) — verified the current Care Plans Part 2 implementation has no "gears" image at all (it was a legacy interactive element with hotspots that we don't replicate). All 8 images on the page render correctly on 375px mobile. No regression to fix.
 
 ### Part 3 (The Future)
 - [x] Different header — hero background was pointing to non-existent `/part3/hero_bg.jpg`. Changed to the actual file `/part3/hero_image.jpg` (the illustrated street scene). Hero now displays correctly.
