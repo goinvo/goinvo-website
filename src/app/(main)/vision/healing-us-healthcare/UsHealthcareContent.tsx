@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useRef, useEffect } from 'react'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { BostonCostComparisonChart } from './BostonCostComparisonChart'
 
 /* ── Image helpers ──────────────────────────────── */
 const IMG = 'https://www.goinvo.com/old/images/features/us-healthcare'
@@ -446,10 +447,7 @@ export function UsHealthcareContent() {
             Pneumonia treatment costs in Boston range from $10,000 to $31,000
             <a href="#s20" id="s20_ref"><sup>[20]</sup></a>
           </p>
-          <div className="chart-placeholder">
-            Interactive chart: Pneumonia treatment cost comparison across
-            Boston hospitals (requires D3.js)
-          </div>
+          <BostonCostComparisonChart />
         </div>
 
         {/* ── Symptoms continued ─────────────────── */}
