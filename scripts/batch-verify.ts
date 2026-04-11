@@ -478,6 +478,7 @@ function selfAuditTree(tree: TreeNode): Issue[] {
 async function main() {
   const args = process.argv.slice(2)
   const sectionFilter = args.includes('--section') ? args[args.indexOf('--section') + 1] : null
+  const mobile = args.includes('--mobile')
 
   let pages: PageDef[] = []
   if (!sectionFilter || sectionFilter === 'vision') pages.push(...VISION_PAGES)
@@ -488,7 +489,14 @@ async function main() {
 
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const page = await browser.newPage()
-  await page.setViewport({ width: 1280, height: 900 })
+  // Default desktop 1280x900; pass --mobile to use 375x812 (iPhone 13)
+  if (mobile) {
+    await page.setViewport({ width: 375, height: 812, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
+    await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
+    console.error(`Running in MOBILE mode (375×812)`)
+  } else {
+    await page.setViewport({ width: 1280, height: 900 })
+  }
 
   const results: { slug: string; section: string; issues: Issue[]; error?: string }[] = []
 
