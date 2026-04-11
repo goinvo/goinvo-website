@@ -23,21 +23,30 @@ interface AuthorSectionProps {
   variant?: 'equal' | 'primary-sidebar'
 }
 
-/** Normalize both old (plain ref) and new (authorCredit object) shapes */
+/** Normalize both old (plain ref) and new (authorCredit object) shapes.
+ *
+ * Display label (the comma-separated bit after the name) follows Gatsby's
+ * convention: it's the AFFILIATION — "GoInvo" for in-house authors —
+ * NOT the personal role. We distinguish in-house vs external team members
+ * by document _id prefix: team-* are GoInvo, external-* use their stored
+ * role (which holds the affiliation like "Yale University"). roleOverride
+ * (per-credit) always wins for article-specific labels like "GoInvo, MIT". */
 function resolveAuthor(credit: AuthorCredit): { member: TeamMember; displayRole: string; link?: string } | null {
   if (credit.author) {
-    // Use credit-level link if present, otherwise fall back to author's social.linkedin
     const link = credit.link || credit.author.social?.linkedin || undefined
+    const isExternal = credit.author._id?.startsWith('external-')
+    const fallback = isExternal ? (credit.author.role || 'GoInvo') : 'GoInvo'
     return {
       member: credit.author,
-      displayRole: credit.roleOverride || credit.author.role || 'GoInvo',
+      displayRole: credit.roleOverride || fallback,
       link,
     }
   }
   if (credit._id && credit.name) {
+    const isExternal = credit._id.startsWith('external-')
     return {
       member: credit as unknown as TeamMember,
-      displayRole: credit.role || 'GoInvo',
+      displayRole: isExternal ? (credit.role || 'GoInvo') : 'GoInvo',
     }
   }
   return null
