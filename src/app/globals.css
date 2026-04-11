@@ -272,6 +272,15 @@
     margin-bottom: 0.5rem;
   }
 
+  /* Nested lists need an explicit indent so sub-bullets don't visually
+     align with parent bullets. Matches Gatsby's 15px nested padding. */
+  .ul ul,
+  .ul ol,
+  ol .ul,
+  ol ol {
+    padding-left: 15px;
+  }
+
   /* Disc bullet override — standard round bullets instead of star images */
   .disc-bullets .ul {
     list-style-type: disc;
