@@ -174,10 +174,10 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Sometimes clicking "Next part" link goes back to top of current part — changed BottomNav from plain `<a>` to Next.js `<Link>` with explicit `window.scrollTo({ top: 0 })` onClick to force scroll-to-top after navigation. The intermittent behavior was likely the transition system preserving scroll position from the previous page.
 
 ## 39. Healing US Healthcare (MAJOR — interactive charts missing)
-- [ ] Chart didn't make it over (map/spending chart) — major rebuild needed
-- [ ] Another chart bites the dust (healthcare spending bar chart) — major rebuild needed
-- [ ] The OG timeline is broken anyway (shows error on Gatsby too)
-- [ ] This chart is gone gone gone (another chart completely missing) — major rebuild needed
+- [x] Chart didn't make it over (map/spending chart) — restored the **Boston pneumonia treatment cost comparison map** in the Symptoms section. The original was a D3 geo projection of Boston with 9 hospital circles sized by treatment cost ($9,736 St Elizabeth's → $31,168 Mass General). Recovered the source CSV via Wayback Machine archives, built a hand-rolled SVG version (no D3 dependency, ~6KB). Includes hover tooltip with clinic visit / MRI / pneumonia prices for each hospital, and a `<details>` accessibility table listing all 9 sorted by cost. Confirmed by user QA: this is the chart they meant.
+- [ ] Another chart bites the dust (healthcare spending bar chart) — DEFERRED: this is one of 3 charts under the Diagnosis section's "Spending Over Time / Spending vs. GDP / Quality" tabs. Source data files (`spending.js`, `gdpvcapita.js`, `qualityvcapita.js`) exist on CloudFront but Wayback returns navigation HTML instead of the raw JS, so I couldn't extract the underlying CSVs/JSON. Need source data from the design team to rebuild accurately — fabricating numbers for a healthcare evidence article isn't acceptable.
+- [ ] The OG timeline is broken anyway (shows error on Gatsby too) — confirmed: original used Knight Lab Timeline JS pulling from a Google Spreadsheet (`docs.google.com/spreadsheet/ccc?key=1qWsuZ9ldjqB1pUambLW1EIbwhHziqCxUEqKixVD2uvk`). The spreadsheet is gone. Same data-availability problem — defer.
+- [ ] This chart is gone gone gone (another chart completely missing) — likely refers to the **Healthcare Waste by category** chart in the Symptoms section (`waste.js` was the source). Same Wayback issue — couldn't extract the underlying data. Defer.
 - [~] Missing content section (PARTICIPATE / Give Feedback section) — section already exists in code; added social share links (Facebook/Twitter/LinkedIn) that were missing from the Share row
 - [~] Also missing content (PARTICIPATE section + CREATING section) — Participate section exists; Creating section may refer to "Creators" h2 which also exists
 ![1775847221250](image/QA-FEEDBACK/1775847221250.png)
