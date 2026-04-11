@@ -496,6 +496,18 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     if (a.styles.borderTopWidth !== b.styles.borderTopWidth || normalizeColor(a.styles.borderTopColor) !== normalizeColor(b.styles.borderTopColor)) {
       diffs.push(`border: ${a.styles.borderTopWidth} ${normalizeColor(a.styles.borderTopColor)} → ${b.styles.borderTopWidth} ${normalizeColor(b.styles.borderTopColor)}`)
     }
+    // Padding (compare vertical and horizontal as shorthand if uniform, otherwise full)
+    const aPadV = `${a.styles.paddingTop} ${a.styles.paddingBottom}`
+    const bPadV = `${b.styles.paddingTop} ${b.styles.paddingBottom}`
+    const aPadH = `${a.styles.paddingLeft} ${a.styles.paddingRight}`
+    const bPadH = `${b.styles.paddingLeft} ${b.styles.paddingRight}`
+    if (aPadV !== bPadV || aPadH !== bPadH) {
+      const fmt = (top: string, right: string, bottom: string, left: string) =>
+        (top === bottom && left === right) ? `${top} ${left}` : `${top} ${right} ${bottom} ${left}`
+      const aP = fmt(a.styles.paddingTop, a.styles.paddingRight, a.styles.paddingBottom, a.styles.paddingLeft)
+      const bP = fmt(b.styles.paddingTop, b.styles.paddingRight, b.styles.paddingBottom, b.styles.paddingLeft)
+      diffs.push(`padding: ${aP} → ${bP}`)
+    }
     // Position (vertical placement relative to page)
     const yDiff = Math.abs(a.rect.y - b.rect.y)
     if (yDiff > 50) diffs.push(`Y position: ${a.rect.y}px → ${b.rect.y}px (${yDiff}px off)`)
