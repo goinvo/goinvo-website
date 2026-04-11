@@ -168,7 +168,7 @@ Feedback from Jen Patel via FigJam board review.
 - [ ] Long scroll of images vs slider makes you lose timeline context and takes forever to get to text
 - [x] Needs horizontal padding (text running edge to edge) — added 1.5rem (mobile) / 3rem (desktop) horizontal padding to article paragraphs and list items
 - [x] Missing interactive piece — restored the dates slider (1985/2015/2025 sensor evolution) as an interactive client component (DateSlider.tsx) replacing the static stacked grid. Updated CSS to support button elements alongside legacy `<a>` elements.
-- [ ] Another piece doesn't work as-is (layout/interactive section broken)
+- [x] Another piece doesn't work as-is (layout/interactive section broken) — root cause: the "Health sensing locations" section was rendering as a static 3-column grid of all 6 location scenes plus all 6 detail cards. Recovered the legacy JS from CloudFront (`from-bathroom-to-healthroom.js`) and saw the original was a slider with 6 buttons (Market/Bathroom/Bedroom/Dining/Living/Work), one large active scene image, and a popover detail "card" aligned with the active button. Built `LocationsSlider.tsx` matching that pattern. Also extended the existing `#locations .slider-controls` CSS to support `<button>` selectors alongside the legacy `<a>` selectors.
 
 ## 40. Disrupt
 - [x] Sometimes clicking "Next part" link goes back to top of current part — changed BottomNav from plain `<a>` to Next.js `<Link>` with explicit `window.scrollTo({ top: 0 })` onClick to force scroll-to-top after navigation. The intermittent behavior was likely the transition system preserving scroll position from the previous page.

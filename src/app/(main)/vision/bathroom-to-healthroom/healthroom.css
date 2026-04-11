@@ -516,42 +516,64 @@
 /* ---- Locations interactive ---- */
 .healthroom-legacy #locations {
   position: relative;
+  margin-bottom: 2em;
+}
+.healthroom-legacy #locations .slider-graphic img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .healthroom-legacy #locations .slider-controls {
   overflow: hidden;
   border: 2px solid black;
-  border-left: 0px;
-  border-right: 0px;
+  border-left: 0;
+  border-right: 0;
+  display: flex;
 }
-.healthroom-legacy #locations .slider-controls a {
+.healthroom-legacy #locations .slider-controls a,
+.healthroom-legacy #locations .slider-controls button {
   display: block;
-  float: left;
-  margin: 4px 0;
-  padding: 4px;
+  flex: 1;
+  margin: 0;
+  padding: 8px 4px;
+  background: transparent;
   color: #000;
   text-align: center;
   text-transform: uppercase;
+  font-size: 0.85em;
+  border: none;
   border-right: 2px solid #000;
-  transition: background 300ms ease;
+  transition: background 200ms ease;
   cursor: pointer;
 }
-.healthroom-legacy #locations .slider-controls a:last-child {
+.healthroom-legacy #locations .slider-controls a:last-child,
+.healthroom-legacy #locations .slider-controls button:last-child {
   border-right: 0;
 }
-.healthroom-legacy #locations .slider-controls a.slide0,
-.healthroom-legacy #locations .slider-controls a.slide1 {
-  width: 12%;
-}
-.healthroom-legacy #locations .slider-controls a.slide2,
-.healthroom-legacy #locations .slider-controls a.slide3,
-.healthroom-legacy #locations .slider-controls a.slide4 {
-  width: 18%;
-}
-.healthroom-legacy #locations .slider-controls a.slide5 {
-  width: 22%;
-}
-.healthroom-legacy #locations .slider-controls a.active {
+.healthroom-legacy #locations .slider-controls a.active,
+.healthroom-legacy #locations .slider-controls button.active {
   background: #f4d37b;
+}
+.healthroom-legacy #locations .calendar-graphics {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 1.5em 0;
+}
+.healthroom-legacy #locations .calendar-graphics .active img {
+  display: block;
+  max-width: 360px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+.healthroom-legacy #locations .slider-contents img {
+  display: block;
+  width: 100%;
+  max-width: 900px;
+  height: auto;
+  margin: 0 auto;
 }
 
 /* ---- Media blocks ---- */
