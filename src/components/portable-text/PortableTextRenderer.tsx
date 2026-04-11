@@ -11,7 +11,7 @@ import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
-import { VirtualCareTop15Table } from '@/components/portable-text/VirtualCareTop15Table'
+import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -725,6 +725,12 @@ const components: PortableTextComponents = {
           return (
             <ArticleReveal intensity="visual">
               <VirtualCareTop15Table />
+            </ArticleReveal>
+          )
+        case 'virtualCareTimeToDiagnosis':
+          return (
+            <ArticleReveal intensity="visual">
+              <VirtualCareTimeToDiagnosis />
             </ArticleReveal>
           )
         default:
