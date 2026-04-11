@@ -69,13 +69,13 @@ Feedback from Jen Patel via FigJam board review.
 ## 17. Faces in Health Communication
 - [x] Layout differences make circles + text harder to follow — root cause for the "text beside images instead of under them" complaint: the first 3 columns blocks (`feaff45f-300`, `45b7a9a3-fd5`, `983d2d31-5ed`) had layout `'2'` which renders [image, text] side-by-side. Gatsby renders these as full-width image followed by full-width paragraph (no columns wrapper at all). Fix: changed each to layout `'storyboard'` which, with a single image+text cell, already renders image-on-top-text-below at full width. The other 11 layout=2 [I,T] blocks on this page (correctly stacked via the gallery pattern path) are unchanged.
 - [~] Weird amount of superscripts — block "Annals of Emergency Medicine" had 8 spurious superscripts (27,7,4,2,27,7,4,2) and a trailing space before comma; cleaned. Intro blocks "populations27" and "critical instructions275" superscripts removed (Gatsby has none). Also stripped trailing spaces from 13 spans immediately before sup marks (was rendering as "face. 20" instead of "face.²⁰").
-- [ ] Another weird layout (Human Faces and Communication section)
+- [x] Another weird layout (Human Faces and Communication section) — the 4 small face icons that should appear in a single horizontal row at the start of the section were split between two Sanity blocks (3-icon `19e0bc21e45e` + 1 stranded image `adefb687-5c3` rendering huge below). Merged the 4th image into the first block and changed layout from `'3'` → `'4'`. Now matches Gatsby's 4-icon row.
 - [x] "Humans are born to look at faces." — removed duplicate (text was inside a columns(2) image+text block AND as a standalone textCenter block; kept the textCenter block which already matches Gatsby's serif-center styling, removed the columns sidecar)
-- [ ] Next sections became "salad" (broken layout)
-- [ ] More layout, image + text mismatch
-- [ ] Image sizes and layouts vary — prefer original design for balance
-- [ ] Next section also doesn't work (Healthcare Graphics section)
-- [ ] Some more layout issues in later sections
+- [x] Next sections became "salad" (broken layout) — the "Benefits of Visual Healthcare Communication" section had block `93790566-c5f` as `layout='1:2'` with 4 items `[I,T,I,T]`. The renderer's asymmetric branch only handles 2-item blocks; 4-item blocks fell through to the image-grid path and rendered as a 50/50 grid. Split into 2 separate single-pair `1:2` blocks. Each pair now renders as `[226px image | 452px text]` matching Gatsby's `1fr 2fr`.
+- [x] More layout, image + text mismatch — covered by the Faces stack fix (3 storyboard conversions), the 1:2 split, the Healthcare Graphics restructure, and the narratives 3-column wrap.
+- [~] Image sizes and layouts vary — prefer original design for balance — addressed by the structural fixes above. Some minor sizing differences remain (Gatsby's images are slightly smaller in some sections) but the major layout mismatches are resolved.
+- [x] Next section also doesn't work (Healthcare Graphics section) — restructured: cigarette+man image and intro paragraph wrapped into `columns.1:2`; the 3 referent images (Message-/Plot-/Self-) wrapped into `columns.3` with merged label+caption text blocks. The "These narratives have the power..." cluster wrapped into `columns.3` of the 3 narrative lines. 11 loose blocks → 3 structured blocks.
+- [~] Some more layout issues in later sections — major sections fixed; remaining minor cosmetic differences (spacing, image proportions in the Appendix experiment screenshots) are out of scope for this pass.
 - [x] "Appendix. A Lean Experiment..." — added missing space after "Appendix." (was "Appendix.A Lean..."). Block was already an h2 header.
 
 ## Global Issues
