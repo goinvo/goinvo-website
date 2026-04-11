@@ -121,3 +121,44 @@ export function VirtualCareTop15Table() {
     </div>
   )
 }
+
+/**
+ * Time-to-diagnosis breakdown table from Virtual Care.
+ *
+ *   Time-to-diagnosis
+ *   Waiting for appointment       | 24 days
+ *   Waiting for clinician in office | 41 minutes
+ *   Consultation with clinician   | 18.21 minutes
+ *   Total                          | 24 days and 59.21 minutes
+ */
+export function VirtualCareTimeToDiagnosis() {
+  return (
+    <div className="my-8">
+      <table className="w-full text-gray text-sm">
+        <thead>
+          <tr>
+            <td colSpan={2} className="font-semibold pb-2">Time-to-diagnosis</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="border-t border-gray-200">
+            <td className="py-2">Waiting for appointment</td>
+            <td className="py-2 text-right">24 days<sup><a href="#references" className="text-secondary hover:text-primary">3</a></sup></td>
+          </tr>
+          <tr className="border-t border-gray-200">
+            <td className="py-2">Waiting for clinician in office</td>
+            <td className="py-2 text-right">41 minutes<sup><a href="#references" className="text-secondary hover:text-primary">4</a></sup></td>
+          </tr>
+          <tr className="border-t border-gray-200">
+            <td className="py-2">Consultation with clinician</td>
+            <td className="py-2 text-right">18.21 minutes<sup><a href="#references" className="text-secondary hover:text-primary">4</a></sup></td>
+          </tr>
+          <tr className="border-t border-gray-200">
+            <td className="py-2 font-semibold">Total</td>
+            <td className="py-2 text-right font-semibold">24 days and 59.21 minutes</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
