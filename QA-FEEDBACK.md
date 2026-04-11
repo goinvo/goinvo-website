@@ -29,7 +29,7 @@ Feedback from Jen Patel via FigJam board review.
 - [x] Scene buttons — changed to tab style
 - [x] 3D viewer border rounding removed
 - [x] Text differences from Gatsby — removed extra "Navigate through our 3D hospital model..." paragraph from ModelViewerSection (not in Gatsby)
-- [ ] Authors + contributors ordering consistency (no contributors on this page; AuthorSection secondary label "Designer/Engineer" vs Gatsby "GoInvo" is a global pattern, not VSG-specific)
+- [x] Authors + contributors ordering consistency — fixed AuthorSection secondary label to use the AFFILIATION ("GoInvo" for in-house) instead of the personal role ("Designer", "Engineer", etc.). Resolver now distinguishes in-house team-* from external- team members by Sanity document _id prefix: in-house always shows "GoInvo", external authors keep their stored role (e.g. Cameron Gettel → "Yale University"). roleOverride still wins for article-specific labels like "GoInvo, MIT". Affects every Authors section site-wide.
 
 ## 6. Eligibility Engine
 - [x] Doubled superscripts (sup "1" and "4") — removed duplicates
