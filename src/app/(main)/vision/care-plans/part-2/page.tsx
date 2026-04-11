@@ -136,7 +136,7 @@ export default function CarePlansPart2Page() {
             </div>
 
             <div className="text-center mt-4">
-              <Image src={`${IMG}/part2/careplan_journey_arrow.png`} alt="Cycle arrow" width={100} height={50} className="inline-block h-auto w-16 mb-2" />
+              <Image src={`${IMG}/part2/careplan_journey_arrow.png`} alt="Cycle arrow" width={150} height={75} className="inline-block h-auto w-24 mb-2" unoptimized />
               <p className="text-gray text-sm italic">The process is a cycle. Patients live the care plan until the next medical encounter.</p>
             </div>
           </div>
