@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import Image from 'next/image'
 import { urlForImage } from '@/sanity/lib/image'
 import type { TeamMember } from '@/types'
@@ -20,7 +21,7 @@ interface AuthorSectionProps {
   /** Section heading — defaults to "Author"/"Authors" based on count */
   heading?: string
   /** Layout variant — "equal" renders all authors the same, "primary-sidebar" highlights the first author with a large photo and shows others in a bordered sidebar */
-  variant?: 'equal' | 'primary-sidebar'
+  variant?: 'equal' | 'primary-sidebar' | 'plain-list'
 }
 
 /** Normalize both old (plain ref) and new (authorCredit object) shapes.
@@ -78,6 +79,22 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
     ? <h3 className="header-md mt-8 mb-4">{sectionHeading}</h3>
     : <h2 className="header-xl font-light mt-8 mb-4 text-center">{sectionHeading}</h2>
 
+  if (variant === 'plain-list') {
+    return (
+      <section className="mt-12">
+        {headingEl}
+        <p className="mt-4">
+          {resolved.map((r, index) => (
+            <Fragment key={r.member._id}>
+              {r.member.name}
+              {index < resolved.length - 1 && <><br /></>}
+            </Fragment>
+          ))}
+        </p>
+      </section>
+    )
+  }
+
   // ── Variant: primary-sidebar ──────────────────────────────────────────
   // First author gets a large photo + bio, remaining authors show in a
   // bordered sidebar with small thumbnails and role labels (matches Gatsby
@@ -105,11 +122,11 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
                 className="w-full h-auto object-cover mb-4"
               />
             )}
-            <p>
+            <p className="mt-4">
               <strong>{primary.member.name}</strong>
               <span className="text-gray">, {primary.displayRole}</span>
             </p>
-            {primaryBio && <p className="text-gray mt-1">{primaryBio}</p>}
+            {primaryBio && <p className="text-gray mt-4">{primaryBio}</p>}
           </div>
 
           {/* Sidebar with remaining authors */}
@@ -191,7 +208,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
               </div>
             )}
             <div>
-              <p>
+              <p className="mt-4">
                 {r.link ? (
                   <a href={r.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
                     <strong>{r.member.name}</strong>
@@ -201,7 +218,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
                 )}
                 <span className="text-gray">, {r.displayRole}</span>
               </p>
-              {bio && <p className="text-gray mt-1">{bio}</p>}
+              {bio && <p className="text-gray mt-4">{bio}</p>}
             </div>
           </div>
         )

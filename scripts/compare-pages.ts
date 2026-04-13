@@ -348,7 +348,7 @@ function auditNextjsStyle(analysis: PageAnalysis, nextjsHtml?: string): Issue[] 
   // (e.g., "Fraud:", "Waste:", "Abuse:") — these are typically bold black on the original site
   if (nextjsHtml) {
     const content = getContentArea(nextjsHtml)
-    const coloredSpans = content.match(/<span\s+class(?:Name)?="text-(?:blue|secondary|primary)[^"]*"[^>]*>[^<]{2,30}:?\s*<\/span>/gi) || []
+    const coloredSpans = content.match(/<span\s+class(?:Name)?="text-(?:blue|secondary|primary)[^"]*"[^>]*>[^<]{2,30}:\s*<\/span>/gi) || []
     if (coloredSpans.length > 0) {
       for (const span of coloredSpans) {
         const textMatch = span.match(/>([^<]+)</)
