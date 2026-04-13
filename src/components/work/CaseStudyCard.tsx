@@ -14,9 +14,14 @@ import { trackCaseStudyClick } from '@/lib/analytics'
 interface CaseStudyCardProps {
   caseStudy: CaseStudy
   className?: string
+  variant?: 'default' | 'up-next'
 }
 
-export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
+export function CaseStudyCard({
+  caseStudy,
+  className,
+  variant = 'default',
+}: CaseStudyCardProps) {
   const cardRef = useRef<HTMLDivElement>(null)
   const ctx = usePageTransition()
   const { setCaseStudyHero } = useHero()
@@ -35,6 +40,9 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const section = (caseStudy as any)._type === 'feature' ? 'vision' : 'work'
   const href = `/${section}/${caseStudy.slug.current}`
+  const showClient = variant === 'default' && section === 'work' && !!caseStudy.client
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const detailText = caseStudy.caption || (caseStudy as any).description
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -96,16 +104,11 @@ export function CaseStudyCard({ caseStudy, className }: CaseStudyCardProps) {
           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
             <p className="font-semibold text-black">{caseStudy.title}</p>
             {/* For vision features, "client" is just the literal "Feature" — skip it and show description instead */}
-            {section === 'work' && caseStudy.client && (
+            {showClient && (
               <p className="text-gray">{caseStudy.client}</p>
             )}
-            {caseStudy.caption && (
-              <p className="text-gray">{caseStudy.caption}</p>
-            )}
-            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-            {!caseStudy.caption && (caseStudy as any).description && (
-              /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-              <p className="text-gray">{(caseStudy as any).description}</p>
+            {detailText && (
+              <p className="text-gray">{detailText}</p>
             )}
           </div>
         </motion.article>
