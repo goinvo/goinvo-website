@@ -162,8 +162,11 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
 
   // ── Variant: equal (default) ──────────────────────────────────────────
   // Every author rendered with the same image + name + bio layout
+  // Gray background matches Gatsby's .background--gray wrapper around
+  // the authors section
   return (
-    <section className="mt-12">
+    <section className="mt-12 w-screen relative left-1/2 -ml-[50vw] py-12 bg-gray-lightest">
+      <div className="max-width max-width-md content-padding mx-auto">
       {headingEl}
       {resolved.map((r) => {
         const imageUrl = r.member.image
@@ -203,6 +206,7 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
           </div>
         )
       })}
+      </div>
     </section>
   )
 }
