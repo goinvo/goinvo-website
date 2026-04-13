@@ -54,12 +54,18 @@ export default function GovernmentPage() {
         style={{ backgroundImage: `url(${cloudfrontImage('/images/case-studies/mass/snap/snap-cover.jpg')})` }}
       >
         <div className="relative h-full max-width">
-          <div className="absolute bottom-0 left-0 w-full lg:w-[800px] bg-white/90 content-padding py-8">
-            <h1 className="header-xl m-0 mb-4">
-              Software for government services is complicated.<br />
-              We know how to do it<span className="text-primary font-serif">.</span>
+          <div className="absolute bottom-0 left-0 w-full lg:w-[385px] bg-white content-padding py-8">
+            <h1 className="header-xl m-0">
+              Software for goverment services is complicated
+              <span className="text-primary font-serif">.</span>
+              <br />
+              We know how to do it
+              <span className="text-primary font-serif">.</span>
             </h1>
-            <Button href="/contact" variant="primary" size="lg">
+            <p className="text-gray mt-4 mb-4">
+              Beautiful software design for government and state services for smoother processes and happy residents.
+            </p>
+            <Button href="/contact" variant="primary" size="md">
               Let&apos;s discuss your project
             </Button>
           </div>
@@ -67,12 +73,12 @@ export default function GovernmentPage() {
       </section>
 
       {/* Results */}
-      <section className="bg-primary-lightest py-16">
+      <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-8">What results are you looking for?</h2>
+          <h2 className="header-xl text-tertiary mt-0 mb-8">What results are you looking for?</h2>
           <ul className="ul grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 list-none pl-0">
             {results.map((result) => (
-              <li key={result} className="font-semibold">{result}</li>
+              <li key={result} className="font-semibold text-tertiary">{result}</li>
             ))}
           </ul>
         </div>
@@ -81,7 +87,7 @@ export default function GovernmentPage() {
       {/* Why Choose GoInvo */}
       <section className="py-16">
         <div className="max-width content-padding text-center">
-          <h2 className="font-serif text-2xl mb-12">Why choose GoInvo?</h2>
+          <h2 className="header-xl mt-0 mb-12">Why choose GoInvo?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
             {reasons.map((reason) => (
               <div key={reason.title}>
@@ -92,8 +98,11 @@ export default function GovernmentPage() {
                   height={200}
                   className="mx-auto mb-4 max-w-[80%]"
                 />
-                <p className="font-semibold mb-2">{reason.title}</p>
-                <p className="text-gray text-md">{reason.description}</p>
+                <p className="mb-0">
+                  <strong>{reason.title}</strong>
+                  <br />
+                  <span className="text-gray text-md">{reason.description}</span>
+                </p>
               </div>
             ))}
           </div>
@@ -125,82 +134,85 @@ export default function GovernmentPage() {
       </section>
 
       {/* Case Studies */}
-      <section className="bg-primary-lightest py-16">
+      <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding text-center">
-          <h2 className="font-serif text-2xl mb-8">
+          <h2 className="header-xl text-tertiary mt-0 mb-8">
             Our work drives results for government services.
           </h2>
-          <Button href="/contact" variant="primary" size="lg" className="mb-12">
+          <Button href="/contact" variant="primary" size="md" className="mb-12">
             Let&apos;s discuss your project
           </Button>
 
           <Link href="/work/mass-snap" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline">
-            <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
-                <h3 className="font-serif text-2xl mb-4">
+                <h3 className="header-xl text-tertiary mt-0 mb-4">
                   1,107,790 Massachusetts residents were recipients of SNAP food benefits in 2024.
                 </h3>
-                <p className="text-gray mb-4">
+                <p className="header-lg text-tertiary mt-0 mb-4">
                   Up from 750,000 residents in 2017. The redesigned application was deployed in
                   July 2018, and for the first time ever at the MA DTA, the volume of online
                   applications exceeded that of applications completed in person.
                 </p>
                 <p className="text-secondary">Read Case Study</p>
               </div>
-              <div className="relative aspect-[4/3] lg:aspect-auto">
+              <div className="flex items-center justify-center px-8 py-10 lg:px-0 lg:py-0">
                 <Image
                   src={cloudfrontImage('/images/case-studies/public-sector/pubDesign_SNAP.jpg')}
                   alt="Massachusetts SNAP"
-                  fill
-                  className="object-cover"
+                  width={400}
+                  height={270}
+                  className="h-auto w-full max-w-[400px] object-contain"
                 />
               </div>
             </div>
           </Link>
 
           <Link href="/work/all-of-us" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline">
-            <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
-                <h3 className="font-serif text-2xl mb-4">
+                <h3 className="header-xl text-tertiary mt-0 mb-4">
                   NIH&apos;s All of Us Research Program
                 </h3>
-                <p className="text-gray mb-4">
+                <p className="header-lg text-tertiary mt-0 mb-4">
                   Through participant-focused design leadership and research, we delivered
                   experiences and strategies that impacted an NIH research program, aiming to
                   build the largest medical data repository for research.
                 </p>
                 <p className="text-secondary">Read Case Study</p>
               </div>
-              <div className="relative aspect-[4/3] lg:aspect-auto">
+              <div className="flex items-center justify-center px-8 py-10 lg:px-0 lg:py-0">
                 <Image
                   src={cloudfrontImage('/images/case-studies/aou/01-hero-image-2.jpg')}
                   alt="All of Us"
-                  fill
-                  className="object-cover"
+                  width={400}
+                  height={285}
+                  className="h-auto w-full max-w-[400px] object-contain"
                 />
               </div>
             </div>
           </Link>
 
           <Link href="/work/ahrq-cds" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline">
-            <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
-                <h3 className="font-serif text-2xl mb-4">
+                <h3 className="header-xl text-tertiary mt-0 mb-4">
                   National Clinical Decision Support Tool
                 </h3>
-                <p className="text-gray mb-4">
+                <p className="header-lg text-tertiary mt-0 mb-4">
                   GoInvo designed CDS Connect, an AHRQ-funded (Agency for Healthcare Research and Quality)
                   national repository for providers, health IT vendors, and researchers to create and share
                   CDS tools (clinical decision support tools) to improve clinical decision making and quality of care.
                 </p>
                 <p className="text-secondary">Read Case Study</p>
               </div>
-              <div className="relative aspect-[4/3] lg:aspect-auto">
+              <div className="flex items-center justify-center px-8 py-10 lg:px-0 lg:py-0">
                 <Image
                   src={cloudfrontImage('/images/case-studies/ahrq/CDS_connect_hero-2.jpg')}
                   alt="AHRQ Clinical Decision Support"
-                  fill
-                  className="object-cover"
+                  width={400}
+                  height={285}
+                  className="h-auto w-full max-w-[400px] object-contain"
                 />
               </div>
             </div>
@@ -223,10 +235,10 @@ export default function GovernmentPage() {
       {/* Contracts and Certifications */}
       <section className="py-16">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-4">
+          <h2 className="header-xl mt-0 mb-4">
             Contracts and Certifications
           </h2>
-          <ul className="list-disc list-inside text-gray space-y-2">
+          <ul className="ul text-gray mt-0">
             <li>State of MA: <strong>ITS81</strong></li>
             <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
           </ul>
