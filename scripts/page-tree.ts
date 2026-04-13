@@ -74,6 +74,12 @@ async function extractTree(page: Page): Promise<TreeNode> {
       return t.trim().substring(0, 150);
     }
 
+    // Full recursive text content — more accurate for matching than
+    // directText which misses text inside child spans/strongs/etc.
+    function fullText(el) {
+      return (el.textContent || '').trim().replace(/\\s+/g, ' ').substring(0, 150);
+    }
+
     function build(el) {
       var tag = el.tagName.toLowerCase();
       if (SKIP_TAGS.indexOf(tag) >= 0) return null;
@@ -85,7 +91,11 @@ async function extractTree(page: Page): Promise<TreeNode> {
       if (el.closest(SKIP_SEL)) return null;
 
       var rect = el.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0 && tag !== 'img') return null;
+      // Allow zero-size elements if they have text content (hidden carousel slides,
+      // collapsed accordion panels, tab content that's display:none). These still
+      // contain real content that should be compared even if not visible.
+      var hasText = el.textContent && el.textContent.trim().length > 0;
+      if (rect.width === 0 && rect.height === 0 && tag !== 'img' && !hasText) return null;
 
       var cs = getComputedStyle(el);
       var cls = (typeof el.className === 'string') ? el.className.trim() : '';
@@ -96,9 +106,17 @@ async function extractTree(page: Page): Promise<TreeNode> {
         if (cn) children.push(cn);
       }
 
-      var dt = directText(el);
+      // Use fullText for text-container elements (p, h1-h4, li, etc.)
+      // so that text split across child spans gets captured correctly.
+      // directText only gets bare text nodes, missing <span>-wrapped content.
+      var isTextContainer = ['p','h1','h2','h3','h4','h5','h6','li','figcaption','blockquote','label','td','th'].indexOf(tag) >= 0;
+      var dt = isTextContainer ? fullText(el) : directText(el);
 
-      if (['div','section','article','span','main'].indexOf(tag) >= 0 && !cls && !el.id && !dt) {
+      // Collapse anonymous wrappers UNLESS they carry styling context
+      // (background color, border) that the diff needs to detect.
+      var hasBg = cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'rgb(255, 255, 255)';
+      var hasBorder = cs.borderTopWidth && parseFloat(cs.borderTopWidth) >= 1 && cs.borderTopStyle !== 'none';
+      if (['div','section','article','span','main'].indexOf(tag) >= 0 && !cls && !el.id && !dt && !hasBg && !hasBorder) {
         if (children.length === 1) return children[0];
         if (children.length === 0) return null;
       }
