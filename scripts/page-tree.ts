@@ -445,22 +445,33 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   }
 
   // ── Duplicate text detection ───────────────────────────────────────
-  // Catches duplicate headings, banners, callouts
+  // Compares how many times each text appears on BOTH sides. Only flags
+  // when B has MORE copies than A (extra duplication), not when both
+  // sides have the same number of intentional repetitions.
   lines.push('')
-  lines.push(`=== Duplicate Content (${labelB}) ===`)
-  const bTexts = flatB.filter(f => f.node.text && f.node.text.length > 20 && ['h1','h2','h3','h4','p'].includes(f.node.tag))
-    .map(f => f.node.text!.substring(0, 60))
-  const bTextCounts = new Map<string, number>()
-  for (const t of bTexts) bTextCounts.set(t, (bTextCounts.get(t) || 0) + 1)
+  lines.push(`=== Extra Duplicates (${labelB} has more copies than ${labelA}) ===`)
+  const textCount = (flat: typeof flatA) => {
+    const map = new Map<string, number>()
+    for (const { node } of flat) {
+      if (node.text && node.text.length > 20 && ['h1','h2','h3','h4','p'].includes(node.tag)) {
+        const key = node.text.substring(0, 60)
+        map.set(key, (map.get(key) || 0) + 1)
+      }
+    }
+    return map
+  }
+  const aTextCounts = textCount(flatA)
+  const bTextCounts = textCount(flatB)
   let dupeCount = 0
-  for (const [text, count] of bTextCounts) {
-    if (count > 1) {
+  for (const [text, bCount] of bTextCounts) {
+    const aCount = aTextCounts.get(text) || 0
+    if (bCount > aCount && bCount > 1) {
       dupeCount++
-      if (dupeCount <= 3) lines.push(`  ⚠ "${text}" appears ${count}× in ${labelB}`)
+      if (dupeCount <= 3) lines.push(`  ⚠ "${text}" — ${labelA}: ${aCount}×, ${labelB}: ${bCount}× (+${bCount - aCount} extra)`)
     }
   }
-  if (dupeCount > 3) lines.push(`  …and ${dupeCount - 3} more duplicates`)
-  if (dupeCount === 0) lines.push(`  No duplicate content`)
+  if (dupeCount > 3) lines.push(`  …and ${dupeCount - 3} more extra duplicates`)
+  if (dupeCount === 0) lines.push(`  No extra duplicates`)
 
   // ── Extra content detection ────────────────────────────────────────
   // Catches paragraphs in B that don't have a fuzzy match in A
