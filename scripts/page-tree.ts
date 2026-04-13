@@ -255,6 +255,12 @@ function printTree(node: TreeNode, indent: string = '', lines: string[] = []): s
       styleParts.push(`border:${styles.borderTopWidth} ${normalizeColor(styles.borderTopColor)}`)
     }
   }
+  // Border on any large container (card/callout detection)
+  if (tag === 'div' || tag === 'section') {
+    if (styles.borderTopWidth && styles.borderTopWidth !== '0px' && parseFloat(styles.borderTopWidth) >= 2) {
+      styleParts.push(`border:${styles.borderTopWidth} ${normalizeColor(styles.borderTopColor)}`)
+    }
+  }
 
   // Dimensions for significant elements
   if (['img', 'video', 'iframe', 'canvas'].includes(tag)) {
@@ -391,14 +397,54 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     }
   }
 
-  // Check for background-colored sections
+  // Check for background-colored sections — compare which text lives
+  // inside a colored background on one site but not the other.
+  // This catches "card" styling differences where Gatsby wraps content
+  // in a .background--gray div but Next.js renders it as plain unstyled text.
   lines.push('')
   lines.push('=== Background Sections ===')
-  const aBg = flatA.filter(f => f.node.styles.backgroundColor && f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && f.node.styles.backgroundColor !== 'rgb(255, 255, 255)')
-  const bBg = flatB.filter(f => f.node.styles.backgroundColor && f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' && f.node.styles.backgroundColor !== 'rgb(255, 255, 255)')
+  const isBgColored = (f: { node: TreeNode }) =>
+    f.node.styles.backgroundColor &&
+    f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+    f.node.styles.backgroundColor !== 'rgb(255, 255, 255)' &&
+    f.node.rect.width > 200 && f.node.rect.height > 40
+  const aBg = flatA.filter(isBgColored)
+  const bBg = flatB.filter(isBgColored)
   if (aBg.length !== bBg.length) {
     lines.push(`  Count: ${aBg.length} → ${bBg.length}`)
   }
+  // Extract text snippets inside bg sections for each side
+  const bgText = (flat: typeof flatA) => {
+    const bgNodes = flat.filter(isBgColored)
+    const texts = new Set<string>()
+    for (const { node } of bgNodes) {
+      // Walk children to collect text
+      const walk = (n: TreeNode) => {
+        if (n.text && n.text.length > 15) texts.add(n.text.substring(0, 40))
+        for (const c of n.children) walk(c)
+      }
+      walk(node)
+    }
+    return texts
+  }
+  const aBgTexts = bgText(flatA)
+  const bBgTexts = bgText(flatB)
+  // Report text in A's bg sections but missing from B's bg sections
+  let bgMismatches = 0
+  for (const t of aBgTexts) {
+    if (!bBgTexts.has(t)) {
+      bgMismatches++
+      if (bgMismatches <= 5) lines.push(`  ⚠ ${labelA} has bg-styled: "${t}…" — ${labelB} renders unstyled`)
+    }
+  }
+  for (const t of bBgTexts) {
+    if (!aBgTexts.has(t)) {
+      bgMismatches++
+      if (bgMismatches <= 5) lines.push(`  ⚠ ${labelB} has bg-styled: "${t}…" — ${labelA} renders unstyled`)
+    }
+  }
+  if (bgMismatches > 5) lines.push(`  …and ${bgMismatches - 5} more bg-style mismatches`)
+  if (bgMismatches === 0 && aBg.length === bBg.length) lines.push(`  Background sections match`)
 
   // Check for missing/extra interactive elements
   lines.push('')
