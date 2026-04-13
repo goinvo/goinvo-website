@@ -391,11 +391,119 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     const aNested = countNested(a)
     const bNested = countNested(b)
     if (aNested !== bNested) diffs.push(`nested lists: ${aNested} → ${bNested} (sub-bullet hierarchy differs)`)
+    // Compare nested list padding (indent detection)
+    if (aNested > 0 || bNested > 0) {
+      const getNestedPadding = (node: TreeNode): string[] => {
+        const result: string[] = []
+        for (const c of node.children) {
+          if (c.tag === 'ul' || c.tag === 'ol') result.push(c.styles.paddingLeft)
+          result.push(...getNestedPadding(c))
+        }
+        return result
+      }
+      const aPads = getNestedPadding(a).join(',')
+      const bPads = getNestedPadding(b).join(',')
+      if (aPads !== bPads) diffs.push(`nested padding: ${aPads || 'none'} → ${bPads || 'none'}`)
+    }
     if (diffs.length) {
       lines.push(`  <${a.tag}> (${a.children.length} items)`)
       for (const d of diffs) lines.push(`    ${d}`)
     }
   }
+
+  // ── Text-transform on ALL text elements (not just headings) ────────
+  // Catches uppercase/lowercase mismatches on paragraphs, captions, tags
+  lines.push('')
+  lines.push('=== Text Transform Mismatches ===')
+  const textTags = new Set(['p', 'span', 'strong', 'em', 'a', 'li', 'figcaption', 'label', 'h1', 'h2', 'h3', 'h4'])
+  let ttMismatches = 0
+  for (let i = 0; i < Math.min(flatA.length, flatB.length); i++) {
+    const a = flatA[i]?.node
+    const b = flatB[i]?.node
+    if (!a || !b) break
+    if (!textTags.has(a.tag) || a.tag !== b.tag) continue
+    if (a.styles.textTransform !== b.styles.textTransform && a.text && a.text.length > 5) {
+      ttMismatches++
+      if (ttMismatches <= 3) {
+        lines.push(`  <${a.tag}> "${(a.text || '').substring(0, 35)}"`)
+        lines.push(`    textTransform: ${a.styles.textTransform} → ${b.styles.textTransform}`)
+      }
+    }
+  }
+  if (ttMismatches > 3) lines.push(`  …and ${ttMismatches - 3} more`)
+  if (ttMismatches === 0) lines.push(`  No text-transform mismatches`)
+
+  // ── Video count check ───────────────────────────────────────────────
+  lines.push('')
+  lines.push('=== Video Check ===')
+  const aVids = flatA.filter(f => f.node.tag === 'video')
+  const bVids = flatB.filter(f => f.node.tag === 'video')
+  if (aVids.length !== bVids.length) {
+    lines.push(`  Video count: ${aVids.length} → ${bVids.length}`)
+  } else {
+    lines.push(`  Video count matches (${aVids.length})`)
+  }
+
+  // ── Duplicate text detection ───────────────────────────────────────
+  // Catches duplicate headings, banners, callouts
+  lines.push('')
+  lines.push(`=== Duplicate Content (${labelB}) ===`)
+  const bTexts = flatB.filter(f => f.node.text && f.node.text.length > 20 && ['h1','h2','h3','h4','p'].includes(f.node.tag))
+    .map(f => f.node.text!.substring(0, 60))
+  const bTextCounts = new Map<string, number>()
+  for (const t of bTexts) bTextCounts.set(t, (bTextCounts.get(t) || 0) + 1)
+  let dupeCount = 0
+  for (const [text, count] of bTextCounts) {
+    if (count > 1) {
+      dupeCount++
+      if (dupeCount <= 3) lines.push(`  ⚠ "${text}" appears ${count}× in ${labelB}`)
+    }
+  }
+  if (dupeCount > 3) lines.push(`  …and ${dupeCount - 3} more duplicates`)
+  if (dupeCount === 0) lines.push(`  No duplicate content`)
+
+  // ── Extra content detection ────────────────────────────────────────
+  // Catches paragraphs in B that don't have a fuzzy match in A
+  // (e.g. academic quote definitions migrated but never on the live site)
+  lines.push('')
+  lines.push(`=== Extra Content (in ${labelB} but not ${labelA}) ===`)
+  const aPTexts = new Set(flatA.filter(f => f.node.tag === 'p' && f.node.text && f.node.text.length > 30)
+    .map(f => (f.node.text || '').substring(0, 30).toLowerCase()))
+  const bParagraphs2 = flatB.filter(f => f.node.tag === 'p' && f.node.text && f.node.text.length > 30)
+  let extraCount = 0
+  for (const { node } of bParagraphs2) {
+    const key = (node.text || '').substring(0, 30).toLowerCase()
+    if (!aPTexts.has(key)) {
+      extraCount++
+      if (extraCount <= 3) lines.push(`  ⚠ "${(node.text || '').substring(0, 50)}…"`)
+    }
+  }
+  if (extraCount > 3) lines.push(`  …and ${extraCount - 3} more extra paragraphs`)
+  if (extraCount === 0) lines.push(`  No extra content`)
+
+  // ── Image layout comparison ────────────────────────────────────────
+  // Catches side-by-side vs stacked mismatches (e.g. image next to text
+  // when it should be above text)
+  lines.push('')
+  lines.push('=== Image Layout Comparison ===')
+  const aImages = flatA.filter(f => f.node.tag === 'img' && f.node.rect.width > 100)
+  const bImages = flatB.filter(f => f.node.tag === 'img' && f.node.rect.width > 100)
+  let layoutMismatches = 0
+  for (let i = 0; i < Math.min(aImages.length, bImages.length); i++) {
+    const aImg = aImages[i].node
+    const bImg = bImages[i].node
+    const aWpct = Math.round((aImg.rect.width / 1280) * 100)
+    const bWpct = Math.round((bImg.rect.width / 1280) * 100)
+    // Flag if one image is <40% width (side-by-side) and the other is >70% (full-width)
+    if ((aWpct < 40 && bWpct > 70) || (aWpct > 70 && bWpct < 40)) {
+      layoutMismatches++
+      if (layoutMismatches <= 3) {
+        lines.push(`  ⚠ Image #${i + 1} [${aImg.src || ''}]: ${aWpct}%w → ${bWpct}%w (${aWpct < 40 ? 'side-by-side→full' : 'full→side-by-side'})`)
+      }
+    }
+  }
+  if (layoutMismatches > 3) lines.push(`  …and ${layoutMismatches - 3} more layout mismatches`)
+  if (layoutMismatches === 0) lines.push(`  Image layouts match`)
 
   // Check for background-colored sections — compare which text lives
   // inside a colored background on one site but not the other.
