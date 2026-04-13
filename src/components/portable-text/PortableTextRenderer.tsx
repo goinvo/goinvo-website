@@ -240,30 +240,32 @@ const components: PortableTextComponents = {
     },
     references: ({ value }) => (
       <ArticleReveal intensity="text">
-        <section id="references" className="my-12 pt-8">
-          <h2 className="header-lg text-center mt-8 mb-4">References</h2>
-          <ol className="pl-0 ml-0 list-decimal" style={{ listStylePosition: 'inside' }}>
-            {value.items?.map(
-              (item: { title: string; link?: string }, i: number) => (
-                <li key={i} className="text-gray mb-4 break-words" id={`ref-${i + 1}`}>
-                  <span id={`fn-${i + 1}`}>{item.title || ''}</span>
-                  {item.link && (
-                    <span>
-                      :{' '}
-                      <a
-                        href={item.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-secondary hover:text-primary break-all"
-                      >
-                        {item.link}
-                      </a>
-                    </span>
-                  )}
-                </li>
-              )
-            )}
-          </ol>
+        <section id="references" className="w-screen relative left-1/2 -ml-[50vw] py-12 my-8 bg-gray-lightest">
+          <div className="max-width max-width-md content-padding mx-auto">
+            <h2 className="header-lg text-center mt-8 mb-4">References</h2>
+            <ol className="pl-0 ml-0 list-decimal" style={{ listStylePosition: 'inside' }}>
+              {value.items?.map(
+                (item: { title: string; link?: string }, i: number) => (
+                  <li key={i} className="text-gray mb-4 break-words" id={`ref-${i + 1}`}>
+                    <span id={`fn-${i + 1}`}>{item.title || ''}</span>
+                    {item.link && (
+                      <span>
+                        :{' '}
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-secondary hover:text-primary break-all"
+                        >
+                          {item.link}
+                        </a>
+                      </span>
+                    )}
+                  </li>
+                )
+              )}
+            </ol>
+          </div>
         </section>
       </ArticleReveal>
     ),
