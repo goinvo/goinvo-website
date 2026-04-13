@@ -2,13 +2,16 @@
  * Full site comparison: vision pages + case studies + main pages
  *
  * Compares DOM structure between Gatsby (live) and Next.js (localhost).
- * Reports heading mismatches, missing content, count differences.
+ * Reports heading mismatches, missing content, count differences, and
+ * rendered-layout drift on main pages (hero wrap and card image layout).
  *
  * Usage:
  *   npx tsx scripts/compare-all-pages.ts              # all pages
  *   npx tsx scripts/compare-all-pages.ts --section work  # case studies only
  *   npx tsx scripts/compare-all-pages.ts --section main  # main pages only
  */
+
+import puppeteer, { type Browser, type Page } from 'puppeteer'
 
 const GATSBY_BASE_URL = 'https://goinvo.com'
 const NEXTJS_BASE_URL = 'http://localhost:3000'
@@ -47,6 +50,32 @@ interface Issue {
   message: string
 }
 
+interface RenderHeroMetric {
+  text: string
+  boxWidth: number
+  boxHeight: number
+  headingWidth: number
+  headingHeight: number
+  lineCount: number | null
+}
+
+interface RenderCardImageMetric {
+  title: string
+  parentWidth: number
+  parentHeight: number
+  imageWidth: number
+  imageHeight: number
+  topOffset: number
+  bottomOffset: number
+  rightGap: number
+  heightOccupancy: number
+}
+
+interface RenderMetrics {
+  hero: RenderHeroMetric | null
+  cardImages: RenderCardImageMetric[]
+}
+
 function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 }
@@ -72,6 +101,188 @@ function getContentArea(html: string): string {
   const bodyMatch = html.match(/<div class="app__body">([\s\S]*?)(?:<div class="footer">|$)/i)
   if (bodyMatch) return bodyMatch[1]
   return html
+}
+
+function pageUrl(base: string, path: string): string {
+  if (path === '/') return `${base}/`
+  return `${base}${path}/`
+}
+
+async function preparePageForCapture(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const step = Math.max(window.innerHeight * 0.75, 400)
+    const maxScroll = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)
+
+    for (let y = 0; y <= maxScroll; y += step) {
+      window.scrollTo(0, y)
+      await new Promise(resolve => setTimeout(resolve, 150))
+    }
+
+    window.scrollTo(0, maxScroll)
+    await new Promise(resolve => setTimeout(resolve, 400))
+    window.scrollTo(0, 0)
+    await new Promise(resolve => setTimeout(resolve, 250))
+  })
+}
+
+async function measureRenderedLayout(page: Page, url: string): Promise<RenderMetrics> {
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+  await new Promise(resolve => setTimeout(resolve, 800))
+  await preparePageForCapture(page)
+
+  return page.evaluate(() => {
+    const transparent = new Set(['rgba(0, 0, 0, 0)', 'transparent'])
+    const root = document.querySelector('main') || document.querySelector('.app__body') || document.body
+    const parsePx = (value: string | null | undefined): number => {
+      const parsed = Number.parseFloat(value ?? '0')
+      return Number.isFinite(parsed) ? parsed : 0
+    }
+    const lineCount = (el: Element | null): number | null => {
+      if (!el) return null
+      const style = getComputedStyle(el)
+      const rect = el.getBoundingClientRect()
+      const height = parsePx(style.lineHeight) || parsePx(style.fontSize) * 1.2
+      if (!height) return null
+      return Math.round((rect.height / height) * 10) / 10
+    }
+    const findMeasuredContainer = (el: HTMLElement | null): HTMLElement | null => {
+      let current = el?.parentElement ?? null
+      while (current && current !== document.body) {
+        const style = getComputedStyle(current)
+        const rect = current.getBoundingClientRect()
+        const targetRect = el?.getBoundingClientRect()
+        const hasPadding =
+          parsePx(style.paddingTop) > 0 ||
+          parsePx(style.paddingRight) > 0 ||
+          parsePx(style.paddingBottom) > 0 ||
+          parsePx(style.paddingLeft) > 0
+        const hasMeasuredBackground = !transparent.has(style.backgroundColor)
+        const className = typeof current.className === 'string' ? current.className : ''
+        const canContain = !!targetRect && rect.width >= targetRect.width + 20 && rect.height >= targetRect.height
+
+        if (canContain && (hasMeasuredBackground || hasPadding || className.includes('content-padding'))) {
+          return current
+        }
+        current = current.parentElement
+      }
+      return el?.parentElement ?? null
+    }
+
+    const heroHeading = Array.from(document.querySelectorAll('h1'))
+      .filter(el => !el.closest('header, footer, nav'))
+      .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)[0] as HTMLElement | undefined
+
+    const hero = (() => {
+      if (!heroHeading) return null
+      const heroBox = findMeasuredContainer(heroHeading)
+      if (!heroBox) return null
+      const headingRect = heroHeading.getBoundingClientRect()
+      const boxRect = heroBox.getBoundingClientRect()
+      return {
+        text: (heroHeading.textContent || '').trim().replace(/\s+/g, ' ').substring(0, 80),
+        boxWidth: Math.round(boxRect.width),
+        boxHeight: Math.round(boxRect.height),
+        headingWidth: Math.round(headingRect.width),
+        headingHeight: Math.round(headingRect.height),
+        lineCount: lineCount(heroHeading),
+      }
+    })()
+
+    const cardImages = Array.from(root.querySelectorAll('a'))
+      .map(link => {
+        const heading = link.querySelector('h2, h3, h4') as HTMLElement | null
+        const img = link.querySelector('img') as HTMLImageElement | null
+        if (!heading || !img) return null
+
+        const cardRect = link.getBoundingClientRect()
+        if (cardRect.width < 500 || cardRect.height < 200) return null
+
+        const parent = img.parentElement as HTMLElement | null
+        if (!parent) return null
+
+        const parentRect = parent.getBoundingClientRect()
+        const imgRect = img.getBoundingClientRect()
+        if (parentRect.width < 250 || parentRect.height < 180 || imgRect.width < 180) return null
+
+        return {
+          title: (heading.textContent || '').trim().replace(/\s+/g, ' ').substring(0, 70),
+          parentWidth: Math.round(parentRect.width),
+          parentHeight: Math.round(parentRect.height),
+          imageWidth: Math.round(imgRect.width),
+          imageHeight: Math.round(imgRect.height),
+          topOffset: Math.round(imgRect.top - parentRect.top),
+          bottomOffset: Math.round(parentRect.bottom - imgRect.bottom),
+          rightGap: Math.round(cardRect.right - parentRect.right),
+          heightOccupancy: Number((imgRect.height / parentRect.height).toFixed(2)),
+        }
+      })
+      .filter((sample): sample is RenderCardImageMetric => sample !== null)
+      .sort((a, b) => a.title.localeCompare(b.title))
+      .slice(0, 6)
+
+    return { hero, cardImages }
+  })
+}
+
+function compareRenderedLayout(label: string, gatsby: RenderMetrics, nextjs: RenderMetrics): Issue[] {
+  const issues: Issue[] = []
+
+  if (gatsby.hero && nextjs.hero) {
+    const diffs: string[] = []
+    const boxWidthDiff = Math.abs(gatsby.hero.boxWidth - nextjs.hero.boxWidth)
+    const headingWidthDiff = Math.abs(gatsby.hero.headingWidth - nextjs.hero.headingWidth)
+    const headingHeightDiff = Math.abs(gatsby.hero.headingHeight - nextjs.hero.headingHeight)
+    const lineCountDiff =
+      gatsby.hero.lineCount !== null && nextjs.hero.lineCount !== null
+        ? Math.abs(gatsby.hero.lineCount - nextjs.hero.lineCount)
+        : 0
+
+    if (boxWidthDiff > 30) diffs.push(`content box width ${gatsby.hero.boxWidth}px -> ${nextjs.hero.boxWidth}px`)
+    if (headingWidthDiff > 30) diffs.push(`heading width ${gatsby.hero.headingWidth}px -> ${nextjs.hero.headingWidth}px`)
+    if (headingHeightDiff > 12) diffs.push(`heading height ${gatsby.hero.headingHeight}px -> ${nextjs.hero.headingHeight}px`)
+    if (lineCountDiff > 0.4) diffs.push(`line wrap ~${gatsby.hero.lineCount} -> ~${nextjs.hero.lineCount} lines`)
+
+    if (diffs.length) {
+      const severity: Issue['severity'] =
+        boxWidthDiff > 60 || headingHeightDiff > 24 || lineCountDiff > 0.8 ? 'high' : 'medium'
+      issues.push({
+        severity,
+        category: 'HERO_WRAP',
+        message: `"${gatsby.hero.text || label}": ${diffs.join('; ')}`,
+      })
+    }
+  }
+
+  const sampleCount = Math.min(gatsby.cardImages.length, nextjs.cardImages.length, 3)
+  for (let i = 0; i < sampleCount; i++) {
+    const g = gatsby.cardImages[i]
+    const n = nextjs.cardImages[i]
+    const diffs: string[] = []
+    const parentWidthDiff = Math.abs(g.parentWidth - n.parentWidth)
+    const rightGapDiff = Math.abs(g.rightGap - n.rightGap)
+    const occupancyDiff = Math.abs(g.heightOccupancy - n.heightOccupancy)
+    const topOffsetDiff = Math.abs(g.topOffset - n.topOffset)
+    const bottomOffsetDiff = Math.abs(g.bottomOffset - n.bottomOffset)
+
+    if (parentWidthDiff > 30) diffs.push(`image column width ${g.parentWidth}px -> ${n.parentWidth}px`)
+    if (rightGapDiff > 8) diffs.push(`image column right gap ${g.rightGap}px -> ${n.rightGap}px`)
+    if (occupancyDiff > 0.12) diffs.push(`image height occupancy ${g.heightOccupancy} -> ${n.heightOccupancy}`)
+    if (topOffsetDiff > 20 || bottomOffsetDiff > 20) {
+      diffs.push(`vertical padding top/bottom ${g.topOffset}px/${g.bottomOffset}px -> ${n.topOffset}px/${n.bottomOffset}px`)
+    }
+
+    if (diffs.length) {
+      const severity: Issue['severity'] =
+        parentWidthDiff > 50 || rightGapDiff > 16 || occupancyDiff > 0.2 ? 'high' : 'medium'
+      issues.push({
+        severity,
+        category: 'CARD_IMAGE_LAYOUT',
+        message: `"${g.title || n.title}": ${diffs.join('; ')}`,
+      })
+    }
+  }
+
+  return issues
 }
 
 function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[] {

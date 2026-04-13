@@ -60,6 +60,12 @@ interface TreeNode {
   children: TreeNode[]
 }
 
+interface FlatNode {
+  path: string
+  node: TreeNode
+  parentPath: string | null
+}
+
 async function extractTree(page: Page): Promise<TreeNode> {
   return page.evaluate(`(function() {
     var SKIP_TAGS = ['script','style','link','meta','noscript','br','wbr'];
@@ -207,6 +213,23 @@ async function extractTree(page: Page): Promise<TreeNode> {
   })()`) as Promise<TreeNode>
 }
 
+async function preparePageForCapture(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const step = Math.max(window.innerHeight * 0.75, 400)
+    const maxScroll = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)
+
+    for (let y = 0; y <= maxScroll; y += step) {
+      window.scrollTo(0, y)
+      await new Promise(resolve => setTimeout(resolve, 150))
+    }
+
+    window.scrollTo(0, maxScroll)
+    await new Promise(resolve => setTimeout(resolve, 400))
+    window.scrollTo(0, 0)
+    await new Promise(resolve => setTimeout(resolve, 250))
+  })
+}
+
 // ── Pretty print ───────────────────────────────────────────────────────
 
 function normalizeColor(c: string): string {
@@ -305,11 +328,11 @@ function printTree(node: TreeNode, indent: string = '', lines: string[] = []): s
 
 // ── Diff two trees ─────────────────────────────────────────────────────
 
-function flattenTree(node: TreeNode, path: string = '', list: { path: string; node: TreeNode }[] = []): { path: string; node: TreeNode }[] {
+function flattenTree(node: TreeNode, path: string = '', list: FlatNode[] = [], parentPath: string | null = null): FlatNode[] {
   const key = `${path}/${node.tag}${node.id ? '#' + node.id : ''}${node.classes.length ? '.' + node.classes[0] : ''}`
-  list.push({ path: key, node })
+  list.push({ path: key, node, parentPath })
   for (let i = 0; i < node.children.length; i++) {
-    flattenTree(node.children[i], `${key}[${i}]`, list)
+    flattenTree(node.children[i], `${key}[${i}]`, list, key)
   }
   return list
 }
@@ -317,7 +340,50 @@ function flattenTree(node: TreeNode, path: string = '', list: { path: string; no
 function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: string): string[] {
   const flatA = flattenTree(treeA)
   const flatB = flattenTree(treeB)
+  const flatAByPath = new Map(flatA.map(entry => [entry.path, entry]))
+  const flatBByPath = new Map(flatB.map(entry => [entry.path, entry]))
   const lines: string[] = []
+  const transparent = new Set(['rgba(0, 0, 0, 0)', 'transparent'])
+  const white = new Set(['rgb(255, 255, 255)', '#fff', '#ffffff'])
+  const parsePx = (value: string | undefined): number => {
+    const parsed = Number.parseFloat(value ?? '0')
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  const isVisibleBackground = (color: string | undefined): boolean => {
+    if (!color) return false
+    return !transparent.has(color)
+  }
+  const getAncestors = (entry: FlatNode, map: Map<string, FlatNode>): FlatNode[] => {
+    const ancestors: FlatNode[] = []
+    let parent = entry.parentPath ? map.get(entry.parentPath) ?? null : null
+    while (parent) {
+      ancestors.push(parent)
+      parent = parent.parentPath ? map.get(parent.parentPath) ?? null : null
+    }
+    return ancestors
+  }
+  const findNearestMeasuredContainer = (entry: FlatNode, map: Map<string, FlatNode>): FlatNode | null => {
+    return getAncestors(entry, map).find(ancestor => {
+      const hasPadding =
+        parsePx(ancestor.node.styles.paddingTop) > 0 ||
+        parsePx(ancestor.node.styles.paddingRight) > 0 ||
+        parsePx(ancestor.node.styles.paddingBottom) > 0 ||
+        parsePx(ancestor.node.styles.paddingLeft) > 0
+      const carriesHeroBoxStyling =
+        isVisibleBackground(ancestor.node.styles.backgroundColor) ||
+        hasPadding ||
+        ancestor.node.classes.some(cls => cls.includes('content-padding'))
+      return carriesHeroBoxStyling &&
+        ancestor.node.rect.width >= entry.node.rect.width + 20 &&
+        ancestor.node.rect.height >= entry.node.rect.height
+    }) ?? null
+  }
+  const lineCount = (node: TreeNode): number | null => {
+    const lineHeight = parsePx(node.styles.lineHeight) || parsePx(node.styles.fontSize) * 1.2
+    if (!lineHeight) return null
+    return Math.round((node.rect.height / lineHeight) * 10) / 10
+  }
+  const percent = (value: number): string => `${Math.round(value * 100)}%`
 
   // Compare element counts by tag
   const countA: Record<string, number> = {}
@@ -370,6 +436,51 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
       lines.push(`  <${a.tag}> "${aText.substring(0, 40) || bText.substring(0, 40)}"`)
       for (const d of diffs) lines.push(`    ${d}`)
     }
+  }
+
+  lines.push('')
+  lines.push('=== Hero Wrap Differences ===')
+  const aHeroHeading = aHeadings.find(f => f.node.tag === 'h1' && (f.node.text || '').length > 10)
+  const bHeroHeading = bHeadings.find(f => f.node.tag === 'h1' && (f.node.text || '').length > 10)
+  if (aHeroHeading && bHeroHeading) {
+    const diffs: string[] = []
+    const aHeading = aHeroHeading.node
+    const bHeading = bHeroHeading.node
+    const aHeroBox = findNearestMeasuredContainer(aHeroHeading, flatAByPath)
+    const bHeroBox = findNearestMeasuredContainer(bHeroHeading, flatBByPath)
+    const widthDiff = Math.abs(aHeading.rect.width - bHeading.rect.width)
+    const heightDiff = Math.abs(aHeading.rect.height - bHeading.rect.height)
+    if (widthDiff > 30) diffs.push(`h1 width: ${aHeading.rect.width}px -> ${bHeading.rect.width}px`)
+    if (heightDiff > 12) diffs.push(`h1 height: ${aHeading.rect.height}px -> ${bHeading.rect.height}px`)
+
+    const aLines = lineCount(aHeading)
+    const bLines = lineCount(bHeading)
+    if (aLines !== null && bLines !== null && Math.abs(aLines - bLines) > 0.4) {
+      diffs.push(`line wrap: ~${aLines} lines -> ~${bLines} lines`)
+    }
+
+    if (aHeroBox && bHeroBox) {
+      const aBg = normalizeColor(aHeroBox.node.styles.backgroundColor)
+      const bBg = normalizeColor(bHeroBox.node.styles.backgroundColor)
+      if (Math.abs(aHeroBox.node.rect.width - bHeroBox.node.rect.width) > 30) {
+        diffs.push(`hero content box width: ${aHeroBox.node.rect.width}px -> ${bHeroBox.node.rect.width}px`)
+      }
+      if (Math.abs(aHeroBox.node.rect.height - bHeroBox.node.rect.height) > 20) {
+        diffs.push(`hero content box height: ${aHeroBox.node.rect.height}px -> ${bHeroBox.node.rect.height}px`)
+      }
+      if (aBg !== bBg && (!white.has(aBg) || !white.has(bBg))) {
+        diffs.push(`hero content box bg: ${aBg} -> ${bBg}`)
+      }
+    }
+
+    if (diffs.length) {
+      lines.push(`  <h1> "${(aHeading.text || bHeading.text).substring(0, 50)}"`)
+      for (const diff of diffs) lines.push(`    ${diff}`)
+    } else {
+      lines.push('  Hero wrap metrics match')
+    }
+  } else {
+    lines.push('  Unable to compare hero headings')
   }
 
   // Compare paragraphs (first 5)
@@ -533,6 +644,67 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   }
   if (layoutMismatches > 3) lines.push(`  …and ${layoutMismatches - 3} more layout mismatches`)
   if (layoutMismatches === 0) lines.push(`  Image layouts match`)
+
+  lines.push('')
+  lines.push('=== Image Occupancy Differences ===')
+  const buildImageSamples = (flat: FlatNode[], map: Map<string, FlatNode>) =>
+    flat
+      .map(entry => {
+        if (entry.node.tag !== 'img') return null
+        if (entry.node.rect.width <= 250 || entry.node.rect.height <= 120) return null
+        const parent = entry.parentPath ? map.get(entry.parentPath) ?? null : null
+        if (!parent) return null
+        if (parent.node.rect.width <= 300 || parent.node.rect.height <= 220) return null
+
+        const topOffset = entry.node.rect.y - parent.node.rect.y
+        const bottomOffset = parent.node.rect.height - entry.node.rect.height - topOffset
+        const leftOffset = entry.node.rect.x - parent.node.rect.x
+        const rightOffset = parent.node.rect.width - entry.node.rect.width - leftOffset
+
+        return {
+          src: entry.node.src || '(unknown)',
+          widthRatio: entry.node.rect.width / parent.node.rect.width,
+          heightRatio: entry.node.rect.height / parent.node.rect.height,
+          topOffset,
+          bottomOffset,
+          leftOffset,
+          rightOffset,
+        }
+      })
+      .filter((sample): sample is NonNullable<typeof sample> => sample !== null)
+
+  const aImageSamples = buildImageSamples(flatA, flatAByPath)
+  const bImageSamples = buildImageSamples(flatB, flatBByPath)
+  let occupancyMismatches = 0
+  for (let i = 0; i < Math.min(aImageSamples.length, bImageSamples.length); i++) {
+    const a = aImageSamples[i]
+    const b = bImageSamples[i]
+    const diffs: string[] = []
+    if (Math.abs(a.heightRatio - b.heightRatio) > 0.18) {
+      diffs.push(`height occupancy: ${percent(a.heightRatio)} -> ${percent(b.heightRatio)}`)
+    }
+    if (Math.abs(a.topOffset - b.topOffset) > 20 || Math.abs(a.bottomOffset - b.bottomOffset) > 20) {
+      diffs.push(`vertical padding: top ${Math.round(a.topOffset)}px / bottom ${Math.round(a.bottomOffset)}px -> top ${Math.round(b.topOffset)}px / bottom ${Math.round(b.bottomOffset)}px`)
+    }
+    if (Math.abs(a.leftOffset - b.leftOffset) > 20 || Math.abs(a.rightOffset - b.rightOffset) > 20) {
+      diffs.push(`horizontal padding: left ${Math.round(a.leftOffset)}px / right ${Math.round(a.rightOffset)}px -> left ${Math.round(b.leftOffset)}px / right ${Math.round(b.rightOffset)}px`)
+    }
+    if (diffs.length) {
+      occupancyMismatches++
+      if (occupancyMismatches <= 5) {
+        lines.push(`  <img> "${a.src}"`)
+        for (const diff of diffs) lines.push(`    ${diff}`)
+      }
+    }
+  }
+  if (aImageSamples.length !== bImageSamples.length) {
+    lines.push(`  Sample count: ${aImageSamples.length} -> ${bImageSamples.length}`)
+  }
+  if (occupancyMismatches === 0 && aImageSamples.length === bImageSamples.length) {
+    lines.push('  Image occupancy metrics match')
+  } else if (occupancyMismatches > 5) {
+    lines.push(`  …and ${occupancyMismatches - 5} more occupancy mismatches`)
+  }
 
   // Check for background-colored sections — compare which text lives
   // inside a colored background on one site but not the other.
@@ -790,12 +962,14 @@ async function main() {
   console.error(`Fetching ${url}...`)
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
   await new Promise(r => setTimeout(r, 1000))
+  await preparePageForCapture(page)
   const tree = await extractTree(page)
 
   if (url2) {
     console.error(`Fetching ${url2}...`)
     await page.goto(url2, { waitUntil: 'networkidle2', timeout: 30000 })
     await new Promise(r => setTimeout(r, 1000))
+    await preparePageForCapture(page)
     const tree2 = await extractTree(page)
 
     const diffLines = diffTrees(tree, tree2, 'A', 'B')

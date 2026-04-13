@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
+import { Button } from '@/components/ui/Button'
 import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { CalendlyEmbed } from '@/components/forms/CalendlyEmbed'
@@ -154,12 +155,14 @@ export default function ServicesPage() {
               <a href="mailto:info@goinvo.com">info@goinvo.com</a>
             </p>
             <p className="text-gray">Or, talk to us live on Zoom.</p>
-            <Link
+            <Button
               href="#calendly-open-office-hours"
-              className="block w-full text-center bg-primary text-white font-semibold uppercase tracking-wider no-underline py-3 px-6 mt-8 mb-8 hover:bg-primary-dark transition-colors"
+              variant="secondary"
+              size="md"
+              className="mt-8 mb-8 w-full"
             >
               Schedule a chat
-            </Link>
+            </Button>
           </div>
         </div>
 

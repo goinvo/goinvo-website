@@ -618,10 +618,15 @@ const components: PortableTextComponents = {
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
       const layout = value.layout || 'inline'
+      const isSingleCenteredButton = layout === 'centered' && buttons.length === 1
       const containerClass = layout === 'fullWidth' ? 'flex gap-4'
         : layout === 'centered' ? 'flex flex-wrap gap-4 justify-center'
         : 'flex flex-wrap gap-4'
-      const btnClass = layout === 'fullWidth' ? 'flex-1 block py-3' : 'inline-flex'
+      const btnClass = layout === 'fullWidth'
+        ? 'flex-1 block py-3'
+        : isSingleCenteredButton
+          ? 'inline-flex w-full sm:w-auto sm:min-w-[330px]'
+          : 'inline-flex'
       return (
         <ArticleReveal intensity="visual">
           <div className={cn('my-6', containerClass)}>
@@ -633,7 +638,8 @@ const components: PortableTextComponents = {
                 rel={btn.external ? 'noopener noreferrer' : undefined}
                 className={cn(
                   'items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
-                  'text-[15px] leading-[1.625rem] py-[0.375rem] px-4',
+                  'text-[15px] leading-[1.625rem]',
+                  'py-[0.375rem] px-4',
                   btnClass,
                   btn.variant === 'primary'
                     ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
@@ -1005,12 +1011,26 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
   // Disable auto-grouping — images render full-width stacked by default.
   // Use explicit 'columns' blocks in Sanity for side-by-side layouts.
   const processed = content
+  const blockComponents = components.block as Record<string, unknown>
+  const rendererComponents: PortableTextComponents = variant === 'case-study'
+    ? ({
+        ...components,
+        block: {
+          ...blockComponents,
+          h4: ({ children }) => (
+            <ArticleReveal intensity="heading">
+              <h4 className="font-sans text-base font-semibold mt-6 mb-2">{children}</h4>
+            </ArticleReveal>
+          ),
+        },
+      } as PortableTextComponents)
+    : components
 
   if (variant === 'case-study') {
     // Case studies use custom star bullets (matching Gatsby)
     return (
       <div className="case-study-content">
-        <PortableText value={processed} components={components} />
+        <PortableText value={processed} components={rendererComponents} />
       </div>
     )
   }
@@ -1019,10 +1039,10 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
   if (bulletStyle === 'disc') {
     return (
       <div className="disc-bullets">
-        <PortableText value={processed} components={components} />
+        <PortableText value={processed} components={rendererComponents} />
       </div>
     )
   }
 
-  return <PortableText value={processed} components={components} />
+  return <PortableText value={processed} components={rendererComponents} />
 }
