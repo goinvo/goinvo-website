@@ -189,6 +189,19 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'contributorsLayout',
+      title: 'Contributors Layout',
+      type: 'string',
+      description: 'How to display the contributors section. Use "Plain list" for pages that should show names only, without photos.',
+      options: {
+        list: [
+          { title: 'Cards (default)', value: 'equal' },
+          { title: 'Plain list', value: 'plain-list' },
+        ],
+      },
+      initialValue: 'equal',
+    }),
+    defineField({
       name: 'specialThanksHeading',
       title: 'Special Thanks Heading',
       type: 'string',

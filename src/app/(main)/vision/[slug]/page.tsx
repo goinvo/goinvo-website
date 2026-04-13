@@ -78,6 +78,12 @@ export default async function VisionFeaturePage({ params }: Props) {
     : null
 
   const widthClass = feature.contentWidth === 'wide' ? '' : feature.contentWidth === 'narrow' ? 'max-width-sm' : 'max-width-md'
+  const useLegacyFacesLayout = slug === 'faces-in-health-communication'
+  const articleContainerClassName = useLegacyFacesLayout
+    ? 'mx-auto px-4 lg:px-4'
+    : `max-width ${widthClass} content-padding mx-auto`
+  const articleContainerStyle = useLegacyFacesLayout ? { maxWidth: '680px' } : undefined
+  const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
 
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
@@ -103,14 +109,14 @@ export default async function VisionFeaturePage({ params }: Props) {
       {/* Title + meta — hidden for fullImageCover pages where the image IS the content */}
       {!feature.fullImageCover && (
         <Reveal style="slide-up" duration={0.5}>
-          <div className={`max-width ${widthClass} content-padding mx-auto`}>
+          <div className={articleContainerClassName} style={articleContainerStyle}>
             <h1
-              className="header-xl mt-8 mb-6"
+              className={titleClassName}
               style={{ viewTransitionName: 'page-title' }}
             >
               {feature.title}
             </h1>
-            {(feature.categories?.length || feature.date) && (
+            {!useLegacyFacesLayout && (feature.categories?.length || feature.date) && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
                 {feature.categories && feature.categories.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -148,7 +154,7 @@ export default async function VisionFeaturePage({ params }: Props) {
         return (
           <>
             <section className="pb-12">
-              <div className={`max-width ${widthClass} content-padding mx-auto`}>
+              <div className={articleContainerClassName} style={articleContainerStyle}>
                 <PortableTextRenderer content={mainContent} bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined} />
               </div>
             </section>
@@ -156,7 +162,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* Authors */}
             {feature.authors && feature.authors.length > 0 && (
               <section className="pb-12">
-                <div className={`max-width ${widthClass} content-padding mx-auto`}>
+                <div className={articleContainerClassName} style={articleContainerStyle}>
                   <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined} />
                 </div>
               </section>
@@ -165,8 +171,12 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* Contributors */}
             {feature.contributors && feature.contributors.length > 0 && (
               <section className="pb-12">
-                <div className={`max-width ${widthClass} content-padding mx-auto`}>
-                  <AuthorSection authors={feature.contributors} heading="Contributors" />
+                <div className={articleContainerClassName} style={articleContainerStyle}>
+                  <AuthorSection
+                    authors={feature.contributors}
+                    heading="Contributors"
+                    variant={feature.contributorsLayout as 'equal' | 'primary-sidebar' | 'plain-list' | undefined}
+                  />
                 </div>
               </section>
             )}
@@ -174,7 +184,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* Special Thanks / Contributors (plain text) */}
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
-                <div className={`max-width ${widthClass} content-padding mx-auto`}>
+                <div className={articleContainerClassName} style={articleContainerStyle}>
                   <h3 className="header-md mt-8 mb-4">{(feature as any).specialThanksHeading || (feature.contributors && feature.contributors.length > 0 ? 'Special thanks to...' : 'Contributors')}</h3>
                   <PortableTextRenderer content={feature.specialThanks} />
                 </div>
@@ -184,7 +194,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* About GoInvo (after Special Thanks) */}
             {feature.showAboutGoInvo && (
               <section className="pb-12">
-                <div className={`max-width ${widthClass} content-padding mx-auto`}>
+                <div className={articleContainerClassName} style={articleContainerStyle}>
                   <AboutGoInvo />
                 </div>
               </section>
@@ -192,7 +202,7 @@ export default async function VisionFeaturePage({ params }: Props) {
 
             {/* Newsletter */}
             <section className="bg-gray-lightest py-8">
-              <div className={`max-width ${widthClass} content-padding mx-auto`}>
+              <div className={articleContainerClassName} style={articleContainerStyle}>
                 <div className="bg-white shadow-card py-6 px-4 md:px-8">
                   <NewsletterForm />
                 </div>
@@ -202,7 +212,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {/* References (after newsletter, matching Gatsby order) */}
             {referencesContent.length > 0 && (
               <section className="pb-12">
-                <div className={`max-width ${widthClass} content-padding mx-auto`}>
+                <div className={articleContainerClassName} style={articleContainerStyle}>
                   <PortableTextRenderer content={referencesContent} />
                 </div>
               </section>
