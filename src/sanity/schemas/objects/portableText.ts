@@ -10,6 +10,9 @@ export default defineType({
       type: 'block',
       styles: [
         { title: 'Normal', value: 'normal' },
+        { title: 'Normal (extra bottom space)', value: 'normalSpacious' },
+        { title: 'Serif Large Paragraph', value: 'serifLarge' },
+        { title: 'Serif Large Paragraph (no top margin)', value: 'serifLargeNoTop' },
         { title: 'H2', value: 'h2' },
         { title: 'H2 (large)', value: 'h2Large' },
         { title: 'H2 (large centered)', value: 'h2LargeCentered' },
@@ -24,6 +27,8 @@ export default defineType({
         { title: 'H4', value: 'h4' },
         { title: 'H4 (with bullet)', value: 'h4Bullet' },
         { title: 'Centered', value: 'textCenter' },
+        { title: 'Serif Large Centered', value: 'serifLargeCentered' },
+        { title: 'Serif Large Centered (tight)', value: 'serifLargeCenteredTight' },
         { title: 'Quote', value: 'blockquote' },
         {
           title: 'Callout',
@@ -208,6 +213,19 @@ export default defineType({
               { title: 'Default (follow article width)', value: 'default' },
               { title: 'Wide (1020px)', value: 'wide' },
               { title: 'Full bleed', value: 'bleed' },
+            ],
+          },
+          initialValue: 'default',
+        },
+        {
+          name: 'variant',
+          title: 'Variant',
+          type: 'string',
+          description: 'Optional presentation style for the column items',
+          options: {
+            list: [
+              { title: 'Default', value: 'default' },
+              { title: 'Centered comparison', value: 'centered' },
             ],
           },
           initialValue: 'default',
