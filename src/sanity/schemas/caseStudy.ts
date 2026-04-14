@@ -33,6 +33,13 @@ export default defineType({
       description: 'Client or partner name shown beneath the title',
     }),
     defineField({
+      name: 'hideClientSubtitle',
+      title: 'Hide Client Subtitle',
+      type: 'boolean',
+      description: 'Hide the "for {client}" subtitle on the page header while keeping the client metadata for other uses',
+      initialValue: false,
+    }),
+    defineField({
       name: 'image',
       title: 'Hero Image',
       type: 'image',
@@ -52,6 +59,26 @@ export default defineType({
       type: 'array',
       description: 'Tag this case study with one or more categories for filtering',
       of: [{ type: 'reference', to: [{ type: 'category' }] }],
+    }),
+    defineField({
+      name: 'displayTags',
+      title: 'Display Tags',
+      type: 'string',
+      description: 'Optional curated tag line shown on the case study page (separate from taxonomy categories used for filtering)',
+    }),
+    defineField({
+      name: 'metadataLayout',
+      title: 'Metadata Layout',
+      type: 'string',
+      description: 'How Time and Tags should be grouped on the case study page',
+      options: {
+        list: [
+          { title: 'Stacked', value: 'stacked' },
+          { title: 'Inline', value: 'inline' },
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'stacked',
     }),
     defineField({
       name: 'authors',

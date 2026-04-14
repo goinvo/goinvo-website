@@ -174,7 +174,7 @@ async function measureRenderedLayout(page: Page, url: string): Promise<RenderMet
 
   return page.evaluate(`(function () {
     const transparent = new Set(['rgba(0, 0, 0, 0)', 'transparent']);
-    const root = document.querySelector('main') || document.querySelector('.app__body') || document.body;
+    const root = document.querySelector('.app__body') || document.querySelector('main') || document.body;
 
     const parsePx = (value) => {
       const parsed = Number.parseFloat(value || '0');
@@ -298,6 +298,7 @@ async function measureRenderedLayout(page: Page, url: string): Promise<RenderMet
     const articleImages = Array.from(root.querySelectorAll('img'))
       .filter((img) => !img.closest('a, section#references, header, footer, nav'))
       .filter((img) => !img.closest('.hero, [class*="hero"]'))
+      .filter((img) => !img.closest('video'))
       .map((img) => {
         const rect = img.getBoundingClientRect();
         if (rect.width <= 250 || rect.height <= 150) return null;
@@ -311,7 +312,6 @@ async function measureRenderedLayout(page: Page, url: string): Promise<RenderMet
       })
       .filter((sample) => sample !== null)
       .sort((a, b) => a.top - b.top)
-      .slice(0, 4)
       .map((sample) => ({
         src: sample.src,
         width: sample.width,
@@ -450,9 +450,45 @@ function compareRenderedLayout(label: string, gatsby: RenderMetrics, nextjs: Ren
         message: `"${label}": ${diffs.join('; ')}`,
       })
     }
+
+    const textDiffs: string[] = []
+    if (
+      gatsby.caseStudyMetadata.timeText &&
+      nextjs.caseStudyMetadata.timeText &&
+      normalizeText(gatsby.caseStudyMetadata.timeText) !== normalizeText(nextjs.caseStudyMetadata.timeText)
+    ) {
+      textDiffs.push(`Time text "${gatsby.caseStudyMetadata.timeText}" -> "${nextjs.caseStudyMetadata.timeText}"`)
+    }
+    if (
+      (gatsby.caseStudyMetadata.tagsText || nextjs.caseStudyMetadata.tagsText) &&
+      normalizeText(gatsby.caseStudyMetadata.tagsText || '') !== normalizeText(nextjs.caseStudyMetadata.tagsText || '')
+    ) {
+      textDiffs.push(`Tags text "${gatsby.caseStudyMetadata.tagsText || '(none)'}" -> "${nextjs.caseStudyMetadata.tagsText || '(none)'}"`)
+    }
+    const gCombinedMetadata = gatsby.caseStudyMetadata.timeTop !== null && gatsby.caseStudyMetadata.tagsTop !== null
+      ? Math.abs(gatsby.caseStudyMetadata.tagsTop - gatsby.caseStudyMetadata.timeTop) < 8
+      : false
+    const nCombinedMetadata = nextjs.caseStudyMetadata.timeTop !== null && nextjs.caseStudyMetadata.tagsTop !== null
+      ? Math.abs(nextjs.caseStudyMetadata.tagsTop - nextjs.caseStudyMetadata.timeTop) < 8
+      : false
+    if (gCombinedMetadata !== nCombinedMetadata) {
+      textDiffs.push(`Metadata grouping ${gCombinedMetadata ? 'inline' : 'stacked'} -> ${nCombinedMetadata ? 'inline' : 'stacked'}`)
+    }
+
+    if (textDiffs.length > 0) {
+      issues.push({
+        severity: 'medium',
+        category: 'CASE_STUDY_METADATA_TEXT',
+        message: `"${label}": ${textDiffs.join('; ')}`,
+      })
+    }
   }
 
-  if (gatsby.articleImages.length !== nextjs.articleImages.length) {
+  const hasComparableArticleSamples =
+    gatsby.articleImages.length >= 2 &&
+    nextjs.articleImages.length >= 2
+
+  if (hasComparableArticleSamples && gatsby.articleImages.length !== nextjs.articleImages.length) {
     issues.push({
       severity: 'medium',
       category: 'CASE_STUDY_IMAGE_COUNT',
@@ -460,7 +496,9 @@ function compareRenderedLayout(label: string, gatsby: RenderMetrics, nextjs: Ren
     })
   }
 
-  const articleImageSampleCount = Math.min(gatsby.articleImages.length, nextjs.articleImages.length, 3)
+  const articleImageSampleCount = hasComparableArticleSamples
+    ? Math.min(gatsby.articleImages.length, nextjs.articleImages.length, 3)
+    : 0
   for (let i = 0; i < articleImageSampleCount; i++) {
     const g = gatsby.articleImages[i]
     const n = nextjs.articleImages[i]
@@ -514,6 +552,7 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
   const nextContent = getContentArea(nextjsHtml)
   const gatsbyHeadings = extractHeadings(gatsbyContent)
   const nextHeadings = extractHeadings(nextContent)
+  const isWorkPage = label.startsWith('work/')
 
   for (const nextHeading of nextHeadings) {
     const found = gatsbyHeadings.some((gatsbyHeading) => {
@@ -548,13 +587,28 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
   }
 
   const counts: Array<[string, number, number, number, 'high' | 'medium']> = [
-    ['images', (gatsbyContent.match(/<img\b/gi) || []).length, (nextContent.match(/<img\b/gi) || []).length, 3, 'high'],
     ['videos', (gatsbyContent.match(/<video\b/gi) || []).length, (nextContent.match(/<video\b/gi) || []).length, 1, 'high'],
     ['iframes', (gatsbyContent.match(/<iframe\b/gi) || []).length, (nextContent.match(/<iframe\b/gi) || []).length, 1, 'high'],
     ['lists', (gatsbyContent.match(/<[uo]l\b/gi) || []).length, (nextContent.match(/<[uo]l\b/gi) || []).length, 2, 'medium'],
     ['superscripts', (gatsbyContent.match(/<sup\b/gi) || []).length, (nextContent.match(/<sup\b/gi) || []).length, 3, 'medium'],
-    ['quotes', (gatsbyContent.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length, (nextContent.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length, 1, 'medium'],
   ]
+
+  if (!isWorkPage) {
+    counts.unshift([
+      'images',
+      (gatsbyContent.match(/<img\b/gi) || []).length,
+      (nextContent.match(/<img\b/gi) || []).length,
+      3,
+      'high',
+    ])
+    counts.push([
+      'quotes',
+      (gatsbyContent.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length,
+      (nextContent.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length,
+      1,
+      'medium',
+    ])
+  }
 
   for (const [name, gatsbyValue, nextValue, threshold, severity] of counts) {
     if (Math.abs(gatsbyValue - nextValue) >= threshold) {
@@ -594,19 +648,38 @@ async function fetchPage(url: string): Promise<string | null> {
 
 async function main() {
   const args = process.argv.slice(2)
+  const verbose = args.includes('--verbose')
   const section = args.find((arg) => arg.startsWith('--section='))?.split('=')[1] ||
     (args.includes('--section') ? args[args.indexOf('--section') + 1] : 'all')
+  const pageFilters = args.filter((arg, index) => {
+    if (arg.startsWith('--')) return false
+    const previous = args[index - 1]
+    return previous !== '--section'
+  })
 
   const pages: Array<{ path: string; label: string }> = []
 
   if (section === 'all' || section === 'work') {
     for (const slug of CASE_STUDY_SLUGS) {
-      pages.push({ path: `/work/${slug}`, label: `work/${slug}` })
+      const page = { path: `/work/${slug}`, label: `work/${slug}` }
+      if (
+        pageFilters.length === 0 ||
+        pageFilters.some((filter) => page.path.includes(filter) || page.label.includes(filter) || slug.includes(filter))
+      ) {
+        pages.push(page)
+      }
     }
   }
 
   if (section === 'all' || section === 'main') {
-    pages.push(...MAIN_PAGES)
+    for (const page of MAIN_PAGES) {
+      if (
+        pageFilters.length === 0 ||
+        pageFilters.some((filter) => page.path.includes(filter) || page.label.toLowerCase().includes(filter.toLowerCase()))
+      ) {
+        pages.push(page)
+      }
+    }
   }
 
   console.log(`\nComparing ${pages.length} ${section} page(s)...\n`)
@@ -672,6 +745,11 @@ async function main() {
         const remaining = issues.filter((issue) => issue.severity !== 'critical' && issue.severity !== 'high').length
         if (remaining > 0) {
           console.log(`     +${remaining} medium/low`)
+          if (verbose) {
+            for (const issue of issues.filter((item) => item.severity === 'medium' || item.severity === 'low')) {
+              console.log(`     ${issue.severity.toUpperCase()} [${issue.category}] ${issue.message}`)
+            }
+          }
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

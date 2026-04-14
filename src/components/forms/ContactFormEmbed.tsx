@@ -8,7 +8,7 @@ export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }
     <div className="bg-white shadow-card overflow-hidden">
       {showHeader && (
         <div className="p-6 pb-0">
-          <h2 className="font-serif text-2xl mb-1">Get in touch</h2>
+          <h2 className="font-serif text-2xl font-light mb-1">Get in touch</h2>
           <p className="text-gray text-md">
             or email us at{' '}
             <a href={`mailto:${siteConfig.email.info}`}>
