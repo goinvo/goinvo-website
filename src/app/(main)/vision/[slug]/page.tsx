@@ -83,6 +83,10 @@ export default async function VisionFeaturePage({ params }: Props) {
     ? 'mx-auto px-4 lg:px-4'
     : `max-width ${widthClass} content-padding mx-auto`
   const articleContainerStyle = useLegacyFacesLayout ? { maxWidth: '680px' } : undefined
+  const newsletterContainerClassName = useLegacyFacesLayout
+    ? 'max-width max-width-md content-padding mx-auto'
+    : articleContainerClassName
+  const newsletterContainerStyle = useLegacyFacesLayout ? undefined : articleContainerStyle
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
 
   return (
@@ -202,7 +206,7 @@ export default async function VisionFeaturePage({ params }: Props) {
 
             {/* Newsletter */}
             <section className="bg-gray-lightest py-8">
-              <div className={articleContainerClassName} style={articleContainerStyle}>
+              <div className={newsletterContainerClassName} style={newsletterContainerStyle}>
                 <div className="bg-white shadow-card py-6 px-4 md:px-8">
                   <NewsletterForm />
                 </div>
