@@ -29,9 +29,12 @@ export interface CaseStudy {
   heading?: string
   slug: { current: string }
   client?: string
+  hideClientSubtitle?: boolean
   image?: SanityImage
   caption?: string
   categories?: Category[]
+  displayTags?: string
+  metadataLayout?: 'stacked' | 'inline'
   authors?: TeamMember[]
   time?: string
   content?: PortableTextBlock[]

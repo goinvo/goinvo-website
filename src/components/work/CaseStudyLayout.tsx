@@ -24,11 +24,32 @@ function getMetadataInsertIndex(content: PortableTextBlock[]): number {
 }
 
 function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
-  if (!caseStudy.time && !caseStudy.categories?.length) return null
+  if (!caseStudy.time && !caseStudy.displayTags) return null
+
+  const metadataLayout = caseStudy.metadataLayout || 'stacked'
+  const hasTime = Boolean(caseStudy.time)
+  const hasTags = Boolean(caseStudy.displayTags)
+
+  if (metadataLayout === 'inline' && hasTime && hasTags) {
+    return (
+      <div>
+        <p className="text-gray mt-0 mb-8">
+          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+            Time:
+          </span>{' '}
+          {caseStudy.time}{' '}
+          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+            Tags:
+          </span>{' '}
+          {caseStudy.displayTags}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div>
-      {caseStudy.time && (
+      {hasTime && (
         <p className="text-gray mt-0 mb-8">
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
             Time:
@@ -36,12 +57,12 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           {caseStudy.time}
         </p>
       )}
-      {caseStudy.categories && caseStudy.categories.length > 0 && (
+      {hasTags && (
         <p className="text-gray mt-0 mb-8">
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
             Tags:
           </span>{' '}
-          {caseStudy.categories.map((category) => category.title).join(', ')}
+          {caseStudy.displayTags}
         </p>
       )}
     </div>
@@ -63,7 +84,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
   const metadataInsertIndex = content ? getMetadataInsertIndex(content) : 0
   const contentBeforeMetadata = content?.slice(0, metadataInsertIndex) || []
   const contentAfterMetadata = content?.slice(metadataInsertIndex) || []
-  const showMetadata = Boolean(caseStudy.time || caseStudy.categories?.length)
+  const showMetadata = Boolean(caseStudy.time || caseStudy.displayTags)
 
   return (
     <article>
