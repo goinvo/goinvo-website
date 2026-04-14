@@ -728,6 +728,8 @@ function getDescendantEntries(entry: FlatNode, flat: FlatNode[]): FlatNode[] {
 
 function getDominantTextEntry(entry: FlatNode, flat: FlatNode[]): FlatNode {
   const textTags = new Set(['p', 'span', 'strong', 'em', 'a', 'li', 'figcaption'])
+  const baseText = normalizeTextContent(entry.node.text)
+  const baseLength = baseText.length
   const candidates = [entry, ...getDescendantEntries(entry, flat)].filter(candidate =>
     textTags.has(candidate.node.tag) && normalizeTextContent(candidate.node.text).length >= 6
   )
@@ -735,11 +737,68 @@ function getDominantTextEntry(entry: FlatNode, flat: FlatNode[]): FlatNode {
   if (candidates.length === 0) return entry
 
   return candidates.sort((left, right) => {
-    const leftLength = normalizeTextContent(left.node.text).length
-    const rightLength = normalizeTextContent(right.node.text).length
-    if (rightLength !== leftLength) return rightLength - leftLength
+    const leftText = normalizeTextContent(left.node.text)
+    const rightText = normalizeTextContent(right.node.text)
+    const leftLength = leftText.length
+    const rightLength = rightText.length
+    const leftCoverage = baseLength > 0 ? Math.min(leftLength, baseLength) / Math.max(leftLength, baseLength) : 1
+    const rightCoverage = baseLength > 0 ? Math.min(rightLength, baseLength) / Math.max(rightLength, baseLength) : 1
+    const leftFontSize = Number.parseFloat(left.node.styles.fontSize || '0')
+    const rightFontSize = Number.parseFloat(right.node.styles.fontSize || '0')
+
+    const leftScore = (leftCoverage >= 0.82 ? 1000 : 0) + leftFontSize * 10 + leftLength
+    const rightScore = (rightCoverage >= 0.82 ? 1000 : 0) + rightFontSize * 10 + rightLength
+
+    if (rightScore !== leftScore) return rightScore - leftScore
     return right.path.length - left.path.length
   })[0]
+}
+
+function collectLeafTextNodes(node: TreeNode): TreeNode[] {
+  const textTags = new Set(['p', 'span', 'strong', 'em', 'a', 'li', 'figcaption'])
+  const childLeaves = node.children.flatMap(child => collectLeafTextNodes(child))
+  const currentNode = textTags.has(node.tag) && normalizeTextContent(node.text).length >= 6 ? [node] : []
+  return [...currentNode, ...childLeaves]
+}
+
+function getRepresentativeParagraphNode(entry: FlatNode): TreeNode {
+  const paragraph = entry.node
+  const paragraphTextLength = normalizeTextContent(paragraph.text).length
+  const parentFontSize = Number.parseFloat(paragraph.styles.fontSize || '0')
+  const leafTextNodes = paragraph.children.flatMap(child => collectLeafTextNodes(child))
+  const totalLeafTextLength = leafTextNodes.reduce((sum, node) => sum + normalizeTextContent(node.text).length, 0)
+  const leafCoverage = paragraphTextLength > 0 ? totalLeafTextLength / paragraphTextLength : 0
+  const leafColors = new Set(
+    leafTextNodes
+      .filter(node => normalizeTextContent(node.text).length >= 12)
+      .map(node => normalizeColor(node.styles.color))
+  )
+
+  const bestLeaf = [...leafTextNodes].sort((left, right) => {
+    const leftLength = normalizeTextContent(left.text).length
+    const rightLength = normalizeTextContent(right.text).length
+    const leftFontSize = Number.parseFloat(left.styles.fontSize || '0')
+    const rightFontSize = Number.parseFloat(right.styles.fontSize || '0')
+    const leftScore = leftFontSize * 10 + leftLength
+    const rightScore = rightFontSize * 10 + rightLength
+    return rightScore - leftScore
+  })[0]
+
+  const bestLeafFontSize = bestLeaf ? Number.parseFloat(bestLeaf.styles.fontSize || '0') : 0
+  if (bestLeaf && leafCoverage >= 0.55 && bestLeafFontSize >= parentFontSize + 2) {
+    return {
+      ...bestLeaf,
+      text: paragraph.text,
+      styles: {
+        ...bestLeaf.styles,
+        color: leafColors.size > 1 ? paragraph.styles.color : bestLeaf.styles.color,
+        marginTop: paragraph.styles.marginTop,
+        marginBottom: paragraph.styles.marginBottom,
+      },
+    }
+  }
+
+  return paragraph
 }
 
 function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: string): string[] {
@@ -936,14 +995,8 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   }
   let paragraphDiffs = 0
   for (const { a: aEntry, b: bEntry } of paragraphPairs) {
-    const paragraphA = aEntry.node
-    const paragraphB = bEntry.node
-    const a = getDominantTextEntry(aEntry, flatA).node
-    const b = getDominantTextEntry(bEntry, flatB).node
-    a.styles.marginTop = paragraphA.styles.marginTop
-    a.styles.marginBottom = paragraphA.styles.marginBottom
-    b.styles.marginTop = paragraphB.styles.marginTop
-    b.styles.marginBottom = paragraphB.styles.marginBottom
+    const a = getRepresentativeParagraphNode(aEntry)
+    const b = getRepresentativeParagraphNode(bEntry)
     const diffs: string[] = []
     if (a.styles.fontSize !== b.styles.fontSize) diffs.push(`fontSize: ${a.styles.fontSize} â†’ ${b.styles.fontSize}`)
     if (a.styles.fontWeight !== b.styles.fontWeight) diffs.push(`fontWeight: ${a.styles.fontWeight} â†’ ${b.styles.fontWeight}`)
@@ -1190,11 +1243,18 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   // in a .background--gray div but Next.js renders it as plain unstyled text.
   lines.push('')
   lines.push('=== Background Sections ===')
-  const isBgColored = (f: { node: TreeNode }) =>
-    f.node.styles.backgroundColor &&
-    f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-    f.node.styles.backgroundColor !== 'rgb(255, 255, 255)' &&
-    f.node.rect.width > 200 && f.node.rect.height > 40
+  const isBgColored = (f: { node: TreeNode }) => {
+    const textLength = normalizeTextContent(f.node.text).length
+    return Boolean(
+      f.node.styles.backgroundColor &&
+      f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+      f.node.styles.backgroundColor !== 'rgb(255, 255, 255)' &&
+      f.node.rect.width > 200 &&
+      f.node.rect.height > 40 &&
+      f.node.rect.height <= 260 &&
+      textLength <= 220
+    )
+  }
   const aBg = flatA.filter(isBgColored)
   const bBg = flatB.filter(isBgColored)
   if (aBg.length !== bBg.length) {
@@ -1203,11 +1263,14 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   // Extract text snippets inside bg sections for each side
   const bgText = (flat: typeof flatA) => {
     const bgNodes = flat.filter(isBgColored)
-    const texts = new Set<string>()
+    const texts = new Map<string, string>()
     for (const { node } of bgNodes) {
       // Walk children to collect text
       const walk = (n: TreeNode) => {
-        if (n.text && n.text.length > 15) texts.add(n.text.substring(0, 40))
+        const normalized = normalizeTextContent(n.text).slice(0, 40)
+        if (normalized.length > 15 && !texts.has(normalized)) {
+          texts.set(normalized, (n.text || '').substring(0, 40))
+        }
         for (const c of n.children) walk(c)
       }
       walk(node)
@@ -1218,13 +1281,13 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   const bBgTexts = bgText(flatB)
   // Report text in A's bg sections but missing from B's bg sections
   let bgMismatches = 0
-  for (const t of aBgTexts) {
+  for (const [t] of aBgTexts) {
     if (!bBgTexts.has(t)) {
       bgMismatches++
       if (bgMismatches <= 5) lines.push(`  ⚠ ${labelA} has bg-styled: "${t}…" — ${labelB} renders unstyled`)
     }
   }
-  for (const t of bBgTexts) {
+  for (const [t] of bBgTexts) {
     if (!aBgTexts.has(t)) {
       bgMismatches++
       if (bgMismatches <= 5) lines.push(`  ⚠ ${labelB} has bg-styled: "${t}…" — ${labelA} renders unstyled`)
