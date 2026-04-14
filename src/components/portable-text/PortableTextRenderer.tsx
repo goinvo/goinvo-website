@@ -82,43 +82,54 @@ const bgSectionColors: Record<string, string> = {
   red: 'bg-[#6b2337] text-white',
 }
 
+function PortableImage({
+  value,
+  sizeClassOverrides = {},
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  value: any
+  sizeClassOverrides?: Partial<Record<string, string>>
+}) {
+  if (!value?.asset) return null
+  const size = value.size || 'full'
+  const align = value.align || 'center'
+  const border = value.border || 'none'
+  const borderClasses: Record<string, string> = {
+    none: '',
+    peach: 'border-[15px] border-[#FFEEE4]',
+    gray: 'border-[15px] border-[#e0e0e0]',
+    teal: 'border-[15px] border-secondary',
+  }
+  const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
+  const imageUrl = urlForImage(value).width(width).url()
+  const sizeClass = sizeClassOverrides[size] || imageSizeClasses[size] || imageSizeClasses.full
+
+  return (
+    <ArticleReveal intensity="visual">
+      <figure className={cn('my-8', sizeClass, size !== 'bleed' && imageAlignClasses[align])}>
+        <img
+          src={imageUrl}
+          alt={value.alt || ''}
+          loading="lazy"
+          className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
+        />
+        {value.caption && (
+          <figcaption className="mt-2 text-base text-gray">
+            {value.caption}
+          </figcaption>
+        )}
+      </figure>
+    </ArticleReveal>
+  )
+}
+
 /* ------------------------------------------------------------------ */
 /*  PortableText component map                                         */
 /* ------------------------------------------------------------------ */
 
 const components: PortableTextComponents = {
   types: {
-    image: ({ value }) => {
-      if (!value?.asset) return null
-      const size = value.size || 'full'
-      const align = value.align || 'center'
-      const border = value.border || 'none'
-      const borderClasses: Record<string, string> = {
-        none: '',
-        peach: 'border-[15px] border-[#FFEEE4]',
-        gray: 'border-[15px] border-[#e0e0e0]',
-        teal: 'border-[15px] border-secondary',
-      }
-      const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
-      const imageUrl = urlForImage(value).width(width).url()
-      return (
-        <ArticleReveal intensity="visual">
-          <figure className={cn('my-8', imageSizeClasses[size], size !== 'bleed' && imageAlignClasses[align])}>
-            <img
-              src={imageUrl}
-              alt={value.alt || ''}
-              loading="lazy"
-              className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
-            />
-            {value.caption && (
-              <figcaption className="mt-2 text-base text-gray">
-                {value.caption}
-              </figcaption>
-            )}
-          </figure>
-        </ArticleReveal>
-      )
-    },
+    image: ({ value }) => <PortableImage value={value} />,
     quote: ({ value }) => (
       <ArticleReveal intensity="visual">
         <Quote text={value.text} author={value.author} role={value.role} refNumber={value.refNumber} refTarget={value.refTarget} />
@@ -845,7 +856,7 @@ const components: PortableTextComponents = {
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
       return (
         <ArticleReveal intensity="heading">
-          <h2 className={cn('header-xl font-light mt-8 mb-4 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+          <h2 className={cn('header-xl font-light mt-6 mb-6 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
         </ArticleReveal>
       )
     },
@@ -1069,10 +1080,17 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
   // Disable auto-grouping — images render full-width stacked by default.
   // Use explicit 'columns' blocks in Sanity for side-by-side layouts.
   const processed = content
+  const typeComponents = components.types as Record<string, unknown>
   const blockComponents = components.block as Record<string, unknown>
   const rendererComponents: PortableTextComponents = variant === 'case-study'
     ? ({
         ...components,
+        types: {
+          ...typeComponents,
+          image: ({ value }) => (
+            <PortableImage value={value} sizeClassOverrides={{ large: imageSizeClasses.full }} />
+          ),
+        },
         block: {
           ...blockComponents,
           h4: ({ children }) => (

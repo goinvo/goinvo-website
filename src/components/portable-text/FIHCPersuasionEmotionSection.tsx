@@ -72,13 +72,13 @@ export function FIHCPersuasionEmotionSection() {
         />
         <div className="absolute top-[37%] left-0 w-full grid grid-cols-3 text-base font-semibold leading-[26px] text-center">
           <div className="px-4">
-            <p className="px-4">These narratives have the power to touch our emotions,</p>
+            <p className="mt-4 px-4">These narratives have the power to touch our emotions,</p>
           </div>
           <div className="px-4">
-            <p className="px-4">impact what we believe,</p>
+            <p className="mt-4 px-4">impact what we believe,</p>
           </div>
           <div className="px-4">
-            <p className="px-4">teach us new behaviors.</p>
+            <p className="mt-4 px-4">teach us new behaviors.</p>
           </div>
         </div>
       </div>
