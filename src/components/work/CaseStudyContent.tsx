@@ -36,7 +36,8 @@ export function CaseStudyContent({ initialData, slug }: Props) {
     firstContentText.toLowerCase() === `for ${caseStudy.client}`.toLowerCase()
   const showClientSubtitle =
     !!caseStudy.client &&
-    caseStudy.client !== 'GoInvo'
+    caseStudy.client !== 'GoInvo' &&
+    !caseStudy.hideClientSubtitle
   const normalizedCaseStudy = hasLeadingClientSubtitle
     ? { ...caseStudy, content: caseStudy.content?.slice(1) }
     : caseStudy
