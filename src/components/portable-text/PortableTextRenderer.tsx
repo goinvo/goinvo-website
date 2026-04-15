@@ -11,6 +11,8 @@ import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
+import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
+import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 
 /* ------------------------------------------------------------------ */
@@ -80,43 +82,54 @@ const bgSectionColors: Record<string, string> = {
   red: 'bg-[#6b2337] text-white',
 }
 
+function PortableImage({
+  value,
+  sizeClassOverrides = {},
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  value: any
+  sizeClassOverrides?: Partial<Record<string, string>>
+}) {
+  if (!value?.asset) return null
+  const size = value.size || 'full'
+  const align = value.align || 'center'
+  const border = value.border || 'none'
+  const borderClasses: Record<string, string> = {
+    none: '',
+    peach: 'border-[15px] border-[#FFEEE4]',
+    gray: 'border-[15px] border-[#e0e0e0]',
+    teal: 'border-[15px] border-secondary',
+  }
+  const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
+  const imageUrl = urlForImage(value).width(width).url()
+  const sizeClass = sizeClassOverrides[size] || imageSizeClasses[size] || imageSizeClasses.full
+
+  return (
+    <ArticleReveal intensity="visual">
+      <figure className={cn('my-8', sizeClass, size !== 'bleed' && imageAlignClasses[align])}>
+        <img
+          src={imageUrl}
+          alt={value.alt || ''}
+          loading="lazy"
+          className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
+        />
+        {value.caption && (
+          <figcaption className="mt-2 text-base text-gray">
+            {value.caption}
+          </figcaption>
+        )}
+      </figure>
+    </ArticleReveal>
+  )
+}
+
 /* ------------------------------------------------------------------ */
 /*  PortableText component map                                         */
 /* ------------------------------------------------------------------ */
 
 const components: PortableTextComponents = {
   types: {
-    image: ({ value }) => {
-      if (!value?.asset) return null
-      const size = value.size || 'full'
-      const align = value.align || 'center'
-      const border = value.border || 'none'
-      const borderClasses: Record<string, string> = {
-        none: '',
-        peach: 'border-[15px] border-[#FFEEE4]',
-        gray: 'border-[15px] border-[#e0e0e0]',
-        teal: 'border-[15px] border-secondary',
-      }
-      const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
-      const imageUrl = urlForImage(value).width(width).url()
-      return (
-        <ArticleReveal intensity="visual">
-          <figure className={cn('my-8', imageSizeClasses[size], size !== 'bleed' && imageAlignClasses[align])}>
-            <img
-              src={imageUrl}
-              alt={value.alt || ''}
-              loading="lazy"
-              className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
-            />
-            {value.caption && (
-              <figcaption className="mt-2 text-base text-gray">
-                {value.caption}
-              </figcaption>
-            )}
-          </figure>
-        </ArticleReveal>
-      )
-    },
+    image: ({ value }) => <PortableImage value={value} />,
     quote: ({ value }) => (
       <ArticleReveal intensity="visual">
         <Quote text={value.text} author={value.author} role={value.role} refNumber={value.refNumber} refTarget={value.refTarget} />
@@ -436,6 +449,7 @@ const components: PortableTextComponents = {
 
       // Image-only: grid of images (original behavior)
       if (hasImages) {
+        const centeredVariant = value.variant === 'centered'
         // Group items into image + following content blocks
         // Each group: one image followed by zero or more text/list blocks until the next image
         const groups: { image: any; content: any[] }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -470,18 +484,22 @@ const components: PortableTextComponents = {
                   const imgUrl = urlForImage(group.image).width(800).url()
                   const caption = group.image.caption || ''
                   const hasRichContent = group.content.length > 0
+                  const centeredGroup = centeredVariant && groups.length >= 2
                   // Check if content is just a short caption (bold text < 60 chars)
                   const isShortCaption = group.content.length === 1 && group.content[0]._type === 'block' &&
                     (group.content[0].children || []).map((c: {text: string}) => c.text).join('').length < 60
                   const isBoldCaption = isShortCaption && (group.content[0].children || []).some((c: {marks?: string[]}) => c.marks?.includes('strong'))
                   return (
-                    <div key={group.image._key} className="m-0">
+                    <div
+                      key={group.image._key}
+                      className={cn('m-0', centeredGroup && 'mx-auto max-w-[300px] text-center')}
+                    >
                       <Image
                         src={imgUrl}
                         alt={group.image.alt || ''}
                         width={800}
                         height={600}
-                        className="w-full h-auto"
+                        className={cn('w-full h-auto', centeredGroup && 'mx-auto')}
                       />
                       {caption && !hasRichContent && (
                         <p className="mt-2 text-base text-gray text-center">{caption}</p>
@@ -492,7 +510,7 @@ const components: PortableTextComponents = {
                         </div>
                       )}
                       {hasRichContent && !isShortCaption && (
-                        <div className="mt-2">
+                        <div className={cn('mt-2', centeredGroup && '[&_p]:text-center')}>
                           <PortableText value={group.content} components={components} />
                         </div>
                       )}
@@ -625,11 +643,11 @@ const components: PortableTextComponents = {
       const btnClass = layout === 'fullWidth'
         ? 'flex-1 block py-3'
         : isSingleCenteredButton
-          ? 'inline-flex w-full sm:w-auto sm:min-w-[330px]'
+          ? 'inline-flex w-full sm:w-auto'
           : 'inline-flex'
       return (
         <ArticleReveal intensity="visual">
-          <div className={cn('my-6', containerClass)}>
+          <div className={cn(isSingleCenteredButton ? 'my-8' : 'my-6', containerClass)}>
             {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
               <a
                 key={i}
@@ -741,6 +759,18 @@ const components: PortableTextComponents = {
               <VirtualCareTimeToDiagnosis />
             </ArticleReveal>
           )
+        case 'fihcFaceDevelopmentSection':
+          return (
+            <ArticleReveal intensity="visual">
+              <FIHCFaceDevelopmentSection />
+            </ArticleReveal>
+          )
+        case 'fihcPersuasionEmotionSection':
+          return (
+            <ArticleReveal intensity="visual">
+              <FIHCPersuasionEmotionSection />
+            </ArticleReveal>
+          )
         default:
           return (
             <div className="my-4 p-3 bg-yellow-50 border border-yellow-300 text-sm text-gray-700">
@@ -821,11 +851,15 @@ const components: PortableTextComponents = {
         <h2 className="header-xl font-light mt-8 mb-4">{children}</h2>
       </ArticleReveal>
     ),
-    h2LargeCentered: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h2 className="header-xl font-light mt-8 mb-4 text-center">{children}</h2>
-      </ArticleReveal>
-    ),
+    h2LargeCentered: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 className={cn('header-xl font-light mt-6 mb-6 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+        </ArticleReveal>
+      )
+    },
     // h2Center is deprecated — use sectionTitle instead. Kept as alias for backwards compat.
     h2Center: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -895,6 +929,26 @@ const components: PortableTextComponents = {
         <p className="font-serif text-[1.5rem] leading-[2.125rem] text-center mb-4 text-black">{children}</p>
       </ArticleReveal>
     ),
+    serifLargeCentered: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <p className="my-8 max-w-[648px] mx-auto font-serif text-[1.5rem] leading-[2.125rem] text-center text-black">{children}</p>
+      </ArticleReveal>
+    ),
+    serifLargeCenteredTight: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <p className="mt-6 mb-6 max-w-[648px] mx-auto font-serif text-[1.5rem] leading-[2.125rem] text-center text-black">{children}</p>
+      </ArticleReveal>
+    ),
+    serifLarge: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <p className="my-4 font-serif text-[1.5rem] leading-[2.125rem] font-light text-black">{children}</p>
+      </ArticleReveal>
+    ),
+    serifLargeNoTop: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <p className="mt-0 mb-6 font-serif text-[1.5rem] leading-[2.125rem] text-black">{children}</p>
+      </ArticleReveal>
+    ),
     callout: ({ children }) => (
       <ArticleReveal intensity="text">
         <div className="bg-[#faf6f4] border-l-4 border-primary my-6 py-4 pr-4 pl-5 leading-[1.625rem]">
@@ -902,11 +956,26 @@ const components: PortableTextComponents = {
         </div>
       </ArticleReveal>
     ),
-    normal: ({ children }) => (
-      <ArticleReveal intensity="text">
-        <p className="my-4 leading-relaxed">{children}</p>
-      </ArticleReveal>
-    ),
+    normal: ({ children, value }) => {
+      // Preserve intentional line breaks from Sanity without changing
+      // the default paragraph treatment for ordinary prose.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('my-4 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
+    normalSpacious: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('mt-4 mb-8 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
   },
 }
 
@@ -1011,10 +1080,17 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
   // Disable auto-grouping — images render full-width stacked by default.
   // Use explicit 'columns' blocks in Sanity for side-by-side layouts.
   const processed = content
+  const typeComponents = components.types as Record<string, unknown>
   const blockComponents = components.block as Record<string, unknown>
   const rendererComponents: PortableTextComponents = variant === 'case-study'
     ? ({
         ...components,
+        types: {
+          ...typeComponents,
+          image: ({ value }) => (
+            <PortableImage value={value} sizeClassOverrides={{ large: imageSizeClasses.full }} />
+          ),
+        },
         block: {
           ...blockComponents,
           h4: ({ children }) => (

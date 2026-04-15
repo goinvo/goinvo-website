@@ -17,6 +17,11 @@
  */
 
 import puppeteer, { type Page } from 'puppeteer'
+import {
+  getPageTreeBaselineSet,
+  listPageTreeBaselineSets,
+  type PageTreeBaselinePage,
+} from './page-tree-baselines'
 
 interface TreeNode {
   tag: string
@@ -64,6 +69,69 @@ interface FlatNode {
   path: string
   node: TreeNode
   parentPath: string | null
+}
+
+interface MatchedFlatNodePair {
+  a: FlatNode
+  b: FlatNode
+}
+
+type ViewportName = 'desktop' | 'mobile'
+
+interface ViewportPreset {
+  name: ViewportName
+  width: number
+  height: number
+  deviceScaleFactor?: number
+  isMobile?: boolean
+  hasTouch?: boolean
+}
+
+interface ResponsiveIssue {
+  tag: string
+  text: string
+  src: string | null
+  left: number
+  right: number
+  width: number
+  height: number
+  overflowLeft: number
+  overflowRight: number
+  scrollWidth?: number
+  clientWidth?: number
+}
+
+interface ResponsiveDiagnostics {
+  viewportWidth: number
+  viewportHeight: number
+  documentScrollWidth: number
+  documentScrollHeight: number
+  horizontalOverflowPx: number
+  overflowingElementCount: number
+  overflowingElements: ResponsiveIssue[]
+  oversizedMediaCount: number
+  oversizedMedia: ResponsiveIssue[]
+  clippedTextCount: number
+  clippedText: ResponsiveIssue[]
+  tinyTapTargetCount: number
+  tinyTapTargets: ResponsiveIssue[]
+}
+
+interface PageSnapshot {
+  tree: TreeNode
+  responsive: ResponsiveDiagnostics
+}
+
+const VIEWPORT_PRESETS: Record<ViewportName, ViewportPreset> = {
+  desktop: { name: 'desktop', width: 1280, height: 900 },
+  mobile: {
+    name: 'mobile',
+    width: 375,
+    height: 812,
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true,
+  },
 }
 
 async function extractTree(page: Page): Promise<TreeNode> {
@@ -230,6 +298,227 @@ async function preparePageForCapture(page: Page): Promise<void> {
   })
 }
 
+async function collectResponsiveDiagnostics(page: Page): Promise<ResponsiveDiagnostics> {
+  return page.evaluate(`(function() {
+    var SKIP_SEL = 'header.site-header, footer.site-footer, nav.site-nav, .header-nav, .mobile-nav, .twenty-eighteen > .header-nav, [data-sanity]';
+    var viewportWidth = window.innerWidth;
+    var viewportHeight = window.innerHeight;
+    var tolerance = 12;
+    var maxItems = 8;
+    var doc = document.documentElement;
+    var body = document.body;
+    var documentScrollWidth = Math.max(doc.scrollWidth, body.scrollWidth);
+    var documentScrollHeight = Math.max(doc.scrollHeight, body.scrollHeight);
+    var horizontalOverflowPx = Math.max(0, Math.round(documentScrollWidth - viewportWidth));
+
+    function isTransparent(value) {
+      return value === 'rgba(0, 0, 0, 0)' || value === 'transparent';
+    }
+
+    function normalizeText(value) {
+      return (value || '').replace(/\\s+/g, ' ').trim();
+    }
+
+    function textSnippet(el) {
+      return normalizeText(el.textContent).substring(0, 70);
+    }
+
+    function sourceName(el) {
+      var tag = el.tagName.toLowerCase();
+      if (tag === 'img') {
+        var imgSrc = el.currentSrc || el.src || '';
+        return imgSrc ? imgSrc.split('/').pop().split('?')[0] : null;
+      }
+      if (tag === 'iframe') return (el.src || '').substring(0, 90) || null;
+      if (tag === 'video') {
+        var source = el.currentSrc || el.src || '';
+        if (!source) {
+          var nestedSource = el.querySelector('source');
+          source = nestedSource ? nestedSource.src : '';
+        }
+        return source ? source.split('/').pop().split('?')[0] : 'video';
+      }
+      return null;
+    }
+
+    function isVisible(el, rect) {
+      if (el.closest(SKIP_SEL)) return false;
+      var cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity || '1') === 0) {
+        return false;
+      }
+      return rect.width > 0 && rect.height > 0;
+    }
+
+    function hasScrollableAncestor(el) {
+      var parent = el.parentElement;
+      while (parent && parent !== document.body) {
+        var styles = getComputedStyle(parent);
+        var parentRect = parent.getBoundingClientRect();
+        var canScrollX = styles.overflowX === 'auto' || styles.overflowX === 'scroll';
+        if (canScrollX && parent.scrollWidth > parent.clientWidth + tolerance) {
+          return true;
+        }
+        if (canScrollX && parentRect.width + tolerance < el.getBoundingClientRect().width) {
+          return true;
+        }
+        parent = parent.parentElement;
+      }
+      return false;
+    }
+
+    function toIssue(el, rect) {
+      return {
+        tag: el.tagName.toLowerCase(),
+        text: textSnippet(el),
+        src: sourceName(el),
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        overflowLeft: Math.max(0, Math.round(-rect.left)),
+        overflowRight: Math.max(0, Math.round(rect.right - viewportWidth)),
+      };
+    }
+
+    function uniqueIssues(issues) {
+      var seen = new Set();
+      var result = [];
+      for (var i = 0; i < issues.length; i++) {
+        var issue = issues[i];
+        var key = issue.tag + '|' + (issue.src || '') + '|' + issue.text.substring(0, 40) + '|' + issue.left + '|' + issue.right;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.push(issue);
+      }
+      return result;
+    }
+
+    function sortBySeverity(issues) {
+      return issues.slice().sort(function(a, b) {
+        var aSeverity = Math.max(a.overflowLeft, a.overflowRight, a.width, a.height);
+        var bSeverity = Math.max(b.overflowLeft, b.overflowRight, b.width, b.height);
+        return bSeverity - aSeverity;
+      });
+    }
+
+    var overflowingElements = [];
+    var allElements = Array.from(document.body.querySelectorAll('*'));
+    for (var i = 0; i < allElements.length; i++) {
+      var el = allElements[i];
+      var rect = el.getBoundingClientRect();
+      if (!isVisible(el, rect)) continue;
+      if (Math.abs(rect.left) > viewportWidth * 2 || Math.abs(rect.right) > viewportWidth * 3) continue;
+      if (rect.width < 24 || rect.height < 12) continue;
+
+      var issue = toIssue(el, rect);
+      if (issue.overflowLeft <= tolerance && issue.overflowRight <= tolerance) continue;
+      if (hasScrollableAncestor(el)) continue;
+
+      var tag = issue.tag;
+      var isContainer = tag === 'div' || tag === 'section' || tag === 'article' || tag === 'main';
+      if (isContainer && issue.overflowLeft + issue.overflowRight < 20 && issue.width < viewportWidth + 20) {
+        continue;
+      }
+
+      overflowingElements.push(issue);
+    }
+
+    var oversizedMedia = [];
+    var mediaElements = Array.from(document.querySelectorAll('img, video, iframe, canvas, svg, table, pre'));
+    for (var j = 0; j < mediaElements.length; j++) {
+      var media = mediaElements[j];
+      var mediaRect = media.getBoundingClientRect();
+      if (!isVisible(media, mediaRect)) continue;
+      if (Math.abs(mediaRect.left) > viewportWidth * 2 || Math.abs(mediaRect.right) > viewportWidth * 3) continue;
+      if (mediaRect.width < 60 || mediaRect.height < 24) continue;
+
+      var mediaIssue = toIssue(media, mediaRect);
+      if (mediaIssue.width <= viewportWidth + tolerance && mediaIssue.overflowLeft <= tolerance && mediaIssue.overflowRight <= tolerance) {
+        continue;
+      }
+      if (hasScrollableAncestor(media)) continue;
+      oversizedMedia.push(mediaIssue);
+    }
+
+    var clippedText = [];
+    var textElements = Array.from(document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, a, button, li, figcaption, blockquote, span'));
+    for (var k = 0; k < textElements.length; k++) {
+      var textEl = textElements[k];
+      var textRect = textEl.getBoundingClientRect();
+      if (!isVisible(textEl, textRect)) continue;
+      if (textRect.width < 60 || textRect.height < 12) continue;
+
+      var text = textSnippet(textEl);
+      if (text.length < 12) continue;
+
+      var textStyles = getComputedStyle(textEl);
+      if (textStyles.display === 'inline') continue;
+
+      var overflowX = ['hidden', 'clip', 'auto', 'scroll'].indexOf(textStyles.overflowX) >= 0;
+      var overflowY = ['hidden', 'clip', 'auto', 'scroll'].indexOf(textStyles.overflowY) >= 0;
+      var clipStyled = overflowX || overflowY || textStyles.textOverflow === 'ellipsis' || textStyles.whiteSpace === 'nowrap';
+      var clippedHorizontally = textEl.scrollWidth > textEl.clientWidth + 12;
+      var clippedVertically = textEl.scrollHeight > textEl.clientHeight + 8;
+
+      if (!clipStyled || (!clippedHorizontally && !clippedVertically)) continue;
+
+      var textIssue = toIssue(textEl, textRect);
+      textIssue.scrollWidth = Math.round(textEl.scrollWidth);
+      textIssue.clientWidth = Math.round(textEl.clientWidth);
+      clippedText.push(textIssue);
+    }
+
+    var tinyTapTargets = [];
+    var interactiveElements = Array.from(document.querySelectorAll('a[href], button, input, select, textarea, [role="button"], summary'));
+    for (var m = 0; m < interactiveElements.length; m++) {
+      var interactive = interactiveElements[m];
+      var interactiveRect = interactive.getBoundingClientRect();
+      if (!isVisible(interactive, interactiveRect)) continue;
+      if (interactiveRect.width >= 44 && interactiveRect.height >= 44) continue;
+
+      var interactiveTag = interactive.tagName.toLowerCase();
+      var interactiveStyles = getComputedStyle(interactive);
+      var verticalPadding = parseFloat(interactiveStyles.paddingTop || '0') + parseFloat(interactiveStyles.paddingBottom || '0');
+      var horizontalPadding = parseFloat(interactiveStyles.paddingLeft || '0') + parseFloat(interactiveStyles.paddingRight || '0');
+      var isButtonishAnchor =
+        interactiveTag !== 'a' ||
+        verticalPadding >= 12 ||
+        horizontalPadding >= 16 ||
+        !isTransparent(interactiveStyles.backgroundColor) ||
+        parseFloat(interactiveStyles.borderTopWidth || '0') > 0 ||
+        interactiveStyles.textTransform === 'uppercase' ||
+        interactiveStyles.display === 'inline-flex' ||
+        interactiveStyles.display === 'flex';
+
+      if (!isButtonishAnchor) continue;
+
+      tinyTapTargets.push(toIssue(interactive, interactiveRect));
+    }
+
+    var uniqueOverflowingElements = uniqueIssues(overflowingElements);
+    var uniqueOversizedMedia = uniqueIssues(oversizedMedia);
+    var uniqueClippedText = uniqueIssues(clippedText);
+    var uniqueTinyTapTargets = uniqueIssues(tinyTapTargets);
+
+    return {
+      viewportWidth: viewportWidth,
+      viewportHeight: viewportHeight,
+      documentScrollWidth: documentScrollWidth,
+      documentScrollHeight: documentScrollHeight,
+      horizontalOverflowPx: horizontalOverflowPx,
+      overflowingElementCount: uniqueOverflowingElements.length,
+      overflowingElements: sortBySeverity(uniqueOverflowingElements).slice(0, maxItems),
+      oversizedMediaCount: uniqueOversizedMedia.length,
+      oversizedMedia: sortBySeverity(uniqueOversizedMedia).slice(0, maxItems),
+      clippedTextCount: uniqueClippedText.length,
+      clippedText: sortBySeverity(uniqueClippedText).slice(0, maxItems),
+      tinyTapTargetCount: uniqueTinyTapTargets.length,
+      tinyTapTargets: sortBySeverity(uniqueTinyTapTargets).slice(0, maxItems),
+    };
+  })()`) as Promise<ResponsiveDiagnostics>
+}
+
 // ── Pretty print ───────────────────────────────────────────────────────
 
 function normalizeColor(c: string): string {
@@ -337,6 +626,181 @@ function flattenTree(node: TreeNode, path: string = '', list: FlatNode[] = [], p
   return list
 }
 
+function normalizeTextContent(value: string | undefined): string {
+  return (value ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s]/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+function pickNearestByY(candidates: FlatNode[], targetY: number, usedPaths: Set<string>): FlatNode | null {
+  let best: FlatNode | null = null
+  let bestDistance = Number.POSITIVE_INFINITY
+
+  for (const candidate of candidates) {
+    if (usedPaths.has(candidate.path)) continue
+
+    const distance = Math.abs(candidate.node.rect.y - targetY)
+    if (distance < bestDistance) {
+      best = candidate
+      bestDistance = distance
+    }
+  }
+
+  return best
+}
+
+function matchTextEntries(
+  aEntries: FlatNode[],
+  bEntries: FlatNode[],
+  {
+    minTextLength = 1,
+    exactPrefixLength = 80,
+    fallbackPrefixLength = 24,
+    sameTagOnly = true,
+  }: {
+    minTextLength?: number
+    exactPrefixLength?: number
+    fallbackPrefixLength?: number
+    sameTagOnly?: boolean
+  } = {},
+): MatchedFlatNodePair[] {
+  const buildKey = (entry: FlatNode, prefixLength: number): string => {
+    const text = normalizeTextContent(entry.node.text).slice(0, prefixLength)
+    return sameTagOnly ? `${entry.node.tag}:${text}` : text
+  }
+
+  const bExact = new Map<string, FlatNode[]>()
+  const bFallback = new Map<string, FlatNode[]>()
+
+  for (const entry of bEntries) {
+    const normalized = normalizeTextContent(entry.node.text)
+    if (normalized.length < minTextLength) continue
+
+    const exactKey = buildKey(entry, exactPrefixLength)
+    const fallbackKey = buildKey(entry, fallbackPrefixLength)
+
+    const exactBucket = bExact.get(exactKey) ?? []
+    exactBucket.push(entry)
+    bExact.set(exactKey, exactBucket)
+
+    const fallbackBucket = bFallback.get(fallbackKey) ?? []
+    fallbackBucket.push(entry)
+    bFallback.set(fallbackKey, fallbackBucket)
+  }
+
+  const usedPaths = new Set<string>()
+  const matches: MatchedFlatNodePair[] = []
+
+  for (const entry of aEntries) {
+    const normalized = normalizeTextContent(entry.node.text)
+    if (normalized.length < minTextLength) continue
+
+    const exactMatch = pickNearestByY(
+      bExact.get(buildKey(entry, exactPrefixLength)) ?? [],
+      entry.node.rect.y,
+      usedPaths,
+    )
+    const fallbackMatch =
+      exactMatch ||
+      normalized.length < fallbackPrefixLength
+        ? null
+        : pickNearestByY(
+            bFallback.get(buildKey(entry, fallbackPrefixLength)) ?? [],
+            entry.node.rect.y,
+            usedPaths,
+          )
+    const match = exactMatch ?? fallbackMatch
+    if (!match) continue
+
+    usedPaths.add(match.path)
+    matches.push({ a: entry, b: match })
+  }
+
+  return matches
+}
+
+function getDescendantEntries(entry: FlatNode, flat: FlatNode[]): FlatNode[] {
+  const prefix = `${entry.path}[`
+  return flat.filter(candidate => candidate.path.startsWith(prefix))
+}
+
+function getDominantTextEntry(entry: FlatNode, flat: FlatNode[]): FlatNode {
+  const textTags = new Set(['p', 'span', 'strong', 'em', 'a', 'li', 'figcaption'])
+  const baseText = normalizeTextContent(entry.node.text)
+  const baseLength = baseText.length
+  const candidates = [entry, ...getDescendantEntries(entry, flat)].filter(candidate =>
+    textTags.has(candidate.node.tag) && normalizeTextContent(candidate.node.text).length >= 6
+  )
+
+  if (candidates.length === 0) return entry
+
+  return candidates.sort((left, right) => {
+    const leftText = normalizeTextContent(left.node.text)
+    const rightText = normalizeTextContent(right.node.text)
+    const leftLength = leftText.length
+    const rightLength = rightText.length
+    const leftCoverage = baseLength > 0 ? Math.min(leftLength, baseLength) / Math.max(leftLength, baseLength) : 1
+    const rightCoverage = baseLength > 0 ? Math.min(rightLength, baseLength) / Math.max(rightLength, baseLength) : 1
+    const leftFontSize = Number.parseFloat(left.node.styles.fontSize || '0')
+    const rightFontSize = Number.parseFloat(right.node.styles.fontSize || '0')
+
+    const leftScore = (leftCoverage >= 0.82 ? 1000 : 0) + leftFontSize * 10 + leftLength
+    const rightScore = (rightCoverage >= 0.82 ? 1000 : 0) + rightFontSize * 10 + rightLength
+
+    if (rightScore !== leftScore) return rightScore - leftScore
+    return right.path.length - left.path.length
+  })[0]
+}
+
+function collectLeafTextNodes(node: TreeNode): TreeNode[] {
+  const textTags = new Set(['p', 'span', 'strong', 'em', 'a', 'li', 'figcaption'])
+  const childLeaves = node.children.flatMap(child => collectLeafTextNodes(child))
+  const currentNode = textTags.has(node.tag) && normalizeTextContent(node.text).length >= 6 ? [node] : []
+  return [...currentNode, ...childLeaves]
+}
+
+function getRepresentativeParagraphNode(entry: FlatNode): TreeNode {
+  const paragraph = entry.node
+  const paragraphTextLength = normalizeTextContent(paragraph.text).length
+  const parentFontSize = Number.parseFloat(paragraph.styles.fontSize || '0')
+  const leafTextNodes = paragraph.children.flatMap(child => collectLeafTextNodes(child))
+  const totalLeafTextLength = leafTextNodes.reduce((sum, node) => sum + normalizeTextContent(node.text).length, 0)
+  const leafCoverage = paragraphTextLength > 0 ? totalLeafTextLength / paragraphTextLength : 0
+  const leafColors = new Set(
+    leafTextNodes
+      .filter(node => normalizeTextContent(node.text).length >= 12)
+      .map(node => normalizeColor(node.styles.color))
+  )
+
+  const bestLeaf = [...leafTextNodes].sort((left, right) => {
+    const leftLength = normalizeTextContent(left.text).length
+    const rightLength = normalizeTextContent(right.text).length
+    const leftFontSize = Number.parseFloat(left.styles.fontSize || '0')
+    const rightFontSize = Number.parseFloat(right.styles.fontSize || '0')
+    const leftScore = leftFontSize * 10 + leftLength
+    const rightScore = rightFontSize * 10 + rightLength
+    return rightScore - leftScore
+  })[0]
+
+  const bestLeafFontSize = bestLeaf ? Number.parseFloat(bestLeaf.styles.fontSize || '0') : 0
+  if (bestLeaf && leafCoverage >= 0.55 && bestLeafFontSize >= parentFontSize + 2) {
+    return {
+      ...bestLeaf,
+      text: paragraph.text,
+      styles: {
+        ...bestLeaf.styles,
+        color: leafColors.size > 1 ? paragraph.styles.color : bestLeaf.styles.color,
+        marginTop: paragraph.styles.marginTop,
+        marginBottom: paragraph.styles.marginBottom,
+      },
+    }
+  }
+
+  return paragraph
+}
+
 function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: string): string[] {
   const flatA = flattenTree(treeA)
   const flatB = flattenTree(treeB)
@@ -373,7 +837,11 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
         isVisibleBackground(ancestor.node.styles.backgroundColor) ||
         hasPadding ||
         ancestor.node.classes.some(cls => cls.includes('content-padding'))
+      const closeToHeading = Math.abs(ancestor.node.rect.y - entry.node.rect.y) <= 200
+      const plausibleBoxHeight = ancestor.node.rect.height <= Math.max(entry.node.rect.height * 4, 700)
       return carriesHeroBoxStyling &&
+        closeToHeading &&
+        plausibleBoxHeight &&
         ancestor.node.rect.width >= entry.node.rect.width + 20 &&
         ancestor.node.rect.height >= entry.node.rect.height
     }) ?? null
@@ -409,10 +877,19 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   const headingTags = new Set(['h1', 'h2', 'h3', 'h4'])
   const aHeadings = flatA.filter(f => headingTags.has(f.node.tag))
   const bHeadings = flatB.filter(f => headingTags.has(f.node.tag))
+  const headingPairs = matchTextEntries(aHeadings, bHeadings, {
+    minTextLength: 3,
+    fallbackPrefixLength: 16,
+    sameTagOnly: false,
+  })
 
-  for (let i = 0; i < Math.min(aHeadings.length, bHeadings.length); i++) {
-    const a = aHeadings[i].node
-    const b = bHeadings[i].node
+  if (aHeadings.length !== bHeadings.length) {
+    lines.push(`  Count: ${aHeadings.length} -> ${bHeadings.length}`)
+  }
+
+  for (const { a: aEntry, b: bEntry } of headingPairs) {
+    const a = aEntry.node
+    const b = bEntry.node
     const diffs: string[] = []
 
     if (a.tag !== b.tag) diffs.push(`tag: ${a.tag} → ${b.tag}`)
@@ -438,6 +915,22 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     }
   }
 
+  const matchedHeadingA = new Set(headingPairs.map(pair => pair.a.path))
+  const matchedHeadingB = new Set(headingPairs.map(pair => pair.b.path))
+  const unmatchedHeadingA = aHeadings.filter(entry => !matchedHeadingA.has(entry.path))
+  const unmatchedHeadingB = bHeadings.filter(entry => !matchedHeadingB.has(entry.path))
+  if (unmatchedHeadingA.length || unmatchedHeadingB.length) {
+    lines.push(`  Unmatched headings: ${labelA} ${unmatchedHeadingA.length}, ${labelB} ${unmatchedHeadingB.length}`)
+    for (const entry of unmatchedHeadingA.slice(0, 2)) {
+      lines.push(`    ${labelA} only: <${entry.node.tag}> "${(entry.node.text || '').substring(0, 50)}"`)
+    }
+    for (const entry of unmatchedHeadingB.slice(0, 2)) {
+      lines.push(`    ${labelB} only: <${entry.node.tag}> "${(entry.node.text || '').substring(0, 50)}"`)
+    }
+  } else if (headingPairs.length === 0) {
+    lines.push('  Unable to match headings by text')
+  }
+
   lines.push('')
   lines.push('=== Hero Wrap Differences ===')
   const aHeroHeading = aHeadings.find(f => f.node.tag === 'h1' && (f.node.text || '').length > 10)
@@ -450,7 +943,7 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     const bHeroBox = findNearestMeasuredContainer(bHeroHeading, flatBByPath)
     const widthDiff = Math.abs(aHeading.rect.width - bHeading.rect.width)
     const heightDiff = Math.abs(aHeading.rect.height - bHeading.rect.height)
-    if (widthDiff > 30) diffs.push(`h1 width: ${aHeading.rect.width}px -> ${bHeading.rect.width}px`)
+    if (widthDiff > 40) diffs.push(`h1 width: ${aHeading.rect.width}px -> ${bHeading.rect.width}px`)
     if (heightDiff > 12) diffs.push(`h1 height: ${aHeading.rect.height}px -> ${bHeading.rect.height}px`)
 
     const aLines = lineCount(aHeading)
@@ -462,14 +955,19 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     if (aHeroBox && bHeroBox) {
       const aBg = normalizeColor(aHeroBox.node.styles.backgroundColor)
       const bBg = normalizeColor(bHeroBox.node.styles.backgroundColor)
-      if (Math.abs(aHeroBox.node.rect.width - bHeroBox.node.rect.width) > 30) {
-        diffs.push(`hero content box width: ${aHeroBox.node.rect.width}px -> ${bHeroBox.node.rect.width}px`)
-      }
-      if (Math.abs(aHeroBox.node.rect.height - bHeroBox.node.rect.height) > 20) {
-        diffs.push(`hero content box height: ${aHeroBox.node.rect.height}px -> ${bHeroBox.node.rect.height}px`)
-      }
-      if (aBg !== bBg && (!white.has(aBg) || !white.has(bBg))) {
-        diffs.push(`hero content box bg: ${aBg} -> ${bBg}`)
+      const compareHeroBoxes =
+        isVisibleBackground(aHeroBox.node.styles.backgroundColor) &&
+        isVisibleBackground(bHeroBox.node.styles.backgroundColor)
+      if (compareHeroBoxes) {
+        if (Math.abs(aHeroBox.node.rect.width - bHeroBox.node.rect.width) > 30) {
+          diffs.push(`hero content box width: ${aHeroBox.node.rect.width}px -> ${bHeroBox.node.rect.width}px`)
+        }
+        if (Math.abs(aHeroBox.node.rect.height - bHeroBox.node.rect.height) > 20) {
+          diffs.push(`hero content box height: ${aHeroBox.node.rect.height}px -> ${bHeroBox.node.rect.height}px`)
+        }
+        if (aBg !== bBg && (!white.has(aBg) || !white.has(bBg))) {
+          diffs.push(`hero content box bg: ${aBg} -> ${bBg}`)
+        }
       }
     }
 
@@ -483,22 +981,47 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     lines.push('  Unable to compare hero headings')
   }
 
-  // Compare paragraphs (first 5)
+  // Compare paragraphs across the full page using text + vertical position.
   lines.push('')
-  lines.push('=== Paragraph Differences (first 5) ===')
-  const aParagraphs = flatA.filter(f => f.node.tag === 'p').slice(0, 5)
-  const bParagraphs = flatB.filter(f => f.node.tag === 'p').slice(0, 5)
-  for (let i = 0; i < Math.min(aParagraphs.length, bParagraphs.length); i++) {
-    const a = aParagraphs[i].node
-    const b = bParagraphs[i].node
+  lines.push('=== Paragraph Differences (matched across page) ===')
+  const aParagraphs = flatA.filter(f => f.node.tag === 'p' && normalizeTextContent(f.node.text).length >= 12)
+  const bParagraphs = flatB.filter(f => f.node.tag === 'p' && normalizeTextContent(f.node.text).length >= 12)
+  const paragraphPairs = matchTextEntries(aParagraphs, bParagraphs, {
+    minTextLength: 12,
+    fallbackPrefixLength: 28,
+  })
+  if (aParagraphs.length !== bParagraphs.length) {
+    lines.push(`  Count: ${aParagraphs.length} -> ${bParagraphs.length}`)
+  }
+  let paragraphDiffs = 0
+  for (const { a: aEntry, b: bEntry } of paragraphPairs) {
+    const a = getRepresentativeParagraphNode(aEntry)
+    const b = getRepresentativeParagraphNode(bEntry)
     const diffs: string[] = []
+    if (a.styles.fontSize !== b.styles.fontSize) diffs.push(`fontSize: ${a.styles.fontSize} â†’ ${b.styles.fontSize}`)
+    if (a.styles.fontWeight !== b.styles.fontWeight) diffs.push(`fontWeight: ${a.styles.fontWeight} â†’ ${b.styles.fontWeight}`)
+    if (a.styles.lineHeight !== b.styles.lineHeight) diffs.push(`lineHeight: ${a.styles.lineHeight} â†’ ${b.styles.lineHeight}`)
     if (a.styles.color !== b.styles.color) diffs.push(`color: ${normalizeColor(a.styles.color)} → ${normalizeColor(b.styles.color)}`)
     if (a.styles.marginBottom !== b.styles.marginBottom) diffs.push(`marginBottom: ${a.styles.marginBottom} → ${b.styles.marginBottom}`)
     if (a.styles.marginTop !== b.styles.marginTop) diffs.push(`marginTop: ${a.styles.marginTop} → ${b.styles.marginTop}`)
     if (diffs.length) {
-      lines.push(`  <p> "${a.text?.substring(0, 40)}"`)
-      for (const d of diffs) lines.push(`    ${d}`)
+      paragraphDiffs++
+      if (paragraphDiffs <= 12) {
+        lines.push(`  <p> "${a.text?.substring(0, 40)}"`)
+        for (const d of diffs) lines.push(`    ${d}`)
+      }
     }
+  }
+
+  if (paragraphDiffs > 12) lines.push(`  ...and ${paragraphDiffs - 12} more paragraph style differences`)
+  const matchedParagraphA = new Set(paragraphPairs.map(pair => pair.a.path))
+  const matchedParagraphB = new Set(paragraphPairs.map(pair => pair.b.path))
+  const unmatchedParagraphA = aParagraphs.filter(entry => !matchedParagraphA.has(entry.path))
+  const unmatchedParagraphB = bParagraphs.filter(entry => !matchedParagraphB.has(entry.path))
+  if (unmatchedParagraphA.length || unmatchedParagraphB.length) {
+    lines.push(`  Unmatched paragraphs: ${labelA} ${unmatchedParagraphA.length}, ${labelB} ${unmatchedParagraphB.length}`)
+  } else if (paragraphDiffs === 0) {
+    lines.push(`  No paragraph style differences in ${paragraphPairs.length} matched paragraphs`)
   }
 
   // Compare lists
@@ -545,12 +1068,17 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   lines.push('')
   lines.push('=== Text Transform Mismatches ===')
   const textTags = new Set(['p', 'span', 'strong', 'em', 'a', 'li', 'figcaption', 'label', 'h1', 'h2', 'h3', 'h4'])
+  const aTextEntries = flatA.filter(f => textTags.has(f.node.tag) && normalizeTextContent(f.node.text).length >= 6)
+  const bTextEntries = flatB.filter(f => textTags.has(f.node.tag) && normalizeTextContent(f.node.text).length >= 6)
+  const textPairs = matchTextEntries(aTextEntries, bTextEntries, {
+    minTextLength: 6,
+    fallbackPrefixLength: 18,
+    sameTagOnly: false,
+  })
   let ttMismatches = 0
-  for (let i = 0; i < Math.min(flatA.length, flatB.length); i++) {
-    const a = flatA[i]?.node
-    const b = flatB[i]?.node
-    if (!a || !b) break
-    if (!textTags.has(a.tag) || a.tag !== b.tag) continue
+  for (const { a: aEntry, b: bEntry } of textPairs) {
+    const a = aEntry.node
+    const b = bEntry.node
     if (a.styles.textTransform !== b.styles.textTransform && a.text && a.text.length > 5) {
       ttMismatches++
       if (ttMismatches <= 3) {
@@ -560,7 +1088,7 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     }
   }
   if (ttMismatches > 3) lines.push(`  …and ${ttMismatches - 3} more`)
-  if (ttMismatches === 0) lines.push(`  No text-transform mismatches`)
+  if (ttMismatches === 0) lines.push(`  No text-transform mismatches across ${textPairs.length} matched text nodes`)
 
   // ── Video count check ───────────────────────────────────────────────
   lines.push('')
@@ -652,9 +1180,12 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
       .map(entry => {
         if (entry.node.tag !== 'img') return null
         if (entry.node.rect.width <= 250 || entry.node.rect.height <= 120) return null
+        const ancestors = getAncestors(entry, map)
+        if (!ancestors.some(ancestor => ancestor.node.tag === 'a')) return null
         const parent = entry.parentPath ? map.get(entry.parentPath) ?? null : null
         if (!parent) return null
         if (parent.node.rect.width <= 300 || parent.node.rect.height <= 220) return null
+        if (parent.node.rect.width > 650) return null
 
         const topOffset = entry.node.rect.y - parent.node.rect.y
         const bottomOffset = parent.node.rect.height - entry.node.rect.height - topOffset
@@ -712,11 +1243,18 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   // in a .background--gray div but Next.js renders it as plain unstyled text.
   lines.push('')
   lines.push('=== Background Sections ===')
-  const isBgColored = (f: { node: TreeNode }) =>
-    f.node.styles.backgroundColor &&
-    f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-    f.node.styles.backgroundColor !== 'rgb(255, 255, 255)' &&
-    f.node.rect.width > 200 && f.node.rect.height > 40
+  const isBgColored = (f: { node: TreeNode }) => {
+    const textLength = normalizeTextContent(f.node.text).length
+    return Boolean(
+      f.node.styles.backgroundColor &&
+      f.node.styles.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+      f.node.styles.backgroundColor !== 'rgb(255, 255, 255)' &&
+      f.node.rect.width > 200 &&
+      f.node.rect.height > 40 &&
+      f.node.rect.height <= 260 &&
+      textLength <= 220
+    )
+  }
   const aBg = flatA.filter(isBgColored)
   const bBg = flatB.filter(isBgColored)
   if (aBg.length !== bBg.length) {
@@ -725,11 +1263,14 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   // Extract text snippets inside bg sections for each side
   const bgText = (flat: typeof flatA) => {
     const bgNodes = flat.filter(isBgColored)
-    const texts = new Set<string>()
+    const texts = new Map<string, string>()
     for (const { node } of bgNodes) {
       // Walk children to collect text
       const walk = (n: TreeNode) => {
-        if (n.text && n.text.length > 15) texts.add(n.text.substring(0, 40))
+        const normalized = normalizeTextContent(n.text).slice(0, 40)
+        if (normalized.length > 15 && !texts.has(normalized)) {
+          texts.set(normalized, (n.text || '').substring(0, 40))
+        }
         for (const c of n.children) walk(c)
       }
       walk(node)
@@ -740,13 +1281,13 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   const bBgTexts = bgText(flatB)
   // Report text in A's bg sections but missing from B's bg sections
   let bgMismatches = 0
-  for (const t of aBgTexts) {
+  for (const [t] of aBgTexts) {
     if (!bBgTexts.has(t)) {
       bgMismatches++
       if (bgMismatches <= 5) lines.push(`  ⚠ ${labelA} has bg-styled: "${t}…" — ${labelB} renders unstyled`)
     }
   }
-  for (const t of bBgTexts) {
+  for (const [t] of bBgTexts) {
     if (!aBgTexts.has(t)) {
       bgMismatches++
       if (bgMismatches <= 5) lines.push(`  ⚠ ${labelB} has bg-styled: "${t}…" — ${labelA} renders unstyled`)
@@ -940,49 +1481,492 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
 
 // ── Main ───────────────────────────────────────────────────────────────
 
+function formatViewport(viewport: ViewportPreset): string {
+  return `${viewport.name} (${viewport.width}x${viewport.height})`
+}
+
+function parseViewportPresets(args: string[], defaultNames: ViewportName[]): ViewportPreset[] {
+  const requested = args.includes('--mobile')
+    ? ['mobile']
+    : (getArgValue(args, '--viewports')?.split(',').map(value => value.trim()).filter(Boolean) ?? defaultNames)
+
+  const invalid = requested.filter(
+    (name): name is string => !(name in VIEWPORT_PRESETS),
+  )
+
+  if (invalid.length > 0) {
+    throw new Error(
+      `Unknown viewport preset(s): ${invalid.join(', ')}. Available presets: ${Object.keys(VIEWPORT_PRESETS).join(', ')}`,
+    )
+  }
+
+  return [...new Set(requested)].map(name => VIEWPORT_PRESETS[name as ViewportName])
+}
+
+async function applyViewport(page: Page, viewport: ViewportPreset): Promise<void> {
+  await page.setViewport({
+    width: viewport.width,
+    height: viewport.height,
+    deviceScaleFactor: viewport.deviceScaleFactor ?? 1,
+    isMobile: viewport.isMobile ?? false,
+    hasTouch: viewport.hasTouch ?? false,
+  })
+}
+
+async function loadSnapshotForUrl(page: Page, url: string, viewport: ViewportPreset): Promise<PageSnapshot> {
+  let lastError: unknown
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      await applyViewport(page, viewport)
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 })
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      await preparePageForCapture(page)
+      const [tree, responsive] = await Promise.all([
+        extractTree(page),
+        collectResponsiveDiagnostics(page),
+      ])
+      return { tree, responsive }
+    } catch (error) {
+      lastError = error
+      if (attempt === 2) break
+      await new Promise(resolve => setTimeout(resolve, 1500 * attempt))
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
+function issueSignature(issue: ResponsiveIssue): string {
+  return `${issue.tag}|${issue.src || ''}|${issue.text.substring(0, 40)}`
+}
+
+function formatResponsiveIssue(issue: ResponsiveIssue): string {
+  const content = issue.src
+    ? `[${issue.src}]`
+    : issue.text
+      ? `"${issue.text.substring(0, 60)}${issue.text.length > 60 ? '...' : ''}"`
+      : ''
+  const overflowParts: string[] = []
+  if (issue.overflowLeft > 0) overflowParts.push(`left ${issue.overflowLeft}px`)
+  if (issue.overflowRight > 0) overflowParts.push(`right ${issue.overflowRight}px`)
+  const dimensions = `${issue.width}x${issue.height}`
+  const overflow = overflowParts.length > 0 ? `, overflow ${overflowParts.join(' / ')}` : ''
+  const clipping = issue.scrollWidth && issue.clientWidth
+    ? `, scroll ${issue.scrollWidth}px vs client ${issue.clientWidth}px`
+    : ''
+  return `<${issue.tag}>${content ? ` ${content}` : ''} (${dimensions}${overflow}${clipping})`
+}
+
+function additionalIssues(base: ResponsiveIssue[], candidate: ResponsiveIssue[]): ResponsiveIssue[] {
+  const baseSignatures = new Set(base.map(issueSignature))
+  return candidate.filter(issue => !baseSignatures.has(issueSignature(issue)))
+}
+
+function diffResponsiveDiagnostics(
+  diagnosticsA: ResponsiveDiagnostics,
+  diagnosticsB: ResponsiveDiagnostics,
+  labelA: string,
+  labelB: string,
+  viewport: ViewportPreset,
+): string[] {
+  const lines: string[] = []
+  const compareIssueGroup = (
+    title: string,
+    countA: number,
+    countB: number,
+    issuesA: ResponsiveIssue[],
+    issuesB: ResponsiveIssue[],
+    emptyMessage: string,
+  ) => {
+    lines.push('')
+    lines.push(`=== ${title} ===`)
+
+    const extras = additionalIssues(issuesA, issuesB)
+    const countWorse = countB > countA
+    if (!countWorse && extras.length === 0) {
+      lines.push(`  ${emptyMessage}`)
+      return
+    }
+
+    if (countA !== countB) {
+      lines.push(`  Count: ${countA} → ${countB}`)
+    }
+
+    const examples = (extras.length > 0 ? extras : issuesB).slice(0, 5)
+    for (const issue of examples) {
+      lines.push(`  ⚠ ${labelB} ${formatResponsiveIssue(issue)}`)
+    }
+  }
+
+  lines.push('')
+  lines.push('=== Responsive Overflow ===')
+  const extraOverflowingElements = additionalIssues(
+    diagnosticsA.overflowingElements,
+    diagnosticsB.overflowingElements,
+  )
+  if (diagnosticsB.horizontalOverflowPx <= 4 && extraOverflowingElements.length === 0) {
+    lines.push('  No additional overflow detected')
+  } else {
+    lines.push(
+      `  Document overflow: ${labelA} ${diagnosticsA.horizontalOverflowPx}px → ${labelB} ${diagnosticsB.horizontalOverflowPx}px`,
+    )
+    if (diagnosticsA.overflowingElementCount !== diagnosticsB.overflowingElementCount) {
+      lines.push(
+        `  Off-screen elements: ${diagnosticsA.overflowingElementCount} → ${diagnosticsB.overflowingElementCount}`,
+      )
+    }
+
+    const examples = (extraOverflowingElements.length > 0
+      ? extraOverflowingElements
+      : diagnosticsB.overflowingElements).slice(0, 5)
+    for (const issue of examples) {
+      lines.push(`  ⚠ ${labelB} ${formatResponsiveIssue(issue)}`)
+    }
+  }
+
+  compareIssueGroup(
+    'Responsive Media Sizing',
+    diagnosticsA.oversizedMediaCount,
+    diagnosticsB.oversizedMediaCount,
+    diagnosticsA.oversizedMedia,
+    diagnosticsB.oversizedMedia,
+    'No additional oversized media detected',
+  )
+
+  compareIssueGroup(
+    'Responsive Text Clipping',
+    diagnosticsA.clippedTextCount,
+    diagnosticsB.clippedTextCount,
+    diagnosticsA.clippedText,
+    diagnosticsB.clippedText,
+    'No additional text clipping detected',
+  )
+
+  if (viewport.name === 'mobile') {
+    compareIssueGroup(
+      'Responsive Tap Targets',
+      diagnosticsA.tinyTapTargetCount,
+      diagnosticsB.tinyTapTargetCount,
+      diagnosticsA.tinyTapTargets,
+      diagnosticsB.tinyTapTargets,
+      'No additional undersized tap targets detected',
+    )
+  }
+
+  return lines
+}
+
+function buildResponsiveSelfAudit(diagnostics: ResponsiveDiagnostics, viewport: ViewportPreset): string[] {
+  const lines: string[] = []
+  lines.push('=== Responsive Self Audit ===')
+
+  const issueLines: string[] = []
+  if (diagnostics.horizontalOverflowPx > 4) {
+    issueLines.push(`  Document overflow: ${diagnostics.horizontalOverflowPx}px`)
+  }
+  if (diagnostics.overflowingElementCount > 0) {
+    issueLines.push(`  Off-screen elements: ${diagnostics.overflowingElementCount}`)
+    for (const issue of diagnostics.overflowingElements.slice(0, 4)) {
+      issueLines.push(`    ⚠ ${formatResponsiveIssue(issue)}`)
+    }
+  }
+  if (diagnostics.oversizedMediaCount > 0) {
+    issueLines.push(`  Oversized media: ${diagnostics.oversizedMediaCount}`)
+    for (const issue of diagnostics.oversizedMedia.slice(0, 4)) {
+      issueLines.push(`    ⚠ ${formatResponsiveIssue(issue)}`)
+    }
+  }
+  if (diagnostics.clippedTextCount > 0) {
+    issueLines.push(`  Clipped text blocks: ${diagnostics.clippedTextCount}`)
+    for (const issue of diagnostics.clippedText.slice(0, 4)) {
+      issueLines.push(`    ⚠ ${formatResponsiveIssue(issue)}`)
+    }
+  }
+  if (viewport.name === 'mobile' && diagnostics.tinyTapTargetCount > 0) {
+    issueLines.push(`  Undersized tap targets: ${diagnostics.tinyTapTargetCount}`)
+    for (const issue of diagnostics.tinyTapTargets.slice(0, 4)) {
+      issueLines.push(`    ⚠ ${formatResponsiveIssue(issue)}`)
+    }
+  }
+
+  if (issueLines.length === 0) {
+    lines.push('  No responsive issues detected')
+  } else {
+    lines.push(...issueLines)
+  }
+
+  return lines
+}
+
+function buildDiffReport(
+  snapshotA: PageSnapshot,
+  snapshotB: PageSnapshot,
+  labelA: string,
+  labelB: string,
+  viewport: ViewportPreset,
+): string[] {
+  return [
+    ...diffTrees(snapshotA.tree, snapshotB.tree, labelA, labelB),
+    ...diffResponsiveDiagnostics(snapshotA.responsive, snapshotB.responsive, labelA, labelB, viewport),
+  ]
+}
+
+function getArgValue(args: string[], flag: string): string | null {
+  const inline = args.find(arg => arg.startsWith(`${flag}=`))
+  if (inline) return inline.substring(flag.length + 1)
+
+  const index = args.indexOf(flag)
+  if (index >= 0 && index < args.length - 1) return args[index + 1]
+  return null
+}
+
+function printUsage(): void {
+  console.log('Usage:')
+  console.log('  npx tsx scripts/page-tree.ts <url>')
+  console.log('  npx tsx scripts/page-tree.ts <url> --json')
+  console.log('  npx tsx scripts/page-tree.ts <url> --diff <url2>')
+  console.log('  npx tsx scripts/page-tree.ts <url> --diff <url2> --viewports desktop,mobile')
+  console.log('  npx tsx scripts/page-tree.ts <url> --mobile')
+  console.log('  npx tsx scripts/page-tree.ts --list-baselines')
+  console.log('  npx tsx scripts/page-tree.ts --baseline vision-approved [--limit 3] [--viewports desktop,mobile]')
+}
+
+function summarizeDiffLines(diffLines: string[]): string[] {
+  const focusSections = new Set([
+    'Hero Wrap Differences',
+    'Image Layout Comparison',
+    'Image Occupancy Differences',
+    'Broken Images',
+    'Responsive Overflow',
+    'Responsive Media Sizing',
+    'Responsive Text Clipping',
+    'Responsive Tap Targets',
+  ])
+  const harmlessLines = new Set([
+    'Hero wrap metrics match',
+    'Unable to compare hero headings',
+    'Image layouts match',
+    'Image occupancy metrics match',
+    'All images loaded successfully on both sides',
+    'No additional overflow detected',
+    'No additional oversized media detected',
+    'No additional text clipping detected',
+    'No additional undersized tap targets detected',
+  ])
+
+  const findings: string[] = []
+  let currentSection = ''
+  let currentViewport = ''
+
+  for (const line of diffLines) {
+    if (line.startsWith('=== ') && line.endsWith(' ===')) {
+      const heading = line.replace(/^===\s*/, '').replace(/\s*===$/, '')
+      if (heading.startsWith('Viewport: ')) {
+        currentViewport = heading.replace('Viewport: ', '').trim()
+        currentSection = ''
+      } else {
+        currentSection = heading
+      }
+      continue
+    }
+
+    const trimmed = line.trim()
+    if (!trimmed) continue
+
+    if (!focusSections.has(currentSection)) continue
+    if (harmlessLines.has(trimmed) || trimmed.startsWith('No ')) continue
+    if (trimmed.startsWith('Sample count:')) continue
+
+    const viewportPrefix = currentViewport ? `[${currentViewport}]` : ''
+    findings.push(`${viewportPrefix}[${currentSection}] ${trimmed}`)
+  }
+
+  return [...new Set(findings)]
+}
+
+async function runBaselineBatch(
+  baselineName: string,
+  viewports: ViewportPreset[],
+  limit?: number,
+): Promise<void> {
+  const baselinePages = getPageTreeBaselineSet(baselineName)
+  if (baselinePages.length === 0) {
+    console.error(`Unknown baseline set "${baselineName}".`)
+    console.error(`Available baseline sets: ${listPageTreeBaselineSets().join(', ')}`)
+    process.exit(1)
+  }
+
+  const selectedPages = typeof limit === 'number' && limit > 0
+    ? baselinePages.slice(0, limit)
+    : baselinePages
+
+  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+  const page = await browser.newPage()
+
+  const results: {
+    baseline: PageTreeBaselinePage
+    findings: string[]
+    error?: string
+  }[] = []
+
+  for (let index = 0; index < selectedPages.length; index++) {
+    const baseline = selectedPages[index]
+    const gatsbyUrl = `https://www.goinvo.com${baseline.path}/`
+    const nextUrl = `http://localhost:3000${baseline.path}`
+    process.stderr.write(
+      `[${index + 1}/${selectedPages.length}] ${baseline.label} [${viewports.map(viewport => viewport.name).join(', ')}]... `,
+    )
+
+    try {
+      const allFindings: string[] = []
+
+      for (const viewport of viewports) {
+        const gatsbySnapshot = await loadSnapshotForUrl(page, gatsbyUrl, viewport)
+        const nextSnapshot = await loadSnapshotForUrl(page, nextUrl, viewport)
+        const diffLines = buildDiffReport(gatsbySnapshot, nextSnapshot, 'Gatsby', 'Next.js', viewport)
+        const viewportDiffLines = viewports.length > 1
+          ? [`=== Viewport: ${formatViewport(viewport)} ===`, ...diffLines]
+          : diffLines
+        allFindings.push(...summarizeDiffLines(viewportDiffLines))
+      }
+
+      const findings = allFindings.filter(finding =>
+        !baseline.allowedFindings?.some(allowed => finding.includes(allowed))
+      )
+      results.push({ baseline, findings })
+      process.stderr.write(findings.length === 0 ? 'clean\n' : `${findings.length} finding(s)\n`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      results.push({ baseline, findings: [], error: message })
+      process.stderr.write('error\n')
+    }
+  }
+
+  await browser.close()
+
+  const clean = results.filter(result => result.findings.length === 0 && !result.error)
+  const errors = results.filter(result => result.error)
+  const flagged = results.filter(result => result.findings.length > 0)
+
+  console.log(`Baseline set: ${baselineName}`)
+  console.log(`Pages checked: ${results.length}`)
+  console.log(`Clean: ${clean.length}`)
+  console.log(`Flagged: ${flagged.length}`)
+  console.log(`Errors: ${errors.length}`)
+  console.log()
+
+  if (flagged.length > 0) {
+    console.log('Flagged pages:')
+    for (const result of flagged) {
+      console.log(`- ${result.baseline.label} (${result.baseline.path})`)
+      for (const finding of result.findings.slice(0, 6)) {
+        console.log(`  ${finding}`)
+      }
+      if (result.findings.length > 6) {
+        console.log(`  ...and ${result.findings.length - 6} more`)
+      }
+    }
+    console.log()
+  }
+
+  if (clean.length > 0) {
+    console.log(`Clean pages: ${clean.map(result => result.baseline.slug).join(', ')}`)
+    console.log()
+  }
+
+  if (errors.length > 0) {
+    console.log('Errors:')
+    for (const result of errors) {
+      console.log(`- ${result.baseline.label}: ${result.error}`)
+    }
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   const url = args.find(a => a.startsWith('http'))
   const jsonMode = args.includes('--json')
   const diffIdx = args.indexOf('--diff')
   const url2 = diffIdx >= 0 ? args[diffIdx + 1] : null
+  const baselineName = getArgValue(args, '--baseline')
+  const limitArg = getArgValue(args, '--limit')
+  const limit = limitArg ? Number.parseInt(limitArg, 10) : undefined
+  const listBaselines = args.includes('--list-baselines')
+  const viewports = parseViewportPresets(args, baselineName ? ['desktop', 'mobile'] : ['desktop'])
+
+  if (listBaselines) {
+    console.log(listPageTreeBaselineSets().join('\n'))
+    return
+  }
+
+  if (baselineName) {
+    await runBaselineBatch(baselineName, viewports, limit)
+    return
+  }
 
   if (!url) {
-    console.log('Usage:')
-    console.log('  npx tsx scripts/page-tree.ts <url>')
-    console.log('  npx tsx scripts/page-tree.ts <url> --json')
-    console.log('  npx tsx scripts/page-tree.ts <url> --diff <url2>')
+    printUsage()
     process.exit(1)
   }
 
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const page = await browser.newPage()
-  await page.setViewport({ width: 1280, height: 900 })
-
-  console.error(`Fetching ${url}...`)
-  await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
-  await new Promise(r => setTimeout(r, 1000))
-  await preparePageForCapture(page)
-  const tree = await extractTree(page)
 
   if (url2) {
-    console.error(`Fetching ${url2}...`)
-    await page.goto(url2, { waitUntil: 'networkidle2', timeout: 30000 })
-    await new Promise(r => setTimeout(r, 1000))
-    await preparePageForCapture(page)
-    const tree2 = await extractTree(page)
+    const outputLines: string[] = []
 
-    const diffLines = diffTrees(tree, tree2, 'A', 'B')
-    console.log(diffLines.join('\n'))
+    for (const viewport of viewports) {
+      console.error(`Fetching ${url} [${formatViewport(viewport)}]...`)
+      const snapshotA = await loadSnapshotForUrl(page, url, viewport)
+      console.error(`Fetching ${url2} [${formatViewport(viewport)}]...`)
+      const snapshotB = await loadSnapshotForUrl(page, url2, viewport)
+      const diffLines = buildDiffReport(snapshotA, snapshotB, 'A', 'B', viewport)
 
-    console.log('\n=== Tree A ===')
-    console.log(printTree(tree).join('\n'))
-    console.log('\n=== Tree B ===')
-    console.log(printTree(tree2).join('\n'))
+      if (viewports.length > 1) {
+        outputLines.push(`=== Viewport: ${formatViewport(viewport)} ===`)
+      }
+      outputLines.push(...diffLines)
+      if (viewports.length > 1) {
+        outputLines.push('')
+      } else {
+        outputLines.push('')
+        outputLines.push('=== Tree A ===')
+        outputLines.push(...printTree(snapshotA.tree))
+        outputLines.push('')
+        outputLines.push('=== Tree B ===')
+        outputLines.push(...printTree(snapshotB.tree))
+      }
+    }
+
+    console.log(outputLines.join('\n').trim())
   } else if (jsonMode) {
-    console.log(JSON.stringify(tree, null, 2))
+    const snapshots = []
+    for (const viewport of viewports) {
+      console.error(`Fetching ${url} [${formatViewport(viewport)}]...`)
+      const snapshot = await loadSnapshotForUrl(page, url, viewport)
+      snapshots.push({
+        viewport: formatViewport(viewport),
+        tree: snapshot.tree,
+        responsive: snapshot.responsive,
+      })
+    }
+
+    console.log(JSON.stringify(viewports.length === 1 ? snapshots[0] : snapshots, null, 2))
   } else {
-    console.log(printTree(tree).join('\n'))
+    const outputLines: string[] = []
+    for (const viewport of viewports) {
+      console.error(`Fetching ${url} [${formatViewport(viewport)}]...`)
+      const snapshot = await loadSnapshotForUrl(page, url, viewport)
+      if (viewports.length > 1) {
+        outputLines.push(`=== Viewport: ${formatViewport(viewport)} ===`)
+      }
+      outputLines.push(...printTree(snapshot.tree))
+      outputLines.push('')
+      outputLines.push(...buildResponsiveSelfAudit(snapshot.responsive, viewport))
+      outputLines.push('')
+    }
+    console.log(outputLines.join('\n').trim())
   }
 
   await browser.close()

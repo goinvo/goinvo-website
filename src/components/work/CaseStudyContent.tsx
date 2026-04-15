@@ -36,7 +36,8 @@ export function CaseStudyContent({ initialData, slug }: Props) {
     firstContentText.toLowerCase() === `for ${caseStudy.client}`.toLowerCase()
   const showClientSubtitle =
     !!caseStudy.client &&
-    caseStudy.client !== 'GoInvo'
+    caseStudy.client !== 'GoInvo' &&
+    !caseStudy.hideClientSubtitle
   const normalizedCaseStudy = hasLeadingClientSubtitle
     ? { ...caseStudy, content: caseStudy.content?.slice(1) }
     : caseStudy
@@ -54,7 +55,7 @@ export function CaseStudyContent({ initialData, slug }: Props) {
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">
           <h1
-            className="header-xl mt-8 mb-6"
+            className="header-xl mt-8 mb-2"
             style={{ viewTransitionName: 'page-title' }}
           >
             {caseStudy.heading || caseStudy.title}
@@ -78,22 +79,6 @@ export function CaseStudyContent({ initialData, slug }: Props) {
                   })
                 : <>for {caseStudy.client}</>}
             </p>
-          )}
-          {(caseStudy.categories?.length || caseStudy.time) && (
-            <div className="mb-4">
-              {caseStudy.time && (
-                <p className="text-gray m-0">
-                  <span className="font-sans text-xs font-semibold uppercase tracking-[2px] text-gray">Time:</span>{' '}
-                  {caseStudy.time}
-                </p>
-              )}
-              {caseStudy.categories && caseStudy.categories.length > 0 && (
-                <p className="text-gray m-0">
-                  <span className="font-sans text-xs font-semibold uppercase tracking-[2px] text-gray">Tags:</span>{' '}
-                  {caseStudy.categories.map((cat) => cat.title).join(', ')}
-                </p>
-              )}
-            </div>
           )}
         </div>
       </Reveal>

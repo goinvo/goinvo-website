@@ -29,9 +29,12 @@ export interface CaseStudy {
   heading?: string
   slug: { current: string }
   client?: string
+  hideClientSubtitle?: boolean
   image?: SanityImage
   caption?: string
   categories?: Category[]
+  displayTags?: string
+  metadataLayout?: 'stacked' | 'inline'
   authors?: TeamMember[]
   time?: string
   content?: PortableTextBlock[]
@@ -87,6 +90,7 @@ export interface Feature {
   authors?: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contributors?: any[]
+  contributorsLayout?: string
   specialThanks?: PortableTextBlock[]
   showAboutGoInvo?: boolean
   externalLink?: string
