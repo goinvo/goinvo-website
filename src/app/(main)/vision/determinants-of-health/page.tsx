@@ -4,9 +4,8 @@ import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { Divider } from '@/components/ui/Divider'
 import { References } from '@/components/ui/References'
-import { DeterminantsChart } from './DeterminantsChart'
+import { DeterminantsExplorer } from './DeterminantsExplorer'
 import { cloudfrontImage } from '@/lib/utils'
-import './determinants.css'
 
 const heroImage = '/images/services/doh-preview.jpg'
 
@@ -20,7 +19,7 @@ export default function DeterminantsOfHealthPage() {
   return (
     <>
       <SetCaseStudyHero image={cloudfrontImage(heroImage)} />
-      <div className="determinants-of-health">
+      <div className="determinants-of-health gatsby-article">
         <div className="pad-vertical--double">
           <div className="max-width max-width--md content-padding">
             <h1 className="header--xl">Determinants of Health</h1>
@@ -107,9 +106,7 @@ export default function DeterminantsOfHealthPage() {
               <h2 className="header--lg text--center margin-top--double margin-bottom--half">
                 Tap the categories to explore
               </h2>
-              <div id="determinants-chart">
-                <DeterminantsChart />
-              </div>
+              <DeterminantsExplorer />
             </div>
 
             <div className="poster margin-top--double">

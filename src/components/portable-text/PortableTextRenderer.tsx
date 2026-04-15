@@ -13,6 +13,13 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
 import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
+import {
+  LonelinessFeelingSection,
+  LonelinessIsolationCostsSection,
+  LonelinessResilienceSection,
+  LonelinessRiskOverviewSection,
+  LonelinessTimelineSection,
+} from '@/components/portable-text/LonelinessFeatureSections'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 
 /* ------------------------------------------------------------------ */
@@ -132,7 +139,14 @@ const components: PortableTextComponents = {
     image: ({ value }) => <PortableImage value={value} />,
     quote: ({ value }) => (
       <ArticleReveal intensity="visual">
-        <Quote text={value.text} author={value.author} role={value.role} refNumber={value.refNumber} refTarget={value.refTarget} />
+        <Quote
+          text={value.text}
+          author={value.author}
+          role={value.role}
+          background={value.background}
+          refNumber={value.refNumber}
+          refTarget={value.refTarget}
+        />
       </ArticleReveal>
     ),
     results: ({ value }) => {
@@ -287,6 +301,7 @@ const components: PortableTextComponents = {
       const items: any[] = value.content || []
       const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2 // 2:1 and 1:2 also count as 2
       const isStoryboard = value.layout === 'storyboard'
+      const isCardVariant = value.variant === 'cards'
       const bg = value.background || 'none'
       const sizeClass = value.size === 'wide' ? 'columns-wide' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
       // Wrapper function to apply size override
@@ -302,6 +317,103 @@ const components: PortableTextComponents = {
       const textBlocks = items.filter(i => i._type === 'block')
       const hasText = textBlocks.length > 0
       const hasImages = images.length > 0
+
+      const buildImageGroups = () => {
+        const groups: { image: any; content: any[] }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+        let currentGroup: { image: any; content: any[] } | null = null // eslint-disable-line @typescript-eslint/no-explicit-any
+        for (const item of items) {
+          if (item._type === 'image' && item.asset?._ref) {
+            if (currentGroup) groups.push(currentGroup)
+            currentGroup = { image: item, content: [] }
+          } else if (currentGroup) {
+            currentGroup.content.push(item)
+          }
+        }
+        if (currentGroup) groups.push(currentGroup)
+        return groups
+      }
+
+      const extractCardContent = (block: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const children = block?.children || []
+        const fullText = children.map((child: any) => child.text || '').join('').replace(/\s+/g, ' ').trim() // eslint-disable-line @typescript-eslint/no-explicit-any
+        const titleFromStrong = children
+          .filter((child: any) => child?.marks?.includes('strong')) // eslint-disable-line @typescript-eslint/no-explicit-any
+          .map((child: any) => child.text || '') // eslint-disable-line @typescript-eslint/no-explicit-any
+          .join('')
+          .replace(/\s+/g, ' ')
+          .trim()
+
+        let title = titleFromStrong
+        let description = fullText
+        if (title && fullText.toLowerCase().startsWith(title.toLowerCase())) {
+          description = fullText.slice(title.length).replace(/^\s*[—-]\s*/, '').trim()
+        } else {
+          const parts = fullText.split(/\s+[—-]\s+/)
+          if (parts.length > 1) {
+            title = parts.shift()?.trim() || ''
+            description = parts.join(' — ').trim()
+          }
+        }
+
+        if (!title) {
+          title = fullText
+          description = ''
+        }
+
+        const href = block?.markDefs?.find((def: any) => def?._type === 'link')?.href || '' // eslint-disable-line @typescript-eslint/no-explicit-any
+        return { title, description, href }
+      }
+
+      if (isCardVariant && hasText && hasImages) {
+        const groups = buildImageGroups()
+        const gridClasses = colCount === 4
+          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+          : colCount === 3
+            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+            : 'grid-cols-1 md:grid-cols-2'
+
+        return (
+          <Wrap>
+            <ArticleReveal intensity="visual">
+              <div className={cn('my-8 grid gap-4', gridClasses)}>
+                {groups.map((group) => {
+                  const textBlock = group.content.find((item) => item._type === 'block')
+                  const { title, description, href } = extractCardContent(textBlock)
+                  const imgUrl = urlForImage(group.image).width(800).height(598).url()
+                  const isExternal = /^https?:\/\//i.test(href)
+                  const CardWrapper = href ? 'a' : 'div'
+
+                  return (
+                    <div key={group.image._key} className="h-full">
+                      <CardWrapper
+                        href={href || undefined}
+                        target={isExternal ? '_blank' : undefined}
+                        rel={isExternal ? 'noopener noreferrer' : undefined}
+                        className={cn(href && 'no-underline text-black block h-full')}
+                      >
+                        <article className="group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] h-full flex flex-col">
+                          <div className="relative h-[260px] overflow-hidden">
+                            <img
+                              src={imgUrl}
+                              alt={group.image.alt || title || ''}
+                              loading="lazy"
+                              className="w-full h-full object-cover transition-transform duration-[var(--transition-card)] group-hover:scale-105"
+                            />
+                          </div>
+                          <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
+                            {title && <p className="font-semibold text-black">{title}</p>}
+                            {description && <p className="text-gray">{description}</p>}
+                          </div>
+                        </article>
+                      </CardWrapper>
+                    </div>
+                  )
+                })}
+              </div>
+            </ArticleReveal>
+          </Wrap>
+        )
+      }
 
       // Storyboard layout: image-on-top text-below cells in a 2-column grid
       // Items should alternate: image, text, image, text, ...
@@ -450,19 +562,7 @@ const components: PortableTextComponents = {
       // Image-only: grid of images (original behavior)
       if (hasImages) {
         const centeredVariant = value.variant === 'centered'
-        // Group items into image + following content blocks
-        // Each group: one image followed by zero or more text/list blocks until the next image
-        const groups: { image: any; content: any[] }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
-        let currentGroup: { image: any; content: any[] } | null = null // eslint-disable-line @typescript-eslint/no-explicit-any
-        for (const item of items) {
-          if (item._type === 'image' && item.asset?._ref) {
-            if (currentGroup) groups.push(currentGroup)
-            currentGroup = { image: item, content: [] }
-          } else if (currentGroup) {
-            currentGroup.content.push(item)
-          }
-        }
-        if (currentGroup) groups.push(currentGroup)
+        const groups = buildImageGroups()
 
         return (
           <Wrap>
@@ -637,38 +737,43 @@ const components: PortableTextComponents = {
       const buttons = value.buttons || []
       const layout = value.layout || 'inline'
       const isSingleCenteredButton = layout === 'centered' && buttons.length === 1
-      const containerClass = layout === 'fullWidth' ? 'flex gap-4'
+      const isSingleFullWidthButton = layout === 'fullWidth' && buttons.length === 1
+      const isBlockButtonLayout = layout === 'fullWidth'
+      const containerClass = isSingleFullWidthButton
+        ? 'flex flex-wrap mb-8'
+        : layout === 'fullWidth' ? 'flex flex-wrap gap-4'
         : layout === 'centered' ? 'flex flex-wrap gap-4 justify-center'
         : 'flex flex-wrap gap-4'
-      const btnClass = layout === 'fullWidth'
-        ? 'flex-1 block py-3'
+      const btnClass = isSingleFullWidthButton
+        ? 'block w-full sm:w-1/2 lg:w-[95%] mx-auto mt-8 mb-2'
+        : layout === 'fullWidth'
+          ? 'flex-1 block'
         : isSingleCenteredButton
           ? 'inline-flex w-full sm:w-auto'
           : 'inline-flex'
       return (
-        <ArticleReveal intensity="visual">
-          <div className={cn(isSingleCenteredButton ? 'my-8' : 'my-6', containerClass)}>
-            {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
-              <a
-                key={i}
-                href={btn.url}
-                target={btn.external ? '_blank' : undefined}
-                rel={btn.external ? 'noopener noreferrer' : undefined}
-                className={cn(
-                  'items-center justify-center font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
-                  'text-[15px] leading-[1.625rem]',
-                  'py-[0.375rem] px-4',
-                  btnClass,
-                  btn.variant === 'primary'
-                    ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
-                    : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
-                )}
-              >
-                {btn.label}
-              </a>
-            ))}
-          </div>
-        </ArticleReveal>
+        <div className={cn(isSingleFullWidthButton ? 'my-0' : isSingleCenteredButton ? 'my-8' : 'my-6', containerClass)}>
+          {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
+            <a
+              key={i}
+              href={btn.url}
+              target={btn.external ? '_blank' : undefined}
+              rel={btn.external ? 'noopener noreferrer' : undefined}
+              className={cn(
+                'font-semibold uppercase tracking-[2px] no-underline transition-all border text-center',
+                'text-[15px] leading-[1.625rem]',
+                'py-[0.375rem] px-4',
+                !isBlockButtonLayout && 'items-center justify-center',
+                btnClass,
+                btn.variant === 'primary'
+                  ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
+                  : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
+              )}
+            >
+              {btn.label}
+            </a>
+          ))}
+        </div>
       )
     },
     imageEquationList: ({ value }) => {
@@ -733,6 +838,9 @@ const components: PortableTextComponents = {
           </div>
         )
       }
+      if (value?.style === 'buttonSpacing') {
+        return <Divider className="mt-[25px] mb-4" />
+      }
       return <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
     },
     contactForm: ({ value }) => (
@@ -769,6 +877,36 @@ const components: PortableTextComponents = {
           return (
             <ArticleReveal intensity="visual">
               <FIHCPersuasionEmotionSection />
+            </ArticleReveal>
+          )
+        case 'lonelinessIsolationCosts':
+          return (
+            <ArticleReveal intensity="visual">
+              <LonelinessIsolationCostsSection />
+            </ArticleReveal>
+          )
+        case 'lonelinessRiskOverview':
+          return (
+            <ArticleReveal intensity="visual">
+              <LonelinessRiskOverviewSection />
+            </ArticleReveal>
+          )
+        case 'lonelinessFeelingSection':
+          return (
+            <ArticleReveal intensity="visual">
+              <LonelinessFeelingSection />
+            </ArticleReveal>
+          )
+        case 'lonelinessTimelineSection':
+          return (
+            <ArticleReveal intensity="visual">
+              <LonelinessTimelineSection />
+            </ArticleReveal>
+          )
+        case 'lonelinessResilienceSection':
+          return (
+            <ArticleReveal intensity="visual">
+              <LonelinessResilienceSection />
             </ArticleReveal>
           )
         default:
@@ -1068,8 +1206,8 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
 
 interface PortableTextRendererProps {
   content: PortableTextBlock[]
-  /** Content variant: 'case-study' applies gray text + double paragraph spacing to match Gatsby */
-  variant?: 'default' | 'case-study'
+  /** Content variant: 'case-study' applies gray text + double paragraph spacing; 'gray-body' applies Gatsby-like gray body copy without changing spacing */
+  variant?: 'default' | 'case-study' | 'gray-body'
   /** Disable automatic grouping of consecutive images into columns */
   noGrouping?: boolean
   /** Bullet style: 'star' (default custom image) or 'disc' (standard round bullets) */
@@ -1093,6 +1231,36 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
         },
         block: {
           ...blockComponents,
+          h2: ({ children }) => (
+            <ArticleReveal intensity="heading">
+              <h2 className="header-lg mt-8 mb-5">{children}</h2>
+            </ArticleReveal>
+          ),
+          h2Center: ({ children, value }) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+            const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            return (
+              <ArticleReveal intensity="heading">
+                <h2 id={anchorId} className="header-lg mt-8 mb-5 text-center">{children}</h2>
+              </ArticleReveal>
+            )
+          },
+          sectionTitle: ({ children, value }) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+            const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            return (
+              <ArticleReveal intensity="heading">
+                <h2 id={anchorId} className="header-lg mt-8 mb-5 text-center">{children}</h2>
+              </ArticleReveal>
+            )
+          },
+          h3: ({ children }) => (
+            <ArticleReveal intensity="heading">
+              <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-[15px] mb-2">{children}</h3>
+            </ArticleReveal>
+          ),
           h4: ({ children }) => (
             <ArticleReveal intensity="heading">
               <h4 className="font-sans text-base font-semibold mt-6 mb-2">{children}</h4>
@@ -1100,21 +1268,34 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
           ),
         },
       } as PortableTextComponents)
-    : components
+    : variant === 'gray-body'
+      ? ({
+          ...components,
+          block: {
+            ...blockComponents,
+            normal: ({ children, value }) => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+              const isVirtualCareIntro = text.includes('Armed with a smartphone or device')
+              return (
+                <ArticleReveal intensity="text">
+                  <p className={cn('my-4 leading-relaxed', isVirtualCareIntro && 'mt-0', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+                </ArticleReveal>
+              )
+            },
+          },
+        } as PortableTextComponents)
+      : components
 
-  if (variant === 'case-study') {
-    // Case studies use custom star bullets (matching Gatsby)
-    return (
-      <div className="case-study-content">
-        <PortableText value={processed} components={rendererComponents} />
-      </div>
-    )
-  }
+  const wrapperClassName = cn(
+    variant === 'case-study' && 'case-study-content',
+    variant === 'gray-body' && 'gray-prose-content',
+    bulletStyle === 'disc' && 'disc-bullets'
+  )
 
-  // Disc bullet style: override .ul star bullets with standard disc
-  if (bulletStyle === 'disc') {
+  if (wrapperClassName) {
     return (
-      <div className="disc-bullets">
+      <div className={wrapperClassName}>
         <PortableText value={processed} components={rendererComponents} />
       </div>
     )

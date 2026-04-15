@@ -304,9 +304,30 @@
     margin-bottom: 2rem;
   }
 
+  .case-study-content figcaption {
+    color: var(--color-gray);
+    font-size: 0.875rem;
+    line-height: 1.4375rem;
+    font-style: italic;
+    text-align: center;
+    margin-top: 0.875rem;
+    margin-bottom: 0.875rem;
+  }
+
   .case-study-content ol,
   .case-study-content ul {
     color: var(--color-gray);
+  }
+
+  .gray-prose-content p,
+  .gray-prose-content ol,
+  .gray-prose-content ul,
+  .gray-prose-content li {
+    color: var(--color-gray);
+  }
+
+  .gray-prose-content h4 + p.whitespace-pre-line {
+    margin-top: 0;
   }
 
 

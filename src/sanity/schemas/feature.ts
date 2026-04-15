@@ -118,6 +118,13 @@ export default defineType({
       description: 'Display date (e.g. "Feb.2026")',
     }),
     defineField({
+      name: 'showPageMeta',
+      title: 'Show Page Meta',
+      type: 'boolean',
+      description: 'Show the category/date row below the page title',
+      initialValue: true,
+    }),
+    defineField({
       name: 'client',
       title: 'Client',
       type: 'string',
@@ -163,6 +170,7 @@ export default defineType({
       options: {
         list: [
           { title: 'Equal (all same size)', value: 'equal' },
+          { title: 'Stacked rows (legacy author layout)', value: 'stacked' },
           { title: 'Primary + sidebar', value: 'primary-sidebar' },
         ],
       },
@@ -196,6 +204,7 @@ export default defineType({
       options: {
         list: [
           { title: 'Cards (default)', value: 'equal' },
+          { title: 'Stacked rows (legacy author layout)', value: 'stacked' },
           { title: 'Plain list', value: 'plain-list' },
         ],
       },
@@ -220,6 +229,32 @@ export default defineType({
       type: 'boolean',
       description: 'Show the standard "About GoInvo" blurb after the author/contributor sections.',
       initialValue: false,
+    }),
+    defineField({
+      name: 'aboutGoInvoPosition',
+      title: '"About GoInvo" Position',
+      type: 'string',
+      description: 'Whether the About GoInvo section appears before or after the newsletter block',
+      options: {
+        list: [
+          { title: 'Before newsletter', value: 'beforeNewsletter' },
+          { title: 'After newsletter', value: 'afterNewsletter' },
+        ],
+      },
+      initialValue: 'beforeNewsletter',
+    }),
+    defineField({
+      name: 'aboutGoInvoVariant',
+      title: '"About GoInvo" Copy',
+      type: 'string',
+      description: 'Choose which standard About GoInvo blurb to render',
+      options: {
+        list: [
+          { title: 'Default', value: 'default' },
+          { title: 'Practice', value: 'practice' },
+        ],
+      },
+      initialValue: 'default',
     }),
     defineField({
       name: 'content',

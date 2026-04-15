@@ -88,6 +88,15 @@ export default async function VisionFeaturePage({ params }: Props) {
     : articleContainerClassName
   const newsletterContainerStyle = useLegacyFacesLayout ? undefined : articleContainerStyle
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
+  const showPageMeta = feature.showPageMeta !== false
+  const aboutGoInvoSection = feature.showAboutGoInvo ? (
+    <section className="pb-12">
+      <div className={articleContainerClassName} style={articleContainerStyle}>
+        <AboutGoInvo variant={feature.aboutGoInvoVariant} />
+      </div>
+    </section>
+  ) : null
+  const renderAboutAfterNewsletter = feature.aboutGoInvoPosition === 'afterNewsletter'
 
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
@@ -120,7 +129,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             >
               {feature.title}
             </h1>
-            {!useLegacyFacesLayout && (feature.categories?.length || feature.date) && (
+            {!useLegacyFacesLayout && showPageMeta && (feature.categories?.length || feature.date) && (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
                 {feature.categories && feature.categories.length > 0 && (
                   <div className="flex flex-wrap gap-2">
@@ -154,12 +163,17 @@ export default async function VisionFeaturePage({ params }: Props) {
         }
         const mainContent = content.filter((b: any) => b._type !== 'references')
         const referencesContent = content.filter((b: any) => b._type === 'references')
+        const portableTextVariant = slug === 'virtual-care' ? 'gray-body' : undefined
 
         return (
           <>
             <section className="pb-12">
               <div className={articleContainerClassName} style={articleContainerStyle}>
-                <PortableTextRenderer content={mainContent} bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined} />
+                <PortableTextRenderer
+                  content={mainContent}
+                  variant={portableTextVariant}
+                  bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined}
+                />
               </div>
             </section>
 
@@ -167,7 +181,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {feature.authors && feature.authors.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
-                  <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined} />
+                  <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'stacked' | 'primary-sidebar' | undefined} />
                 </div>
               </section>
             )}
@@ -179,7 +193,7 @@ export default async function VisionFeaturePage({ params }: Props) {
                   <AuthorSection
                     authors={feature.contributors}
                     heading="Contributors"
-                    variant={feature.contributorsLayout as 'equal' | 'primary-sidebar' | 'plain-list' | undefined}
+                    variant={feature.contributorsLayout as 'equal' | 'stacked' | 'primary-sidebar' | 'plain-list' | undefined}
                   />
                 </div>
               </section>
@@ -196,13 +210,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             )}
 
             {/* About GoInvo (after Special Thanks) */}
-            {feature.showAboutGoInvo && (
-              <section className="pb-12">
-                <div className={articleContainerClassName} style={articleContainerStyle}>
-                  <AboutGoInvo />
-                </div>
-              </section>
-            )}
+            {!renderAboutAfterNewsletter && aboutGoInvoSection}
 
             {/* Newsletter */}
             <section className="bg-gray-lightest py-8">
@@ -212,6 +220,8 @@ export default async function VisionFeaturePage({ params }: Props) {
                 </div>
               </div>
             </section>
+
+            {renderAboutAfterNewsletter && aboutGoInvoSection}
 
             {/* References (after newsletter, matching Gatsby order) */}
             {referencesContent.length > 0 && (
