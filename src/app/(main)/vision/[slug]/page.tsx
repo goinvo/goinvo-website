@@ -234,6 +234,66 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
     })
   }
 
+  if (slug === 'virtual-care') {
+    if (content.some((block: any) => block?._type === 'results')) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      return content
+    }
+
+    const faceToFaceText = 'face-to-face clinical office visits every year'
+    const virtualText = 'can be conducted virtually'
+    const nextContent = [...content]
+    const blockText = (block: any) => textFromPortableBlock(block) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    const resultsBlock = {
+      _key: 'virtual-care-results-band',
+      _type: 'results',
+      variant: 'statBand',
+      background: 'none',
+      items: [
+        {
+          _key: 'virtual-care-results-face-to-face',
+          _type: 'object',
+          stat: '990',
+          unit: 'M',
+          description: faceToFaceText,
+          refNumber: '1',
+          refTarget: 'references',
+        },
+        {
+          _key: 'virtual-care-results-virtual',
+          _type: 'object',
+          stat: '459',
+          unit: 'M',
+          annotation: '(46%)',
+          description: virtualText,
+        },
+      ],
+    }
+
+    const introIndex = nextContent.findIndex((block) =>
+      blockText(block) === 'Half of face-to-face clinical office visits can be conducted virtually.'
+    )
+
+    const faceToFaceIndex = introIndex >= 0 && blockText(nextContent[introIndex + 1]).startsWith(faceToFaceText)
+      ? introIndex + 1
+      : nextContent.findIndex((block) => blockText(block).startsWith(faceToFaceText))
+    const virtualIndex = faceToFaceIndex >= 0 && blockText(nextContent[faceToFaceIndex + 1]) === virtualText
+      ? faceToFaceIndex + 1
+      : nextContent.findIndex((block) => blockText(block) === virtualText)
+
+    if (faceToFaceIndex >= 0 && virtualIndex === faceToFaceIndex + 1) {
+      nextContent.splice(faceToFaceIndex, 2, resultsBlock as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      return nextContent
+    }
+
+    if (introIndex >= 0) {
+      nextContent.splice(introIndex + 1, 0, resultsBlock as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      return nextContent
+    }
+
+    return [resultsBlock as any, ...nextContent] // eslint-disable-line @typescript-eslint/no-explicit-any
+  }
+
   if (slug !== 'open-source-healthcare') {
     return content
   }

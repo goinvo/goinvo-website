@@ -48,7 +48,11 @@ export interface CaseStudy {
 
 export interface Result {
   stat: string
+  unit?: string
+  annotation?: string
   description: string
+  refNumber?: string
+  refTarget?: string
 }
 
 export interface Reference {
