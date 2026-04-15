@@ -1426,6 +1426,11 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
           ),
           h4: ({ children }) => (
             <ArticleReveal intensity="heading">
+              <h4 className="font-sans text-base font-semibold mt-6 mb-2">{children}</h4>
+            </ArticleReveal>
+          ),
+          h4CaseStudyTight: ({ children }) => (
+            <ArticleReveal intensity="heading">
               <h4 className="font-sans text-base font-semibold leading-[1.1875rem] mt-[21px] mb-2">{children}</h4>
             </ArticleReveal>
           ),
