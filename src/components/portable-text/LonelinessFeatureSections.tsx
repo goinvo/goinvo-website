@@ -85,7 +85,7 @@ const feelingCards: FeelingCard[] = [
     body: (
       <>
         A broken heart exhibits similar physical pain levels as a broken limb because our nervous system processes social
-        rejection in the same area of the brain as physical pain. Evolution has wired socialization into the brain&apos;s
+        rejection in the same area of the brain as physical pain. Evolution has wired socialization into the brain&rsquo;s
         automatic reflexes on account of human contact dramatically increasing our chances of survival.
         <RefSup target="references">14,15</RefSup>
       </>
@@ -96,7 +96,7 @@ const feelingCards: FeelingCard[] = [
     body: (
       <>
         The default for the human brain is to assess and respond to our social context and stimuli, otherwise known as our
-        &quot;default network&quot;. When we feel socially fulfilled, there is a boost in our brain&apos;s reward center (activating
+        &ldquo;default network&quot;. When we feel socially fulfilled, there is a boost in our brain&rsquo;s reward center (activating
         dopamine and oxytocin) along with healthy function in the parts of our brain that process social exclusion.
         <RefSup target="references">11,12,13</RefSup>
       </>

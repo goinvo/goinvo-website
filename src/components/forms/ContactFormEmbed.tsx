@@ -1,10 +1,18 @@
 'use client'
 
 import { siteConfig } from '@/lib/config'
+import { cn } from '@/lib/utils'
+import { getSectionBandClassName, type SectionBackground } from '@/lib/sectionBackgrounds'
 import { LoadingIframe } from '@/components/ui/LoadingIframe'
 
-export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }) {
-  return (
+export function ContactFormEmbed({
+  showHeader = true,
+  background = 'white',
+}: {
+  showHeader?: boolean
+  background?: SectionBackground
+}) {
+  const card = (
     <div className="bg-white shadow-card overflow-hidden">
       {showHeader && (
         <div className="p-6 pb-0">
@@ -29,5 +37,15 @@ export function ContactFormEmbed({ showHeader = true }: { showHeader?: boolean }
         />
       </div>
     </div>
+  )
+
+  const backgroundClassName = getSectionBandClassName(background)
+
+  if (backgroundClassName) {
+    return <div className={cn(backgroundClassName, 'p-6 md:p-8')}>{card}</div>
+  }
+
+  return (
+    card
   )
 }

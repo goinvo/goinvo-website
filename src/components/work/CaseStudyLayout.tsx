@@ -11,7 +11,15 @@ interface CaseStudyLayoutProps {
 }
 
 function getMetadataInsertIndex(content: PortableTextBlock[]): number {
+  const firstButtonGroupIndex = content.findIndex((block) => block._type === 'buttonGroup')
   const firstDividerIndex = content.findIndex((block) => block._type === 'divider')
+  if (
+    firstButtonGroupIndex >= 0 &&
+    (firstDividerIndex === -1 || firstButtonGroupIndex < firstDividerIndex) &&
+    firstButtonGroupIndex <= 8
+  ) {
+    return firstButtonGroupIndex
+  }
   if (firstDividerIndex >= 0) return firstDividerIndex
 
   const firstSectionHeadingIndex = content.findIndex((block) => {

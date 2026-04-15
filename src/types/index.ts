@@ -1,4 +1,5 @@
 import type { PortableTextBlock } from '@portabletext/types'
+import type { SectionBackground } from '@/lib/sectionBackgrounds'
 
 export interface SanityImage {
   _type: 'image'
@@ -14,6 +15,7 @@ export interface SanityImage {
   }
   alt?: string
   caption?: string
+  link?: string
 }
 
 export interface Category {
@@ -87,11 +89,14 @@ export interface Feature {
   showPageMeta?: boolean
   client?: string
   authorLayout?: string
+  authorBackground?: SectionBackground
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   authors?: any[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contributors?: any[]
   contributorsLayout?: string
+  contributorsBackground?: SectionBackground
+  newsletterBackground?: SectionBackground
   specialThanks?: PortableTextBlock[]
   showAboutGoInvo?: boolean
   aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'

@@ -9,10 +9,9 @@
   color: #222;
 }
 
-.killer-truths h1,
-.killer-truths h2,
-.killer-truths h3,
-.killer-truths h4 {
+.kt-authors-wrapper h2,
+.kt-authors-wrapper h3,
+.kt-sources-wrapper h2 {
   text-transform: uppercase;
   font-weight: bold;
 }
@@ -26,51 +25,21 @@
   color: #de2005;
 }
 
-/* Hero */
-.kt-hero {
-  background-color: #373737;
-  color: #fff;
-  padding: 20px 0;
-}
-
-.kt-hero img {
-  width: 100%;
-  display: block;
-}
-
-@media (min-width: 550px) {
-  .kt-hero {
-    padding-left: 50px;
-  }
-
-  .kt-hero img {
-    height: 150px;
-    width: auto;
-  }
-}
-
-/* Chart/poster section */
-.kt-chart-wrapper {
-  background-color: #373737;
-  color: #e5e5e5;
-  padding: 20px 0;
-}
-
-.kt-chart-description {
-  max-width: 500px;
-  margin: 0 20px 20px;
-  font-size: 16px;
-}
-
-@media (min-width: 550px) {
-  .kt-chart-description {
-    margin: 0 50px 20px;
-  }
+/* Poster section */
+.kt-poster-section {
+  background-color: #1d1d1d;
+  padding: 20px 0 0;
 }
 
 .kt-poster-img {
   width: 100%;
   display: block;
+}
+
+@media (min-width: 550px) {
+  .kt-poster-section {
+    padding-top: 32px;
+  }
 }
 
 /* Accessible bar chart table */
@@ -294,4 +263,19 @@
   color: #e65b47;
   display: inline;
   word-wrap: break-word;
+}
+
+/* Keep the shared newsletter component on its normal typography */
+.killer-truths .kt-newsletter-reset h2 {
+  text-transform: none;
+  font-weight: 300;
+  letter-spacing: 0;
+  color: #1d1b1a;
+  font-family: var(--font-serif);
+}
+
+.killer-truths .kt-newsletter-reset p,
+.killer-truths .kt-newsletter-reset input,
+.killer-truths .kt-newsletter-reset button {
+  font-family: var(--font-sans);
 }

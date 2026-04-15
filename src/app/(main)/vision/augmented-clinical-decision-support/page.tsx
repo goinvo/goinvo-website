@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Author } from '@/components/ui/Author'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { PregnancyCarousel } from './PregnancyCarousel'
 import { cloudfrontImage } from '@/lib/utils'
 import './acds.css'
@@ -288,11 +288,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
             </div>
           </div>
 
-          <div className="background--gray pad-vertical--double">
-            <div className="max-width max-width--md content-padding">
-              <NewsletterForm />
-            </div>
-          </div>
+          <NewsletterSection background="gray" />
         </div>
       </>
     )

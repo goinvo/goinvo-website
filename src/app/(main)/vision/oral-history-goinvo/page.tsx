@@ -2662,7 +2662,7 @@ So it all started with a
 </article>
 
       {/* Newsletter */}
-      <div className="bg-gray-lightest py-12 px-4">
+      <div className="py-12 px-4">
         <div className="max-w-2xl mx-auto text-center">
           <NewsletterForm />
         </div>

@@ -1,5 +1,8 @@
+import { Fragment } from 'react'
 import Image from 'next/image'
 import { urlForImage } from '@/sanity/lib/image'
+import { cn } from '@/lib/utils'
+import { getSectionBandClassName, resolveSectionBackground, type SectionBackground } from '@/lib/sectionBackgrounds'
 import type { TeamMember } from '@/types'
 
 interface AuthorCredit {
@@ -16,7 +19,24 @@ interface AuthorCredit {
 interface AuthorSectionProps {
   authors: AuthorCredit[]
   heading?: string
-  variant?: 'equal' | 'stacked' | 'primary-sidebar' | 'plain-list'
+  variant?: 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list'
+  background?: SectionBackground
+}
+
+function wrapAuthorSection(children: React.ReactNode, background: SectionBackground) {
+  const backgroundClassName = getSectionBandClassName(background)
+
+  if (backgroundClassName) {
+    return (
+      <section className={cn('mt-12 w-screen relative left-1/2 -ml-[50vw] py-12', backgroundClassName)}>
+        <div className="max-width max-width-md content-padding mx-auto">
+          {children}
+        </div>
+      </section>
+    )
+  }
+
+  return <section className="mt-12">{children}</section>
 }
 
 function resolveAuthor(credit: AuthorCredit): { member: TeamMember; displayRole: string; link?: string } | null {
@@ -47,13 +67,17 @@ function extractText(blocks: unknown): string {
   if (typeof blocks === 'string') return blocks
   if (!Array.isArray(blocks)) return ''
 
-  return blocks
+  const text = blocks
     .filter((block: any) => block._type === 'block') // eslint-disable-line @typescript-eslint/no-explicit-any
     .map((block: any) => (block.children || []).map((child: any) => child.text || '').join('')) // eslint-disable-line @typescript-eslint/no-explicit-any
     .join(' ')
+
+  // Preserve Gatsby-style curly apostrophes in author bios even when the
+  // underlying Sanity text was entered with straight apostrophes.
+  return text.replace(/([A-Za-z])'([A-Za-z])/g, '$1’$2')
 }
 
-export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSectionProps) {
+export function AuthorSection({ authors, heading, variant = 'equal', background }: AuthorSectionProps) {
   if (!authors || authors.length === 0) return null
 
   const resolved = authors
@@ -64,7 +88,16 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
 
   const sectionHeading = heading || (resolved.length === 1 ? 'Author' : 'Authors')
   const isContributors = sectionHeading === 'Contributors'
-  const headingEl = variant === 'stacked'
+  const sectionBackground = resolveSectionBackground(background, variant === 'equal' ? 'gray' : 'white')
+  const headingEl = variant === 'legacy-text-list'
+    ? (
+        <h2 className={cn('header-lg mt-8 mb-2', isContributors && 'mt-12')}>{sectionHeading}</h2>
+      )
+    : variant === 'stacked-subheading'
+    ? (
+        <h3 className="header-md mt-8 mb-4">{sectionHeading}</h3>
+      )
+    : variant === 'stacked'
     ? (
         isContributors
           ? <h2 className="header-lg mt-5 mb-5 text-center">{sectionHeading}</h2>
@@ -77,8 +110,8 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
       )
 
   if (variant === 'plain-list') {
-    return (
-      <section className="mt-12">
+    return wrapAuthorSection(
+      <>
         {headingEl}
         {resolved.map((author) => (
           <p key={author.member._id} className="mt-4">
@@ -88,13 +121,40 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
             )}
           </p>
         ))}
-      </section>
+      </>,
+      sectionBackground
     )
   }
 
-  if (variant === 'stacked') {
-    return (
-      <section className="mt-12">
+  if (variant === 'legacy-text-list') {
+    return wrapAuthorSection(
+      <>
+        {headingEl}
+        <p className="mt-0 whitespace-pre-line">
+          {resolved.map((author, index) => (
+            <Fragment key={author.member._id}>
+              {index > 0 && <br />}
+              {author.link ? (
+                <a href={author.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                  {author.member.name}
+                </a>
+              ) : (
+                author.member.name
+              )}
+              {author.displayRole && !(sectionHeading === 'Contributors' && author.displayRole === 'GoInvo') && (
+                <span>, {author.displayRole}</span>
+              )}
+            </Fragment>
+          ))}
+        </p>
+      </>,
+      sectionBackground
+    )
+  }
+
+  if (variant === 'stacked' || variant === 'stacked-subheading') {
+    return wrapAuthorSection(
+      <>
         {headingEl}
         {resolved.map((author) => {
           const imageUrl = author.member.image
@@ -134,7 +194,8 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
             </div>
           )
         })}
-      </section>
+      </>,
+      sectionBackground
     )
   }
 
@@ -146,8 +207,8 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
       : null
     const primaryBio = primary.member.bio ? extractText(primary.member.bio) : ''
 
-    return (
-      <section className="mt-12">
+    return wrapAuthorSection(
+      <>
         {headingEl}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-start">
           <div>
@@ -211,53 +272,53 @@ export function AuthorSection({ authors, heading, variant = 'equal' }: AuthorSec
             })}
           </div>
         </div>
-      </section>
+      </>,
+      sectionBackground
     )
   }
 
-  return (
-    <section className="mt-12 w-screen relative left-1/2 -ml-[50vw] py-12 bg-gray-lightest">
-      <div className="max-width max-width-md content-padding mx-auto">
-        {headingEl}
-        {resolved.map((author) => {
-          const imageUrl = author.member.image
-            ? urlForImage(author.member.image).width(400).url()
-            : null
-          const bio = author.member.bio ? extractText(author.member.bio) : ''
+  return wrapAuthorSection(
+    <>
+      {headingEl}
+      {resolved.map((author) => {
+        const imageUrl = author.member.image
+          ? urlForImage(author.member.image).width(400).url()
+          : null
+        const bio = author.member.bio ? extractText(author.member.bio) : ''
 
-          return (
-            <div
-              key={author.member._id}
-              className={`grid grid-cols-1 gap-6 my-8 items-start ${imageUrl ? 'lg:grid-cols-2' : ''}`}
-            >
-              {imageUrl && (
-                <div>
-                  <Image
-                    src={imageUrl}
-                    alt={author.member.name}
-                    width={400}
-                    height={300}
-                    className="w-full h-auto object-cover"
-                  />
-                </div>
-              )}
+        return (
+          <div
+            key={author.member._id}
+            className={`grid grid-cols-1 gap-6 my-8 items-start ${imageUrl ? 'lg:grid-cols-2' : ''}`}
+          >
+            {imageUrl && (
               <div>
-                <p className="mt-4">
-                  {author.link ? (
-                    <a href={author.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
-                      <strong>{author.member.name}</strong>
-                    </a>
-                  ) : (
-                    <strong>{author.member.name}</strong>
-                  )}
-                  <span className="text-gray">, {author.displayRole}</span>
-                </p>
-                {bio && <p className="text-gray mt-4">{bio}</p>}
+                <Image
+                  src={imageUrl}
+                  alt={author.member.name}
+                  width={400}
+                  height={300}
+                  className="w-full h-auto object-cover"
+                />
               </div>
+            )}
+            <div>
+              <p className="mt-4">
+                {author.link ? (
+                  <a href={author.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
+                    <strong>{author.member.name}</strong>
+                  </a>
+                ) : (
+                  <strong>{author.member.name}</strong>
+                )}
+                <span className="text-gray">, {author.displayRole}</span>
+              </p>
+              {bio && <p className="text-gray mt-4">{bio}</p>}
             </div>
-          )
-        })}
-      </div>
-    </section>
+          </div>
+        )
+      })}
+    </>,
+    sectionBackground
   )
 }

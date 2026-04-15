@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import './print-big.css'
 
 export const metadata: Metadata = {
@@ -144,14 +143,6 @@ export default function PrintBigPage() {
         </p>
       </section>
 
-      {/* Newsletter */}
-      <section className="bg-gray-lightest py-8">
-        <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card py-6 px-4 md:px-8">
-            <NewsletterForm />
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

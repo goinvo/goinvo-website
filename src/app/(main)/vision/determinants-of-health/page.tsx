@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Author } from '@/components/ui/Author'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { Divider } from '@/components/ui/Divider'
 import { References } from '@/components/ui/References'
 import { DeterminantsExplorer } from './DeterminantsExplorer'
@@ -200,11 +200,7 @@ export default function DeterminantsOfHealthPage() {
           </div>
         </div>
 
-        <div className="background--gray pad-vertical--double">
-          <div className="max-width max-width--md content-padding">
-            <NewsletterForm />
-          </div>
-        </div>
+        <NewsletterSection background="gray" />
 
         <div className="pad-vertical--double">
           <div className="max-width max-width--md content-padding">
