@@ -20,7 +20,7 @@ const data = [
   {
     id: 'covid-19',
     title: 'COVID-19',
-    date: 'Dec 2019 - 2024',
+    date: 'Dec 2019 - Present',
     cases: 704753890,
     deaths: 7010681,
   },
@@ -69,7 +69,7 @@ export function CovidChart() {
   }, [fitContainer])
 
   if (containerWidth === null) {
-    return <div ref={containerRef} className="w-full" />
+    return <div ref={containerRef} className="chart" />
   }
 
   const isMobile = containerWidth < 500
@@ -79,7 +79,7 @@ export function CovidChart() {
     top: isMobile ? 45 : 75,
     right: 20,
     bottom: 200,
-    left: isMobile ? 80 : 140,
+    left: isMobile ? 100 : 175,
   }
 
   const width = containerWidth
@@ -127,15 +127,14 @@ export function CovidChart() {
   const tableY = height - margins.bottom + 40
 
   return (
-    <div ref={containerRef} className="max-width content-padding mx-auto my-8">
-      <div className="w-full">
-        <svg
-          width={width}
-          height={height}
-          role="img"
-          aria-label="Bar chart comparing SARS, MERS, and COVID-19 confirmed cases and deaths"
-          style={{ fontFamily: "'Open Sans', sans-serif" }}
-        >
+    <div ref={containerRef} className="chart">
+      <svg
+        width={width}
+        height={height}
+        role="img"
+        aria-label="Bar chart comparing SARS, MERS, and COVID-19 confirmed cases and deaths"
+        style={{ fontFamily: "'Open Sans', sans-serif" }}
+      >
           {/* Y axis gridlines + labels */}
           {yTicks.map((val) => {
             const y = yScale(val)
@@ -321,25 +320,7 @@ export function CovidChart() {
               </g>
             )
           })}
-        </svg>
-      </div>
-
-      {/* Legend */}
-      <div className="flex justify-center gap-6 mt-4 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="w-4 h-4 rounded-sm inline-block" style={{ backgroundColor: '#D6D2EA' }} />
-          <span className="text-gray">Confirmed Cases</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-4 h-4 rounded-sm inline-block" style={{ backgroundColor: '#563C8D' }} />
-          <span className="text-gray">Deaths</span>
-        </div>
-      </div>
-
-      {/* Source note */}
-      <p className="text-sm text-gray text-center mt-4 italic">
-        Data through 2024. Source: WHO COVID-19 Dashboard.
-      </p>
+      </svg>
     </div>
   )
 }

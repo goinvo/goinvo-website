@@ -57,67 +57,6 @@ function NumberListItem({
   )
 }
 
-/* ---------- SVG icons (inline, from Gatsby assets) ---------- */
-
-function CheckIcon({ className, alt }: { className?: string; alt?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 444.19 420.68"
-      role="img"
-      aria-label={alt || 'check icon'}
-    >
-      <circle fill="#563C8D" cx="224.67" cy="202.84" r="155.41" />
-      <polyline
-        fill="none"
-        stroke="#FFFFFF"
-        strokeWidth="36"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeMiterlimit="10"
-        points="155.7,224.07 208.56,282.77 288.34,142.35"
-      />
-    </svg>
-  )
-}
-
-function XIcon({ className, alt }: { className?: string; alt?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 444.19 420.68"
-      role="img"
-      aria-label={alt || 'x icon'}
-    >
-      <circle fill="#563C8D" cx="222.1" cy="210.34" r="155.41" />
-      <line
-        fill="none"
-        stroke="#FFFFFF"
-        strokeWidth="36"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeMiterlimit="10"
-        x1="148.98"
-        y1="286.69"
-        x2="297.21"
-        y2="137.58"
-      />
-      <line
-        fill="none"
-        stroke="#FFFFFF"
-        strokeWidth="36"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeMiterlimit="10"
-        x1="297.21"
-        y1="286.69"
-        x2="148.98"
-        y2="137.58"
-      />
-    </svg>
-  )
-}
-
 /* ---------- references data ---------- */
 
 const references = [
@@ -837,7 +776,7 @@ export default function CoronavirusPage() {
                 to get sick away from the patient.
               </NumberListItem>
               <NumberListItem number="3">
-                Clean all <strong>&ldquo;high touch&rdquo;</strong> surfaces.
+                  Clean all <strong>"high touch"</strong> surfaces.
               </NumberListItem>
               <NumberListItem number="4">
                 Understand and help the person{' '}
@@ -997,14 +936,22 @@ export default function CoronavirusPage() {
                     />
                   </div>
                   <div className="pro-con">
-                    <CheckIcon className="pro-con-icon" alt="pros" />
+                    <img
+                      className="pro-con-icon"
+                      src="/images/features/coronavirus/icon-check.svg"
+                      alt="pros"
+                    />
                     <p>
                       Will help <strong>prevent the spread</strong> of
                       COVID-19 if you are sick
                     </p>
                   </div>
                   <div className="pro-con">
-                    <XIcon className="pro-con-icon" alt="cons" />
+                    <img
+                      className="pro-con-icon"
+                      src="/images/features/coronavirus/icon-x.svg"
+                      alt="cons"
+                    />
                     <p>
                       <strong>Does not effectively prevent catching</strong>{' '}
                       COVID-19
@@ -1022,7 +969,11 @@ export default function CoronavirusPage() {
                     />
                   </div>
                   <div className="pro-con">
-                    <CheckIcon className="pro-con-icon" alt="pros" />
+                    <img
+                      className="pro-con-icon"
+                      src="/images/features/coronavirus/icon-check.svg"
+                      alt="pros"
+                    />
                     <p>
                       Will help{' '}
                       <strong>prevent against catching and spreading</strong>{' '}
@@ -1030,7 +981,11 @@ export default function CoronavirusPage() {
                     </p>
                   </div>
                   <div className="pro-con">
-                    <XIcon className="pro-con-icon" alt="cons" />
+                    <img
+                      className="pro-con-icon"
+                      src="/images/features/coronavirus/icon-x.svg"
+                      alt="cons"
+                    />
                     <p>
                       <strong>
                         If it has a breathing valve, does not effectively
@@ -1609,7 +1564,7 @@ export default function CoronavirusPage() {
             </div>
           </div>
           <div className="max-width content-padding pad-vertical--double">
-            <References hideTitle items={references} />
+            <References hideTitle items={references} variant="legacy" />
           </div>
         </section>
         <section>
@@ -1629,16 +1584,16 @@ export default function CoronavirusPage() {
           </div>
           <div className="max-width max-width--md content-padding">
             <div className="pad-vertical--double">
-              <Author name="Patricia Nguyen" />
-              <Author name="Colleen Tang Poy" />
-              <Author name="Parsuree Vatanasirisuk" />
-              <Author name="Craig McGinley" />
+              <Author name="Patricia Nguyen" variant="legacy" />
+              <Author name="Colleen Tang Poy" variant="legacy" />
+              <Author name="Parsuree Vatanasirisuk" variant="legacy" />
+              <Author name="Craig McGinley" variant="legacy" />
 
               <h3 className="header--md">Contributors</h3>
 
-              <Author name="Jen Patel" />
-              <Author name="Meghana Karande" />
-              <Author name="Juhan Sonin" />
+              <Author name="Jen Patel" variant="legacy" />
+              <Author name="Meghana Karande" variant="legacy" />
+              <Author name="Juhan Sonin" variant="legacy" />
             </div>
           </div>
         </section>
