@@ -8,6 +8,7 @@
  * Usage:
  *   npx tsx scripts/compare-visual.ts fraud-waste-abuse-in-healthcare
  *   npx tsx scripts/compare-visual.ts fraud-waste-abuse-in-healthcare --screenshots
+ *   npx tsx scripts/compare-visual.ts fraud-waste-abuse-in-healthcare --screenshots --play-animations
  *   npx tsx scripts/compare-visual.ts --all
  *
  * Requires: Next.js server on localhost:3000, puppeteer installed
@@ -62,6 +63,63 @@ interface Diff {
   property: string
   gatsby: string
   nextjs: string
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function waitForAssets(page: Page) {
+  await page.evaluate(async () => {
+    if ('fonts' in document) {
+      await (document as Document & { fonts?: { ready: Promise<void> } }).fonts?.ready
+    }
+  }).catch(() => {})
+
+  await page.waitForFunction(
+    () => Array.from(document.images).every(img => img.complete),
+    { timeout: 10000 },
+  ).catch(() => {})
+}
+
+async function playAnimations(page: Page) {
+  await waitForAssets(page)
+  await sleep(700)
+
+  const scrollPoints = await page.evaluate(() => {
+    const doc = document.documentElement
+    const maxScroll = Math.max(doc.scrollHeight, document.body.scrollHeight) - window.innerHeight
+    if (maxScroll <= 0) {
+      return [0]
+    }
+
+    const step = Math.max(Math.floor(window.innerHeight * 0.75), 280)
+    const points: number[] = []
+    for (let y = 0; y <= maxScroll; y += step) {
+      points.push(y)
+    }
+    if (points[points.length - 1] !== maxScroll) {
+      points.push(maxScroll)
+    }
+    return points
+  })
+
+  for (const y of scrollPoints) {
+    await page.evaluate((scrollY) => {
+      window.scrollTo({ top: scrollY, behavior: 'auto' })
+    }, y)
+    await sleep(250)
+  }
+
+  for (const y of [...scrollPoints].reverse()) {
+    await page.evaluate((scrollY) => {
+      window.scrollTo({ top: scrollY, behavior: 'auto' })
+    }, y)
+    await sleep(150)
+  }
+
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'auto' }))
+  await sleep(700)
 }
 
 async function extractElements(page: Page): Promise<ElementInfo[]> {
@@ -233,7 +291,7 @@ function compareStyles(g: ElementInfo, n: ElementInfo): Diff[] {
   return diffs
 }
 
-async function comparePage(slug: string, takeScreenshots: boolean) {
+async function comparePage(slug: string, takeScreenshots: boolean, playPageAnimations: boolean) {
   const gatsbySlug = SLUG_MAP[slug] || slug
   const gatsbyUrl = `${GATSBY_BASE}/${gatsbySlug}/`
   const nextjsUrl = `${NEXTJS_BASE}/${slug}/`
@@ -268,11 +326,23 @@ async function comparePage(slug: string, takeScreenshots: boolean) {
     await Promise.all([
       gPage.waitForSelector('img', { timeout: 5000 }).catch(() => {}),
       nPage.waitForSelector('img', { timeout: 5000 }).catch(() => {}),
+      waitForAssets(gPage),
+      waitForAssets(nPage),
     ])
 
     // Screenshots
     if (takeScreenshots) {
       mkdirSync(SCREENSHOT_DIR, { recursive: true })
+      if (playPageAnimations) {
+        await gPage.screenshot({ path: `${SCREENSHOT_DIR}/${slug}-gatsby-initial.png`, fullPage: true })
+        await nPage.screenshot({ path: `${SCREENSHOT_DIR}/${slug}-nextjs-initial.png`, fullPage: true })
+      }
+      if (playPageAnimations) {
+        await Promise.all([
+          playAnimations(gPage),
+          playAnimations(nPage),
+        ])
+      }
       await gPage.screenshot({ path: `${SCREENSHOT_DIR}/${slug}-gatsby.png`, fullPage: true })
       await nPage.screenshot({ path: `${SCREENSHOT_DIR}/${slug}-nextjs.png`, fullPage: true })
       console.log(`    📸 Screenshots saved to ${SCREENSHOT_DIR}/`)
@@ -341,11 +411,12 @@ async function comparePage(slug: string, takeScreenshots: boolean) {
 async function main() {
   const args = process.argv.slice(2)
   const screenshots = args.includes('--screenshots')
+  const playPageAnimations = args.includes('--play-animations')
   const verbose = args.includes('--verbose')
   const slugArg = args.find(a => !a.startsWith('--'))
 
   if (!slugArg) {
-    console.log('Usage: npx tsx scripts/compare-visual.ts <slug> [--screenshots] [--verbose]')
+    console.log('Usage: npx tsx scripts/compare-visual.ts <slug> [--screenshots] [--play-animations] [--verbose]')
     process.exit(1)
   }
 
@@ -353,7 +424,11 @@ async function main() {
   console.log(`   Gatsby: ${GATSBY_BASE}/${SLUG_MAP[slugArg] || slugArg}/`)
   console.log(`   Next.js: ${NEXTJS_BASE}/${slugArg}/`)
 
-  const diffs = await comparePage(slugArg, screenshots)
+  if (playPageAnimations) {
+    console.log('   Animation mode: enabled')
+  }
+
+  const diffs = await comparePage(slugArg, screenshots, playPageAnimations)
 
   if (diffs && verbose) {
     console.log('\n  All differences:')

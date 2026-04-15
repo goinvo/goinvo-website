@@ -1025,6 +1025,16 @@ const components: PortableTextComponents = {
         <ul className="ul mb-8">{children}</ul>
       </ArticleReveal>
     ),
+    plainBullet: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <ul className="list-disc pl-10 mb-8">{children}</ul>
+      </ArticleReveal>
+    ),
+    legacyBullet: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <ul className="ul legacy-bullet-list mb-8">{children}</ul>
+      </ArticleReveal>
+    ),
     number: ({ children }) => (
       <ArticleReveal intensity="text">
         <ol className="list-decimal pl-6 mb-8 space-y-2">{children}</ol>
@@ -1033,6 +1043,8 @@ const components: PortableTextComponents = {
   },
   listItem: {
     bullet: ({ children }) => <li>{children}</li>,
+    plainBullet: ({ children }) => <li>{children}</li>,
+    legacyBullet: ({ children }) => <li>{children}</li>,
     number: ({ children }) => <li>{children}</li>,
   },
   marks: {
@@ -1109,9 +1121,10 @@ const components: PortableTextComponents = {
     h2LargeCentered: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
       return (
         <ArticleReveal intensity="heading">
-          <h2 className={cn('header-xl font-light mt-6 mb-6 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+          <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-6 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
         </ArticleReveal>
       )
     },
@@ -1182,11 +1195,19 @@ const components: PortableTextComponents = {
         <h4 className="font-sans text-base font-semibold mt-6 mb-0">{children}</h4>
       </ArticleReveal>
     ),
-    h4LegacySm: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h4 className="font-sans text-base font-semibold leading-[1.1875rem] mt-[21px] mb-[21px]">{children}</h4>
-      </ArticleReveal>
-    ),
+    h4LegacySm: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const isNumbered = /^\d+\.\s/.test(text)
+      return (
+        <ArticleReveal intensity="heading">
+          <h4 className={cn(
+            'font-sans text-base font-semibold leading-[1.1875rem] mt-[21px] mb-[21px]',
+            isNumbered && 'text-gray numeral-gutter'
+          )}>{children}</h4>
+        </ArticleReveal>
+      )
+    },
     h2SpaciousTop: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h2 className="header-lg mt-8 mb-5">{children}</h2>
@@ -1266,6 +1287,24 @@ const components: PortableTextComponents = {
       return (
         <ArticleReveal intensity="text">
           <p className={cn('mt-0 mb-4 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
+    smallGrayLabel: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('mt-8 mb-1 text-sm text-gray', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
+    smallGrayNote: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('mt-0 mb-3 text-sm leading-relaxed text-gray', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
         </ArticleReveal>
       )
     },

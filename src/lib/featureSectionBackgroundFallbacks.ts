@@ -72,6 +72,7 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   'healthcare-dollars': {
     authorBackground: 'white',
     newsletterBackground: 'gray',
+    portableTextVariant: 'gray-body',
   },
   'healthcare-ai': {
     authorBackground: 'white',
