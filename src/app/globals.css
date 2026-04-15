@@ -295,6 +295,10 @@
     padding-left: 15px;
   }
 
+  .legacy-bullet-list {
+    padding-left: 40px !important;
+  }
+
   /* Disc bullet override — standard round bullets instead of star images */
   .disc-bullets .ul {
     list-style-type: disc;
