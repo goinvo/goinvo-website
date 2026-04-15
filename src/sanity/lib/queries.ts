@@ -32,16 +32,30 @@ export const caseStudyBySlugQuery = groq`
     authors[]-> { _id, name, role, bio, image },
     time,
     content,
-    upNext[]-> {
-      _id,
-      _type,
-      title,
-      slug,
-      client,
-      image,
-      caption,
-      description
-    },
+    "upNext": upNext[]{
+      "item": select(
+        _ref == "drafts.caseStudy-fastercures-health-data-basics" => *[_type == "caseStudy" && slug.current == "fastercures-health-data-basics"][0] {
+          _id,
+          _type,
+          title,
+          slug,
+          client,
+          image,
+          caption,
+          description
+        },
+        @-> {
+          _id,
+          _type,
+          title,
+          slug,
+          client,
+          image,
+          caption,
+          description
+        }
+      )
+    }[].item,
     metaDescription
   }
 `

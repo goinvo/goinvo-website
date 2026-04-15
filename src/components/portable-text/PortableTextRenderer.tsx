@@ -750,7 +750,9 @@ const components: PortableTextComponents = {
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
       const layout = value.layout || 'inline'
+      const size = value.size || 'default'
       const isTextLinkLayout = layout === 'textLinks'
+      const isLargeButtonGroup = size === 'large'
       const useLegacyDoubleSpacing = value.spacing === 'legacyDouble'
       if (isTextLinkLayout) {
         return (
@@ -772,6 +774,8 @@ const components: PortableTextComponents = {
       const isSingleCenteredButton = layout === 'centered' && buttons.length === 1
       const isSingleFullWidthButton = layout === 'fullWidth' && buttons.length === 1
       const isBlockButtonLayout = layout === 'fullWidth'
+      const largeButtonClass = isLargeButtonGroup ? 'w-full lg:w-auto lg:min-w-[330px]' : ''
+      const centeredButtonClass = isLargeButtonGroup ? largeButtonClass : 'w-full sm:w-auto'
       const containerClass = isSingleFullWidthButton
         ? 'flex flex-wrap mb-8'
         : useLegacyDoubleSpacing && layout === 'fullWidth'
@@ -788,8 +792,8 @@ const components: PortableTextComponents = {
         : layout === 'fullWidth'
           ? 'flex-1 block'
         : isSingleCenteredButton
-          ? 'inline-flex w-full sm:w-auto'
-          : 'inline-flex'
+          ? cn('inline-flex', centeredButtonClass)
+        : 'inline-flex'
       const wrapperClass = isSingleFullWidthButton
         ? 'my-0'
         : useLegacyDoubleSpacing && layout === 'fullWidth'
@@ -810,6 +814,7 @@ const components: PortableTextComponents = {
                 'text-[15px] leading-[1.625rem]',
                 'py-[0.375rem] px-4',
                 !isBlockButtonLayout && 'items-center justify-center',
+                !isSingleFullWidthButton && !useLegacyDoubleSpacing && layout !== 'fullWidth' && largeButtonClass,
                 btnClass,
                 btn.variant === 'primary'
                   ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
@@ -1001,7 +1006,7 @@ const components: PortableTextComponents = {
         </a>
       )
     },
-    sup: ({ children }) => <><sup>{children}</sup>{' '}</>,
+    sup: ({ children }) => <sup>{children}</sup>,
     // Legacy decorators (backward compat)
     teal: ({ children }) => <span className="text-secondary">{children}</span>,
     orange: ({ children }) => <span className="text-primary">{children}</span>,
@@ -1017,14 +1022,14 @@ const components: PortableTextComponents = {
       return <span className={colorMap[value?.color] || 'text-secondary'}>{children}</span>
     },
     refCitation: ({ children, value }) => (
-      <><sup>
+      <sup>
         <a
           href="#references"
           className="!text-primary !no-underline hover:!underline hover:!text-black text-xs"
         >
           {value?.refNumber || children}
         </a>
-      </sup>{' '}</>
+      </sup>
     ),
   },
   block: {
@@ -1104,6 +1109,11 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    h4Bold: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h4 className="font-sans text-base font-bold mt-6 mb-2">{children}</h4>
+      </ArticleReveal>
+    ),
     h4NoBottom: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h4 className="font-sans text-base font-semibold mt-6 mb-0">{children}</h4>
@@ -1175,6 +1185,24 @@ const components: PortableTextComponents = {
       return (
         <ArticleReveal intensity="text">
           <p className={cn('mt-4 mb-8 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
+    normalGrayStandard: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('mt-4 mb-4 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
+    normalGrayNoTop: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('mt-0 mb-4 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
         </ArticleReveal>
       )
     },
@@ -1352,7 +1380,7 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
               const isVirtualCareIntro = text.includes('Armed with a smartphone or device')
               return (
                 <ArticleReveal intensity="text">
-                  <p className={cn('my-4 leading-relaxed', isVirtualCareIntro && 'mt-0', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+                  <p className={cn('mt-4 mb-0 leading-relaxed', isVirtualCareIntro && 'mt-0', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
                 </ArticleReveal>
               )
             },
