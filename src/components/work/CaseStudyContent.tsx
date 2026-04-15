@@ -68,35 +68,73 @@ function createDividerBlock(key: string): LoosePortableTextBlock {
   } as LoosePortableTextBlock
 }
 
-function isLeadingClientSubtitle(text: string): boolean {
+function isLeadingClientSubtitle(text: string, nextBlock?: PortableTextBlock): boolean {
   const normalized = text.trim().toLowerCase()
-  return normalized.length > 0 && normalized.length <= 80 && /^for(\s+the)?\s+/.test(normalized)
+  if (!normalized.length || !/^for(\s+the)?\s+/.test(normalized)) {
+    return false
+  }
+
+  if (nextBlock?._type === 'block' && ['h3', 'h4', 'sectionTitle', 'h2'].includes(nextBlock.style || '')) {
+    return true
+  }
+
+  return normalized.length <= 120
 }
 
-function stripDuplicatedSuperscriptParentheticals(block: LoosePortableTextBlock): LoosePortableTextBlock {
+function normalizeCitationChildren(block: LoosePortableTextBlock): LoosePortableTextBlock {
   if (block._type !== 'block' || !Array.isArray(block.children)) {
     return block
   }
 
   let changed = false
-  const children = (block.children as BlockChild[]).map((child, index, source) => {
+  const children = (block.children as BlockChild[]).flatMap((child, index, source) => {
     const previousChild = source[index - 1]
     const previousSupText = previousChild?.marks?.includes('sup') ? previousChild.text?.trim() : ''
+    const nextChildren: BlockChild[] = []
+    const marks = child.marks || []
 
-    if (!previousSupText || !/^\d+$/.test(previousSupText) || !child.text) {
-      return child
+    if (!child.text || marks.includes('sup')) {
+      return [child]
     }
 
-    const normalizedText = child.text.replace(new RegExp(`^\\(${previousSupText}\\)`), '')
-    if (normalizedText === child.text) {
-      return child
+    let normalizedText = child.text
+    if (previousSupText && /^\d+$/.test(previousSupText)) {
+      const strippedText = normalizedText.replace(new RegExp(`^\\(${previousSupText}\\)`), '')
+      if (strippedText !== normalizedText) {
+        normalizedText = strippedText
+        changed = true
+      }
+    }
+
+    const parts = normalizedText.split(/(\(\d{1,2}\))/g).filter(Boolean)
+    if (parts.length === 1) {
+      if (normalizedText !== child.text) {
+        return [{ ...child, text: normalizedText }]
+      }
+      return [child]
     }
 
     changed = true
-    return {
-      ...child,
-      text: normalizedText,
-    }
+    parts.forEach((part, partIndex) => {
+      const citationMatch = /^\((\d{1,2})\)$/.exec(part)
+      if (citationMatch) {
+        nextChildren.push({
+          ...child,
+          _key: `${child._key || `child-${index}`}-sup-${partIndex}`,
+          marks: [...marks, 'sup'],
+          text: citationMatch[1],
+        })
+        return
+      }
+
+      nextChildren.push({
+        ...child,
+        _key: `${child._key || `child-${index}`}-text-${partIndex}`,
+        text: part,
+      })
+    })
+
+    return nextChildren
   })
 
   return changed
@@ -105,6 +143,10 @@ function stripDuplicatedSuperscriptParentheticals(block: LoosePortableTextBlock)
         children,
       } as LoosePortableTextBlock
     : block
+}
+
+function stripMarkdownItalics(text: string): string {
+  return text.replace(/_([^_]+)_/g, '$1')
 }
 
 function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStudy {
@@ -266,10 +308,138 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
   }
 
   if (slug === 'mount-sinai-consent') {
-    const normalizedContent = content.map(stripDuplicatedSuperscriptParentheticals)
+    const normalizedContent = content.map(normalizeCitationChildren)
     if (normalizedContent.some((block, index) => block !== content[index])) {
       content.splice(0, content.length, ...normalizedContent)
       changed = true
+    }
+  }
+
+  if (slug === 'commonhealth-smart-health-cards') {
+    const normalizedContent = content.map(normalizeCitationChildren)
+    if (normalizedContent.some((block, index) => block !== content[index])) {
+      content.splice(0, content.length, ...normalizedContent)
+      changed = true
+    }
+  }
+
+  if (slug === 'inspired-ehrs') {
+    const topButtonGroupIndex = content.findIndex(
+      (block) =>
+        block._type === 'buttonGroup' &&
+        Array.isArray(block.buttons) &&
+        block.buttons.some((button) => button?.label === 'Read the book') &&
+        block.buttons.some((button) => button?.label === 'View the code')
+    )
+    if (topButtonGroupIndex >= 0) {
+      const buttonGroup = content[topButtonGroupIndex]
+      if (buttonGroup.layout !== 'inline' || buttonGroup.size !== 'large') {
+        content[topButtonGroupIndex] = {
+          ...buttonGroup,
+          layout: 'inline',
+          size: 'large',
+        }
+        changed = true
+      }
+    }
+
+    const jamiaLinkIndex = content.findIndex((block) => blockText(block) === 'JAMIA paper')
+    if (jamiaLinkIndex >= 0) {
+      content.splice(jamiaLinkIndex, 1)
+      changed = true
+    }
+
+    const providerCenteredIndex = content.findIndex(
+      (block) => blockText(block) === 'Provider and patient-centered design'
+    )
+    if (
+      providerCenteredIndex >= 0 &&
+      blockText(content[providerCenteredIndex - 1] as PortableTextBlock) !== 'Solution'
+    ) {
+      const insertBlocks: LoosePortableTextBlock[] = []
+      if (content[providerCenteredIndex - 1]?._type !== 'divider') {
+        insertBlocks.push(createDividerBlock('inspired-ehrs-solution-divider'))
+      }
+      insertBlocks.push(createSectionTitleBlock('inspired-ehrs-solution-heading', 'Solution') as LoosePortableTextBlock)
+      content.splice(providerCenteredIndex, 0, ...insertBlocks)
+      changed = true
+    }
+
+    const finalButtonGroupIndex = content.findIndex(
+      (block, index) =>
+        index > providerCenteredIndex &&
+        block._type === 'buttonGroup' &&
+        Array.isArray(block.buttons) &&
+        block.buttons.length === 1 &&
+        block.buttons[0]?.label === 'Read the book'
+    )
+    const resultsIndex = content.findIndex((block) => block._type === 'results')
+    if (resultsIndex >= 0) {
+      const resultsBlock = content[resultsIndex]
+      if (resultsBlock.variant !== 'legacyRow') {
+        content[resultsIndex] = {
+          ...resultsBlock,
+          variant: 'legacyRow',
+        }
+        changed = true
+      }
+
+      if (
+        finalButtonGroupIndex >= 0 &&
+        finalButtonGroupIndex > resultsIndex
+      ) {
+        const [buttonGroup] = content.splice(finalButtonGroupIndex, 1)
+        const updatedButtonGroup =
+          buttonGroup.layout === 'centered' && buttonGroup.size === 'large'
+            ? buttonGroup
+            : { ...buttonGroup, layout: 'centered', size: 'large' }
+        content.splice(resultsIndex, 0, updatedButtonGroup)
+        changed = true
+      } else if (finalButtonGroupIndex >= 0) {
+        const buttonGroup = content[finalButtonGroupIndex]
+        if (buttonGroup.layout !== 'centered' || buttonGroup.size !== 'large') {
+          content[finalButtonGroupIndex] = {
+            ...buttonGroup,
+            layout: 'centered',
+            size: 'large',
+          }
+          changed = true
+        }
+      }
+
+      const currentResultsIndex = content.findIndex((block) => block._type === 'results')
+      if (
+        currentResultsIndex >= 0 &&
+        blockText(content[currentResultsIndex - 1] as PortableTextBlock) !== 'Results'
+      ) {
+        content.splice(
+          currentResultsIndex,
+          0,
+          createDividerBlock('inspired-ehrs-results-divider'),
+          createSectionTitleBlock('inspired-ehrs-results-heading', 'Results')
+        )
+        changed = true
+      }
+    }
+
+    const titleParagraphIndex = content.findIndex(
+      (block) => blockText(block).includes('_Inspired EHRs: Designing for Clinicians_ offers')
+    )
+    if (titleParagraphIndex >= 0) {
+      const block = content[titleParagraphIndex]
+      if (block._type === 'block' && Array.isArray(block.children)) {
+        const children = (block.children as BlockChild[]).map((child) => ({
+          ...child,
+          text: child.text ? stripMarkdownItalics(child.text) : child.text,
+        }))
+        if (children.some((child, index) => child.text !== (block.children as BlockChild[])[index]?.text)) {
+          content[titleParagraphIndex] = {
+            ...block,
+            children,
+          } as LoosePortableTextBlock
+          changed = true
+        }
+      }
     }
   }
 
@@ -288,7 +458,9 @@ export function CaseStudyContent({ initialData, slug }: Props) {
     .map((child) => child.text || '')
     .join('')
     .trim()
-  const hasLeadingClientSubtitle = firstContentBlock?._type === 'block' && isLeadingClientSubtitle(firstContentText)
+  const hasLeadingClientSubtitle =
+    firstContentBlock?._type === 'block' &&
+    isLeadingClientSubtitle(firstContentText, caseStudy.content?.[1])
   const showClientSubtitle =
     (hasLeadingClientSubtitle || (!!caseStudy.client && caseStudy.client !== 'GoInvo')) &&
     !caseStudy.hideClientSubtitle
