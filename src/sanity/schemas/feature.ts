@@ -1,4 +1,5 @@
 import { defineField, defineType } from 'sanity'
+import { sectionBackgroundOptions } from '../../lib/sectionBackgrounds'
 
 export default defineType({
   name: 'feature',
@@ -177,6 +178,16 @@ export default defineType({
       initialValue: 'equal',
     }),
     defineField({
+      name: 'authorBackground',
+      title: 'Author Background',
+      type: 'string',
+      description: 'Background behind the author section. White keeps the section unwrapped; the other options create a full-width brand-tinted band.',
+      options: {
+        list: [...sectionBackgroundOptions],
+      },
+      initialValue: 'white',
+    }),
+    defineField({
       name: 'contributors',
       title: 'Contributors',
       type: 'array',
@@ -209,6 +220,26 @@ export default defineType({
         ],
       },
       initialValue: 'equal',
+    }),
+    defineField({
+      name: 'contributorsBackground',
+      title: 'Contributors Background',
+      type: 'string',
+      description: 'Background behind the contributors section when contributors are shown separately.',
+      options: {
+        list: [...sectionBackgroundOptions],
+      },
+      initialValue: 'white',
+    }),
+    defineField({
+      name: 'newsletterBackground',
+      title: 'Newsletter Background',
+      type: 'string',
+      description: 'Background behind the newsletter/subscribe section shown below authors and special thanks.',
+      options: {
+        list: [...sectionBackgroundOptions],
+      },
+      initialValue: 'white',
     }),
     defineField({
       name: 'specialThanksHeading',

@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useState, useRef, useEffect } from 'react'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { BostonCostComparisonChart } from './BostonCostComparisonChart'
 import {
   SpendingOverTimeChart,
@@ -1263,13 +1262,6 @@ export function UsHealthcareContent() {
       </div>
 
       {/* ── Newsletter ───────────────────────────── */}
-      <div style={{ backgroundColor: '#f5f5f5', padding: '2rem 0' }}>
-        <div style={{ maxWidth: 840, margin: '0 auto', padding: '0 20px' }}>
-          <div style={{ backgroundColor: 'white', padding: '1.5rem 2rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <NewsletterForm />
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

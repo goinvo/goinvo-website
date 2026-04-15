@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import './killer-truths.css'
 
 export const metadata: Metadata = {
@@ -22,70 +21,63 @@ export const metadata: Metadata = {
   },
 }
 
+const CHART_ROWS = [
+  { name: 'Heart Disease', value: 4850000 },
+  { name: 'Cancer', value: 4610000 },
+  { name: 'Medical Error', value: 2010000 },
+  { name: 'Chronic Lower Resp Disease', value: 1130000 },
+  { name: 'Stroke', value: 1050000 },
+  { name: 'Accidents', value: 1000000 },
+  { name: "Alzheimer's Disease", value: 670000 },
+  { name: 'Diabetes', value: 580000 },
+  { name: 'Influenza, Pneumonia', value: 430000 },
+  { name: 'Kidney Disease', value: 380000 },
+  { name: 'Drug Overdose', value: 320000 },
+  { name: 'Suicide', value: 310000 },
+  { name: 'Firearm Related', value: 250000 },
+  { name: 'Homicide', value: 110000 },
+  { name: 'Drunk Driving', value: 90000 },
+  { name: 'Terrorism', value: 52 },
+]
+
 export default function KillerTruthsPage() {
   return (
     <div className="killer-truths pt-[var(--spacing-header-height)]">
-
-      {/* Hero */}
-      <header className="kt-hero">
-        <div className="max-w-[960px] mx-auto px-5">
+      <section className="kt-poster-section" aria-labelledby="killer-truths-heading">
+        <div className="max-w-[1280px] mx-auto px-5">
+          <h1 id="killer-truths-heading" className="sr-only">Killer Truths</h1>
           <Image
-            src="https://www.goinvo.com/old/images/features/killer-truths/killer_truths_title.png"
-            alt="Killer Truths"
-            width={1600}
-            height={400}
-            className="kt-hero-img"
+            src="https://www.goinvo.com/old/images/features/killer-truths/Killer_Truths_Slide.png"
+            alt="Killer Truths chart showing the estimated number of deaths in the USA from 2007 to 2014."
+            width={2560}
+            height={1440}
+            className="kt-poster-img"
             style={{ width: '100%', height: 'auto' }}
             unoptimized
           />
-        </div>
-      </header>
-
-      {/* Chart — accessible HTML/SVG bar chart */}
-      <div className="kt-chart-wrapper">
-        <p className="kt-chart-description">
-          Estimated number of deaths in USA from 2007-2014.
-        </p>
-        <div className="max-w-[960px] mx-auto px-5">
-          <table className="kt-chart-table" role="table" aria-label="Causes of death in USA 2007-2014">
-            <caption className="sr-only">Estimated number of deaths in USA from 2007-2014 by cause</caption>
-            <thead className="sr-only">
-              <tr><th>Cause</th><th>Deaths</th></tr>
-            </thead>
-            <tbody>
-              {[
-                { name: 'Heart Disease', value: 4850000 },
-                { name: 'Cancer', value: 4610000 },
-                { name: 'Medical Error', value: 2010000 },
-                { name: 'Chronic Lower Resp Disease', value: 1130000 },
-                { name: 'Stroke', value: 1050000 },
-                { name: 'Accidents', value: 1000000 },
-                { name: "Alzheimer's Disease", value: 670000 },
-                { name: 'Diabetes', value: 580000 },
-                { name: 'Influenza, Pneumonia', value: 430000 },
-                { name: 'Kidney Disease', value: 380000 },
-                { name: 'Drug Overdose', value: 320000 },
-                { name: 'Suicide', value: 310000 },
-                { name: 'Firearm Related', value: 250000 },
-                { name: 'Homicide', value: 110000 },
-                { name: 'Drunk Driving', value: 90000 },
-                { name: 'Terrorism', value: 52 },
-              ].map((row) => {
-                const widthPct = (row.value / 4850000) * 100
-                return (
+          <div className="sr-only">
+            <p>
+              Estimated number of deaths in USA from 2007-2014. For references and ranking:
+              {' '}
+              killertruths.org.
+            </p>
+            <table role="table" aria-label="Causes of death in USA 2007-2014">
+              <caption>Estimated number of deaths in USA from 2007-2014 by cause</caption>
+              <thead>
+                <tr><th>Cause</th><th>Deaths</th></tr>
+              </thead>
+              <tbody>
+                {CHART_ROWS.map((row) => (
                   <tr key={row.name}>
-                    <th scope="row" className="kt-chart-name">{row.name}</th>
-                    <td className="kt-chart-value">{row.value.toLocaleString()}</td>
-                    <td className="kt-chart-bar-cell" aria-hidden="true">
-                      <div className="kt-chart-bar" style={{ width: `${widthPct}%` }} />
-                    </td>
+                    <th scope="row">{row.name}</th>
+                    <td>{row.value.toLocaleString()}</td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
 
       {/* Download Bar */}
       <div className="kt-download-wrapper">
@@ -226,14 +218,6 @@ export default function KillerTruthsPage() {
         </div>
       </div>
 
-      {/* Newsletter */}
-      <section className="bg-gray-lightest py-8">
-        <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card py-6 px-4 md:px-8">
-            <NewsletterForm />
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

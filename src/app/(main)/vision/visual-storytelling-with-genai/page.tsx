@@ -8,7 +8,8 @@ import { PortableTextRenderer } from '@/components/portable-text/PortableTextRen
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { NewsletterSection } from '@/components/forms/NewsletterSection'
+import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
 import { stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import { ModelViewerSection } from './ModelViewerSection'
 import type { Feature } from '@/types'
@@ -61,7 +62,8 @@ export default async function VisualStorytellingPage() {
   const mainBefore = beforeModel.filter((b: any) => b._type !== 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
   const mainAfter = afterModel.filter((b: any) => b._type !== 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
   const referencesContent = content.filter((b: any) => b._type === 'references') // eslint-disable-line @typescript-eslint/no-explicit-any
-
+  const authorBackground = resolveSectionBackground(feature.authorBackground, 'white')
+  const newsletterBackground = resolveSectionBackground(feature.newsletterBackground, 'gray')
   return (
     <div>
       {heroImageUrl && (
@@ -109,19 +111,17 @@ export default async function VisualStorytellingPage() {
       {feature.authors && feature.authors.length > 0 && (
         <section className="pb-12">
           <div className="max-width content-padding mx-auto">
-            <AuthorSection authors={feature.authors} variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined} />
+            <AuthorSection
+              authors={feature.authors}
+              variant={feature.authorLayout as 'equal' | 'primary-sidebar' | undefined}
+              background={authorBackground}
+            />
           </div>
         </section>
       )}
 
       {/* Newsletter */}
-      <section className="bg-gray-lightest py-8">
-        <div className="max-width content-padding mx-auto">
-          <div className="bg-white shadow-card py-6 px-4 md:px-8">
-            <NewsletterForm />
-          </div>
-        </div>
-      </section>
+      <NewsletterSection background={newsletterBackground} />
 
       {/* References */}
       {referencesContent.length > 0 && (

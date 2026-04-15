@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Author } from '@/components/ui/Author'
 import { References } from '@/components/ui/References'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { Divider } from '@/components/ui/Divider'
 import { ProblemCard } from './ProblemCard'
 import problems from '@/data/vision/us-healthcare-problems/problems.json'
@@ -203,11 +203,7 @@ export default function USHealthcareProblemsFeature() {
             </div>
           </div>
 
-          <div className="background--gray pad-vertical--double">
-            <div className="max-width max-width--md content-padding">
-              <NewsletterForm />
-            </div>
-          </div>
+          <NewsletterSection background="gray" />
 
           <div className="pad-vertical--double">
             <div className="max-width max-width--md content-padding">

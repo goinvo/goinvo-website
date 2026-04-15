@@ -1,5 +1,6 @@
 import { defineType, defineArrayMember } from 'sanity'
 import { SectionTitleStyle, CalloutStyle } from '../../components/BlockStyleComponents'
+import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
 
 export default defineType({
   title: 'Portable Text',
@@ -127,6 +128,14 @@ export default defineType({
           type: 'string',
           title: 'Caption',
           description: 'Optional caption displayed below the image',
+        },
+        {
+          name: 'link',
+          type: 'url',
+          title: 'Image Link',
+          description: 'Optional URL to open when the image is clicked',
+          validation: (Rule) =>
+            Rule.uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }),
         },
         {
           name: 'size',
@@ -473,6 +482,16 @@ export default defineType({
         },
       },
       fields: [
+        {
+          name: 'background',
+          title: 'Section background',
+          type: 'string',
+          description: 'Background behind the references block.',
+          options: {
+            list: [...sectionBackgroundOptions],
+          },
+          initialValue: 'white',
+        },
         {
           name: 'items',
           title: 'Reference items',
@@ -840,6 +859,16 @@ export default defineType({
           type: 'boolean',
           description: 'Show "Get in touch" heading and email link above the form',
           initialValue: true,
+        },
+        {
+          name: 'background',
+          title: 'Section background',
+          type: 'string',
+          description: 'Background behind the contact form card.',
+          options: {
+            list: [...sectionBackgroundOptions],
+          },
+          initialValue: 'white',
         },
       ],
     }),

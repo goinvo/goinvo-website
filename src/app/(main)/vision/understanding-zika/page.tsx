@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { ZikaNav } from './ZikaNav'
 import './zika.css'
 
@@ -2047,14 +2046,6 @@ export default function UnderstandingZikaPage() {
         </span>
       </div>
 
-      {/* Newsletter */}
-      <section className="bg-gray-lightest py-8">
-        <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card py-6 px-4 md:px-8">
-            <NewsletterForm />
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

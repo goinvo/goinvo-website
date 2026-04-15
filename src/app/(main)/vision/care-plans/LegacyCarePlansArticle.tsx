@@ -89,9 +89,14 @@ export function LegacyCarePlansArticle({
   page: LegacyCarePlansPage
 }) {
   return (
-    <div
-      className="legacy-careplans"
-      dangerouslySetInnerHTML={{ __html: loadLegacyArticle(page) }}
-    />
+    <>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,600" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Work+Sans:400,300,700" />
+      <div
+        className="legacy-careplans"
+        style={{ paddingTop: 'var(--spacing-header-height)' }}
+        dangerouslySetInnerHTML={{ __html: loadLegacyArticle(page) }}
+      />
+    </>
   )
 }

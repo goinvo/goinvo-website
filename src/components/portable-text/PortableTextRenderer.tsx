@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, Fragment } from 'react'
+import { useEffect, useRef, useState, Fragment } from 'react'
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
@@ -11,6 +11,7 @@ import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
+import { References } from '@/components/ui/References'
 import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
 import {
@@ -110,18 +111,110 @@ function PortableImage({
   const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
   const imageUrl = urlForImage(value).width(width).url()
   const sizeClass = sizeClassOverrides[size] || imageSizeClasses[size] || imageSizeClasses.full
+  const imageLink = typeof value.link === 'string' ? value.link.trim() : ''
+  const isExternalImageLink = /^(https?:\/\/|mailto:)/i.test(imageLink)
+  const imageElement = (
+    <img
+      src={imageUrl}
+      alt={value.alt || ''}
+      loading="lazy"
+      className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
+    />
+  )
 
   return (
     <ArticleReveal intensity="visual">
       <figure className={cn('my-8', sizeClass, size !== 'bleed' && imageAlignClasses[align])}>
-        <img
-          src={imageUrl}
-          alt={value.alt || ''}
-          loading="lazy"
-          className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
-        />
+        {imageLink ? (
+          <a
+            href={imageLink}
+            target={isExternalImageLink ? '_blank' : undefined}
+            rel={isExternalImageLink ? 'noopener noreferrer' : undefined}
+            className="block"
+          >
+            {imageElement}
+          </a>
+        ) : imageElement}
         {value.caption && (
           <figcaption className="mt-2 text-base text-gray">
+            {value.caption}
+          </figcaption>
+        )}
+      </figure>
+    </ArticleReveal>
+  )
+}
+
+function PortableVideoEmbed({
+  value,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  value: any
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [aspectRatio, setAspectRatio] = useState<string | undefined>(undefined)
+  const videoSize = value.size || 'default'
+  const sizeClass = videoSize === 'wide'
+    ? 'w-[75vw] relative left-1/2 -translate-x-1/2'
+    : videoSize === 'full'
+      ? 'w-screen relative left-1/2 -ml-[50vw]'
+      : ''
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (video?.videoWidth && video?.videoHeight) {
+      setAspectRatio(`${video.videoWidth} / ${video.videoHeight}`)
+    }
+  }, [value.url])
+
+  if (isDirectVideoUrl(value.url)) {
+    const derivedPoster = value.poster || value.url.replace(/\.(mp4|webm|mov|ogv)(\?|$)/i, '.jpg$2')
+
+    return (
+      <ArticleReveal intensity="visual">
+        <figure className={cn('my-8', sizeClass)}>
+          <video
+            ref={videoRef}
+            src={value.url}
+            poster={derivedPoster}
+            controls={!value.autoPlay}
+            autoPlay={value.autoPlay || undefined}
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            onLoadedMetadata={(event) => {
+              const video = event.currentTarget
+              if (video.videoWidth && video.videoHeight) {
+                setAspectRatio(`${video.videoWidth} / ${video.videoHeight}`)
+              }
+            }}
+            style={aspectRatio ? { aspectRatio } : undefined}
+            className={cn('block w-full h-auto', videoSize === 'default' && 'max-h-[480px] object-contain')}
+          />
+          {value.caption && (
+            <figcaption className="mt-2 text-base text-gray text-center">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      </ArticleReveal>
+    )
+  }
+
+  return (
+    <ArticleReveal intensity="visual">
+      <figure className="my-8">
+        <div className="aspect-video">
+          <iframe
+            src={value.url}
+            className="w-full h-full"
+            allowFullScreen
+            title={value.caption || 'Video'}
+          />
+        </div>
+        {value.caption && (
+          <figcaption className="mt-2 text-base text-gray text-center">
             {value.caption}
           </figcaption>
         )}
@@ -267,33 +360,7 @@ const components: PortableTextComponents = {
     },
     references: ({ value }) => (
       <ArticleReveal intensity="text">
-        <section id="references" className="w-screen relative left-1/2 -ml-[50vw] py-12 my-8 bg-gray-lightest">
-          <div className="max-width max-width-md content-padding mx-auto">
-            <h2 className="header-lg text-center mt-8 mb-4">References</h2>
-            <ol className="pl-0 ml-0 list-decimal" style={{ listStylePosition: 'inside' }}>
-              {value.items?.map(
-                (item: { title: string; link?: string }, i: number) => (
-                  <li key={i} className="text-gray mb-4 break-words" id={`ref-${i + 1}`}>
-                    <span id={`fn-${i + 1}`}>{item.title || ''}</span>
-                    {item.link && (
-                      <span>
-                        :{' '}
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-secondary hover:text-primary break-all"
-                        >
-                          {item.link}
-                        </a>
-                      </span>
-                    )}
-                  </li>
-                )
-              )}
-            </ol>
-          </div>
-        </section>
+        <References items={value.items || []} background={value.background} />
       </ArticleReveal>
     ),
     columns: ({ value }) => {
@@ -652,60 +719,7 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
-    videoEmbed: ({ value }) => {
-      const videoSize = value.size || 'default'
-      // wide = 75% of viewport (breaks out of article container), full = 100% viewport
-      const sizeClass = videoSize === 'wide'
-        ? 'w-[75vw] relative left-1/2 -translate-x-1/2'
-        : videoSize === 'full'
-          ? 'w-screen relative left-1/2 -ml-[50vw]'
-          : ''
-      if (isDirectVideoUrl(value.url)) {
-        // Auto-derive poster from video URL by swapping the extension
-        // (matches Gatsby pattern: video.mp4 → video.jpg next to it on CDN)
-        const derivedPoster = value.poster || value.url.replace(/\.(mp4|webm|mov|ogv)(\?|$)/i, '.jpg$2')
-        return (
-          <ArticleReveal intensity="visual">
-            <figure className={cn('my-8', sizeClass)}>
-              <video
-                src={value.url}
-                poster={derivedPoster}
-                controls={!value.autoPlay}
-                autoPlay={value.autoPlay || undefined}
-                loop
-                muted
-                playsInline
-                className={cn('w-full', videoSize === 'default' && 'max-h-[480px] object-contain')}
-              />
-              {value.caption && (
-                <figcaption className="mt-2 text-base text-gray text-center">
-                  {value.caption}
-                </figcaption>
-              )}
-            </figure>
-          </ArticleReveal>
-        )
-      }
-      return (
-        <ArticleReveal intensity="visual">
-          <figure className="my-8">
-            <div className="aspect-video">
-              <iframe
-                src={value.url}
-                className="w-full h-full"
-                allowFullScreen
-                title={value.caption || 'Video'}
-              />
-            </div>
-            {value.caption && (
-              <figcaption className="mt-2 text-base text-gray text-center">
-                {value.caption}
-              </figcaption>
-            )}
-          </figure>
-        </ArticleReveal>
-      )
-    },
+    videoEmbed: ({ value }) => <PortableVideoEmbed value={value} />,
     iframeEmbed: ({ value }) => (
       <ArticleReveal intensity="visual">
         <figure className={cn('my-8', value.fullWidth && 'w-screen relative left-1/2 -ml-[50vw]')}>
@@ -736,23 +750,55 @@ const components: PortableTextComponents = {
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
       const layout = value.layout || 'inline'
+      const isTextLinkLayout = layout === 'textLinks'
+      const useLegacyDoubleSpacing = value.spacing === 'legacyDouble'
+      if (isTextLinkLayout) {
+        return (
+          <div className="my-2 flex flex-col gap-1">
+            {buttons.map((btn: { label: string; url: string; external?: boolean }, i: number) => (
+              <a
+                key={i}
+                href={btn.url}
+                target={btn.external ? '_blank' : undefined}
+                rel={btn.external ? 'noopener noreferrer' : undefined}
+                className="text-base hover:text-primary"
+              >
+                {btn.label}
+              </a>
+            ))}
+          </div>
+        )
+      }
       const isSingleCenteredButton = layout === 'centered' && buttons.length === 1
       const isSingleFullWidthButton = layout === 'fullWidth' && buttons.length === 1
       const isBlockButtonLayout = layout === 'fullWidth'
       const containerClass = isSingleFullWidthButton
         ? 'flex flex-wrap mb-8'
+        : useLegacyDoubleSpacing && layout === 'fullWidth'
+          ? 'flex flex-wrap gap-4 px-[9px]'
         : layout === 'fullWidth' ? 'flex flex-wrap gap-4'
         : layout === 'centered' ? 'flex flex-wrap gap-4 justify-center'
         : 'flex flex-wrap gap-4'
       const btnClass = isSingleFullWidthButton
         ? 'block w-full sm:w-1/2 lg:w-[95%] mx-auto mt-8 mb-2'
+        : useLegacyDoubleSpacing && layout === 'fullWidth'
+          ? 'flex-1 block mt-8 mb-8'
+        : useLegacyDoubleSpacing
+          ? 'inline-block mt-8 mb-8'
         : layout === 'fullWidth'
           ? 'flex-1 block'
         : isSingleCenteredButton
           ? 'inline-flex w-full sm:w-auto'
           : 'inline-flex'
+      const wrapperClass = isSingleFullWidthButton
+        ? 'my-0'
+        : useLegacyDoubleSpacing && layout === 'fullWidth'
+          ? 'mt-4 mb-8'
+        : isSingleCenteredButton
+          ? 'my-8'
+          : 'my-6'
       return (
-        <div className={cn(isSingleFullWidthButton ? 'my-0' : isSingleCenteredButton ? 'my-8' : 'my-6', containerClass)}>
+        <div className={cn(wrapperClass, containerClass)}>
           {buttons.map((btn: { label: string; url: string; variant?: string; external?: boolean }, i: number) => (
             <a
               key={i}
@@ -846,7 +892,10 @@ const components: PortableTextComponents = {
     contactForm: ({ value }) => (
       <ArticleReveal intensity="visual">
         <div className="my-12">
-          <ContactFormEmbed showHeader={value?.showHeader !== false} />
+          <ContactFormEmbed
+            showHeader={value?.showHeader !== false}
+            background={value?.background}
+          />
         </div>
       </ArticleReveal>
     ),
@@ -1055,6 +1104,21 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    h4NoBottom: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h4 className="font-sans text-base font-semibold mt-6 mb-0">{children}</h4>
+      </ArticleReveal>
+    ),
+    h4LegacySm: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h4 className="font-sans text-base font-semibold leading-[1.1875rem] mt-[21px] mb-[21px]">{children}</h4>
+      </ArticleReveal>
+    ),
+    h2SpaciousTop: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="header-lg mt-8 mb-5">{children}</h2>
+      </ArticleReveal>
+    ),
     blockquote: ({ children }) => (
       <ArticleReveal intensity="text">
         <blockquote className="border-l-4 border-primary pl-6 my-6 italic text-gray">
@@ -1111,6 +1175,15 @@ const components: PortableTextComponents = {
       return (
         <ArticleReveal intensity="text">
           <p className={cn('mt-4 mb-8 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+        </ArticleReveal>
+      )
+    },
+    normalNoTopSpacious: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="text">
+          <p className={cn('mt-0 mb-8 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
         </ArticleReveal>
       )
     },
