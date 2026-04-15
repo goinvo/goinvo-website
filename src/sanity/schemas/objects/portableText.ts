@@ -355,6 +355,7 @@ export default defineType({
               { title: 'Horizontal row', value: 'row' },
               { title: '2-column grid', value: 'grid' },
               { title: 'Stacked (vertical)', value: 'stacked' },
+              { title: 'Stat band', value: 'statBand' },
             ],
           },
           initialValue: 'row',
@@ -369,6 +370,8 @@ export default defineType({
               type: 'object',
               fields: [
                 { name: 'stat', title: 'Statistic', type: 'string', description: 'The number or metric (e.g. "40%", "3x")' },
+                { name: 'unit', title: 'Unit / suffix', type: 'string', description: 'Optional smaller suffix shown beside the stat (e.g. "M", "%", "days")' },
+                { name: 'annotation', title: 'Trailing annotation', type: 'string', description: 'Optional trailing note displayed at full stat size (e.g. "(46%)")' },
                 { name: 'description', title: 'Description', type: 'string', description: 'What the stat represents' },
                 { name: 'refNumber', title: 'Reference citation', type: 'string', description: 'Optional superscript citation (e.g. "4", "A3") — links to #references or #methodology' },
                 { name: 'refTarget', title: 'Reference target', type: 'string', description: 'Anchor target for the citation link', options: { list: [{ title: 'References', value: 'references' }, { title: 'Methodology', value: 'methodology' }] } },

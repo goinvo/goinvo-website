@@ -243,11 +243,32 @@ const components: PortableTextComponents = {
       </ArticleReveal>
     ),
     results: ({ value }) => {
-      const items: { stat: string; description: string; refNumber?: string; refTarget?: string }[] = value.items || []
+      const items: {
+        stat: string
+        unit?: string
+        annotation?: string
+        description: string
+        refNumber?: string
+        refTarget?: string
+      }[] = value.items || []
       const count = items.length
       const bg = value.background || 'none'
       const variant = value.variant || 'row'
       const perItemBg = bg === 'gray' ? 'bg-gray-lightest' : bg === 'teal' ? 'bg-secondary/10' : ''
+      const renderCitation = (item: { refNumber?: string; refTarget?: string }) => (
+        item.refNumber ? (
+          <>
+            <sup>
+              <a
+                href={`#${item.refTarget || 'references'}`}
+                className="!text-primary !no-underline hover:!underline text-xs"
+              >
+                {' '}{item.refNumber}
+              </a>
+            </sup>{' '}
+          </>
+        ) : null
+      )
 
       // Determine grid classes based on variant
       let gridClasses: string
@@ -255,6 +276,8 @@ const components: PortableTextComponents = {
         gridClasses = 'grid-cols-1 max-w-md mx-auto'
       } else if (variant === 'grid') {
         gridClasses = 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+      } else if (variant === 'statBand') {
+        gridClasses = 'grid-cols-1 lg:grid-cols-2'
       } else {
         // "row" (default) — auto-detect columns from item count
         gridClasses = count === 1
@@ -272,39 +295,45 @@ const components: PortableTextComponents = {
         <ArticleReveal intensity="visual">
           <div
             className={cn(
-              'grid gap-4 my-12',
+              'grid',
+              variant === 'statBand' ? 'my-10 gap-y-8 lg:gap-x-0' : 'my-12 gap-4',
               gridClasses,
             )}
           >
             {items.map((item, i) => (
-              <div key={i} className="text-center">
-                <div className={cn(
-                  'p-4 mb-2',
-                  perItemBg || '',
-                )}>
-                  <span className={cn(
-                    'block font-serif text-[2.25rem]',
-                    perItemBg ? '' : 'text-primary',
-                  )}>
-                    {item.stat}
-                  </span>
+              variant === 'statBand' ? (
+                <div key={i} className="text-left lg:pr-5">
+                  <div className={cn('w-fit', perItemBg && 'px-4 pt-4 pb-2', perItemBg || '')}>
+                    <div className="flex flex-wrap items-end gap-x-1">
+                      <span className="header-xl mb-0 text-black">{item.stat}</span>
+                      {item.unit && <span className="header-lg mb-0 text-black">{item.unit}</span>}
+                      {item.annotation && <span className="header-xl mb-0 text-black">{` ${item.annotation}`}</span>}
+                    </div>
+                  </div>
+                  <p className="max-w-[260px] -mt-3 text-gray px-0">
+                    {item.description}
+                    {renderCitation(item)}
+                  </p>
                 </div>
-                <p className="text-sm text-gray px-1">
-                  {item.description}
-                  {item.refNumber && (
-                    <>
-                      <sup>
-                        <a
-                          href={`#${item.refTarget || 'references'}`}
-                          className="!text-primary !no-underline hover:!underline text-xs"
-                        >
-                          {' '}{item.refNumber}
-                        </a>
-                      </sup>{' '}
-                    </>
-                  )}
-                </p>
-              </div>
+              ) : (
+                <div key={i} className="text-center">
+                  <div className={cn(
+                    'p-4 mb-2',
+                    perItemBg || '',
+                  )}>
+                    <span className={cn(
+                      'block font-serif text-[2.25rem]',
+                      perItemBg ? '' : 'text-primary',
+                    )}>
+                      {item.stat}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray px-1">
+                    {item.description}
+                    {renderCitation(item)}
+                  </p>
+                </div>
+              )
             ))}
           </div>
         </ArticleReveal>
