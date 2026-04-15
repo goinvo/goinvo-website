@@ -17,7 +17,7 @@ export function References({ items, className, hideTitle, variant = 'default' }:
             References
           </h2>
         )}
-        <ol className="references ml-0 pl-0 list-inside">
+        <ol className="references">
           {items.map((item, index) => (
             <li
               key={item.link && item.link.length ? item.link : item.title}
