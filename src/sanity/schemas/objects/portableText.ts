@@ -353,6 +353,7 @@ export default defineType({
           options: {
             list: [
               { title: 'Horizontal row', value: 'row' },
+              { title: 'Legacy row', value: 'legacyRow' },
               { title: '2-column grid', value: 'grid' },
               { title: 'Stacked (vertical)', value: 'stacked' },
               { title: 'Stat band', value: 'statBand' },

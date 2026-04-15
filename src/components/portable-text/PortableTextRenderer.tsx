@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, Fragment } from 'react'
+import { Children, useEffect, useRef, useState, Fragment } from 'react'
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
@@ -278,6 +278,12 @@ const components: PortableTextComponents = {
         gridClasses = 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
       } else if (variant === 'statBand') {
         gridClasses = 'grid-cols-1 lg:grid-cols-2'
+      } else if (variant === 'legacyRow') {
+        gridClasses = count === 1
+          ? 'grid-cols-1 max-w-md mx-auto'
+          : count === 2
+            ? 'grid-cols-1 sm:grid-cols-2 max-w-2xl mx-auto'
+            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
       } else {
         // "row" (default) — auto-detect columns from item count
         gridClasses = count === 1
@@ -296,7 +302,11 @@ const components: PortableTextComponents = {
           <div
             className={cn(
               'grid',
-              variant === 'statBand' ? 'my-10 gap-y-8 lg:gap-x-0' : 'my-12 gap-4',
+              variant === 'statBand'
+                ? 'my-10 gap-y-8 lg:gap-x-0'
+                : variant === 'legacyRow'
+                  ? 'mt-0 mb-12 gap-4'
+                  : 'my-12 gap-4',
               gridClasses,
             )}
           >
@@ -328,10 +338,17 @@ const components: PortableTextComponents = {
                       {item.stat}
                     </span>
                   </div>
-                  <p className="text-sm text-gray px-1">
-                    {item.description}
-                    {renderCitation(item)}
-                  </p>
+                  {variant === 'legacyRow' ? (
+                    <span className="block px-1 text-base text-gray">
+                      {item.description}
+                      {renderCitation(item)}
+                    </span>
+                  ) : (
+                    <p className="px-1 text-sm text-gray">
+                      {item.description}
+                      {renderCitation(item)}
+                    </p>
+                  )}
                 </div>
               )
             ))}
@@ -1035,7 +1052,23 @@ const components: PortableTextComponents = {
         </a>
       )
     },
-    sup: ({ children }) => <sup>{children}</sup>,
+    sup: ({ children }) => {
+      const text = Children.toArray(children)
+        .map((child) => (typeof child === 'string' || typeof child === 'number' ? String(child) : ''))
+        .join('')
+        .trim()
+
+      return /^\d+$/.test(text) ? (
+        <sup>
+          <a
+            href="#references"
+            className="!text-primary !no-underline hover:!underline hover:!text-black text-xs"
+          >
+            {children}
+          </a>
+        </sup>
+      ) : <sup>{children}</sup>
+    },
     // Legacy decorators (backward compat)
     teal: ({ children }) => <span className="text-secondary">{children}</span>,
     orange: ({ children }) => <span className="text-primary">{children}</span>,
