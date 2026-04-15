@@ -340,6 +340,10 @@
     color: var(--color-gray);
   }
 
+  .gray-prose-content p + p {
+    margin-top: 0;
+  }
+
   .gray-prose-content h4 + p.whitespace-pre-line {
     margin-top: 0;
   }

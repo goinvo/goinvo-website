@@ -9,6 +9,26 @@ export function cn(...classes: (string | false | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
 
+export function findPortableHeading(blocks: any[], labels: string[]): string | undefined {
+  for (const block of blocks || []) {
+    if (block?._type !== 'block') continue
+
+    const headingStyles = ['h2', 'h2Center', 'h2Large', 'sectionTitle', 'h3']
+    if (!headingStyles.includes(block.style)) continue
+
+    const text = (block.children || [])
+      .map((c: any) => c.text || '')
+      .join('')
+      .trim()
+
+    if (labels.includes(text)) {
+      return text
+    }
+  }
+
+  return undefined
+}
+
 /**
  * Remove an "Authors" or "Author" h2 heading from portable text blocks
  * to avoid duplication when AuthorSection renders its own heading.

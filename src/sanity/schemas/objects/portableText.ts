@@ -12,6 +12,8 @@ export default defineType({
       styles: [
         { title: 'Normal', value: 'normal' },
         { title: 'Normal (extra bottom space)', value: 'normalSpacious' },
+        { title: 'Normal (gray standard spacing)', value: 'normalGrayStandard' },
+        { title: 'Normal (gray no top margin)', value: 'normalGrayNoTop' },
         { title: 'Serif Large Paragraph', value: 'serifLarge' },
         { title: 'Serif Large Paragraph (no top margin)', value: 'serifLargeNoTop' },
         { title: 'H2', value: 'h2' },
@@ -26,6 +28,7 @@ export default defineType({
         { title: 'H3 (centered)', value: 'h3Centered' },
         { title: 'H3 (orange)', value: 'h3Orange' },
         { title: 'H4', value: 'h4' },
+        { title: 'H4 (bold)', value: 'h4Bold' },
         { title: 'H4 (with bullet)', value: 'h4Bullet' },
         { title: 'Centered', value: 'textCenter' },
         { title: 'Serif Large Centered', value: 'serifLargeCentered' },
@@ -839,6 +842,19 @@ export default defineType({
             ],
           },
           initialValue: 'inline',
+        },
+        {
+          name: 'size',
+          title: 'Size',
+          type: 'string',
+          description: 'Use "Large" for Gatsby-style CTA buttons with a wider desktop footprint.',
+          options: {
+            list: [
+              { title: 'Default', value: 'default' },
+              { title: 'Large CTA', value: 'large' },
+            ],
+          },
+          initialValue: 'default',
         },
       ],
     }),

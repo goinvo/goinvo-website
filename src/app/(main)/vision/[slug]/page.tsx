@@ -13,7 +13,7 @@ import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
 import { featureSectionBackgroundFallbacks } from '@/lib/featureSectionBackgroundFallbacks'
-import { stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
+import { findPortableHeading, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
 
 interface Props {
@@ -42,6 +42,37 @@ function createBulletBlock(key: string, text: string, level = 2) {
     markDefs: [],
     style: 'normal',
   }
+}
+
+function normalizeSupFollowerSpacing(block: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (block?._type !== 'block' || !Array.isArray(block.children)) {
+    return block
+  }
+
+  let changed = false
+  const children = block.children.map((child: any, index: number, source: any[]) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (index === 0 || typeof child?.text !== 'string') {
+      return child
+    }
+
+    const previousChild = source[index - 1]
+    const followsSupCitation = Array.isArray(previousChild?.marks) && previousChild.marks.includes('sup')
+    if (!followsSupCitation) {
+      return child
+    }
+
+    if (/^\s/.test(child.text) || /^[,.;:!?)]/.test(child.text)) {
+      return child
+    }
+
+    changed = true
+    return {
+      ...child,
+      text: ` ${child.text}`,
+    }
+  })
+
+  return changed ? { ...block, children } : block
 }
 
 function transformFeatureContentForSlug(slug: string, content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -144,6 +175,65 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
     })
   }
 
+  if (slug === 'open-pro') {
+    const regularGrayParagraphs = new Set([
+      'The patient can initiate communication of relevant medical data with the doctor to send outcomes, align priorities, and arrange the care they need.',
+      'The patient records her own experiences and pushes it to the health record. Her doctor can then spend more face-to-face time discussing her care, rather than conducting time-consuming interviews and performing data entry.',
+      'PRO tools allow the patient to report clinically relevant information at the point of pain, when it is most reliable, to inform the most appropriate treatments. Over the course of treatment, the PRO promotes accurate recordings of outcomes to advance changes when needed.',
+      'The patient provides invaluable data on treatment outcomes. The data is accurate, timely, and multi-dimensional. These qualities of data are possible only with many patients’ voices.',
+    ])
+    const grayNoTopParagraphs = new Set([
+      'Design and Development v1.0: 8 weeks, 1.0FTE',
+      'Development v1.0: 6 weeks, 1.0FTE',
+      'Development of minimal service: 6 weeks, 1.0FTE',
+    ])
+
+    return content.map((block) => {
+      const normalizedBlock = normalizeSupFollowerSpacing(block)
+      const text = textFromPortableBlock(normalizedBlock)
+
+      if (normalizedBlock?._type === 'block' && text === 'Your Patient Reported Outcome is a direct connection between you, the source of critical medical data, and the decisions regarding your care and the future of the health system.') {
+        return {
+          ...normalizedBlock,
+          style: 'h4Bold',
+        }
+      }
+
+      if (
+        normalizedBlock?._type === 'block' &&
+        (
+          regularGrayParagraphs.has(text) ||
+          text.startsWith('The patient is able choose treatments, personalized to their needs')
+        )
+      ) {
+        return {
+          ...normalizedBlock,
+          style: 'normalGrayStandard',
+        }
+      }
+
+      if (normalizedBlock?._type === 'block' && grayNoTopParagraphs.has(text)) {
+        return {
+          ...normalizedBlock,
+          style: 'normalGrayNoTop',
+        }
+      }
+
+      if (
+        normalizedBlock?._type === 'buttonGroup' &&
+        Array.isArray(normalizedBlock.buttons) &&
+        normalizedBlock.buttons.some((button: any) => button?.label === 'Contribute on GitHub') // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) {
+        return {
+          ...normalizedBlock,
+          layout: 'fullWidth',
+        }
+      }
+
+      return normalizedBlock
+    })
+  }
+
   if (slug !== 'open-source-healthcare') {
     return content
   }
@@ -228,6 +318,27 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
   return transformed
 }
 
+function transformFeatureContributorsForSlug(slug: string, contributors: any[] | undefined) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!contributors) {
+    return contributors
+  }
+
+  if (slug === 'open-pro') {
+    return contributors.map((credit) => {
+      if (credit?.author?.name === 'Juhan Sonin' && !credit.roleOverride) {
+        return {
+          ...credit,
+          roleOverride: 'GoInvo, MIT',
+        }
+      }
+
+      return credit
+    })
+  }
+
+  return contributors
+}
+
 export async function generateStaticParams() {
   try {
     const features = await client.fetch<Feature[]>(allFeaturesQuery)
@@ -296,6 +407,7 @@ export default async function VisionFeaturePage({ params }: Props) {
   const backgroundFallbacks = featureSectionBackgroundFallbacks[slug]
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
   const showPageMeta = backgroundFallbacks?.showPageMeta ?? (feature.showPageMeta !== false)
+  const transformedContributors = transformFeatureContributorsForSlug(slug, feature.contributors as any)
   const authorVariant = (backgroundFallbacks?.authorLayout || feature.authorLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const contributorsVariant = (backgroundFallbacks?.contributorsLayout || feature.contributorsLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const authorBackground = resolveSectionBackground(feature.authorBackground, backgroundFallbacks?.authorBackground || 'gray')
@@ -371,9 +483,12 @@ export default async function VisionFeaturePage({ params }: Props) {
       {feature.content && (() => {
         let content = feature.content
         content = stripTitleHeading(content, feature.title)
+        const authorHeading = feature.authors && feature.authors.length > 0
+          ? findPortableHeading(content as any[], ['Authors', 'Author'])
+          : undefined
         if (feature.authors && feature.authors.length > 0) {
           content = stripAuthorHeading(content, {
-            stripContributors: (feature.contributors?.length ?? 0) > 0,
+            stripContributors: (transformedContributors?.length ?? 0) > 0,
           })
         }
         content = transformFeatureContentForSlug(slug, content as any)
@@ -405,6 +520,7 @@ export default async function VisionFeaturePage({ params }: Props) {
                 <div className={articleContainerClassName} style={articleContainerStyle}>
                   <AuthorSection
                     authors={feature.authors}
+                    heading={authorHeading}
                     variant={authorVariant}
                     background={authorBackground}
                   />
@@ -413,11 +529,11 @@ export default async function VisionFeaturePage({ params }: Props) {
             )}
 
             {/* Contributors */}
-            {feature.contributors && feature.contributors.length > 0 && (
+            {transformedContributors && transformedContributors.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
                   <AuthorSection
-                    authors={feature.contributors}
+                    authors={transformedContributors}
                     heading="Contributors"
                     variant={contributorsVariant}
                     background={contributorsBackground}
@@ -430,7 +546,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
-                  <h3 className="header-md mt-8 mb-4">{(feature as any).specialThanksHeading || (feature.contributors && feature.contributors.length > 0 ? 'Special thanks to...' : 'Contributors')}</h3>
+                  <h3 className="header-md mt-8 mb-4">{(feature as any).specialThanksHeading || (transformedContributors && transformedContributors.length > 0 ? 'Special thanks to...' : 'Contributors')}</h3>
                   <PortableTextRenderer content={feature.specialThanks} />
                 </div>
               </section>
