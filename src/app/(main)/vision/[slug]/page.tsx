@@ -44,6 +44,362 @@ function createBulletBlock(key: string, text: string, level = 2) {
   }
 }
 
+function createPortableBlock(
+  key: string,
+  segments: Array<{ text: string; marks?: string[] }>,
+  style = 'normal',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  markDefs: any[] = [],
+) {
+  return {
+    _key: key,
+    _type: 'block',
+    children: segments.map((segment, index) => ({
+      _key: `${key}-span-${index}`,
+      _type: 'span',
+      marks: segment.marks || [],
+      text: segment.text,
+    })),
+    markDefs,
+    style,
+  }
+}
+
+function createTextBlock(key: string, text: string, style = 'normal') {
+  return createPortableBlock(key, [{ text }], style)
+}
+
+function plainSegment(text: string) {
+  return { text }
+}
+
+function strongSegment(text: string) {
+  return { text, marks: ['strong'] }
+}
+
+function supSegment(text: string) {
+  return { text, marks: ['sup'] }
+}
+
+function createHealthcareDollarsMethodologyBlocks() {
+  return [
+    createTextBlock('healthcare-dollars-methodology-col1-nhe-label', 'Column 1, National health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col1-nhe-1', [
+      strongSegment('$3,500B'),
+      plainSegment(', 2017 National Health Expenditure'),
+      supSegment('1'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col2-nhe-label', 'Column 2, National health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-nhe-1', [
+      strongSegment('$2,600B'),
+      plainSegment(', 2017 National health insurance'),
+      supSegment('1'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-nhe-2', [
+      strongSegment('$366B'),
+      plainSegment(', 2017 Out of pocket'),
+      supSegment('1'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-nhe-3', [
+      strongSegment('$355B'),
+      plainSegment(', 2017 Other third party payers and public health activity'),
+      supSegment('1'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-nhe-4', [
+      strongSegment('$250B'),
+      plainSegment(', 2017 Tax exclusion, employee health insurance subsidy'),
+      supSegment('2'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-nhe-5', [
+      strongSegment('$168B'),
+      plainSegment(', 2017 Research'),
+      supSegment('3'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col3-nhe-label', 'Column 3, National health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col3-nhe-1', [
+      strongSegment('$1,200B'),
+      plainSegment(', 2017 Private health insurance'),
+      supSegment('4'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col3-nhe-2', [
+      strongSegment('$1,400B'),
+      plainSegment(', 2017 Public health insurance'),
+      supSegment('1'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col3-nhe-3', [
+      strongSegment('$103B'),
+      plainSegment(', 2015 Private funds'),
+      supSegment('4'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col3-nhe-4', [
+      strongSegment('$36B'),
+      plainSegment(', 2017 Public funds'),
+      supSegment('4'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col3-nhe-5', [
+      strongSegment('$5B'),
+      plainSegment(', 2017 Nonprofit foundations'),
+      supSegment('4'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col4-nhe-label', 'Column 4, National health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-1', [
+      strongSegment('$1,030.8B'),
+      plainSegment(', 2017 Patient benefits'),
+      supSegment('5'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-1a', [
+      strongSegment('$3,500B'),
+      plainSegment(', 2017 private health insurance expenditure'),
+      supSegment('1'),
+      plainSegment(', minus '),
+      strongSegment('$169.2B'),
+      plainSegment(' 2017 estimated administrative costs in private health insurance.'),
+    ]), 2, 'legacyBullet'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-2', [
+      strongSegment('$169.2B'),
+      plainSegment(', 2017 Administrative costs, private health insurance'),
+      supSegment('5'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-2a', [
+      strongSegment('14.1%'),
+      plainSegment(' in private health insurance administrative costs'),
+      supSegment('5'),
+      plainSegment(', multiplied by '),
+      strongSegment('$3,500B'),
+      plainSegment(' 2017 expenditure'),
+      supSegment('1'),
+    ]), 2, 'legacyBullet'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-3', [
+      strongSegment('$804.51B'),
+      plainSegment(', 2017 Medicare expenditure'),
+      supSegment('6'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-4', [
+      strongSegment('$582B'),
+      plainSegment(', 2017 Medicaid expenditure'),
+      supSegment('7'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-5', [
+      strongSegment('$133B'),
+      plainSegment(', 2017 Other health insurance programs'),
+      supSegment('1'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-6', [
+      strongSegment('$72B'),
+      plainSegment(', 2015 Pharmaceutical private funds'),
+      supSegment('3'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-7', [
+      strongSegment('$17B'),
+      plainSegment(', 2015 Medical technology private funds'),
+      supSegment('3'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-8', [
+      strongSegment('$6B'),
+      plainSegment(', 2015 Biotechnology private funds'),
+      supSegment('3'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col4-nhe-9', [
+      strongSegment('$7B'),
+      plainSegment(', 2015 Other sectors'),
+      supSegment('3'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col5-nhe-label', 'Column 5, National health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-1', [
+      strongSegment('$534.64B'),
+      plainSegment(', 2018 Insurance claims & indemnities for Medicare'),
+      supSegment('6'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-2', [
+      strongSegment('$203.73B'),
+      plainSegment(', 2018 Grants, subsidies, contributions for Medicare'),
+      supSegment('6'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-3', [
+      strongSegment('$66.13'),
+      plainSegment(', 2018 Other expenses for Medicare'),
+      supSegment('6'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-4', [
+      strongSegment('$71B'),
+      plainSegment(', 2017 Administrative costs of Medicaid'),
+      supSegment('8'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-4a', [
+      strongSegment('12.2%'),
+      plainSegment(' is mean administrative loss % for MCOs, multiplied by '),
+      strongSegment('$582B'),
+      plainSegment(' 2017 Medicaid expenditure'),
+      supSegment('7'),
+    ]), 2, 'legacyBullet'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-5', [
+      strongSegment('$511B'),
+      plainSegment(', 2017 Patient benefits from Medicaid'),
+      supSegment('8'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-5a', [
+      strongSegment('$582B'),
+      plainSegment(', 2017 Medicaid expenditure'),
+      supSegment('7'),
+      plainSegment(', minus '),
+      strongSegment('$71B'),
+      plainSegment(' 2017 administrative costs of Medicaid'),
+      supSegment('8'),
+      plainSegment(', minus '),
+      strongSegment('$46B'),
+      plainSegment(' 2017 administrative costs of Medicaid'),
+      supSegment('9'),
+    ]), 2, 'legacyBullet'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-6', [
+      strongSegment('$45.8B'),
+      plainSegment(', 2014 Fraud, waste, and abuse within Medicaid'),
+      supSegment('9'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-7', [
+      strongSegment('$52.55B'),
+      plainSegment(', 2017 TRICARE expenditure'),
+      supSegment('10'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-8', [
+      strongSegment('$17.52B'),
+      plainSegment(', 2017 CHIP expenditure'),
+      supSegment('11'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-9', [
+      strongSegment('$62B'),
+      plainSegment(', 2017 Other health insurance programs not listed here'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col5-nhe-9a', [
+      strongSegment('$133B'),
+      plainSegment(', 2017 Other health insurance programs'),
+      supSegment('1'),
+      plainSegment(', minus '),
+      strongSegment('$63B'),
+      plainSegment(' 2017 TRICARE'),
+      supSegment('10'),
+      plainSegment(', minus '),
+      strongSegment('$18B'),
+      plainSegment(' 2017 CHIP'),
+      supSegment('11'),
+    ]), 2, 'legacyBullet'),
+
+    createTextBlock('healthcare-dollars-methodology-col6-nhe-label', 'Column 6, National health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col6-nhe-1', [
+      strongSegment('$454.14B'),
+      plainSegment(', 2018 Patient benefits for Medicare'),
+      supSegment('12'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col6-nhe-1a', [
+      strongSegment('$534.64B'),
+      plainSegment(', Insurance claims & indemnities, minus '),
+      strongSegment('$80.5B'),
+      plainSegment(' 2018 fraud, waste, and abuse'),
+      supSegment('12'),
+    ]), 2, 'legacyBullet'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col6-nhe-2', [
+      strongSegment('$80.5B'),
+      plainSegment(', 2018 Fraud, waste, and abuse for Medicare'),
+      supSegment('12'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col6-nhe-2a', [
+      strongSegment('10%'),
+      plainSegment(' estimated fraud, waste, and abuse in 2012'),
+      supSegment('12'),
+      plainSegment(', multiplied by '),
+      strongSegment('$804.51B'),
+      plainSegment(' Medicare expenditure'),
+      supSegment('6'),
+    ]), 2, 'legacyBullet'),
+
+    createTextBlock('healthcare-dollars-methodology-col1-phe-label', 'Column 1, Personal health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col1-phe-1', [
+      strongSegment('$2,800B'),
+      plainSegment(', 2016 Personal health expenditure'),
+      supSegment('13'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col2-phe-label', 'Column 2, Personal health expenditure section', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-phe-1', [
+      strongSegment('$1,070B'),
+      plainSegment(', 2016 Hospital, personal health expenditure'),
+      supSegment('13'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-phe-2', [
+      strongSegment('$658B'),
+      plainSegment(', 2016 Physician and clinical, personal health expenditure'),
+      supSegment('13'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-phe-3', [
+      strongSegment('$325B'),
+      plainSegment(', 2016 Prescription drugs, personal health expenditure'),
+      supSegment('13'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-phe-4', [
+      strongSegment('$160B'),
+      plainSegment(', 2016 Nursing care facilities & continuing care, personal health expenditure'),
+      supSegment('13'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-phe-5', [
+      strongSegment('$123B'),
+      plainSegment(', 2016 Dental, personal health expenditure'),
+      supSegment('13'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-phe-6', [
+      strongSegment('$375B'),
+      plainSegment(', 2016 Other personal health expenditure'),
+      supSegment('13'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col1-hhs-label', 'Column 1, Health and human services expenditure', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col1-hhs-1', [
+      strongSegment('$1,110B'),
+      plainSegment(', 2018 Health and human services expenditure'),
+      supSegment('14'),
+    ])),
+
+    createTextBlock('healthcare-dollars-methodology-col2-hhs-label', 'Column 2, Health and human services expenditure', 'smallGrayLabel'),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-1', [
+      strongSegment('$1T'),
+      plainSegment(', 2018 Centers for Medicare & Medicaid Services'),
+      supSegment('14'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-2', [
+      strongSegment('$47B'),
+      plainSegment(', 2018 Administration for children & families'),
+      supSegment('14'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-3', [
+      strongSegment('$26B'),
+      plainSegment(', 2018 National Institutes of Health'),
+      supSegment('14'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-4', [
+      strongSegment('$6B'),
+      plainSegment(', 2018 Centers for Disease Control & Prevention'),
+      supSegment('14'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-5', [
+      strongSegment('$5B'),
+      plainSegment(', 2018 Indian Health Service'),
+      supSegment('14'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-6', [
+      strongSegment('$4B'),
+      plainSegment(', 2018 Substance abuse and mental health services administration'),
+      supSegment('14'),
+    ])),
+    toBulletListItem(createPortableBlock('healthcare-dollars-methodology-col2-hhs-7', [
+      strongSegment('$2B'),
+      plainSegment(', 2018 Food and drug administration'),
+      supSegment('14'),
+    ])),
+  ]
+}
+
 function normalizeSupFollowerSpacing(block: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (block?._type !== 'block' || !Array.isArray(block.children)) {
     return block
@@ -73,6 +429,47 @@ function normalizeSupFollowerSpacing(block: any) { // eslint-disable-line @types
   })
 
   return changed ? { ...block, children } : block
+}
+
+function withBlockStyle(block: any, style: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const normalized = normalizeSupFollowerSpacing(block)
+  return {
+    ...normalized,
+    level: undefined,
+    listItem: undefined,
+    style,
+  }
+}
+
+function toBulletListItem(block: any, level = 1, listItem = 'bullet') { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const normalized = normalizeSupFollowerSpacing(block)
+  return {
+    ...normalized,
+    level,
+    listItem,
+    style: 'normal',
+  }
+}
+
+function recolorTextMarkDefs(block: any, color: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (block?._type !== 'block' || !Array.isArray(block.markDefs)) {
+    return block
+  }
+
+  let changed = false
+  const markDefs = block.markDefs.map((markDef: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (markDef?._type !== 'textColor' || markDef.color === color) {
+      return markDef
+    }
+
+    changed = true
+    return {
+      ...markDef,
+      color,
+    }
+  })
+
+  return changed ? { ...block, markDefs } : block
 }
 
 function transformFeatureContentForSlug(slug: string, content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -292,6 +689,274 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
     }
 
     return [resultsBlock as any, ...nextContent] // eslint-disable-line @typescript-eslint/no-explicit-any
+  }
+
+  if (slug === 'fraud-waste-abuse-in-healthcare') {
+    return content.map((block) => {
+      const normalized = normalizeSupFollowerSpacing(block)
+      const text = textFromPortableBlock(normalized)
+
+      if (
+        normalized?._type === 'columns' &&
+        Array.isArray(normalized.content) &&
+        normalized.content.some((item: any) => textFromPortableBlock(item).startsWith('Fraud: intentional misuse of healthcare system resources.')) // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) {
+        return {
+          ...normalized,
+          content: normalized.content.map((item: any) => item?._type === 'block' ? recolorTextMarkDefs(item, 'teal') : item), // eslint-disable-line @typescript-eslint/no-explicit-any
+        }
+      }
+
+      if (normalized?._type === 'block' && text.startsWith('Fraud 10% + Waste 20%')) {
+        return {
+          ...normalized,
+          style: 'h3Centered',
+        }
+      }
+
+      return normalized
+    })
+  }
+
+  if (slug === 'human-centered-design-for-ai') {
+    const sectionHeadings = new Set([
+      'Four design principles for trustworthy AI co-pilots',
+      'From black box to transparent partner',
+      'What this means for health software leaders',
+    ])
+    const bulletItems = new Set([
+      'A top layer that shows the recommendation, a simple confidence indicator, and one or two key factors that drove the suggestion.',
+      'Deeper layers that expose more detail: additional contributing variables, thresholds, and full audit trails, only when a user asks for them.',
+      'Clear indicators when a case falls outside the model’s typical population or input range.',
+      'Visual confidence bands that distinguish strong signals from weak suggestions.',
+      'Obvious controls for overriding, dismissing, or downgrading AI recommendations.',
+      'Deep EHR integration so AI outputs appear where clinicians already work, rather than in separate portals.',
+      'Specialty-specific views and shortcuts for radiology, pathology, emergency medicine, and other high-pressure settings.',
+      'Mobile and tablet experiences tuned for environments like home health or telehealth visits.',
+      'Bringing clinicians, coders, nurses, and patients into the design process from the start.',
+      'Treating explainability, limitations, and feedback loops as primary requirements, not compliance afterthoughts.',
+      'Measuring success not just in model performance, but in sustained, real‑world use and satisfaction across clinical teams',
+    ])
+    const plainBulletItems = new Set([
+      'Bringing clinicians, coders, nurses, and patients into the design process from the start.',
+      'Treating explainability, limitations, and feedback loops as primary requirements, not compliance afterthoughts.',
+      'Measuring success not just in model performance, but in sustained, real‑world use and satisfaction across clinical teams',
+    ])
+
+    return content.map((block) => {
+      const normalized = normalizeSupFollowerSpacing(block)
+      const text = textFromPortableBlock(normalized)
+
+      if (normalized?._type === 'block' && sectionHeadings.has(text)) {
+        return {
+          ...normalized,
+          style: 'h3',
+        }
+      }
+
+      if (normalized?._type === 'block' && bulletItems.has(text)) {
+        return toBulletListItem(normalized, 1, plainBulletItems.has(text) ? 'plainBullet' : 'bullet')
+      }
+
+      if (normalized?._type === 'block' && normalized.style === 'h4' && /^\d+\.\s/.test(text) && Array.isArray(normalized.children) && normalized.children[0]?.text) {
+        return {
+          ...normalized,
+          style: 'h4LegacySm',
+          children: normalized.children.map((child: any, index: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+            if (index !== 0 || typeof child?.text !== 'string') {
+              return child
+            }
+
+            return {
+              ...child,
+              text: child.text.replace(/^(\d+\.)\s/, '$1  '),
+            }
+          }),
+        }
+      }
+
+      if (normalized?._type === 'block' && text === 'About GoInvo') {
+        return {
+          ...normalized,
+          style: 'h4',
+        }
+      }
+
+      return normalized
+    })
+  }
+
+  if (slug === 'healthcare-dollars') {
+    const downloadButton = content
+      .find((block) => block?._type === 'buttonGroup' && Array.isArray(block.buttons) && block.buttons.some((button: any) => button?.label === 'Download')) // eslint-disable-line @typescript-eslint/no-explicit-any
+      ?.buttons?.find((button: any) => button?.label === 'Download') // eslint-disable-line @typescript-eslint/no-explicit-any
+    const buyPrintButton = content
+      .find((block) => block?._type === 'buttonGroup' && Array.isArray(block.buttons) && block.buttons.some((button: any) => button?.label === 'Buy Print')) // eslint-disable-line @typescript-eslint/no-explicit-any
+      ?.buttons?.find((button: any) => button?.label === 'Buy Print') // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    const transformed: any[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+    let hasInsertedPosterSection = false
+    let inMethodologySection = false
+    let inMethodologyEntries = false
+    let hasInjectedMethodologyLists = false
+
+    for (const originalBlock of content) {
+      const block = normalizeSupFollowerSpacing(originalBlock)
+      const text = textFromPortableBlock(block)
+
+      if (block?._type === 'block' && text === 'To Understand the Healthcare system, follow the money') {
+        transformed.push({
+          ...block,
+          style: 'h4LegacySm',
+        })
+        continue
+      }
+
+      if (
+        block?._type === 'columns' &&
+        Array.isArray(block.content) &&
+        block.content.some((item: any) => item?._type === 'image' && item.asset?._ref) && // eslint-disable-line @typescript-eslint/no-explicit-any
+        block.content.some((item: any) => textFromPortableBlock(item).startsWith('*Tax exclusion $ amount is not added')) // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) {
+        const posterImage = block.content.find((item: any) => item?._type === 'image' && item.asset?._ref) // eslint-disable-line @typescript-eslint/no-explicit-any
+        const taxExclusionNote = block.content.find((item: any) => item?._type === 'block') // eslint-disable-line @typescript-eslint/no-explicit-any
+
+        if (posterImage) {
+          transformed.push({
+            ...posterImage,
+            _key: 'healthcare-dollars-poster-image',
+            align: 'center',
+            link: downloadButton?.url || posterImage.link,
+            size: 'bleed',
+          })
+        }
+
+        if (!hasInsertedPosterSection && (downloadButton || buyPrintButton)) {
+          transformed.push({
+            _key: 'healthcare-dollars-actions',
+            _type: 'buttonGroup',
+            buttons: [downloadButton, buyPrintButton].filter(Boolean).map((button: any) => ({ ...button })), // eslint-disable-line @typescript-eslint/no-explicit-any
+            layout: 'fullWidth',
+            spacing: 'legacyDouble',
+          })
+          hasInsertedPosterSection = true
+        }
+
+        if (taxExclusionNote) {
+          transformed.push(createTextBlock(
+            'healthcare-dollars-tax-exclusion-note',
+            '*Tax exclusion $ amount is not added into the $3,500B national health expenditure. Though it is a part of expenditure, it is not included in many data sources and is unclear how it should be best organized without causing contradictions in the expenditure breakdowns.',
+            'smallGrayNote'
+          ))
+        }
+        continue
+      }
+
+      if (
+        block?._type === 'buttonGroup' &&
+        Array.isArray(block.buttons) &&
+        block.buttons.some((button: any) => button?.label === 'Download' || button?.label === 'Buy Print') // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) {
+        continue
+      }
+
+      if (block?._type === 'block' && text.startsWith('"Where your Health Dollars Go" is a map of the US healthcare system and its components.')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-intro-map',
+          '"Where your Health Dollars Go" is a map of the US healthcare system and its components. By following the allocation and flow of money in healthcare, the thread of how the organizations, departments, and major players are connected becomes apparent.'
+        ))
+        continue
+      }
+
+      if (block?._type === 'block' && text.startsWith('The visualization serves two purposes.')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-intro-purpose',
+          'The visualization serves two purposes. The first is to provide the public and professionals interested in the healthcare space a way to increase understanding and explore how all the pieces fit together. The second is to give providers, patient advocacy groups, health policymakers, and health economists a visual communication tool to discuss issues at the higher health systems level.'
+        ))
+        continue
+      }
+
+      if (block?._type === 'block' && text.startsWith('*$168B in research')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-research-note',
+          '*$168B in research is a higher $ amount than the category breakdowns within it, as the $ amounts are taken from sources from differing years.',
+          'smallGrayNote'
+        ))
+        continue
+      }
+
+      if (block?._type === 'block' && text.startsWith('*All $ amounts have been rounded')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-rounding-note',
+          '*All $ amounts have been rounded to the nearest billionth for readability and scanning purposes.',
+          'smallGrayNote'
+        ))
+        continue
+      }
+
+      if (block?._type === 'block' && text.startsWith('The US healthcare system is extremely convoluted.')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-spaghetti',
+          'The US healthcare system is extremely convoluted. To call it “spaghetti” would be an understatement. Because of the complexity, accurately capturing and following associative and financial relationships is difficult. The wider picture of how organizations are connected, how money flows through the US healthcare system is difficult to see. As a result, public discourse around US healthcare issues and reforms are often too narrow in context. Many consumer services and products developed in the health technology space don’t consider long term, primary, secondary or tertiary, downstream effects they will have on the market or for patients in this wider view.'
+        ))
+        continue
+      }
+
+      if (block?._type === 'block' && text.startsWith('"Where your Health Dollars Go" provides a detailed high-level view')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-overview',
+          '"Where your Health Dollars Go" provides a detailed high-level view of major components within the US healthcare system and how they interact. The map serves as a communication tool for health professionals, organizations, groups, and policymakers to develop services and policies with the context of the larger picture of how their plans may impact the nation from the government to individual patients. The visualization also provides a canvas for professionals to use, projecting their services and products on the map, to more effectively drive development that aligns with our patient health values.'
+        ))
+        continue
+      }
+
+      if (block?._type === 'block' && text === 'Methodology') {
+        inMethodologySection = true
+        inMethodologyEntries = false
+        transformed.push(block)
+        continue
+      }
+
+      if (block?._type === 'block' && text === 'Author') {
+        inMethodologySection = false
+        inMethodologyEntries = false
+        transformed.push(block)
+        continue
+      }
+
+      if (inMethodologySection && block?._type === 'block' && text.startsWith('The components of the healthcare system to include')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-methodology-intro',
+          'The components of the healthcare system to include in the visualization were primarily based on what public data was available. Some expenditures were based on older estimates due to difficulty in finding up to date data (such as administrative costs for private health insurance).'
+        ))
+        continue
+      }
+
+      if (inMethodologySection && block?._type === 'block' && text.startsWith('Other expenditures, such as numbers on fraud, waste, and abuse')) {
+        transformed.push(createTextBlock(
+          'healthcare-dollars-methodology-estimates',
+          'Other expenditures, such as numbers on fraud, waste, and abuse for health insurance programs, are best guesses based on a range of estimates as referenced below.'
+        ))
+        continue
+      }
+
+      if (inMethodologySection && block?._type === 'block' && text.startsWith('Column ')) {
+        inMethodologyEntries = true
+        if (!hasInjectedMethodologyLists) {
+          transformed.push(...createHealthcareDollarsMethodologyBlocks())
+          hasInjectedMethodologyLists = true
+        }
+        continue
+      }
+
+      if (inMethodologyEntries && block?._type === 'block' && block.style === 'normal') {
+        continue
+      }
+
+      transformed.push(block)
+    }
+
+    return transformed
   }
 
   if (slug !== 'open-source-healthcare') {
