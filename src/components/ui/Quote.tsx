@@ -7,6 +7,7 @@ interface QuoteProps {
   text: string
   author?: string
   role?: string
+  preserveEmptyRoleLine?: boolean
   background?: 'gray' | 'white'
   className?: string
   refNumber?: string
@@ -33,7 +34,16 @@ function EkgDivider() {
   )
 }
 
-export function Quote({ text, author, role, background, className, refNumber, refTarget }: QuoteProps) {
+export function Quote({
+  text,
+  author,
+  role,
+  preserveEmptyRoleLine,
+  background,
+  className,
+  refNumber,
+  refTarget,
+}: QuoteProps) {
   return (
     <motion.div
       data-quote="true"
@@ -92,8 +102,12 @@ export function Quote({ text, author, role, background, className, refNumber, re
         {(author || role) && (
           <p className="text-gray text-sm leading-[1.4375rem] !my-[14px]">
             <span>{author}</span>
-            <br />
-            <span>{role || ''}</span>
+            {(role || preserveEmptyRoleLine) && (
+              <>
+                <br />
+                <span>{role || ''}</span>
+              </>
+            )}
           </p>
         )}
         <div className="mt-8 mb-4">
