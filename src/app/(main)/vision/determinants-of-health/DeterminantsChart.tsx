@@ -1,11 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
 import determinants from '@/data/vision/determinants-of-health/chart-data.json'
 
-const colors = ['#F9D7A7', '#B2E5E9', '#E8ED9D', '#F8CBC5', '#90EED4']
-const iconPaths = [
+const GoogleChart = dynamic(
+  () => import('react-google-charts').then(mod => mod.Chart),
+  { ssr: false }
+)
+
+const icons = [
   '/images/vision/determinants-of-health/individual-behavior.svg',
   '/images/vision/determinants-of-health/social-circumstances.svg',
   '/images/vision/determinants-of-health/genetics-biology.svg',
@@ -13,153 +17,119 @@ const iconPaths = [
   '/images/vision/determinants-of-health/environment.svg',
 ]
 
-interface Division {
-  title: string
-  factors?: string[]
+const baseOptions = {
+  chartArea: { left: 0, top: '10%', width: '100%', height: '85%' },
+  legend: 'none',
+  pieHole: 0.25,
+  pieSliceText: 'none',
+  pieSliceTextStyle: { color: '#444', fontSize: 12 },
+  fontName: 'Open Sans',
+  fontColor: '#444',
+  tooltip: { trigger: 'none' },
+  colors: ['#F9D7A7', '#B2E5E9', '#E8ED9D', '#F8CBC5', '#90EED4'],
 }
 
-interface Determinant {
-  id: string
-  title: string
-  shortTitle: string
-  percentage: number
-  description: string
-  divisions: Division[]
+function getResponsiveChartOptions() {
+  if (typeof window !== 'undefined' && window.innerWidth > 800) {
+    return { legend: { position: 'labeled' }, pieSliceText: 'none' }
+  }
+
+  return { legend: { position: 'none' }, pieSliceText: 'percentage' }
 }
 
-function DonutChart({
-  data,
-  activeIndex,
+export function DeterminantsChart({
+  selectedIndex,
   onSelect,
 }: {
-  data: Determinant[]
-  activeIndex: number
-  onSelect: (i: number) => void
+  selectedIndex: number
+  onSelect: (index: number) => void
 }) {
-  const total = data.reduce((sum, d) => sum + d.percentage, 0)
-  const cx = 150
-  const cy = 150
-  const outerR = 130
-  const innerR = 35
-  let cumulative = 0
+  const chartRef = useRef<any>(null)
+  const [chartOptions, setChartOptions] = useState(() => ({
+    ...baseOptions,
+    ...getResponsiveChartOptions(),
+  }))
 
-  const slices = data.map((d, i) => {
-    const startAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2
-    cumulative += d.percentage
-    const endAngle = (cumulative / total) * 2 * Math.PI - Math.PI / 2
-    const midAngle = (startAngle + endAngle) / 2
-
-    const largeArc = d.percentage / total > 0.5 ? 1 : 0
-
-    const x1Outer = cx + outerR * Math.cos(startAngle)
-    const y1Outer = cy + outerR * Math.sin(startAngle)
-    const x2Outer = cx + outerR * Math.cos(endAngle)
-    const y2Outer = cy + outerR * Math.sin(endAngle)
-    const x1Inner = cx + innerR * Math.cos(endAngle)
-    const y1Inner = cy + innerR * Math.sin(endAngle)
-    const x2Inner = cx + innerR * Math.cos(startAngle)
-    const y2Inner = cy + innerR * Math.sin(startAngle)
-
-    const path = [
-      `M ${x1Outer} ${y1Outer}`,
-      `A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2Outer} ${y2Outer}`,
-      `L ${x1Inner} ${y1Inner}`,
-      `A ${innerR} ${innerR} 0 ${largeArc} 0 ${x2Inner} ${y2Inner}`,
-      'Z',
-    ].join(' ')
-
-    // Label position
-    const labelR = outerR + 18
-    const labelX = cx + labelR * Math.cos(midAngle)
-    const labelY = cy + labelR * Math.sin(midAngle)
-
-    return (
-      <g key={d.id}>
-        <path
-          d={path}
-          fill={colors[i]}
-          stroke="white"
-          strokeWidth="2"
-          opacity={activeIndex === i ? 1 : 0.6}
-          className="cursor-pointer transition-opacity duration-200"
-          onClick={() => onSelect(i)}
-        />
-        <text
-          x={labelX}
-          y={labelY}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="text-[10px] fill-gray-dark pointer-events-none"
-        >
-          {d.shortTitle}
-        </text>
-      </g>
-    )
-  })
-
-  return (
-    <svg viewBox="0 0 300 300" className="w-full max-w-[400px] mx-auto">
-      {slices}
-    </svg>
+  const chartData = useMemo(
+    () => [
+      ['Determinant', 'Percentage'],
+      ...determinants.map(determinant => [
+        determinant.title,
+        determinant.percentage,
+      ]),
+    ],
+    []
   )
-}
 
-export function DeterminantsChart() {
-  const [activeIndex, setActiveIndex] = useState(0)
-  const data = determinants as Determinant[]
-  const selected = data[activeIndex]
+  useEffect(() => {
+    const syncChartOptions = () => {
+      setChartOptions({
+        ...baseOptions,
+        ...getResponsiveChartOptions(),
+      })
+    }
+
+    syncChartOptions()
+    window.addEventListener('resize', syncChartOptions)
+
+    return () => window.removeEventListener('resize', syncChartOptions)
+  }, [])
+
+  useEffect(() => {
+    const chart = chartRef.current?.getChart?.()
+    if (!chart) return
+
+    chart.setSelection([{ row: selectedIndex, column: null }])
+  }, [selectedIndex, chartOptions])
 
   return (
-    <div className="max-width max-width--md content-padding mx-auto my-12">
-      {/* Legend buttons — 60×60 icon-only horizontal row, matching Gatsby
-          (no labels next to icons; the donut chart segments are themselves
-          labeled). Hover/active is a subtle scale + opacity nudge so users
-          still discover the buttons are interactive. */}
-      <div className="flex flex-row justify-center items-center gap-6 mb-6 flex-wrap">
-        {data.map((d, i) => (
-          <button
-            key={d.id}
-            onClick={() => setActiveIndex(i)}
-            aria-label={d.title}
-            className={cn(
-              'border-0 cursor-pointer transition-transform bg-transparent p-0',
-              activeIndex === i ? 'scale-110' : 'hover:scale-105'
-            )}
-          >
-            <img src={iconPaths[i]} alt={d.title} width={60} height={60} className="w-[60px] h-[60px]" />
-          </button>
+    <div>
+      <ul className="list--unstyled doh__chart-legend">
+        {determinants.map((determinant, index) => (
+          <li key={determinant.id}>
+            <button
+              type="button"
+              className="button button--transparent doh__determinant-button"
+              onClick={() => onSelect(index)}
+            >
+              <img src={icons[index]} alt={determinant.title} />
+              <span className="doh__chart-legend__label text--gray text--sm">
+                {determinant.shortTitle}
+              </span>
+            </button>
+          </li>
         ))}
-      </div>
+      </ul>
+      <GoogleChart
+        chartType="PieChart"
+        width="100%"
+        height="300px"
+        data={chartData}
+        options={chartOptions}
+        chartEvents={[
+          {
+            eventName: 'ready',
+            callback: ({ chartWrapper }: { chartWrapper: any }) => {
+              chartRef.current = chartWrapper
+              chartWrapper
+                ?.getChart?.()
+                ?.setSelection([{ row: selectedIndex, column: null }])
+            },
+          },
+          {
+            eventName: 'select',
+            callback: ({ chartWrapper }: { chartWrapper: any }) => {
+              const selectedRow = chartWrapper
+                ?.getChart?.()
+                ?.getSelection?.()?.[0]?.row
 
-      {/* Donut chart (full-width centered, matching Gatsby) */}
-      <DonutChart
-        data={data}
-        activeIndex={activeIndex}
-        onSelect={setActiveIndex}
+              if (typeof selectedRow === 'number') {
+                onSelect(selectedRow)
+              }
+            },
+          },
+        ]}
       />
-
-      {/* Details panel (below chart, not side-by-side) */}
-      <div className="mt-8">
-        <h3 className="font-sans text-[1.17em] font-bold mb-2">{selected.title}</h3>
-        <p className="leading-relaxed mb-6">{selected.description}</p>
-
-        {selected.divisions && selected.divisions.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-            {selected.divisions.map((div) => (
-              <div key={div.title}>
-                <h4 className="font-sans text-base font-bold mb-1">{div.title}</h4>
-                {div.factors && div.factors.length > 0 && (
-                  <ul className="ul list-outside pl-4 text-sm text-gray-dark space-y-0.5">
-                    {div.factors.map((f) => (
-                      <li key={f}>{f}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   )
 }

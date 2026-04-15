@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local claude/codex worktree metadata
+.claude/worktrees/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -46,3 +49,9 @@ src/app/case-study/
 
 # Migration audit (local reference only)
 /.audit/
+.audit-*.txt
+.audit-*.json
+.audit-*.png
+.tmp-*.png
+.next-start*.log
+.next-dev-*.log

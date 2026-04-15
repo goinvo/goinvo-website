@@ -226,6 +226,7 @@ export default defineType({
             list: [
               { title: 'Default', value: 'default' },
               { title: 'Centered comparison', value: 'centered' },
+              { title: 'Cards', value: 'cards' },
             ],
           },
           initialValue: 'default',
@@ -281,6 +282,19 @@ export default defineType({
           title: 'Role / Title',
           type: 'string',
           description: 'Job title or affiliation of the quoted person',
+        },
+        {
+          name: 'background',
+          title: 'Background',
+          type: 'string',
+          description: 'Optional quote background treatment',
+          options: {
+            list: [
+              { title: 'White', value: 'white' },
+              { title: 'Gray', value: 'gray' },
+            ],
+          },
+          initialValue: 'white',
         },
         {
           name: 'refNumber',
@@ -641,6 +655,7 @@ export default defineType({
             list: [
               { title: 'Default', value: 'default' },
               { title: 'Thick', value: 'thick' },
+              { title: 'Button spacing', value: 'buttonSpacing' },
               { title: 'Arrow down', value: 'arrow' },
             ],
           },
