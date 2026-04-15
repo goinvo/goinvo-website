@@ -149,6 +149,17 @@ function stripMarkdownItalics(text: string): string {
   return text.replace(/_([^_]+)_/g, '$1')
 }
 
+function setBlockStyle(block: LoosePortableTextBlock, style: string): LoosePortableTextBlock {
+  if (block._type !== 'block' || block.style === style) {
+    return block
+  }
+
+  return {
+    ...block,
+    style,
+  }
+}
+
 function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStudy {
   if (!caseStudy.content?.length) {
     return caseStudy
@@ -324,6 +335,16 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
   }
 
   if (slug === 'inspired-ehrs') {
+    const inspiredH4Content = content.map((block) =>
+      block._type === 'block' && block.style === 'h4'
+        ? setBlockStyle(block, 'h4CaseStudyTight')
+        : block
+    )
+    if (inspiredH4Content.some((block, index) => block !== content[index])) {
+      content.splice(0, content.length, ...inspiredH4Content)
+      changed = true
+    }
+
     const topButtonGroupIndex = content.findIndex(
       (block) =>
         block._type === 'buttonGroup' &&
