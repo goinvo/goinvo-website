@@ -25,6 +25,10 @@ type LoosePortableTextBlock = PortableTextBlock & {
   alt?: string
   caption?: string
   link?: string
+  style?: string
+  layout?: string
+  size?: string
+  buttons?: Array<{ label?: string }>
 }
 
 function blockText(block?: PortableTextBlock): string {
@@ -37,51 +41,113 @@ function blockText(block?: PortableTextBlock): string {
     .trim()
 }
 
+function createSectionTitleBlock(key: string, text: string): PortableTextBlock {
+  return {
+    _key: key,
+    _type: 'block',
+    children: [
+      {
+        _key: `${key}-span`,
+        _type: 'span',
+        marks: [],
+        text,
+      },
+    ],
+    markDefs: [],
+    style: 'sectionTitle',
+  } as PortableTextBlock
+}
+
 function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStudy {
-  if (slug !== 'mitre-state-of-us-healthcare' || !caseStudy.content?.length) {
+  if (!caseStudy.content?.length) {
     return caseStudy
   }
 
   const content = [...caseStudy.content] as LoosePortableTextBlock[]
   let changed = false
 
-  const largeScaleIndex = content.findIndex(
-    (block) => blockText(block) === 'Large scale technical storytelling, for a technical audience'
-  )
-  const firstLargeScaleParagraphIndex = content.findIndex(
-    (block, index) =>
-      index > largeScaleIndex &&
-      blockText(block).startsWith('A touchscreen data wall made up of 12 LCD panels side by side')
-  )
-
-  if (largeScaleIndex >= 0 && firstLargeScaleParagraphIndex > largeScaleIndex) {
-    const duplicateImageIndex = content.findIndex(
-      (block, index) => index > largeScaleIndex && index < firstLargeScaleParagraphIndex && block._type === 'image'
+  if (slug === 'mitre-state-of-us-healthcare') {
+    const largeScaleIndex = content.findIndex(
+      (block) => blockText(block) === 'Large scale technical storytelling, for a technical audience'
+    )
+    const firstLargeScaleParagraphIndex = content.findIndex(
+      (block, index) =>
+        index > largeScaleIndex &&
+        blockText(block).startsWith('A touchscreen data wall made up of 12 LCD panels side by side')
     )
 
-    if (duplicateImageIndex >= 0) {
-      content.splice(duplicateImageIndex, 1)
-      changed = true
+    if (largeScaleIndex >= 0 && firstLargeScaleParagraphIndex > largeScaleIndex) {
+      const duplicateImageIndex = content.findIndex(
+        (block, index) => index > largeScaleIndex && index < firstLargeScaleParagraphIndex && block._type === 'image'
+      )
+
+      if (duplicateImageIndex >= 0) {
+        content.splice(duplicateImageIndex, 1)
+        changed = true
+      }
+    }
+
+    const healthIndicatorsLink = 'https://docs.google.com/spreadsheets/d/1eef_1BK6gipOuhxpdXWnQ8eQdp1ZssjwUupKs7oITdc/edit?usp=sharing'
+    const healthIndicatorsIndex = content.findIndex((block) => blockText(block) === 'Global Health Indicators List')
+    if (healthIndicatorsIndex >= 0) {
+      const imageIndex = content.findIndex((block, index) => {
+        if (index <= healthIndicatorsIndex || block._type !== 'image') return false
+
+        const alt = (block.alt || '').toLowerCase()
+        const caption = (block.caption || '').toLowerCase()
+        return alt.includes('health indicator') || caption.includes('health indicator')
+      })
+
+      if (imageIndex >= 0) {
+        const imageBlock = content[imageIndex]
+        if (imageBlock.link !== healthIndicatorsLink) {
+          content[imageIndex] = { ...imageBlock, link: healthIndicatorsLink }
+          changed = true
+        }
+      }
     }
   }
 
-  const healthIndicatorsLink = 'https://docs.google.com/spreadsheets/d/1eef_1BK6gipOuhxpdXWnQ8eQdp1ZssjwUupKs7oITdc/edit?usp=sharing'
-  const healthIndicatorsIndex = content.findIndex((block) => blockText(block) === 'Global Health Indicators List')
-  if (healthIndicatorsIndex >= 0) {
-    const imageIndex = content.findIndex((block, index) => {
-      if (index <= healthIndicatorsIndex || block._type !== 'image') return false
+  if (slug === 'mitre-flux-notes') {
+    const buttonGroupIndex = content.findIndex(
+      (block) =>
+        block._type === 'buttonGroup' &&
+        Array.isArray(block.buttons) &&
+        block.buttons.some((button) => button?.label === 'Designs on GitHub')
+    )
 
-      const alt = (block.alt || '').toLowerCase()
-      const caption = (block.caption || '').toLowerCase()
-      return alt.includes('health indicator') || caption.includes('health indicator')
-    })
-
-    if (imageIndex >= 0) {
-      const imageBlock = content[imageIndex]
-      if (imageBlock.link !== healthIndicatorsLink) {
-        content[imageIndex] = { ...imageBlock, link: healthIndicatorsLink }
+    if (buttonGroupIndex >= 0) {
+      const buttonGroup = content[buttonGroupIndex]
+      if (buttonGroup.layout !== 'inline' || buttonGroup.size !== 'large') {
+        content[buttonGroupIndex] = {
+          ...buttonGroup,
+          layout: 'inline',
+          size: 'large',
+        }
         changed = true
       }
+    }
+
+    const solutionMarkerIndex = content.findIndex(
+      (block) => blockText(block) === 'Capture structured data during note authoring'
+    )
+    if (
+      solutionMarkerIndex >= 0 &&
+      blockText(content[solutionMarkerIndex - 1] as PortableTextBlock) !== 'Solution'
+    ) {
+      content.splice(solutionMarkerIndex, 0, createSectionTitleBlock('mitre-flux-solution-heading', 'Solution'))
+      changed = true
+    }
+
+    const resultsMarkerIndex = content.findIndex(
+      (block) => blockText(block) === 'Gained partners in exploring innovative data capture methods'
+    )
+    if (
+      resultsMarkerIndex >= 0 &&
+      blockText(content[resultsMarkerIndex - 1] as PortableTextBlock) !== 'Results'
+    ) {
+      content.splice(resultsMarkerIndex, 0, createSectionTitleBlock('mitre-flux-results-heading', 'Results'))
+      changed = true
     }
   }
 

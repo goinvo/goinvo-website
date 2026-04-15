@@ -106,6 +106,7 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
     authorBackground: 'gray',
     newsletterBackground: 'white',
     contributorsBackground: 'gray',
+    portableTextVariant: 'gray-body',
     referencesBackground: 'gray',
     forceNewsletterBand: true,
   },
