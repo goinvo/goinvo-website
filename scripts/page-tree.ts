@@ -817,6 +817,10 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     if (!color) return false
     return !transparent.has(color)
   }
+  const isWhiteBackground = (color: string | undefined): boolean => {
+    if (!color) return false
+    return white.has(color)
+  }
   const getAncestors = (entry: FlatNode, map: Map<string, FlatNode>): FlatNode[] => {
     const ancestors: FlatNode[] = []
     let parent = entry.parentPath ? map.get(entry.parentPath) ?? null : null
@@ -1295,6 +1299,111 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
   }
   if (bgMismatches > 5) lines.push(`  …and ${bgMismatches - 5} more bg-style mismatches`)
   if (bgMismatches === 0 && aBg.length === bBg.length) lines.push(`  Background sections match`)
+
+  // Gray quote bands should be full-bleed, not trapped inside the article width.
+  lines.push('')
+  lines.push('=== Quote Background Width ===')
+  const findQuoteBackgroundNodes = (
+    flat: FlatNode[],
+  ): FlatNode[] => flat.filter((entry) => {
+    if (!isVisibleBackground(entry.node.styles.backgroundColor) || isWhiteBackground(entry.node.styles.backgroundColor)) {
+      return false
+    }
+    if (entry.node.rect.width < 300 || entry.node.rect.height < 100) return false
+
+    const descendants = getDescendantEntries(entry, flat)
+    const quoteParagraph = descendants.find((candidate) =>
+      candidate.node.tag === 'p' &&
+      parsePx(candidate.node.styles.fontSize) >= 20 &&
+      normalizeTextContent(candidate.node.text).length >= 30
+    )
+    const quoteCaption = descendants.find((candidate) =>
+      candidate.node.tag === 'p' &&
+      parsePx(candidate.node.styles.fontSize) <= 16 &&
+      normalizeTextContent(candidate.node.text).length >= 10
+    )
+
+    return Boolean(quoteParagraph && quoteCaption)
+  })
+  const quoteKey = (entry: FlatNode, flat: FlatNode[]): string => {
+    const descendants = getDescendantEntries(entry, flat)
+    const quoteParagraph = descendants.find((candidate) =>
+      candidate.node.tag === 'p' &&
+      parsePx(candidate.node.styles.fontSize) >= 20 &&
+      normalizeTextContent(candidate.node.text).length >= 30
+    )
+    return normalizeTextContent(quoteParagraph?.node.text || entry.node.text).slice(0, 50)
+  }
+  const aQuoteNodes = findQuoteBackgroundNodes(flatA)
+  const bQuoteNodes = findQuoteBackgroundNodes(flatB)
+  if (aQuoteNodes.length !== bQuoteNodes.length) {
+    lines.push(`  Count: ${aQuoteNodes.length} → ${bQuoteNodes.length}`)
+  }
+  let quoteWidthMismatches = 0
+  const usedQuotePaths = new Set<string>()
+  for (const aEntry of aQuoteNodes) {
+    const key = quoteKey(aEntry, flatA)
+    const bCandidates = bQuoteNodes.filter((candidate) =>
+      !usedQuotePaths.has(candidate.path) &&
+      quoteKey(candidate, flatB) === key
+    )
+    const bEntry = pickNearestByY(bCandidates, aEntry.node.rect.y, usedQuotePaths)
+    if (!bEntry) continue
+    usedQuotePaths.add(bEntry.path)
+
+    const widthDiff = Math.abs(aEntry.node.rect.width - bEntry.node.rect.width)
+    if (widthDiff > 80) {
+      quoteWidthMismatches++
+      if (quoteWidthMismatches <= 5) {
+        lines.push(
+          `  ⚠ Quote "${key.slice(0, 28)}…" background width: ${aEntry.node.rect.width}px → ${bEntry.node.rect.width}px`
+        )
+      }
+    }
+  }
+  if (quoteWidthMismatches === 0 && aQuoteNodes.length === bQuoteNodes.length) {
+    lines.push('  Quote background widths match')
+  } else if (quoteWidthMismatches > 5) {
+    lines.push(`  …and ${quoteWidthMismatches - 5} more quote width mismatches`)
+  }
+
+  // Newsletter cards should not inherit an extra tinted section background
+  // unless the reference page does the same.
+  lines.push('')
+  lines.push('=== Newsletter Background ===')
+  const findNewsletterHeading = (flat: FlatNode[]): FlatNode | null =>
+    flat.find((entry) =>
+      entry.node.tag === 'h2' &&
+      normalizeTextContent(entry.node.text).includes('subscribe to our newsletter')
+    ) ?? null
+  const findNearestTintedAncestor = (
+    entry: FlatNode | null,
+    map: Map<string, FlatNode>,
+  ): FlatNode | null => {
+    if (!entry) return null
+    return getAncestors(entry, map).find((ancestor) =>
+      isVisibleBackground(ancestor.node.styles.backgroundColor) &&
+      !isWhiteBackground(ancestor.node.styles.backgroundColor) &&
+      ancestor.node.rect.width >= entry.node.rect.width
+    ) ?? null
+  }
+  const aNewsletterHeading = findNewsletterHeading(flatA)
+  const bNewsletterHeading = findNewsletterHeading(flatB)
+  const aNewsletterBg = findNearestTintedAncestor(aNewsletterHeading, flatAByPath)
+  const bNewsletterBg = findNearestTintedAncestor(bNewsletterHeading, flatBByPath)
+  if (aNewsletterBg || bNewsletterBg) {
+    if (!aNewsletterBg && bNewsletterBg) {
+      lines.push(`  ⚠ ${labelB} adds a tinted newsletter wrapper (${normalizeColor(bNewsletterBg.node.styles.backgroundColor)}) that ${labelA} does not have`)
+    } else if (aNewsletterBg && !bNewsletterBg) {
+      lines.push(`  ⚠ ${labelA} has a tinted newsletter wrapper (${normalizeColor(aNewsletterBg.node.styles.backgroundColor)}) that ${labelB} is missing`)
+    } else if (aNewsletterBg && bNewsletterBg && aNewsletterBg.node.styles.backgroundColor !== bNewsletterBg.node.styles.backgroundColor) {
+      lines.push(`  ⚠ newsletter wrapper bg: ${normalizeColor(aNewsletterBg.node.styles.backgroundColor)} → ${normalizeColor(bNewsletterBg.node.styles.backgroundColor)}`)
+    } else {
+      lines.push('  Newsletter background wrappers match')
+    }
+  } else {
+    lines.push('  Newsletter background wrappers match')
+  }
 
   // Check for missing/extra interactive elements
   lines.push('')

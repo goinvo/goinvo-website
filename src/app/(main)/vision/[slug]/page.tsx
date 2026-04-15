@@ -213,7 +213,7 @@ export default async function VisionFeaturePage({ params }: Props) {
             {!renderAboutAfterNewsletter && aboutGoInvoSection}
 
             {/* Newsletter */}
-            <section className="bg-gray-lightest py-8">
+            <section className="py-8">
               <div className={newsletterContainerClassName} style={newsletterContainerStyle}>
                 <div className="bg-white shadow-card py-6 px-4 md:px-8">
                   <NewsletterForm />

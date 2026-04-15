@@ -39,7 +39,9 @@ export function Quote({ text, author, role, background, className, refNumber, re
       data-quote="true"
       className={cn(
         'p-4',
-        background === 'gray' && 'bg-gray-light',
+        // Gatsby renders gray quotes as full-bleed bands, even when the
+        // quote lives inside a constrained article container.
+        background === 'gray' && 'relative left-1/2 right-1/2 w-screen max-w-none -ml-[50vw] -mr-[50vw] bg-gray-light',
         className
       )}
       initial={{ opacity: 0, y: 20 }}
