@@ -236,6 +236,7 @@ const components: PortableTextComponents = {
           text={value.text}
           author={value.author}
           role={value.role}
+          preserveEmptyRoleLine={value.preserveEmptyRoleLine}
           background={value.background}
           refNumber={value.refNumber}
           refTarget={value.refTarget}

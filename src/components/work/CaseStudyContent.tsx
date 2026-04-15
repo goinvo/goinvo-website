@@ -30,6 +30,9 @@ type LoosePortableTextBlock = PortableTextBlock & {
   layout?: string
   size?: string
   variant?: string
+  author?: string
+  role?: string
+  preserveEmptyRoleLine?: boolean
   buttons?: Array<{ label?: string }>
 }
 
@@ -157,6 +160,22 @@ function setBlockStyle(block: LoosePortableTextBlock, style: string): LoosePorta
   return {
     ...block,
     style,
+  }
+}
+
+function preserveEmptyQuoteRoleLine(block: LoosePortableTextBlock): LoosePortableTextBlock {
+  if (
+    block._type !== 'quote' ||
+    !block.author ||
+    block.role ||
+    block.preserveEmptyRoleLine
+  ) {
+    return block
+  }
+
+  return {
+    ...block,
+    preserveEmptyRoleLine: true,
   }
 }
 
@@ -330,6 +349,20 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     const normalizedContent = content.map(normalizeCitationChildren)
     if (normalizedContent.some((block, index) => block !== content[index])) {
       content.splice(0, content.length, ...normalizedContent)
+      changed = true
+    }
+
+    const quoteAdjustedContent = content.map(preserveEmptyQuoteRoleLine)
+    if (quoteAdjustedContent.some((block, index) => block !== content[index])) {
+      content.splice(0, content.length, ...quoteAdjustedContent)
+      changed = true
+    }
+  }
+
+  if (['insidetracker-nutrition-science', 'paintrackr', 'wuxi-nextcode-familycode'].includes(slug)) {
+    const quoteAdjustedContent = content.map(preserveEmptyQuoteRoleLine)
+    if (quoteAdjustedContent.some((block, index) => block !== content[index])) {
+      content.splice(0, content.length, ...quoteAdjustedContent)
       changed = true
     }
   }
