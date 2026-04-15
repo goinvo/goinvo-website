@@ -16,6 +16,7 @@ interface Props {
 
 interface BlockChild {
   _key?: string
+  _type?: string
   marks?: string[]
   text?: string
 }
@@ -28,6 +29,7 @@ type LoosePortableTextBlock = PortableTextBlock & {
   style?: string
   layout?: string
   size?: string
+  variant?: string
   buttons?: Array<{ label?: string }>
 }
 
@@ -56,6 +58,53 @@ function createSectionTitleBlock(key: string, text: string): PortableTextBlock {
     markDefs: [],
     style: 'sectionTitle',
   } as PortableTextBlock
+}
+
+function createDividerBlock(key: string): LoosePortableTextBlock {
+  return {
+    _key: key,
+    _type: 'divider',
+    style: 'default',
+  } as LoosePortableTextBlock
+}
+
+function isLeadingClientSubtitle(text: string): boolean {
+  const normalized = text.trim().toLowerCase()
+  return normalized.length > 0 && normalized.length <= 80 && /^for(\s+the)?\s+/.test(normalized)
+}
+
+function stripDuplicatedSuperscriptParentheticals(block: LoosePortableTextBlock): LoosePortableTextBlock {
+  if (block._type !== 'block' || !Array.isArray(block.children)) {
+    return block
+  }
+
+  let changed = false
+  const children = (block.children as BlockChild[]).map((child, index, source) => {
+    const previousChild = source[index - 1]
+    const previousSupText = previousChild?.marks?.includes('sup') ? previousChild.text?.trim() : ''
+
+    if (!previousSupText || !/^\d+$/.test(previousSupText) || !child.text) {
+      return child
+    }
+
+    const normalizedText = child.text.replace(new RegExp(`^\\(${previousSupText}\\)`), '')
+    if (normalizedText === child.text) {
+      return child
+    }
+
+    changed = true
+    return {
+      ...child,
+      text: normalizedText,
+    }
+  })
+
+  return changed
+    ? {
+        ...block,
+        children,
+      } as LoosePortableTextBlock
+    : block
 }
 
 function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStudy {
@@ -151,6 +200,79 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     }
   }
 
+  if (slug === 'fastercures-health-data-basics') {
+    const buttonGroupIndex = content.findIndex(
+      (block) =>
+        block._type === 'buttonGroup' &&
+        Array.isArray(block.buttons) &&
+        block.buttons.some((button) => button?.label === 'View on GitHub')
+    )
+
+    if (buttonGroupIndex >= 0) {
+      const buttonGroup = content[buttonGroupIndex]
+      if (buttonGroup.layout !== 'centered' || buttonGroup.size !== 'large') {
+        content[buttonGroupIndex] = {
+          ...buttonGroup,
+          layout: 'centered',
+          size: 'large',
+        }
+        changed = true
+      }
+    }
+
+    const educationalPluginsIndex = content.findIndex(
+      (block) => blockText(block) === 'Educational open source plugins'
+    )
+    if (educationalPluginsIndex >= 0) {
+      let solutionInsertIndex = educationalPluginsIndex
+      for (let index = educationalPluginsIndex - 1; index >= 0; index -= 1) {
+        if (content[index]?._type === 'image') {
+          solutionInsertIndex = index
+          break
+        }
+      }
+
+      if (blockText(content[solutionInsertIndex - 1] as PortableTextBlock) !== 'Solution') {
+        content.splice(
+          solutionInsertIndex,
+          0,
+          createSectionTitleBlock('fastercures-solution-heading', 'Solution')
+        )
+        changed = true
+      }
+    }
+
+    const resultsIndex = content.findIndex((block) => block._type === 'results')
+    if (resultsIndex >= 0) {
+      const resultsBlock = content[resultsIndex]
+      if (resultsBlock.variant !== 'legacyRow') {
+        content[resultsIndex] = {
+          ...resultsBlock,
+          variant: 'legacyRow',
+        }
+        changed = true
+      }
+
+      if (blockText(content[resultsIndex - 1] as PortableTextBlock) !== 'Results') {
+        content.splice(
+          resultsIndex,
+          0,
+          createDividerBlock('fastercures-results-divider'),
+          createSectionTitleBlock('fastercures-results-heading', 'Results')
+        )
+        changed = true
+      }
+    }
+  }
+
+  if (slug === 'mount-sinai-consent') {
+    const normalizedContent = content.map(stripDuplicatedSuperscriptParentheticals)
+    if (normalizedContent.some((block, index) => block !== content[index])) {
+      content.splice(0, content.length, ...normalizedContent)
+      changed = true
+    }
+  }
+
   return changed ? { ...caseStudy, content: content as PortableTextBlock[] } : caseStudy
 }
 
@@ -166,16 +288,9 @@ export function CaseStudyContent({ initialData, slug }: Props) {
     .map((child) => child.text || '')
     .join('')
     .trim()
-  const normalizedFirstContentText = firstContentText.toLowerCase()
-  const hasLeadingClientSubtitle =
-    !!caseStudy.client &&
-    (
-      normalizedFirstContentText === `for ${caseStudy.client}`.toLowerCase() ||
-      normalizedFirstContentText === `for the ${caseStudy.client}`.toLowerCase()
-    )
+  const hasLeadingClientSubtitle = firstContentBlock?._type === 'block' && isLeadingClientSubtitle(firstContentText)
   const showClientSubtitle =
-    !!caseStudy.client &&
-    caseStudy.client !== 'GoInvo' &&
+    (hasLeadingClientSubtitle || (!!caseStudy.client && caseStudy.client !== 'GoInvo')) &&
     !caseStudy.hideClientSubtitle
   const normalizedCaseStudy = hasLeadingClientSubtitle
     ? { ...caseStudy, content: caseStudy.content?.slice(1) }
