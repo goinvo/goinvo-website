@@ -92,12 +92,8 @@ export function Quote({ text, author, role, background, className, refNumber, re
         {(author || role) && (
           <p className="text-gray text-sm leading-[1.4375rem] !my-[14px]">
             <span>{author}</span>
-            {role && (
-              <>
-                <br />
-                <span>{role}</span>
-              </>
-            )}
+            <br />
+            <span>{role || ''}</span>
           </p>
         )}
         <div className="mt-8 mb-4">
