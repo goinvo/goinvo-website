@@ -272,6 +272,20 @@
     margin-bottom: 0.5rem;
   }
 
+  .references {
+    margin-left: 0;
+    padding-left: 0;
+    list-style-position: inside;
+    list-style-type: decimal;
+  }
+
+  .references li,
+  .references a {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+  }
+
   /* Nested lists need an explicit indent so sub-bullets don't visually
      align with parent bullets. Matches Gatsby's 15px nested padding. */
   .ul ul,
