@@ -10,6 +10,7 @@ import { ChatlioWidget } from '@/components/analytics/ChatlioWidget'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { ScrollDepthTracker } from '@/components/analytics/ScrollDepthTracker'
 import { ExternalLinkTracker } from '@/components/analytics/ExternalLinkTracker'
+import './vision/determinants-of-health/determinants.css'
 
 export default function MainLayout({
   children,

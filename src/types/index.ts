@@ -84,6 +84,7 @@ export interface Feature {
   description?: string
   categories?: string[]
   date?: string
+  showPageMeta?: boolean
   client?: string
   authorLayout?: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -93,6 +94,8 @@ export interface Feature {
   contributorsLayout?: string
   specialThanks?: PortableTextBlock[]
   showAboutGoInvo?: boolean
+  aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'
+  aboutGoInvoVariant?: 'default' | 'practice'
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
