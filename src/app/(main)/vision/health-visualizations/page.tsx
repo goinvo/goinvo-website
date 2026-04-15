@@ -7,7 +7,6 @@ import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { Reveal } from '@/components/ui/Reveal'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import type { HealthVisualization } from '@/types'
 
@@ -164,20 +163,14 @@ export default async function HealthVisualizationsPage() {
       </section>
 
       {/* Subscribe */}
-      <section className="max-width max-width-md content-padding pb-16">
-        <Reveal style="slide-up">
-          <SubscribeForm />
-        </Reveal>
-      </section>
-
-      {/* Newsletter */}
-      <section className="bg-gray-lightest py-8">
+      <section className="bg-gray-light py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <div className="bg-white shadow-card py-6 px-4 md:px-8">
-            <NewsletterForm />
-          </div>
+          <Reveal style="slide-up">
+            <SubscribeForm />
+          </Reveal>
         </div>
       </section>
+
     </div>
   )
 }

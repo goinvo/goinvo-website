@@ -151,6 +151,7 @@ export const featureBySlugQuery = groq`
     showPageMeta,
     client,
     authorLayout,
+    authorBackground,
     "authors": authors[] {
       roleOverride,
       "author": coalesce(
@@ -165,6 +166,8 @@ export const featureBySlugQuery = groq`
       "author": author-> { _id, name, role, bio, image, social }
     },
     contributorsLayout,
+    contributorsBackground,
+    newsletterBackground,
     specialThanks,
     showAboutGoInvo,
     aboutGoInvoPosition,

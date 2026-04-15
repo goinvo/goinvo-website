@@ -7,6 +7,7 @@ import { CaseStudyLayout } from '@/components/work/CaseStudyLayout'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import type { CaseStudy } from '@/types'
+import type { PortableTextBlock } from '@portabletext/types'
 
 interface Props {
   initialData: CaseStudy
@@ -17,6 +18,74 @@ interface BlockChild {
   _key?: string
   marks?: string[]
   text?: string
+}
+
+type LoosePortableTextBlock = PortableTextBlock & {
+  _type: string
+  alt?: string
+  caption?: string
+  link?: string
+}
+
+function blockText(block?: PortableTextBlock): string {
+  if (block?._type !== 'block') return ''
+
+  return ((block.children as BlockChild[]) || [])
+    .map((child) => child.text || '')
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStudy {
+  if (slug !== 'mitre-state-of-us-healthcare' || !caseStudy.content?.length) {
+    return caseStudy
+  }
+
+  const content = [...caseStudy.content] as LoosePortableTextBlock[]
+  let changed = false
+
+  const largeScaleIndex = content.findIndex(
+    (block) => blockText(block) === 'Large scale technical storytelling, for a technical audience'
+  )
+  const firstLargeScaleParagraphIndex = content.findIndex(
+    (block, index) =>
+      index > largeScaleIndex &&
+      blockText(block).startsWith('A touchscreen data wall made up of 12 LCD panels side by side')
+  )
+
+  if (largeScaleIndex >= 0 && firstLargeScaleParagraphIndex > largeScaleIndex) {
+    const duplicateImageIndex = content.findIndex(
+      (block, index) => index > largeScaleIndex && index < firstLargeScaleParagraphIndex && block._type === 'image'
+    )
+
+    if (duplicateImageIndex >= 0) {
+      content.splice(duplicateImageIndex, 1)
+      changed = true
+    }
+  }
+
+  const healthIndicatorsLink = 'https://docs.google.com/spreadsheets/d/1eef_1BK6gipOuhxpdXWnQ8eQdp1ZssjwUupKs7oITdc/edit?usp=sharing'
+  const healthIndicatorsIndex = content.findIndex((block) => blockText(block) === 'Global Health Indicators List')
+  if (healthIndicatorsIndex >= 0) {
+    const imageIndex = content.findIndex((block, index) => {
+      if (index <= healthIndicatorsIndex || block._type !== 'image') return false
+
+      const alt = (block.alt || '').toLowerCase()
+      const caption = (block.caption || '').toLowerCase()
+      return alt.includes('health indicator') || caption.includes('health indicator')
+    })
+
+    if (imageIndex >= 0) {
+      const imageBlock = content[imageIndex]
+      if (imageBlock.link !== healthIndicatorsLink) {
+        content[imageIndex] = { ...imageBlock, link: healthIndicatorsLink }
+        changed = true
+      }
+    }
+  }
+
+  return changed ? { ...caseStudy, content: content as PortableTextBlock[] } : caseStudy
 }
 
 export function CaseStudyContent({ initialData, slug }: Props) {
@@ -31,9 +100,13 @@ export function CaseStudyContent({ initialData, slug }: Props) {
     .map((child) => child.text || '')
     .join('')
     .trim()
+  const normalizedFirstContentText = firstContentText.toLowerCase()
   const hasLeadingClientSubtitle =
     !!caseStudy.client &&
-    firstContentText.toLowerCase() === `for ${caseStudy.client}`.toLowerCase()
+    (
+      normalizedFirstContentText === `for ${caseStudy.client}`.toLowerCase() ||
+      normalizedFirstContentText === `for the ${caseStudy.client}`.toLowerCase()
+    )
   const showClientSubtitle =
     !!caseStudy.client &&
     caseStudy.client !== 'GoInvo' &&
@@ -41,6 +114,7 @@ export function CaseStudyContent({ initialData, slug }: Props) {
   const normalizedCaseStudy = hasLeadingClientSubtitle
     ? { ...caseStudy, content: caseStudy.content?.slice(1) }
     : caseStudy
+  const transformedCaseStudy = transformCaseStudyForSlug(normalizedCaseStudy, slug)
 
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
   // minimize top/bottom cropping at desktop widths
@@ -83,7 +157,7 @@ export function CaseStudyContent({ initialData, slug }: Props) {
         </div>
       </Reveal>
 
-      <CaseStudyLayout caseStudy={normalizedCaseStudy} />
+      <CaseStudyLayout caseStudy={transformedCaseStudy} />
     </div>
   )
 }

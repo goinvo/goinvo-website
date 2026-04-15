@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { GovernmentCarousel } from './GovernmentCarousel'
 import { VotingCarousel } from './VotingCarousel'
 import './redesign-democracy.css'
@@ -1380,90 +1379,82 @@ export default function RedesignDemocracyPage() {
       {/* ============================================================ */}
       {/*  CREDITS: Author & Contributors                               */}
       {/* ============================================================ */}
-      <div className="credits-section px-8 max-[978px]:px-6">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Author */}
-          <div className="md:w-[65%]">
-            <Image
-              src="https://www.goinvo.com/old/images/people/dirk/dk_nofilter.jpg"
-              alt="Dirk Knemeyer"
-              width={600}
-              height={400}
-              className="w-full h-auto"
-            />
-            <div className="author-content">
-              <h3>Author</h3>
-              <h2 className="font-serif text-[1.75rem] sm:text-[2.25rem] font-light mb-2">
-                Dirk Knemeyer
-              </h2>
-              <p className="text-[20px] leading-snug">
-                Dirk Knemeyer is a social futurist and a founder of GoInvo. He
-                has provided consulting, design, and technology to some of the
-                best companies in the world including Apple, Microsoft, Oracle,
-                PayPal, and Shutterfly. Dirk&rsquo;s writings have been published
-                in places like Business Week and Core77. He has keynoted
-                conferences in Europe and the U.S. and spoken at venues like TEDx,
-                Humanity+, and South by Southwest. Dirk has participated on 15
-                boards in industries including healthcare, publishing, and
-                education. He holds a Master of Arts in Popular Culture from
-                Bowling Green State University and a Bachelor of Arts in English
-                from The University of Toledo.
-              </p>
+      <section className="bg-white py-8 mt-8">
+        <div className="credits-section px-8 max-[978px]:px-6">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Author */}
+            <div className="md:w-[65%]">
+              <Image
+                src="https://www.goinvo.com/old/images/people/dirk/dk_nofilter.jpg"
+                alt="Dirk Knemeyer"
+                width={600}
+                height={400}
+                className="w-full h-auto"
+              />
+              <div className="author-content">
+                <h3>Author</h3>
+                <h2 className="font-serif text-[1.75rem] sm:text-[2.25rem] font-light mb-2">
+                  Dirk Knemeyer
+                </h2>
+                <p className="text-[20px] leading-snug">
+                  Dirk Knemeyer is a social futurist and a founder of GoInvo. He
+                  has provided consulting, design, and technology to some of the
+                  best companies in the world including Apple, Microsoft, Oracle,
+                  PayPal, and Shutterfly. Dirk&rsquo;s writings have been published
+                  in places like Business Week and Core77. He has keynoted
+                  conferences in Europe and the U.S. and spoken at venues like TEDx,
+                  Humanity+, and South by Southwest. Dirk has participated on 15
+                  boards in industries including healthcare, publishing, and
+                  education. He holds a Master of Arts in Popular Culture from
+                  Bowling Green State University and a Bachelor of Arts in English
+                  from The University of Toledo.
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Contributors */}
-          <div className="md:w-[35%]">
-            <div className="contributors-box">
-              {contributors.map((c, idx) => (
-                <div key={c.name}>
-                  <div className="contributor">
-                    <div className="contributor-image">
-                      <Image
-                        src={IMG(c.image)}
-                        alt={c.name}
-                        width={80}
-                        height={80}
-                        className="w-full h-auto"
-                      />
+            {/* Contributors */}
+            <div className="md:w-[35%]">
+              <div className="contributors-box">
+                {contributors.map((c, idx) => (
+                  <div key={c.name}>
+                    <div className="contributor">
+                      <div className="contributor-image">
+                        <Image
+                          src={IMG(c.image)}
+                          alt={c.name}
+                          width={80}
+                          height={80}
+                          className="w-full h-auto"
+                        />
+                      </div>
+                      <div className="contributor-info">
+                        <h3>{c.role}</h3>
+                        <p>
+                          {c.name}
+                          <br />
+                          <small>
+                            <a
+                              href={`https://twitter.com/${c.twitter}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              @{c.twitter}
+                            </a>
+                          </small>
+                        </p>
+                      </div>
                     </div>
-                    <div className="contributor-info">
-                      <h3>{c.role}</h3>
-                      <p>
-                        {c.name}
-                        <br />
-                        <small>
-                          <a
-                            href={`https://twitter.com/${c.twitter}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            @{c.twitter}
-                          </a>
-                        </small>
-                      </p>
-                    </div>
+                    {idx < contributors.length - 1 && (
+                      <hr className="contributor-hr" />
+                    )}
                   </div>
-                  {idx < contributors.length - 1 && (
-                    <hr className="contributor-hr" />
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/*  NEWSLETTER                                                    */}
-      {/* ============================================================ */}
-      <section className="bg-[#f5f5f5] py-8 mt-8">
-        <div className="max-w-[900px] mx-auto px-8">
-          <div className="bg-white shadow-md py-6 px-4 md:px-8">
-            <NewsletterForm />
           </div>
         </div>
       </section>
+
     </div>
   )
 }
