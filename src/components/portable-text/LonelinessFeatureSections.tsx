@@ -491,7 +491,7 @@ export function LonelinessIsolationCostsSection() {
         </a>
       </div>
 
-      <h2 className="header-lg mb-4">Social isolation costs us...</h2>
+      <h2 className="header-lg mb-5">Social isolation costs us...</h2>
 
       <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-2 lg:gap-x-5">
         <div className="lg:pr-[20px]">
@@ -529,7 +529,7 @@ export function LonelinessRiskOverviewSection() {
     <section>
       <h2 className="header-lg mb-2">When we feel excluded, we lose our fight against disease.</h2>
 
-      <h4 className="font-sans text-base font-semibold">
+      <h4 className="mb-5 font-sans text-base font-semibold">
         It increases our risk for
         <RefSup target="references">3,4</RefSup>
       </h4>
@@ -550,7 +550,7 @@ export function LonelinessRiskOverviewSection() {
         </div>
       </div>
 
-      <h4 className="mt-8 font-sans text-base font-semibold">
+      <h4 className="mt-8 mb-5 font-sans text-base font-semibold">
         It increases impacts for our body&apos;s functions
         <RefSup target="references">4,5,6,7</RefSup>
       </h4>
@@ -562,13 +562,13 @@ export function LonelinessRiskOverviewSection() {
 export function LonelinessFeelingSection() {
   return (
     <section>
-      <h2 className="header-lg">It&apos;s not just a feeling.</h2>
+      <h2 className="header-lg mb-5">It&apos;s not just a feeling.</h2>
       <h4 className="mb-0 font-sans text-base font-semibold">Loneliness...</h4>
 
       <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-6 lg:grid-cols-2">
         {feelingCards.map((card) => (
           <div key={card.title} className="lg:pr-[20px]">
-            <h4 className="font-sans text-base font-semibold">{card.title}</h4>
+                <h4 className="mb-5 font-sans text-base font-semibold">{card.title}</h4>
             <p className="my-4 text-gray">{card.body}</p>
           </div>
         ))}
@@ -580,13 +580,13 @@ export function LonelinessFeelingSection() {
 export function LonelinessTimelineSection() {
   return (
     <section>
-      <h2 className="header-lg">The causes and consequences are unique to every person.</h2>
+      <h2 className="header-lg mb-5">The causes and consequences are unique to every person.</h2>
       <p className="my-4 text-gray">Take a look at how social connection varies across our lifespan</p>
 
       <div className="mt-8 border-l-[4px]" style={{ borderColor: ORANGE_LIGHT }}>
         {timelineStages.map((stage) => (
           <section key={stage.label} className="pl-0">
-            <h3 className="header-md mb-0 flex items-center gap-5">
+            <h3 className="header-md mb-[15px] flex items-center gap-5">
               <span
                 aria-hidden="true"
                 className="ml-[-11px] inline-block h-5 w-5 rounded-full border-[2px] bg-white"
@@ -606,7 +606,7 @@ export function LonelinessTimelineSection() {
                 </div>
                 <div className="pb-[30px] pl-5 lg:w-1/2 lg:pl-0">
                   <h4
-                    className={`mt-6 mb-2 font-sans text-base font-semibold ${item.titleClassName || ''}`.trim()}
+                    className={`mt-6 mb-5 font-sans text-base font-semibold ${item.titleClassName || ''}`.trim()}
                     style={item.titleStyle}
                   >
                     {item.title}
@@ -625,7 +625,7 @@ export function LonelinessTimelineSection() {
 export function LonelinessResilienceSection() {
   return (
     <section>
-      <h2 className="header-lg text-center">Resilience in Our Human Code</h2>
+      <h2 className="header-lg mb-5 text-center">Resilience in Our Human Code</h2>
       <p className="my-4 text-gray">
         While these are statistically relevant, humans have the ability to survive and surpass their circumstances to live
         full and healthy lives. Loneliness, and other social, circumstantial, and behavioral{' '}
@@ -636,7 +636,7 @@ export function LonelinessResilienceSection() {
       </p>
 
       <div className="my-[50px]">
-        <h4 className="font-sans text-base font-semibold">
+        <h4 className="mb-5 font-sans text-base font-semibold">
           Take Steps Now
           <RefSup target="fn-34">34</RefSup>
         </h4>

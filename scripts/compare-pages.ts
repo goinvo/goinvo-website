@@ -134,6 +134,67 @@ const GATSBY_CLASS_MEANING: Record<string, { font?: string; weight?: string; siz
   'button--block': { desc: 'Full-width block button' },
 }
 
+function countQuotes(content: string): number {
+  const matches = content.match(/<(?:blockquote|div|section)[^>]*(?:data-quote="true"|class(?:Name)?="[^"]*\bquote\b[^"]*")[^>]*>|<blockquote\b/gi) || []
+  return matches.length
+}
+
+function countSupCitations(content: string): number {
+  const supBlocks = content.match(/<sup\b[^>]*>[\s\S]*?<\/sup>/gi) || []
+  if (supBlocks.length === 0) {
+    return 0
+  }
+
+  return supBlocks.reduce((total, supBlock) => {
+    const links = supBlock.match(/<a[^>]*href="#(?:references|methodology)"/gi) || []
+    return total + (links.length > 0 ? links.length : 1)
+  }, 0)
+}
+
+const AUTHOR_SECTION_RE = />\s*(?:Authors?|Contributors?)\s*<\/h[1-4]>|id=["'](?:authors|credits)["']|class=["'][^"']*\b(?:author__image|author__bio|contributors?|contributor)\b[^"']*["']/i
+const REFERENCES_SECTION_RE = /id=["']references["']|>\s*(?:References|Sources)\s*<\/h[1-4]>|class=["'][^"']*\breferences\b[^"']*["']/i
+const NEWSLETTER_SECTION_RE = /subscribe\s*to\s*our\s*newsletter|newsletter/i
+
+function getSectionPositions(content: string) {
+  return {
+    authors: content.search(AUTHOR_SECTION_RE),
+    newsletter: content.search(NEWSLETTER_SECTION_RE),
+    references: content.search(REFERENCES_SECTION_RE),
+  }
+}
+
+function compareSectionOrder(
+  sectionA: keyof ReturnType<typeof getSectionPositions>,
+  sectionB: keyof ReturnType<typeof getSectionPositions>,
+  gatsbyPositions: ReturnType<typeof getSectionPositions>,
+  nextPositions: ReturnType<typeof getSectionPositions>,
+) {
+  const gatsbyA = gatsbyPositions[sectionA]
+  const gatsbyB = gatsbyPositions[sectionB]
+  const nextA = nextPositions[sectionA]
+  const nextB = nextPositions[sectionB]
+
+  if (gatsbyA < 0 || gatsbyB < 0 || nextA < 0 || nextB < 0) {
+    return null
+  }
+
+  const gatsbyHasABeforeB = gatsbyA < gatsbyB
+  const nextHasABeforeB = nextA < nextB
+  if (gatsbyHasABeforeB === nextHasABeforeB) {
+    return null
+  }
+
+  const labels = {
+    authors: 'Authors/Contributors',
+    newsletter: 'Newsletter',
+    references: 'References',
+  } satisfies Record<keyof ReturnType<typeof getSectionPositions>, string>
+
+  const expectedOrder = `${labels[sectionA]} ${gatsbyHasABeforeB ? 'before' : 'after'} ${labels[sectionB]}`
+  const actualOrder = `${labels[sectionA]} ${nextHasABeforeB ? 'before' : 'after'} ${labels[sectionB]}`
+  return `${actualOrder} in Next.js, but Gatsby renders ${expectedOrder}`
+}
+
 /** Check if Next.js classes match the expected styling for a Gatsby class */
 function checkClassMatch(gatsbyClasses: string, nextjsClasses: string): string[] {
   const issues: string[] = []
@@ -409,6 +470,11 @@ interface PageAnalysis {
   hasShadowCards: boolean
   bgSections: string[]
   videoWidthClasses: string[]
+  sectionPositions: {
+    authors: number
+    newsletter: number
+    references: number
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -534,7 +600,7 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
   // Check for key sections
   const hasMethodology = /id="methodology"|Methodology<\/h/i.test(src)
   const hasReferences = /<References|id="references"|sources-wrapper|Sources<\/h/i.test(src)
-  const hasAuthors = /<Author |id="authors"/i.test(src)
+  const hasAuthors = /<Author\b|AuthorSection|id=["'](?:authors|credits)["']|className=["'][^"']*\b(?:author|contributors?|contributor)\b/i.test(src)
 
   // Extract anchor IDs (id="...")
   const anchorIds: string[] = []
@@ -671,7 +737,7 @@ function crossReferenceGatsbySource(
     }
   }
   if (gatsbySrc.hasReferences) {
-    const hasRefsInNext = /id="references"|References<\/h|Sources<\/h|class="references"/i.test(content)
+    const hasRefsInNext = REFERENCES_SECTION_RE.test(content)
     if (!hasRefsInNext) {
       issues.push({
         severity: 'critical',
@@ -681,12 +747,12 @@ function crossReferenceGatsbySource(
     }
   }
   if (gatsbySrc.hasAuthors) {
-    const hasAuthorsInNext = /Authors?<\/h|class="author"|<Author|AuthorSection/i.test(content)
+    const hasAuthorsInNext = AUTHOR_SECTION_RE.test(content)
     if (!hasAuthorsInNext) {
       issues.push({
         severity: 'high',
         category: 'SRC_MISSING_SECTION',
-        message: 'Gatsby source has Authors section but it is missing from Next.js',
+        message: 'Gatsby source has an author/contributor section but it is missing from Next.js',
       })
     }
   }
@@ -705,24 +771,27 @@ function crossReferenceGatsbySource(
   // ---- SECTION ORDERING ----
   // Gatsby order: content → authors → newsletter/subscribe → references
   // Check that Authors comes before Newsletter, and Newsletter before References
-  const authorsIdx = content.search(/Authors<\/h2>/i)
-  const newsIdx = content.search(/subscribe.*newsletter|newsletter/i)
-  const refsIdx = content.search(/id="references"/i)
+  if (false) {
+    const authorsIdx = content.search(/Authors<\/h2>/i)
+    const newsIdx = content.search(/subscribe.*newsletter|newsletter/i)
+    const refsIdx = content.search(/id="references"/i)
 
-  if (authorsIdx > 0 && newsIdx > 0 && authorsIdx > newsIdx) {
+    if (authorsIdx > 0 && newsIdx > 0 && authorsIdx > newsIdx) {
     issues.push({
       severity: 'high',
       category: 'SECTION_ORDER',
       message: 'Authors section appears after Newsletter — expected order: content → authors → newsletter → references',
     })
-  }
-  if (newsIdx > 0 && refsIdx > 0 && newsIdx > refsIdx) {
+    }
+    if (newsIdx > 0 && refsIdx > 0 && newsIdx > refsIdx) {
     const isOverride = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
     issues.push({
       severity: isOverride ? 'low' : 'high',
       category: 'SECTION_ORDER',
       message: 'Newsletter appears after References — expected order: content → authors → newsletter → references',
     })
+    }
+
   }
 
   // ---- FULL-BLEED IMAGE CHECK ----
@@ -818,7 +887,7 @@ function crossReferenceGatsbySource(
 
   // ---- QUOTE COUNT ----
   if (gatsbySrc.quoteCount > 0) {
-    const nextQuotes = (content.match(/blockquote|class="[^"]*quote/gi) || []).length
+    const nextQuotes = countQuotes(content)
     if (nextQuotes === 0) {
       issues.push({
         severity: 'high',
@@ -830,7 +899,7 @@ function crossReferenceGatsbySource(
 
   // ---- SUPERSCRIPT COUNT ----
   if (gatsbySrc.supCount > 0) {
-    const nextSups = (content.match(/<sup/gi) || []).length
+    const nextSups = Math.max((content.match(/<sup/gi) || []).length, countSupCitations(content))
     const diff = gatsbySrc.supCount - nextSups
     if (diff > 0) {
       const isInteractive = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
@@ -916,6 +985,7 @@ function getContentArea(html: string): string {
 
 function analyzeHtml(html: string): PageAnalysis {
   const content = getContentArea(html)
+  const sectionPositions = getSectionPositions(content)
 
   const headings: PageElement[] = []
   for (let level = 1; level <= 4; level++) {
@@ -944,10 +1014,8 @@ function analyzeHtml(html: string): PageAnalysis {
 
   // Split images into content vs author/contributor
   const allImgs = (content.match(/<img\b/gi) || []).length
-  // Author section images: inside a section with "Author" heading or contributor grid
-  // Heuristic: count imgs that appear after the last content section and before newsletter
-  const authorSectionMatch = content.match(/(?:Authors?|Contributors?)<\/h[23]>[\s\S]*$/i)
-  const authorImgs = authorSectionMatch ? (authorSectionMatch[0].match(/<img\b/gi) || []).length : 0
+  const authorSectionStart = sectionPositions.authors
+  const authorImgs = authorSectionStart >= 0 ? (content.slice(authorSectionStart).match(/<img\b/gi) || []).length : 0
   const contentImgs = allImgs - authorImgs
 
   return {
@@ -959,20 +1027,21 @@ function analyzeHtml(html: string): PageAnalysis {
     iframes: (content.match(/<iframe\b/gi) || []).length,
     uls: (content.match(/<ul\b/gi) || []).length,
     ols: (content.match(/<ol\b/gi) || []).length,
-    sups: (content.match(/<sup\b/gi) || []).length,
-    quotes: (content.match(/<blockquote\b/gi) || []).length,
+    sups: Math.max((content.match(/<sup\b/gi) || []).length, countSupCitations(content)),
+    quotes: countQuotes(content),
     paragraphs: (content.match(/<p\b/gi) || []).length,
     buttons,
     links,
-    hasReferences: /id="references"|<References|class="references"|Sources<\/h|References<\/h/i.test(content),
-    hasAuthors: /<Author|class="author"/i.test(content) || /Authors?<\/h/i.test(content),
-    hasNewsletter: /subscribe|newsletter/i.test(content),
+    hasReferences: sectionPositions.references >= 0,
+    hasAuthors: sectionPositions.authors >= 0,
+    hasNewsletter: sectionPositions.newsletter >= 0,
     hasShadowCards: /shadow-card|shadow.*rgba.*0\.08/i.test(content),
     bgSections: [
       ...(content.match(/background--blue|bg-blue|bg-secondary(?!\/)/gi) || []),
-      ...(content.match(/background--gray|bg-gray-lightest/gi) || []),
+      ...(content.match(/background--gray|bg-gray-light(?:est)?/gi) || []),
     ],
     videoWidthClasses,
+    sectionPositions,
   }
 }
 
@@ -1206,7 +1275,21 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
     issues.push({ severity: 'critical', category: 'MISSING_SECTION', message: 'References section missing from Next.js' })
   }
   if (gatsby.hasAuthors && !nextjs.hasAuthors) {
-    issues.push({ severity: 'high', category: 'MISSING_SECTION', message: 'Authors section missing from Next.js' })
+    issues.push({ severity: 'high', category: 'MISSING_SECTION', message: 'Author/contributor section missing from Next.js' })
+  }
+  const sectionPairs: Array<[keyof PageAnalysis['sectionPositions'], keyof PageAnalysis['sectionPositions']]> = [
+    ['authors', 'newsletter'],
+    ['newsletter', 'references'],
+    ['authors', 'references'],
+  ]
+  for (const [sectionA, sectionB] of sectionPairs) {
+    const orderMismatch = compareSectionOrder(sectionA, sectionB, gatsby.sectionPositions, nextjs.sectionPositions)
+    if (!orderMismatch) continue
+    issues.push({
+      severity: 'high',
+      category: 'SECTION_ORDER',
+      message: orderMismatch,
+    })
   }
   // Shadow cards are part of the Next.js template (related content cards),
   // not a per-page content issue — skip this check

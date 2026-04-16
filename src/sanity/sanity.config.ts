@@ -5,6 +5,8 @@ import { schemaTypes } from './schemas'
 import { apiVersion, dataset, projectId } from './env'
 import { gettingStartedPlugin } from './tools/gettingStarted'
 import { feedbackPlugin } from './tools/feedbackTool'
+import { featureArticleTemplates, resolveFeatureNewDocumentOptions } from './featureTemplates'
+import { featureAuthoringBadge } from './featureBadges'
 import './studio.css'
 
 export default defineConfig({
@@ -26,7 +28,12 @@ export default defineConfig({
     gettingStartedPlugin(),
     feedbackPlugin(),
   ],
+  document: {
+    badges: (prev) => [...prev, featureAuthoringBadge],
+    newDocumentOptions: resolveFeatureNewDocumentOptions,
+  },
   schema: {
     types: schemaTypes,
+    templates: (prev) => [...prev, ...featureArticleTemplates],
   },
 })

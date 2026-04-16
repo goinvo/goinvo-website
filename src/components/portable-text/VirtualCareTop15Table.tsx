@@ -1,3 +1,5 @@
+import { DataTable, type DataTableRow } from '@/components/ui/DataTable'
+
 type IconName = 'smartphone' | 'clinic' | 'ekg' | 'bloodPressure' | 'required' | 'optional'
 
 interface CellValue {
@@ -220,31 +222,59 @@ export function VirtualCareTop15Table() {
 }
 
 export function VirtualCareTimeToDiagnosis() {
+  const rows: DataTableRow[] = [
+    {
+      key: 'waiting-appointment',
+      cells: [
+        'Waiting for appointment',
+        <>
+          24 days
+          <sup>
+            <a href="#references" className="ml-[0.18em] text-primary no-underline hover:underline">3</a>
+          </sup>
+        </>,
+      ],
+    },
+    {
+      key: 'waiting-clinician',
+      cells: [
+        'Waiting for clinician in office',
+        <>
+          41 minutes
+          <sup>
+            <a href="#references" className="ml-[0.18em] text-primary no-underline hover:underline">4</a>
+          </sup>
+        </>,
+      ],
+    },
+    {
+      key: 'consultation',
+      cells: [
+        'Consultation with clinician',
+        <>
+          18.21 minutes
+          <sup>
+            <a href="#references" className="ml-[0.18em] text-primary no-underline hover:underline">4</a>
+          </sup>
+        </>,
+      ],
+    },
+    {
+      key: 'total',
+      cells: ['Total', '24 days and 59.21 minutes'],
+    },
+  ]
+
   return (
-    <div className="my-8">
-      <table width="100%" className="w-full text-base text-gray">
-        <tbody>
-          <tr>
-            <td colSpan={2} className="pb-2 pr-[5px] align-top">Time-to-diagnosis</td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-[5px] align-top">Waiting for appointment</td>
-            <td className="py-2 pr-[5px] align-top">24 days<sup><a href="#references" className="text-primary no-underline hover:underline">3</a></sup></td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-[5px] align-top">Waiting for clinician in office</td>
-            <td className="py-2 pr-[5px] align-top">41 minutes<sup><a href="#references" className="text-primary no-underline hover:underline">4</a></sup></td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-[5px] align-top">Consultation with clinician</td>
-            <td className="py-2 pr-[5px] align-top">18.21 minutes<sup><a href="#references" className="text-primary no-underline hover:underline">4</a></sup></td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-[5px] align-top">Total</td>
-            <td className="py-2 pr-[5px] align-top">24 days and 59.21 minutes</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      sectionTitle="Time-to-diagnosis"
+      rows={rows}
+      stripedRows
+      tone="gray"
+      columns={[
+        { label: '', width: '70%' },
+        { label: '', width: '30%' },
+      ]}
+    />
   )
 }
