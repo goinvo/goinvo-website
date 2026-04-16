@@ -11,6 +11,7 @@ import { Quote } from '@/components/ui/Quote'
 import { Divider } from '@/components/ui/Divider'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
+import { DataTable } from '@/components/ui/DataTable'
 import { References } from '@/components/ui/References'
 import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
@@ -22,6 +23,7 @@ import {
   LonelinessTimelineSection,
 } from '@/components/portable-text/LonelinessFeatureSections'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
+import { parseDataTableSource } from '@/lib/dataTable'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -258,17 +260,35 @@ const components: PortableTextComponents = {
       const perItemBg = bg === 'gray' ? 'bg-gray-lightest' : bg === 'teal' ? 'bg-secondary/10' : ''
       const renderCitation = (item: { refNumber?: string; refTarget?: string }) => (
         item.refNumber ? (
-          <>
-            <sup>
-              <a
-                href={`#${item.refTarget || 'references'}`}
-                className="!text-primary !no-underline hover:!underline text-xs"
-              >
-                {' '}{item.refNumber}
-              </a>
-            </sup>{' '}
-          </>
+          <sup className="ml-[0.18em]">
+            <a
+              href={`#${item.refTarget || 'references'}`}
+              className="!text-primary !no-underline hover:!underline text-xs"
+            >
+              {item.refNumber}
+            </a>
+          </sup>
         ) : null
+      )
+      const renderStatValue = (
+        item: { stat: string; unit?: string; annotation?: string },
+        {
+          containerClassName,
+          statClassName,
+          unitClassName,
+          annotationClassName,
+        }: {
+          containerClassName: string
+          statClassName: string
+          unitClassName: string
+          annotationClassName: string
+        },
+      ) => (
+        <div className={containerClassName}>
+          <span className={statClassName}>{item.stat}</span>
+          {item.unit && <span className={unitClassName}>{`\u00A0${item.unit}`}</span>}
+          {item.annotation && <span className={annotationClassName}>{`\u00A0${item.annotation}`}</span>}
+        </div>
       )
 
       // Determine grid classes based on variant
@@ -315,13 +335,14 @@ const components: PortableTextComponents = {
               variant === 'statBand' ? (
                 <div key={i} className="text-left lg:pr-5">
                   <div className={cn('w-fit', perItemBg && 'px-4 pt-4 pb-2', perItemBg || '')}>
-                    <div className="flex flex-wrap items-end gap-x-1">
-                      <span className="header-xl mb-0 text-black">{item.stat}</span>
-                      {item.unit && <span className="header-lg mb-0 text-black">{item.unit}</span>}
-                      {item.annotation && <span className="header-xl mb-0 text-black">{` ${item.annotation}`}</span>}
-                    </div>
+                    {renderStatValue(item, {
+                      containerClassName: 'flex flex-wrap items-end',
+                      statClassName: 'header-xl mb-0 text-black',
+                      unitClassName: 'header-lg mb-0 text-black',
+                      annotationClassName: 'header-xl mb-0 text-black',
+                    })}
                   </div>
-                  <p className="max-w-[260px] -mt-3 text-gray px-0">
+                  <p className="max-w-[260px] mt-px text-gray px-0">
                     {item.description}
                     {renderCitation(item)}
                   </p>
@@ -332,12 +353,21 @@ const components: PortableTextComponents = {
                     'p-4 mb-2',
                     perItemBg || '',
                   )}>
-                    <span className={cn(
-                      'block font-serif text-[2.25rem]',
-                      perItemBg ? '' : 'text-primary',
-                    )}>
-                      {item.stat}
-                    </span>
+                    {renderStatValue(item, {
+                      containerClassName: 'flex flex-wrap items-end justify-center',
+                      statClassName: cn(
+                        'font-serif text-[2.25rem]',
+                        perItemBg ? 'text-black' : 'text-primary',
+                      ),
+                      unitClassName: cn(
+                        'font-serif text-[1.5rem] leading-none',
+                        perItemBg ? 'text-black' : 'text-primary',
+                      ),
+                      annotationClassName: cn(
+                        'font-serif text-[1.75rem] leading-none',
+                        perItemBg ? 'text-black' : 'text-primary',
+                      ),
+                    })}
                   </div>
                   {variant === 'legacyRow' ? (
                     <span className="block px-1 text-base text-gray">
@@ -353,6 +383,40 @@ const components: PortableTextComponents = {
                 </div>
               )
             ))}
+          </div>
+        </ArticleReveal>
+      )
+    },
+    dataTable: ({ value }) => {
+      const parsedRows = parseDataTableSource(value?.sourceData, value?.delimiter || 'auto')
+
+      if (!parsedRows.length) return null
+
+      const useFirstRowAsHeader = value?.useFirstRowAsHeader !== false
+      const headerRow = useFirstRowAsHeader ? parsedRows[0] : undefined
+      const bodyRows = useFirstRowAsHeader ? parsedRows.slice(1) : parsedRows
+
+      if (!bodyRows.length) return null
+
+      return (
+        <ArticleReveal intensity="visual">
+          <div>
+            <DataTable
+              sectionTitle={value?.title}
+              columns={headerRow?.map((cell: string) => ({ label: cell || '' }))}
+              rows={bodyRows.map((row: string[], rowIndex: number) => ({
+                key: value?._key ? `${value._key}-${rowIndex}` : `data-table-row-${rowIndex}`,
+                cells: row,
+              }))}
+              stripedRows={value?.stripedRows !== false}
+              fullWidth={Boolean(value?.fullWidth)}
+              tone={value?.tone === 'default' ? 'default' : 'gray'}
+            />
+            {value?.caption ? (
+              <p className={cn('mt-2 text-base', value?.tone === 'default' ? 'text-black' : 'text-gray')}>
+                {value.caption}
+              </p>
+            ) : null}
           </div>
         </ArticleReveal>
       )
@@ -1088,7 +1152,7 @@ const components: PortableTextComponents = {
     // New unified text color annotation
     textColor: ({ children, value }) => {
       const colorMap: Record<string, string> = {
-        teal: 'text-secondary',
+        teal: 'text-tertiary',
         orange: 'text-primary',
         charcoal: 'text-tertiary',
         gray: 'text-gray',
@@ -1128,6 +1192,16 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    h2LargeCenteredSpacious: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-[30px] text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+        </ArticleReveal>
+      )
+    },
     // h2Center is deprecated — use sectionTitle instead. Kept as alias for backwards compat.
     h2Center: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1163,6 +1237,11 @@ const components: PortableTextComponents = {
     h3: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
+      </ArticleReveal>
+    ),
+    h3NoBottom: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-0">{children}</h3>
       </ArticleReveal>
     ),
     h4Bullet: ({ children }) => (

@@ -20,6 +20,7 @@ const govtTypes = [
     id: 'theocracy',
     label: 'Theocracy',
     color: 'slide0',
+    image: IMG('examples/king-tang.jpg'),
     description:
       'A deity was recognized as the official ruler and policy was set by officials who claimed divine guidance. These leaders largely came from privileged groups and families.',
     strength:
@@ -37,6 +38,7 @@ const govtTypes = [
     id: 'oligarchy',
     label: 'Oligarchy',
     color: 'slide1',
+    image: IMG('examples/leonidas.jpg'),
     description:
       'Control was exercised by a small group of people whose authority was based on special status related to power, wealth, education, or family.',
     strength: 'Efficient application of power by a theoretically enlightened group.',
@@ -52,6 +54,7 @@ const govtTypes = [
     id: 'feudalism',
     label: 'Feudalism',
     color: 'slide2',
+    image: IMG('examples/oda-nobunaga.jpg'),
     description:
       'Powerful regional families lorded over their territory and the people therein, with sovereignty a product of military might.',
     strength: 'Civilians had a high degree of social security and stability.',
@@ -68,6 +71,7 @@ const govtTypes = [
     id: 'a-monarchy',
     label: 'Absolute Monarchy',
     color: 'slide3',
+    image: IMG('examples/louie.jpg'),
     description: 'A single individual held most of the power over a nation-state.',
     strength:
       'A single ruler was able to act decisively, set a vision, and execute it without compromise.',
@@ -84,6 +88,7 @@ const govtTypes = [
     id: 'p-monarchy',
     label: 'Parliamentary Monarchy',
     color: 'slide4',
+    image: IMG('examples/victoria.jpg'),
     description:
       'A ruling monarch worked with a democratically elected parliament, all within a code of laws.',
     strength:
@@ -101,6 +106,7 @@ const govtTypes = [
     id: 'sps',
     label: 'Single-Party State',
     color: 'slide5',
+    image: IMG('examples/stalin-lenin.jpg'),
     description:
       'Most western dictatorships of the 20th century were established where a single political party took control of the government and, to varying degrees, independently made decisions relating to rulers and laws.',
     strength:
@@ -303,7 +309,7 @@ export default function RedesignDemocracyPage() {
       {/* ============================================================ */}
       {/*  SECTION 1: INTRODUCTION                                      */}
       {/* ============================================================ */}
-      <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem]">
+      <div className="article-band">
         <section id="section1" className="content-section pt-4 mb-12">
           {/* Social Sharing */}
           <div className="social-buttons mb-8">
@@ -323,6 +329,14 @@ export default function RedesignDemocracyPage() {
               rel="noopener noreferrer"
             >
               Twitter
+            </a>
+            <a
+              className="plus"
+              href="https://plus.google.com/share?url=http%3A%2F%2Fgoinvo.com%2Ffeatures%2Fredesign-democracy%2F"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Google+
             </a>
             <a
               className="in"
@@ -397,7 +411,7 @@ export default function RedesignDemocracyPage() {
       {/* ============================================================ */}
       {/*  SECTION 2: THE ORIGINS OF DEMOCRACY                          */}
       {/* ============================================================ */}
-      <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem]">
+      <div className="article-band">
         <section id="section2" className="content-section pt-4 mb-12">
           <header>
             <h3 className="font-serif text-[1.25rem] leading-tight sm:text-[1.75rem]">
@@ -433,8 +447,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('population.jpg')}
               alt="Population chart showing 25000 male citizens, 46500 menial laborers, 115000 slaves, and 129000 women and children that were living in ancient Greece."
-              width={800}
-              height={400}
+              width={978}
+              height={401}
               className="w-full h-auto"
             />
           </div>
@@ -444,8 +458,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('greek.jpg')}
               alt="Key technologies from ancient Greece: thermometers, coin money, and catapults."
-              width={400}
-              height={300}
+              width={830}
+              height={484}
               className="w-full h-auto"
             />
             <p className="caption-box teal mt-0 text-sm">
@@ -482,7 +496,7 @@ export default function RedesignDemocracyPage() {
         <GovernmentCarousel govtTypes={govtTypes} />
       </div>
 
-      <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem]">
+      <div className="article-band">
         <p>
           Systems of government are characterized by a broad and complicated
           range of characteristics. This complexity can make it difficult to
@@ -507,12 +521,12 @@ export default function RedesignDemocracyPage() {
 
         <div className="my-6">
           <Image
-            src={IMG('circle.jpg')}
-            alt="Chart showing rings depicting 'Myself and family' at center, through 'Friends', interests, community, geography, national identity, and finally 'All of humanity'."
-            width={800}
-            height={500}
-            className="w-full h-auto"
-          />
+              src={IMG('circle.jpg')}
+              alt="Chart showing rings depicting 'Myself and family' at center, through 'Friends', interests, community, geography, national identity, and finally 'All of humanity'."
+              width={1161}
+              height={695}
+              className="w-full h-auto"
+            />
         </div>
 
         {/* Winston Churchill aside */}
@@ -591,8 +605,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('hands.jpg')}
               alt="A graphic of a heart being held by two hands."
-              width={400}
-              height={300}
+              width={830}
+              height={416}
               className="w-full h-auto"
             />
             <p className="caption-box yellow mt-0 text-sm">
@@ -673,8 +687,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('stalin.jpg')}
               alt="Josef Stalin"
-              width={400}
-              height={300}
+              width={825}
+              height={352}
               className="w-full h-auto"
             />
             <p className="caption-box blue mt-0 text-sm">
@@ -736,8 +750,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('citizens.jpg')}
               alt="Chart depicting the ratio of citizens participating in government: one-half in Ancient Athens, 1 in ten-thousand in the 1790 United States, and 1 in three-hundred eighty-four thousand in the 2014 United States."
-              width={800}
-              height={400}
+              width={981}
+              height={346}
               className="w-full h-auto"
             />
           </div>
@@ -747,8 +761,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('moon.jpg')}
               alt="An astronaut on the moon, waving at the photographer."
-              width={400}
-              height={300}
+              width={828}
+              height={383}
               className="w-full h-auto"
             />
             <p className="caption-box teal mt-0 text-sm">
@@ -829,8 +843,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('states-chart.jpg')}
               alt="Chart showing states that have vastly different numbers of representatives: 1 each for Colorado, North and South Dakota, Vermont, Delaware and Alaska, yet 53 representatives for the state of California."
-              width={800}
-              height={400}
+              width={1196}
+              height={576}
               className="w-full h-auto"
             />
           </div>
@@ -947,8 +961,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('legislature.jpg')}
               alt="Chart showing how special interest groups and big business can get in the way of citizens access to legislature and therefore overall democratization of the law-making process."
-              width={800}
-              height={500}
+              width={817}
+              height={515}
               className="w-full h-auto"
             />
           </div>
@@ -968,21 +982,21 @@ export default function RedesignDemocracyPage() {
       {/*  FADED SECTION: Basic model of current legislature            */}
       {/* ============================================================ */}
       <div className="faded-section">
-        <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem] clearfix">
+        <div className="article-band faded-shell clearfix">
           {/* Aside: Capitol + two-states */}
           <div className="aside-image clearfix">
             <Image
               src={IMG('capitol.jpg')}
               alt="US Capitol Building"
-              width={400}
-              height={300}
+              width={691}
+              height={349}
               className="w-full h-auto mb-4"
             />
             <Image
               src={IMG('two-states.jpg')}
               alt="Map showing Robert F. Kennedy's home state vs. the state he was a senator in."
-              width={400}
-              height={200}
+              width={693}
+              height={372}
               className="w-full h-auto"
             />
             <p className="caption-box tan mt-0 text-sm">
@@ -1057,7 +1071,7 @@ export default function RedesignDemocracyPage() {
       {/* ============================================================ */}
       {/*  SECTION 5: THE DIGITAL SOLUTION                              */}
       {/* ============================================================ */}
-      <div className="max-w-[60%] mx-auto px-[5rem] max-[860px]:max-w-full max-[540px]:px-[2rem]">
+      <div className="article-band">
         <section id="section5" className="content-section pt-4 mb-0">
           <header>
             <h3 className="font-serif text-[1.25rem] leading-tight sm:text-[1.75rem]">
@@ -1071,8 +1085,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('phones.jpg')}
               alt="Graphic of different smartphones fanned out."
-              width={400}
-              height={300}
+              width={830}
+              height={374}
               className="w-full h-auto"
             />
             <p className="caption-box orange mt-0 text-sm">
@@ -1145,8 +1159,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('flow-icons.jpg')}
               alt="Flowchart showing how legislation could be voted on by being proposed by governments, but then being passed along to the citizens for voting through their handheld devices."
-              width={400}
-              height={600}
+              width={881}
+              height={2318}
               className="w-full h-auto"
             />
           </div>
@@ -1269,8 +1283,8 @@ export default function RedesignDemocracyPage() {
             <Image
               src={IMG('leaders.jpg')}
               alt="Photographs of Stephen Hawking, Carl Sagan, Clara Barton, and Henry Ford."
-              width={400}
-              height={300}
+              width={830}
+              height={565}
               className="w-full h-auto"
             />
             <p className="caption-box green mt-0 text-sm">
@@ -1359,6 +1373,14 @@ export default function RedesignDemocracyPage() {
           rel="noopener noreferrer"
         >
           Twitter
+        </a>
+        <a
+          className="plus"
+          href="https://plus.google.com/share?url=http%3A%2F%2Fgoinvo.com%2Ffeatures%2Fredesign-democracy%2F"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Google+
         </a>
         <a
           className="in"

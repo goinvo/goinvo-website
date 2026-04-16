@@ -5,6 +5,7 @@ export interface FeatureSectionBackgroundFallback {
   authorLayout?: 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list'
   newsletterBackground: SectionBackground
   newsletterCardWidth?: 'standard' | 'narrow'
+  peopleSectionPosition?: 'beforeNewsletter' | 'afterNewsletter'
   contributorsBackground?: SectionBackground
   contributorsLayout?: 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list'
   showPageMeta?: boolean
@@ -59,6 +60,7 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   'patient-centered-consent': {
     authorBackground: 'white',
     newsletterBackground: 'gray',
+    peopleSectionPosition: 'afterNewsletter',
   },
   vapepocolypse: {
     authorBackground: 'white',
@@ -72,6 +74,7 @@ export const featureSectionBackgroundFallbacks: Record<string, FeatureSectionBac
   'healthcare-dollars': {
     authorBackground: 'white',
     newsletterBackground: 'gray',
+    peopleSectionPosition: 'afterNewsletter',
     portableTextVariant: 'gray-body',
   },
   'healthcare-ai': {

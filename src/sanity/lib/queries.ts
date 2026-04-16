@@ -182,6 +182,7 @@ export const featureBySlugQuery = groq`
     contributorsLayout,
     contributorsBackground,
     newsletterBackground,
+    peopleSectionPosition,
     specialThanks,
     showAboutGoInvo,
     aboutGoInvoPosition,

@@ -12,6 +12,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
+import { isCodeAssistedFeatureSlug, usesLegacyFeatureTransforms } from '@/lib/featureAuthoring'
 import { featureSectionBackgroundFallbacks } from '@/lib/featureSectionBackgroundFallbacks'
 import { findPortableHeading, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
@@ -633,13 +634,52 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
 
   if (slug === 'virtual-care') {
     if (content.some((block: any) => block?._type === 'results')) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      return content
+      return content.map((block: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        const text = textFromPortableBlock(block)
+        if (
+          block?._type === 'block' &&
+          (
+            text === 'Half of face-to-face clinical office visits can be conducted virtually.' ||
+            text === 'Care must go virtual' ||
+            text.includes('Healthcare delayed is healthcare denied')
+          )
+        ) {
+          return { ...block, style: 'h4LegacySm' }
+        }
+        if (block?._type === 'block' && text === 'The Top 15 Encounters Breakdown') {
+          return { ...block, style: 'h3NoBottom' }
+        }
+        if (block?._type === 'block' && text === 'Methodology') {
+          return { ...block, style: 'h2LargeCenteredSpacious' }
+        }
+        return block
+      })
     }
 
     const faceToFaceText = 'face-to-face clinical office visits every year'
     const virtualText = 'can be conducted virtually'
     const nextContent = [...content]
     const blockText = (block: any) => textFromPortableBlock(block) // eslint-disable-line @typescript-eslint/no-explicit-any
+    const applyVirtualCareHeadingStyles = (blocks: any[]) => blocks.map((block) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      const text = blockText(block)
+      if (
+        block?._type === 'block' &&
+        (
+          text === 'Half of face-to-face clinical office visits can be conducted virtually.' ||
+          text === 'Care must go virtual' ||
+          text.includes('Healthcare delayed is healthcare denied')
+        )
+      ) {
+        return { ...block, style: 'h4LegacySm' }
+      }
+      if (block?._type === 'block' && text === 'The Top 15 Encounters Breakdown') {
+        return { ...block, style: 'h3NoBottom' }
+      }
+      if (block?._type === 'block' && text === 'Methodology') {
+        return { ...block, style: 'h2LargeCenteredSpacious' }
+      }
+      return block
+    })
 
     const resultsBlock = {
       _key: 'virtual-care-results-band',
@@ -680,15 +720,15 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
 
     if (faceToFaceIndex >= 0 && virtualIndex === faceToFaceIndex + 1) {
       nextContent.splice(faceToFaceIndex, 2, resultsBlock as any) // eslint-disable-line @typescript-eslint/no-explicit-any
-      return nextContent
+      return applyVirtualCareHeadingStyles(nextContent)
     }
 
     if (introIndex >= 0) {
       nextContent.splice(introIndex + 1, 0, resultsBlock as any) // eslint-disable-line @typescript-eslint/no-explicit-any
-      return nextContent
+      return applyVirtualCareHeadingStyles(nextContent)
     }
 
-    return [resultsBlock as any, ...nextContent] // eslint-disable-line @typescript-eslint/no-explicit-any
+    return applyVirtualCareHeadingStyles([resultsBlock as any, ...nextContent]) // eslint-disable-line @typescript-eslint/no-explicit-any
   }
 
   if (slug === 'fraud-waste-abuse-in-healthcare') {
@@ -737,15 +777,9 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       'Treating explainability, limitations, and feedback loops as primary requirements, not compliance afterthoughts.',
       'Measuring success not just in model performance, but in sustained, real‑world use and satisfaction across clinical teams',
     ])
-    const plainBulletItems = new Set([
-      'Bringing clinicians, coders, nurses, and patients into the design process from the start.',
-      'Treating explainability, limitations, and feedback loops as primary requirements, not compliance afterthoughts.',
-      'Measuring success not just in model performance, but in sustained, real‑world use and satisfaction across clinical teams',
-    ])
-
-    return content.map((block) => {
-      const normalized = normalizeSupFollowerSpacing(block)
-      const text = textFromPortableBlock(normalized)
+      return content.map((block) => {
+        const normalized = normalizeSupFollowerSpacing(block)
+        const text = textFromPortableBlock(normalized)
 
       if (normalized?._type === 'block' && sectionHeadings.has(text)) {
         return {
@@ -755,12 +789,34 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       }
 
       if (normalized?._type === 'block' && bulletItems.has(text)) {
-        return toBulletListItem(normalized, 1, plainBulletItems.has(text) ? 'plainBullet' : 'bullet')
+        return toBulletListItem(normalized)
       }
 
-      if (normalized?._type === 'block' && normalized.style === 'h4' && /^\d+\.\s/.test(text) && Array.isArray(normalized.children) && normalized.children[0]?.text) {
-        return {
-          ...normalized,
+        if (normalized?._type === 'block' && text === "To unlock AI's promise, healthcare needs something different: AI deliberately designed to earn trust.") {
+          return {
+            _key: normalized._key,
+            _type: 'quote',
+            text,
+            author: '',
+            role: '',
+          }
+        }
+
+        if (
+          normalized?._type === 'quote' &&
+          typeof normalized.text === 'string' &&
+          normalized.text.startsWith('Studies of AI decision support tools show that layered explainability improves acceptance without overwhelming users') &&
+          normalized.text.includes('The goal is not to teach every user data science')
+        ) {
+          return {
+            ...normalized,
+            text: 'Studies of AI decision support tools show that layered explainability improves acceptance without overwhelming users, especially when explanations use familiar clinical concepts instead of raw model internals.',
+          }
+        }
+
+        if (normalized?._type === 'block' && normalized.style === 'h4' && /^\d+\.\s/.test(text) && Array.isArray(normalized.children) && normalized.children[0]?.text) {
+          return {
+            ...normalized,
           style: 'h4LegacySm',
           children: normalized.children.map((child: any, index: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
             if (index !== 0 || typeof child?.text !== 'string') {
@@ -1129,18 +1185,23 @@ export default async function VisionFeaturePage({ params }: Props) {
     ? 'mx-auto px-4 lg:px-4'
     : `max-width ${widthClass} content-padding mx-auto`
   const articleContainerStyle = useLegacyFacesLayout ? { maxWidth: '680px' } : undefined
-  const backgroundFallbacks = featureSectionBackgroundFallbacks[slug]
+  const usesCodeAssistedCms = isCodeAssistedFeatureSlug(slug)
+  const usesLegacyTransforms = usesLegacyFeatureTransforms(slug)
+  const backgroundFallbacks = usesCodeAssistedCms ? featureSectionBackgroundFallbacks[slug] : undefined
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
   const showPageMeta = backgroundFallbacks?.showPageMeta ?? (feature.showPageMeta !== false)
-  const transformedContributors = transformFeatureContributorsForSlug(slug, feature.contributors as any)
+  const transformedContributors = usesLegacyTransforms
+    ? transformFeatureContributorsForSlug(slug, feature.contributors as any)
+    : feature.contributors
   const authorVariant = (backgroundFallbacks?.authorLayout || feature.authorLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const contributorsVariant = (backgroundFallbacks?.contributorsLayout || feature.contributorsLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
-  const authorBackground = resolveSectionBackground(feature.authorBackground, backgroundFallbacks?.authorBackground || 'gray')
+  const authorBackground = resolveSectionBackground(feature.authorBackground, backgroundFallbacks?.authorBackground || 'white')
   const contributorsBackground = resolveSectionBackground(
     feature.contributorsBackground,
     backgroundFallbacks?.contributorsBackground || 'white'
   )
   const newsletterBackground = resolveSectionBackground(feature.newsletterBackground, backgroundFallbacks?.newsletterBackground || 'white')
+  const peopleSectionPosition = feature.peopleSectionPosition || backgroundFallbacks?.peopleSectionPosition || 'beforeNewsletter'
   const aboutGoInvoSection = feature.showAboutGoInvo ? (
     <section className="pb-12">
       <div className={articleContainerClassName} style={articleContainerStyle}>
@@ -1207,16 +1268,23 @@ export default async function VisionFeaturePage({ params }: Props) {
       {/* Content (without references — rendered separately after newsletter) */}
       {feature.content && (() => {
         let content = feature.content
-        content = stripTitleHeading(content, feature.title)
-        const authorHeading = feature.authors && feature.authors.length > 0
-          ? findPortableHeading(content as any[], ['Authors', 'Author'])
-          : undefined
-        if (feature.authors && feature.authors.length > 0) {
+        let authorHeading: string | undefined
+
+        if (usesCodeAssistedCms) {
+          content = stripTitleHeading(content, feature.title)
+        }
+
+        if (usesCodeAssistedCms && feature.authors && feature.authors.length > 0) {
+          authorHeading = findPortableHeading(content as any[], ['Authors', 'Author'])
           content = stripAuthorHeading(content, {
             stripContributors: (transformedContributors?.length ?? 0) > 0,
           })
         }
-        content = transformFeatureContentForSlug(slug, content as any)
+
+        if (usesLegacyTransforms) {
+          content = transformFeatureContentForSlug(slug, content as any)
+        }
+
         const mainContent = content.filter((b: any) => b._type !== 'references')
         const referencesContent = content
           .filter((b: any) => b._type === 'references')
@@ -1225,21 +1293,10 @@ export default async function VisionFeaturePage({ params }: Props) {
               ? { ...block, background: backgroundFallbacks.referencesBackground }
               : block
           ))
-        const portableTextVariant = backgroundFallbacks?.portableTextVariant || (slug === 'virtual-care' ? 'gray-body' : undefined)
-
-        return (
+        const portableTextVariant = backgroundFallbacks?.portableTextVariant
+          || (usesLegacyTransforms && slug === 'virtual-care' ? 'gray-body' : undefined)
+        const peopleSections = (
           <>
-            <section className="pb-12">
-              <div className={articleContainerClassName} style={articleContainerStyle}>
-                <PortableTextRenderer
-                  content={mainContent}
-                  variant={portableTextVariant}
-                  bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined}
-                />
-              </div>
-            </section>
-
-            {/* Authors */}
             {feature.authors && feature.authors.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
@@ -1253,7 +1310,6 @@ export default async function VisionFeaturePage({ params }: Props) {
               </section>
             )}
 
-            {/* Contributors */}
             {transformedContributors && transformedContributors.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
@@ -1267,7 +1323,6 @@ export default async function VisionFeaturePage({ params }: Props) {
               </section>
             )}
 
-            {/* Special Thanks / Contributors (plain text) */}
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
@@ -1276,6 +1331,22 @@ export default async function VisionFeaturePage({ params }: Props) {
                 </div>
               </section>
             )}
+          </>
+        )
+
+        return (
+          <>
+            <section className="pb-12">
+              <div className={articleContainerClassName} style={articleContainerStyle}>
+                <PortableTextRenderer
+                  content={mainContent}
+                  variant={portableTextVariant}
+                  bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined}
+                />
+              </div>
+            </section>
+
+            {peopleSectionPosition !== 'afterNewsletter' && peopleSections}
 
             {/* About GoInvo (after Special Thanks) */}
             {!renderAboutAfterNewsletter && aboutGoInvoSection}
@@ -1287,9 +1358,11 @@ export default async function VisionFeaturePage({ params }: Props) {
               forceBand={Boolean(backgroundFallbacks?.forceNewsletterBand)}
             />
 
+            {peopleSectionPosition === 'afterNewsletter' && peopleSections}
+
             {renderAboutAfterNewsletter && aboutGoInvoSection}
 
-            {/* References (after newsletter, matching Gatsby order) */}
+            {/* References follow the newsletter / people stack so pages can mirror Gatsby order per slug. */}
             {referencesContent.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>

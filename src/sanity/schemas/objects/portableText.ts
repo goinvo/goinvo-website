@@ -1,38 +1,32 @@
 import { defineType, defineArrayMember } from 'sanity'
 import { SectionTitleStyle, CalloutStyle } from '../../components/BlockStyleComponents'
+import { PortableTextInput } from '../../components/PortableTextInput'
+import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
 
 export default defineType({
   title: 'Portable Text',
   name: 'portableText',
   type: 'array',
+  components: {
+    input: PortableTextInput,
+  },
   of: [
     defineArrayMember({
       type: 'block',
       styles: [
-        { title: 'Normal', value: 'normal' },
-        { title: 'Normal (extra bottom space)', value: 'normalSpacious' },
-        { title: 'Normal (gray standard spacing)', value: 'normalGrayStandard' },
-        { title: 'Normal (gray no top margin)', value: 'normalGrayNoTop' },
-        { title: 'Serif Large Paragraph', value: 'serifLarge' },
-        { title: 'Serif Large Paragraph (no top margin)', value: 'serifLargeNoTop' },
-        { title: 'H2', value: 'h2' },
-        { title: 'H2 (large)', value: 'h2Large' },
-        { title: 'H2 (large centered)', value: 'h2LargeCentered' },
+        { title: 'Body paragraph', value: 'normal' },
+        { title: 'Body paragraph (extra space below)', value: 'normalSpacious' },
+        { title: 'Large serif paragraph', value: 'serifLarge' },
+        { title: 'Section heading (H2)', value: 'h2' },
+        { title: 'Section heading (large H2)', value: 'h2Large' },
         {
-          title: 'H2 (centered)',
+          title: 'Centered section heading',
           value: 'sectionTitle',
           component: SectionTitleStyle,
         },
-        { title: 'H3', value: 'h3' },
-        { title: 'H3 (centered)', value: 'h3Centered' },
-        { title: 'H3 (orange)', value: 'h3Orange' },
-        { title: 'H4', value: 'h4' },
-        { title: 'H4 (bold)', value: 'h4Bold' },
-        { title: 'H4 (with bullet)', value: 'h4Bullet' },
-        { title: 'Centered', value: 'textCenter' },
-        { title: 'Serif Large Centered', value: 'serifLargeCentered' },
-        { title: 'Serif Large Centered (tight)', value: 'serifLargeCenteredTight' },
+        { title: 'Subheading (H3)', value: 'h3' },
+        { title: 'Small heading (H4)', value: 'h4' },
         { title: 'Quote', value: 'blockquote' },
         {
           title: 'Callout',
@@ -337,11 +331,24 @@ export default defineType({
       name: 'results',
       title: 'Results',
       type: 'object',
+      components: {
+        input: ResultsBlockInput,
+      },
       preview: {
         select: { items: 'items', variant: 'variant' },
         prepare({ items, variant }) {
           const count = items?.length || 0
-          return { title: `${count} result${count !== 1 ? 's' : ''} (${variant || 'row'})`, subtitle: 'Results / Stats' }
+          const labelMap: Record<string, string> = {
+            row: 'Standard stats row',
+            statBand: 'Stat band',
+            stacked: 'Stacked stats',
+            legacyRow: 'Legacy row',
+            grid: 'Legacy grid',
+          }
+          return {
+            title: labelMap[variant || 'row'] || 'Results',
+            subtitle: `${count} stat${count !== 1 ? 's' : ''}`,
+          }
         },
       },
       fields: [
@@ -349,14 +356,12 @@ export default defineType({
           name: 'variant',
           title: 'Layout',
           type: 'string',
-          description: 'How to arrange the stats.',
+          description: 'Choose the results layout editors should use for this block.',
           options: {
             list: [
-              { title: 'Horizontal row', value: 'row' },
-              { title: 'Legacy row', value: 'legacyRow' },
-              { title: '2-column grid', value: 'grid' },
-              { title: 'Stacked (vertical)', value: 'stacked' },
+              { title: 'Standard stats row', value: 'row' },
               { title: 'Stat band', value: 'statBand' },
+              { title: 'Stacked stats', value: 'stacked' },
             ],
           },
           initialValue: 'row',
@@ -365,15 +370,16 @@ export default defineType({
           name: 'items',
           title: 'Result items',
           type: 'array',
-          description: 'Outcome metrics displayed in a stats row',
+          description: 'Add one or more stats. Keep each stat short and pair it with a clear explanation.',
+          validation: (Rule) => Rule.required().min(1),
           of: [
             {
               type: 'object',
               fields: [
-                { name: 'stat', title: 'Statistic', type: 'string', description: 'The number or metric (e.g. "40%", "3x")' },
-                { name: 'unit', title: 'Unit / suffix', type: 'string', description: 'Optional smaller suffix shown beside the stat (e.g. "M", "%", "days")' },
-                { name: 'annotation', title: 'Trailing annotation', type: 'string', description: 'Optional trailing note displayed at full stat size (e.g. "(46%)")' },
-                { name: 'description', title: 'Description', type: 'string', description: 'What the stat represents' },
+                { name: 'stat', title: 'Statistic', type: 'string', description: 'The main number or metric, such as "40", "3x", or "$12".' },
+                { name: 'unit', title: 'Unit / suffix', type: 'string', description: 'Optional smaller suffix shown next to the stat, such as "%", "M", or "days".' },
+                { name: 'annotation', title: 'Annotation', type: 'string', description: 'Optional note shown beside the stat, such as "(46%)" or "YoY".' },
+                { name: 'description', title: 'Description', type: 'string', description: 'Short explanation of what the stat means.' },
                 { name: 'refNumber', title: 'Reference citation', type: 'string', description: 'Optional superscript citation (e.g. "4", "A3") — links to #references or #methodology' },
                 { name: 'refTarget', title: 'Reference target', type: 'string', description: 'Anchor target for the citation link', options: { list: [{ title: 'References', value: 'references' }, { title: 'Methodology', value: 'methodology' }] } },
               ],
@@ -393,6 +399,102 @@ export default defineType({
             ],
           },
           initialValue: 'none',
+        },
+      ],
+    }),
+    defineArrayMember({
+      name: 'dataTable',
+      title: 'Data Table',
+      type: 'object',
+      components: {
+        input: DataTableBlockInput,
+      },
+      preview: {
+        select: {
+          title: 'title',
+          sourceData: 'sourceData',
+          useFirstRowAsHeader: 'useFirstRowAsHeader',
+        },
+        prepare({ title, sourceData, useFirstRowAsHeader }) {
+          const rows = typeof sourceData === 'string'
+            ? sourceData.split(/\r?\n/).map((line: string) => line.trim()).filter(Boolean)
+            : []
+          const rowCount = Math.max(rows.length - (useFirstRowAsHeader === false ? 0 : 1), 0)
+
+          return {
+            title: title || 'Data Table',
+            subtitle: `${rowCount} row${rowCount !== 1 ? 's' : ''}${useFirstRowAsHeader === false ? '' : ' + header'}`,
+          }
+        },
+      },
+      fields: [
+        {
+          name: 'title',
+          title: 'Table title',
+          type: 'string',
+          description: 'Optional label shown above the table, such as "Time-to-diagnosis".',
+        },
+        {
+          name: 'sourceData',
+          title: 'Source Data',
+          type: 'text',
+          rows: 10,
+          description: 'Paste CSV or TSV data. Copying directly from a spreadsheet usually works best as TSV.',
+          validation: (Rule) => Rule.required(),
+        },
+        {
+          name: 'delimiter',
+          title: 'Source format',
+          type: 'string',
+          description: 'Leave this on Auto unless you need to force CSV or TSV parsing.',
+          options: {
+            list: [
+              { title: 'Auto-detect', value: 'auto' },
+              { title: 'CSV (comma-separated)', value: 'csv' },
+              { title: 'TSV (tab-separated)', value: 'tsv' },
+            ],
+          },
+          initialValue: 'auto',
+        },
+        {
+          name: 'useFirstRowAsHeader',
+          title: 'Use First Row as Header',
+          type: 'boolean',
+          description: 'Turn this off for two-column key/value tables that do not have a header row.',
+          initialValue: true,
+        },
+        {
+          name: 'stripedRows',
+          title: 'Striped rows',
+          type: 'boolean',
+          description: 'Adds alternating row backgrounds to match the Gatsby-style editorial tables.',
+          initialValue: true,
+        },
+        {
+          name: 'fullWidth',
+          title: 'Full width',
+          type: 'boolean',
+          description: 'Break out of the article column for wider tables that need more horizontal room.',
+          initialValue: false,
+        },
+        {
+          name: 'tone',
+          title: 'Text color',
+          type: 'string',
+          description: 'Gray matches most reference tables; black is useful for denser data tables.',
+          options: {
+            list: [
+              { title: 'Gray', value: 'gray' },
+              { title: 'Black', value: 'default' },
+            ],
+          },
+          initialValue: 'gray',
+        },
+        {
+          name: 'caption',
+          title: 'Caption',
+          type: 'string',
+          description: 'Optional note shown below the table.',
         },
       ],
     }),

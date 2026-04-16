@@ -45,7 +45,7 @@ export function Quote({
   refTarget,
 }: QuoteProps) {
   return (
-    <motion.div
+    <motion.blockquote
       data-quote="true"
       className={cn(
         'p-4',
@@ -77,7 +77,7 @@ export function Quote({
           <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light !text-black !my-6">
             {text}
             {refNumber && (
-              <sup>
+              <sup className="ml-[0.18em]">
                 <a
                   href={`#${refTarget || 'references'}`}
                   className="!text-primary !no-underline hover:!underline text-xs"
@@ -114,6 +114,6 @@ export function Quote({
           <EkgDivider />
         </div>
       </div>
-    </motion.div>
+    </motion.blockquote>
   )
 }

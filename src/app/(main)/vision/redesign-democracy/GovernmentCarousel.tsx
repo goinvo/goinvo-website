@@ -6,6 +6,7 @@ interface GovtType {
   id: string
   label: string
   color: string
+  image: string
   description: string
   strength: string
   weakness: string
@@ -25,7 +26,7 @@ export function GovernmentCarousel({ govtTypes }: { govtTypes: GovtType[] }) {
         <div key={govt.id} className={`govt-slide ${govt.id}`}>
           <div className="slide-text">
             <header>
-              <h4 className="font-serif">{govt.label}</h4>
+              <h4>{govt.label}</h4>
               <p>{govt.description}</p>
             </header>
             <hr className={`section-hr ${govt.id}`} />
@@ -56,6 +57,12 @@ export function GovernmentCarousel({ govtTypes }: { govtTypes: GovtType[] }) {
               </div>
             </div>
           </div>
+          <div
+            className="slide-image"
+            style={{ backgroundImage: `url(${govt.image})` }}
+            role="img"
+            aria-label={`${govt.label} historical illustration`}
+          />
         </div>
       ))}
     </LegacyCarousel>
