@@ -101,10 +101,13 @@ export interface Feature {
   contributorsLayout?: string
   contributorsBackground?: SectionBackground
   newsletterBackground?: SectionBackground
+  peopleSectionPosition?: 'beforeNewsletter' | 'afterNewsletter'
+  specialThanksHeading?: string
   specialThanks?: PortableTextBlock[]
   showAboutGoInvo?: boolean
   aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'
   aboutGoInvoVariant?: 'default' | 'practice'
+  previewReviewed?: boolean
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
