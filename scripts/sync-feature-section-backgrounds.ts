@@ -11,15 +11,15 @@ dotenv.config({ path: '.env.local' })
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET
-const readToken = process.env.SANITY_API_READ_TOKEN || process.env.SANITY_WRITE_TOKEN
-const writeToken = process.env.SANITY_WRITE_TOKEN
+const writeToken = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_WRITE_TOKEN
+const readToken = process.env.SANITY_API_READ_TOKEN || writeToken
 
 if (!projectId || !dataset) {
   throw new Error('Missing NEXT_PUBLIC_SANITY_PROJECT_ID or NEXT_PUBLIC_SANITY_DATASET in .env.local')
 }
 
 if (write && !writeToken) {
-  throw new Error('Missing SANITY_WRITE_TOKEN in .env.local')
+  throw new Error('Missing SANITY_WRITE_TOKEN or SANITY_API_WRITE_TOKEN in .env.local')
 }
 
 const fallbackEntries = Object.entries(featureSectionBackgroundFallbacks)

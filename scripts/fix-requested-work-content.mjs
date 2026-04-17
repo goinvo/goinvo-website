@@ -6,10 +6,10 @@ loadEnv({ path: '.env.local' })
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production'
-const token = process.env.SANITY_WRITE_TOKEN
+const token = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_WRITE_TOKEN
 
 if (!projectId || !token) {
-  throw new Error('Missing NEXT_PUBLIC_SANITY_PROJECT_ID or SANITY_WRITE_TOKEN')
+  throw new Error('Missing NEXT_PUBLIC_SANITY_PROJECT_ID or SANITY_WRITE_TOKEN/SANITY_API_WRITE_TOKEN')
 }
 
 const client = createClient({
