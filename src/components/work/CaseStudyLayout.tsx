@@ -1,10 +1,48 @@
+import Image from 'next/image'
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { Reveal } from '@/components/ui/Reveal'
 import { CaseStudyCard } from './CaseStudyCard'
 import { cn, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
-import type { CaseStudy } from '@/types'
+import { urlForImage } from '@/sanity/lib/image'
+import { resolveSectionBackground, getSectionBandClassName, type SectionBackground } from '@/lib/sectionBackgrounds'
+import type { CaseStudy, ExternalUpNextItem } from '@/types'
 import type { PortableTextBlock } from '@portabletext/types'
+
+function isExternalUpNextItem(item: CaseStudy | ExternalUpNextItem): item is ExternalUpNextItem {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (item as any)?._type === 'externalUpNextItem'
+}
+
+function ExternalUpNextCard({ item }: { item: ExternalUpNextItem }) {
+  const imageUrl = item.image?.asset
+    ? urlForImage(item.image).width(800).height(500).url()
+    : undefined
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="no-underline h-full block group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] flex flex-col"
+    >
+      {imageUrl && (
+        <div className="relative h-[260px] overflow-hidden">
+          <Image
+            src={imageUrl}
+            alt={item.title}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+            style={{ objectPosition: 'center top' }}
+          />
+        </div>
+      )}
+      <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
+        <p className="font-semibold text-black">{item.title}</p>
+        {item.caption && <p className="text-gray">{item.caption}</p>}
+      </div>
+    </a>
+  )
+}
 
 interface CaseStudyLayoutProps {
   caseStudy: CaseStudy
@@ -134,23 +172,35 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
                       : 'md:grid-cols-2 lg:grid-cols-3'
                 )}
               >
-                {caseStudy.upNext.filter(Boolean).map((study) => (
-                  <CaseStudyCard key={study._id} caseStudy={study} variant="up-next" />
-                ))}
+                {caseStudy.upNext.filter(Boolean).map((item) =>
+                  isExternalUpNextItem(item) ? (
+                    <ExternalUpNextCard key={item._id} item={item} />
+                  ) : (
+                    <CaseStudyCard key={item._id} caseStudy={item} variant="up-next" />
+                  ),
+                )}
               </div>
             </div>
           </section>
         </Reveal>
       )}
 
-      {/* References (after Up Next, matching Gatsby order) */}
-      {referencesBlock && (
-        <div className="bg-gray-lightest py-8">
-          <div className="max-width max-width-md content-padding mx-auto">
-            <PortableTextRenderer content={[referencesBlock]} variant="case-study" />
+      {/* References (after Up Next, matching Gatsby order). Background uses
+          the references block's `background` field if set; otherwise defaults
+          to gray for parity with the legacy case-study layout. */}
+      {referencesBlock && (() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const blockBackground = (referencesBlock as any).background as SectionBackground | undefined
+        const resolved = resolveSectionBackground(blockBackground, 'gray')
+        const bandClass = getSectionBandClassName(resolved) || 'bg-gray-lightest'
+        return (
+          <div className={cn(bandClass, 'py-8')}>
+            <div className="max-width max-width-md content-padding mx-auto">
+              <PortableTextRenderer content={[referencesBlock]} variant="case-study" />
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </article>
   )
 }

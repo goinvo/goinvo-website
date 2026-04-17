@@ -115,8 +115,29 @@ export default defineType({
       title: 'Up Next',
       type: 'array',
       group: 'extras',
-      description: 'Related case studies or vision articles shown at the bottom',
-      of: [{ type: 'reference', to: [{ type: 'caseStudy' }, { type: 'feature' }] }],
+      description:
+        'Related case studies or vision articles shown at the bottom. Add an external link entry for off-site resources (e.g. Carrier Testing on GitHub Pages).',
+      of: [
+        { type: 'reference', to: [{ type: 'caseStudy' }, { type: 'feature' }] },
+        {
+          type: 'object',
+          name: 'externalUpNextItem',
+          title: 'External link',
+          fields: [
+            { name: 'title', type: 'string', validation: (Rule) => Rule.required() },
+            {
+              name: 'url',
+              type: 'url',
+              validation: (Rule) => Rule.required().uri({ allowRelative: true, scheme: ['http', 'https'] }),
+            },
+            { name: 'caption', type: 'text', rows: 2, description: 'Short description shown on the card' },
+            { name: 'image', type: 'image', options: { hotspot: true } },
+          ],
+          preview: {
+            select: { title: 'title', subtitle: 'url', media: 'image' },
+          },
+        },
+      ],
     }),
     defineField({
       name: 'time',

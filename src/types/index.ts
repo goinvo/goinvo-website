@@ -40,10 +40,19 @@ export interface CaseStudy {
   authors?: TeamMember[]
   time?: string
   content?: PortableTextBlock[]
-  upNext?: CaseStudy[]
+  upNext?: (CaseStudy | ExternalUpNextItem)[]
   hidden?: boolean
   metaDescription?: string
   order?: number
+}
+
+export interface ExternalUpNextItem {
+  _id: string
+  _type: 'externalUpNextItem'
+  title: string
+  url: string
+  caption?: string
+  image?: SanityImage
 }
 
 export interface Result {
