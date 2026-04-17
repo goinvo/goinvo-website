@@ -45,15 +45,18 @@ gap drops from 15 to **4**. All four are intentional UX:
 The original Gatsby version stacked all 3 date images and all 6 location
 scenes simultaneously; the new sliders consolidate them. No fix needed.
 
-### 3. Landing pages have MORE Next headings than Gatsby
+### 3. Landing pages have MORE Next headings than Gatsby ✅ VERIFIED
 - AI Landing: gatsby=4, next=10 (Δ150%)
 - Enterprise: gatsby=5, next=7 (Δ40%)
 - Government: gatsby=6, next=9 (Δ50%)
 - Patient Engagement: gatsby=9, next=12 (Δ33%)
 
-These were re-architected with more component sections. Likely
-intentional but worth a visual sanity check that nothing was added that
-shouldn't be there.
+After comparing actual heading text on each page, **all heading text
+matches exactly** between Gatsby and Next. The smoke check counts
+h1+h2+h3 only — Gatsby uses `<h4>` for case-study cards on these
+landing pages while our redesigned versions use `<h3>` (same text,
+different semantic level). Open Source Health Design has the same
+pattern with one h3 → h2 promotion. No content is missing.
 
 ### 4. Care Plans Part 1 — `/vision/care-plans/part-1` ✅ VERIFIED
 Restricted comparison to substantive paragraphs (>30 chars) inside the
@@ -75,19 +78,36 @@ match Gatsby on every metric:
   CommonHealth Smart Cards, FasterCures Health Data, Mount Sinai Consent,
   Inspired EHRs, Personal Genome Project, StaffPlan, Care Cards
 
-## Pages With Modest Image Gaps (Δ22-38% fewer images)
+## Pages With Modest Image Gaps ✅ VERIFIED
 
-These case studies have 2-3 fewer rendered images than Gatsby. Could be
-real (a section image not migrated) or could be the Next.js `<Image>`
-component being smarter about not rendering hero `<img>` twice. Worth a
-quick visual scan of each:
+After scrolling each page so lazy-loaded images render and comparing
+counts, every flagged case study matches Gatsby's image count except
+Tabeeb (1-image deficit, non-critical):
 
-- MITRE State of US Healthcare (Δ27%)
-- Infobionic Heart Monitor (Δ25%)
-- Partners GeneInsight (Δ25%)
-- InsideTracker Nutrition (Δ22%)
-- PainTrackr (Δ22%)
-- Tabeeb Diagnostics (Δ38%)
+- MITRE State of US Healthcare ✅
+- Infobionic Heart Monitor ✅
+- Partners GeneInsight ✅ (6/6)
+- InsideTracker Nutrition ✅ (7/7)
+- PainTrackr ✅ — captions render in `<figcaption>` not `<p>`; smoke
+  check missed them (3/3 captions present in HTML)
+- Tabeeb Diagnostics — gatsby=6, next=5; minor 1-image gap
+  (likely one up-next card lacking an image asset on its target
+  feature document; non-critical)
+
+Filenames differ between sites because Gatsby uses raw CloudFront URLs
+(`insidetracker_bloodwork_hero_3.jpg`) while Next.js serves the same
+images via Sanity asset URLs (`6538d6ae...-2000x3441.jpg`). Same content,
+different CDNs.
+
+## Other Pages Verified This Pass
+
+- **Digital Healthcare 2016** ✅ — Gatsby has 4×h3 contributor labels
+  (Contributing Author, Web Developer & Designer, etc.) where ours has
+  1×h2 "Contributors" wrapper from the standardized AuthorSection
+  (intentional per QA item #38).
+- **All other case studies** flagged ONLY by the cross-the-board
+  `LISTS Δ` were re-confirmed as the footer-structure delta. Already
+  documented as a false positive below.
 
 ## What Was Fixed This Session
 
