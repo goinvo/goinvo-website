@@ -58,7 +58,7 @@ function positionToSlide(position: number): number {
  */
 export function TimelineSlider({ slides }: TimelineSliderProps) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [position, setPosition] = useState(SLIDE_POSITIONS[0])
+  const [position, setPosition] = useState<number>(SLIDE_POSITIONS[0])
   const [isDragging, setIsDragging] = useState(false)
   const railRef = useRef<HTMLDivElement>(null)
   const active = slides[activeIndex]

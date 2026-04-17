@@ -34,6 +34,14 @@ export const caseStudyBySlugQuery = groq`
     content,
     "upNext": upNext[]{
       "item": select(
+        _type == "externalUpNextItem" => {
+          "_id": _key,
+          "_type": "externalUpNextItem",
+          title,
+          url,
+          caption,
+          image,
+        },
         _ref == "drafts.caseStudy-fastercures-health-data-basics" => *[_type == "caseStudy" && slug.current == "fastercures-health-data-basics"][0] {
           _id,
           _type,
