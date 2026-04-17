@@ -123,6 +123,17 @@
   text-align: center;
 }
 
+/* Inline (non-sticky) nav sits right above the first item; Gatsby gives it
+   a 120px breathing room so the first item doesn't crowd against the nav bar. */
+.digital-healthcare .nav-inline {
+  margin-bottom: 120px;
+}
+@media only screen and (max-width: 768px) {
+  .digital-healthcare .nav-inline {
+    margin-bottom: 60px;
+  }
+}
+
 @media only screen and (max-width: 1130px) {
   .digital-healthcare .nav-wrapper {
     padding: 0 31px;
