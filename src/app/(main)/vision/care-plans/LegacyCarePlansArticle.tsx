@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { CarePlansStickyNav } from "./CarePlansStickyNav";
 
 type LegacyCarePlansPage = "overview" | "part1" | "part2" | "part3";
 
@@ -239,6 +240,7 @@ export function LegacyCarePlansArticle({
         style={{ paddingTop: "var(--spacing-header-height)" }}
         dangerouslySetInnerHTML={{ __html: loadLegacyArticle(page) }}
       />
+      <CarePlansStickyNav />
     </>
   );
 }
