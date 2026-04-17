@@ -84,6 +84,9 @@ export interface Feature {
   image?: SanityImage
   heroPosition?: string
   fullImageCover?: boolean
+  articleHeroImage?: SanityImage
+  articleHeroPosition?: string
+  articleFullImageCover?: boolean
   contentWidth?: 'narrow' | 'medium' | 'wide'
   bulletStyle?: 'star' | 'disc'
   video?: string
@@ -103,6 +106,7 @@ export interface Feature {
   newsletterBackground?: SectionBackground
   peopleSectionPosition?: 'beforeNewsletter' | 'afterNewsletter'
   specialThanksHeading?: string
+  specialThanksHeadingStyle?: 'subheading' | 'legacy-centered-h2'
   specialThanks?: PortableTextBlock[]
   showAboutGoInvo?: boolean
   aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'
