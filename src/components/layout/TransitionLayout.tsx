@@ -100,6 +100,7 @@ function TransitionContent({
   const ctx = usePageTransition()
   const prefersReducedMotion = useReducedMotion()
   const isCard = !!ctx?.cardRect
+  const pageRef = useRef<HTMLDivElement>(null)
 
   // Scroll to top on navigation (unless card/morph transitions handle it)
   const prevPathRef = useRef(pathname)
@@ -124,9 +125,23 @@ function TransitionContent({
   const shouldCollapse = isCard && pathname === sourceRef.current
   const animateState = shouldCollapse ? 'collapse' : 'visible'
 
+  // Framer Motion leaves `filter: blur(0px)` as an inline style in the
+  // 'visible' state. Even a 0px blur creates a new containing block, which
+  // breaks `position: fixed` for descendants (e.g. the digital-healthcare
+  // sticky nav). Clear it once the page is at rest. Runs on initial mount
+  // and again whenever the pathname changes.
+  useEffect(() => {
+    if (animateState !== 'visible') return
+    const handle = requestAnimationFrame(() => {
+      if (pageRef.current) pageRef.current.style.filter = 'none'
+    })
+    return () => cancelAnimationFrame(handle)
+  }, [pathname, animateState])
+
   return (
     <AnimatePresence mode="wait" initial={false} custom={{ isCard }}>
       <motion.div
+        ref={pageRef}
         key={pathname}
         custom={{ isCard }}
         variants={pageVariants}
@@ -135,11 +150,18 @@ function TransitionContent({
         exit="exit"
         transition={prefersReducedMotion ? instantTransition : pageTransition}
         onAnimationComplete={(definition) => {
-          // When the NEW page finishes entering ('visible'), hand off from
-          // the fixed CardTransitionOverlay to the in-flow PersistentHero
-          // so the hero image scrolls with the page content.
-          if (definition === 'visible' && ctx?.cardRect) {
-            ctx.clearTransition()
+          if (definition === 'visible') {
+            // Framer Motion leaves `filter: blur(0px)` inline after the enter
+            // animation settles. Even a 0px blur creates a new containing
+            // block, which breaks `position: fixed` for descendants (see
+            // digital-healthcare sticky nav). Clear it once the page is at
+            // rest so fixed elements anchor to the viewport again.
+            if (pageRef.current) {
+              pageRef.current.style.filter = 'none'
+            }
+            if (ctx?.cardRect) {
+              ctx.clearTransition()
+            }
           }
         }}
       >
