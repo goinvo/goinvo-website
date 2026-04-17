@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { CarePlansCarousels } from "./CarePlansCarousels";
 import { CarePlansPopovers } from "./CarePlansPopovers";
 import { CarePlansStickyNav } from "./CarePlansStickyNav";
 
@@ -243,6 +244,7 @@ export function LegacyCarePlansArticle({
       />
       <CarePlansStickyNav />
       <CarePlansPopovers />
+      <CarePlansCarousels />
     </>
   );
 }
