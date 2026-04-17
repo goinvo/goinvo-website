@@ -471,13 +471,12 @@
 }
 .healthroom-legacy #dates .slider-aside .slider-controls {
   position: relative;
-  display: table;
-  table-layout: fixed;
+  display: flex;
   width: 100%;
 }
 .healthroom-legacy #dates .slider-aside .slider-controls a,
 .healthroom-legacy #dates .slider-aside .slider-controls button {
-  display: table-cell;
+  flex: 1 1 0;
   text-align: center;
   color: #000;
   background: none;
