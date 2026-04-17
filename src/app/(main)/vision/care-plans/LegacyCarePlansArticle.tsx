@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { CarePlansPopovers } from "./CarePlansPopovers";
 import { CarePlansStickyNav } from "./CarePlansStickyNav";
 
 type LegacyCarePlansPage = "overview" | "part1" | "part2" | "part3";
@@ -241,6 +242,7 @@ export function LegacyCarePlansArticle({
         dangerouslySetInnerHTML={{ __html: loadLegacyArticle(page) }}
       />
       <CarePlansStickyNav />
+      <CarePlansPopovers />
     </>
   );
 }
