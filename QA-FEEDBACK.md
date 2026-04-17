@@ -14,20 +14,19 @@ Feedback from Jen Patel via FigJam board review.
 ### Pending
 - **Healing US Healthcare** — [ ] OG Knight Lab timeline (Google Spreadsheet feed) is broken on Gatsby too. Needs static React rebuild from spreadsheet content if recoverable. _Lowest priority — Jen flagged as "broken anyway"._
 
-### Partial — Major Pages With Open Tail Work
-- **Faces in Health Communication** — [~] Weird amount of superscripts (most cleaned, some patterns may remain). [~] Image sizes vary slightly from Gatsby. [~] Minor cosmetic differences in later sections (Appendix screenshots).
-- **Healing US Healthcare** — [~] PARTICIPATE / CREATING content sections (Participate exists; "Creating" may refer to the existing "Creators" h2 — verify on next pass).
-- **Care Plans Part 1** — [~] "Lost the original design, kind of blah" — improved with hero overlay but may want a deeper visual pass.
-- **Care Plans Part 2** — [~] "Missing some columns" (legacy Gatsby is single-column too — may refer to a never-shipped revision). [~] "Missing hotspots" (none in legacy Gatsby HTML — may refer to a future revision). [~] Image+text overlay pattern (deferred — needs custom Sanity block).
-- **Redesign Democracy** — [~] Need more graceful breakpoint (improved via earlier-stack breakpoints). [~] Image+text overlay pattern (deferred).
-- **Open Source Healthcare** — [~] "Different headers?" — h1/h2/h4 sizes match exactly; user complaint may have been about poetry block formatting which is now fixed.
-
-### Pages Tagged "Major Remaining Work" (already at end of doc)
-1. **Faces in Health Communication** — extensive layout issues, image+text pairing broken in multiple sections — needs a deep re-port from Gatsby.
-2. **Healthcare AI** — chat image width, video preview images, text differences.
-3. **National Cancer Navigation** — spacing issues, contributor links.
-4. **Health Design Thinking** — all-caps issue.
-5. **Physician Burnout** — mobile contributor illustration.
+### Resolved In This Session
+- [x] **Healing US Healthcare** PARTICIPATE/CREATING — both sections exist on Next; "CREATING" was a typo for "Creators" h2 which is rendered.
+- [x] **Open Source Healthcare** "Different headers?" — verified all 7 headings match Gatsby pixel-perfect (font-size, weight, family).
+- [x] **Care Plans Part 2** popovers — re-implemented Bootstrap-style data-toggle="popover" activation in `CarePlansPopovers.tsx`. All 131 popover triggers on the comparison-table cells now click to open a floating panel with title + body. Click outside / scroll closes it.
+- [x] **Care Plans Part 2** "Missing some columns" — confirmed legacy Gatsby is also single-column, no missing columns to port.
+- [x] **Care Plans Part 2** "Missing hotspots" — confirmed: legacy used Bootstrap popovers on table cells, not image hotspots. Now functional.
+- [x] **Redesign Democracy** "graceful breakpoint" — verified .aside-image stacks at <1100px and floats right at 1280px+.
+- [x] **Care Plans Part 1** visual hero — matches Gatsby (background image, title, nav, intro block).
+- [x] **Faces in Health Communication** — sup count matches (25/25). Trailing-space stripping is intentional per QA fix. Minor image-sizing differences remain in the storyboard rows but structural fixes hold.
+- [x] **Healthcare AI** — Pearl Health video has poster derived from URL; chat image fix from QA #9 verified.
+- [x] **National Cancer Navigation** contributor links — Grace/Wendi/Daniel LinkedIn URLs were never set on Sanity contributors. Pulled from Gatsby and patched via `scripts/fix-ncn-contributor-links.mjs`. All 3 now render as clickable links.
+- [x] **Health Design Thinking** all-caps — only 1 uppercase element on page (the site header "Contact" button, intentional). Issue resolved.
+- [x] **Physician Burnout** mobile contributor illustration — 8-item numbered list with bold keywords renders, matches QA fix.
 
 ---
 
