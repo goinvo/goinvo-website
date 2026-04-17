@@ -743,14 +743,14 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       ) {
         return {
           ...normalized,
-          content: normalized.content.map((item: any) => item?._type === 'block' ? recolorTextMarkDefs(item, 'teal') : item), // eslint-disable-line @typescript-eslint/no-explicit-any
+          content: normalized.content.map((item: any) => item?._type === 'block' ? recolorTextMarkDefs(item, 'charcoal') : item), // eslint-disable-line @typescript-eslint/no-explicit-any
         }
       }
 
       if (normalized?._type === 'block' && text.startsWith('Fraud 10% + Waste 20%')) {
         return {
           ...normalized,
-          style: 'h3Centered',
+          style: 'legacyH2MdCentered',
         }
       }
 
@@ -1144,8 +1144,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Vision Project Not Found' }
   }
 
-  const ogImage = feature.image
-    ? urlForImage(feature.image).width(1200).height(630).url()
+  const ogSourceImage = feature.articleHeroImage || feature.image
+  const ogImage = ogSourceImage
+    ? urlForImage(ogSourceImage).width(1200).height(630).url()
     : undefined
 
   return {
@@ -1168,15 +1169,20 @@ export default async function VisionFeaturePage({ params }: Props) {
     notFound()
   }
 
+  // Optional article-level hero override (when the listing card image differs from the article hero)
+  const heroImage = feature.articleHeroImage || feature.image
+  const heroPosition = feature.articleHeroImage ? feature.articleHeroPosition : feature.heroPosition
+  const fullImageCover = feature.articleHeroImage ? feature.articleFullImageCover : feature.fullImageCover
+
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
   // minimize top/bottom cropping at desktop widths
-  const heroImageUrl = feature.image
-    ? urlForImage(feature.image).width(1600).height(564).url()
+  const heroImageUrl = heroImage
+    ? urlForImage(heroImage).width(1600).height(564).url()
     : null
 
   // Full image cover: show the complete image as page content, no hero crop
-  const fullCoverUrl = feature.fullImageCover && feature.image
-    ? urlForImage(feature.image).width(1920).url()
+  const fullCoverUrl = fullImageCover && heroImage
+    ? urlForImage(heroImage).width(1920).url()
     : null
 
   const widthClass = feature.contentWidth === 'wide' ? '' : feature.contentWidth === 'narrow' ? 'max-width-sm' : 'max-width-md'
@@ -1214,8 +1220,8 @@ export default async function VisionFeaturePage({ params }: Props) {
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
-      {!feature.fullImageCover && heroImageUrl && (
-        <SetCaseStudyHero image={heroImageUrl} bgPosition={feature.heroPosition} />
+      {!fullImageCover && heroImageUrl && (
+        <SetCaseStudyHero image={heroImageUrl} bgPosition={heroPosition} />
       )}
 
       {/* Full image cover — render inline so the full image shows without cropping */}
@@ -1233,7 +1239,7 @@ export default async function VisionFeaturePage({ params }: Props) {
       )}
 
       {/* Title + meta — hidden for fullImageCover pages where the image IS the content */}
-      {!feature.fullImageCover && (
+      {!fullImageCover && (
         <Reveal style="slide-up" duration={0.5}>
           <div className={articleContainerClassName} style={articleContainerStyle}>
             <h1
@@ -1295,6 +1301,9 @@ export default async function VisionFeaturePage({ params }: Props) {
           ))
         const portableTextVariant = backgroundFallbacks?.portableTextVariant
           || (usesLegacyTransforms && slug === 'virtual-care' ? 'gray-body' : undefined)
+        const specialThanksHeadingText = (feature as any).specialThanksHeading
+          || (transformedContributors && transformedContributors.length > 0 ? 'Special thanks to...' : 'Contributors')
+        const specialThanksHeadingStyle = feature.specialThanksHeadingStyle || 'subheading'
         const peopleSections = (
           <>
             {feature.authors && feature.authors.length > 0 && (
@@ -1326,7 +1335,11 @@ export default async function VisionFeaturePage({ params }: Props) {
             {feature.specialThanks && feature.specialThanks.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
-                  <h3 className="header-md mt-8 mb-4">{(feature as any).specialThanksHeading || (transformedContributors && transformedContributors.length > 0 ? 'Special thanks to...' : 'Contributors')}</h3>
+                  {specialThanksHeadingStyle === 'legacy-centered-h2' ? (
+                    <h2 className="header-lg mt-16 mb-5 text-center">{specialThanksHeadingText}</h2>
+                  ) : (
+                    <h3 className="header-md mt-8 mb-4">{specialThanksHeadingText}</h3>
+                  )}
                   <PortableTextRenderer content={feature.specialThanks} />
                 </div>
               </section>

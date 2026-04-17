@@ -23,7 +23,16 @@
 }
 
 .legacy-careplans #feature-article header.nav-wrapper.scroll-nav {
-  display: none !important;
+  position: fixed;
+  top: var(--spacing-header-height, 50px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: none;
+}
+
+.legacy-careplans #feature-article header.nav-wrapper.scroll-nav.is-visible {
+  display: block;
 }
 
 .legacy-careplans #feature-article .part {

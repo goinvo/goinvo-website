@@ -157,6 +157,9 @@ export const featureBySlugQuery = groq`
     image,
     heroPosition,
     fullImageCover,
+    articleHeroImage,
+    articleHeroPosition,
+    articleFullImageCover,
     contentWidth,
     video,
     description,
@@ -189,6 +192,7 @@ export const featureBySlugQuery = groq`
     aboutGoInvoVariant,
     bulletStyle,
     specialThanksHeading,
+    specialThanksHeadingStyle,
     content,
     metaDescription
   }

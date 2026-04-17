@@ -495,9 +495,9 @@ export function LonelinessIsolationCostsSection() {
 
       <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-2 lg:gap-x-5">
         <div className="lg:pr-[20px]">
-          <div className="flex items-baseline gap-[10px] lg:block">
-            <span className="header-xl text-primary">8</span>
-            <span className="header-lg text-primary">years</span>
+          <div className="flex items-baseline lg:block">
+            <span className="header-xl">8</span>
+            <span className="header-lg">{' years'}</span>
           </div>
           <div className="max-w-[260px]">
             <p className="mt-0 text-base leading-[1.625rem] text-gray">
@@ -508,9 +508,9 @@ export function LonelinessIsolationCostsSection() {
         </div>
 
         <div className="lg:pr-[20px]">
-          <div className="flex items-baseline gap-[10px] lg:block">
-            <span className="header-xl text-primary">$6.7</span>
-            <span className="header-lg text-primary">B</span>
+          <div className="flex items-baseline lg:block">
+            <span className="header-xl">$6.7</span>
+            <span className="header-lg">B</span>
           </div>
           <div className="max-w-[260px]">
             <p className="mt-0 text-base leading-[1.625rem] text-gray">
@@ -535,8 +535,8 @@ export function LonelinessRiskOverviewSection() {
       </h4>
       <RiskRows rows={riskRows} />
 
-      <div className="my-10 flex justify-center md:my-0 md:justify-start">
-        <div className="w-full md:w-1/2 md:min-w-[320px]">
+      <div className="my-10 flex w-full justify-center md:my-0">
+        <div className="min-w-[320px]">
           <div className="mx-auto h-[100px] w-[100px] rounded-full border-[3px]" style={{ borderColor: ORANGE_LIGHT }}>
             <Image
               src={`${ICON_BASE}/suicide.svg`}
