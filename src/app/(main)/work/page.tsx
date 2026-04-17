@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { sanityFetch } from '@/sanity/lib/live'
 import { client } from '@/sanity/lib/client'
+import { readToken } from '@/sanity/env'
 import { allCaseStudiesQuery, draftCaseStudiesQuery } from '@/sanity/lib/queries'
 import { ProjectSearch } from '@/components/work/ProjectSearch'
 import { Quote } from '@/components/ui/Quote'
@@ -47,7 +48,7 @@ export default async function WorkPage() {
   if (isDraftMode) {
     try {
       const rawClient = client.withConfig({
-        token: process.env.SANITY_API_READ_TOKEN,
+        token: readToken,
         useCdn: false,
       })
       const { drafts, publishedIds } = await rawClient.fetch(draftCaseStudiesQuery)
