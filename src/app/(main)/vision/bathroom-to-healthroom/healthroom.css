@@ -278,8 +278,34 @@
   z-index: 1;
 }
 
+/* Caption and paired video both animate in when the caption scrolls into
+   view. Initially the caption is offset 50% to the right and the video is
+   collapsed (width 0, opacity 0); a scroll-driven JS effect strips the
+   .initial-margin / .initial-hide classes once the caption enters the
+   viewport, triggering the transitions. Mirrors Gatsby's from-bathroom-to-
+   healthroom.js behavior. */
+.healthroom-legacy .aside-media .caption {
+  transition: margin-left 550ms ease-in-out;
+}
 .healthroom-legacy .aside-media .caption.initial-margin {
-  margin-left: 0;
+  margin-left: 50%;
+}
+.healthroom-legacy .aside-media .video {
+  transition: opacity 550ms ease-in-out, width 550ms ease-in-out;
+  opacity: 1;
+}
+.healthroom-legacy .aside-media .video.initial-hide {
+  opacity: 0;
+  width: 0 !important;
+}
+@media only screen and (max-width: 450px) {
+  .healthroom-legacy .aside-media .caption.initial-margin {
+    margin-left: 0;
+  }
+  .healthroom-legacy .aside-media .video.initial-hide {
+    width: auto !important;
+    opacity: 1;
+  }
 }
 
 /* ---- Expanded graphic (timeline) ---- */
@@ -638,6 +664,39 @@
   top: 0;
   font-size: 10px;
   transform: translateX(-50%);
+}
+
+/* ---- Scroll-wrapper (pins #blade-runner-wrapper / #crane-wrapper while
+       reading the paired margin paragraph, then shrinks the video as the
+       text scrolls past — mirrors Gatsby's from-bathroom-to-healthroom.js) */
+.healthroom-legacy .scroll-wrapper {
+  overflow: hidden;
+  margin-bottom: 2em;
+  transition: height 10ms ease-in-out;
+}
+.healthroom-legacy .scroll-wrapper .full {
+  margin-bottom: 0;
+}
+.healthroom-legacy .scroll-wrapper.fix-me {
+  position: fixed;
+  width: 100%;
+  max-width: 1199px;
+  z-index: 1000;
+}
+.healthroom-legacy .scroll-empty {
+  height: 0;
+  transition: height 10ms ease-in-out;
+}
+@media only screen and (max-width: 1000px) {
+  /* Pin behavior is desktop-only, mirroring the legacy n>1000 guard. */
+  .healthroom-legacy .scroll-wrapper.fix-me {
+    position: static;
+    width: auto;
+    max-width: none;
+  }
+  .healthroom-legacy .scroll-empty {
+    height: 0 !important;
+  }
 }
 
 /* ---- Locations interactive ---- */

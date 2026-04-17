@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { BackgroundVideo } from './BackgroundVideo'
+import { BathroomScrollEffects } from './BathroomScrollEffects'
 import { DateSlider } from './DateSlider'
 import { LocationsSlider } from './LocationsSlider'
 import { TimelineSlider } from './TimelineSlider'
@@ -46,6 +47,7 @@ function Img({
 export default function BathroomToHealthroomPage() {
   return (
     <div className="healthroom-legacy pt-[var(--spacing-header-height)]">
+      <BathroomScrollEffects />
       <article className="design-for-life" id="feature-article">
         {/* Title section with background video matching legacy header */}
         <header className="bathroom-header relative overflow-hidden flex items-center justify-center text-white text-center"
@@ -383,23 +385,26 @@ export default function BathroomToHealthroomPage() {
             </div>
           </header>
           <div className="section-content">
-            {/* Blade Runner eye-tracking overlay */}
-            <div className="relative overflow-hidden" id="eye-tracking">
-              <BackgroundVideo
-                mp4Src={`${VID_BASE}/blade_runner.mp4`}
-                posterSrc={legacyImage('blade-runner-poster.jpg')}
-              />
-              <p className="caption relative z-[1]">
-                These days, my thoughts turn pretty frequently to the image of
-                the Voight-Kampff interrogation machine in the movie Blade Runner
-                (1982). It was a tabletop apparatus with a mechanical eye that
-                peered into a human (or robot) eye to non-invasively determine
-                his/her/its &ldquo;health&rdquo; status. It&rsquo;s either
-                really creepy or really practical.
-              </p>
+            {/* Blade Runner eye-tracking overlay — wrapped for scroll-pin */}
+            <div className="scroll-wrapper" id="blade-runner-wrapper">
+              <div className="relative overflow-hidden" id="eye-tracking">
+                <BackgroundVideo
+                  mp4Src={`${VID_BASE}/blade_runner.mp4`}
+                  posterSrc={legacyImage('blade-runner-poster.jpg')}
+                />
+                <p className="caption relative z-[1]">
+                  These days, my thoughts turn pretty frequently to the image of
+                  the Voight-Kampff interrogation machine in the movie Blade Runner
+                  (1982). It was a tabletop apparatus with a mechanical eye that
+                  peered into a human (or robot) eye to non-invasively determine
+                  his/her/its &ldquo;health&rdquo; status. It&rsquo;s either
+                  really creepy or really practical.
+                </p>
+              </div>
             </div>
+            <div className="scroll-empty" id="blade-empty" />
 
-            <p>
+            <p id="blade-margin">
               The current confluence of sensor tech, data analytics maturity,
               hardware durability, miniaturization, and industrial evolution
               create a perfect storm for capturing biologic metrics and
@@ -600,17 +605,20 @@ export default function BathroomToHealthroomPage() {
               </p>
             </div>
 
-            {/* Crane / healthroom video */}
-            <div className="full relative overflow-hidden" id="crane" style={{ margin: '2em 0' }}>
-              <BackgroundVideo
-                mp4Src={`${VID_BASE}/crane.mp4`}
-                posterSrc={legacyImage('crane-poster.jpg')}
-              />
-              {/* Spacer to maintain aspect ratio */}
-              <div className="relative z-[1]" style={{ paddingTop: '50%' }} />
+            {/* Crane / healthroom video — wrapped for scroll-pin */}
+            <div className="scroll-wrapper" id="crane-wrapper">
+              <div className="full relative overflow-hidden" id="crane" style={{ margin: '2em 0' }}>
+                <BackgroundVideo
+                  mp4Src={`${VID_BASE}/crane.mp4`}
+                  posterSrc={legacyImage('crane-poster.jpg')}
+                />
+                {/* Spacer to maintain aspect ratio */}
+                <div className="relative z-[1]" style={{ paddingTop: '50%' }} />
+              </div>
             </div>
+            <div className="scroll-empty" id="crane-empty" />
 
-            <p>
+            <p id="crane-margin">
               Hospitals are rolling out patient portals and insurance companies
               are experimenting with electronic health records, but the
               usefulness of those repositories is limited to patients. More
