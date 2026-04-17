@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useRef, useEffect } from 'react'
 import { BostonCostComparisonChart } from './BostonCostComparisonChart'
+import { HealingSankeyChart } from './HealingSankeyChart'
 import {
   SpendingOverTimeChart,
   GdpVsCapitaChart,
@@ -1006,6 +1007,9 @@ export function UsHealthcareContent() {
                 </div>
               )}
             </div>
+          </div>
+          <div id="sankey-chart" className="chart-container">
+            <HealingSankeyChart />
           </div>
         </div>
 

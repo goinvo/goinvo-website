@@ -519,7 +519,17 @@
   height: auto;
 }
 .us-healthcare-legacy #sankey-chart {
-  display: none; /* D3 chart placeholder - hidden without JS */
+  display: block;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto 2rem;
+  padding: 0 1rem;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+.us-healthcare-legacy .healing-sankey-chart {
+  display: block;
+  margin: 0 auto;
 }
 .us-healthcare-legacy #sankeyGUI {
   position: relative;
