@@ -2,6 +2,7 @@
 
 import { revalidateTag } from 'next/cache'
 import { client } from '@/sanity/lib/client'
+import { readToken } from '@/sanity/env'
 import { draftMode } from 'next/headers'
 import type { QueryParams } from '@sanity/client'
 
@@ -15,7 +16,7 @@ export async function refetchQuery(query: string, params?: QueryParams) {
 
   return client
     .withConfig({
-      token: process.env.SANITY_API_READ_TOKEN,
+      token: readToken,
       useCdn: false,
       perspective: isEnabled ? 'drafts' : 'published',
     })

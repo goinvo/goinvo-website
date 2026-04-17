@@ -9,6 +9,7 @@ import { DraftFeaturesSection } from '@/components/vision/DraftFeaturesSection'
 import { ReviewCarousel } from '@/components/vision/ReviewCarousel'
 import { cloudfrontImage } from '@/lib/utils'
 import { client } from '@/sanity/lib/client'
+import { readToken } from '@/sanity/env'
 import { draftFeaturesQuery } from '@/sanity/lib/queries'
 import type { StaticFeature, Feature } from '@/types'
 
@@ -126,7 +127,7 @@ export default async function VisionPage() {
   if (isDraftMode) {
     try {
       const rawClient = client.withConfig({
-        token: process.env.SANITY_API_READ_TOKEN,
+        token: readToken,
         useCdn: false,
       })
       const { drafts, publishedIds } = await rawClient.fetch(draftFeaturesQuery)
