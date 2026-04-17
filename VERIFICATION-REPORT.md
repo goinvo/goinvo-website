@@ -99,6 +99,40 @@ Filenames differ between sites because Gatsby uses raw CloudFront URLs
 images via Sanity asset URLs (`6538d6ae...-2000x3441.jpg`). Same content,
 different CDNs.
 
+## Care Plans Overview (`/vision/care-plans`) — deep visual diff ✅
+
+After the user flagged "still has a lot of issues" and asked for
+screenshots, captured desktop (1440×900) and mobile (375×812) full-page
+renders of both Gatsby and our Next build, sliced into 900-px chunks,
+and diffed landmark y-positions for every heading/image/nav/section.
+
+**Finding: the two pages are structurally identical.** Every landmark
+lines up at the exact same y-position on both sites:
+
+    Hero image           y=50    h=848   (both)
+    Stuck nav bar        y=898   h=68    (both)
+    Overview/Landscape/
+      Future labels      y=932   h=24    (both)
+    Download links       y=1006  h=55    (both)
+    The Care Plan Series y=1006  h=38    (both)
+    3-part teasers       y=1363  h=953   (both)
+    Want to Work
+      Together?          y=2508  h=38    (both)
+    Authors              y=3304  h=38    (both)
+    Contributors         y=4404  h=38    (both)
+    Total article height: 5119px (both)
+
+Mobile chunks match pixel-for-pixel including the CARE PLANS title
+overlay, the blue 2-column nav grid (Part1 Overview / Part2 Landscape /
+Part3 Future / Download eBook), and every paragraph of body text.
+
+Only visible cross-site difference is the chrome at the top of the
+viewport — Gatsby shows its legacy "WORK / SERVICES / ABOUT / VISION /
+CONTACT" nav while our site shows its own header. Everything inside
+the article renders at parity.
+
+No fixes needed.
+
 ## Other Pages Verified This Pass
 
 - **Digital Healthcare 2016** ✅ — Gatsby has 4×h3 contributor labels
