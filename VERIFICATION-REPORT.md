@@ -16,28 +16,34 @@ upNext audit at `scripts/audit-up-next.mjs`.
 
 ## Real Issues Worth a Closer Look
 
-### 1. Healing US Healthcare — `/vision/healing-us-healthcare`
-Largest content gap of any page audited:
-- HEADINGS: gatsby=99, next=67 (Δ32%)
-- PARAGRAPHS: gatsby=161, next=122 (Δ24%)
-- IMAGES: gatsby=10, next=7 (Δ30%)
-- LISTS: gatsby=15, next=8 (Δ47%)
+### 1. Healing US Healthcare — `/vision/healing-us-healthcare` ✅ VERIFIED
+Smoke-check originally flagged Δ24-47% gaps. Investigated and
+confirmed **functional parity** — no fix needed.
 
-Per QA-FEEDBACK item #39 the missing pieces were: PARTICIPATE / CREATING
-content sections (marked partial), the OG Knight Lab timeline (broken on
-Gatsby too), and the 3+2 restored charts (already done). The remaining
-24-47% gap suggests body-text sections may still be missing — needs a
-content diff pass.
+Root cause: Gatsby has 35 unique `individual-result` DOM nodes; ours
+has 19. The 16 extra Gatsby keys (`universal_access`, `perfect_quality`,
+`better_prices`, `better_costs`, `more_equitable`, `preventative_meds`,
+`health_conscious_people`, `more_time`, `better_care`, `fewer_tests`,
+`reduced_errors`, `efficiency`, `individualise_meds`, `value_quality_life`,
+`fewer_visits`, `fees_for_outcomes`) are **orphaned placeholders** —
+none are referenced by any of the 4 perspective menus (patient/provider/
+policymaker/payer), so they never render to a user. Most have empty
+`<p></p>` bodies in Gatsby — content was never written.
 
-### 2. Bathroom to Healthroom — `/vision/bathroom-to-healthroom`
-- IMAGES: gatsby=28, next=13 (Δ54%)
-- LISTS: gatsby=10, next=6 (Δ40%)
+The 16 placeholders × 2 h3s + 2 empty `<p>`s account for ~32 of the 39
+missing paragraphs. The remaining ~7 paragraphs / 3 images / 3-4 lists
+are mostly the footer-structure delta. All real content matches.
 
-Likely intentional: the LocationsSlider now renders only the active scene
-(1 image) instead of all 6 simultaneously, and DateSlider renders 1 of 3.
-That accounts for ~10 of the missing 15 images. The rest may be inline
-illustrations not yet ported. **Verify visually before declaring this
-acceptable.**
+### 2. Bathroom to Healthroom — `/vision/bathroom-to-healthroom` ✅ VERIFIED
+After scrolling the page so lazy-loaded images render, the actual image
+gap drops from 15 to **4**. All four are intentional UX:
+- `2015.png`, `2025.png` — DateSlider's hidden alternates (we render
+  only the active 1985 slide)
+- `dining_room.png`, `living_room.png` — LocationsSlider's hidden
+  scenes (we render only the active MARKET slide)
+
+The original Gatsby version stacked all 3 date images and all 6 location
+scenes simultaneously; the new sliders consolidate them. No fix needed.
 
 ### 3. Landing pages have MORE Next headings than Gatsby
 - AI Landing: gatsby=4, next=10 (Δ150%)
@@ -49,15 +55,13 @@ These were re-architected with more component sections. Likely
 intentional but worth a visual sanity check that nothing was added that
 shouldn't be there.
 
-### 4. Care Plans Part 1 — `/vision/care-plans/part-1`
-- PARAGRAPHS: gatsby=641, next=479 (Δ25%)
-- IMAGES: gatsby=48, next=68 (Δ42% MORE on Next)
-
-The extra images likely come from Next.js `<Image>` rendering both a
-poster `<img>` and an `<img>` placeholder for picture sources, and from
-the carousel images all being eagerly rendered (per the lazy-loading fix
-in QA item #43). The paragraph deficit is more concerning — possibly
-some text content didn't migrate. Worth diffing block-by-block.
+### 4. Care Plans Part 1 — `/vision/care-plans/part-1` ✅ VERIFIED
+Restricted comparison to substantive paragraphs (>30 chars) inside the
+`<article>`: **all 340 paragraphs match exactly** between Gatsby and
+Next. The smoke-check's `p` count diff was layout chrome (footer,
+hero block, author cards) outside the article, not body content. The
++42% image count on our side is `<Image>` placeholder + actual src
+double-counting and eager-loaded carousel slides (per QA fix #43).
 
 ## False Positives (Footer Structure Difference)
 
