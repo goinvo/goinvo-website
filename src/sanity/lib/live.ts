@@ -1,8 +1,8 @@
 import { defineLive } from 'next-sanity'
 import { client } from './client'
-import { projectId } from '../env'
+import { projectId, readToken } from '../env'
 
-export const token = process.env.SANITY_API_READ_TOKEN
+export const token = readToken || undefined
 
 const live = defineLive({
   client,
