@@ -5,7 +5,29 @@ Feedback from Jen Patel via FigJam board review.
 ## Status Key
 - [x] Fixed
 - [ ] Pending
-- [~] Partially fixed
+- [~] Partially fixed (works, but not at full parity / parked as out-of-scope)
+
+---
+
+## Remaining Work (Open Items Only)
+
+### Pending
+- **Healing US Healthcare** — [ ] OG Knight Lab timeline (Google Spreadsheet feed) is broken on Gatsby too. Needs static React rebuild from spreadsheet content if recoverable. _Lowest priority — Jen flagged as "broken anyway"._
+
+### Partial — Major Pages With Open Tail Work
+- **Faces in Health Communication** — [~] Weird amount of superscripts (most cleaned, some patterns may remain). [~] Image sizes vary slightly from Gatsby. [~] Minor cosmetic differences in later sections (Appendix screenshots).
+- **Healing US Healthcare** — [~] PARTICIPATE / CREATING content sections (Participate exists; "Creating" may refer to the existing "Creators" h2 — verify on next pass).
+- **Care Plans Part 1** — [~] "Lost the original design, kind of blah" — improved with hero overlay but may want a deeper visual pass.
+- **Care Plans Part 2** — [~] "Missing some columns" (legacy Gatsby is single-column too — may refer to a never-shipped revision). [~] "Missing hotspots" (none in legacy Gatsby HTML — may refer to a future revision). [~] Image+text overlay pattern (deferred — needs custom Sanity block).
+- **Redesign Democracy** — [~] Need more graceful breakpoint (improved via earlier-stack breakpoints). [~] Image+text overlay pattern (deferred).
+- **Open Source Healthcare** — [~] "Different headers?" — h1/h2/h4 sizes match exactly; user complaint may have been about poetry block formatting which is now fixed.
+
+### Pages Tagged "Major Remaining Work" (already at end of doc)
+1. **Faces in Health Communication** — extensive layout issues, image+text pairing broken in multiple sections — needs a deep re-port from Gatsby.
+2. **Healthcare AI** — chat image width, video preview images, text differences.
+3. **National Cancer Navigation** — spacing issues, contributor links.
+4. **Health Design Thinking** — all-caps issue.
+5. **Physician Burnout** — mobile contributor illustration.
 
 ---
 
@@ -100,7 +122,7 @@ Feedback from Jen Patel via FigJam board review.
 ## 24. Determinants of Health
 - [x] Why different style of buttons? — changed `.determinants-of-health .button--secondary` from filled teal `#007385` to outlined orange (transparent bg, `#E36216` text, `1px solid #FFB992` border, `6px 16px` padding, 15px font) matching Gatsby exactly
 - [x] Wrong icons for the chart — replaced 5 placeholder generic icons with the actual Gatsby SVGs (Individual Behavior, Social Circumstances, Genetics & Biology, Medical Care, Environment). Decoded from base64 in Gatsby HTML and saved to public/images/vision/determinants-of-health/.
-- [~] Chart looks different from Gatsby (our custom SVG donut vs react-google-charts) — kept the custom SVG donut (works well, no library needed) but fixed the legend mismatch: removed duplicate "Tap the categories to explore" h2 (was rendered by both `page.tsx` and `DeterminantsChart.tsx`); switched the icon legend from a vertical-stacked 32×32 icon+label list to a horizontal row of 60×60 icon-only buttons matching Gatsby exactly. Active state is now `scale-110` instead of opacity dimming.
+- [~] Chart looks different from Gatsby (our custom SVG donut vs![1776457095322](image/QA-FEEDBACK/1776457095322.png) react-google-charts) — kept the custom SVG donut (works well, no library needed) but fixed the legend mismatch: removed duplicate "Tap the categories to explore" h2 (was rendered by both `page.tsx` and `DeterminantsChart.tsx`); switched the icon legend from a vertical-stacked 32×32 icon+label list to a horizontal row of 60×60 icon-only buttons matching Gatsby ex![1776447665277](image/QA-FEEDBACK/1776447665277.png)actly. Active state is now `scale-110` instead of opacity dimming.
 - [x] Big sans-serif header "Individual Behavior" — reduced from text-xl (20px) to 1.17em (~18.72px matching Gatsby's h3 default)
 - [x] Little sub-headers (Psychological Assets, etc.) — changed from default serif 24px to font-sans text-base font-bold (16px, matching Gatsby's h4)
 - [x] Blue-on-blue contrast — `.background--blue` was `#dff0f5` (distinctly blue); Gatsby uses `#f8fafe` (nearly white). Changed to match. The gray text now has proper contrast.
