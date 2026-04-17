@@ -7,20 +7,21 @@ const write = process.argv.includes('--write')
 const gatsbyDir = 'C:/Users/quest/Programming/GoInvo/goinvo.com/src/case-studies'
 
 dotenv.config({ path: '.env.local' })
+const writeToken = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_WRITE_TOKEN
 
 if (!process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || !process.env.NEXT_PUBLIC_SANITY_DATASET) {
   throw new Error('Missing NEXT_PUBLIC_SANITY_PROJECT_ID or NEXT_PUBLIC_SANITY_DATASET in .env.local')
 }
 
-if (write && !process.env.SANITY_WRITE_TOKEN) {
-  throw new Error('Missing SANITY_WRITE_TOKEN in .env.local')
+if (write && !writeToken) {
+  throw new Error('Missing SANITY_WRITE_TOKEN or SANITY_API_WRITE_TOKEN in .env.local')
 }
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
   apiVersion: '2024-01-01',
-  token: write ? process.env.SANITY_WRITE_TOKEN : process.env.SANITY_API_READ_TOKEN,
+  token: write ? writeToken : process.env.SANITY_API_READ_TOKEN,
   useCdn: false,
 })
 

@@ -11,13 +11,14 @@ import { createClient } from 'next-sanity'
 import 'dotenv/config'
 
 const WRITE = process.argv.includes('--write')
+const WRITE_TOKEN = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_WRITE_TOKEN
 
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
   apiVersion: '2024-01-01',
   useCdn: false,
-  token: process.env.SANITY_WRITE_TOKEN,
+  token: WRITE_TOKEN,
 })
 
 const KATHY_ID = 'alumni-kathy-mikk'
@@ -79,3 +80,5 @@ if (WRITE) {
 } else {
   console.log('(Dry run — pass --write to apply)')
 }
+
+
