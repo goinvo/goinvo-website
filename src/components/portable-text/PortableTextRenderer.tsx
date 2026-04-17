@@ -24,6 +24,7 @@ import {
 } from '@/components/portable-text/LonelinessFeatureSections'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 import { parseDataTableSource } from '@/lib/dataTable'
+import { ARTICLE_TEXT_COLOR_CLASS, isArticleTextColor } from '@/lib/articleTextColors'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -1151,14 +1152,11 @@ const components: PortableTextComponents = {
     orange: ({ children }) => <span className="text-primary">{children}</span>,
     // New unified text color annotation
     textColor: ({ children, value }) => {
-      const colorMap: Record<string, string> = {
-        teal: 'text-tertiary',
-        orange: 'text-primary',
-        charcoal: 'text-tertiary',
-        gray: 'text-gray',
-        blue: 'text-blue',
-      }
-      return <span className={colorMap[value?.color] || 'text-secondary'}>{children}</span>
+      const colorValue = value?.color
+      const className = isArticleTextColor(colorValue)
+        ? ARTICLE_TEXT_COLOR_CLASS[colorValue]
+        : ARTICLE_TEXT_COLOR_CLASS.teal
+      return <span className={className}>{children}</span>
     },
     refCitation: ({ children, value }) => (
       <sup>

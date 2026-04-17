@@ -1,8 +1,25 @@
 import { defineType, defineArrayMember } from 'sanity'
-import { SectionTitleStyle, CalloutStyle } from '../../components/BlockStyleComponents'
+import {
+  BlockQuoteStyle,
+  BodyParagraphSpaciousStyle,
+  BodyParagraphStyle,
+  CalloutStyle,
+  LargeSectionHeadingStyle,
+  LargeSerifParagraphStyle,
+  SectionHeadingStyle,
+  SectionTitleStyle,
+  SmallHeadingStyle,
+  SubheadingStyle,
+} from '../../components/BlockStyleComponents'
 import { PortableTextInput } from '../../components/PortableTextInput'
 import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
+import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
+
+const collapsibleCustomBlockOptions = {
+  collapsible: true,
+  collapsed: true,
+} as const
 
 export default defineType({
   title: 'Portable Text',
@@ -15,19 +32,51 @@ export default defineType({
     defineArrayMember({
       type: 'block',
       styles: [
-        { title: 'Body paragraph', value: 'normal' },
-        { title: 'Body paragraph (extra space below)', value: 'normalSpacious' },
-        { title: 'Large serif paragraph', value: 'serifLarge' },
-        { title: 'Section heading (H2)', value: 'h2' },
-        { title: 'Section heading (large H2)', value: 'h2Large' },
+        {
+          title: 'Body paragraph',
+          value: 'normal',
+          component: BodyParagraphStyle,
+        },
+        {
+          title: 'Body paragraph (extra space below)',
+          value: 'normalSpacious',
+          component: BodyParagraphSpaciousStyle,
+        },
+        {
+          title: 'Large serif paragraph',
+          value: 'serifLarge',
+          component: LargeSerifParagraphStyle,
+        },
+        {
+          title: 'Section heading (H2)',
+          value: 'h2',
+          component: SectionHeadingStyle,
+        },
+        {
+          title: 'Section heading (large H2)',
+          value: 'h2Large',
+          component: LargeSectionHeadingStyle,
+        },
         {
           title: 'Centered section heading',
           value: 'sectionTitle',
           component: SectionTitleStyle,
         },
-        { title: 'Subheading (H3)', value: 'h3' },
-        { title: 'Small heading (H4)', value: 'h4' },
-        { title: 'Quote', value: 'blockquote' },
+        {
+          title: 'Subheading (H3)',
+          value: 'h3',
+          component: SubheadingStyle,
+        },
+        {
+          title: 'Small heading (H4)',
+          value: 'h4',
+          component: SmallHeadingStyle,
+        },
+        {
+          title: 'Quote',
+          value: 'blockquote',
+          component: BlockQuoteStyle,
+        },
         {
           title: 'Callout',
           value: 'callout',
@@ -73,6 +122,9 @@ export default defineType({
             name: 'textColor',
             type: 'object',
             icon: () => 'A',
+            components: {
+              annotation: TextColorAnnotation,
+            },
             fields: [
               {
                 title: 'Color',
@@ -83,9 +135,9 @@ export default defineType({
                   list: [
                     { title: 'Emerald Teal (#007385)', value: 'teal' },
                     { title: 'Vibrant Orange (#E36216)', value: 'orange' },
-                    { title: 'Deep Charcoal (#263238)', value: 'charcoal' },
+                    { title: 'Deep Charcoal (#24434D)', value: 'charcoal' },
                     { title: 'Warm Gray (#787473)', value: 'gray' },
-                    { title: 'Ocean Blue (#486393)', value: 'blue' },
+                    { title: 'Ocean Blue (#4A5E88)', value: 'blue' },
                   ],
                 },
                 initialValue: 'teal',
@@ -185,6 +237,7 @@ export default defineType({
       name: 'columns',
       title: 'Columns',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { layout: 'layout', caption: 'caption' },
         prepare({ layout, caption }) {
@@ -270,6 +323,7 @@ export default defineType({
       name: 'quote',
       title: 'Quote',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       fields: [
         {
           name: 'text',
@@ -331,6 +385,7 @@ export default defineType({
       name: 'results',
       title: 'Results',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       components: {
         input: ResultsBlockInput,
       },
@@ -406,6 +461,7 @@ export default defineType({
       name: 'dataTable',
       title: 'Data Table',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       components: {
         input: DataTableBlockInput,
       },
@@ -502,6 +558,7 @@ export default defineType({
       name: 'cardGrid',
       title: 'Card Grid',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { items: 'items', columns: 'columns' },
         prepare({ items, columns }) {
@@ -562,6 +619,7 @@ export default defineType({
       name: 'reviewCard',
       title: 'Review Card',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { title: 'title', status: 'status' },
         prepare({ title, status }) {
@@ -583,6 +641,7 @@ export default defineType({
       name: 'references',
       title: 'References',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { items: 'items' },
         prepare({ items }) {
@@ -623,6 +682,7 @@ export default defineType({
       title: 'Background Section',
       type: 'object',
       description: 'Full-width colored background wrapper for content',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { color: 'color' },
         prepare({ color }) {
@@ -662,6 +722,7 @@ export default defineType({
       name: 'videoEmbed',
       title: 'Video Embed',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { url: 'url', caption: 'caption' },
         prepare({ url, caption }) {
@@ -714,6 +775,7 @@ export default defineType({
       name: 'iframeEmbed',
       title: 'Iframe Embed',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { url: 'url', caption: 'caption' },
         prepare({ url, caption }) {
@@ -768,6 +830,7 @@ export default defineType({
       name: 'divider',
       title: 'Divider',
       type: 'object',
+      options: collapsibleCustomBlockOptions,
       preview: {
         prepare() {
           return { title: '— Divider —', subtitle: 'Horizontal rule' }
@@ -796,6 +859,7 @@ export default defineType({
       title: 'Image Carousel',
       type: 'object',
       description: 'Slideshow with thumbnail navigation. Use for storyboards, step-by-step visuals, or multi-image galleries.',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { caption: 'caption', images: 'images' },
         prepare({ caption, images }) {
@@ -846,6 +910,7 @@ export default defineType({
       title: 'Image Equation List',
       type: 'object',
       description: 'Rows of [Image] + [Text] = [Image] (e.g., 3D render + prompt = output)',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { heading1: 'headings.0', heading2: 'headings.1', heading3: 'headings.2' },
         prepare({ heading1, heading2, heading3 }) {
@@ -886,6 +951,7 @@ export default defineType({
       title: 'Spacer',
       type: 'object',
       description: 'Adds vertical spacing between content blocks',
+      options: collapsibleCustomBlockOptions,
       preview: {
         prepare() { return { title: '↕ Spacer', subtitle: 'Vertical space' } },
       },
@@ -911,6 +977,7 @@ export default defineType({
       title: 'Buttons',
       type: 'object',
       description: 'One or more buttons side by side',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { buttons: 'buttons' },
         prepare({ buttons }) {
@@ -969,6 +1036,7 @@ export default defineType({
       title: 'Contact Form',
       type: 'object',
       description: 'Embeds the "Get in touch" contact form (JotForm)',
+      options: collapsibleCustomBlockOptions,
       preview: {
         prepare() {
           return { title: 'Contact Form', subtitle: 'JotForm embed' }
@@ -999,6 +1067,7 @@ export default defineType({
       title: 'Custom Component',
       type: 'object',
       description: 'Renders a hard-coded React component by name. Used for page-specific tables and visualizations that don\'t fit the generic block types.',
+      options: collapsibleCustomBlockOptions,
       preview: {
         select: { name: 'name' },
         prepare({ name }) {

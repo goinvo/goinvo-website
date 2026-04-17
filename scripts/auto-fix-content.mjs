@@ -18,16 +18,17 @@ import { randomUUID } from 'crypto'
 import dotenv from 'dotenv'
 dotenv.config({ path: '.env.local' })
 
+const WRITE = process.argv.includes('--write')
+const WRITE_TOKEN = process.env.SANITY_WRITE_TOKEN || process.env.SANITY_API_WRITE_TOKEN
+const SLUG_ARG = process.argv.find(a => !a.startsWith('-') && a !== process.argv[0] && a !== process.argv[1])
+
 const client = createClient({
   projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
   dataset: process.env.NEXT_PUBLIC_SANITY_DATASET || 'production',
-  token: process.env.SANITY_WRITE_TOKEN,
+  token: WRITE_TOKEN,
   apiVersion: '2024-01-01',
   useCdn: false,
 })
-
-const WRITE = process.argv.includes('--write')
-const SLUG_ARG = process.argv.find(a => !a.startsWith('-') && a !== process.argv[0] && a !== process.argv[1])
 
 function makeKey() { return randomUUID().slice(0, 12) }
 
@@ -274,3 +275,5 @@ async function main() {
 }
 
 main().catch(err => { console.error(err); process.exit(1) })
+
+
