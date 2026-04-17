@@ -516,57 +516,128 @@
 .healthroom-legacy #timeline {
   position: relative;
   margin-bottom: 2em;
+  margin-top: -10px;
 }
 .healthroom-legacy #timeline .slider-contents {
+  position: relative;
   min-height: 240px;
+  border: 3px solid #000;
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+}
+.healthroom-legacy #timeline .slick-prev,
+.healthroom-legacy #timeline .slick-next {
+  position: absolute;
+  top: calc(50% - 20px);
+  width: 20px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: url("https://www.goinvo.com/old/images/arrow.png") no-repeat center / contain;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: opacity 250ms ease-in-out;
+  z-index: 5;
+  font-size: 0;
+  color: transparent;
+}
+.healthroom-legacy #timeline .slick-prev:hover:not(:disabled),
+.healthroom-legacy #timeline .slick-next:hover:not(:disabled) {
+  opacity: 1;
+}
+.healthroom-legacy #timeline .slick-prev:disabled,
+.healthroom-legacy #timeline .slick-next:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+.healthroom-legacy #timeline .slick-prev {
+  left: 15px;
+  transform: rotate(180deg);
+}
+.healthroom-legacy #timeline .slick-next {
+  right: 15px;
 }
 .healthroom-legacy #timeline .slide-content {
   max-width: 720px;
   margin: 0 auto;
   padding: 1em 1.5rem;
 }
-.healthroom-legacy #timeline .timeline-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5em;
-  margin-top: 1em;
-  padding: 0 1.5rem;
+.healthroom-legacy #timeline .byline {
+  position: absolute;
+  bottom: 0.5em;
+  left: 1.5em;
+  color: #939598;
+  z-index: 1000;
+  font-size: 0.7em;
 }
-.healthroom-legacy #timeline .timeline-arrow {
-  background: transparent;
-  border: 1px solid #999;
-  padding: 0.4em 1em;
-  font-size: 0.85em;
-  cursor: pointer;
-  transition: all 200ms ease;
+
+/* ---- Timeline scrubber (replaces the legacy jQuery UI slider) ---- */
+.healthroom-legacy #timechart {
+  max-width: 978px;
+  margin: 0 auto;
 }
-.healthroom-legacy #timeline .timeline-arrow:hover:not(:disabled) {
-  background: #f4d37b;
-  border-color: #000;
-}
-.healthroom-legacy #timeline .timeline-arrow:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.healthroom-legacy #timeline .timeline-dots {
-  display: flex;
-  gap: 0.5em;
-}
-.healthroom-legacy #timeline .timeline-dot {
-  width: 10px;
+.healthroom-legacy #timechart:after {
+  display: block;
   height: 10px;
-  border-radius: 50%;
-  border: 1px solid #666;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  transition: all 200ms ease;
+  content: "";
+  border: 3px solid #000;
+  border-top-width: 2px;
+  margin: 0 14px;
 }
-.healthroom-legacy #timeline .timeline-dot.active {
-  background: #f4d37b;
-  border-color: #000;
-  transform: scale(1.2);
+.healthroom-legacy #timeline-slider-controller,
+.healthroom-legacy #timeline-dates {
+  max-width: 930px;
+  margin: 0 auto;
+  position: relative;
+  height: 10px;
+  z-index: 100;
+}
+.healthroom-legacy #timeline-slider-controller {
+  top: -10px;
+  cursor: pointer;
+  touch-action: none;
+}
+.healthroom-legacy #timeline-slider-controller > span {
+  display: block;
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  top: -5px;
+  margin-left: -10px;
+  border: 3px solid #000;
+  border-radius: 20px;
+  background: #f04e52;
+  cursor: grab;
+  transition: left 350ms ease-in-out;
+}
+.healthroom-legacy #timeline-slider-controller:active > span,
+.healthroom-legacy #timeline-slider-controller > span:active {
+  cursor: grabbing;
+}
+.healthroom-legacy #timeline-slider-controller > span:focus {
+  outline: none;
+}
+.healthroom-legacy #timeline-slider-controller > span:after {
+  content: " ";
+  position: absolute;
+  background-color: #a30c29;
+  width: 8px;
+  height: 8px;
+  border-radius: 100%;
+  left: calc(50% - 4px);
+  top: calc(50% - 4px);
+  z-index: 1000;
+}
+.healthroom-legacy #timeline-dates {
+  background-color: transparent;
+  top: 3px;
+  height: 1px;
+}
+.healthroom-legacy #timeline-dates > div {
+  position: absolute;
+  top: 0;
+  font-size: 10px;
+  transform: translateX(-50%);
 }
 
 /* ---- Locations interactive ---- */
@@ -589,7 +660,6 @@
 .healthroom-legacy #locations .slider-controls a,
 .healthroom-legacy #locations .slider-controls button {
   display: block;
-  flex: 1;
   margin: 0;
   padding: 8px 4px;
   background: transparent;
@@ -610,20 +680,40 @@
 .healthroom-legacy #locations .slider-controls button.active {
   background: #f4d37b;
 }
+
+/* Popover card — anchored under the active button. The card's left is set
+   inline by JS to match the active button's offsetLeft (Gatsby moveCard). */
 .healthroom-legacy #locations .calendar-graphics {
   position: relative;
   width: 100%;
-  display: flex;
-  justify-content: center;
-  margin: 1.5em 0;
+  height: 0;
+  margin: 0;
 }
-.healthroom-legacy #locations .calendar-graphics .active img {
+.healthroom-legacy #locations .calendar-graphics > div {
+  position: absolute;
+  top: 20px;
+  left: -300px;
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: left 250ms ease-in-out, opacity 200ms ease-in-out;
+}
+.healthroom-legacy #locations .calendar-graphics > div.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.healthroom-legacy #locations .calendar-graphics > div img {
   display: block;
-  max-width: 360px;
-  width: 100%;
   height: auto;
-  margin: 0 auto;
+  width: 100%;
 }
+/* Per-card max widths matching legacy (cards are different sizes) */
+.healthroom-legacy #locations .calendar-graphics > .position-0 { max-width: 195px; }
+.healthroom-legacy #locations .calendar-graphics > .position-1 { max-width: 170px; }
+.healthroom-legacy #locations .calendar-graphics > .position-2 { max-width: 263px; }
+.healthroom-legacy #locations .calendar-graphics > .position-3 { max-width: 263px; }
+.healthroom-legacy #locations .calendar-graphics > .position-4 { max-width: 200px; }
+.healthroom-legacy #locations .calendar-graphics > .position-5 { max-width: 264px; }
 .healthroom-legacy #locations .slider-contents img {
   display: block;
   width: 100%;
