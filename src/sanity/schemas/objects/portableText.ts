@@ -1,16 +1,4 @@
 import { defineType, defineArrayMember } from 'sanity'
-import {
-  BlockQuoteStyle,
-  BodyParagraphSpaciousStyle,
-  BodyParagraphStyle,
-  CalloutStyle,
-  LargeSectionHeadingStyle,
-  LargeSerifParagraphStyle,
-  SectionHeadingStyle,
-  SectionTitleStyle,
-  SmallHeadingStyle,
-  SubheadingStyle,
-} from '../../components/BlockStyleComponents'
 import { PortableTextInput } from '../../components/PortableTextInput'
 import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
@@ -32,56 +20,23 @@ export default defineType({
     defineArrayMember({
       type: 'block',
       styles: [
-        {
-          title: 'Body paragraph',
-          value: 'normal',
-          component: BodyParagraphStyle,
-        },
-        {
-          title: 'Body paragraph (extra space below)',
-          value: 'normalSpacious',
-          component: BodyParagraphSpaciousStyle,
-        },
-        {
-          title: 'Large serif paragraph',
-          value: 'serifLarge',
-          component: LargeSerifParagraphStyle,
-        },
-        {
-          title: 'Section heading (H2)',
-          value: 'h2',
-          component: SectionHeadingStyle,
-        },
-        {
-          title: 'Section heading (large H2)',
-          value: 'h2Large',
-          component: LargeSectionHeadingStyle,
-        },
-        {
-          title: 'Centered section heading',
-          value: 'sectionTitle',
-          component: SectionTitleStyle,
-        },
-        {
-          title: 'Subheading (H3)',
-          value: 'h3',
-          component: SubheadingStyle,
-        },
-        {
-          title: 'Small heading (H4)',
-          value: 'h4',
-          component: SmallHeadingStyle,
-        },
-        {
-          title: 'Quote',
-          value: 'blockquote',
-          component: BlockQuoteStyle,
-        },
-        {
-          title: 'Callout',
-          value: 'callout',
-          component: CalloutStyle,
-        },
+        { title: 'Body paragraph', value: 'normal' },
+        { title: 'Body paragraph (extra space below)', value: 'normalSpacious' },
+        { title: 'Large serif paragraph', value: 'serifLarge' },
+        { title: 'Section heading (H2)', value: 'h2' },
+        { title: 'Section heading (large H2)', value: 'h2Large' },
+        { title: 'Legacy centered section heading (H1)', value: 'legacyH1Centered' },
+        { title: 'Legacy large section heading (H1)', value: 'legacyH1Large' },
+        { title: 'Legacy wide centered section heading (H1)', value: 'legacyH1CenteredWide' },
+        { title: 'Centered section heading', value: 'sectionTitle' },
+        { title: 'Legacy compact section heading (H2)', value: 'legacyH2Md' },
+        { title: 'Legacy compact centered section heading (H2)', value: 'legacyH2MdCentered' },
+        { title: 'Legacy spacious section heading (H2)', value: 'legacyH2Spacious' },
+        { title: 'Subheading (H3)', value: 'h3' },
+        { title: 'Legacy compact subsection heading (H3)', value: 'legacyH3Compact' },
+        { title: 'Small heading (H4)', value: 'h4' },
+        { title: 'Quote', value: 'blockquote' },
+        { title: 'Callout', value: 'callout' },
       ],
       marks: {
         decorators: [
