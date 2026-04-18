@@ -1,3 +1,4 @@
+import { draftMode } from 'next/headers'
 import { Header } from '@/components/layout/Header'
 import { TransitionLayout } from '@/components/layout/TransitionLayout'
 import { HeroProvider } from '@/context/HeroContext'
@@ -10,13 +11,19 @@ import { ChatlioWidget } from '@/components/analytics/ChatlioWidget'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { ScrollDepthTracker } from '@/components/analytics/ScrollDepthTracker'
 import { ExternalLinkTracker } from '@/components/analytics/ExternalLinkTracker'
+import { ThrottledSanityLive } from '@/components/sanity/ThrottledSanityLive'
+import { PreviewBanner } from '@/components/sanity/PreviewBanner'
+import { DraftModeGuard } from '@/components/sanity/DraftModeGuard'
+import { SafeVisualEditing } from '@/components/sanity/SafeVisualEditing'
 import './vision/determinants-of-health/determinants.css'
 
-export default function MainLayout({
+export default async function MainLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const { isEnabled: isDraftMode } = await draftMode()
+
   return (
     <HeroProvider>
       <a
@@ -38,6 +45,14 @@ export default function MainLayout({
       <WebVitals />
       <ScrollDepthTracker />
       <ExternalLinkTracker />
+      {/* Sanity live-data — mounted only inside the (main) group so the
+          /studio route (which lives outside this group) doesn't receive
+          its own mutation events and trigger a revalidate/re-render
+          loop under the editor. */}
+      <ThrottledSanityLive />
+      {isDraftMode && <SafeVisualEditing />}
+      {isDraftMode && <PreviewBanner />}
+      {isDraftMode && <DraftModeGuard />}
     </HeroProvider>
   )
 }
