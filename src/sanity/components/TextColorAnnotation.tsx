@@ -1,18 +1,15 @@
 import type { BlockAnnotationProps } from 'sanity'
-import { ARTICLE_TEXT_COLOR_HEX, isArticleTextColor } from '@/lib/articleTextColors'
 
+/**
+ * Pass-through annotation for the "Text Color" mark.
+ *
+ * We intentionally do NOT tint the text inside the Studio editor —
+ * (a) the editor is dark-themed, so a light tint (e.g. charcoal) is
+ * effectively invisible, and (b) editors told us the in-editor tint
+ * was distracting. The color is still written to the markDef's
+ * `color` field and rendered on the public page by
+ * PortableTextRenderer.
+ */
 export function TextColorAnnotation(props: BlockAnnotationProps) {
-  const colorValue = (props.value as { color?: unknown } | undefined)?.color
-  const resolvedColor = isArticleTextColor(colorValue)
-    ? ARTICLE_TEXT_COLOR_HEX[colorValue]
-    : ARTICLE_TEXT_COLOR_HEX.teal
-
-  return props.renderDefault({
-    ...props,
-    textElement: (
-      <span style={{ color: resolvedColor }}>
-        {props.textElement}
-      </span>
-    ),
-  })
+  return props.renderDefault(props)
 }
