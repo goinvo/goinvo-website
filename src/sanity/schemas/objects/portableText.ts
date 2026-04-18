@@ -85,14 +85,18 @@ export default defineType({
                 title: 'Color',
                 name: 'color',
                 type: 'string',
-                description: 'Select a brand color',
+                description:
+                  'Pick a brand color for emphasis. Note: charcoal is ' +
+                  'only a few shades off default body text, so the shift ' +
+                  'is intentionally subtle — use teal, orange, blue, or ' +
+                  'gray when you want the highlight to pop.',
                 options: {
                   list: [
-                    { title: 'Emerald Teal (#007385)', value: 'teal' },
-                    { title: 'Vibrant Orange (#E36216)', value: 'orange' },
-                    { title: 'Deep Charcoal (#24434D)', value: 'charcoal' },
-                    { title: 'Warm Gray (#787473)', value: 'gray' },
-                    { title: 'Ocean Blue (#4A5E88)', value: 'blue' },
+                    { title: 'Emerald Teal (#007385) — vivid', value: 'teal' },
+                    { title: 'Vibrant Orange (#E36216) — vivid', value: 'orange' },
+                    { title: 'Ocean Blue (#4A5E88) — vivid', value: 'blue' },
+                    { title: 'Warm Gray (#787473) — soft contrast', value: 'gray' },
+                    { title: 'Deep Charcoal (#24434D) — subtle (near body text)', value: 'charcoal' },
                   ],
                 },
                 initialValue: 'teal',
