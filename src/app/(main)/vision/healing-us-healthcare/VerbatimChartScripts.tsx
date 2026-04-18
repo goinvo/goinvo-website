@@ -2,9 +2,7 @@
 
 /**
  * Loads the unmodified Gatsby microsite scripts that render the
- * D3 charts on this page. We vendor the original files (jQuery
- * is globally present via the Studio/dev bundle; we only load
- * D3 v3 + sankey plugin + each chart script) under
+ * D3 charts on this page. We vendor the original files under
  * /public/features/us-healthcare/ so the scripts can fetch their
  * CSV/JSON data at the exact paths they hard-code.
  *
@@ -12,19 +10,32 @@
  * they look for their #id DOM targets and draw. Every target
  * (#spending-capita-chart, #gdp-vs-capita-chart,
  * #quality-vs-capita-chart, #waste-chart, #cost-comparison-boston-chart,
- * #sankey-chart) must already be in the DOM before this mounts.
+ * #sankey-chart, #health-history) must already be in the DOM.
+ *
+ * Also boots Knight Lab TimelineJS against our vendored JSON
+ * (data/timeline.json) for the "History of US Healthcare" timeline.
  */
 
 import Script from 'next/script'
 
 const BASE = '/features/us-healthcare/js'
+const KNIGHTLAB_TIMELINE = 'https://cdn.knightlab.com/libs/timeline3/latest'
 
-// Stylesheet the Gatsby microsite uses alongside these scripts.
-// Loaded once at the top of the article body in UsHealthcareContent.
+declare global {
+  interface Window {
+    TL?: { Timeline: new (id: string, source: string, opts: unknown) => unknown }
+    __heal_timeline_init?: boolean
+  }
+}
 
 export function VerbatimChartScripts() {
   return (
     <>
+      {/* Knight Lab TimelineJS stylesheet (loaded globally by next/head) */}
+      <link
+        rel="stylesheet"
+        href={`${KNIGHTLAB_TIMELINE}/css/timeline.css`}
+      />
       <Script
         src="https://code.jquery.com/jquery-3.6.0.min.js"
         strategy="beforeInteractive"
@@ -40,6 +51,24 @@ export function VerbatimChartScripts() {
       <Script src={`${BASE}/waste.js`} strategy="afterInteractive" />
       <Script src={`${BASE}/cost_comparison_boston.js`} strategy="afterInteractive" />
       <Script src={`${BASE}/sankey.js`} strategy="afterInteractive" />
+      {/* Knight Lab TimelineJS — init once ready. Matches the
+          legacy Gatsby options (full-width, 600px tall). */}
+      <Script
+        src={`${KNIGHTLAB_TIMELINE}/js/timeline.js`}
+        strategy="afterInteractive"
+        onReady={() => {
+          if (typeof window === 'undefined' || !window.TL) return
+          if (window.__heal_timeline_init) return
+          const target = document.getElementById('health-history')
+          if (!target) return
+          window.__heal_timeline_init = true
+          new window.TL.Timeline(
+            'health-history',
+            '/features/us-healthcare/data/timeline.json',
+            { width: '100%', height: '600' },
+          )
+        }}
+      />
     </>
   )
 }
