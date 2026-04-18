@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { scaleLinear } from 'd3-scale'
 
 /* ─────────── Shared helpers ─────────── */
 
@@ -105,18 +106,20 @@ export function SpendingOverTimeChart() {
   const innerW = W - M.left - M.right
   const innerH = H - M.top - M.bottom
 
-  const xScale = (year: number) => ((year - chart.minYear) / (chart.maxYear - chart.minYear)) * innerW
-  const yScale = (capita: number) => innerH - (capita / chart.maxCapita) * innerH
+  // Use d3-scale .nice() so the axis ticks land on round numbers (0, 1k, 2k…
+  // 9k) matching Gatsby's rendering.
+  const xScaleD3 = scaleLinear().domain([chart.minYear, chart.maxYear]).nice()
+  const yScaleD3 = scaleLinear().domain([0, chart.maxCapita]).nice()
+  const [xMinNice, xMaxNice] = xScaleD3.domain() as [number, number]
+  const [yMinNice, yMaxNice] = yScaleD3.domain() as [number, number]
 
-  // Y-axis ticks (round to thousands)
-  const yTickCount = 6
-  const yTickStep = Math.ceil(chart.maxCapita / yTickCount / 1000) * 1000
-  const yTicks: number[] = []
-  for (let v = 0; v <= chart.maxCapita; v += yTickStep) yTicks.push(v)
+  const xScale = (year: number) => ((year - xMinNice) / (xMaxNice - xMinNice)) * innerW
+  const yScale = (capita: number) => innerH - (capita / yMaxNice) * innerH
 
-  // X-axis ticks (every 10 years)
+  const yTicks: number[] = yScaleD3.ticks(8).filter((v) => v >= 0)
+  // X ticks every 5 years across the nice domain so years like 1960/1965/.../2015 show up
   const xTicks: number[] = []
-  for (let y = Math.ceil(chart.minYear / 10) * 10; y <= chart.maxYear; y += 10) xTicks.push(y)
+  for (let y = Math.ceil(xMinNice / 5) * 5; y <= xMaxNice; y += 5) xTicks.push(y)
 
   // Build path string for a country line
   const pathFor = (points: { year: number; capita: number }[]) =>
@@ -147,21 +150,32 @@ export function SpendingOverTimeChart() {
             </g>
           ))}
 
-          {/* Country lines */}
+          {/* Country lines + data-point circles (matches Gatsby's look) */}
           {chart.lines.map((line) => {
             const isHovered = hovered === line.country
             const isOther = hovered && !isHovered
+            const strokeColor = isHovered ? '#5a5e8e' : '#9a9a9a'
+            const opacity = isOther ? 0.2 : 1
             return (
-              <path
-                key={line.country}
-                d={pathFor(line.points)}
-                fill="none"
-                stroke={isHovered ? '#5a5e8e' : '#9a9a9a'}
-                strokeWidth={isHovered ? 3 : 1}
-                strokeOpacity={isOther ? 0.2 : 1}
-                className="cursor-pointer transition-all"
-                onMouseEnter={() => setHovered(line.country)}
-              />
+              <g key={line.country} onMouseEnter={() => setHovered(line.country)} className="cursor-pointer">
+                <path
+                  d={pathFor(line.points)}
+                  fill="none"
+                  stroke={strokeColor}
+                  strokeWidth={isHovered ? 3 : 1}
+                  strokeOpacity={opacity}
+                />
+                {line.points.map((p, i) => (
+                  <circle
+                    key={i}
+                    cx={xScale(p.year)}
+                    cy={yScale(p.capita)}
+                    r={isHovered ? 3 : 1.5}
+                    fill={strokeColor}
+                    fillOpacity={opacity}
+                  />
+                ))}
+              </g>
             )
           })}
 
@@ -297,11 +311,16 @@ function ScatterChart({ data, xKey, yKey, xLabel, yLabel, xFormat, yFormat, defa
   const innerW = W - M.left - M.right
   const innerH = H - M.top - M.bottom
 
-  // Pad domain by 5% on each side
+  // Pad domain by 5% then round to nice tick boundaries so the axes read
+  // as 1000/2000/3000 (like Gatsby) rather than 1348/2906/4464.
   const xPad = (maxX - minX) * 0.05
   const yPad = (maxY - minY) * 0.05
-  const xRange = [minX - xPad, maxX + xPad]
-  const yRange = [minY - yPad, maxY + yPad]
+  const xScaleD3 = scaleLinear().domain([minX - xPad, maxX + xPad]).nice()
+  const yScaleD3 = scaleLinear().domain([minY - yPad, maxY + yPad]).nice()
+  const [xMinNice, xMaxNice] = xScaleD3.domain() as [number, number]
+  const [yMinNice, yMaxNice] = yScaleD3.domain() as [number, number]
+  const xRange = [xMinNice, xMaxNice]
+  const yRange = [yMinNice, yMaxNice]
 
   const xScale = (v: number) => ((v - xRange[0]) / (xRange[1] - xRange[0])) * innerW
   const yScale = (v: number) => {
@@ -310,19 +329,16 @@ function ScatterChart({ data, xKey, yKey, xLabel, yLabel, xFormat, yFormat, defa
   }
   const rScale = (pop: number) => 4 + ((pop - minPop) / (maxPop - minPop)) * 22
 
-  const xTickCount = 6
-  const yTickCount = 6
-  const xTicks: number[] = []
-  for (let i = 0; i <= xTickCount; i++) xTicks.push(xRange[0] + (i / xTickCount) * (xRange[1] - xRange[0]))
-  const yTicks: number[] = []
-  if (yIntegerTicks) {
-    // Force integer ticks within the data range (e.g. quality ranking 1-11)
-    const lo = Math.ceil(Math.min(...ys))
-    const hi = Math.floor(Math.max(...ys))
-    for (let v = lo; v <= hi; v++) yTicks.push(v)
-  } else {
-    for (let i = 0; i <= yTickCount; i++) yTicks.push(yRange[0] + (i / yTickCount) * (yRange[1] - yRange[0]))
-  }
+  const xTicks: number[] = xScaleD3.ticks(7)
+  const yTicks: number[] = yIntegerTicks
+    ? (() => {
+        const lo = Math.ceil(Math.min(...ys))
+        const hi = Math.floor(Math.max(...ys))
+        const arr: number[] = []
+        for (let v = lo; v <= hi; v++) arr.push(v)
+        return arr
+      })()
+    : yScaleD3.ticks(7)
 
   const hoveredRow = hovered ? data.find((d) => d.name === hovered) : null
 
