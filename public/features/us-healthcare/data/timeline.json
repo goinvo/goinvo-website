@@ -1,0 +1,106 @@
+{
+  "title": {
+    "text": {
+      "headline": "The History of US Healthcare",
+      "text": ""
+    }
+  },
+  "events": [
+    {
+      "start_date": {
+        "year": "1929"
+      },
+      "text": {
+        "headline": "Beginning of Health Insurance",
+        "text": "The first program resembling health insurance, known as prepaid hospital coverage, became available in Texas in 1929. For a fixed $6 payment, Dallas teachers could receive 21 days of hospitalization at Baylor University."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1929"
+      },
+      "text": {
+        "headline": "Blue Cross and Blue Shield",
+        "text": "In twenty years following the Texas experiment, Blue Cross (for hospital services) and Blue Shield (for physician services) entered the scene. Insurance made healthcare more accessible. However, prior to insurance, doctors charged different rates to different patients. They often charged wealthy people more and poor people less, something they could no longer do for patients with insurance."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1939"
+      },
+      "end_date": {
+        "year": "1945"
+      },
+      "text": {
+        "headline": "Employer-Based Coverage",
+        "text": "During World War II, companies used health insurance to attract employees. Due to cost controls, companies were restrained in their ability to raise wages but not in their ability to add health benefits to employment packages. This began the shift to the employer-based health insurance model still present in the U.S. today."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1954"
+      },
+      "text": {
+        "headline": "Tax Exclusion",
+        "text": "In 1954, a comprehensive revision of the IRS code created a tax exclusion for employer-provided health insurance. While employers were required to pay taxes on the money they paid employees, they were not required to pay taxes on the money they spent on an employee’s health insurance. This meant that a dollar spent by an employer on health insurance was worth more to the employee than a dollar spent on wages. The tax exclusion was also responsible for the shift to employer-based coverage."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1946"
+      },
+      "text": {
+        "headline": "Hill-Burton Act",
+        "text": "In 1946, Congress passed the Hospital Survey and Construction (Hill-Burton) Act, which funded the construction and expansion of hospitals. The act was the first major federally funded healthcare act. It resulted in more than 416,000 new hospital beds at a cost of nearly $5 billion."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1965"
+      },
+      "text": {
+        "headline": "Medicare and Medicaid",
+        "text": "Healthcare reform efforts began in earnest with the New Deal and continued through the passage of the Patient Protection and Affordable Care Act in 2010. The most notable national healthcare legislation that actually passed in the interim was Medicare and Medicaid in 1965, which focused on assisting the elderly and the poor."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1970"
+      },
+      "end_date": {
+        "year": "1974"
+      },
+      "text": {
+        "headline": "Competing Proposals",
+        "text": "Senator Ted Kenney and President Nixon proposed different plans for healthcare reform. Nixon's focused on an employer mandate while Kennedy's called for a single-payer system."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1983"
+      },
+      "text": {
+        "headline": "Mediare Introduces Diagnostic Related Groups (DRGs)",
+        "text": "When it first passed, Medicare paid hospitals the cost of a procedure or treatment plus a percentage. This was meant to compensate for capital expenditures related to expansions. Not only did this guarantee the hospitals a profit, but it incentivized high costs so that hosptials could make even larger profits from Medicare. DRGs replaced the cost-based system by stipulating a reimbursement for a given class of products received by a Medicare patient."
+      }
+    },
+    {
+      "start_date": {
+        "year": "1993"
+      },
+      "text": {
+        "headline": "Health Security Act",
+        "text": "President Clinton's healthcare plan, spearheaded by then-First Lady Hillary Clinton, received little Congressional support and ultimately was never passed."
+      }
+    },
+    {
+      "start_date": {
+        "year": "2010"
+      },
+      "text": {
+        "headline": "Patient Protection and Affordable Care Act",
+        "text": "President Obama signed the Patient Protection and Affordable Care Act into law in 2010. The legislation was highly contentious and passed along party lines. Among the most controversial aspects, the individual mandate requires everyone to buy health insurance or pay a penalty tax (unless neither can be afforded). Despite its negative reception by Republicans, the individual mandate was first proposed in 1989 by a conservative think-tank called The Heritage Foundation."
+      }
+    }
+  ]
+}

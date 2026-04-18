@@ -759,13 +759,14 @@ export function UsHealthcareContent() {
           </p>
         </article>
 
-        {/* Timeline placeholder */}
-        <div className="timeline-wrapper">
-          <div className="chart-placeholder">
-            Interactive timeline: History of U.S. Healthcare Reform (requires
-            Knight Lab Timeline JS)
-          </div>
-        </div>
+        {/* Knight Lab TimelineJS mount target — initialized by
+            VerbatimChartScripts against /data/timeline.json */}
+        <div
+          id="health-history"
+          className="timeline-wrapper"
+          style={{ width: '100%', height: 600 }}
+        />
+
 
         <article>
           <p className="p-slide">
