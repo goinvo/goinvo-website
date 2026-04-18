@@ -221,10 +221,12 @@ export function GdpVsCapitaChart() {
     yKey="capita"
     xLabel="% GDP"
     yLabel="Dollars per Capita"
-    xFormat={(v) => `${v.toFixed(1)}%`}
-    yFormat={fmt$}
+    xFormat={(v) => String(Math.round(v))}
+    yFormat={(v) => Math.round(v).toLocaleString('en-US')}
     defaultHighlight="United States"
     chartId="gdp-vs-capita"
+    yTickCount={9}
+    xTickCount={8}
     tooltipExtra={(row) => (
       <>
         <p className="text-base text-primary font-semibold m-0">{`${parseFloat(row.gdp).toFixed(1)}%`}</p>
@@ -247,13 +249,14 @@ export function QualityVsCapitaChart() {
     xKey="capita"
     yKey="quality_ranking"
     xLabel="Dollars per Capita"
-    yLabel="Overall Quality Ranking (1 = best)"
-    xFormat={fmt$}
-    yFormat={(v) => `#${Math.round(v)}`}
+    yLabel="Overall Quality Ranking"
+    xFormat={(v) => Math.round(v).toLocaleString('en-US')}
+    yFormat={(v) => String(Math.round(v))}
     defaultHighlight="United States"
     chartId="quality-vs-capita"
     yInvert
     yIntegerTicks
+    xTickStep={500}
     tooltipExtra={(row) => (
       <>
         <p className="text-base text-primary font-semibold m-0">
@@ -286,10 +289,15 @@ interface ScatterProps {
   yInvert?: boolean
   /** Force ticks to be integers (for quality ranking 1-11) */
   yIntegerTicks?: boolean
+  /** Override d3-scale's default tick count (default 7) */
+  xTickCount?: number
+  yTickCount?: number
+  /** Force an explicit X tick step (e.g. 500 for Quality) */
+  xTickStep?: number
   tooltipExtra: (row: Record<string, string>) => React.ReactNode
 }
 
-function ScatterChart({ data, xKey, yKey, xLabel, yLabel, xFormat, yFormat, defaultHighlight, chartId, yInvert, yIntegerTicks, tooltipExtra }: ScatterProps) {
+function ScatterChart({ data, xKey, yKey, xLabel, yLabel, xFormat, yFormat, defaultHighlight, chartId, yInvert, yIntegerTicks, xTickCount, yTickCount, xTickStep, tooltipExtra }: ScatterProps) {
   const [hovered, setHovered] = useState<string | null>(defaultHighlight)
 
   if (!data) return <ChartLoading />
@@ -329,7 +337,14 @@ function ScatterChart({ data, xKey, yKey, xLabel, yLabel, xFormat, yFormat, defa
   }
   const rScale = (pop: number) => 4 + ((pop - minPop) / (maxPop - minPop)) * 22
 
-  const xTicks: number[] = xScaleD3.ticks(7)
+  const xTicks: number[] = xTickStep
+    ? (() => {
+        const arr: number[] = []
+        const start = Math.ceil(xRange[0] / xTickStep) * xTickStep
+        for (let v = start; v <= xRange[1]; v += xTickStep) arr.push(v)
+        return arr
+      })()
+    : xScaleD3.ticks(xTickCount ?? 7)
   const yTicks: number[] = yIntegerTicks
     ? (() => {
         const lo = Math.ceil(Math.min(...ys))
@@ -338,7 +353,7 @@ function ScatterChart({ data, xKey, yKey, xLabel, yLabel, xFormat, yFormat, defa
         for (let v = lo; v <= hi; v++) arr.push(v)
         return arr
       })()
-    : yScaleD3.ticks(7)
+    : yScaleD3.ticks(yTickCount ?? 7)
 
   const hoveredRow = hovered ? data.find((d) => d.name === hovered) : null
 
