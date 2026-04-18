@@ -1,14 +1,7 @@
 'use client'
 
 import { useCallback, useState, useRef, useEffect } from 'react'
-import { BostonCostComparisonChart } from './BostonCostComparisonChart'
-import { HealingSankeyChart } from './HealingSankeyChart'
-import {
-  SpendingOverTimeChart,
-  GdpVsCapitaChart,
-  QualityVsCapitaChart,
-  HealthcareWasteChart,
-} from './HuhCharts'
+import { VerbatimChartScripts } from './VerbatimChartScripts'
 
 /* ── Image helpers ──────────────────────────────── */
 const IMG = 'https://www.goinvo.com/old/images/features/us-healthcare'
@@ -94,6 +87,7 @@ export function UsHealthcareContent() {
 
   return (
     <div className="us-healthcare-legacy">
+      <VerbatimChartScripts />
       {/* ── Medical Bill (fixed sidebar) ──────────── */}
       <div
         id="medical-bill"
@@ -485,7 +479,7 @@ export function UsHealthcareContent() {
             Pneumonia treatment costs in Boston range from $10,000 to $31,000
             <a href="#s20" id="s20_ref"><sup>[20]</sup></a>
           </p>
-          <BostonCostComparisonChart />
+          <div id="cost-comparison-boston-chart" />
         </div>
 
         {/* ── Symptoms continued ─────────────────── */}
@@ -676,7 +670,7 @@ export function UsHealthcareContent() {
             <a href="#s27" id="s27_ref"><sup>[27]</sup></a>
           </p>
           <p className="note2">*data are presented on a log scale</p>
-          <HealthcareWasteChart />
+          <div id="waste-chart" />
         </div>
 
         {/* ── Symptoms continued (hospital) ──────── */}
@@ -810,6 +804,7 @@ export function UsHealthcareContent() {
                 <div className="toggle-rect">
                   <div
                     className={`tab-link${activeTab === 'tab-1' ? ' current' : ''}`}
+                    data-tab="tab-1"
                     onClick={() => setActiveTab('tab-1')}
                   >
                     Spending Over Time
@@ -820,6 +815,7 @@ export function UsHealthcareContent() {
                 <div className="toggle-rect">
                   <div
                     className={`tab-link${activeTab === 'tab-2' ? ' current' : ''}`}
+                    data-tab="tab-2"
                     onClick={() => setActiveTab('tab-2')}
                   >
                     Spending vs. GDP
@@ -830,6 +826,7 @@ export function UsHealthcareContent() {
                 <div className="toggle-rect">
                   <div
                     className={`tab-link${activeTab === 'tab-3' ? ' current' : ''}`}
+                    data-tab="tab-3"
                     onClick={() => setActiveTab('tab-3')}
                   >
                     Quality
@@ -845,7 +842,7 @@ export function UsHealthcareContent() {
               growing at a faster rate than in other countries.
               <a href="#s41" id="s41_ref"><sup>[41]</sup></a>
             </p>
-            {activeTab === 'tab-1' && <SpendingOverTimeChart />}
+            <div id="spending-capita-chart" />
           </div>
 
           <div className={`tab-content${activeTab === 'tab-2' ? ' current' : ''}`} id="tab-2">
@@ -854,7 +851,7 @@ export function UsHealthcareContent() {
               UK spent less than 10%.
               <a href="#s42" id="s42_ref"><sup>[42]</sup></a>
             </p>
-            {activeTab === 'tab-2' && <GdpVsCapitaChart />}
+            <div id="gdp-vs-capita-chart" />
           </div>
 
           <div className={`tab-content${activeTab === 'tab-3' ? ' current' : ''}`} id="tab-3">
@@ -862,7 +859,7 @@ export function UsHealthcareContent() {
               The U.S. spends the most money but ranks last in quality.
               <a href="#s43" id="s43_ref"><sup>[43]</sup></a>
             </p>
-            {activeTab === 'tab-3' && <QualityVsCapitaChart />}
+            <div id="quality-vs-capita-chart" />
           </div>
         </div>
 
@@ -1040,9 +1037,7 @@ export function UsHealthcareContent() {
               )}
             </div>
           </div>
-          <div id="sankey-chart" className="chart-container">
-            <HealingSankeyChart />
-          </div>
+          <div id="sankey-chart" className="chart-container" />
         </div>
 
         {/* ── Individual Results (expanded details) ── */}
