@@ -832,3 +832,60 @@
   height: 75%;
   width: 75%;
 }
+
+/* ───────────────── Verbatim-Gatsby chart CSS (scoped) ─────────────────
+   D3 v3 scripts generate SVGs with these classes. Copied verbatim from
+   goinvo.com/old/stylesheets/features/us-healthcare.css and scoped to
+   our article wrapper so they don't leak elsewhere. */
+.us-healthcare-legacy svg circle:hover,
+.us-healthcare-legacy svg rect:hover,
+.us-healthcare-legacy svg path:hover { cursor: pointer; }
+.us-healthcare-legacy .axis path,
+.us-healthcare-legacy .axis line { fill: none; stroke: #000; shape-rendering: crispEdges; }
+.us-healthcare-legacy .x.axis path { display: none; }
+.us-healthcare-legacy .y.axis path { display: none; }
+.us-healthcare-legacy .y.axis line { stroke: gray; opacity: .5; stroke-dasharray: 2, 2; }
+.us-healthcare-legacy .x.axis line { stroke: gray; opacity: .5; stroke-dasharray: 2, 2; }
+.us-healthcare-legacy .axis text,
+.us-healthcare-legacy .yaxis text,
+.us-healthcare-legacy .xaxis text { font-family: sans-serif; font-size: 11px !important; }
+.us-healthcare-legacy .yaxis path,
+.us-healthcare-legacy .xaxis path { display: none; }
+.us-healthcare-legacy .yaxis line { stroke: gray; opacity: .5; stroke-dasharray: 2, 2; }
+.us-healthcare-legacy .xaxis line { stroke: gray; opacity: .5; stroke-dasharray: 2, 2; }
+.us-healthcare-legacy .line { fill: none; stroke: gray; stroke-width: 1.5px; transition: opacity 0.3s; }
+.us-healthcare-legacy .linepoint { opacity: 0; fill: gray; transition: opacity 0.3s; }
+.us-healthcare-legacy .label-hover { opacity: 0; }
+.us-healthcare-legacy path.invisible { fill: none; stroke: transparent; stroke-width: 8px; }
+.us-healthcare-legacy svg .country-label { font-family: 'Lato'; text-transform: uppercase; font-weight: 800; font-size: .7em; opacity: .9; }
+.us-healthcare-legacy .node rect { fill-opacity: .9; shape-rendering: crispEdges; }
+.us-healthcare-legacy .node text { pointer-events: none; font: 12px sans-serif; }
+.us-healthcare-legacy .link { fill: none; stroke: #dedede; stroke-opacity: .5; }
+.us-healthcare-legacy .link[data-highlight="forwards"] { stroke: #8589ba; }
+.us-healthcare-legacy .link[data-highlight="backwards"] { stroke: #8589ba; }
+.us-healthcare-legacy div.tooltip {
+  position: absolute;
+  text-align: center;
+  max-width: 175px;
+  min-width: 150px;
+  width: auto;
+  height: auto;
+  padding: 7px;
+  padding-bottom: 1.5em;
+  font: .8em 'Lato';
+  line-height: 1.5em;
+  background: rgba(255, 255, 255, 0.75);
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgba(154, 154, 154, 0.3);
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 100;
+  word-wrap: break-word;
+}
+.us-healthcare-legacy div.tooltip strong { font-family: 'Lato'; font-size: 1.1em; }
+.us-healthcare-legacy div.tooltip .tt-important { font-family: 'Lato'; margin-top: .6em; font-size: 1.65em; }
+@media only screen and (max-width: 768px) {
+  .us-healthcare-legacy div.tooltip { min-width: 0px; width: auto; }
+  .us-healthcare-legacy div.tooltip .tt-important { margin-top: .3em; font-size: 1.4em; }
+}
