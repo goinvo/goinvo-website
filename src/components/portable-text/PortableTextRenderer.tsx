@@ -24,7 +24,6 @@ import {
 } from '@/components/portable-text/LonelinessFeatureSections'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 import { parseDataTableSource } from '@/lib/dataTable'
-import { ARTICLE_TEXT_COLOR_CLASS, isArticleTextColor } from '@/lib/articleTextColors'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -629,7 +628,7 @@ const components: PortableTextComponents = {
                         className="w-full h-auto"
                       />
                       {cell.text.length > 0 && (
-                        <div className="mt-2 [&_p]:my-2 [&_p]:text-base [&_p]:text-gray">
+                        <div className="mt-2 [&_p]:text-black [&_p:first-child]:mt-0">
                           <PortableText value={cell.text} components={components} />
                         </div>
                       )}
@@ -1150,12 +1149,25 @@ const components: PortableTextComponents = {
     // Legacy decorators (backward compat)
     teal: ({ children }) => <span className="text-secondary">{children}</span>,
     orange: ({ children }) => <span className="text-primary">{children}</span>,
-    // New unified text color annotation
+    // New unified text color annotation. Historical docs stored the
+    // color on a `value` field instead of `color`; accept either so
+    // old content keeps rendering until the data is normalized.
+    // NB: the class names are written out as string literals so
+    // Tailwind's JIT scanner picks them up.
     textColor: ({ children, value }) => {
-      const colorValue = value?.color
-      const className = isArticleTextColor(colorValue)
-        ? ARTICLE_TEXT_COLOR_CLASS[colorValue]
-        : ARTICLE_TEXT_COLOR_CLASS.teal
+      const rawColor =
+        (value as { color?: unknown; value?: unknown } | undefined)?.color ??
+        (value as { color?: unknown; value?: unknown } | undefined)?.value
+      const className = (() => {
+        switch (rawColor) {
+          case 'orange':   return 'text-primary'
+          case 'teal':     return 'text-secondary'
+          case 'charcoal': return 'text-tertiary'
+          case 'gray':     return 'text-gray'
+          case 'blue':     return 'text-blue'
+          default:         return 'text-secondary'
+        }
+      })()
       return <span className={className}>{children}</span>
     },
     refCitation: ({ children, value }) => (
@@ -1180,6 +1192,11 @@ const components: PortableTextComponents = {
         <h2 className="header-xl font-light mt-8 mb-4">{children}</h2>
       </ArticleReveal>
     ),
+    legacyH1Large: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h1 className="header-xl font-light mt-8 mb-6">{children}</h1>
+      </ArticleReveal>
+    ),
     h2LargeCentered: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
@@ -1187,6 +1204,44 @@ const components: PortableTextComponents = {
       return (
         <ArticleReveal intensity="heading">
           <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-6 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+        </ArticleReveal>
+      )
+    },
+    legacyH1Centered: ({ children, value }) => {
+      // Legacy Gatsby parity: a centered H1 used for section breaks inside
+      // long-form feature pages like Faces in Health Communication.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return (
+        <ArticleReveal intensity="heading">
+          <h1
+            id={anchorId}
+            className={cn(
+              'header-xl font-light text-center max-w-[400px] mx-auto my-0',
+              text.includes('\n') && 'whitespace-pre-line',
+            )}
+          >
+            {children}
+          </h1>
+        </ArticleReveal>
+      )
+    },
+    legacyH1CenteredWide: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return (
+        <ArticleReveal intensity="heading">
+          <h1
+            id={anchorId}
+            className={cn(
+              'header-xl font-light text-center max-w-[600px] mx-auto my-0',
+              text.includes('\n') && 'whitespace-pre-line',
+            )}
+          >
+            {children}
+          </h1>
         </ArticleReveal>
       )
     },
@@ -1237,9 +1292,29 @@ const components: PortableTextComponents = {
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
       </ArticleReveal>
     ),
+    legacyH2Md: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="header-md mt-3 mb-3">{children}</h2>
+      </ArticleReveal>
+    ),
+    legacyH2MdCentered: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="header-md mt-3 mb-3 text-center">{children}</h2>
+      </ArticleReveal>
+    ),
+    legacyH2Spacious: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h2 className="header-lg mt-16 mb-5">{children}</h2>
+      </ArticleReveal>
+    ),
     h3NoBottom: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-0">{children}</h3>
+      </ArticleReveal>
+    ),
+    legacyH3Compact: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h3 className="font-sans text-base font-semibold leading-[1.1875rem] mt-4 mb-2">{children}</h3>
       </ArticleReveal>
     ),
     h4Bullet: ({ children }) => (
@@ -1564,7 +1639,7 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
               const isVirtualCareIntro = text.includes('Armed with a smartphone or device')
               return (
                 <ArticleReveal intensity="text">
-                  <p className={cn('mt-4 mb-0 leading-relaxed', isVirtualCareIntro && 'mt-0', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+                  <p className={cn('mt-4 mb-4 leading-relaxed', isVirtualCareIntro && 'mt-0', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
                 </ArticleReveal>
               )
             },
