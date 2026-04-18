@@ -7,7 +7,6 @@ import { gettingStartedPlugin } from './tools/gettingStarted'
 import { feedbackPlugin } from './tools/feedbackTool'
 import { featureArticleTemplates, resolveFeatureNewDocumentOptions } from './featureTemplates'
 import { featureAuthoringBadge } from './featureBadges'
-import './studio.css'
 
 export default defineConfig({
   name: 'goinvo',
