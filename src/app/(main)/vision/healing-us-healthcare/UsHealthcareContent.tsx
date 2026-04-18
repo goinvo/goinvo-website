@@ -26,14 +26,46 @@ export function UsHealthcareContent() {
   const [billVisible, setBillVisible] = useState(false)
 
   useEffect(() => {
+    // Port of Gatsby's medical-bill show/hide scroll logic from
+    // old/javascripts/features/us-healthcare/index.js: show the bill only
+    // while the Symptoms scenario is on screen, hide once scrolled past
+    // #history (Diagnosis / Prescription / etc.) or when the #waste-container
+    // chart is dominating the viewport.
     const handler = () => {
-      if (window.scrollY > 600) {
-        setBillVisible(true)
-      } else {
-        setBillVisible(false)
+      const vh = window.innerHeight
+      const top = (sel: string) => {
+        const el = document.querySelector(sel) as HTMLElement | null
+        return el ? el.getBoundingClientRect().top : NaN
       }
+      const s = top('#clinic_visit_location')
+      const e = top('#waste-container')
+      const o = top('#ct2_location')
+      const l = top('#history')
+      const scrollYPassed600 = window.scrollY > 600
+
+      // If the Gatsby landmarks are missing, fall back to: show after the
+      // hero has scrolled off AND hide once past the history section.
+      if (isNaN(s) || isNaN(e) || isNaN(o) || isNaN(l)) {
+        const symptomsEl = document.querySelector('#symptoms') as HTMLElement | null
+        const diagnosisEl = document.querySelector('#diagnosis') as HTMLElement | null
+        if (symptomsEl && diagnosisEl) {
+          const symT = symptomsEl.getBoundingClientRect().top
+          const diaT = diagnosisEl.getBoundingClientRect().top
+          setBillVisible(symT < 0.5 * vh && diaT > 0.5 * vh)
+          return
+        }
+        setBillVisible(scrollYPassed600)
+        return
+      }
+
+      const hide =
+        s - 0.6 * vh > 0 ||
+        (e - 0.5 * vh < 0 && o - 0.5 * vh > 0) ||
+        l - 0.5 * vh < 0
+      setBillVisible(!hide)
     }
     window.addEventListener('scroll', handler, { passive: true })
+    handler()
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
