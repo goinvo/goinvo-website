@@ -16,6 +16,12 @@ const COLLAPSED_TOOLBAR_LABELS = {
   insertMenu: 'More blocks',
 } as const
 
+function setAttrIfChanged(element: HTMLElement, name: string, value: string) {
+  if (element.getAttribute(name) !== value) {
+    element.setAttribute(name, value)
+  }
+}
+
 function decoratePortableTextEditor(rootElement: HTMLElement) {
   const actionMenuButton = rootElement.querySelector<HTMLElement>('[data-testid="action-menu-button"]')
   const insertMenuButton = rootElement.querySelector<HTMLElement>('[data-testid="insert-menu-button"]')
@@ -24,26 +30,26 @@ function decoratePortableTextEditor(rootElement: HTMLElement) {
   const customBlocks = rootElement.querySelectorAll<HTMLElement>('[data-testid="pt-editor"] [data-testid="pt-block"][data-type]:not([data-type="block"])')
 
   if (actionMenuButton) {
-    actionMenuButton.setAttribute('title', COLLAPSED_TOOLBAR_LABELS.actionMenu)
-    actionMenuButton.setAttribute('aria-label', COLLAPSED_TOOLBAR_LABELS.actionMenu)
+    setAttrIfChanged(actionMenuButton, 'title', COLLAPSED_TOOLBAR_LABELS.actionMenu)
+    setAttrIfChanged(actionMenuButton, 'aria-label', COLLAPSED_TOOLBAR_LABELS.actionMenu)
   }
 
   if (insertMenuButton) {
-    insertMenuButton.setAttribute('title', COLLAPSED_TOOLBAR_LABELS.insertMenu)
-    insertMenuButton.setAttribute('aria-label', COLLAPSED_TOOLBAR_LABELS.insertMenu)
-    insertMenuButton.setAttribute('data-goinvo-insert-menu-button', 'true')
+    setAttrIfChanged(insertMenuButton, 'title', COLLAPSED_TOOLBAR_LABELS.insertMenu)
+    setAttrIfChanged(insertMenuButton, 'aria-label', COLLAPSED_TOOLBAR_LABELS.insertMenu)
+    setAttrIfChanged(insertMenuButton, 'data-goinvo-insert-menu-button', 'true')
   }
 
   if (editorElement) {
-    editorElement.setAttribute('data-goinvo-pt-editor', 'true')
+    setAttrIfChanged(editorElement, 'data-goinvo-pt-editor', 'true')
   }
 
   if (articleCanvasElement) {
-    articleCanvasElement.setAttribute('data-goinvo-article-canvas', 'true')
+    setAttrIfChanged(articleCanvasElement, 'data-goinvo-article-canvas', 'true')
   }
 
   customBlocks.forEach((blockElement) => {
-    blockElement.setAttribute('data-goinvo-custom-block', 'true')
+    setAttrIfChanged(blockElement, 'data-goinvo-custom-block', 'true')
   })
 }
 
@@ -68,7 +74,7 @@ export function PortableTextInput(props: InputProps) {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['data-testid', 'aria-label'],
+      attributeFilter: ['data-testid'],
     })
 
     return () => {
