@@ -1,10 +1,5 @@
 import type { Metadata } from 'next'
-import { draftMode } from 'next/headers'
 import { siteConfig } from '@/lib/config'
-import { ThrottledSanityLive } from '@/components/sanity/ThrottledSanityLive'
-import { PreviewBanner } from '@/components/sanity/PreviewBanner'
-import { DraftModeGuard } from '@/components/sanity/DraftModeGuard'
-import { SafeVisualEditing } from '@/components/sanity/SafeVisualEditing'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -49,13 +44,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const { isEnabled: isDraftMode } = await draftMode()
-
   return (
     <html lang="en">
       <head>
@@ -95,13 +88,13 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans text-black antialiased">
-        {children}
-        <ThrottledSanityLive />
-        {isDraftMode && <SafeVisualEditing />}
-        {isDraftMode && <PreviewBanner />}
-        {isDraftMode && <DraftModeGuard />}
-      </body>
+      {/* Sanity live-data hooks and Visual Editing are intentionally NOT
+          mounted here — they live in the (main) route group. Mounting
+          them globally would include the /studio route, where every
+          user-typed character would fire a mutation → revalidate →
+          re-render loop that either hangs the editor (Vercel) or
+          triggers an HMR-style reload (dev). */}
+      <body className="font-sans text-black antialiased">{children}</body>
     </html>
   )
 }
