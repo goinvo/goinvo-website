@@ -106,18 +106,22 @@ export function SpendingOverTimeChart() {
   const innerW = W - M.left - M.right
   const innerH = H - M.top - M.bottom
 
-  // Use d3-scale .nice() so the axis ticks land on round numbers (0, 1k, 2k…
-  // 9k) matching Gatsby's rendering.
-  const xScaleD3 = scaleLinear().domain([chart.minYear, chart.maxYear]).nice()
+  // Pin the X domain to 1960–2015 (Gatsby ends the axis at 2015 — past 2013
+  // the CSV is mostly blank, so .nice() rounding up to 2020 introduces a
+  // useless tail). Y domain nice-rounds to 9000, but Gatsby only labels
+  // 1k–8k so we filter 0 and the top tick out.
+  const xMinNice = Math.min(chart.minYear, 1960)
+  const xMaxNice = 2015
   const yScaleD3 = scaleLinear().domain([0, chart.maxCapita]).nice()
-  const [xMinNice, xMaxNice] = xScaleD3.domain() as [number, number]
-  const [yMinNice, yMaxNice] = yScaleD3.domain() as [number, number]
+  const [, yMaxNice] = yScaleD3.domain() as [number, number]
 
   const xScale = (year: number) => ((year - xMinNice) / (xMaxNice - xMinNice)) * innerW
   const yScale = (capita: number) => innerH - (capita / yMaxNice) * innerH
 
-  const yTicks: number[] = yScaleD3.ticks(8).filter((v) => v >= 0)
-  // X ticks every 5 years across the nice domain so years like 1960/1965/.../2015 show up
+  const yTicks: number[] = yScaleD3
+    .ticks(8)
+    .filter((v) => v >= 1000 && v <= 8000)
+  // X ticks every 5 years (1960, 1965, …, 2015)
   const xTicks: number[] = []
   for (let y = Math.ceil(xMinNice / 5) * 5; y <= xMaxNice; y += 5) xTicks.push(y)
 
@@ -202,7 +206,6 @@ export function SpendingOverTimeChart() {
           <text x={innerW / 2} y={innerH + 40} textAnchor="middle" fontSize="12" fill="#444">Year</text>
         </g>
       </svg>
-      <p className="text-xs text-gray text-center mt-2">Hover any line to highlight a country. Default: {hovered || 'none'}</p>
     </div>
   )
 }
