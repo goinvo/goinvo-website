@@ -3,20 +3,18 @@
 /**
  * Boston Pneumonia Treatment Cost Comparison
  *
- * Replicates the D3 chart from the legacy Gatsby page (CloudFront archives):
- * a Boston-area map with each major hospital as a circle, sized proportionally
- * to its pneumonia treatment cost.
+ * Replicates the D3 chart from the legacy Gatsby page: a Boston-area map
+ * with each major hospital drawn as a circle sized by its pneumonia
+ * treatment cost. Hovering a circle shows a tooltip with the three prices.
  *
- * Data source: boston-hospitals.csv extracted from Wayback Machine snapshot
- * (originally /features/us-healthcare/data/boston_hospitals.csv).
- *
- * Range: $9,736 (St Elizabeth's) to $31,168 (Mass General)
- *
- * Implementation uses inline SVG with hand-rolled equirectangular projection
- * (no D3 dependency) since the data set is small and fixed.
+ * Uses d3-geo's Albers projection with the same parameters as the legacy
+ * script (rotate [71.057, 0], center [0, 42.313]) and renders each
+ * neighborhood polygon from boston-neighborhoods.json, then places the
+ * 9 hospitals by their (lat, lon) through the same projection.
  */
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { geoAlbers, geoPath, type GeoProjection } from 'd3-geo'
 
 interface Hospital {
   name: string
@@ -41,81 +39,86 @@ const HOSPITALS: Hospital[] = [
 
 const fmt$ = (n: number) => `$${n.toLocaleString('en-US')}`
 
+type GeoJSONFeature = { type: 'Feature'; geometry: GeoJSON.Geometry; properties: Record<string, unknown> }
+type GeoJSONFC = { type: 'FeatureCollection'; features: GeoJSONFeature[] }
+
 export function BostonCostComparisonChart() {
   const [hovered, setHovered] = useState<string | null>(null)
+  const [geoData, setGeoData] = useState<GeoJSONFC | null>(null)
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Compute bounds with a margin
-  const { minLat, maxLat, minLon, maxLon } = useMemo(() => {
-    const lats = HOSPITALS.map((h) => h.lat)
-    const lons = HOSPITALS.map((h) => h.lon)
-    return {
-      minLat: Math.min(...lats) - 0.015,
-      maxLat: Math.max(...lats) + 0.015,
-      minLon: Math.min(...lons) - 0.015,
-      maxLon: Math.max(...lons) + 0.015,
+  // Load Boston neighborhoods GeoJSON
+  useEffect(() => {
+    let cancelled = false
+    fetch('/data/healing-us-healthcare/neighborhoods.json')
+      .then((r) => r.json())
+      .then((data: GeoJSONFC) => {
+        if (!cancelled) setGeoData(data)
+      })
+      .catch(() => {
+        if (!cancelled) setGeoData({ type: 'FeatureCollection', features: [] })
+      })
+    return () => {
+      cancelled = true
     }
   }, [])
 
-  const width = 800
-  const height = 600
+  const width = 1000
+  const height = 650
 
-  // Equirectangular-ish projection: latitude → y, longitude → x
-  // Account for cosine of mean latitude so distances aren't distorted
-  const meanLat = (minLat + maxLat) / 2
-  const lonScale = Math.cos((meanLat * Math.PI) / 180)
-  const lonRange = (maxLon - minLon) * lonScale
-  const latRange = maxLat - minLat
-  const dataAspect = lonRange / latRange
-  const viewAspect = width / height
-  // Fit dataset inside viewport preserving aspect
-  let scale: number
-  if (dataAspect > viewAspect) {
-    scale = width / lonRange
-  } else {
-    scale = height / latRange
-  }
-  // Padding so circles aren't clipped at edges
-  scale *= 0.85
+  // Albers projection matching the legacy script:
+  //   d3.geo.albers().scale(215*i).rotate([71.057,0]).center([0,42.313]).translate([i/2,o/2])
+  const projection: GeoProjection = useMemo(() => {
+    return geoAlbers()
+      .rotate([71.057, 0])
+      .center([0, 42.313])
+      .scale(215 * width)
+      .translate([width / 2, height / 2])
+  }, [width, height])
 
-  const project = (lat: number, lon: number): [number, number] => {
-    const x = (lon - minLon) * lonScale * scale
-    const y = (maxLat - lat) * scale
-    const offsetX = (width - lonRange * scale) / 2
-    const offsetY = (height - latRange * scale) / 2
-    return [x + offsetX, y + offsetY]
-  }
+  const pathGen = useMemo(() => geoPath(projection), [projection])
 
-  // Circle radius scaled by pneumonia cost
+  // Circle radius scaled by pneumonia cost (tuned to match Gatsby's visual weight)
   const minCost = Math.min(...HOSPITALS.map((h) => h.price_pneumonia))
   const maxCost = Math.max(...HOSPITALS.map((h) => h.price_pneumonia))
   const radiusFor = (cost: number) => {
     const norm = (cost - minCost) / (maxCost - minCost)
-    return 18 + norm * 60 // 18px to 78px
+    return 18 + norm * 60
   }
 
   const hoveredHospital = hovered ? HOSPITALS.find((h) => h.name === hovered) : null
 
   return (
-    <div className="my-8">
-      <div className="relative w-full max-w-4xl mx-auto">
+    <div className="my-8" ref={containerRef}>
+      <div className="relative w-full max-w-5xl mx-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-auto"
+          className="w-full h-auto block"
           role="img"
           aria-label="Boston-area hospitals showing pneumonia treatment cost variation"
         >
-          {/* Background rectangle for the Boston area */}
-          <rect x="0" y="0" width={width} height={height} fill="#f5f5f5" />
-
-          {/* Subtle grid lines (latitude/longitude) */}
-          {[42.30, 42.32, 42.34, 42.36, 42.38].map((lat) => {
-            const [, y] = project(lat, minLon)
-            return <line key={`lat-${lat}`} x1="0" y1={y} x2={width} y2={y} stroke="#e0e0e0" strokeWidth="1" />
-          })}
+          {/* Neighborhood polygons */}
+          {geoData &&
+            geoData.features.map((feature, i) => {
+              const d = pathGen(feature)
+              if (!d) return null
+              return (
+                <path
+                  key={i}
+                  d={d}
+                  fill="#dedede"
+                  stroke="#ffffff"
+                  strokeWidth="0.75"
+                />
+              )
+            })}
 
           {/* Hospital circles */}
           {HOSPITALS.map((h) => {
-            const [cx, cy] = project(h.lat, h.lon)
+            const projected = projection([h.lon, h.lat])
+            if (!projected) return null
+            const [cx, cy] = projected
             const r = radiusFor(h.price_pneumonia)
             const isHovered = hovered === h.name
             return (
@@ -124,40 +127,45 @@ export function BostonCostComparisonChart() {
                   cx={cx}
                   cy={cy}
                   r={r}
-                  fill={isHovered ? '#8589BA' : 'rgba(154, 154, 154, 0.65)'}
+                  fill={isHovered ? 'rgba(133, 137, 186, 0.9)' : 'rgba(154, 154, 154, 0.65)'}
                   stroke={isHovered ? '#5a5e8e' : 'none'}
                   strokeWidth="2"
-                  className="transition-all cursor-pointer"
-                  onMouseEnter={() => setHovered(h.name)}
-                  onMouseLeave={() => setHovered(null)}
+                  className="cursor-pointer transition-[fill,stroke] duration-200"
+                  onMouseEnter={(e) => {
+                    setHovered(h.name)
+                    const rect = containerRef.current?.getBoundingClientRect()
+                    if (rect) {
+                      setTooltipPos({
+                        x: e.clientX - rect.left + 12,
+                        y: e.clientY - rect.top + 12,
+                      })
+                    }
+                  }}
+                  onMouseMove={(e) => {
+                    const rect = containerRef.current?.getBoundingClientRect()
+                    if (rect) {
+                      setTooltipPos({
+                        x: e.clientX - rect.left + 12,
+                        y: e.clientY - rect.top + 12,
+                      })
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    setHovered(null)
+                    setTooltipPos(null)
+                  }}
                 />
               </g>
             )
           })}
-
-          {/* Always-visible labels for the largest 2 (Mass General, Brigham) */}
-          {HOSPITALS.filter((h) => h.price_pneumonia > 25000).map((h) => {
-            const [cx, cy] = project(h.lat, h.lon)
-            const r = radiusFor(h.price_pneumonia)
-            return (
-              <text
-                key={`label-${h.name}`}
-                x={cx}
-                y={cy + r + 16}
-                textAnchor="middle"
-                fontSize="13"
-                fill="#444"
-                fontWeight="600"
-              >
-                {fmt$(h.price_pneumonia)}
-              </text>
-            )
-          })}
         </svg>
 
-        {/* Hover tooltip */}
-        {hoveredHospital && (
-          <div className="absolute top-2 right-2 bg-white border border-gray-300 rounded shadow-lg p-3 text-xs max-w-[260px]">
+        {/* Hover tooltip — positioned near cursor */}
+        {hoveredHospital && tooltipPos && (
+          <div
+            className="absolute bg-white border border-gray-300 rounded shadow-lg p-3 text-xs max-w-[260px] pointer-events-none z-10"
+            style={{ left: tooltipPos.x, top: tooltipPos.y }}
+          >
             <p className="font-semibold mb-2">{hoveredHospital.name}</p>
             <p className="text-base text-primary font-semibold m-0">{fmt$(hoveredHospital.price_visit)}</p>
             <p className="text-gray text-xs m-0 mb-1">Clinic Visit</p>
