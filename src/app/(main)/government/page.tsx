@@ -119,17 +119,20 @@ export default function GovernmentPage() {
 
       {/* Client Logos */}
       <section className="py-8">
-        <div className="max-width content-padding text-center">
-          <p className="font-semibold mb-4">
-            Trusted by ambitious state agencies and for-public partners
-          </p>
-          <ClientLogos variant="government" />
-          <p className="text-gray text-md mt-4">
-            Our <strong>ITS81</strong> and <strong>GSA 47QTCA26D001W</strong> contracts
-            prequalify us for IT professional services&mdash;streamlining government
-            procurement and validating our expertise as a trusted vendor for both
-            Massachusetts state and federal agencies.
-          </p>
+        <div className="max-width content-padding">
+          <hr className="border-0 border-t border-gray-medium mb-8 mx-auto max-w-full" />
+          <div className="text-center">
+            <p className="font-semibold mb-4">
+              Trusted by ambitious state agencies and for-public partners
+            </p>
+            <ClientLogos variant="government" />
+            <p className="text-gray text-md mt-4">
+              Our <strong>ITS81</strong> and <strong>GSA 47QTCA26D001W</strong> contracts
+              prequalify us for IT professional services&mdash;streamlining government
+              procurement and validating our expertise as a trusted vendor for both
+              Massachusetts state and federal agencies.
+            </p>
+          </div>
         </div>
       </section>
 

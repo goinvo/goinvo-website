@@ -19,7 +19,7 @@ export default function ContactPage() {
       />
 
       {/* Contact Form — overlaps hero with negative margin */}
-      <section className="bg-blue-light py-16">
+      <section className="relative z-10 bg-blue-light py-16">
         <div className="max-width max-width-sm content-padding mx-auto" style={{ marginTop: '-7rem' }}>
           <ContactFormEmbed />
           <div className="mt-8 space-y-3">

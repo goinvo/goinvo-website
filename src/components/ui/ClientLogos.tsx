@@ -83,7 +83,7 @@ interface ClientLogosProps {
 export function ClientLogos({ className, variant = 'default' }: ClientLogosProps) {
   const logos = logoVariants[variant] || homepageLogos
   return (
-    <ul className={cn('list-none m-0 p-0 flex flex-wrap', className)}>
+    <ul className={cn('list-none m-0 p-0 flex flex-wrap justify-center', className)}>
       {logos.map((logo) => (
         <li
           key={logo.name}
