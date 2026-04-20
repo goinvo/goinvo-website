@@ -1,15 +1,16 @@
 'use client'
 
+import { createDataAttribute } from 'next-sanity'
 import type { CSSProperties, ReactNode } from 'react'
+import { dataset, projectId, studioUrl } from '@/sanity/env'
 
 interface Props {
   documentType: 'caseStudy' | 'feature'
   documentId: string
   /**
-   * Dot-path of the field to focus when the Presentation tool opens,
-   * e.g. "image" or "content". Navigates to
-   * `/studio/presentation/<type>/<id>/<fieldPath>` so the right field
-   * lights up in the edit panel.
+   * Dot-path of the field to focus when Presentation opens, e.g.
+   * "image" or "content". Used by Sanity's Visual Editing overlay
+   * to focus the field in the Studio's right-hand panel.
    */
   fieldPath: string
   className?: string
@@ -19,11 +20,11 @@ interface Props {
 }
 
 /**
- * Wrapper button that navigates the Presentation preview's top window
- * to the Sanity Presentation tool focused on a specific field of the
- * current document. Preserves the current preview URL as the
- * `?preview=` parameter so the iframe keeps rendering the same page
- * the editor was looking at.
+ * Draft-mode-only wrapper that tags its child element with the Sanity
+ * Visual Editing data attribute. When the preview is embedded in the
+ * Presentation tool (which mounts <VisualEditing />, see
+ * SafeVisualEditing), hovering shows an edit affordance and clicking
+ * focuses the field in the right-hand Studio panel — no full reload.
  *
  * The parent decides whether to render this at all — it should only
  * appear when draftMode is enabled, so Studio affordances never ship
@@ -38,38 +39,28 @@ export function EditInStudioLink({
   ariaLabel,
   children,
 }: Props) {
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    if (typeof window === 'undefined') return
-    const target = window.top || window
-    const currentUrl = window.location.href
-    const studioUrl = `/studio/presentation/${documentType}/${documentId}/${fieldPath}?preview=${encodeURIComponent(
-      currentUrl,
-    )}`
-    target.location.href = studioUrl
-  }
+  // `createDataAttribute` generates the data-sanity string that
+  // @sanity/visual-editing recognises to wire up click-to-edit via
+  // postMessage to the parent Studio.
+  const attr = createDataAttribute({
+    baseUrl: studioUrl,
+    projectId,
+    dataset,
+    id: documentId,
+    type: documentType,
+    path: fieldPath,
+  }).toString()
 
   return (
-    <button
-      type="button"
-      onClick={handleClick}
+    <div
+      data-sanity={attr}
+      role="button"
       aria-label={ariaLabel}
+      tabIndex={0}
       className={className}
-      style={{
-        display: 'block',
-        width: '100%',
-        border: 'none',
-        background: 'transparent',
-        padding: 0,
-        cursor: 'pointer',
-        textAlign: 'inherit',
-        color: 'inherit',
-        font: 'inherit',
-        ...style,
-      }}
+      style={{ cursor: 'pointer', ...style }}
     >
       {children}
-    </button>
+    </div>
   )
 }
