@@ -13,7 +13,6 @@ import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
-import { MissingHeroPlaceholder } from '@/components/sanity/MissingHeroPlaceholder'
 import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
 import {
   hasMeaningfulFeatureBody,
@@ -1230,16 +1229,20 @@ export default async function VisionFeaturePage({ params }: Props) {
 
   const hasHeroImage = Boolean(heroImage)
   const hasContent = hasMeaningfulFeatureBody(feature.content)
+  const heroEditTarget =
+    isDraftMode && !hasHeroImage && !fullImageCover
+      ? { documentType: 'feature' as const, documentId: feature._id, fieldPath: 'image' }
+      : undefined
 
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
       {!fullImageCover && heroImageUrl && (
-        <SetCaseStudyHero image={heroImageUrl} bgPosition={heroPosition} />
-      )}
-
-      {isDraftMode && !hasHeroImage && !fullImageCover && (
-        <MissingHeroPlaceholder documentType="feature" documentId={feature._id} />
+        <SetCaseStudyHero
+          image={heroImageUrl}
+          bgPosition={heroPosition}
+          editTarget={heroEditTarget}
+        />
       )}
 
       {/* Full image cover — render inline so the full image shows without cropping */}

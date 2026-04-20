@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useHero, type HeroConfig } from '@/context/HeroContext'
+import { EditInStudioLink } from '@/components/sanity/EditInStudioLink'
 import { cloudfrontImage } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -216,6 +217,21 @@ export function PersistentHero() {
                 )}
               </motion.div>
             </AnimatePresence>
+
+            {/* Draft-mode click-to-edit overlay for placeholder hero images. */}
+            {config.editTarget && (
+              <div className="absolute inset-0 z-10">
+                <EditInStudioLink
+                  documentType={config.editTarget.documentType}
+                  documentId={config.editTarget.documentId}
+                  fieldPath={config.editTarget.fieldPath}
+                  ariaLabel="Upload hero image in Sanity Studio"
+                  className="group block h-full w-full"
+                >
+                  <span className="flex h-full w-full items-center justify-center transition-colors bg-transparent group-hover:bg-primary/10" />
+                </EditInStudioLink>
+              </div>
+            )}
           </div>
 
           {/* Text box — hidden for image-only heroes */}
