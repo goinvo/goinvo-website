@@ -33,8 +33,7 @@ export const caseStudyBySlugQuery = groq`
     hideClientSubtitle,
     image,
     caption,
-    categories[]-> { _id, title, slug },
-    additionalTags,
+    categories[]-> { _id, title, slug, isMainCategory, filterOrder },
     metadataLayout,
     authors[]-> { _id, name, role, bio, image },
     time,
@@ -113,11 +112,24 @@ export const draftFeaturesQuery = groq`{
 
 // Categories
 export const allCategoriesQuery = groq`
-  *[_type == "category"] | order(title asc) {
+  *[_type == "category"] | order(isMainCategory desc, filterOrder asc, title asc) {
     _id,
     title,
     slug,
+    isMainCategory,
+    filterOrder,
     description
+  }
+`
+
+// Main categories drive the /work filter chips. Ordered by filterOrder
+// with title as the tie-breaker so the UI is stable even when filterOrder
+// is missing.
+export const mainCategoriesQuery = groq`
+  *[_type == "category" && isMainCategory == true] | order(filterOrder asc, title asc) {
+    _id,
+    title,
+    slug
   }
 `
 

@@ -70,21 +70,26 @@ function getMetadataInsertIndex(content: PortableTextBlock[]): number {
 }
 
 function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
-  const categoryTitles = (caseStudy.categories || [])
-    .map((c) => c?.title)
-    .filter((t): t is string => Boolean(t))
-  const additionalTags = (caseStudy.additionalTags || []).filter(Boolean)
+  const categories = caseStudy.categories || []
+  const mainTitles = categories
+    .filter((c) => c?.isMainCategory)
+    .map((c) => c.title)
+    .filter(Boolean)
+  const additionalTitles = categories
+    .filter((c) => c && !c.isMainCategory)
+    .map((c) => c.title)
+    .filter(Boolean)
 
   const hasTime = Boolean(caseStudy.time)
-  const hasCategories = categoryTitles.length > 0
-  const hasAdditional = additionalTags.length > 0
+  const hasMain = mainTitles.length > 0
+  const hasAdditional = additionalTitles.length > 0
 
-  if (!hasTime && !hasCategories && !hasAdditional) return null
+  if (!hasTime && !hasMain && !hasAdditional) return null
 
   const metadataLayout = caseStudy.metadataLayout || 'stacked'
-  const tagsLine = [...categoryTitles, ...additionalTags].join(', ')
 
-  if (metadataLayout === 'inline' && hasTime && (hasCategories || hasAdditional)) {
+  if (metadataLayout === 'inline' && hasTime && (hasMain || hasAdditional)) {
+    const combined = [...mainTitles, ...additionalTitles].join(', ')
     return (
       <div>
         <p className="text-gray mt-0 mb-8">
@@ -95,7 +100,7 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
             Tags:
           </span>{' '}
-          {tagsLine}
+          {combined}
         </p>
       </div>
     )
@@ -111,20 +116,20 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           {caseStudy.time}
         </p>
       )}
-      {hasCategories && (
+      {hasMain && (
         <p className="text-gray mt-0 mb-4">
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
-            Categories:
+            Main Categories:
           </span>{' '}
-          {categoryTitles.join(', ')}
+          {mainTitles.join(', ')}
         </p>
       )}
       {hasAdditional && (
         <p className="text-gray mt-0 mb-8">
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
-            Tags:
+            Additional:
           </span>{' '}
-          {additionalTags.join(', ')}
+          {additionalTitles.join(', ')}
         </p>
       )}
     </div>
@@ -148,8 +153,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
   const contentAfterMetadata = content?.slice(metadataInsertIndex) || []
   const showMetadata = Boolean(
     caseStudy.time ||
-      (caseStudy.categories && caseStudy.categories.length > 0) ||
-      (caseStudy.additionalTags && caseStudy.additionalTags.length > 0)
+      (caseStudy.categories && caseStudy.categories.length > 0)
   )
 
   return (
