@@ -22,24 +22,29 @@ function GettingStartedComponent() {
       </Section>
 
       <Section title="2. Content Types at a Glance">
+        <p>Every entry in the sidebar maps to a document type. Here's exactly what each one controls and where it shows up on the public site.</p>
         <Table
-          headers={['Type', 'Purpose']}
+          headers={['Type', 'Where it shows on the site', 'Purpose']}
           rows={[
-            ['Feature', 'Vision articles, thought leadership, research pieces, and editorial content'],
-            ['Case Study', 'Client project write-ups shown on /work'],
-            ['Vision Project', 'Internal or experimental vision projects'],
-            ['Category', 'Tags for filtering case studies and features'],
-            ['Team Member', 'Staff and alumni bios on /about'],
-            ['Job', 'Open positions on /about/careers'],
-            ['Homepage Header', 'Rotating hero slides on the homepage'],
-            ['Page', 'Generic site pages'],
-            ['Site Settings', 'Global footer, social, and contact settings'],
+            ['Case Study', '/work and /work/<slug>', 'Client project write-ups. Also drives the curated homepage story cards (3M / Ipsos / SNAP).'],
+            ['Vision Piece', '/vision and /vision/<slug>', 'Vision articles, thought leadership, research pieces, and editorial content. (Schema name is still "feature" internally.)'],
+            ['Team Member', '/about (bios) and / (team marquee)', 'Staff and alumni profiles, with bio, role, social links, and headshot.'],
+            ['Category', 'Filter chips on /work', 'Tags referenced by Case Study documents. 11 categories currently in use (Healthcare, Open Source, AI, Enterprise, Government, etc.).'],
+            ['Job', '/about/careers', 'Open positions list. The careers page queries activeJobsQuery, but there are currently zero job documents in the dataset — create one here when a role opens.'],
+            ['Health Visualization', '/vision/health-visualizations', '31 individual health-visualization entries rendered on the Health Visualizations page. Pending consolidation into Vision Piece.'],
+            ['Homepage Header', '(not yet wired to a page)', 'Schema exists but the homepage hero is currently hardcoded. Safe to ignore until someone wires it to HomeContent.'],
+            ['Site Settings', '(not yet wired to a page)', 'Schema for global footer / social / SEO defaults. The public site still reads these values from src/lib/config.ts. Leave empty or populate if someone wires it up.'],
+            ['CMS Feedback', 'Internal — not rendered', 'Backing store for the "Send Feedback" tool. Not editor-facing content; leave it alone.'],
           ]}
         />
 
-        <h4 style={{ marginTop: 20, marginBottom: 8 }}>Creating a Feature Article</h4>
+        <Callout>
+          <strong>Two of these are currently inert.</strong> Homepage Header and Site Settings have schemas but nothing on the public site reads them yet. Creating documents there has no effect today. Flag it if you want either wired up.
+        </Callout>
+
+        <h4 style={{ marginTop: 20, marginBottom: 8 }}>Creating a Vision Piece</h4>
         <ol>
-          <li>In <strong>Structure</strong>, click <strong>Feature</strong> then <strong>+ Create</strong>.</li>
+          <li>In <strong>Structure</strong>, click <strong>Vision Piece</strong> then <strong>+ Create</strong>.</li>
           <li>Choose the template that fits best: <strong>Standard article</strong>, <strong>Research/report article</strong>, or <strong>Visual/stat-heavy article</strong>.</li>
           <li>Fill in the <strong>Basics</strong> tab first: title, slug, categories, date, and client if needed.</li>
           <li>Use <strong>Hero &amp; Meta</strong> for the hero image, image positioning, listing summary, and page meta row.</li>
@@ -52,6 +57,9 @@ function GettingStartedComponent() {
         <Callout>
           <strong>Check the authoring status card first.</strong> New articles should be <strong>Guided CMS</strong>. If a page is marked <strong>Code-assisted CMS</strong> or <strong>Static override</strong>, the card explains what Studio can and cannot control.
         </Callout>
+
+        <h4 style={{ marginTop: 20, marginBottom: 8 }}>Reordering Lists</h4>
+        <p>Case Study, Vision Piece, Team Member, and Homepage Header list views now support drag-to-reorder. Grab the handle on the left of a row and drop it where you want — the new order persists to the public site automatically. You no longer need to hand-edit numeric <code>order</code> fields.</p>
       </Section>
 
       <Section title="3. Drafts, Preview, and Publish">
