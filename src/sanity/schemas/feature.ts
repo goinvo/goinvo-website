@@ -554,20 +554,6 @@ export default defineType({
       group: 'properties',
       description: 'SEO description for search engines (max ~160 characters)',
     }),
-    defineField({
-      name: 'order',
-      title: 'Order',
-      type: 'number',
-      group: 'properties',
-      description: 'Display order (lower numbers first)',
-    }),
-  ],
-  orderings: [
-    {
-      title: 'Date (Newest)',
-      name: 'dateDesc',
-      by: [{ field: 'order', direction: 'asc' }],
-    },
   ],
   preview: {
     select: {
