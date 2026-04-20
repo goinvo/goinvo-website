@@ -715,6 +715,7 @@ function crossReferenceGatsbySource(
     // General case: check that the expected Next.js class appears somewhere
     if (tc.className !== 'text--teal') {
       const hasExpected = new RegExp(expected.nextClass.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(content)
+        || (tc.className === 'text--gray' && /gray-prose-content/.test(content))
       if (!hasExpected) {
         issues.push({
           severity: 'medium',
@@ -1084,13 +1085,14 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
     const na = normalizeHeading(a)
     const nb = normalizeHeading(b)
     if (na.length < 3 || nb.length < 3) return na === nb
+    if (na === nb) return true
     // Use longer substring and stripped-whitespace matching
-    // Require at least 50% length overlap to prevent short words matching long headings
+    // Require close length overlap so page titles do not collide with subsection headings
     const sa = na.substring(0, 35)
     const sb = nb.substring(0, 35)
     const shorter = Math.min(sa.length, sb.length)
     const longer = Math.max(sa.length, sb.length)
-    if ((sa.includes(sb) || sb.includes(sa)) && shorter / longer > 0.5) return true
+    if ((sa.includes(sb) || sb.includes(sa)) && shorter / longer > 0.85) return true
     // Check synonyms
     for (const [x, y] of headingSynonyms) {
       if ((na.includes(x) && nb.includes(y)) || (na.includes(y) && nb.includes(x))) return true
@@ -1155,6 +1157,16 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
       // Skip numbered headings — they can legitimately be serif or bold-sans
       const isNumbered = /^\d+[\.\)]\s/.test(gh.text)
       if (isNumbered) continue
+      if (gh.tag !== match.tag) {
+        const isInteractiveOverride = INTERACTIVE_OVERRIDE_SLUGS.has(slug)
+        const isH1Mismatch = gh.tag === 'h1' || match.tag === 'h1'
+        issues.push({
+          severity: isInteractiveOverride ? 'low' : isH1Mismatch ? 'high' : 'medium',
+          category: 'HEADING_LEVEL',
+          message: `"${gh.text.substring(0, 40)}": heading tag ${gh.tag} in Gatsby → ${match.tag} in Next.js`,
+        })
+      }
+
       const classIssues = checkClassMatch(gh.classes, match.classes)
       for (const ci of classIssues) {
         issues.push({

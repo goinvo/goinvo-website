@@ -35,9 +35,12 @@ export const heroConfigs: Record<string, HeroConfig> = {
     title: (
       <>
         Design that Delivers<span className="text-primary font-serif">.</span>
+        <br />
+        <span className="font-serif text-[1.5rem] leading-[2.125rem]">
+          Real projects, real users, real business outcomes.
+        </span>
       </>
     ),
-    subtitle: 'Real projects, real users, real business outcomes.',
   },
   '/services': {
     image: '/images/services/hand-drawing.jpg',
@@ -62,26 +65,20 @@ export const heroConfigs: Record<string, HeroConfig> = {
     ),
   },
   '/vision': {
-    image: 'https://cdn.sanity.io/images/a1wsimxr/production/3a08d155020800e26d90159045c8c422b22aa33c-4000x1528.jpg',
+    image: '/images/vision/vision-illustration-desktop-left.jpg',
     bgPosition: 'center',
     title: null,
     hideTextBox: true,
     expandAfterSlide: true,
+    desktopImages: [
+      '/images/vision/vision-illustration-desktop-left.jpg',
+      '/images/vision/vision-illustration-desktop-right.jpg',
+    ],
     mobileImages: [
       '/images/vision/vision-illustration-mobile-home.jpg',
       '/images/vision/vision-illustration-mobile-practice.jpg',
       '/images/vision/vision-illustration-mobile-country.jpg',
     ],
-  },
-  '/open-source-health-design': {
-    image: '/images/open_source/open-source-bgd.png',
-    bgPosition: 'center',
-    title: (
-      <>
-        Open Source Health Design<span className="text-primary font-serif">.</span>
-      </>
-    ),
-    subtitle: 'Bringing Trust, Openness, Innovation, & Design to Healthcare',
   },
 }
 

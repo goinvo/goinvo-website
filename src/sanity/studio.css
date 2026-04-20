@@ -1,0 +1,42 @@
+/**
+ * Keep the default Sanity theme, but give the Main Content authoring
+ * view a wider working area for Portable Text-heavy documents.
+ */
+
+body:has([data-testid='group-tab-content'][aria-selected='true']) :where(
+    #document-panel-scroller,
+    [data-testid='document-panel-scroller']
+  ),
+body:has([data-testid='group-select-content'][aria-selected='true']) :where(
+    #document-panel-scroller,
+    [data-testid='document-panel-scroller']
+  ) {
+  max-width: 960px !important;
+}
+
+body:has([data-testid='group-tab-content'][aria-selected='true']) [data-testid='pt-editor'],
+body:has([data-testid='group-select-content'][aria-selected='true']) [data-testid='pt-editor'] {
+  max-width: 100% !important;
+}
+
+body:has([data-testid='group-tab-content'][aria-selected='true'])
+    [data-goinvo-portable-text-input='true']
+    [data-testid='pt-editor'][data-fullscreen='false'],
+body:has([data-testid='group-select-content'][aria-selected='true'])
+    [data-goinvo-portable-text-input='true']
+    [data-testid='pt-editor'][data-fullscreen='false'] {
+  min-height: 26rem !important;
+  height: min(56rem, calc(100dvh - 14rem)) !important;
+}
+
+body:has([data-testid='group-tab-content'][aria-selected='true'])
+    [data-goinvo-portable-text-input='true']
+    [data-testid='pt-editor'][data-fullscreen='false']
+    > :last-child,
+body:has([data-testid='group-select-content'][aria-selected='true'])
+    [data-goinvo-portable-text-input='true']
+    [data-testid='pt-editor'][data-fullscreen='false']
+    > :last-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}

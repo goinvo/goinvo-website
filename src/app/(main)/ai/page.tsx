@@ -63,24 +63,44 @@ const caseStudies = [
   },
 ]
 
+function DoubleArrow({ color }: { color: string }) {
+  return (
+    <svg
+      viewBox="0 0 400 24"
+      preserveAspectRatio="none"
+      className="w-full h-6"
+      aria-hidden
+    >
+      {/* central line */}
+      <rect x="4" y="10" width="392" height="4" rx="2" fill={color} />
+      {/* left-pointing V at the left end */}
+      <rect x="0" y="4" width="16" height="4" rx="2" fill={color} transform="rotate(-45 8 6)" />
+      <rect x="0" y="16" width="16" height="4" rx="2" fill={color} transform="rotate(45 8 18)" />
+      {/* right-pointing V at the right end */}
+      <rect x="384" y="4" width="16" height="4" rx="2" fill={color} transform="rotate(45 392 6)" />
+      <rect x="384" y="16" width="16" height="4" rx="2" fill={color} transform="rotate(-45 392 18)" />
+    </svg>
+  )
+}
+
 export default function AIPage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section
-        className="relative h-[450px] bg-cover bg-center"
+        className="relative h-[450px] bg-cover bg-top"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/ai/ai_hero_2_sm.jpg')})` }}
       >
         <div className="relative h-full max-width">
-          <div className="absolute bottom-0 left-0 w-full lg:w-[800px] bg-white/90 content-padding py-8">
+          <div className="absolute bottom-0 left-0 w-full lg:w-[385px] bg-white/90 content-padding py-8">
             <h1 className="header-xl m-0 mb-4">
               Designing AI-Powered Experiences for People and Organizations<span className="text-primary font-serif">.</span>
             </h1>
-            <p className="text-gray text-lg mb-6 max-w-2xl">
+            <p className="text-gray mb-6">
               We design tools and experiences with AI so people and machines can
               skillfully work together.
             </p>
-            <Button href="/contact" variant="primary" size="lg">
+            <Button href="/contact" variant="primary" size="md">
               Let&apos;s discuss your project
             </Button>
           </div>
@@ -88,23 +108,26 @@ export default function AIPage() {
       </section>
 
       {/* Results */}
-      <section className="py-16">
+      <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-8">What results are you looking for?</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h2 className="header-xl mt-0 mb-8">What results are you looking for?</h2>
+          <ul className="ul grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
             {results.map((result) => (
-              <p key={result.label} className="font-semibold">
+              <li key={result.label}>
                 <strong>{result.label}</strong> {result.text}
-              </p>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
       {/* Case Studies */}
-      <section className="bg-gray-light py-16">
+      <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-8">Driving results services with AI</h2>
+          <h2 className="header-xl mt-0 mb-8">
+            Driving results services with AI
+            <span className="text-primary font-serif">.</span>
+          </h2>
           <div className="space-y-8">
             {caseStudies.map((study) => (
               <Link
@@ -113,6 +136,17 @@ export default function AIPage() {
                 className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2">
+                  <div className="p-6 md:p-8 flex flex-col justify-center text-tertiary">
+                    <h4 className="header-xl mb-0">
+                      {study.subtitle}
+                    </h4>
+                    <p className="header-lg text-tertiary mt-6 mb-0">
+                      {study.description}
+                    </p>
+                    <p className="mt-4 mb-0">
+                      <span className="text-secondary underline">Read Case Study</span>
+                    </p>
+                  </div>
                   <div className="aspect-[16/10] md:aspect-auto overflow-hidden">
                     <Image
                       src={cloudfrontImage(study.image)}
@@ -122,15 +156,6 @@ export default function AIPage() {
                       className="w-full h-full object-cover image--interactive"
                     />
                   </div>
-                  <div className="p-6 md:p-8 flex flex-col justify-center">
-                    <p className="text-xs uppercase tracking-wider text-gray font-semibold mb-1">
-                      {study.title}
-                    </p>
-                    <h3 className="font-serif text-xl mb-2 transition-colors">
-                      {study.subtitle}
-                    </h3>
-                    <p className="text-gray text-md">{study.description}</p>
-                  </div>
                 </div>
               </Link>
             ))}
@@ -139,42 +164,98 @@ export default function AIPage() {
       </section>
 
       {/* 80/20 AI Fit Diagram */}
-      <section className="py-16">
+      <section className="goinvo-ai-fit py-16">
         <div className="max-width content-padding">
-          <div className="max-w-3xl mx-auto mb-8">
-            <p className="font-serif text-lg mb-6">
-              In the land of AI products, designers will split time between problem solving, facilitation, and bending AI services versus tooling the individual GenAI and agentic services.
-            </p>
+          {/* Top intro text — right-aligned, split across two rows */}
+          <div className="fit-text-top font-serif">
+            <div className="flex flex-row">
+              <div className="w-[74%] mr-[10px] pr-5 text-right">
+                <p className="mb-0 text-lg lg:text-2xl font-light leading-snug">
+                  In the land of AI products, designers will split time between problem solving, facilitation, and bending AI services
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-row">
+              <div className="w-[74%] mr-[10px] pr-5 text-right">
+                <p className="mt-0 mb-0 text-lg lg:text-2xl font-light leading-snug">versus</p>
+              </div>
+              <div className="w-[25%]">
+                <p className="mt-0 text-lg lg:text-2xl font-light leading-snug">tooling the individual GenAI and agentic services.</p>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-[4fr_1fr] gap-4 max-w-3xl mx-auto mb-4">
-            <div className="border-t-2 border-primary pt-4">
-              <p className="font-serif text-lg">
-                Most design will live here in the <span className="font-serif text-3xl text-primary">80<span className="text-xl">%</span></span>
-                <br />using AI services to facilitate, problem solve, drive better decisions, and productionize products
+
+          {/* Stats row: 80% and 20% */}
+          <div className="flex flex-row mt-4">
+            <div className="w-[74%] mr-[10px] pr-5 text-right font-serif">
+              <p className="text-lg lg:text-2xl font-light leading-snug">
+                Most design will live here in the{' '}
+                <span className="text-[2.75rem] font-semibold align-middle">
+                  80<span className="text-2xl font-light">%</span>
+                </span>
+                <br />
+                using AI services to facilitate, problem solve, drive better decisions, and productionize products
               </p>
             </div>
-            <div className="border-t-2 border-secondary pt-4">
-              <p className="font-serif text-lg">
-                <span className="font-serif text-3xl text-secondary">20<span className="text-xl">%</span></span> Tooling
+            <div className="w-[25%] font-serif">
+              <p className="text-lg lg:text-2xl font-light leading-snug">
+                <span className="text-[2.75rem] font-semibold align-middle">
+                  20<span className="text-2xl font-light">%</span>
+                </span>{' '}
+                Tooling
               </p>
             </div>
           </div>
-          <div className="max-w-3xl mx-auto text-center">
-            <p className="font-serif text-lg">
-              GoInvo lives here as toolmakers and service shapers.
-            </p>
+
+          {/* Arrows row */}
+          <div className="flex flex-row my-5">
+            <div className="w-[74%] mr-[10px]">
+              <DoubleArrow color="#3F7CCB" />
+            </div>
+            <div className="w-[25%]">
+              <DoubleArrow color="#D27A64" />
+            </div>
+          </div>
+
+          {/* Bracket + "GoInvo lives here" */}
+          <div className="flex flex-col items-end">
+            <div className="w-[60%] -mr-10 text-center">
+              <div className="mx-auto w-[187px]">
+                <Image
+                  src="/images/bracket-down.svg"
+                  alt="bracket pointed down"
+                  width={187}
+                  height={54}
+                  className="mx-auto"
+                />
+              </div>
+              <p className="font-serif text-lg lg:text-2xl font-light leading-snug mt-4">
+                GoInvo lives here as toolmakers and service shapers.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Visual Storytelling Featured Project */}
-      <section className="bg-gray-light py-16">
+      <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
           <Link
             href="/vision/visual-storytelling-with-genai"
             className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
+              <div className="p-6 md:p-8 flex flex-col justify-center text-tertiary">
+                <h4 className="header-xl mb-0">
+                  Reimagining Visual Storytelling with GenAI
+                </h4>
+                <p className="header-lg text-tertiary mt-6 mb-0">
+                  GenAI accelerates our design process and enhances our ability to tell compelling stories through visuals.
+                </p>
+                <p className="mt-4 mb-0">
+                  <span className="text-secondary underline">Read Case Study</span>
+                </p>
+              </div>
               <div className="aspect-[16/10] md:aspect-auto overflow-hidden">
                 <Image
                   src={cloudfrontImage('/images/features/visual-storytelling-with-genai/genai-hero-3.jpg')}
@@ -184,33 +265,33 @@ export default function AIPage() {
                   className="w-full h-full object-cover image--interactive"
                 />
               </div>
-              <div className="p-6 md:p-8 flex flex-col justify-center">
-                <p className="text-xs uppercase tracking-wider text-gray font-semibold mb-1">
-                  Featured
-                </p>
-                <h3 className="font-serif text-xl mb-2 transition-colors">
-                  Reimagining Visual Storytelling with GenAI
-                </h3>
-                <p className="text-gray text-md">
-                  GenAI accelerates our design process and enhances our ability to tell compelling stories through visuals.
-                </p>
-              </div>
             </div>
           </Link>
         </div>
       </section>
 
       {/* Client Logos */}
-      <section className="py-8">
-        <div className="max-width content-padding text-center">
-          <p className="font-semibold mb-4">Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</p>
-          <ClientLogos variant="ai" />
+      <section className="py-16 text-tertiary">
+        <div className="max-width content-padding">
+          <hr className="border-0 border-t border-gray-medium mb-12 mx-auto max-w-full" />
+          <div className="text-center">
+            <p className="mb-6">
+              <strong>Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</strong>
+            </p>
+            <ClientLogos variant="ai" />
+          </div>
         </div>
       </section>
 
-      {/* Contact Form */}
-      <section className="py-16">
-        <div className="max-width-md content-padding mx-auto">
+      {/* CTA + Contact Form */}
+      <section className="bg-blue-light py-16">
+        <div className="max-width-md content-padding mx-auto text-center text-tertiary">
+          <p className="header-xl text-tertiary mb-2">
+            We ship software that works.
+            <br />
+            Let&apos;s build together!
+          </p>
+          <p className="text-gray mb-8">Reach out to learn how GoInvo can help.</p>
           <ContactFormEmbed />
         </div>
       </section>
