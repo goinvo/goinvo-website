@@ -70,13 +70,21 @@ function getMetadataInsertIndex(content: PortableTextBlock[]): number {
 }
 
 function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
-  if (!caseStudy.time && !caseStudy.displayTags) return null
+  const categoryTitles = (caseStudy.categories || [])
+    .map((c) => c?.title)
+    .filter((t): t is string => Boolean(t))
+  const additionalTags = (caseStudy.additionalTags || []).filter(Boolean)
+
+  const hasTime = Boolean(caseStudy.time)
+  const hasCategories = categoryTitles.length > 0
+  const hasAdditional = additionalTags.length > 0
+
+  if (!hasTime && !hasCategories && !hasAdditional) return null
 
   const metadataLayout = caseStudy.metadataLayout || 'stacked'
-  const hasTime = Boolean(caseStudy.time)
-  const hasTags = Boolean(caseStudy.displayTags)
+  const tagsLine = [...categoryTitles, ...additionalTags].join(', ')
 
-  if (metadataLayout === 'inline' && hasTime && hasTags) {
+  if (metadataLayout === 'inline' && hasTime && (hasCategories || hasAdditional)) {
     return (
       <div>
         <p className="text-gray mt-0 mb-8">
@@ -87,7 +95,7 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
             Tags:
           </span>{' '}
-          {caseStudy.displayTags}
+          {tagsLine}
         </p>
       </div>
     )
@@ -103,12 +111,20 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           {caseStudy.time}
         </p>
       )}
-      {hasTags && (
+      {hasCategories && (
+        <p className="text-gray mt-0 mb-4">
+          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+            Categories:
+          </span>{' '}
+          {categoryTitles.join(', ')}
+        </p>
+      )}
+      {hasAdditional && (
         <p className="text-gray mt-0 mb-8">
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
             Tags:
           </span>{' '}
-          {caseStudy.displayTags}
+          {additionalTags.join(', ')}
         </p>
       )}
     </div>
@@ -130,7 +146,11 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
   const metadataInsertIndex = content ? getMetadataInsertIndex(content) : 0
   const contentBeforeMetadata = content?.slice(0, metadataInsertIndex) || []
   const contentAfterMetadata = content?.slice(metadataInsertIndex) || []
-  const showMetadata = Boolean(caseStudy.time || caseStudy.displayTags)
+  const showMetadata = Boolean(
+    caseStudy.time ||
+      (caseStudy.categories && caseStudy.categories.length > 0) ||
+      (caseStudy.additionalTags && caseStudy.additionalTags.length > 0)
+  )
 
   return (
     <article>
