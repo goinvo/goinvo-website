@@ -6,12 +6,16 @@ import { useLiveData } from '@/components/sanity/LiveData'
 import { CaseStudyLayout } from '@/components/work/CaseStudyLayout'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
+import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
+import { MissingHeroPlaceholder } from '@/components/sanity/MissingHeroPlaceholder'
 import type { CaseStudy } from '@/types'
 import type { PortableTextBlock } from '@portabletext/types'
 
 interface Props {
   initialData: CaseStudy
   slug: string
+  /** Whether Sanity Presentation/draft mode is active on this request. */
+  isDraftMode?: boolean
 }
 
 interface BlockChild {
@@ -500,10 +504,21 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
   return changed ? { ...caseStudy, content: content as PortableTextBlock[] } : caseStudy
 }
 
-export function CaseStudyContent({ initialData, slug }: Props) {
+export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
   const caseStudy = useLiveData(initialData, caseStudyBySlugQuery, { slug })
 
   if (!caseStudy) return null
+
+  const hasMeaningfulContent = (caseStudy.content || []).some((block) => {
+    if (!block?._type) return false
+    if (block._type !== 'block') return true
+    const text = ((block.children as BlockChild[] | undefined) || [])
+      .map((c) => c.text || '')
+      .join('')
+      .trim()
+    return text.length > 0
+  })
+  const hasHeroImage = Boolean(caseStudy.image?.asset)
 
   const firstContentBlock = caseStudy.content?.[0]
   const firstContentChildren: BlockChild[] =
@@ -534,6 +549,10 @@ export function CaseStudyContent({ initialData, slug }: Props) {
   return (
     <div>
       <SetCaseStudyHero image={heroImageUrl} />
+
+      {isDraftMode && !hasHeroImage && (
+        <MissingHeroPlaceholder documentType="caseStudy" documentId={caseStudy._id} />
+      )}
 
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">
@@ -566,7 +585,11 @@ export function CaseStudyContent({ initialData, slug }: Props) {
         </div>
       </Reveal>
 
-      <CaseStudyLayout caseStudy={transformedCaseStudy} />
+      {isDraftMode && !hasMeaningfulContent ? (
+        <EmptyContentPlaceholder documentType="caseStudy" documentId={caseStudy._id} />
+      ) : (
+        <CaseStudyLayout caseStudy={transformedCaseStudy} />
+      )}
     </div>
   )
 }
