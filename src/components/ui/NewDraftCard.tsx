@@ -23,13 +23,14 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
 
       if (!res.ok) throw new Error('Failed to create draft')
 
-      const { id } = await res.json()
-      // Navigate the top-level window to the Studio Structure tool
-      // to edit the newly created document. We use window.top because
-      // this component runs inside the Presentation tool's preview iframe.
-      const studioPath = `/studio/structure/${type};${id}`
-      const target = window.top || window
-      target.location.href = studioPath
+      const { slug } = await res.json()
+      // Navigate the preview iframe to the new draft's public page.
+      // Draft mode is already enabled in this iframe (we only render
+      // NewDraftCard inside the Presentation preview), so the
+      // `[slug]` route will fetch the draft via sanityFetch and
+      // Presentation will wire up overlays for inline editing.
+      const previewPath = type === 'caseStudy' ? `/work/${slug}` : `/vision/${slug}`
+      window.location.href = previewPath
     } catch (e) {
       console.error('Failed to create draft:', e)
       setCreating(false)
