@@ -1,6 +1,6 @@
 'use client'
 
-import { urlForImage } from '@/sanity/lib/image'
+import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import { caseStudyBySlugQuery } from '@/sanity/lib/queries'
 import { useLiveData } from '@/components/sanity/LiveData'
 import { CaseStudyLayout } from '@/components/work/CaseStudyLayout'
@@ -524,14 +524,16 @@ export function CaseStudyContent({ initialData, slug }: Props) {
   const transformedCaseStudy = transformCaseStudyForSlug(normalizedCaseStudy, slug)
 
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
-  // minimize top/bottom cropping at desktop widths
+  // minimize top/bottom cropping at desktop widths. Drafts without a
+  // hero image yet fall back to a placeholder so the layout stays
+  // intact instead of breaking.
   const heroImageUrl = caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(1600).height(564).url()
-    : null
+    : PLACEHOLDER_IMAGE_URL
 
   return (
     <div>
-      {heroImageUrl && <SetCaseStudyHero image={heroImageUrl} />}
+      <SetCaseStudyHero image={heroImageUrl} />
 
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">

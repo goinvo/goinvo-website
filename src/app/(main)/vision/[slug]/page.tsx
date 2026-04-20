@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
 import { featureBySlugQuery, allFeaturesQuery } from '@/sanity/lib/queries'
-import { urlForImage } from '@/sanity/lib/image'
+import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
@@ -1175,10 +1175,12 @@ export default async function VisionFeaturePage({ params }: Props) {
   const fullImageCover = feature.articleHeroImage ? feature.articleFullImageCover : feature.fullImageCover
 
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
-  // minimize top/bottom cropping at desktop widths
+  // minimize top/bottom cropping at desktop widths. Fallback to a
+  // generic placeholder when the article doesn't have a hero image
+  // yet (new draft, or editor hasn't uploaded one).
   const heroImageUrl = heroImage
     ? urlForImage(heroImage).width(1600).height(564).url()
-    : null
+    : PLACEHOLDER_IMAGE_URL
 
   // Full image cover: show the complete image as page content, no hero crop
   const fullCoverUrl = fullImageCover && heroImage

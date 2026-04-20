@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { CaseStudy } from '@/types'
-import { urlForImage } from '@/sanity/lib/image'
+import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { useHero } from '@/context/HeroContext'
 import { trackCaseStudyClick } from '@/lib/analytics'
@@ -28,14 +28,14 @@ export function CaseStudyCard({
 
   const imageUrl = caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(800).height(500).url()
-    : undefined
+    : PLACEHOLDER_IMAGE_URL
 
   // Higher-res URL for the hero (overlay morph + PersistentHero)
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
   // minimize top/bottom cropping at desktop widths
   const heroImageUrl = caseStudy.image?.asset
     ? urlForImage(caseStudy.image).width(1600).height(564).url()
-    : undefined
+    : PLACEHOLDER_IMAGE_URL
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const section = (caseStudy as any)._type === 'feature' ? 'vision' : 'work'
@@ -90,17 +90,15 @@ export function CaseStudyCard({
           whileHover={{ y: -4 }}
           transition={{ duration: 0.3 }}
         >
-          {imageUrl && (
-            <div data-card-image className="relative h-[260px] overflow-hidden [backface-visibility:hidden]">
-              <Image
-                src={imageUrl}
-                alt={caseStudy.title}
-                fill
-                className="object-cover [backface-visibility:hidden] group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
-                style={{ objectPosition: 'center top' }}
-              />
-            </div>
-          )}
+          <div data-card-image className="relative h-[260px] overflow-hidden [backface-visibility:hidden]">
+            <Image
+              src={imageUrl}
+              alt={caseStudy.title}
+              fill
+              className="object-cover [backface-visibility:hidden] group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+              style={{ objectPosition: 'center top' }}
+            />
+          </div>
           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
             <p className="font-semibold text-black">{caseStudy.title}</p>
             {/* For vision features, "client" is just the literal "Feature" — skip it and show description instead */}
