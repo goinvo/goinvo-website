@@ -69,7 +69,7 @@ export default defineType({
       name: 'categories',
       title: 'Categories',
       type: 'array',
-      group: 'extras',
+      group: 'properties',
       description: 'Tag this case study with one or more categories for filtering',
       of: [{ type: 'reference', to: [{ type: 'category' }] }],
     }),

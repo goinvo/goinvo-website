@@ -25,10 +25,6 @@ function isStaticOverrideDocument(document: unknown) {
   return isStaticFeatureOverrideSlug(getDocumentSlug(document))
 }
 
-function readOnlyForStaticOverride({ document }: { document?: unknown }) {
-  return isStaticOverrideDocument(document)
-}
-
 function hasDocumentArrayItems(document: unknown, fieldName: 'authors' | 'contributors' | 'specialThanks') {
   if (!document || typeof document !== 'object') return false
 
@@ -230,7 +226,6 @@ export default defineType({
       title: 'Content Width',
       type: 'string',
       group: 'content',
-      readOnly: readOnlyForStaticOverride,
       description: 'Max width of the article content area. Most articles use Medium (711px). Use Wide for pages with larger images/diagrams.',
       options: {
         list: [
@@ -246,7 +241,6 @@ export default defineType({
       title: 'Bullet Style',
       type: 'string',
       group: 'content',
-      readOnly: readOnlyForStaticOverride,
       description: 'List bullet style. Star (default) uses a custom star image. Disc uses standard round bullets (matching some Gatsby pages like healthcare-ai, eligibility-engine).',
       options: {
         list: [
@@ -305,7 +299,6 @@ export default defineType({
       title: 'Show Page Meta',
       type: 'boolean',
       group: 'properties',
-      readOnly: readOnlyForStaticOverride,
       description: 'Show the category/date row below the page title',
       initialValue: true,
     }),
@@ -336,7 +329,6 @@ export default defineType({
       title: 'Authors',
       type: 'array',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       description: 'Team members who authored this feature. Use roleOverride for article-specific roles (e.g., "Editor" instead of the team member\'s default role).',
       of: [
         {
@@ -357,7 +349,6 @@ export default defineType({
       title: 'Author Layout',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !hasDocumentArrayItems(document, 'authors'),
       description: 'How to display the author section. "Equal" shows all authors the same size. "Primary + sidebar" highlights the first author and shows the rest in a bordered sidebar.',
       options: {
@@ -376,7 +367,6 @@ export default defineType({
       title: 'Author Background',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !hasDocumentArrayItems(document, 'authors'),
       description: 'Background behind the author section. White keeps the section unwrapped; the other options create a full-width brand-tinted band.',
       options: {
@@ -389,7 +379,6 @@ export default defineType({
       title: 'Contributors',
       type: 'array',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       description: 'Additional contributors (shown in a separate "Contributors" section below authors).',
       of: [
         {
@@ -411,7 +400,6 @@ export default defineType({
       title: 'Contributors Layout',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !hasDocumentArrayItems(document, 'contributors'),
       description: 'How to display the contributors section. Use "Plain list" for pages that should show names only, without photos.',
       options: {
@@ -429,7 +417,6 @@ export default defineType({
       title: 'Contributors Background',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !hasDocumentArrayItems(document, 'contributors'),
       description: 'Background behind the contributors section when contributors are shown separately.',
       options: {
@@ -442,7 +429,6 @@ export default defineType({
       title: 'Newsletter Background',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       description: 'Background behind the newsletter/subscribe section shown below authors and special thanks.',
       options: {
         list: [...sectionBackgroundOptions],
@@ -454,7 +440,6 @@ export default defineType({
       title: 'Authors/Contributors Position',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       description: 'Whether the author, contributor, and special-thanks sections appear before or after the newsletter block.',
       options: {
         list: [
@@ -469,7 +454,6 @@ export default defineType({
       title: 'Special Thanks Heading',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !hasDocumentArrayItems(document, 'specialThanks'),
       description: 'Custom heading for the special thanks section. Defaults to "Contributors" or "Special thanks to..." based on context.',
     }),
@@ -478,7 +462,6 @@ export default defineType({
       title: 'Special Thanks Heading Style',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !hasDocumentArrayItems(document, 'specialThanks'),
       description: 'Choose whether the Special Thanks heading uses the default small subheading or a larger legacy section heading.',
       options: {
@@ -494,7 +477,6 @@ export default defineType({
       title: 'Special Thanks',
       type: 'array',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       description: 'Optional "Special thanks to..." section shown after Authors/Contributors. Use for acknowledging people who are not formal authors or contributors.',
       of: [{ type: 'block' }],
     }),
@@ -503,7 +485,6 @@ export default defineType({
       title: 'Show "About GoInvo" Section',
       type: 'boolean',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       description: 'Show the standard "About GoInvo" blurb after the author/contributor sections.',
       initialValue: false,
     }),
@@ -512,7 +493,6 @@ export default defineType({
       title: '"About GoInvo" Position',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !documentHasAboutGoInvo(document),
       description: 'Whether the About GoInvo section appears before or after the newsletter block',
       options: {
@@ -528,7 +508,6 @@ export default defineType({
       title: '"About GoInvo" Copy',
       type: 'string',
       group: 'extras',
-      readOnly: readOnlyForStaticOverride,
       hidden: ({ document }) => !documentHasAboutGoInvo(document),
       description: 'Choose which standard About GoInvo blurb to render',
       options: {
@@ -544,7 +523,6 @@ export default defineType({
       title: 'Content',
       type: 'portableText',
       group: 'content',
-      readOnly: readOnlyForStaticOverride,
       description: 'Full page content for internal vision pages',
     }),
     defineField({
@@ -552,7 +530,6 @@ export default defineType({
       title: 'Draft Preview Reviewed',
       type: 'boolean',
       group: 'properties',
-      readOnly: readOnlyForStaticOverride,
       description: 'Check this after reviewing the draft in the Presentation tab and confirming it is ready to publish.',
       initialValue: false,
     }),
