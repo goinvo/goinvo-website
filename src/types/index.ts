@@ -137,17 +137,9 @@ export interface Job {
   isActive?: boolean
 }
 
-export interface VisionProject {
-  _id: string
-  title: string
-  slug: { current: string }
-  image?: SanityImage
-  description?: PortableTextBlock[]
-  content?: PortableTextBlock[]
-  category?: string
-}
-
-/** Static feature from features.json (Gatsby-sourced data) */
+/** Display shape consumed by VisionGrid, DraftFeaturesSection, and the
+ *  spotlight card. Produced by src/lib/featureDisplay.ts from a Sanity
+ *  Feature document; originally sourced from src/data/features.json. */
 export interface StaticFeature {
   id: string
   title: string
