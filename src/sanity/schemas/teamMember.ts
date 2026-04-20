@@ -53,19 +53,6 @@ export default defineType({
       description: 'Check to move this person to the Alumni section',
       initialValue: false,
     }),
-    defineField({
-      name: 'order',
-      title: 'Sort Order',
-      type: 'number',
-      description: 'Display position on the About page (lower numbers appear first)',
-    }),
-  ],
-  orderings: [
-    {
-      title: 'Sort Order',
-      name: 'orderAsc',
-      by: [{ field: 'order', direction: 'asc' }],
-    },
   ],
   preview: {
     select: {

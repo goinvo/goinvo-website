@@ -44,7 +44,6 @@ export interface CaseStudy {
   upNext?: (CaseStudy | ExternalUpNextItem)[]
   hidden?: boolean
   metaDescription?: string
-  order?: number
 }
 
 export interface ExternalUpNextItem {
@@ -84,7 +83,6 @@ export interface TeamMember {
     email?: string
   }
   isAlumni?: boolean
-  order?: number
 }
 
 export interface Feature {
@@ -126,7 +124,6 @@ export interface Feature {
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
   metaDescription?: string
-  order?: number
 }
 
 export interface Job {
@@ -154,33 +151,6 @@ export interface StaticFeature {
   externalLink?: boolean
   hiddenWorkPage?: boolean
   imagePosition?: string
-}
-
-export interface HomepageHeader {
-  _id: string
-  title: string
-  subtitle?: string
-  image?: SanityImage
-  link?: string
-  order?: number
-}
-
-export interface SiteSettings {
-  siteTitle: string
-  description?: string
-  socialLinks?: {
-    linkedin?: string
-    twitter?: string
-    medium?: string
-    flickr?: string
-    soundcloud?: string
-  }
-  footerText?: string
-  contactInfo?: {
-    email?: string
-    phone?: string
-    address?: string
-  }
 }
 
 export interface SEO {
