@@ -73,18 +73,18 @@ export default defineType({
       type: 'array',
       group: 'properties',
       description:
-        'Primary categories. These drive the filter chips on /work AND appear as "Categories:" at the top of the case study page. Pick from the canonical list.',
-      of: [{ type: 'reference', to: [{ type: 'category' }] }],
-    }),
-    defineField({
-      name: 'additionalTags',
-      title: 'Additional tags',
-      type: 'array',
-      group: 'properties',
-      description:
-        'Free-form extra tags shown on the case study page under the primary categories (e.g. "Interactive wall"). Do not drive filtering. Leave empty if you do not have anything to add beyond Categories above.',
-      of: [{ type: 'string' }],
-      options: { layout: 'tags' },
+        'Pick from the canonical list. Main Categories (Healthcare, Enterprise, Government, AI) also drive the filter chips on /work; additional categories (Patient Engagement, Open Source, etc.) just display on the case study page. You can flag a category as main/additional on the Category document itself.',
+      of: [
+        {
+          type: 'reference',
+          to: [{ type: 'category' }],
+          options: {
+            // Show main categories first in the picker so editors reach for
+            // the filter-driving ones first.
+            filter: '!(_id in path("drafts.**"))',
+          },
+        },
+      ],
     }),
     defineField({
       name: 'metadataLayout',

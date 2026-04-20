@@ -5,12 +5,16 @@ import Image from 'next/image'
 import { sanityFetch } from '@/sanity/lib/live'
 import { client } from '@/sanity/lib/client'
 import { readToken } from '@/sanity/env'
-import { allCaseStudiesQuery, draftCaseStudiesQuery } from '@/sanity/lib/queries'
+import {
+  allCaseStudiesQuery,
+  draftCaseStudiesQuery,
+  mainCategoriesQuery,
+} from '@/sanity/lib/queries'
 import { ProjectSearch } from '@/components/work/ProjectSearch'
 import { Quote } from '@/components/ui/Quote'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
-import type { CaseStudy } from '@/types'
+import type { CaseStudy, Category } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Case Studies by UX Design Agency',
@@ -40,7 +44,10 @@ const upNext = [
 ]
 
 export default async function WorkPage() {
-  const { data: caseStudies } = await sanityFetch({ query: allCaseStudiesQuery }) as { data: CaseStudy[] }
+  const [{ data: caseStudies }, { data: mainCategories }] = await Promise.all([
+    sanityFetch({ query: allCaseStudiesQuery }) as Promise<{ data: CaseStudy[] }>,
+    sanityFetch({ query: mainCategoriesQuery }) as Promise<{ data: Category[] }>,
+  ])
 
   // Fetch draft-only case studies when in preview mode
   let draftCaseStudies: CaseStudy[] = []
@@ -63,7 +70,11 @@ export default async function WorkPage() {
   return (
     <div>
       {/* Case Studies with Filter */}
-      <ProjectSearch caseStudies={caseStudies} draftCaseStudies={draftCaseStudies} />
+      <ProjectSearch
+        caseStudies={caseStudies}
+        draftCaseStudies={draftCaseStudies}
+        mainCategories={mainCategories || []}
+      />
 
       {/* Quote */}
       <Quote

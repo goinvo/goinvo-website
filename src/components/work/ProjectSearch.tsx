@@ -5,9 +5,7 @@ import { CategoriesList } from '@/components/ui/CategoriesList'
 import { CaseStudyCard } from './CaseStudyCard'
 import { NewDraftCard } from '@/components/ui/NewDraftCard'
 import { useHero } from '@/context/HeroContext'
-import type { CaseStudy } from '@/types'
-
-const filterCategories = ['All', 'Healthcare', 'Enterprise', 'Government', 'AI']
+import type { CaseStudy, Category } from '@/types'
 
 const categoryHeroImages: Record<string, string[]> = {
   All: ['/images/work/dr-emily.jpg'],
@@ -33,9 +31,15 @@ function pickRandom(arr: string[]): string {
 interface ProjectSearchProps {
   caseStudies: CaseStudy[]
   draftCaseStudies?: CaseStudy[]
+  /** Main (filter-driving) categories, pre-sorted. Drives the filter chip row. */
+  mainCategories: Category[]
 }
 
-export function ProjectSearch({ caseStudies, draftCaseStudies = [] }: ProjectSearchProps) {
+export function ProjectSearch({ caseStudies, draftCaseStudies = [], mainCategories }: ProjectSearchProps) {
+  const filterCategories = useMemo(
+    () => ['All', ...mainCategories.map((c) => c.title)],
+    [mainCategories],
+  )
   const [activeCategory, setActiveCategory] = useState('All')
   const { overrideImage } = useHero()
   const prevIndexRef = useRef(0)
