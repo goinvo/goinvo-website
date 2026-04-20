@@ -32,15 +32,9 @@ function GettingStartedComponent() {
             ['Category', 'Filter chips on /work', 'Tags referenced by Case Study documents. 11 categories currently in use (Healthcare, Open Source, AI, Enterprise, Government, etc.).'],
             ['Job', '/about/careers', 'Open positions list. The careers page queries activeJobsQuery, but there are currently zero job documents in the dataset — create one here when a role opens.'],
             ['Health Visualization', '/vision/health-visualizations', '31 individual health-visualization entries rendered on the Health Visualizations page. Pending consolidation into Vision Piece.'],
-            ['Homepage Header', '(not yet wired to a page)', 'Schema exists but the homepage hero is currently hardcoded. Safe to ignore until someone wires it to HomeContent.'],
-            ['Site Settings', '(not yet wired to a page)', 'Schema for global footer / social / SEO defaults. The public site still reads these values from src/lib/config.ts. Leave empty or populate if someone wires it up.'],
             ['CMS Feedback', 'Internal — not rendered', 'Backing store for the "Send Feedback" tool. Not editor-facing content; leave it alone.'],
           ]}
         />
-
-        <Callout>
-          <strong>Two of these are currently inert.</strong> Homepage Header and Site Settings have schemas but nothing on the public site reads them yet. Creating documents there has no effect today. Flag it if you want either wired up.
-        </Callout>
 
         <h4 style={{ marginTop: 20, marginBottom: 8 }}>Creating a Vision Piece</h4>
         <ol>
@@ -59,7 +53,7 @@ function GettingStartedComponent() {
         </Callout>
 
         <h4 style={{ marginTop: 20, marginBottom: 8 }}>Reordering Lists</h4>
-        <p>Case Study, Vision Piece, Team Member, and Homepage Header list views now support drag-to-reorder. Grab the handle on the left of a row and drop it where you want — the new order persists to the public site automatically. You no longer need to hand-edit numeric <code>order</code> fields.</p>
+        <p>Case Study, Vision Piece, and Team Member list views support drag-to-reorder. Grab the handle on the left of a row and drop it where you want — the new order persists to the public site automatically. The old numeric <code>order</code> field has been retired.</p>
       </Section>
 
       <Section title="3. Drafts, Preview, and Publish">

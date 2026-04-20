@@ -9,7 +9,7 @@ export const allCaseStudiesQuery = groq`
     && !hidden
     && title != "Untitled"
     && !(slug.current match "untitled-*")
-  ] | order(order asc) {
+  ] | order(orderRank asc) {
     _id,
     title,
     slug,
@@ -18,8 +18,7 @@ export const allCaseStudiesQuery = groq`
     image,
     caption,
     categories[]-> { _id, title, slug },
-    metaDescription,
-    order
+    metaDescription
   }
 `
 
@@ -76,7 +75,7 @@ export const caseStudyBySlugQuery = groq`
 
 // Draft-only case studies (used in preview mode)
 export const draftCaseStudiesQuery = groq`{
-  "drafts": *[_type == "caseStudy" && _id in path("drafts.**")] {
+  "drafts": *[_type == "caseStudy" && _id in path("drafts.**")] | order(orderRank asc) {
     _id,
     title,
     slug,
@@ -84,15 +83,14 @@ export const draftCaseStudiesQuery = groq`{
     image,
     caption,
     categories[]-> { _id, title, slug },
-    metaDescription,
-    order
+    metaDescription
   },
   "publishedIds": *[_type == "caseStudy" && !(_id in path("drafts.**"))]._id
 }`
 
 // Draft-only features (used in preview mode)
 export const draftFeaturesQuery = groq`{
-  "drafts": *[_type == "feature" && _id in path("drafts.**")] {
+  "drafts": *[_type == "feature" && _id in path("drafts.**")] | order(orderRank asc) {
     _id,
     title,
     slug,
@@ -104,8 +102,7 @@ export const draftFeaturesQuery = groq`{
     showPageMeta,
     client,
     externalLink,
-    hiddenWorkPage,
-    order
+    hiddenWorkPage
   },
   "publishedIds": *[_type == "feature" && !(_id in path("drafts.**"))]._id
 }`
@@ -135,14 +132,13 @@ export const mainCategoriesQuery = groq`
 
 // Team Members
 export const teamMembersQuery = groq`
-  *[_type == "teamMember" && !isAlumni] | order(order asc) {
+  *[_type == "teamMember" && !isAlumni] | order(orderRank asc) {
     _id,
     name,
     role,
     bio,
     image,
-    social,
-    order
+    social
   }
 `
 
@@ -162,7 +158,7 @@ export const allFeaturesQuery = groq`
   *[_type == "feature"
     && title != "Untitled"
     && !(slug.current match "untitled-*")
-  ] | order(order asc) {
+  ] | order(orderRank asc) {
     _id,
     title,
     slug,
@@ -174,8 +170,7 @@ export const allFeaturesQuery = groq`
     showPageMeta,
     client,
     externalLink,
-    hiddenWorkPage,
-    order
+    hiddenWorkPage
   }
 `
 
@@ -239,38 +234,6 @@ export const activeJobsQuery = groq`
   }
 `
 
-// Homepage
-export const homepageQuery = groq`{
-  "headers": *[_type == "homepageHeader"] | order(order asc) {
-    _id,
-    title,
-    subtitle,
-    image,
-    link,
-    order
-  },
-  "featuredWork": *[_type == "feature"][0..5] | order(date desc) {
-    _id,
-    title,
-    slug,
-    image,
-    description,
-    categories,
-    date,
-    client,
-    externalLink
-  },
-  "caseStudies": *[_type == "caseStudy" && !hidden][0..8] | order(order asc) {
-    _id,
-    title,
-    slug,
-    client,
-    image,
-    caption,
-    categories[]-> { _id, title, slug }
-  }
-}`
-
 // Health Visualizations
 export const allHealthVisualizationsQuery = groq`
   *[_type == "healthVisualization"] | order(order asc) {
@@ -283,16 +246,5 @@ export const allHealthVisualizationsQuery = groq`
     downloadLink,
     learnMoreLink,
     order
-  }
-`
-
-// Site Settings
-export const siteSettingsQuery = groq`
-  *[_type == "siteSettings"][0] {
-    siteTitle,
-    description,
-    socialLinks,
-    footerText,
-    contactInfo
   }
 `
