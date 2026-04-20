@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useHero, type HeroConfig } from '@/context/HeroContext'
+import { useHero, type HeroConfig, type HeroEditTarget } from '@/context/HeroContext'
 import { EditInStudioLink } from '@/components/sanity/EditInStudioLink'
 import { cloudfrontImage } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -199,7 +199,9 @@ export function PersistentHero() {
                 onAnimationComplete={handleSlideComplete}
                 className="absolute inset-0"
               >
-                {isMultiImage ? (
+                {config.editTarget ? (
+                  <HeroEditPlaceholder editTarget={config.editTarget} />
+                ) : isMultiImage ? (
                   <MultiImageContent
                     config={config}
                     onImageLoad={handleImageLoad}
@@ -217,21 +219,6 @@ export function PersistentHero() {
                 )}
               </motion.div>
             </AnimatePresence>
-
-            {/* Draft-mode click-to-edit overlay for placeholder hero images. */}
-            {config.editTarget && (
-              <div className="absolute inset-0 z-10">
-                <EditInStudioLink
-                  documentType={config.editTarget.documentType}
-                  documentId={config.editTarget.documentId}
-                  fieldPath={config.editTarget.fieldPath}
-                  ariaLabel="Upload hero image in Sanity Studio"
-                  className="group block h-full w-full"
-                >
-                  <span className="flex h-full w-full items-center justify-center transition-colors bg-transparent group-hover:bg-primary/10" />
-                </EditInStudioLink>
-              </div>
-            )}
           </div>
 
           {/* Text box — hidden for image-only heroes */}
@@ -266,5 +253,64 @@ export function PersistentHero() {
         </motion.div>
       ) : null}
     </AnimatePresence>
+  )
+}
+
+/**
+ * Fills the hero slot with a gray dashed placeholder and a "Click to
+ * replace hero image…" call-to-action. Rendered in draft mode only,
+ * when the underlying document hasn't had a hero image uploaded yet.
+ * Matches the visual language of EmptyContentPlaceholder so the
+ * whole page reads as "two editable slots" for new drafts.
+ */
+function HeroEditPlaceholder({ editTarget }: { editTarget: HeroEditTarget }) {
+  return (
+    <EditInStudioLink
+      documentType={editTarget.documentType}
+      documentId={editTarget.documentId}
+      fieldPath={editTarget.fieldPath}
+      ariaLabel="Click to replace hero image in Sanity Studio"
+      className="group h-full w-full bg-gray-light transition-colors hover:bg-primary-lightest"
+    >
+      <div className="flex h-full w-full items-center justify-center p-6">
+        <div className="flex flex-col items-center gap-3 rounded-lg border-2 border-dashed border-gray-medium group-hover:border-primary bg-white/40 group-hover:bg-white/70 transition-colors px-8 py-6 text-center">
+          <HeroPlusBadge />
+          <span className="font-serif text-xl font-light text-black">
+            Click to replace hero image…
+          </span>
+          <span className="text-gray text-md">
+            Opens the Image field in Sanity Studio
+          </span>
+        </div>
+      </div>
+    </EditInStudioLink>
+  )
+}
+
+function HeroPlusBadge() {
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      aria-hidden
+      className="text-gray group-hover:text-primary transition-colors"
+    >
+      <circle
+        cx="22"
+        cy="22"
+        r="20"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray="4 4"
+      />
+      <path
+        d="M22 14V30M14 22H30"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
   )
 }
