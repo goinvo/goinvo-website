@@ -64,19 +64,18 @@ export default function PatientEngagementPage() {
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
       <section
-        className="relative h-[450px] bg-cover bg-center"
+        className="relative h-[450px] bg-cover bg-top"
         style={{ backgroundImage: `url(${cloudfrontImage('/images/patient-engagement/patient_hero.jpg')})` }}
       >
-        
         <div className="relative h-full max-width">
-          <div className="absolute bottom-0 left-0 w-full lg:w-[800px] bg-white/90 content-padding py-8">
-            <h1 className="header-xl m-0 mb-4">
+          <div className="absolute bottom-0 left-0 w-full lg:w-[385px] bg-white content-padding py-8">
+            <h1 className="header-xl m-0">
               Designing patient engagement experiences that connect, educate, and empower<span className="text-primary font-serif">.</span>
             </h1>
-            <p className="text-gray text-lg mb-8 max-w-2xl">
+            <p className="text-gray mt-4 mb-4">
               We craft impactful communication that drive adoption, trust, and outcomes.
             </p>
-            <Button href="/contact" variant="primary" size="lg">
+            <Button href="/contact" variant="primary" size="md">
               Let&apos;s discuss your project
             </Button>
           </div>
@@ -84,11 +83,11 @@ export default function PatientEngagementPage() {
       </section>
 
       {/* Intro */}
-      <section className="py-16">
+      <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
-          <p className="text-gray text-lg max-w-3xl">
+          <p className="max-w-3xl">
             At GoInvo, we focus on patient engagement through human-centered experiences
-            that meet people where they are, whether they&apos;re navigating a chronic condition,
+            that meet people where they are, whether they&rsquo;re navigating a chronic condition,
             participating in medical research, or simply trying to better understand their
             health data. Our approach combines empathy and research to make complex healthcare
             information accessible. We create digital tools and resources that empower patients,
@@ -98,14 +97,14 @@ export default function PatientEngagementPage() {
       </section>
 
       {/* Our Approach */}
-      <section className="bg-gray-light py-16">
+      <section className="py-16 text-tertiary">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-8">Our approach</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <h2 className="header-xl text-black text-center mt-0 mb-8">Our Approach</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
             {approaches.map((approach) => (
               <div key={approach.title}>
-                <h3 className="font-semibold mb-2">{approach.title}</h3>
-                <p className="text-gray text-md">{approach.description}</p>
+                <h3 className="font-sans text-base font-semibold text-black mb-2">{approach.title}</h3>
+                <p className="mt-2">{approach.description}</p>
               </div>
             ))}
           </div>
@@ -113,53 +112,65 @@ export default function PatientEngagementPage() {
       </section>
 
       {/* Client Logos */}
-      <section className="py-8">
-        <div className="max-width content-padding text-center">
-          <h3 className="font-semibold mb-4">Trusted by ambitious startups, Fortune 500&apos;s, and government agencies</h3>
-          <ClientLogos variant="patient-engagement" />
-        </div>
-      </section>
-
-      {/* Case Studies */}
-      <section className="py-16">
+      <section className="py-16 text-tertiary">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-2xl mb-4">Driving results for patient engagement.</h2>
-          <Button href="/contact" variant="primary" size="lg" className="mb-8">
-            Let&apos;s discuss your project
-          </Button>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {caseStudies.map((study) => (
-              <Link
-                key={study.title}
-                href={study.link}
-                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
-              >
-                <div className="aspect-[16/10] overflow-hidden">
-                  <Image
-                    src={cloudfrontImage(study.image)}
-                    alt={study.title}
-                    width={500}
-                    height={312}
-                    className="w-full h-full object-cover image--interactive"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="font-semibold mb-2 transition-colors">
-                    {study.title}
-                  </h3>
-                  <p className="text-gray text-md">{study.description}</p>
-                </div>
-              </Link>
-            ))}
+          <hr className="border-0 border-t border-gray-medium mb-12 mx-auto max-w-full" />
+          <div className="text-center">
+            <h3 className="font-sans text-base font-bold mb-6">
+              Trusted by ambitious startups, Fortune 500&apos;s, and government agencies
+            </h3>
+            <ClientLogos variant="patient-engagement" />
           </div>
         </div>
       </section>
 
-      {/* Contact Form */}
+      {/* Case Studies */}
+      <section className="bg-primary-lightest py-16 text-tertiary">
+        <div className="max-width content-padding text-center">
+          <h2 className="header-xl text-tertiary mt-0 mb-8">
+            Driving results for patient engagement<span className="text-primary font-serif">.</span>
+          </h2>
+          <Button href="/contact" variant="primary" size="md" className="mb-12">
+            Let&apos;s discuss your project
+          </Button>
+
+          {caseStudies.map((study) => (
+            <Link
+              key={study.title}
+              href={study.link}
+              className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
+                <div className="p-8 lg:p-12">
+                  <h4 className="header-xl text-tertiary mt-0 mb-4">
+                    {study.title}
+                  </h4>
+                  <p className="header-lg text-tertiary mt-0 mb-4">
+                    {study.description}
+                  </p>
+                  <p className="text-secondary mt-4 mb-0">Read Case Study</p>
+                </div>
+                <div className="flex items-center justify-center px-8 py-10 lg:px-0 lg:py-0">
+                  <Image
+                    src={cloudfrontImage(study.image)}
+                    alt={study.title}
+                    width={400}
+                    height={270}
+                    className="h-auto w-full max-w-[400px] object-contain"
+                  />
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA + Contact Form */}
       <section className="bg-blue-light py-16">
-        <div className="max-width-md content-padding mx-auto text-center">
-          <p className="font-serif text-2xl mb-2">
-            We ship software that works.<br />
+        <div className="max-width-md content-padding mx-auto text-center text-tertiary">
+          <p className="header-xl text-tertiary mb-2">
+            We ship software that works.
+            <br />
             Let&apos;s build together!
           </p>
           <p className="text-gray mb-8">Reach out to learn how GoInvo can help.</p>

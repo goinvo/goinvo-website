@@ -50,7 +50,7 @@ export default function OpenOfficeHoursPage() {
               </p>
               <a
                 href="#calendly"
-                className="inline-flex items-center bg-transparent text-secondary border border-secondary font-semibold uppercase tracking-wider px-6 py-3 hover:bg-secondary/10 transition-colors"
+                className="inline-flex items-center bg-transparent text-primary border border-primary-light font-semibold uppercase tracking-[2px] px-4 py-[0.375rem] text-md hover:bg-primary-lightest transition-colors"
               >
                 Choose a time to chat
               </a>
@@ -75,20 +75,11 @@ export default function OpenOfficeHoursPage() {
         </div>
       </section>
 
-      {/* How Can We Help — full-width split: image left, blue right (GradientImageColumns reverse) */}
+      {/* How Can We Help — full-width split: blue+content left, image right (Gatsby reverse) */}
       <section>
         <div className="flex flex-col lg:flex-row">
-          <div className="lg:w-1/2">
-            <Image
-              src={cloudfrontImage('/images/about/beckett-working.jpg')}
-              alt="Beckett working"
-              width={960}
-              height={640}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="lg:w-1/2 bg-blue-light py-12 lg:py-16">
-            <div className="max-w-[510px] mr-auto content-padding">
+          <div className="lg:w-1/2 bg-blue-light py-12 lg:py-16 order-2 lg:order-1">
+            <div className="max-w-[510px] ml-auto content-padding">
               <h2 className="header-lg mb-6">
                 How can we help<span className="text-primary font-serif">?</span>
               </h2>
@@ -100,6 +91,15 @@ export default function OpenOfficeHoursPage() {
                 ))}
               </ul>
             </div>
+          </div>
+          <div className="lg:w-1/2 order-1 lg:order-2">
+            <Image
+              src={cloudfrontImage('/images/about/beckett-working.jpg')}
+              alt="Beckett working"
+              width={960}
+              height={640}
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </section>

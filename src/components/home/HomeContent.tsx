@@ -17,6 +17,8 @@ interface HomeContentProps {
 export function HomeContent({ teamMembers }: HomeContentProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const ctx = usePageTransition()
+  const topRowMembers = teamMembers.slice(0, 5)
+  const bottomRowMembers = teamMembers.slice(5, 10)
 
   function handleMorphClick(href: string, sectionId: string) {
     const section = document.querySelector(
@@ -183,11 +185,20 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       <section
           className="relative py-16 md:py-24 bg-cover min-h-[500px] md:min-h-[600px]"
           style={{
-            backgroundImage: `linear-gradient(to bottom right, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.2) 50%, transparent 100%), url(${cloudfrontImage('/images/homepage/eric-topol-2.jpg')})`,
-            backgroundPosition: 'center, top right',
+            backgroundImage: `url(${cloudfrontImage('/images/homepage/eric-topol-2.jpg')})`,
+            backgroundPosition: 'top right',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: 'cover',
           }}
         >
-          <div className="max-width content-padding">
+          <div
+            aria-hidden
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.7) 25%, rgba(0,0,0,0.4) 50%, transparent 80%)',
+            }}
+          />
+          <div className="relative max-width content-padding">
             <p className="font-serif text-2xl md:text-[1.75rem] lg:text-[2rem] italic text-white leading-[1.8] mb-6 max-w-[700px]">
               &ldquo;The GoInvo studio is one of the most talented groups of
               designers I have ever met in the healthcare space. Not only are
@@ -260,45 +271,6 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         </div>
       </section>
 
-      {/* 5b. Credibility Stats */}
-      <section className="py-12 md:py-20">
-        <div className="max-width content-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-12 items-start">
-            <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold">
-              Our designs in healthcare are used every day<span className="text-primary font-serif">.</span>
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-8">
-              <div>
-                <p className="font-semibold mb-1">160 million patients</p>
-                <p className="text-gray text-sm">
-                  are analyzed, care planned, and risk adjusted with the software we design.
-                </p>
-              </div>
-              <div>
-                <p className="font-semibold mb-1">1,000,000 Massachusetts residents</p>
-                <p className="text-gray text-sm">
-                  count on our service design for food assistance each month.{' '}
-                  <a href="/work/mass-snap" className="text-secondary">Read the case study</a>
-                </p>
-              </div>
-              <div>
-                <p className="font-semibold mb-1">Wikipedia</p>
-                <p className="text-gray text-sm">
-                  relies on our data visualization to explain complex health topics.{' '}
-                  <a href="/vision/determinants-of-health" className="text-secondary">Social determinants of health</a>
-                </p>
-              </div>
-              <div>
-                <p className="font-semibold mb-1">1 billion prescriptions</p>
-                <p className="text-gray text-sm">
-                  flow through software we&apos;ve designed for healthcare systems nationwide.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 6. 10x increase - SNAP Impact (LEFT) */}
       <section
         data-morph-section="snap"
@@ -363,7 +335,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         {/* Top marquee - scrolls right */}
         <div className="h-[300px] overflow-hidden" aria-hidden="true">
           <Marquee direction="right" speed={30} gradient={false} pauseOnHover={false} autoFill>
-            {teamMembers.slice(0, Math.ceil(teamMembers.length / 2)).map((member) => (
+            {topRowMembers.map((member) => (
               <div key={`top-${member.name}`} className="inline-block w-[300px] h-[300px] mr-2">
                 <Image
                   src={member.image}
@@ -400,7 +372,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         {/* Bottom marquee - scrolls left */}
         <div className="h-[300px] overflow-hidden" aria-hidden="true">
           <Marquee direction="left" speed={30} gradient={false} pauseOnHover={false} autoFill>
-            {teamMembers.slice(Math.ceil(teamMembers.length / 2)).map((member) => (
+            {bottomRowMembers.map((member) => (
               <div key={`bottom-${member.name}`} className="inline-block w-[300px] h-[300px] mr-2">
                 <Image
                   src={member.image}

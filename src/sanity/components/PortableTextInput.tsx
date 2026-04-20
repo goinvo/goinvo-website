@@ -5,10 +5,11 @@
  * article-preview chrome, and toolbar affordances on top of the PTE.
  * In practice that made the editor look inconsistent with the rest
  * of the (dark-themed) Studio and could fight with Sanity's own
- * styling on upgrades. We now defer entirely to the default input.
+ * styling on upgrades. We keep the default UI intact and only add a
+ * wrapper hook for narrowly scoped Studio layout tweaks.
  */
 import { type InputProps } from 'sanity'
 
 export function PortableTextInput(props: InputProps) {
-  return props.renderDefault(props)
+  return <div data-goinvo-portable-text-input="true">{props.renderDefault(props)}</div>
 }

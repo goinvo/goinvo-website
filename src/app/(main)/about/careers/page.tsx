@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import { sanityFetch } from '@/sanity/lib/live'
 import { activeJobsQuery } from '@/sanity/lib/queries'
-import { Quote } from '@/components/ui/Quote'
 import { cloudfrontImage } from '@/lib/utils'
 import { TestimonialCarousel } from './TestimonialCarousel'
 import type { Job } from '@/types'
@@ -53,7 +52,7 @@ const perks = [
 ]
 
 export default async function CareersPage() {
-  const { data: jobs } = await sanityFetch({ query: activeJobsQuery }) as { data: Job[] }
+  await sanityFetch({ query: activeJobsQuery }) as { data: Job[] }
 
   return (
     <div className="pt-[var(--spacing-header-height)]">
@@ -77,62 +76,79 @@ export default async function CareersPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {values.map((value) => (
               <div key={value.title}>
-                <h3 className="font-sans text-base font-bold mb-2">{value.title}</h3>
-                <p className="text-gray text-md">{value.description}</p>
+                <h3 className="font-sans text-base font-semibold text-black mb-2">
+                  {value.title}
+                </h3>
+                <p className="text-gray mt-2">{value.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials — tabbed carousel with full-width split (matching Gatsby GradientImageColumns) */}
-      <section className="py-16">
+      {/* Experiencing GoInvo for... section heading */}
+      <div className="max-width content-padding pt-16">
+        <h2 className="header-xl mb-0">
+          Experiencing GoInvo for<span className="text-primary font-serif">...</span>
+        </h2>
+      </div>
+
+      {/* Testimonials carousel */}
+      <section className="pt-8 pb-16">
         <TestimonialCarousel />
       </section>
 
-      {/* Job Description */}
+      {/* Job Description + Apply form (matches Gatsby BackgroundImage w/ gradient) */}
       <section
-        className="relative py-16 bg-cover bg-center"
-        style={{ backgroundImage: `url(${cloudfrontImage('/images/contact/studio.jpg')})` }}
+        className="relative py-16"
+        style={{
+          background: `linear-gradient(
+            to top,
+            #F3F1F0 0%,
+            rgba(237, 233, 230, 0.9932) 20%,
+            rgba(234, 228, 225, 0.9893) 25%,
+            rgba(234, 228, 225, 0.8979) 40%,
+            rgba(234, 228, 225, 0.82) 55%,
+            rgba(234, 228, 225, 0.538) 70%,
+            rgba(234, 228, 225, 0) 100%
+          ), url(${cloudfrontImage('/images/contact/studio.jpg')}) top center / cover no-repeat`,
+        }}
       >
-        <div className="absolute inset-0 bg-black/60" />
         <div className="relative z-10 max-width-md content-padding mx-auto">
           <div className="bg-gray-light p-8 md:p-12">
-            <h2 className="font-serif text-2xl mb-4">
+            <h2 className="header-xl mt-0 mb-4">
               Working together towards a healthy groove
             </h2>
             <p className="mb-4">
-              We&apos;re looking for a designer and an engineer to join our intimate studio.
+              We&rsquo;re looking for a designer and an engineer to join our intimate studio.
             </p>
-            <p className="text-gray mb-4">
-              If you&apos;re familiar with our work, you know we design, build, and
+            <p className="mb-4">
+              If you&rsquo;re familiar with our work, you know we design, build, and
               ship beautiful software for companies of all sizes, from
-              Apple, Johnson & Johnson, NIH (National Institutes of Health),
+              Apple, Johnson &amp; Johnson, NIH (National Institutes of Health),
               and Walgreens, to micro startups. We are hyper-concerned about
               guiding people through tough decisions and producing
               eyebrow-raising results.
             </p>
 
-            <p className="text-gray mb-4">Our idealized candidate can be described in this way:</p>
+            <p className="mb-4">Our idealized candidate can be described in this way:</p>
 
-            <p className="mb-2">
+            <p className="mb-4">
               <strong>First and foremost, you need to be exceptional:</strong>
-            </p>
-            <p className="text-gray mb-4">
+              <br />
               love designing and building software, making is in your DNA,
               and solving crazy problems with 50 different crazy solutions. You
               need to have a proven track record of designing and shipping healthcare
               software.
             </p>
 
-            <p className="mb-2">
-              <strong>Second, you need to be a system thinker and serial do&apos;er:</strong>
-            </p>
-            <p className="text-gray mb-4">
+            <p className="mb-4">
+              <strong>Second, you need to be a system thinker and serial do&rsquo;er:</strong>
+              <br />
               to see beyond the design and production tasks to the
               entire product ecosystem and to have a firm grasp of engineering
               principles and business practices. You will need to lead not
-              just yourself but other studio&apos;ites and clients. Your
+              just yourself but other studio&rsquo;ites and clients. Your
               responsibilities include leading projects and, over time,
               learning how to manage the entire service to designing software
               that is destined to ship. You will not be a cog in a machine.
@@ -142,10 +158,9 @@ export default async function CareersPage() {
               business.
             </p>
 
-            <p className="mb-2">
+            <p className="mb-4">
               <strong>Third, you have to really care about Design, your fellow staff, and Spaceship Earth:</strong>
-            </p>
-            <p className="text-gray mb-4">
+              <br />
               being adrenalized about doing good, healthcare, business, writing, open
               source, innovation, craftsmanship, and fun. You are given great
               freedom and responsibility for managing your own work program while
@@ -158,40 +173,50 @@ export default async function CareersPage() {
               own).
             </p>
 
-            <p className="text-gray mb-4">
-              That&apos;s the kind of person we want. If you have those three
+            <p className="mb-4">
+              That&rsquo;s the kind of person we want. If you have those three
               qualities, just about anything else is negotiable.
             </p>
 
-            <p className="text-gray mb-4">
+            <p className="mb-4">
               If you have any questions about the position, please email me.
             </p>
-            <p className="text-gray mb-4">
+            <p className="mb-4">
               You can apply below, or send me your resume, portfolio, and
               phone number so we can chat.
             </p>
-            <p className="text-gray">
-              Looking forward,<br />
-              Juhan Sonin, Director<br />
+            <p className="mb-0">
+              Looking forward,
+              <br />
+              Juhan Sonin, Director
+              <br />
               <a href="mailto:juhan@goinvo.com">juhan@goinvo.com</a>
             </p>
+
+            <div className="pt-8">
+              <h2 className="header-xl mb-6">Apply</h2>
+              <iframe
+                id="JotFormIFrame-251193306087052"
+                title="Application"
+                src="https://form.jotform.com/251193306087052"
+                className="w-full border-0"
+                style={{ minHeight: '600px' }}
+                allowTransparency
+              />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Apply */}
-      <section className="bg-blue-light py-16">
-        <div className="max-width-md content-padding mx-auto">
-          <h2 className="font-serif text-2xl mb-6">Apply</h2>
-          <iframe
-            id="JotFormIFrame-251193306087052"
-            title="Application"
-            src="https://form.jotform.com/251193306087052"
-            className="w-full border-0"
-            style={{ minHeight: '600px' }}
-            allowTransparency
-          />
-        </div>
+      {/* Studio image band (Gatsby: background--gray pad-vertical) */}
+      <section className="bg-gray-light py-8">
+        <Image
+          src={cloudfrontImage('/images/contact/studio.jpg')}
+          alt="GoInvo studio space"
+          width={1920}
+          height={400}
+          className="w-full h-[400px] object-cover"
+        />
       </section>
 
       {/* Perks */}
@@ -200,13 +225,15 @@ export default async function CareersPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {perks.map((perk) => (
               <div key={perk.title}>
-                <Image
-                  src={cloudfrontImage(perk.image)}
-                  alt={perk.title}
-                  width={400}
-                  height={300}
-                  className="w-full h-auto mb-4"
-                />
+                <div className="relative w-full aspect-[308/260] mb-4">
+                  <Image
+                    src={cloudfrontImage(perk.image)}
+                    alt={perk.title}
+                    fill
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    className="object-cover"
+                  />
+                </div>
                 <p className="font-semibold mb-2">{perk.title}</p>
                 <p className="text-gray text-md">{perk.caption}</p>
               </div>

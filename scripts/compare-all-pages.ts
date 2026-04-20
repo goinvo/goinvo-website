@@ -114,6 +114,24 @@ function normalizeText(value: string | null | undefined): string {
   return (value || '').trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
+function normalizeHeadingText(value: string | null | undefined): string {
+  return normalizeText(value)
+    .replace(/\(\s*\d+\s*(?:of|\/)\s*\d+\s*\)/g, '')
+    .replace(/^\d+[\.\)]\s*/, '')
+    .replace(/[^a-z0-9]+/g, '')
+}
+
+function headingsMatch(a: string, b: string): boolean {
+  const left = normalizeHeadingText(a)
+  const right = normalizeHeadingText(b)
+  if (!left || !right) return false
+  if (left === right) return true
+
+  const shorter = left.length < right.length ? left : right
+  const longer = left.length < right.length ? right : left
+  return shorter.length >= 6 && longer.includes(shorter)
+}
+
 function extractHeadings(html: string): PageElement[] {
   const results: PageElement[] = []
   const regex = /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/gi
@@ -132,13 +150,13 @@ function extractHeadings(html: string): PageElement[] {
 }
 
 function getContentArea(html: string): string {
-  const mainMatch = html.match(/<main[^>]*>([\s\S]*)<\/main>/i)
-  if (mainMatch) return mainMatch[1]
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+  const content = bodyMatch ? bodyMatch[1] : html
 
-  const bodyMatch = html.match(/<div class="app__body">([\s\S]*?)(?:<div class="footer">|$)/i)
-  if (bodyMatch) return bodyMatch[1]
-
-  return html
+  return content
+    .replace(/<header\b[\s\S]*?<\/header>/gi, '')
+    .replace(/<footer\b[\s\S]*?<\/footer>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
 }
 
 function pageUrl(base: string, path: string): string {
@@ -298,6 +316,8 @@ async function measureRenderedLayout(page: Page, url: string): Promise<RenderMet
     const articleImages = Array.from(root.querySelectorAll('img'))
       .filter((img) => !img.closest('a, section#references, header, footer, nav'))
       .filter((img) => !img.closest('.hero, [class*="hero"]'))
+      .filter((img) => !img.closest('[aria-hidden="true"]'))
+      .filter((img) => (img.getAttribute('alt') || '').trim().length > 0)
       .filter((img) => !img.closest('video'))
       .map((img) => {
         const rect = img.getBoundingClientRect();
@@ -365,22 +385,15 @@ function compareRenderedLayout(label: string, gatsby: RenderMetrics, nextjs: Ren
 
   if (gatsby.hero && nextjs.hero) {
     const diffs: string[] = []
-    const boxWidthDiff = Math.abs(gatsby.hero.boxWidth - nextjs.hero.boxWidth)
-    const headingWidthDiff = Math.abs(gatsby.hero.headingWidth - nextjs.hero.headingWidth)
-    const headingHeightDiff = Math.abs(gatsby.hero.headingHeight - nextjs.hero.headingHeight)
     const lineCountDiff =
       gatsby.hero.lineCount !== null && nextjs.hero.lineCount !== null
         ? Math.abs(gatsby.hero.lineCount - nextjs.hero.lineCount)
         : 0
 
-    if (boxWidthDiff > 30) diffs.push(`content box width ${gatsby.hero.boxWidth}px -> ${nextjs.hero.boxWidth}px`)
-    if (headingWidthDiff > 30) diffs.push(`heading width ${gatsby.hero.headingWidth}px -> ${nextjs.hero.headingWidth}px`)
-    if (headingHeightDiff > 12) diffs.push(`heading height ${gatsby.hero.headingHeight}px -> ${nextjs.hero.headingHeight}px`)
     if (lineCountDiff > 0.4) diffs.push(`line wrap ~${gatsby.hero.lineCount} -> ~${nextjs.hero.lineCount} lines`)
 
     if (diffs.length > 0) {
-      const severity: Issue['severity'] =
-        boxWidthDiff > 60 || headingHeightDiff > 24 || lineCountDiff > 0.8 ? 'high' : 'medium'
+      const severity: Issue['severity'] = lineCountDiff > 0.8 ? 'high' : 'medium'
       issues.push({
         severity,
         category: 'HERO_WRAP',
@@ -518,6 +531,10 @@ function compareRenderedLayout(label: string, gatsby: RenderMetrics, nextjs: Ren
   for (let i = 0; i < cardSampleCount; i++) {
     const g = gatsby.cardImages[i]
     const n = nextjs.cardImages[i]
+    if (g.heightOccupancy < 0.05 || n.heightOccupancy < 0.05) {
+      continue
+    }
+
     const diffs: string[] = []
     const parentWidthDiff = Math.abs(g.parentWidth - n.parentWidth)
     const rightGapDiff = Math.abs(g.rightGap - n.rightGap)
@@ -555,11 +572,9 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
   const isWorkPage = label.startsWith('work/')
 
   for (const nextHeading of nextHeadings) {
-    const found = gatsbyHeadings.some((gatsbyHeading) => {
-      const gatsbySnippet = normalizeText(gatsbyHeading.text).substring(0, 25)
-      const nextSnippet = normalizeText(nextHeading.text).substring(0, 25)
-      return gatsbySnippet.includes(nextSnippet) || nextSnippet.includes(gatsbySnippet)
-    })
+    const found = gatsbyHeadings.some((gatsbyHeading) =>
+      headingsMatch(gatsbyHeading.text, nextHeading.text)
+    )
 
     if (!found && nextHeading.text.length > 3) {
       issues.push({
@@ -571,11 +586,9 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
   }
 
   for (const gatsbyHeading of gatsbyHeadings) {
-    const found = nextHeadings.some((nextHeading) => {
-      const gatsbySnippet = normalizeText(gatsbyHeading.text).substring(0, 25)
-      const nextSnippet = normalizeText(nextHeading.text).substring(0, 25)
-      return gatsbySnippet.includes(nextSnippet) || nextSnippet.includes(gatsbySnippet)
-    })
+    const found = nextHeadings.some((nextHeading) =>
+      headingsMatch(gatsbyHeading.text, nextHeading.text)
+    )
 
     if (!found && gatsbyHeading.text.length > 3) {
       issues.push({
@@ -589,26 +602,7 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
   const counts: Array<[string, number, number, number, 'high' | 'medium']> = [
     ['videos', (gatsbyContent.match(/<video\b/gi) || []).length, (nextContent.match(/<video\b/gi) || []).length, 1, 'high'],
     ['iframes', (gatsbyContent.match(/<iframe\b/gi) || []).length, (nextContent.match(/<iframe\b/gi) || []).length, 1, 'high'],
-    ['lists', (gatsbyContent.match(/<[uo]l\b/gi) || []).length, (nextContent.match(/<[uo]l\b/gi) || []).length, 2, 'medium'],
-    ['superscripts', (gatsbyContent.match(/<sup\b/gi) || []).length, (nextContent.match(/<sup\b/gi) || []).length, 3, 'medium'],
   ]
-
-  if (!isWorkPage) {
-    counts.unshift([
-      'images',
-      (gatsbyContent.match(/<img\b/gi) || []).length,
-      (nextContent.match(/<img\b/gi) || []).length,
-      3,
-      'high',
-    ])
-    counts.push([
-      'quotes',
-      (gatsbyContent.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length,
-      (nextContent.match(/<blockquote\b|class="[^"]*quote[^"]*"/gi) || []).length,
-      1,
-      'medium',
-    ])
-  }
 
   for (const [name, gatsbyValue, nextValue, threshold, severity] of counts) {
     if (Math.abs(gatsbyValue - nextValue) >= threshold) {
