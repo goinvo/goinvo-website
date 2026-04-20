@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
+import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
@@ -11,8 +12,14 @@ import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
+import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
+import { MissingHeroPlaceholder } from '@/components/sanity/MissingHeroPlaceholder'
 import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
-import { isCodeAssistedFeatureSlug, usesLegacyFeatureTransforms } from '@/lib/featureAuthoring'
+import {
+  hasMeaningfulFeatureBody,
+  isCodeAssistedFeatureSlug,
+  usesLegacyFeatureTransforms,
+} from '@/lib/featureAuthoring'
 import { featureSectionBackgroundFallbacks } from '@/lib/featureSectionBackgroundFallbacks'
 import { findPortableHeading, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
@@ -1160,10 +1167,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function VisionFeaturePage({ params }: Props) {
   const { slug } = await params
 
-  const { data: feature } = (await sanityFetch({
-    query: featureBySlugQuery,
-    params: { slug },
-  })) as { data: Feature | null }
+  const [{ data: feature }, { isEnabled: isDraftMode }] = await Promise.all([
+    sanityFetch({ query: featureBySlugQuery, params: { slug } }) as Promise<{
+      data: Feature | null
+    }>,
+    draftMode(),
+  ])
 
   if (!feature) {
     notFound()
@@ -1219,11 +1228,18 @@ export default async function VisionFeaturePage({ params }: Props) {
   ) : null
   const renderAboutAfterNewsletter = feature.aboutGoInvoPosition === 'afterNewsletter'
 
+  const hasHeroImage = Boolean(heroImage)
+  const hasContent = hasMeaningfulFeatureBody(feature.content)
+
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
       {!fullImageCover && heroImageUrl && (
         <SetCaseStudyHero image={heroImageUrl} bgPosition={heroPosition} />
+      )}
+
+      {isDraftMode && !hasHeroImage && !fullImageCover && (
+        <MissingHeroPlaceholder documentType="feature" documentId={feature._id} />
       )}
 
       {/* Full image cover — render inline so the full image shows without cropping */}
@@ -1271,6 +1287,13 @@ export default async function VisionFeaturePage({ params }: Props) {
             )}
           </div>
         </Reveal>
+      )}
+
+      {/* Empty-body placeholder shown in Presentation preview when no
+          body blocks have been authored yet. Stays out of the public
+          render so visitors don't see editor affordances. */}
+      {isDraftMode && !hasContent && (
+        <EmptyContentPlaceholder documentType="feature" documentId={feature._id} />
       )}
 
       {/* Content (without references — rendered separately after newsletter) */}

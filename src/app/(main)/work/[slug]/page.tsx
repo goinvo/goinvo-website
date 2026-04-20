@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { draftMode } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
@@ -44,11 +45,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CaseStudyPage({ params }: Props) {
   const { slug } = await params
-  const { data: caseStudy } = await sanityFetch({ query: caseStudyBySlugQuery, params: { slug } }) as { data: CaseStudy | null }
+  const [{ data: caseStudy }, { isEnabled: isDraftMode }] = await Promise.all([
+    sanityFetch({ query: caseStudyBySlugQuery, params: { slug } }) as Promise<{ data: CaseStudy | null }>,
+    draftMode(),
+  ])
 
   if (!caseStudy) {
     notFound()
   }
 
-  return <CaseStudyContent initialData={caseStudy} slug={slug} />
+  return <CaseStudyContent initialData={caseStudy} slug={slug} isDraftMode={isDraftMode} />
 }

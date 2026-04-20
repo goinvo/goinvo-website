@@ -1,12 +1,14 @@
-<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder image">
-  <rect width="1600" height="900" fill="#e8e8e8"/>
-  <g stroke="#b8b8b8" stroke-width="6" fill="none" stroke-linecap="round">
-    <rect x="600" y="320" width="400" height="260" rx="14"/>
-    <circle cx="720" cy="420" r="30"/>
-    <path d="M640 540 L790 400 L890 490 L1000 380 L960 540"/>
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Hero image not set">
+  <rect width="1600" height="900" fill="#f2efed"/>
+  <g stroke="#c9c4bf" stroke-width="4" fill="none" stroke-linecap="round">
+    <rect x="540" y="300" width="520" height="320" rx="18" stroke-dasharray="12 10"/>
   </g>
-  <g font-family="system-ui, -apple-system, Segoe UI, sans-serif" fill="#787473" text-anchor="middle">
-    <text x="800" y="640" font-size="26" font-weight="600">Image not set</text>
-    <text x="800" y="672" font-size="18">Upload a hero image in Sanity Studio</text>
+  <g stroke="#9a928b" stroke-width="6" stroke-linecap="round">
+    <line x1="800" y1="430" x2="800" y2="500"/>
+    <line x1="765" y1="465" x2="835" y2="465"/>
+  </g>
+  <g font-family="system-ui, -apple-system, Segoe UI, sans-serif" fill="#6f665f" text-anchor="middle">
+    <text x="800" y="560" font-size="26" font-weight="600">Click to add hero image</text>
+    <text x="800" y="596" font-size="18">Opens the image field in Sanity Studio</text>
   </g>
 </svg>
