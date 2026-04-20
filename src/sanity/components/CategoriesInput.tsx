@@ -1,0 +1,292 @@
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import {
+  PatchEvent,
+  insert,
+  set,
+  setIfMissing,
+  unset,
+  useClient,
+  type ArrayOfObjectsInputProps,
+  type Reference,
+} from 'sanity'
+
+type CategoryDoc = {
+  _id: string
+  title: string
+  isMainCategory?: boolean | null
+  filterOrder?: number | null
+}
+
+type ReferenceValue = Reference & { _key: string }
+
+function nextKey() {
+  return Math.random().toString(36).slice(2, 10)
+}
+
+/**
+ * Array-of-references input with a grouped picker.
+ *
+ * Replaces the default reference-picker experience for the `categories`
+ * field on Case Study. The picker is a native <select> with two
+ * <optgroup> labels — "Main Categories" and "Additional Categories" —
+ * so editors get the grouping/ordering the reference input doesn't
+ * ship with out of the box.
+ *
+ * Already-selected categories render as chips above the picker with
+ * remove buttons, mirroring the default array UI.
+ */
+export function CategoriesInput(props: ArrayOfObjectsInputProps) {
+  const { value = [], onChange } = props
+  const client = useClient({ apiVersion: '2024-01-01' })
+  const [categories, setCategories] = useState<CategoryDoc[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    client
+      .fetch<CategoryDoc[]>(
+        `*[_type == "category"] | order(isMainCategory desc, filterOrder asc, title asc){ _id, title, isMainCategory, filterOrder }`,
+      )
+      .then((docs) => {
+        if (!cancelled) setCategories(docs)
+      })
+      .catch(() => {
+        /* ignore — picker stays empty and the Sanity default input is always reachable via fallback */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [client])
+
+  const selectedRefs = useMemo(() => {
+    return (value as ReferenceValue[] | undefined) || []
+  }, [value])
+
+  const selectedIds = useMemo(() => new Set(selectedRefs.map((r) => r._ref)), [selectedRefs])
+
+  const categoriesById = useMemo(
+    () => new Map(categories.map((c) => [c._id, c])),
+    [categories],
+  )
+
+  const available = useMemo(() => {
+    const main: CategoryDoc[] = []
+    const additional: CategoryDoc[] = []
+    for (const c of categories) {
+      if (selectedIds.has(c._id)) continue
+      if (c.isMainCategory) main.push(c)
+      else additional.push(c)
+    }
+    return { main, additional }
+  }, [categories, selectedIds])
+
+  const handleAdd = useCallback(
+    (categoryId: string) => {
+      if (!categoryId) return
+      const ref: ReferenceValue = {
+        _type: 'reference',
+        _ref: categoryId,
+        _key: nextKey(),
+      }
+      onChange(PatchEvent.from([setIfMissing([]), insert([ref], 'after', [-1])]))
+    },
+    [onChange],
+  )
+
+  const handleRemove = useCallback(
+    (key: string) => {
+      onChange(PatchEvent.from(unset([{ _key: key }])))
+    },
+    [onChange],
+  )
+
+  const handleClear = useCallback(() => {
+    onChange(PatchEvent.from(set([])))
+  }, [onChange])
+
+  const mainSelected = selectedRefs.filter(
+    (r) => categoriesById.get(r._ref)?.isMainCategory,
+  )
+  const additionalSelected = selectedRefs.filter(
+    (r) => !categoriesById.get(r._ref)?.isMainCategory && categoriesById.has(r._ref),
+  )
+  const unresolvedSelected = selectedRefs.filter((r) => !categoriesById.has(r._ref))
+
+  const noAvailable = available.main.length === 0 && available.additional.length === 0
+  const hasAnySelected = selectedRefs.length > 0
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {hasAnySelected && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {mainSelected.length > 0 && (
+            <GroupChips
+              label="Main Categories"
+              accent="#E36216"
+              items={mainSelected.map((ref) => ({
+                key: ref._key,
+                title: categoriesById.get(ref._ref)?.title || ref._ref,
+              }))}
+              onRemove={handleRemove}
+            />
+          )}
+          {additionalSelected.length > 0 && (
+            <GroupChips
+              label="Additional Categories"
+              accent="#007385"
+              items={additionalSelected.map((ref) => ({
+                key: ref._key,
+                title: categoriesById.get(ref._ref)?.title || ref._ref,
+              }))}
+              onRemove={handleRemove}
+            />
+          )}
+          {unresolvedSelected.length > 0 && (
+            <GroupChips
+              label="Unresolved references"
+              accent="#9a3412"
+              items={unresolvedSelected.map((ref) => ({
+                key: ref._key,
+                title: `(missing: ${ref._ref})`,
+              }))}
+              onRemove={handleRemove}
+            />
+          )}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <select
+          value=""
+          onChange={(e) => {
+            const id = e.target.value
+            if (id) handleAdd(id)
+            e.currentTarget.value = ''
+          }}
+          disabled={noAvailable}
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            fontSize: '14px',
+            borderRadius: '4px',
+            border: '1px solid var(--card-border-color, #d1d5db)',
+            background: 'var(--card-bg-color, #fff)',
+            color: 'var(--card-fg-color, inherit)',
+          }}
+        >
+          <option value="" disabled>
+            {noAvailable
+              ? 'All categories added'
+              : hasAnySelected
+                ? 'Add another category…'
+                : 'Select a category…'}
+          </option>
+          {available.main.length > 0 && (
+            <optgroup label="Main Categories">
+              {available.main.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.title}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {available.additional.length > 0 && (
+            <optgroup label="Additional Categories">
+              {available.additional.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.title}
+                </option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+        {hasAnySelected && (
+          <button
+            type="button"
+            onClick={handleClear}
+            style={{
+              padding: '8px 12px',
+              fontSize: '13px',
+              borderRadius: '4px',
+              border: '1px solid var(--card-border-color, #d1d5db)',
+              background: 'transparent',
+              color: 'var(--card-muted-fg-color, #6b7280)',
+              cursor: 'pointer',
+            }}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GroupChips({
+  label,
+  accent,
+  items,
+  onRemove,
+}: {
+  label: string
+  accent: string
+  items: { key: string; title: string }[]
+  onRemove: (key: string) => void
+}) {
+  return (
+    <div>
+      <div
+        style={{
+          fontSize: '11px',
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'var(--card-muted-fg-color, #6b7280)',
+          marginBottom: '4px',
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {items.map((item) => (
+          <span
+            key={item.key}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: '999px',
+              border: `1px solid ${accent}`,
+              background: 'var(--card-bg-color, #fff)',
+              color: 'var(--card-fg-color, inherit)',
+              fontSize: '13px',
+            }}
+          >
+            {item.title}
+            <button
+              type="button"
+              onClick={() => onRemove(item.key)}
+              aria-label={`Remove ${item.title}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '16px',
+                height: '16px',
+                border: 'none',
+                background: 'transparent',
+                color: accent,
+                fontSize: '16px',
+                lineHeight: 1,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}

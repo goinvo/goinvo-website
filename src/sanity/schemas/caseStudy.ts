@@ -1,5 +1,6 @@
 import { defineField, defineType } from 'sanity'
 import { orderRankField } from '@sanity/orderable-document-list'
+import { CategoriesInput } from '../components/CategoriesInput'
 
 export default defineType({
   name: 'caseStudy',
@@ -73,18 +74,16 @@ export default defineType({
       type: 'array',
       group: 'properties',
       description:
-        'Pick from the canonical list. Main Categories (Healthcare, Enterprise, Government, AI) also drive the filter chips on /work; additional categories (Patient Engagement, Open Source, etc.) just display on the case study page. You can flag a category as main/additional on the Category document itself.',
+        'Pick from the canonical list. Main Categories (Healthcare, Enterprise, Government, AI) drive the filter chips on /work. Additional categories (Patient Engagement, Open Source, etc.) just display on the case study page. Toggle the Main Category checkbox on the Category document to move one between groups.',
       of: [
         {
           type: 'reference',
           to: [{ type: 'category' }],
-          options: {
-            // Show main categories first in the picker so editors reach for
-            // the filter-driving ones first.
-            filter: '!(_id in path("drafts.**"))',
-          },
         },
       ],
+      components: {
+        input: CategoriesInput,
+      },
     }),
     defineField({
       name: 'metadataLayout',
