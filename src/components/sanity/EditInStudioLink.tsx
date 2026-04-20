@@ -5,6 +5,13 @@ import type { CSSProperties, ReactNode } from 'react'
 interface Props {
   documentType: 'caseStudy' | 'feature'
   documentId: string
+  /**
+   * Dot-path of the field to focus when the Presentation tool opens,
+   * e.g. "image" or "content". Navigates to
+   * `/studio/presentation/<type>/<id>/<fieldPath>` so the right field
+   * lights up in the edit panel.
+   */
+  fieldPath: string
   className?: string
   style?: CSSProperties
   ariaLabel?: string
@@ -12,27 +19,35 @@ interface Props {
 }
 
 /**
- * Wrapper that navigates the Presentation preview's top window to the
- * Studio Structure editor for the referenced document. Used for
- * "click to edit" affordances inside the preview iframe (empty-content
- * placeholder, missing-image placeholder, etc).
+ * Wrapper button that navigates the Presentation preview's top window
+ * to the Sanity Presentation tool focused on a specific field of the
+ * current document. Preserves the current preview URL as the
+ * `?preview=` parameter so the iframe keeps rendering the same page
+ * the editor was looking at.
  *
  * The parent decides whether to render this at all — it should only
- * appear when draftMode is enabled, to avoid shipping Studio links to
- * public visitors.
+ * appear when draftMode is enabled, so Studio affordances never ship
+ * to public visitors.
  */
 export function EditInStudioLink({
   documentType,
   documentId,
+  fieldPath,
   className,
   style,
   ariaLabel,
   children,
 }: Props) {
-  const handleClick = () => {
-    const target = typeof window !== 'undefined' ? window.top || window : null
-    if (!target) return
-    target.location.href = `/studio/structure/${documentType};${documentId}`
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    if (typeof window === 'undefined') return
+    const target = window.top || window
+    const currentUrl = window.location.href
+    const studioUrl = `/studio/presentation/${documentType}/${documentId}/${fieldPath}?preview=${encodeURIComponent(
+      currentUrl,
+    )}`
+    target.location.href = studioUrl
   }
 
   return (

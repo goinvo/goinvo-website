@@ -7,7 +7,6 @@ import { CaseStudyLayout } from '@/components/work/CaseStudyLayout'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
-import { MissingHeroPlaceholder } from '@/components/sanity/MissingHeroPlaceholder'
 import type { CaseStudy } from '@/types'
 import type { PortableTextBlock } from '@portabletext/types'
 
@@ -546,13 +545,14 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
     ? urlForImage(caseStudy.image).width(1600).height(564).url()
     : PLACEHOLDER_IMAGE_URL
 
+  const heroEditTarget =
+    isDraftMode && !hasHeroImage
+      ? { documentType: 'caseStudy' as const, documentId: caseStudy._id, fieldPath: 'image' }
+      : undefined
+
   return (
     <div>
-      <SetCaseStudyHero image={heroImageUrl} />
-
-      {isDraftMode && !hasHeroImage && (
-        <MissingHeroPlaceholder documentType="caseStudy" documentId={caseStudy._id} />
-      )}
+      <SetCaseStudyHero image={heroImageUrl} editTarget={heroEditTarget} />
 
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">

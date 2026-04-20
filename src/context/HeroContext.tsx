@@ -14,6 +14,12 @@ import { usePathname } from 'next/navigation'
 /*  Hero config per route                                              */
 /* ------------------------------------------------------------------ */
 
+export interface HeroEditTarget {
+  documentType: 'caseStudy' | 'feature'
+  documentId: string
+  fieldPath: string
+}
+
 export interface HeroConfig {
   image: string
   bgPosition: string
@@ -26,6 +32,13 @@ export interface HeroConfig {
   desktopImages?: string[]
   /** Stacked images on mobile (falls back to desktopImages or single image) */
   mobileImages?: string[]
+  /**
+   * If set, the hero image is shown as a click-to-edit placeholder in
+   * draft mode. Used when a Case Study or Vision Piece has no hero
+   * image yet — clicking the placeholder jumps into the Sanity
+   * Presentation edit panel for the image field.
+   */
+  editTarget?: HeroEditTarget
 }
 
 export const heroConfigs: Record<string, HeroConfig> = {
@@ -124,14 +137,25 @@ interface HeroState {
   direction: number
   imageKey: number
   /** Pending case study hero set before navigation (card click flow) */
-  caseStudyHero: { image: string; bgPosition: string; expandAfterSlide?: boolean } | null
+  caseStudyHero: {
+    image: string
+    bgPosition: string
+    expandAfterSlide?: boolean
+    editTarget?: HeroEditTarget
+  } | null
 }
 
 type HeroAction =
   | { type: 'NAVIGATE'; pathname: string; prevPathname: string | null }
   | { type: 'OVERRIDE'; image: string; bgPosition?: string; direction?: number }
   | { type: 'SLIDE_DONE' }
-  | { type: 'SET_CASE_STUDY_HERO'; image: string; bgPosition?: string; expandAfterSlide?: boolean }
+  | {
+      type: 'SET_CASE_STUDY_HERO'
+      image: string
+      bgPosition?: string
+      expandAfterSlide?: boolean
+      editTarget?: HeroEditTarget
+    }
 
 function isDynamicHeroRoute(pathname: string): boolean {
   return (pathname.startsWith('/work/') && pathname.length > 6) ||
@@ -153,6 +177,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
             title: null,
             hideTextBox: true,
             expandAfterSlide: state.caseStudyHero.expandAfterSlide,
+            editTarget: state.caseStudyHero.editTarget,
           }
           return {
             ...state,
@@ -202,6 +227,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
       const image = action.image
       const bgPosition = action.bgPosition ?? 'center'
       const expandAfterSlide = action.expandAfterSlide ?? false
+      const editTarget = action.editTarget
 
       // Direct access: already on a case study route but hero is hidden
       if (state.phase === 'hidden' && isDynamicHeroRoute(state.pathname)) {
@@ -211,6 +237,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
           title: null,
           hideTextBox: true,
           expandAfterSlide,
+          editTarget,
         }
         return {
           ...state,
@@ -218,7 +245,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
           config: csConfig,
           displayImage: image,
           bgPosition,
-          caseStudyHero: { image, bgPosition, expandAfterSlide },
+          caseStudyHero: { image, bgPosition, expandAfterSlide, editTarget },
           imageKey: state.imageKey + 1,
         }
       }
@@ -226,7 +253,7 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
       // Card-click: store for when NAVIGATE fires after router.push
       return {
         ...state,
-        caseStudyHero: { image, bgPosition, expandAfterSlide },
+        caseStudyHero: { image, bgPosition, expandAfterSlide, editTarget },
       }
     }
 
@@ -273,7 +300,12 @@ interface HeroContextValue {
   state: HeroState
   overrideImage: (image: string, bgPosition?: string, direction?: number) => void
   slideDone: () => void
-  setCaseStudyHero: (image: string, bgPosition?: string, expandAfterSlide?: boolean) => void
+  setCaseStudyHero: (
+    image: string,
+    bgPosition?: string,
+    expandAfterSlide?: boolean,
+    editTarget?: HeroEditTarget,
+  ) => void
 }
 
 const HeroCtx = createContext<HeroContextValue | null>(null)
@@ -311,8 +343,19 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const setCaseStudyHero = useCallback(
-    (image: string, bgPosition?: string, expandAfterSlide?: boolean) => {
-      dispatch({ type: 'SET_CASE_STUDY_HERO', image, bgPosition, expandAfterSlide })
+    (
+      image: string,
+      bgPosition?: string,
+      expandAfterSlide?: boolean,
+      editTarget?: HeroEditTarget,
+    ) => {
+      dispatch({
+        type: 'SET_CASE_STUDY_HERO',
+        image,
+        bgPosition,
+        expandAfterSlide,
+        editTarget,
+      })
     },
     [],
   )

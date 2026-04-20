@@ -16,6 +16,7 @@ export function EmptyContentPlaceholder({ documentType, documentId }: Props) {
       <EditInStudioLink
         documentType={documentType}
         documentId={documentId}
+        fieldPath="content"
         ariaLabel="Open content editor"
         className="group rounded-lg"
       >
