@@ -25,8 +25,8 @@ function nextKey() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-function publishedId(id: string) {
-  return id.replace(/^drafts\./, '')
+function publishedId(id: string | undefined | null) {
+  return (id ?? '').replace(/^drafts\./, '')
 }
 
 function slugify(input: string) {
@@ -73,7 +73,10 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
   }, [client])
 
   const selectedRefs = useMemo(() => {
-    return (value as ReferenceValue[] | undefined) || []
+    const raw = (value as ReferenceValue[] | undefined) || []
+    // Partially-filled items (no _ref yet) crash the grouping logic and
+    // render as empty chips — drop them until Sanity fills them in.
+    return raw.filter((r): r is ReferenceValue => Boolean(r && r._ref))
   }, [value])
 
   const selectedIds = useMemo(
