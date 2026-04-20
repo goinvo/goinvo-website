@@ -1,5 +1,4 @@
 import { defineType, defineArrayMember } from 'sanity'
-import { PortableTextInput } from '../../components/PortableTextInput'
 import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
@@ -13,9 +12,6 @@ export default defineType({
   title: 'Portable Text',
   name: 'portableText',
   type: 'array',
-  components: {
-    input: PortableTextInput,
-  },
   of: [
     defineArrayMember({
       type: 'block',
