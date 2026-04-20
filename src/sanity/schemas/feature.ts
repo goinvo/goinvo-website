@@ -40,7 +40,7 @@ function documentHasAboutGoInvo(document: unknown) {
 
 export default defineType({
   name: 'feature',
-  title: 'Feature',
+  title: 'Vision Piece',
   type: 'document',
   groups: [
     { name: 'properties', title: 'Properties', default: true },

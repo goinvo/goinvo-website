@@ -1,8 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { siteConfig } from '@/lib/config'
 import { client } from '@/sanity/lib/client'
-import { allCaseStudiesQuery, visionProjectsQuery } from '@/sanity/lib/queries'
-import type { CaseStudy, VisionProject } from '@/types'
+import { allCaseStudiesQuery, allFeaturesQuery } from '@/sanity/lib/queries'
+import type { CaseStudy, Feature } from '@/types'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = siteConfig.url
@@ -45,13 +45,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }))
 
-    const visionProjects = await client.fetch<VisionProject[]>(visionProjectsQuery)
-    visionRoutes = visionProjects.map((project) => ({
-      url: `${baseUrl}/vision/${project.slug.current}`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly' as const,
-      priority: 0.7,
-    }))
+    const features = await client.fetch<Feature[]>(allFeaturesQuery)
+    visionRoutes = features
+      .filter((feature) => feature.slug?.current && !feature.externalLink)
+      .map((feature) => ({
+        url: `${baseUrl}/vision/${feature.slug.current}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.7,
+      }))
   } catch {
     // Sanity not configured — skip dynamic routes
   }
