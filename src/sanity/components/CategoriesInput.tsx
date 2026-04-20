@@ -19,8 +19,23 @@ type CategoryDoc = {
 
 type ReferenceValue = Reference & { _key: string }
 
+const ADD_NEW_SENTINEL = '__add_new_category__'
+
 function nextKey() {
   return Math.random().toString(36).slice(2, 10)
+}
+
+function publishedId(id: string) {
+  return id.replace(/^drafts\./, '')
+}
+
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 96)
 }
 
 /**
@@ -61,18 +76,36 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
     return (value as ReferenceValue[] | undefined) || []
   }, [value])
 
-  const selectedIds = useMemo(() => new Set(selectedRefs.map((r) => r._ref)), [selectedRefs])
-
-  const categoriesById = useMemo(
-    () => new Map(categories.map((c) => [c._id, c])),
-    [categories],
+  const selectedIds = useMemo(
+    () => new Set(selectedRefs.map((r) => publishedId(r._ref))),
+    [selectedRefs],
   )
+
+  // Key by the published id so references (which always use the published
+  // id) resolve correctly even when useClient returns drafts-perspective
+  // category docs (whose _id is "drafts.<baseId>"). Prefer a draft entry
+  // over the published one if both exist so in-progress edits show.
+  const categoriesById = useMemo(() => {
+    const map = new Map<string, CategoryDoc>()
+    for (const c of categories) {
+      const base = publishedId(c._id)
+      const existing = map.get(base)
+      if (!existing || c._id.startsWith('drafts.')) {
+        map.set(base, c)
+      }
+    }
+    return map
+  }, [categories])
 
   const available = useMemo(() => {
     const main: CategoryDoc[] = []
     const additional: CategoryDoc[] = []
+    const seen = new Set<string>()
     for (const c of categories) {
-      if (selectedIds.has(c._id)) continue
+      const base = publishedId(c._id)
+      if (seen.has(base)) continue
+      seen.add(base)
+      if (selectedIds.has(base)) continue
       if (c.isMainCategory) main.push(c)
       else additional.push(c)
     }
@@ -84,13 +117,64 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
       if (!categoryId) return
       const ref: ReferenceValue = {
         _type: 'reference',
-        _ref: categoryId,
+        _ref: publishedId(categoryId),
         _key: nextKey(),
       }
       onChange(PatchEvent.from([setIfMissing([]), insert([ref], 'after', [-1])]))
     },
     [onChange],
   )
+
+  const handleAddNew = useCallback(async () => {
+    const raw = typeof window !== 'undefined' ? window.prompt('Name for the new category') : null
+    const title = raw?.trim()
+    if (!title) return
+    const slug = slugify(title)
+    if (!slug) {
+      if (typeof window !== 'undefined') {
+        window.alert('Name must include at least one letter or number.')
+      }
+      return
+    }
+    try {
+      const existing = await client.fetch<CategoryDoc | null>(
+        `*[_type == "category" && slug.current == $slug][0]{_id, title, isMainCategory, filterOrder}`,
+        { slug },
+      )
+      let categoryId: string
+      if (existing) {
+        categoryId = existing._id
+        setCategories((prev) => {
+          const base = publishedId(existing._id)
+          if (prev.some((c) => publishedId(c._id) === base)) return prev
+          return [...prev, existing]
+        })
+      } else {
+        const created = await client.create({
+          _type: 'category',
+          title,
+          slug: { _type: 'slug', current: slug },
+          isMainCategory: false,
+        })
+        categoryId = created._id
+        setCategories((prev) => [
+          ...prev,
+          {
+            _id: created._id,
+            title,
+            isMainCategory: false,
+            filterOrder: null,
+          },
+        ])
+      }
+      handleAdd(categoryId)
+    } catch (err) {
+      console.error('Failed to create new category', err)
+      if (typeof window !== 'undefined') {
+        window.alert('Could not create the category. Check the console for details.')
+      }
+    }
+  }, [client, handleAdd])
 
   const handleRemove = useCallback(
     (key: string) => {
@@ -104,12 +188,15 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
   }, [onChange])
 
   const mainSelected = selectedRefs.filter(
-    (r) => categoriesById.get(r._ref)?.isMainCategory,
+    (r) => categoriesById.get(publishedId(r._ref))?.isMainCategory,
   )
-  const additionalSelected = selectedRefs.filter(
-    (r) => !categoriesById.get(r._ref)?.isMainCategory && categoriesById.has(r._ref),
+  const additionalSelected = selectedRefs.filter((r) => {
+    const cat = categoriesById.get(publishedId(r._ref))
+    return cat && !cat.isMainCategory
+  })
+  const unresolvedSelected = selectedRefs.filter(
+    (r) => !categoriesById.has(publishedId(r._ref)),
   )
-  const unresolvedSelected = selectedRefs.filter((r) => !categoriesById.has(r._ref))
 
   const noAvailable = available.main.length === 0 && available.additional.length === 0
   const hasAnySelected = selectedRefs.length > 0
@@ -159,10 +246,14 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
           value=""
           onChange={(e) => {
             const id = e.target.value
-            if (id) handleAdd(id)
-            e.currentTarget.value = ''
+            const el = e.currentTarget
+            el.value = ''
+            if (id === ADD_NEW_SENTINEL) {
+              void handleAddNew()
+            } else if (id) {
+              handleAdd(id)
+            }
           }}
-          disabled={noAvailable}
           style={{
             flex: 1,
             padding: '8px 12px',
@@ -175,7 +266,7 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
         >
           <option value="" disabled>
             {noAvailable
-              ? 'All categories added'
+              ? 'All existing categories added — pick Other… to create a new one'
               : hasAnySelected
                 ? 'Add another category…'
                 : 'Select a category…'}
@@ -198,6 +289,9 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
               ))}
             </optgroup>
           )}
+          <optgroup label="Create">
+            <option value={ADD_NEW_SENTINEL}>Other… (create new category)</option>
+          </optgroup>
         </select>
         {hasAnySelected && (
           <button
