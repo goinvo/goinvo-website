@@ -1,0 +1,12 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder image">
+  <rect width="1600" height="900" fill="#e8e8e8"/>
+  <g stroke="#b8b8b8" stroke-width="6" fill="none" stroke-linecap="round">
+    <rect x="600" y="320" width="400" height="260" rx="14"/>
+    <circle cx="720" cy="420" r="30"/>
+    <path d="M640 540 L790 400 L890 490 L1000 380 L960 540"/>
+  </g>
+  <g font-family="system-ui, -apple-system, Segoe UI, sans-serif" fill="#787473" text-anchor="middle">
+    <text x="800" y="640" font-size="26" font-weight="600">Image not set</text>
+    <text x="800" y="672" font-size="18">Upload a hero image in Sanity Studio</text>
+  </g>
+</svg>

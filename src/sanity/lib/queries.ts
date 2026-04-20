@@ -1,8 +1,15 @@
 import { groq } from 'next-sanity'
 
 // Case Studies
+// Filter out stub drafts that were accidentally published as
+// "Untitled" with an untitled-xxx slug (pre-"drafts." prefix fix).
+// They're safe to delete in Studio; until then, hide from the public list.
 export const allCaseStudiesQuery = groq`
-  *[_type == "caseStudy" && !hidden] | order(order asc) {
+  *[_type == "caseStudy"
+    && !hidden
+    && title != "Untitled"
+    && !(slug.current match "untitled-*")
+  ] | order(order asc) {
     _id,
     title,
     slug,
@@ -140,7 +147,10 @@ export const alumniQuery = groq`
 
 // Features
 export const allFeaturesQuery = groq`
-  *[_type == "feature"] | order(order asc) {
+  *[_type == "feature"
+    && title != "Untitled"
+    && !(slug.current match "untitled-*")
+  ] | order(order asc) {
     _id,
     title,
     slug,
