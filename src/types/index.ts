@@ -22,6 +22,8 @@ export interface Category {
   _id: string
   title: string
   slug: { current: string }
+  isMainCategory?: boolean
+  filterOrder?: number
   description?: string
 }
 
@@ -35,7 +37,6 @@ export interface CaseStudy {
   image?: SanityImage
   caption?: string
   categories?: Category[]
-  additionalTags?: string[]
   metadataLayout?: 'stacked' | 'inline'
   authors?: TeamMember[]
   time?: string
