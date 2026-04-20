@@ -1,4 +1,4 @@
-import { urlForImage } from '@/sanity/lib/image'
+import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import type { Feature, StaticFeature } from '@/types'
 
 /**
@@ -22,6 +22,9 @@ export function featureToDisplay(feature: Feature): StaticFeature {
   }
   if (!imageUrl && feature.video) {
     imageUrl = feature.video
+  }
+  if (!imageUrl) {
+    imageUrl = PLACEHOLDER_IMAGE_URL
   }
 
   return {

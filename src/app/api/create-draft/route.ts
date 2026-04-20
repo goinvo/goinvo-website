@@ -30,7 +30,14 @@ export async function POST(request: NextRequest) {
   const slug = `untitled-${nanoid(6).toLowerCase()}`
   const title = 'Untitled'
 
+  // Must create with _id prefixed "drafts." so Sanity treats this as a
+  // draft document. Without the prefix, client.create() produces a
+  // published document, which then gets filtered out of the drafts-only
+  // list on /work and /vision (and shows up on the live site).
+  const docId = `drafts.${nanoid(10)}`
+
   const doc = await client.create({
+    _id: docId,
     _type: type,
     title,
     slug: { _type: 'slug', current: slug },
