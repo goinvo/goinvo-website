@@ -34,7 +34,7 @@ export const caseStudyBySlugQuery = groq`
     image,
     caption,
     categories[]-> { _id, title, slug },
-    displayTags,
+    additionalTags,
     metadataLayout,
     authors[]-> { _id, name, role, bio, image },
     time,

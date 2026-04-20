@@ -35,7 +35,7 @@ export interface CaseStudy {
   image?: SanityImage
   caption?: string
   categories?: Category[]
-  displayTags?: string
+  additionalTags?: string[]
   metadataLayout?: 'stacked' | 'inline'
   authors?: TeamMember[]
   time?: string
