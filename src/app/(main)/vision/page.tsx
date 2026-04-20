@@ -10,10 +10,10 @@ import { ReviewCarousel } from '@/components/vision/ReviewCarousel'
 import { cloudfrontImage } from '@/lib/utils'
 import { client } from '@/sanity/lib/client'
 import { readToken } from '@/sanity/env'
-import { draftFeaturesQuery } from '@/sanity/lib/queries'
-import type { StaticFeature, Feature } from '@/types'
-
-import allFeatures from '@/data/features.json'
+import { sanityFetch } from '@/sanity/lib/live'
+import { allFeaturesQuery, draftFeaturesQuery } from '@/sanity/lib/queries'
+import { featureToDisplay } from '@/lib/featureDisplay'
+import type { Feature, StaticFeature } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Our vision on the future of health',
@@ -21,14 +21,7 @@ export const metadata: Metadata = {
     'Our thoughts on the intersection of design, technology, and healthcare.',
 }
 
-const spotlightFeature = (allFeatures as StaticFeature[]).find(
-  (f) => f.id === 'doodle-to-demo'
-)!
-
-// Filter out spotlight feature for the grid (all other features shown)
-const gridFeatures = (allFeatures as StaticFeature[]).filter(
-  (f) => f.id !== spotlightFeature.id
-)
+const SPOTLIGHT_SLUG = 'doodle-to-demo'
 
 const publicationLogos = [
   {
@@ -121,7 +114,22 @@ const reviews = [
 ]
 
 export default async function VisionPage() {
-  // Fetch draft-only features when in preview mode
+  // Published features from Sanity drive the spotlight and grid
+  const { data: sanityFeatures } = (await sanityFetch({
+    query: allFeaturesQuery,
+  })) as { data: Feature[] }
+
+  const displayFeatures = (sanityFeatures ?? []).map(featureToDisplay)
+
+  const spotlightFeature =
+    displayFeatures.find((f) => f.id === SPOTLIGHT_SLUG) ?? displayFeatures[0]
+
+  const gridFeatures = displayFeatures.filter(
+    (f) => f.id !== spotlightFeature?.id
+  )
+
+  // Fetch draft-only features when in preview mode (features that have no
+  // published counterpart yet)
   let draftFeatures: Feature[] = []
   const { isEnabled: isDraftMode } = await draftMode()
   if (isDraftMode) {
@@ -147,50 +155,28 @@ export default async function VisionPage() {
       )}
 
       {/* Spotlight */}
+      {spotlightFeature && (
       <div className="max-width content-padding py-8 lg:py-16">
         <h3 className="header-md py-8">Spotlight</h3>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
           {/* Spotlight feature (2/3) */}
-          <a
-            href={spotlightFeature.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
-          >
-            <div className="h-[260px] overflow-hidden bg-gray-medium">
-              {spotlightFeature.video ? (
-                <video
-                  src={cloudfrontImage(spotlightFeature.video)}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Image
-                  src={cloudfrontImage(spotlightFeature.image)}
-                  alt={spotlightFeature.title}
-                  width={680}
-                  height={260}
-                  className="w-full h-full object-cover"
-                />
-              )}
-            </div>
-            <div className="p-4">
-              <p className="font-bold text-black mb-1">
-                {spotlightFeature.title}
-              </p>
-              <p className="text-gray text-sm mb-1">
-                Feature | {spotlightFeature.date}
-              </p>
-              {spotlightFeature.caption && (
-                <p className="text-gray text-sm">
-                  {spotlightFeature.caption}
-                </p>
-              )}
-            </div>
-          </a>
+          {spotlightFeature.externalLink ? (
+            <a
+              href={spotlightFeature.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+            >
+              <SpotlightCardContent feature={spotlightFeature} />
+            </a>
+          ) : (
+            <Link
+              href={spotlightFeature.link}
+              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+            >
+              <SpotlightCardContent feature={spotlightFeature} />
+            </Link>
+          )}
 
           {/* Health Visualizations (1/3) */}
           <Link
@@ -220,6 +206,7 @@ export default async function VisionPage() {
           </Link>
         </div>
       </div>
+      )}
 
       {/* Features Grid */}
       <div className="bg-blue-light py-4 lg:py-16">
@@ -366,5 +353,42 @@ export default async function VisionPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+function SpotlightCardContent({ feature }: { feature: StaticFeature }) {
+  const hasVideo = Boolean(feature.video)
+  return (
+    <>
+      <div className="h-[260px] overflow-hidden bg-gray-medium">
+        {hasVideo ? (
+          <video
+            src={cloudfrontImage(feature.video as string)}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image
+            src={cloudfrontImage(feature.image)}
+            alt={feature.title}
+            width={680}
+            height={260}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+      <div className="p-4">
+        <p className="font-bold text-black mb-1">{feature.title}</p>
+        <p className="text-gray text-sm mb-1">
+          Feature | {feature.date}
+        </p>
+        {feature.caption && (
+          <p className="text-gray text-sm">{feature.caption}</p>
+        )}
+      </div>
+    </>
   )
 }
