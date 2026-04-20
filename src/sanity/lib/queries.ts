@@ -217,30 +217,6 @@ export const activeJobsQuery = groq`
   }
 `
 
-// Vision Projects
-export const visionProjectsQuery = groq`
-  *[_type == "visionProject"] | order(title asc) {
-    _id,
-    title,
-    slug,
-    image,
-    description,
-    category
-  }
-`
-
-export const visionProjectBySlugQuery = groq`
-  *[_type == "visionProject" && slug.current == $slug][0] {
-    _id,
-    title,
-    slug,
-    image,
-    description,
-    content,
-    category
-  }
-`
-
 // Homepage
 export const homepageQuery = groq`{
   "headers": *[_type == "homepageHeader"] | order(order asc) {
