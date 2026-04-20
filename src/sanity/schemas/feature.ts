@@ -1,4 +1,5 @@
 import { defineField, defineType } from 'sanity'
+import { orderRankField } from '@sanity/orderable-document-list'
 import { sectionBackgroundOptions } from '../../lib/sectionBackgrounds'
 import {
   FeatureAuthoringStatusInput,
@@ -117,6 +118,7 @@ export default defineType({
     }).warning(),
   ],
   fields: [
+    orderRankField({ type: 'feature' }),
     defineField({
       name: 'title',
       title: 'Title',
