@@ -7,6 +7,7 @@ import { gettingStartedPlugin } from './tools/gettingStarted'
 import { feedbackPlugin } from './tools/feedbackTool'
 import { featureArticleTemplates, resolveFeatureNewDocumentOptions } from './featureTemplates'
 import { featureAuthoringBadge } from './featureBadges'
+import { structure } from './structure'
 import './studio.css'
 
 export default defineConfig({
@@ -17,7 +18,7 @@ export default defineConfig({
   apiVersion,
   basePath: '/studio',
   plugins: [
-    structureTool(),
+    structureTool({ structure }),
     presentationTool({
       previewUrl: {
         previewMode: {
