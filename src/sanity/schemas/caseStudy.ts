@@ -72,15 +72,19 @@ export default defineType({
       title: 'Categories',
       type: 'array',
       group: 'properties',
-      description: 'Tag this case study with one or more categories for filtering',
+      description:
+        'Primary categories. These drive the filter chips on /work AND appear as "Categories:" at the top of the case study page. Pick from the canonical list.',
       of: [{ type: 'reference', to: [{ type: 'category' }] }],
     }),
     defineField({
-      name: 'displayTags',
-      title: 'Display Tags',
-      type: 'string',
-      group: 'extras',
-      description: 'Optional curated tag line shown on the case study page (separate from taxonomy categories used for filtering)',
+      name: 'additionalTags',
+      title: 'Additional tags',
+      type: 'array',
+      group: 'properties',
+      description:
+        'Free-form extra tags shown on the case study page under the primary categories (e.g. "Interactive wall"). Do not drive filtering. Leave empty if you do not have anything to add beyond Categories above.',
+      of: [{ type: 'string' }],
+      options: { layout: 'tags' },
     }),
     defineField({
       name: 'metadataLayout',
