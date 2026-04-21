@@ -7,12 +7,18 @@ export default defineType({
   title: 'Case Study',
   type: 'document',
   groups: [
+    // Properties and Main Content map to the actual page; Advanced
+    // Settings holds rare overrides. Field order within each group
+    // follows the visual order on the rendered case study page so
+    // editors can fill in the page top-to-bottom.
     { name: 'properties', title: 'Properties', default: true },
     { name: 'content', title: 'Main Content' },
-    { name: 'extras', title: 'Extra Content' },
+    { name: 'advanced', title: 'Advanced Settings' },
   ],
   fields: [
     orderRankField({ type: 'caseStudy' }),
+
+    // --- Properties (visual order on the page) -----------------------
     defineField({
       name: 'title',
       title: 'Title',
@@ -20,13 +26,6 @@ export default defineType({
       group: 'properties',
       description: 'The case study headline shown on the listing card and page header',
       validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: 'heading',
-      title: 'Page Heading',
-      type: 'string',
-      group: 'properties',
-      description: 'Override title for the page h1 (defaults to title if empty)',
     }),
     defineField({
       name: 'slug',
@@ -38,21 +37,6 @@ export default defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: 'client',
-      title: 'Client',
-      type: 'string',
-      group: 'properties',
-      description: 'Client or partner name shown beneath the title',
-    }),
-    defineField({
-      name: 'hideClientSubtitle',
-      title: 'Hide Client Subtitle',
-      type: 'boolean',
-      group: 'properties',
-      description: 'Hide the "for {client}" subtitle on the page header while keeping the client metadata for other uses',
-      initialValue: false,
-    }),
-    defineField({
       name: 'image',
       title: 'Hero Image',
       type: 'image',
@@ -61,12 +45,26 @@ export default defineType({
       options: { hotspot: true },
     }),
     defineField({
+      name: 'client',
+      title: 'Client',
+      type: 'string',
+      group: 'properties',
+      description: 'Client or partner name shown beneath the title',
+    }),
+    defineField({
       name: 'caption',
       title: 'Caption',
       type: 'text',
       rows: 3,
       group: 'properties',
       description: 'Short summary shown on the listing card (1-2 sentences)',
+    }),
+    defineField({
+      name: 'time',
+      title: 'Time',
+      type: 'string',
+      group: 'properties',
+      description: 'Project duration (e.g. "1.5 designers for 6 months"). Rendered in the page metadata row.',
     }),
     defineField({
       name: 'categories',
@@ -86,40 +84,18 @@ export default defineType({
       },
     }),
     defineField({
-      name: 'metadataLayout',
-      title: 'Metadata Layout',
-      type: 'string',
-      group: 'extras',
-      description: 'How Time and Tags should be grouped on the case study page',
-      options: {
-        list: [
-          { title: 'Stacked', value: 'stacked' },
-          { title: 'Inline', value: 'inline' },
-        ],
-        layout: 'radio',
-      },
-      initialValue: 'stacked',
-    }),
-    defineField({
       name: 'authors',
       title: 'Authors',
       type: 'array',
-      group: 'extras',
-      description: 'Team members who authored this case study',
+      group: 'properties',
+      description: 'Team members who authored this case study. Shown after the article body.',
       of: [{ type: 'reference', to: [{ type: 'teamMember' }] }],
-    }),
-    defineField({
-      name: 'content',
-      title: 'Content',
-      type: 'portableText',
-      group: 'content',
-      description: 'Full case study body — use headings, images, columns, and quotes',
     }),
     defineField({
       name: 'upNext',
       title: 'Up Next',
       type: 'array',
-      group: 'extras',
+      group: 'properties',
       description:
         'Related case studies or vision articles shown at the bottom. Add an external link entry for off-site resources (e.g. Carrier Testing on GitHub Pages).',
       of: [
@@ -145,27 +121,61 @@ export default defineType({
       ],
     }),
     defineField({
-      name: 'time',
-      title: 'Time',
-      type: 'string',
-      group: 'extras',
-      description: 'Project duration (e.g. "1.5 designers for 6 months")',
-    }),
-    defineField({
-      name: 'hidden',
-      title: 'Hidden',
-      type: 'boolean',
-      group: 'properties',
-      description: 'Hide this case study from the /work listing (it can still be accessed by URL)',
-      initialValue: false,
-    }),
-    defineField({
       name: 'metaDescription',
       title: 'Meta Description',
       type: 'text',
       rows: 3,
       group: 'properties',
       description: 'SEO description for search engines (max ~160 characters)',
+    }),
+
+    // --- Main Content ------------------------------------------------
+    defineField({
+      name: 'content',
+      title: 'Content',
+      type: 'portableText',
+      group: 'content',
+      description: 'Full case study body — use headings, images, columns, and quotes',
+    }),
+
+    // --- Advanced Settings -------------------------------------------
+    defineField({
+      name: 'heading',
+      title: 'Page Heading',
+      type: 'string',
+      group: 'advanced',
+      description: 'Override the h1 used on the page (defaults to the Title field).',
+    }),
+    defineField({
+      name: 'hideClientSubtitle',
+      title: 'Hide Client Subtitle',
+      type: 'boolean',
+      group: 'advanced',
+      description: 'Hide the "for {client}" subtitle on the page while still keeping the client value for listing and metadata.',
+      initialValue: false,
+    }),
+    defineField({
+      name: 'metadataLayout',
+      title: 'Metadata Layout',
+      type: 'string',
+      group: 'advanced',
+      description: 'How Time and Tags are grouped in the page metadata row.',
+      options: {
+        list: [
+          { title: 'Stacked', value: 'stacked' },
+          { title: 'Inline', value: 'inline' },
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'stacked',
+    }),
+    defineField({
+      name: 'hidden',
+      title: 'Hidden',
+      type: 'boolean',
+      group: 'advanced',
+      description: 'Hide this case study from the /work listing. It can still be visited directly by URL.',
+      initialValue: false,
     }),
   ],
   preview: {
