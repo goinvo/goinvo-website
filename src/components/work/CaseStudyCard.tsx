@@ -26,16 +26,18 @@ export function CaseStudyCard({
   const ctx = usePageTransition()
   const { setCaseStudyHero } = useHero()
 
-  const imageUrl = caseStudy.image?.asset
-    ? urlForImage(caseStudy.image).width(800).height(500).url()
+  const hasHeroAsset = Boolean(caseStudy.image?.asset)
+
+  const imageUrl = hasHeroAsset
+    ? urlForImage(caseStudy.image!).width(800).height(500).url()
     : PLACEHOLDER_IMAGE_URL
 
   // Higher-res URL for the hero (overlay morph + PersistentHero)
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
   // minimize top/bottom cropping at desktop widths
-  const heroImageUrl = caseStudy.image?.asset
-    ? urlForImage(caseStudy.image).width(1600).height(564).url()
-    : PLACEHOLDER_IMAGE_URL
+  const heroImageUrl = hasHeroAsset
+    ? urlForImage(caseStudy.image!).width(1600).height(564).url()
+    : null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const section = (caseStudy as any)._type === 'feature' ? 'vision' : 'work'
@@ -46,6 +48,9 @@ export function CaseStudyCard({
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      // No real hero asset: let the Link navigate normally so the
+      // target page can render its own HeroEditPlaceholder. Pre-seeding
+      // the hero with the placeholder URL would flash a broken image.
       if (!ctx || !heroImageUrl || !cardRef.current) return
 
       const imageEl = cardRef.current.querySelector('[data-card-image]')
