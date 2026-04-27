@@ -6,7 +6,7 @@ export default defineType({
   title: 'Team Member',
   type: 'document',
   fields: [
-    orderRankField({ type: 'teamMember' }),
+    orderRankField({ type: 'teamMember', newItemPosition: 'before' }),
     defineField({
       name: 'name',
       title: 'Name',

@@ -19,3 +19,36 @@ body:has([data-testid='group-select-content'][aria-selected='true']) :where(
   ) {
   max-width: 960px !important;
 }
+
+/* Sanity collapses field-group tabs into a select on very narrow
+   inspectors. The control has an accessible label, but no visible one. */
+:where(div):has(> [data-ui='Select'] > select[data-testid='field-group-select']) {
+  display: grid;
+  gap: 0.35rem;
+}
+
+:where(div):has(> [data-ui='Select'] > select[data-testid='field-group-select'])::before {
+  content: 'Section';
+  color: var(--card-muted-fg-color, #a0aec0);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* In narrow Portable Text editors Sanity collapses both formatting
+   and insert controls into ellipsis buttons. Keep the formatting menu
+   as ellipsis, but make the insert-elements menu read as "add". */
+[data-testid='insert-menu-button'] svg {
+  display: none;
+}
+
+[data-testid='insert-menu-button']::before {
+  content: '+';
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  transform: translateY(-1px);
+}

@@ -119,7 +119,6 @@ export interface Feature {
   showAboutGoInvo?: boolean
   aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'
   aboutGoInvoVariant?: 'default' | 'practice'
-  previewReviewed?: boolean
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]

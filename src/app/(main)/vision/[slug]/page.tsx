@@ -13,7 +13,8 @@ import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
-import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
+import { GuidedFeatureContent } from '@/components/vision/GuidedFeatureContent'
+import { resolveSectionBackground, type SectionBackground } from '@/lib/sectionBackgrounds'
 import {
   hasMeaningfulFeatureBody,
   isCodeAssistedFeatureSlug,
@@ -22,9 +23,14 @@ import {
 import { featureSectionBackgroundFallbacks } from '@/lib/featureSectionBackgroundFallbacks'
 import { findPortableHeading, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
+import type { PortableTextBlock } from '@portabletext/types'
 
 interface Props {
   params: Promise<{ slug: string }>
+}
+
+type FeatureContentBlock = PortableTextBlock & {
+  background?: SectionBackground
 }
 
 function textFromPortableBlock(block: any): string { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -436,16 +442,6 @@ function normalizeSupFollowerSpacing(block: any) { // eslint-disable-line @types
   })
 
   return changed ? { ...block, children } : block
-}
-
-function withBlockStyle(block: any, style: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const normalized = normalizeSupFollowerSpacing(block)
-  return {
-    ...normalized,
-    level: undefined,
-    listItem: undefined,
-    style,
-  }
 }
 
 function toBulletListItem(block: any, level = 1, listItem = 'bullet') { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -1166,12 +1162,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function VisionFeaturePage({ params }: Props) {
   const { slug } = await params
 
-  const [{ data: feature }, { isEnabled: isDraftMode }] = await Promise.all([
-    sanityFetch({ query: featureBySlugQuery, params: { slug } }) as Promise<{
-      data: Feature | null
-    }>,
-    draftMode(),
-  ])
+  const { isEnabled: isDraftMode } = await draftMode()
+  const { data: feature } = (await sanityFetch({
+    query: featureBySlugQuery,
+    params: { slug },
+    perspective: isDraftMode ? 'drafts' : undefined,
+  })) as { data: Feature | null }
 
   if (!feature) {
     notFound()
@@ -1207,7 +1203,7 @@ export default async function VisionFeaturePage({ params }: Props) {
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
   const showPageMeta = backgroundFallbacks?.showPageMeta ?? (feature.showPageMeta !== false)
   const transformedContributors = usesLegacyTransforms
-    ? transformFeatureContributorsForSlug(slug, feature.contributors as any)
+    ? transformFeatureContributorsForSlug(slug, feature.contributors)
     : feature.contributors
   const authorVariant = (backgroundFallbacks?.authorLayout || feature.authorLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const contributorsVariant = (backgroundFallbacks?.contributorsLayout || feature.contributorsLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
@@ -1292,16 +1288,24 @@ export default async function VisionFeaturePage({ params }: Props) {
         </Reveal>
       )}
 
-      {/* Empty-body placeholder shown in Presentation preview when no
-          body blocks have been authored yet. Stays out of the public
-          render so visitors don't see editor affordances. */}
-      {isDraftMode && !hasContent && (
-        <EmptyContentPlaceholder documentType="feature" documentId={feature._id} />
-      )}
+      {!usesCodeAssistedCms && !usesLegacyTransforms ? (
+        <GuidedFeatureContent
+          initialData={feature}
+          slug={slug}
+          isDraftMode={isDraftMode}
+        />
+      ) : (
+        <>
+          {/* Empty-body placeholder shown in Presentation preview when no
+              body blocks have been authored yet. Stays out of the public
+              render so visitors don't see editor affordances. */}
+          {isDraftMode && !hasContent && (
+            <EmptyContentPlaceholder documentType="feature" documentId={feature._id} />
+          )}
 
-      {/* Content (without references — rendered separately after newsletter) */}
-      {feature.content && (() => {
-        let content = feature.content
+          {/* Content (without references — rendered separately after newsletter) */}
+          {feature.content && (() => {
+        let content: FeatureContentBlock[] = feature.content
         let authorHeading: string | undefined
 
         if (usesCodeAssistedCms) {
@@ -1309,27 +1313,27 @@ export default async function VisionFeaturePage({ params }: Props) {
         }
 
         if (usesCodeAssistedCms && feature.authors && feature.authors.length > 0) {
-          authorHeading = findPortableHeading(content as any[], ['Authors', 'Author'])
+          authorHeading = findPortableHeading(content, ['Authors', 'Author'])
           content = stripAuthorHeading(content, {
             stripContributors: (transformedContributors?.length ?? 0) > 0,
           })
         }
 
         if (usesLegacyTransforms) {
-          content = transformFeatureContentForSlug(slug, content as any)
+          content = transformFeatureContentForSlug(slug, content)
         }
 
-        const mainContent = content.filter((b: any) => b._type !== 'references')
+        const mainContent = content.filter((block) => block._type !== 'references')
         const referencesContent = content
-          .filter((b: any) => b._type === 'references')
-          .map((block: any) => (
+          .filter((block) => block._type === 'references')
+          .map((block) => (
             backgroundFallbacks?.referencesBackground && !block.background
               ? { ...block, background: backgroundFallbacks.referencesBackground }
               : block
           ))
         const portableTextVariant = backgroundFallbacks?.portableTextVariant
           || (usesLegacyTransforms && slug === 'virtual-care' ? 'gray-body' : undefined)
-        const specialThanksHeadingText = (feature as any).specialThanksHeading
+        const specialThanksHeadingText = feature.specialThanksHeading
           || (transformedContributors && transformedContributors.length > 0 ? 'Special thanks to...' : 'Contributors')
         const specialThanksHeadingStyle = feature.specialThanksHeadingStyle || 'subheading'
         const peopleSections = (
@@ -1413,7 +1417,9 @@ export default async function VisionFeaturePage({ params }: Props) {
             )}
           </>
         )
-      })()}
+          })()}
+        </>
+      )}
     </div>
   )
 }

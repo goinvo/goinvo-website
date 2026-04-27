@@ -41,6 +41,13 @@ export async function POST(request: NextRequest) {
     _type: type,
     title,
     slug: { _type: 'slug', current: slug },
+    ...(type === 'feature'
+      ? {
+          contentWidth: 'medium',
+          bulletStyle: 'star',
+          showPageMeta: true,
+        }
+      : {}),
   })
 
   return NextResponse.json({ id: doc._id, slug, type })
