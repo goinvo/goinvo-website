@@ -78,15 +78,11 @@ export const heroConfigs: Record<string, HeroConfig> = {
     ),
   },
   '/vision': {
-    image: '/images/vision/vision-illustration-desktop-left.jpg',
+    image: '/images/vision/vision-illustration-preview.jpg',
     bgPosition: 'center',
     title: null,
     hideTextBox: true,
     expandAfterSlide: true,
-    desktopImages: [
-      '/images/vision/vision-illustration-desktop-left.jpg',
-      '/images/vision/vision-illustration-desktop-right.jpg',
-    ],
     mobileImages: [
       '/images/vision/vision-illustration-mobile-home.jpg',
       '/images/vision/vision-illustration-mobile-practice.jpg',

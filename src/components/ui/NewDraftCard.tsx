@@ -7,6 +7,27 @@ interface NewDraftCardProps {
   label: string
 }
 
+const deploymentBypassParams = [
+  'x-vercel-protection-bypass',
+  'x-vercel-set-bypass-cookie',
+] as const
+
+// Protected Vercel preview links rely on these params; keep them on
+// in-preview mutations and redirects so iframe-based Presentation still works.
+function withDeploymentBypassParams(path: string): string {
+  const currentUrl = new URL(window.location.href)
+  const targetUrl = new URL(path, window.location.origin)
+
+  for (const param of deploymentBypassParams) {
+    const value = currentUrl.searchParams.get(param)
+    if (value) {
+      targetUrl.searchParams.set(param, value)
+    }
+  }
+
+  return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
+}
+
 export function NewDraftCard({ type, label }: NewDraftCardProps) {
   const [creating, setCreating] = useState(false)
 
@@ -15,8 +36,9 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
     setCreating(true)
 
     try {
-      const res = await fetch('/api/create-draft', {
+      const res = await fetch(withDeploymentBypassParams('/api/create-draft'), {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type }),
       })
@@ -30,7 +52,7 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
       // `[slug]` route will fetch the draft via sanityFetch and
       // Presentation will wire up overlays for inline editing.
       const previewPath = type === 'caseStudy' ? `/work/${slug}` : `/vision/${slug}`
-      window.location.href = previewPath
+      window.location.href = withDeploymentBypassParams(previewPath)
     } catch (e) {
       console.error('Failed to create draft:', e)
       setCreating(false)
