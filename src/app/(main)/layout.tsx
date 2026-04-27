@@ -15,6 +15,7 @@ import { ThrottledSanityLive } from '@/components/sanity/ThrottledSanityLive'
 import { PreviewBanner } from '@/components/sanity/PreviewBanner'
 import { DraftModeGuard } from '@/components/sanity/DraftModeGuard'
 import { SafeVisualEditing } from '@/components/sanity/SafeVisualEditing'
+import { DraftMutationRefresh } from '@/components/sanity/DraftMutationRefresh'
 import './vision/determinants-of-health/determinants.css'
 
 export default async function MainLayout({
@@ -51,6 +52,7 @@ export default async function MainLayout({
           loop under the editor. */}
       <ThrottledSanityLive />
       {isDraftMode && <SafeVisualEditing />}
+      {isDraftMode && <DraftMutationRefresh />}
       {isDraftMode && <PreviewBanner />}
       {isDraftMode && <DraftModeGuard />}
     </HeroProvider>
