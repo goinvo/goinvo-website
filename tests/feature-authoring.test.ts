@@ -29,34 +29,24 @@ describe('Feature authoring configuration', () => {
     const groups = (featureSchema.groups || []).map((group) => group.name)
 
     expect(groups).toEqual([
-      'basics',
-      'heroMeta',
-      'body',
-      'people',
-      'pageSettings',
-      'seo',
+      'properties',
+      'content',
+      'extras',
     ])
 
-    expect(getSchemaField(featureSchema, 'authoringStatus').group).toBe('basics')
-    expect(getSchemaField(featureSchema, 'authoringStatus').components?.input).toBeDefined()
-    expect(getSchemaField(featureSchema, 'content').group).toBe('body')
-    expect(getSchemaField(featureSchema, 'previewReviewed').group).toBe('pageSettings')
-    expect(getSchemaField(featureSchema, 'previewReviewed').initialValue).toBe(false)
-    expect(getSchemaField(featureSchema, 'publishingChecklist').group).toBe('pageSettings')
+    expect(getSchemaField(featureSchema, 'content').group).toBe('content')
+    expect(getSchemaField(featureSchema, 'publishingChecklist').group).toBe('properties')
     expect(getSchemaField(featureSchema, 'publishingChecklist').components?.input).toBeDefined()
   })
 
-  it('marks static override body and people controls as read-only', () => {
+  it('keeps article body and people controls in the guided authoring groups', () => {
     const contentField = getSchemaField(featureSchema, 'content')
     const authorsField = getSchemaField(featureSchema, 'authors')
     const newsletterField = getSchemaField(featureSchema, 'newsletterBackground')
 
-    expect(contentField.readOnly?.({ document: { slug: { current: 'coronavirus' } } })).toBe(true)
-    expect(authorsField.readOnly?.({ document: { slug: { current: 'coronavirus' } } })).toBe(true)
-    expect(newsletterField.readOnly?.({ document: { slug: { current: 'coronavirus' } } })).toBe(true)
-
-    expect(contentField.readOnly?.({ document: { slug: { current: 'new-guided-article' } } })).toBe(false)
-    expect(authorsField.readOnly?.({ document: { slug: { current: 'new-guided-article' } } })).toBe(false)
+    expect(contentField.group).toBe('content')
+    expect(authorsField.group).toBe('extras')
+    expect(newsletterField.group).toBe('extras')
   })
 
   it('hides secondary people controls until they are relevant', () => {
@@ -114,8 +104,15 @@ describe('Portable Text authoring contract', () => {
       'serifLarge',
       'h2',
       'h2Large',
+      'legacyH1Centered',
+      'legacyH1Large',
+      'legacyH1CenteredWide',
       'sectionTitle',
+      'legacyH2Md',
+      'legacyH2MdCentered',
+      'legacyH2Spacious',
       'h3',
+      'legacyH3Compact',
       'h4',
       'blockquote',
       'callout',

@@ -16,7 +16,7 @@ export default defineType({
     { name: 'advanced', title: 'Advanced Settings' },
   ],
   fields: [
-    orderRankField({ type: 'caseStudy' }),
+    orderRankField({ type: 'caseStudy', newItemPosition: 'before' }),
 
     // --- Properties (visual order on the page) -----------------------
     defineField({

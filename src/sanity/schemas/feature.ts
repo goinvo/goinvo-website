@@ -2,7 +2,7 @@ import { defineField, defineType } from 'sanity'
 import { orderRankField } from '@sanity/orderable-document-list'
 import { sectionBackgroundOptions } from '../../lib/sectionBackgrounds'
 import {
-  FeatureAuthoringStatusInput,
+  ContentWidthInput,
   FeaturePublishingChecklistInput,
 } from '../components/FeatureAuthoringInputs'
 import {
@@ -39,6 +39,8 @@ function documentHasAboutGoInvo(document: unknown) {
   return (document as { showAboutGoInvo?: boolean }).showAboutGoInvo === true
 }
 
+type FeatureContent = Parameters<typeof hasMeaningfulFeatureBody>[0]
+
 export default defineType({
   name: 'feature',
   title: 'Vision Piece',
@@ -53,11 +55,10 @@ export default defineType({
       const feature = document as {
         slug?: { current?: string }
         image?: unknown
-        content?: any[]
+        content?: FeatureContent
         authors?: unknown[]
         contributors?: unknown[]
         specialThanks?: unknown[]
-        previewReviewed?: boolean
       } | undefined
 
       if (!feature || isStaticOverrideDocument(feature)) return true
@@ -69,7 +70,7 @@ export default defineType({
     Rule.custom((document) => {
       const feature = document as {
         slug?: { current?: string }
-        content?: any[]
+        content?: FeatureContent
       } | undefined
 
       if (!feature || isStaticOverrideDocument(feature)) return true
@@ -81,7 +82,7 @@ export default defineType({
     Rule.custom((document) => {
       const feature = document as {
         slug?: { current?: string }
-        content?: any[]
+        content?: FeatureContent
       } | undefined
 
       if (!feature || isStaticOverrideDocument(feature)) return true
@@ -104,21 +105,9 @@ export default defineType({
       }
       return true
     }).warning(),
-    Rule.custom((document) => {
-      const feature = document as {
-        slug?: { current?: string }
-        previewReviewed?: boolean
-      } | undefined
-
-      if (!feature || isStaticOverrideDocument(feature)) return true
-      if (!feature.previewReviewed) {
-        return 'Open the Presentation tab and review the draft before publishing, then check "Draft preview reviewed".'
-      }
-      return true
-    }).warning(),
   ],
   fields: [
-    orderRankField({ type: 'feature' }),
+    orderRankField({ type: 'feature', newItemPosition: 'before' }),
     defineField({
       name: 'title',
       title: 'Title',
@@ -141,17 +130,6 @@ export default defineType({
           }
           return true
         }).warning(),
-    }),
-    defineField({
-      name: 'authoringStatus',
-      title: 'Authoring Status',
-      type: 'string',
-      group: 'properties',
-      readOnly: true,
-      description: 'Shows whether this page is fully CMS-driven, still code-assisted, or rendered by a static override.',
-      components: {
-        input: FeatureAuthoringStatusInput,
-      },
     }),
     defineField({
       name: 'image',
@@ -237,13 +215,17 @@ export default defineType({
         ],
       },
       initialValue: 'medium',
+      components: {
+        input: ContentWidthInput,
+      },
     }),
     defineField({
       name: 'bulletStyle',
-      title: 'Bullet Style',
+      title: 'Default Bullet Style',
       type: 'string',
       group: 'content',
-      description: 'List bullet style. Star (default) uses a custom star image. Disc uses standard round bullets (matching some Gatsby pages like healthcare-ai, eligibility-engine).',
+      hidden: true,
+      description: 'Legacy default for older documents. New articles choose Star bullet or Disc bullet per list in the Content editor toolbar.',
       options: {
         list: [
           { title: 'Star (default)', value: 'star' },
@@ -528,20 +510,12 @@ export default defineType({
       description: 'Full page content for internal vision pages',
     }),
     defineField({
-      name: 'previewReviewed',
-      title: 'Draft Preview Reviewed',
-      type: 'boolean',
-      group: 'properties',
-      description: 'Check this after reviewing the draft in the Presentation tab and confirming it is ready to publish.',
-      initialValue: false,
-    }),
-    defineField({
       name: 'publishingChecklist',
       title: 'Publishing Checklist',
       type: 'string',
       group: 'properties',
       readOnly: true,
-      description: 'Quick acceptance checklist for this article before publishing.',
+      description: 'Automated checks and optional publishing guidance.',
       components: {
         input: FeaturePublishingChecklistInput,
       },

@@ -1,4 +1,5 @@
 import type { NewDocumentOptionsContext, Template, TemplateItem } from 'sanity'
+import { getInitialOrderRank } from './orderable/rank'
 
 const baseFeatureDefaults = {
   contentWidth: 'medium',
@@ -13,7 +14,13 @@ const baseFeatureDefaults = {
   showAboutGoInvo: false,
   aboutGoInvoPosition: 'beforeNewsletter',
   aboutGoInvoVariant: 'default',
-  previewReviewed: false,
+}
+
+function featureTemplateValue(defaults: typeof baseFeatureDefaults) {
+  return async (_params: undefined, context: Parameters<typeof getInitialOrderRank>[1]) => ({
+    ...defaults,
+    orderRank: await getInitialOrderRank('feature', context, 'before'),
+  })
 }
 
 export const FEATURE_TEMPLATE_IDS = {
@@ -27,36 +34,36 @@ export const featureArticleTemplates: Template[] = [
     id: FEATURE_TEMPLATE_IDS.standard,
     title: 'Feature: Standard article',
     schemaType: 'feature',
-    value: {
+    value: featureTemplateValue({
       ...baseFeatureDefaults,
       contentWidth: 'medium',
       bulletStyle: 'star',
       newsletterBackground: 'white',
-    },
+    }),
   },
   {
     id: FEATURE_TEMPLATE_IDS.research,
     title: 'Feature: Research / report',
     schemaType: 'feature',
-    value: {
+    value: featureTemplateValue({
       ...baseFeatureDefaults,
       contentWidth: 'wide',
       bulletStyle: 'disc',
       newsletterBackground: 'gray',
       showAboutGoInvo: true,
-    },
+    }),
   },
   {
     id: FEATURE_TEMPLATE_IDS.visual,
     title: 'Feature: Visual / stat-heavy',
     schemaType: 'feature',
-    value: {
+    value: featureTemplateValue({
       ...baseFeatureDefaults,
       contentWidth: 'wide',
       bulletStyle: 'star',
       newsletterBackground: 'gray',
       showPageMeta: false,
-    },
+    }),
   },
 ]
 
@@ -77,8 +84,9 @@ export const featureTemplateItems: TemplateItem[] = [
 
 export function resolveFeatureNewDocumentOptions(
   prev: TemplateItem[],
-  _context: NewDocumentOptionsContext
+  context: NewDocumentOptionsContext,
 ): TemplateItem[] {
+  void context
   const withoutDefaultFeatureItem = prev.filter((item) => item.templateId !== 'feature')
   return [...withoutDefaultFeatureItem, ...featureTemplateItems]
 }

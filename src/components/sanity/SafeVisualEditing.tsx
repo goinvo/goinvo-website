@@ -2,7 +2,8 @@
 
 import { VisualEditing } from 'next-sanity'
 import { useRouter } from 'next/navigation'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
+import { createDebouncedRefresh } from './refreshScheduler'
 
 /**
  * Wraps next-sanity's VisualEditing with a custom refresh handler.
@@ -14,31 +15,32 @@ import { useCallback, useRef } from 'react'
  * - Manual refresh: router.refresh() (soft RSC re-render) immediately.
  * - Mutation-driven refresh: debounced router.refresh() so server
  *   components (e.g. vision pages) re-render after edits settle. The
- *   debounce prevents per-keystroke refresh storms while still giving
- *   server-rendered pages live updates.
+ *   returned promise lets Presentation perform its extra consistency
+ *   refresh instead of assuming live loaders handled everything already.
  */
 const MUTATION_REFRESH_DEBOUNCE_MS = 1500
 
 export function SafeVisualEditing() {
   const router = useRouter()
-  const mutationTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const mutationRefresh = useMemo(
+    () => createDebouncedRefresh(() => router.refresh(), MUTATION_REFRESH_DEBOUNCE_MS),
+    [router],
+  )
+
+  useEffect(() => () => {
+    mutationRefresh.cancel()
+  }, [mutationRefresh])
 
   const handleRefresh = useCallback(
     (payload: { source: 'manual' | 'mutation'; livePreviewEnabled: boolean }) => {
       if (payload.source === 'mutation') {
-        if (mutationTimeoutRef.current) {
-          clearTimeout(mutationTimeoutRef.current)
-        }
-        mutationTimeoutRef.current = setTimeout(() => {
-          router.refresh()
-        }, MUTATION_REFRESH_DEBOUNCE_MS)
-        return false
+        return mutationRefresh.schedule()
       }
 
       router.refresh()
       return Promise.resolve()
     },
-    [router],
+    [mutationRefresh, router],
   )
 
   return <VisualEditing refresh={handleRefresh} />

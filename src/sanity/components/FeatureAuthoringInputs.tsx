@@ -1,11 +1,10 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Badge, Card, Flex, Stack, Text } from '@sanity/ui'
 import type { InputProps, ObjectInputProps } from 'sanity'
-import { useFormValue } from 'sanity'
-import { parseDataTableSource } from '@/lib/dataTable'
+import { PatchEvent, set, useFormValue, type StringInputProps } from 'sanity'
+import { parseDataTableSource, type DataTableDelimiter } from '@/lib/dataTable'
 import {
   getFeatureEditorExperience,
-  getFeatureEditorExperienceDescription,
-  getFeatureEditorExperienceLabel,
   hasFeatureCitations,
   hasFeaturePeople,
   hasFeatureReferences,
@@ -16,11 +15,22 @@ type FeatureDocumentValue = {
   title?: string
   slug?: { current?: string }
   image?: unknown
-  content?: any[]
+  content?: NonNullable<Parameters<typeof hasMeaningfulFeatureBody>[0]>
   authors?: unknown[]
   contributors?: unknown[]
   specialThanks?: unknown[]
-  previewReviewed?: boolean
+  metaDescription?: string
+  description?: string
+  categories?: string[]
+  date?: string
+}
+
+type ChecklistItem = {
+  key: string
+  label: string
+  done: boolean
+  kind: 'required' | 'optional'
+  detail: ReactNode
 }
 
 function cardStyles(accent: string) {
@@ -28,144 +38,162 @@ function cardStyles(accent: string) {
     border: `1px solid ${accent}`,
     borderRadius: '8px',
     padding: '14px 16px',
-    background: '#fff',
   } as const
 }
 
 function statusPill(label: string, tone: 'neutral' | 'good' | 'warn') {
-  const palette = {
-    neutral: { bg: '#f3f4f6', text: '#374151' },
-    good: { bg: '#e8f7ee', text: '#166534' },
-    warn: { bg: '#fff3e8', text: '#9a3412' },
-  }[tone]
+  const sanityTone = tone === 'good' ? 'positive' : tone === 'warn' ? 'caution' : 'default'
 
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        borderRadius: '999px',
-        padding: '2px 8px',
-        background: palette.bg,
-        color: palette.text,
-        fontSize: '12px',
-        fontWeight: 600,
-      }}
-    >
-      {label}
-    </span>
-  )
-}
-
-export function FeatureAuthoringStatusInput(_props: InputProps) {
-  const document = (useFormValue([]) || {}) as FeatureDocumentValue
-  const slug = document.slug?.current
-  const experience = getFeatureEditorExperience(slug)
-
-  const accent =
-    experience === 'static-override' ? '#d97706' :
-      experience === 'code-assisted' ? '#007385' :
-        '#166534'
-
-  const title =
-    experience === 'static-override' ? 'Static override detected' :
-      experience === 'code-assisted' ? 'Legacy compatibility article' :
-        'Guided CMS article'
-
-  return (
-    <div style={cardStyles(accent)}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-        <strong style={{ fontSize: '14px' }}>{title}</strong>
-        {statusPill(getFeatureEditorExperienceLabel(slug), experience === 'guided' ? 'good' : 'warn')}
-      </div>
-      <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#4b5563' }}>
-        {slug
-          ? getFeatureEditorExperienceDescription(slug)
-          : 'Generate a slug first. New feature articles use the guided CMS path by default, and the Studio will warn you if you pick a slug that is still controlled by code.'}
-      </p>
-      {experience === 'static-override' && slug && (
-        <p style={{ margin: '8px 0 0', fontSize: '12px', lineHeight: 1.5, color: '#9a3412' }}>
-          Live page source: <code>{`src/app/(main)/vision/${slug}/page.tsx`}</code>
-        </p>
-      )}
-      {experience === 'code-assisted' && (
-        <p style={{ margin: '8px 0 0', fontSize: '12px', lineHeight: 1.5, color: '#0f4c55' }}>
-          Safe rule for editors: use this page for content updates, but do not treat its formatting behavior as the model for new articles.
-        </p>
-      )}
-    </div>
-  )
+  return <Badge tone={sanityTone}>{label}</Badge>
 }
 
 export function FeaturePublishingChecklistInput(_props: InputProps) {
+  void _props
   const document = (useFormValue([]) || {}) as FeatureDocumentValue
+  const [openItemKey, setOpenItemKey] = useState<string | null>(null)
   const slug = document.slug?.current
   const experience = getFeatureEditorExperience(slug)
 
   if (experience === 'static-override') {
     return (
-      <div style={cardStyles('#d97706')}>
-        <strong style={{ display: 'block', marginBottom: 6, fontSize: '14px' }}>Publishing checklist</strong>
-        <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.6, color: '#4b5563' }}>
+      <Card border padding={4} radius={2} tone="caution">
+        <Text muted size={1}>
           This document still powers a code-rendered page. Use this entry for metadata and reference only, then review the live route directly after any code-side change.
-        </p>
-      </div>
+        </Text>
+      </Card>
     )
   }
 
-  const items = [
+  const requiredItems: ChecklistItem[] = [
     {
+      key: 'required-basics',
       label: 'Title, slug, and hero image are set',
       done: Boolean(document.title && slug && document.image),
+      kind: 'required',
+      detail: 'The title and slug create the public article URL. The hero image is also used by article cards and social previews when no override is set.',
     },
     {
+      key: 'required-content',
       label: 'Body content includes at least one real block',
       done: hasMeaningfulFeatureBody(document.content),
+      kind: 'required',
+      detail: 'Add the article body in Main Content. Empty paragraphs do not count; use real text, images, quotes, results, references, or other supported blocks.',
     },
     {
+      key: 'required-credits',
       label: 'Authors, contributors, or special thanks are configured',
       done: hasFeaturePeople(document),
+      kind: 'required',
+      detail: 'Add at least one person in Extra Content so published articles have clear authorship or contributor credit.',
     },
     {
+      key: 'required-references',
       label: 'References are present when the article uses citations',
       done: !hasFeatureCitations(document.content) || hasFeatureReferences(document.content),
-    },
-    {
-      label: 'Draft preview has been reviewed in the Presentation tab',
-      done: Boolean(document.previewReviewed),
+      kind: 'required',
+      detail: 'If the body uses citation marks, add a References block near the end of Main Content. Articles without citations automatically pass this check.',
     },
   ]
 
+  const optionalItems: ChecklistItem[] = [
+    {
+      key: 'optional-seo',
+      label: 'SEO meta description is added',
+      done: Boolean(document.metaDescription?.trim()),
+      kind: 'optional',
+      detail: 'Aim for about 140-160 characters. Write a clear summary with the article topic and value, not a pile of keywords.',
+    },
+    {
+      key: 'optional-card-summary',
+      label: 'Listing card description is added',
+      done: Boolean(document.description?.trim()),
+      kind: 'optional',
+      detail: 'Use one or two short sentences that help someone decide whether to open the article from the Vision listing.',
+    },
+    {
+      key: 'optional-categories',
+      label: 'Categories and display date are set when useful',
+      done: Boolean((document.categories?.length ?? 0) > 0 || document.date?.trim()),
+      kind: 'optional',
+      detail: 'Categories help with scanning and future filtering. Add a display date when the piece is time-sensitive or part of a dated publication flow.',
+    },
+  ]
+
+  const items = [...requiredItems, ...optionalItems].sort((left, right) => {
+    const rank = (item: ChecklistItem) => {
+      if (!item.done && item.kind === 'required') return 0
+      if (!item.done) return 1
+      if (item.kind === 'required') return 2
+      return 3
+    }
+
+    return rank(left) - rank(right)
+  })
+
   return (
-    <div style={cardStyles('#007385')}>
-      <strong style={{ display: 'block', marginBottom: 8, fontSize: '14px' }}>Publishing checklist</strong>
-      <div style={{ display: 'grid', gap: 8 }}>
+    <Card border padding={4} radius={2}>
+      <Stack space={3}>
+        <Stack space={2}>
         {items.map((item) => (
-          <div
+          <Card
             key={item.label}
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-              padding: '8px 10px',
-              borderRadius: 6,
-              background: item.done ? '#e8f7ee' : '#f9fafb',
-              border: `1px solid ${item.done ? '#86efac' : '#e5e7eb'}`,
+            border
+            padding={3}
+            radius={2}
+            tone={item.done ? 'positive' : 'default'}
+            style={{ cursor: 'pointer' }}
+            tabIndex={0}
+            onClick={() => setOpenItemKey((current) => (current === item.key ? null : item.key))}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                setOpenItemKey((current) => (current === item.key ? null : item.key))
+              }
             }}
           >
-            <span style={{ fontSize: 12, lineHeight: 1.4, fontWeight: 700 }}>{item.done ? 'DONE' : 'TODO'}</span>
-            <span style={{ fontSize: '13px', lineHeight: 1.5, color: '#374151' }}>{item.label}</span>
-          </div>
+            <Stack space={3}>
+              <Flex align="flex-start" gap={3}>
+                <Badge tone={item.done ? 'positive' : item.kind === 'optional' ? 'caution' : 'default'}>
+                  {item.done ? 'Done' : item.kind === 'optional' ? 'Optional' : 'Todo'}
+                </Badge>
+                <Text size={1}>{item.label}</Text>
+              </Flex>
+              {openItemKey === item.key && (
+                <Text muted size={1}>
+                  {item.detail}
+                </Text>
+              )}
+            </Stack>
+          </Card>
         ))}
-      </div>
-      <p style={{ margin: '10px 0 0', fontSize: '12px', lineHeight: 1.5, color: '#4b5563' }}>
-        Tip: after checking the draft in Presentation, toggle <strong>Draft preview reviewed</strong> below so collaborators know this article is ready to publish.
-      </p>
-    </div>
+        </Stack>
+      </Stack>
+    </Card>
   )
 }
 
+export function ContentWidthInput(props: StringInputProps) {
+  const { onChange, renderDefault, value } = props
+  const selectedValue = value || 'medium'
+
+  useEffect(() => {
+    if (!value) {
+      onChange(PatchEvent.from(set('medium')))
+    }
+  }, [onChange, value])
+
+  return renderDefault({ ...props, value: selectedValue })
+}
+
 type ResultVariant = 'row' | 'stacked' | 'statBand' | 'legacyRow' | 'grid'
+type ResultsBlockValue = {
+  variant?: ResultVariant
+}
+type DataTableBlockValue = {
+  sourceData?: string
+  delimiter?: DataTableDelimiter
+  useFirstRowAsHeader?: boolean
+}
 
 const RESULT_VARIANT_CARDS: Array<{
   value: ResultVariant
@@ -240,7 +268,7 @@ const RESULT_VARIANT_CARDS: Array<{
   },
 ]
 
-export function ResultsBlockInput(props: ObjectInputProps<Record<string, any>>) {
+export function ResultsBlockInput(props: ObjectInputProps<ResultsBlockValue>) {
   const currentVariant = (props.value?.variant || 'row') as ResultVariant
   const selectedCard = RESULT_VARIANT_CARDS.find((card) => card.value === currentVariant)
 
@@ -259,7 +287,6 @@ export function ResultsBlockInput(props: ObjectInputProps<Record<string, any>>) 
                 border: `2px solid ${card.value === currentVariant ? '#007385' : '#d1d5db'}`,
                 borderRadius: 8,
                 padding: 12,
-                background: card.value === currentVariant ? '#f0fbfc' : '#fff',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
@@ -282,7 +309,7 @@ export function ResultsBlockInput(props: ObjectInputProps<Record<string, any>>) 
   )
 }
 
-export function DataTableBlockInput(props: ObjectInputProps<Record<string, any>>) {
+export function DataTableBlockInput(props: ObjectInputProps<DataTableBlockValue>) {
   const source = typeof props.value?.sourceData === 'string' ? props.value.sourceData : ''
   const delimiter = props.value?.delimiter || 'auto'
   const previewRows = parseDataTableSource(source, delimiter).slice(0, 5)
@@ -313,7 +340,6 @@ export function DataTableBlockInput(props: ObjectInputProps<Record<string, any>>
                           textAlign: 'left',
                           padding: '6px 8px',
                           borderBottom: '1px solid #d1d5db',
-                          background: '#f9fafb',
                         }}
                       >
                         {cell || `Column ${index + 1}`}
@@ -331,7 +357,6 @@ export function DataTableBlockInput(props: ObjectInputProps<Record<string, any>>
                         style={{
                           padding: '6px 8px',
                           borderBottom: '1px solid #e5e7eb',
-                          background: rowIndex % 2 === 0 ? '#f9f9f9' : '#fff',
                         }}
                       >
                         {cell}

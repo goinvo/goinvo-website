@@ -1,4 +1,5 @@
 import { defineType, defineArrayMember } from 'sanity'
+import { AsteriskIcon, OlistIcon, UlistIcon } from '@sanity/icons'
 import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
@@ -33,6 +34,11 @@ export default defineType({
         { title: 'Small heading (H4)', value: 'h4' },
         { title: 'Quote', value: 'blockquote' },
         { title: 'Callout', value: 'callout' },
+      ],
+      lists: [
+        { title: 'Star bullet', value: 'bullet', icon: AsteriskIcon },
+        { title: 'Disc bullet', value: 'plainBullet', icon: UlistIcon },
+        { title: 'Numbered', value: 'number', icon: OlistIcon },
       ],
       marks: {
         decorators: [

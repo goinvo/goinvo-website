@@ -1,5 +1,5 @@
 import type { StructureBuilder, StructureResolver } from 'sanity/structure'
-import { orderableDocumentListDeskItem } from '@sanity/orderable-document-list'
+import { goinvoOrderableDocumentListDeskItem } from './orderable/deskItem'
 
 /**
  * Custom desk structure: drag-to-reorder lists for the document types
@@ -9,6 +9,7 @@ import { orderableDocumentListDeskItem } from '@sanity/orderable-document-list'
  * orderRank, and the numeric `order` field has been retired.
  */
 const ORDERABLE_TYPES = ['caseStudy', 'feature', 'teamMember'] as const
+const HIDDEN_TYPES = ['orderPreset'] as const
 
 export const structure: StructureResolver = (S, context) => {
   return S.list()
@@ -23,7 +24,8 @@ export const structure: StructureResolver = (S, context) => {
         const id = listItem.getId()
         return (
           id !== undefined &&
-          !(ORDERABLE_TYPES as readonly string[]).includes(id)
+          !(ORDERABLE_TYPES as readonly string[]).includes(id) &&
+          !(HIDDEN_TYPES as readonly string[]).includes(id)
         )
       }),
     ])
@@ -40,7 +42,7 @@ function orderableList(
   context: Parameters<StructureResolver>[1],
   { type, title, icon }: OrderableOpts,
 ) {
-  return orderableDocumentListDeskItem({
+  return goinvoOrderableDocumentListDeskItem({
     type,
     title,
     icon,

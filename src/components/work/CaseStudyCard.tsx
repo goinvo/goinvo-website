@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import type { CaseStudy } from '@/types'
-import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
+import { urlForImage } from '@/sanity/lib/image'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { useHero } from '@/context/HeroContext'
 import { trackCaseStudyClick } from '@/lib/analytics'
@@ -30,7 +30,7 @@ export function CaseStudyCard({
 
   const imageUrl = hasHeroAsset
     ? urlForImage(caseStudy.image!).width(800).height(500).url()
-    : PLACEHOLDER_IMAGE_URL
+    : null
 
   // Higher-res URL for the hero (overlay morph + PersistentHero)
   // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
@@ -39,9 +39,11 @@ export function CaseStudyCard({
     ? urlForImage(caseStudy.image!).width(1600).height(564).url()
     : null
 
+  const caseStudySlug = caseStudy.slug.current
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const section = (caseStudy as any)._type === 'feature' ? 'vision' : 'work'
-  const href = `/${section}/${caseStudy.slug.current}`
+  const href = `/${section}/${caseStudySlug}`
   const showClient = variant === 'default' && section === 'work' && !!caseStudy.client
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const detailText = caseStudy.caption || (caseStudy as any).description
@@ -61,7 +63,7 @@ export function CaseStudyCard({
 
       trackCaseStudyClick({
         case_study_title: caseStudy.title,
-        case_study_slug: caseStudy.slug.current,
+        case_study_slug: caseStudySlug,
         click_location: 'work_grid',
       })
 
@@ -81,7 +83,7 @@ export function CaseStudyCard({
         href,
       })
     },
-    [ctx, heroImageUrl, href, setCaseStudyHero]
+    [caseStudy.title, caseStudySlug, ctx, heroImageUrl, href, setCaseStudyHero]
   )
 
   return (
@@ -95,14 +97,20 @@ export function CaseStudyCard({
           whileHover={{ y: -4 }}
           transition={{ duration: 0.3 }}
         >
-          <div data-card-image className="relative h-[260px] overflow-hidden [backface-visibility:hidden]">
-            <Image
-              src={imageUrl}
-              alt={caseStudy.title}
-              fill
-              className="object-cover [backface-visibility:hidden] group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
-              style={{ objectPosition: 'center top' }}
-            />
+          <div data-card-image className="relative h-[260px] overflow-hidden bg-gray-medium [backface-visibility:hidden]">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={caseStudy.title}
+                fill
+                className="object-cover [backface-visibility:hidden] group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+                style={{ objectPosition: 'center top' }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray text-sm">
+                No image
+              </div>
+            )}
           </div>
           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
             <p className="font-semibold text-black">{caseStudy.title}</p>

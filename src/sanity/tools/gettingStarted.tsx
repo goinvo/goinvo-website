@@ -22,7 +22,7 @@ function GettingStartedComponent() {
       </Section>
 
       <Section title="2. Content Types at a Glance">
-        <p>Every entry in the sidebar maps to a document type. Here's exactly what each one controls and where it shows up on the public site.</p>
+        <p>Every entry in the sidebar maps to a document type. Here&apos;s exactly what each one controls and where it shows up on the public site.</p>
         <Table
           headers={['Type', 'Where it shows on the site', 'Purpose']}
           rows={[
@@ -61,7 +61,6 @@ function GettingStartedComponent() {
         <ol>
           <li>Create or edit a document - it saves automatically as a draft.</li>
           <li>Open <strong>Presentation</strong> to review the draft on the site before publishing.</li>
-          <li>Use the <strong>Draft Preview Reviewed</strong> checkbox in the Feature editor once you have checked the page.</li>
           <li>Click the green <strong>Publish</strong> button when the article is ready.</li>
         </ol>
 
@@ -126,8 +125,8 @@ function GettingStartedComponent() {
         </p>
         <ul>
           <li><strong>People</strong> controls authors, contributors, special thanks, newsletter background, and About GoInvo placement.</li>
-          <li><strong>Page Settings</strong> holds listing behavior, the preview checkbox, and the article acceptance checklist.</li>
-          <li><strong>SEO</strong> is where you write the meta description for search engines.</li>
+          <li><strong>Page Settings</strong> holds listing behavior and the article acceptance checklist.</li>
+          <li><strong>SEO</strong> is where you write the meta description for search engines. The checklist also calls out optional SEO and listing-summary improvements.</li>
         </ul>
         <p>
           If a section is not relevant yet, leave it blank. The editor will hide some advanced controls until they are needed.
@@ -141,7 +140,7 @@ function GettingStartedComponent() {
           <li>Body content is complete and in the right order.</li>
           <li>Authors, contributors, or special thanks are configured when needed.</li>
           <li>References are present if citations are used.</li>
-          <li>Draft preview has been reviewed before publish.</li>
+          <li>Optional SEO, listing summary, categories, and display date are considered.</li>
         </ul>
       </Section>
 
