@@ -5,6 +5,7 @@
  * - Button variant mismatches (primary vs secondary)
  * - Button position/styling differences
  * - Video autoplay mismatches
+ * - Content order mismatches
  * - Element count differences
  * - Heading style differences
  *
@@ -200,8 +201,84 @@ function normalizeColor(c: string): string {
   return `#${(+r).toString(16).padStart(2, '0')}${(+g).toString(16).padStart(2, '0')}${(+b).toString(16).padStart(2, '0')}`
 }
 
+interface ContentOrderToken {
+  key: string
+  label: string
+  index: number
+}
+
+function normalizeText(s: string): string {
+  return s.replace(/\s+/g, ' ').replace(/[^\w\s]/g, ' ').trim().toLowerCase()
+}
+
+function collectContentOrderTokens(nodes: TreeNode[]): ContentOrderToken[] {
+  const orderedTags = new Set(['h1', 'h2', 'h3', 'h4', 'p', 'img', 'video', 'iframe'])
+
+  return nodes
+    .filter(n => orderedTags.has(n.tag))
+    .map((node): ContentOrderToken | null => {
+      if (node.tag === 'img' || node.tag === 'video' || node.tag === 'iframe') {
+        const source = (node.src || '').trim()
+        if (!source) return null
+        return { key: `${node.tag}:${source.toLowerCase()}`, label: `<${node.tag}> ${source}`, index: 0 }
+      }
+
+      const text = normalizeText(node.text)
+      if (text.length < 24) return null
+      return {
+        key: `${node.tag}:${text.slice(0, 90)}`,
+        label: `<${node.tag}> "${node.text.replace(/\s+/g, ' ').slice(0, 60)}"`,
+        index: 0,
+      }
+    })
+    .filter((token): token is ContentOrderToken => Boolean(token))
+    .map((token, index) => ({ ...token, index }))
+}
+
+function uniqueOrderTokenMap(tokens: ContentOrderToken[]): Map<string, ContentOrderToken> {
+  const counts = new Map<string, number>()
+  for (const token of tokens) counts.set(token.key, (counts.get(token.key) || 0) + 1)
+
+  const unique = new Map<string, ContentOrderToken>()
+  for (const token of tokens) {
+    if (counts.get(token.key) === 1) unique.set(token.key, token)
+  }
+  return unique
+}
+
+function countMediaBetween(nodes: TreeNode[], startIndex: number, endIndex: number): number {
+  if (startIndex < 0 || endIndex < 0 || startIndex === endIndex) return 0
+
+  const from = Math.min(startIndex, endIndex) + 1
+  const to = Math.max(startIndex, endIndex)
+  return nodes
+    .slice(from, to)
+    .filter(n => ['img', 'video', 'iframe'].includes(n.tag))
+    .length
+}
+
+function templateBoundaryIndex(nodes: TreeNode[]): number {
+  const boundaryText = [
+    'authors',
+    'author',
+    'contributors',
+    'subscribe to our newsletter',
+    'up next',
+    'references',
+    'about goinvo',
+    'special thanks',
+  ]
+  const index = nodes.findIndex(node => {
+    const text = normalizeText(node.text)
+    return ['h2', 'h3', 'h4', 'p'].includes(node.tag) &&
+      boundaryText.some(boundary => text === boundary || text.startsWith(`${boundary} `))
+  })
+
+  return index >= 0 ? index : nodes.length
+}
+
 interface Issue {
-  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'EXTRA_CONTENT' | 'SPACING'
+  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'CONTENT_ORDER' | 'EXTRA_CONTENT' | 'SPACING'
   severity: 'high' | 'medium' | 'low'
   detail: string
 }
@@ -274,6 +351,67 @@ function compareTrees(a: TreeNode, b: TreeNode): Issue[] {
   }
 
   // ── Image column placement comparison ────────────────────────────
+  // Content order comparison
+  const contentFlatA = flatA.slice(0, templateBoundaryIndex(flatA))
+  const contentFlatB = flatB.slice(0, templateBoundaryIndex(flatB))
+  const aOrder = collectContentOrderTokens(contentFlatA)
+  const bOrder = collectContentOrderTokens(contentFlatB)
+  const aOrderByKey = uniqueOrderTokenMap(aOrder)
+  const bOrderByKey = uniqueOrderTokenMap(bOrder)
+  const sharedOrder = aOrder.filter(token => aOrderByKey.has(token.key) && bOrderByKey.has(token.key))
+  let lastBToken: ContentOrderToken | null = null
+  let orderIssues = 0
+  for (const aToken of sharedOrder) {
+    const bToken = bOrderByKey.get(aToken.key)
+    if (!bToken) continue
+
+    if (lastBToken && bToken.index < lastBToken.index) {
+      orderIssues += 1
+      if (orderIssues <= 5) {
+        issues.push({
+          type: 'CONTENT_ORDER',
+          severity: 'high',
+          detail: `${bToken.label} appears before ${lastBToken.label} on Next.js, but after it on Gatsby`,
+        })
+      }
+      continue
+    }
+
+    lastBToken = bToken
+  }
+
+  const orderTextTags = new Set(['h1', 'h2', 'h3', 'h4', 'p'])
+  const aTextOrder = contentFlatA
+    .map((node, index) => ({ node, index, key: `${node.tag}:${normalizeText(node.text).slice(0, 90)}` }))
+    .filter(item => orderTextTags.has(item.node.tag) && normalizeText(item.node.text).length >= 24)
+  const bTextOrder = contentFlatB
+    .map((node, index) => ({ node, index, key: `${node.tag}:${normalizeText(node.text).slice(0, 90)}` }))
+    .filter(item => orderTextTags.has(item.node.tag) && normalizeText(item.node.text).length >= 24)
+  const aTextCounts = new Map<string, number>()
+  const bTextCounts = new Map<string, number>()
+  for (const item of aTextOrder) aTextCounts.set(item.key, (aTextCounts.get(item.key) || 0) + 1)
+  for (const item of bTextOrder) bTextCounts.set(item.key, (bTextCounts.get(item.key) || 0) + 1)
+  const bTextByKey = new Map(bTextOrder.filter(item => bTextCounts.get(item.key) === 1).map(item => [item.key, item]))
+  const sharedTextOrder = aTextOrder.filter(item => aTextCounts.get(item.key) === 1 && bTextByKey.has(item.key))
+
+  for (let index = 1; index < sharedTextOrder.length; index += 1) {
+    const previousA = sharedTextOrder[index - 1]
+    const currentA = sharedTextOrder[index]
+    const previousB = bTextByKey.get(previousA.key)
+    const currentB = bTextByKey.get(currentA.key)
+    if (!previousB || !currentB) continue
+
+    const aMediaBetween = countMediaBetween(contentFlatA, previousA.index, currentA.index)
+    const bMediaBetween = countMediaBetween(contentFlatB, previousB.index, currentB.index)
+    if (aMediaBetween !== bMediaBetween) {
+      issues.push({
+        type: 'CONTENT_ORDER',
+        severity: 'high',
+        detail: `Media between "${previousA.node.text.slice(0, 38)}" and "${currentA.node.text.slice(0, 38)}": Gatsby ${aMediaBetween}, Next.js ${bMediaBetween}`,
+      })
+    }
+  }
+
   // Detect images that are standalone on Gatsby but in a grid on Next.js (or vice versa)
   // Filter: skip hero (y < 300), unloaded (height 0), author headshots (width < 400 AND y > 80% of page)
   const filterContentImgs = (nodes: TreeNode[]) => {

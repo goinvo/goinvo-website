@@ -9,6 +9,7 @@ import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
+import { ArticleMeta } from '@/components/ui/ArticleMeta'
 import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
 import { stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
 import { ModelViewerSection } from './ModelViewerSection'
@@ -75,16 +76,7 @@ export default async function VisualStorytellingPage() {
           <h1 className="header-xl mt-8 mb-6" style={{ viewTransitionName: 'page-title' }}>
             {feature.title}
           </h1>
-          {(feature.categories?.length || feature.date) && (
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
-              {feature.categories?.map((cat) => (
-                <span key={cat} className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1">
-                  {cat}
-                </span>
-              ))}
-              {feature.date && <span className="text-gray text-sm">{feature.date}</span>}
-            </div>
-          )}
+          <ArticleMeta date={feature.date} categories={feature.categories} />
         </div>
       </Reveal>
 

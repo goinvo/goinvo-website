@@ -114,15 +114,7 @@ function TransitionContent({
   // Track the page that was visible when the card transition started.
   // Only THAT page should collapse — not the target page, not pages
   // visited after the target.
-  const sourceRef = useRef<string | null>(null)
-  if (isCard && sourceRef.current === null) {
-    sourceRef.current = pathname
-  }
-  if (!isCard) {
-    sourceRef.current = null
-  }
-
-  const shouldCollapse = isCard && pathname === sourceRef.current
+  const shouldCollapse = isCard && pathname !== ctx?.cardRect?.href
   const animateState = shouldCollapse ? 'collapse' : 'visible'
 
   // Framer Motion leaves `filter: blur(0px)` as an inline style in the
@@ -177,10 +169,21 @@ function TransitionContent({
 
 export function TransitionLayout({
   children,
+  disableTransitions,
 }: {
   children: React.ReactNode
+  disableTransitions?: boolean
 }) {
   const pathname = usePathname()
+
+  if (disableTransitions) {
+    return (
+      <>
+        {children}
+        <Footer />
+      </>
+    )
+  }
 
   return (
     <PageTransitionProvider>

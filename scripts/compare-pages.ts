@@ -351,7 +351,7 @@ function checkSpacingIssues(html: string): Issue[] {
  * Run standalone style checks on Next.js page (no Gatsby comparison needed).
  * Catches font, spacing, and class issues purely from Next.js rendered output.
  */
-function auditNextjsStyle(analysis: PageAnalysis, nextjsHtml?: string): Issue[] {
+function auditNextjsStyle(analysis: PageAnalysis, nextjsHtml?: string, slug?: string): Issue[] {
   const issues: Issue[] = []
 
   // ---- List styling checks ----
@@ -359,12 +359,38 @@ function auditNextjsStyle(analysis: PageAnalysis, nextjsHtml?: string): Issue[] 
     const content = getContentArea(nextjsHtml)
 
     // Check for <ul> elements using list-disc instead of .ul class (should use orange star bullets)
-    const listDiscUls = (content.match(/<ul[^>]*class(?:Name)?="[^"]*list-disc[^"]*"/gi) || [])
+    const allowNativeDiscLists = slug ? INTERACTIVE_OVERRIDE_SLUGS.has(slug) : false
+    const listDiscUls = allowNativeDiscLists
+      ? []
+      : (content.match(/<ul[^>]*class(?:Name)?="[^"]*list-disc[^"]*"/gi) || [])
     if (listDiscUls.length > 0) {
       issues.push({
         severity: 'medium',
         category: 'LIST_STYLE',
         message: `${listDiscUls.length} <ul> using list-disc instead of .ul class (should use orange star bullets)`,
+      })
+    }
+
+    // Tailwind preflight removes native list markers. Ordered lists need an
+    // explicit list style unless they are rendered inside a prose system that
+    // restores markers.
+    const olTags = [...content.matchAll(/<ol\b([^>]*)>/gi)]
+    const unstyledOls = olTags.filter(([, attrs]) => {
+      const classMatch = attrs.match(/class(?:Name)?="([^"]*)"/i)
+      const styleMatch = attrs.match(/style="([^"]*)"/i)
+      const classes = (classMatch?.[1] || '').toLowerCase()
+      const style = (styleMatch?.[1] || '').toLowerCase()
+      return !classes.includes('list-decimal') &&
+        !classes.includes('list-[decimal') &&
+        !classes.includes('list-none') &&
+        !classes.includes('prose') &&
+        !style.includes('list-style')
+    })
+    if (unstyledOls.length > 0) {
+      issues.push({
+        severity: 'medium',
+        category: 'LIST_STYLE',
+        message: `${unstyledOls.length} <ol> without an explicit decimal list style (Tailwind preflight can hide numbering)`,
       })
     }
 
@@ -503,6 +529,8 @@ interface GatsbySourceAnalysis {
   exists: boolean
   imageClasses: { className: string; context: string }[]
   textColorClasses: { className: string; context: string }[]
+  authorNames: string[]
+  contributorNames: string[]
   columnsCount: number
   columnItems: { layout: string; context: string }[]
   headingTexts: string[]
@@ -515,10 +543,138 @@ interface GatsbySourceAnalysis {
   fullBleedImageCount: number
 }
 
+function decodeBasicEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/<!-- -->/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function normalizePersonName(name: string): string {
+  return decodeBasicEntities(name)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s'-]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function uniqueNames(names: string[]): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const name of names.map(decodeBasicEntities).filter(Boolean)) {
+    const key = normalizePersonName(name)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    result.push(name)
+  }
+  return result
+}
+
+function extractAuthorNamesFromJsx(region: string): string[] {
+  const names: string[] = []
+  const authorRegex = /<Author\b[^>]*\bname=["']([^"']+)["'][^>]*\/?>/g
+  let match
+  while ((match = authorRegex.exec(region)) !== null) {
+    names.push(match[1])
+  }
+  return uniqueNames(names)
+}
+
+function findHeadingIndex(content: string, label: string, start = 0): number {
+  const regex = new RegExp(`<h[1-4][^>]*>[\\s\\S]*?${label}[\\s\\S]*?<\\/h[1-4]>`, 'i')
+  const match = regex.exec(content.slice(start))
+  return match ? start + match.index : -1
+}
+
+function findNextSectionIndex(content: string, start: number): number {
+  const nextPatterns = [
+    /<h[1-4][^>]*>[\s\S]*?(?:References|Sources|Subscribe|Newsletter)[\s\S]*?<\/h[1-4]>/i,
+    /<SubscribeForm\b/i,
+    /<NewsletterSection\b/i,
+    /id=["']references["']/i,
+    /subscribe\s*to\s*our\s*newsletter/i,
+  ]
+
+  let next = -1
+  const rest = content.slice(start)
+  for (const pattern of nextPatterns) {
+    const match = pattern.exec(rest)
+    if (!match) continue
+    const idx = start + match.index
+    if (next < 0 || idx < next) next = idx
+  }
+  return next
+}
+
+function extractGatsbyAuthorGroups(src: string): { authorNames: string[]; contributorNames: string[] } {
+  const authorsIdx = findHeadingIndex(src, 'Authors?')
+  if (authorsIdx < 0) {
+    return { authorNames: [], contributorNames: [] }
+  }
+
+  const contributorsIdx = findHeadingIndex(src, 'Contributors?', authorsIdx)
+  const nextIdx = findNextSectionIndex(src, contributorsIdx >= 0 ? contributorsIdx : authorsIdx)
+  const authorsRegionEnd = contributorsIdx >= 0 ? contributorsIdx : (nextIdx >= 0 ? nextIdx : src.length)
+  const contributorsRegionEnd = nextIdx >= 0 ? nextIdx : src.length
+
+  return {
+    authorNames: extractAuthorNamesFromJsx(src.slice(authorsIdx, authorsRegionEnd)),
+    contributorNames: contributorsIdx >= 0
+      ? extractAuthorNamesFromJsx(src.slice(contributorsIdx, contributorsRegionEnd))
+      : [],
+  }
+}
+
+function extractRenderedNames(region: string): string[] {
+  const names: string[] = []
+  const strongRegex = /<strong\b[^>]*>([\s\S]*?)<\/strong>/gi
+  let match
+  while ((match = strongRegex.exec(region)) !== null) {
+    const name = stripTags(match[1])
+    if (name) names.push(name)
+  }
+  return uniqueNames(names)
+}
+
+function extractRenderedAuthorGroups(content: string): { authorNames: string[]; contributorNames: string[] } {
+  const authorsIdx = findHeadingIndex(content, 'Authors?')
+  if (authorsIdx < 0) {
+    return { authorNames: [], contributorNames: [] }
+  }
+
+  const contributorsIdx = findHeadingIndex(content, 'Contributors?', authorsIdx)
+  const nextIdx = findNextSectionIndex(content, contributorsIdx >= 0 ? contributorsIdx : authorsIdx)
+  const authorsRegionEnd = contributorsIdx >= 0 ? contributorsIdx : (nextIdx >= 0 ? nextIdx : content.length)
+  const contributorsRegionEnd = nextIdx >= 0 ? nextIdx : content.length
+
+  return {
+    authorNames: extractRenderedNames(content.slice(authorsIdx, authorsRegionEnd)),
+    contributorNames: contributorsIdx >= 0
+      ? extractRenderedNames(content.slice(contributorsIdx, contributorsRegionEnd))
+      : [],
+  }
+}
+
+function namesDifference(expected: string[], actual: string[]): string[] {
+  const actualKeys = new Set(actual.map(normalizePersonName))
+  return expected.filter(name => !actualKeys.has(normalizePersonName(name)))
+}
+
+function namesIntersection(a: string[], b: string[]): string[] {
+  const bKeys = new Set(b.map(normalizePersonName))
+  return a.filter(name => bKeys.has(normalizePersonName(name)))
+}
+
 /** Read and analyze the Gatsby JSX source for a vision page */
 function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
   const empty: GatsbySourceAnalysis = {
     exists: false, imageClasses: [], textColorClasses: [],
+    authorNames: [], contributorNames: [],
     columnsCount: 0, columnItems: [], headingTexts: [],
     hasMethodology: false, hasReferences: false, hasAuthors: false,
     anchorIds: [], quoteCount: 0, supCount: 0, fullBleedImageCount: 0,
@@ -590,7 +746,7 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
   const headingTexts: string[] = []
   const headingRegex = /<h[1-4][^>]*>([^<]+)<\/h[1-4]>/g
   while ((m = headingRegex.exec(src)) !== null) {
-    let text = m[1].trim()
+    const text = m[1].trim()
       .replace(/\{'\s*'\}/g, ' ')    // strip JSX whitespace {' '}
       .replace(/\s+/g, ' ')
       .trim()
@@ -601,6 +757,7 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
   const hasMethodology = /id="methodology"|Methodology<\/h/i.test(src)
   const hasReferences = /<References|id="references"|sources-wrapper|Sources<\/h/i.test(src)
   const hasAuthors = /<Author\b|AuthorSection|id=["'](?:authors|credits)["']|className=["'][^"']*\b(?:author|contributors?|contributor)\b/i.test(src)
+  const { authorNames, contributorNames } = extractGatsbyAuthorGroups(src)
 
   // Extract anchor IDs (id="...")
   const anchorIds: string[] = []
@@ -640,6 +797,8 @@ function analyzeGatsbySource(slug: string): GatsbySourceAnalysis {
     exists: true,
     imageClasses,
     textColorClasses,
+    authorNames,
+    contributorNames,
     columnsCount: columnsMatches.length,
     columnItems,
     headingTexts,
@@ -767,6 +926,54 @@ function crossReferenceGatsbySource(
       category: 'DUPLICATE_SECTION',
       message: `"Authors" heading appears ${authorHeadingMatches.length} times — content likely has an Authors heading that should be stripped (template already renders AuthorSection)`,
     })
+  }
+
+  const renderedGroups = extractRenderedAuthorGroups(content)
+  const duplicatedPeople = namesIntersection(renderedGroups.authorNames, renderedGroups.contributorNames)
+  if (duplicatedPeople.length > 0) {
+    issues.push({
+      severity: 'high',
+      category: 'DUPLICATE_AUTHOR',
+      message: `${duplicatedPeople.join(', ')} listed in both Authors and Contributors`,
+    })
+  }
+
+  if (gatsbySrc.authorNames.length > 0) {
+    const missingAuthors = namesDifference(gatsbySrc.authorNames, renderedGroups.authorNames)
+    const extraAuthors = namesDifference(renderedGroups.authorNames, gatsbySrc.authorNames)
+    if (missingAuthors.length > 0) {
+      issues.push({
+        severity: 'high',
+        category: 'AUTHOR_MISMATCH',
+        message: `Gatsby author(s) missing from Next.js Authors: ${missingAuthors.join(', ')}`,
+      })
+    }
+    if (extraAuthors.length > 0) {
+      issues.push({
+        severity: 'high',
+        category: 'AUTHOR_MISMATCH',
+        message: `Next.js Authors has extra name(s) not in Gatsby Authors: ${extraAuthors.join(', ')}`,
+      })
+    }
+  }
+
+  if (gatsbySrc.contributorNames.length > 0) {
+    const missingContributors = namesDifference(gatsbySrc.contributorNames, renderedGroups.contributorNames)
+    const extraContributors = namesDifference(renderedGroups.contributorNames, gatsbySrc.contributorNames)
+    if (missingContributors.length > 0) {
+      issues.push({
+        severity: 'high',
+        category: 'AUTHOR_MISMATCH',
+        message: `Gatsby contributor(s) missing from Next.js Contributors: ${missingContributors.join(', ')}`,
+      })
+    }
+    if (extraContributors.length > 0) {
+      issues.push({
+        severity: 'high',
+        category: 'AUTHOR_MISMATCH',
+        message: `Next.js Contributors has extra name(s) not in Gatsby Contributors: ${extraContributors.join(', ')}`,
+      })
+    }
   }
 
   // ---- SECTION ORDERING ----
@@ -1313,7 +1520,7 @@ function compare(slug: string, gatsby: PageAnalysis, nextjs: PageAnalysis, nextj
   }
 
   // ---- STANDALONE NEXT.JS STYLE CHECKS ----
-  issues.push(...auditNextjsStyle(nextjs, nextjsHtml))
+  issues.push(...auditNextjsStyle(nextjs, nextjsHtml, slug))
 
   // ---- GATSBY SOURCE CROSS-REFERENCE ----
   const gatsbySrc = analyzeGatsbySource(slug)
@@ -1380,7 +1587,7 @@ async function main() {
     if (!gatsbyHtml) {
       // No Gatsby equivalent — run standalone Next.js style audit + source cross-ref
       if (!jsonOutput) process.stdout.write('(standalone audit) ')
-      issues = auditNextjsStyle(analyzeHtml(nextjsHtml), nextjsHtml)
+      issues = auditNextjsStyle(analyzeHtml(nextjsHtml), nextjsHtml, slug)
       const gatsbySrc = analyzeGatsbySource(slug)
       if (gatsbySrc.exists) {
         issues.push(...crossReferenceGatsbySource(slug, gatsbySrc, nextjsHtml))
@@ -1393,14 +1600,26 @@ async function main() {
     criticalCount += issues.filter(i => i.severity === 'critical').length
     const crits = issues.filter(i => i.severity === 'critical').length
     const highs = issues.filter(i => i.severity === 'high').length
-    const isClean = crits === 0 && highs === 0
+    const mediums = issues.filter(i => i.severity === 'medium').length
+    const lows = issues.filter(i => i.severity === 'low').length
+    const hasBlockingIssues = crits > 0 || highs > 0
+    const isClean = issues.length === 0
     if (isClean) cleanPages++
 
     if (!jsonOutput) {
-      if (isClean && issues.length === 0) {
+      if (isClean) {
         console.log('✅')
-      } else if (isClean) {
-        console.log(`✅ (${issues.length} low)`)
+      } else if (!hasBlockingIssues) {
+        console.log(`⚠️  ${issues.length} issues (${mediums}M ${lows}L)`)
+        const showSeverities = verbose
+          ? ['critical', 'high', 'medium', 'low']
+          : ['medium']
+        for (const issue of issues.filter(i => showSeverities.includes(i.severity))) {
+          const icons: Record<string, string> = { critical: '🔴', high: '🟠', medium: '🟡', low: '⚪' }
+          console.log(`     ${icons[issue.severity]} [${issue.category}] ${issue.message}`)
+        }
+        const hidden = issues.filter(i => !showSeverities.includes(i.severity)).length
+        if (hidden > 0) console.log(`     ℹ️  +${hidden} low (use --verbose)`)
       } else {
         console.log(`❌ ${issues.length} issues (${crits}C ${highs}H)`)
         const showSeverities = verbose

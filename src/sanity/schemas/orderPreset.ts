@@ -13,6 +13,12 @@ export default defineType({
       readOnly: true,
     }),
     defineField({
+      name: 'name',
+      title: 'Preset Name',
+      type: 'string',
+      readOnly: true,
+    }),
+    defineField({
       name: 'orderType',
       title: 'Ordered Type',
       type: 'string',
@@ -34,7 +40,7 @@ export default defineType({
   ],
   preview: {
     select: {
-      title: 'title',
+      title: 'name',
       subtitle: 'updatedAt',
     },
   },

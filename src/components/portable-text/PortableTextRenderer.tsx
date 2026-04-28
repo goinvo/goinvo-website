@@ -1,6 +1,6 @@
 'use client'
 
-import { Children, useEffect, useRef, useState, Fragment } from 'react'
+import { Children, cloneElement, Fragment, isValidElement, useEffect, useRef, useState } from 'react'
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
@@ -59,6 +59,31 @@ function ArticleReveal({
   )
 }
 
+function renderSoftLineBreaks(children: React.ReactNode): React.ReactNode {
+  return Children.map(children, (child) => {
+    if (typeof child === 'string') {
+      const parts = child.split('\n')
+      if (parts.length === 1) return child
+
+      return parts.map((part, index) => (
+        <Fragment key={index}>
+          {index > 0 && <br />}
+          {part}
+        </Fragment>
+      ))
+    }
+
+    if (isValidElement(child)) {
+      const props = child.props as { children?: React.ReactNode }
+      if (props.children) {
+        return cloneElement(child, undefined, renderSoftLineBreaks(props.children))
+      }
+    }
+
+    return child
+  })
+}
+
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
@@ -95,10 +120,12 @@ const bgSectionColors: Record<string, string> = {
 function PortableImage({
   value,
   sizeClassOverrides = {},
+  marginClassName = 'my-8',
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any
   sizeClassOverrides?: Partial<Record<string, string>>
+  marginClassName?: string
 }) {
   if (!value?.asset) return null
   const size = value.size || 'full'
@@ -114,19 +141,42 @@ function PortableImage({
   const imageUrl = urlForImage(value).width(width).url()
   const sizeClass = sizeClassOverrides[size] || imageSizeClasses[size] || imageSizeClasses.full
   const imageLink = typeof value.link === 'string' ? value.link.trim() : ''
+  const mobileImageUrl = typeof value.mobileImageUrl === 'string' ? value.mobileImageUrl.trim() : ''
+  const accessibilityDescription =
+    typeof value.accessibilityDescription === 'string'
+      ? value.accessibilityDescription.trim()
+      : ''
+  const accessibilityDescriptionId = accessibilityDescription
+    ? `image-description-${value._key || value.asset?._ref || imageUrl.replace(/[^a-z0-9]+/gi, '-')}`
+    : undefined
+  const imageAlt = value.decorative ? '' : value.alt || ''
   const isExternalImageLink = /^(https?:\/\/|mailto:)/i.test(imageLink)
   const imageElement = (
-    <img
-      src={imageUrl}
-      alt={value.alt || ''}
-      loading="lazy"
-      className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
-    />
+    mobileImageUrl ? (
+      <picture className="block">
+        <source media="(max-width: 863px)" srcSet={mobileImageUrl} />
+        <img
+          src={imageUrl}
+          alt={imageAlt}
+          aria-describedby={accessibilityDescriptionId}
+          loading="lazy"
+          className={cn('block h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
+        />
+      </picture>
+    ) : (
+      <img
+        src={imageUrl}
+        alt={imageAlt}
+        aria-describedby={accessibilityDescriptionId}
+        loading="lazy"
+        className={cn('h-auto', size === 'bleed' ? 'w-full' : 'max-w-full', borderClasses[border])}
+      />
+    )
   )
 
   return (
     <ArticleReveal intensity="visual">
-      <figure className={cn('my-8', sizeClass, size !== 'bleed' && imageAlignClasses[align])}>
+      <figure className={cn(marginClassName, sizeClass, size !== 'bleed' && imageAlignClasses[align])}>
         {imageLink ? (
           <a
             href={imageLink}
@@ -141,6 +191,11 @@ function PortableImage({
           <figcaption className="mt-2 text-base text-gray">
             {value.caption}
           </figcaption>
+        )}
+        {accessibilityDescription && (
+          <p id={accessibilityDescriptionId} className="sr-only">
+            {accessibilityDescription}
+          </p>
         )}
       </figure>
     </ArticleReveal>
@@ -495,6 +550,7 @@ const components: PortableTextComponents = {
       const textBlocks = items.filter(i => i._type === 'block')
       const hasText = textBlocks.length > 0
       const hasImages = images.length > 0
+      const hasColumnActions = items.some(i => i._type === 'buttonGroup')
 
       const buildImageGroups = () => {
         const groups: { image: any; content: any[] }[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -569,13 +625,13 @@ const components: PortableTextComponents = {
                         rel={isExternal ? 'noopener noreferrer' : undefined}
                         className={cn(href && 'no-underline text-black block h-full')}
                       >
-                        <article className="group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] h-full flex flex-col">
+                        <article className="group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out h-full flex flex-col">
                           <div className="relative h-[260px] overflow-hidden">
                             <img
                               src={imgUrl}
                               alt={group.image.alt || title || ''}
                               loading="lazy"
-                              className="w-full h-full object-cover transition-transform duration-[var(--transition-card)] group-hover:scale-105"
+                              className="w-full h-full object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.025]"
                             />
                           </div>
                           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
@@ -657,7 +713,7 @@ const components: PortableTextComponents = {
 
       // Mixed content: text + image side by side
       // For 2-column layout with exactly [image, text] or [text, image], always use side-by-side
-      if (hasText && hasImages && colCount === 2 && (items.length === 2 || !isGalleryPattern)) {
+      if (hasText && hasImages && !hasColumnActions && colCount === 2 && (items.length === 2 || !isGalleryPattern)) {
         const firstImageIdx = items.findIndex(i => i._type === 'image' && i.asset?._ref)
         const firstTextIdx = items.findIndex(i => i._type === 'block')
         const imageFirst = firstImageIdx < firstTextIdx
@@ -788,7 +844,7 @@ const components: PortableTextComponents = {
                         </div>
                       )}
                       {hasRichContent && !isShortCaption && (
-                        <div className={cn('mt-2', centeredGroup && '[&_p]:text-center')}>
+                        <div className={cn('mt-2', (centeredGroup || hasColumnActions) && '[&_p]:text-center')}>
                           <PortableText value={group.content} components={components} />
                         </div>
                       )}
@@ -888,14 +944,14 @@ const components: PortableTextComponents = {
       const largeButtonClass = isLargeButtonGroup ? 'w-full lg:w-auto lg:min-w-[330px]' : ''
       const centeredButtonClass = isLargeButtonGroup ? largeButtonClass : 'w-full sm:w-auto'
       const containerClass = isSingleFullWidthButton
-        ? 'flex flex-wrap mb-8'
+        ? 'flex flex-wrap justify-center mb-8'
         : useLegacyDoubleSpacing && layout === 'fullWidth'
           ? 'flex flex-wrap gap-4 px-[9px]'
         : layout === 'fullWidth' ? 'flex flex-wrap gap-4'
         : layout === 'centered' ? 'flex flex-wrap gap-4 justify-center'
         : 'flex flex-wrap gap-4'
       const btnClass = isSingleFullWidthButton
-        ? 'block w-full sm:w-1/2 lg:w-[95%] mx-auto mt-8 mb-2'
+        ? 'block w-full sm:w-[330px] mt-8 mb-2'
         : useLegacyDoubleSpacing && layout === 'fullWidth'
           ? 'flex-1 block mt-8 mb-8'
         : useLegacyDoubleSpacing
@@ -943,7 +999,7 @@ const components: PortableTextComponents = {
       const rows: { inputImage?: any; prompt?: string; outputImage?: any }[] = value.rows || [] // eslint-disable-line @typescript-eslint/no-explicit-any
       return (
         <ArticleReveal intensity="visual">
-          <div className="my-8 bg-[#f6f6f6] py-5">
+          <div className="process-diagram relative left-1/2 -ml-[50vw] my-8 w-screen bg-[#f6f6f6] py-5 font-serif">
             {headings.length > 0 && (
               <div className="hidden md:grid grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 mb-4 items-end max-width content-padding mx-auto">
                 {headings.map((h, i) => (
@@ -958,14 +1014,27 @@ const components: PortableTextComponents = {
               const inputUrl = row.inputImage?.asset ? urlForImage(row.inputImage).width(400).url() : ''
               const outputUrl = row.outputImage?.asset ? urlForImage(row.outputImage).width(400).url() : ''
               return (
-                <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-4 items-center mb-8 md:mb-4 max-width content-padding mx-auto">
-                  {inputUrl && <img src={inputUrl} alt="" loading="lazy" className="w-full h-auto" />}
-                  <span className="text-2xl font-normal">+</span>
-                  <p className="font-serif text-base leading-relaxed m-0">
-                    &ldquo;{row.prompt}&rdquo;
-                  </p>
-                  <span className="text-2xl font-normal">=</span>
-                  {outputUrl && <img src={outputUrl} alt="" loading="lazy" className="w-full h-auto" />}
+                <div key={i} className="grid grid-cols-[46%_5%_46%_3%] md:grid-cols-[1fr_auto_1fr_auto_1fr] gap-x-0 gap-y-[15px] md:gap-4 items-center mb-5 pb-[15px] border-b-2 border-gray-medium md:mb-4 md:pb-0 md:border-b-0 max-width content-padding mx-auto">
+                  <div className="self-stretch flex flex-col">
+                    {headings[0] && <div className="md:hidden mb-2 text-base">{headings[0]}</div>}
+                    {inputUrl && (
+                      <div className="flex flex-1 items-center">
+                        <img src={inputUrl} alt="" loading="lazy" className="block w-full h-auto" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="self-center text-center font-sans text-[1.5rem] leading-[1.625rem] font-normal">+</span>
+                  <div>
+                    {headings[1] && <div className="md:hidden mb-2 text-base">{headings[1]}</div>}
+                    <p className="bg-white rounded-[10px] p-2.5 font-serif text-base leading-relaxed m-0">
+                      &ldquo;{row.prompt}&rdquo;
+                    </p>
+                  </div>
+                  <span className="hidden md:block text-center font-sans text-[1.5rem] leading-[1.625rem] font-normal">=</span>
+                  <div className="col-span-4 md:col-span-1 mt-[15px] md:mt-0">
+                    {headings[2] && <div className="md:hidden mb-2 text-base">{headings[2]}</div>}
+                    {outputUrl && <img src={outputUrl} alt="" loading="lazy" className="block w-full h-auto" />}
+                  </div>
                 </div>
               )
             })}
@@ -1146,6 +1215,7 @@ const components: PortableTextComponents = {
         </sup>
       ) : <sup>{children}</sup>
     },
+    supSeparator: ({ children }) => <sup>{children}</sup>,
     // Legacy decorators (backward compat)
     teal: ({ children }) => <span className="text-secondary">{children}</span>,
     orange: ({ children }) => <span className="text-primary">{children}</span>,
@@ -1409,9 +1479,10 @@ const components: PortableTextComponents = {
       // the default paragraph treatment for ordinary prose.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const content = text.includes('\n') ? renderSoftLineBreaks(children) : children
       return (
         <ArticleReveal intensity="text">
-          <p className={cn('my-4 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+          <p className={cn('my-4 leading-relaxed', text.includes('\n') && 'whitespace-pre-line')}>{content}</p>
         </ArticleReveal>
       )
     },
@@ -1581,7 +1652,11 @@ export function PortableTextRenderer({ content, variant = 'default', noGrouping 
         types: {
           ...typeComponents,
           image: ({ value }) => (
-            <PortableImage value={value} sizeClassOverrides={{ large: imageSizeClasses.full }} />
+            <PortableImage
+              value={value}
+              sizeClassOverrides={{ large: imageSizeClasses.full }}
+              marginClassName="mt-8 mb-[39px]"
+            />
           ),
         },
         block: {

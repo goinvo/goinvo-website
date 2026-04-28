@@ -23,7 +23,7 @@ function ExternalUpNextCard({ item }: { item: ExternalUpNextItem }) {
       href={item.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="no-underline h-full block group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] flex flex-col"
+      className="no-underline h-full block group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out flex flex-col"
     >
       {imageUrl && (
         <div className="relative h-[260px] overflow-hidden">
@@ -31,7 +31,7 @@ function ExternalUpNextCard({ item }: { item: ExternalUpNextItem }) {
             src={imageUrl}
             alt={item.title}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+            className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.025]"
             style={{ objectPosition: 'center top' }}
           />
         </div>
@@ -70,26 +70,24 @@ function getMetadataInsertIndex(content: PortableTextBlock[]): number {
 }
 
 function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
+  const displayTags = caseStudy.displayTags?.trim()
   const categories = caseStudy.categories || []
-  const mainTitles = categories
-    .filter((c) => c?.isMainCategory)
-    .map((c) => c.title)
+  const categoryTags = [
+    ...categories.filter((category) => category?.isMainCategory),
+    ...categories.filter((category) => category && !category.isMainCategory),
+  ]
+    .map((category) => category.title)
     .filter(Boolean)
-  const additionalTitles = categories
-    .filter((c) => c && !c.isMainCategory)
-    .map((c) => c.title)
-    .filter(Boolean)
+  const tagsText = categoryTags.length > 0 ? categoryTags.join(', ') : displayTags || ''
 
   const hasTime = Boolean(caseStudy.time)
-  const hasMain = mainTitles.length > 0
-  const hasAdditional = additionalTitles.length > 0
+  const hasTags = Boolean(tagsText)
 
-  if (!hasTime && !hasMain && !hasAdditional) return null
+  if (!hasTime && !hasTags) return null
 
   const metadataLayout = caseStudy.metadataLayout || 'stacked'
 
-  if (metadataLayout === 'inline' && hasTime && (hasMain || hasAdditional)) {
-    const combined = [...mainTitles, ...additionalTitles].join(', ')
+  if (metadataLayout === 'inline' && hasTime && hasTags) {
     return (
       <div>
         <p className="text-gray mt-0 mb-8">
@@ -100,7 +98,7 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
             Tags:
           </span>{' '}
-          {combined}
+          {tagsText}
         </p>
       </div>
     )
@@ -116,20 +114,12 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
           {caseStudy.time}
         </p>
       )}
-      {hasMain && (
-        <p className="text-gray mt-0 mb-4">
-          <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
-            Main Categories:
-          </span>{' '}
-          {mainTitles.join(', ')}
-        </p>
-      )}
-      {hasAdditional && (
+      {hasTags && (
         <p className="text-gray mt-0 mb-8">
           <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
-            Additional:
+            Tags:
           </span>{' '}
-          {additionalTitles.join(', ')}
+          {tagsText}
         </p>
       )}
     </div>
@@ -137,10 +127,14 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
 }
 
 export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
-  const hasAuthors = caseStudy.authors && caseStudy.authors.length > 0
+  const authors = caseStudy.hideAuthors
+    ? []
+    : (caseStudy.authors || []).filter((author): author is NonNullable<typeof author> => Boolean(author))
+  const hasAuthors = authors.length > 0
   let rawContent = caseStudy.content
-  if (rawContent) rawContent = stripTitleHeading(rawContent, caseStudy.title)
-  if (hasAuthors && rawContent) rawContent = stripAuthorHeading(rawContent)
+  if (rawContent) rawContent = stripTitleHeading(rawContent, caseStudy.heading || caseStudy.title)
+  if (rawContent && caseStudy.heading) rawContent = stripTitleHeading(rawContent, caseStudy.title)
+  if ((hasAuthors || caseStudy.hideAuthors) && rawContent) rawContent = stripAuthorHeading(rawContent)
 
   // Gatsby order: content → Up Next → References
   // Split references out of content so we can render them after Up Next
@@ -151,10 +145,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
   const metadataInsertIndex = content ? getMetadataInsertIndex(content) : 0
   const contentBeforeMetadata = content?.slice(0, metadataInsertIndex) || []
   const contentAfterMetadata = content?.slice(metadataInsertIndex) || []
-  const showMetadata = Boolean(
-    caseStudy.time ||
-      (caseStudy.categories && caseStudy.categories.length > 0)
-  )
+  const showMetadata = Boolean(caseStudy.time || caseStudy.displayTags?.trim())
 
   return (
     <article>
@@ -172,10 +163,10 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
       )}
 
       {/* Authors */}
-      {caseStudy.authors && caseStudy.authors.length > 0 && (
+      {hasAuthors && (
         <Reveal style="slide-up">
           <div className="max-width max-width-md content-padding mx-auto">
-            <AuthorSection authors={caseStudy.authors} />
+            <AuthorSection authors={authors} />
           </div>
         </Reveal>
       )}

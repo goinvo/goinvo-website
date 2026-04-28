@@ -49,7 +49,7 @@ export default defineType({
       title: 'Client',
       type: 'string',
       group: 'properties',
-      description: 'Client or partner name shown beneath the title',
+      description: 'Optional client or partner name. Leave blank when the client cannot be named; listings and the page subtitle will omit it.',
     }),
     defineField({
       name: 'caption',
@@ -67,12 +67,20 @@ export default defineType({
       description: 'Project duration (e.g. "1.5 designers for 6 months"). Rendered in the page metadata row.',
     }),
     defineField({
+      name: 'displayTags',
+      title: 'Display Tags',
+      type: 'string',
+      group: 'properties',
+      description:
+        'Optional comma-separated fallback tags shown in the case study page metadata when no Categories are selected.',
+    }),
+    defineField({
       name: 'categories',
       title: 'Categories',
       type: 'array',
       group: 'properties',
       description:
-        'Pick from the canonical list. Main Categories (Healthcare, Enterprise, Government, AI) drive the filter chips on /work. Additional categories (Patient Engagement, Open Source, etc.) just display on the case study page. Toggle the Main Category checkbox on the Category document to move one between groups.',
+        'Pick from the canonical list. Main Categories (Healthcare, Enterprise, Government, AI) drive the filter chips on /work. Additional categories support internal taxonomy and listing organization. Both groups display together as Tags on the case study page.',
       of: [
         {
           type: 'reference',
@@ -151,7 +159,15 @@ export default defineType({
       title: 'Hide Client Subtitle',
       type: 'boolean',
       group: 'advanced',
-      description: 'Hide the "for {client}" subtitle on the page while still keeping the client value for listing and metadata.',
+      description: 'Hide the generated client subtitle when a client is provided. Pages with no client omit the subtitle automatically.',
+      initialValue: false,
+    }),
+    defineField({
+      name: 'hideAuthors',
+      title: 'Hide Authors',
+      type: 'boolean',
+      group: 'advanced',
+      description: 'Hide the author section even when authors are selected. Leave off to render selected authors; leave Authors empty for no author section.',
       initialValue: false,
     }),
     defineField({
@@ -181,8 +197,16 @@ export default defineType({
   preview: {
     select: {
       title: 'title',
-      subtitle: 'client',
+      client: 'client',
       media: 'image',
+    },
+    prepare({ title, client, media }) {
+      const clientName = typeof client === 'string' ? client.trim() : ''
+      return {
+        title,
+        subtitle: clientName || 'Client not listed',
+        media,
+      }
     },
   },
 })

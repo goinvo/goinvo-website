@@ -1,6 +1,8 @@
 import {
   ComposeIcon,
+  DocumentsIcon,
   DownloadIcon,
+  TrashIcon,
   SortIcon,
   UploadIcon,
   WarningOutlineIcon,
@@ -76,14 +78,24 @@ export function goinvoOrderableDocumentListDeskItem(config: OrderableListConfig)
           menuItems: [
             ...menuItems,
             S.menuItem()
-              .title('Save Order Preset')
+              .title('Save New Order Preset')
               .icon(UploadIcon)
               .action('saveOrderPreset')
+              .serialize(),
+            S.menuItem()
+              .title('Overwrite Order Preset')
+              .icon(DocumentsIcon)
+              .action('overwriteOrderPreset')
               .serialize(),
             S.menuItem()
               .title('Load Order Preset')
               .icon(DownloadIcon)
               .action('loadOrderPreset')
+              .serialize(),
+            S.menuItem()
+              .title('Delete Order Preset')
+              .icon(TrashIcon)
+              .action('deleteOrderPreset')
               .serialize(),
             S.menuItem()
               .title('Move Needs-Ordering to Top')

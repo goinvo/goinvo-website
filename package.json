@@ -11,7 +11,9 @@
     "test:watch": "vitest",
     "test:content": "vitest run tests/sanity-content.test.ts",
     "test:media": "vitest run tests/media-integrity.test.ts",
-    "test:pages": "vitest run tests/page-render.test.ts"
+    "test:pages": "vitest run tests/page-render.test.ts",
+    "audit:superscripts": "npx tsx scripts/audit-superscripts.ts",
+    "audit:linebreaks": "npx tsx scripts/check-linebreaks.ts"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

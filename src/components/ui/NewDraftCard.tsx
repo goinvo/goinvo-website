@@ -1,31 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { withDeploymentBypassParams } from '@/lib/deploymentBypass'
 
 interface NewDraftCardProps {
   type: 'caseStudy' | 'feature'
   label: string
-}
-
-const deploymentBypassParams = [
-  'x-vercel-protection-bypass',
-  'x-vercel-set-bypass-cookie',
-] as const
-
-// Protected Vercel preview links rely on these params; keep them on
-// in-preview mutations and redirects so iframe-based Presentation still works.
-function withDeploymentBypassParams(path: string): string {
-  const currentUrl = new URL(window.location.href)
-  const targetUrl = new URL(path, window.location.origin)
-
-  for (const param of deploymentBypassParams) {
-    const value = currentUrl.searchParams.get(param)
-    if (value) {
-      targetUrl.searchParams.set(param, value)
-    }
-  }
-
-  return `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
 }
 
 export function NewDraftCard({ type, label }: NewDraftCardProps) {
@@ -63,7 +43,7 @@ export function NewDraftCard({ type, label }: NewDraftCardProps) {
     <button
       onClick={handleCreate}
       disabled={creating}
-      className="block w-full bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow cursor-pointer border-0 text-left"
+      className="block w-full bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out cursor-pointer border-0 text-left"
     >
       <div className="h-full min-h-[200px] flex flex-col justify-center items-center text-center p-8">
         {creating ? (

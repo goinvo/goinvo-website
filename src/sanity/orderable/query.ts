@@ -23,7 +23,7 @@ export function getDocumentQuery({
 
   const querySelect = `*[_type == $type ${perspectiveFilter ? `&& ${perspectiveFilter}` : ''}${filter ? `&& ${filter}` : ''}]`
   const queryOrder = `|order(@[$order] asc)`
-  const queryFields = `{_id, _type, ${ORDER_FIELD_NAME}}`
+  const queryFields = `{_id, _type, title, slug, ${ORDER_FIELD_NAME}, featured, hiddenWorkPage}`
 
   return {
     query: `${querySelect}${queryOrder}${queryFields}`,
@@ -37,5 +37,17 @@ export function getDocumentQuery({
 }
 
 export function getOrderPresetQuery() {
-  return `*[_id == $presetId][0]{_id, _type, orderType, documentIds, updatedAt}`
+  return `*[_id == $presetId][0]{_id, _type, name, title, orderType, documentIds, updatedAt}`
+}
+
+export function getOrderPresetsQuery() {
+  return `*[_type == "orderPreset" && orderType == $type] | order(coalesce(name, title) asc) {
+    _id,
+    _type,
+    name,
+    title,
+    orderType,
+    documentIds,
+    updatedAt
+  }`
 }

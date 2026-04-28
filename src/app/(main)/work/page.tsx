@@ -9,12 +9,13 @@ import {
   allCaseStudiesQuery,
   draftCaseStudiesQuery,
   mainCategoriesQuery,
+  selectedWorkFeaturesQuery,
 } from '@/sanity/lib/queries'
 import { ProjectSearch } from '@/components/work/ProjectSearch'
 import { Quote } from '@/components/ui/Quote'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
-import type { CaseStudy, Category } from '@/types'
+import type { CaseStudy, Category, Feature } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Case Studies by UX Design Agency',
@@ -43,10 +44,26 @@ const upNext = [
   },
 ]
 
-export default async function WorkPage() {
-  const [{ data: caseStudies }, { data: mainCategories }] = await Promise.all([
+interface WorkPageProps {
+  searchParams?: Promise<{
+    category?: string | string[]
+  }>
+}
+
+export default async function WorkPage({ searchParams }: WorkPageProps) {
+  const resolvedSearchParams = await searchParams
+  const categoryParam = Array.isArray(resolvedSearchParams?.category)
+    ? resolvedSearchParams.category[0]
+    : resolvedSearchParams?.category
+
+  const [
+    { data: caseStudies },
+    { data: mainCategories },
+    { data: selectedFeatures },
+  ] = await Promise.all([
     sanityFetch({ query: allCaseStudiesQuery }) as Promise<{ data: CaseStudy[] }>,
     sanityFetch({ query: mainCategoriesQuery }) as Promise<{ data: Category[] }>,
+    sanityFetch({ query: selectedWorkFeaturesQuery }) as Promise<{ data: Feature[] }>,
   ])
 
   // Fetch draft-only case studies when in preview mode
@@ -61,7 +78,11 @@ export default async function WorkPage() {
       const { drafts, publishedIds } = await rawClient.fetch(draftCaseStudiesQuery)
       draftCaseStudies = (drafts as (CaseStudy & { _id: string })[])
         .filter((d) => !publishedIds.includes(d._id.replace('drafts.', '')))
-        .map((d) => ({ ...d, _id: d._id.replace('drafts.', '') }))
+        .map((d) => ({
+          ...d,
+          _draftId: d._id,
+          _id: d._id.replace('drafts.', ''),
+        }))
     } catch (e) {
       console.error('Failed to fetch draft case studies:', e)
     }
@@ -71,8 +92,10 @@ export default async function WorkPage() {
     <div>
       {/* Case Studies with Filter */}
       <ProjectSearch
-        caseStudies={caseStudies}
+        key={categoryParam || 'all'}
+        caseStudies={[...(caseStudies || []), ...(selectedFeatures || [])]}
         draftCaseStudies={draftCaseStudies}
+        initialCategory={categoryParam}
         mainCategories={mainCategories || []}
       />
 
@@ -118,14 +141,14 @@ export default async function WorkPage() {
               <Link
                 key={item.title}
                 href={item.link}
-                className="group block bg-white text-black no-underline shadow-card hover:shadow-card-hover transition-shadow"
+                className="group block bg-white text-black no-underline shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out"
               >
                 <div className="relative h-[250px] overflow-hidden">
                   <Image
                     src={cloudfrontImage(item.image)}
                     alt={item.title}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+                    className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.025]"
                   />
                 </div>
                 <div className="p-4">

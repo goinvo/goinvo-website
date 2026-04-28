@@ -132,6 +132,23 @@ function headingsMatch(a: string, b: string): boolean {
   return shorter.length >= 6 && longer.includes(shorter)
 }
 
+function headingCounts(headings: PageElement[]): Map<string, { count: number; sample: PageElement }> {
+  const counts = new Map<string, { count: number; sample: PageElement }>()
+
+  for (const heading of headings) {
+    const key = normalizeHeadingText(heading.text)
+    if (!key || heading.text.length <= 3) continue
+
+    const existing = counts.get(key)
+    counts.set(key, {
+      count: (existing?.count || 0) + 1,
+      sample: existing?.sample || heading,
+    })
+  }
+
+  return counts
+}
+
 function extractHeadings(html: string): PageElement[] {
   const results: PageElement[] = []
   const regex = /<h([1-4])([^>]*)>([\s\S]*?)<\/h\1>/gi
@@ -569,7 +586,6 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
   const nextContent = getContentArea(nextjsHtml)
   const gatsbyHeadings = extractHeadings(gatsbyContent)
   const nextHeadings = extractHeadings(nextContent)
-  const isWorkPage = label.startsWith('work/')
 
   for (const nextHeading of nextHeadings) {
     const found = gatsbyHeadings.some((gatsbyHeading) =>
@@ -595,6 +611,29 @@ function compare(label: string, gatsbyHtml: string, nextjsHtml: string): Issue[]
         severity: 'high',
         category: 'MISSING_HEADING',
         message: `<${gatsbyHeading.tag}> "${gatsbyHeading.text}" in Gatsby only`,
+      })
+    }
+  }
+
+  const gatsbyHeadingCounts = headingCounts(gatsbyHeadings)
+  const nextHeadingCounts = headingCounts(nextHeadings)
+  for (const [key, gatsbyValue] of gatsbyHeadingCounts.entries()) {
+    const nextCount = nextHeadingCounts.get(key)?.count || 0
+    if (gatsbyValue.count > nextCount) {
+      issues.push({
+        severity: 'high',
+        category: 'MISSING_HEADING',
+        message: `<${gatsbyValue.sample.tag}> "${gatsbyValue.sample.text}" appears ${gatsbyValue.count} time(s) in Gatsby but ${nextCount} time(s) in Next.js`,
+      })
+    }
+  }
+  for (const [key, nextValue] of nextHeadingCounts.entries()) {
+    const gatsbyCount = gatsbyHeadingCounts.get(key)?.count || 0
+    if (nextValue.count > gatsbyCount) {
+      issues.push({
+        severity: 'critical',
+        category: 'EXTRA_HEADING',
+        message: `<${nextValue.sample.tag}> "${nextValue.sample.text}" appears ${nextValue.count} time(s) in Next.js but ${gatsbyCount} time(s) in Gatsby`,
       })
     }
   }
