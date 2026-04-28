@@ -874,10 +874,14 @@ const components: PortableTextComponents = {
     },
     backgroundSection: ({ value }) => {
       const bgClass = bgSectionColors[value.color] || bgSectionColors.gray
+      const spacingClass = value.spacing === 'legacyFlush' ? 'py-8 my-0' : 'py-12 my-8'
+      const toneClass = value.tone === 'default'
+        ? '[&_p:not(.methodology-label)]:!text-black [&_li]:!text-black [&_ul]:!text-black'
+        : ''
       return (
         <ArticleReveal intensity="visual">
-          <div className={cn('w-screen relative left-1/2 -ml-[50vw] py-12 my-8', bgClass)}>
-            <div className="max-width max-width-md content-padding mx-auto">
+          <div className={cn('w-screen relative left-1/2 -ml-[50vw]', spacingClass, bgClass)}>
+            <div className={cn('max-width max-width-md content-padding mx-auto', toneClass)}>
               {value.content && (
                 <PortableText value={value.content} components={components} />
               )}
@@ -1325,6 +1329,16 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    h2HealthcareMethodology: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 id={anchorId} className={cn('header-xl font-light mt-[30px] mb-[30px] text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+        </ArticleReveal>
+      )
+    },
     // h2Center is deprecated — use sectionTitle instead. Kept as alias for backwards compat.
     h2Center: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1474,6 +1488,11 @@ const components: PortableTextComponents = {
         </div>
       </ArticleReveal>
     ),
+    caption: ({ children }) => (
+      <ArticleReveal intensity="text">
+        <p className="mt-2 mb-6 text-sm leading-[23px] text-gray">{children}</p>
+      </ArticleReveal>
+    ),
     normal: ({ children, value }) => {
       // Preserve intentional line breaks from Sanity without changing
       // the default paragraph treatment for ordinary prose.
@@ -1486,6 +1505,11 @@ const components: PortableTextComponents = {
         </ArticleReveal>
       )
     },
+    h4MethodologyVersion: ({ children }) => (
+      <ArticleReveal intensity="heading">
+        <h4 className="font-sans text-base font-semibold leading-[1.1875rem] mt-8 mb-2">{children}</h4>
+      </ArticleReveal>
+    ),
     normalSpacious: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
@@ -1518,7 +1542,7 @@ const components: PortableTextComponents = {
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
       return (
         <ArticleReveal intensity="text">
-          <p className={cn('mt-8 mb-1 text-sm text-gray', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
+          <p className={cn('methodology-label mt-8 mb-1 text-sm !text-gray', text.includes('\n') && 'whitespace-pre-line')}>{children}</p>
         </ArticleReveal>
       )
     },

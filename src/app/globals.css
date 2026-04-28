@@ -256,10 +256,8 @@
   }
 
   .ul {
-    list-style-position: outside;
-    list-style-type: none;
-    list-style-image: url('/images/bullet.svg');
-    padding-left: 21px;
+    list-style: none;
+    padding-left: 0;
   }
 
   @media (min-width: 864px) {
@@ -269,8 +267,20 @@
   }
 
   .ul li {
-    padding-left: 4px;
+    position: relative;
+    padding-left: 21px;
     margin-bottom: 0.5rem;
+  }
+
+  .ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.78em;
+    width: 8px;
+    height: 8px;
+    background: url('/images/bullet.svg') center / contain no-repeat;
+    transform: translateY(-50%);
   }
 
   .references {
@@ -308,7 +318,12 @@
   }
 
   .disc-bullets .ul li {
+    position: static;
     padding-left: 0;
+  }
+
+  .disc-bullets .ul li::before {
+    content: none;
   }
 
   /* Hanging indent for numbered headings — pushes the number into the gutter */

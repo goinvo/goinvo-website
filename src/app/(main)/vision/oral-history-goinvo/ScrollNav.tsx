@@ -6,10 +6,10 @@ import { useEffect, useRef } from 'react'
  * Activates sticky scroll navigation for the Oral History page.
  *
  * Behavior (matching legacy featurenav-scroll.js):
- * - When the user scrolls past the `.nav-wrapper.stuck` element,
- *   the `.nav-wrapper.scroll-nav` becomes visible (position: fixed via CSS).
+ * - The `.nav-wrapper.stuck` element uses CSS sticky positioning. When it is
+ *   pinned, this script adds the same shadow treatment as Gatsby's fixed clone.
  * - The nav link corresponding to the current section gets an `active` class.
- * - On screens <= 750px the scroll-nav stays hidden.
+ * - On screens <= 750px the nav keeps the legacy non-sticky mobile behavior.
  */
 export function ScrollNav() {
   const rafRef = useRef<number>(0)
@@ -46,20 +46,18 @@ export function ScrollNav() {
 
       // Show/hide scroll-nav based on scroll position and screen width
       if (windowWidth > 750) {
-        const stuckTop = stuckNav!.getBoundingClientRect().top + scrollY
-        if (scrollY >= stuckTop) {
-          if (scrollNav!.style.display !== 'block') {
-            scrollNav!.style.display = 'block'
-          }
+        const headerOffset = 50
+        const stuckTop = stuckNav!.getBoundingClientRect().top
+        if (stuckTop <= headerOffset) {
+          stuckNav!.classList.add('is-sticky')
         } else {
-          if (scrollNav!.style.display !== 'none') {
-            scrollNav!.style.display = 'none'
-          }
+          stuckNav!.classList.remove('is-sticky')
         }
       } else {
-        if (scrollNav!.style.display !== 'none') {
-          scrollNav!.style.display = 'none'
-        }
+        stuckNav!.classList.remove('is-sticky')
+      }
+      if (scrollNav!.style.display !== 'none') {
+        scrollNav!.style.display = 'none'
       }
 
       // Determine active section based on scroll position
