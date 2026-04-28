@@ -10,25 +10,30 @@ export function ArticleMeta({ date, categories, className }: ArticleMetaProps) {
   const tags = (categories || [])
     .map((category) => category?.trim())
     .filter((category): category is string => Boolean(category))
+  const hasDate = Boolean(date)
 
   if (!date && tags.length === 0) return null
 
   return (
     <div
       className={cn(
-        'mb-4 grid gap-3 sm:flex sm:items-start sm:justify-between',
+        'mb-4 grid gap-3 sm:flex sm:items-start',
+        hasDate ? 'sm:justify-between' : 'sm:justify-start',
         className,
       )}
     >
-      {date ? (
+      {hasDate && (
         <span className="text-sm leading-[1.625rem] text-gray sm:shrink-0">
           {date}
         </span>
-      ) : (
-        <span className="hidden sm:block" aria-hidden="true" />
       )}
       {tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 sm:ml-auto sm:justify-end">
+        <div
+          className={cn(
+            'flex flex-wrap gap-2',
+            hasDate ? 'sm:ml-auto sm:justify-end' : 'sm:justify-start',
+          )}
+        >
           {tags.map((tag) => (
             <span
               key={tag}
