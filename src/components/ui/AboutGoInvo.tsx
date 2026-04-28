@@ -35,6 +35,13 @@ export function AboutGoInvo({ className, variant = 'default' }: AboutGoInvoProps
               </>
             )}
       </p>
+      {variant !== 'practice' && (
+        <p className="text-gray mt-4 mb-4">
+          Interested in digital healthcare strategy and user experience design?
+          <br />
+          <a href="/contact">Contact Us</a>
+        </p>
+      )}
     </div>
   )
 }
