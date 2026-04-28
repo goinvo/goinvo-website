@@ -19,6 +19,7 @@ type FeatureDocumentValue = {
   authors?: unknown[]
   contributors?: unknown[]
   specialThanks?: unknown[]
+  metaTitle?: string
   metaDescription?: string
   description?: string
   categories?: string[]

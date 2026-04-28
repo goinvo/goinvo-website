@@ -133,6 +133,7 @@ export interface Feature {
   externalLink?: string
   hiddenWorkPage?: boolean
   content?: PortableTextBlock[]
+  metaTitle?: string
   metaDescription?: string
 }
 

@@ -44,6 +44,7 @@ function FeatureCard({ feature }: { feature: StaticFeature }) {
             alt={feature.title}
             width={400}
             height={260}
+            quality={95}
             className="w-full h-full object-cover [backface-visibility:hidden]"
             style={{
               objectPosition: feature.imagePosition || 'center center',
