@@ -179,7 +179,7 @@ export function AuthorSection({ authors, heading, variant = 'equal', background 
                 </div>
               )}
               <div>
-                <p className="mt-4">
+                <p className="mt-0">
                   {author.link ? (
                     <a href={author.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
                       <strong>{author.member.name}</strong>
@@ -221,7 +221,7 @@ export function AuthorSection({ authors, heading, variant = 'equal', background 
                 className="w-full h-auto object-cover mb-4"
               />
             )}
-            <p className="mt-4">
+            <p className="mt-0">
               <strong>{primary.member.name}</strong>
               <span className="text-gray">, {primary.displayRole}</span>
             </p>
@@ -303,7 +303,7 @@ export function AuthorSection({ authors, heading, variant = 'equal', background 
               </div>
             )}
             <div>
-              <p className="mt-4">
+              <p className="mt-0">
                 {author.link ? (
                   <a href={author.link} target="_blank" rel="noopener noreferrer" className="hover:text-primary">
                     <strong>{author.member.name}</strong>
