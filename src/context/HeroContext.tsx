@@ -349,7 +349,7 @@ const HeroCtx = createContext<HeroContextValue | null>(null)
 
 export function HeroProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const prevPathname = useRef<string | null>(null)
+  const prevPathname = useRef<string | null>(pathname)
 
   const [state, dispatch] = useReducer(
     heroReducer,
