@@ -57,12 +57,13 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
           {reviews.map((review, index) => (
             <li
               key={review.id}
-              className="relative flex"
+              className={cn(
+                'relative flex border-t border-[#d0cfce] lg:border-b',
+                index === reviews.length - 1 && 'border-b',
+                index !== reviews.length - 1 && 'lg:mr-4'
+              )}
               style={{
-                borderTop: '1px solid #d0cfce',
-                borderBottom: '1px solid #d0cfce',
                 flex: '1 1 0%',
-                marginRight: index !== reviews.length - 1 ? '1rem' : undefined,
               }}
             >
               <button
