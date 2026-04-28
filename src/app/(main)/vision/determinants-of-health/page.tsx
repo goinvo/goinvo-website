@@ -829,7 +829,7 @@ export default function DeterminantsOfHealthPage() {
                 calculations.
               </p>
               <h3 className="header--md">14.Apr.2020</h3>
-              <p>
+              <p className="text--gray">
                 Spanish poster version added, based on the updated Aug 2017
                 calculations. Translation by Roberto Laureles.
               </p>

@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import Link from 'next/link'
 import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
@@ -230,20 +229,14 @@ function PosterCardComponent({ card }: { card: PosterCard }) {
         )}
         {card.learnMoreLink && (
           <p className="text-center mt-3 text-sm">
-            {card.learnMoreLink.startsWith('http') ? (
-              <a
-                href={card.learnMoreLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-secondary hover:underline"
-              >
-                Learn More
-              </a>
-            ) : (
-              <Link href={card.learnMoreLink} className="text-secondary hover:underline">
-                Learn More
-              </Link>
-            )}
+            <a
+              href={card.learnMoreLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-secondary hover:underline"
+            >
+              Learn More
+            </a>
           </p>
         )}
       </div>
