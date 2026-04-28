@@ -131,6 +131,10 @@
   .coronavirus .hidden--until-lg {
     display: block;
   }
+
+  .coronavirus .hidden--until-lg.coronavirus-inline--lg {
+    display: inline;
+  }
 }
 
 .coronavirus .image--max-width {
@@ -156,6 +160,14 @@
 .coronavirus .chart {
   display: block;
   width: 100%;
+}
+
+.coronavirus .coronavirus-chart-caption {
+  margin-top: -1.5rem;
+  color: #787473;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .coronavirus .Axis {

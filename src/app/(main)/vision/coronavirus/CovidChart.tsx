@@ -21,8 +21,8 @@ const data = [
     id: 'covid-19',
     title: 'COVID-19',
     date: 'Dec 2019 - Present',
-    cases: 704753890,
-    deaths: 7010681,
+    cases: 676570149,
+    deaths: 6881802,
   },
 ]
 
