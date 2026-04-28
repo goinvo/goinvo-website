@@ -5,7 +5,7 @@ import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import Image from 'next/image'
-import { cn, cloudfrontImage } from '@/lib/utils'
+import { cloudfrontImage } from '@/lib/utils'
 
 const hotspots = [
   {
@@ -167,21 +167,20 @@ export function ModelViewerSection() {
   }
 
   return (
-    <div className="max-width content-padding mx-auto my-12">
-      <div className="grid grid-cols-1 gap-8 items-start">
-        {/* Hotspot Image — w-fit shrink-wraps to image so overlay % positions match */}
-        <div className="relative w-fit">
+    <div className="mx-auto max-w-[988px] px-4 md:px-0">
+      <div className="grid grid-cols-1 items-start">
+        <div className="hotspot-image-container relative mx-auto w-full md:w-1/2">
           <Image
             src={cloudfrontImage(
               '/images/features/visual-storytelling-with-genai/genai-3d-model-3.jpg'
             )}
-            alt="Hospital 3D model overview with hotspots"
+            alt="Hospital 3D Model"
             width={800}
-            height={500}
-            className="image--max-width rounded"
+            height={530}
+            sizes="(min-width: 768px) 494px, calc(100vw - 32px)"
+            className="image--max-width block h-auto w-full"
           />
-          {/* Transparent hotspot overlays — numbered markers are baked into the image PNG */}
-          <div className="absolute inset-0">
+          <div className="hotspot-overlay absolute inset-0">
             {[
               { id: 1, left: '25%', top: '52%' },
               { id: 2, left: '41%', top: '47%' },
@@ -194,29 +193,23 @@ export function ModelViewerSection() {
                 <button
                   key={pos.id}
                   onClick={() => handleHotspot(hotspot)}
-                  className={cn(
-                    'absolute w-10 h-10 rounded-lg cursor-pointer transition-colors',
-                    activeHotspot === hotspot.title
-                      ? 'bg-transparent'
-                      : 'bg-transparent hover:bg-[#c53e20]/30'
-                  )}
-                  style={{ left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)' }}
+                  className="hotspot-button absolute h-10 w-10 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-lg border-0 bg-transparent transition-colors hover:bg-[#c53e20]/25"
+                  style={{ left: pos.left, top: pos.top }}
                   title={hotspot.title}
                   aria-label={`Scene ${pos.id}`}
-                >
-                </button>
+                />
               )
             })}
           </div>
-          {activeHotspot && (
-            <p className="mt-2 text-sm text-gray text-center">
-              {activeHotspot}
-            </p>
-          )}
         </div>
 
-        {/* 3D Model Viewer */}
-        <div className="border border-gray-medium overflow-hidden">
+        <div className="hotspot-caption">
+          <p>
+            <strong>{activeHotspot}</strong>
+          </p>
+        </div>
+
+        <div className="model-viewport mx-5 mb-[15px] overflow-hidden rounded-lg border border-gray-medium md:mx-0">
           {isSupported ? (
             <ModelCanvas cameraTarget={cameraTarget} />
           ) : (
@@ -228,31 +221,9 @@ export function ModelViewerSection() {
               </p>
             </div>
           )}
-          <div className="p-3 bg-gray-lightest text-xs text-gray text-center">
-            Click and drag to orbit. Scroll to zoom. Right-click to pan.
-          </div>
         </div>
       </div>
 
-      {/* Scene tabs */}
-      <div className="mt-4">
-        <div className="flex border-b border-gray-light">
-          {hotspots.map((h) => (
-            <button
-              key={h.id}
-              onClick={() => handleHotspot(h)}
-              className={cn(
-                'px-4 py-2 text-sm font-semibold uppercase tracking-[1px] cursor-pointer transition-colors border-b-2 -mb-px',
-                activeHotspot === h.title
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray hover:text-black'
-              )}
-            >
-              Scene {h.id}
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

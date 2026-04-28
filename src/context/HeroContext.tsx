@@ -146,6 +146,13 @@ type HeroAction =
   | { type: 'OVERRIDE'; image: string; bgPosition?: string; direction?: number }
   | { type: 'SLIDE_DONE' }
   | {
+      type: 'SET_CURRENT_HERO'
+      image: string
+      bgPosition?: string
+      expandAfterSlide?: boolean
+      editTarget?: HeroEditTarget
+    }
+  | {
       type: 'SET_CASE_STUDY_HERO'
       image: string
       bgPosition?: string
@@ -253,6 +260,34 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
       }
     }
 
+    case 'SET_CURRENT_HERO': {
+      const image = action.image
+      const bgPosition = action.bgPosition ?? 'center'
+      const expandAfterSlide = action.expandAfterSlide ?? false
+      const editTarget = action.editTarget
+      const csConfig: HeroConfig = {
+        image,
+        bgPosition,
+        title: null,
+        hideTextBox: true,
+        expandAfterSlide,
+        editTarget,
+      }
+
+      return {
+        ...state,
+        phase: 'idle',
+        config: csConfig,
+        displayImage: image,
+        bgPosition,
+        caseStudyHero: null,
+        imageKey:
+          state.displayImage === image && state.bgPosition === bgPosition
+            ? state.imageKey
+            : state.imageKey + 1,
+      }
+    }
+
     case 'OVERRIDE': {
       if (!state.config) return state // ignore overrides when no hero
       return {
@@ -296,6 +331,12 @@ interface HeroContextValue {
   state: HeroState
   overrideImage: (image: string, bgPosition?: string, direction?: number) => void
   slideDone: () => void
+  setCurrentHero: (
+    image: string,
+    bgPosition?: string,
+    expandAfterSlide?: boolean,
+    editTarget?: HeroEditTarget,
+  ) => void
   setCaseStudyHero: (
     image: string,
     bgPosition?: string,
@@ -338,6 +379,24 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SLIDE_DONE' })
   }, [])
 
+  const setCurrentHero = useCallback(
+    (
+      image: string,
+      bgPosition?: string,
+      expandAfterSlide?: boolean,
+      editTarget?: HeroEditTarget,
+    ) => {
+      dispatch({
+        type: 'SET_CURRENT_HERO',
+        image,
+        bgPosition,
+        expandAfterSlide,
+        editTarget,
+      })
+    },
+    [],
+  )
+
   const setCaseStudyHero = useCallback(
     (
       image: string,
@@ -357,7 +416,7 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <HeroCtx.Provider value={{ state, overrideImage, slideDone, setCaseStudyHero }}>
+    <HeroCtx.Provider value={{ state, overrideImage, slideDone, setCurrentHero, setCaseStudyHero }}>
       {children}
     </HeroCtx.Provider>
   )

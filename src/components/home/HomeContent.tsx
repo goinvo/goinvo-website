@@ -251,6 +251,8 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
                 <strong>10M+ API calls</strong> driving real research, not toys.
               </p>
               <p className="text-gray mb-6">
+                <strong>This was transformation.</strong>
+                <br />
                 Research that took weeks now takes hours. With citations.
               </p>
               <Button onClick={() => handleMorphClick('/work/ipsos-facto', 'ipsos')} variant="outline" className="w-full block">
@@ -295,18 +297,18 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
                   </p>
                 </div>
                 <p>Fax. Mail. Walk-ins.</p>
-                <div>
-                  <p><strong>Two years after redesign:</strong></p>
-                  <p>Online applications hit ~44%.</p>
-                </div>
-                <div>
-                  <p><strong>Today:</strong></p>
-                  <p>
-                    Nearly <strong>1,000,000</strong> people rely on SNAP.
-                    <br />
-                    <strong>70% apply online.</strong>
-                  </p>
-                </div>
+                <p>
+                  <strong>Two years after redesign:</strong>
+                  <br />
+                  Online applications hit ~44%.
+                </p>
+                <p>
+                  <strong>Today:</strong>
+                  <br />
+                  Nearly <strong>1,000,000</strong> people rely on SNAP.
+                  <br />
+                  <strong>70% apply online.</strong>
+                </p>
                 <p>
                   A million people didn&apos;t change.
                   <br />

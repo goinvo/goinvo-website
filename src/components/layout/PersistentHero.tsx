@@ -69,6 +69,8 @@ function MultiImageContent({
               className="object-cover"
               style={{ objectPosition: 'center' }}
               onLoad={i === 0 ? onImageLoad : undefined}
+              quality={95}
+              sizes={`${Math.ceil(100 / desktop.length)}vw`}
               priority
             />
           </div>
@@ -82,6 +84,8 @@ function MultiImageContent({
           fill
           className="object-cover"
           style={{ objectPosition: 'center' }}
+          quality={95}
+          sizes="100vw"
           priority
         />
       </div>
@@ -214,6 +218,8 @@ export function PersistentHero() {
                     className="object-cover"
                     style={{ objectPosition: bgPosition }}
                     onLoad={handleImageLoad}
+                    quality={95}
+                    sizes="100vw"
                     priority
                   />
                 )}

@@ -15,9 +15,13 @@ function isVideo(src: string) {
   )
 }
 
+function isExternalHref(href: string) {
+  return /^(https?:)?\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:')
+}
+
 function FeatureCard({ feature }: { feature: StaticFeature }) {
-  const isExternal = feature.externalLink
   const href = feature.link
+  const opensOutsideSite = feature.externalLink && isExternalHref(href)
 
   const cardContent = (
     <>
@@ -63,13 +67,13 @@ function FeatureCard({ feature }: { feature: StaticFeature }) {
     </>
   )
 
-  if (isExternal) {
+  if (opensOutsideSite) {
     return (
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] no-underline"
+        className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
       >
         {cardContent}
       </a>
@@ -79,7 +83,7 @@ function FeatureCard({ feature }: { feature: StaticFeature }) {
   return (
     <Link
       href={href}
-      className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] no-underline"
+      className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
     >
       {cardContent}
     </Link>
@@ -120,12 +124,7 @@ export function VisionGrid({ features }: VisionGridProps) {
 
   return (
     <>
-      <h3 className="header-md pb-8">
-        Features{' '}
-        <span className="text-gray text-sm font-sans">
-          ({visibleFeatures.length} of {features.length})
-        </span>
-      </h3>
+      <h3 className="header-md pb-8">Features</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {visibleFeatures.map((feature) => (
           <FeatureCard key={feature.id} feature={feature} />
@@ -140,7 +139,7 @@ export function VisionGrid({ features }: VisionGridProps) {
               onClick={loadMore}
               className="inline-block bg-white border border-gray-medium text-gray font-semibold px-8 py-3 hover:border-secondary hover:text-secondary transition-colors"
             >
-              Load More Features ({remaining} remaining)
+              Load More Features
             </button>
           </div>
         </>

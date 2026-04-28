@@ -113,8 +113,15 @@ export default defineType({
       title: 'Title',
       type: 'string',
       group: 'properties',
-      description: 'The main headline shown on the article page and in feature listings.',
+      description: 'The main headline shown on the article page.',
       validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'cardTitle',
+      title: 'Card Title',
+      type: 'string',
+      group: 'properties',
+      description: 'Optional shorter title for feature listing cards. Leave blank to use the main title.',
     }),
     defineField({
       name: 'slug',
@@ -295,17 +302,25 @@ export default defineType({
     }),
     defineField({
       name: 'externalLink',
-      title: 'External Link',
-      type: 'url',
+      title: 'Alternate Link',
+      type: 'string',
       group: 'properties',
-      description: 'If set, the listing card links to this URL instead of /vision/[slug]',
+      description: 'If set, the listing card links here instead of /vision/[slug]. Use a full URL or an internal path like /about/studio-timeline.',
+    }),
+    defineField({
+      name: 'featured',
+      title: 'Selected Feature',
+      type: 'boolean',
+      group: 'properties',
+      description: 'Include this vision piece in selected/featured feature lists, including the Work page feature cards.',
+      initialValue: false,
     }),
     defineField({
       name: 'hiddenWorkPage',
       title: 'Hidden on Work Page',
       type: 'boolean',
       group: 'properties',
-      description: 'Hide from the /work listing (still accessible at its direct URL)',
+      description: 'Legacy migration flag. Use Selected Feature for new edits; existing documents use this as a fallback.',
       initialValue: false,
     }),
     defineField({
@@ -534,6 +549,18 @@ export default defineType({
       title: 'title',
       subtitle: 'date',
       media: 'image',
+      featured: 'featured',
+      hiddenWorkPage: 'hiddenWorkPage',
+    },
+    prepare({ title, subtitle, media, featured, hiddenWorkPage }) {
+      const selected = typeof featured === 'boolean' ? featured : hiddenWorkPage !== true
+      const selectionLabel = selected ? 'Selected feature' : 'Non-featured'
+
+      return {
+        title,
+        subtitle: subtitle ? `${selectionLabel} - ${subtitle}` : selectionLabel,
+        media,
+      }
     },
   },
 })

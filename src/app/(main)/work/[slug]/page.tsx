@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : undefined
 
   return {
-    title: caseStudy.title,
+    title: caseStudy.heading || caseStudy.title,
     description: caseStudy.metaDescription || caseStudy.caption || undefined,
     openGraph: ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : undefined,
     twitter: ogImage ? { images: [ogImage] } : undefined,

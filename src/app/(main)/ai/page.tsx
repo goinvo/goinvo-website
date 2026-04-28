@@ -63,23 +63,23 @@ const caseStudies = [
   },
 ]
 
-function DoubleArrow({ color }: { color: string }) {
+function Arrow({ split }: { split: '80' | '20' }) {
   return (
-    <svg
-      viewBox="0 0 400 24"
-      preserveAspectRatio="none"
-      className="w-full h-6"
-      aria-hidden
-    >
-      {/* central line */}
-      <rect x="4" y="10" width="392" height="4" rx="2" fill={color} />
-      {/* left-pointing V at the left end */}
-      <rect x="0" y="4" width="16" height="4" rx="2" fill={color} transform="rotate(-45 8 6)" />
-      <rect x="0" y="16" width="16" height="4" rx="2" fill={color} transform="rotate(45 8 18)" />
-      {/* right-pointing V at the right end */}
-      <rect x="384" y="4" width="16" height="4" rx="2" fill={color} transform="rotate(45 392 6)" />
-      <rect x="384" y="16" width="16" height="4" rx="2" fill={color} transform="rotate(-45 392 18)" />
-    </svg>
+    <div className={`arrow arrow-${split}`} aria-hidden="true">
+      <div className="arrow-line" />
+      <div className="arrow-vtop-left" />
+      <div className="arrow-vtop-right" />
+    </div>
+  )
+}
+
+function ArrowVertical({ split }: { split: '80' | '20' }) {
+  return (
+    <div className={`arrow-vert arrow-${split}`} aria-hidden="true">
+      <div className="arrow-line" />
+      <div className="arrow-vtop-left" />
+      <div className="arrow-vtop-right" />
+    </div>
   )
 }
 
@@ -133,10 +133,10 @@ export default function AIPage() {
               <Link
                 key={study.title}
                 href={study.link}
-                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2">
-                  <div className="p-6 md:p-8 flex flex-col justify-center text-tertiary">
+                <div className="flex flex-wrap-reverse">
+                  <div className="flex flex-[1_1_300px] flex-col justify-center p-6 text-tertiary md:p-8">
                     <h4 className="header-xl mb-0">
                       {study.subtitle}
                     </h4>
@@ -147,13 +147,14 @@ export default function AIPage() {
                       <span className="text-secondary underline">Read Case Study</span>
                     </p>
                   </div>
-                  <div className="aspect-[16/10] md:aspect-auto overflow-hidden">
+                  <div className="relative min-h-[220px] flex-[1_1_300px] overflow-hidden">
                     <Image
                       src={cloudfrontImage(study.image)}
                       alt={study.title}
-                      width={600}
-                      height={375}
-                      className="w-full h-full object-cover image--interactive"
+                      fill
+                      sizes="(max-width: 767px) calc(100vw - 2rem), 510px"
+                      quality={95}
+                      className="object-cover image--interactive"
                     />
                   </div>
                 </div>
@@ -166,72 +167,120 @@ export default function AIPage() {
       {/* 80/20 AI Fit Diagram */}
       <section className="goinvo-ai-fit py-16">
         <div className="max-width content-padding">
-          {/* Top intro text — right-aligned, split across two rows */}
-          <div className="fit-text-top font-serif">
-            <div className="flex flex-row">
-              <div className="w-[74%] mr-[10px] pr-5 text-right">
-                <p className="mb-0 text-lg lg:text-2xl font-light leading-snug">
+          <div className="fit-text-top text--serif">
+            <div className="row text-row">
+              <div className="col width-80">
+                <p className="margin-bottom--none text--lg">
                   In the land of AI products, designers will split time between problem solving, facilitation, and bending AI services
                 </p>
               </div>
             </div>
-            <div className="flex flex-row">
-              <div className="w-[74%] mr-[10px] pr-5 text-right">
-                <p className="mt-0 mb-0 text-lg lg:text-2xl font-light leading-snug">versus</p>
+            <div className="row text-row">
+              <div className="col width-80">
+                <p className="margin-top--none margin-bottom--none text--lg">versus</p>
               </div>
-              <div className="w-[25%]">
-                <p className="mt-0 text-lg lg:text-2xl font-light leading-snug">tooling the individual GenAI and agentic services.</p>
+              <div className="col width-20">
+                <p className="margin-top--none text--lg">tooling the individual GenAI and agentic services.</p>
               </div>
             </div>
           </div>
 
-          {/* Stats row: 80% and 20% */}
-          <div className="flex flex-row mt-4">
-            <div className="w-[74%] mr-[10px] pr-5 text-right font-serif">
-              <p className="text-lg lg:text-2xl font-light leading-snug">
-                Most design will live here in the{' '}
-                <span className="text-[2.75rem] font-semibold align-middle">
-                  80<span className="text-2xl font-light">%</span>
-                </span>
-                <br />
-                using AI services to facilitate, problem solve, drive better decisions, and productionize products
-              </p>
-            </div>
-            <div className="w-[25%] font-serif">
-              <p className="text-lg lg:text-2xl font-light leading-snug">
-                <span className="text-[2.75rem] font-semibold align-middle">
-                  20<span className="text-2xl font-light">%</span>
-                </span>{' '}
-                Tooling
-              </p>
-            </div>
-          </div>
-
-          {/* Arrows row */}
-          <div className="flex flex-row my-5">
-            <div className="w-[74%] mr-[10px]">
-              <DoubleArrow color="#3F7CCB" />
-            </div>
-            <div className="w-[25%]">
-              <DoubleArrow color="#D27A64" />
-            </div>
-          </div>
-
-          {/* Bracket + "GoInvo lives here" */}
-          <div className="flex flex-col items-end">
-            <div className="w-[60%] -mr-10 text-center">
-              <div className="mx-auto w-[187px]">
-                <Image
-                  src="/images/bracket-down.svg"
-                  alt="bracket pointed down"
-                  width={187}
-                  height={54}
-                  className="mx-auto"
-                />
+          <div className="diagram-desktop">
+            <div className="stat-stack">
+              <div className="row text-row stat-text">
+                <div className="col width-80">
+                  <p className="text--lg text--serif">
+                    Most design will live here in the <span className="inline-number">80<span className="inline-percentage">%</span></span>
+                    <br />
+                    using AI services to facilitate, problem solve, drive better decisions, and productionize products
+                  </p>
+                </div>
+                <div className="col width-20">
+                  <p className="text--lg text--serif">
+                    <span className="inline-number">20<span className="inline-percentage">%</span></span> Tooling
+                  </p>
+                </div>
               </div>
-              <p className="font-serif text-lg lg:text-2xl font-light leading-snug mt-4">
-                GoInvo lives here as toolmakers and service shapers.
-              </p>
+            </div>
+
+            <div className="row arrow-row">
+              <div className="col width-80">
+                <Arrow split="80" />
+              </div>
+              <div className="col width-20">
+                <Arrow split="20" />
+              </div>
+            </div>
+
+            <div className="goinvo-lives-container">
+              <div className="goinvo-lives">
+                <div className="row bracket-row">
+                  <div className="bracket">
+                    <Image
+                      className="bracket-icon"
+                      src="/images/bracket-down.svg"
+                      alt="bracket pointed down"
+                      width={187}
+                      height={54}
+                    />
+                  </div>
+                </div>
+
+                <div className="goinvo-lives-text">
+                  <div className="row lg-only">
+                    <p className="text--lg text--serif">GoInvo lives here as toolmakers and service shapers.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="diagram-mobile">
+            <div className="arrow-stack">
+              <div className="arrow-column-80">
+                <ArrowVertical split="80" />
+              </div>
+              <div className="arrow-column-20">
+                <ArrowVertical split="20" />
+              </div>
+            </div>
+
+            <div className="goinvo-lives-container">
+              <div className="goinvo-lives">
+                <div className="row bracket-row">
+                  <div className="bracket">
+                    <Image
+                      className="bracket-icon"
+                      src="/images/bracket-down.svg"
+                      alt="bracket pointed down"
+                      width={187}
+                      height={54}
+                    />
+                  </div>
+                </div>
+
+                <div className="stat-stack">
+                  <div className="row text-row stat-text">
+                    <div className="col width-80">
+                      <p className="text--lg text--serif">
+                        Most design will live here in the <span className="inline-number">80<span className="inline-percentage">%</span></span>
+                        <br />
+                        using AI services to facilitate, problem solve, drive better decisions, and productionize products
+                      </p>
+                    </div>
+                    <div className="goinvo-lives-text">
+                      <div className="row">
+                        <p className="text--lg text--serif">GoInvo lives here as toolmakers and service shapers.</p>
+                      </div>
+                    </div>
+                    <div className="col width-20">
+                      <p className="text--lg text--serif">
+                        <span className="inline-number">20<span className="inline-percentage">%</span></span> Tooling
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -242,7 +291,7 @@ export default function AIPage() {
         <div className="max-width content-padding">
           <Link
             href="/vision/visual-storytelling-with-genai"
-            className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+            className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
               <div className="p-6 md:p-8 flex flex-col justify-center text-tertiary">

@@ -15,7 +15,10 @@ export interface SanityImage {
   }
   alt?: string
   caption?: string
+  accessibilityDescription?: string
+  decorative?: boolean
   link?: string
+  mobileImageUrl?: string
 }
 
 export interface Category {
@@ -29,16 +32,20 @@ export interface Category {
 
 export interface CaseStudy {
   _id: string
+  _type?: 'caseStudy'
+  _draftId?: string
   title: string
   heading?: string
   slug: { current: string }
-  client?: string
+  client?: string | null
   hideClientSubtitle?: boolean
+  hideAuthors?: boolean
   image?: SanityImage
   caption?: string
   categories?: Category[]
+  displayTags?: string
   metadataLayout?: 'stacked' | 'inline'
-  authors?: TeamMember[]
+  authors?: TeamMember[] | null
   time?: string
   content?: PortableTextBlock[]
   upNext?: (CaseStudy | ExternalUpNextItem)[]
@@ -87,7 +94,10 @@ export interface TeamMember {
 
 export interface Feature {
   _id: string
+  _type?: 'feature'
+  _draftId?: string
   title: string
+  cardTitle?: string
   slug: { current: string }
   image?: SanityImage
   heroPosition?: string
@@ -102,7 +112,8 @@ export interface Feature {
   categories?: string[]
   date?: string
   showPageMeta?: boolean
-  client?: string
+  client?: string | null
+  featured?: boolean
   authorLayout?: string
   authorBackground?: SectionBackground
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,6 +160,7 @@ export interface StaticFeature {
   link: string
   externalLink?: boolean
   hiddenWorkPage?: boolean
+  featured?: boolean
   imagePosition?: string
 }
 

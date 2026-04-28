@@ -31,11 +31,11 @@ const testimonials = [
   },
 ]
 
-function Divider() {
+function Divider({ className }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className="block w-full h-[30px] bg-center bg-cover my-4"
+      className={cn('block h-[30px] w-full bg-cover bg-center', className ?? 'my-4')}
       style={{ backgroundImage: "url('/images/ekg-divider.svg')" }}
     />
   )
@@ -59,7 +59,7 @@ export function TestimonialCarousel() {
                 type="button"
                 onClick={() => setActive(i)}
                 className={cn(
-                  'w-full py-1 text-center font-sans bg-transparent border-0 cursor-pointer transition-colors',
+                  'w-full py-1 text-left font-sans bg-transparent border-0 cursor-pointer transition-colors',
                   active === i ? 'text-primary' : 'text-secondary hover:text-primary'
                 )}
               >
@@ -78,64 +78,70 @@ export function TestimonialCarousel() {
       </div>
 
       {/* Quote area — full-width gray background, two-column with image + quote */}
-      <div className="bg-gray-light pb-12 lg:pb-[50px]">
-        <div className="max-width content-padding">
-          <div className="flex flex-col lg:flex-row lg:items-stretch">
-            <div className="lg:w-1/2 relative h-[300px] lg:h-[500px] -mx-[var(--content-padding,1rem)] lg:mx-0">
-              <Image
-                src={cloudfrontImage(t.image)}
-                alt={t.name}
-                fill
-                sizes="(min-width: 864px) 50vw, 100vw"
-                className="object-cover"
-              />
-            </div>
-            <div className="lg:w-1/2 flex items-center">
-              <div className="w-full max-w-[510px] mx-auto p-4 lg:p-8">
-                <Divider />
-                <div className="relative px-4 lg:px-8 py-8">
-                  {/* Opening quote mark */}
-                  <span
-                    aria-hidden
-                    className="absolute -top-4 left-0 w-5 h-5 lg:w-[30px] lg:h-[30px] bg-contain bg-center bg-no-repeat"
-                    style={{ backgroundImage: "url('/images/quote.svg')" }}
-                  />
-                  <p className="header-lg text-black mb-6">{t.quote}</p>
-                  <p className="text-gray text-md m-0">
-                    <span>{t.name}</span>
-                    <br />
-                    <span>{t.role}</span>
-                  </p>
-                  {/* Closing quote mark */}
-                  <span
-                    aria-hidden
-                    className="absolute -bottom-4 right-0 w-5 h-5 lg:w-[30px] lg:h-[30px] bg-contain bg-center bg-no-repeat"
-                    style={{
-                      backgroundImage: "url('/images/quote.svg')",
-                      transform: 'rotateX(180deg) scaleX(-1)',
-                    }}
+      <div className="relative bg-gray-light pb-[50px]">
+        <div className="relative bg-gray-light">
+          <div className="max-width content-padding">
+            <div className="flex flex-col lg:flex-row lg:items-stretch">
+              <div className="lg:w-1/2">
+                <div className="relative h-[300px] w-[calc(100%+2rem)] -ml-4 lg:absolute lg:inset-y-0 lg:left-0 lg:right-1/2 lg:h-auto lg:w-auto lg:ml-0">
+                  <Image
+                    src={cloudfrontImage(t.image)}
+                    alt={t.name}
+                    fill
+                    sizes="(min-width: 864px) 50vw, 100vw"
+                    className="object-cover object-center"
                   />
                 </div>
-                <Divider />
+              </div>
+              <div className="lg:w-1/2">
+                <div className="pb-4 lg:ml-8 lg:pb-0">
+                  <div className="bg-gray-light p-4">
+                    <div className="max-width-sm">
+                      <Divider className="mt-4 mb-12" />
+                      <p className="header-lg relative my-6 text-black">
+                        <span
+                          aria-hidden
+                          className="absolute -top-[25px] left-0 h-5 w-5 bg-contain bg-center bg-no-repeat"
+                          style={{ backgroundImage: "url('/images/quote.svg')" }}
+                        />
+                        {t.quote}
+                        <span
+                          aria-hidden
+                          className="absolute -bottom-[25px] right-0 h-5 w-5 bg-contain bg-center bg-no-repeat"
+                          style={{
+                            backgroundImage: "url('/images/quote.svg')",
+                            transform: 'rotateX(180deg) scaleX(-1)',
+                          }}
+                        />
+                      </p>
+                      <p className="m-0 text-sm leading-[1.4375rem] text-gray">
+                        <span>{t.name}</span>
+                        <br />
+                        <span>{t.role}</span>
+                      </p>
+                      <Divider className="mt-8 mb-4" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Pagination dots */}
-          <div className="flex justify-center gap-2 mt-6">
-            {testimonials.map((item, i) => (
-              <button
-                key={item.tab}
-                type="button"
-                onClick={() => setActive(i)}
-                aria-label={`Show testimonial ${i + 1}`}
-                className={cn(
-                  'w-[10px] h-[10px] rounded-full border-0 cursor-pointer p-0',
-                  active === i ? 'bg-primary' : 'bg-primary/40'
-                )}
-              />
-            ))}
-          </div>
+        {/* Pagination dots */}
+        <div className="absolute bottom-[13px] left-0 flex h-[29px] w-full items-center justify-center gap-2">
+          {testimonials.map((item, i) => (
+            <button
+              key={item.tab}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`Show testimonial ${i + 1}`}
+              className={cn(
+                'h-[10px] w-[10px] cursor-pointer rounded-full border-0 p-0',
+                active === i ? 'bg-primary' : 'bg-primary/40'
+              )}
+            />
+          ))}
         </div>
       </div>
     </div>

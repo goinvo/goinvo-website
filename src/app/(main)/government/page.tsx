@@ -146,7 +146,7 @@ export default function GovernmentPage() {
             Let&apos;s discuss your project
           </Button>
 
-          <Link href="/work/mass-snap" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline">
+          <Link href="/work/mass-snap" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out mb-8 text-left no-underline">
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
                 <h3 className="header-xl text-tertiary mt-0 mb-4">
@@ -171,7 +171,7 @@ export default function GovernmentPage() {
             </div>
           </Link>
 
-          <Link href="/work/all-of-us" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline">
+          <Link href="/work/all-of-us" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out mb-8 text-left no-underline">
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
                 <h3 className="header-xl text-tertiary mt-0 mb-4">
@@ -196,7 +196,7 @@ export default function GovernmentPage() {
             </div>
           </Link>
 
-          <Link href="/work/ahrq-cds" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline">
+          <Link href="/work/ahrq-cds" className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out mb-8 text-left no-underline">
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
                 <h3 className="header-xl text-tertiary mt-0 mb-4">

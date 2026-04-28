@@ -41,6 +41,10 @@ function isImage(block) {
   return block?._type === 'image' && block?.asset
 }
 
+function hasEmbeddedCaption(block) {
+  return isImage(block) && typeof block.caption === 'string' && block.caption.trim().length > 0
+}
+
 function isShortText(block, maxLen = 300) {
   if (block?._type !== 'block') return false
   const text = getBlockText(block)
@@ -101,8 +105,10 @@ function fixImageTextColumns(content) {
       continue
     }
 
-    // Image + short descriptive text (not a heading) → 2-column
-    if (isImage(current) && current.size !== 'bleed' && isShortText(next) &&
+    // Image + short descriptive text (not a heading) → 2-column.
+    // Do not wrap captioned image blocks; their following paragraph is body copy,
+    // not an image-side caption. Legacy caption text blocks are handled above.
+    if (isImage(current) && !hasEmbeddedCaption(current) && current.size !== 'bleed' && isShortText(next) &&
         next.style === 'normal' && !isImage(block3)) {
       result.push({
         _type: 'columns',

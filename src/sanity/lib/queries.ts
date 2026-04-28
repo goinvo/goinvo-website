@@ -12,9 +12,11 @@ export const allCaseStudiesQuery = groq`
   ] | order(orderRank asc) {
     _id,
     title,
+    heading,
     slug,
     client,
     hideClientSubtitle,
+    hideAuthors,
     image,
     caption,
     categories[]-> { _id, title, slug },
@@ -30,9 +32,11 @@ export const caseStudyBySlugQuery = groq`
     slug,
     client,
     hideClientSubtitle,
+    hideAuthors,
     image,
     caption,
     categories[]-> { _id, title, slug, isMainCategory, filterOrder },
+    displayTags,
     metadataLayout,
     authors[]-> { _id, name, role, bio, image },
     time,
@@ -51,6 +55,7 @@ export const caseStudyBySlugQuery = groq`
           _id,
           _type,
           title,
+          heading,
           slug,
           client,
           image,
@@ -61,6 +66,7 @@ export const caseStudyBySlugQuery = groq`
           _id,
           _type,
           title,
+          heading,
           slug,
           client,
           image,
@@ -78,6 +84,7 @@ export const draftCaseStudiesQuery = groq`{
   "drafts": *[_type == "caseStudy" && _id in path("drafts.**")] | order(orderRank asc) {
     _id,
     title,
+    heading,
     slug,
     client,
     image,
@@ -92,7 +99,9 @@ export const draftCaseStudiesQuery = groq`{
 export const draftFeaturesQuery = groq`{
   "drafts": *[_type == "feature" && _id in path("drafts.**")] | order(orderRank asc) {
     _id,
+    _type,
     title,
+    cardTitle,
     slug,
     image,
     video,
@@ -102,6 +111,7 @@ export const draftFeaturesQuery = groq`{
     showPageMeta,
     client,
     externalLink,
+    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
     hiddenWorkPage
   },
   "publishedIds": *[_type == "feature" && !(_id in path("drafts.**"))]._id
@@ -132,7 +142,7 @@ export const mainCategoriesQuery = groq`
 
 // Team Members
 export const teamMembersQuery = groq`
-  *[_type == "teamMember" && !isAlumni] | order(orderRank asc) {
+  *[_type == "teamMember" && _id match "team-*" && isAlumni != true] | order(orderRank asc) {
     _id,
     name,
     role,
@@ -160,7 +170,9 @@ export const allFeaturesQuery = groq`
     && !(slug.current match "untitled-*")
   ] | order(orderRank asc) {
     _id,
+    _type,
     title,
+    cardTitle,
     slug,
     image,
     video,
@@ -170,6 +182,31 @@ export const allFeaturesQuery = groq`
     showPageMeta,
     client,
     externalLink,
+    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
+    hiddenWorkPage
+  }
+`
+
+export const selectedWorkFeaturesQuery = groq`
+  *[_type == "feature"
+    && title != "Untitled"
+    && !(slug.current match "untitled-*")
+    && coalesce(featured, coalesce(hiddenWorkPage, false) != true) == true
+  ] | order(orderRank asc) {
+    _id,
+    _type,
+    title,
+    cardTitle,
+    slug,
+    image,
+    video,
+    description,
+    categories,
+    date,
+    showPageMeta,
+    client,
+    externalLink,
+    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
     hiddenWorkPage
   }
 `
@@ -178,6 +215,7 @@ export const featureBySlugQuery = groq`
   *[_type == "feature" && slug.current == $slug][0] {
     _id,
     title,
+    cardTitle,
     slug,
     image,
     heroPosition,
@@ -192,6 +230,9 @@ export const featureBySlugQuery = groq`
     date,
     showPageMeta,
     client,
+    externalLink,
+    "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
+    hiddenWorkPage,
     authorLayout,
     authorBackground,
     "authors": authors[] {

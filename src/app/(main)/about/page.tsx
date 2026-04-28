@@ -137,6 +137,41 @@ function TeamMemberCard({ member }: { member: TeamMember }) {
   )
 }
 
+function CareerAwaitsCard() {
+  return (
+    <div className="bg-blue-light mb-12">
+      <div className="max-width content-padding py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="lg:pr-4">
+            <Image
+              src={cloudfrontImage('/images/about/silhouette.jpg')}
+              alt="Career opportunities at GoInvo"
+              width={800}
+              height={500}
+              className="w-full h-auto"
+            />
+          </div>
+          <div className="lg:pl-4 lg:pt-8">
+            <p className="font-semibold mt-0 mb-1">Your Career Awaits</p>
+            <p className="text-gray mb-4">Designer and/or Engineer</p>
+            <p className="text-gray">
+              If you&apos;re looking to engage in meaningful work, learn from a
+              diverse team and thrive with autonomy on complex projects, we&apos;d
+              be a good fit.
+            </p>
+            <Link
+              href="/about/careers"
+              className="inline-block border border-primary-light text-primary no-underline font-semibold uppercase tracking-[2px] text-sm px-10 py-3 hover:bg-primary-lightest transition-colors"
+            >
+              Learn about careers
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default async function AboutPage() {
   const { data: team } = await sanityFetch({ query: teamMembersQuery }) as { data: TeamMember[] }
 
@@ -223,13 +258,21 @@ export default async function AboutPage() {
 
       {/* Team */}
       <Reveal style="slide-up">
-        <div id="our-team" className="max-width content-padding py-8 lg:py-12 scroll-mt-[var(--spacing-header-height)]">
-          <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-center mb-8 lg:mb-12">
-            Our team
-          </h2>
-          {team.map((member) => (
-            <TeamMemberCard key={member._id} member={member} />
-          ))}
+        <div id="our-team" className="py-8 lg:py-12 scroll-mt-[var(--spacing-header-height)]">
+          <div className="max-width content-padding">
+            <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-center mb-8 lg:mb-12">
+              Our team
+            </h2>
+            {team.slice(0, 3).map((member) => (
+              <TeamMemberCard key={member._id} member={member} />
+            ))}
+          </div>
+          <CareerAwaitsCard />
+          <div className="max-width content-padding">
+            {team.slice(3).map((member) => (
+              <TeamMemberCard key={member._id} member={member} />
+            ))}
+          </div>
         </div>
       </Reveal>
 
@@ -240,24 +283,14 @@ export default async function AboutPage() {
             <h3 className="font-sans text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] text-center mb-4">
               Code of Ethics
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-              <ul className="ul">
-                {ethics.slice(0, 3).map((ethic) => (
-                  <li key={ethic.title} className="mb-8">
-                    <p className="font-semibold mb-1">{ethic.title}</p>
-                    <p className="text-gray text-md">{ethic.content}</p>
-                  </li>
-                ))}
-              </ul>
-              <ul className="ul">
-                {ethics.slice(3).map((ethic) => (
-                  <li key={ethic.title} className="mb-8">
-                    <p className="font-semibold mb-1">{ethic.title}</p>
-                    <p className="text-gray text-md">{ethic.content}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ul className="ul grid grid-cols-1 md:grid-cols-2 gap-x-8">
+              {ethics.map((ethic) => (
+                <li key={ethic.title} className="mb-8">
+                  <p className="font-semibold mb-1">{ethic.title}</p>
+                  <p className="text-gray text-md">{ethic.content}</p>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </Reveal>
@@ -296,9 +329,9 @@ export default async function AboutPage() {
                 <Link href="/about/studio-timeline">
                   Studio timeline
                 </Link>
-                <a href="/vision/oral-history-goinvo">
+                <Link href="/vision/oral-history-goinvo">
                   Oral history
-                </a>
+                </Link>
               </div>
             </div>
             <div className="lg:pl-4">
@@ -352,7 +385,7 @@ export default async function AboutPage() {
                     href={item.link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group block bg-white text-black overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+                    className="group block bg-white text-black overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
                   >
                     {inner}
                   </a>
@@ -362,7 +395,7 @@ export default async function AboutPage() {
                 <Link
                   key={item.title}
                   href={item.link}
-                  className="group block bg-white text-black overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+                  className="group block bg-white text-black overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
                 >
                   {inner}
                 </Link>

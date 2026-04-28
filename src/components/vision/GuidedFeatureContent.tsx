@@ -9,6 +9,7 @@ import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { resolveSectionBackground } from '@/lib/sectionBackgrounds'
 import { hasMeaningfulFeatureBody } from '@/lib/featureAuthoring'
+import { findPortableHeading, stripAuthorHeading } from '@/lib/utils'
 import type { Feature } from '@/types'
 import type { PortableTextBlock } from '@portabletext/types'
 
@@ -36,7 +37,15 @@ export function GuidedFeatureContent({
   isDraftMode,
 }: GuidedFeatureContentProps) {
   const feature = useLiveData(initialData, featureBySlugQuery, { slug })
-  const content = feature.content
+  const rawContent = feature.content || []
+  const hasAuthors = Boolean(feature.authors && feature.authors.length > 0)
+  const hasContributors = Boolean(feature.contributors && feature.contributors.length > 0)
+  const authorHeading = hasAuthors
+    ? findPortableHeading(rawContent, ['Authors', 'Author'])
+    : undefined
+  const content = hasAuthors
+    ? stripAuthorHeading(rawContent, { stripContributors: hasContributors })
+    : rawContent
   const hasContent = hasMeaningfulFeatureBody(content)
 
   const widthClass =
@@ -77,6 +86,7 @@ export function GuidedFeatureContent({
           <div className={articleContainerClassName} style={articleContainerStyle}>
             <AuthorSection
               authors={feature.authors}
+              heading={authorHeading}
               variant={authorVariant}
               background={authorBackground}
             />
@@ -112,7 +122,7 @@ export function GuidedFeatureContent({
     </>
   )
 
-  if (!content) {
+  if (content.length === 0) {
     return isDraftMode && !hasContent ? (
       <EmptyContentPlaceholder documentType="feature" documentId={feature._id} />
     ) : null

@@ -23,6 +23,10 @@ export const metadata: Metadata = {
 
 const SPOTLIGHT_SLUG = 'doodle-to-demo'
 
+function isExternalHref(href: string) {
+  return /^(https?:)?\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:')
+}
+
 const publicationLogos = [
   {
     name: 'NPR',
@@ -141,7 +145,11 @@ export default async function VisionPage() {
       const { drafts, publishedIds } = await rawClient.fetch(draftFeaturesQuery)
       draftFeatures = (drafts as (Feature & { _id: string })[])
         .filter((d) => !publishedIds.includes(d._id.replace('drafts.', '')))
-        .map((d) => ({ ...d, _id: d._id.replace('drafts.', '') }))
+        .map((d) => ({
+          ...d,
+          _draftId: d._id,
+          _id: d._id.replace('drafts.', ''),
+        }))
     } catch (e) {
       console.error('Failed to fetch draft features:', e)
     }
@@ -160,19 +168,19 @@ export default async function VisionPage() {
         <h3 className="header-md py-8">Spotlight</h3>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
           {/* Spotlight feature (2/3) */}
-          {spotlightFeature.externalLink ? (
+          {spotlightFeature.externalLink && isExternalHref(spotlightFeature.link) ? (
             <a
               href={spotlightFeature.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
             >
               <SpotlightCardContent feature={spotlightFeature} />
             </a>
           ) : (
             <Link
               href={spotlightFeature.link}
-              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
             >
               <SpotlightCardContent feature={spotlightFeature} />
             </Link>
@@ -181,7 +189,7 @@ export default async function VisionPage() {
           {/* Health Visualizations (1/3) */}
           <Link
             href="/vision/health-visualizations"
-            className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+            className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
           >
             <div className="h-[260px] overflow-hidden">
               <Image

@@ -1,8 +1,14 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import type { ReactNode } from 'react'
 import { urlForImage } from '@/sanity/lib/image'
 import { NewDraftCard } from '@/components/ui/NewDraftCard'
+import { DraftDeleteButton } from '@/components/ui/DraftDeleteButton'
 import type { Feature } from '@/types'
+
+function isExternalHref(href: string) {
+  return /^(https?:)?\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:')
+}
 
 function DraftFeatureCard({ feature }: { feature: Feature }) {
   const imageUrl = feature.image?.asset
@@ -42,35 +48,46 @@ function DraftFeatureCard({ feature }: { feature: Feature }) {
     </>
   )
 
+  let card: ReactNode
+
   if (!href) {
-    return (
+    card = (
       <div className="bg-white overflow-hidden shadow-card">
         {inner}
-        <p className="px-4 pb-3 text-gray text-xs">No slug set — generate one in the Studio</p>
+        <p className="px-4 pb-3 text-gray text-xs">No slug set - generate one in the Studio</p>
       </div>
     )
-  }
-
-  if (feature.externalLink) {
-    return (
+  } else if (feature.externalLink && isExternalHref(href)) {
+    card = (
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+        className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
       >
         {inner}
       </a>
     )
+  } else {
+    card = (
+      <Link
+        href={href}
+        className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
+      >
+        {inner}
+      </Link>
+    )
   }
 
   return (
-    <Link
-      href={href}
-      className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
-    >
-      {inner}
-    </Link>
+    <div className="group relative">
+      {card}
+      <DraftDeleteButton
+        documentId={feature._draftId}
+        type="feature"
+        title={feature.title || 'Untitled'}
+      />
+    </div>
   )
 }
 
@@ -91,13 +108,12 @@ export function DraftFeaturesSection({ features }: DraftFeaturesSectionProps) {
       />
       <div className="max-width content-padding py-8">
         <h3 className="font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary m-0 mb-6">
-          Draft Features ({features.length})
+          Draft Features
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {features.map((feature) => (
             <DraftFeatureCard key={feature._id} feature={feature} />
           ))}
-          {/* New draft card */}
           <NewDraftCard type="feature" label="New Vision Article" />
         </div>
       </div>

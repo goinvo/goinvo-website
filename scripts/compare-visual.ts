@@ -35,6 +35,7 @@ interface ElementInfo {
   tag: string
   text: string
   classes: string
+  mediaLabel: string
   index: number
   styles: {
     fontSize: string
@@ -131,10 +132,36 @@ async function extractElements(page: Page): Promise<ElementInfo[]> {
     return Array.from(elements).map((el, i) => {
       const cs = getComputedStyle(el)
       const rect = el.getBoundingClientRect()
+      const tag = el.tagName.toLowerCase()
+      let mediaLabel = ''
+
+      if (tag === 'img') {
+        const figureCaption = el.closest('figure')?.querySelector('figcaption')?.textContent?.trim()
+        if (figureCaption) {
+          mediaLabel = figureCaption
+        } else {
+          let node: Element | null = el
+          for (let depth = 0; depth < 4 && node && !mediaLabel; depth++) {
+            const next = node.nextElementSibling
+            if (next && ['figcaption', 'p'].includes(next.tagName.toLowerCase())) {
+              mediaLabel = next.textContent?.trim() || ''
+            }
+            node = node.parentElement
+          }
+        }
+
+        if (!mediaLabel) mediaLabel = el.getAttribute('alt')?.trim() || ''
+        if (!mediaLabel) {
+          const src = el.getAttribute('src') || ''
+          mediaLabel = src.split('/').pop()?.split('?')[0] || ''
+        }
+      }
+
       return {
-        tag: el.tagName.toLowerCase(),
+        tag,
         text: (el.textContent || '').trim().substring(0, 80),
         classes: el.className || '',
+        mediaLabel,
         index: i,
         styles: {
           fontSize: cs.fontSize,
@@ -160,9 +187,18 @@ async function extractElements(page: Page): Promise<ElementInfo[]> {
   })
 }
 
+function isVisibleImage(element: ElementInfo) {
+  return element.tag === 'img' && element.rect.width > 20 && element.styles.display !== 'none'
+}
+
+function normalizeMatchText(text: string) {
+  return text.replace(/\s+/g, ' ').replace(/[^\w\s]/g, '').trim().toLowerCase()
+}
+
 function matchElements(gatsby: ElementInfo[], nextjs: ElementInfo[]): { matched: [ElementInfo, ElementInfo][]; missingInNext: ElementInfo[]; extraInNext: ElementInfo[] } {
   const matched: [ElementInfo, ElementInfo][] = []
   const usedNext = new Set<number>()
+  const usedGatsby = new Set<number>()
 
   // Match headings first (by text similarity)
   const headingTags = new Set(['h1', 'h2', 'h3', 'h4'])
@@ -175,16 +211,38 @@ function matchElements(gatsby: ElementInfo[], nextjs: ElementInfo[]): { matched:
     )
     if (match) {
       usedNext.add(nextjs.indexOf(match))
+      usedGatsby.add(gatsby.indexOf(g))
       matched.push([g, match])
     }
   }
 
-  // Match images by order
-  const gImages = gatsby.filter(e => e.tag === 'img')
-  const nImages = nextjs.filter((e, i) => e.tag === 'img' && !usedNext.has(i))
-  for (let i = 0; i < Math.min(gImages.length, nImages.length); i++) {
-    usedNext.add(nextjs.indexOf(nImages[i]))
-    matched.push([gImages[i], nImages[i]])
+  // Match visible images by nearby caption/alt first, then by order.
+  const gImages = gatsby.filter(isVisibleImage)
+  const nImages = nextjs.filter((e, i) => isVisibleImage(e) && !usedNext.has(i))
+  const labelCounts = (images: ElementInfo[]) => images.reduce((counts, image) => {
+    const label = normalizeMatchText(image.mediaLabel)
+    if (label) counts.set(label, (counts.get(label) || 0) + 1)
+    return counts
+  }, new Map<string, number>())
+  const gLabelCounts = labelCounts(gImages)
+  const nLabelCounts = labelCounts(nImages)
+
+  for (const gImage of gImages) {
+    const label = normalizeMatchText(gImage.mediaLabel)
+    if (!label || gLabelCounts.get(label) !== 1 || nLabelCounts.get(label) !== 1) continue
+    const nImage = nImages.find((image) => normalizeMatchText(image.mediaLabel) === label)
+    if (!nImage) continue
+    usedGatsby.add(gatsby.indexOf(gImage))
+    usedNext.add(nextjs.indexOf(nImage))
+    matched.push([gImage, nImage])
+  }
+
+  const remainingGImages = gImages.filter((image) => !usedGatsby.has(gatsby.indexOf(image)))
+  const remainingNImages = nImages.filter((image) => !usedNext.has(nextjs.indexOf(image)))
+  for (let i = 0; i < Math.min(remainingGImages.length, remainingNImages.length); i++) {
+    usedGatsby.add(gatsby.indexOf(remainingGImages[i]))
+    usedNext.add(nextjs.indexOf(remainingNImages[i]))
+    matched.push([remainingGImages[i], remainingNImages[i]])
   }
 
   // Match lists by order
@@ -213,7 +271,10 @@ function matchElements(gatsby: ElementInfo[], nextjs: ElementInfo[]): { matched:
 
 function compareStyles(g: ElementInfo, n: ElementInfo): Diff[] {
   const diffs: Diff[] = []
-  const label = `<${g.tag}> "${g.text.substring(0, 40)}"`
+  const labelText = g.tag === 'img'
+    ? (g.mediaLabel || n.mediaLabel || 'image')
+    : g.text
+  const label = `<${g.tag}> "${labelText.substring(0, 40)}"`
 
   // Font checks for headings
   if (['h1', 'h2', 'h3', 'h4'].includes(g.tag)) {
@@ -260,7 +321,7 @@ function compareStyles(g: ElementInfo, n: ElementInfo): Diff[] {
   if (g.tag === 'img') {
     // Width difference > 50px
     if (Math.abs(g.rect.width - n.rect.width) > 50) {
-      diffs.push({ severity: 'high', element: `<img> (${g.text.substring(0, 30) || 'image'})`, property: 'width', gatsby: `${g.rect.width}px`, nextjs: `${n.rect.width}px` })
+      diffs.push({ severity: 'high', element: label, property: 'width', gatsby: `${g.rect.width}px`, nextjs: `${n.rect.width}px` })
     }
   }
 
@@ -331,6 +392,7 @@ async function comparePage(slug: string, takeScreenshots: boolean, playPageAnima
     ])
 
     // Screenshots
+    const playedPageAnimationsForScreenshots = takeScreenshots && playPageAnimations
     if (takeScreenshots) {
       mkdirSync(SCREENSHOT_DIR, { recursive: true })
       if (playPageAnimations) {
@@ -346,6 +408,13 @@ async function comparePage(slug: string, takeScreenshots: boolean, playPageAnima
       await gPage.screenshot({ path: `${SCREENSHOT_DIR}/${slug}-gatsby.png`, fullPage: true })
       await nPage.screenshot({ path: `${SCREENSHOT_DIR}/${slug}-nextjs.png`, fullPage: true })
       console.log(`    📸 Screenshots saved to ${SCREENSHOT_DIR}/`)
+    }
+
+    if (!playedPageAnimationsForScreenshots) {
+      await Promise.all([
+        playAnimations(gPage),
+        playAnimations(nPage),
+      ])
     }
 
     // Extract elements
@@ -369,8 +438,8 @@ async function comparePage(slug: string, takeScreenshots: boolean, playPageAnima
     }
 
     // Element counts
-    const gCounts = { img: gElements.filter(e => e.tag === 'img').length, sup: gElements.filter(e => e.tag === 'sup').length, ul: gElements.filter(e => e.tag === 'ul').length }
-    const nCounts = { img: nElements.filter(e => e.tag === 'img').length, sup: nElements.filter(e => e.tag === 'sup').length, ul: nElements.filter(e => e.tag === 'ul').length }
+    const gCounts = { img: gElements.filter(isVisibleImage).length, sup: gElements.filter(e => e.tag === 'sup').length, ul: gElements.filter(e => e.tag === 'ul').length }
+    const nCounts = { img: nElements.filter(isVisibleImage).length, sup: nElements.filter(e => e.tag === 'sup').length, ul: nElements.filter(e => e.tag === 'ul').length }
 
     if (Math.abs(gCounts.img - nCounts.img) >= 2) {
       allDiffs.push({ severity: 'high', element: 'images', property: 'count', gatsby: `${gCounts.img}`, nextjs: `${nCounts.img}` })

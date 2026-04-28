@@ -65,18 +65,35 @@ const slugToImage: Record<string, string> = Object.fromEntries(
   fallbackPosters.map((p) => [p.id, p.image])
 )
 
-function resolveDownloadUrl(link: string): string {
-  if (!link) return ''
-  return link.startsWith('http') ? link : `https://www.goinvo.com${link}`
+const learnMorePathOverrides: Record<string, string> = {
+  '/features/careplans': '/vision/care-plans/',
+  '/vision/careplans': '/vision/care-plans/',
 }
 
-/** Rewrite legacy goinvo.com/features/ URLs to local /vision/ paths */
+function resolveDownloadUrl(link: string): string {
+  if (!link) return ''
+  const goinvoPdf = link.match(/^https?:\/\/(?:www\.)?goinvo\.com(\/pdf\/.+)$/)
+  if (goinvoPdf) return cloudfrontImage(goinvoPdf[1])
+  return link.startsWith('http') ? link : cloudfrontImage(link)
+}
+
+/** Rewrite legacy GoInvo URLs to current local routes. */
 function normalizeLearnMoreLink(link: string): string {
   if (!link) return ''
-  // Convert absolute goinvo.com/features/ URLs to local /vision/ paths
-  const m = link.match(/(?:https?:\/\/)?(?:www\.)?goinvo\.com\/features\/([^/?#]+)/)
+  const trimmed = link.trim()
+  const goinvoPath = trimmed.match(
+    /^https?:\/\/(?:www\.)?goinvo\.com(\/[^?#]*)([?#].*)?$/
+  )
+  const localLink = goinvoPath ? `${goinvoPath[1]}${goinvoPath[2] ?? ''}` : trimmed
+  const [path, hash] = localLink.split('#')
+  const normalizedPath = path.replace(/\/$/, '')
+  const override = learnMorePathOverrides[normalizedPath]
+  if (override) return hash ? `${override}#${hash}` : override
+
+  // Convert legacy /features/ URLs to local /vision/ paths
+  const m = localLink.match(/^\/features\/([^/?#]+)/)
   if (m) return `/vision/${m[1]}`
-  return link
+  return trimmed
 }
 
 function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
@@ -105,7 +122,7 @@ function normalizeFallbackItems(): PosterCard[] {
     title: p.title,
     imageUrl: cloudfrontImage(p.image),
     downloadUrl: resolveDownloadUrl(p.downloadLink),
-    learnMoreLink: p.learnMoreLink,
+    learnMoreLink: normalizeLearnMoreLink(p.learnMoreLink),
   }))
 }
 
@@ -183,7 +200,7 @@ function PosterCardComponent({ card }: { card: PosterCard }) {
         alt={card.title}
         width={600}
         height={450}
-        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+        className="w-full h-full object-cover transition-transform duration-500 ease-out will-change-transform hover:scale-[1.025]"
       />
     </div>
   ) : (
@@ -191,7 +208,7 @@ function PosterCardComponent({ card }: { card: PosterCard }) {
   )
 
   return (
-    <div className="flex h-full flex-col bg-white rounded shadow-card hover:shadow-card-hover transition-shadow overflow-hidden">
+    <div className="flex h-full flex-col bg-white rounded shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out overflow-hidden">
       {card.downloadUrl ? (
         <a href={card.downloadUrl} target="_blank" rel="noopener noreferrer">
           {imageBlock}

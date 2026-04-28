@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { Button } from '@/components/ui/Button'
 import { ImageCarousel } from '@/components/ui/ImageCarousel'
 import { cloudfrontImage } from '@/lib/utils'
@@ -74,7 +73,7 @@ export function LivingHealthLabCarousels() {
           <p className="leading-relaxed mb-4">
             How might we address these problems in the future?
           </p>
-          <ol className="ol mb-4">
+          <ol className="list-decimal pl-6 space-y-2 mb-4 leading-relaxed">
             <li>
               Integration of technology: a conveniently-timed text prompt
               might improve consistency of day-to-day tracking.
@@ -123,12 +122,9 @@ export function LivingHealthLabCarousels() {
       <div>
         <h3 className="header-md mt-6 mb-3">4) Next Steps: Digital Design</h3>
         <p className="leading-relaxed mb-4">
-          The insights from our paper prototype tests are driving the
-          digital design phase. After our experience with the workbook, the
-          team feels the Living Health Lab approach has real potential to
-          create meaningful changes. The digital version aims to solve the
-          key challenges we faced: remembering to track, being creative in
-          testing, and turning data into insights.
+          In Stage 2, we mapped out logic flows and the information
+          architecture of Living Health Lab as a native or web app, and we
+          began mocking up the screens.
         </p>
         <ImageCarousel images={digitalSlides} thumbnailSize="lg" />
       </div>

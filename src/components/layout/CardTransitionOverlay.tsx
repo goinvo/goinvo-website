@@ -142,6 +142,7 @@ export function CardTransitionOverlay() {
               className="object-cover"
               style={{ objectPosition: 'center top' }}
               sizes="100vw"
+              quality={95}
             />
           </motion.div>
         )}

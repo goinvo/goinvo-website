@@ -117,11 +117,25 @@ export default defineType({
       options: { hotspot: true },
       fields: [
         {
+          name: 'decorative',
+          type: 'boolean',
+          title: 'Decorative image',
+          description: 'Use only when the image adds no information. Decorative images render with empty alt text.',
+          initialValue: false,
+        },
+        {
           name: 'alt',
           type: 'string',
           title: 'Alt text',
           description:
-            'Describe the image for screen readers (e.g. "Doctor reviewing patient chart on tablet"). Leave empty for decorative images.',
+            'Short screen reader label. Keep this concise; use the accessibility description for diagrams, charts, and dense UI screens.',
+          hidden: ({ parent }) => Boolean(parent?.decorative),
+          validation: (Rule) =>
+            Rule.custom((alt, context) => {
+              const parent = context.parent as { decorative?: boolean } | undefined
+              if (parent?.decorative || (typeof alt === 'string' && alt.trim())) return true
+              return 'Add concise alt text, or mark the image as decorative.'
+            }).warning(),
         },
         {
           name: 'caption',
@@ -130,12 +144,28 @@ export default defineType({
           description: 'Optional caption displayed below the image',
         },
         {
+          name: 'accessibilityDescription',
+          type: 'text',
+          rows: 5,
+          title: 'Accessibility description',
+          description: 'Long text equivalent for complex images such as diagrams, charts, workflows, screenshots, and UI mockups. Screen readers receive this via aria-describedby.',
+          hidden: ({ parent }) => Boolean(parent?.decorative),
+        },
+        {
           name: 'link',
           type: 'url',
           title: 'Image Link',
           description: 'Optional URL to open when the image is clicked',
           validation: (Rule) =>
             Rule.uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }),
+        },
+        {
+          name: 'mobileImageUrl',
+          type: 'url',
+          title: 'Mobile image URL',
+          description: 'Optional alternate image used below the large breakpoint.',
+          validation: (Rule) =>
+            Rule.uri({ scheme: ['https', 'http'] }),
         },
         {
           name: 'size',
@@ -246,7 +276,61 @@ export default defineType({
           title: 'Content',
           type: 'array',
           description: 'Text and images distributed across the columns',
-          of: [{ type: 'block' }, { type: 'image', options: { hotspot: true } }],
+          of: [
+            { type: 'block' },
+            { type: 'image', options: { hotspot: true } },
+            {
+              name: 'buttonGroup',
+              title: 'Buttons',
+              type: 'object',
+              description: 'One or more buttons displayed beneath a column item',
+              fields: [
+                {
+                  name: 'buttons',
+                  title: 'Buttons',
+                  type: 'array',
+                  of: [
+                    {
+                      type: 'object',
+                      fields: [
+                        { name: 'label', title: 'Label', type: 'string', validation: (Rule) => Rule.required() },
+                        { name: 'url', title: 'URL', type: 'url', validation: (Rule) => Rule.required().uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }) },
+                        { name: 'variant', title: 'Variant', type: 'string', options: { list: [{ title: 'Primary', value: 'primary' }, { title: 'Secondary', value: 'secondary' }] }, initialValue: 'secondary' },
+                        { name: 'external', title: 'New tab', type: 'boolean', initialValue: true },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  name: 'layout',
+                  title: 'Layout',
+                  type: 'string',
+                  description: 'How the buttons are displayed',
+                  options: {
+                    list: [
+                      { title: 'Inline (side by side)', value: 'inline' },
+                      { title: 'Full width (equal share)', value: 'fullWidth' },
+                      { title: 'Centered', value: 'centered' },
+                    ],
+                  },
+                  initialValue: 'inline',
+                },
+                {
+                  name: 'size',
+                  title: 'Size',
+                  type: 'string',
+                  description: 'Use "Large" for Gatsby-style CTA buttons with a wider desktop footprint.',
+                  options: {
+                    list: [
+                      { title: 'Default', value: 'default' },
+                      { title: 'Large CTA', value: 'large' },
+                    ],
+                  },
+                  initialValue: 'default',
+                },
+              ],
+            },
+          ],
         },
         {
           name: 'caption',

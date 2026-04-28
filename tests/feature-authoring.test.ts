@@ -35,6 +35,7 @@ describe('Feature authoring configuration', () => {
     ])
 
     expect(getSchemaField(featureSchema, 'content').group).toBe('content')
+    expect(getSchemaField(featureSchema, 'featured').group).toBe('properties')
     expect(getSchemaField(featureSchema, 'publishingChecklist').group).toBe('properties')
     expect(getSchemaField(featureSchema, 'publishingChecklist').components?.input).toBeDefined()
   })

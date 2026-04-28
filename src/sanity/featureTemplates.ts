@@ -5,6 +5,7 @@ const baseFeatureDefaults = {
   contentWidth: 'medium',
   bulletStyle: 'star',
   showPageMeta: true,
+  featured: false,
   authorLayout: 'equal',
   authorBackground: 'white',
   contributorsLayout: 'equal',

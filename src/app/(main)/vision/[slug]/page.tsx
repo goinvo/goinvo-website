@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { draftMode } from 'next/headers'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { client } from '@/sanity/lib/client'
 import { sanityFetch } from '@/sanity/lib/live'
 import { featureBySlugQuery, allFeaturesQuery } from '@/sanity/lib/queries'
@@ -12,6 +12,7 @@ import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { AboutGoInvo } from '@/components/ui/AboutGoInvo'
+import { ArticleMeta } from '@/components/ui/ArticleMeta'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
 import { GuidedFeatureContent } from '@/components/vision/GuidedFeatureContent'
 import { resolveSectionBackground, type SectionBackground } from '@/lib/sectionBackgrounds'
@@ -454,6 +455,316 @@ function toBulletListItem(block: any, level = 1, listItem = 'bullet') { // eslin
   }
 }
 
+function hasButtonLabel(block: any, label: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  return block?._type === 'buttonGroup' &&
+    Array.isArray(block.buttons) &&
+    block.buttons.some((button: any) => button?.label === label) // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
+function transformOwnYourHealthDataActions(content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const comicUrl = 'https://dd17w042cevyt.cloudfront.net/pdf/vision/own-your-health-data/Own-Your-Health-Data.pdf'
+  const whitepaperUrl = 'https://docs.google.com/document/d/13j03-beeoOZujMK6smdjcicKAb1Jh_L6tn_NG91Nq4M/edit'
+  const githubUrl = 'https://github.com/goinvo/OwnYourHealthData'
+  const columnsIndex = content.findIndex(
+    (block) => block?._type === 'columns' &&
+      Array.isArray(block.content) &&
+      block.content.filter((item: any) => item?._type === 'image').length >= 2 // eslint-disable-line @typescript-eslint/no-explicit-any
+  )
+  const viewWhitepaperIndex = content.findIndex((block) => hasButtonLabel(block, 'View Whitepaper'))
+  const downloadComicIndex = content.findIndex((block) => hasButtonLabel(block, 'Download Comic'))
+
+  if (columnsIndex < 0 || viewWhitepaperIndex < 0 || downloadComicIndex < 0) {
+    return content
+  }
+
+  const columnsBlock = content[columnsIndex]
+  if (columnsBlock.content.some((item: any) => item?._type === 'buttonGroup')) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    return content
+  }
+
+  const [comicImage, whitepaperImage] = columnsBlock.content
+    .filter((item: any) => item?._type === 'image') // eslint-disable-line @typescript-eslint/no-explicit-any
+    .slice(0, 2)
+
+  return content
+    .map((block, index) => {
+      if (index !== columnsIndex) return block
+
+      return {
+        ...columnsBlock,
+        layout: '2',
+        content: [
+          { ...comicImage, link: comicUrl },
+          { ...content[downloadComicIndex], layout: 'fullWidth' },
+          createPortableBlock(
+            'own-your-health-data-github-link',
+            [{ text: 'On GitHub', marks: ['github-link'] }],
+            'normal',
+            [{ _key: 'github-link', _type: 'link', href: githubUrl, blank: true }],
+          ),
+          { ...whitepaperImage, link: whitepaperUrl },
+          { ...content[viewWhitepaperIndex], layout: 'fullWidth' },
+        ],
+      }
+    })
+    .filter((_, index) => index !== viewWhitepaperIndex && index !== downloadComicIndex)
+}
+
+function extractPrecisionAutismSpecialThanks(content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const headingIndex = content.findIndex(
+    (block) => textFromPortableBlock(block).toLowerCase() === 'special thanks to...'
+  )
+
+  if (headingIndex < 0) {
+    return { content }
+  }
+
+  const specialThanks: any[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+  let endIndex = headingIndex + 1
+  while (endIndex < content.length) {
+    const block = content[endIndex]
+    if (block?._type !== 'block' || block?.listItem !== 'bullet') break
+    specialThanks.push(block)
+    endIndex += 1
+  }
+
+  if (specialThanks.length === 0) {
+    return { content }
+  }
+
+  return {
+    content: [
+      ...content.slice(0, headingIndex),
+      ...content.slice(endIndex),
+    ],
+    specialThanks,
+    specialThanksHeading: textFromPortableBlock(content[headingIndex]),
+  }
+}
+
+function addPhysicianBurnoutMobileContributorImage(content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const mobileImageUrl = 'https://dd17w042cevyt.cloudfront.net/images/features/burnout/contributors-mobile.jpg?w=800'
+
+  return content.map((block) => {
+    if (
+      block?._type !== 'image' ||
+      block?.mobileImageUrl ||
+      !String(block?.alt || '').startsWith('A physician balancing the heavy burden of contributors to burnout.')
+    ) {
+      return block
+    }
+
+    return {
+      ...block,
+      mobileImageUrl,
+    }
+  })
+}
+
+function createSpan(key: string, text: string, marks: string[] = []) {
+  return {
+    _key: key,
+    _type: 'span',
+    marks,
+    text,
+  }
+}
+
+function referenceSpan(key: string, refNumber: string) {
+  return createSpan(key, refNumber, ['sup'])
+}
+
+function superscriptSeparatorSpan(key: string) {
+  return createSpan(key, ', ', ['supSeparator'])
+}
+
+function addSpacingAfterCitationSpans(block: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (block?._type !== 'block' || !Array.isArray(block.children)) return block
+
+  return {
+    ...block,
+    children: block.children.map((child: any, index: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+      const previous = block.children[index - 1]
+      const previousText = String(previous?.text || '').trim()
+      const previousIsCitation = previous?.marks?.includes('sup') && /^\d+(?:,\d+)*$/.test(previousText)
+      const currentStartsText = typeof child?.text === 'string' && /^[A-Za-z0-9"']/.test(child.text)
+
+      if (previousIsCitation && currentStartsText) {
+        return {
+          ...child,
+          text: ` ${child.text}`,
+        }
+      }
+
+      return child
+    }),
+  }
+}
+
+function fixVirtualDiabetesCareCitations(content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  return content.flatMap((block) => {
+    const text = textFromPortableBlock(block)
+
+    if (block?._type === 'references' && Array.isArray(block.items)) {
+      return [{
+        ...block,
+        items: block.items.filter(
+          (item: { title?: string }) => !item.title?.startsWith('Bunnell, R.'),
+        ),
+      }]
+    }
+
+    if (block?._type === 'columns' && Array.isArray(block.content)) {
+      const image = block.content.find((item: any) => item?._type === 'image') // eslint-disable-line @typescript-eslint/no-explicit-any
+      const textBlock = block.content.find((item: any) => // eslint-disable-line @typescript-eslint/no-explicit-any
+        textFromPortableBlock(item).startsWith('A key resource in providing care to these individuals is time.')
+      )
+
+      if (image && textBlock) {
+        const key = textBlock._key || 'virtual-diabetes-care-rural-urban'
+        return [
+          image,
+          addSpacingAfterCitationSpans({
+            ...textBlock,
+            markDefs: [
+              {
+                _key: `${key}-rural-link`,
+                _type: 'link',
+                href: '/work/tabeeb-diagnostics',
+              },
+            ],
+            children: [
+              createSpan(`${key}-span-0`, 'A key resource in providing care to these individuals is time. In '),
+              createSpan(`${key}-span-1`, 'rural areas', [`${key}-rural-link`]),
+              createSpan(`${key}-span-2`, ', the commute time to the nearest doctor is an hour on average. In underserved urban areas, the time to an appointment can be months because of the low physician to patient ratios.'),
+              referenceSpan(`${key}-ref-9`, '9'),
+            ],
+          }),
+        ]
+      }
+    }
+
+    if (text.startsWith('By 2020, telehealth visits within the Medicare program')) {
+      const key = block._key || 'virtual-diabetes-care-medicare-telehealth'
+      return [addSpacingAfterCitationSpans({
+        ...block,
+        markDefs: [],
+        children: [
+          createSpan(
+            `${key}-span-0`,
+            'By 2020, telehealth visits within the Medicare program represented 8% of primary care visits, and 3% of specialists visits, with the largest increase in visits seen in mental health / behavioral health.',
+          ),
+          referenceSpan(`${key}-ref-1`, '1'),
+          createSpan(
+            `${key}-span-1`,
+            'With Medicare waiving its strict telehealth reimbursement rules, the amount of telehealth services delivered from April to December, 2020 increased tenfold from the previous year, from 5 million to 53 million, according to the U.S. Government Accountability Office.',
+          ),
+          referenceSpan(`${key}-ref-2`, '2'),
+          createSpan(
+            `${key}-span-2`,
+            'At the peak of the pandemic, surveys showed that 32%, or nearly a third, of all outpatient visits were telehealth.',
+          ),
+          referenceSpan(`${key}-ref-3`, '3'),
+        ],
+      })]
+    }
+
+    if (text.startsWith('Chronic conditions like diabetes, stroke, and heart disease')) {
+      const key = block._key || 'virtual-diabetes-care-treating-diabetes'
+      return [addSpacingAfterCitationSpans({
+        ...block,
+        markDefs: [],
+        children: [
+          createSpan(
+            `${key}-span-0`,
+            'Chronic conditions like diabetes, stroke, and heart disease represent the leading cause for death and disability in the United States, according to the Centers for Disease Control and Prevention.',
+          ),
+          referenceSpan(`${key}-ref-5a`, '5'),
+          createSpan(
+            `${key}-span-1`,
+            'Six out of 10 Americans have at least one chronic disease that is often preventable with healthy lifestyle habits.',
+          ),
+          referenceSpan(`${key}-ref-5b`, '5'),
+          createSpan(
+            `${key}-span-2`,
+            'Diabetes, in particular, affects 463 million people worldwide.',
+          ),
+          referenceSpan(`${key}-ref-6`, '6'),
+          createSpan(
+            `${key}-span-3`,
+            'In the U.S alone, 37.3 million adults or 11% of the population are diagnosed with diabetes.',
+          ),
+          referenceSpan(`${key}-ref-7a`, '7'),
+          createSpan(
+            `${key}-span-4`,
+            'Unfortunately, that includes 8.5 million people who are unaware they have diabetes.',
+          ),
+          referenceSpan(`${key}-ref-7b`, '7'),
+          createSpan(
+            `${key}-span-5`,
+            'Once diagnosed with diabetes, a person has an increased risk of having other chronic health conditions like obesity, hypertension, heart and liver disease, as well as some forms of cancer. Being able to adequately treat and ideally prevent this condition could potentially prevent many of the chronic health conditions mentioned and promote health and wellness in many communities.',
+          ),
+        ],
+      })]
+    }
+
+    if (text.startsWith('Virtual care delivery alleviates the limitations of face-to-face')) {
+      const key = block._key || 'virtual-diabetes-care-delivery'
+      return [addSpacingAfterCitationSpans({
+        ...block,
+        markDefs: [],
+        children: [
+          createSpan(
+            `${key}-span-0`,
+            'Virtual care delivery alleviates the limitations of face-to-face encounters by creating more touch points and supplementing in person care. Several recent studies show that a virtual managed care system for diabetes can lead to measurable clinical improvements that are similar to those seen with usual face-to-face medical care — including decrease in Hgb A1c, significant and sustained weight loss, and decrease in blood pressure.',
+          ),
+          referenceSpan(`${key}-ref-9`, '9'),
+          superscriptSeparatorSpan(`${key}-sep-9-10`),
+          referenceSpan(`${key}-ref-10`, '10'),
+          superscriptSeparatorSpan(`${key}-sep-10-11`),
+          referenceSpan(`${key}-ref-11`, '11'),
+        ],
+      })]
+    }
+
+    if (text.startsWith('Clinically, results from a 2021 systematic review')) {
+      const key = block._key || 'virtual-diabetes-care-clinical-results'
+      return [addSpacingAfterCitationSpans({
+        ...block,
+        markDefs: [],
+        children: [
+          createSpan(
+            `${key}-span-0`,
+            'Clinically, results from a 2021 systematic review and meta analysis of 29 randomized control trials demonstrated when compared to usual care Hgb A1c can be greatly influenced through the use of technology interventions of various types, including telephone, videoconferencing, interactive websites and mobile health apps.',
+          ),
+          referenceSpan(`${key}-ref-11`, '11'),
+          createSpan(
+            `${key}-span-1`,
+            'Additionally, a significant decrease in weight / BMI and blood pressure has also been associated with telemedicine care for diabetes management. A telemedicine program started in the health system of UPMC in Pittsburgh showed an average decrease of A1c from 10.2% to 8.8% in three months.',
+          ),
+          referenceSpan(`${key}-ref-9`, '9'),
+        ],
+      })]
+    }
+
+    if (text.startsWith('As with many healthcare technologies and services')) {
+      const key = block._key || 'virtual-diabetes-care-access-availability'
+      return [addSpacingAfterCitationSpans({
+        ...block,
+        markDefs: [],
+        children: [
+          createSpan(
+            `${key}-span-0`,
+            'As with many healthcare technologies and services, access and availability can be an issue. There are fears, perhaps well-founded, that virtual care could further worsen disparities of the more vulnerable populations including the elderly, ethnic minority groups and others in underserved communities.',
+          ),
+        ],
+      })]
+    }
+
+    return [addSpacingAfterCitationSpans(block)]
+  })
+}
+
 function recolorTextMarkDefs(block: any, color: string) { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (block?._type !== 'block' || !Array.isArray(block.markDefs)) {
     return block
@@ -475,7 +786,109 @@ function recolorTextMarkDefs(block: any, color: string) { // eslint-disable-line
   return changed ? { ...block, markDefs } : block
 }
 
+function createHealthcareAiRippleBullet(
+  key: string,
+  segments: Array<{ text: string; marks?: string[] }>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  markDefs: any[] = [],
+) {
+  return toBulletListItem(createPortableBlock(key, segments, 'normal', markDefs), 1)
+}
+
+function createHealthcareAiRippleEffectsBullets(keys: string[]) {
+  const fallbackKeys = [
+    'healthcare-ai-ripple-misinformation',
+    'healthcare-ai-ripple-harmful-information',
+    'healthcare-ai-ripple-biases',
+    'healthcare-ai-ripple-workers',
+    'healthcare-ai-ripple-ownership',
+    'healthcare-ai-ripple-relationship',
+  ]
+
+  const keyAt = (index: number) => keys[index] || fallbackKeys[index]
+
+  return [
+    createHealthcareAiRippleBullet(keyAt(0), [
+      strongSegment('Misinformation at scale'),
+      plainSegment(': Stack Overflow banned ChatGPT answers as it got swamped with quality control at scale. ChatGPT makes it incredibly easy to post an answer, but the non-zero error rate is a real problem for quality control. There\'s no easy way to check ChatGPT\'s answers without doing the research manually. This could become a serious problem if everyone uses a similar tool for health answers.'),
+    ]),
+    createHealthcareAiRippleBullet(keyAt(1), [
+      strongSegment('Harmful information'),
+      plainSegment(': "Molotov Cocktail questions" can still be achieved by phrasing as a '),
+      { text: 'print function question', marks: ['print-function-question-link'] },
+      plainSegment('. Presumably similar information about how to effectively commit suicide, for example, could be easily obtained.'),
+    ], [
+      {
+        _key: 'print-function-question-link',
+        _type: 'link',
+        href: 'https://twitter.com/zswitten/status/1598197802676682752',
+      },
+    ]),
+    createHealthcareAiRippleBullet(keyAt(2), [
+      strongSegment('Perpetuating harmful biases, conventions, etc'),
+      plainSegment(': The AI will provide answers based on the material it is trained on. If the material is biased or non-inclusive, the AI\'s answers will reflect that. For example, when asked to portray a telehealth call, MidJourney generated four all-white doctors, three of whom were male.'),
+    ]),
+    createHealthcareAiRippleBullet(keyAt(3), [
+      strongSegment('Impact on human workers'),
+      plainSegment(': In the long run, AI could replace writers, artists, musicians, and many white-collar jobs. Ideally, AI could augment these people\'s work by generating a starting point that humans can perfect or brainstorming initial concepts. However, this new technology may ultimately fill jobs and put humans out of work.'),
+    ]),
+    createHealthcareAiRippleBullet(keyAt(4), [
+      strongSegment('Property and ownership issues'),
+      plainSegment(': Many have raised the issue that image generation AI is trained on art that it does not own. Some artists have seen their personal style and even their signature show up in Stable Diffusion ('),
+      { text: 'article', marks: ['stable-diffusion-article-link'] },
+      plainSegment(').'),
+    ], [
+      {
+        _key: 'stable-diffusion-article-link',
+        _type: 'link',
+        href: 'https://www.cbc.ca/radio/asithappens/artificial-intelligence-ai-art-ethics-greg-rutkowski-1.6679466',
+      },
+    ]),
+    createHealthcareAiRippleBullet(keyAt(5), [
+      strongSegment('Our relationship with technology and each other'),
+      plainSegment(': Human immersion into technology has not always had a positive impact on health (e.g., social media\'s impact on mental health). How can we make sure we\'re not running blindly into more negative effects in the name of "progress?" How will an increase of artificial intelligence impact human intelligence? It may allow humans to learn and accomplish new things, but it may also reduce our skills in other areas, like synthesis of information. It\'s important to closely examine what we might be losing.'),
+    ]),
+  ]
+}
+
+function replaceHealthcareAiRippleEffectsCopy(content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  const headingIndex = content.findIndex(
+    (block) => textFromPortableBlock(block) === 'Ripple Effects and Unintended Outcomes'
+  )
+
+  if (headingIndex < 0) {
+    return content
+  }
+
+  const firstBulletIndex = content.findIndex(
+    (block, index) => index > headingIndex && block?._type === 'block' && block?.listItem === 'bullet'
+  )
+
+  if (firstBulletIndex < 0) {
+    return content
+  }
+
+  let endIndex = firstBulletIndex
+  while (endIndex < content.length && content[endIndex]?._type === 'block' && content[endIndex]?.listItem === 'bullet') {
+    endIndex += 1
+  }
+
+  const existingKeys = content
+    .slice(firstBulletIndex, endIndex)
+    .map((block) => block?._key)
+
+  return [
+    ...content.slice(0, firstBulletIndex),
+    ...createHealthcareAiRippleEffectsBullets(existingKeys),
+    ...content.slice(endIndex),
+  ]
+}
+
 function transformFeatureContentForSlug(slug: string, content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (slug === 'own-your-health-data') {
+    return transformOwnYourHealthDataActions(content)
+  }
+
   if (slug === 'healthcare-ai') {
     const transformed: any[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -488,6 +901,47 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
             .replace(/\.(mp4|webm|mov|ogv)(\?|$)/i, '.jpg$2'),
         })
         continue
+      }
+
+      if (
+        block?._type === 'columns' &&
+        block?.layout === 'storyboard' &&
+        Array.isArray(block.content)
+      ) {
+        const jayStoryIntro = 'Jay gets home from school. AiHealth believes they may be feeling depressed based on their health data:'
+        const missingJayBullets = [
+          { key: 'healthcare-ai-jay-hrv-low', text: 'Their heart rate variability is low' },
+          { key: 'healthcare-ai-jay-phone-use', text: "They've been on their phone more than often" },
+          { key: 'healthcare-ai-jay-step-count', text: 'Step count is low' },
+        ]
+        const hasMissingJayBullet = missingJayBullets.some(
+          (bullet) => !block.content.some((item: any) => textFromPortableBlock(item) === bullet.text) // eslint-disable-line @typescript-eslint/no-explicit-any
+        )
+
+        if (hasMissingJayBullet) {
+          const jayIntroIndex = block.content.findIndex(
+            (item: any) => textFromPortableBlock(item) === jayStoryIntro // eslint-disable-line @typescript-eslint/no-explicit-any
+          )
+
+          if (jayIntroIndex >= 0) {
+            const existingText = new Set(
+              block.content.map((item: any) => textFromPortableBlock(item)) // eslint-disable-line @typescript-eslint/no-explicit-any
+            )
+            const bulletsToInsert = missingJayBullets
+              .filter((bullet) => !existingText.has(bullet.text))
+              .map((bullet) => createBulletBlock(bullet.key, bullet.text, 1))
+
+            transformed.push({
+              ...block,
+              content: [
+                ...block.content.slice(0, jayIntroIndex + 1),
+                ...bulletsToInsert,
+                ...block.content.slice(jayIntroIndex + 1),
+              ],
+            })
+            continue
+          }
+        }
       }
 
       if (
@@ -555,7 +1009,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       }
     }
 
-    return transformed
+    return replaceHealthcareAiRippleEffectsCopy(transformed)
   }
 
   if (slug === 'national-cancer-navigation') {
@@ -1173,6 +1627,10 @@ export default async function VisionFeaturePage({ params }: Props) {
     notFound()
   }
 
+  if (feature.externalLink) {
+    redirect(feature.externalLink)
+  }
+
   // Optional article-level hero override (when the listing card image differs from the article hero)
   const heroImage = feature.articleHeroImage || feature.image
   const heroPosition = feature.articleHeroImage ? feature.articleHeroPosition : feature.heroPosition
@@ -1265,24 +1723,8 @@ export default async function VisionFeaturePage({ params }: Props) {
             >
               {feature.title}
             </h1>
-            {!useLegacyFacesLayout && showPageMeta && (feature.categories?.length || feature.date) && (
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-4">
-                {feature.categories && feature.categories.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {feature.categories.map((cat) => (
-                      <span
-                        key={cat}
-                        className="text-xs uppercase tracking-wider text-gray bg-gray-light px-3 py-1"
-                      >
-                        {cat}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {feature.date && (
-                  <span className="text-gray text-sm">{feature.date}</span>
-                )}
-              </div>
+            {!useLegacyFacesLayout && showPageMeta && (
+              <ArticleMeta date={feature.date} categories={feature.categories} />
             )}
           </div>
         </Reveal>
@@ -1307,6 +1749,8 @@ export default async function VisionFeaturePage({ params }: Props) {
           {feature.content && (() => {
         let content: FeatureContentBlock[] = feature.content
         let authorHeading: string | undefined
+        let extractedSpecialThanks: FeatureContentBlock[] | undefined
+        let extractedSpecialThanksHeading: string | undefined
 
         if (usesCodeAssistedCms) {
           content = stripTitleHeading(content, feature.title)
@@ -1323,6 +1767,21 @@ export default async function VisionFeaturePage({ params }: Props) {
           content = transformFeatureContentForSlug(slug, content)
         }
 
+        if (slug === 'physician-burnout') {
+          content = addPhysicianBurnoutMobileContributorImage(content)
+        }
+
+        if (slug === 'virtual-diabetes-care') {
+          content = fixVirtualDiabetesCareCitations(content)
+        }
+
+        if (slug === 'precision-autism') {
+          const extracted = extractPrecisionAutismSpecialThanks(content)
+          content = extracted.content
+          extractedSpecialThanks = extracted.specialThanks
+          extractedSpecialThanksHeading = extracted.specialThanksHeading
+        }
+
         const mainContent = content.filter((block) => block._type !== 'references')
         const referencesContent = content
           .filter((block) => block._type === 'references')
@@ -1333,9 +1792,14 @@ export default async function VisionFeaturePage({ params }: Props) {
           ))
         const portableTextVariant = backgroundFallbacks?.portableTextVariant
           || (usesLegacyTransforms && slug === 'virtual-care' ? 'gray-body' : undefined)
+        const effectiveSpecialThanks = feature.specialThanks && feature.specialThanks.length > 0
+          ? feature.specialThanks
+          : extractedSpecialThanks
         const specialThanksHeadingText = feature.specialThanksHeading
+          || extractedSpecialThanksHeading
           || (transformedContributors && transformedContributors.length > 0 ? 'Special thanks to...' : 'Contributors')
-        const specialThanksHeadingStyle = feature.specialThanksHeadingStyle || 'subheading'
+        const specialThanksHeadingStyle = feature.specialThanksHeadingStyle
+          || (slug === 'precision-autism' && extractedSpecialThanks ? 'legacy-centered-h2' : 'subheading')
         const peopleSections = (
           <>
             {feature.authors && feature.authors.length > 0 && (
@@ -1364,7 +1828,7 @@ export default async function VisionFeaturePage({ params }: Props) {
               </section>
             )}
 
-            {feature.specialThanks && feature.specialThanks.length > 0 && (
+            {effectiveSpecialThanks && effectiveSpecialThanks.length > 0 && (
               <section className="pb-12">
                 <div className={articleContainerClassName} style={articleContainerStyle}>
                   {specialThanksHeadingStyle === 'legacy-centered-h2' ? (
@@ -1372,7 +1836,7 @@ export default async function VisionFeaturePage({ params }: Props) {
                   ) : (
                     <h3 className="header-md mt-8 mb-4">{specialThanksHeadingText}</h3>
                   )}
-                  <PortableTextRenderer content={feature.specialThanks} />
+                  <PortableTextRenderer content={effectiveSpecialThanks} />
                 </div>
               </section>
             )}

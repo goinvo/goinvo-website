@@ -134,7 +134,7 @@ export default function EnterprisePage() {
           {/* 3M Case Study */}
           <Link
             href="/work/3m-coderyte"
-            className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow mb-8 text-left no-underline"
+            className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out mb-8 text-left no-underline"
           >
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
@@ -168,7 +168,7 @@ export default function EnterprisePage() {
           {/* InfoBionic Case Study */}
           <Link
             href="/work/infobionic-heart-monitoring"
-            className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow text-left no-underline"
+            className="block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out text-left no-underline"
           >
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">

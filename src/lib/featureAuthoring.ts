@@ -44,6 +44,7 @@ export const LEGACY_TRANSFORM_FEATURE_SLUGS = new Set([
   'national-cancer-navigation',
   'open-pro',
   'open-source-healthcare',
+  'own-your-health-data',
   'virtual-care',
 ])
 

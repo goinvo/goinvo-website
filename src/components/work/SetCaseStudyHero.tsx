@@ -24,7 +24,7 @@ export function SetCaseStudyHero({
   bgPosition?: string
   editTarget?: HeroEditTarget
 }) {
-  const { setCaseStudyHero } = useHero()
+  const { setCurrentHero } = useHero()
 
   // Stable JSON so useEffect deps don't rerun every render from a fresh object
   const editTargetKey = editTarget
@@ -32,10 +32,10 @@ export function SetCaseStudyHero({
     : ''
 
   useEffect(() => {
-    setCaseStudyHero(image, bgPosition, expandAfterSlide, editTarget)
+    setCurrentHero(image, bgPosition, expandAfterSlide, editTarget)
     // editTargetKey is a stable serialization of editTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [image, bgPosition, expandAfterSlide, editTargetKey, setCaseStudyHero])
+  }, [image, bgPosition, expandAfterSlide, editTargetKey, setCurrentHero])
 
   return null
 }
