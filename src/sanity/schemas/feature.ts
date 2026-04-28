@@ -536,6 +536,13 @@ export default defineType({
       },
     }),
     defineField({
+      name: 'metaTitle',
+      title: 'Meta Title',
+      type: 'string',
+      group: 'properties',
+      description: 'Optional browser tab / SEO title. Leave blank to use the article title.',
+    }),
+    defineField({
       name: 'metaDescription',
       title: 'Meta Description',
       type: 'text',

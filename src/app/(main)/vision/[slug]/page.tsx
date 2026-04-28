@@ -414,6 +414,17 @@ function createHealthcareDollarsMethodologyBlocks() {
   ]
 }
 
+function createHealthcareDollarsMethodologySection(content: any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  return {
+    _key: 'healthcare-dollars-methodology-section',
+    _type: 'backgroundSection',
+    color: 'blue',
+    spacing: 'legacyFlush',
+    tone: 'default',
+    content,
+  }
+}
+
 function normalizeSupFollowerSpacing(block: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
   if (block?._type !== 'block' || !Array.isArray(block.children)) {
     return block
@@ -1311,6 +1322,15 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
     let inMethodologySection = false
     let inMethodologyEntries = false
     let hasInjectedMethodologyLists = false
+    let methodologyContent: any[] = [] // eslint-disable-line @typescript-eslint/no-explicit-any
+
+    const flushMethodologySection = () => {
+      if (methodologyContent.length === 0) return
+      transformed.push(createHealthcareDollarsMethodologySection(methodologyContent))
+      methodologyContent = []
+      inMethodologySection = false
+      inMethodologyEntries = false
+    }
 
     for (const originalBlock of content) {
       const block = normalizeSupFollowerSpacing(originalBlock)
@@ -1425,19 +1445,42 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       if (block?._type === 'block' && text === 'Methodology') {
         inMethodologySection = true
         inMethodologyEntries = false
-        transformed.push(block)
+        methodologyContent.push({ ...block, style: 'h2HealthcareMethodology' })
         continue
       }
 
       if (block?._type === 'block' && text === 'Author') {
-        inMethodologySection = false
-        inMethodologyEntries = false
+        flushMethodologySection()
         transformed.push(block)
         continue
       }
 
+      if (inMethodologySection && block?._type === 'references') {
+        flushMethodologySection()
+        transformed.push(block)
+        continue
+      }
+
+      if (inMethodologySection && block?._type === 'divider') {
+        flushMethodologySection()
+        continue
+      }
+
+      if (inMethodologySection && block?._type === 'block' && text.startsWith('Below is a description of the methodology')) {
+        methodologyContent.push(createTextBlock(
+          'healthcare-dollars-methodology-summary',
+          'Below is a description of the methodology used in creating the "Where your Health Dollars Go" visualization. It is updated based on continuing research and feedback.'
+        ))
+        continue
+      }
+
+      if (inMethodologySection && block?._type === 'block' && text === 'v1 - 30.Jan.2019') {
+        methodologyContent.push({ ...block, style: 'h4MethodologyVersion' })
+        continue
+      }
+
       if (inMethodologySection && block?._type === 'block' && text.startsWith('The components of the healthcare system to include')) {
-        transformed.push(createTextBlock(
+        methodologyContent.push(createTextBlock(
           'healthcare-dollars-methodology-intro',
           'The components of the healthcare system to include in the visualization were primarily based on what public data was available. Some expenditures were based on older estimates due to difficulty in finding up to date data (such as administrative costs for private health insurance).'
         ))
@@ -1445,7 +1488,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       }
 
       if (inMethodologySection && block?._type === 'block' && text.startsWith('Other expenditures, such as numbers on fraud, waste, and abuse')) {
-        transformed.push(createTextBlock(
+        methodologyContent.push(createTextBlock(
           'healthcare-dollars-methodology-estimates',
           'Other expenditures, such as numbers on fraud, waste, and abuse for health insurance programs, are best guesses based on a range of estimates as referenced below.'
         ))
@@ -1455,7 +1498,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
       if (inMethodologySection && block?._type === 'block' && text.startsWith('Column ')) {
         inMethodologyEntries = true
         if (!hasInjectedMethodologyLists) {
-          transformed.push(...createHealthcareDollarsMethodologyBlocks())
+          methodologyContent.push(...createHealthcareDollarsMethodologyBlocks())
           hasInjectedMethodologyLists = true
         }
         continue
@@ -1465,8 +1508,15 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
         continue
       }
 
+      if (inMethodologySection) {
+        methodologyContent.push(block)
+        continue
+      }
+
       transformed.push(block)
     }
+
+    flushMethodologySection()
 
     return transformed
   }
@@ -1573,6 +1623,40 @@ function transformFeatureContributorsForSlug(slug: string, contributors: any[] |
     })
   }
 
+  if (slug === 'ai-design-certification') {
+    return contributors.map((credit) => {
+      if (credit?.author?.name === 'Eric Benoit') {
+        const authorWithoutSocial = { ...credit.author }
+        delete authorWithoutSocial.social
+
+        return {
+          ...credit,
+          link: undefined,
+          author: authorWithoutSocial,
+        }
+      }
+
+      return credit
+    })
+  }
+
+  if (slug === 'virtual-care') {
+    return contributors.map((credit) => {
+      if (credit?.author?.name === 'Juhan Sonin') {
+        const authorWithoutSocial = { ...credit.author }
+        delete authorWithoutSocial.social
+
+        return {
+          ...credit,
+          link: undefined,
+          author: authorWithoutSocial,
+        }
+      }
+
+      return credit
+    })
+  }
+
   return contributors
 }
 
@@ -1605,11 +1689,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? urlForImage(ogSourceImage).width(1200).height(630).url()
     : undefined
 
+  const metadataTitle = feature.metaTitle?.trim()
+  const pageTitle = metadataTitle || feature.title
+  const description = feature.metaDescription || feature.description
+
   return {
-    title: feature.title,
-    description: feature.metaDescription || feature.description,
-    openGraph: ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : undefined,
-    twitter: ogImage ? { images: [ogImage] } : undefined,
+    title: metadataTitle ? { absolute: metadataTitle } : feature.title,
+    description,
+    openGraph: ogImage
+      ? { title: pageTitle, description, images: [{ url: ogImage, width: 1200, height: 630 }] }
+      : { title: pageTitle, description },
+    twitter: ogImage
+      ? { title: pageTitle, description, images: [ogImage] }
+      : { title: pageTitle, description },
   }
 }
 
@@ -1660,9 +1752,7 @@ export default async function VisionFeaturePage({ params }: Props) {
   const backgroundFallbacks = usesCodeAssistedCms ? featureSectionBackgroundFallbacks[slug] : undefined
   const titleClassName = useLegacyFacesLayout ? 'header-xl mt-6 mb-6' : 'header-xl mt-8 mb-6'
   const showPageMeta = backgroundFallbacks?.showPageMeta ?? (feature.showPageMeta !== false)
-  const transformedContributors = usesLegacyTransforms
-    ? transformFeatureContributorsForSlug(slug, feature.contributors)
-    : feature.contributors
+  const transformedContributors = transformFeatureContributorsForSlug(slug, feature.contributors)
   const authorVariant = (backgroundFallbacks?.authorLayout || feature.authorLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const contributorsVariant = (backgroundFallbacks?.contributorsLayout || feature.contributorsLayout) as 'equal' | 'stacked' | 'stacked-subheading' | 'primary-sidebar' | 'plain-list' | 'legacy-text-list' | undefined
   const authorBackground = resolveSectionBackground(feature.authorBackground, backgroundFallbacks?.authorBackground || 'white')
@@ -1792,6 +1882,15 @@ export default async function VisionFeaturePage({ params }: Props) {
           ))
         const portableTextVariant = backgroundFallbacks?.portableTextVariant
           || (usesLegacyTransforms && slug === 'virtual-care' ? 'gray-body' : undefined)
+        const postNewsletterContentIndex = slug === 'healthcare-dollars'
+          ? mainContent.findIndex((block) => block._key === 'healthcare-dollars-methodology-section')
+          : -1
+        const preNewsletterContent = postNewsletterContentIndex >= 0
+          ? mainContent.slice(0, postNewsletterContentIndex)
+          : mainContent
+        const postNewsletterContent = postNewsletterContentIndex >= 0
+          ? mainContent.slice(postNewsletterContentIndex)
+          : []
         const effectiveSpecialThanks = feature.specialThanks && feature.specialThanks.length > 0
           ? feature.specialThanks
           : extractedSpecialThanks
@@ -1845,15 +1944,17 @@ export default async function VisionFeaturePage({ params }: Props) {
 
         return (
           <>
-            <section className="pb-12">
-              <div className={articleContainerClassName} style={articleContainerStyle}>
-                <PortableTextRenderer
-                  content={mainContent}
-                  variant={portableTextVariant}
-                  bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined}
-                />
-              </div>
-            </section>
+            {preNewsletterContent.length > 0 && (
+              <section className="pb-12">
+                <div className={articleContainerClassName} style={articleContainerStyle}>
+                  <PortableTextRenderer
+                    content={preNewsletterContent}
+                    variant={portableTextVariant}
+                    bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined}
+                  />
+                </div>
+              </section>
+            )}
 
             {peopleSectionPosition !== 'afterNewsletter' && peopleSections}
 
@@ -1866,6 +1967,14 @@ export default async function VisionFeaturePage({ params }: Props) {
               cardWidth={backgroundFallbacks?.newsletterCardWidth || 'standard'}
               forceBand={Boolean(backgroundFallbacks?.forceNewsletterBand)}
             />
+
+            {postNewsletterContent.length > 0 && (
+              <PortableTextRenderer
+                content={postNewsletterContent}
+                variant={portableTextVariant}
+                bulletStyle={feature.bulletStyle as 'star' | 'disc' | undefined}
+              />
+            )}
 
             {peopleSectionPosition === 'afterNewsletter' && peopleSections}
 

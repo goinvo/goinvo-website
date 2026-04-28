@@ -146,7 +146,12 @@
 
 #oral-history-legacy #feature-article header.nav-wrapper a:hover{color:#6d6e6a}
 
-#oral-history-legacy #feature-article header.nav-wrapper.scroll-nav{position:fixed;top:50px;left:0;display:none}
+#oral-history-legacy #feature-article header.nav-wrapper.scroll-nav{display:none !important}
+
+@media only screen and (min-width: 751px){
+#oral-history-legacy #feature-article header.nav-wrapper.stuck{position:sticky;top:50px;left:0;z-index:999}
+#oral-history-legacy #feature-article header.nav-wrapper.stuck.is-sticky{box-shadow:0 5px 15px -8px #000}
+}
 
 #oral-history-legacy #feature-article header.nav-wrapper.middle-nav{display:none}
 

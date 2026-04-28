@@ -26,6 +26,7 @@ const menuLabels: Record<string, string> = {
 }
 
 const DIAMOND_SVG = `url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCA4IDgiPjxwYXRoIGZpbGw9IiNlMzYyMTYiIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTQuMzc3IDBjLjIxNCAwIC40MjcuMTA1LjUzNC40Ny41MzQgMS43MjYuNTg3IDEuODMgMi42MTYgMi40NTguNDguMjEuNTM0LjM2Ni40MjcgMS4wNDYtLjE2LjQxOC0uMzIuNTIzLS40OC42MjctMS45NzYuOTQxLTIuMDMuOTk0LTIuNjE2IDMuMDMzQS42NTcuNjU3IDAgMCAxIDQuMjcgOGMtLjQ4IDAtMS4wNjgtLjMxNC0xLjIyOC0uNzMyLS40OC0xLjU2OS0uNzQ4LTIuMDQtMi4xODktMi41MUMuMzIgNC41NSAwIDQuMTMxIDAgMy41NTZjMC0uMzE0LjE2LS40NzEuMzItLjUyMyAxLjY1NS0uMzY2IDIuMjQyLS43ODUgMi43MjMtMi4wNEMzLjI1Ni40MTggMy43OSAwIDQuMzc3IDBaIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=")`
+const CARET_SVG = `url("data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTggMTAiIGZpbGw9IiNlMzYyMTYiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0wLjY0NjQ0NyAwLjY0NjQ0N0MwLjg0MTcwOSAwLjQ1MTE4NCAxLjE1ODI5IDAuNDUxMTg0IDEuMzUzNTUgMC42NDY0NDdMOSA4LjI5Mjg5TDE2LjY0NjQgMC42NDY0NDdDMTYuODQxNyAwLjQ1MTE4NCAxNy4xNTgzIDAuNDUxMTg0IDE3LjM1MzYgMC42NDY0NDdDMTcuNTQ4OCAwLjg0MTcwOSAxNy41NDg4IDEuMTU4MjkgMTcuMzUzNiAxLjM1MzU1TDkgOS43MDcxMUwwLjY0NjQ0NyAxLjM1MzU1QzAuNDUxMTg0IDEuMTU4MjkgMC40NTExODQgMC44NDE3MDkgMC42NDY0NDcgMC42NDY0NDdaIiAvPjwvc3ZnPg==")`
 
 interface ReviewCarouselProps {
   reviews: Review[]
@@ -34,6 +35,12 @@ interface ReviewCarouselProps {
 export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const active = reviews[activeIndex]
+  const goToPrevious = () => {
+    setActiveIndex((current) => (current - 1 + reviews.length) % reviews.length)
+  }
+  const goToNext = () => {
+    setActiveIndex((current) => (current + 1) % reviews.length)
+  }
 
   return (
     <div>
@@ -80,11 +87,36 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
       </div>
 
       {/* Gray area */}
-      <div className="bg-gray-light" data-review-container style={{ paddingBottom: 50 }}>
+      <div className="group bg-gray-light" data-review-container style={{ paddingBottom: 50 }}>
         {/* Content wrapper: position relative so image can use top:0 bottom:0
              The HEIGHT of this div = content flow only (no dots).
              Image matches this height exactly via absolute positioning. */}
         <div className="relative">
+          <button
+            type="button"
+            onClick={goToPrevious}
+            className="hidden lg:flex absolute left-0 top-1/2 z-20 h-[50px] w-[50px] -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
+            aria-label="Previous review"
+          >
+            <span
+              aria-hidden="true"
+              className="block h-full w-full bg-contain bg-center bg-no-repeat"
+              style={{ backgroundImage: CARET_SVG, transform: 'rotate(90deg)' }}
+            />
+          </button>
+          <button
+            type="button"
+            onClick={goToNext}
+            className="hidden lg:flex absolute right-0 top-1/2 z-20 h-[50px] w-[50px] -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 opacity-0 pointer-events-none transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
+            aria-label="Next review"
+          >
+            <span
+              aria-hidden="true"
+              className="block h-full w-full bg-contain bg-center bg-no-repeat"
+              style={{ backgroundImage: CARET_SVG, transform: 'rotate(-90deg)' }}
+            />
+          </button>
+
           {/* Mobile image: stacked above content */}
           <div className="relative overflow-hidden h-[300px] lg:hidden">
             <Image src={cloudfrontImage(active.image)} alt="" fill className="object-cover object-center" />

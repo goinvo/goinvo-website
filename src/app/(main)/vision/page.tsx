@@ -199,6 +199,7 @@ export default async function VisionPage() {
                 alt="Health Visualizations"
                 width={400}
                 height={260}
+                quality={95}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -384,6 +385,7 @@ function SpotlightCardContent({ feature }: { feature: StaticFeature }) {
             alt={feature.title}
             width={680}
             height={260}
+            quality={95}
             className="w-full h-full object-cover"
           />
         )}

@@ -260,6 +260,7 @@ export const featureBySlugQuery = groq`
     specialThanksHeading,
     specialThanksHeadingStyle,
     content,
+    metaTitle,
     metaDescription
   }
 `
