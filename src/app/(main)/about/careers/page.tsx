@@ -4,6 +4,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { activeJobsQuery } from '@/sanity/lib/queries'
 import { cloudfrontImage } from '@/lib/utils'
 import { TestimonialCarousel } from './TestimonialCarousel'
+import { ApplicationFormEmbed } from './ApplicationFormEmbed'
 import type { Job } from '@/types'
 
 export const metadata: Metadata = {
@@ -195,14 +196,7 @@ export default async function CareersPage() {
 
             <div className="pt-8">
               <h2 className="header-xl mb-6">Apply</h2>
-              <iframe
-                id="JotFormIFrame-251193306087052"
-                title="Application"
-                src="https://form.jotform.com/251193306087052"
-                className="w-full border-0"
-                style={{ minHeight: '600px' }}
-                allowTransparency
-              />
+              <ApplicationFormEmbed />
             </div>
           </div>
         </div>

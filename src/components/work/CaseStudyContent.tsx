@@ -27,6 +27,7 @@ interface BlockChild {
 type LoosePortableTextBlock = PortableTextBlock & {
   _type: string
   alt?: string
+  asset?: { _ref?: string; originalFilename?: string; url?: string }
   caption?: string
   link?: string
   style?: string
@@ -340,14 +341,6 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     }
   }
 
-  if (slug === 'mount-sinai-consent') {
-    const normalizedContent = content.map(normalizeCitationChildren)
-    if (normalizedContent.some((block, index) => block !== content[index])) {
-      content.splice(0, content.length, ...normalizedContent)
-      changed = true
-    }
-  }
-
   if (slug === 'commonhealth-smart-health-cards') {
     const normalizedContent = content.map(normalizeCitationChildren)
     if (normalizedContent.some((block, index) => block !== content[index])) {
@@ -366,6 +359,39 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     const quoteAdjustedContent = content.map(preserveEmptyQuoteRoleLine)
     if (quoteAdjustedContent.some((block, index) => block !== content[index])) {
       content.splice(0, content.length, ...quoteAdjustedContent)
+      changed = true
+    }
+  }
+
+  if (slug === 'public-sector') {
+    const notableProjectIndex = content.findIndex((block) =>
+      blockText(block).startsWith('One of GoInvo') &&
+      blockText(block).includes('Mass SNAP')
+    )
+    const statsImageIndex = content.findIndex((block) => {
+      if (block._type !== 'image') return false
+
+      const alt = (block.alt || '').toLowerCase()
+      const caption = (block.caption || '').toLowerCase()
+      const filename = block.asset?.originalFilename || block.asset?.url || block.asset?._ref || ''
+      return alt.includes('public sector design statistics') ||
+        caption.includes('public sector design statistics') ||
+        filename.includes('pubDesign_stats_oct_2024')
+    })
+
+    if (notableProjectIndex > statsImageIndex && statsImageIndex >= 0) {
+      const [notableProjectBlock] = content.splice(notableProjectIndex, 1)
+      const updatedStatsImageIndex = content.findIndex((block) => {
+        if (block._type !== 'image') return false
+
+        const alt = (block.alt || '').toLowerCase()
+        const caption = (block.caption || '').toLowerCase()
+        const filename = block.asset?.originalFilename || block.asset?.url || block.asset?._ref || ''
+        return alt.includes('public sector design statistics') ||
+          caption.includes('public sector design statistics') ||
+          filename.includes('pubDesign_stats_oct_2024')
+      })
+      content.splice(updatedStatsImageIndex, 0, notableProjectBlock)
       changed = true
     }
   }
@@ -526,23 +552,22 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
     .map((child) => child.text || '')
     .join('')
     .trim()
+  const clientName = caseStudy.client?.trim()
   const hasLeadingClientSubtitle =
     firstContentBlock?._type === 'block' &&
     isLeadingClientSubtitle(firstContentText, caseStudy.content?.[1])
   const showClientSubtitle =
-    (hasLeadingClientSubtitle || (!!caseStudy.client && caseStudy.client !== 'GoInvo')) &&
+    (hasLeadingClientSubtitle || (!!clientName && clientName !== 'GoInvo')) &&
     !caseStudy.hideClientSubtitle
   const normalizedCaseStudy = hasLeadingClientSubtitle
     ? { ...caseStudy, content: caseStudy.content?.slice(1) }
     : caseStudy
   const transformedCaseStudy = transformCaseStudyForSlug(normalizedCaseStudy, slug)
 
-  // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
-  // minimize top/bottom cropping at desktop widths. Drafts without a
-  // hero image yet fall back to a placeholder so the layout stays
-  // intact instead of breaking.
+  // Keep hero sources at high quality and let PersistentHero handle
+  // viewport-specific cropping. Pre-cropping here softens UI screenshots.
   const heroImageUrl = caseStudy.image?.asset
-    ? urlForImage(caseStudy.image).width(1600).height(564).url()
+    ? urlForImage(caseStudy.image).width(2000).quality(95).url()
     : PLACEHOLDER_IMAGE_URL
 
   const heroEditTarget =
@@ -579,7 +604,7 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
 
                     return <span key={child._key || `${index}-${text}`}>{content}</span>
                   })
-                : <>for {caseStudy.client}</>}
+                : <>for {clientName}</>}
             </p>
           )}
         </div>

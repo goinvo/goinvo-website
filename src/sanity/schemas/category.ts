@@ -25,7 +25,7 @@ export default defineType({
       title: 'Main Category',
       type: 'boolean',
       description:
-        'Check to make this category appear as a filter chip on /work AND be grouped under "Main Categories" on the case study page. Leave unchecked for additional categories that only display alongside the main ones.',
+        'Check to make this category appear as a filter chip on /work. Case study pages display main and additional categories together under "Tags".',
       initialValue: false,
     }),
     defineField({

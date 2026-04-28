@@ -20,6 +20,7 @@ interface ListSetting {
 
 interface DraggableListProps {
   data: SanityDocumentWithOrder[]
+  droppableId?: string
   listIsUpdating: boolean
   needsOrderingIds: Set<string>
   setListIsUpdating: (val: boolean) => void
@@ -28,13 +29,22 @@ interface DraggableListProps {
 const getItemStyle = (
   draggableStyle: CSSProperties | undefined,
   itemIsUpdating: boolean,
-): CSSProperties => ({
-  userSelect: 'none',
-  transition: 'opacity 500ms ease-in-out',
-  opacity: itemIsUpdating ? 0.2 : 1,
-  pointerEvents: itemIsUpdating ? 'none' : undefined,
-  ...draggableStyle,
-})
+  isDragging: boolean,
+): CSSProperties => {
+  const settleTransition = [
+    'transform 450ms cubic-bezier(0.22, 1, 0.36, 1)',
+    'opacity 650ms ease-in-out',
+    'box-shadow 300ms ease',
+  ].join(', ')
+
+  return {
+    ...draggableStyle,
+    userSelect: 'none',
+    transition: isDragging ? draggableStyle?.transition : settleTransition,
+    opacity: itemIsUpdating ? 0.2 : 1,
+    pointerEvents: itemIsUpdating ? 'none' : undefined,
+  }
+}
 
 function cardTone(settings: ListSetting) {
   const { isDuplicate, isGhosting, isDragging, isSelected, needsOrdering } = settings
@@ -48,6 +58,7 @@ function cardTone(settings: ListSetting) {
 
 export function DraggableList({
   data,
+  droppableId = 'documentSortZone',
   listIsUpdating,
   needsOrderingIds,
   setListIsUpdating,
@@ -171,8 +182,8 @@ export function DraggableList({
       return handleDragEnd(
         {
           draggableId: id,
-          source: { index: shiftFrom, droppableId: 'documentSortZone' },
-          destination: { index: shiftTo, droppableId: 'documentSortZone' },
+          source: { index: shiftFrom, droppableId },
+          destination: { index: shiftTo, droppableId },
           reason: 'DROP',
           mode: 'FLUID',
           type: 'DEFAULT',
@@ -181,7 +192,7 @@ export function DraggableList({
         entities,
       )
     },
-    [handleDragEnd],
+    [droppableId, handleDragEnd],
   )
 
   const onWindowKeyDown = useCallback(
@@ -211,7 +222,7 @@ export function DraggableList({
 
   return (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={onDragEnd}>
-      <Droppable droppableId="documentSortZone">
+      <Droppable droppableId={droppableId}>
         {(provided) => (
           <div {...provided.droppableProps} ref={provided.innerRef}>
             {orderedData.map((item, index) => (
@@ -241,7 +252,11 @@ export function DraggableList({
                       ref={innerProvided.innerRef}
                       {...innerProvided.draggableProps}
                       {...innerProvided.dragHandleProps}
-                      style={getItemStyle(innerProvided.draggableProps.style, isUpdating)}
+                      style={getItemStyle(
+                        innerProvided.draggableProps.style,
+                        isUpdating,
+                        isDragging,
+                      )}
                     >
                       <Box paddingBottom={1}>
                         <Card

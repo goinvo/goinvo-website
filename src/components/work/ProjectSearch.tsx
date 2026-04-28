@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { CategoriesList } from '@/components/ui/CategoriesList'
 import { CaseStudyCard } from './CaseStudyCard'
 import { NewDraftCard } from '@/components/ui/NewDraftCard'
+import { DraftDeleteButton } from '@/components/ui/DraftDeleteButton'
 import { useHero } from '@/context/HeroContext'
-import type { CaseStudy, Category } from '@/types'
+import type { CaseStudy, Category, Feature } from '@/types'
 
 const categoryHeroImages: Record<string, string[]> = {
   All: ['/images/work/dr-emily.jpg'],
@@ -28,41 +30,112 @@ function pickRandom(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
+function categoryParamValue(category: string): string {
+  return normalizeCategoryValue(category)
+}
+
+function normalizeCategoryValue(category: string): string {
+  return category
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function itemMatchesCategory(item: CaseStudy | Feature, category: string): boolean {
+  const activeCategory = normalizeCategoryValue(category)
+  const categories = (item.categories ?? []) as Array<Category | string>
+
+  return categories.some((candidate) => {
+    if (typeof candidate === 'string') {
+      return normalizeCategoryValue(candidate) === activeCategory
+    }
+
+    return (
+      normalizeCategoryValue(candidate.title) === activeCategory ||
+      normalizeCategoryValue(candidate.slug?.current ?? '') === activeCategory
+    )
+  })
+}
+
+function resolveCategoryFromParam(
+  value: string | null,
+  categories: string[],
+): string {
+  if (!value) return 'All'
+
+  const normalizedValue = value.trim().toLowerCase()
+  return categories.find((category) => (
+    category.toLowerCase() === normalizedValue ||
+    categoryParamValue(category) === normalizedValue
+  )) || 'All'
+}
+
 interface ProjectSearchProps {
-  caseStudies: CaseStudy[]
+  caseStudies: Array<CaseStudy | Feature>
   draftCaseStudies?: CaseStudy[]
+  initialCategory?: string
   /** Main (filter-driving) categories, pre-sorted. Drives the filter chip row. */
   mainCategories: Category[]
 }
 
-export function ProjectSearch({ caseStudies, draftCaseStudies = [], mainCategories }: ProjectSearchProps) {
+export function ProjectSearch({
+  caseStudies,
+  draftCaseStudies = [],
+  initialCategory,
+  mainCategories,
+}: ProjectSearchProps) {
+  const pathname = usePathname()
+  const router = useRouter()
   const filterCategories = useMemo(
     () => ['All', ...mainCategories.map((c) => c.title)],
     [mainCategories],
   )
-  const [activeCategory, setActiveCategory] = useState('All')
+  const [activeCategory, setActiveCategory] = useState(
+    () => resolveCategoryFromParam(initialCategory || null, filterCategories),
+  )
   const { overrideImage } = useHero()
   const prevIndexRef = useRef(0)
 
-  const handleCategorySelect = useCallback((category: string) => {
+  useEffect(() => {
     const prevIndex = prevIndexRef.current
-    const nextIndex = filterCategories.indexOf(category)
+    const nextIndex = filterCategories.indexOf(activeCategory)
     const direction = nextIndex > prevIndex ? 1 : -1
     prevIndexRef.current = nextIndex
 
+    const images = categoryHeroImages[activeCategory] || categoryHeroImages.All
+    overrideImage(pickRandom(images), 'center top', direction)
+  }, [activeCategory, filterCategories, overrideImage])
+
+  const handleCategorySelect = useCallback((category: string) => {
     setActiveCategory(category)
 
-    const images = categoryHeroImages[category] || categoryHeroImages.All
-    overrideImage(pickRandom(images), 'center top', direction)
-  }, [overrideImage])
+    const nextParams = new URLSearchParams(window.location.search)
+
+    if (category === 'All') {
+      nextParams.delete('category')
+    } else {
+      nextParams.set('category', categoryParamValue(category))
+    }
+
+    const queryString = nextParams.toString()
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
+  }, [pathname, router])
+
+  useEffect(() => {
+    const syncCategoryFromLocation = () => {
+      const nextParams = new URLSearchParams(window.location.search)
+      setActiveCategory(resolveCategoryFromParam(nextParams.get('category'), filterCategories))
+    }
+
+    window.addEventListener('popstate', syncCategoryFromLocation)
+    return () => window.removeEventListener('popstate', syncCategoryFromLocation)
+  }, [filterCategories])
 
   const filteredStudies = useMemo(() => {
     if (activeCategory === 'All') return caseStudies
-    return caseStudies.filter((study) =>
-      study.categories?.some(
-        (cat) => cat.title.toLowerCase() === activeCategory.toLowerCase()
-      )
-    )
+    return caseStudies.filter((study) => itemMatchesCategory(study, activeCategory))
   }, [caseStudies, activeCategory])
 
   return (
@@ -84,7 +157,7 @@ export function ProjectSearch({ caseStudies, draftCaseStudies = [], mainCategori
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {draftCaseStudies.map((study) => (
-                <div key={study._id} className="relative">
+                <div key={study._id} className="group relative">
                   {study.slug?.current ? (
                     <CaseStudyCard caseStudy={study} />
                   ) : (
@@ -93,6 +166,11 @@ export function ProjectSearch({ caseStudies, draftCaseStudies = [], mainCategori
                       <p className="text-gray text-sm">No slug set — generate one in the Studio to preview</p>
                     </div>
                   )}
+                  <DraftDeleteButton
+                    documentId={study._draftId}
+                    type="caseStudy"
+                    title={study.title || 'Untitled'}
+                  />
                 </div>
               ))}
               {/* New draft card */}

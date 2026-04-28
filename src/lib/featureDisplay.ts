@@ -1,6 +1,14 @@
 import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import type { Feature, StaticFeature } from '@/types'
 
+const FEATURE_LINK_OVERRIDES: Record<string, string> = {
+  'studio-timeline': '/about/studio-timeline',
+}
+
+const FEATURE_CARD_TITLE_OVERRIDES: Record<string, string> = {
+  'virtual-diabetes-care': 'Virtual Diabetes Care',
+}
+
 /**
  * Convert a Sanity `feature` document into the display shape used by
  * VisionGrid, spotlight cards, and DraftFeaturesSection. Lets the
@@ -10,7 +18,9 @@ export function featureToDisplay(feature: Feature): StaticFeature {
   const slug = feature.slug?.current ?? feature._id
 
   const isExternal = Boolean(feature.externalLink)
-  const link = isExternal ? (feature.externalLink as string) : `/vision/${slug}`
+  const link = isExternal
+    ? (feature.externalLink as string)
+    : FEATURE_LINK_OVERRIDES[slug] ?? `/vision/${slug}`
 
   let imageUrl = ''
   if (feature.image) {
@@ -29,7 +39,7 @@ export function featureToDisplay(feature: Feature): StaticFeature {
 
   return {
     id: slug,
-    title: feature.title,
+    title: feature.cardTitle || FEATURE_CARD_TITLE_OVERRIDES[slug] || feature.title,
     date: feature.date ?? '',
     client: feature.client ?? '',
     categories: feature.categories ?? [],
@@ -39,6 +49,7 @@ export function featureToDisplay(feature: Feature): StaticFeature {
     link,
     externalLink: isExternal,
     hiddenWorkPage: feature.hiddenWorkPage,
+    featured: feature.featured,
     imagePosition: feature.heroPosition,
   }
 }

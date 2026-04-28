@@ -29,12 +29,12 @@ export function Card({
   const content = (
     <motion.div
       className={cn(
-        'bg-white overflow-hidden shadow-card transition-shadow duration-[var(--transition-card)]',
+        'bg-white overflow-hidden shadow-card transition-shadow duration-500 ease-out',
         href && 'hover:shadow-card-hover cursor-pointer',
         className
       )}
-      whileHover={href ? { y: -4 } : undefined}
-      transition={{ duration: 0.3 }}
+      whileHover={href ? { y: -2 } : undefined}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
     >
       {image && (
         <div className="relative aspect-[16/10] overflow-hidden">

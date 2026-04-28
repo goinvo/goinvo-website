@@ -5,14 +5,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import type { CaseStudy } from '@/types'
+import type { CaseStudy, Feature } from '@/types'
 import { urlForImage } from '@/sanity/lib/image'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { useHero } from '@/context/HeroContext'
 import { trackCaseStudyClick } from '@/lib/analytics'
 
 interface CaseStudyCardProps {
-  caseStudy: CaseStudy
+  caseStudy: CaseStudy | Feature
   className?: string
   variant?: 'default' | 'up-next'
 }
@@ -32,24 +32,30 @@ export function CaseStudyCard({
     ? urlForImage(caseStudy.image!).width(800).height(500).url()
     : null
 
-  // Higher-res URL for the hero (overlay morph + PersistentHero)
-  // Hero is 1280x450 (~2.84:1) so use a closer aspect than 16:9 to
-  // minimize top/bottom cropping at desktop widths
+  // Higher-res URL for the hero (overlay morph + PersistentHero).
+  // Avoid pre-cropping here so UI screenshots stay crisp.
   const heroImageUrl = hasHeroAsset
-    ? urlForImage(caseStudy.image!).width(1600).height(564).url()
+    ? urlForImage(caseStudy.image!).width(2000).quality(95).url()
     : null
 
   const caseStudySlug = caseStudy.slug.current
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const section = (caseStudy as any)._type === 'feature' ? 'vision' : 'work'
-  const href = `/${section}/${caseStudySlug}`
-  const showClient = variant === 'default' && section === 'work' && !!caseStudy.client
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const detailText = caseStudy.caption || (caseStudy as any).description
+  const isFeature = caseStudy._type === 'feature'
+  const section = isFeature ? 'vision' : 'work'
+  const externalLink = isFeature ? (caseStudy as Feature).externalLink : undefined
+  const href = externalLink || `/${section}/${caseStudySlug}`
+  const isExternal = Boolean(externalLink)
+  const clientName = caseStudy.client?.trim()
+  const showClient = variant === 'default' && section === 'work' && !!clientName
+  const detailText = (
+    isFeature ? (caseStudy as Feature).description : (caseStudy as CaseStudy).caption
+  )
+  const displayTitle = (isFeature ? undefined : (caseStudy as CaseStudy).heading) || caseStudy.title
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (isExternal) return
+
       // No real hero asset: let the Link navigate normally so the
       // target page can render its own HeroEditPlaceholder. Pre-seeding
       // the hero with the placeholder URL would flash a broken image.
@@ -62,7 +68,7 @@ export function CaseStudyCard({
       e.preventDefault()
 
       trackCaseStudyClick({
-        case_study_title: caseStudy.title,
+        case_study_title: displayTitle,
         case_study_slug: caseStudySlug,
         click_location: 'work_grid',
       })
@@ -83,7 +89,7 @@ export function CaseStudyCard({
         href,
       })
     },
-    [caseStudy.title, caseStudySlug, ctx, heroImageUrl, href, setCaseStudyHero]
+    [caseStudySlug, ctx, displayTitle, heroImageUrl, href, isExternal, setCaseStudyHero]
   )
 
   return (
@@ -91,19 +97,23 @@ export function CaseStudyCard({
       <Link href={href} onClick={handleClick} className="no-underline h-full block">
         <motion.article
           className={cn(
-            'group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-[var(--transition-card)] h-full flex flex-col',
+            'group bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow h-full flex flex-col',
+            'duration-500 ease-out',
             className
           )}
-          whileHover={{ y: -4 }}
-          transition={{ duration: 0.3 }}
+          whileHover={{ y: -2 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         >
           <div data-card-image className="relative h-[260px] overflow-hidden bg-gray-medium [backface-visibility:hidden]">
             {imageUrl ? (
               <Image
                 src={imageUrl}
-                alt={caseStudy.title}
+                alt={displayTitle}
                 fill
-                className="object-cover [backface-visibility:hidden] group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+                className={cn(
+                  'object-cover [backface-visibility:hidden] transition-transform will-change-transform',
+                  'duration-500 ease-out group-hover:scale-[1.025]',
+                )}
                 style={{ objectPosition: 'center top' }}
               />
             ) : (
@@ -113,10 +123,10 @@ export function CaseStudyCard({
             )}
           </div>
           <div className="p-4 [&>p]:m-0 [&>p]:mb-1 flex-grow">
-            <p className="font-semibold text-black">{caseStudy.title}</p>
+            <p className="font-semibold text-black">{displayTitle}</p>
             {/* For vision features, "client" is just the literal "Feature" — skip it and show description instead */}
             {showClient && (
-              <p className="text-gray">{caseStudy.client}</p>
+              <p className="text-gray">{clientName}</p>
             )}
             {detailText && (
               <p className="text-gray">{detailText}</p>

@@ -35,7 +35,7 @@ export default async function MainLayout({
       </a>
       <Header />
       <PersistentHero />
-      <TransitionLayout>
+      <TransitionLayout disableTransitions={isDraftMode}>
         <main id="main-content">{children}</main>
       </TransitionLayout>
       <GoogleAnalytics />

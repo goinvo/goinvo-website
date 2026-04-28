@@ -76,6 +76,12 @@ interface MatchedFlatNodePair {
   b: FlatNode
 }
 
+interface ContentOrderToken {
+  key: string
+  label: string
+  index: number
+}
+
 type ViewportName = 'desktop' | 'mobile'
 
 interface ViewportPreset {
@@ -801,6 +807,89 @@ function getRepresentativeParagraphNode(entry: FlatNode): TreeNode {
   return paragraph
 }
 
+function collectContentOrderTokens(flat: FlatNode[]): ContentOrderToken[] {
+  const orderedTags = new Set(['h1', 'h2', 'h3', 'h4', 'p', 'img', 'video', 'iframe'])
+
+  return flat
+    .filter(entry => orderedTags.has(entry.node.tag))
+    .map((entry): ContentOrderToken | null => {
+      if (entry.node.tag === 'img' || entry.node.tag === 'video' || entry.node.tag === 'iframe') {
+        const source = (entry.node.src || '').trim()
+        if (!source) return null
+
+        return {
+          key: `${entry.node.tag}:${source.toLowerCase()}`,
+          label: `<${entry.node.tag}> ${source}`,
+          index: 0,
+        }
+      }
+
+      const text = normalizeTextContent(entry.node.text)
+      if (text.length < 24) return null
+
+      return {
+        key: `${entry.node.tag}:${text.slice(0, 90)}`,
+        label: `<${entry.node.tag}> "${(entry.node.text || '').replace(/\s+/g, ' ').slice(0, 60)}"`,
+        index: 0,
+      }
+    })
+    .filter((token): token is ContentOrderToken => Boolean(token))
+    .map((token, index) => ({ ...token, index }))
+}
+
+function uniqueOrderTokenMap(tokens: ContentOrderToken[]): Map<string, ContentOrderToken> {
+  const counts = new Map<string, number>()
+  for (const token of tokens) {
+    counts.set(token.key, (counts.get(token.key) || 0) + 1)
+  }
+
+  const unique = new Map<string, ContentOrderToken>()
+  for (const token of tokens) {
+    if (counts.get(token.key) === 1) {
+      unique.set(token.key, token)
+    }
+  }
+
+  return unique
+}
+
+function countMediaBetween(flat: FlatNode[], startPath: string, endPath: string): number {
+  const startIndex = flat.findIndex(entry => entry.path === startPath)
+  const endIndex = flat.findIndex(entry => entry.path === endPath)
+  if (startIndex < 0 || endIndex < 0 || startIndex === endIndex) return 0
+
+  const from = Math.min(startIndex, endIndex) + 1
+  const to = Math.max(startIndex, endIndex)
+  return flat
+    .slice(from, to)
+    .filter(entry =>
+      ['img', 'video', 'iframe'].includes(entry.node.tag) &&
+      entry.node.rect.width > 20 &&
+      entry.node.rect.height > 20
+    )
+    .length
+}
+
+function templateBoundaryIndex(flat: FlatNode[]): number {
+  const boundaryText = [
+    'authors',
+    'author',
+    'contributors',
+    'subscribe to our newsletter',
+    'up next',
+    'references',
+    'about goinvo',
+    'special thanks',
+  ]
+  const index = flat.findIndex(entry => {
+    const text = normalizeTextContent(entry.node.text)
+    return ['h2', 'h3', 'h4', 'p'].includes(entry.node.tag) &&
+      boundaryText.some(boundary => text === boundary || text.startsWith(`${boundary} `))
+  })
+
+  return index >= 0 ? index : flat.length
+}
+
 function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: string): string[] {
   const flatA = flattenTree(treeA)
   const flatB = flattenTree(treeB)
@@ -1028,6 +1117,71 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     lines.push(`  No paragraph style differences in ${paragraphPairs.length} matched paragraphs`)
   }
 
+  lines.push('')
+  lines.push('=== Content Order Differences ===')
+  const contentFlatA = flatA.slice(0, templateBoundaryIndex(flatA))
+  const contentFlatB = flatB.slice(0, templateBoundaryIndex(flatB))
+  const aOrder = collectContentOrderTokens(contentFlatA)
+  const bOrder = collectContentOrderTokens(contentFlatB)
+  const aOrderByKey = uniqueOrderTokenMap(aOrder)
+  const bOrderByKey = uniqueOrderTokenMap(bOrder)
+  const sharedAOrder = aOrder.filter(token => aOrderByKey.has(token.key) && bOrderByKey.has(token.key))
+  let lastBToken: ContentOrderToken | null = null
+  let orderMismatchCount = 0
+
+  for (const aToken of sharedAOrder) {
+    const bToken = bOrderByKey.get(aToken.key)
+    if (!bToken) continue
+
+    if (lastBToken && bToken.index < lastBToken.index) {
+      orderMismatchCount += 1
+      if (orderMismatchCount <= 8) {
+        lines.push(`  ORDER MISMATCH: ${bToken.label} appears before ${lastBToken.label} in ${labelB}, but after it in ${labelA}`)
+      }
+      continue
+    }
+
+    lastBToken = bToken
+  }
+
+  if (orderMismatchCount > 8) lines.push(`  ...and ${orderMismatchCount - 8} more content order mismatches`)
+
+  const orderTextTags = new Set(['h1', 'h2', 'h3', 'h4', 'p'])
+  const aOrderTextEntries = contentFlatA.filter(entry =>
+    orderTextTags.has(entry.node.tag) &&
+    normalizeTextContent(entry.node.text).length >= 24
+  )
+  const bOrderTextEntries = contentFlatB.filter(entry =>
+    orderTextTags.has(entry.node.tag) &&
+    normalizeTextContent(entry.node.text).length >= 24
+  )
+  const orderTextPairs = matchTextEntries(aOrderTextEntries, bOrderTextEntries, {
+    minTextLength: 24,
+    fallbackPrefixLength: 28,
+    sameTagOnly: false,
+  }).sort((left, right) => contentFlatA.findIndex(entry => entry.path === left.a.path) - contentFlatA.findIndex(entry => entry.path === right.a.path))
+  let mediaGapMismatchCount = 0
+
+  for (let index = 1; index < orderTextPairs.length; index += 1) {
+    const previousPair = orderTextPairs[index - 1]
+    const currentPair = orderTextPairs[index]
+    const aMediaBetween = countMediaBetween(contentFlatA, previousPair.a.path, currentPair.a.path)
+    const bMediaBetween = countMediaBetween(contentFlatB, previousPair.b.path, currentPair.b.path)
+
+    if (aMediaBetween !== bMediaBetween) {
+      mediaGapMismatchCount += 1
+      if (mediaGapMismatchCount <= 8) {
+        lines.push(
+          `  ORDER MISMATCH: media between "${(previousPair.a.node.text || '').slice(0, 38)}" and "${(currentPair.a.node.text || '').slice(0, 38)}" differs: ${labelA} ${aMediaBetween}, ${labelB} ${bMediaBetween}`
+        )
+      }
+    }
+  }
+
+  const totalOrderMismatches = orderMismatchCount + mediaGapMismatchCount
+  if (mediaGapMismatchCount > 8) lines.push(`  ...and ${mediaGapMismatchCount - 8} more media gap mismatches`)
+  if (totalOrderMismatches === 0) lines.push(`  Content order matches across ${sharedAOrder.length} shared nodes and ${orderTextPairs.length} text intervals`)
+
   // Compare lists
   lines.push('')
   lines.push('=== List Differences ===')
@@ -1166,11 +1320,23 @@ function diffTrees(treeA: TreeNode, treeB: TreeNode, labelA: string, labelB: str
     const bImg = bImages[i].node
     const aWpct = Math.round((aImg.rect.width / 1280) * 100)
     const bWpct = Math.round((bImg.rect.width / 1280) * 100)
-    // Flag if one image is <40% width (side-by-side) and the other is >70% (full-width)
-    if ((aWpct < 40 && bWpct > 70) || (aWpct > 70 && bWpct < 40)) {
+    const widthDelta = Math.abs(aImg.rect.width - bImg.rect.width)
+    const widthRatioDelta = Math.abs(aImg.rect.width / Math.max(bImg.rect.width, 1) - 1)
+    // Article images often max out at the medium content width (~711px),
+    // which is only ~56% of a 1280px viewport. Compare actual rendered
+    // widths too, so full article image -> half-column regressions are caught.
+    const looksLikeFullToColumn =
+      widthDelta > 120 &&
+      widthRatioDelta > 0.25 &&
+      (Math.max(aImg.rect.width, bImg.rect.width) >= 600 || Math.min(aImg.rect.width, bImg.rect.width) <= 420)
+    const viewportBucketMismatch = (aWpct < 40 && bWpct > 70) || (aWpct > 70 && bWpct < 40)
+    if (viewportBucketMismatch || looksLikeFullToColumn) {
       layoutMismatches++
       if (layoutMismatches <= 3) {
-        lines.push(`  ⚠ Image #${i + 1} [${aImg.src || ''}]: ${aWpct}%w → ${bWpct}%w (${aWpct < 40 ? 'side-by-side→full' : 'full→side-by-side'})`)
+        const direction = aImg.rect.width > bImg.rect.width ? 'larger→smaller' : 'smaller→larger'
+        lines.push(
+          `  ⚠ Image #${i + 1} [${aImg.src || ''}]: ${aImg.rect.width}px (${aWpct}%w) → ${bImg.rect.width}px (${bWpct}%w) (${direction})`
+        )
       }
     }
   }
@@ -1844,6 +2010,7 @@ function printUsage(): void {
 function summarizeDiffLines(diffLines: string[]): string[] {
   const focusSections = new Set([
     'Hero Wrap Differences',
+    'Content Order Differences',
     'Image Layout Comparison',
     'Image Occupancy Differences',
     'Broken Images',
@@ -1854,6 +2021,7 @@ function summarizeDiffLines(diffLines: string[]): string[] {
   ])
   const harmlessLines = new Set([
     'Hero wrap metrics match',
+    'Content order matches',
     'Unable to compare hero headings',
     'Image layouts match',
     'Image occupancy metrics match',
@@ -1884,7 +2052,7 @@ function summarizeDiffLines(diffLines: string[]): string[] {
     if (!trimmed) continue
 
     if (!focusSections.has(currentSection)) continue
-    if (harmlessLines.has(trimmed) || trimmed.startsWith('No ')) continue
+    if (harmlessLines.has(trimmed) || trimmed.startsWith('No ') || trimmed.startsWith('Content order matches')) continue
     if (trimmed.startsWith('Sample count:')) continue
 
     const viewportPrefix = currentViewport ? `[${currentViewport}]` : ''

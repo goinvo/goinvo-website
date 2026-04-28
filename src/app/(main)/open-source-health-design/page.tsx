@@ -102,8 +102,10 @@ function ProjectCard({
   project: (typeof fundedProjects)[number]
 }) {
   const isExternal = project.link.startsWith('http')
+  const imageOrder = project.imagePosition === 'left' ? 'md:order-1' : 'md:order-2'
+  const textOrder = project.imagePosition === 'left' ? 'md:order-2' : 'md:order-1'
   const textBlock = (
-    <div className="flex flex-col justify-center p-8 lg:p-12">
+    <div className={`order-2 flex flex-col justify-center p-4 text-left md:p-8 lg:p-12 ${textOrder}`}>
       <h4 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary text-left mb-4">
         {project.title}
       </h4>
@@ -111,7 +113,7 @@ function ProjectCard({
     </div>
   )
   const imageBlock = (
-    <div className="flex items-center justify-center p-8">
+    <div className={`order-1 flex items-center justify-center p-6 md:p-8 ${imageOrder}`}>
       <Image
         src={cloudfrontImage(project.image)}
         alt={project.title}
@@ -122,18 +124,12 @@ function ProjectCard({
     </div>
   )
 
-  const inner =
-    project.imagePosition === 'left' ? (
-      <div className="grid grid-cols-1 md:grid-cols-2">
-        {imageBlock}
-        {textBlock}
-      </div>
-    ) : (
-      <div className="grid grid-cols-1 md:grid-cols-2">
-        {textBlock}
-        {imageBlock}
-      </div>
-    )
+  const inner = (
+    <div className="grid grid-cols-1 md:grid-cols-2">
+      {imageBlock}
+      {textBlock}
+    </div>
+  )
 
   if (isExternal) {
     return (
@@ -141,7 +137,7 @@ function ProjectCard({
         href={project.link}
         target="_blank"
         rel="noopener noreferrer"
-        className="block bg-white shadow-card hover:shadow-card-hover transition-shadow no-underline mt-8"
+        className="mx-[10px] mt-4 block bg-white shadow-card transition-shadow no-underline hover:shadow-card-hover md:mx-0 md:mt-8"
       >
         {inner}
       </a>
@@ -151,7 +147,7 @@ function ProjectCard({
   return (
     <Link
       href={project.link}
-      className="block bg-white shadow-card hover:shadow-card-hover transition-shadow no-underline mt-8"
+      className="mx-[10px] mt-4 block bg-white shadow-card transition-shadow no-underline hover:shadow-card-hover md:mx-0 md:mt-8"
     >
       {inner}
     </Link>
@@ -162,10 +158,10 @@ export default function OpenSourceHealthDesignPage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
       {/* Hero */}
-      <section style={{ backgroundColor: '#faf6f4' }} className="overflow-hidden">
+      <section className="overflow-hidden bg-white">
         <div className="max-width content-padding py-12 lg:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div className="text-tertiary">
+          <div className="grid grid-cols-1 gap-6 text-center lg:grid-cols-2 lg:gap-12 lg:text-left items-center">
+            <div className="order-2 mx-auto max-w-[280px] text-tertiary lg:order-1 lg:max-w-none">
               <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
                 Open Source Health Design
                 <span className="font-serif text-primary">.</span>
@@ -173,11 +169,11 @@ export default function OpenSourceHealthDesignPage() {
               <p className="mb-6">
                 Bringing Trust, Openness, Innovation, &amp; Design to Healthcare
               </p>
-              <Button href="/contact" variant="primary" size="lg">
+              <Button href="/contact" variant="primary" size="md" className="mt-5 mb-[30px]">
                 Get Involved
               </Button>
             </div>
-            <div>
+            <div className="order-1 mx-auto max-w-[280px] lg:order-2 lg:max-w-none">
               <Image
                 src={cloudfrontImage('/images/open_source/open-source-bgd.png')}
                 alt="Open Source Health Design"
@@ -194,7 +190,7 @@ export default function OpenSourceHealthDesignPage() {
       {/* Vision Statement + Stats */}
       <section style={{ backgroundColor: '#faf6f4' }} className="py-16">
         <div className="max-width content-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16 text-center lg:text-left">
             <div>
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary">
                 We envision a world where patients can be cared for with
@@ -259,7 +255,7 @@ export default function OpenSourceHealthDesignPage() {
 
       {/* Initiative Description + Client Logos */}
       <section style={{ backgroundColor: '#faf6f4' }} className="py-16">
-        <div className="max-width content-padding">
+        <div className="max-width content-padding text-center lg:text-left">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
             <div>
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light text-tertiary">
@@ -297,9 +293,9 @@ export default function OpenSourceHealthDesignPage() {
 
           {/* Client Logos */}
           <div>
-            <h4 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.1875rem] lg:leading-[1.375rem] mb-4">
+            <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.1875rem] lg:leading-[1.375rem] mb-4">
               We&apos;ve worked with...
-            </h4>
+            </h3>
             <ClientLogos variant="open-source" />
           </div>
         </div>
@@ -310,6 +306,7 @@ export default function OpenSourceHealthDesignPage() {
         text="The GoInvo studio is one of the most talented groups of designers I have ever met in the healthcare space. Not only are their ideas, designs, and graphics remarkable, but I haven't yet figured out how they know so much about medicine and its future."
         author="Eric Topol"
         role="MD, Director, Scripps Translational Science Institute"
+        className="[&_p:first-of-type]:!text-tertiary"
       />
 
       {/* Funding Section */}
@@ -324,7 +321,7 @@ export default function OpenSourceHealthDesignPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
             {fundingBenefits.map((benefit) => (
               <div key={benefit.image} className="px-4">
-                <div className="mx-auto mb-4 w-[80%] max-w-[200px]">
+                <div className="mx-auto mb-4 hidden w-[80%] max-w-[200px] sm:block">
                   <Image
                     src={cloudfrontImage(benefit.image)}
                     alt={benefit.description}
@@ -345,7 +342,12 @@ export default function OpenSourceHealthDesignPage() {
 
           {/* Get in touch button */}
           <div className="mt-12">
-            <Button href="/contact" variant="outline" size="lg">
+            <Button
+              href="/contact"
+              variant="outline"
+              size="md"
+              className="!border-tertiary !text-tertiary hover:!bg-transparent"
+            >
               Get in touch
             </Button>
           </div>
@@ -379,9 +381,9 @@ export default function OpenSourceHealthDesignPage() {
       {/* Open Source Conversations */}
       <section className="py-16">
         <div className="max-width content-padding">
-          <h2 className="font-serif text-xl lg:text-2xl text-tertiary mb-8">
+          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-tertiary mb-6">
             Open Source Health Design conversations
-          </h2>
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {conversations.map((item) => (
               <a
@@ -389,14 +391,14 @@ export default function OpenSourceHealthDesignPage() {
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow no-underline"
+                className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
               >
                 <div className="relative h-[200px] overflow-hidden">
                   <Image
                     src={cloudfrontImage(item.image)}
                     alt={item.title}
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-[var(--transition-card)]"
+                    className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.025]"
                   />
                 </div>
                 <div className="p-4">
@@ -426,7 +428,7 @@ export default function OpenSourceHealthDesignPage() {
                 Reach out to know more about the current partnership
                 opportunities available!
               </p>
-              <Button href="/contact" variant="primary" size="lg">
+              <Button href="/contact" variant="primary" size="md">
                 Get Involved
               </Button>
             </div>

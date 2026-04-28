@@ -16,6 +16,9 @@
 	.st10{fill:none;stroke:#24434D;stroke-linecap:round;}
 	.st11{fill:#E6F1F6;stroke:#C5DFE8;stroke-miterlimit:10;}
 	.st12{fill:#436B78;}
+	.link{transition:0.25s;}
+	.link:hover{filter:drop-shadow(0px 7px 7px rgba(57,75,94,0.17));}
+	.link:focus{filter:drop-shadow(0px 7px 7px rgba(57,75,94,0.17));}
 </style>
 
 
