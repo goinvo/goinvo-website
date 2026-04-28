@@ -31,8 +31,9 @@ function formatCompact(n: number): string {
 }
 
 /* ---------- static COVID data (Johns Hopkins no longer updated) ---------- */
-const CASES = 704000000
-const DEATHS = 7010000
+const CASES = 676570149
+const DEATHS = 6881802
+const COVID_DATA_LAST_UPDATED = '9 March 2023'
 
 /* ---------- sub-components ---------- */
 
@@ -288,6 +289,9 @@ export default function CoronavirusPage() {
             <div className="margin-top--double margin-bottom--double">
               <h4>Live update of COVID-19 numbers</h4>
               <CovidChart />
+              <p className="coronavirus-chart-caption">
+                COVID-19 numbers last updated {COVID_DATA_LAST_UPDATED}.
+              </p>
             </div>
             <h4>
               How deadly is COVID-19?<sup>19,20</sup>
@@ -711,11 +715,11 @@ export default function CoronavirusPage() {
               </strong>{' '}
               for{' '}
               <strong>
-                patients<span className="hidden--until-lg"> (P)</span>
+                patients<span className="hidden--until-lg coronavirus-inline--lg"> (P)</span>
               </strong>{' '}
               and for{' '}
               <strong>
-                caregivers<span className="hidden--until-lg"> (C)</span>
+                caregivers<span className="hidden--until-lg coronavirus-inline--lg"> (C)</span>
               </strong>
               .
             </p>
