@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { OralHistorySlideshow } from './OralHistorySlideshow'
 import { ScrollNav } from './ScrollNav'
 import './oral-history.css'
 
@@ -13,6 +14,7 @@ export default function OralHistoryGoinvoPage() {
   return (
     <div id="oral-history-legacy" className="pt-[var(--spacing-header-height)]">
       <ScrollNav />
+      <OralHistorySlideshow />
 
 <article className='oral-history' id='feature-article'>
 <div className='overall-header'>
@@ -84,9 +86,9 @@ export default function OralHistoryGoinvoPage() {
 <div className='interview-content'>
 <div className='speaker-avatar dirk'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Dirk Knemeyer:</span>
+<span className='full-name'>Dirk Knemeyer:</span>{' '}
 <span className='speaker-text'>
-So it all started with a
+So it all started with a{' '}
 <a href='http://boxesandarrows.com/information-design-the-understanding-discipline/'>Boxes and Arrows article.</a>
 </span>
 </div>
@@ -94,7 +96,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar andrei'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Andrei Herasimchuk:</span>
+<span className='full-name'>Andrei Herasimchuk:</span>{' '}
 <span className='speaker-text'>I haven’t read that article in a while, and re-reading my comments on it, I’m surprised at how much I still agree with my younger self! In fact, many of my concerns about titles, job descriptions, and confusion over design and the tech sector have come to fruition. Having said that, I know I come off as overly direct in the way I speak and write, but I really was attempting to be as diplomatic as I knew how in my comments to that article.</span>
 </div>
 </div>
@@ -269,7 +271,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar juhan'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Juhan Sonin:</span>
+<span className='full-name'>Juhan Sonin:</span>{' '}
 <span className='speaker-text'>When the padded cell fits...</span>
 </div>
 </div>
@@ -288,7 +290,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar donna'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Donna Driscoll:</span>
+<span className='full-name'>Donna Driscoll:</span>{' '}
 <span className='speaker-text'>And that last comment is why we initially thought you were literally crazy, Captain Sonin. But when you flew out and we met for the first time I knew you and Andrei would become kindred spirits. You shared the same design philosophy.</span>
 </div>
 </div>
@@ -319,7 +321,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar ben'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Ben Listwon:</span>
+<span className='full-name'>Ben Listwon:</span>{' '}
 <span className='speaker-text'>Ugh, jeepers, I don’t think that’s right. Honestly, I’ve been blessed to work with people that make me look smart, and I’ve tried, even after Invo, to hire or work with only the folks that will outshine my abilities.</span>
 </div>
 </div>
@@ -450,14 +452,14 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar dirk'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Dirk Knemeyer:</span>
+<span className='full-name'>Dirk Knemeyer:</span>{' '}
 <span className='speaker-text'>By the fall of 2005, we had a few projects going at once and some interesting leads. Ben was working with us pretty much full-time as well. But it was Agile that changed everything.</span>
 </div>
 </div>
 <div className='interview-content'>
 <div className='speaker-avatar andrei'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Andrei Herasimchuk:</span>
+<span className='full-name'>Andrei Herasimchuk:</span>{' '}
 <span className='speaker-text'>It did.</span>
 </div>
 </div>
@@ -470,7 +472,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar ben'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Ben Listwon:</span>
+<span className='full-name'>Ben Listwon:</span>{' '}
 <span className='speaker-text'>There was also a real sense of desperation in that meeting. The folks at Agile knew what had served them well for many years, but that things were changing and they didn’t want to be left behind. The opportunity was huge, but there was a real danger of missing the mark. So, yeah, it was definitely a first for me, coming from a startup background where there was little legacy and far less consequence to failure. It was exhilarating and scary.</span>
 </div>
 </div>
@@ -507,7 +509,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar donna'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Donna Driscoll:</span>
+<span className='full-name'>Donna Driscoll:</span>{' '}
 <span className='speaker-text'>I was at Adobe at the time doing exploratory research to inform the company’s mobile strategy. I remember Andrei picking me up from work and telling me there was this amazing opportunity for me with Invo—and he needed an answer by the following morning. Nothing like advance notice and being able to prepare!</span>
 </div>
 </div>
@@ -646,7 +648,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar uday'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Uday Gajendar:</span>
+<span className='full-name'>Uday Gajendar:</span>{' '}
 <span className='speaker-text'>LOL totally! I agree with Ben on that. It was a bit of sheer terror in the beginning but ultimately Agile was a major defining experience for me in terms of diving into and driving “good design” in a wholly authentic, integrative manner, with a fabulous team and unparalleled camaraderie. Small personal bonus: having previously started my design career at Oracle in 2001, seeing the Agile UX being bought by and folded back into Oracle in 2008 was a bit of a “cherry on top” for me ;-) #sweetrevenge (But I didn’t say that!)</span>
 </div>
 </div>
@@ -1111,14 +1113,14 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar dirk'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Dirk Knemeyer:</span>
+<span className='full-name'>Dirk Knemeyer:</span>{' '}
 <span className='speaker-text'>As Agile finally started winding down we had a new big client hitting: <a href="http://www.mcafee.com/us/">McAfee</a>. Andrei, your old buddy Tim Kinslow got hired over there and wanted us to redesign the Total Protection Suite.</span>
 </div>
 </div>
 <div className='interview-content'>
 <div className='speaker-avatar andrei'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Andrei Herasimchuk:</span>
+<span className='full-name'>Andrei Herasimchuk:</span>{' '}
 <span className='speaker-text'>Tim and I worked at Adobe during the same period in the late 90s. He’s a great guy. He had moved over to McAfee and was trying to find ways to inject new ideas into their core product line. He reached out to us and we spent a few months discussing what that could look like if we were to come on board.</span>
 </div>
 </div>
@@ -1137,7 +1139,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar ben'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Ben Listwon:</span>
+<span className='full-name'>Ben Listwon:</span>{' '}
 <span className='speaker-text'>Yeah, McAfee was sort of the coming-of-age of the SV tech practice too. Rob and Tiff had really taken the wheel and I think the effort they put into really owning our development standards made it possible to meet the McAfee team where we needed to technically. They had a lot of low-level tech hurdles, and we had a high-level library of abstractions, so what could have gone horribly ended up being smooth sailing because of their hard work.</span>
 </div>
 </div>
@@ -1174,7 +1176,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar juhan'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Juhan Sonin:</span>
+<span className='full-name'>Juhan Sonin:</span>{' '}
 <span className='speaker-text'>I was at <a href="http://en.wikipedia.org/wiki/Mitre_Corporation">MITRE</a>, which was pretty damn good and a bit cushy, and I was learning a ton. It was an interesting time for us to have talked because it was at the crescendo moment. I’m asking myself “what happens next?” Not everything can be flowers and honey and sex. It was hard because it was a really good situation where I was protected in an R&D environment. You had this umbrella from having to worry about what quarter it was and what the money looked like.</span>
 </div>
 </div>
@@ -1427,7 +1429,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar eric'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Eric Benoit:</span>
+<span className='full-name'>Eric Benoit:</span>{' '}
 <span className='speaker-text'>I remember getting this email from Juhan via my website’s contact form. He asked if I was interested in designing “meaty apps” in the health space. I’m still not sure how he found me.</span>
 </div>
 </div>
@@ -1524,7 +1526,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar jon'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Jonathan Follett:</span>
+<span className='full-name'>Jonathan Follett:</span>{' '}
 <span className='speaker-text'>You and I met at a financial information design conference at the <a href="http://www.harvardclub.com/Club/Scripts/Home/home.asp">Harvard Club</a> back in 2005. I remember that you had a slide up of your two boys, and you talked about how the word “user” rubbed you the wrong way, which was in the early years of the user experience. I always felt that way as well, just that there were two industries that referred to their clients as users, the computer industry and the illicit drug industry. That resonated with me.</span>
 </div>
 </div>
@@ -1747,14 +1749,14 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar dirk'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Dirk Knemeyer:</span>
+<span className='full-name'>Dirk Knemeyer:</span>{' '}
 <span className='speaker-text'>Jon, perhaps your first major contribution, and a big part of our getting back on the right trajectory, was the PTC project.</span>
 </div>
 </div>
 <div className='interview-content'>
 <div className='speaker-avatar jon'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>John Follett:</span>
+<span className='full-name'>John Follett:</span>{' '}
 <span className='speaker-text'>Yeah, that’s right. I was doing a lot of teaching, these one-day seminars on web applications. Nancy from <a href="http://www.ptc.com/">PTC</a> was in the group that came to see me one Saturday at <a href="http://www.bentley.edu/">Bentley University</a>, and I’d been up the whole night before preparing for it. It was stupidest thing to do because I was so exhausted. She kept asking me questions, and I knew she was really enjoying the class, but I was just being tortured because I was so exhausted from my preparation.</span>
 </div>
 </div>
@@ -1773,7 +1775,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar juhan'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Juhan Sonin:</span>
+<span className='full-name'>Juhan Sonin:</span>{' '}
 <span className='speaker-text'>The PTC project was Boston’s first big project, meaning three or four people full time for over five months. It was a jumpstart for the studio. It allowed us to do lots of different things and go from having a few contractors to hiring people and building a stronger team. We helped PTC re-imagine what their next-generation CAD software was going to be. It’s a huge application, competing with <a href="http://www.autodesk.com/">Autodesk</a> and <a href="http://www.solidworks.com/">SolidWorks</a>. It had a massive number of screen states, and we had to come up with a strategy for how the UI was going to be implemented, and help their engineers and designers come up with a way to keep track of their own design. They had let it go for 20 years, just by adding parts and pieces. Eventually it was a year- and-a-half relationship and very good for the studio.</span>
 </div>
 </div>
@@ -1792,7 +1794,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar sarah'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Sarah Kaiser:</span>
+<span className='full-name'>Sarah Kaiser:</span>{' '}
 <span className='speaker-text'>I came onto PTC after the initial UI design work was complete, to create a framework for the icons. It was my first big client project and a hell of a primer, made easy only by lead designer Dawa Chung’s unrelenting work ethic and Juhan’s guidance.</span>
 </div>
 </div>
@@ -1871,7 +1873,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar eric'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Eric Benoit:</span>
+<span className='full-name'>Eric Benoit:</span>{' '}
 <span className='speaker-text'>I was really happy with the way the product turned out. CodeRyte gave us the time to get it done right. They had us on board as a true partner; nobody was counting time... just getting this new product delivered. This was also a good test for me. At this point, I hadn’t yet led software into production nor an engineering team. I learned a shit ton and it was really validating to see my design kick ass in the real world.</span>
 </div>
 </div>
@@ -2016,7 +2018,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar jen'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Jen Patel:</span>
+<span className='full-name'>Jen Patel:</span>{' '}
 <span className='speaker-text'>Inspired EHRs: Designing for Clinicians is one of our contributions to affecting health care on a national scale. Electronic health records are an important part of hospital systems but seriously lack in usability, leading to many gaps that could be the cause of injury, sickness, or, worse, death. In the book we worked on several key areas of electronic health records, helped to develop the foundations of each chapter, designed beautiful interfaces that are intuitive for physicians and support how they work on a daily basis. We built prototypes, integrated as interactive pieces in the ebook, to demonstrate how such interfaces could function, giving readers a chance to mess around with the tools we’ve designed. Inspired EHRs evolved into an open sourced, lightweight design policy for electronic health records.</span>
 </div>
 </div>
@@ -2303,7 +2305,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar juhan'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Juhan Sonin:</span>
+<span className='full-name'>Juhan Sonin:</span>{' '}
 <span className='speaker-text'>We had a couple of really good years in 2012, 2013. Then things started going in the other direction. You’d seen it during the McAfee times out in Silicon Valley. We made a few choices project-wise that were good but not great, and we were suffering from a lack of focus. We had maybe 18 people in the company. We were at the maximum. I was losing complete insight into things that were going on. And we didn’t have enough lieutenants who could take a strong lead on things and let me just touch everything in a thoughtful way without having to go too deep into the weeds. I was still in the weeds too often.</span>
 </div>
 </div>
@@ -2322,7 +2324,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar jon'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Jonathan Follett:</span>
+<span className='full-name'>Jonathan Follett:</span>{' '}
 <span className='speaker-text'>I think that’s right. We have a better grasp of who we are and what we want as an organization. I think that is extremely important when you’re talking about the kind of work that you go after.</span>
 </div>
 </div>
@@ -2347,7 +2349,7 @@ So it all started with a
 <div className='interview-content'>
 <div className='speaker-avatar dirk'></div>
 <div className='speaker-speaks'>
-<span className='full-name'>Dirk Knemeyer:</span>
+<span className='full-name'>Dirk Knemeyer:</span>{' '}
 <span className='speaker-text'>While I wish the bad times hadn’t happened it was good for me to get back more fully engaged in Invo Boston when there was some stress and struggle. It created sort of a perfect opportunity for us to re-frame what we were doing, and how. 2014 has been kind of up and down, but the foundation is good.</span>
 </div>
 </div>

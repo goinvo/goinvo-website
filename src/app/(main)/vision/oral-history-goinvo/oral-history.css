@@ -28,6 +28,14 @@
 
 #oral-history-legacy .rslides-container .caption{font-size:18px;line-height:28px;margin-bottom:0px;color:rgba(0,0,0,0.45);padding:10px 0px}
 
+#oral-history-legacy .rslides-dots{display:flex;justify-content:center;align-items:center;gap:8px;padding:4px 0 6px;margin:0}
+
+#oral-history-legacy .rslides-dot{display:block;width:9px;height:9px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,0.24);cursor:pointer;appearance:none;transition:background-color 200ms ease-in-out,transform 200ms ease-in-out}
+
+#oral-history-legacy .rslides-dot:hover,#oral-history-legacy .rslides-dot:focus-visible{background:rgba(0,0,0,0.45);outline:none;transform:scale(1.2)}
+
+#oral-history-legacy .rslides-dot.active,#oral-history-legacy .rslides-dot[aria-current="true"]{background:#6d6e6a;transform:scale(1.25)}
+
 #oral-history-legacy .rslides1_nav{position:absolute;-webkit-tap-highlight-color:transparent;top:calc(50% - 18px);left:70px;z-index:99;opacity:0.8;text-indent:-9999px;overflow:hidden;text-decoration:none;height:38px;width:38px;background:transparent url("https://www.goinvo.com/old/images/features/an-oral-history/slides/arrows.gif") no-repeat left center;margin-top:-45px;border-radius:50%}
 
 @media only screen and (max-width: 750px){
@@ -303,6 +311,12 @@
 
 #oral-history-legacy .social-buttons.centered{padding-left:0;text-align:center}
 
+@media only screen and (max-width: 560px){
+#oral-history-legacy .social-buttons.centered{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;padding-left:15px;padding-right:15px}
+#oral-history-legacy .social-buttons.centered p{flex:0 0 100%}
+#oral-history-legacy .social-buttons.centered a{display:inline-block;margin-top:0}
+}
+
 #oral-history-legacy .fb-comments{margin:0 auto;max-width:90rem;text-align:center}
 
 #oral-history-legacy .credit-wrapper{background-color:rgba(0,0,0,0.03);padding:60px 0px;border-top:3px solid rgba(0,0,0,0.4)}
@@ -388,7 +402,7 @@
 #oral-history-legacy #credits .contributors .cont-wrapper{width:906px;margin:0 auto}
 
 @media only screen and (max-width: 400px){
-#oral-history-legacy #credits .contributors .cont-wrapper{padding-left:calc(50% - 80px)}
+#oral-history-legacy #credits .contributors .cont-wrapper{padding-left:0}
 }
 
 #oral-history-legacy #credits .contributors .cont-wrapper h2{text-align:center;font-size:28px;line-height:22px;width:100%;margin:0 auto;margin-bottom:30px;color:rgba(0,0,0,0.6)}
