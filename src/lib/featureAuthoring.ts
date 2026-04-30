@@ -90,7 +90,7 @@ export function getFeatureEditorExperienceDescription(slug?: string | null): str
     return 'This article still uses legacy compatibility rules or code-side fallbacks. New articles should use the guided CMS path instead of copying these patterns.'
   }
 
-  return 'This article renders directly from CMS-authored fields and supported block options. Use the Body, People, Page Settings, and SEO tabs to control the page.'
+  return 'This article renders directly from CMS-authored fields and supported block options. Use the Properties, Main Content, and Extra Content tabs to control the page.'
 }
 
 export function hasMeaningfulFeatureBody(content: PortableTextLikeBlock[] | undefined): boolean {

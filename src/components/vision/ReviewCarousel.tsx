@@ -136,7 +136,7 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
                 <div className="relative">
                   <div className="absolute bg-contain bg-center bg-no-repeat" style={{ top: -25, left: 0, width: 20, height: 20, backgroundImage: 'url(/images/quote.svg)' }} />
                   <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light m-0">{active.quote}</p>
-                  <p className="text-sm leading-snug mt-4 mb-0" style={{ color: '#787473' }}>
+                  <p className="text-sm leading-snug mt-4 mb-0 text-gray">
                     <span>{active.quotee}</span><br /><span>{active.quoteeSub}</span>
                   </p>
                   <div className="absolute bg-contain bg-center bg-no-repeat" style={{ bottom: -25, right: 0, width: 20, height: 20, backgroundImage: 'url(/images/quote.svg)', transform: 'rotateX(180deg) scaleX(-1)' }} />
@@ -156,10 +156,15 @@ export function ReviewCarousel({ reviews }: ReviewCarouselProps) {
             <button
               key={index}
               onClick={() => setActiveIndex(index)}
-              className="border-0 cursor-pointer p-0 rounded-full"
-              style={{ width: 10, height: 10, backgroundColor: '#e36216', opacity: index === activeIndex ? 1 : 0.4 }}
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0"
               aria-label={`Review ${index + 1}`}
-            />
+            >
+              <span
+                aria-hidden
+                className="h-[10px] w-[10px] rounded-full bg-primary"
+                style={{ opacity: index === activeIndex ? 1 : 0.4 }}
+              />
+            </button>
           ))}
         </div>
       </div>

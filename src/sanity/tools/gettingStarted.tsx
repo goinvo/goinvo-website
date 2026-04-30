@@ -40,11 +40,10 @@ function GettingStartedComponent() {
         <ol>
           <li>In <strong>Structure</strong>, click <strong>Vision Piece</strong> then <strong>+ Create</strong>.</li>
           <li>Choose the template that fits best: <strong>Standard article</strong>, <strong>Research/report article</strong>, or <strong>Visual/stat-heavy article</strong>.</li>
-          <li>Fill in the <strong>Basics</strong> tab first: title, slug, categories, date, and client if needed.</li>
-          <li>Use <strong>Hero &amp; Meta</strong> for the hero image, image positioning, listing summary, and page meta row.</li>
-          <li>Write the article in the <strong>Body</strong> tab using Portable Text blocks.</li>
-          <li>Use the <strong>People</strong> tab for authors, contributors, newsletter background, and About GoInvo settings.</li>
-          <li>Review the <strong>Page Settings</strong> checklist, then preview the draft in <strong>Presentation</strong>.</li>
+          <li>Fill in <strong>Properties</strong> first: title, slug, hero image, listing summary, categories, date, and page meta settings.</li>
+          <li>Write the article in <strong>Main Content</strong> using Portable Text blocks.</li>
+          <li>Use <strong>Extra Content</strong> for authors, contributors, special thanks, newsletter background, and About GoInvo settings.</li>
+          <li>Review the <strong>Publishing Checklist</strong> in Properties, then preview the draft in <strong>Presentation</strong>.</li>
           <li>Click <strong>Publish</strong> when everything looks correct.</li>
         </ol>
 
@@ -77,9 +76,8 @@ function GettingStartedComponent() {
         <h4 style={{ marginTop: 20, marginBottom: 8 }}>Supported text styles</h4>
         <ul>
           <li><strong>Body paragraph</strong> - standard article paragraph</li>
-          <li><strong>Body paragraph (extra space below)</strong> - paragraph with a little more breathing room</li>
           <li><strong>Large serif paragraph</strong> - lead-in or emphasis paragraph</li>
-          <li><strong>Section heading (H2)</strong> and <strong>Section heading (large H2)</strong> - main section breaks</li>
+          <li><strong>Section heading (H2)</strong> - main section breaks</li>
           <li><strong>Subheading (H3)</strong> and <strong>Small heading (H4)</strong> - sub-sections</li>
           <li><strong>Quote</strong> and <strong>Callout</strong> - styled emphasis blocks</li>
         </ul>
@@ -119,14 +117,14 @@ function GettingStartedComponent() {
         </p>
       </Section>
 
-      <Section title="6. People, Newsletter, and Page Settings">
+      <Section title="6. Extra Content, Newsletter, and Publishing">
         <p>
           Feature articles split page-level controls into clear tabs:
         </p>
         <ul>
-          <li><strong>People</strong> controls authors, contributors, special thanks, newsletter background, and About GoInvo placement.</li>
-          <li><strong>Page Settings</strong> holds listing behavior and the article acceptance checklist.</li>
-          <li><strong>SEO</strong> is where you write the meta description for search engines. The checklist also calls out optional SEO and listing-summary improvements.</li>
+          <li><strong>Properties</strong> holds hero media, listing behavior, page meta, SEO description, and the publishing checklist.</li>
+          <li><strong>Main Content</strong> holds the Portable Text article body.</li>
+          <li><strong>Extra Content</strong> controls authors, contributors, special thanks, newsletter background, and About GoInvo placement.</li>
         </ul>
         <p>
           If a section is not relevant yet, leave it blank. The editor will hide some advanced controls until they are needed.

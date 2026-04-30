@@ -35,8 +35,8 @@ export default async function MainLayout({
       </a>
       <Header />
       <PersistentHero />
-      <TransitionLayout disableTransitions={isDraftMode}>
-        <main id="main-content">{children}</main>
+      <TransitionLayout disableTransitions={isDraftMode} mainId="main-content">
+        {children}
       </TransitionLayout>
       <GoogleAnalytics />
       <HubSpotTracking />
