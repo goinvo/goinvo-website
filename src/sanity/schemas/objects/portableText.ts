@@ -18,7 +18,6 @@ export default defineType({
       type: 'block',
       styles: [
         { title: 'Body paragraph', value: 'normal' },
-        { title: 'Caption', value: 'caption' },
         { title: 'Large serif paragraph', value: 'serifLarge' },
         { title: 'Section heading (H2)', value: 'h2' },
         { title: 'Subheading (H3)', value: 'h3' },
@@ -183,6 +182,14 @@ export default defineType({
             ],
           },
           initialValue: 'full',
+        },
+        {
+          name: 'forceStandalone',
+          type: 'boolean',
+          title: 'Keep standalone',
+          description: 'Prevents migration helpers from wrapping this image with following body text.',
+          hidden: true,
+          initialValue: false,
         },
         {
           name: 'align',

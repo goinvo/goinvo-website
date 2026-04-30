@@ -37,7 +37,7 @@ export default function EbolaCareGuidelinePage() {
         {/* Download Section */}
         <section className="ebola-care-download my-12">
           <a
-            href="https://goinvo.com/features/ebola-care-guideline/files/ebola_care_guideline.pdf"
+            href="/pdf/vision/ebola-care-guideline.pdf"
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full h-full"

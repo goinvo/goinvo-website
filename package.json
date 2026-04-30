@@ -12,8 +12,9 @@
     "test:content": "vitest run tests/sanity-content.test.ts",
     "test:media": "vitest run tests/media-integrity.test.ts",
     "test:pages": "vitest run tests/page-render.test.ts",
-    "audit:superscripts": "npx tsx scripts/audit-superscripts.ts",
-    "audit:linebreaks": "npx tsx scripts/check-linebreaks.ts"
+    "manage": "tsx scripts/manage.ts",
+    "audit:superscripts": "tsx scripts/manage.ts audit:superscripts",
+    "audit:linebreaks": "tsx scripts/manage.ts audit:linebreaks"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
@@ -63,6 +64,7 @@
     "playwright": "^1.58.2",
     "puppeteer": "^24.40.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.2"
   }

@@ -16,11 +16,18 @@
  */
 
 import { createClient } from '@sanity/client'
+import dotenv from 'dotenv'
+
+dotenv.config({ path: '.env.local' })
+
+const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
+const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production'
+const token = process.env.SANITY_API_READ_TOKEN || process.env.SANITY_WRITE_TOKEN
 
 const client = createClient({
-  projectId: 'a1wsimxr',
-  dataset: 'production',
-  token: 'skNpoSObzT9DMD5jwjsUV76GbcI5iZqJla9frrMCn73SozTq7LhRClBk6gUK59yfPbHIG4Nnfpx4afWS4XgqZ1KlHOcTFVDaxMbekmuzGxx6uuV7HK68gF7yLvkJEljziinEIxiiqNK5rRuG0ckl6rFaW3judK7hkqpRi1jLstYBPf9duLwu',
+  projectId,
+  dataset,
+  token,
   apiVersion: '2024-01-01',
   useCdn: false,
 })
@@ -125,6 +132,10 @@ function auditDocument(doc, type) {
 }
 
 async function main() {
+  if (!projectId) {
+    throw new Error('Missing NEXT_PUBLIC_SANITY_PROJECT_ID in .env.local')
+  }
+
   console.log('Fetching all case studies and features from Sanity...\n')
 
   const [caseStudies, features] = await Promise.all([

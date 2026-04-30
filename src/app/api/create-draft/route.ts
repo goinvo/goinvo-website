@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@sanity/client'
 import { nanoid } from 'nanoid'
+import { draftMode } from 'next/headers'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 
 const client = writeToken
@@ -14,6 +15,14 @@ const client = writeToken
   : null
 
 export async function POST(request: NextRequest) {
+  const { isEnabled } = await draftMode()
+  if (!isEnabled) {
+    return NextResponse.json(
+      { error: 'Draft mode is required to create Sanity drafts' },
+      { status: 403 },
+    )
+  }
+
   if (!client) {
     return NextResponse.json(
       { error: 'Sanity write token is not configured' },

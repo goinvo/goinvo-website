@@ -53,7 +53,6 @@ export function DataTable({
         : column.label != null
     )
   )
-
   const table = (
     <table
       className={cn(
