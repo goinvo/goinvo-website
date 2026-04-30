@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { siteConfig, footerLinks } from '@/lib/config'
 
 export function Footer() {
+  const footerTextLinkClassName = 'inline-block min-h-6 !text-white hover:!text-white/80 no-underline transition-colors duration-[var(--transition-button)]'
+
   return (
     <footer className="bg-secondary text-white border-b-[3rem] border-secondary">
       <div className="max-width content-padding py-12 md:py-16">
@@ -13,7 +15,7 @@ export function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
+                  className={footerTextLinkClassName}
                 >
                   {link.title}
                 </Link>
@@ -27,7 +29,7 @@ export function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
+                  className={footerTextLinkClassName}
                 >
                   {link.title}
                 </Link>
@@ -41,7 +43,7 @@ export function Footer() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
+                  className={footerTextLinkClassName}
                 >
                   {link.title}
                 </Link>
@@ -54,7 +56,7 @@ export function Footer() {
             <li>
               <Link
                 href="/contact"
-                className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
+                className={footerTextLinkClassName}
               >
                 Contact Us
               </Link>
@@ -64,7 +66,7 @@ export function Footer() {
                 href={siteConfig.address.mapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
+                className={footerTextLinkClassName}
               >
                 {siteConfig.address.street}
                 <br />
@@ -75,7 +77,7 @@ export function Footer() {
             <li>
               <a
                 href={`mailto:${siteConfig.email.info}`}
-                className="text-white hover:text-white/80 no-underline transition-colors duration-[var(--transition-button)]"
+                className={footerTextLinkClassName}
               >
                 {siteConfig.email.info}
               </a>

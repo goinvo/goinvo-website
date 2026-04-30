@@ -100,7 +100,9 @@ export default function PrimarySelfCareAlgorithmsPage() {
             <table className="table-fixed text-sm w-full" style={{ borderCollapse: 'unset' }}>
               <thead>
                 <tr>
-                  <th className="text-left py-2 px-3 w-[180px] bg-white sticky left-0 z-10 align-top font-normal"> </th>
+                  <th className="text-left py-2 px-3 w-[180px] bg-white sticky left-0 z-10 align-top font-normal">
+                    <span className="sr-only">Self-care topic</span>
+                  </th>
                   {['0-5 years old', '6-12', '13-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '90+'].map(
                     (age) => (
                       <th key={age} className="py-2 px-3 w-[80px] text-left align-top font-normal">

@@ -1,13 +1,14 @@
 import { defineLive } from 'next-sanity'
 import { client } from './client'
-import { projectId, readToken } from '../env'
+import { previewToken, projectId, readToken } from '../env'
 
-export const token = readToken || undefined
+export const serverToken = previewToken || undefined
+export const browserToken = readToken || undefined
 
 const live = defineLive({
   client,
-  serverToken: token,
-  browserToken: token,
+  serverToken,
+  browserToken,
 })
 
 /**

@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
+      <h1 className="sr-only">Contact GoInvo</h1>
       {/* Hero — full studio image, no gradient overlay */}
       <section
         className="relative h-[450px] bg-cover bg-center"

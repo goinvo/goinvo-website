@@ -13,8 +13,16 @@
  *   npx tsx scripts/batch-verify.ts                    # all pages
  *   npx tsx scripts/batch-verify.ts --section vision   # vision only
  *   npx tsx scripts/batch-verify.ts --section work     # case studies only
+ *   npx tsx scripts/batch-verify.ts --mobile           # mobile viewport only
+ *   npx tsx scripts/batch-verify.ts --all-viewports    # desktop then mobile
+ *   npx tsx scripts/batch-verify.ts --clear-cache      # discard cached snapshots before running
+ *   npx tsx scripts/batch-verify.ts --flush-non-clean  # discard cached snapshots only for pages with prior issues/errors
+ *   npx tsx scripts/batch-verify.ts --clear-non-clean  # alias for --flush-non-clean
+ *   npx tsx scripts/batch-verify.ts --no-cache         # bypass cache for this run
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
 import puppeteer, { type Page, type Browser } from 'puppeteer'
 
 interface TreeNode {
@@ -218,6 +226,7 @@ function collectContentOrderTokens(nodes: TreeNode[]): ContentOrderToken[] {
     .filter(n => orderedTags.has(n.tag))
     .map((node): ContentOrderToken | null => {
       if (node.tag === 'img' || node.tag === 'video' || node.tag === 'iframe') {
+        if (!isComparableMediaNode(node)) return null
         const source = (node.src || '').trim()
         if (!source) return null
         return { key: `${node.tag}:${source.toLowerCase()}`, label: `<${node.tag}> ${source}`, index: 0 }
@@ -233,6 +242,14 @@ function collectContentOrderTokens(nodes: TreeNode[]): ContentOrderToken[] {
     })
     .filter((token): token is ContentOrderToken => Boolean(token))
     .map((token, index) => ({ ...token, index }))
+}
+
+function isComparableMediaNode(node: TreeNode): boolean {
+  if (node.tag === 'video' || node.tag === 'iframe') return node.rect.width > 40 && node.rect.height > 40
+  // Gatsby's legacy lazy-image wrappers often leave real content images at
+  // 0x0 in the DOM while the visible wrapper carries the layout. Image order is
+  // checked with screenshots and rendered-size comparisons instead.
+  return false
 }
 
 function uniqueOrderTokenMap(tokens: ContentOrderToken[]): Map<string, ContentOrderToken> {
@@ -253,7 +270,7 @@ function countMediaBetween(nodes: TreeNode[], startIndex: number, endIndex: numb
   const to = Math.max(startIndex, endIndex)
   return nodes
     .slice(from, to)
-    .filter(n => ['img', 'video', 'iframe'].includes(n.tag))
+    .filter(isComparableMediaNode)
     .length
 }
 
@@ -278,7 +295,7 @@ function templateBoundaryIndex(nodes: TreeNode[]): number {
 }
 
 interface Issue {
-  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'CONTENT_ORDER' | 'EXTRA_CONTENT' | 'SPACING'
+  type: 'BUTTON_VARIANT' | 'BUTTON_MISSING' | 'BUTTON_EXTRA' | 'BUTTON_STYLE' | 'VIDEO_AUTOPLAY' | 'VIDEO_COUNT' | 'HEADING_TAG' | 'HEADING_STYLE' | 'ELEMENT_COUNT' | 'CONTENT_MISMATCH' | 'CONTENT_ORDER' | 'EXTRA_CONTENT' | 'SPACING' | 'MOBILE_LAYOUT'
   severity: 'high' | 'medium' | 'low'
   detail: string
 }
@@ -611,32 +628,439 @@ function selfAuditTree(tree: TreeNode): Issue[] {
   return issues
 }
 
+function formatOverflowElement(el: OverflowElementSnapshot): string {
+  const name = el.text || el.classes || el.tag
+  return `<${el.tag}> "${name.substring(0, 36)}" ${el.width}px wide (${el.left}-${el.right})`
+}
+
+function formatTapTarget(target: TapTargetSnapshot): string {
+  const label = target.label || target.tag
+  return `"${label.substring(0, 32)}" ${target.width}x${target.height}px`
+}
+
+function tapTargetKey(target: TapTargetSnapshot): string {
+  return `${target.tag}:${(target.label || '').replace(/\s+/g, ' ').trim().toLowerCase()}`
+}
+
+function auditMobileLayout(gatsbySnapshot: PageSnapshot, nextSnapshot: PageSnapshot): Issue[] {
+  const issues: Issue[] = []
+  const gatsbyMetrics = gatsbySnapshot.viewportMetrics
+  const nextMetrics = nextSnapshot.viewportMetrics
+  const nextOverflow = Math.max(0, nextMetrics.documentWidth - nextMetrics.viewportWidth)
+  const gatsbyOverflow = Math.max(0, gatsbyMetrics.documentWidth - gatsbyMetrics.viewportWidth)
+
+  if (nextOverflow > 3) {
+    const likely = nextMetrics.overflowElements.slice(0, 3).map(formatOverflowElement).join('; ')
+    const detail = `Horizontal overflow: Next.js document ${nextMetrics.documentWidth}px on ${nextMetrics.viewportWidth}px viewport (${nextOverflow}px overflow); Gatsby overflow ${gatsbyOverflow}px${likely ? `. Likely: ${likely}` : ''}`
+    issues.push({
+      type: 'MOBILE_LAYOUT',
+      severity: nextOverflow > gatsbyOverflow + 3 ? 'high' : 'medium',
+      detail,
+    })
+  }
+
+  const gatsbyTapTargets = new Map(gatsbyMetrics.smallTapTargets.map(target => [tapTargetKey(target), target]))
+  const regressedTapTargets = nextMetrics.smallTapTargets.filter(target => {
+    const gatsbyTarget = gatsbyTapTargets.get(tapTargetKey(target))
+    if (!gatsbyTarget) return false
+    return target.width < gatsbyTarget.width - 3 || target.height < gatsbyTarget.height - 3
+  })
+
+  if (regressedTapTargets.length > 0) {
+    issues.push({
+      type: 'MOBILE_LAYOUT',
+      severity: 'low',
+      detail: `Smaller mobile tap targets than Gatsby: ${regressedTapTargets.slice(0, 4).map(formatTapTarget).join('; ')}`,
+    })
+  }
+
+  return issues
+}
+
+// Cache page snapshots so long verification runs can resume.
+
+type CaptureTarget = 'gatsby' | 'next'
+type ViewportName = 'desktop' | 'mobile'
+
+interface GridSnapshot {
+  kids: number
+  cols: number
+  kidW: number
+}
+
+interface OverflowElementSnapshot {
+  tag: string
+  text: string
+  classes: string
+  width: number
+  left: number
+  right: number
+  y: number
+}
+
+interface TapTargetSnapshot {
+  tag: string
+  label: string
+  width: number
+  height: number
+  y: number
+}
+
+interface ViewportMetricsSnapshot {
+  viewportWidth: number
+  documentWidth: number
+  overflowElements: OverflowElementSnapshot[]
+  smallTapTargets: TapTargetSnapshot[]
+}
+
+interface PageSnapshot {
+  cacheVersion: string
+  capturedAt: string
+  target: CaptureTarget
+  url: string
+  viewport: string
+  tree: TreeNode
+  supCount: number
+  grids: GridSnapshot[]
+  viewportMetrics: ViewportMetricsSnapshot
+}
+
+interface BatchResult {
+  slug: string
+  section: string
+  issues: Issue[]
+  error?: string
+}
+
+interface BatchResultsFile {
+  cacheVersion?: string
+  viewport?: string
+  sectionFilter?: string | null
+  results?: BatchResult[]
+}
+
+interface CacheStats {
+  hits: number
+  misses: number
+  writes: number
+}
+
+const CACHE_VERSION = 'batch-verify-snapshot-v3'
+
+function getArgValue(args: string[], flag: string): string | null {
+  const index = args.indexOf(flag)
+  if (index === -1) return null
+  const value = args[index + 1]
+  return value && !value.startsWith('--') ? value : null
+}
+
+function cacheFileFor(cacheDir: string, viewport: string, pd: PageDef, target: CaptureTarget): string {
+  return path.join(cacheDir, viewport, `${pd.section}__${pd.slug}__${target}.json`)
+}
+
+function readSnapshotCache(file: string, url: string, viewport: string, target: CaptureTarget): PageSnapshot | null {
+  if (!fs.existsSync(file)) return null
+
+  try {
+    const snapshot = JSON.parse(fs.readFileSync(file, 'utf8')) as PageSnapshot
+    if (
+      snapshot.cacheVersion !== CACHE_VERSION ||
+      snapshot.url !== url ||
+      snapshot.viewport !== viewport ||
+      snapshot.target !== target ||
+      !snapshot.tree ||
+      !snapshot.viewportMetrics
+    ) {
+      return null
+    }
+    return snapshot
+  } catch {
+    return null
+  }
+}
+
+function writeSnapshotCache(file: string, snapshot: PageSnapshot): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, JSON.stringify(snapshot, null, 2))
+}
+
+function writeResultsFile(
+  file: string,
+  results: BatchResult[],
+  pages: PageDef[],
+  options: { cacheVersion: string; viewport: string; sectionFilter: string | null }
+): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, JSON.stringify({
+    ...options,
+    generatedAt: new Date().toISOString(),
+    pagesExpected: pages.length,
+    pagesChecked: results.length,
+    results,
+  }, null, 2))
+}
+
+function removeCachedSnapshotsForPage(cacheDir: string, viewport: string, pd: PageDef): number {
+  let removed = 0
+  const targets: CaptureTarget[] = ['gatsby', 'next']
+  for (const target of targets) {
+    const file = cacheFileFor(cacheDir, viewport, pd, target)
+    if (fs.existsSync(file)) {
+      fs.rmSync(file, { force: true })
+      removed += 1
+    }
+  }
+  return removed
+}
+
+function flushNonCleanCachedSnapshots(resultsFile: string, cacheDir: string, viewport: string, pages: PageDef[]): void {
+  if (!fs.existsSync(resultsFile)) {
+    throw new Error(`Cannot flush non-clean cache without a previous results file: ${resultsFile}`)
+  }
+
+  const prior = JSON.parse(fs.readFileSync(resultsFile, 'utf8')) as BatchResultsFile
+  if (!Array.isArray(prior.results)) {
+    throw new Error(`Previous results file is missing a results array: ${resultsFile}`)
+  }
+
+  const pagesByKey = new Map(pages.map(page => [`${page.section}/${page.slug}`, page]))
+  let dirtyPages = 0
+  let removedSnapshots = 0
+
+  for (const result of prior.results) {
+    if (!result.error && result.issues.length === 0) continue
+
+    dirtyPages += 1
+    const page = pagesByKey.get(`${result.section}/${result.slug}`)
+    if (!page) continue
+
+    removedSnapshots += removeCachedSnapshotsForPage(cacheDir, viewport, page)
+  }
+
+  console.error(`Flushed non-clean cache: ${dirtyPages} pages, ${removedSnapshots} snapshots removed`)
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function capturePageSnapshot(
+  page: Page,
+  url: string,
+  target: CaptureTarget,
+  viewport: string,
+  timeoutMs: number
+): Promise<PageSnapshot> {
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: timeoutMs })
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  await sleep(1000)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await sleep(300)
+
+  const tree = await extractTree(page)
+  const supCount = await page.evaluate(() => {
+    const root = document.querySelector('main') || document.querySelector('.app__body') || document.body
+    return root.querySelectorAll('sup').length
+  })
+  const gridSelector = target === 'gatsby' ? '[class*=grid],[style*=grid]' : '[class*=grid]'
+  const grids = await page.evaluate((selector) => {
+    const root = document.querySelector('main') || document.querySelector('.app__body') || document.body
+    return Array.from(root.querySelectorAll(selector)).filter(el => {
+      const cs = getComputedStyle(el)
+      return cs.display === 'grid' && el.children.length >= 4
+    }).map(el => ({
+      kids: el.children.length,
+      cols: getComputedStyle(el).gridTemplateColumns.split(' ').length,
+      kidW: Math.round(el.children[0].getBoundingClientRect().width),
+    }))
+  }, gridSelector)
+  const viewportMetrics = await page.evaluate(`(function() {
+    var root = document.querySelector('main') || document.querySelector('.app__body') || document.body;
+    var viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    var documentWidth = Math.ceil(Math.max(
+      document.documentElement.scrollWidth,
+      document.body.scrollWidth,
+      root.scrollWidth
+    ));
+    var leeway = 3;
+
+    function classSummary(el) {
+      var className = typeof el.className === 'string' ? el.className.trim() : '';
+      return className ? className.split(/\\s+/).slice(0, 4).join('.') : '';
+    }
+
+    function textSummary(el) {
+      var aria = el.getAttribute('aria-label') || el.getAttribute('alt') || '';
+      var direct = Array.from(el.childNodes)
+        .filter(function(node) { return node.nodeType === 3; })
+        .map(function(node) { return node.textContent || ''; })
+        .join(' ');
+      return (aria || direct || (el.textContent || ''))
+        .replace(/\\s+/g, ' ')
+        .trim()
+        .slice(0, 60);
+    }
+
+    function isVisibleElement(el, rect) {
+      if (rect.width < 2 || rect.height < 2) return false;
+      if (rect.left < -1000 || rect.top < -1000) return false;
+      var cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return false;
+      if (cs.position === 'fixed') return false;
+      return true;
+    }
+
+    var overflowElements = Array.from(root.querySelectorAll('*'))
+      .map(function(el) { return { el: el, rect: el.getBoundingClientRect() }; })
+      .filter(function(item) {
+        return isVisibleElement(item.el, item.rect) && (item.rect.left < -leeway || item.rect.right > viewportWidth + leeway);
+      })
+      .slice(0, 8)
+      .map(function(item) {
+        return {
+          tag: item.el.tagName.toLowerCase(),
+          text: textSummary(item.el),
+          classes: classSummary(item.el),
+          width: Math.round(item.rect.width),
+          left: Math.round(item.rect.left),
+          right: Math.round(item.rect.right),
+          y: Math.round(item.rect.y),
+        };
+      });
+
+    var smallTapTargets = Array.from(root.querySelectorAll('a,button,input,select,textarea,[role="button"]'))
+      .map(function(el) {
+        var rect = el.getBoundingClientRect();
+        var cs = getComputedStyle(el);
+        var tag = el.tagName.toLowerCase();
+        var role = el.getAttribute('role') || '';
+        var classes = classSummary(el);
+        var isButtonLike = tag !== 'a' ||
+          role === 'button' ||
+          /\\b(btn|button)\\b/i.test(classes) ||
+          (cs.display !== 'inline' && cs.textTransform === 'uppercase' && parseFloat(cs.letterSpacing || '0') > 0.5);
+
+        return {
+          el: el,
+          rect: rect,
+          isButtonLike: isButtonLike,
+          tag: tag,
+          label: textSummary(el),
+        };
+      })
+      .filter(function(item) {
+        return item.isButtonLike && isVisibleElement(item.el, item.rect) && (item.rect.width < 44 || item.rect.height < 44);
+      })
+      .slice(0, 8)
+      .map(function(item) {
+        return {
+          tag: item.tag,
+          label: item.label,
+          width: Math.round(item.rect.width),
+          height: Math.round(item.rect.height),
+          y: Math.round(item.rect.y),
+        };
+      });
+
+    return { viewportWidth: viewportWidth, documentWidth: documentWidth, overflowElements: overflowElements, smallTapTargets: smallTapTargets };
+  })()`) as ViewportMetricsSnapshot
+
+  return {
+    cacheVersion: CACHE_VERSION,
+    capturedAt: new Date().toISOString(),
+    target,
+    url,
+    viewport,
+    tree,
+    supCount,
+    grids,
+    viewportMetrics,
+  }
+}
+
+async function getPageSnapshot(
+  page: Page,
+  pd: PageDef,
+  target: CaptureTarget,
+  url: string,
+  options: { cacheDir: string; enabled: boolean; viewport: string; timeoutMs: number; stats: CacheStats }
+): Promise<PageSnapshot> {
+  const file = cacheFileFor(options.cacheDir, options.viewport, pd, target)
+
+  if (options.enabled) {
+    const cached = readSnapshotCache(file, url, options.viewport, target)
+    if (cached) {
+      options.stats.hits += 1
+      return cached
+    }
+  }
+
+  options.stats.misses += 1
+  const snapshot = await capturePageSnapshot(page, url, target, options.viewport, options.timeoutMs)
+
+  if (options.enabled) {
+    writeSnapshotCache(file, snapshot)
+    options.stats.writes += 1
+  }
+
+  return snapshot
+}
+
 // ── Main ──────────────────────────────────────────────────────────────
 
-async function main() {
-  const args = process.argv.slice(2)
-  const sectionFilter = args.includes('--section') ? args[args.indexOf('--section') + 1] : null
-  const mobile = args.includes('--mobile')
+async function runBatch(args: string[], viewport: ViewportName) {
+  const sectionFilter = getArgValue(args, '--section')
+  const mobile = viewport === 'mobile'
+  const timeoutMs = Number(getArgValue(args, '--timeout-ms') || 60000)
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    throw new Error(`Invalid --timeout-ms value: ${getArgValue(args, '--timeout-ms')}`)
+  }
+  if (sectionFilter && sectionFilter !== 'vision' && sectionFilter !== 'work') {
+    throw new Error(`Invalid --section value "${sectionFilter}". Expected "vision" or "work".`)
+  }
 
   let pages: PageDef[] = []
   if (!sectionFilter || sectionFilter === 'vision') pages.push(...VISION_PAGES)
   if (!sectionFilter || sectionFilter === 'work') pages.push(...WORK_PAGES)
+  if (pages.length === 0) throw new Error('No pages selected for batch verification.')
+
+  const cacheDir = path.resolve(getArgValue(args, '--cache-dir') || path.join('.audit', 'batch-verify-cache'))
+  const useCache = !args.includes('--no-cache')
+  const resultsFile = path.join(cacheDir, `last-results-${viewport}-${sectionFilter || 'all'}.json`)
+  const flushNonClean = args.includes('--flush-non-clean') || args.includes('--clear-non-clean')
+
+  if (args.includes('--clear-cache') && flushNonClean) {
+    throw new Error('Use either --clear-cache or --flush-non-clean, not both.')
+  }
+  if (args.includes('--clear-cache')) {
+    fs.rmSync(cacheDir, { recursive: true, force: true })
+    console.error(`Cleared cache: ${cacheDir}`)
+  }
+  if (flushNonClean) {
+    flushNonCleanCachedSnapshots(resultsFile, cacheDir, viewport, pages)
+  }
+
+  const cacheStats: CacheStats = { hits: 0, misses: 0, writes: 0 }
 
   const gatsbyBase = 'https://www.goinvo.com'
   const nextBase = 'http://localhost:3000'
 
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
+  console.error(`Cache: ${useCache ? 'enabled' : 'disabled'} (${cacheDir})`)
+  console.error(`Navigation timeout: ${timeoutMs}ms`)
+
+  const browser: Browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] })
   const page = await browser.newPage()
-  // Default desktop 1280x900; pass --mobile to use 375x812 (iPhone 13)
+  // Desktop uses 1280x900; mobile uses 375x812 (iPhone 13).
   if (mobile) {
     await page.setViewport({ width: 375, height: 812, deviceScaleFactor: 2, isMobile: true, hasTouch: true })
     await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
     console.error(`Running in MOBILE mode (375×812)`)
   } else {
     await page.setViewport({ width: 1280, height: 900 })
+    console.error('Running in DESKTOP mode (1280x900)')
   }
 
-  const results: { slug: string; section: string; issues: Issue[]; error?: string }[] = []
+  const results: BatchResult[] = []
 
   for (const pd of pages) {
     const gatsbyUrl = `${gatsbyBase}${pd.gatsbyPath}`
@@ -644,71 +1068,20 @@ async function main() {
 
     process.stderr.write(`[${results.length + 1}/${pages.length}] ${pd.slug}...`)
     try {
-      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await new Promise(r => setTimeout(r, 1000))
-      await page.evaluate(() => window.scrollTo(0, 0))
-      await new Promise(r => setTimeout(r, 300))
-      const treeA = await extractTree(page)
+      const snapshotOptions = { cacheDir, enabled: useCache, viewport, timeoutMs, stats: cacheStats }
+      const gatsbySnapshot = await getPageSnapshot(page, pd, 'gatsby', gatsbyUrl, snapshotOptions)
+      const nextSnapshot = await getPageSnapshot(page, pd, 'next', nextUrl, snapshotOptions)
 
-      await page.goto(nextUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await new Promise(r => setTimeout(r, 1000))
-      await page.evaluate(() => window.scrollTo(0, 0))
-      await new Promise(r => setTimeout(r, 300))
-      const treeB = await extractTree(page)
+      const issues = compareTrees(gatsbySnapshot.tree, nextSnapshot.tree)
 
-      const issues = compareTrees(treeA, treeB)
-
-      // Additional inline element checks (sup/blockquote not reliably in tree)
-      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await new Promise(r => setTimeout(r, 800))
-      // Check superscripts (not reliably in tree)
-      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await new Promise(r => setTimeout(r, 800))
-      const supsA = await page.evaluate(() => {
-        const m = document.querySelector('main') || document.querySelector('.app__body') || document.body
-        return m.querySelectorAll('sup').length
-      })
-      await page.goto(nextUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await new Promise(r => setTimeout(r, 800))
-      const supsB = await page.evaluate(() => {
-        const m = document.querySelector('main') || document.body
-        return m.querySelectorAll('sup').length
-      })
+      const supsA = gatsbySnapshot.supCount
+      const supsB = nextSnapshot.supCount
       if (supsA > supsB + 1) {
         issues.push({ type: 'ELEMENT_COUNT', severity: 'medium', detail: `<sup>: ${supsA} → ${supsB} (missing ${supsA - supsB})` })
       }
 
-      // Check grid layouts (card grids, column layouts)
-      const gridsB = await page.evaluate(() => {
-        const m = document.querySelector('main') || document.body
-        return Array.from(m.querySelectorAll('[class*=grid]')).filter(el => {
-          const cs = getComputedStyle(el)
-          return cs.display === 'grid' && el.children.length >= 4
-        }).map(el => ({
-          kids: el.children.length,
-          cols: getComputedStyle(el).gridTemplateColumns.split(' ').length,
-          kidW: Math.round(el.children[0].getBoundingClientRect().width),
-        }))
-      })
-      await page.goto(gatsbyUrl, { waitUntil: 'networkidle2', timeout: 30000 })
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-      await new Promise(r => setTimeout(r, 800))
-      const gridsA = await page.evaluate(() => {
-        const m = document.querySelector('.app__body') || document.body
-        return Array.from(m.querySelectorAll('[class*=grid],[style*=grid]')).filter(el => {
-          const cs = getComputedStyle(el)
-          return cs.display === 'grid' && el.children.length >= 4
-        }).map(el => ({
-          kids: el.children.length,
-          cols: getComputedStyle(el).gridTemplateColumns.split(' ').length,
-          kidW: Math.round(el.children[0].getBoundingClientRect().width),
-        }))
-      })
+      const gridsA = gatsbySnapshot.grids
+      const gridsB = nextSnapshot.grids
       // Compare grids with same item count
       for (const gA of gridsA) {
         const gB = gridsB.find(g => g.kids === gA.kids)
@@ -718,24 +1091,31 @@ async function main() {
       }
 
       // Self-audit: style consistency checks on Next.js page alone
-      issues.push(...selfAuditTree(treeB))
+      issues.push(...selfAuditTree(nextSnapshot.tree))
+      if (viewport === 'mobile') {
+        issues.push(...auditMobileLayout(gatsbySnapshot, nextSnapshot))
+      }
 
       results.push({ slug: pd.slug, section: pd.section, issues })
+      writeResultsFile(resultsFile, results, pages, { cacheVersion: CACHE_VERSION, viewport, sectionFilter })
 
       const high = issues.filter(i => i.severity === 'high').length
       const med = issues.filter(i => i.severity === 'medium').length
       process.stderr.write(` ${high}H ${med}M ${issues.length - high - med}L\n`)
     } catch (err: any) {
-      results.push({ slug: pd.slug, section: pd.section, issues: [], error: err.message?.substring(0, 80) })
+      results.push({ slug: pd.slug, section: pd.section, issues: [], error: (err?.message || String(err)).substring(0, 160) })
+      writeResultsFile(resultsFile, results, pages, { cacheVersion: CACHE_VERSION, viewport, sectionFilter })
       process.stderr.write(` ERROR\n`)
     }
   }
 
   await browser.close()
+  console.error(`Cache stats: ${cacheStats.hits} hits, ${cacheStats.misses} misses, ${cacheStats.writes} writes`)
+  console.error(`Incremental results: ${resultsFile}`)
 
   // ── Report ────────────────────────────────────────────────────────
   console.log('\n═══════════════════════════════════════════════════════')
-  console.log('  BATCH VERIFICATION REPORT')
+  console.log(`  BATCH VERIFICATION REPORT (${viewport.toUpperCase()})`)
   console.log('═══════════════════════════════════════════════════════\n')
 
   // Summary
@@ -748,6 +1128,7 @@ async function main() {
     }
   }
   console.log(`Pages checked: ${results.length}`)
+  console.log(`Viewport: ${viewport}`)
   console.log(`Total issues: ${totalHigh} HIGH, ${totalMed} MEDIUM, ${totalLow} LOW`)
   console.log(`Errors: ${results.filter(r => r.error).length}\n`)
 
@@ -795,4 +1176,45 @@ async function main() {
   }
 }
 
-main().catch(console.error)
+function selectViewports(args: string[]): ViewportName[] {
+  const allViewports = args.includes('--all-viewports')
+  const mobile = args.includes('--mobile')
+  if (allViewports && mobile) {
+    throw new Error('Use either --all-viewports or --mobile, not both.')
+  }
+  return allViewports ? ['desktop', 'mobile'] : [mobile ? 'mobile' : 'desktop']
+}
+
+function removeFlag(args: string[], flag: string): string[] {
+  return args.filter(arg => arg !== flag)
+}
+
+async function main() {
+  const rawArgs = process.argv.slice(2)
+  const viewports = selectViewports(rawArgs)
+  let args = rawArgs
+  const flushNonClean = rawArgs.includes('--flush-non-clean') || rawArgs.includes('--clear-non-clean')
+
+  if (rawArgs.includes('--clear-cache') && flushNonClean) {
+    throw new Error('Use either --clear-cache or --flush-non-clean, not both.')
+  }
+
+  if (viewports.length > 1 && rawArgs.includes('--clear-cache')) {
+    const cacheDir = path.resolve(getArgValue(rawArgs, '--cache-dir') || path.join('.audit', 'batch-verify-cache'))
+    fs.rmSync(cacheDir, { recursive: true, force: true })
+    console.error(`Cleared cache: ${cacheDir}`)
+    args = removeFlag(rawArgs, '--clear-cache')
+  }
+
+  for (const viewport of viewports) {
+    if (viewports.length > 1) {
+      console.error(`\n=== ${viewport.toUpperCase()} batch verification ===`)
+    }
+    await runBatch(args, viewport)
+  }
+}
+
+main().catch(err => {
+  console.error(err)
+  process.exitCode = 1
+})

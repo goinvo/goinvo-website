@@ -210,15 +210,42 @@ function rewriteLegacyLinks(page: LegacyCarePlansPage, html: string) {
   return nextHtml;
 }
 
+function escapeHtmlAttribute(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function imageAltFromAttributes(attrs: string) {
+  const src = attrs.match(/\bsrc=(['"])(.*?)\1/i)?.[2] || "";
+  const fileName = src.split(/[/?#]/).filter(Boolean).pop() || "";
+  const baseName = fileName.replace(/\.[a-z0-9]+$/i, "");
+  return baseName
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function addMissingImageAlt(html: string) {
+  return html.replace(/<img\b(?![^>]*\balt=)([^>]*)>/gi, (_match, attrs: string) => {
+    const alt = escapeHtmlAttribute(imageAltFromAttributes(attrs));
+    return `<img alt="${alt}"${attrs}>`;
+  });
+}
+
 function loadLegacyArticle(page: LegacyCarePlansPage) {
   const rawHtml = readFileSync(
     join(LEGACY_HTML_DIR, LEGACY_PAGE_FILES[page]),
     "utf8",
   );
 
-  return rewriteLegacyLinks(
-    page,
-    addSectionAnchors(page, rawHtml.replace(/^\uFEFF/, "").trim()),
+  return addMissingImageAlt(
+    rewriteLegacyLinks(
+      page,
+      addSectionAnchors(page, rawHtml.replace(/^\uFEFF/, "").trim()),
+    ),
   );
 }
 

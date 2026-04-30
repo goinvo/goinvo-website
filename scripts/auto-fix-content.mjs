@@ -108,7 +108,7 @@ function fixImageTextColumns(content) {
     // Image + short descriptive text (not a heading) → 2-column.
     // Do not wrap captioned image blocks; their following paragraph is body copy,
     // not an image-side caption. Legacy caption text blocks are handled above.
-    if (isImage(current) && !hasEmbeddedCaption(current) && current.size !== 'bleed' && isShortText(next) &&
+    if (isImage(current) && !current.forceStandalone && !hasEmbeddedCaption(current) && current.size !== 'bleed' && isShortText(next) &&
         next.style === 'normal' && !isImage(block3)) {
       result.push({
         _type: 'columns',

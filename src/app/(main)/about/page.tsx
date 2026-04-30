@@ -357,9 +357,9 @@ export default async function AboutPage() {
       {/* Up Next */}
       <div className="bg-blue-light py-4 lg:py-16">
         <div className="max-width content-padding">
-          <h4 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-4">
+          <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mb-4">
             Up next
-          </h4>
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {upNext.map((item) => {
               const inner = (

@@ -168,7 +168,11 @@ const baseCellClassName = 'align-top px-[5px] py-[10px] leading-[26px]'
 
 export function VirtualCareTop15Table() {
   return (
-    <div className="relative left-1/2 right-1/2 my-8 w-screen -ml-[50vw] -mr-[50vw] overflow-x-auto">
+    <div
+      tabIndex={0}
+      aria-label="Scrollable virtual care diagnosis table"
+      className="relative left-1/2 right-1/2 my-8 w-screen -ml-[50vw] -mr-[50vw] overflow-x-auto"
+    >
       <table className="w-full min-w-[1040px] border-collapse text-base leading-[26px] text-black">
         <tbody>
           <tr className="text-gray">

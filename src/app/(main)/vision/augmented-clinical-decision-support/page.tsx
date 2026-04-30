@@ -96,6 +96,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
               >
                 <img
                   src={cloudfrontImage("/images/features/augmented-clinical-decision-support/augmented-cds-process-map-primary-care.jpg")}
+                  alt="Primary care process map for augmented clinical decision support"
                   className="image--max-width"
                 />
               </a>
@@ -122,6 +123,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
               >
                 <img
                   src={cloudfrontImage("/images/features/augmented-clinical-decision-support/clinical-task-guidance-system-diagram-2.jpg")}
+                  alt="Clinical task guidance system diagram"
                   className="image--max-width"
                 />
               </a>
@@ -167,6 +169,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
               >
                 <img
                   src={cloudfrontImage("/images/features/augmented-clinical-decision-support/augmented-cds-process-map-pregnancy.jpg")}
+                  alt="Pregnancy process map for augmented clinical decision support"
                   className="image--max-width"
                 />
               </a>
@@ -191,6 +194,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
               >
                 <img
                   src={cloudfrontImage("/images/features/augmented-clinical-decision-support/augmented-cds-process-map-head-injury.jpg")}
+                  alt="Head injury process map for augmented clinical decision support"
                   className="image--max-width"
                 />
               </a>
@@ -215,6 +219,7 @@ export default function AugmentedClinicalDecisionSupportFeature() {
               >
                 <img
                   src={cloudfrontImage("/images/features/augmented-clinical-decision-support/augmented-cds-process-map-cancer.jpg")}
+                  alt="Cancer process map for augmented clinical decision support"
                   className="image--max-width"
                 />
               </a>

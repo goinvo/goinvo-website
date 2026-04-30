@@ -53,6 +53,7 @@ export function DataTable({
         : column.label != null
     )
   )
+  const scrollLabel = typeof sectionTitle === 'string' ? sectionTitle : 'Scrollable data table'
 
   const table = (
     <table
@@ -118,11 +119,19 @@ export function DataTable({
 
   if (fullWidth) {
     return (
-      <div className="relative left-1/2 right-1/2 my-8 w-screen -ml-[50vw] -mr-[50vw] overflow-x-auto">
+      <div
+        tabIndex={0}
+        aria-label={scrollLabel}
+        className="relative left-1/2 right-1/2 my-8 w-screen -ml-[50vw] -mr-[50vw] overflow-x-auto"
+      >
         <div className="min-w-[720px] px-5">{table}</div>
       </div>
     )
   }
 
-  return <div className="my-8 overflow-x-auto">{table}</div>
+  return (
+    <div tabIndex={0} aria-label={scrollLabel} className="my-8 overflow-x-auto">
+      {table}
+    </div>
+  )
 }

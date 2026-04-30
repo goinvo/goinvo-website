@@ -150,8 +150,9 @@ export function PersistentHero() {
   return (
     <AnimatePresence mode="wait">
       {config && displayImage ? (
-        <motion.div
+        <motion.section
           ref={heroOuterRef}
+          aria-label="Page hero"
           key="persistent-hero"
           variants={containerVariants}
           initial="enter"
@@ -256,7 +257,7 @@ export function PersistentHero() {
               </div>
             </div>
           )}
-        </motion.div>
+        </motion.section>
       ) : null}
     </AnimatePresence>
   )

@@ -9,7 +9,7 @@ import { DraftFeaturesSection } from '@/components/vision/DraftFeaturesSection'
 import { ReviewCarousel } from '@/components/vision/ReviewCarousel'
 import { cloudfrontImage } from '@/lib/utils'
 import { client } from '@/sanity/lib/client'
-import { readToken } from '@/sanity/env'
+import { previewToken } from '@/sanity/env'
 import { sanityFetch } from '@/sanity/lib/live'
 import { allFeaturesQuery, draftFeaturesQuery } from '@/sanity/lib/queries'
 import { featureToDisplay } from '@/lib/featureDisplay'
@@ -139,7 +139,7 @@ export default async function VisionPage() {
   if (isDraftMode) {
     try {
       const rawClient = client.withConfig({
-        token: readToken,
+        token: previewToken,
         useCdn: false,
       })
       const { drafts, publishedIds } = await rawClient.fetch(draftFeaturesQuery)
@@ -157,6 +157,7 @@ export default async function VisionPage() {
 
   return (
     <div>
+      <h1 className="sr-only">Vision</h1>
       {/* Draft features — visible only in preview mode */}
       {draftFeatures.length > 0 && (
         <DraftFeaturesSection features={draftFeatures} />

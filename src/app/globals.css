@@ -4,6 +4,7 @@
 @theme {
   /* Colors */
   --color-primary: #E36216;
+  --color-primary-accessible: #b84a0e;
   --color-primary-dark: #cc5812;
   --color-primary-light: #ffb992;
   --color-primary-lightest: #faf6f4;
@@ -11,7 +12,7 @@
   --color-tertiary: #24434d;
   --color-tertiary-lightest: #f6f9fa;
   --color-black: #1d1b1a;
-  --color-gray: #787473;
+  --color-gray: #6f6b6a;
   --color-gray-medium: #d0cfce;
   --color-gray-light: #f6f6f6;
   --color-gray-lightest: #fafafa;
@@ -106,11 +107,11 @@
   }
 
   a:hover {
-    color: var(--color-primary);
+    color: var(--color-primary-accessible);
   }
 
   sup a {
-    color: var(--color-primary);
+    color: var(--color-primary-accessible);
     text-decoration: none;
   }
 
@@ -148,6 +149,57 @@
 
 /* Utility classes matching existing site */
 @layer utilities {
+  .bg-primary {
+    background-color: var(--color-primary-accessible);
+  }
+
+  .border-primary {
+    border-color: var(--color-primary-accessible);
+  }
+
+  .text-primary {
+    color: var(--color-primary-accessible);
+  }
+
+  .\!text-primary {
+    color: var(--color-primary-accessible) !important;
+  }
+
+  .btn-primary,
+  .btn.btn-primary,
+  input.btn-primary {
+    background-color: var(--color-primary-accessible) !important;
+    border-color: var(--color-primary-accessible) !important;
+    color: var(--color-white) !important;
+  }
+
+  .button--secondary {
+    border-color: var(--color-primary-accessible) !important;
+    color: var(--color-primary-accessible) !important;
+  }
+
+  footer a {
+    color: var(--color-white) !important;
+  }
+
+  footer a:not([aria-label]) {
+    display: inline-block !important;
+    line-height: 1.5rem !important;
+    min-height: 1.5rem !important;
+  }
+
+  .legacy-careplans a,
+  .legacy-careplans .clearfix p {
+    color: var(--color-secondary) !important;
+  }
+
+  .legacy-careplans nav a,
+  .legacy-careplans nav a *,
+  .legacy-careplans .download-ebook,
+  .legacy-careplans .download-ebook * {
+    color: var(--color-white) !important;
+  }
+
   /* Gatsby header--md equivalent: small uppercase bold gray subheading */
   .header-md {
     font-family: var(--font-sans);
@@ -328,7 +380,13 @@
 
   /* Hanging indent for numbered headings — pushes the number into the gutter */
   .numeral-gutter {
-    margin-left: -1.5rem;
+    margin-left: -1rem;
+  }
+
+  @media (min-width: 568px) {
+    .numeral-gutter {
+      margin-left: -1.5rem;
+    }
   }
 
   /* Case study content: gray text + double paragraph spacing (matching Gatsby) */
