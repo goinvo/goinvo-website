@@ -8,12 +8,12 @@ interface ImageCarouselProps {
   images: { url: string; alt?: string }[]
   /** Optional caption displayed below the carousel */
   caption?: string
-  /** Thumbnail size: 'sm' (30x20), 'md' (60x40), 'lg' (100x65) */
+  /** Thumbnail size: 'sm' (30x24), 'md' (60x40), 'lg' (100x65) */
   thumbnailSize?: 'sm' | 'md' | 'lg'
 }
 
 const thumbSizes = {
-  sm: { w: 30, h: 20, cls: 'w-[30px] h-[20px]', cover: true },
+  sm: { w: 30, h: 24, cls: 'w-[30px] h-6', cover: true },
   md: { w: 60, h: 40, cls: 'w-[60px] h-[40px]', cover: true },
   lg: { w: 100, h: 65, cls: 'w-[100px]', cover: false },
 }

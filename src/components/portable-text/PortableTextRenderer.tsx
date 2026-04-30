@@ -151,6 +151,7 @@ function PortableImage({
     : undefined
   const imageAlt = value.decorative ? '' : value.alt || ''
   const isExternalImageLink = /^(https?:\/\/|mailto:)/i.test(imageLink)
+  const imageLinkLabel = imageAlt || value.caption || 'Open linked image'
   const imageElement = (
     mobileImageUrl ? (
       <picture className="block">
@@ -181,9 +182,10 @@ function PortableImage({
           <a
             href={imageLink}
             target={isExternalImageLink ? '_blank' : undefined}
-            rel={isExternalImageLink ? 'noopener noreferrer' : undefined}
-            className="block"
-          >
+          rel={isExternalImageLink ? 'noopener noreferrer' : undefined}
+          className="block"
+          aria-label={imageLinkLabel}
+        >
             {imageElement}
           </a>
         ) : imageElement}

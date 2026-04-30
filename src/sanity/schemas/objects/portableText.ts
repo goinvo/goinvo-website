@@ -18,7 +18,6 @@ export default defineType({
       type: 'block',
       styles: [
         { title: 'Body paragraph', value: 'normal' },
-        { title: 'Caption', value: 'caption' },
         { title: 'Large serif paragraph', value: 'serifLarge' },
         { title: 'Section heading (H2)', value: 'h2' },
         { title: 'Subheading (H3)', value: 'h3' },
@@ -88,7 +87,7 @@ export default defineType({
                     { title: 'Emerald Teal (#007385) — vivid', value: 'teal' },
                     { title: 'Vibrant Orange (#E36216) — vivid', value: 'orange' },
                     { title: 'Ocean Blue (#4A5E88) — vivid', value: 'blue' },
-                    { title: 'Warm Gray (#787473) — soft contrast', value: 'gray' },
+                    { title: 'Warm Gray (#6F6B6A) - soft contrast', value: 'gray' },
                     { title: 'Deep Charcoal (#24434D) — subtle (near body text)', value: 'charcoal' },
                   ],
                 },
@@ -183,6 +182,14 @@ export default defineType({
             ],
           },
           initialValue: 'full',
+        },
+        {
+          name: 'forceStandalone',
+          type: 'boolean',
+          title: 'Keep standalone',
+          description: 'Prevents migration helpers from wrapping this image with following body text.',
+          hidden: true,
+          initialValue: false,
         },
         {
           name: 'align',

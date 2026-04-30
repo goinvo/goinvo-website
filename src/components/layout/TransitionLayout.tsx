@@ -93,14 +93,16 @@ const instantTransition = {
 function TransitionContent({
   children,
   pathname,
+  mainId,
 }: {
   children: React.ReactNode
   pathname: string
+  mainId?: string
 }) {
   const ctx = usePageTransition()
   const prefersReducedMotion = useReducedMotion()
   const isCard = !!ctx?.cardRect
-  const pageRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef<HTMLElement>(null)
 
   // Scroll to top on navigation (unless card/morph transitions handle it)
   const prevPathRef = useRef(pathname)
@@ -132,7 +134,8 @@ function TransitionContent({
 
   return (
     <AnimatePresence mode="wait" initial={false} custom={{ isCard }}>
-      <motion.div
+      <motion.main
+        id={mainId}
         ref={pageRef}
         key={pathname}
         custom={{ isCard }}
@@ -158,7 +161,7 @@ function TransitionContent({
         }}
       >
         <FrozenRouter>{children}</FrozenRouter>
-      </motion.div>
+      </motion.main>
     </AnimatePresence>
   )
 }
@@ -170,16 +173,18 @@ function TransitionContent({
 export function TransitionLayout({
   children,
   disableTransitions,
+  mainId,
 }: {
   children: React.ReactNode
   disableTransitions?: boolean
+  mainId?: string
 }) {
   const pathname = usePathname()
 
   if (disableTransitions) {
     return (
       <>
-        {children}
+        <main id={mainId}>{children}</main>
         <Footer />
       </>
     )
@@ -187,7 +192,7 @@ export function TransitionLayout({
 
   return (
     <PageTransitionProvider>
-      <TransitionContent pathname={pathname}>{children}</TransitionContent>
+      <TransitionContent pathname={pathname} mainId={mainId}>{children}</TransitionContent>
       <motion.div
         layout="position"
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}

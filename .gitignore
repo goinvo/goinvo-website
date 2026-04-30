@@ -29,6 +29,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.next*.log
+.codex-logs/
+scripts/tmp-*.mjs
+image/QA-FEEDBACK/*.png
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -37,8 +41,8 @@ yarn-error.log*
 # vercel
 .vercel
 
-# local claude/codex worktree metadata
-.claude/worktrees/
+# local agent worktree metadata
+.claude/
 
 # typescript
 *.tsbuildinfo

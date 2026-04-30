@@ -143,7 +143,7 @@ taskkill //f //im node.exe 2>/dev/null
 `compare-pages.ts` uses `args.find()` — only the first positional slug is processed. Loop for multiple:
 
 ```bash
-for slug in page1 page2 page3; do npx tsx scripts/compare-pages.ts $slug --verbose; done
+for slug in page1 page2 page3; do npx tsx scripts/manage.ts compare:vision $slug --verbose; done
 ```
 
 ### Sanity returns empty data silently when env vars are missing
@@ -198,10 +198,10 @@ for slug in page1 page2 page3; do npx tsx scripts/compare-pages.ts $slug --verbo
 
 When removing a static page override to let the Sanity `[slug]` route take over, you MUST verify visual parity with the live Gatsby site (goinvo.com). **Do not just delete the override and assume it works.**
 
-1. **Visual comparison first** — Run `npx tsx scripts/compare-visual.ts <slug> --screenshots --verbose` to compare computed styles (fonts, spacing, colors, image sizes, list bullets, superscripts) between Gatsby and Next.js using Puppeteer. Screenshots are saved to `.audit/screenshots/` for manual review.
+1. **Visual comparison first** — Run `npx tsx scripts/manage.ts compare:visual <slug> --screenshots --verbose` to compare computed styles (fonts, spacing, colors, image sizes, list bullets, superscripts) between Gatsby and Next.js using Puppeteer. Screenshots are saved to `.audit/screenshots/` for manual review.
 2. **Fix Sanity content** — If content is wrong (wrong heading level, missing superscripts, incorrect image size attribute, missing text), fix it in Sanity directly. The Sanity data must be correct.
 3. **Add renderer variants when the renderer can't produce the right output** — If images render too large, add a `size` parameter. If headings need different styling, add a style variant. If lists need star bullets, ensure `.ul` class is used. **Always extend the renderer rather than hardcoding page-specific markup.**
-4. **Structural audit** — Run `npx tsx scripts/compare-pages.ts <slug> --verbose` for heading/element count checks.
+4. **Structural audit** — Run `npx tsx scripts/manage.ts compare:vision <slug> --verbose` for heading/element count checks.
 5. **Only then delete the override** — After confirming the Sanity version visually matches the original.
 
 ### Adding New Block Types / Variants
@@ -239,26 +239,31 @@ When content needs a visual treatment the renderer doesn't support yet:
 
 ### Verification & Fix Scripts
 
-- **`scripts/page-tree.ts`** — **PRIMARY TOOL**. Dumps a page's component tree with computed styles, dimensions, and interactivity. Supports `--diff <url2>` to compare Gatsby vs Next.js side by side. Use this to identify every element difference on a page. Catches heading levels, font sizes, colors, margins, bullet styles, numbering gutter, missing elements, and structural mismatches.
+- **`scripts/manage.ts`** — **PRIMARY ENTRYPOINT**. Routes reusable maintenance tasks through one CLI and forwards task-specific flags to the underlying tool.
   ```bash
-  npx tsx scripts/page-tree.ts https://www.goinvo.com/vision/slug/ --diff http://localhost:3000/vision/slug
+  npx tsx scripts/manage.ts --help
   ```
-- **`scripts/deep-audit.ts`** — Puppeteer element-level style comparison across all pages. Detects videos, iframes, canvas, fixed/sticky, CSS animations. Outputs JSON reports to `.audit/deep-reports/`.
-- **`scripts/regression-test.ts`** — Snapshots key CSS properties on 16 sample pages and compares against a saved baseline. Run `--baseline` to save, then run without flags to compare. Catches heading size/weight/font changes, border removal, spacing changes, hero disappearance. **MUST be run before any global CSS or renderer change.**
+- **`scripts/manage.ts tree`** — **PRIMARY VISUAL TOOL**. Dumps a page's component tree with computed styles, dimensions, and interactivity. Supports `--diff <url2>` to compare Gatsby vs Next.js side by side. Use this to identify every element difference on a page. Catches heading levels, font sizes, colors, margins, bullet styles, numbering gutter, missing elements, and structural mismatches.
   ```bash
-  npx tsx scripts/regression-test.ts --baseline  # save baseline
-  npx tsx scripts/regression-test.ts             # check for regressions
+  npx tsx scripts/manage.ts tree https://www.goinvo.com/vision/slug/ --diff http://localhost:3000/vision/slug
   ```
-- **`scripts/compare-visual.ts`** — Puppeteer visual comparison (computed styles, screenshots).
-- **`scripts/compare-pages.ts`** — HTML structural comparison (headings, counts, classes). Use for batch audits.
-- **`scripts/auto-fix-content.mjs`** — **AUTO-FIX** common Sanity content issues across all pages. Detects image+text pairs that should be 2-column layouts and fixes them automatically. Run with `--write` to apply. Always run this after content migrations.
-- **`scripts/audit-content.mjs`** — Sanity document quality (empty blocks, missing assets, duplicate titles).
-- **`scripts/audit-site-integrity.mjs`** — Route/redirect/link/SEO validation.
-- **`scripts/generate-verification.mjs`** — Generates VERIFICATION.md with all 101 pages and side-by-side URLs for manual review.
-- **`scripts/batch-verify.ts`** — Runs page-tree diff on all 55 Sanity-driven pages (vision + case studies), reports button variant/position mismatches, video autoplay mismatches, heading tag differences, and element count gaps. Use `--section vision` or `--section work` to filter.
+- **`scripts/manage.ts audit:deep`** — Puppeteer element-level style comparison across all pages. Detects videos, iframes, canvas, fixed/sticky, CSS animations. Outputs JSON reports to `.audit/deep-reports/`.
+- **`scripts/manage.ts regression`** — Snapshots key CSS properties on 16 sample pages and compares against a saved baseline. Run `--baseline` to save, then run without flags to compare. Catches heading size/weight/font changes, border removal, spacing changes, hero disappearance. **MUST be run before any global CSS or renderer change.**
   ```bash
-  npx tsx scripts/batch-verify.ts                    # all pages
-  npx tsx scripts/batch-verify.ts --section vision   # vision only
+  npx tsx scripts/manage.ts regression --baseline  # save baseline
+  npx tsx scripts/manage.ts regression             # check for regressions
+  ```
+- **`scripts/manage.ts compare:visual`** — Puppeteer visual comparison (computed styles, screenshots).
+- **`scripts/manage.ts compare:vision`** — HTML structural comparison (headings, counts, classes). Use for batch audits.
+- **`scripts/manage.ts fix:content`** — **AUTO-FIX** common Sanity content issues across all pages. Detects image+text pairs that should be 2-column layouts and fixes them automatically. Run with `--write` to apply. Always run this after content migrations.
+- **`scripts/manage.ts audit:content`** — Sanity document quality (empty blocks, missing assets, duplicate titles).
+- **`scripts/manage.ts audit:a11y`** — axe-core accessibility checks plus project-specific heading, overflow, and tap-target checks.
+- **`scripts/manage.ts audit:site`** — Route/redirect/link/SEO validation.
+- **`scripts/manage.ts generate:verification`** — Generates VERIFICATION.md with all 101 pages and side-by-side URLs for manual review.
+- **`scripts/manage.ts verify`** — Runs page-tree diff on all 55 Sanity-driven pages (vision + case studies), reports button variant/position mismatches, video autoplay mismatches, heading tag differences, and element count gaps. Use `--section vision` or `--section work` to filter.
+  ```bash
+  npx tsx scripts/manage.ts verify                    # all pages
+  npx tsx scripts/manage.ts verify --section vision   # vision only
   ```
 
 ### ALWAYS run auto-fix after content migrations
@@ -266,7 +271,7 @@ When content needs a visual treatment the renderer doesn't support yet:
 After migrating content to Sanity or patching content blocks, ALWAYS run:
 
 ```bash
-node scripts/auto-fix-content.mjs --write
+npx tsx scripts/manage.ts fix:content --write
 ```
 
 This catches image+text pairs that should be side-by-side columns, heading level mismatches, and other structural issues that can't be caught by the simple element-count audit.
@@ -383,7 +388,7 @@ When the homepage section morph is implemented:
 
 When migrating content, adding pages, or making style changes, **always run the comparison scripts** to catch regressions.
 
-### Primary Audit Script: `scripts/compare-pages.ts`
+### Primary Audit Script: `scripts/manage.ts compare:vision`
 
 Compares vision pages between the live Gatsby site (goinvo.com) and the local Next.js build. Also runs standalone style audits for pages that don't exist on Gatsby (new articles).
 
@@ -392,16 +397,16 @@ Compares vision pages between the live Gatsby site (goinvo.com) and the local Ne
 npx next build && npx next start
 
 # Compare all vision pages (default port 3000)
-npx tsx scripts/compare-pages.ts
+npx tsx scripts/manage.ts compare:vision
 
 # Compare a single page
-npx tsx scripts/compare-pages.ts human-centered-design-for-ai
+npx tsx scripts/manage.ts compare:vision human-centered-design-for-ai
 
 # Show all severity levels
-npx tsx scripts/compare-pages.ts --verbose
+npx tsx scripts/manage.ts compare:vision --verbose
 
 # JSON output for programmatic use
-npx tsx scripts/compare-pages.ts --json
+npx tsx scripts/manage.ts compare:vision --json
 ```
 
 **What it catches:**
@@ -420,17 +425,17 @@ npx tsx scripts/compare-pages.ts --json
 
 **Slug mapping:** The script maps Next.js slugs to their Gatsby equivalents (e.g., `bathroom-to-healthroom` → `from-bathroom-to-healthroom`). When adding a new vision page, add its entry to the `SLUG_MAP` in the script (value `null` if slugs match, or the Gatsby slug if different).
 
-### Secondary Audit Script: `scripts/compare-all-pages.ts`
+### Secondary Audit Script: `scripts/manage.ts compare:all`
 
 Compares case study and main pages (about, services, work, etc.) between Gatsby and Next.js.
 
 ```bash
-npx tsx scripts/compare-all-pages.ts              # all pages
-npx tsx scripts/compare-all-pages.ts --section work  # case studies only
-npx tsx scripts/compare-all-pages.ts --section main  # main pages only
+npx tsx scripts/manage.ts compare:all                 # all pages
+npx tsx scripts/manage.ts compare:all --section work   # case studies only
+npx tsx scripts/manage.ts compare:all --section main   # main pages only
 ```
 
-### Sanity Content Audit: `scripts/audit-content.mjs`
+### Sanity Content Audit: `scripts/manage.ts audit:content`
 
 Checks Sanity documents (case studies + features) for structural issues:
 
@@ -439,16 +444,16 @@ Checks Sanity documents (case studies + features) for structural issues:
 - Consecutive duplicate blocks
 
 ```bash
-node scripts/audit-content.mjs
+npx tsx scripts/manage.ts audit:content
 ```
 
-### Site Integrity Audit: `scripts/audit-site-integrity.mjs`
+### Site Integrity Audit: `scripts/manage.ts audit:site`
 
 Checks all routes return 200, redirects resolve, internal links are valid, and SEO meta tags are present.
 
 ```bash
 npx next build && npx next start -p 3099
-node scripts/audit-site-integrity.mjs --base=http://localhost:3099
+npx tsx scripts/manage.ts audit:site --base=http://localhost:3099
 ```
 
 ### Heading Style Reference

@@ -52,7 +52,7 @@ const TASKS = [
   {
     id: 'reorder',
     title: 'Change the sort order of items',
-    description: 'On any case study, change the Sort Order number and check the /work listing to see the effect.',
+    description: 'In Structure, open the Case Study list and drag a row by its handle. Check the /work listing to see the new order.',
   },
   {
     id: 'publish-unpublish',

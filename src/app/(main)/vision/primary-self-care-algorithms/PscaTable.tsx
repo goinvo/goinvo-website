@@ -30,6 +30,8 @@ export function PscaTable({ children }: { children: React.ReactNode }) {
   return (
     <div
       ref={containerRef}
+      tabIndex={0}
+      aria-label="Scrollable table"
       className={cn(
         'psca-table-wrap relative w-full overflow-x-auto mb-8',
         scrolling && 'psca-table--shadow'

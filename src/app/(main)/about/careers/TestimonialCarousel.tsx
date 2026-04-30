@@ -136,11 +136,16 @@ export function TestimonialCarousel() {
               type="button"
               onClick={() => setActive(i)}
               aria-label={`Show testimonial ${i + 1}`}
-              className={cn(
-                'h-[10px] w-[10px] cursor-pointer rounded-full border-0 p-0',
-                active === i ? 'bg-primary' : 'bg-primary/40'
-              )}
-            />
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0"
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  'h-[10px] w-[10px] rounded-full',
+                  active === i ? 'bg-primary' : 'bg-primary/40'
+                )}
+              />
+            </button>
           ))}
         </div>
       </div>
