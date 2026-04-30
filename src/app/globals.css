@@ -328,7 +328,13 @@
 
   /* Hanging indent for numbered headings — pushes the number into the gutter */
   .numeral-gutter {
-    margin-left: -1.5rem;
+    margin-left: -1rem;
+  }
+
+  @media (min-width: 568px) {
+    .numeral-gutter {
+      margin-left: -1.5rem;
+    }
   }
 
   /* Case study content: gray text + double paragraph spacing (matching Gatsby) */

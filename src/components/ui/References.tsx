@@ -72,7 +72,7 @@ export function References({ items, className, hideTitle, variant = 'default', b
         {items.map((item, index) => (
           <li key={index} className="text-gray text-sm flex gap-2">
             <span className="text-gray/50 font-semibold shrink-0">{index + 1}.</span>
-            <span>
+            <span className="min-w-0 break-words">
               {item.link ? (
                 <>
                   {item.title}

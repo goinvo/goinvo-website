@@ -181,9 +181,9 @@ function PortableImage({
           <a
             href={imageLink}
             target={isExternalImageLink ? '_blank' : undefined}
-            rel={isExternalImageLink ? 'noopener noreferrer' : undefined}
-            className="block"
-          >
+          rel={isExternalImageLink ? 'noopener noreferrer' : undefined}
+          className="block"
+        >
             {imageElement}
           </a>
         ) : imageElement}

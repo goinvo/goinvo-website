@@ -1,6 +1,6 @@
 import { draftMode } from 'next/headers'
 import { client } from '@/sanity/lib/client'
-import { token } from '@/sanity/lib/live'
+import { browserToken } from '@/sanity/lib/live'
 import { ThrottledSanityLiveClient } from './ThrottledSanityLiveClient'
 
 /**
@@ -30,7 +30,7 @@ export async function ThrottledSanityLive() {
       apiVersion={apiVersion}
       useProjectHostname={useProjectHostname}
       requestTagPrefix={requestTagPrefix}
-      token={typeof token === 'string' && isEnabled ? token : undefined}
+      token={typeof browserToken === 'string' && isEnabled ? browserToken : undefined}
       draftModeEnabled={isEnabled}
       draftModePerspective="drafts"
     />
