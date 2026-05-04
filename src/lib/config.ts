@@ -75,6 +75,8 @@ export const footerLinks = {
   ],
   tertiary: [
     { href: '/vision', title: 'Vision' },
+    { href: '/open-source-health-design', title: 'Open Design' },
+    { href: '/about/studio-timeline', title: 'Studio Timeline' },
   ],
   contact: [
     { href: '/contact', title: 'Contact Us' },

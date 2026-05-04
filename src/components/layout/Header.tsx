@@ -146,7 +146,7 @@ export function Header() {
               ref={navPanelRef}
               role="dialog"
               aria-label="Navigation menu"
-              className="fixed top-0 right-0 h-screen w-[65vw] bg-white z-[var(--z-mobile-nav)] pt-20 lg:hidden"
+              className="fixed top-0 right-0 h-screen w-[75vw] min-w-[280px] bg-white z-[var(--z-mobile-nav)] pt-20 lg:hidden"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}

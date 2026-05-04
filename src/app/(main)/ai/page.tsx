@@ -125,8 +125,7 @@ export default function AIPage() {
       <section className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
           <h2 className="header-xl mt-0 mb-8">
-            Driving results services with AI
-            <span className="text-primary font-serif">.</span>
+            Driving results with AI<span className="text-primary font-serif">.</span>
           </h2>
           <div className="space-y-8">
             {caseStudies.map((study) => (

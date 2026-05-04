@@ -14,7 +14,7 @@ const VID_BASE = 'https://www.goinvo.com/old/videos/dfl'
 const legacyImage = (path: string) => `${IMG_BASE}/${path}`
 
 export const metadata: Metadata = {
-  title: 'From Bathroom to Healthroom - GoInvo',
+  title: 'From Bathroom to Healthroom',
   description:
     'How magical technology will revolutionize human health.',
 }

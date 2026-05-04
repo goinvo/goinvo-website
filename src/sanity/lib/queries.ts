@@ -11,6 +11,7 @@ export const allCaseStudiesQuery = groq`
     && !(slug.current match "untitled-*")
   ] | order(orderRank asc) {
     _id,
+    _updatedAt,
     title,
     heading,
     slug,
@@ -171,6 +172,7 @@ export const allFeaturesQuery = groq`
   ] | order(orderRank asc) {
     _id,
     _type,
+    _updatedAt,
     title,
     cardTitle,
     slug,
@@ -183,6 +185,7 @@ export const allFeaturesQuery = groq`
     client,
     externalLink,
     "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
+    spotlight,
     hiddenWorkPage
   }
 `

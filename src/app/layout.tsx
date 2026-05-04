@@ -94,7 +94,12 @@ export default function RootLayout({
           user-typed character would fire a mutation → revalidate →
           re-render loop that either hangs the editor (Vercel) or
           triggers an HMR-style reload (dev). */}
-      <body className="font-sans text-black antialiased">{children}</body>
+      {/* suppressHydrationWarning silences mismatches caused by browser
+          extensions that inject attributes onto <body> before React loads
+          (e.g. ColorZilla's cz-shortcut-listen). */}
+      <body className="font-sans text-black antialiased" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   )
 }

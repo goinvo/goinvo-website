@@ -153,7 +153,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       >
         <div className="max-width flex justify-start w-full">
           <Reveal style="slide-right">
-            <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] md:w-[380px]">
+            <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] max-w-[calc(100vw-32px)] md:w-[380px] md:max-w-none">
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-4">
                 Backlog: Zero
               </h2>
@@ -236,7 +236,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       >
         <div className="max-width content-padding flex md:justify-end w-full">
           <Reveal style="slide-left">
-            <div data-morph-card className="bg-white p-6 md:p-10 w-[85vw] md:w-[380px]">
+            <div data-morph-card className="bg-white p-6 md:p-10 w-[85vw] max-w-[calc(100vw-32px)] md:w-[380px] md:max-w-none">
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-4">
                 Weeks to Hours
               </h2>
@@ -283,7 +283,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       >
         <div className="max-width flex justify-start w-full">
           <Reveal style="slide-right">
-            <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] md:w-[380px]">
+            <div data-morph-card className="bg-white p-6 md:p-8 w-[85vw] max-w-[calc(100vw-32px)] md:w-[380px] md:max-w-none">
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-6">
                 10x increase<span className="text-primary font-serif">.</span>
               </h2>

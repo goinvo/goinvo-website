@@ -6,6 +6,8 @@ import { cloudfrontImage } from '@/lib/utils'
 export const metadata: Metadata = {
   title: 'Thank You',
   description: 'Thank you for contacting us! We will get back to you within 2 business hours.',
+  // Confirmation page — should not appear in search results.
+  robots: { index: false, follow: false },
 }
 
 const { googleAdsId, googleAdsConversionLabel } = siteConfig.analytics

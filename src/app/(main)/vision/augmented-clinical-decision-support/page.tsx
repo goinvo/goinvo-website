@@ -7,7 +7,7 @@ import { cloudfrontImage } from '@/lib/utils'
 import './acds.css'
 
 export const metadata: Metadata = {
-  title: 'Augmented Clinical Decision Support - GoInvo',
+  title: 'Augmented Clinical Decision Support',
   description:
     'Real-time, augmented decision support and guidance for mobile health workers, to better training and repeatable health outcomes.',
 }

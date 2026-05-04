@@ -29,7 +29,6 @@ export function ContactFormEmbed({
         <LoadingIframe
           id={`JotFormIFrame-${siteConfig.jotformId}`}
           title="Contact"
-          allowTransparency
           scrolling="no"
           src={`https://form.jotform.com/${siteConfig.jotformId}`}
           className="w-full border-0"

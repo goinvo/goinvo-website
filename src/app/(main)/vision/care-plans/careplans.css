@@ -4,6 +4,34 @@
 @import url('https://www.goinvo.com/old/stylesheets/features/careplans.css');
 @import url('https://www.goinvo.com/old/stylesheets/feature-elements.css');
 
+/* ----------------------------------------------------------------- */
+/* Bootstrap (loaded above for the legacy careplans markup) clobbers   */
+/* the global header's flex layout. These overrides re-establish the   */
+/* header's intended row layout and re-show the nav links across all   */
+/* four /vision/care-plans routes. Replace with a scoped Bootstrap     */
+/* vendor when the legacy markup is ported to Tailwind.                */
+/* ----------------------------------------------------------------- */
+header.fixed {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+@media (min-width: 1024px) {
+  header.fixed {
+    justify-content: space-around !important;
+  }
+  header.fixed > a[href]:not([aria-label="GoInvo Home"]) {
+    display: flex !important;
+  }
+}
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  header.fixed > a[href][href="/work"],
+  header.fixed > a[href][href="/vision"] {
+    display: flex !important;
+  }
+}
+
 .legacy-careplans {
   width: 100%;
   overflow-x: hidden;
