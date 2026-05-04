@@ -12,7 +12,7 @@ import { urlForImage } from '@/sanity/lib/image'
 import type { TeamMember } from '@/types'
 
 export const metadata: Metadata = {
-  title: 'About GoInvo, a UX design company in Boston',
+  title: 'About — a UX design company in Boston',
   description:
     "Over the past decade, we've created beautiful software for patients, clinicians, researchers, and administrators.",
 }

@@ -56,7 +56,7 @@ export default function GovernmentPage() {
         <div className="relative h-full max-width">
           <div className="absolute bottom-0 left-0 w-full lg:w-[385px] bg-white content-padding py-8">
             <h1 className="header-xl m-0">
-              Software for goverment services is complicated
+              Software for government services is complicated
               <span className="text-primary font-serif">.</span>
               <br />
               We know how to do it

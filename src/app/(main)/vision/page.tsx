@@ -21,7 +21,12 @@ export const metadata: Metadata = {
     'Our thoughts on the intersection of design, technology, and healthcare.',
 }
 
-const SPOTLIGHT_SLUG = 'doodle-to-demo'
+/**
+ * Spotlight fallback. Editors should pick the Spotlight piece in Sanity
+ * (Vision Piece → "Spotlight on /vision" toggle). If no Vision Piece has
+ * the toggle on, we fall back to this slug, then to displayFeatures[0].
+ */
+const SPOTLIGHT_FALLBACK_SLUG = 'doodle-to-demo'
 
 function isExternalHref(href: string) {
   return /^(https?:)?\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:')
@@ -125,8 +130,17 @@ export default async function VisionPage() {
 
   const displayFeatures = (sanityFeatures ?? []).map(featureToDisplay)
 
+  // Look up the Sanity feature flagged as Spotlight first, then fall
+  // through to the legacy hardcoded slug, then to the first feature in
+  // the list. The spotlight flag was added to the schema 2026-05-04.
+  const spotlightFromSanity = (sanityFeatures ?? []).find(
+    (f) => (f as { spotlight?: boolean }).spotlight === true,
+  )
   const spotlightFeature =
-    displayFeatures.find((f) => f.id === SPOTLIGHT_SLUG) ?? displayFeatures[0]
+    (spotlightFromSanity &&
+      displayFeatures.find((f) => f.id === spotlightFromSanity.slug?.current)) ??
+    displayFeatures.find((f) => f.id === SPOTLIGHT_FALLBACK_SLUG) ??
+    displayFeatures[0]
 
   const gridFeatures = displayFeatures.filter(
     (f) => f.id !== spotlightFeature?.id
@@ -166,7 +180,7 @@ export default async function VisionPage() {
       {/* Spotlight */}
       {spotlightFeature && (
       <div className="max-width content-padding py-8 lg:py-16">
-        <h3 className="header-md py-8">Spotlight</h3>
+        <h2 className="header-md py-8">Spotlight</h2>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
           {/* Spotlight feature (2/3) */}
           {spotlightFeature.externalLink && isExternalHref(spotlightFeature.link) ? (

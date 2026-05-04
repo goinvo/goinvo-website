@@ -6,7 +6,7 @@ import { CovidChart } from './CovidChart'
 import './coronavirus.css'
 
 export const metadata: Metadata = {
-  title: 'Understanding the Novel Coronavirus (COVID-19) - GoInvo',
+  title: 'Understanding the Novel Coronavirus (COVID-19)',
   description:
     'Learn about COVID-19, what it means for U.S. residents, and how you can protect yourself. Updated as new information emerges.',
 }
@@ -343,13 +343,15 @@ export default function CoronavirusPage() {
               </div>
               <div className="timepoint">
                 <div className="dot" />
-                <p>
-                  <span className="text--bold">7 Jan 2020</span>
+                <div>
+                  <p>
+                    <span className="text--bold">7 Jan 2020</span>
+                  </p>
                   <ul>
                     <li>New virus identified as a coronavirus</li>
                     <li>Europe&apos;s first case confirmed in France</li>
                   </ul>
-                </p>
+                </div>
               </div>
               <div className="timepoint">
                 <div className="dot" />
@@ -379,8 +381,10 @@ export default function CoronavirusPage() {
               </div>
               <div className="timepoint">
                 <div className="dot" />
-                <p>
-                  <span className="text--bold">30 Jan 2020</span>
+                <div>
+                  <p>
+                    <span className="text--bold">30 Jan 2020</span>
+                  </p>
                   <ul>
                     <li>
                       WHO declares the outbreak a global public-health
@@ -391,12 +395,14 @@ export default function CoronavirusPage() {
                       person-to-person spread
                     </li>
                   </ul>
-                </p>
+                </div>
               </div>
               <div className="timepoint">
                 <div className="dot" />
-                <p>
-                  <span className="text--bold">31 Jan 2020</span>
+                <div>
+                  <p>
+                    <span className="text--bold">31 Jan 2020</span>
+                  </p>
                   <ul>
                     <li>HHS Secretary declares a PHE for the US</li>
                     <li>
@@ -404,7 +410,7 @@ export default function CoronavirusPage() {
                       the entry of travelers from mainland China into the US
                     </li>
                   </ul>
-                </p>
+                </div>
               </div>
               <div className="timepoint">
                 <div className="dot" />

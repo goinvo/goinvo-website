@@ -316,6 +316,15 @@ export default defineType({
       initialValue: false,
     }),
     defineField({
+      name: 'spotlight',
+      title: 'Spotlight on /vision',
+      type: 'boolean',
+      group: 'properties',
+      description:
+        'Pin this piece to the Spotlight slot at the top of /vision. At most one Vision Piece should have this checked at a time — the public page picks the first match it finds.',
+      initialValue: false,
+    }),
+    defineField({
       name: 'hiddenWorkPage',
       title: 'Hidden on Work Page',
       type: 'boolean',
