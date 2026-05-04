@@ -41,7 +41,10 @@ describe('Page Rendering', () => {
     expect(sitemapUrls.length).toBeGreaterThan(10)
   })
 
-  it('should return 200 for all sitemap pages', async () => {
+  // Long timeout — sequentially probes every sitemap URL (~60 pages) at
+  // 10s per fetch, which can comfortably exceed the default 30s test
+  // budget on a project this size.
+  it('should return 200 for all sitemap pages', { timeout: 180_000 }, async () => {
     if (!serverAvailable) return
 
     const failures: string[] = []
@@ -58,7 +61,10 @@ describe('Page Rendering', () => {
     expect(failures).toEqual([])
   })
 
-  it('should have no broken CloudFront image URLs on any page', async () => {
+  // Long timeout — fetches every vision/work page, parses the body, and
+  // HEADs every CloudFront image found. With ~50 content pages and
+  // dozens of images each, the default 30s budget is insufficient.
+  it('should have no broken CloudFront image URLs on any page', { timeout: 300_000 }, async () => {
     if (!serverAvailable) return
 
     const contentUrls = sitemapUrls.filter(u => u.includes('/vision/') || u.includes('/work/'))
