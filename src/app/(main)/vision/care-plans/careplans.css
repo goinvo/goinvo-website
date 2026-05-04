@@ -17,6 +17,16 @@ header.fixed {
   align-items: center !important;
   justify-content: space-between !important;
 }
+/* Bootstrap recolors all <a> to its hyperlink blue; restore the dark
+   text-[#1d1b1a] the global header uses, and the white text inside the
+   contact CTA pill. axe-core flags the blue as insufficient contrast. */
+header.fixed > a[href] {
+  color: #1d1b1a !important;
+  text-decoration: none !important;
+}
+header.fixed > a[href="/contact"] span {
+  color: #ffffff !important;
+}
 @media (min-width: 1024px) {
   header.fixed {
     justify-content: space-around !important;
