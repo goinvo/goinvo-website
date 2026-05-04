@@ -29,12 +29,15 @@ const pageVariants = {
           filter: 'blur(0px)',
         }
       : {
-          // Standard: fade + scale + blur
+          // Standard: fade + scale + blur. Starting opacity at 0.55
+          // (rather than 0) keeps content readable through the
+          // ~350ms enter animation; on slow hydrations the page no
+          // longer looks broken while the transition completes.
           clipPath: 'inset(0 0 0% 0)',
-          opacity: 0,
-          scale: 1.015,
-          y: 16,
-          filter: 'blur(3px)',
+          opacity: 0.55,
+          scale: 1.008,
+          y: 8,
+          filter: 'blur(1px)',
         },
   visible: {
     clipPath: 'inset(0 0 0% 0)',

@@ -4,7 +4,7 @@ import { siteConfig } from '@/lib/config'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'Contact GoInvo | Healthcare UX Design Agency',
+  title: 'Contact us — Healthcare UX Design Agency',
   description:
     'Contact us with new project opportunities, speaker requests, portfolio reviews, and more.',
 }

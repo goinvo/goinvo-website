@@ -31,6 +31,7 @@ function ExternalUpNextCard({ item }: { item: ExternalUpNextItem }) {
             src={imageUrl}
             alt={item.title}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="object-cover transition-transform duration-500 ease-out will-change-transform group-hover:scale-[1.025]"
             style={{ objectPosition: 'center top' }}
           />

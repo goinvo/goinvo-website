@@ -35,8 +35,20 @@ export default defineType({
     defineField({
       name: 'date',
       title: 'Date',
+      // Kept as string for backward-compat with existing entries that
+      // store "Mar.2016", "Apr.2020", etc. The regex blocks future
+      // editors from introducing different formats. A future migration
+      // can flip this to type: 'date' and rewrite existing values.
       type: 'string',
-      description: 'Publication date (e.g. "Oct.2021")',
+      description:
+        'Publication date in the format "MMM.YYYY", e.g. "Oct.2021". The first three letters of the month, then a period, then the four-digit year.',
+      validation: (Rule) =>
+        Rule.regex(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\.\d{4}$/, {
+          name: 'MMM.YYYY format',
+          invert: false,
+        }).warning(
+          'Use the format "MMM.YYYY" (e.g. "Oct.2021") so this date sorts and renders consistently across the site.',
+        ),
     }),
     defineField({
       name: 'downloadLink',

@@ -110,6 +110,7 @@ export function CaseStudyCard({
                 src={imageUrl}
                 alt={displayTitle}
                 fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 className={cn(
                   'object-cover [backface-visibility:hidden] transition-transform will-change-transform',
                   'duration-500 ease-out group-hover:scale-[1.025]',

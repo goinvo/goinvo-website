@@ -23,7 +23,51 @@ export default defineType({
     defineField({
       name: 'bio',
       title: 'Bio',
-      type: 'portableText',
+      // Restricted block content — paragraphs with bold/italic/links only.
+      // Image / Columns / headings / quotes are deliberately omitted so a
+      // short biography can't accidentally drag in a layout block. The
+      // underlying Portable Text shape is unchanged so existing bios in
+      // Sanity continue to render through the same block renderer.
+      type: 'array',
+      of: [
+        {
+          type: 'block',
+          styles: [{ title: 'Body paragraph', value: 'normal' }],
+          lists: [],
+          marks: {
+            decorators: [
+              { title: 'Bold', value: 'strong' },
+              { title: 'Italic', value: 'em' },
+            ],
+            annotations: [
+              {
+                title: 'URL',
+                name: 'link',
+                type: 'object',
+                fields: [
+                  {
+                    title: 'URL',
+                    name: 'href',
+                    type: 'url',
+                    description: 'Full URL or mailto: link',
+                    validation: (Rule) =>
+                      Rule.uri({
+                        allowRelative: true,
+                        scheme: ['https', 'http', 'mailto'],
+                      }),
+                  },
+                  {
+                    title: 'Open in new tab',
+                    name: 'blank',
+                    type: 'boolean',
+                    initialValue: false,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
       description: 'Short biography shown on the team member detail view',
     }),
     defineField({

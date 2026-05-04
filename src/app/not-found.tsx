@@ -1,6 +1,7 @@
 import { cloudfrontImage } from '@/lib/utils'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
+import { Button } from '@/components/ui/Button'
 
 export default function NotFound() {
   return (
@@ -15,9 +16,17 @@ export default function NotFound() {
             <h1 className="header-xl" style={{ fontWeight: 700 }}>
               NOT FOUND...
             </h1>
-            <p style={{ fontSize: '1.125rem', marginBottom: '12px' }}>
+            <p style={{ fontSize: '1.125rem', marginBottom: '24px' }}>
               You just hit a route that doesn&apos;t exist... the sadness.
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+              <Button href="/" variant="primary" size="md">
+                Go home
+              </Button>
+              <Button href="/work" variant="secondary" size="md">
+                Browse our work
+              </Button>
+            </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={cloudfrontImage('/images/404/404-website.png')}
