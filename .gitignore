@@ -66,3 +66,5 @@ deploy-check.log
 deploy-check-status.txt
 deploy-cleanup.bat
 deploy-cleanup.log
+deploy-finalize.bat
+deploy-finalize.log
