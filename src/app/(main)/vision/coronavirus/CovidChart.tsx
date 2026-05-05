@@ -69,7 +69,17 @@ export function CovidChart() {
   }, [fitContainer])
 
   if (containerWidth === null) {
-    return <div ref={containerRef} className="chart" />
+    // Reserve space matching the eventual rendered height so the chart
+    // doesn't cause CLS when it appears. The chart uses 500px when
+    // containerWidth < 500 ("mobile") and 700px otherwise. The
+    // covid-chart-placeholder class encodes the same breakpoint via
+    // CSS so SSR reserves the correct height per viewport.
+    return (
+      <div
+        ref={containerRef}
+        className="chart covid-chart-placeholder"
+      />
+    )
   }
 
   const isMobile = containerWidth < 500

@@ -6,7 +6,7 @@ export function HubSpotTracking() {
     <Script
       id="hs-script-loader"
       src={`https://js.hs-scripts.com/${siteConfig.hubspot.portalId}.js`}
-      strategy="afterInteractive"
+      strategy="lazyOnload"
     />
   )
 }

@@ -3,7 +3,11 @@
    Scoped under .coronavirus
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css?family=Montserrat:400,600&display=swap');
+/* font-display: optional avoids the layout shift caused by font swap.
+   If Montserrat isn't loaded within ~100ms the browser keeps the
+   fallback for the page lifetime -- a small typographic regression
+   for a meaningful CLS win. */
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,600&display=optional');
 
 /* --- Gatsby global utility classes scoped inside .coronavirus --- */
 
@@ -730,4 +734,18 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* Reserve final CovidChart height pre-render to prevent CLS.
+   CovidChart switches between 500px (containerWidth < 500) and
+   700px otherwise; match that breakpoint with a viewport-width
+   media query (container is roughly viewport-width minus content
+   padding so this approximation is close enough). */
+.coronavirus .covid-chart-placeholder {
+  min-height: 500px;
+}
+@media (min-width: 600px) {
+  .coronavirus .covid-chart-placeholder {
+    min-height: 700px;
+  }
 }
