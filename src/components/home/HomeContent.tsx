@@ -143,15 +143,29 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
         </div>
       </section>
 
-      {/* 2. Backlog: Zero - 3M Case Study (LEFT) */}
+      {/* 2. Backlog: Zero - 3M Case Study (LEFT)
+          Hero rendered as a layered <Image priority> rather than a CSS
+          bg-cover so Next.js emits an LCP preload link, the browser
+          uses fetchPriority=high, and the responsive srcset cuts
+          download time on mobile. The 3M section was the mobile-home
+          LCP (background-image discovery + load delays + render delay
+          totaled ~58s on a slow connection); switching to <Image>
+          removes the load-delay and download-time portions. */}
       <section
         data-morph-section="3m"
-        className="relative py-16 md:py-16 bg-cover bg-center min-h-[500px] md:min-h-[600px] flex items-start overflow-hidden"
-        style={{
-          backgroundImage: `url(${cloudfrontImage('/images/homepage/bg-storycard-3m.jpg')})`,
-        }}
+        className="relative py-16 md:py-16 min-h-[500px] md:min-h-[600px] flex items-start overflow-hidden"
       >
-        <div className="max-width flex justify-start w-full">
+        <Image
+          src={cloudfrontImage('/images/homepage/bg-storycard-3m.jpg')}
+          alt=""
+          fill
+          sizes="100vw"
+          priority
+          fetchPriority="high"
+          quality={85}
+          className="object-cover object-center"
+        />
+        <div className="relative z-10 max-width flex justify-start w-full">
           <Reveal style="slide-right">
             <div data-morph-card className="bg-white p-6 md:p-8 w-full md:w-[380px]">
               <h2 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-semibold mb-4">
