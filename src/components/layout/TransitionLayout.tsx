@@ -26,25 +26,26 @@ const pageVariants = {
           opacity: 1,
           scale: 1,
           y: 0,
-          filter: 'blur(0px)',
         }
       : {
-          // Standard: fade + scale + blur. Starting opacity at 0.55
+          // Standard: fade + subtle scale. Starting opacity at 0.55
           // (rather than 0) keeps content readable through the
           // ~350ms enter animation; on slow hydrations the page no
           // longer looks broken while the transition completes.
+          // Note: filter: blur(...) was removed -- the transition
+          // from filter:blur(0px) -> filter:none on settle creates/
+          // removes a containing block, which Lighthouse flags as a
+          // layout shift on the main element (~0.13 CLS on mobile).
           clipPath: 'inset(0 0 0% 0)',
           opacity: 0.55,
           scale: 1.008,
           y: 8,
-          filter: 'blur(1px)',
         },
   visible: {
     clipPath: 'inset(0 0 0% 0)',
     opacity: 1,
     scale: 1,
     y: 0,
-    filter: 'blur(0px)',
   },
   // Old page collapses vertically while card image morphs to hero
   collapse: {
@@ -52,7 +53,6 @@ const pageVariants = {
     opacity: 0,
     y: -20,
     scale: 0.98,
-    filter: 'blur(2px)',
   },
   exit: (custom: { isCard?: boolean } | undefined) =>
     custom?.isCard
@@ -62,14 +62,12 @@ const pageVariants = {
           opacity: 0,
           y: -20,
           scale: 0.98,
-          filter: 'blur(2px)',
         }
       : {
           // Standard exit
           opacity: 0,
           scale: 0.985,
           y: -12,
-          filter: 'blur(3px)',
         },
 }
 
@@ -122,18 +120,9 @@ function TransitionContent({
   const shouldCollapse = isCard && pathname !== ctx?.cardRect?.href
   const animateState = shouldCollapse ? 'collapse' : 'visible'
 
-  // Framer Motion leaves `filter: blur(0px)` as an inline style in the
-  // 'visible' state. Even a 0px blur creates a new containing block, which
-  // breaks `position: fixed` for descendants (e.g. the digital-healthcare
-  // sticky nav). Clear it once the page is at rest. Runs on initial mount
-  // and again whenever the pathname changes.
-  useEffect(() => {
-    if (animateState !== 'visible') return
-    const handle = requestAnimationFrame(() => {
-      if (pageRef.current) pageRef.current.style.filter = 'none'
-    })
-    return () => cancelAnimationFrame(handle)
-  }, [pathname, animateState])
+  // (Previously a useEffect cleared inline filter:blur(0px) here to avoid
+  // the containing-block side effect; the blur was removed entirely from
+  // pageVariants, so no cleanup is needed now.)
 
   return (
     <AnimatePresence mode="wait" initial={false} custom={{ isCard }}>
@@ -148,18 +137,8 @@ function TransitionContent({
         exit="exit"
         transition={prefersReducedMotion ? instantTransition : pageTransition}
         onAnimationComplete={(definition) => {
-          if (definition === 'visible') {
-            // Framer Motion leaves `filter: blur(0px)` inline after the enter
-            // animation settles. Even a 0px blur creates a new containing
-            // block, which breaks `position: fixed` for descendants (see
-            // digital-healthcare sticky nav). Clear it once the page is at
-            // rest so fixed elements anchor to the viewport again.
-            if (pageRef.current) {
-              pageRef.current.style.filter = 'none'
-            }
-            if (ctx?.cardRect) {
-              ctx.clearTransition()
-            }
+          if (definition === 'visible' && ctx?.cardRect) {
+            ctx.clearTransition()
           }
         }}
       >
