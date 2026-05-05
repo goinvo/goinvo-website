@@ -962,29 +962,14 @@ header {
 }
 
 /* ============================================================
-   PersistentHero clip-path reveal — used by case study heroes.
-   Container reserves full expanded height from first paint
-   (so layout never shifts -- no CLS), and the image inside
-   starts masked to a centered horizontal band that animates
-   to fully visible. Approximates the legacy "expand-after-slide"
-   effect without animating layout-affecting properties.
+   EmailOctopus newsletter/subscribe form: square corners on the
+   submit button. The form is rendered by an external script
+   (eocampaign1.com) which inlines a default border-radius; we
+   override with !important since their styles ship as inline
+   style="...". Targets buttons + submit-style inputs inside any
+   <NewsletterForm> / <SubscribeForm> wrapper.
    ============================================================ */
-.hero-clip-transition {
-  transition: clip-path 700ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: clip-path;
-}
-.hero-clip-band {
-  clip-path: inset(40% 0 40% 0);
-}
-.hero-clip-revealed {
-  clip-path: inset(0 0 0 0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-clip-transition {
-    transition: none;
-  }
-  .hero-clip-band {
-    clip-path: inset(0 0 0 0);
-  }
+.newsletter-form-host button,
+.newsletter-form-host input[type="submit"] {
+  border-radius: 0 !important;
 }
