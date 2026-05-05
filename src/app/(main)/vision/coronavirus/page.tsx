@@ -177,6 +177,9 @@ export default function CoronavirusPage() {
               src={cloudfrontImage('/images/features/coronavirus/hero-2.jpg')}
               className="hero__image"
               alt=""
+              width={1920}
+              height={530}
+              fetchPriority="high"
             />
           </div>
           <div className="coronavirus-header-container">
