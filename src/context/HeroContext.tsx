@@ -20,6 +20,11 @@ export interface HeroEditTarget {
   fieldPath: string
 }
 
+export interface ImageDimensions {
+  width: number
+  height: number
+}
+
 export interface HeroConfig {
   image: string
   bgPosition: string
@@ -32,6 +37,16 @@ export interface HeroConfig {
   desktopImages?: string[]
   /** Stacked images on mobile (falls back to desktopImages or single image) */
   mobileImages?: string[]
+  /**
+   * Intrinsic dimensions of the desktop hero image. When present, the
+   * hero container uses CSS aspect-ratio at SSR so the final size is
+   * reserved from first paint -- no expand-after-load layout shift,
+   * and no cached-image onLoad race that would crop the image on
+   * subsequent visits.
+   */
+  imageDimensions?: ImageDimensions
+  /** Intrinsic dimensions of each mobileImages entry (1:1 by index). */
+  mobileImageDimensions?: ImageDimensions[]
   /**
    * If set, the hero image is shown as a click-to-edit placeholder in
    * draft mode. Used when a Case Study or Vision Piece has no hero
@@ -83,10 +98,16 @@ export const heroConfigs: Record<string, HeroConfig> = {
     title: null,
     hideTextBox: true,
     expandAfterSlide: true,
+    imageDimensions: { width: 2000, height: 764 },
     mobileImages: [
       '/images/vision/vision-illustration-mobile-home.jpg',
       '/images/vision/vision-illustration-mobile-practice.jpg',
       '/images/vision/vision-illustration-mobile-country.jpg',
+    ],
+    mobileImageDimensions: [
+      { width: 2000, height: 3086 },
+      { width: 2000, height: 2440 },
+      { width: 2000, height: 1842 },
     ],
   },
 }

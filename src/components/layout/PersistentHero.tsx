@@ -100,6 +100,16 @@ function MultiImageContent({
 export function PersistentHero() {
   const { state, slideDone } = useHero()
   const { config, displayImage, bgPosition, direction, imageKey, pathname } = state
+  // When the hero config ships intrinsic image dimensions, reserve the
+  // final hero size at SSR via CSS aspect-ratio. Eliminates two bugs:
+  //   1. persistent-hero-gap CLS (container expanding after image load)
+  //   2. cached-image second-visit cropping (handleImageLoad race when
+  //      onLoad does not refire on a cached <img>)
+  // Routes without imageDimensions fall back to the legacy compact->expand
+  // path below.
+  const intrinsicAspect = config?.imageDimensions
+    ? `${config.imageDimensions.width} / ${config.imageDimensions.height}`
+    : null
   const [expanded, setExpanded] = useState(false)
   const expandTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -161,31 +171,54 @@ export function PersistentHero() {
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
           className="relative pt-[var(--spacing-header-height)]"
         >
-          {/* Mobile stacked images — rendered outside animation container */}
+          {/* Mobile stacked images — rendered outside animation container.
+              When mobileImageDimensions are provided we forward width and
+              height to each <img>, so the browser knows the aspect ratio
+              before the file finishes downloading (zero CLS as the stack
+              paints). */}
           {config?.mobileImages && config.mobileImages.length > 0 && (
             <div className="sm:hidden">
-              {config.mobileImages.map((src, i) => (
-                <img
-                  key={src}
-                  src={cloudfrontImage(src)}
-                  alt=""
-                  className="w-full h-auto block"
-                  loading={i === 0 ? 'eager' : 'lazy'}
-                />
-              ))}
+              {config.mobileImages.map((mobileSrc, i) => {
+                const dims = config.mobileImageDimensions?.[i]
+                return (
+                  <img
+                    key={mobileSrc}
+                    src={cloudfrontImage(mobileSrc)}
+                    alt=""
+                    width={dims?.width}
+                    height={dims?.height}
+                    className="w-full h-auto block"
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                  />
+                )
+              })}
             </div>
           )}
 
-          {/* Image container — directional slide, optionally expands */}
+          {/* Image container.
+              - Routes with imageDimensions: container uses aspect-ratio
+                from SSR so the final size is reserved at first paint
+                (no expand-after-load CLS, no cached onLoad race).
+              - Routes without imageDimensions: container starts compact
+                and expands once the inner Image fires onLoad (legacy). */}
           <div
             ref={containerRef}
             className={cn(
-              'overflow-hidden relative transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
-              config?.mobileImages ? 'hidden sm:block sm:h-[220px] lg:h-[450px]' : 'h-[220px] lg:h-[450px]',
+              'overflow-hidden relative',
+              !intrinsicAspect &&
+                'transition-[height] duration-600 ease-[cubic-bezier(0.4,0,0.2,1)]',
+              !intrinsicAspect &&
+                (config?.mobileImages
+                  ? 'hidden sm:block sm:h-[220px] lg:h-[450px]'
+                  : 'h-[220px] lg:h-[450px]'),
+              intrinsicAspect && config?.mobileImages && 'hidden sm:block',
+              intrinsicAspect && 'w-full',
             )}
             style={{
               viewTransitionName: 'hero-image',
-              ...(expanded ? { height: fullImageHeight ?? '70vh' } : {}),
+              ...(intrinsicAspect
+                ? { aspectRatio: intrinsicAspect }
+                : (expanded ? { height: fullImageHeight ?? '70vh' } : {})),
             }}
           >
             <AnimatePresence

@@ -383,7 +383,7 @@
     <div class="tags"><span class="tag tag-studio">studio</span></div>
     <div class="desc">Banner reads "5/31 pages still need to be ordered. Drag highlighted pages into place, then select Save New Order Preset." The Save action isn't on the banner — editors need to remember it lives behind the document list edit (pencil) icon. 5/31 case studies and 2/58 vision pieces are stuck in the unsaved state today; this is evidence the workflow doesn't survive editors.</div>
     <div class="ref">src/sanity/orderable/deskItem.ts</div>
-    <div class="fix"><b>Fix applied:</b> PersistentHero now reserves space at SSR via <code>HeroSpacer</code> for routes known to mount a hero, and the visible compact→full reveal is implemented as a clip-path animation on the inner image (rendered at the FINAL expanded height from first paint, so layout never shifts).</div>
+    <div class="fix"><b>Fix applied:</b> the hero <code>HeroConfig</code> now ships intrinsic image dimensions (<code>imageDimensions</code> + per-image <code>mobileImageDimensions[]</code>). When present, the container is sized via CSS <code>aspect-ratio</code> at SSR so the final size is reserved from first paint (no expand-after-load CLS). This also fixes a separate cached-image race where the previous JS-driven <code>onLoad</code> measurement would not refire on subsequent visits, causing the hero to crop to a 70vh fallback height.</div>
   </div>
 </div>
 
