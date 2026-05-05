@@ -19,7 +19,7 @@ export function NewsletterForm() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-[627px]">
+    <div className="mx-auto max-w-[627px] newsletter-form-host">
       <h2 className="header-lg mt-5 mb-5">Subscribe to our newsletter</h2>
       <p className="mt-4 mb-4 text-black">
         You&apos;ll receive our latest ideas, visualizations, and studio news
