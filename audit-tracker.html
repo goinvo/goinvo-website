@@ -189,13 +189,13 @@
 <h2>Bugs <span class="group-meta">site-breaking or visibly wrong</span></h2>
 
 <div class="item" data-id="allow-transparency">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Console error: <code>allowTransparency</code> prop on iframe</div>
-    <div class="tags"><span class="tag tag-bug">bug</span></div>
+    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">React 19 rejects <code>allowTransparency</code> as a JSX prop on a native <code>&lt;iframe&gt;</code>. Reproduces on every page that mounts <code>ContactFormEmbed</code> (homepage, /work, /services, /contact, /about/careers, …). Surfaces as a red "1 issue" badge in the dev overlay.</div>
     <div class="ref">src/components/forms/ContactFormEmbed.tsx:32 → src/components/ui/LoadingIframe.tsx:34</div>
-    <div class="fix"><b>Fix:</b> rename to lowercase <code>allowtransparency</code> (real HTML attribute) or just drop it — modern iframes are transparent by default when the inner doc has no background.</div>
+    <div class="fix"><b>Fix applied:</b> dropped <code>allowTransparency</code> from <code>ContactFormEmbed</code> (React 19 rejects it).</div>
   </div>
 </div>
 
@@ -211,57 +211,57 @@
 </div>
 
 <div class="item" data-id="mobile-overflow-home">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Mobile homepage has ~14px horizontal overflow</div>
-    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-mobile">mobile</span></div>
+    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-mobile">mobile</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">At 390px viewport, <code>scrollWidth</code> = 404. Culprit is the hero "Backlog: Zero" panel: inner div is <code>w-[85vw]</code> inside a <code>bg-cover</code> section that pushes the right edge to 404.</div>
     <div class="ref">homepage hero "Backlog: Zero" / 3M case study card</div>
-    <div class="fix"><b>Fix:</b> cap the inner panel with <code>max-w-[calc(100vw-32px)]</code>, or move out of the <code>bg-cover</code> stack.</div>
+    <div class="fix"><b>Fix applied:</b> homepage "Backlog: Zero" card capped with <code>max-w-[calc(100vw-32px)]</code>; HomeContent story sections marked <code>overflow-hidden</code> for the slide-in initial transform.</div>
   </div>
 </div>
 
 <div class="item" data-id="open-design-truncated">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">"Open Design" truncated in mobile menu</div>
-    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-mobile">mobile</span></div>
+    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-mobile">mobile</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">At 390px the mobile nav drawer renders the longest label as "Open Desig" — last letter clipped.</div>
     <div class="ref">src/components/layout/Header.tsx (mobile drawer)</div>
-    <div class="fix"><b>Fix:</b> widen the drawer to <code>min-w-[260px]</code>, or shorten the label to "Open" / "Open-Source".</div>
+    <div class="fix"><b>Fix applied:</b> mobile menu drawer widened to <code>75vw min-w-[280px]</code> so "Open Design" no longer truncates.</div>
   </div>
 </div>
 
 <h2>Performance <span class="group-meta">noisy console + LCP</span></h2>
 
 <div class="item" data-id="page-fade-stuck">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Framer Motion page-transition fade leaves content invisible during navigation</div>
-    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-design">ux</span></div>
+    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-design">ux</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Every navigation (e.g. → /work, /vision, /services, /vision/[slug]) keeps the body at low opacity for ~1–3 s. Several screenshots I took caught the page mid-fade and would be indistinguishable from a broken page on a slow connection.</div>
     <div class="ref">src/components/layout/TransitionLayout.tsx</div>
-    <div class="fix"><b>Fix:</b> raise the initial opacity (e.g. .8 → 1), shorten the in-animation, or animate only on exit.</div>
+    <div class="fix"><b>Fix applied:</b> raised pageVariants initial opacity 0 → 0.55 and dropped the <code>filter: blur(...)</code> states (blur(0px) creates a containing block that breaks <code>position: fixed</code> descendants and registers as a CLS spike).</div>
   </div>
 </div>
 
 <div class="item" data-id="image-fill-sizes">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Many <code>&lt;Image fill /&gt;</code> instances missing the <code>sizes</code> prop</div>
-    <div class="tags"><span class="tag tag-perf">perf</span></div>
+    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">~20 console warnings on /work and /vision telling Next.js it can't pick the right responsive variant. Result: oversized assets shipped on small screens.</div>
-    <div class="fix"><b>Fix:</b> grep for <code>&lt;Image fill</code> and add a <code>sizes</code> prop matching the layout (e.g. <code>"(max-width:768px) 100vw, 50vw"</code> for two-column grids).</div>
+    <div class="fix"><b>Fix applied:</b> <code>sizes</code> prop added to <code>&lt;Image fill /&gt;</code> in CaseStudyCard, CaseStudyLayout, and the generic Card.</div>
   </div>
 </div>
 
 <div class="item" data-id="lcp-eager">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">LCP hero images don't carry <code>loading="eager"</code></div>
-    <div class="tags"><span class="tag tag-perf">perf</span></div>
+    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Next flagged the /work page's hero (and others) as the LCP candidate without an eager hint. First-paint LCP suffers as a result.</div>
-    <div class="fix"><b>Fix:</b> add <code>priority</code> to the above-the-fold <code>&lt;Image&gt;</code> in the hero / persistent hero components.</div>
+    <div class="fix"><b>Fix applied (partial):</b> /vision/coronavirus hero now carries <code>width</code>, <code>height</code>, and <code>fetchPriority="high"</code>; <code>PersistentHero</code> Image already has <code>priority</code>. Other LCP candidates (mobile home, /vision Spotlight) still pending.</div>
   </div>
 </div>
 
@@ -319,10 +319,10 @@
 <h2>Design / UX <span class="group-meta">public site</span></h2>
 
 <div class="item" data-id="footer-vision-asymmetric">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Footer Vision column has only one link</div>
-    <div class="tags"><span class="tag tag-design">ux</span></div>
+    <div class="tags"><span class="tag tag-design">ux</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Other columns have 3 links each. The Vision column dangles. Either expand (e.g. featured vision pieces) or restructure.</div>
   </div>
 </div>
@@ -337,10 +337,10 @@
 </div>
 
 <div class="item" data-id="404-no-cta">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">404 page has no recovery CTA</div>
-    <div class="tags"><span class="tag tag-design">ux</span></div>
+    <div class="tags"><span class="tag tag-design">ux</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">"NOT FOUND… the sadness." plus a 404 illustration. The only way out is the global nav. Add a "Browse work" / "Go home" button.</div>
   </div>
 </div>
@@ -360,15 +360,15 @@
     <div class="title">"Standardized Health Record" wraps to "Standard- ized" on /vision</div>
     <div class="tags"><span class="tag tag-design">ux</span><span class="tag tag-mobile">mobile</span></div>
     <div class="desc">CSS hyphenation breaks the term mid-word on the mobile vision hero label.</div>
-    <div class="fix"><b>Fix:</b> set <code>hyphens: none</code> on those labels, or shorten the string.</div>
+    <div class="fix"><b>Fix applied:</b> Footer Vision column now also links to Open Design and Studio Timeline.</div>
   </div>
 </div>
 
 <div class="item" data-id="persistent-hero-gap">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">PersistentHero hydration leaves a blank space for ~1–2s after navigation</div>
-    <div class="tags"><span class="tag tag-design">ux</span><span class="tag tag-perf">perf</span></div>
+    <div class="tags"><span class="tag tag-design">ux</span><span class="tag tag-perf">perf</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">/work shows a white area where the doctor-with-glucose-monitor hero will appear, then it pops in. Compounded by the page-transition fade above.</div>
     <div class="ref">src/components/layout/PersistentHero.tsx</div>
   </div>
@@ -383,7 +383,7 @@
     <div class="tags"><span class="tag tag-studio">studio</span></div>
     <div class="desc">Banner reads "5/31 pages still need to be ordered. Drag highlighted pages into place, then select Save New Order Preset." The Save action isn't on the banner — editors need to remember it lives behind the document list edit (pencil) icon. 5/31 case studies and 2/58 vision pieces are stuck in the unsaved state today; this is evidence the workflow doesn't survive editors.</div>
     <div class="ref">src/sanity/orderable/deskItem.ts</div>
-    <div class="fix"><b>Fix:</b> auto-save order on drop, or default new docs to top/bottom and skip the manual save altogether.</div>
+    <div class="fix"><b>Fix applied:</b> PersistentHero now reserves space at SSR via <code>HeroSpacer</code> for routes known to mount a hero, and the visible compact→full reveal is implemented as a clip-path animation on the inner image (rendered at the FINAL expanded height from first paint, so layout never shifts).</div>
   </div>
 </div>
 
@@ -407,35 +407,35 @@
 </div>
 
 <div class="item" data-id="featured-vs-spotlight">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Spotlight slot on /vision is hardcoded; no editor control</div>
-    <div class="tags"><span class="tag tag-studio">studio</span><span class="tag tag-design">ux</span></div>
+    <div class="tags"><span class="tag tag-studio">studio</span><span class="tag tag-design">ux</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">The schema offers Featured / Non-featured. The public /vision page has Spotlight + Features. Spotlight is pinned to <code>SPOTLIGHT_SLUG = 'doodle-to-demo'</code> in code — changing it requires a deploy, and editors have no path to do it.</div>
     <div class="ref">src/app/(main)/vision/page.tsx:24</div>
-    <div class="fix"><b>Fix:</b> add a <code>spotlight: boolean</code> field to the Vision Piece schema (with validation that at most one is set), and read from Sanity instead of the hardcoded slug.</div>
+    <div class="fix"><b>Fix applied:</b> new <code>spotlight</code> boolean on Vision Piece; <code>vision/page.tsx</code> reads it from Sanity (falls back to legacy doodle-to-demo slug, then the first feature).</div>
   </div>
 </div>
 
 <div class="item" data-id="bio-too-rich">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Team Member Bio is full Portable Text (Image, Columns, headings)</div>
-    <div class="tags"><span class="tag tag-studio">studio</span></div>
+    <div class="tags"><span class="tag tag-studio">studio</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Field description literally says "Short biography." Toolbar offers Image and Columns. Editors will inevitably try them.</div>
     <div class="ref">src/sanity/schemas/teamMember.ts (bio field)</div>
-    <div class="fix"><b>Fix:</b> change to <code>type: 'text'</code> (plain) or <code>block</code> with <code>styles: [{title:'Normal', value:'normal'}]</code> and no inline image / column blocks.</div>
+    <div class="fix"><b>Fix applied:</b> Team Member <code>bio</code> restricted to paragraphs + bold/italic + link annotations only (no Image, Columns, headings, or quotes).</div>
   </div>
 </div>
 
 <div class="item" data-id="health-viz-date-string">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Health Visualization Date is a free-text string</div>
-    <div class="tags"><span class="tag tag-studio">studio</span></div>
+    <div class="tags"><span class="tag tag-studio">studio</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Field helper says "Publication date (e.g. "Oct.2021")". Format is currently consistent but ~half of entries are blank, and any future editor can break the format.</div>
     <div class="ref">src/sanity/schemas/healthVisualization.ts (date field)</div>
-    <div class="fix"><b>Fix:</b> change to <code>type: 'date'</code>, format at render time. Provides a date picker, validation, and consistent output.</div>
+    <div class="fix"><b>Fix applied:</b> Health Visualization <code>date</code> now regex-validated to <code>MMM.YYYY</code> format.</div>
   </div>
 </div>
 
@@ -484,67 +484,67 @@
 </div>
 
 <div class="item" data-id="a11y-vision-heading-order">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Heading order skip on /vision (moderate)</div>
-    <div class="tags"><span class="tag tag-design">a11y</span></div>
+    <div class="tags"><span class="tag tag-design">a11y</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">axe-core flagged a heading level that skips a tier (e.g. h2 → h4). Screen-reader users get a confusing outline.</div>
     <div class="ref">src/app/(main)/vision/page.tsx (Spotlight / Features section headings)</div>
-    <div class="fix"><b>Fix:</b> demote/promote the offending heading so levels increase by one at most.</div>
+    <div class="fix"><b>Fix applied:</b> Spotlight heading promoted from <code>h3</code> → <code>h2</code> to fix the heading-order skip.</div>
   </div>
 </div>
 
 <div class="item" data-id="redirects-http-external">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">236 of 350 redirects point to <code>http://yes.goinvo.com/...</code> (HTTP, not HTTPS, off-domain)</div>
-    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Two issues stacked on the same set of redirects: (1) all are <code>http://</code>, so users get an HTTP→HTTPS hop after the 308 redirect, and (2) the destination is a separate domain (<code>yes.goinvo.com</code>). If the secondary domain ever changes URL structure or goes away, those redirects silently dead-end.</div>
     <div class="ref">redirects.json + next.config.ts (built into <code>redirects()</code> with <code>permanent: true</code>)</div>
-    <div class="fix"><b>Fix:</b> rewrite all <code>http://yes.goinvo.com/...</code> destinations to <code>https://...</code>. Audit whether yes.goinvo.com is still the right destination for these legacy article URLs — if articles have moved into the new site, point them at the new locations.</div>
+    <div class="fix"><b>Fix applied:</b> 229 <code>http://yes.goinvo.com/*</code> destinations rewritten to <code>https</code>.</div>
   </div>
 </div>
 
 <div class="item" data-id="sitemap-thank-you">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">/thank-you is included in sitemap.xml</div>
-    <div class="tags"><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">The post-form-submission confirmation page is listed in the sitemap with priority 0.8. It should not be indexable — visitors landing on /thank-you from search will be confused, and it dilutes the site's link graph. Robots.txt doesn't disallow it either.</div>
     <div class="ref">src/app/sitemap.ts (the static route list)</div>
-    <div class="fix"><b>Fix:</b> remove <code>'/thank-you'</code> from <code>staticRoutes</code> in sitemap.ts AND add a <code>noindex</code> meta on the page itself (or <code>Disallow: /thank-you</code> in robots.txt).</div>
+    <div class="fix"><b>Fix applied:</b> /thank-you removed from <code>sitemap.ts</code>; added to <code>robots.ts</code> Disallow.</div>
   </div>
 </div>
 
 <div class="item" data-id="sitemap-lastmod-now">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">sitemap.xml uses <code>new Date()</code> for every <code>&lt;lastmod&gt;</code></div>
-    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-perf">perf</span><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Every URL is stamped with "now" each time the sitemap regenerates, so all pages claim they were just modified. Search engines weigh <code>lastmod</code> for re-crawl scheduling — bogus dates mean either every page gets re-crawled constantly or the signal gets ignored entirely.</div>
     <div class="ref">src/app/sitemap.ts</div>
-    <div class="fix"><b>Fix:</b> for static routes, hard-code or read from a build-time timestamp; for Sanity-driven routes, use the document's <code>_updatedAt</code>.</div>
+    <div class="fix"><b>Fix applied:</b> static routes pinned to a fixed <code>lastmod</code>; Sanity-driven entries use <code>_updatedAt</code>.</div>
   </div>
 </div>
 
 <div class="item" data-id="coronavirus-ul-in-p">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Invalid HTML on /vision/coronavirus: <code>&lt;ul&gt;</code> inside <code>&lt;p&gt;</code></div>
-    <div class="tags"><span class="tag tag-bug">bug</span></div>
+    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">A timepoint in the COVID-19 timeline puts a <code>&lt;ul&gt;</code> inside a <code>&lt;p&gt;</code>. Browsers auto-close the <code>&lt;p&gt;</code> before the <code>&lt;ul&gt;</code>, so React's hydration tree doesn't match the server tree — full hydration error logged on every render.</div>
     <div class="ref">src/app/(main)/vision/coronavirus/page.tsx:346-353 (the "7 Jan 2020" timepoint)</div>
-    <div class="fix"><b>Fix:</b> swap the wrapping <code>&lt;p&gt;</code> to a <code>&lt;div&gt;</code> (other timepoints can stay) — or move the <code>&lt;ul&gt;</code> after the closing <code>&lt;/p&gt;</code>.</div>
+    <div class="fix"><b>Fix applied:</b> stopped nesting <code>&lt;ul&gt;</code> inside <code>&lt;p&gt;</code> across the three timepoints so hydration succeeds.</div>
   </div>
 </div>
 
 <div class="item" data-id="duplicate-goinvo-title">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Several pages have "GoInvo" twice in the <code>&lt;title&gt;</code></div>
-    <div class="tags"><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Examples: <code>"About GoInvo, a UX design company in Boston | GoInvo"</code>, <code>"Understanding the Novel Coronavirus (COVID-19) - GoInvo | GoInvo"</code>, <code>"From Bathroom to Healthroom - GoInvo | GoInvo"</code>. The page-level metadata already includes "GoInvo", and the layout's title template appends "| GoInvo" again.</div>
-    <div class="fix"><b>Fix:</b> drop "GoInvo" / "- GoInvo" / "GoInvo," from the page-level <code>metadata.title</code> — let the template suffix handle it.</div>
+    <div class="fix"><b>Fix applied:</b> dropped duplicated "GoInvo" suffix from /about, /contact, and four vision-piece <code>metadata.title</code>s.</div>
   </div>
 </div>
 
@@ -581,24 +581,24 @@
 </div>
 
 <div class="item" data-id="ai-grammar">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Awkward heading on /ai: "Driving results services with AI"</div>
-    <div class="tags"><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Reads like the word "services" leaked from a sister page (e.g. /enterprise has the parallel <code>"Driving results for Enterprise software."</code>). Likely a copy/paste edit. Also missing the orange-period accent the other pages have.</div>
     <div class="ref">src/app/(main)/ai/page.tsx:128</div>
-    <div class="fix"><b>Fix:</b> rephrase to <code>"Driving results for AI products."</code> (with the same <code>&lt;span className="text-primary font-serif"&gt;.&lt;/span&gt;</code> accent).</div>
+    <div class="fix"><b>Fix applied:</b> "Driving results services with AI" → "Driving results with AI".</div>
   </div>
 </div>
 
 <div class="item" data-id="government-typo">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Typo on /government hero: "Software for <em>goverment</em> services is complicated"</div>
-    <div class="tags"><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Headline reads "goverment" (one n). Visible to anyone landing on the page from search or a direct link.</div>
     <div class="ref">src/app/(main)/government/page.tsx:59</div>
-    <div class="fix"><b>Fix:</b> rename <code>"Software for goverment services is complicated"</code> → <code>"Software for government services is complicated"</code>.</div>
+    <div class="fix"><b>Fix applied:</b> "goverment" → "government".</div>
   </div>
 </div>
 
@@ -615,33 +615,33 @@
 </div>
 
 <div class="item" data-id="disrupt-title-inconsistency">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Disrupt series titles are inconsistent ("Part 3:" vs none on others)</div>
-    <div class="tags"><span class="tag tag-content">content</span></div>
+    <div class="tags"><span class="tag tag-content">content</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Part 1: "Disrupt! Emerging Technologies", Part 2: "Disrupt! From Horse to Horsepower", <em>Part 3: "Disrupt! Part 3: The Coming Disruption"</em>, Part 4: "Disrupt! Crowdsourcing Innovation", Part 5: "Disrupt! The Future of Design", Part 6: "Disrupt! Fukushima and Fragility". Only Part 3 has the explicit "Part 3:" infix.</div>
     <div class="ref">src/app/(main)/vision/disrupt/part-3/page.tsx (metadata.title)</div>
-    <div class="fix"><b>Fix:</b> drop "Part 3:" from the title to match the others, or add the part number to all six for consistency.</div>
+    <div class="fix"><b>Fix applied:</b> dropped redundant "Part 3:" infix from the Disrupt Part 3 title.</div>
   </div>
 </div>
 
 <div class="item" data-id="contact-embed-on-orphan-pages">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">"1 issue" / "2 issues" Next dev badge appears on most public pages</div>
-    <div class="tags"><span class="tag tag-bug">bug</span></div>
+    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Tracking which pages mount <code>ContactFormEmbed</code>: home, /work, /services, /contact, /enterprise, /government, /ai, /patient-engagement, /about/careers, /open-source-health-design (via Get Involved), /thank-you. Once the <code>allowTransparency</code> issue is fixed, all of these clean up at once.</div>
   </div>
 </div>
 
 <div class="item" data-id="hydration-extension">
-  <input type="checkbox">
+  <input type="checkbox" checked>
   <div>
     <div class="title">Hydration mismatch from browser-extension attribute on <code>&lt;body&gt;</code></div>
-    <div class="tags"><span class="tag tag-bug">bug</span></div>
+    <div class="tags"><span class="tag tag-bug">bug</span><span class="tag tag-fixed">fixed</span></div>
     <div class="desc">Triggers on every page. The user's browser extension (looks like ColorZilla — adds <code>cz-shortcut-listen="true"</code>) injects an attribute onto <code>&lt;body&gt;</code> before React loads, so React's hydration finds an attribute the server didn't render. Not actually a site bug, but produces a red dev-overlay on every page and a console warning in production for any user with that class of extension.</div>
     <div class="ref">src/app/layout.tsx:97 — <code>&lt;body className="font-sans text-black antialiased"&gt;</code></div>
-    <div class="fix"><b>Fix:</b> add <code>suppressHydrationWarning</code> to the <code>&lt;body&gt;</code> tag — Next.js docs explicitly recommend this for body/html where extensions inject attributes.</div>
+    <div class="fix"><b>Fix applied:</b> <code>suppressHydrationWarning</code> on the root <code>&lt;body&gt;</code> tag silences the browser-extension attribute mismatch (next.js docs explicitly recommend this).</div>
   </div>
 </div>
 
