@@ -94,7 +94,7 @@ export function Header() {
           href={item.href}
           onClick={() => trackNavClick({ nav_item: item.title, nav_type: 'desktop', nav_location: 'header' })}
           className={cn(
-            'relative hidden h-full flex-col justify-center px-4 text-[15px] font-semibold uppercase tracking-[2px] no-underline text-[#1d1b1a] transition-colors hover:text-primary',
+            'relative hidden h-full flex-col justify-center px-4 text-[15px] font-semibold leading-[1.375rem] uppercase tracking-[2px] no-underline text-[#1d1b1a] transition-colors hover:text-primary',
             'hideOnMobile' in item && item.hideOnMobile ? 'lg:flex' : 'sm:flex',
             isActive(item.href) && 'after:content-[""] after:absolute after:left-0 after:bottom-0 after:w-full after:h-[5px] after:bg-primary'
           )}
@@ -122,9 +122,9 @@ export function Header() {
       <Link
         href="/contact"
         onClick={() => trackNavClick({ nav_item: 'Contact', nav_type: 'desktop', nav_location: 'header' })}
-        className="hidden lg:flex items-center px-4 text-[15px] font-semibold uppercase tracking-[2px] no-underline h-full"
+        className="hidden lg:flex items-center px-4 text-[15px] font-semibold leading-[1.375rem] uppercase tracking-[2px] no-underline h-full"
       >
-        <span className="border border-primary bg-primary text-white px-5 py-2 hover:bg-primary-dark hover:border-primary-dark transition-colors duration-75">
+        <span className="border border-primary bg-primary text-white px-4 py-[0.375rem] leading-[1.625rem] hover:bg-primary-dark hover:border-primary-dark transition-colors duration-75">
           Contact
         </span>
       </Link>
