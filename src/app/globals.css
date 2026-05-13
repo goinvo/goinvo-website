@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Open+Sans:wght@600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&family=Open+Sans:wght@400;600&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -216,6 +216,15 @@
       font-size: 0.9375rem;
       line-height: 1.375rem;
     }
+  }
+
+  /* Gatsby header--sm equivalent: small sans bold heading */
+  .header-sm,
+  .header--sm {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.1875rem;
   }
 
   /* Gatsby header--lg equivalent: medium serif light section heading */
