@@ -212,7 +212,7 @@ const RESULT_VARIANT_CARDS: Array<{
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
         {['48%', '2x', '14'].map((value) => (
           <div key={value} style={{ textAlign: 'center', padding: '10px 6px', borderRadius: 6, background: '#f9fafb' }}>
-            <div style={{ fontFamily: 'serif', fontSize: 24, color: '#E36216' }}>{value}</div>
+            <div style={{ fontFamily: 'serif', fontSize: 24, color: '#b84a0e' }}>{value}</div>
             <div style={{ fontSize: 11, color: '#6b7280' }}>Supporting label</div>
           </div>
         ))}
@@ -246,7 +246,7 @@ const RESULT_VARIANT_CARDS: Array<{
       <div style={{ display: 'grid', gap: 8 }}>
         {['48%', '2x'].map((value) => (
           <div key={value} style={{ padding: '10px 12px', borderRadius: 6, background: '#f9fafb' }}>
-            <div style={{ fontFamily: 'serif', fontSize: 24, color: '#E36216' }}>{value}</div>
+            <div style={{ fontFamily: 'serif', fontSize: 24, color: '#b84a0e' }}>{value}</div>
             <div style={{ fontSize: 11, color: '#6b7280' }}>Supporting label</div>
           </div>
         ))}

@@ -3,7 +3,7 @@ import Image from 'next/image'
 
 const ICON_BASE = '/images/features/loneliness-in-our-human-code'
 const CARE_CARD_URL = 'https://cdn.sanity.io/images/a1wsimxr/production/2276515b0fe9163cda31be8488bfac1947ca7156-2000x2857.jpg'
-const ORANGE_LIGHT = '#ffb992'
+const ORANGE_LIGHT = 'var(--color-primary-light)'
 
 type RiskCard = {
   alt: string

@@ -63,7 +63,7 @@ export default function BathroomToHealthroomPage() {
           <div className="relative z-[2] max-width max-width-md content-padding mx-auto py-8">
             <h1 className="header-xl mb-2" style={{ color: '#fff' }}>From Bathroom to Healthroom</h1>
             <p className="font-serif text-lg mb-1" style={{ color: 'rgba(255,255,255,0.85)' }}>How magical technology will revolutionize human health</p>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>By Juhan Sonin · <a href="mailto:juhan@goinvo.com" style={{ color: '#E36216' }}>juhan@goinvo.com</a></p>
+          <p className="text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>By Juhan Sonin · <a href="mailto:juhan@goinvo.com" style={{ color: 'var(--color-primary)' }}>juhan@goinvo.com</a></p>
           </div>
         </header>
 

@@ -39,7 +39,7 @@
 }
 
 .living-health-lab .lhl-carousel-button.active {
-  background-color: #E36216;
+  background-color: var(--color-primary);
 }
 
 .living-health-lab .lhl-carousel-prev,
@@ -193,7 +193,7 @@
 }
 
 .living-health-lab .button--primary {
-  background-color: #E36216;
+  background-color: var(--color-primary);
   color: #fff;
   border: none;
 }

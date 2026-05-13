@@ -1,6 +1,6 @@
 export const ARTICLE_TEXT_COLOR_HEX = {
   teal: '#007385',
-  orange: '#E36216',
+  orange: '#b84a0e',
   charcoal: '#24434d',
   gray: '#6f6b6a',
   blue: '#4a5e88',

@@ -67,7 +67,7 @@ export function AlignmentDebug() {
           key={left}
           style={{
             position: 'fixed', top: 0, left, width: 1, height: '100vh',
-            background: 'rgba(227, 98, 22, 0.5)', zIndex: 99998,
+        background: 'rgba(184, 74, 14, 0.5)', zIndex: 99998,
             pointerEvents: 'none',
           }}
         />
@@ -134,7 +134,7 @@ export function AlignmentDebug() {
       onClick={() => setVisible(true)}
       style={{
         position: 'fixed', bottom: 8, right: 8, zIndex: 99999,
-        background: '#E36216', color: '#fff', border: 'none',
+            background: '#b84a0e', color: '#fff', border: 'none',
         padding: '4px 10px', fontSize: 11, cursor: 'pointer', borderRadius: 4,
       }}
     >
