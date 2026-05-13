@@ -106,12 +106,12 @@ export function Header() {
       {/* Mobile Hamburger */}
       <button
         ref={hamburgerRef}
-        className="lg:hidden flex flex-col p-2 border-0 bg-transparent cursor-pointer"
+        className="lg:hidden flex flex-col p-2 border-0 bg-transparent text-primary cursor-pointer"
         onClick={toggleMobileNav}
         aria-label="Open navigation menu"
         aria-expanded={mobileNavOpen}
       >
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="#E36216" xmlns="http://www.w3.org/2000/svg">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
           <rect x="3" y="5" width="18" height="2" rx="1" />
           <rect x="3" y="11" width="18" height="2" rx="1" />
           <rect x="3" y="17" width="18" height="2" rx="1" />
@@ -157,9 +157,9 @@ export function Header() {
                 ref={closeButtonRef}
                 onClick={closeMobileNav}
                 aria-label="Close navigation menu"
-                className="absolute top-0 right-0 p-4 border-0 bg-transparent cursor-pointer"
+                className="absolute top-0 right-0 p-4 border-0 bg-transparent text-primary cursor-pointer"
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#E36216" xmlns="http://www.w3.org/2000/svg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                   <path d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7A1 1 0 105.7 7.11L10.59 12 5.7 16.89a1 1 0 101.41 1.41L12 13.41l4.89 4.89a1 1 0 001.41-1.41L13.41 12l4.89-4.89a1 1 0 000-1.4z" />
                 </svg>
               </button>

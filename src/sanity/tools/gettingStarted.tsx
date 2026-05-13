@@ -1546,7 +1546,7 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'flex-start',
     gap: 16,
     padding: '20px 24px',
-    background: 'linear-gradient(135deg, rgba(0,115,133,0.10), rgba(227,98,22,0.06))',
+                  background: 'linear-gradient(135deg, rgba(0,115,133,0.10), rgba(184,74,14,0.06))',
     border: '1px solid var(--card-border-color)',
     borderRadius: 12,
     marginBottom: 16,

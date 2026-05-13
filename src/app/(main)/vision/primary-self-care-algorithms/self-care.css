@@ -37,8 +37,8 @@
 }
 
 .primary-self-care-algorithms .algorithm-icons__algorithm--active {
-  border-color: #E36216;
-  background-color: rgba(227, 98, 22, 0.02);
+  border-color: var(--color-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 2%, transparent);
 }
 
 .primary-self-care-algorithms .algorithm {
@@ -217,7 +217,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  color: #E36216;
+  color: var(--color-primary);
   text-decoration: underline;
 }
 

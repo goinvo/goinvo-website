@@ -3,10 +3,10 @@
 
 @theme {
   /* Colors */
-  --color-primary: #E36216;
-  --color-primary-accessible: #b84a0e;
-  --color-primary-dark: #cc5812;
-  --color-primary-light: #ffb992;
+  --color-primary: #b84a0e;
+  --color-primary-accessible: var(--color-primary);
+  --color-primary-dark: #9f3f0c;
+  --color-primary-light: var(--color-primary);
   --color-primary-lightest: #faf6f4;
   --color-secondary: #007385;
   --color-tertiary: #24434d;
@@ -107,11 +107,11 @@
   }
 
   a:hover {
-    color: var(--color-primary-accessible);
+    color: var(--color-primary);
   }
 
   sup a {
-    color: var(--color-primary-accessible);
+    color: var(--color-primary);
     text-decoration: none;
   }
 
@@ -150,32 +150,32 @@
 /* Utility classes matching existing site */
 @layer utilities {
   .bg-primary {
-    background-color: var(--color-primary-accessible);
+    background-color: var(--color-primary);
   }
 
   .border-primary {
-    border-color: var(--color-primary-accessible);
+    border-color: var(--color-primary);
   }
 
   .text-primary {
-    color: var(--color-primary-accessible);
+    color: var(--color-primary);
   }
 
   .\!text-primary {
-    color: var(--color-primary-accessible) !important;
+    color: var(--color-primary) !important;
   }
 
   .btn-primary,
   .btn.btn-primary,
   input.btn-primary {
-    background-color: var(--color-primary-accessible) !important;
-    border-color: var(--color-primary-accessible) !important;
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
     color: var(--color-white) !important;
   }
 
   .button--secondary {
-    border-color: var(--color-primary-accessible) !important;
-    color: var(--color-primary-accessible) !important;
+    border-color: var(--color-primary) !important;
+    color: var(--color-primary) !important;
   }
 
   footer a {
