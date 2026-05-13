@@ -350,7 +350,7 @@
 
 /* sup reference links */
 .public-healthroom sup a {
-  color: #e36216;
+  color: var(--color-primary);
   text-decoration: none;
 }
 

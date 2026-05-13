@@ -85,7 +85,7 @@ export default defineType({
                 options: {
                   list: [
                     { title: 'Emerald Teal (#007385) — vivid', value: 'teal' },
-                    { title: 'Vibrant Orange (#E36216) — vivid', value: 'orange' },
+                    { title: 'Accessible Orange (#b84a0e) — vivid', value: 'orange' },
                     { title: 'Ocean Blue (#4A5E88) — vivid', value: 'blue' },
                     { title: 'Warm Gray (#6F6B6A) - soft contrast', value: 'gray' },
                     { title: 'Deep Charcoal (#24434D) — subtle (near body text)', value: 'charcoal' },

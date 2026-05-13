@@ -211,7 +211,7 @@ export function CategoriesInput(props: ArrayOfObjectsInputProps) {
           {mainSelected.length > 0 && (
             <GroupChips
               label="Main Categories"
-              accent="#E36216"
+              accent="#b84a0e"
               items={mainSelected.map((ref) => ({
                 key: ref._key,
                 title: categoriesById.get(ref._ref)?.title || ref._ref,
