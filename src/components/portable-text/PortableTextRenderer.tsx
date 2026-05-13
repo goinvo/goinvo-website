@@ -1575,15 +1575,28 @@ const components: PortableTextComponents = {
  * the original Gatsby `pure-g` grid wrappers. This restores the
  * side-by-side layout for pairs of consecutive images.
  */
-function isGroupableImage(block: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
-  return block?._type === 'image' && block?.asset && block?.size !== 'bleed'
+type PortableTextObject = PortableTextBlock & {
+  _key?: string
+  _type?: string
+  asset?: unknown
+  size?: string
+  style?: string
+  children?: Array<{ text?: string }>
 }
 
-function isShortTextBlock(block: any): boolean { // eslint-disable-line @typescript-eslint/no-explicit-any
+function blockAt(blocks: PortableTextBlock[], index: number): PortableTextObject | undefined {
+  return blocks[index] as PortableTextObject | undefined
+}
+
+function isGroupableImage(block: PortableTextObject | undefined): block is PortableTextObject {
+  return block?._type === 'image' && Boolean(block.asset) && block.size !== 'bleed'
+}
+
+function isShortTextBlock(block: PortableTextObject | undefined): block is PortableTextObject {
   if (block?._type !== 'block') return false
   // Headings are NOT captions — don't group them with images
   if (block.style && block.style !== 'normal') return false
-  const text = (block.children || []).map((c: any) => c.text || '').join('') // eslint-disable-line @typescript-eslint/no-explicit-any
+  const text = (block.children || []).map(child => child.text || '').join('')
   return text.length > 0 && text.length < 200
 }
 
@@ -1592,9 +1605,17 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
   let i = 0
 
   while (i < blocks.length) {
-    const current = blocks[i] as any // eslint-disable-line @typescript-eslint/no-explicit-any
-    const next = blocks[i + 1] as any // eslint-disable-line @typescript-eslint/no-explicit-any
-    const afterNext = blocks[i + 2] as any // eslint-disable-line @typescript-eslint/no-explicit-any
+    const current = blockAt(blocks, i)
+    const next = blockAt(blocks, i + 1)
+    const afterNext = blockAt(blocks, i + 2)
+    const fourth = blockAt(blocks, i + 3)
+    const fifth = blockAt(blocks, i + 4)
+    const sixth = blockAt(blocks, i + 5)
+
+    if (!current) {
+      i++
+      continue
+    }
 
     // Skip bleed images — they should always render standalone at full viewport width
     if (current?._type === 'image' && current?.size === 'bleed') {
@@ -1606,28 +1627,28 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
     // Pattern: image, caption, image, caption, image, caption → 3-column grid with captions
     if (
       isGroupableImage(current) && isShortTextBlock(next) &&
-      isGroupableImage(afterNext) && isShortTextBlock(blocks[i + 3] as any) &&
-      isGroupableImage(blocks[i + 4] as any) && isShortTextBlock(blocks[i + 5] as any)
+      isGroupableImage(afterNext) && isShortTextBlock(fourth) &&
+      isGroupableImage(fifth) && isShortTextBlock(sixth)
     ) {
       result.push({
         _type: 'columns',
         _key: `autogrid-${current._key || i}`,
         layout: '3',
-        content: [current, next, afterNext, blocks[i + 3], blocks[i + 4], blocks[i + 5]],
-      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        content: [current, next, afterNext, fourth, fifth, sixth],
+      } as unknown as PortableTextBlock)
       i += 6
     // Pattern: image, caption, image, caption → 2-column grid with captions
     } else if (
       isGroupableImage(current) && isShortTextBlock(next) &&
-      isGroupableImage(afterNext) && isShortTextBlock(blocks[i + 3] as any) &&
-      !isGroupableImage(blocks[i + 4] as any)
+      isGroupableImage(afterNext) && isShortTextBlock(fourth) &&
+      !isGroupableImage(fifth)
     ) {
       result.push({
         _type: 'columns',
         _key: `autogrid-${current._key || i}`,
         layout: '2',
-        content: [current, next, afterNext, blocks[i + 3]],
-      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+        content: [current, next, afterNext, fourth],
+      } as unknown as PortableTextBlock)
       i += 4
     // Three consecutive bare images → 3-column grid
     } else if (isGroupableImage(current) && isGroupableImage(next) && isGroupableImage(afterNext)) {
@@ -1636,7 +1657,7 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
         _key: `autogrid-${current._key || i}`,
         layout: '3',
         content: [current, next, afterNext],
-      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      } as unknown as PortableTextBlock)
       i += 3
     // Two consecutive bare images → 2-column grid
     } else if (isGroupableImage(current) && isGroupableImage(next)) {
@@ -1645,7 +1666,7 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
         _key: `autogrid-${current._key || i}`,
         layout: '2',
         content: [current, next],
-      } as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      } as unknown as PortableTextBlock)
       i += 2
     } else {
       result.push(current)

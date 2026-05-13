@@ -33,6 +33,11 @@ yarn-error.log*
 .codex-logs/
 scripts/tmp-*.mjs
 image/QA-FEEDBACK/*.png
+.lighthouse/
+lh-test.json
+lighthouse-*.bat
+lighthouse-*.log
+lighthouse-summary.md
 
 # env files (can opt-in for committing if needed)
 .env*

@@ -65,6 +65,7 @@ export default function USHealthcareProblemsFeature() {
             {problems.map((problem, i) => {
               return (
                 <ProblemCard
+                  key={problem.id}
                   number={i}
                   id={problem.id}
                   title={problem.title}

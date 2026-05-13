@@ -2,12 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import type { GoogleChartWrapper } from 'react-google-charts'
 import determinants from '@/data/vision/determinants-of-health/chart-data.json'
 
 const GoogleChart = dynamic(
   () => import('react-google-charts').then(mod => mod.Chart),
   { ssr: false }
 )
+
+type ChartSelection = { row: number; column: number | null }
+type SelectableChart = ReturnType<GoogleChartWrapper['getChart']> & {
+  setSelection?: (selection: ChartSelection[]) => void
+}
 
 const icons = [
   '/images/vision/determinants-of-health/individual-behavior.svg',
@@ -44,7 +50,7 @@ export function DeterminantsChart({
   selectedIndex: number
   onSelect: (index: number) => void
 }) {
-  const chartRef = useRef<any>(null)
+  const chartRef = useRef<GoogleChartWrapper | null>(null)
   const [chartOptions, setChartOptions] = useState(() => ({
     ...baseOptions,
     ...getResponsiveChartOptions(),
@@ -76,10 +82,10 @@ export function DeterminantsChart({
   }, [])
 
   useEffect(() => {
-    const chart = chartRef.current?.getChart?.()
+    const chart = chartRef.current?.getChart?.() as SelectableChart | null | undefined
     if (!chart) return
 
-    chart.setSelection([{ row: selectedIndex, column: null }])
+    chart.setSelection?.([{ row: selectedIndex, column: null }])
   }, [selectedIndex, chartOptions])
 
   return (
@@ -109,16 +115,16 @@ export function DeterminantsChart({
         chartEvents={[
           {
             eventName: 'ready',
-            callback: ({ chartWrapper }: { chartWrapper: any }) => {
+            callback: ({ chartWrapper }) => {
+              if (!chartWrapper) return
               chartRef.current = chartWrapper
-              chartWrapper
-                ?.getChart?.()
-                ?.setSelection([{ row: selectedIndex, column: null }])
+              const chart = chartWrapper.getChart() as SelectableChart | null | undefined
+              chart?.setSelection?.([{ row: selectedIndex, column: null }])
             },
           },
           {
             eventName: 'select',
-            callback: ({ chartWrapper }: { chartWrapper: any }) => {
+            callback: ({ chartWrapper }) => {
               const selectedRow = chartWrapper
                 ?.getChart?.()
                 ?.getSelection?.()?.[0]?.row

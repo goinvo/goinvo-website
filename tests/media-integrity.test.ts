@@ -30,8 +30,8 @@ interface EmbedInfo {
   url: string
 }
 
-let embeds: EmbedInfo[] = []
-let staticOverrideImages: { slug: string; path: string }[] = []
+const embeds: EmbedInfo[] = []
+const staticOverrideImages: { slug: string; path: string }[] = []
 
 beforeAll(async () => {
   // Collect all embed URLs from Sanity
@@ -172,9 +172,6 @@ describe('Media Integrity', () => {
   })
 
   it('should have all public SVG files valid (with xmlns attribute)', () => {
-    const { readdirSync, readFileSync } = require('fs')
-    const { join } = require('path')
-
     function findSvgs(dir: string): string[] {
       const results: string[] = []
       try {
