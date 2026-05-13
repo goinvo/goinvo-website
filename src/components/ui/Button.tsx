@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 interface ButtonProps {
   href?: string
-  variant?: 'primary' | 'secondary' | 'outline' | 'transparent'
+  variant?: 'primary' | 'secondary' | 'outline' | 'tertiary' | 'transparent'
   size?: 'sm' | 'md' | 'lg'
   className?: string
   children: React.ReactNode
@@ -28,6 +28,8 @@ export function Button({
     primary: 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark',
     secondary: 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest',
     outline: 'bg-transparent text-primary border-primary hover:bg-primary-lightest',
+    tertiary:
+      'bg-transparent text-tertiary border-tertiary hover:bg-tertiary-lightest hover:text-tertiary active:bg-tertiary active:border-tertiary active:text-white',
     transparent: 'bg-transparent text-black border-transparent hover:text-primary',
   }
   const sizeClasses = {
