@@ -15,7 +15,7 @@ npm run manage -- compare:vision human-centered-design-for-ai --verbose
 npm run manage -- audit:content
 npm run manage -- audit:a11y --viewport mobile --section vision
 npm run manage -- fix:content --write
-npm run manage -- regression --baseline
+npm run manage -- regression --all-viewports
 ```
 
 Run `npm run manage -- --help` for the full task list.
@@ -28,7 +28,7 @@ Run `npm run manage -- --help` for the full task list.
 - `compare-all-pages.ts` - case study and main-page parity checks.
 - `compare-visual.ts` - screenshot and computed-style visual comparison.
 - `deep-audit.ts` - broad Puppeteer audit for element-level regressions.
-- `regression-test.ts` - baseline-driven CSS regression checks.
+- `regression-test.ts` - live-site CSS regression checks with desktop/mobile support and explicit accessibility color allowances.
 - `audit-content.mjs` - Sanity document quality checks.
 - `accessibility-audit.ts` - axe-core accessibility checks plus heading, overflow, and tap-target checks.
 - `auto-fix-content.mjs` - repeatable Sanity content normalization.
