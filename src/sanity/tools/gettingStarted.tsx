@@ -165,13 +165,14 @@ const categories: Category[] = [
           },
           {
             id: 'basics.tour.drafts',
-            title: 'The "Drafts" dropdown (top right)',
+            title: 'The "Drafts" / release picker',
             body: (
               <>
                 That&apos;s Sanity&apos;s release-context picker, not a status
-                filter. Most of the time leave it on <em>Drafts</em>; switching
-                to <em>Published</em> shows the live version of every doc,
-                read-only.
+                filter. Most day-to-day edits happen in <em>Drafts</em>.
+                Switch to <em>Published</em> only when you want to inspect the
+                live version, or choose a named release when you&apos;re staging
+                a coordinated launch.
               </>
             ),
           },
@@ -222,9 +223,9 @@ const categories: Category[] = [
             title: 'Publish or discard',
             body: (
               <>
-                Happy with it? Click the green <strong>Publish</strong> button
-                at the bottom-right. Want to abandon it? Click the … menu and
-                choose <em>Discard changes</em>.
+                Happy with it? Click <strong>Publish</strong> in the document
+                action bar. Want to abandon it? Open the document action menu
+                and choose <em>Discard changes</em>.
               </>
             ),
             tip: (
@@ -248,10 +249,9 @@ const categories: Category[] = [
             title: 'Shortcuts',
             body: (
               <ul style={inlineList}>
-                <li><kbd style={kbd}>Ctrl</kbd>/<kbd style={kbd}>⌘</kbd> + <kbd style={kbd}>S</kbd> — saves the current edit (autosave already runs, this just confirms)</li>
-                <li><kbd style={kbd}>Ctrl</kbd>/<kbd style={kbd}>⌘</kbd> + <kbd style={kbd}>P</kbd> — Publish</li>
-                <li><kbd style={kbd}>Ctrl</kbd>/<kbd style={kbd}>⌘</kbd> + <kbd style={kbd}>K</kbd> — open the global search</li>
-                <li><kbd style={kbd}>Esc</kbd> — close the current pane</li>
+                <li><kbd style={kbd}>Ctrl</kbd>/<kbd style={kbd}>Cmd</kbd> + <kbd style={kbd}>K</kbd> - open the global search</li>
+                <li><kbd style={kbd}>Esc</kbd> - close the current modal, menu, or preview overlay</li>
+                <li>Publishing is always done from the document action bar; do not use browser print shortcuts as publish shortcuts.</li>
               </ul>
             ),
           },
@@ -304,9 +304,10 @@ const categories: Category[] = [
             title: 'Fill in Properties first',
             body: (
               <>
-                Title, slug, hero image, listing summary, categories, date,
-                page meta. The Properties tab mirrors the order of the
-                rendered page so you can fill it in top-to-bottom.
+                Title, slug, hero/listing image, listing summary, fixed
+                Vision categories, display date, and optional SEO title and
+                description. The Properties tab also controls selected Work
+                features, /vision Spotlight, and whether page metadata renders.
               </>
             ),
             tip: (
@@ -324,7 +325,8 @@ const categories: Category[] = [
               <>
                 Body uses Portable Text. Use <em>Body paragraph</em> for prose,{' '}
                 <em>Section heading (H2)</em> for breaks, and add Quote,
-                Results, Image, or Columns blocks where they make sense.
+                Results, Image, Columns, Buttons, Data Table, or Background
+                Section blocks where they make sense.
               </>
             ),
             tip: (
@@ -347,13 +349,14 @@ const categories: Category[] = [
           },
           {
             id: 'authoring.vision.spotlight',
-            title: 'Optional — feature it on /vision',
+            title: 'Optional — feature it on listing surfaces',
             body: (
               <>
-                Toggle <strong>Selected Feature</strong> to put the piece in
-                the /vision Features grid and the /work feature cards. Toggle{' '}
-                <strong>Spotlight on /vision</strong> to pin it to the top
-                Spotlight slot (only one piece at a time).
+                Toggle <strong>Selected Feature</strong> to include the piece
+                in selected/featured surfaces such as the /work feature cards.
+                Toggle <strong>Spotlight on /vision</strong> to pin it to the
+                top Spotlight slot. Keep only one Spotlight checked; the public
+                page uses the first match it finds.
               </>
             ),
           },
@@ -374,8 +377,7 @@ const categories: Category[] = [
             body: (
               <>
                 When the Publishing Checklist on the Properties tab is happy,
-                click the green <strong>Publish</strong> button at the
-                bottom-right.
+                click <strong>Publish</strong> in the document action bar.
               </>
             ),
           },
@@ -427,9 +429,11 @@ const categories: Category[] = [
             title: 'Assign categories',
             body: (
               <>
-                Pick from the canonical category list — these drive the
-                filter chips on /work. Use Display Tags only as a fallback
-                when no Category fits.
+                Pick from the canonical category list. Main Categories
+                (Healthcare, Enterprise, Government, AI) drive the /work filter
+                chips; additional categories still display as tags and help
+                internal taxonomy. Use Display Tags only as a fallback when no
+                Category fits.
               </>
             ),
           },
@@ -439,9 +443,8 @@ const categories: Category[] = [
             body: (
               <>
                 Publish, then drag the row into its final position in the
-                list. Click the document-list edit (pencil) icon at the top
-                of the list and choose <strong>Save New Order Preset</strong>{' '}
-                to persist.
+                orderable list. Click the list edit/pencil control and choose{' '}
+                <strong>Save New Order Preset</strong> to persist the order.
               </>
             ),
           },
@@ -492,8 +495,9 @@ const categories: Category[] = [
             body: (
               <>
                 Publish, then drag the row into the desired position in the
-                Team list (the marquee on the homepage and the team grid on
-                /about both honor this order).
+                Team list and save the order preset if the list asks for it.
+                The marquee on the homepage and the team grid on /about both
+                honor this order.
               </>
             ),
           },
@@ -535,7 +539,7 @@ const categories: Category[] = [
       {
         id: 'authoring.categories',
         title: 'Manage categories',
-        blurb: 'The tags that drive /work filter chips and listings.',
+        blurb: 'Case-study categories, /work filter chips, and listing tags.',
         minutes: 3,
         keywords: ['category', 'tag', 'taxonomy', 'filter'],
         links: [{ path: '/structure/category', label: 'Open Categories' }],
@@ -545,9 +549,11 @@ const categories: Category[] = [
             title: 'Add a new category',
             body: (
               <>
-                Categories drive the filter chips on /work. Add one only when
-                you have at least 2-3 case studies that fit it — singletons
-                clutter the chip row.
+                Category documents are used by Case Studies. Only categories
+                with <strong>Main Category</strong> enabled become /work filter
+                chips, so add a new main category only when several case
+                studies need it. Additional categories can be more specific
+                without cluttering the chip row.
               </>
             ),
           },
@@ -556,9 +562,10 @@ const categories: Category[] = [
             title: 'Assign categories to documents',
             body: (
               <>
-                Categories are referenced from Case Study and Vision Piece
-                documents. Open the doc, scroll to <em>Categories</em>, and
-                pick one or more.
+                Case Studies reference Category documents from their
+                <em>Categories</em> field. Vision Pieces do not reference these
+                documents; they use the fixed category choices in the Vision
+                Piece Properties tab.
               </>
             ),
           },
@@ -577,9 +584,10 @@ const categories: Category[] = [
             title: 'Create the job document',
             body: (
               <>
-                Title, role description, qualifications, and location. The
-                careers page queries <code>activeJobsQuery</code>; mark a job
-                as inactive to remove it without deleting.
+                Fill in title, description, location, employment type, and
+                <strong>Is Active</strong>. The careers page queries{' '}
+                <code>activeJobsQuery</code>; uncheck Is Active to remove a
+                role without deleting it.
               </>
             ),
           },
@@ -629,9 +637,8 @@ const categories: Category[] = [
             title: 'Publish when ready',
             body: (
               <>
-                Click the green <strong>Publish</strong> button at the
-                bottom-right of the editor. The live site updates within a
-                few seconds.
+                Click <strong>Publish</strong> in the document action bar.
+                The live site updates within a few seconds.
               </>
             ),
           },
@@ -640,9 +647,9 @@ const categories: Category[] = [
             title: 'Discard a draft you don’t want',
             body: (
               <>
-                Open the editor, click the … menu at the top-right, and
-                choose <em>Discard changes</em>. Discard never deletes
-                published content — only the in-progress draft.
+                Open the editor, use the document action menu, and choose{' '}
+                <em>Discard changes</em>. Discard never deletes published
+                content — only the in-progress draft.
               </>
             ),
           },
@@ -671,10 +678,9 @@ const categories: Category[] = [
             title: 'Save the order preset',
             body: (
               <>
-                Click the document-list edit (pencil) icon at the top of the
-                list and choose <strong>Save New Order Preset</strong>. Until
-                you save, the &quot;X pages still need to be ordered&quot;
-                banner stays.
+                Click the list edit/pencil control and choose{' '}
+                <strong>Save New Order Preset</strong>. Until you save, the
+                &quot;X pages still need to be ordered&quot; banner stays.
               </>
             ),
             tip: (
@@ -698,10 +704,11 @@ const categories: Category[] = [
             title: 'What’s a release?',
             body: (
               <>
-                The <strong>Drafts</strong> dropdown at the top right is the
-                release-context picker. By default you edit in the{' '}
-                <em>Drafts</em> release — every doc you change there ends up
-                in a single bundle that publishes together.
+                The <strong>Drafts</strong> picker in the Studio top bar is
+                the release-context picker. <em>Drafts</em> is the normal
+                editing context for individual changes; named releases are the
+                bundled contexts you create when several docs should launch
+                together.
               </>
             ),
           },
@@ -753,9 +760,10 @@ const categories: Category[] = [
             title: 'Click anything on the page',
             body: (
               <>
-                Hover over any block to see edit overlays. Click into a heading,
-                paragraph, or image and the editor jumps to that field — fast
-                way to tweak content where it lives.
+                Hover over editable Sanity-rendered content to see overlays.
+                Click into a heading, paragraph, or image and the editor jumps
+                to that field. Static code-rendered pages and some custom
+                blocks may preview correctly without click-to-edit overlays.
               </>
             ),
           },
@@ -765,7 +773,8 @@ const categories: Category[] = [
             body: (
               <>
                 Click the share icon at the top of the preview to copy a URL
-                that lets a teammate review the draft without logging in.
+                for teammate review. Depending on the preview environment, the
+                teammate may still need Studio or Vercel access.
               </>
             ),
           },
@@ -826,8 +835,9 @@ const categories: Category[] = [
             title: 'Insert an image block',
             body: (
               <>
-                In the Portable Text editor, click <strong>Image</strong> in
-                the toolbar. Upload or pick from the asset library.
+                In the Portable Text editor, use the block insert menu and
+                choose <strong>Image</strong>. Upload a new asset or pick an
+                existing one from the asset library.
               </>
             ),
           },
@@ -854,8 +864,9 @@ const categories: Category[] = [
             body: (
               <>
                 Small (25%), Medium (50%), Large (75%), Full width, or Full
-                bleed (viewport-wide). Most inline article images look right
-                at Large or Full.
+                bleed (viewport-wide). Use alignment only when the image is
+                narrower than full width. Most inline article images look
+                right at Large or Full.
               </>
             ),
           },
@@ -873,8 +884,10 @@ const categories: Category[] = [
             title: 'Add a Video Embed block',
             body: (
               <>
-                In the Portable Text toolbar, choose <strong>Video Embed</strong>.
-                Paste a CloudFront URL or YouTube URL.
+                In the Portable Text insert menu, choose{' '}
+                <strong>Video Embed</strong>. Paste a CloudFront or YouTube
+                URL, then set size if the video needs to break wider than the
+                article column.
               </>
             ),
           },
@@ -885,7 +898,8 @@ const categories: Category[] = [
               <>
                 The poster appears before the video plays. Use it as a
                 still-frame fallback so the article isn&apos;t a wall of black
-                rectangles before videos load.
+                rectangles before videos load. Enable Auto-play only for
+                ambient/demo videos; those play muted and looping.
               </>
             ),
           },
@@ -937,9 +951,9 @@ const categories: Category[] = [
                 headers={['Type', 'Where it shows', 'Purpose']}
                 rows={[
                   ['Case Study', '/work, /work/<slug>', 'Client project write-ups + curated homepage story cards.'],
-                  ['Vision Piece', '/vision, /vision/<slug>', 'Vision articles, thought leadership, research. (Schema name: feature.)'],
+                  ['Vision Piece', '/vision, /vision/<slug>', 'Vision articles, thought leadership, research. Some legacy/highly custom slugs are rendered by code overrides. (Schema name: feature.)'],
                   ['Team Member', '/about, homepage marquee', 'Bios, role, social links, headshot.'],
-                  ['Category', '/work filter chips', '11 in-use tags referenced by Case Studies + Vision Pieces.'],
+                  ['Category', '/work filter chips and case-study tags', 'Category documents are referenced by Case Studies. Only Main Categories appear as /work filter chips.'],
                   ['Job', '/about/careers', 'Open positions.'],
                   ['Health Visualization', '/vision/health-visualizations', 'Standalone visualization entries, e.g. Determinants of Health.'],
                   ['CMS Feedback', 'Internal — leave alone', 'Backing store for the "Send Feedback" tool.'],
@@ -968,7 +982,7 @@ const categories: Category[] = [
                   ['Infographic / poster', '1600 px wide+', 'Use Full Image Cover when the whole frame matters.'],
                   ['Team headshot', '400 × 400 px+', 'Square. Set hotspot on the face.'],
                   ['Health Viz preview', '800 × 600 px+', 'Cropped to 16:10 on the listing.'],
-                  ['Social share', '1200 × 630 px', 'Optional SEO image.'],
+                  ['Social share crop', '1200 × 630 px', 'Generated from the feature/article hero image or case-study image.'],
                 ]}
               />
             ),
@@ -1024,7 +1038,7 @@ const categories: Category[] = [
                 <li>Body content is complete and in the right order.</li>
                 <li>Authors, contributors, special thanks configured when needed.</li>
                 <li>References present if citations are used.</li>
-                <li>SEO metadata, listing summary, categories, display date considered.</li>
+                <li>SEO title/description, listing summary, categories, and display date considered.</li>
                 <li>Previewed in Presentation and looks right at desktop + mobile.</li>
               </ul>
             ),
@@ -1055,7 +1069,7 @@ const categories: Category[] = [
               <>
                 If the editor shows only an orange <strong>Draft</strong>{' '}
                 badge (no green Published), the doc has never been published.
-                Click <strong>Publish</strong>.
+                Click <strong>Publish</strong> in the document action bar.
               </>
             ),
           },
@@ -1066,6 +1080,19 @@ const categories: Category[] = [
               <>
                 The public site only shows published content. To see drafts
                 applied to the page, use <em>Presentation</em>.
+              </>
+            ),
+          },
+          {
+            id: 'troubleshooting.draft-missing.static-override',
+            title: 'Check for static Vision overrides',
+            body: (
+              <>
+                Some legacy or highly custom Vision pages are rendered from
+                code instead of the Sanity body. If Studio shows a static
+                override warning badge on the Vision Piece, Sanity content is
+                still useful for reference, but the visible page may need a code
+                change too.
               </>
             ),
           },
@@ -1083,10 +1110,10 @@ const categories: Category[] = [
             title: 'Save the order preset',
             body: (
               <>
-                Drag-and-drop alone isn&apos;t enough. After dragging, click
-                the document-list edit (pencil) icon at the top of the list
-                and choose <strong>Save New Order Preset</strong>. The banner
-                clears once every highlighted row has been placed and saved.
+                Drag-and-drop alone isn&apos;t enough. After dragging, click the
+                list edit/pencil control and choose{' '}
+                <strong>Save New Order Preset</strong>. The banner clears once
+                every highlighted row has been placed and saved.
               </>
             ),
           },
@@ -1105,9 +1132,8 @@ const categories: Category[] = [
             body: (
               <>
                 If the document still exists (you reverted a field, didn&apos;t
-                delete the whole doc), click the … menu at the top-right of
-                the editor and choose <strong>History</strong>. Pick a prior
-                version and restore.
+                delete the whole doc), open the document action menu and choose
+                <strong>History</strong>. Pick a prior version and restore.
               </>
             ),
           },
