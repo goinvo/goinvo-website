@@ -56,6 +56,10 @@ export interface HeroConfig {
   editTarget?: HeroEditTarget
 }
 
+interface HeroOverrideOptions {
+  animate?: boolean
+}
+
 export const heroConfigs: Record<string, HeroConfig> = {
   '/work': {
     image: '/images/work/dr-emily.jpg',
@@ -109,6 +113,16 @@ export const heroConfigs: Record<string, HeroConfig> = {
       { width: 2000, height: 2440 },
       { width: 2000, height: 1842 },
     ],
+  },
+  '/open-source-health-design': {
+    image: '/images/open_source/open-source-bgd.png',
+    bgPosition: 'center',
+    title: (
+      <>
+        Open Source Health Design<span className="text-primary font-serif">.</span>
+      </>
+    ),
+    subtitle: 'Bringing Trust, Openness, Innovation, & Design to Healthcare',
   },
 }
 
@@ -164,7 +178,13 @@ interface HeroState {
 
 type HeroAction =
   | { type: 'NAVIGATE'; pathname: string; prevPathname: string | null }
-  | { type: 'OVERRIDE'; image: string; bgPosition?: string; direction?: number }
+  | {
+      type: 'OVERRIDE'
+      image: string
+      bgPosition?: string
+      direction?: number
+      options?: HeroOverrideOptions
+    }
   | { type: 'SLIDE_DONE' }
   | {
       type: 'SET_CURRENT_HERO'
@@ -311,13 +331,14 @@ function heroReducer(state: HeroState, action: HeroAction): HeroState {
 
     case 'OVERRIDE': {
       if (!state.config) return state // ignore overrides when no hero
+      const shouldAnimate = action.options?.animate ?? true
       return {
         ...state,
-        phase: 'sliding',
+        phase: shouldAnimate ? 'sliding' : 'idle',
         displayImage: action.image,
         bgPosition: action.bgPosition ?? state.bgPosition,
         direction: action.direction ?? 1,
-        imageKey: state.imageKey + 1,
+        imageKey: shouldAnimate ? state.imageKey + 1 : state.imageKey,
       }
     }
 
@@ -350,7 +371,12 @@ function initialState(pathname: string): HeroState {
 
 interface HeroContextValue {
   state: HeroState
-  overrideImage: (image: string, bgPosition?: string, direction?: number) => void
+  overrideImage: (
+    image: string,
+    bgPosition?: string,
+    direction?: number,
+    options?: HeroOverrideOptions,
+  ) => void
   slideDone: () => void
   setCurrentHero: (
     image: string,
@@ -390,8 +416,13 @@ export function HeroProvider({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   const overrideImage = useCallback(
-    (image: string, bgPosition?: string, direction?: number) => {
-      dispatch({ type: 'OVERRIDE', image, bgPosition, direction })
+    (
+      image: string,
+      bgPosition?: string,
+      direction?: number,
+      options?: HeroOverrideOptions,
+    ) => {
+      dispatch({ type: 'OVERRIDE', image, bgPosition, direction, options })
     },
     [],
   )
