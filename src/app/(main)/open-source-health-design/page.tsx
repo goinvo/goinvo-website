@@ -344,9 +344,9 @@ export default function OpenSourceHealthDesignPage() {
           <div className="mt-12">
             <Button
               href="/contact"
-              variant="outline"
+              variant="tertiary"
               size="md"
-              className="!border-tertiary !text-tertiary hover:!bg-transparent"
+              className="leading-[26px]"
             >
               Get in touch
             </Button>

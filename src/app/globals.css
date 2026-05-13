@@ -981,4 +981,12 @@ header {
 .newsletter-form-host button,
 .newsletter-form-host input[type="submit"] {
   border-radius: 0 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+}
+
+.newsletter-form-host .form-container,
+.newsletter-form-host .inline-container,
+.newsletter-form-host [data-form].inline-container {
+  max-width: 100% !important;
 }

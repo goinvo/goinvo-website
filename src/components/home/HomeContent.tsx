@@ -6,7 +6,7 @@ import Marquee from 'react-fast-marquee'
 import { ClientLogos } from '@/components/ui/ClientLogos'
 import { Button } from '@/components/ui/Button'
 import { Reveal } from '@/components/ui/Reveal'
-import { NewsletterForm } from '@/components/forms/NewsletterForm'
+import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { usePageTransition } from '@/context/PageTransitionContext'
 import { cloudfrontImage } from '@/lib/utils'
 
@@ -339,9 +339,9 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
 
       {/* 7. Newsletter */}
       <Reveal style="slide-up">
-        <section className="bg-blue-light py-12 md:py-16">
+        <section className="py-8">
           <div className="max-width-md content-padding mx-auto">
-            <NewsletterForm />
+            <SubscribeForm />
           </div>
         </section>
       </Reveal>

@@ -20,13 +20,15 @@ export function SubscribeForm() {
   }, [])
 
   return (
-    <div className="bg-white shadow-card p-8 newsletter-form-host">
-      <h2 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mb-2">Subscribe to our newsletter</h2>
-      <p className="text-gray mb-4">
-        You&apos;ll receive our latest ideas, visualizations, and studio news delivered to your
-        inbox twice a month.
-      </p>
-      <div ref={containerRef} />
+    <div className="bg-white shadow-card newsletter-form-host">
+      <div className="mx-[42px] pt-[10px]">
+        <h2 className="header-lg mt-5 mb-5">Subscribe to our newsletter</h2>
+        <p className="mt-4 mb-4 text-black">
+          You&apos;ll receive our latest ideas, visualizations, and studio news delivered to your
+          inbox twice a month.
+        </p>
+        <div ref={containerRef} />
+      </div>
     </div>
   )
 }
