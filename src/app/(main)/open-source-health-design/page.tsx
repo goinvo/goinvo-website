@@ -156,37 +156,7 @@ function ProjectCard({
 
 export default function OpenSourceHealthDesignPage() {
   return (
-    <div className="pt-[var(--spacing-header-height)]">
-      {/* Hero */}
-      <section className="overflow-hidden bg-white">
-        <div className="max-width content-padding py-12 lg:py-16">
-          <div className="grid grid-cols-1 gap-6 text-center lg:grid-cols-2 lg:gap-12 lg:text-left items-center">
-            <div className="order-2 mx-auto max-w-[280px] text-tertiary lg:order-1 lg:max-w-none">
-              <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">
-                Open Source Health Design
-                <span className="font-serif text-primary">.</span>
-              </h1>
-              <p className="mb-6">
-                Bringing Trust, Openness, Innovation, &amp; Design to Healthcare
-              </p>
-              <Button href="/contact" variant="primary" size="md" className="mt-5 mb-[30px]">
-                Get Involved
-              </Button>
-            </div>
-            <div className="order-1 mx-auto max-w-[280px] lg:order-2 lg:max-w-none">
-              <Image
-                src={cloudfrontImage('/images/open_source/open-source-bgd.png')}
-                alt="Open Source Health Design"
-                width={720}
-                height={440}
-                className="w-full h-auto"
-                priority
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
+    <div>
       {/* Vision Statement + Stats */}
       <section style={{ backgroundColor: '#faf6f4' }} className="py-16">
         <div className="max-width content-padding">
@@ -197,6 +167,9 @@ export default function OpenSourceHealthDesignPage() {
                 technology that can be trusted
                 <span className="font-serif text-primary">.</span>
               </h2>
+              <Button href="/contact" variant="primary" size="lg" className="mt-6">
+                Get Involved
+              </Button>
             </div>
             <div className="text-tertiary">
               <p className="mb-4">

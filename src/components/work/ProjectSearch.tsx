@@ -97,6 +97,7 @@ export function ProjectSearch({
   )
   const { overrideImage } = useHero()
   const prevIndexRef = useRef(0)
+  const hasMountedRef = useRef(false)
 
   useEffect(() => {
     const prevIndex = prevIndexRef.current
@@ -105,7 +106,9 @@ export function ProjectSearch({
     prevIndexRef.current = nextIndex
 
     const images = categoryHeroImages[activeCategory] || categoryHeroImages.All
-    overrideImage(pickRandom(images), 'center top', direction)
+    const shouldAnimate = hasMountedRef.current
+    hasMountedRef.current = true
+    overrideImage(pickRandom(images), 'center top', direction, { animate: shouldAnimate })
   }, [activeCategory, filterCategories, overrideImage])
 
   const handleCategorySelect = useCallback((category: string) => {
