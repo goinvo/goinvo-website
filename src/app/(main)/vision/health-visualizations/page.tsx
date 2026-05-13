@@ -216,7 +216,7 @@ function PosterCardComponent({ card }: { card: PosterCard }) {
         imageBlock
       )}
       <div className="p-4">
-        <h4 className="font-semibold text-black mb-4 leading-snug text-base">{card.title}</h4>
+        <h4 className="header-sm text-black mb-[21px]">{card.title}</h4>
         {card.downloadUrl && (
           <a
             href={card.downloadUrl}

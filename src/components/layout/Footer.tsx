@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { siteConfig, footerLinks } from '@/lib/config'
 
 export function Footer() {
-  const footerTextLinkClassName = 'inline-block min-h-6 !text-white hover:!text-white/80 no-underline transition-colors duration-[var(--transition-button)]'
+  const footerTextLinkClassName = 'inline-block min-h-6 !text-white hover:!text-white/80 font-normal underline transition-colors duration-[var(--transition-button)]'
 
   return (
     <footer className="bg-secondary text-white border-b-[3rem] border-secondary">
