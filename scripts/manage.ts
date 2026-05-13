@@ -82,7 +82,7 @@ const tasks = {
   'regression': {
     runner: 'tsx',
     file: 'regression-test.ts',
-    description: 'Run baseline-driven CSS regression checks. Pass --baseline to save a baseline.',
+    description: 'Run live-site CSS regression checks. Forwards flags such as --section, --mobile, --all-viewports, --path.',
   },
   'generate:verification': {
     runner: 'node',
@@ -120,7 +120,7 @@ Examples:
   npm run manage -- audit:content
   npm run manage -- audit:a11y --viewport mobile --section vision
   npm run manage -- fix:content --write
-  npm run manage -- regression --baseline
+  npm run manage -- regression --all-viewports
   npm run manage -- sanity:schema
 
 Tasks:

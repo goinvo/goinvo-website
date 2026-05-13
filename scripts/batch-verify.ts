@@ -1019,7 +1019,7 @@ async function runBatch(args: string[], viewport: ViewportName) {
     throw new Error(`Invalid --section value "${sectionFilter}". Expected "vision" or "work".`)
   }
 
-  let pages: PageDef[] = []
+  const pages: PageDef[] = []
   if (!sectionFilter || sectionFilter === 'vision') pages.push(...VISION_PAGES)
   if (!sectionFilter || sectionFilter === 'work') pages.push(...WORK_PAGES)
   if (pages.length === 0) throw new Error('No pages selected for batch verification.')
@@ -1102,8 +1102,9 @@ async function runBatch(args: string[], viewport: ViewportName) {
       const high = issues.filter(i => i.severity === 'high').length
       const med = issues.filter(i => i.severity === 'medium').length
       process.stderr.write(` ${high}H ${med}M ${issues.length - high - med}L\n`)
-    } catch (err: any) {
-      results.push({ slug: pd.slug, section: pd.section, issues: [], error: (err?.message || String(err)).substring(0, 160) })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      results.push({ slug: pd.slug, section: pd.section, issues: [], error: message.substring(0, 160) })
       writeResultsFile(resultsFile, results, pages, { cacheVersion: CACHE_VERSION, viewport, sectionFilter })
       process.stderr.write(` ERROR\n`)
     }
