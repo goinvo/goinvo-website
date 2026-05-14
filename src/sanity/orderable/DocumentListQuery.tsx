@@ -4,7 +4,12 @@ import type { SanityClient } from '@sanity/client'
 
 import { DraggableList } from './DraggableList'
 import { getFilteredDedupedDocs } from './getFilteredDedupedDocs'
-import { filterIdsForDocuments, partitionFeatureDocuments } from './groups'
+import {
+  filterIdsForDocuments,
+  partitionFeatureDocuments,
+  partitionPublicationDocuments,
+  shouldGroupByPublicationState,
+} from './groups'
 import { getNeedsOrderingIds } from './presets'
 import { getDocumentQuery, getOrderPresetQuery } from './query'
 import type { DocumentListQueryProps, OrderPreset, SanityDocumentWithOrder } from './types'
@@ -81,6 +86,12 @@ function useLiveQuery<T>(
   return state
 }
 
+function contentTypeLabel(type: string) {
+  if (type === 'caseStudy') return 'case studies'
+  if (type === 'feature') return 'vision pieces'
+  return 'documents'
+}
+
 interface OrderableGroupProps {
   description: string
   documents: SanityDocumentWithOrder[]
@@ -104,6 +115,10 @@ function OrderableGroup({
     () => filterIdsForDocuments(needsOrderingIds, documents),
     [documents, needsOrderingIds],
   )
+  const documentsKey = useMemo(
+    () => documents.map((document) => `${document._id}:${document.orderRank ?? ''}`).join('|'),
+    [documents],
+  )
 
   return (
     <Stack space={2}>
@@ -126,6 +141,7 @@ function OrderableGroup({
       </Card>
       {documents.length ? (
         <DraggableList
+          key={`${droppableId}:${documentsKey}`}
           data={documents}
           droppableId={droppableId}
           listIsUpdating={listIsUpdating}
@@ -180,14 +196,35 @@ export function DocumentListQuery({
     () => getFilteredDedupedDocs(documentsState.data ?? [], currentVersion),
     [currentVersion, documentsState.data],
   )
+  const groupedByPublication = shouldGroupByPublicationState(type)
+  const publicationGroups = useMemo(
+    () => partitionPublicationDocuments(documentsState.data ?? []),
+    [documentsState.data],
+  )
+  const publicOrderDocuments = groupedByPublication ? publicationGroups.published : data
 
   const needsOrderingIds = useMemo(
-    () => getNeedsOrderingIds(data, presetState.data),
-    [data, presetState.data],
+    () => getNeedsOrderingIds(publicOrderDocuments, presetState.data),
+    [publicOrderDocuments, presetState.data],
   )
   const dataKey = useMemo(
     () => data.map((document) => `${document._id}:${document.orderRank ?? ''}`).join('|'),
     [data],
+  )
+  const emptyNeedsOrderingIds = useMemo(() => new Set<string>(), [])
+  const visibleDocumentCount = groupedByPublication
+    ? publicationGroups.published.length + publicationGroups.drafts.length
+    : data.length
+  const orderingWarning = needsOrderingIds.size > 0 && (
+    <Box marginBottom={2}>
+      <Card padding={4} radius={2} tone="caution">
+        <Text size={1}>
+          {needsOrderingIds.size}/{publicOrderDocuments.length} published{' '}
+          {contentTypeLabel(type)} still need to be ordered. Drag highlighted published pieces
+          into place, then select <strong>Save New Order Preset</strong>.
+        </Text>
+      </Card>
+    </Box>
   )
 
   if (documentsState.loading || presetState.loading) {
@@ -208,7 +245,7 @@ export function DocumentListQuery({
     )
   }
 
-  if (!data.length) {
+  if (!visibleDocumentCount) {
     return (
       <Flex align="center" direction="column" height="fill" justify="center">
         <Container width={1}>
@@ -222,41 +259,90 @@ export function DocumentListQuery({
     )
   }
 
-  if (type === 'feature') {
-    const featureGroups = partitionFeatureDocuments(data)
+  if (groupedByPublication) {
+    const publishedTitle = type === 'caseStudy' ? 'Published work' : 'Published vision pieces'
+    const draftTitle = type === 'caseStudy' ? 'Draft work' : 'Draft vision pieces'
+
+    if (type === 'feature') {
+      const publishedFeatureGroups = partitionFeatureDocuments(publicationGroups.published)
+      const draftFeatureGroups = partitionFeatureDocuments(publicationGroups.drafts)
+
+      return (
+        <Stack space={1} style={{ overflow: 'auto', height: '100%' }}>
+          <Box padding={2}>
+            {orderingWarning}
+            <Stack space={4}>
+              <OrderableGroup
+                title="Published / Featured"
+                description="Published vision pieces selected for featured surfaces and public ordering."
+                documents={publishedFeatureGroups.featured}
+                droppableId="featurePublishedFeaturedSortZone"
+                listIsUpdating={listIsUpdating}
+                needsOrderingIds={needsOrderingIds}
+                setListIsUpdating={setListIsUpdating}
+              />
+              <OrderableGroup
+                title="Published / Non-featured"
+                description="Published vision pieces that are not selected for featured surfaces."
+                documents={publishedFeatureGroups.nonFeatured}
+                droppableId="featurePublishedNonFeaturedSortZone"
+                listIsUpdating={listIsUpdating}
+                needsOrderingIds={needsOrderingIds}
+                setListIsUpdating={setListIsUpdating}
+              />
+              {publicationGroups.drafts.length > 0 && (
+                <>
+                  <OrderableGroup
+                    title="Drafts / Featured"
+                    description="Draft vision pieces are separated from the public ordering."
+                    documents={draftFeatureGroups.featured}
+                    droppableId="featureDraftFeaturedSortZone"
+                    listIsUpdating={listIsUpdating}
+                    needsOrderingIds={emptyNeedsOrderingIds}
+                    setListIsUpdating={setListIsUpdating}
+                  />
+                  <OrderableGroup
+                    title="Drafts / Non-featured"
+                    description="Draft vision pieces are separated from the public ordering."
+                    documents={draftFeatureGroups.nonFeatured}
+                    droppableId="featureDraftNonFeaturedSortZone"
+                    listIsUpdating={listIsUpdating}
+                    needsOrderingIds={emptyNeedsOrderingIds}
+                    setListIsUpdating={setListIsUpdating}
+                  />
+                </>
+              )}
+            </Stack>
+          </Box>
+        </Stack>
+      )
+    }
 
     return (
       <Stack space={1} style={{ overflow: 'auto', height: '100%' }}>
         <Box padding={2}>
-          {needsOrderingIds.size > 0 && (
-            <Box marginBottom={2}>
-              <Card padding={4} radius={2} tone="caution">
-                <Text size={1}>
-                  {needsOrderingIds.size}/{data.length} pages still need to be ordered. Drag
-                  highlighted pages into place, then select <strong>Save New Order Preset</strong>.
-                </Text>
-              </Card>
-            </Box>
-          )}
+          {orderingWarning}
           <Stack space={4}>
             <OrderableGroup
-              title="Featured"
-              description="Selected features shown in featured surfaces like the Work page."
-              documents={featureGroups.featured}
-              droppableId="featureFeaturedSortZone"
+              title={publishedTitle}
+              description="Published pieces shown on the public site. This is the visible ordering."
+              documents={publicationGroups.published}
+              droppableId={`${type}PublishedSortZone`}
               listIsUpdating={listIsUpdating}
               needsOrderingIds={needsOrderingIds}
               setListIsUpdating={setListIsUpdating}
             />
-            <OrderableGroup
-              title="Non-featured"
-              description="Vision pieces that are published but not selected for featured surfaces."
-              documents={featureGroups.nonFeatured}
-              droppableId="featureNonFeaturedSortZone"
-              listIsUpdating={listIsUpdating}
-              needsOrderingIds={needsOrderingIds}
-              setListIsUpdating={setListIsUpdating}
-            />
+            {publicationGroups.drafts.length > 0 && (
+              <OrderableGroup
+                title={draftTitle}
+                description="Draft pieces are separated from the public ordering until they are published."
+                documents={publicationGroups.drafts}
+                droppableId={`${type}DraftSortZone`}
+                listIsUpdating={listIsUpdating}
+                needsOrderingIds={emptyNeedsOrderingIds}
+                setListIsUpdating={setListIsUpdating}
+              />
+            )}
           </Stack>
         </Box>
       </Stack>
@@ -266,16 +352,7 @@ export function DocumentListQuery({
   return (
     <Stack space={1} style={{ overflow: 'auto', height: '100%' }}>
       <Box padding={2}>
-        {needsOrderingIds.size > 0 && (
-          <Box marginBottom={2}>
-            <Card padding={4} radius={2} tone="caution">
-              <Text size={1}>
-                {needsOrderingIds.size}/{data.length} pages still need to be ordered. Drag
-                highlighted pages into place, then select <strong>Save New Order Preset</strong>.
-              </Text>
-            </Card>
-          </Box>
-        )}
+        {orderingWarning}
         <DraggableList
           key={dataKey}
           data={data}

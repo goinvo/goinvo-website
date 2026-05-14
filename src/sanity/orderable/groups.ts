@@ -1,4 +1,23 @@
+import { getPublishedId, isDraftId, isPublishedId } from 'sanity'
+
 import type { SanityDocumentWithOrder } from './types'
+
+export function shouldGroupByPublicationState(type: string) {
+  return type === 'caseStudy' || type === 'feature'
+}
+
+export function partitionPublicationDocuments(documents: SanityDocumentWithOrder[]) {
+  const flatDocuments = documents.flat()
+  const published = flatDocuments.filter((document) => document._id && isPublishedId(document._id))
+  const drafts = flatDocuments
+    .filter((document) => document._id && isDraftId(document._id))
+    .map((document) => ({
+      ...document,
+      hasPublished: flatDocuments.some((item) => item._id === getPublishedId(document._id)),
+    }))
+
+  return { published, drafts }
+}
 
 export function isFeaturedFeatureDocument(document: SanityDocumentWithOrder) {
   if (typeof document.featured === 'boolean') return document.featured

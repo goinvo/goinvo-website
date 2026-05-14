@@ -5,6 +5,7 @@ import type { ToastParams } from '@sanity/ui'
 import { ORDER_PRESET_TYPE } from './constants'
 import { DocumentListWrapper } from './DocumentListWrapper'
 import { getFilteredDedupedDocs } from './getFilteredDedupedDocs'
+import { partitionPublicationDocuments, shouldGroupByPublicationState } from './groups'
 import { getNamedOrderPresetId, getOrderPresetId, getOrderPresetSlug } from './ids'
 import { getNeedsOrderingIds, getPresetDocumentIds, sortDocumentsByPreset } from './presets'
 import { getDocumentQuery, getOrderPresetQuery, getOrderPresetsQuery } from './query'
@@ -32,6 +33,10 @@ async function fetchDocuments(options: OrderableDocumentListOptions) {
     queryParams,
     { tag: 'goinvo-orderable.action-documents' },
   )
+
+  if (shouldGroupByPublicationState(options.type)) {
+    return partitionPublicationDocuments(documents).published
+  }
 
   return getFilteredDedupedDocs(documents, options.currentVersion)
 }
