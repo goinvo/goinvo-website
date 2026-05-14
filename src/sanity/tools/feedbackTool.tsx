@@ -141,6 +141,7 @@ function FeedbackComponent() {
     try {
       await client.create({
         _type: 'cmsFeedback',
+        status: 'new',
         submittedBy: currentUser?.name || currentUser?.email || 'Unknown',
         submittedAt: new Date().toISOString(),
         tasks: TASKS.map((t) => ({

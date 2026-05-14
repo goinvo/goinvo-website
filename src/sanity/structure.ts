@@ -10,6 +10,7 @@ import { goinvoOrderableDocumentListDeskItem } from './orderable/deskItem'
  */
 const ORDERABLE_TYPES = ['caseStudy', 'feature', 'teamMember'] as const
 const HIDDEN_TYPES = ['orderPreset'] as const
+const FEEDBACK_TYPE = 'cmsFeedback'
 
 export const structure: StructureResolver = (S, context) => {
   return S.list()
@@ -18,6 +19,7 @@ export const structure: StructureResolver = (S, context) => {
       orderableList(S, context, { type: 'caseStudy', title: 'Case Study' }),
       orderableList(S, context, { type: 'feature', title: 'Vision Piece' }),
       orderableList(S, context, { type: 'teamMember', title: 'Team Member' }),
+      feedbackInboxList(S),
       S.divider(),
       // Non-orderable document types: defer to auto-generated list items
       ...S.documentTypeListItems().filter((listItem) => {
@@ -25,7 +27,8 @@ export const structure: StructureResolver = (S, context) => {
         return (
           id !== undefined &&
           !(ORDERABLE_TYPES as readonly string[]).includes(id) &&
-          !(HIDDEN_TYPES as readonly string[]).includes(id)
+          !(HIDDEN_TYPES as readonly string[]).includes(id) &&
+          id !== FEEDBACK_TYPE
         )
       }),
     ])
@@ -49,4 +52,54 @@ function orderableList(
     S,
     context,
   })
+}
+
+function feedbackInboxList(S: StructureBuilder) {
+  const newestFirst = [{ field: 'submittedAt', direction: 'desc' as const }]
+
+  return S.listItem()
+    .title('CMS Feedback')
+    .schemaType(FEEDBACK_TYPE)
+    .child(
+      S.list()
+        .title('CMS Feedback')
+        .items([
+          S.listItem()
+            .title('Unread')
+            .child(
+              S.documentList()
+                .title('Unread Feedback')
+                .schemaType(FEEDBACK_TYPE)
+                .filter(`_type == "${FEEDBACK_TYPE}" && !defined(readAt)`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('Open / Reviewed')
+            .child(
+              S.documentList()
+                .title('Open / Reviewed Feedback')
+                .schemaType(FEEDBACK_TYPE)
+                .filter(`_type == "${FEEDBACK_TYPE}" && (!defined(status) || status in ["new", "reviewed"])`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('Resolved')
+            .child(
+              S.documentList()
+                .title('Resolved Feedback')
+                .schemaType(FEEDBACK_TYPE)
+                .filter(`_type == "${FEEDBACK_TYPE}" && status in ["resolved", "noAction", "archived"]`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('All')
+            .child(
+              S.documentList()
+                .title('All Feedback')
+                .schemaType(FEEDBACK_TYPE)
+                .filter(`_type == "${FEEDBACK_TYPE}"`)
+                .defaultOrdering(newestFirst),
+            ),
+        ]),
+    )
 }
