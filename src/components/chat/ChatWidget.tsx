@@ -11,7 +11,6 @@ import {
 } from '@/lib/chat/attachments'
 
 const THREAD_STORAGE_KEY = 'goinvo-chat-thread-v1'
-const THREADS_STORAGE_KEY = 'goinvo-chat-threads-v1'
 const SESSION_STORAGE_KEY = 'goinvo-chat-browser-session-v1'
 
 interface ChatMessage {
@@ -28,9 +27,6 @@ interface StoredThread {
   visitorKey: string
   name?: string
   email?: string
-  status?: string
-  lastMessageAt?: string
-  lastMessagePreview?: string
 }
 
 interface ThreadResponse {
@@ -48,14 +44,10 @@ interface DirectUpload {
   messageId: string
 }
 
-type ChatViewMode = 'conversation' | 'threads' | 'new'
-
 export function ChatWidget() {
   const [enabled, setEnabled] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [thread, setThread] = useState<StoredThread | null>(null)
-  const [storedThreads, setStoredThreads] = useState<StoredThread[]>([])
-  const [viewMode, setViewMode] = useState<ChatViewMode>('new')
   const [threadStatus, setThreadStatus] = useState<string>('new')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [pollingIntervalMs, setPollingIntervalMs] = useState<number>(siteConfig.chat.pollingIntervalMs)
@@ -81,19 +73,18 @@ export function ChatWidget() {
     if (!response.ok) {
       if (response.status === 404 || response.status === 403) {
         localStorage.removeItem(THREAD_STORAGE_KEY)
-        setStoredThreads(removeStoredThread(storedThread.threadId))
         setThread(null)
         setMessages([])
-        setViewMode(loadStoredThreads().length ? 'threads' : 'new')
       }
       throw new Error('Unable to load chat')
     }
 
     const data = (await response.json()) as ThreadResponse
-    const updatedThread = mergeStoredThreadWithResponse(storedThread, data)
-    setStoredThreads(saveStoredThread(updatedThread))
+    const updatedThread = mergeStoredThreadWithVisitor(storedThread, data.visitor)
+    if (updatedThread !== storedThread) {
+      saveStoredThread(updatedThread)
+    }
     setThread(updatedThread)
-    setViewMode('conversation')
     setThreadStatus(data.status)
     setMessages(data.messages || [])
     setName(updatedThread.name || '')
@@ -110,8 +101,6 @@ export function ChatWidget() {
         setEnabled(true)
         if (data.pollingIntervalMs) setPollingIntervalMs(data.pollingIntervalMs)
 
-        const availableThreads = loadStoredThreads()
-        setStoredThreads(availableThreads)
         const storedThread = loadStoredThread()
         if (storedThread) {
           try {
@@ -119,8 +108,6 @@ export function ChatWidget() {
           } catch {
             setError(null)
           }
-        } else if (availableThreads.length) {
-          setViewMode('threads')
         }
       })
       .catch(() => {
@@ -133,7 +120,7 @@ export function ChatWidget() {
   }, [loadThread])
 
   useEffect(() => {
-    if (!enabled || !thread || viewMode !== 'conversation') return
+    if (!enabled || !thread) return
 
     const interval = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return
@@ -141,7 +128,7 @@ export function ChatWidget() {
     }, pollingIntervalMs)
 
     return () => window.clearInterval(interval)
-  }, [enabled, loadThread, pollingIntervalMs, thread, viewMode])
+  }, [enabled, loadThread, pollingIntervalMs, thread])
 
   useEffect(() => {
     if (!isOpen) return
@@ -166,23 +153,19 @@ export function ChatWidget() {
         website,
       }, initialAttachment)
 
-      let storedThread = mergeStoredThreadWithResponse({
+      const storedThread = {
         threadId: data.threadId,
         visitorKey: data.visitorKey || '',
         name: name.trim() || data.visitor?.name,
         email: email.trim() || data.visitor?.email,
-      }, data)
+      }
 
-      setStoredThreads(saveStoredThread(storedThread))
+      saveStoredThread(storedThread)
       setThread(storedThread)
-      setViewMode('conversation')
       setThreadStatus(data.status)
       setMessages(data.messages || [])
       if (data.directUpload && initialAttachment) {
         const uploadedData = await uploadDirectAttachment(data.threadId, storedThread.visitorKey, data.directUpload, initialAttachment)
-        storedThread = mergeStoredThreadWithResponse(storedThread, uploadedData)
-        setStoredThreads(saveStoredThread(storedThread))
-        setThread(storedThread)
         setThreadStatus(uploadedData.status)
         setMessages(uploadedData.messages || [])
       }
@@ -215,16 +198,15 @@ export function ChatWidget() {
 
       setThreadStatus(data.status)
       setMessages(data.messages || [])
-      let updatedThread = mergeStoredThreadWithResponse(thread, data)
-      setStoredThreads(saveStoredThread(updatedThread))
-      setThread(updatedThread)
-      setName(updatedThread.name || '')
-      setEmail(updatedThread.email || '')
+      const updatedThread = mergeStoredThreadWithVisitor(thread, data.visitor)
+      if (updatedThread !== thread) {
+        saveStoredThread(updatedThread)
+        setThread(updatedThread)
+        setName(updatedThread.name || '')
+        setEmail(updatedThread.email || '')
+      }
       if (data.directUpload && replyAttachment) {
         const uploadedData = await uploadDirectAttachment(thread.threadId, thread.visitorKey, data.directUpload, replyAttachment)
-        updatedThread = mergeStoredThreadWithResponse(updatedThread, uploadedData)
-        setStoredThreads(saveStoredThread(updatedThread))
-        setThread(updatedThread)
         setThreadStatus(uploadedData.status)
         setMessages(uploadedData.messages || [])
       }
@@ -238,40 +220,9 @@ export function ChatWidget() {
     }
   }
 
-  const handleShowThreads = () => {
-    setError(null)
-    setStoredThreads(loadStoredThreads())
-    setViewMode('threads')
-  }
-
-  const handleOpenThread = (selectedThread: StoredThread) => {
-    setError(null)
-    selectStoredThread(selectedThread)
-    loadThread(selectedThread).catch((err) => {
-      setError(err instanceof Error ? err.message : 'Unable to load chat')
-    })
-  }
-
-  const handleStartNewThread = () => {
-    setError(null)
-    setThread(null)
-    setThreadStatus('new')
-    setMessages([])
-    setReplyMessage('')
-    setReplyAttachment(null)
-    setInitialAttachment(null)
-    setInitialMessage('')
-    localStorage.removeItem(THREAD_STORAGE_KEY)
-    setViewMode('new')
-    if (initialAttachmentInputRef.current) initialAttachmentInputRef.current.value = ''
-    if (replyAttachmentInputRef.current) replyAttachmentInputRef.current.value = ''
-  }
-
   if (!enabled) return null
 
-  const hasThread = viewMode === 'conversation' && Boolean(thread)
-  const isThreadList = viewMode === 'threads'
-  const showBackButton = viewMode !== 'threads' && storedThreads.length > 0
+  const hasThread = Boolean(thread)
   const statusLabel = threadStatus === 'waitingOnVisitor' ? 'Replied' : threadStatus === 'resolved' ? 'Resolved' : null
   return (
     <div className="fixed right-4 bottom-4 z-[1200] font-sans sm:right-6 sm:bottom-6">
@@ -281,28 +232,11 @@ export function ChatWidget() {
           className="mb-3 flex h-[min(640px,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-lg border border-gray-medium bg-white shadow-[0_16px_40px_rgba(29,27,26,0.18)]"
         >
           <div className="flex min-h-14 items-center justify-between gap-4 bg-tertiary px-4 py-3 text-white">
-            <div className="flex min-w-0 items-center gap-2">
-              {showBackButton && (
-                <button
-                  type="button"
-                  onClick={handleShowThreads}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center text-white transition-colors hover:bg-white/10 focus:bg-white/10 focus:outline-none"
-                  aria-label="All messages"
-                  title="All messages"
-                >
-                  <ArrowLeftIcon />
-                </button>
+            <div>
+              <h2 className="mb-0 font-sans text-base font-semibold leading-6">GoInvo</h2>
+              {(!hasThread || statusLabel) && (
+                <p className="mb-0 text-xs leading-5 text-white/85">{hasThread ? statusLabel : 'Ask us anything'}</p>
               )}
-              <div className="min-w-0">
-                <h2 className="mb-0 font-sans text-base font-semibold leading-6">
-                  {isThreadList ? 'Messages' : 'GoInvo'}
-                </h2>
-                {(isThreadList || !hasThread || statusLabel) && (
-                  <p className="mb-0 text-xs leading-5 text-white/85">
-                    {isThreadList ? 'Conversations' : hasThread ? statusLabel : 'Ask us anything'}
-                  </p>
-                )}
-              </div>
             </div>
             <button
               type="button"
@@ -316,14 +250,7 @@ export function ChatWidget() {
           </div>
 
           <div className="flex-1 overflow-y-auto bg-gray-lightest px-4 py-4">
-            {isThreadList ? (
-              <ThreadList
-                threads={storedThreads}
-                activeThreadId={thread?.threadId}
-                onOpenThread={handleOpenThread}
-                onStartNewThread={handleStartNewThread}
-              />
-            ) : !hasThread ? (
+            {!hasThread ? (
               <div className="rounded-lg border border-gray-medium bg-white p-4">
                 <h3 className="mb-2 font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary">
                   {siteConfig.chat.introTitle}
@@ -389,15 +316,7 @@ export function ChatWidget() {
               </div>
             )}
 
-            {isThreadList ? (
-              <button
-                type="button"
-                onClick={handleStartNewThread}
-                className="h-10 w-full bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
-              >
-                New conversation
-              </button>
-            ) : !hasThread ? (
+            {!hasThread ? (
               <form onSubmit={handleStartThread} className="space-y-3">
                 <input
                   type="text"
@@ -604,78 +523,6 @@ async function uploadDirectAttachment(
   return data
 }
 
-function ThreadList({
-  threads,
-  activeThreadId,
-  onOpenThread,
-  onStartNewThread,
-}: {
-  threads: StoredThread[]
-  activeThreadId?: string
-  onOpenThread: (thread: StoredThread) => void
-  onStartNewThread: () => void
-}) {
-  if (!threads.length) {
-    return (
-      <div className="rounded-lg border border-gray-medium bg-white p-4">
-        <h3 className="mb-2 font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary">
-          No messages yet
-        </h3>
-        <p className="mb-4 text-sm leading-6 text-gray">Start a conversation and we will reply here.</p>
-        <button
-          type="button"
-          onClick={onStartNewThread}
-          className="h-10 w-full bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
-        >
-          New conversation
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      {threads.map((storedThread) => {
-        const isActive = storedThread.threadId === activeThreadId
-        return (
-          <button
-            key={storedThread.threadId}
-            type="button"
-            onClick={() => onOpenThread(storedThread)}
-            className={`w-full border px-3 py-3 text-left transition-colors ${
-              isActive
-                ? 'border-secondary bg-white'
-                : 'border-gray-medium bg-white hover:border-secondary hover:bg-gray-lightest'
-            }`}
-            aria-current={isActive ? 'true' : undefined}
-          >
-            <span className="flex min-w-0 items-start justify-between gap-3">
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold leading-5 text-tertiary">
-                  {getThreadTitle(storedThread)}
-                </span>
-                <span className="mt-1 block line-clamp-2 text-xs leading-5 text-gray">
-                  {storedThread.lastMessagePreview || 'Conversation with GoInvo'}
-                </span>
-              </span>
-              <span className="shrink-0 text-right">
-                {storedThread.lastMessageAt && (
-                  <span className="block text-[11px] leading-5 text-gray">{formatThreadDate(storedThread.lastMessageAt)}</span>
-                )}
-                {storedThread.status && (
-                  <span className="mt-1 block text-[11px] font-semibold uppercase leading-5 tracking-[1px] text-secondary">
-                    {getThreadStatusLabel(storedThread.status)}
-                  </span>
-                )}
-              </span>
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
 function AttachmentPicker({
   id,
   inputRef,
@@ -735,23 +582,6 @@ function AttachmentSummary({
   )
 }
 
-function ArrowLeftIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <path d="m15 18-6-6 6-6" />
-    </svg>
-  )
-}
-
 function PaperclipIcon() {
   return (
     <svg
@@ -770,111 +600,29 @@ function PaperclipIcon() {
 }
 
 function loadStoredThread(): StoredThread | null {
-  return parseStoredThread(localStorage.getItem(THREAD_STORAGE_KEY))
-}
-
-function loadStoredThreads(): StoredThread[] {
-  let threads: StoredThread[] = []
-
   try {
-    const raw = localStorage.getItem(THREADS_STORAGE_KEY)
-    const parsed = raw ? JSON.parse(raw) : []
-    if (Array.isArray(parsed)) {
-      threads = parsed.map((item) => parseStoredThread(JSON.stringify(item))).filter(Boolean) as StoredThread[]
-    }
-  } catch {
-    threads = []
-  }
-
-  const activeThread = loadStoredThread()
-  return activeThread ? upsertStoredThread(threads, activeThread) : sortStoredThreads(threads)
-}
-
-function saveStoredThread(thread: StoredThread) {
-  const threads = upsertStoredThread(loadStoredThreads(), thread)
-  localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(thread))
-  localStorage.setItem(THREADS_STORAGE_KEY, JSON.stringify(threads))
-  return threads
-}
-
-function selectStoredThread(thread: StoredThread) {
-  localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(thread))
-}
-
-function removeStoredThread(threadId: string) {
-  const threads = loadStoredThreads().filter((item) => item.threadId !== threadId)
-  localStorage.setItem(THREADS_STORAGE_KEY, JSON.stringify(threads))
-  const activeThread = loadStoredThread()
-  if (activeThread?.threadId === threadId) {
-    localStorage.removeItem(THREAD_STORAGE_KEY)
-  }
-  return threads
-}
-
-function mergeStoredThreadWithResponse(
-  thread: StoredThread,
-  response: Pick<ThreadResponse, 'status' | 'visitor' | 'messages'>,
-) {
-  const lastMessage = response.messages.at(-1)
-  const nextThread = {
-    ...thread,
-    name: thread.name || response.visitor?.name,
-    email: thread.email || response.visitor?.email,
-    status: response.status,
-    lastMessageAt: lastMessage?.createdAt || thread.lastMessageAt,
-    lastMessagePreview: lastMessage?.text || thread.lastMessagePreview,
-  }
-
-  return nextThread
-}
-
-function parseStoredThread(raw: string | null): StoredThread | null {
-  if (!raw) return null
-
-  try {
-    const value = JSON.parse(raw) as Partial<StoredThread>
-    if (typeof value.threadId !== 'string' || typeof value.visitorKey !== 'string') return null
-    return {
-      threadId: value.threadId,
-      visitorKey: value.visitorKey,
-      ...(typeof value.name === 'string' ? { name: value.name } : {}),
-      ...(typeof value.email === 'string' ? { email: value.email } : {}),
-      ...(typeof value.status === 'string' ? { status: value.status } : {}),
-      ...(typeof value.lastMessageAt === 'string' ? { lastMessageAt: value.lastMessageAt } : {}),
-      ...(typeof value.lastMessagePreview === 'string' ? { lastMessagePreview: value.lastMessagePreview } : {}),
-    }
+    const raw = localStorage.getItem(THREAD_STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as StoredThread) : null
   } catch {
     return null
   }
 }
 
-function upsertStoredThread(threads: StoredThread[], thread: StoredThread) {
-  return sortStoredThreads([thread, ...threads.filter((item) => item.threadId !== thread.threadId)])
+function saveStoredThread(thread: StoredThread) {
+  localStorage.setItem(THREAD_STORAGE_KEY, JSON.stringify(thread))
 }
 
-function sortStoredThreads(threads: StoredThread[]) {
-  return [...threads].sort((first, second) => {
-    const firstTime = Date.parse(first.lastMessageAt || '')
-    const secondTime = Date.parse(second.lastMessageAt || '')
-    return (Number.isFinite(secondTime) ? secondTime : 0) - (Number.isFinite(firstTime) ? firstTime : 0)
-  })
-}
+function mergeStoredThreadWithVisitor(
+  thread: StoredThread,
+  visitor: ThreadResponse['visitor'],
+) {
+  const nextThread = {
+    ...thread,
+    name: thread.name || visitor?.name,
+    email: thread.email || visitor?.email,
+  }
 
-function getThreadTitle(thread: StoredThread) {
-  return thread.name || thread.email || 'Website chat'
-}
-
-function getThreadStatusLabel(status: string) {
-  if (status === 'waitingOnVisitor') return 'Replied'
-  if (status === 'resolved') return 'Resolved'
-  if (status === 'open') return 'Open'
-  return 'New'
-}
-
-function formatThreadDate(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+  return nextThread.name === thread.name && nextThread.email === thread.email ? thread : nextThread
 }
 
 function getBrowserSessionId() {
