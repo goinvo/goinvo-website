@@ -28,7 +28,6 @@ CHAT_NO_RESPONSE_EMAIL_REPLY_TO=hello@goinvo.com
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_SIGNING_SECRET=...
 SLACK_CHAT_CHANNEL_ID=C...
-CHAT_SLACK_DEDICATED_CHANNELS=true
 CHAT_SLACK_CHANNEL_PING=<!here>
 ```
 
@@ -46,7 +45,7 @@ Interactivity:    https://www.goinvo.com/api/slack/interactions
 OAuth redirect:   http://localhost:3000/api/slack/oauth
 OAuth redirect:   https://www.goinvo.com/api/slack/oauth
 Bot events:        message.channels
-Bot scopes:        chat:write, channels:history, channels:write, files:write, users:read
+Bot scopes:        chat:write, channels:history, files:write, users:read
 ```
 
 After installing the app to the GoInvo workspace:
@@ -74,13 +73,9 @@ Slack's Windows installer does not pass flags through the piped `irm ... | iex` 
 
 Slack event and interaction mutations are verified with the app signing secret. The Events API URL-verification challenge is answered without writing data so the app can be created before the signing secret is present in Vercel.
 
-Each new website chat creates a dedicated public Slack channel named like `#website-chat-{visitor}-{id}` when `CHAT_SLACK_DEDICATED_CHANNELS` is not `false`. The hub channel `#website-chatbot` receives a ping and a link to that conversation channel. If channel creation fails because the bot is missing `channels:write` or workspace policy blocks channel creation, the app falls back to a threaded message in `#website-chatbot`.
-
-Teammate replies made in the dedicated conversation channel, either as top-level messages or thread replies, are pushed to `/api/slack/events`, appended to the Sanity `chatThread`, and shown in the website widget on the next poll. Visitor follow-up messages are posted back into the dedicated Slack channel. In fallback mode, Slack replies should be made in the thread created by the bot, and visitor follow-up messages are posted back into that same Slack thread.
+Each new website chat creates a top-level message in `#website-chatbot`, including `CHAT_SLACK_CHANNEL_PING` (`<!here>` by default) so the channel is notified. Slack replies should be made in the thread created by the bot. Those replies are pushed to `/api/slack/events`, appended to the Sanity `chatThread`, and shown in the website widget on the next poll. Visitor follow-up messages are posted back into the same Slack thread and broadcast to the channel with the same ping.
 
 Visitor messages can include one attachment up to 4 MB. Supported types are common images (`jpg`, `png`, `gif`, `webp`), small videos (`mp4`, `webm`, `mov`), PDFs, and plain text/CSV files. Attachments are sent to Slack with `files.getUploadURLExternal` and `files.completeUploadExternal`, so the Slack app must have the `files:write` bot scope and be reinstalled after adding that scope.
-
-If attachments show `Upload failed`, check the server logs and the attachment error field in Sanity. A common cause is an old bot token that was issued before `files:write` was added. In that case, Slack returns `missing_scope` with `needed: files:write`; reinstall the Slack app, then update `SLACK_BOT_TOKEN` locally and in Vercel with the new Bot User OAuth Token.
 
 ## No-Response Fallback
 
