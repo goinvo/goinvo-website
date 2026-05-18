@@ -16,7 +16,7 @@ import {
 import {
   applySlackFileUploadResult,
   isSlackPostingConfigured,
-  startSlackChatConversation,
+  notifySlackNewThread,
   uploadSlackChatAttachment,
 } from '@/lib/chat/slack'
 
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     lastMessagePreview: previewText(visibleMessageText),
   })) as CreatedChatThread
 
-  const slackResult = await startSlackChatConversation({
+  const slackResult = await notifySlackNewThread({
     threadId,
     visitorName,
     visitorEmail: visitorEmail || undefined,
@@ -151,11 +151,7 @@ export async function POST(request: NextRequest) {
       .set({
         slack: {
           channelId: slackResult.channel,
-          ...(slackResult.channelName ? { channelName: slackResult.channelName } : {}),
           threadTs: slackResult.ts,
-          dedicatedChannel: slackResult.dedicatedChannel,
-          ...(slackResult.hubChannelId ? { hubChannelId: slackResult.hubChannelId } : {}),
-          ...(slackResult.hubThreadTs ? { hubThreadTs: slackResult.hubThreadTs } : {}),
           lastPostAt: new Date().toISOString(),
         },
         messages: responseMessages,
