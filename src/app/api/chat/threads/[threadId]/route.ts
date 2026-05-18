@@ -231,6 +231,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       visitorEmail: thread.visitor?.email || extractedEmail,
       message: visibleMessageText,
       pageUrl: thread.source?.pageUrl,
+      studioBaseUrl: request.nextUrl.origin,
     })
 
     let uploadedAttachments: ChatAttachment[] | undefined

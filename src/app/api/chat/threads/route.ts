@@ -139,6 +139,7 @@ export async function POST(request: NextRequest) {
     visitorEmail: visitorEmail || undefined,
     message: visibleMessageText,
     pageUrl: source.pageUrl,
+    studioBaseUrl: request.nextUrl.origin,
   })
 
   let responseMessages = [message]
