@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { FormEvent, useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { siteConfig } from '@/lib/config'
 import {
@@ -9,10 +10,36 @@ import {
   validateChatAttachment,
   type ChatAttachment,
 } from '@/lib/chat/attachments'
+import { teamHeadshots } from '@/data/team-headshots'
+import { cloudfrontImage } from '@/lib/utils'
 
 const THREAD_STORAGE_KEY = 'goinvo-chat-thread-v1'
 const THREADS_STORAGE_KEY = 'goinvo-chat-threads-v1'
 const SESSION_STORAGE_KEY = 'goinvo-chat-browser-session-v1'
+const DEFAULT_CHAT_TEAM_MEMBER = 'Juhan Sonin'
+const CHAT_TEAM_MEMBER_ALIASES: Record<string, string> = {
+  juhan: 'Juhan Sonin',
+  'juhan sonin': 'Juhan Sonin',
+  eric: 'Eric Benoit',
+  'eric benoit': 'Eric Benoit',
+  jen: 'Jen Patel',
+  'jen patel': 'Jen Patel',
+  claire: 'Claire Lin',
+  'claire lin': 'Claire Lin',
+  chloe: 'Chloe Ma',
+  'chloe ma': 'Chloe Ma',
+  craig: 'Craig McGinley',
+  'craig mcginley': 'Craig McGinley',
+  tala: 'Tala Habbab',
+  'tala habbab': 'Tala Habbab',
+  shirley: 'Shirley Xu',
+  'shirley xu': 'Shirley Xu',
+  maverick: 'Maverick Chan',
+  'maverick chan': 'Maverick Chan',
+  jon: 'Jonathan Follett',
+  jonathan: 'Jonathan Follett',
+  'jonathan follett': 'Jonathan Follett',
+}
 
 interface ChatMessage {
   id: string
@@ -293,6 +320,7 @@ export function ChatWidget() {
                   <ArrowLeftIcon />
                 </button>
               )}
+              {!isThreadList && <ChatTeamAvatar src={getChatTeamAvatarSrc()} size="header" showStatus />}
               <div className="min-w-0">
                 <h2 className="mb-0 font-sans text-base font-semibold leading-6">
                   {isThreadList ? 'Messages' : 'GoInvo'}
@@ -336,20 +364,20 @@ export function ChatWidget() {
               <div className="space-y-3">
                 {messages.map((message) => {
                   const isVisitor = message.authorType === 'visitor'
+                  const teamAvatarSrc = isVisitor ? undefined : getChatTeamAvatarSrc(message.authorName)
                   return (
-                    <div key={message.id} className={`flex ${isVisitor ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      key={message.id}
+                      className={`flex ${isVisitor ? 'justify-end' : 'items-start justify-start gap-2'}`}
+                    >
+                      {!isVisitor && teamAvatarSrc && <ChatTeamAvatar src={teamAvatarSrc} />}
                       <div
-                        className={`max-w-[82%] rounded-none px-3 py-2 text-sm leading-6 ${
+                        className={`min-w-0 rounded-none px-3 py-2 text-sm leading-6 ${
                           isVisitor
-                            ? 'bg-secondary text-white'
-                            : 'border border-gray-medium bg-white text-black'
+                            ? 'max-w-[82%] bg-secondary text-white'
+                            : 'max-w-[calc(100%-3rem)] border border-gray-medium bg-white text-black'
                         }`}
                       >
-                        {!isVisitor && (
-                          <div className="mb-1 text-xs font-semibold uppercase tracking-[1px] text-primary">
-                            {message.authorName || 'GoInvo'}
-                          </div>
-                        )}
                         <div className="whitespace-pre-wrap break-words">{message.text}</div>
                         {Boolean(message.attachments?.length) && (
                           <div className="mt-2 space-y-1">
@@ -676,6 +704,42 @@ function ThreadList({
   )
 }
 
+function ChatTeamAvatar({
+  src,
+  size = 'message',
+  showStatus = false,
+}: {
+  src: string
+  size?: 'message' | 'header'
+  showStatus?: boolean
+}) {
+  const imageSize = size === 'header' ? 144 : 128
+  const wrapperClass =
+    size === 'header' ? 'relative h-9 w-9 shrink-0' : 'relative mt-1 h-8 w-8 shrink-0'
+  const imageClass =
+    size === 'header'
+      ? 'absolute inset-0 overflow-hidden rounded-full border-2 border-white bg-gray-lightest'
+      : 'absolute inset-0 overflow-hidden rounded-full border border-gray-medium bg-white'
+
+  return (
+    <span className={wrapperClass} aria-hidden="true">
+      <span className={imageClass}>
+        <Image
+          src={src}
+          alt=""
+          width={imageSize}
+          height={imageSize}
+          quality={95}
+          className="h-full w-full object-cover"
+        />
+      </span>
+      {showStatus && (
+        <span className="absolute right-0 bottom-0 block h-2.5 w-2.5 rounded-full border-2 border-tertiary bg-[#44c961]" />
+      )}
+    </span>
+  )
+}
+
 function AttachmentPicker({
   id,
   inputRef,
@@ -869,6 +933,33 @@ function getThreadStatusLabel(status: string) {
   if (status === 'resolved') return 'Resolved'
   if (status === 'open') return 'Open'
   return 'New'
+}
+
+function getChatTeamAvatarSrc(authorName?: string) {
+  const memberName = getChatTeamMemberName(authorName)
+  return cloudfrontImage(teamHeadshots[memberName])
+}
+
+function getChatTeamMemberName(authorName?: string) {
+  const normalizedName = normalizeChatTeamName(authorName)
+
+  if (authorName && teamHeadshots[authorName]) return authorName
+  if (normalizedName && CHAT_TEAM_MEMBER_ALIASES[normalizedName]) {
+    return CHAT_TEAM_MEMBER_ALIASES[normalizedName]
+  }
+
+  const matchingName = Object.keys(teamHeadshots).find(
+    (name) => normalizeChatTeamName(name) === normalizedName,
+  )
+
+  return matchingName || DEFAULT_CHAT_TEAM_MEMBER
+}
+
+function normalizeChatTeamName(value?: string) {
+  return value
+    ?.toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
 }
 
 function formatThreadDate(value: string) {
