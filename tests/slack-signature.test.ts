@@ -4,6 +4,7 @@ import { validateChatAttachment } from '@/lib/chat/attachments'
 import {
   applySlackFileUploadResult,
   buildSlackConversationChannelName,
+  fetchSlackTeamReplies,
   getChatThreadStudioPath,
   getChatThreadStudioUrl,
   notifySlackNewThread,
@@ -228,6 +229,61 @@ describe('Slack request verification', () => {
     expect(body.thread_ts).toBeUndefined()
     expect(body.reply_broadcast).toBeUndefined()
     expect(body.text).toContain('One more thing')
+  })
+
+  it('fetches human Slack replies from dedicated channel history and the original thread', async () => {
+    process.env.SLACK_BOT_TOKEN = 'xoxb-test'
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ok: true,
+          messages: [
+            { type: 'message', user: 'U1', text: 'Top-level answer', ts: '1779062600.000100' },
+            { type: 'message', bot_id: 'B1', text: 'Bot message', ts: '1779062500.000100' },
+            { type: 'message', subtype: 'channel_join', user: 'U2', text: 'joined', ts: '1779062400.000100' },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ok: true,
+          messages: [
+            { type: 'message', bot_id: 'B1', text: 'Original bot message', ts: '1779062400.000100' },
+            { type: 'message', user: 'U3', text: 'Thread answer', ts: '1779062700.000100' },
+          ],
+        }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const replies = await fetchSlackTeamReplies({
+      channel: 'C-CHAT',
+      threadTs: '1779062400.000100',
+      dedicatedChannel: true,
+      oldestTs: '1779062400.000100',
+    })
+
+    expect(replies).toEqual([
+      {
+        channel: 'C-CHAT',
+        user: 'U1',
+        text: 'Top-level answer',
+        ts: '1779062600.000100',
+        threadTs: undefined,
+      },
+      {
+        channel: 'C-CHAT',
+        user: 'U3',
+        text: 'Thread answer',
+        ts: '1779062700.000100',
+        threadTs: undefined,
+      },
+    ])
+    expect(String(fetchMock.mock.calls[0][0])).toContain('conversations.history')
+    expect(String(fetchMock.mock.calls[1][0])).toContain('conversations.replies')
   })
 
   it('uploads visitor attachments to the existing Slack thread', async () => {

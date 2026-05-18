@@ -67,6 +67,25 @@ interface SlackCreateConversationResponse {
   provided?: string
 }
 
+interface SlackConversationMessagesResponse {
+  ok: boolean
+  messages?: SlackConversationMessage[]
+  error?: string
+  needed?: string
+  provided?: string
+}
+
+interface SlackConversationMessage {
+  type?: string
+  subtype?: string
+  channel?: string
+  user?: string
+  bot_id?: string
+  text?: string
+  ts?: string
+  thread_ts?: string
+}
+
 export interface SlackPostResult {
   channel: string
   ts: string
@@ -93,6 +112,14 @@ export type SlackFileUploadResult =
 export type SlackFileUploadPrepareResult =
   | { ok: true; uploadUrl: string; fileId: string }
   | { ok: false; error: string }
+
+export interface SlackTeamReply {
+  channel: string
+  user?: string
+  text: string
+  ts: string
+  threadTs?: string
+}
 
 export function getSlackConfig() {
   return {
@@ -459,6 +486,39 @@ export async function notifySlackVisitorReply(input: {
   })
 }
 
+export async function fetchSlackTeamReplies(input: {
+  channel: string
+  threadTs?: string
+  dedicatedChannel?: boolean
+  oldestTs?: string
+}) {
+  const replies: SlackTeamReply[] = []
+  const shouldFetchChannelMessages = input.dedicatedChannel || !input.threadTs
+
+  if (shouldFetchChannelMessages) {
+    replies.push(
+      ...(await fetchSlackMessages('conversations.history', {
+        channel: input.channel,
+        ...(input.oldestTs ? { oldest: input.oldestTs } : {}),
+        limit: '50',
+      })),
+    )
+  }
+
+  if (input.threadTs) {
+    replies.push(
+      ...(await fetchSlackMessages('conversations.replies', {
+        channel: input.channel,
+        ts: input.threadTs,
+        ...(input.oldestTs ? { oldest: input.oldestTs } : {}),
+        limit: '50',
+      })),
+    )
+  }
+
+  return sortUniqueSlackReplies(replies)
+}
+
 export async function uploadSlackChatAttachment(input: {
   attachment: ValidatedChatAttachment
   channel?: string
@@ -620,6 +680,51 @@ function secureCompare(actual: string, expected: string) {
 
 function escapeSlack(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+async function fetchSlackMessages(method: 'conversations.history' | 'conversations.replies', params: Record<string, string>) {
+  const { botToken } = getSlackConfig()
+  if (!botToken) return []
+
+  const response = await fetch(`https://slack.com/api/${method}?${new URLSearchParams(params).toString()}`, {
+    headers: {
+      authorization: `Bearer ${botToken}`,
+    },
+  })
+
+  const data = (await response.json()) as SlackConversationMessagesResponse
+  if (!response.ok || !data.ok) {
+    console.error(`Slack ${method} failed:`, formatSlackApiError(data, response.statusText))
+    return []
+  }
+
+  return (data.messages || [])
+    .filter(isSlackTeamReply)
+    .map((message) => ({
+      channel: message.channel || params.channel,
+      user: message.user,
+      text: message.text || '',
+      ts: message.ts || '',
+      threadTs: message.thread_ts,
+    }))
+}
+
+function isSlackTeamReply(message: SlackConversationMessage): message is SlackConversationMessage & { text: string; ts: string } {
+  return Boolean(
+    message.type === 'message' &&
+      !message.subtype &&
+      !message.bot_id &&
+      message.text &&
+      message.ts,
+  )
+}
+
+function sortUniqueSlackReplies(replies: SlackTeamReply[]) {
+  const byTs = new Map<string, SlackTeamReply>()
+  replies.forEach((reply) => {
+    if (reply.ts) byTs.set(reply.ts, reply)
+  })
+  return [...byTs.values()].sort((first, second) => Number(first.ts) - Number(second.ts))
 }
 
 function getStudioBaseUrl(baseUrl: string | undefined) {
