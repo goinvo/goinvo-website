@@ -20,9 +20,10 @@ import {
 } from '@/lib/chat/validation'
 import {
   applySlackFileUploadResult,
+  getSlackConfig,
   isSlackPostingConfigured,
-  notifySlackNewThread,
   notifySlackVisitorReply,
+  startSlackChatConversation,
   uploadSlackChatAttachment,
 } from '@/lib/chat/slack'
 
@@ -39,7 +40,7 @@ interface PublicThread {
   visitor?: { name?: string; email?: string }
   messages?: SanityChatMessage[]
   source?: { pageUrl?: string }
-  slack?: { channelId?: string; threadTs?: string }
+  slack?: { channelId?: string; channelName?: string; threadTs?: string; dedicatedChannel?: boolean }
   noResponseFallbackSentAt?: string
   noResponseFallbackVariant?: NoResponseFallbackVariant
   noResponseEmailSentAt?: string
@@ -165,18 +166,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
   await patch.commit()
 
   if (thread.slack?.threadTs) {
-    await notifySlackVisitorReply({
+    const isDedicatedSlackChannel = Boolean(
+      thread.slack.dedicatedChannel ||
+        (thread.slack.channelId && thread.slack.channelId !== getSlackConfig().channelId),
+    )
+    const slackReply = await notifySlackVisitorReply({
       threadId,
+      channel: thread.slack.channelId,
       threadTs: thread.slack.threadTs,
       visitorName: thread.visitor?.name || extractedName,
       message: visibleMessageText,
+      replyInThread: !isDedicatedSlackChannel,
     })
 
     if (attachment && chatAttachment) {
       const uploadResult = await uploadSlackChatAttachment({
         attachment,
         channel: thread.slack.channelId,
-        threadTs: thread.slack.threadTs,
+        threadTs: isDedicatedSlackChannel ? slackReply?.ts : thread.slack.threadTs,
         initialComment: `Attachment from ${thread.visitor?.name || extractedName || 'visitor'}: ${attachment.filename}`,
       })
       await setMessageAttachments(client, threadId, message._key, [
@@ -184,7 +191,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       ])
     }
   } else {
-    const slackResult = await notifySlackNewThread({
+    const slackResult = await startSlackChatConversation({
       threadId,
       visitorName: thread.visitor?.name || extractedName,
       visitorEmail: thread.visitor?.email || extractedEmail,
@@ -217,7 +224,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
         .set({
           slack: {
             channelId: slackResult.channel,
+            ...(slackResult.channelName ? { channelName: slackResult.channelName } : {}),
             threadTs: slackResult.ts,
+            dedicatedChannel: slackResult.dedicatedChannel,
+            ...(slackResult.hubChannelId ? { hubChannelId: slackResult.hubChannelId } : {}),
+            ...(slackResult.hubThreadTs ? { hubThreadTs: slackResult.hubThreadTs } : {}),
             lastPostAt: new Date().toISOString(),
           },
         })

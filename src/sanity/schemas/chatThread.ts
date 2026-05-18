@@ -187,7 +187,11 @@ export default defineType({
       group: 'routing',
       fields: [
         { name: 'channelId', title: 'Channel ID', type: 'string', readOnly: true },
+        { name: 'channelName', title: 'Channel Name', type: 'string', readOnly: true },
         { name: 'threadTs', title: 'Thread Timestamp', type: 'string', readOnly: true },
+        { name: 'dedicatedChannel', title: 'Dedicated Channel', type: 'boolean', readOnly: true },
+        { name: 'hubChannelId', title: 'Hub Channel ID', type: 'string', readOnly: true },
+        { name: 'hubThreadTs', title: 'Hub Thread Timestamp', type: 'string', readOnly: true },
         { name: 'lastPostAt', title: 'Last Post At', type: 'datetime', readOnly: true },
       ],
     }),
