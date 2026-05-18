@@ -120,6 +120,17 @@ export default defineType({
                     { name: 'contentType', title: 'Content Type', type: 'string', validation: (Rule) => Rule.required() },
                     { name: 'size', title: 'Size', type: 'number', validation: (Rule) => Rule.required() },
                     {
+                      name: 'storageMode',
+                      title: 'Storage Mode',
+                      type: 'string',
+                      options: {
+                        list: [
+                          { title: 'Inline Chat API', value: 'inline' },
+                          { title: 'Slack File', value: 'slack' },
+                        ],
+                      },
+                    },
+                    {
                       name: 'uploadStatus',
                       title: 'Upload Status',
                       type: 'string',
@@ -133,6 +144,9 @@ export default defineType({
                     },
                     { name: 'slackFileId', title: 'Slack File ID', type: 'string', readOnly: true },
                     { name: 'slackFileTitle', title: 'Slack File Title', type: 'string', readOnly: true },
+                    { name: 'slackPermalink', title: 'Slack Permalink', type: 'url', readOnly: true },
+                    { name: 'slackPermalinkPublic', title: 'Slack Public Permalink', type: 'url', readOnly: true },
+                    { name: 'slackPrivateUrl', title: 'Slack Private URL', type: 'url', readOnly: true },
                     { name: 'error', title: 'Error', type: 'text', rows: 2, readOnly: true },
                   ],
                   preview: {

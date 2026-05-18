@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import { siteConfig } from '@/lib/config'
-import type { ChatAttachment, ValidatedChatAttachment } from '@/lib/chat/attachments'
+import type { ChatAttachment, ChatAttachmentMetadata, ValidatedChatAttachment } from '@/lib/chat/attachments'
 
 type SlackBlock = Record<string, unknown>
 
@@ -45,7 +45,13 @@ interface SlackUploadUrlResponse {
 
 interface SlackCompleteUploadResponse {
   ok: boolean
-  files?: { id?: string; title?: string }[]
+  files?: {
+    id?: string
+    title?: string
+    permalink?: string
+    permalink_public?: string
+    url_private?: string
+  }[]
   error?: string
   needed?: string
   provided?: string
@@ -75,7 +81,18 @@ export interface SlackConversationStartResult extends SlackPostResult {
 }
 
 export type SlackFileUploadResult =
-  | { ok: true; fileId: string; title?: string }
+  | {
+      ok: true
+      fileId: string
+      title?: string
+      permalink?: string
+      permalinkPublic?: string
+      privateUrl?: string
+    }
+  | { ok: false; error: string }
+
+export type SlackFileUploadPrepareResult =
+  | { ok: true; uploadUrl: string; fileId: string }
   | { ok: false; error: string }
 
 export function getSlackConfig() {
@@ -441,23 +458,37 @@ export async function uploadSlackChatAttachment(input: {
   threadTs?: string
   initialComment?: string
 }): Promise<SlackFileUploadResult> {
+  const prepared = await prepareSlackChatAttachmentUpload({ attachment: input.attachment })
+  if (!prepared.ok) return prepared
+
+  return uploadPreparedSlackChatAttachment({
+    ...input,
+    uploadUrl: prepared.uploadUrl,
+    fileId: prepared.fileId,
+  })
+}
+
+export async function prepareSlackChatAttachmentUpload(input: {
+  attachment: ChatAttachmentMetadata
+}): Promise<SlackFileUploadPrepareResult> {
   const config = getSlackConfig()
-  const channel = input.channel || config.channelId
-  if (!config.botToken || !channel) {
+  if (!config.botToken) {
     return { ok: false, error: 'Slack file uploads are not configured' }
   }
+
+  const params = new URLSearchParams({
+    filename: input.attachment.filename,
+    length: String(input.attachment.size),
+    alt_txt: input.attachment.filename,
+  })
 
   const uploadUrlResponse = await fetch('https://slack.com/api/files.getUploadURLExternal', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${config.botToken}`,
-      'content-type': 'application/json; charset=utf-8',
+      'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
     },
-    body: JSON.stringify({
-      filename: input.attachment.filename,
-      length: input.attachment.size,
-      alt_txt: input.attachment.filename,
-    }),
+    body: params,
   })
 
   const uploadUrlData = (await uploadUrlResponse.json()) as SlackUploadUrlResponse
@@ -470,7 +501,22 @@ export async function uploadSlackChatAttachment(input: {
     }
   }
 
-  const uploadResponse = await fetch(uploadUrlData.upload_url, {
+  return {
+    ok: true,
+    uploadUrl: uploadUrlData.upload_url,
+    fileId: uploadUrlData.file_id,
+  }
+}
+
+export async function uploadPreparedSlackChatAttachment(input: {
+  attachment: ValidatedChatAttachment
+  uploadUrl: string
+  fileId: string
+  channel?: string
+  threadTs?: string
+  initialComment?: string
+}): Promise<SlackFileUploadResult> {
+  const uploadResponse = await fetch(input.uploadUrl, {
     method: 'POST',
     headers: {
       'content-type': input.attachment.contentType,
@@ -483,18 +529,36 @@ export async function uploadSlackChatAttachment(input: {
     return { ok: false, error: uploadResponse.statusText || 'Unable to upload file to Slack' }
   }
 
+  return completeSlackChatAttachmentUpload(input)
+}
+
+export async function completeSlackChatAttachmentUpload(input: {
+  attachment: ChatAttachmentMetadata
+  fileId: string
+  channel?: string
+  threadTs?: string
+  initialComment?: string
+}): Promise<SlackFileUploadResult> {
+  const config = getSlackConfig()
+  const channel = input.channel || config.channelId
+  if (!config.botToken || !channel) {
+    return { ok: false, error: 'Slack file uploads are not configured' }
+  }
+
+  const params = new URLSearchParams({
+    channel_id: channel,
+    files: JSON.stringify([{ id: input.fileId, title: input.attachment.filename }]),
+  })
+  if (input.threadTs) params.set('thread_ts', input.threadTs)
+  if (input.initialComment) params.set('initial_comment', input.initialComment)
+
   const completeResponse = await fetch('https://slack.com/api/files.completeUploadExternal', {
     method: 'POST',
     headers: {
       authorization: `Bearer ${config.botToken}`,
-      'content-type': 'application/json; charset=utf-8',
+      'content-type': 'application/x-www-form-urlencoded; charset=utf-8',
     },
-    body: JSON.stringify({
-      channel_id: channel,
-      initial_comment: input.initialComment,
-      ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
-      files: [{ id: uploadUrlData.file_id, title: input.attachment.filename }],
-    }),
+    body: params,
   })
 
   const completeData = (await completeResponse.json()) as SlackCompleteUploadResponse
@@ -509,8 +573,11 @@ export async function uploadSlackChatAttachment(input: {
 
   return {
     ok: true,
-    fileId: completeData.files?.[0]?.id || uploadUrlData.file_id,
+    fileId: completeData.files?.[0]?.id || input.fileId,
     title: completeData.files?.[0]?.title || input.attachment.filename,
+    permalink: completeData.files?.[0]?.permalink,
+    permalinkPublic: completeData.files?.[0]?.permalink_public,
+    privateUrl: completeData.files?.[0]?.url_private,
   }
 }
 
@@ -524,6 +591,9 @@ export function applySlackFileUploadResult(
       uploadStatus: 'uploaded',
       slackFileId: result.fileId,
       ...(result.title ? { slackFileTitle: result.title } : {}),
+      ...(result.permalink ? { slackPermalink: result.permalink } : {}),
+      ...(result.permalinkPublic ? { slackPermalinkPublic: result.permalinkPublic } : {}),
+      ...(result.privateUrl ? { slackPrivateUrl: result.privateUrl } : {}),
     }
   }
 

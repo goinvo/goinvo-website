@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES,
   MAX_CHAT_ATTACHMENT_SIZE_BYTES,
   createChatAttachment,
   formatAttachmentSize,
   validateChatAttachment,
+  validateChatAttachmentMetadata,
+  validateInlineChatAttachment,
 } from '@/lib/chat/attachments'
 import {
   MAX_CHAT_MESSAGE_LENGTH,
@@ -47,10 +50,27 @@ describe('chat validation helpers', () => {
     )
 
     expect(
-      validateChatAttachment(
-        new File([new Uint8Array(MAX_CHAT_ATTACHMENT_SIZE_BYTES + 1)], 'large.png', { type: 'image/png' }),
-      ).error,
+      validateChatAttachment(createFileLike('large.png', 'image/png', MAX_CHAT_ATTACHMENT_SIZE_BYTES + 1)).error,
     ).toBe(`Attachment must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_SIZE_BYTES)} or smaller`)
+  })
+
+  it('limits inline CMS uploads separately from Slack-routed attachments', () => {
+    const largeImage = createFileLike('large.png', 'image/png', MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES + 1)
+
+    expect(validateInlineChatAttachment(largeImage).error).toBe(
+      `Attachment must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES)} or smaller`,
+    )
+    expect(
+      validateChatAttachmentMetadata({
+        filename: largeImage.name,
+        contentType: largeImage.type,
+        size: largeImage.size,
+      }).attachment,
+    ).toMatchObject({
+      filename: 'large.png',
+      contentType: 'image/png',
+      size: MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES + 1,
+    })
   })
 
   it('extracts an email address from a chat reply', () => {
@@ -123,3 +143,12 @@ describe('chat validation helpers', () => {
     ])
   })
 })
+
+function createFileLike(name: string, type: string, size: number): File {
+  return {
+    name,
+    type,
+    size,
+    arrayBuffer: async () => new ArrayBuffer(0),
+  } as File
+}
