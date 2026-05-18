@@ -54,13 +54,11 @@ export async function POST(request: NextRequest) {
 async function handleSlackEvent(event: SlackMessageEvent) {
   if (event.type !== 'message') return
   if (event.subtype || event.bot_id) return
-  if (!event.text || !event.ts || !event.channel) return
+  if (!event.text || !event.ts || !event.thread_ts) return
+  if (event.ts === event.thread_ts) return
 
   const { channelId } = getSlackConfig()
-  const eventThreadTs = event.thread_ts && event.thread_ts !== event.ts ? event.thread_ts : undefined
-  const isHubChannel = Boolean(channelId && event.channel === channelId)
-
-  if (isHubChannel && !eventThreadTs) return
+  if (channelId && event.channel !== channelId) return
 
   const text = normalizeChatText(event.text)
   if (!text) return
@@ -68,11 +66,14 @@ async function handleSlackEvent(event: SlackMessageEvent) {
   const client = getChatSanityClient()
   if (!client) return
 
-  const thread = await findSlackBackedThread({
-    channelId: event.channel,
-    threadTs: eventThreadTs,
-    isHubChannel,
-  })
+  const thread = await client.fetch<SlackBackedThread | null>(
+    `*[_type == "chatThread" && slack.threadTs == $threadTs][0]{
+      _id,
+      status,
+      messages[]{_key, _type, authorType, authorName, authorEmail, text, createdAt, slackUserId, slackMessageTs}
+    }`,
+    { threadTs: event.thread_ts },
+  )
 
   if (!thread || thread.status === 'spam' || thread.status === 'archived') return
   if ((thread.messages || []).some((message) => message.slackMessageTs === event.ts)) return
@@ -99,41 +100,6 @@ async function handleSlackEvent(event: SlackMessageEvent) {
       lastMessagePreview: previewText(text),
     })
     .commit()
-}
-
-async function findSlackBackedThread(input: {
-  channelId: string
-  threadTs?: string
-  isHubChannel: boolean
-}) {
-  const client = getChatSanityClient()
-  if (!client) return null
-
-  const projection = `{
-    _id,
-    status,
-    messages[]{_key, _type, authorType, authorName, authorEmail, text, createdAt, slackUserId, slackMessageTs}
-  }`
-
-  if (input.isHubChannel) {
-    if (!input.threadTs) return null
-    return client.fetch<SlackBackedThread | null>(
-      `*[_type == "chatThread" && slack.threadTs == $threadTs][0]${projection}`,
-      { threadTs: input.threadTs },
-    )
-  }
-
-  const byChannel = await client.fetch<SlackBackedThread | null>(
-    `*[_type == "chatThread" && slack.channelId == $channelId][0]${projection}`,
-    { channelId: input.channelId },
-  )
-
-  if (byChannel || !input.threadTs) return byChannel
-
-  return client.fetch<SlackBackedThread | null>(
-    `*[_type == "chatThread" && slack.threadTs == $threadTs][0]${projection}`,
-    { threadTs: input.threadTs },
-  )
 }
 
 function slackTimestampToIso(ts: string) {
