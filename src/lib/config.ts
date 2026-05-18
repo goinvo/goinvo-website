@@ -41,10 +41,6 @@ export const siteConfig = {
     googleAdsId: 'AW-973476681',
     googleAdsConversionLabel: 'oygPCN6t2W4QyaaY0AM',
   },
-  chatlio: {
-    widgetId: '413f13c1-0a3b-447f-45a6-f99b340d8c78',
-    allowedHosts: ['goinvo.com', 'www.goinvo.com'],
-  },
   blogFeedUrl: 'https://yes.goinvo.com/articles/rss.xml',
   maxWidth: {
     default: 1020,
