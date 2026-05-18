@@ -375,7 +375,7 @@ export function ChatWidget() {
                         className={`min-w-0 rounded-[18px] px-3 py-2 text-sm leading-6 ${
                           isVisitor
                             ? 'max-w-[82%] bg-secondary text-white'
-                            : 'max-w-[calc(100%-3rem)] border border-gray-medium bg-white text-black'
+                            : 'max-w-[calc(100%-3rem)] rounded-l-none border border-gray-medium bg-white text-black'
                         }`}
                       >
                         <div className="whitespace-pre-wrap break-words">{message.text}</div>
