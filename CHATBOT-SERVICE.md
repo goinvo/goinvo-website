@@ -78,11 +78,7 @@ Each new website chat creates a dedicated public Slack channel named like `#webs
 
 Teammate replies made in the dedicated conversation channel, either as top-level messages or thread replies, are pushed to `/api/slack/events`, appended to the Sanity `chatThread`, and shown in the website widget on the next poll. Visitor follow-up messages are posted back into the dedicated Slack channel. In fallback mode, Slack replies should be made in the thread created by the bot, and visitor follow-up messages are posted back into that same Slack thread.
 
-Visitor messages can include one attachment up to Slack's per-file upload limit, currently 1 GB. Supported types are common images (`jpg`, `png`, `gif`, `webp`), videos (`mp4`, `webm`, `mov`), PDFs, and plain text/CSV files.
-
-Attachments at or below 4 MB are routed through the website API, sent to Slack, and stored in Sanity only as metadata plus Slack upload status. Larger attachments skip CMS file storage entirely: the browser asks the website API for a Slack upload URL, uploads the file directly to Slack, and the API stores the Slack file ID/permalink when the upload is completed. This keeps the CMS as the thread system of record without turning it into a file store.
-
-Slack uploads use `files.getUploadURLExternal` and `files.completeUploadExternal`, so the Slack app must have the `files:write` bot scope and be reinstalled after adding that scope. The Slack Web API calls are sent as `application/x-www-form-urlencoded`, while the upload URL receives the file bytes directly.
+Visitor messages can include one attachment up to 4 MB. Supported types are common images (`jpg`, `png`, `gif`, `webp`), small videos (`mp4`, `webm`, `mov`), PDFs, and plain text/CSV files. Attachments are sent to Slack with `files.getUploadURLExternal` and `files.completeUploadExternal`, so the Slack app must have the `files:write` bot scope and be reinstalled after adding that scope.
 
 If attachments show `Upload failed`, check the server logs and the attachment error field in Sanity. A common cause is an old bot token that was issued before `files:write` was added. In that case, Slack returns `missing_scope` with `needed: files:write`; reinstall the Slack app, then update `SLACK_BOT_TOKEN` locally and in Vercel with the new Bot User OAuth Token.
 

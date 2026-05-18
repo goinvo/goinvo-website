@@ -2,7 +2,7 @@ import { createHash } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
 import { isAllowedChatRequest } from '@/lib/chat/config'
-import { createChatAttachment, validateChatAttachmentMetadata } from '@/lib/chat/attachments'
+import { createChatAttachment } from '@/lib/chat/attachments'
 import { readChatRequestBody } from '@/lib/chat/request'
 import {
   createChatMessage,
@@ -16,7 +16,6 @@ import {
 import {
   applySlackFileUploadResult,
   isSlackPostingConfigured,
-  prepareSlackChatAttachmentUpload,
   startSlackChatConversation,
   uploadSlackChatAttachment,
 } from '@/lib/chat/slack'
@@ -33,7 +32,6 @@ interface CreateThreadBody {
   sessionId?: unknown
   language?: unknown
   website?: unknown
-  attachment?: unknown
 }
 
 interface CreatedChatThread {
@@ -58,24 +56,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: requestBody.error }, { status: 400 })
   }
 
-  const body = requestBody.fields as CreateThreadBody
-  const pendingAttachmentResult = requestBody.attachment ? {} : validateChatAttachmentMetadata(body.attachment)
-  if (pendingAttachmentResult.error) {
-    return NextResponse.json({ error: pendingAttachmentResult.error }, { status: 400 })
-  }
-
-  const pendingAttachment = pendingAttachmentResult.attachment
-
-  if ((requestBody.attachment || pendingAttachment) && !isSlackPostingConfigured()) {
+  if (requestBody.attachment && !isSlackPostingConfigured()) {
     return NextResponse.json({ error: 'Attachments require Slack to be configured' }, { status: 503 })
   }
 
+  const body = requestBody.fields as CreateThreadBody
   if (typeof body.website === 'string' && body.website.trim()) {
     return NextResponse.json({ error: 'Unable to start chat' }, { status: 400 })
   }
 
   const messageText = normalizeChatText(body.message)
-  if (!messageText && !requestBody.attachment && !pendingAttachment) {
+  if (!messageText && !requestBody.attachment) {
     return NextResponse.json({ error: 'Message or attachment is required' }, { status: 400 })
   }
 
@@ -89,12 +80,8 @@ export async function POST(request: NextRequest) {
   const threadId = `chatThread.${crypto.randomUUID()}`
   const visitorKey = crypto.randomUUID()
   const attachment = requestBody.attachment
-  const chatAttachment = attachment
-    ? createChatAttachment(attachment, 'pending', 'inline')
-    : pendingAttachment
-      ? createChatAttachment(pendingAttachment, 'pending', 'slack')
-      : undefined
-  const visibleMessageText = messageText || `Attached ${attachment?.filename || pendingAttachment?.filename}`
+  const chatAttachment = attachment ? createChatAttachment(attachment) : undefined
+  const visibleMessageText = messageText || `Attached ${attachment?.filename}`
   const message = createChatMessage({
     authorType: 'visitor',
     authorName: visitorName,
@@ -142,7 +129,6 @@ export async function POST(request: NextRequest) {
   })
 
   let responseMessages = [message]
-  let directUpload: DirectUploadResponse | undefined
 
   if (slackResult) {
     if (attachment && chatAttachment) {
@@ -158,32 +144,6 @@ export async function POST(request: NextRequest) {
           attachments: [applySlackFileUploadResult(chatAttachment, uploadResult)],
         },
       ]
-    } else if (pendingAttachment && chatAttachment) {
-      const prepared = await prepareSlackChatAttachmentUpload({ attachment: pendingAttachment })
-      responseMessages = [
-        {
-          ...message,
-          attachments: [
-            prepared.ok
-              ? {
-                  ...chatAttachment,
-                  slackFileId: prepared.fileId,
-                }
-              : {
-                  ...chatAttachment,
-                  uploadStatus: 'failed',
-                  error: prepared.error,
-                },
-          ],
-        },
-      ]
-      if (prepared.ok) {
-        directUpload = {
-          uploadUrl: prepared.uploadUrl,
-          fileId: prepared.fileId,
-          messageId: message._key,
-        }
-      }
     }
 
     await client
@@ -223,14 +183,7 @@ export async function POST(request: NextRequest) {
     status: thread.status,
     visitor: thread.visitor,
     messages: toPublicMessages(responseMessages),
-    ...(directUpload ? { directUpload } : {}),
   })
-}
-
-interface DirectUploadResponse {
-  uploadUrl: string
-  fileId: string
-  messageId: string
 }
 
 function buildThreadTitle(name: string | undefined, email: string | undefined, message: string) {

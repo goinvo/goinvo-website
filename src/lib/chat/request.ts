@@ -1,4 +1,4 @@
-import { validateInlineChatAttachment, type ValidatedChatAttachment } from '@/lib/chat/attachments'
+import { validateChatAttachment, type ValidatedChatAttachment } from '@/lib/chat/attachments'
 
 export interface ChatRequestBody {
   fields: Record<string, unknown>
@@ -11,7 +11,7 @@ export async function readChatRequestBody(request: Request): Promise<ChatRequest
 
   if (contentType.includes('multipart/form-data')) {
     const formData = await request.formData()
-    const attachmentResult = validateInlineChatAttachment(formData.get('attachment'))
+    const attachmentResult = validateChatAttachment(formData.get('attachment'))
     if (attachmentResult.error) return { fields: {}, error: attachmentResult.error }
 
     return {

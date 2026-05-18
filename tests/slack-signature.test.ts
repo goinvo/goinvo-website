@@ -243,21 +243,19 @@ describe('Slack request verification', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3)
 
     const [, uploadUrlRequest] = fetchMock.mock.calls[0]
-    const uploadUrlParams = new URLSearchParams(String(uploadUrlRequest.body))
-    expect(Object.fromEntries(uploadUrlParams.entries())).toEqual({
+    expect(JSON.parse(String(uploadUrlRequest.body))).toEqual({
       filename: 'screen.png',
-      length: '11',
+      length: 11,
       alt_txt: 'screen.png',
     })
 
     const [, completeRequest] = fetchMock.mock.calls[2]
-    const completeParams = new URLSearchParams(String(completeRequest.body))
-    expect(Object.fromEntries(completeParams.entries())).toMatchObject({
+    expect(JSON.parse(String(completeRequest.body))).toEqual({
       channel_id: 'C123',
       thread_ts: '1779062400.000100',
       initial_comment: 'Attachment from Ada: screen.png',
+      files: [{ id: 'F123', title: 'screen.png' }],
     })
-    expect(JSON.parse(completeParams.get('files') ?? '')).toEqual([{ id: 'F123', title: 'screen.png' }])
   })
 
   it('builds Slack-safe dedicated channel names', () => {
