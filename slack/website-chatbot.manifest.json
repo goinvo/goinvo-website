@@ -19,7 +19,7 @@
       "bot": [
         "chat:write",
         "channels:history",
-        "channels:manage",
+        "channels:write",
         "files:write",
         "users:read"
       ]
