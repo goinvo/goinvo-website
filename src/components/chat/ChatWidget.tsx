@@ -278,7 +278,7 @@ export function ChatWidget() {
       {isOpen && (
         <section
           aria-label="GoInvo chat"
-          className="mb-3 flex h-[min(640px,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-md border border-gray-medium bg-white shadow-[0_16px_40px_rgba(29,27,26,0.18)]"
+          className="mb-3 flex h-[min(640px,calc(100vh-7rem))] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-none border border-gray-medium bg-white shadow-[0_16px_40px_rgba(29,27,26,0.18)]"
         >
           <div className="flex min-h-14 items-center justify-between gap-4 bg-tertiary px-4 py-3 text-white">
             <div className="flex min-w-0 items-center gap-2">
@@ -286,7 +286,7 @@ export function ChatWidget() {
                 <button
                   type="button"
                   onClick={handleShowThreads}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 focus:bg-white/10 focus:outline-none"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none text-white transition-colors hover:bg-white/10 focus:bg-white/10 focus:outline-none"
                   aria-label="All messages"
                   title="All messages"
                 >
@@ -307,7 +307,7 @@ export function ChatWidget() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="group relative h-8 w-8 shrink-0 rounded-md border border-white/30 text-white transition-colors hover:bg-white/10"
+              className="group relative h-8 w-8 shrink-0 rounded-none border border-white/30 text-white transition-colors hover:bg-white/10"
               aria-label="Close chat"
             >
               <span className="absolute left-1/2 top-1/2 block h-[2px] w-4 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-current transition-transform group-hover:scale-110" />
@@ -324,7 +324,7 @@ export function ChatWidget() {
                 onStartNewThread={handleStartNewThread}
               />
             ) : !hasThread ? (
-              <div className="rounded-md border border-gray-medium bg-white p-4">
+              <div className="rounded-none border border-gray-medium bg-white p-4">
                 <h3 className="mb-2 font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary">
                   {siteConfig.chat.introTitle}
                 </h3>
@@ -339,7 +339,7 @@ export function ChatWidget() {
                   return (
                     <div key={message.id} className={`flex ${isVisitor ? 'justify-end' : 'justify-start'}`}>
                       <div
-                        className={`max-w-[82%] rounded-md px-3 py-2 text-sm leading-6 ${
+                        className={`max-w-[82%] rounded-none px-3 py-2 text-sm leading-6 ${
                           isVisitor
                             ? 'bg-secondary text-white'
                             : 'border border-gray-medium bg-white text-black'
@@ -356,7 +356,7 @@ export function ChatWidget() {
                             {message.attachments?.map((attachment) => (
                               <div
                                 key={`${message.id}-${attachment.filename}`}
-                                className={`min-w-0 max-w-full overflow-hidden rounded-md border px-2 py-1 text-xs leading-5 ${
+                                className={`min-w-0 max-w-full overflow-hidden rounded-none border px-2 py-1 text-xs leading-5 ${
                                   isVisitor
                                     ? 'border-white/35 bg-white/10 text-white'
                                     : 'border-gray-medium bg-gray-lightest text-gray'
@@ -384,7 +384,7 @@ export function ChatWidget() {
 
           <div className="border-t border-gray-medium bg-white p-4">
             {error && (
-              <div className="mb-3 rounded-md border border-red bg-red/5 px-3 py-2 text-sm leading-5 text-red" role="alert">
+              <div className="mb-3 rounded-none border border-red bg-red/5 px-3 py-2 text-sm leading-5 text-red" role="alert">
                 {error}
               </div>
             )}
@@ -393,7 +393,7 @@ export function ChatWidget() {
               <button
                 type="button"
                 onClick={handleStartNewThread}
-                className="h-10 w-full rounded-md bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
+                className="h-10 w-full rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
               >
                 New conversation
               </button>
@@ -405,7 +405,7 @@ export function ChatWidget() {
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Name"
                   autoComplete="name"
-                  className="h-10 w-full rounded-md border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
+                  className="h-10 w-full rounded-none border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
                 />
                 <input
                   type="email"
@@ -413,7 +413,7 @@ export function ChatWidget() {
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Email"
                   autoComplete="email"
-                  className="h-10 w-full rounded-md border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
+                  className="h-10 w-full rounded-none border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
                 />
                 <label className="sr-only" htmlFor="chat-website">
                   Website
@@ -433,7 +433,7 @@ export function ChatWidget() {
                   placeholder="How can we help?"
                   rows={4}
                   maxLength={2000}
-                  className="min-h-24 w-full resize-none rounded-md border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
+                  className="min-h-24 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
                   required={!initialAttachment}
                 />
                 <AttachmentSummary
@@ -447,7 +447,7 @@ export function ChatWidget() {
                   <button
                     type="submit"
                     disabled={isSubmitting || (!initialMessage.trim() && !initialAttachment)}
-                    className="h-10 flex-1 rounded-md bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
+                    className="h-10 flex-1 rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     {isSubmitting ? 'Sending...' : 'Send'}
                   </button>
@@ -467,7 +467,7 @@ export function ChatWidget() {
                   placeholder="Write a reply"
                   rows={3}
                   maxLength={2000}
-                  className="min-h-20 w-full resize-none rounded-md border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
+                  className="min-h-20 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
                   required={!replyAttachment}
                 />
                 <AttachmentSummary
@@ -481,7 +481,7 @@ export function ChatWidget() {
                   <button
                     type="submit"
                     disabled={isSubmitting || (!replyMessage.trim() && !replyAttachment)}
-                    className="h-10 flex-1 rounded-md bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
+                    className="h-10 flex-1 rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
                   >
                     {isSubmitting ? 'Sending...' : 'Send'}
                   </button>
@@ -502,7 +502,7 @@ export function ChatWidget() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group flex min-h-12 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[30px] bg-[#252a3c] py-3 pl-4 pr-5 text-left text-white shadow-[0_12px_30px_rgba(29,27,26,0.22)] transition-colors hover:bg-tertiary sm:max-w-none"
+          className="group flex min-h-12 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-none bg-[#252a3c] py-3 pl-4 pr-5 text-left text-white shadow-[0_12px_30px_rgba(29,27,26,0.22)] transition-colors hover:bg-tertiary sm:max-w-none"
           aria-expanded={isOpen}
           aria-label="Open GoInvo chat"
         >
@@ -617,7 +617,7 @@ function ThreadList({
 }) {
   if (!threads.length) {
     return (
-      <div className="rounded-md border border-gray-medium bg-white p-4">
+      <div className="rounded-none border border-gray-medium bg-white p-4">
         <h3 className="mb-2 font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary">
           No messages yet
         </h3>
@@ -625,7 +625,7 @@ function ThreadList({
         <button
           type="button"
           onClick={onStartNewThread}
-          className="h-10 w-full rounded-md bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
+          className="h-10 w-full rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
         >
           New conversation
         </button>
@@ -642,7 +642,7 @@ function ThreadList({
             key={storedThread.threadId}
             type="button"
             onClick={() => onOpenThread(storedThread)}
-            className={`w-full rounded-md border px-3 py-3 text-left transition-colors ${
+            className={`w-full rounded-none border px-3 py-3 text-left transition-colors ${
               isActive
                 ? 'border-secondary bg-white'
                 : 'border-gray-medium bg-white hover:border-secondary hover:bg-gray-lightest'
@@ -692,7 +692,7 @@ function AttachmentPicker({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-gray-medium text-tertiary transition-colors hover:border-secondary hover:text-secondary focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25"
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border border-gray-medium text-tertiary transition-colors hover:border-secondary hover:text-secondary focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/25"
         aria-label={attachment ? `Change attached file: ${attachment.name}` : 'Attach file'}
         title="Attach file"
       >
@@ -720,7 +720,7 @@ function AttachmentSummary({
   if (!attachment) return null
 
   return (
-    <div className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-gray-medium bg-gray-lightest px-3 py-2 text-xs leading-5 text-gray">
+    <div className="flex min-w-0 items-center justify-between gap-2 rounded-none border border-gray-medium bg-gray-lightest px-3 py-2 text-xs leading-5 text-gray">
       <span className="min-w-0 truncate">
         {attachment.name} ({formatAttachmentSize(attachment.size)})
       </span>
