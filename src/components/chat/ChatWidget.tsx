@@ -281,18 +281,18 @@ export function ChatWidget() {
                             {message.attachments?.map((attachment) => (
                               <div
                                 key={`${message.id}-${attachment.filename}`}
-                                className={`border px-2 py-1 text-xs leading-5 ${
+                                className={`min-w-0 max-w-full overflow-hidden border px-2 py-1 text-xs leading-5 ${
                                   isVisitor
                                     ? 'border-white/35 bg-white/10 text-white'
                                     : 'border-gray-medium bg-gray-lightest text-gray'
                                 }`}
                               >
-                                <span className="font-semibold">{attachment.filename}</span>
-                                <span className="ml-1 opacity-80">
-                                  {formatAttachmentSize(attachment.size)}
+                                <span className="block max-w-full break-all font-semibold leading-5">
+                                  {attachment.filename}
                                 </span>
+                                <span className="block opacity-80">{formatAttachmentSize(attachment.size)}</span>
                                 {attachment.uploadStatus === 'failed' && (
-                                  <span className="ml-1 font-semibold">Upload failed</span>
+                                  <span className="block font-semibold">Upload failed</span>
                                 )}
                               </div>
                             ))}
