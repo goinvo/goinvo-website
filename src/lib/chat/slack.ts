@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
+import { siteConfig } from '@/lib/config'
 import type { ChatAttachment, ChatAttachmentMetadata, ValidatedChatAttachment } from '@/lib/chat/attachments'
 
 type SlackBlock = Record<string, unknown>
@@ -182,14 +183,9 @@ export async function getSlackUserDisplayName(userId: string | undefined) {
   )
 }
 
-export function getChatThreadStudioPath(threadId: string) {
-  return `/studio/intent/edit/id=${encodeURIComponent(threadId)};type=chatThread`
-}
-
-export function getChatThreadStudioUrl(threadId: string, baseUrl?: string) {
-  const path = getChatThreadStudioPath(threadId)
-  const resolvedBaseUrl = getStudioBaseUrl(baseUrl)
-  return resolvedBaseUrl ? new URL(path, resolvedBaseUrl).toString() : path
+export function getChatThreadStudioUrl(threadId: string) {
+  const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || siteConfig.url).replace(/\/$/, '')
+  return `${baseUrl}/studio/intent/edit/id=${encodeURIComponent(threadId)};type=chatThread`
 }
 
 export function getSlackChannelPing() {
@@ -271,7 +267,6 @@ export async function notifySlackHubNewConversation(input: {
   visitorEmail?: string
   message: string
   pageUrl?: string
-  studioBaseUrl?: string
 }) {
   const visitor = input.visitorName || input.visitorEmail || 'Anonymous visitor'
   const page = input.pageUrl ? `<${escapeSlack(input.pageUrl)}|source page>` : 'the website'
@@ -312,7 +307,7 @@ export async function notifySlackHubNewConversation(input: {
           {
             type: 'button',
             text: { type: 'plain_text', text: 'Open in CMS' },
-            url: getChatThreadStudioUrl(input.threadId, input.studioBaseUrl),
+            url: getChatThreadStudioUrl(input.threadId),
             action_id: 'goinvo_chat_open_cms',
           },
           {
@@ -334,7 +329,6 @@ export async function startSlackChatConversation(input: {
   visitorEmail?: string
   message: string
   pageUrl?: string
-  studioBaseUrl?: string
 }): Promise<SlackConversationStartResult | null> {
   const conversationChannel = await createSlackConversationChannel(input)
   const hubResult = conversationChannel
@@ -369,7 +363,6 @@ export async function notifySlackNewThread(input: {
   visitorEmail?: string
   message: string
   pageUrl?: string
-  studioBaseUrl?: string
   replyTarget?: 'channel' | 'thread'
 }) {
   const visitor = input.visitorName || input.visitorEmail || 'Anonymous visitor'
@@ -414,7 +407,7 @@ export async function notifySlackNewThread(input: {
           {
             type: 'button',
             text: { type: 'plain_text', text: 'Open in CMS' },
-            url: getChatThreadStudioUrl(input.threadId, input.studioBaseUrl),
+            url: getChatThreadStudioUrl(input.threadId),
             action_id: 'goinvo_chat_open_cms',
           },
           {
@@ -620,22 +613,6 @@ function secureCompare(actual: string, expected: string) {
 
 function escapeSlack(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-function getStudioBaseUrl(baseUrl: string | undefined) {
-  const value = baseUrl || process.env.CHAT_STUDIO_BASE_URL || process.env.NEXT_PUBLIC_SANITY_STUDIO_URL
-  if (!value) return undefined
-
-  try {
-    const url = new URL(value)
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined
-    if (url.pathname === '/studio' || url.pathname.endsWith('/studio/')) {
-      return url.origin
-    }
-    return url.origin
-  } catch {
-    return undefined
-  }
 }
 
 function formatSlackApiError(

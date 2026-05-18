@@ -4,8 +4,6 @@ import { validateChatAttachment } from '@/lib/chat/attachments'
 import {
   applySlackFileUploadResult,
   buildSlackConversationChannelName,
-  getChatThreadStudioPath,
-  getChatThreadStudioUrl,
   notifySlackNewThread,
   notifySlackVisitorReply,
   startSlackChatConversation,
@@ -19,7 +17,6 @@ describe('Slack request verification', () => {
   const originalChannel = process.env.SLACK_CHAT_CHANNEL_ID
   const originalPing = process.env.CHAT_SLACK_CHANNEL_PING
   const originalDedicatedChannels = process.env.CHAT_SLACK_DEDICATED_CHANNELS
-  const originalStudioBaseUrl = process.env.CHAT_STUDIO_BASE_URL
 
   afterEach(() => {
     process.env.SLACK_SIGNING_SECRET = originalSecret
@@ -27,7 +24,6 @@ describe('Slack request verification', () => {
     process.env.SLACK_CHAT_CHANNEL_ID = originalChannel
     process.env.CHAT_SLACK_CHANNEL_PING = originalPing
     process.env.CHAT_SLACK_DEDICATED_CHANNELS = originalDedicatedChannels
-    process.env.CHAT_STUDIO_BASE_URL = originalStudioBaseUrl
     vi.unstubAllGlobals()
   })
 
@@ -102,15 +98,6 @@ describe('Slack request verification', () => {
     expect(body.blocks[2].text.text).toContain('First message:')
   })
 
-  it('builds CMS links from the relative Studio path and current site origin', () => {
-    const threadId = 'chatThread.test'
-
-    expect(getChatThreadStudioPath(threadId)).toBe('/studio/intent/edit/id=chatThread.test;type=chatThread')
-    expect(getChatThreadStudioUrl(threadId, 'http://localhost:3000')).toBe(
-      'http://localhost:3000/studio/intent/edit/id=chatThread.test;type=chatThread',
-    )
-  })
-
   it('creates a dedicated Slack channel and notifies the hub for a new website chat', async () => {
     process.env.SLACK_BOT_TOKEN = 'xoxb-test'
     process.env.SLACK_CHAT_CHANNEL_ID = 'C-HUB'
@@ -138,7 +125,6 @@ describe('Slack request verification', () => {
       visitorName: 'Ada Lovelace',
       message: 'Can we talk about the thing?',
       pageUrl: 'https://www.goinvo.com/',
-      studioBaseUrl: 'http://localhost:3000',
     })
 
     expect(result).toEqual({
@@ -160,17 +146,11 @@ describe('Slack request verification', () => {
     const hubBody = JSON.parse(String(hubRequest.body))
     expect(hubBody.channel).toBe('C-HUB')
     expect(hubBody.blocks[0].text.text).toContain('Join <#C-CHAT|website-chat-ada-abcdef12>')
-    expect(hubBody.blocks[3].elements[0].url).toBe(
-      'http://localhost:3000/studio/intent/edit/id=chatThread.abcdef12-3456-7890-abcd-ef1234567890;type=chatThread',
-    )
 
     const [, chatRequest] = fetchMock.mock.calls[2]
     const chatBody = JSON.parse(String(chatRequest.body))
     expect(chatBody.channel).toBe('C-CHAT')
     expect(chatBody.blocks[0].text.text).toContain('Reply in this Slack channel')
-    expect(chatBody.blocks[3].elements[0].url).toBe(
-      'http://localhost:3000/studio/intent/edit/id=chatThread.abcdef12-3456-7890-abcd-ef1234567890;type=chatThread',
-    )
   })
 
   it('pings and broadcasts visitor follow-ups inside the existing Slack thread', async () => {
