@@ -19,7 +19,6 @@ CHAT_WIDGET_ENABLED=true
 CHAT_WIDGET_ALLOWED_HOSTS=goinvo.com,www.goinvo.com,localhost,127.0.0.1
 CHAT_IP_HASH_SALT=...
 NEXT_PUBLIC_SITE_URL=https://www.goinvo.com
-CHAT_STUDIO_BASE_URL=https://your-next-site.example.com
 
 RESEND_API_KEY=re_...
 CHAT_NO_RESPONSE_EMAIL_ENABLED=true
@@ -36,8 +35,6 @@ CHAT_SLACK_CHANNEL_PING=<!here>
 Slack posting is optional. Without Slack variables, the widget still stores threads in Sanity.
 
 The production Slack channel is `#website-chatbot` (`C0B5EC9LGFJ`).
-
-Slack "Open in CMS" buttons use the relative Studio path `/studio/intent/edit/...` resolved against the incoming chat API request origin. If chat is served from a domain that is not the Next.js/Sanity Studio host, set `CHAT_STUDIO_BASE_URL` to the Next.js site origin so Slack opens Studio instead of the legacy Gatsby site.
 
 ## Slack App Setup
 
