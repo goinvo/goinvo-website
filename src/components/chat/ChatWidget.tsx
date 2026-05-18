@@ -372,7 +372,7 @@ export function ChatWidget() {
                     >
                       {!isVisitor && teamAvatarSrc && <ChatTeamAvatar src={teamAvatarSrc} />}
                       <div
-                        className={`min-w-0 rounded-none px-3 py-2 text-sm leading-6 ${
+                        className={`min-w-0 rounded-[18px] px-3 py-2 text-sm leading-6 ${
                           isVisitor
                             ? 'max-w-[82%] bg-secondary text-white'
                             : 'max-w-[calc(100%-3rem)] border border-gray-medium bg-white text-black'
@@ -384,7 +384,7 @@ export function ChatWidget() {
                             {message.attachments?.map((attachment) => (
                               <div
                                 key={`${message.id}-${attachment.filename}`}
-                                className={`min-w-0 max-w-full overflow-hidden rounded-none border px-2 py-1 text-xs leading-5 ${
+                                className={`min-w-0 max-w-full overflow-hidden rounded-[10px] border px-2 py-1 text-xs leading-5 ${
                                   isVisitor
                                     ? 'border-white/35 bg-white/10 text-white'
                                     : 'border-gray-medium bg-gray-lightest text-gray'
