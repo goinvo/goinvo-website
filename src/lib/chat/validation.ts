@@ -27,10 +27,7 @@ export interface PublicChatMessage {
   authorName?: string
   text: string
   createdAt: string
-  attachments?: Pick<
-    ChatAttachment,
-    'filename' | 'contentType' | 'size' | 'uploadStatus' | 'slackPermalink'
-  >[]
+  attachments?: Pick<ChatAttachment, 'filename' | 'contentType' | 'size' | 'uploadStatus'>[]
 }
 
 export function makeSanityKey() {
@@ -107,7 +104,6 @@ export function toPublicMessages(messages: SanityChatMessage[] | null | undefine
               contentType: attachment.contentType,
               size: attachment.size,
               uploadStatus: attachment.uploadStatus,
-              slackPermalink: attachment.slackPermalink,
             })),
           }
         : {}),
