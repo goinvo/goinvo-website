@@ -17,6 +17,8 @@ interface SlackPostMessageResponse {
   channel?: string
   ts?: string
   error?: string
+  needed?: string
+  provided?: string
 }
 
 interface SlackUserInfoResponse {
@@ -37,17 +39,39 @@ interface SlackUploadUrlResponse {
   upload_url?: string
   file_id?: string
   error?: string
+  needed?: string
+  provided?: string
 }
 
 interface SlackCompleteUploadResponse {
   ok: boolean
   files?: { id?: string; title?: string }[]
   error?: string
+  needed?: string
+  provided?: string
+}
+
+interface SlackCreateConversationResponse {
+  ok: boolean
+  channel?: {
+    id?: string
+    name?: string
+  }
+  error?: string
+  needed?: string
+  provided?: string
 }
 
 export interface SlackPostResult {
   channel: string
   ts: string
+}
+
+export interface SlackConversationStartResult extends SlackPostResult {
+  channelName?: string
+  dedicatedChannel: boolean
+  hubChannelId?: string
+  hubThreadTs?: string
 }
 
 export type SlackFileUploadResult =
@@ -108,7 +132,7 @@ export async function postSlackMessage(input: SlackPostMessageInput): Promise<Sl
 
   const data = (await response.json()) as SlackPostMessageResponse
   if (!response.ok || !data.ok || !data.channel || !data.ts) {
-    console.error('Slack chat.postMessage failed:', data.error || response.statusText)
+    console.error('Slack chat.postMessage failed:', formatSlackApiError(data, response.statusText))
     return null
   }
 
@@ -151,8 +175,77 @@ export function getSlackChannelPing() {
   return process.env.CHAT_SLACK_CHANNEL_PING || '<!here>'
 }
 
-export async function notifySlackNewThread(input: {
+export function getDedicatedSlackChannelsEnabled() {
+  return process.env.CHAT_SLACK_DEDICATED_CHANNELS !== 'false'
+}
+
+export function buildSlackConversationChannelName(input: {
   threadId: string
+  visitorName?: string
+  visitorEmail?: string
+}) {
+  const visitor = input.visitorName || input.visitorEmail?.split('@')[0] || 'visitor'
+  const visitorSlug = visitor
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 42) || 'visitor'
+  const threadSlug = input.threadId
+    .replace(/^chatThread\./, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase()
+    .slice(0, 8)
+
+  return `website-chat-${visitorSlug}-${threadSlug}`.slice(0, 80).replace(/-+$/g, '')
+}
+
+export async function createSlackConversationChannel(input: {
+  threadId: string
+  visitorName?: string
+  visitorEmail?: string
+}) {
+  const config = getSlackConfig()
+  if (!config.botToken || !getDedicatedSlackChannelsEnabled()) return null
+
+  const baseName = buildSlackConversationChannelName(input)
+  const fallbackName = `${baseName.slice(0, 74)}-${Date.now().toString(36).slice(-5)}`.slice(0, 80)
+
+  for (const name of [baseName, fallbackName]) {
+    const response = await fetch('https://slack.com/api/conversations.create', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${config.botToken}`,
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({
+        name,
+        is_private: false,
+      }),
+    })
+
+    const data = (await response.json()) as SlackCreateConversationResponse
+    if (response.ok && data.ok && data.channel?.id) {
+      return {
+        id: data.channel.id,
+        name: data.channel.name || name,
+      }
+    }
+
+    if (data.error === 'name_taken' && name === baseName) {
+      continue
+    }
+
+    console.error('Slack conversations.create failed:', formatSlackApiError(data, response.statusText))
+    return null
+  }
+
+  return null
+}
+
+export async function notifySlackHubNewConversation(input: {
+  threadId: string
+  conversationChannelId: string
+  conversationChannelName?: string
   visitorName?: string
   visitorEmail?: string
   message: string
@@ -161,16 +254,118 @@ export async function notifySlackNewThread(input: {
   const visitor = input.visitorName || input.visitorEmail || 'Anonymous visitor'
   const page = input.pageUrl ? `<${escapeSlack(input.pageUrl)}|source page>` : 'the website'
   const ping = getSlackChannelPing()
-  const text = `${ping} New GoInvo website chat from ${visitor}: ${input.message}`
+  const channelLabel = input.conversationChannelName
+    ? `<#${input.conversationChannelId}|${escapeSlack(input.conversationChannelName)}>`
+    : `<#${input.conversationChannelId}>`
 
   return postSlackMessage({
+    text: `${ping} New GoInvo website chat from ${visitor} in ${channelLabel}: ${input.message}`,
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `${ping} *New website chat from ${escapeSlack(visitor)}*\nJoin ${channelLabel} to answer the website visitor.`,
+        },
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `From ${page}`,
+          },
+        ],
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*First message:*\n>${escapeSlack(input.message)}`,
+        },
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Open in CMS' },
+            url: getChatThreadStudioUrl(input.threadId),
+            action_id: 'goinvo_chat_open_cms',
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: 'Mark resolved' },
+            style: 'primary',
+            value: input.threadId,
+            action_id: 'goinvo_chat_mark_resolved',
+          },
+        ],
+      },
+    ],
+  })
+}
+
+export async function startSlackChatConversation(input: {
+  threadId: string
+  visitorName?: string
+  visitorEmail?: string
+  message: string
+  pageUrl?: string
+}): Promise<SlackConversationStartResult | null> {
+  const conversationChannel = await createSlackConversationChannel(input)
+  const hubResult = conversationChannel
+    ? await notifySlackHubNewConversation({
+        ...input,
+        conversationChannelId: conversationChannel.id,
+        conversationChannelName: conversationChannel.name,
+      })
+    : null
+
+  const firstMessage = await notifySlackNewThread({
+    ...input,
+    channel: conversationChannel?.id,
+    replyTarget: conversationChannel ? 'channel' : 'thread',
+  })
+
+  if (!firstMessage) return null
+
+  return {
+    ...firstMessage,
+    channelName: conversationChannel?.name,
+    dedicatedChannel: Boolean(conversationChannel),
+    hubChannelId: hubResult?.channel,
+    hubThreadTs: hubResult?.ts,
+  }
+}
+
+export async function notifySlackNewThread(input: {
+  channel?: string
+  threadId: string
+  visitorName?: string
+  visitorEmail?: string
+  message: string
+  pageUrl?: string
+  replyTarget?: 'channel' | 'thread'
+}) {
+  const visitor = input.visitorName || input.visitorEmail || 'Anonymous visitor'
+  const page = input.pageUrl ? `<${escapeSlack(input.pageUrl)}|source page>` : 'the website'
+  const ping = getSlackChannelPing()
+  const text = `${ping} New GoInvo website chat from ${visitor}: ${input.message}`
+  const replyInstruction =
+    input.replyTarget === 'channel'
+      ? 'Reply in this Slack channel to answer the website visitor.'
+      : 'Reply in this Slack thread to answer the website visitor.'
+
+  return postSlackMessage({
+    channel: input.channel,
     text,
     blocks: [
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `${ping} *New website chat from ${escapeSlack(visitor)}*\nReply in this Slack thread to answer the website visitor.`,
+          text: `${ping} *New website chat from ${escapeSlack(visitor)}*\n${replyInstruction}`,
         },
       },
       {
@@ -213,16 +408,20 @@ export async function notifySlackNewThread(input: {
 
 export async function notifySlackVisitorReply(input: {
   threadId: string
-  threadTs: string
+  channel?: string
+  threadTs?: string
   visitorName?: string
   message: string
+  replyInThread?: boolean
 }) {
   const visitor = input.visitorName || 'Visitor'
   const ping = getSlackChannelPing()
+  const shouldReplyInThread = input.replyInThread !== false && Boolean(input.threadTs)
 
   return postSlackMessage({
-    threadTs: input.threadTs,
-    replyBroadcast: true,
+    channel: input.channel,
+    threadTs: shouldReplyInThread ? input.threadTs : undefined,
+    replyBroadcast: shouldReplyInThread ? true : undefined,
     text: `${ping} New website chat reply from ${visitor}: ${input.message}`,
     blocks: [
       {
@@ -239,7 +438,7 @@ export async function notifySlackVisitorReply(input: {
 export async function uploadSlackChatAttachment(input: {
   attachment: ValidatedChatAttachment
   channel?: string
-  threadTs: string
+  threadTs?: string
   initialComment?: string
 }): Promise<SlackFileUploadResult> {
   const config = getSlackConfig()
@@ -263,9 +462,11 @@ export async function uploadSlackChatAttachment(input: {
 
   const uploadUrlData = (await uploadUrlResponse.json()) as SlackUploadUrlResponse
   if (!uploadUrlResponse.ok || !uploadUrlData.ok || !uploadUrlData.upload_url || !uploadUrlData.file_id) {
+    const error = formatSlackApiError(uploadUrlData, uploadUrlResponse.statusText || 'Unable to get Slack upload URL')
+    console.error('Slack files.getUploadURLExternal failed:', error)
     return {
       ok: false,
-      error: uploadUrlData.error || uploadUrlResponse.statusText || 'Unable to get Slack upload URL',
+      error,
     }
   }
 
@@ -278,6 +479,7 @@ export async function uploadSlackChatAttachment(input: {
   })
 
   if (!uploadResponse.ok) {
+    console.error('Slack file binary upload failed:', uploadResponse.statusText || uploadResponse.status)
     return { ok: false, error: uploadResponse.statusText || 'Unable to upload file to Slack' }
   }
 
@@ -289,17 +491,19 @@ export async function uploadSlackChatAttachment(input: {
     },
     body: JSON.stringify({
       channel_id: channel,
-      thread_ts: input.threadTs,
       initial_comment: input.initialComment,
+      ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
       files: [{ id: uploadUrlData.file_id, title: input.attachment.filename }],
     }),
   })
 
   const completeData = (await completeResponse.json()) as SlackCompleteUploadResponse
   if (!completeResponse.ok || !completeData.ok) {
+    const error = formatSlackApiError(completeData, completeResponse.statusText || 'Unable to complete Slack file upload')
+    console.error('Slack files.completeUploadExternal failed:', error)
     return {
       ok: false,
-      error: completeData.error || completeResponse.statusText || 'Unable to complete Slack file upload',
+      error,
     }
   }
 
@@ -339,4 +543,17 @@ function secureCompare(actual: string, expected: string) {
 
 function escapeSlack(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function formatSlackApiError(
+  data: { error?: string; needed?: string; provided?: string } | null | undefined,
+  fallback: string,
+) {
+  const error = data?.error || fallback
+  const details = [
+    data?.needed ? `needed: ${data.needed}` : undefined,
+    data?.provided ? `provided: ${data.provided}` : undefined,
+  ].filter(Boolean)
+
+  return details.length ? `${error} (${details.join('; ')})` : error
 }
