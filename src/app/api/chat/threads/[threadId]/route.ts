@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
 import { isAllowedChatRequest } from '@/lib/chat/config'
-import { createChatAttachment, validateChatAttachmentMetadata, type ChatAttachment } from '@/lib/chat/attachments'
+import { createChatAttachment, type ChatAttachment } from '@/lib/chat/attachments'
 import { readChatRequestBody } from '@/lib/chat/request'
 import {
   getNoResponseEmailDraft,
@@ -23,7 +23,6 @@ import {
   getSlackConfig,
   isSlackPostingConfigured,
   notifySlackVisitorReply,
-  prepareSlackChatAttachmentUpload,
   startSlackChatConversation,
   uploadSlackChatAttachment,
 } from '@/lib/chat/slack'
@@ -105,22 +104,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: requestBody.error }, { status: 400 })
   }
 
-  const body = requestBody.fields as { visitorKey?: unknown; message?: unknown; attachment?: unknown }
-  const pendingAttachmentResult = requestBody.attachment ? {} : validateChatAttachmentMetadata(body.attachment)
-  if (pendingAttachmentResult.error) {
-    return NextResponse.json({ error: pendingAttachmentResult.error }, { status: 400 })
-  }
-
-  const pendingAttachment = pendingAttachmentResult.attachment
-
-  if ((requestBody.attachment || pendingAttachment) && !isSlackPostingConfigured()) {
+  if (requestBody.attachment && !isSlackPostingConfigured()) {
     return NextResponse.json({ error: 'Attachments require Slack to be configured' }, { status: 503 })
   }
 
+  const body = requestBody.fields as { visitorKey?: unknown; message?: unknown }
   const visitorKey = typeof body.visitorKey === 'string' ? body.visitorKey : ''
   const messageText = normalizeChatText(body.message)
 
-  if (!messageText && !requestBody.attachment && !pendingAttachment) {
+  if (!messageText && !requestBody.attachment) {
     return NextResponse.json({ error: 'Message or attachment is required' }, { status: 400 })
   }
 
@@ -135,12 +127,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const now = new Date().toISOString()
   const attachment = requestBody.attachment
-  const chatAttachment = attachment
-    ? createChatAttachment(attachment, 'pending', 'inline')
-    : pendingAttachment
-      ? createChatAttachment(pendingAttachment, 'pending', 'slack')
-      : undefined
-  const visibleMessageText = messageText || `Attached ${attachment?.filename || pendingAttachment?.filename}`
+  const chatAttachment = attachment ? createChatAttachment(attachment) : undefined
+  const visibleMessageText = messageText || `Attached ${attachment?.filename}`
   const extractedEmail = thread.visitor?.email ? undefined : extractEmailAddress(visibleMessageText)
   const extractedName = thread.visitor?.name ? undefined : extractVisitorNameFromContactReply(visibleMessageText)
   const message = createChatMessage({
@@ -177,8 +165,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   await patch.commit()
 
-  let directUpload: DirectUploadResponse | undefined
-
   if (thread.slack?.threadTs) {
     const isDedicatedSlackChannel = Boolean(
       thread.slack.dedicatedChannel ||
@@ -203,26 +189,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
       await setMessageAttachments(client, threadId, message._key, [
         applySlackFileUploadResult(chatAttachment, uploadResult),
       ])
-    } else if (pendingAttachment && chatAttachment) {
-      const prepared = await prepareSlackChatAttachmentUpload({ attachment: pendingAttachment })
-      const preparedAttachment = prepared.ok
-        ? {
-            ...chatAttachment,
-            slackFileId: prepared.fileId,
-          }
-        : {
-            ...chatAttachment,
-            uploadStatus: 'failed' as const,
-            error: prepared.error,
-          }
-      await setMessageAttachments(client, threadId, message._key, [preparedAttachment])
-      if (prepared.ok) {
-        directUpload = {
-          uploadUrl: prepared.uploadUrl,
-          fileId: prepared.fileId,
-          messageId: message._key,
-        }
-      }
     }
   } else {
     const slackResult = await startSlackChatConversation({
@@ -242,27 +208,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         initialComment: `Attachment from ${thread.visitor?.name || extractedName || 'visitor'}: ${attachment.filename}`,
       })
       uploadedAttachments = [applySlackFileUploadResult(chatAttachment, uploadResult)]
-    } else if (slackResult && pendingAttachment && chatAttachment) {
-      const prepared = await prepareSlackChatAttachmentUpload({ attachment: pendingAttachment })
-      uploadedAttachments = [
-        prepared.ok
-          ? {
-              ...chatAttachment,
-              slackFileId: prepared.fileId,
-            }
-          : {
-              ...chatAttachment,
-              uploadStatus: 'failed',
-              error: prepared.error,
-            },
-      ]
-      if (prepared.ok) {
-        directUpload = {
-          uploadUrl: prepared.uploadUrl,
-          fileId: prepared.fileId,
-          messageId: message._key,
-        }
-      }
     } else if (chatAttachment) {
       uploadedAttachments = [
         {
@@ -297,23 +242,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const updated = await client.fetch<PublicThread | null>(publicThreadQuery, { threadId, visitorKey })
   const updatedWithEmail = updated ? await sendNoResponseEmailIfDue(client, updated, visitorKey) : null
-  return NextResponse.json(
-    updatedWithEmail
-      ? {
-          ...toThreadResponse(updatedWithEmail),
-          ...(directUpload ? { directUpload } : {}),
-        }
-      : { error: 'Thread not found' },
-    {
-      status: updatedWithEmail ? 200 : 404,
-    },
-  )
-}
-
-interface DirectUploadResponse {
-  uploadUrl: string
-  fileId: string
-  messageId: string
+  return NextResponse.json(updatedWithEmail ? toThreadResponse(updatedWithEmail) : { error: 'Thread not found' }, {
+    status: updatedWithEmail ? 200 : 404,
+  })
 }
 
 async function setMessageAttachments(
