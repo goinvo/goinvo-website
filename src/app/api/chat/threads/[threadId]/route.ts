@@ -20,7 +20,9 @@ import {
 } from '@/lib/chat/validation'
 import {
   applySlackFileUploadResult,
+  fetchSlackTeamReplies,
   getSlackConfig,
+  getSlackUserDisplayName,
   isSlackPostingConfigured,
   notifySlackVisitorReply,
   prepareSlackChatAttachmentUpload,
@@ -84,7 +86,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
   }
 
-  const threadWithFallback = await appendNoResponseFallbackIfDue(client, thread, visitorKey)
+  const threadWithSlackReplies = await appendSlackRepliesIfAvailable(client, thread, visitorKey)
+  const threadWithFallback = await appendNoResponseFallbackIfDue(client, threadWithSlackReplies, visitorKey)
   const threadWithEmail = await sendNoResponseEmailIfDue(client, threadWithFallback, visitorKey)
   return NextResponse.json(toThreadResponse(threadWithEmail))
 }
@@ -331,6 +334,82 @@ async function setMessageAttachments(
     .commit()
 }
 
+async function appendSlackRepliesIfAvailable(
+  client: NonNullable<ReturnType<typeof getChatSanityClient>>,
+  thread: PublicThread,
+  visitorKey: string,
+) {
+  if (thread.status === 'spam' || thread.status === 'archived') return thread
+  if (!thread.slack?.channelId) return thread
+
+  const existingSlackMessageTs = new Set((thread.messages || []).map((message) => message.slackMessageTs).filter(Boolean))
+  const replies = (
+    await fetchSlackTeamReplies({
+      channel: thread.slack.channelId,
+      threadTs: thread.slack.threadTs,
+      dedicatedChannel: thread.slack.dedicatedChannel,
+      oldestTs: thread.slack.threadTs,
+    })
+  ).filter((reply) => !existingSlackMessageTs.has(reply.ts))
+
+  if (!replies.length) return thread
+
+  const messages: SanityChatMessage[] = []
+  const userNames = new Map<string, string | undefined>()
+  for (const reply of replies) {
+    const text = normalizeChatText(reply.text)
+    if (!text) continue
+
+    let authorName: string | undefined
+    if (reply.user) {
+      if (!userNames.has(reply.user)) {
+        userNames.set(reply.user, await getSlackUserDisplayName(reply.user))
+      }
+      authorName = userNames.get(reply.user)
+    }
+
+    messages.push(
+      createChatMessage({
+        authorType: 'team',
+        authorName: authorName || 'GoInvo',
+        text,
+        createdAt: slackTimestampToIso(reply.ts),
+        slackUserId: reply.user,
+        slackMessageTs: reply.ts,
+      }),
+    )
+  }
+
+  if (!messages.length) return thread
+
+  const lastMessage = messages.at(-1)
+  const patch = client
+    .patch(thread._id)
+    .setIfMissing({ messages: [] })
+    .append('messages', messages)
+    .set({
+      status: 'waitingOnVisitor',
+      lastMessageAt: lastMessage?.createdAt,
+      lastTeamMessageAt: lastMessage?.createdAt,
+      lastMessagePreview: previewText(lastMessage?.text || ''),
+    })
+
+  if (thread._rev) {
+    patch.ifRevisionId(thread._rev)
+  }
+
+  try {
+    await patch.commit()
+  } catch (error) {
+    console.error('Failed to append Slack chat replies:', error)
+  }
+
+  return (await client.fetch<PublicThread | null>(publicThreadQuery, {
+    threadId: thread._id,
+    visitorKey,
+  })) || thread
+}
+
 async function appendNoResponseFallbackIfDue(
   client: NonNullable<ReturnType<typeof getChatSanityClient>>,
   thread: PublicThread,
@@ -438,4 +517,10 @@ function toThreadResponse(thread: PublicThread) {
     visitor: thread.visitor,
     messages: toPublicMessages(thread.messages),
   }
+}
+
+function slackTimestampToIso(ts: string) {
+  const seconds = Number(ts.split('.')[0])
+  if (!Number.isFinite(seconds)) return new Date().toISOString()
+  return new Date(seconds * 1000).toISOString()
 }
