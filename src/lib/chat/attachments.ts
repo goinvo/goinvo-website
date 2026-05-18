@@ -1,4 +1,5 @@
-export const MAX_CHAT_ATTACHMENT_SIZE_BYTES = 4 * 1024 * 1024
+export const MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES = 4 * 1024 * 1024
+export const MAX_CHAT_ATTACHMENT_SIZE_BYTES = 1024 * 1024 * 1024
 
 export const CHAT_ATTACHMENT_TYPES = [
   'image/jpeg',
@@ -30,6 +31,7 @@ export const CHAT_ATTACHMENT_ACCEPT = [
 
 export type ChatAttachmentContentType = (typeof CHAT_ATTACHMENT_TYPES)[number]
 export type ChatAttachmentUploadStatus = 'pending' | 'uploaded' | 'failed'
+export type ChatAttachmentStorageMode = 'inline' | 'slack'
 
 export interface ChatAttachment {
   _key: string
@@ -38,13 +40,23 @@ export interface ChatAttachment {
   contentType: ChatAttachmentContentType
   size: number
   uploadStatus?: ChatAttachmentUploadStatus
+  storageMode?: ChatAttachmentStorageMode
   slackFileId?: string
   slackFileTitle?: string
+  slackPermalink?: string
+  slackPermalinkPublic?: string
+  slackPrivateUrl?: string
   error?: string
 }
 
 export interface ValidatedChatAttachment {
   file: File
+  filename: string
+  contentType: ChatAttachmentContentType
+  size: number
+}
+
+export interface ChatAttachmentMetadata {
   filename: string
   contentType: ChatAttachmentContentType
   size: number
@@ -64,15 +76,19 @@ const extensionContentTypes: Record<string, ChatAttachmentContentType> = {
   csv: 'text/csv',
 }
 
-export function validateChatAttachment(value: unknown):
+export function validateChatAttachment(
+  value: unknown,
+  options: { maxSizeBytes?: number } = {},
+):
   | { attachment: ValidatedChatAttachment; error?: never }
   | { attachment?: never; error?: string } {
   if (!isFileLike(value) || !value.name) return {}
 
   const filename = sanitizeFilename(value.name)
+  const maxSizeBytes = options.maxSizeBytes || MAX_CHAT_ATTACHMENT_SIZE_BYTES
   if (!value.size) return { error: 'Attachment is empty' }
-  if (value.size > MAX_CHAT_ATTACHMENT_SIZE_BYTES) {
-    return { error: `Attachment must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_SIZE_BYTES)} or smaller` }
+  if (value.size > maxSizeBytes) {
+    return { error: `Attachment must be ${formatAttachmentSize(maxSizeBytes)} or smaller` }
   }
 
   const contentType = resolveAttachmentContentType(value)
@@ -90,9 +106,43 @@ export function validateChatAttachment(value: unknown):
   }
 }
 
+export function validateInlineChatAttachment(value: unknown) {
+  return validateChatAttachment(value, { maxSizeBytes: MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES })
+}
+
+export function validateChatAttachmentMetadata(value: unknown):
+  | { attachment: ChatAttachmentMetadata; error?: never }
+  | { attachment?: never; error?: string } {
+  if (!value || typeof value !== 'object') return {}
+
+  const record = value as Record<string, unknown>
+  if (typeof record.filename !== 'string') return {}
+
+  const filename = sanitizeFilename(record.filename)
+  const size = typeof record.size === 'number' ? record.size : Number(record.size)
+  if (!Number.isFinite(size) || size <= 0) return { error: 'Attachment is empty' }
+  if (size > MAX_CHAT_ATTACHMENT_SIZE_BYTES) {
+    return { error: `Attachment must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_SIZE_BYTES)} or smaller` }
+  }
+
+  const contentType = resolveAttachmentMetadataContentType(filename, record.contentType)
+  if (!contentType) {
+    return { error: 'Attachment type is not supported' }
+  }
+
+  return {
+    attachment: {
+      filename,
+      contentType,
+      size,
+    },
+  }
+}
+
 export function createChatAttachment(
-  attachment: ValidatedChatAttachment,
+  attachment: ValidatedChatAttachment | ChatAttachmentMetadata,
   uploadStatus: ChatAttachmentUploadStatus = 'pending',
+  storageMode: ChatAttachmentStorageMode = 'inline',
 ): ChatAttachment {
   return {
     _key: crypto.randomUUID().replace(/-/g, '').slice(0, 12),
@@ -101,6 +151,7 @@ export function createChatAttachment(
     contentType: attachment.contentType,
     size: attachment.size,
     uploadStatus,
+    storageMode,
   }
 }
 
@@ -114,6 +165,14 @@ function resolveAttachmentContentType(file: File) {
   if (isAllowedAttachmentType(file.type)) return file.type
 
   const extension = file.name.split('.').pop()?.toLowerCase()
+  if (!extension) return undefined
+  return extensionContentTypes[extension]
+}
+
+function resolveAttachmentMetadataContentType(filename: string, contentType: unknown) {
+  if (typeof contentType === 'string' && isAllowedAttachmentType(contentType)) return contentType
+
+  const extension = filename.split('.').pop()?.toLowerCase()
   if (!extension) return undefined
   return extensionContentTypes[extension]
 }

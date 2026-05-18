@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState, type RefObject } f
 import { siteConfig } from '@/lib/config'
 import {
   CHAT_ATTACHMENT_ACCEPT,
+  MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES,
   formatAttachmentSize,
   validateChatAttachment,
   type ChatAttachment,
@@ -18,7 +19,7 @@ interface ChatMessage {
   authorName?: string
   text: string
   createdAt: string
-  attachments?: Pick<ChatAttachment, 'filename' | 'contentType' | 'size' | 'uploadStatus'>[]
+  attachments?: Pick<ChatAttachment, 'filename' | 'contentType' | 'size' | 'uploadStatus' | 'slackPermalink'>[]
 }
 
 interface StoredThread {
@@ -34,6 +35,13 @@ interface ThreadResponse {
   status: string
   visitor?: { name?: string; email?: string }
   messages: ChatMessage[]
+  directUpload?: DirectUpload
+}
+
+interface DirectUpload {
+  uploadUrl: string
+  fileId: string
+  messageId: string
 }
 
 export function ChatWidget() {
@@ -133,27 +141,17 @@ export function ChatWidget() {
     setIsSubmitting(true)
 
     try {
-      const formData = new FormData()
-      formData.set('name', name)
-      formData.set('email', email)
-      formData.set('message', initialMessage)
-      formData.set('pageUrl', window.location.href)
-      formData.set('pageTitle', document.title)
-      formData.set('referrer', document.referrer)
-      formData.set('sessionId', getBrowserSessionId())
-      formData.set('language', navigator.language)
-      formData.set('website', website)
-      if (initialAttachment) formData.set('attachment', initialAttachment)
-
-      const response = await fetch('/api/chat/threads', {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = (await response.json()) as ThreadResponse & { error?: string }
-      if (!response.ok) {
-        throw new Error(data.error || 'Unable to start chat')
-      }
+      const data = await sendChatRequest('/api/chat/threads', {
+        name,
+        email,
+        message: initialMessage,
+        pageUrl: window.location.href,
+        pageTitle: document.title,
+        referrer: document.referrer,
+        sessionId: getBrowserSessionId(),
+        language: navigator.language,
+        website,
+      }, initialAttachment)
 
       const storedThread = {
         threadId: data.threadId,
@@ -166,6 +164,11 @@ export function ChatWidget() {
       setThread(storedThread)
       setThreadStatus(data.status)
       setMessages(data.messages || [])
+      if (data.directUpload && initialAttachment) {
+        const uploadedData = await uploadDirectAttachment(data.threadId, storedThread.visitorKey, data.directUpload, initialAttachment)
+        setThreadStatus(uploadedData.status)
+        setMessages(uploadedData.messages || [])
+      }
       setInitialMessage('')
       setInitialAttachment(null)
       if (initialAttachmentInputRef.current) initialAttachmentInputRef.current.value = ''
@@ -184,20 +187,14 @@ export function ChatWidget() {
     setIsSubmitting(true)
 
     try {
-      const formData = new FormData()
-      formData.set('visitorKey', thread.visitorKey)
-      formData.set('message', replyMessage)
-      if (replyAttachment) formData.set('attachment', replyAttachment)
-
-      const response = await fetch(`/api/chat/threads/${encodeURIComponent(thread.threadId)}`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      const data = (await response.json()) as ThreadResponse & { error?: string }
-      if (!response.ok) {
-        throw new Error(data.error || 'Unable to send message')
-      }
+      const data = await sendChatRequest(
+        `/api/chat/threads/${encodeURIComponent(thread.threadId)}`,
+        {
+          visitorKey: thread.visitorKey,
+          message: replyMessage,
+        },
+        replyAttachment,
+      )
 
       setThreadStatus(data.status)
       setMessages(data.messages || [])
@@ -207,6 +204,11 @@ export function ChatWidget() {
         setThread(updatedThread)
         setName(updatedThread.name || '')
         setEmail(updatedThread.email || '')
+      }
+      if (data.directUpload && replyAttachment) {
+        const uploadedData = await uploadDirectAttachment(thread.threadId, thread.visitorKey, data.directUpload, replyAttachment)
+        setThreadStatus(uploadedData.status)
+        setMessages(uploadedData.messages || [])
       }
       setReplyMessage('')
       setReplyAttachment(null)
@@ -444,6 +446,81 @@ export function ChatWidget() {
     setError(null)
     onValidFile(file)
   }
+}
+
+async function sendChatRequest(
+  url: string,
+  fields: Record<string, string>,
+  attachment: File | null,
+) {
+  const usesDirectSlackUpload = Boolean(attachment && attachment.size > MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES)
+  const response = await fetch(url, {
+    method: 'POST',
+    ...(usesDirectSlackUpload
+      ? {
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            ...fields,
+            attachment: attachment
+              ? {
+                  filename: attachment.name,
+                  contentType: attachment.type,
+                  size: attachment.size,
+                }
+              : undefined,
+          }),
+        }
+      : {
+          body: toFormData(fields, attachment),
+        }),
+  })
+
+  const data = (await response.json()) as ThreadResponse & { error?: string }
+  if (!response.ok) {
+    throw new Error(data.error || 'Unable to send message')
+  }
+
+  return data
+}
+
+function toFormData(fields: Record<string, string>, attachment: File | null) {
+  const formData = new FormData()
+  Object.entries(fields).forEach(([key, value]) => {
+    formData.set(key, value)
+  })
+  if (attachment) formData.set('attachment', attachment)
+  return formData
+}
+
+async function uploadDirectAttachment(
+  threadId: string,
+  visitorKey: string,
+  directUpload: DirectUpload,
+  attachment: File,
+) {
+  await fetch(directUpload.uploadUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: attachment,
+  })
+
+  const response = await fetch('/api/chat/attachments/complete', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      threadId,
+      visitorKey,
+      messageId: directUpload.messageId,
+      fileId: directUpload.fileId,
+    }),
+  })
+
+  const data = (await response.json()) as ThreadResponse & { error?: string }
+  if (!response.ok) {
+    throw new Error(data.error || 'Unable to finish Slack attachment upload')
+  }
+
+  return data
 }
 
 function AttachmentPicker({
