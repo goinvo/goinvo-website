@@ -41,9 +41,25 @@ export const siteConfig = {
     googleAdsId: 'AW-973476681',
     googleAdsConversionLabel: 'oygPCN6t2W4QyaaY0AM',
   },
-  chatlio: {
-    widgetId: '413f13c1-0a3b-447f-45a6-f99b340d8c78',
-    allowedHosts: ['goinvo.com', 'www.goinvo.com'],
+  chat: {
+    allowedHosts: ['goinvo.com', 'www.goinvo.com', 'localhost', '127.0.0.1', '::1'],
+    pollingIntervalMs: 3000,
+    noResponse: {
+      delayMs: 60_000,
+      withoutContact:
+        "Oops! Sorry no one has responded yet. If you'd like a reply, please type your name and email here in chat and we'll follow up as soon as we can.",
+      withoutEmail:
+        "Oops! Sorry no one has responded yet. If you'd like a reply, please type your email here in chat and we'll follow up as soon as we can.",
+      withEmail:
+        "Oops! Sorry no one has responded yet. We have your email on file, so you can leave and we'll reply as soon as we can, or you can continue to wait.",
+    },
+    greeting: "Question? We're here, ready to chat.",
+    introTitle: 'How can we help?',
+    introText: 'Send us a note and the GoInvo team will reply here as soon as we can.',
+    avatar: {
+      name: 'GoInvo team',
+      image: '/images/about/headshot-shirley-xu.jpg',
+    },
   },
   blogFeedUrl: 'https://yes.goinvo.com/articles/rss.xml',
   maxWidth: {
