@@ -343,6 +343,14 @@ describe('Slack request verification', () => {
         visitorEmail: 'hello+chat@goinvo.com',
       }),
     ).toBe('website-chat-hello-chat-abcdef12')
+
+    expect(
+      buildSlackConversationChannelName({
+        threadId: 'chatThread.ABCDEF12-3456-7890-abcd-ef1234567890',
+        visitorUid: 'cambridge-ma-us-abcdef12',
+        visitorEmail: 'hello+chat@goinvo.com',
+      }),
+    ).toBe('website-chat-cambridge-ma-us-abcdef12')
   })
 
   it('records Slack attachment upload results on message metadata', () => {

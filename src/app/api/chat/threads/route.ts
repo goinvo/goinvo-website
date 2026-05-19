@@ -14,6 +14,11 @@ import {
   type SanityChatMessage,
 } from '@/lib/chat/validation'
 import {
+  buildChatVisitorUid,
+  buildGeneratedChatTitle,
+  getVisitorLocationFromHeaders,
+} from '@/lib/chat/visitorIdentity'
+import {
   applySlackFileUploadResult,
   isSlackPostingConfigured,
   prepareSlackChatAttachmentUpload,
@@ -38,8 +43,9 @@ interface CreateThreadBody {
 
 interface CreatedChatThread {
   _id: string
+  title?: string
   status: string
-  visitor?: { name?: string; email?: string }
+  visitor?: { uid?: string; name?: string; email?: string }
   messages?: SanityChatMessage[]
 }
 
@@ -88,6 +94,8 @@ export async function POST(request: NextRequest) {
   const now = new Date().toISOString()
   const threadId = `chatThread.${crypto.randomUUID()}`
   const visitorKey = crypto.randomUUID()
+  const visitorLocation = getVisitorLocationFromHeaders(request.headers)
+  const visitorUid = buildChatVisitorUid({ threadId, location: visitorLocation })
   const attachment = requestBody.attachment
   const chatAttachment = attachment
     ? createChatAttachment(attachment, 'pending', 'inline')
@@ -111,9 +119,10 @@ export async function POST(request: NextRequest) {
     ...(request.headers.get('user-agent') ? { userAgent: request.headers.get('user-agent') || undefined } : {}),
     ...(asString(body.language, 40) ? { language: asString(body.language, 40) } : {}),
     ...(hashIp(getClientIp(request)) ? { ipHash: hashIp(getClientIp(request)) } : {}),
+    ...(visitorLocation ? { location: visitorLocation } : {}),
   }
 
-  const title = buildThreadTitle(visitorName, visitorEmail, visibleMessageText)
+  const title = buildGeneratedChatTitle(visitorUid)
   const thread = (await client.create({
     _id: threadId,
     _type: 'chatThread',
@@ -122,6 +131,7 @@ export async function POST(request: NextRequest) {
     visitorKey,
     sessionId: asString(body.sessionId, 120),
     visitor: {
+      uid: visitorUid,
       ...(visitorName ? { name: visitorName } : {}),
       ...(visitorEmail ? { email: visitorEmail } : {}),
     },
@@ -137,6 +147,7 @@ export async function POST(request: NextRequest) {
     threadId,
     visitorName,
     visitorEmail: visitorEmail || undefined,
+    visitorUid,
     message: visibleMessageText,
     pageUrl: source.pageUrl,
     studioBaseUrl: request.nextUrl.origin,
@@ -220,6 +231,7 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     threadId: thread._id,
+    title: thread.title || title,
     visitorKey,
     status: thread.status,
     visitor: thread.visitor,
@@ -232,11 +244,6 @@ interface DirectUploadResponse {
   uploadUrl: string
   fileId: string
   messageId: string
-}
-
-function buildThreadTitle(name: string | undefined, email: string | undefined, message: string) {
-  const visitor = name || email || 'Anonymous visitor'
-  return `${visitor}: ${previewText(message, 80)}`
 }
 
 function asString(value: unknown, maxLength: number) {
