@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
 import { HubSpotTracking } from '@/components/analytics/HubSpotTracking'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { ScrollDepthTracker } from '@/components/analytics/ScrollDepthTracker'
 import { ExternalLinkTracker } from '@/components/analytics/ExternalLinkTracker'
@@ -39,6 +40,7 @@ export default async function MainLayout({
       </TransitionLayout>
       <GoogleAnalytics />
       <HubSpotTracking />
+      <ChatWidget />
       <Analytics />
       <SpeedInsights />
       <WebVitals />
