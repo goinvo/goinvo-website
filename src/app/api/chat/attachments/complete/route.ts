@@ -16,8 +16,9 @@ interface CompleteAttachmentBody {
 
 interface PublicThread {
   _id: string
+  title?: string
   status: string
-  visitor?: { name?: string; email?: string }
+  visitor?: { uid?: string; name?: string; email?: string }
   messages?: SanityChatMessage[]
   slack?: {
     channelId?: string
@@ -28,6 +29,7 @@ interface PublicThread {
 
 const publicThreadQuery = `*[_type == "chatThread" && _id == $threadId && visitorKey == $visitorKey][0]{
   _id,
+  title,
   status,
   visitor,
   messages,
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
     fileId,
     channel: thread.slack?.channelId,
     threadTs: thread.slack?.dedicatedChannel ? undefined : thread.slack?.threadTs,
-    initialComment: `Attachment from ${message.authorName || thread.visitor?.name || 'visitor'}: ${attachment.filename}`,
+    initialComment: `Attachment from ${message.authorName || thread.visitor?.name || thread.visitor?.email || thread.visitor?.uid || 'visitor'}: ${attachment.filename}`,
   })
 
   const nextAttachment = applySlackFileUploadResult(attachment, result)
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
     updated
       ? {
           threadId: updated._id,
+          title: updated.title,
           status: updated.status,
           visitor: updated.visitor,
           messages: toPublicMessages(updated.messages),

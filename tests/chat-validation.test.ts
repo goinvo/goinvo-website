@@ -18,6 +18,11 @@ import {
   toPublicMessages,
   type SanityChatMessage,
 } from '@/lib/chat/validation'
+import {
+  buildChatVisitorUid,
+  buildGeneratedChatTitle,
+  getVisitorLocationFromHeaders,
+} from '@/lib/chat/visitorIdentity'
 
 describe('chat validation helpers', () => {
   it('normalizes valid visitor input', () => {
@@ -30,6 +35,31 @@ describe('chat validation helpers', () => {
     expect(normalizeChatText('   ')).toBeNull()
     expect(normalizeChatText('x'.repeat(MAX_CHAT_MESSAGE_LENGTH + 1))).toBeNull()
     expect(normalizeVisitorEmail('not-an-email')).toBeNull()
+  })
+
+  it('builds location-based chat identifiers from request headers', () => {
+    const headers = new Headers({
+      'x-vercel-ip-city': 'Cambridge',
+      'x-vercel-ip-country-region': 'MA',
+      'x-vercel-ip-country': 'US',
+      'x-vercel-ip-timezone': 'America%2FNew_York',
+    })
+    const location = getVisitorLocationFromHeaders(headers)
+    const uid = buildChatVisitorUid({
+      threadId: 'chatThread.ABCDEF12-3456-7890-abcd-ef1234567890',
+      location,
+    })
+
+    expect(location).toEqual({
+      label: 'Cambridge, MA, US',
+      slug: 'cambridge-ma-us',
+      city: 'Cambridge',
+      region: 'MA',
+      country: 'US',
+      timezone: 'America/New_York',
+    })
+    expect(uid).toBe('cambridge-ma-us-abcdef12')
+    expect(buildGeneratedChatTitle(uid)).toBe('Website chat cambridge-ma-us-abcdef12')
   })
 
   it('validates supported small attachments', () => {

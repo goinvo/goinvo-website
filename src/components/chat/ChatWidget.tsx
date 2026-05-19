@@ -53,6 +53,7 @@ interface ChatMessage {
 interface StoredThread {
   threadId: string
   visitorKey: string
+  title?: string
   name?: string
   email?: string
   status?: string
@@ -63,8 +64,9 @@ interface StoredThread {
 interface ThreadResponse {
   threadId: string
   visitorKey?: string
+  title?: string
   status: string
-  visitor?: { name?: string; email?: string }
+  visitor?: { uid?: string; name?: string; email?: string }
   messages: ChatMessage[]
   directUpload?: DirectUpload
 }
@@ -196,6 +198,7 @@ export function ChatWidget() {
       let storedThread = mergeStoredThreadWithResponse({
         threadId: data.threadId,
         visitorKey: data.visitorKey || '',
+        title: data.title,
         name: name.trim() || data.visitor?.name,
         email: email.trim() || data.visitor?.email,
       }, data)
@@ -352,13 +355,12 @@ export function ChatWidget() {
                 onStartNewThread={handleStartNewThread}
               />
             ) : !hasThread ? (
-              <div className="rounded-none border border-gray-medium bg-white p-4">
-                <h3 className="mb-2 font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary">
-                  {siteConfig.chat.introTitle}
-                </h3>
-                <p className="mb-0 text-sm leading-6 text-gray">
-                  {siteConfig.chat.introText}
-                </p>
+              <div className="flex items-start gap-2">
+                <ChatTeamAvatar src={getChatTeamAvatarSrc()} />
+                <div className="min-w-0 max-w-[calc(100%-3rem)] rounded-[18px] rounded-bl-none border border-gray-medium bg-white px-3 py-2 text-sm leading-6 text-black">
+                  <p className="mb-1 font-semibold leading-6">{siteConfig.chat.introTitle}</p>
+                  <p className="mb-0 leading-6 text-gray">{siteConfig.chat.introText}</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -428,19 +430,12 @@ export function ChatWidget() {
             ) : !hasThread ? (
               <form onSubmit={handleStartThread} className="space-y-3">
                 <input
-                  type="text"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Name"
-                  autoComplete="name"
-                  className="h-10 w-full rounded-none border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
-                />
-                <input
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Email"
+                  placeholder="Email (optional)"
                   autoComplete="email"
+                  aria-label="Email (optional)"
                   className="h-10 w-full rounded-none border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
                 />
                 <label className="sr-only" htmlFor="chat-website">
@@ -458,7 +453,7 @@ export function ChatWidget() {
                 <textarea
                   value={initialMessage}
                   onChange={(event) => setInitialMessage(event.target.value)}
-                  placeholder="How can we help?"
+                  placeholder="Write a message"
                   rows={4}
                   maxLength={2000}
                   className="min-h-24 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
@@ -530,7 +525,7 @@ export function ChatWidget() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="group flex min-h-12 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-none bg-[#252a3c] py-3 pl-4 pr-5 text-left text-white shadow-[0_12px_30px_rgba(29,27,26,0.22)] transition-colors hover:bg-tertiary sm:max-w-none"
+          className="group flex min-h-12 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[18px] rounded-br-none bg-[#252a3c] py-3 pl-4 pr-5 text-left text-white shadow-[0_12px_30px_rgba(29,27,26,0.22)] transition-colors hover:bg-tertiary sm:max-w-none"
           aria-expanded={isOpen}
           aria-label="Open GoInvo chat"
         >
@@ -877,11 +872,12 @@ function removeStoredThread(threadId: string) {
 
 function mergeStoredThreadWithResponse(
   thread: StoredThread,
-  response: Pick<ThreadResponse, 'status' | 'visitor' | 'messages'>,
+  response: Pick<ThreadResponse, 'title' | 'status' | 'visitor' | 'messages'>,
 ) {
   const lastMessage = response.messages.at(-1)
   const nextThread = {
     ...thread,
+    title: thread.title || response.title,
     name: thread.name || response.visitor?.name,
     email: thread.email || response.visitor?.email,
     status: response.status,
@@ -901,6 +897,7 @@ function parseStoredThread(raw: string | null): StoredThread | null {
     return {
       threadId: value.threadId,
       visitorKey: value.visitorKey,
+      ...(typeof value.title === 'string' ? { title: value.title } : {}),
       ...(typeof value.name === 'string' ? { name: value.name } : {}),
       ...(typeof value.email === 'string' ? { email: value.email } : {}),
       ...(typeof value.status === 'string' ? { status: value.status } : {}),
@@ -925,7 +922,7 @@ function sortStoredThreads(threads: StoredThread[]) {
 }
 
 function getThreadTitle(thread: StoredThread) {
-  return thread.name || thread.email || 'Website chat'
+  return thread.title || thread.name || thread.email || 'Website chat'
 }
 
 function getThreadStatusLabel(status: string) {

@@ -50,6 +50,7 @@ export default defineType({
       type: 'object',
       group: 'summary',
       fields: [
+        { name: 'uid', title: 'Generated UID', type: 'string', readOnly: true },
         { name: 'name', title: 'Name', type: 'string' },
         {
           name: 'email',
@@ -245,6 +246,20 @@ export default defineType({
         { name: 'userAgent', title: 'User Agent', type: 'string' },
         { name: 'language', title: 'Language', type: 'string' },
         { name: 'ipHash', title: 'IP Hash', type: 'string', readOnly: true },
+        {
+          name: 'location',
+          title: 'Location',
+          type: 'object',
+          readOnly: true,
+          fields: [
+            { name: 'label', title: 'Label', type: 'string' },
+            { name: 'slug', title: 'Slug', type: 'string' },
+            { name: 'city', title: 'City', type: 'string' },
+            { name: 'region', title: 'Region', type: 'string' },
+            { name: 'country', title: 'Country', type: 'string' },
+            { name: 'timezone', title: 'Timezone', type: 'string' },
+          ],
+        },
       ],
     }),
     defineField({
@@ -342,12 +357,13 @@ export default defineType({
     select: {
       title: 'title',
       status: 'status',
+      visitorUid: 'visitor.uid',
       visitorName: 'visitor.name',
       visitorEmail: 'visitor.email',
       lastMessageAt: 'lastMessageAt',
     },
-    prepare({ title, status, visitorName, visitorEmail, lastMessageAt }) {
-      const visitor = visitorName || visitorEmail || 'Anonymous visitor'
+    prepare({ title, status, visitorUid, visitorName, visitorEmail, lastMessageAt }) {
+      const visitor = visitorUid || visitorName || visitorEmail || 'Anonymous visitor'
       const statusLabel = statusOptions.find((option) => option.value === status)?.title || 'New'
 
       return {

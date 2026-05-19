@@ -39,8 +39,9 @@ type RouteContext = {
 interface PublicThread {
   _id: string
   _rev?: string
+  title?: string
   status: string
-  visitor?: { name?: string; email?: string }
+  visitor?: { uid?: string; name?: string; email?: string }
   messages?: SanityChatMessage[]
   source?: { pageUrl?: string }
   slack?: { channelId?: string; channelName?: string; threadTs?: string; dedicatedChannel?: boolean }
@@ -55,6 +56,7 @@ interface PublicThread {
 const publicThreadQuery = `*[_type == "chatThread" && _id == $threadId && visitorKey == $visitorKey][0]{
   _id,
   _rev,
+  title,
   status,
   visitor,
   messages,
@@ -191,7 +193,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       threadId,
       channel: thread.slack.channelId,
       threadTs: thread.slack.threadTs,
-      visitorName: thread.visitor?.name || extractedName,
+      visitorName: getThreadVisitorLabel(thread, extractedName),
       message: visibleMessageText,
       replyInThread: !isDedicatedSlackChannel,
     })
@@ -201,7 +203,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         attachment,
         channel: thread.slack.channelId,
         threadTs: isDedicatedSlackChannel ? slackReply?.ts : thread.slack.threadTs,
-        initialComment: `Attachment from ${thread.visitor?.name || extractedName || 'visitor'}: ${attachment.filename}`,
+        initialComment: `Attachment from ${getThreadVisitorLabel(thread, extractedName)}: ${attachment.filename}`,
       })
       await setMessageAttachments(client, threadId, message._key, [
         applySlackFileUploadResult(chatAttachment, uploadResult),
@@ -232,6 +234,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       threadId,
       visitorName: thread.visitor?.name || extractedName,
       visitorEmail: thread.visitor?.email || extractedEmail,
+      visitorUid: thread.visitor?.uid,
       message: visibleMessageText,
       pageUrl: thread.source?.pageUrl,
       studioBaseUrl: request.nextUrl.origin,
@@ -243,7 +246,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         attachment,
         channel: slackResult.channel,
         threadTs: slackResult.ts,
-        initialComment: `Attachment from ${thread.visitor?.name || extractedName || 'visitor'}: ${attachment.filename}`,
+        initialComment: `Attachment from ${getThreadVisitorLabel(thread, extractedName)}: ${attachment.filename}`,
       })
       uploadedAttachments = [applySlackFileUploadResult(chatAttachment, uploadResult)]
     } else if (slackResult && pendingAttachment && chatAttachment) {
@@ -513,10 +516,15 @@ async function sendNoResponseEmailIfDue(
 function toThreadResponse(thread: PublicThread) {
   return {
     threadId: thread._id,
+    title: thread.title,
     status: thread.status,
     visitor: thread.visitor,
     messages: toPublicMessages(thread.messages),
   }
+}
+
+function getThreadVisitorLabel(thread: PublicThread, fallbackName?: string) {
+  return thread.visitor?.name || fallbackName || thread.visitor?.email || thread.visitor?.uid || 'visitor'
 }
 
 function slackTimestampToIso(ts: string) {
