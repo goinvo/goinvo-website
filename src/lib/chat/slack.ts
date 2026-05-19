@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import type { ChatAttachment, ChatAttachmentMetadata, ValidatedChatAttachment } from '@/lib/chat/attachments'
+import { getChatThreadShortId, slugifyChatIdentifier } from '@/lib/chat/visitorIdentity'
 
 type SlackBlock = Record<string, unknown>
 
@@ -229,26 +230,20 @@ export function getDedicatedSlackChannelsEnabled() {
 
 export function buildSlackConversationChannelName(input: {
   threadId: string
+  visitorUid?: string
   visitorName?: string
   visitorEmail?: string
 }) {
-  const visitor = input.visitorName || input.visitorEmail?.split('@')[0] || 'visitor'
-  const visitorSlug = visitor
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 42) || 'visitor'
-  const threadSlug = input.threadId
-    .replace(/^chatThread\./, '')
-    .replace(/[^a-z0-9]/gi, '')
-    .toLowerCase()
-    .slice(0, 8)
+  const visitor = input.visitorUid || input.visitorName || input.visitorEmail?.split('@')[0] || 'visitor'
+  const visitorSlug = slugifyChatIdentifier(visitor).slice(0, input.visitorUid ? 67 : 42)
+  const suffix = input.visitorUid ? '' : `-${getChatThreadShortId(input.threadId)}`
 
-  return `website-chat-${visitorSlug}-${threadSlug}`.slice(0, 80).replace(/-+$/g, '')
+  return `website-chat-${visitorSlug}${suffix}`.slice(0, 80).replace(/-+$/g, '')
 }
 
 export async function createSlackConversationChannel(input: {
   threadId: string
+  visitorUid?: string
   visitorName?: string
   visitorEmail?: string
 }) {
@@ -294,13 +289,14 @@ export async function notifySlackHubNewConversation(input: {
   threadId: string
   conversationChannelId: string
   conversationChannelName?: string
+  visitorUid?: string
   visitorName?: string
   visitorEmail?: string
   message: string
   pageUrl?: string
   studioBaseUrl?: string
 }) {
-  const visitor = input.visitorName || input.visitorEmail || 'Anonymous visitor'
+  const visitor = getSlackVisitorLabel(input)
   const page = input.pageUrl ? `<${escapeSlack(input.pageUrl)}|source page>` : 'the website'
   const ping = getSlackChannelPing()
   const channelLabel = input.conversationChannelName
@@ -357,6 +353,7 @@ export async function notifySlackHubNewConversation(input: {
 
 export async function startSlackChatConversation(input: {
   threadId: string
+  visitorUid?: string
   visitorName?: string
   visitorEmail?: string
   message: string
@@ -392,6 +389,7 @@ export async function startSlackChatConversation(input: {
 export async function notifySlackNewThread(input: {
   channel?: string
   threadId: string
+  visitorUid?: string
   visitorName?: string
   visitorEmail?: string
   message: string
@@ -399,7 +397,7 @@ export async function notifySlackNewThread(input: {
   studioBaseUrl?: string
   replyTarget?: 'channel' | 'thread'
 }) {
-  const visitor = input.visitorName || input.visitorEmail || 'Anonymous visitor'
+  const visitor = getSlackVisitorLabel(input)
   const page = input.pageUrl ? `<${escapeSlack(input.pageUrl)}|source page>` : 'the website'
   const ping = getSlackChannelPing()
   const text = `${ping} New GoInvo website chat from ${visitor}: ${input.message}`
@@ -680,6 +678,14 @@ function secureCompare(actual: string, expected: string) {
 
 function escapeSlack(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function getSlackVisitorLabel(input: {
+  visitorUid?: string
+  visitorName?: string
+  visitorEmail?: string
+}) {
+  return input.visitorName || input.visitorEmail || input.visitorUid || 'Anonymous visitor'
 }
 
 async function fetchSlackMessages(method: 'conversations.history' | 'conversations.replies', params: Record<string, string>) {
