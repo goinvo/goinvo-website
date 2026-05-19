@@ -1,0 +1,534 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getChatSanityClient } from '@/lib/chat/sanity'
+import { isAllowedChatRequest } from '@/lib/chat/config'
+import { createChatAttachment, validateChatAttachmentMetadata, type ChatAttachment } from '@/lib/chat/attachments'
+import { readChatRequestBody } from '@/lib/chat/request'
+import {
+  getNoResponseEmailDraft,
+  isNoResponseEmailConfigured,
+  sendNoResponseEmail,
+} from '@/lib/chat/email'
+import { getNoResponseFallback, type NoResponseFallbackVariant } from '@/lib/chat/noResponse'
+import {
+  createChatMessage,
+  extractEmailAddress,
+  extractVisitorNameFromContactReply,
+  normalizeChatText,
+  previewText,
+  toPublicMessages,
+  type SanityChatMessage,
+} from '@/lib/chat/validation'
+import {
+  applySlackFileUploadResult,
+  fetchSlackTeamReplies,
+  getSlackConfig,
+  getSlackUserDisplayName,
+  isSlackPostingConfigured,
+  notifySlackVisitorReply,
+  prepareSlackChatAttachmentUpload,
+  startSlackChatConversation,
+  uploadSlackChatAttachment,
+} from '@/lib/chat/slack'
+
+export const dynamic = 'force-dynamic'
+
+type RouteContext = {
+  params: Promise<{ threadId: string }>
+}
+
+interface PublicThread {
+  _id: string
+  _rev?: string
+  title?: string
+  status: string
+  visitor?: { uid?: string; name?: string; email?: string }
+  messages?: SanityChatMessage[]
+  source?: { pageUrl?: string }
+  slack?: { channelId?: string; channelName?: string; threadTs?: string; dedicatedChannel?: boolean }
+  noResponseFallbackSentAt?: string
+  noResponseFallbackVariant?: NoResponseFallbackVariant
+  noResponseEmailSentAt?: string
+  noResponseEmailAttemptedAt?: string
+  noResponseEmailProviderId?: string
+  noResponseEmailLastError?: string
+}
+
+const publicThreadQuery = `*[_type == "chatThread" && _id == $threadId && visitorKey == $visitorKey][0]{
+  _id,
+  _rev,
+  title,
+  status,
+  visitor,
+  messages,
+  source,
+  slack,
+  noResponseFallbackSentAt,
+  noResponseFallbackVariant,
+  noResponseEmailSentAt,
+  noResponseEmailAttemptedAt,
+  noResponseEmailProviderId,
+  noResponseEmailLastError
+}`
+
+export async function GET(request: NextRequest, context: RouteContext) {
+  if (!isAllowedChatRequest(request)) {
+    return NextResponse.json({ error: 'Chat is not available from this origin' }, { status: 403 })
+  }
+
+  const client = getChatSanityClient()
+  if (!client) {
+    return NextResponse.json({ error: 'Chat is not configured' }, { status: 503 })
+  }
+
+  const { threadId } = await context.params
+  const visitorKey = request.nextUrl.searchParams.get('visitorKey') || ''
+  const thread = await client.fetch<PublicThread | null>(publicThreadQuery, { threadId, visitorKey })
+
+  if (!thread) {
+    return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
+  }
+
+  const threadWithSlackReplies = await appendSlackRepliesIfAvailable(client, thread, visitorKey)
+  const threadWithFallback = await appendNoResponseFallbackIfDue(client, threadWithSlackReplies, visitorKey)
+  const threadWithEmail = await sendNoResponseEmailIfDue(client, threadWithFallback, visitorKey)
+  return NextResponse.json(toThreadResponse(threadWithEmail))
+}
+
+export async function POST(request: NextRequest, context: RouteContext) {
+  if (!isAllowedChatRequest(request)) {
+    return NextResponse.json({ error: 'Chat is not available from this origin' }, { status: 403 })
+  }
+
+  const client = getChatSanityClient()
+  if (!client) {
+    return NextResponse.json({ error: 'Chat is not configured' }, { status: 503 })
+  }
+
+  const { threadId } = await context.params
+  const requestBody = await readChatRequestBody(request)
+  if (requestBody.error) {
+    return NextResponse.json({ error: requestBody.error }, { status: 400 })
+  }
+
+  const body = requestBody.fields as { visitorKey?: unknown; message?: unknown; attachment?: unknown }
+  const pendingAttachmentResult = requestBody.attachment ? {} : validateChatAttachmentMetadata(body.attachment)
+  if (pendingAttachmentResult.error) {
+    return NextResponse.json({ error: pendingAttachmentResult.error }, { status: 400 })
+  }
+
+  const pendingAttachment = pendingAttachmentResult.attachment
+
+  if ((requestBody.attachment || pendingAttachment) && !isSlackPostingConfigured()) {
+    return NextResponse.json({ error: 'Attachments require Slack to be configured' }, { status: 503 })
+  }
+
+  const visitorKey = typeof body.visitorKey === 'string' ? body.visitorKey : ''
+  const messageText = normalizeChatText(body.message)
+
+  if (!messageText && !requestBody.attachment && !pendingAttachment) {
+    return NextResponse.json({ error: 'Message or attachment is required' }, { status: 400 })
+  }
+
+  const thread = await client.fetch<PublicThread | null>(publicThreadQuery, { threadId, visitorKey })
+  if (!thread) {
+    return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
+  }
+
+  if (thread.status === 'spam' || thread.status === 'archived') {
+    return NextResponse.json({ error: 'Thread is closed' }, { status: 409 })
+  }
+
+  const now = new Date().toISOString()
+  const attachment = requestBody.attachment
+  const chatAttachment = attachment
+    ? createChatAttachment(attachment, 'pending', 'inline')
+    : pendingAttachment
+      ? createChatAttachment(pendingAttachment, 'pending', 'slack')
+      : undefined
+  const visibleMessageText = messageText || `Attached ${attachment?.filename || pendingAttachment?.filename}`
+  const extractedEmail = thread.visitor?.email ? undefined : extractEmailAddress(visibleMessageText)
+  const extractedName = thread.visitor?.name ? undefined : extractVisitorNameFromContactReply(visibleMessageText)
+  const message = createChatMessage({
+    authorType: 'visitor',
+    authorName: thread.visitor?.name || extractedName,
+    authorEmail: thread.visitor?.email || extractedEmail,
+    text: visibleMessageText,
+    createdAt: now,
+    attachments: chatAttachment ? [chatAttachment] : undefined,
+  })
+
+  const patch = client
+    .patch(threadId)
+    .setIfMissing({ messages: [] })
+    .append('messages', [message])
+    .set({
+      status: 'open',
+      lastMessageAt: now,
+      lastVisitorMessageAt: now,
+      lastMessagePreview: previewText(visibleMessageText),
+    })
+
+  if (extractedEmail) {
+    patch.setIfMissing({ visitor: {} }).set({ 'visitor.email': extractedEmail })
+  }
+
+  if (extractedName) {
+    patch.setIfMissing({ visitor: {} }).set({ 'visitor.name': extractedName })
+  }
+
+  if (thread.status === 'resolved') {
+    patch.unset(['resolvedAt'])
+  }
+
+  await patch.commit()
+
+  let directUpload: DirectUploadResponse | undefined
+
+  if (thread.slack?.threadTs) {
+    const isDedicatedSlackChannel = Boolean(
+      thread.slack.dedicatedChannel ||
+        (thread.slack.channelId && thread.slack.channelId !== getSlackConfig().channelId),
+    )
+    const slackReply = await notifySlackVisitorReply({
+      threadId,
+      channel: thread.slack.channelId,
+      threadTs: thread.slack.threadTs,
+      visitorName: getThreadVisitorLabel(thread, extractedName),
+      message: visibleMessageText,
+      replyInThread: !isDedicatedSlackChannel,
+    })
+
+    if (attachment && chatAttachment) {
+      const uploadResult = await uploadSlackChatAttachment({
+        attachment,
+        channel: thread.slack.channelId,
+        threadTs: isDedicatedSlackChannel ? slackReply?.ts : thread.slack.threadTs,
+        initialComment: `Attachment from ${getThreadVisitorLabel(thread, extractedName)}: ${attachment.filename}`,
+      })
+      await setMessageAttachments(client, threadId, message._key, [
+        applySlackFileUploadResult(chatAttachment, uploadResult),
+      ])
+    } else if (pendingAttachment && chatAttachment) {
+      const prepared = await prepareSlackChatAttachmentUpload({ attachment: pendingAttachment })
+      const preparedAttachment = prepared.ok
+        ? {
+            ...chatAttachment,
+            slackFileId: prepared.fileId,
+          }
+        : {
+            ...chatAttachment,
+            uploadStatus: 'failed' as const,
+            error: prepared.error,
+          }
+      await setMessageAttachments(client, threadId, message._key, [preparedAttachment])
+      if (prepared.ok) {
+        directUpload = {
+          uploadUrl: prepared.uploadUrl,
+          fileId: prepared.fileId,
+          messageId: message._key,
+        }
+      }
+    }
+  } else {
+    const slackResult = await startSlackChatConversation({
+      threadId,
+      visitorName: thread.visitor?.name || extractedName,
+      visitorEmail: thread.visitor?.email || extractedEmail,
+      visitorUid: thread.visitor?.uid,
+      message: visibleMessageText,
+      pageUrl: thread.source?.pageUrl,
+      studioBaseUrl: request.nextUrl.origin,
+    })
+
+    let uploadedAttachments: ChatAttachment[] | undefined
+    if (slackResult && attachment && chatAttachment) {
+      const uploadResult = await uploadSlackChatAttachment({
+        attachment,
+        channel: slackResult.channel,
+        threadTs: slackResult.ts,
+        initialComment: `Attachment from ${getThreadVisitorLabel(thread, extractedName)}: ${attachment.filename}`,
+      })
+      uploadedAttachments = [applySlackFileUploadResult(chatAttachment, uploadResult)]
+    } else if (slackResult && pendingAttachment && chatAttachment) {
+      const prepared = await prepareSlackChatAttachmentUpload({ attachment: pendingAttachment })
+      uploadedAttachments = [
+        prepared.ok
+          ? {
+              ...chatAttachment,
+              slackFileId: prepared.fileId,
+            }
+          : {
+              ...chatAttachment,
+              uploadStatus: 'failed',
+              error: prepared.error,
+            },
+      ]
+      if (prepared.ok) {
+        directUpload = {
+          uploadUrl: prepared.uploadUrl,
+          fileId: prepared.fileId,
+          messageId: message._key,
+        }
+      }
+    } else if (chatAttachment) {
+      uploadedAttachments = [
+        {
+          ...chatAttachment,
+          uploadStatus: 'failed',
+          error: 'Unable to start Slack thread for attachment',
+        },
+      ]
+    }
+
+    if (slackResult) {
+      await client
+        .patch(threadId)
+        .set({
+          slack: {
+            channelId: slackResult.channel,
+            ...(slackResult.channelName ? { channelName: slackResult.channelName } : {}),
+            threadTs: slackResult.ts,
+            dedicatedChannel: slackResult.dedicatedChannel,
+            ...(slackResult.hubChannelId ? { hubChannelId: slackResult.hubChannelId } : {}),
+            ...(slackResult.hubThreadTs ? { hubThreadTs: slackResult.hubThreadTs } : {}),
+            lastPostAt: new Date().toISOString(),
+          },
+        })
+        .commit()
+    }
+
+    if (uploadedAttachments) {
+      await setMessageAttachments(client, threadId, message._key, uploadedAttachments)
+    }
+  }
+
+  const updated = await client.fetch<PublicThread | null>(publicThreadQuery, { threadId, visitorKey })
+  const updatedWithEmail = updated ? await sendNoResponseEmailIfDue(client, updated, visitorKey) : null
+  return NextResponse.json(
+    updatedWithEmail
+      ? {
+          ...toThreadResponse(updatedWithEmail),
+          ...(directUpload ? { directUpload } : {}),
+        }
+      : { error: 'Thread not found' },
+    {
+      status: updatedWithEmail ? 200 : 404,
+    },
+  )
+}
+
+interface DirectUploadResponse {
+  uploadUrl: string
+  fileId: string
+  messageId: string
+}
+
+async function setMessageAttachments(
+  client: NonNullable<ReturnType<typeof getChatSanityClient>>,
+  threadId: string,
+  messageKey: string,
+  attachments: ChatAttachment[],
+) {
+  await client
+    .patch(threadId)
+    .set({
+      [`messages[_key=="${messageKey}"].attachments`]: attachments,
+    })
+    .commit()
+}
+
+async function appendSlackRepliesIfAvailable(
+  client: NonNullable<ReturnType<typeof getChatSanityClient>>,
+  thread: PublicThread,
+  visitorKey: string,
+) {
+  if (thread.status === 'spam' || thread.status === 'archived') return thread
+  if (!thread.slack?.channelId) return thread
+
+  const existingSlackMessageTs = new Set((thread.messages || []).map((message) => message.slackMessageTs).filter(Boolean))
+  const replies = (
+    await fetchSlackTeamReplies({
+      channel: thread.slack.channelId,
+      threadTs: thread.slack.threadTs,
+      dedicatedChannel: thread.slack.dedicatedChannel,
+      oldestTs: thread.slack.threadTs,
+    })
+  ).filter((reply) => !existingSlackMessageTs.has(reply.ts))
+
+  if (!replies.length) return thread
+
+  const messages: SanityChatMessage[] = []
+  const userNames = new Map<string, string | undefined>()
+  for (const reply of replies) {
+    const text = normalizeChatText(reply.text)
+    if (!text) continue
+
+    let authorName: string | undefined
+    if (reply.user) {
+      if (!userNames.has(reply.user)) {
+        userNames.set(reply.user, await getSlackUserDisplayName(reply.user))
+      }
+      authorName = userNames.get(reply.user)
+    }
+
+    messages.push(
+      createChatMessage({
+        authorType: 'team',
+        authorName: authorName || 'GoInvo',
+        text,
+        createdAt: slackTimestampToIso(reply.ts),
+        slackUserId: reply.user,
+        slackMessageTs: reply.ts,
+      }),
+    )
+  }
+
+  if (!messages.length) return thread
+
+  const lastMessage = messages.at(-1)
+  const patch = client
+    .patch(thread._id)
+    .setIfMissing({ messages: [] })
+    .append('messages', messages)
+    .set({
+      status: 'waitingOnVisitor',
+      lastMessageAt: lastMessage?.createdAt,
+      lastTeamMessageAt: lastMessage?.createdAt,
+      lastMessagePreview: previewText(lastMessage?.text || ''),
+    })
+
+  if (thread._rev) {
+    patch.ifRevisionId(thread._rev)
+  }
+
+  try {
+    await patch.commit()
+  } catch (error) {
+    console.error('Failed to append Slack chat replies:', error)
+  }
+
+  return (await client.fetch<PublicThread | null>(publicThreadQuery, {
+    threadId: thread._id,
+    visitorKey,
+  })) || thread
+}
+
+async function appendNoResponseFallbackIfDue(
+  client: NonNullable<ReturnType<typeof getChatSanityClient>>,
+  thread: PublicThread,
+  visitorKey: string,
+) {
+  const fallback = getNoResponseFallback(thread)
+  if (!fallback) return thread
+
+  const now = new Date().toISOString()
+  const message = createChatMessage({
+    authorType: 'team',
+    authorName: 'GoInvo',
+    text: fallback.text,
+    createdAt: now,
+    fallbackKind: 'noResponse',
+  })
+
+  const patch = client
+    .patch(thread._id)
+    .setIfMissing({ messages: [] })
+    .append('messages', [message])
+    .set({
+      noResponseFallbackSentAt: now,
+      noResponseFallbackVariant: fallback.variant,
+      lastMessageAt: now,
+      lastMessagePreview: previewText(fallback.text),
+    })
+
+  if (thread._rev) {
+    patch.ifRevisionId(thread._rev)
+  }
+
+  try {
+    await patch.commit()
+  } catch (error) {
+    console.error('Failed to append no-response chat fallback:', error)
+  }
+
+  return (await client.fetch<PublicThread | null>(publicThreadQuery, {
+    threadId: thread._id,
+    visitorKey,
+  })) || thread
+}
+
+async function sendNoResponseEmailIfDue(
+  client: NonNullable<ReturnType<typeof getChatSanityClient>>,
+  thread: PublicThread,
+  visitorKey: string,
+) {
+  if (!isNoResponseEmailConfigured()) return thread
+
+  const draft = getNoResponseEmailDraft(thread)
+  if (!draft) return thread
+
+  const attemptedAt = new Date().toISOString()
+  const claimPatch = client
+    .patch(thread._id)
+    .set({
+      noResponseEmailAttemptedAt: attemptedAt,
+    })
+    .unset(['noResponseEmailLastError'])
+
+  if (thread._rev) {
+    claimPatch.ifRevisionId(thread._rev)
+  }
+
+  try {
+    await claimPatch.commit()
+  } catch (error) {
+    console.error('Failed to claim no-response email send:', error)
+    return (await client.fetch<PublicThread | null>(publicThreadQuery, {
+      threadId: thread._id,
+      visitorKey,
+    })) || thread
+  }
+
+  const result = await sendNoResponseEmail(draft)
+  const completePatch = client.patch(thread._id)
+
+  if (result.ok) {
+    completePatch
+      .set({
+        noResponseEmailSentAt: new Date().toISOString(),
+        noResponseEmailProviderId: result.id,
+      })
+      .unset(['noResponseEmailLastError'])
+  } else {
+    completePatch.set({
+      noResponseEmailLastError: result.error,
+    })
+  }
+
+  await completePatch.commit()
+
+  return (await client.fetch<PublicThread | null>(publicThreadQuery, {
+    threadId: thread._id,
+    visitorKey,
+  })) || thread
+}
+
+function toThreadResponse(thread: PublicThread) {
+  return {
+    threadId: thread._id,
+    title: thread.title,
+    status: thread.status,
+    visitor: thread.visitor,
+    messages: toPublicMessages(thread.messages),
+  }
+}
+
+function getThreadVisitorLabel(thread: PublicThread, fallbackName?: string) {
+  return thread.visitor?.name || fallbackName || thread.visitor?.email || thread.visitor?.uid || 'visitor'
+}
+
+function slackTimestampToIso(ts: string) {
+  const seconds = Number(ts.split('.')[0])
+  if (!Number.isFinite(seconds)) return new Date().toISOString()
+  return new Date(seconds * 1000).toISOString()
+}
