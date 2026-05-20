@@ -168,6 +168,14 @@ export default defineType({
             Rule.uri({ scheme: ['https', 'http'] }),
         },
         {
+          name: 'vectorImageUrl',
+          type: 'url',
+          title: 'SVG / vector image URL',
+          description: 'Optional SVG or vector source used instead of the uploaded raster image.',
+          validation: (Rule) =>
+            Rule.uri({ allowRelative: true, scheme: ['https', 'http'] }),
+        },
+        {
           name: 'size',
           type: 'string',
           title: 'Size',
