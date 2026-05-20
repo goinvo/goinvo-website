@@ -89,7 +89,7 @@ export function createChatMessage(input: {
 }
 
 export function toPublicMessages(messages: SanityChatMessage[] | null | undefined): PublicChatMessage[] {
-  return (messages || [])
+  return dedupeChatMessages(messages || [])
     .filter(
       (message): message is SanityChatMessage & { authorType: 'visitor' | 'team' } =>
         message.authorType === 'visitor' || message.authorType === 'team',
@@ -112,6 +112,17 @@ export function toPublicMessages(messages: SanityChatMessage[] | null | undefine
           }
         : {}),
     }))
+}
+
+export function dedupeChatMessages(messages: SanityChatMessage[]) {
+  const seenSlackMessages = new Set<string>()
+
+  return messages.filter((message) => {
+    if (!message.slackMessageTs) return true
+    if (seenSlackMessages.has(message.slackMessageTs)) return false
+    seenSlackMessages.add(message.slackMessageTs)
+    return true
+  })
 }
 
 export function previewText(text: string, length = 180) {

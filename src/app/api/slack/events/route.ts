@@ -24,6 +24,7 @@ interface SlackMessageEvent {
 
 interface SlackBackedThread {
   _id: string
+  _rev?: string
   status?: string
   messages?: SanityChatMessage[]
 }
@@ -75,8 +76,6 @@ async function handleSlackEvent(event: SlackMessageEvent) {
   })
 
   if (!thread || thread.status === 'spam' || thread.status === 'archived') return
-  if ((thread.messages || []).some((message) => message.slackMessageTs === event.ts)) return
-
   const createdAt = slackTimestampToIso(event.ts)
   const authorName = await getSlackUserDisplayName(event.user)
   const message = createChatMessage({
@@ -88,17 +87,52 @@ async function handleSlackEvent(event: SlackMessageEvent) {
     slackMessageTs: event.ts,
   })
 
-  await client
-    .patch(thread._id)
-    .setIfMissing({ messages: [] })
-    .append('messages', [message])
-    .set({
-      status: 'waitingOnVisitor',
-      lastMessageAt: createdAt,
-      lastTeamMessageAt: createdAt,
-      lastMessagePreview: previewText(text),
-    })
-    .commit()
+  await appendSlackEventMessageIfMissing(client, thread, message, createdAt, text)
+}
+
+async function appendSlackEventMessageIfMissing(
+  client: NonNullable<ReturnType<typeof getChatSanityClient>>,
+  initialThread: SlackBackedThread,
+  message: SanityChatMessage,
+  createdAt: string,
+  text: string,
+) {
+  let thread: SlackBackedThread | null = initialThread
+
+  for (let attempt = 0; attempt < 3 && thread; attempt += 1) {
+    if ((thread.messages || []).some((existingMessage) => existingMessage.slackMessageTs === message.slackMessageTs)) {
+      return
+    }
+
+    const patch = client
+      .patch(thread._id)
+      .setIfMissing({ messages: [] })
+      .append('messages', [message])
+      .set({
+        status: 'waitingOnVisitor',
+        lastMessageAt: createdAt,
+        lastTeamMessageAt: createdAt,
+        lastMessagePreview: previewText(text),
+      })
+
+    if (thread._rev) {
+      patch.ifRevisionId(thread._rev)
+    }
+
+    try {
+      await patch.commit()
+      return
+    } catch (error) {
+      thread = await fetchSlackBackedThreadById(thread._id)
+      if ((thread?.messages || []).some((existingMessage) => existingMessage.slackMessageTs === message.slackMessageTs)) {
+        return
+      }
+
+      if (attempt === 2) {
+        console.error('Failed to append Slack chat event:', error)
+      }
+    }
+  }
 }
 
 async function findSlackBackedThread(input: {
@@ -111,6 +145,7 @@ async function findSlackBackedThread(input: {
 
   const projection = `{
     _id,
+    _rev,
     status,
     messages[]{_key, _type, authorType, authorName, authorEmail, text, createdAt, slackUserId, slackMessageTs}
   }`
@@ -133,6 +168,21 @@ async function findSlackBackedThread(input: {
   return client.fetch<SlackBackedThread | null>(
     `*[_type == "chatThread" && slack.threadTs == $threadTs][0]${projection}`,
     { threadTs: input.threadTs },
+  )
+}
+
+async function fetchSlackBackedThreadById(threadId: string) {
+  const client = getChatSanityClient()
+  if (!client) return null
+
+  return client.fetch<SlackBackedThread | null>(
+    `*[_type == "chatThread" && _id == $threadId][0]{
+      _id,
+      _rev,
+      status,
+      messages[]{_key, _type, authorType, authorName, authorEmail, text, createdAt, slackUserId, slackMessageTs}
+    }`,
+    { threadId },
   )
 }
 
