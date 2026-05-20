@@ -9,8 +9,17 @@ import { goinvoOrderableDocumentListDeskItem } from './orderable/deskItem'
  * orderRank, and the numeric `order` field has been retired.
  */
 const ORDERABLE_TYPES = ['caseStudy', 'feature', 'teamMember'] as const
-const HIDDEN_TYPES = ['orderPreset'] as const
+const MARKETING_TYPES = [
+  'marketingAnalyticsSource',
+  'marketingCalendarItem',
+  'marketingCampaign',
+  'marketingChannel',
+  'marketingFunnel',
+  'marketingLinkItem',
+] as const
+const HIDDEN_TYPES = ['orderPreset', ...MARKETING_TYPES] as const
 const FEEDBACK_TYPE = 'cmsFeedback'
+const CHAT_THREAD_TYPE = 'chatThread'
 
 export const structure: StructureResolver = (S, context) => {
   return S.list()
@@ -20,6 +29,7 @@ export const structure: StructureResolver = (S, context) => {
       orderableList(S, context, { type: 'feature', title: 'Vision Piece' }),
       orderableList(S, context, { type: 'teamMember', title: 'Team Member' }),
       feedbackInboxList(S),
+      chatThreadInboxList(S),
       S.divider(),
       // Non-orderable document types: defer to auto-generated list items
       ...S.documentTypeListItems().filter((listItem) => {
@@ -28,7 +38,8 @@ export const structure: StructureResolver = (S, context) => {
           id !== undefined &&
           !(ORDERABLE_TYPES as readonly string[]).includes(id) &&
           !(HIDDEN_TYPES as readonly string[]).includes(id) &&
-          id !== FEEDBACK_TYPE
+          id !== FEEDBACK_TYPE &&
+          id !== CHAT_THREAD_TYPE
         )
       }),
     ])
@@ -98,6 +109,65 @@ function feedbackInboxList(S: StructureBuilder) {
                 .title('All Feedback')
                 .schemaType(FEEDBACK_TYPE)
                 .filter(`_type == "${FEEDBACK_TYPE}"`)
+                .defaultOrdering(newestFirst),
+            ),
+        ]),
+    )
+}
+
+function chatThreadInboxList(S: StructureBuilder) {
+  const newestFirst = [{ field: 'lastMessageAt', direction: 'desc' as const }]
+
+  return S.listItem()
+    .title('Chat Threads')
+    .schemaType(CHAT_THREAD_TYPE)
+    .child(
+      S.list()
+        .title('Chat Threads')
+        .items([
+          S.listItem()
+            .title('New')
+            .child(
+              S.documentList()
+                .title('New Chat Threads')
+                .schemaType(CHAT_THREAD_TYPE)
+                .filter(`_type == "${CHAT_THREAD_TYPE}" && status == "new"`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('Open')
+            .child(
+              S.documentList()
+                .title('Open Chat Threads')
+                .schemaType(CHAT_THREAD_TYPE)
+                .filter(`_type == "${CHAT_THREAD_TYPE}" && status in ["new", "open"]`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('Waiting on Visitor')
+            .child(
+              S.documentList()
+                .title('Waiting on Visitor')
+                .schemaType(CHAT_THREAD_TYPE)
+                .filter(`_type == "${CHAT_THREAD_TYPE}" && status == "waitingOnVisitor"`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('Closed')
+            .child(
+              S.documentList()
+                .title('Closed Chat Threads')
+                .schemaType(CHAT_THREAD_TYPE)
+                .filter(`_type == "${CHAT_THREAD_TYPE}" && status in ["resolved", "spam", "archived"]`)
+                .defaultOrdering(newestFirst),
+            ),
+          S.listItem()
+            .title('All')
+            .child(
+              S.documentList()
+                .title('All Chat Threads')
+                .schemaType(CHAT_THREAD_TYPE)
+                .filter(`_type == "${CHAT_THREAD_TYPE}"`)
                 .defaultOrdering(newestFirst),
             ),
         ]),
