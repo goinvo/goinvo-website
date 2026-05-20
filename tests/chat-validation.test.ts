@@ -172,6 +172,40 @@ describe('chat validation helpers', () => {
       },
     ])
   })
+
+  it('dedupes Slack replies before exposing chat messages publicly', () => {
+    const messages: SanityChatMessage[] = [
+      {
+        _key: 'first',
+        _type: 'chatMessage',
+        authorType: 'team',
+        authorName: 'GoInvo',
+        text: 'Answer',
+        createdAt: '2026-05-18T00:00:00.000Z',
+        slackMessageTs: '1779227200.262029',
+      },
+      {
+        _key: 'duplicate',
+        _type: 'chatMessage',
+        authorType: 'team',
+        authorName: 'GoInvo',
+        text: 'Answer',
+        createdAt: '2026-05-18T00:00:00.000Z',
+        slackMessageTs: '1779227200.262029',
+      },
+      {
+        _key: 'second',
+        _type: 'chatMessage',
+        authorType: 'team',
+        authorName: 'GoInvo',
+        text: 'Another answer',
+        createdAt: '2026-05-18T00:01:00.000Z',
+        slackMessageTs: '1779227260.262029',
+      },
+    ]
+
+    expect(toPublicMessages(messages).map((message) => message.id)).toEqual(['first', 'second'])
+  })
 })
 
 function createFileLike(name: string, type: string, size: number): File {

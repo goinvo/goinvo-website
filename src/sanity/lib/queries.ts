@@ -164,6 +164,40 @@ export const alumniQuery = groq`
   }
 `
 
+export const linkInBioItemsQuery = groq`
+  *[
+    _type == "marketingLinkItem"
+    && (!defined(expiresAt) || dateTime(expiresAt) > dateTime(now()))
+    && status != "archived"
+    && (
+      (
+        status == "active"
+        && (!defined(publishAt) || dateTime(publishAt) <= dateTime(now()))
+      )
+      || (
+        defined(calendarItem)
+        && calendarItem->status in ["scheduled", "published"]
+        && (!defined(calendarItem->publishAt) || dateTime(calendarItem->publishAt) <= dateTime(now()))
+      )
+      || count(*[
+        _type == "marketingCalendarItem"
+        && references(^._id)
+        && status in ["scheduled", "published"]
+        && (!defined(publishAt) || dateTime(publishAt) <= dateTime(now()))
+      ]) > 0
+    )
+  ] | order(coalesce(order, 100) asc, _updatedAt desc) {
+    _id,
+    title,
+    description,
+    url,
+    type,
+    featured,
+    image,
+    sourceChannel
+  }
+`
+
 // Features
 export const allFeaturesQuery = groq`
   *[_type == "feature"
