@@ -127,7 +127,8 @@ function PortableImage({
   sizeClassOverrides?: Partial<Record<string, string>>
   marginClassName?: string
 }) {
-  if (!value?.asset) return null
+  const vectorImageUrl = typeof value.vectorImageUrl === 'string' ? value.vectorImageUrl.trim() : ''
+  if (!value?.asset && !vectorImageUrl) return null
   const size = value.size || 'full'
   const align = value.align || 'center'
   const border = value.border || 'none'
@@ -138,8 +139,8 @@ function PortableImage({
     teal: 'border-[15px] border-secondary',
   }
   const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 2400 : 1200
-  const imageBuilder = urlForImage(value).width(width)
-  const imageUrl = (size === 'bleed' ? imageBuilder.fit('max') : imageBuilder).url()
+  const imageBuilder = value.asset ? urlForImage(value).width(width) : null
+  const imageUrl = vectorImageUrl || (imageBuilder ? (size === 'bleed' ? imageBuilder.fit('max') : imageBuilder).url() : '')
   const sizeClass = sizeClassOverrides[size] || imageSizeClasses[size] || imageSizeClasses.full
   const imageLink = typeof value.link === 'string' ? value.link.trim() : ''
   const mobileImageUrl = typeof value.mobileImageUrl === 'string' ? value.mobileImageUrl.trim() : ''
