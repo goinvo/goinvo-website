@@ -137,8 +137,9 @@ function PortableImage({
     gray: 'border-[15px] border-[#e0e0e0]',
     teal: 'border-[15px] border-secondary',
   }
-  const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 1600 : 1200
-  const imageUrl = urlForImage(value).width(width).url()
+  const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 2400 : 1200
+  const imageBuilder = urlForImage(value).width(width)
+  const imageUrl = (size === 'bleed' ? imageBuilder.fit('max') : imageBuilder).url()
   const sizeClass = sizeClassOverrides[size] || imageSizeClasses[size] || imageSizeClasses.full
   const imageLink = typeof value.link === 'string' ? value.link.trim() : ''
   const mobileImageUrl = typeof value.mobileImageUrl === 'string' ? value.mobileImageUrl.trim() : ''
