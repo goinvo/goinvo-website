@@ -47,6 +47,10 @@ When porting legacy pages, the cover/hero image should be used ONLY as the `SetC
 
 When a page needs a different visual treatment, add a `variant` prop or dropdown to the existing component rather than creating a new component. This keeps the Sanity Studio UX simple (one block type with a variant selector) and prevents component sprawl. If a component doesn't support the needed layout, ADD a variant to it — don't replace the component or create a parallel one.
 
+### Studio advanced fields belong in bottom dropdowns
+
+In custom Sanity Studio tools, do NOT add standalone "Advanced fields" buttons in form headers or sidebars. If the custom form needs access to the full Sanity document, put it in a collapsed `details` dropdown at the bottom of the form instead.
+
 ### ALWAYS visually compare against the live Gatsby site before assuming anything is correct
 
 Do NOT assume section order, layout, styling, or structure. Open BOTH the Gatsby page (goinvo.com/vision/{slug}/) AND the Next.js page (localhost:3000/vision/{slug}) side by side and visually compare. Check:

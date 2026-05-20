@@ -134,17 +134,19 @@ const categories: Category[] = [
       {
         id: 'basics.tour',
         title: 'Take a tour of the studio',
-        blurb: 'The four top tabs, the structure pane, and the editor pane.',
+        blurb: 'The Studio tabs, the structure pane, and the editor pane.',
         minutes: 3,
         keywords: ['intro', 'overview', 'welcome', 'first time', 'navigation'],
         links: [{ path: '/structure', label: 'Open the Structure pane' }],
         steps: [
           {
             id: 'basics.tour.tabs',
-            title: 'The four top tabs',
+            title: 'The Studio tabs',
             body: (
               <>
                 <strong>Structure</strong> for editing content.{' '}
+                <strong>Marketing</strong> for calendar, campaign, funnel,
+                channel, and analytics planning.{' '}
                 <strong>Presentation</strong> for previewing the live site with
                 your draft applied.{' '}
                 <strong>Getting Started</strong> (this guide).{' '}
@@ -272,7 +274,358 @@ const categories: Category[] = [
     ],
   },
 
-  /* ---------------- 2. Authoring ---------------- */
+  /* ---------------- 2. Marketing suite ---------------- */
+  {
+    id: 'marketing',
+    title: 'Marketing suite',
+    blurb: 'Calendar, campaigns, funnels, channels, analytics, and Quick Links.',
+    icon: ChartUpwardIcon,
+    articles: [
+      {
+        id: 'marketing.overview',
+        title: 'Use the Marketing workspace',
+        blurb: 'The designer-friendly operating layer for planned outreach.',
+        minutes: 5,
+        keywords: ['marketing', 'overview', 'calendar', 'campaign', 'funnel', 'channels', 'analytics', 'instagram'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.overview.framework',
+            title: 'Use it as the notification layer',
+            body: (
+              <>
+                The Marketing workspace is designed for GoInvo designers, not
+                full-time marketers. Its job is to set up the campaign, funnel,
+                channel, calendar, analytics, and Quick Link framework so the
+                remaining work is the actual post, page, image, email, or
+                artifact people will see.
+              </>
+            ),
+            tip: (
+              <>
+                Treat the Designer workflow and Needs attention flags like an
+                internal setup queue: resolve the framework first, then start
+                drafting the content only when the shell is connected.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.overview.order',
+            title: 'Work from strategy to artifact',
+            body: (
+              <>
+                Start with the broad intent, then move toward the thing you
+                need to make: campaigns set the goal and audience, funnels
+                define the next step, channels constrain the format, calendar
+                items become the actual posts or pages, and analytics explains
+                whether the work helped.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.overview.templates',
+            title: 'Use templates as scaffolding',
+            body: (
+              <>
+                Templates are prompts, not rules. Pick the closest campaign,
+                funnel, or content pattern, then rewrite the goal, audience,
+                CTA, and brief in plain language so designers do not need to
+                invent the marketing strategy before making the content.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.channels',
+        title: 'Manage channels and content types',
+        blurb: 'Define where GoInvo publishes and what formats belong there.',
+        minutes: 4,
+        keywords: ['channels', 'instagram', 'linkedin', 'email', 'content types', 'carousel', 'reel'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.channels.first',
+            title: 'Start with channels before planning content',
+            body: (
+              <>
+                Open <strong>Channels</strong> and add the places GoInvo
+                publishes, such as Instagram, LinkedIn, email, the website, or
+                partner sites. Calendar items use these channels to offer
+                useful downstream choices.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.types',
+            title: 'Give each channel its own formats',
+            body: (
+              <>
+                Content types should be individual managed entries, not a
+                comma-separated list. Instagram can include carousel, reel,
+                story, and post; email can include newsletter or announcement;
+                the website can include article, case study, service page, or
+                landing page.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.deletion',
+            title: 'Check usage before deleting',
+            body: (
+              <>
+                Before deleting a channel or content type, review whether
+                calendar items or campaigns already reference it. If content is
+                attached, archive or reassign the channel instead of removing
+                the vocabulary out from under existing work.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.campaigns',
+        title: 'Plan campaigns by goal and audience',
+        blurb: 'Use campaigns as strategy containers, not tiny content tasks.',
+        minutes: 7,
+        keywords: ['campaigns', 'goals', 'audience', 'keywords', 'intent', 'utm', 'measurement'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.campaigns.goal',
+            title: 'Start with the outcome',
+            body: (
+              <>
+                A campaign should name what should change: awareness for a
+                topic, qualified conversations, service-page interest,
+                audience growth, launch support, or adoption of a resource.
+                Specific executions like case study release are better treated
+                as playbooks inside that broader objective.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.campaigns.audience',
+            title: 'Name the audience and intent',
+            body: (
+              <>
+                Write who this is for and what they are trying to learn,
+                compare, decide, or do. Fill the objective, topic cluster,
+                visitor intent, and target query prompts so designers can make
+                the right artifact without needing a marketing background.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.campaigns.measurement',
+            title: 'Keep measurement consistent',
+            body: (
+              <>
+                Choose one primary KPI and one stable UTM campaign name. Keep
+                source, medium, campaign, content, and term naming consistent
+                and lowercase so reports do not split the same effort across
+                multiple rows.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.campaigns.relationships',
+            title: 'Connect the rest of the suite',
+            body: (
+              <>
+                Attach channels, funnels, analytics sources, and calendar
+                items to the campaign. The campaign should become the shared
+                folder for the goal, audience, messages, posts, landing pages,
+                Quick Links, and results.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.funnels',
+        title: 'Build reusable funnels',
+        blurb: 'Map what someone should do after seeing a page, post, or link.',
+        minutes: 5,
+        keywords: ['funnels', 'stage map', 'cta', 'conversion', 'awareness', 'consideration'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.funnels.stage-map',
+            title: 'Use funnels for stage maps',
+            body: (
+              <>
+                Funnels define reusable stages, offers, CTAs, destination URLs,
+                and metrics. A campaign can use a funnel so every calendar item
+                has a clear next step instead of ending with a vague
+                <em>learn more</em>.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.funnels.open-tabs',
+            title: 'Open funnels like working files',
+            body: (
+              <>
+                The All funnels view is the browser. Click{' '}
+                <strong>Open funnel</strong> to add a funnel to the tab strip,
+                then switch between open funnels without crowding the editor.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.funnels.templates',
+            title: 'Preview templates before creating',
+            body: (
+              <>
+                Use the New funnel screen to preview audience, conversion goal,
+                and stage map before creating anything. After creation, tune
+                the stages and CTAs to the actual campaign.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.calendar',
+        title: 'Schedule content on the calendar',
+        blurb: 'Turn strategy into dated design work and publishing tasks.',
+        minutes: 6,
+        keywords: ['calendar', 'content calendar', 'publish date', 'post', 'templates', 'brief'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.calendar.add',
+            title: 'Add dated work from the modal',
+            body: (
+              <>
+                Use the calendar <strong>Add</strong> button to create a
+                dated item with a channel, content type, campaign, and optional
+                template. This keeps planning close to the month view instead
+                of hiding new work below the calendar.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.calendar.brief',
+            title: 'Fill the practical brief',
+            body: (
+              <>
+                Each item should have a brief, CTA, working URL, funnel stage,
+                and analytics source when possible. Templates like insight
+                carousel, case study promo, newsletter roundup, or service page
+                nudge can prefill the first draft.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.calendar.links',
+            title: 'Connect posts to Quick Links',
+            body: (
+              <>
+                When a post points people to <em>link in bio</em>, attach or
+                create a Quick Link from the calendar item. Published or
+                scheduled posts can then help keep <code>/links</code> current.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.analytics',
+        title: 'Connect analytics once',
+        blurb: 'Attach measurement sources to campaigns, funnels, and channels.',
+        minutes: 5,
+        keywords: ['analytics', 'ga4', 'gtm', 'vercel', 'metrics', 'utm', 'dashboard'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.analytics.sources',
+            title: 'Create shared sources',
+            body: (
+              <>
+                Use <strong>Analytics</strong> for GA4, GTM, Vercel Analytics,
+                dashboard links, reporting cadence, and key metric definitions.
+                Sources should be reusable so campaigns and funnels do not need
+                analytics setup from scratch.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.analytics.connections',
+            title: 'Attach sources to marketing elements',
+            body: (
+              <>
+                Connect sources to campaigns, funnels, and channels. The
+                dashboard view should make it easy to see which marketing
+                elements are measured and which still need a source.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.analytics.vercel',
+            title: 'Use Vercel data for site-level signals',
+            body: (
+              <>
+                Vercel Analytics and Speed Insights are useful for lightweight
+                website signals. Pair them with campaign UTMs or GA4 when you
+                need channel attribution, source/medium reporting, or keyword
+                and creative variation data.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.quick-links',
+        title: 'Manage Quick Links',
+        blurb: 'Control the public /links page used by Instagram and social posts.',
+        minutes: 4,
+        keywords: ['quick links', 'link in bio', 'instagram', 'links', '/links', 'housing truths'],
+        links: [
+          { path: '/marketing', label: 'Open Marketing workspace' },
+        ],
+        steps: [
+          {
+            id: 'marketing.quick-links.baseline',
+            title: 'Keep durable links managed',
+            body: (
+              <>
+                Use <strong>Quick Links</strong> to manage the public{' '}
+                <code>/links</code> page. Durable links such as GoInvo and
+                Housing Truths should exist as managed link records so Studio
+                and the public page show the same list.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.quick-links.calendar',
+            title: 'Create temporary links from calendar items',
+            body: (
+              <>
+                Calendar items with a working or published URL appear as
+                candidates, so the link page can be updated from the content
+                plan instead of maintained by memory.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.quick-links.editor',
+            title: 'Edit the public card details',
+            body: (
+              <>
+                Each Quick Link can have a title, description, URL, cover
+                image, status, ordering, campaign, and associated posts. Use
+                the editor to decide what appears publicly and when.
+              </>
+            ),
+          },
+        ],
+      },
+    ],
+  },
+
+  /* ---------------- 3. Authoring ---------------- */
   {
     id: 'authoring',
     title: 'Authoring content',
@@ -596,7 +949,7 @@ const categories: Category[] = [
     ],
   },
 
-  /* ---------------- 3. Publishing & workflow ---------------- */
+  /* ---------------- 4. Publishing & workflow ---------------- */
   {
     id: 'publishing',
     title: 'Publishing & workflow',
@@ -783,7 +1136,7 @@ const categories: Category[] = [
     ],
   },
 
-  /* ---------------- 4. Media & assets ---------------- */
+  /* ---------------- 5. Media & assets ---------------- */
   {
     id: 'media',
     title: 'Media & assets',
@@ -929,7 +1282,7 @@ const categories: Category[] = [
     ],
   },
 
-  /* ---------------- 5. Editorial reference ---------------- */
+  /* ---------------- 6. Editorial reference ---------------- */
   {
     id: 'reference',
     title: 'Editorial reference',
@@ -1048,7 +1401,7 @@ const categories: Category[] = [
     ],
   },
 
-  /* ---------------- 6. Troubleshooting ---------------- */
+  /* ---------------- 7. Troubleshooting ---------------- */
   {
     id: 'troubleshooting',
     title: 'Troubleshooting',
@@ -1186,6 +1539,10 @@ const categories: Category[] = [
   },
 ]
 
+const articleAliases: Record<string, string> = {
+  'basics.marketing': 'marketing.overview',
+}
+
 /* -----------------------------------------------------------------
  * Search filter
  * ----------------------------------------------------------------- */
@@ -1274,7 +1631,7 @@ function ArticleCard({
   const pct = total === 0 ? 0 : (done / total) * 100
 
   return (
-    <div style={{ ...styles.articleCard, ...(open ? styles.articleCardOpen : null) }}>
+    <div id={`article-${article.id}`} style={{ ...styles.articleCard, ...(open ? styles.articleCardOpen : null) }}>
       <button onClick={onToggleOpen} style={styles.articleHeader} type="button">
         <span style={styles.articleChevron}>
           {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
@@ -1384,6 +1741,27 @@ function GettingStartedComponent() {
 
   useEffect(() => {
     setProgress(loadProgress())
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const requestedArticleId = new URLSearchParams(window.location.search).get('article')
+    if (!requestedArticleId) return
+    const articleId = articleAliases[requestedArticleId] || requestedArticleId
+
+    const exists = categories.some((category) =>
+      category.articles.some((article) => article.id === articleId),
+    )
+    if (!exists) return
+
+    setQuery('')
+    setOpenArticles((current) => new Set([...current, articleId]))
+    window.setTimeout(() => {
+      document.getElementById(`article-${articleId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 100)
   }, [])
 
   const toggleArticle = (id: string) =>
