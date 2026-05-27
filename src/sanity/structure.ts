@@ -11,11 +11,23 @@ import { goinvoOrderableDocumentListDeskItem } from './orderable/deskItem'
 const ORDERABLE_TYPES = ['caseStudy', 'feature', 'teamMember'] as const
 const MARKETING_TYPES = [
   'marketingAnalyticsSource',
+  'marketingAudienceProfile',
   'marketingCalendarItem',
   'marketingCampaign',
   'marketingChannel',
+  'marketingCta',
+  'marketingExperiment',
   'marketingFunnel',
   'marketingLinkItem',
+  'marketingMessagePillar',
+  'marketingPerformanceSignal',
+  'marketingProofPoint',
+  'marketingQualityGate',
+  'marketingResearchPlan',
+  'marketingResearchProject',
+  'marketingResearchResult',
+  'marketingResearchRun',
+  'marketingTrackingRule',
 ] as const
 const HIDDEN_TYPES = ['orderPreset', ...MARKETING_TYPES] as const
 const FEEDBACK_TYPE = 'cmsFeedback'

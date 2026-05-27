@@ -35,6 +35,16 @@ const siteContext = {
     channels: [{ title: 'Instagram', key: 'instagram', platform: 'social' }],
     links: [{ title: 'GoInvo', url: 'https://www.goinvo.com', type: 'site' }],
     templates: [{ title: 'Thought leadership campaign', kind: 'campaign', description: 'Reusable campaign shell.' }],
+    researchProjects: [],
+    researchResults: [],
+    audienceProfiles: [{ title: 'Design leaders', priority: 'primary', audience: 'Design leaders' }],
+    messagePillars: [{ title: 'Clear systems', coreClaim: 'Clear systems help people act.', topicCluster: 'civic design' }],
+    proofPoints: [{ title: 'Housing proof', claim: 'Housing Truths visualizes housing forces.', confidence: 'medium' }],
+    ctas: [{ title: 'Read source', label: 'Read the source', funnelStage: 'interest' }],
+    trackingRules: [{ title: 'Default tracking', status: 'active', utmCampaignPattern: 'lowercase-topic' }],
+    qualityGates: [{ title: 'Content review', status: 'active', whenToUse: 'Before publishing.' }],
+    experiments: [],
+    performanceSignals: [],
   },
 }
 
@@ -71,6 +81,7 @@ describe('marketing assistant API', () => {
       ['analyticsSource', 'analyticsSource'],
       ['linkItem', 'linkItem'],
       ['template', 'template'],
+      ['strategyAsset', 'strategyAsset'],
     ] as const
 
     for (const [kind, section] of cases) {
@@ -347,6 +358,98 @@ describe('marketing assistant API', () => {
       kind: 'campaign',
       primaryKpi: 'Engaged visits',
       channels: ['website', 'instagram', 'linkedin'],
+    })
+  })
+
+  it('generates reusable strategy assets with strategy context', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body))
+      expect(body.text.format.name).toBe('marketing_strategyAsset_suggestion')
+      expect(body.text.format.schema.required).toContain('strategyAsset')
+      const userPayload = JSON.parse(body.input[1].content)
+      expect(userPayload.outputContract.strategyAsset).toMatchObject({
+        assetType: expect.stringContaining('audience'),
+      })
+      expect(userPayload.siteContext.existingMarketing.audienceProfiles).toEqual([
+        expect.objectContaining({ title: 'Design leaders' }),
+      ])
+      expect(userPayload.siteContext.existingMarketing.messagePillars).toEqual([
+        expect.objectContaining({ coreClaim: 'Clear systems help people act.' }),
+      ])
+
+      return new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            summary: 'AI suggested a reusable audience profile.',
+            rationale: ['Strategy should be reusable before content generation.'],
+            siteReferences: [],
+            strategyAsset: {
+              assetType: 'audience',
+              title: 'Civic design leaders',
+              status: 'active',
+              summary: 'Audience guidance for civic design content.',
+              priority: 'primary',
+              audience: 'Civic design leaders',
+              needs: ['Understand complex systems quickly'],
+              pains: ['Scattered evidence'],
+              misconceptions: ['Visual content does not need a source'],
+              trustTriggers: ['Concrete artifacts'],
+              desiredActions: ['Read the source'],
+              objections: ['Too abstract'],
+              coreClaim: null,
+              supportingClaims: null,
+              approvedPhrases: null,
+              phrasesToAvoid: null,
+              topicCluster: 'civic design',
+              proofType: null,
+              claim: null,
+              sourceTitle: null,
+              sourceUrl: null,
+              confidence: null,
+              usageNotes: null,
+              ctaLabel: null,
+              funnelStage: null,
+              destination: null,
+              successSignal: null,
+              utmSourceRule: null,
+              utmMediumRule: null,
+              utmCampaignPattern: null,
+              utmContentPattern: null,
+              allowedSources: null,
+              allowedMediums: null,
+              qualityChecklist: null,
+              hypothesis: null,
+              expectedSignal: null,
+              result: null,
+              decision: null,
+              provider: null,
+              signalType: null,
+              sourceLabel: null,
+              query: null,
+              pageUrl: null,
+              metrics: null,
+              interpretation: null,
+              recommendation: null,
+              notes: 'Review before saving.',
+            },
+          }),
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+    vi.stubGlobal('fetch', openAiFetch)
+
+    const response = await POST(assistRequest('strategyAsset', { assetType: 'audience', title: 'Civic design leaders' }))
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(true)
+    expect(payload.suggestion.strategyAsset).toMatchObject({
+      assetType: 'audience',
+      title: 'Civic design leaders',
+      priority: 'primary',
+      needs: ['Understand complex systems quickly'],
     })
   })
 

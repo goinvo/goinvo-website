@@ -1,10 +1,10 @@
 import { defineField, defineType } from 'sanity'
 import { funnelStageOptions } from './marketingFunnel'
-import { targetSiteFields } from './marketingCampaign'
+import { searchIntentOptions, targetSiteFields } from './marketingCampaign'
 
 const calendarStatusOptions = [
   { title: 'Idea', value: 'idea' },
-  { title: 'Drafting', value: 'drafting' },
+  { title: 'Draft', value: 'drafting' },
   { title: 'Review', value: 'review' },
   { title: 'Scheduled', value: 'scheduled' },
   { title: 'Published', value: 'published' },
@@ -125,6 +125,28 @@ export default defineType({
       options: { list: funnelStageOptions },
     }),
     defineField({
+      name: 'topicCluster',
+      title: 'Topic / Keyword Cluster',
+      type: 'string',
+      group: 'planning',
+      description: 'SEO or campaign topic this item supports.',
+    }),
+    defineField({
+      name: 'searchIntent',
+      title: 'Search / Visitor Intent',
+      type: 'string',
+      group: 'planning',
+      options: { list: searchIntentOptions },
+    }),
+    defineField({
+      name: 'targetQueries',
+      title: 'Target Queries / Phrases',
+      type: 'array',
+      group: 'planning',
+      of: [{ type: 'string' }],
+      description: 'Plain-language phrases this post or page should help answer.',
+    }),
+    defineField({
       name: 'targetSites',
       title: 'Target Sites',
       type: 'array',
@@ -140,6 +162,51 @@ export default defineType({
           },
         },
       ],
+    }),
+    defineField({
+      name: 'researchProject',
+      title: 'Research Project',
+      type: 'reference',
+      group: 'planning',
+      to: [{ type: 'marketingResearchProject' }],
+      description: 'Research directive that justified this planned item.',
+    }),
+    defineField({
+      name: 'researchResults',
+      title: 'Research Results',
+      type: 'array',
+      group: 'planning',
+      of: [{ type: 'reference', to: [{ type: 'marketingResearchResult' }] }],
+      description: 'Approved findings used to generate or justify this planned item.',
+    }),
+    defineField({
+      name: 'audienceProfiles',
+      title: 'Audience Profiles',
+      type: 'array',
+      group: 'planning',
+      of: [{ type: 'reference', to: [{ type: 'marketingAudienceProfile' }] }],
+      description: 'Reusable audience records this item should speak to.',
+    }),
+    defineField({
+      name: 'messagePillars',
+      title: 'Message Pillars',
+      type: 'array',
+      group: 'planning',
+      of: [{ type: 'reference', to: [{ type: 'marketingMessagePillar' }] }],
+    }),
+    defineField({
+      name: 'proofPoints',
+      title: 'Proof Points',
+      type: 'array',
+      group: 'planning',
+      of: [{ type: 'reference', to: [{ type: 'marketingProofPoint' }] }],
+    }),
+    defineField({
+      name: 'ctas',
+      title: 'CTAs',
+      type: 'array',
+      group: 'planning',
+      of: [{ type: 'reference', to: [{ type: 'marketingCta' }] }],
     }),
     defineField({
       name: 'canonicalContent',
@@ -188,6 +255,65 @@ export default defineType({
       group: 'content',
     }),
     defineField({
+      name: 'contentDraft',
+      title: 'Draft Content / Caption',
+      type: 'text',
+      rows: 8,
+      group: 'content',
+      description: 'Editable AI or human-written copy for the planned item.',
+    }),
+    defineField({
+      name: 'draftFrames',
+      title: 'Draft Frames / Slides',
+      type: 'array',
+      group: 'content',
+      description: 'Frame-level copy for carousels, videos, or other multi-part content.',
+      of: [
+        {
+          name: 'draftFrame',
+          title: 'Draft Frame',
+          type: 'object',
+          fields: [
+            defineField({ name: 'title', title: 'Title', type: 'string' }),
+            defineField({ name: 'body', title: 'Body Copy', type: 'text', rows: 3 }),
+            defineField({ name: 'visualDirection', title: 'Visual Direction', type: 'text', rows: 2 }),
+            defineField({ name: 'altText', title: 'Alt Text', type: 'text', rows: 2 }),
+          ],
+          preview: {
+            select: { title: 'title', subtitle: 'body' },
+            prepare({ title, subtitle }) {
+              return {
+                title: title || 'Draft frame',
+                subtitle,
+              }
+            },
+          },
+        },
+      ],
+    }),
+    defineField({
+      name: 'draftAltText',
+      title: 'Overall Draft Alt Text',
+      type: 'text',
+      rows: 3,
+      group: 'content',
+    }),
+    defineField({
+      name: 'draftHashtags',
+      title: 'Draft Hashtags / Tags',
+      type: 'array',
+      group: 'content',
+      of: [{ type: 'string' }],
+    }),
+    defineField({
+      name: 'contentProductionNotes',
+      title: 'Content Production Notes',
+      type: 'text',
+      rows: 4,
+      group: 'content',
+      description: 'Source-checking, asset, accessibility, or review notes before publishing.',
+    }),
+    defineField({
       name: 'callToAction',
       title: 'Call to Action',
       type: 'string',
@@ -200,11 +326,40 @@ export default defineType({
       group: 'measurement',
     }),
     defineField({
+      name: 'trackingRule',
+      title: 'Tracking Rule',
+      type: 'reference',
+      group: 'measurement',
+      to: [{ type: 'marketingTrackingRule' }],
+    }),
+    defineField({
       name: 'analyticsSource',
       title: 'Analytics Source',
       type: 'reference',
       group: 'measurement',
       to: [{ type: 'marketingAnalyticsSource' }],
+    }),
+    defineField({
+      name: 'qualityGates',
+      title: 'Quality Gates',
+      type: 'array',
+      group: 'measurement',
+      of: [{ type: 'reference', to: [{ type: 'marketingQualityGate' }] }],
+      description: 'Checklist guidance before this item is scheduled or published.',
+    }),
+    defineField({
+      name: 'experiments',
+      title: 'Experiments',
+      type: 'array',
+      group: 'measurement',
+      of: [{ type: 'reference', to: [{ type: 'marketingExperiment' }] }],
+    }),
+    defineField({
+      name: 'performanceSignals',
+      title: 'Performance Signals',
+      type: 'array',
+      group: 'measurement',
+      of: [{ type: 'reference', to: [{ type: 'marketingPerformanceSignal' }] }],
     }),
     defineField({
       name: 'performanceNotes',
