@@ -20,4 +20,67 @@ describe('Portable Text authoring', () => {
       'Numbered',
     ])
   })
+
+  it('gives column blocks one editor per visual column', () => {
+    type SchemaMember = {
+      name?: string
+      type?: string
+      fields?: SchemaMember[]
+      of?: SchemaMember[]
+      options?: { collapsible?: boolean; collapsed?: boolean }
+      initialValue?: { columnContent?: unknown[] }
+    }
+
+    const columnsMember = portableTextSchema.of?.find((member) => member.name === 'columns') as
+      | SchemaMember
+      | undefined
+    const columnContentField = columnsMember?.fields?.find((field) => field.name === 'columnContent')
+    const columnMember = columnContentField?.of?.find((member) => member.name === 'column')
+    const nestedContentField = columnMember?.fields?.find((field) => field.name === 'content')
+    const legacyContentField = columnsMember?.fields?.find((field) => field.name === 'content')
+
+    expect(columnContentField).toBeDefined()
+    expect(columnsMember?.initialValue?.columnContent).toHaveLength(2)
+    expect(nestedContentField?.of?.map((member) => member.name || member.type)).toEqual([
+      'block',
+      'image',
+      'buttonGroup',
+    ])
+    expect(legacyContentField?.options).toMatchObject({ collapsible: true, collapsed: true })
+  })
+
+  it('authors iframe blocks as HTML embeds with code fields and preview input', () => {
+    type SchemaMember = {
+      name?: string
+      title?: string
+      type?: string
+      fields?: SchemaMember[]
+      components?: { input?: unknown }
+      initialValue?: Record<string, unknown>
+    }
+
+    const embedMember = portableTextSchema.of?.find((member) => member.name === 'iframeEmbed') as
+      | SchemaMember
+      | undefined
+
+    expect(embedMember?.title).toBe('HTML Embed')
+    expect(embedMember?.components?.input).toBeDefined()
+    expect(embedMember?.initialValue).toMatchObject({ embedMode: 'html' })
+
+    const fields = embedMember?.fields || []
+    expect(fields.map((field) => field.name)).toEqual([
+      'embedMode',
+      'html',
+      'css',
+      'js',
+      'url',
+      'caption',
+      'aspectRatio',
+      'height',
+      'fullWidth',
+    ])
+    expect(fields.find((field) => field.name === 'html')?.components?.input).toBeDefined()
+    expect(fields.find((field) => field.name === 'css')?.components?.input).toBeDefined()
+    expect(fields.find((field) => field.name === 'js')?.components?.input).toBeDefined()
+  })
 })

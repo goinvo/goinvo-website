@@ -1,12 +1,17 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { definePlugin, type Tool, useClient } from 'sanity'
 import {
+  BellIcon,
   CalendarIcon,
+  ChevronLeftIcon,
   CloseIcon,
   DashboardIcon,
+  EllipsisHorizontalIcon,
   LaunchIcon,
   LinkIcon,
   MasterDetailIcon,
+  RefreshIcon,
+  SearchIcon,
   TagIcon,
   TargetIcon,
   TrendUpwardIcon,
@@ -17,7 +22,29 @@ import { campaignObjectiveOptions, campaignStatusOptions, searchIntentOptions } 
 import { channelPlatformOptions, channelStatusOptions } from '../schemas/marketingChannel'
 import { funnelStageOptions, funnelStatusOptions } from '../schemas/marketingFunnel'
 import { linkItemStatusOptions, linkItemTypeOptions } from '../schemas/marketingLinkItem'
+import {
+  collaborationRelationshipOptions,
+  collaborationStatusOptions,
+  contentFormatOptions,
+  contributionTypeOptions,
+  opportunityReadinessOptions,
+  researchConfidenceOptions,
+  researchEvidenceTypeOptions,
+  researchMethodOptions,
+  researchPlanCadenceOptions,
+  researchPlanStatusOptions,
+  researchPriorityOptions,
+} from '../schemas/marketingResearchPlan'
+import { researchProjectStatusOptions, researchProjectTypeOptions } from '../schemas/marketingResearchProject'
+import { researchResultStatusOptions, researchResultTypeOptions } from '../schemas/marketingResearchResult'
+import { researchRunStatusOptions } from '../schemas/marketingResearchRun'
 import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '../schemas/marketingTemplate'
+import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
+import {
+  DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY,
+  defaultDesignerWorkflowTutorial,
+  getDesignerWorkflowTutorial,
+} from '../tutorials/designerWorkflowTutorials'
 
 const API_VERSION = '2024-01-01'
 const ADD_CHANNEL_VALUE = '__add_new_channel__'
@@ -56,6 +83,11 @@ const MARKETING_CONTROL_CSS = `
   }
 `
 
+const MARKETING_OPAQUE_CARD_BG = '#11141f'
+const MARKETING_OPAQUE_PANEL_BG = '#151a26'
+const DESIGNER_WORKFLOW_SESSIONS_STORAGE_KEY = 'goinvo.marketing.designerWorkflow.sessions.v2'
+const DESIGNER_WORKFLOW_ACTIVE_SESSION_STORAGE_KEY = 'goinvo.marketing.designerWorkflow.activeSession.v2'
+
 const MARKETING_QUERY = `{
   "calendarItems": *[_type == "marketingCalendarItem"]|order(publishAt asc, _updatedAt desc) {
     _id,
@@ -66,6 +98,11 @@ const MARKETING_QUERY = `{
     contentType,
     channel,
     brief,
+    contentDraft,
+    draftFrames[]{_key, title, body, visualDirection, altText},
+    draftAltText,
+    draftHashtags,
+    contentProductionNotes,
     workingUrl,
     publishedUrl,
     "linkItems": linkItems[]->{
@@ -89,10 +126,23 @@ const MARKETING_QUERY = `{
     callToAction,
     utmCampaign,
     funnelStage,
+    topicCluster,
+    searchIntent,
+    targetQueries,
     "campaign": campaign->{_id, title, status},
     "funnel": funnel->{_id, title, status},
     "analyticsSource": analyticsSource->{_id, title, provider, status},
-    "channelRef": channelRef->{_id, title, key, status, platform, contentTypes[]{_key, label, value, description}}
+    "channelRef": channelRef->{_id, title, key, status, platform, contentTypes[]{_key, label, value, description}},
+    "researchProject": researchProject->{_id, title, status},
+    "researchResults": researchResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
+    "audienceProfiles": audienceProfiles[]->{_id, title, priority, status},
+    "messagePillars": messagePillars[]->{_id, title, coreClaim, topicCluster},
+    "proofPoints": proofPoints[]->{_id, title, claim, confidence},
+    "ctas": ctas[]->{_id, title, label, funnelStage},
+    "trackingRule": trackingRule->{_id, title, status},
+    "qualityGates": qualityGates[]->{_id, title, status},
+    "experiments": experiments[]->{_id, title, status},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status}
   },
   "campaigns": *[_type == "marketingCampaign"]|order(startDate desc, _updatedAt desc) {
     _id,
@@ -116,7 +166,17 @@ const MARKETING_QUERY = `{
     notes,
     primaryKpi,
     utmCampaign,
-    successMetrics[]{label, target, "source": source->{_id, title, provider, status}}
+    successMetrics[]{label, target, "source": source->{_id, title, provider, status}},
+    "researchProject": researchProject->{_id, title, status},
+    "researchResults": researchResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
+    "audienceProfiles": audienceProfiles[]->{_id, title, priority, status},
+    "messagePillars": messagePillars[]->{_id, title, coreClaim, topicCluster},
+    "proofPoints": proofPoints[]->{_id, title, claim, confidence},
+    "ctas": ctas[]->{_id, title, label, funnelStage},
+    "trackingRule": trackingRule->{_id, title, status},
+    "qualityGates": qualityGates[]->{_id, title, status},
+    "experiments": experiments[]->{_id, title, status},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status}
   },
   "funnels": *[_type == "marketingFunnel"]|order(_updatedAt desc) {
     _id,
@@ -127,7 +187,15 @@ const MARKETING_QUERY = `{
     conversionGoal,
     notes,
     stages[]{_key, _type, stage, goal, offer, callToAction, destinationUrl, metrics},
-    "analyticsSources": analyticsSources[]->{_id, title, provider, status}
+    "analyticsSources": analyticsSources[]->{_id, title, provider, status},
+    "researchProject": researchProject->{_id, title, status},
+    "researchResults": researchResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
+    "audienceProfiles": audienceProfiles[]->{_id, title, priority, status},
+    "messagePillars": messagePillars[]->{_id, title, coreClaim, topicCluster},
+    "proofPoints": proofPoints[]->{_id, title, claim, confidence},
+    "ctas": ctas[]->{_id, title, label, funnelStage},
+    "qualityGates": qualityGates[]->{_id, title, status},
+    "experiments": experiments[]->{_id, title, status}
   },
   "analyticsSources": *[_type == "marketingAnalyticsSource"]|order(title asc) {
     _id,
@@ -148,6 +216,120 @@ const MARKETING_QUERY = `{
     implementationNotes,
     targetSites[]{_key, label, url},
     keyMetrics[]{_key, label, definition}
+  },
+  "audienceProfiles": *[_type == "marketingAudienceProfile"]|order(priority asc, _updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    priority,
+    audience,
+    needs,
+    pains,
+    misconceptions,
+    trustTriggers,
+    desiredActions,
+    objections,
+    notes
+  },
+  "messagePillars": *[_type == "marketingMessagePillar"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    coreClaim,
+    supportingClaims,
+    approvedPhrases,
+    phrasesToAvoid,
+    topicCluster,
+    "audiences": audiences[]->{_id, title, priority},
+    "proofPoints": proofPoints[]->{_id, title, confidence},
+    notes
+  },
+  "proofPoints": *[_type == "marketingProofPoint"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    claim,
+    proofType,
+    sourceTitle,
+    sourceUrl,
+    confidence,
+    "researchResults": researchResults[]->{_id, title, resultType, status, keyword},
+    "audiences": audiences[]->{_id, title, priority},
+    topicCluster,
+    usageNotes
+  },
+  "ctas": *[_type == "marketingCta"]|order(priority asc, _updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    label,
+    funnelStage,
+    destination,
+    successSignal,
+    "audiences": audiences[]->{_id, title, priority},
+    priority,
+    notes
+  },
+  "trackingRules": *[_type == "marketingTrackingRule"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    status,
+    utmSourceRule,
+    utmMediumRule,
+    utmCampaignPattern,
+    utmContentPattern,
+    allowedSources[]{_key, label, value, whenToUse},
+    allowedMediums[]{_key, label, value, whenToUse},
+    examples[]{_key, label, url, notes},
+    notes
+  },
+  "qualityGates": *[_type == "marketingQualityGate"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    status,
+    whenToUse,
+    checks[]{_key, label, category, guidance, required},
+    notes
+  },
+  "experiments": *[_type == "marketingExperiment"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    status,
+    hypothesis,
+    expectedSignal,
+    "campaign": campaign->{_id, title, status},
+    "calendarItem": calendarItem->{_id, title, status, publishAt},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status},
+    result,
+    decision,
+    decisionDate,
+    notes
+  },
+  "performanceSignals": *[_type == "marketingPerformanceSignal"]|order(coalesce(metricDate, _updatedAt) desc) {
+    _id,
+    _updatedAt,
+    title,
+    provider,
+    status,
+    signalType,
+    sourceLabel,
+    query,
+    pageUrl,
+    "campaign": campaign->{_id, title, status},
+    "channel": channel->{_id, title, key, status},
+    "linkItem": linkItem->{_id, title, url, status},
+    "calendarItem": calendarItem->{_id, title, status, publishAt},
+    "researchProject": researchProject->{_id, title, status},
+    metricDate,
+    periodStart,
+    periodEnd,
+    metrics[]{_key, label, value, unit, change},
+    interpretation,
+    recommendation,
+    rawImport
   },
   "channels": *[_type == "marketingChannel"]|order(title asc) {
     _id,
@@ -180,7 +362,182 @@ const MARKETING_QUERY = `{
     },
     "campaign": campaign->{_id, title, status},
     "calendarItem": calendarItem->{_id, title, status, publishAt, workingUrl, publishedUrl, channel},
-    "calendarItems": calendarItems[]->{_id, title, status, publishAt, workingUrl, publishedUrl, channel}
+    "calendarItems": calendarItems[]->{_id, title, status, publishAt, workingUrl, publishedUrl, channel},
+    "researchProject": researchProject->{_id, title, status},
+    "researchResults": researchResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
+    "audienceProfiles": audienceProfiles[]->{_id, title, priority, status},
+    "messagePillars": messagePillars[]->{_id, title, coreClaim, topicCluster},
+    "proofPoints": proofPoints[]->{_id, title, claim, confidence},
+    "cta": cta->{_id, title, label, funnelStage},
+    "trackingRule": trackingRule->{_id, title, status},
+    "qualityGates": qualityGates[]->{_id, title, status},
+    "experiments": experiments[]->{_id, title, status},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status}
+  },
+  "researchProjects": *[_type == "marketingResearchProject"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    status,
+    researchType,
+    brief,
+    audience,
+    goals,
+    campaignObjective,
+    positioning,
+    canonicalUrl,
+    "audienceProfiles": audienceProfiles[]->{_id, title, priority, status},
+    "messagePillars": messagePillars[]->{_id, title, coreClaim, topicCluster},
+    "proofPoints": proofPoints[]->{_id, title, claim, confidence},
+    seedKeywords,
+    seedUrls,
+    targetGeography,
+    language,
+    methods,
+    researchQuestions[]{_key, question, whyItMatters, method, decisionNeeded, status},
+    collaborators[]{
+      _key,
+      name,
+      organization,
+      relationshipType,
+      topicArea,
+      availabilityStart,
+      availabilityEnd,
+      contributionType,
+      capacity,
+      expectedContribution,
+      status,
+      "relatedResults": relatedResults[]->{_id, title, resultType, status, keyword},
+      notes
+    },
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, interpretation, recommendation},
+    "selectedResults": selectedResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
+    "approvedResults": approvedResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
+    "generatedCampaigns": generatedCampaigns[]->{_id, title, status},
+    "generatedFunnels": generatedFunnels[]->{_id, title, status},
+    "generatedCalendarItems": generatedCalendarItems[]->{_id, title, status, publishAt, workingUrl, publishedUrl, channel},
+    "generatedLinkItems": generatedLinkItems[]->{_id, title, url, status},
+    "legacyPlan": legacyPlan->{_id, title, status},
+    internalNotes
+  },
+  "researchResults": *[_type == "marketingResearchResult"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    resultType,
+    status,
+    "project": project->{_id, title, status},
+    "run": run->{_id, title, status, provider, startedAt},
+    selectedForSynthesis,
+    approvedAt,
+    priority,
+    provider,
+    sourceMethod,
+    scoreSource,
+    database,
+    fetchedAt,
+    rawProviderMetadata,
+    keyword,
+    searchIntent,
+    volume,
+    difficulty,
+    cpc,
+    competition,
+    resultsCount,
+    canonicalUrl,
+    contentGap,
+    sourceTitle,
+    sourceUrl,
+    claim,
+    evidenceType,
+    confidence,
+    implication,
+    competitorName,
+    competitorUrl,
+    collaboratorName,
+    organization,
+    relationshipType,
+    topicArea,
+    availabilityStart,
+    availabilityEnd,
+    contributionType,
+    capacity,
+    expectedContribution,
+    collaborationStatus
+  },
+  "researchRuns": *[_type == "marketingResearchRun"]|order(startedAt desc, _updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    "project": project->{_id, title, status},
+    provider,
+    status,
+    startedAt,
+    completedAt,
+    methods,
+    seedKeywords,
+    seedUrls,
+    database,
+    warnings,
+    errors,
+    "createdResults": createdResults[]->{_id, title, resultType, status, keyword}
+  },
+  "researchPlans": *[_type == "marketingResearchPlan"]|order(_updatedAt desc) {
+    _id,
+    _updatedAt,
+    title,
+    status,
+    summary,
+    audience,
+    positioning,
+    campaignObjective,
+    canonicalUrl,
+    releaseCadence,
+    contentPillars[]{_key, title, audienceNeed, angle, exampleFormats},
+    researchQuestions[]{_key, question, whyItMatters, method, decisionNeeded, status},
+    evidenceNotes[]{_key, claim, sourceTitle, sourceUrl, evidenceType, confidence, implication, gap},
+    assumptions[]{_key, assumption, risk, validationSignal, confidence},
+    seoTargets[]{_key, query, intent, priority, canonicalUrl, contentGap, notes},
+    channels[]{_key, channelKey, rationale, cadence, priority},
+    collaborations[]{
+      _key,
+      name,
+      organization,
+      relationshipType,
+      topicArea,
+      availabilityStart,
+      availabilityEnd,
+      contributionType,
+      expectedContribution,
+      status,
+      notes
+    },
+    releaseWindows[]{_key, label, startDate, endDate, goal, priority},
+    contentOpportunities[]{
+      _key,
+      title,
+      channel,
+      format,
+      owner,
+      releaseWindow,
+      callToAction,
+      sourceMaterial,
+      destinationUrl,
+      readiness,
+      seoQuery,
+      priority,
+      notes,
+      "generatedCalendarItem": generatedCalendarItem->{_id, title, status, publishAt, workingUrl, publishedUrl, channel},
+      "generatedLinkItem": generatedLinkItem->{_id, title, url, status}
+    },
+    measurementGoals[]{_key, label, target, "source": source->{_id, title, provider, status}},
+    strategyAdjustments[]{_key, decisionDate, trigger, reason, recommendation, affectedItems, decision},
+    "generatedCampaigns": generatedCampaigns[]->{_id, title, status},
+    "generatedFunnels": generatedFunnels[]->{_id, title, status},
+    "generatedCalendarItems": generatedCalendarItems[]->{_id, title, status, publishAt, workingUrl, publishedUrl, channel},
+    "generatedLinkItems": generatedLinkItems[]->{_id, title, url, status},
+    "generatedAnalyticsSources": generatedAnalyticsSources[]->{_id, title, provider, status},
+    internalNotes
   },
   "templates": *[_type == "marketingTemplate"]|order(coalesce(order, 100) asc, title asc) {
     _id,
@@ -199,6 +556,12 @@ const MARKETING_QUERY = `{
     searchIntent,
     targetQueries,
     positioning,
+    "audienceProfiles": audienceProfiles[]->{_id, title, priority, status},
+    "messagePillars": messagePillars[]->{_id, title, coreClaim, topicCluster},
+    "proofPoints": proofPoints[]->{_id, title, claim, confidence},
+    "ctas": ctas[]->{_id, title, label, funnelStage},
+    "trackingRule": trackingRule->{_id, title, status},
+    "qualityGates": qualityGates[]->{_id, title, status},
     channels,
     successMetrics[]{_key, label, target},
     designerGuidance,
@@ -213,6 +576,9 @@ type MarketingDocumentInput = { _type: string } & Record<string, unknown>
 
 type MarketingViewId =
   | 'dashboard'
+  | 'attention'
+  | 'strategy'
+  | 'research'
   | 'calendar'
   | 'campaigns'
   | 'funnels'
@@ -220,7 +586,18 @@ type MarketingViewId =
   | 'channels'
   | 'analytics'
   | 'linkTree'
-type MarketingAssistKind = 'campaign' | 'funnel' | 'calendarItem' | 'channel' | 'analyticsSource' | 'linkItem' | 'template'
+type MarketingAssistKind =
+  | 'campaign'
+  | 'funnel'
+  | 'calendarItem'
+  | 'channel'
+  | 'analyticsSource'
+  | 'linkItem'
+  | 'template'
+  | 'researchProject'
+  | 'researchSynthesis'
+  | 'researchPlan'
+  | 'strategyAsset'
 
 export const MARKETING_TOOL_VIEWS: Array<{
   id: MarketingViewId
@@ -233,6 +610,24 @@ export const MARKETING_TOOL_VIEWS: Array<{
     title: 'Dashboard',
     description: 'See content runway, strategy gaps, and the next best fixes.',
     icon: DashboardIcon,
+  },
+  {
+    id: 'attention',
+    title: 'Needs Attention',
+    description: 'Review setup gaps, missing content fields, and measurement tasks.',
+    icon: BellIcon,
+  },
+  {
+    id: 'research',
+    title: 'Research',
+    description: 'Turn strategy inputs, SEO, and collaborators into release opportunities.',
+    icon: SearchIcon,
+  },
+  {
+    id: 'strategy',
+    title: 'Strategy',
+    description: 'Manage reusable audiences, messages, proof, CTAs, tracking rules, and quality gates.',
+    icon: TargetIcon,
   },
   {
     id: 'calendar',
@@ -278,6 +673,15 @@ export const MARKETING_TOOL_VIEWS: Array<{
   },
 ]
 
+export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
+  'dashboard',
+  'research',
+  'strategy',
+  'calendar',
+  'channels',
+  'linkTree',
+]
+
 interface RefSummary {
   _id: string
   title?: string
@@ -318,16 +722,42 @@ interface MarketingCalendarItem {
   contentType?: string
   channel?: string
   brief?: string
+  contentDraft?: string
+  draftFrames?: DraftContentFrame[]
+  draftAltText?: string
+  draftHashtags?: string[]
+  contentProductionNotes?: string
   workingUrl?: string
   publishedUrl?: string
   linkItems?: MarketingLinkItem[]
   callToAction?: string
   utmCampaign?: string
   funnelStage?: string
+  topicCluster?: string
+  searchIntent?: string
+  targetQueries?: string[]
   campaign?: RefSummary
   funnel?: RefSummary
   channelRef?: MarketingChannel
   analyticsSource?: RefSummary
+  researchProject?: RefSummary
+  researchResults?: MarketingResearchResult[]
+  audienceProfiles?: MarketingAudienceProfile[]
+  messagePillars?: MarketingMessagePillar[]
+  proofPoints?: MarketingProofPoint[]
+  ctas?: MarketingCta[]
+  trackingRule?: RefSummary
+  qualityGates?: MarketingQualityGate[]
+  experiments?: MarketingExperiment[]
+  performanceSignals?: MarketingPerformanceSignal[]
+}
+
+type DraftContentFrame = {
+  _key?: string
+  title?: string
+  body?: string
+  visualDirection?: string
+  altText?: string
 }
 
 interface MarketingCampaign {
@@ -353,6 +783,16 @@ interface MarketingCampaign {
   primaryKpi?: string
   utmCampaign?: string
   successMetrics?: SuccessMetric[]
+  researchProject?: RefSummary
+  researchResults?: MarketingResearchResult[]
+  audienceProfiles?: MarketingAudienceProfile[]
+  messagePillars?: MarketingMessagePillar[]
+  proofPoints?: MarketingProofPoint[]
+  ctas?: MarketingCta[]
+  trackingRule?: RefSummary
+  qualityGates?: MarketingQualityGate[]
+  experiments?: MarketingExperiment[]
+  performanceSignals?: MarketingPerformanceSignal[]
 }
 
 interface FunnelStage {
@@ -376,6 +816,14 @@ interface MarketingFunnel {
   notes?: string
   stages?: FunnelStage[]
   analyticsSources?: RefSummary[]
+  researchProject?: RefSummary
+  researchResults?: MarketingResearchResult[]
+  audienceProfiles?: MarketingAudienceProfile[]
+  messagePillars?: MarketingMessagePillar[]
+  proofPoints?: MarketingProofPoint[]
+  ctas?: MarketingCta[]
+  qualityGates?: MarketingQualityGate[]
+  experiments?: MarketingExperiment[]
 }
 
 interface MarketingAnalyticsSource {
@@ -397,6 +845,128 @@ interface MarketingAnalyticsSource {
   implementationNotes?: string
   targetSites?: Array<{ _key?: string; label?: string; url?: string }>
   keyMetrics?: Array<{ _key?: string; _type?: 'keyMetric'; label?: string; definition?: string }>
+}
+
+interface MarketingAudienceProfile {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  priority?: string
+  audience?: string
+  needs?: string[]
+  pains?: string[]
+  misconceptions?: string[]
+  trustTriggers?: string[]
+  desiredActions?: string[]
+  objections?: string[]
+  notes?: string
+}
+
+interface MarketingMessagePillar {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  coreClaim?: string
+  supportingClaims?: string[]
+  approvedPhrases?: string[]
+  phrasesToAvoid?: string[]
+  topicCluster?: string
+  audiences?: MarketingAudienceProfile[]
+  proofPoints?: MarketingProofPoint[]
+  notes?: string
+}
+
+interface MarketingProofPoint {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  claim?: string
+  proofType?: string
+  sourceTitle?: string
+  sourceUrl?: string
+  confidence?: string
+  researchResults?: MarketingResearchResult[]
+  audiences?: MarketingAudienceProfile[]
+  topicCluster?: string
+  usageNotes?: string
+}
+
+interface MarketingCta {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  label?: string
+  funnelStage?: string
+  destination?: string
+  successSignal?: string
+  audiences?: MarketingAudienceProfile[]
+  priority?: string
+  notes?: string
+}
+
+interface MarketingTrackingRule {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  status?: string
+  utmSourceRule?: string
+  utmMediumRule?: string
+  utmCampaignPattern?: string
+  utmContentPattern?: string
+  allowedSources?: Array<{ _key?: string; label?: string; value?: string; whenToUse?: string }>
+  allowedMediums?: Array<{ _key?: string; label?: string; value?: string; whenToUse?: string }>
+  examples?: Array<{ _key?: string; label?: string; url?: string; notes?: string }>
+  notes?: string
+}
+
+interface MarketingQualityGate {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  status?: string
+  whenToUse?: string
+  checks?: Array<{ _key?: string; label?: string; category?: string; guidance?: string; required?: boolean }>
+  notes?: string
+}
+
+interface MarketingExperiment {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  status?: string
+  hypothesis?: string
+  expectedSignal?: string
+  campaign?: RefSummary
+  calendarItem?: MarketingCalendarItem
+  performanceSignals?: MarketingPerformanceSignal[]
+  result?: string
+  decision?: string
+  decisionDate?: string
+  notes?: string
+}
+
+interface MarketingPerformanceSignal {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  provider?: string
+  status?: string
+  signalType?: string
+  sourceLabel?: string
+  query?: string
+  pageUrl?: string
+  campaign?: RefSummary
+  channel?: MarketingChannel
+  linkItem?: MarketingLinkItem
+  calendarItem?: MarketingCalendarItem
+  researchProject?: RefSummary
+  metricDate?: string
+  periodStart?: string
+  periodEnd?: string
+  metrics?: Array<{ _key?: string; label?: string; value?: number; unit?: string; change?: string }>
+  interpretation?: string
+  recommendation?: string
+  rawImport?: string
 }
 
 interface MarketingLinkItem {
@@ -422,6 +992,16 @@ interface MarketingLinkItem {
   campaign?: RefSummary
   calendarItem?: MarketingCalendarItem
   calendarItems?: MarketingCalendarItem[]
+  researchProject?: RefSummary
+  researchResults?: MarketingResearchResult[]
+  audienceProfiles?: MarketingAudienceProfile[]
+  messagePillars?: MarketingMessagePillar[]
+  proofPoints?: MarketingProofPoint[]
+  cta?: MarketingCta
+  trackingRule?: RefSummary
+  qualityGates?: MarketingQualityGate[]
+  experiments?: MarketingExperiment[]
+  performanceSignals?: MarketingPerformanceSignal[]
 }
 
 interface MarketingTemplate {
@@ -441,6 +1021,12 @@ interface MarketingTemplate {
   searchIntent?: string
   targetQueries?: string[]
   positioning?: string
+  audienceProfiles?: MarketingAudienceProfile[]
+  messagePillars?: MarketingMessagePillar[]
+  proofPoints?: MarketingProofPoint[]
+  ctas?: MarketingCta[]
+  trackingRule?: RefSummary
+  qualityGates?: MarketingQualityGate[]
   channels?: string[]
   successMetrics?: Array<{ _key?: string; label?: string; target?: string }>
   designerGuidance?: string[]
@@ -449,13 +1035,295 @@ interface MarketingTemplate {
   stages?: FunnelStage[]
 }
 
+interface ResearchContentPillar {
+  _key?: string
+  _type?: 'contentPillar'
+  title?: string
+  audienceNeed?: string
+  angle?: string
+  exampleFormats?: string[]
+}
+
+interface ResearchQuestion {
+  _key?: string
+  _type?: 'researchQuestion'
+  question?: string
+  whyItMatters?: string
+  method?: string
+  decisionNeeded?: string
+  status?: string
+}
+
+interface ResearchEvidenceNote {
+  _key?: string
+  _type?: 'evidenceNote'
+  claim?: string
+  sourceTitle?: string
+  sourceUrl?: string
+  evidenceType?: string
+  confidence?: string
+  implication?: string
+  gap?: string
+}
+
+interface ResearchAssumption {
+  _key?: string
+  _type?: 'researchAssumption'
+  assumption?: string
+  risk?: string
+  validationSignal?: string
+  confidence?: string
+}
+
+interface ResearchSeoTarget {
+  _key?: string
+  _type?: 'seoTarget'
+  query?: string
+  intent?: string
+  priority?: string
+  canonicalUrl?: string
+  contentGap?: string
+  notes?: string
+}
+
+interface ResearchRecommendedChannel {
+  _key?: string
+  _type?: 'recommendedChannel'
+  channelKey?: string
+  rationale?: string
+  cadence?: string
+  priority?: string
+}
+
+interface ResearchCollaboration {
+  _key?: string
+  _type?: 'collaborationOpportunity'
+  name?: string
+  organization?: string
+  relationshipType?: string
+  topicArea?: string
+  availabilityStart?: string
+  availabilityEnd?: string
+  contributionType?: string
+  expectedContribution?: string
+  status?: string
+  notes?: string
+}
+
+interface ResearchReleaseWindow {
+  _key?: string
+  _type?: 'releaseWindow'
+  label?: string
+  startDate?: string
+  endDate?: string
+  goal?: string
+  priority?: string
+}
+
+interface ResearchContentOpportunity {
+  _key?: string
+  _type?: 'contentOpportunity'
+  title?: string
+  channel?: string
+  format?: string
+  owner?: string
+  releaseWindow?: string
+  callToAction?: string
+  sourceMaterial?: string
+  destinationUrl?: string
+  readiness?: string
+  seoQuery?: string
+  priority?: string
+  notes?: string
+  selected?: boolean
+  generatedCalendarItem?: MarketingCalendarItem | ReferenceValue
+  generatedLinkItem?: MarketingLinkItem | ReferenceValue
+}
+
+interface ResearchMeasurementGoal {
+  _key?: string
+  _type?: 'measurementGoal'
+  label?: string
+  target?: string
+  source?: RefSummary | ReferenceValue
+}
+
+interface ResearchStrategyAdjustment {
+  _key?: string
+  _type?: 'strategyAdjustment'
+  decisionDate?: string
+  trigger?: string
+  reason?: string
+  recommendation?: string
+  affectedItems?: string[]
+  decision?: string
+}
+
+interface MarketingResearchPlan {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  status?: string
+  summary?: string
+  audience?: string
+  positioning?: string
+  campaignObjective?: string
+  canonicalUrl?: string
+  releaseCadence?: string
+  contentPillars?: ResearchContentPillar[]
+  researchQuestions?: ResearchQuestion[]
+  evidenceNotes?: ResearchEvidenceNote[]
+  assumptions?: ResearchAssumption[]
+  seoTargets?: ResearchSeoTarget[]
+  channels?: ResearchRecommendedChannel[]
+  collaborations?: ResearchCollaboration[]
+  releaseWindows?: ResearchReleaseWindow[]
+  contentOpportunities?: ResearchContentOpportunity[]
+  measurementGoals?: ResearchMeasurementGoal[]
+  strategyAdjustments?: ResearchStrategyAdjustment[]
+  generatedCampaigns?: RefSummary[]
+  generatedFunnels?: RefSummary[]
+  generatedCalendarItems?: MarketingCalendarItem[]
+  generatedLinkItems?: MarketingLinkItem[]
+  generatedAnalyticsSources?: RefSummary[]
+  internalNotes?: string
+}
+
+interface MarketingResearchProject {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  status?: string
+  researchType?: string
+  brief?: string
+  audience?: string
+  goals?: string[]
+  campaignObjective?: string
+  positioning?: string
+  canonicalUrl?: string
+  seedKeywords?: string[]
+  seedUrls?: string[]
+  targetGeography?: string
+  language?: string
+  methods?: string[]
+  researchQuestions?: ResearchQuestion[]
+  collaborators?: ResearchProjectCollaborator[]
+  audienceProfiles?: MarketingAudienceProfile[]
+  messagePillars?: MarketingMessagePillar[]
+  proofPoints?: MarketingProofPoint[]
+  performanceSignals?: MarketingPerformanceSignal[]
+  selectedResults?: MarketingResearchResult[]
+  approvedResults?: MarketingResearchResult[]
+  generatedCampaigns?: RefSummary[]
+  generatedFunnels?: RefSummary[]
+  generatedCalendarItems?: MarketingCalendarItem[]
+  generatedLinkItems?: MarketingLinkItem[]
+  legacyPlan?: RefSummary
+  internalNotes?: string
+}
+
+interface ResearchProjectCollaborator {
+  _key?: string
+  _type?: 'researchCollaborator'
+  name?: string
+  organization?: string
+  relationshipType?: string
+  topicArea?: string
+  availabilityStart?: string
+  availabilityEnd?: string
+  contributionType?: string
+  capacity?: string
+  expectedContribution?: string
+  status?: string
+  relatedResults?: MarketingResearchResult[]
+  notes?: string
+}
+
+interface MarketingResearchResult {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  resultType?: string
+  status?: string
+  project?: RefSummary
+  run?: RefSummary & { startedAt?: string }
+  selectedForSynthesis?: boolean
+  proofPoints?: MarketingProofPoint[]
+  performanceSignals?: MarketingPerformanceSignal[]
+  approvedAt?: string
+  priority?: string
+  provider?: string
+  sourceMethod?: string
+  scoreSource?: string
+  database?: string
+  fetchedAt?: string
+  rawProviderMetadata?: string
+  keyword?: string
+  searchIntent?: string
+  volume?: number
+  difficulty?: number
+  cpc?: number
+  competition?: number
+  resultsCount?: number
+  canonicalUrl?: string
+  contentGap?: string
+  sourceTitle?: string
+  sourceUrl?: string
+  claim?: string
+  evidenceType?: string
+  confidence?: string
+  implication?: string
+  competitorName?: string
+  competitorUrl?: string
+  collaboratorName?: string
+  organization?: string
+  relationshipType?: string
+  topicArea?: string
+  availabilityStart?: string
+  availabilityEnd?: string
+  contributionType?: string
+  capacity?: string
+  expectedContribution?: string
+  collaborationStatus?: string
+}
+
+interface MarketingResearchRun {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  project?: RefSummary
+  provider?: string
+  status?: string
+  startedAt?: string
+  completedAt?: string
+  methods?: string[]
+  seedKeywords?: string[]
+  seedUrls?: string[]
+  database?: string
+  warnings?: string[]
+  errors?: string[]
+  createdResults?: MarketingResearchResult[]
+}
+
 interface MarketingData {
   calendarItems: MarketingCalendarItem[]
   campaigns: MarketingCampaign[]
   funnels: MarketingFunnel[]
   analyticsSources: MarketingAnalyticsSource[]
+  audienceProfiles: MarketingAudienceProfile[]
+  messagePillars: MarketingMessagePillar[]
+  proofPoints: MarketingProofPoint[]
+  ctas: MarketingCta[]
+  trackingRules: MarketingTrackingRule[]
+  qualityGates: MarketingQualityGate[]
+  experiments: MarketingExperiment[]
+  performanceSignals: MarketingPerformanceSignal[]
   channels: MarketingChannel[]
   linkItems: MarketingLinkItem[]
+  researchProjects: MarketingResearchProject[]
+  researchResults: MarketingResearchResult[]
+  researchRuns: MarketingResearchRun[]
+  researchPlans: MarketingResearchPlan[]
   templates: MarketingTemplate[]
 }
 
@@ -470,6 +1338,67 @@ type MarketingAiSuggestion = {
   analyticsSource?: Partial<MarketingAnalyticsSource>
   linkItem?: Partial<MarketingLinkItem>
   template?: Partial<MarketingTemplate>
+  researchProject?: Partial<MarketingResearchProject>
+  researchSynthesis?: MarketingResearchSynthesisSuggestion
+  researchPlan?: Partial<MarketingResearchPlan>
+  strategyAsset?: MarketingStrategyAssetSuggestion
+}
+
+type MarketingStrategyAssetSuggestion = Partial<MarketingAudienceProfile> &
+  Partial<MarketingMessagePillar> &
+  Partial<MarketingProofPoint> &
+  Partial<MarketingCta> &
+  Partial<MarketingTrackingRule> &
+  Partial<MarketingQualityGate> &
+  Partial<MarketingExperiment> &
+  Partial<MarketingPerformanceSignal> & {
+    assetType?: StrategyAssetKind | StrategyAssistAssetType
+    summary?: string
+    priority?: string
+    ctaLabel?: string
+    destination?: string
+    qualityChecklist?: MarketingQualityGate['checks']
+  }
+
+type MarketingResearchSynthesisSuggestion = {
+  summary?: string
+  missingInputs?: string[]
+  recommendedMethods?: string[]
+  selectedResultIds?: string[]
+  contentOpportunities?: ResearchContentOpportunity[]
+  releaseRecommendation?: string
+  internalNotes?: string
+}
+
+type StrategyAssetKind =
+  | 'audiences'
+  | 'messages'
+  | 'proof'
+  | 'ctas'
+  | 'tracking'
+  | 'quality'
+  | 'experiments'
+  | 'performance'
+
+type StrategyWorkspaceMode = 'foundation' | 'campaigns' | 'funnels'
+type StrategyAssistAssetType =
+  | 'audience'
+  | 'message'
+  | 'proof'
+  | 'cta'
+  | 'trackingRule'
+  | 'qualityGate'
+  | 'experiment'
+  | 'performanceSynthesis'
+
+type GuidedAutofillQuestion = {
+  id: string
+  label: string
+  choices: Array<{
+    value: string
+    label: string
+    description: string
+  }>
 }
 
 type MarketingAiAssistResponse = {
@@ -499,6 +1428,9 @@ type CalendarItemTemplate = {
   brief: string
   callToAction: string
 }
+
+type CalendarDisplayGroup = 'preview' | 'draft' | 'final'
+type SavedCalendarDisplayGroup = Exclude<CalendarDisplayGroup, 'preview'>
 
 type CampaignTemplate = {
   id: string
@@ -580,17 +1512,95 @@ type WorkflowSetupStep = {
   terms?: WorkflowTerm[]
 }
 
+type CarouselWizardResult = {
+  researchProjectId?: string
+  researchPlanId?: string
+  channelId?: string
+  campaignId?: string
+  funnelId?: string
+  calendarItemId?: string
+  linkItemId?: string
+  title: string
+  demo?: boolean
+}
+
+type DesignerWizardMode = 'singleItem' | 'plan'
+
+type MarketingPlanQuestionnaire = {
+  topic: string
+  objective: string
+  audience: string
+  destinationUrl: string
+  runway: 'oneWeek' | 'twoWeeks' | 'oneMonth'
+  contentCapacity: 'oneItem' | 'weeklyCarousel' | 'multiChannel'
+  primaryMetric: string
+  notes: string
+}
+
+type DesignerWorkflowSession = {
+  id: string
+  title: string
+  mode: DesignerWizardMode
+  stepIndex: number
+  strategyStepIndex: number
+  questionnaire: MarketingPlanQuestionnaire
+  strategyPrompt: string
+  strategySuggestion: MarketingAiSuggestion | null
+  strategyUsedAi: boolean | null
+  result: CarouselWizardResult | null
+  tutorialDemo?: boolean
+  ephemeral?: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+type StrategyAssistantRecommendation = {
+  title: string
+  detail: string
+  view: MarketingViewId
+  steps: string[]
+  strategicContext: Array<{
+    title: string
+    detail: string
+  }>
+}
+
+type DesignerWorkflowTutorialPrepareSignal = {
+  stepId: string
+  tutorialId: string
+  demoRecommendation?: boolean
+  token: number
+} | null
+
+type WizardStepDefinition = {
+  title: string
+  detail: string
+}
+
 const EMPTY_DATA: MarketingData = {
   calendarItems: [],
   campaigns: [],
   funnels: [],
   analyticsSources: [],
+  audienceProfiles: [],
+  messagePillars: [],
+  proofPoints: [],
+  ctas: [],
+  trackingRules: [],
+  qualityGates: [],
+  experiments: [],
+  performanceSignals: [],
   channels: [],
   linkItems: [],
+  researchProjects: [],
+  researchResults: [],
+  researchRuns: [],
+  researchPlans: [],
   templates: [],
 }
 
 const statusColors: Record<string, { bg: string; fg: string; border: string }> = {
+  preview: { bg: 'rgba(0, 115, 133, 0.08)', fg: '#4dc4d6', border: 'rgba(77, 196, 214, 0.72)' },
   idea: { bg: 'rgba(124, 101, 39, 0.16)', fg: '#d6a93f', border: 'rgba(214, 169, 63, 0.35)' },
   drafting: { bg: 'rgba(55, 111, 173, 0.16)', fg: '#79b3f0', border: 'rgba(121, 179, 240, 0.35)' },
   review: { bg: 'rgba(148, 90, 172, 0.16)', fg: '#d6a1f0', border: 'rgba(214, 161, 240, 0.35)' },
@@ -814,6 +1824,75 @@ const workflowSetupSteps: WorkflowSetupStep[] = [
     designerAction: 'Connect one analytics source and add a Quick Link when the post says link in bio.',
     view: 'analytics',
     terms: [workflowTerms[6], workflowTerms[8]],
+  },
+]
+
+const MARKETING_SKILL_INSPIRATIONS = [
+  {
+    name: 'Content strategy',
+    source: 'coreyhaines31/marketingskills',
+    url: 'https://github.com/coreyhaines31/marketingskills/tree/main/skills/content-strategy',
+    lesson: 'Ask for business context, audience, content goals, and topic clusters before planning.',
+  },
+  {
+    name: 'Social content',
+    source: 'coreyhaines31/marketingskills',
+    url: 'https://github.com/coreyhaines31/marketingskills/tree/main/skills/social',
+    lesson: 'Turn pillar content into platform-specific atoms, then schedule a realistic content calendar.',
+  },
+  {
+    name: 'Analytics tracking',
+    source: 'coreyhaines31/marketingskills',
+    url: 'https://github.com/coreyhaines31/marketingskills/tree/main/skills/analytics',
+    lesson: 'Start with the decision the data should inform, then pick one primary metric and consistent UTMs.',
+  },
+  {
+    name: 'Marketing strategy and PMM',
+    source: 'alirezarezvani/claude-skills',
+    url: 'https://agent-skills.md/skills/alirezarezvani/claude-skills/marketing-strategy-pmm',
+    lesson: 'Use positioning, ICP, launch planning, and GTM structure without exposing designers to jargon.',
+  },
+]
+
+const WIZARD_RUNWAY_OPTIONS: SelectOption[] = [
+  { title: 'One week', value: 'oneWeek' },
+  { title: 'Two weeks', value: 'twoWeeks' },
+  { title: 'One month', value: 'oneMonth' },
+]
+
+const WIZARD_CAPACITY_OPTIONS: SelectOption[] = [
+  { title: 'Just one item', value: 'oneItem' },
+  { title: 'Weekly carousel', value: 'weeklyCarousel' },
+  { title: 'Multi-channel plan', value: 'multiChannel' },
+]
+
+const SINGLE_ITEM_WIZARD_STEPS: WizardStepDefinition[] = [
+  {
+    title: 'Name the item',
+    detail: 'Give the designer enough context to understand what they are making and who it should help.',
+  },
+  {
+    title: 'Set the publishing shell',
+    detail: 'Choose the destination, CTA, and success signal before anyone writes the post.',
+  },
+  {
+    title: 'Create research project',
+    detail: 'Create the research project first; campaign, funnel, calendar, and Quick Link records come from approved findings later.',
+  },
+]
+
+const CAMPAIGN_PLAN_WIZARD_STEPS: WizardStepDefinition[] = [
+  {
+    title: 'Set the strategy',
+    detail: 'Name the campaign, audience, and objective in plain language.',
+  },
+  {
+    title: 'Choose the runway',
+    detail: 'Decide how much content the team can actually make and how long the plan should run.',
+  },
+  {
+    title: 'Create research project',
+    detail: 'Create the editable research project first, then convert approved findings into production records.',
   },
 ]
 
@@ -1149,6 +2228,26 @@ const marketingAiAssistCopy: Record<
     prompt: 'Example: Make a reusable Instagram-to-article campaign template for designers launching new visual essays.',
     fills: ['when to use', 'audience', 'starter fields', 'metrics', 'designer guidance', 'funnel stages'],
   },
+  researchProject: {
+    target: 'research project',
+    prompt: 'Example: Research whether Housing Truths should become an Instagram content runway, starting with SEO and source scans.',
+    fills: ['directive', 'audience', 'seed keywords', 'seed URLs', 'methods', 'research questions', 'collaborators'],
+  },
+  researchSynthesis: {
+    target: 'research synthesis',
+    prompt: 'Example: Use the selected SEO and source results to recommend the next content opportunity, but do not schedule it yet.',
+    fills: ['missing inputs', 'selected result IDs', 'opportunities', 'release recommendation'],
+  },
+  researchPlan: {
+    target: 'research and release plan',
+    prompt: 'Example: Build a two-week release plan around a new housing data essay, with an intern helping on research and visuals.',
+    fills: ['summary', 'SEO targets', 'collaborators', 'release windows', 'content opportunities', 'measurement goals'],
+  },
+  strategyAsset: {
+    target: 'strategy foundation',
+    prompt: 'Example: Create an audience profile, proof point, CTA, or tracking rule designers can reuse before making content.',
+    fills: ['audience', 'message', 'proof', 'CTA', 'tracking rule', 'quality gate', 'experiment', 'performance signal'],
+  },
 }
 
 const styles = {
@@ -1268,7 +2367,7 @@ const styles = {
     cursor: 'pointer',
   },
   guidePanel: {
-    background: 'rgba(0, 115, 133, 0.08)',
+    background: MARKETING_OPAQUE_CARD_BG,
     border: '1px solid rgba(0, 115, 133, 0.28)',
     borderRadius: 8,
     padding: 16,
@@ -1285,6 +2384,7 @@ const styles = {
     maxWidth: 'calc(100vw - 48px)',
   },
   guidePopover: {
+    background: MARKETING_OPAQUE_CARD_BG,
     width: 520,
     maxWidth: 'calc(100vw - 48px)',
     maxHeight: 'calc(100vh - 120px)',
@@ -1346,6 +2446,11 @@ function MarketingComponent() {
   const [error, setError] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [lastLoaded, setLastLoaded] = useState<string | null>(null)
+  const [actionsOpen, setActionsOpen] = useState(false)
+  const [workflowTutorialRequest, setWorkflowTutorialRequest] = useState(0)
+  const [workflowTutorialLibraryRequest, setWorkflowTutorialLibraryRequest] = useState(0)
+  const [workflowTutorialId, setWorkflowTutorialId] = useState(defaultDesignerWorkflowTutorial.id)
+  const [workflowTutorialDemoRecommendation, setWorkflowTutorialDemoRecommendation] = useState(false)
 
   const loadData = useCallback(async () => {
     setError(null)
@@ -1356,8 +2461,20 @@ function MarketingComponent() {
         campaigns: nextData.campaigns || [],
         funnels: nextData.funnels || [],
         analyticsSources: nextData.analyticsSources || [],
+        audienceProfiles: nextData.audienceProfiles || [],
+        messagePillars: nextData.messagePillars || [],
+        proofPoints: nextData.proofPoints || [],
+        ctas: nextData.ctas || [],
+        trackingRules: nextData.trackingRules || [],
+        qualityGates: nextData.qualityGates || [],
+        experiments: nextData.experiments || [],
+        performanceSignals: nextData.performanceSignals || [],
         channels: nextData.channels || [],
         linkItems: nextData.linkItems || [],
+        researchProjects: nextData.researchProjects || [],
+        researchResults: nextData.researchResults || [],
+        researchRuns: nextData.researchRuns || [],
+        researchPlans: nextData.researchPlans || [],
         templates: nextData.templates || [],
       })
       setLastLoaded(new Date().toLocaleTimeString())
@@ -1372,6 +2489,24 @@ function MarketingComponent() {
   useEffect(() => {
     void loadData()
   }, [loadData])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const requestedTutorial = new URLSearchParams(window.location.search).get('designerWorkflowTutorial')
+    if (requestedTutorial) {
+      setWorkflowTutorialId(getDesignerWorkflowTutorial(requestedTutorial).id)
+      setWorkflowTutorialDemoRecommendation(requestedTutorial === 'designer-workflow-recommendation')
+      setWorkflowTutorialRequest((current) => current + 1)
+      return
+    }
+    if (hasDesignerWorkflowTutorialCompleted(defaultDesignerWorkflowTutorial.id)) return
+    const timer = window.setTimeout(() => {
+      setWorkflowTutorialId(defaultDesignerWorkflowTutorial.id)
+      setWorkflowTutorialDemoRecommendation(false)
+      setWorkflowTutorialRequest((current) => current + 1)
+    }, 450)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const commitPatch = useCallback(
     async (id: string, set: Record<string, unknown>, unset: string[] = []) => {
@@ -1403,7 +2538,37 @@ function MarketingComponent() {
     [client, loadData],
   )
 
+  const generateCarouselSetup = useCallback(
+    async (questionnaire: MarketingPlanQuestionnaire) => {
+      setSavingId(`carousel-${slugify(questionnaire.topic || 'item')}`)
+      try {
+        const result = await generateInstagramCarouselSetup(client, data, questionnaire)
+        await loadData()
+        return result
+      } finally {
+        setSavingId(null)
+      }
+    },
+    [client, data, loadData],
+  )
+
+  const generateMarketingPlan = useCallback(
+    async (questionnaire: MarketingPlanQuestionnaire) => {
+      setSavingId(`marketing-plan-${slugify(questionnaire.topic || 'plan')}`)
+      try {
+        const result = await generateQuestionnaireMarketingPlan(client, data, questionnaire)
+        await loadData()
+        return result
+      } finally {
+        setSavingId(null)
+      }
+    },
+    [client, data, loadData],
+  )
+
   const activeView = MARKETING_TOOL_VIEWS.find((candidate) => candidate.id === view) || MARKETING_TOOL_VIEWS[0]
+  const attentionItems = useMemo(() => (loading ? [] : getMarketingAttentionItems(data)), [data, loading])
+  const attentionCount = attentionItems.length
 
   return (
     <div data-marketing-tool="true" style={styles.shell}>
@@ -1413,23 +2578,140 @@ function MarketingComponent() {
           <div>
             <h1 style={styles.h1}>Marketing</h1>
             <p style={styles.subtitle}>
-              Plan content, campaigns, funnels, channels, and analytics from one operational workspace.
+              Plan strategy, research, publishing, channels, and public links from one operational workspace.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {lastLoaded && <span style={{ ...styles.muted, ...styles.small }}>Updated {lastLoaded}</span>}
             <a href="/studio/getting-started?article=marketing.overview" style={styles.button}>
-              <LaunchIcon style={{ width: 15, height: 15 }} />
               Marketing guide
+              <LaunchIcon style={{ width: 15, height: 15 }} />
             </a>
-            <button type="button" style={styles.button} onClick={() => void loadData()}>
-              Refresh
+            <button
+              type="button"
+              aria-label={`${attentionCount} marketing item${attentionCount === 1 ? '' : 's'} need attention`}
+              style={{
+                ...styles.button,
+                position: 'relative',
+                width: 38,
+                height: 38,
+                padding: 0,
+                borderColor: view === 'attention' ? '#E36216' : 'var(--card-border-color)',
+                color: view === 'attention' ? '#E36216' : 'var(--card-fg-color)',
+              }}
+              onClick={() => {
+                setView('attention')
+                setActionsOpen(false)
+              }}
+            >
+              <BellIcon style={{ width: 18, height: 18 }} />
+              {attentionCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    top: -6,
+                    right: -6,
+                    minWidth: 20,
+                    height: 20,
+                    padding: '0 5px',
+                    borderRadius: 999,
+                    background: '#E36216',
+                    color: '#fff',
+                    border: '2px solid var(--card-bg-color)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    lineHeight: 1,
+                  }}
+                >
+                  {attentionCount}
+                </span>
+              )}
             </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                aria-label="Open marketing actions"
+                aria-expanded={actionsOpen}
+                style={{ ...styles.button, width: 38, height: 38, padding: 0, fontSize: 20, lineHeight: 1 }}
+                onClick={() => setActionsOpen((current) => !current)}
+              >
+                <EllipsisHorizontalIcon style={{ width: 20, height: 20 }} />
+              </button>
+              {actionsOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    zIndex: 20,
+                    minWidth: 180,
+                    ...styles.card,
+                    padding: 6,
+                    display: 'grid',
+                    gap: 4,
+                  }}
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onClick={() => {
+                      setView('analytics')
+                      setActionsOpen(false)
+                    }}
+                  >
+                    Analytics
+                    <TrendUpwardIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onClick={() => {
+                      setView('templates')
+                      setActionsOpen(false)
+                    }}
+                  >
+                    Templates
+                    <DashboardIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onClick={() => {
+                      setActionsOpen(false)
+                      setWorkflowTutorialLibraryRequest((current) => current + 1)
+                    }}
+                  >
+                    Designer Workflow tutorials
+                    <SearchIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                    onClick={() => {
+                      setActionsOpen(false)
+                      void loadData()
+                    }}
+                  >
+                    Refresh
+                    <RefreshIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         <nav style={styles.nav} aria-label="Marketing sections">
-          {MARKETING_TOOL_VIEWS.map((candidate) => (
+          {MARKETING_TOOL_VIEWS.filter((candidate) => PRIMARY_MARKETING_VIEW_IDS.includes(candidate.id)).map((candidate) => (
             <MarketingNavButton
               key={candidate.id}
               view={candidate}
@@ -1439,7 +2721,19 @@ function MarketingComponent() {
           ))}
         </nav>
 
-        {!loading && <MarketingGuidanceWidget data={data} onOpenView={setView} />}
+        {!loading && (
+          <MarketingGuidanceWidget
+            data={data}
+            savingId={savingId}
+        tutorialRequest={workflowTutorialRequest}
+        tutorialLibraryRequest={workflowTutorialLibraryRequest}
+        tutorialId={workflowTutorialId}
+        tutorialDemoRecommendation={workflowTutorialDemoRecommendation}
+        onOpenView={setView}
+            onGenerateInstagramCarousel={generateCarouselSetup}
+            onGenerateMarketingPlan={generateMarketingPlan}
+          />
+        )}
 
         {error && (
           <div style={{ ...styles.panel, borderColor: 'rgba(227, 98, 22, 0.45)', marginBottom: 16 }}>
@@ -1453,6 +2747,28 @@ function MarketingComponent() {
         ) : (
           <>
             {view === 'dashboard' && <MarketingDashboard data={data} onOpenView={setView} />}
+            {view === 'attention' && <MarketingAttentionWorkspace items={attentionItems} onOpenView={setView} />}
+            {view === 'strategy' && (
+              <StrategyWorkspace
+                client={client}
+                data={data}
+                savingId={savingId}
+                createDocument={createDocument}
+                loadData={loadData}
+                commitPatch={commitPatch}
+              />
+            )}
+            {view === 'research' && (
+              <ResearchWorkspace
+                client={client}
+                data={data}
+                savingId={savingId}
+                createDocument={createDocument}
+                loadData={loadData}
+                commitPatch={commitPatch}
+                onOpenView={setView}
+              />
+            )}
             {view === 'calendar' && (
               <CalendarWorkspace
                 client={client}
@@ -1769,97 +3085,2590 @@ function MarketingDashboard({
   )
 }
 
-function MarketingGuidanceWidget({
-  data,
+function MarketingAttentionWorkspace({
+  items,
   onOpenView,
 }: {
-  data: MarketingData
+  items: MarketingAttentionItem[]
   onOpenView: (view: MarketingViewId) => void
 }) {
+  const severitySummary: Array<{ severity: MarketingAttentionItem['severity']; label: string }> = [
+    { severity: 'content', label: 'Content tasks' },
+    { severity: 'measurement', label: 'Measurement tasks' },
+    { severity: 'setup', label: 'Setup tasks' },
+  ]
+
+  return (
+    <section style={{ display: 'grid', gap: 16 }}>
+      <div style={styles.panel}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div>
+            <div style={styles.kicker}>Needs Attention</div>
+            <h2 style={{ margin: 0, fontSize: 24 }}>Open marketing tasks</h2>
+            <p style={{ ...styles.subtitle, marginTop: 8 }}>
+              These are the gaps that can block designers from getting straight to content writing.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {severitySummary.map(({ severity, label }) => {
+              const count = items.filter((item) => item.severity === severity).length
+              const tone = getDashboardGapTone(severity)
+              return (
+                <span
+                  key={severity}
+                  style={{
+                    border: `1px solid ${tone.border}`,
+                    background: tone.bg,
+                    color: tone.fg,
+                    borderRadius: 999,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 800,
+                  }}
+                >
+                  {count} {label}
+                </span>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {items.length === 0 ? (
+        <EmptyInline title="Nothing needs attention right now." />
+      ) : (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {items.map((item) => {
+            const tone = getDashboardGapTone(item.severity)
+            return (
+              <article
+                key={item.id}
+                style={{
+                  ...styles.card,
+                  borderColor: tone.border,
+                  background: tone.bg,
+                  padding: 14,
+                  display: 'grid',
+                  gap: 10,
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ ...styles.small, color: tone.fg, fontWeight: 800, textTransform: 'capitalize', marginBottom: 4 }}>
+                      {item.severity}
+                    </div>
+                    <h3 style={{ margin: 0, fontSize: 17 }}>{item.title}</h3>
+                    <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0' }}>{item.detail}</p>
+                  </div>
+                  <button type="button" style={styles.button} onClick={() => onOpenView(item.view)}>
+                    Open {getMarketingViewTitle(item.view)}
+                  </button>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
+    </section>
+  )
+}
+
+type StrategyDocument =
+  | MarketingAudienceProfile
+  | MarketingMessagePillar
+  | MarketingProofPoint
+  | MarketingCta
+  | MarketingTrackingRule
+  | MarketingQualityGate
+  | MarketingExperiment
+  | MarketingPerformanceSignal
+
+type StrategySectionConfig = {
+  id: StrategyAssetKind
+  title: string
+  singular: string
+  documentType: string
+  why: string
+  when: string
+  affects: string
+}
+
+const STRATEGY_SECTIONS: StrategySectionConfig[] = [
+  {
+    id: 'audiences',
+    title: 'Audiences',
+    singular: 'audience',
+    documentType: 'marketingAudienceProfile',
+    why: 'Audience profiles prevent generic captions and help designers choose the right proof, CTA, and tone.',
+    when: 'Use before research, campaigns, funnels, and content drafts when the work needs a clear person in mind.',
+    affects: 'Research questions, campaign goals, message pillars, CTAs, Quick Links, and content drafts.',
+  },
+  {
+    id: 'messages',
+    title: 'Messages',
+    singular: 'message pillar',
+    documentType: 'marketingMessagePillar',
+    why: 'Message pillars give designers durable claims and approved language so each post is not a blank strategy exercise.',
+    when: 'Use when a topic should repeat across multiple assets, channels, or release windows.',
+    affects: 'Campaign positioning, content briefs, captions, page copy, and AI draft generation.',
+  },
+  {
+    id: 'proof',
+    title: 'Proof',
+    singular: 'proof point',
+    documentType: 'marketingProofPoint',
+    why: 'Proof points keep claims source-aware and reusable, which is especially important before visual content is published.',
+    when: 'Use when a message needs evidence, a statistic, a quote, a case artifact, or a research result.',
+    affects: 'Research synthesis, campaign claims, content quality checks, and alt text/source review.',
+  },
+  {
+    id: 'ctas',
+    title: 'CTAs',
+    singular: 'CTA',
+    documentType: 'marketingCta',
+    why: 'A CTA ladder makes the next step explicit instead of ending every asset with a vague learn-more path.',
+    when: 'Use whenever content should move someone from attention to a useful destination or conversation.',
+    affects: 'Funnels, calendar items, Quick Links, campaign measurement, and content drafts.',
+  },
+  {
+    id: 'tracking',
+    title: 'Tracking',
+    singular: 'tracking rule',
+    documentType: 'marketingTrackingRule',
+    why: 'Tracking rules keep UTM naming consistent so performance can be compared without rebuilding analytics each time.',
+    when: 'Use before publishing promoted links, Quick Links, campaign URLs, or multi-channel content.',
+    affects: 'Campaign UTMs, Quick Links, analytics review, and performance signals.',
+  },
+  {
+    id: 'quality',
+    title: 'Quality Gates',
+    singular: 'quality gate',
+    documentType: 'marketingQualityGate',
+    why: 'Quality gates make review visible: source safety, claims, accessibility, CTA, tracking, and readiness.',
+    when: 'Use before scheduled or published content. V1 warns and guides; it does not hard-block publishing.',
+    affects: 'Calendar readiness, content drafts, campaign review, source checks, and accessibility.',
+  },
+  {
+    id: 'experiments',
+    title: 'Experiments',
+    singular: 'experiment',
+    documentType: 'marketingExperiment',
+    why: 'Experiments turn uncertainty into a testable hypothesis instead of quietly changing strategy by taste.',
+    when: 'Use when trying a new hook, CTA, channel, destination, or format and watching a specific signal.',
+    affects: 'Campaign decisions, calendar iteration, analytics interpretation, and future templates.',
+  },
+  {
+    id: 'performance',
+    title: 'Performance Signals',
+    singular: 'performance signal',
+    documentType: 'marketingPerformanceSignal',
+    why: 'Performance signals store manually reviewed first-party evidence before it becomes a research result or strategy update.',
+    when: 'Use when GSC, GA4, Instagram, Vercel, or manual observations suggest the plan should change.',
+    affects: 'Research analytics review, dashboard gaps, experiments, and strategy adjustments.',
+  },
+]
+
+const audiencePriorityOptions: SelectOption[] = [
+  { title: 'Primary', value: 'primary' },
+  { title: 'Secondary', value: 'secondary' },
+  { title: 'Niche / Experimental', value: 'niche' },
+  { title: 'Paused', value: 'paused' },
+]
+const proofTypeOptions: SelectOption[] = [
+  { title: 'Statistic', value: 'statistic' },
+  { title: 'Quote', value: 'quote' },
+  { title: 'Case Evidence', value: 'caseEvidence' },
+  { title: 'Research Finding', value: 'researchFinding' },
+  { title: 'Visual Artifact', value: 'visualArtifact' },
+  { title: 'Team Knowledge', value: 'teamKnowledge' },
+  { title: 'Other', value: 'other' },
+]
+const ctaPriorityOptions: SelectOption[] = [
+  { title: 'Primary', value: 'primary' },
+  { title: 'Secondary', value: 'secondary' },
+  { title: 'Contextual', value: 'contextual' },
+  { title: 'Experimental', value: 'experimental' },
+]
+const documentStatusOptions: SelectOption[] = [
+  { title: 'Active', value: 'active' },
+  { title: 'Draft', value: 'draft' },
+  { title: 'Archived', value: 'archived' },
+]
+const experimentStatusOptions: SelectOption[] = [
+  { title: 'Idea', value: 'idea' },
+  { title: 'Running', value: 'running' },
+  { title: 'Reviewing', value: 'reviewing' },
+  { title: 'Decided', value: 'decided' },
+  { title: 'Archived', value: 'archived' },
+]
+const experimentDecisionOptions: SelectOption[] = [
+  { title: 'Keep', value: 'keep' },
+  { title: 'Iterate', value: 'iterate' },
+  { title: 'Stop', value: 'stop' },
+  { title: 'Inconclusive', value: 'inconclusive' },
+]
+const performanceProviderOptions: SelectOption[] = [
+  { title: 'Google Search Console', value: 'gsc' },
+  { title: 'GA4', value: 'ga4' },
+  { title: 'Instagram', value: 'instagram' },
+  { title: 'Vercel Analytics', value: 'vercel' },
+  { title: 'Manual', value: 'manual' },
+  { title: 'Other', value: 'other' },
+]
+const performanceStatusOptions: SelectOption[] = [
+  { title: 'New', value: 'new' },
+  { title: 'Reviewed', value: 'reviewed' },
+  { title: 'Suggests Strategy Update', value: 'suggestsUpdate' },
+  { title: 'Archived', value: 'archived' },
+]
+const confidenceOptions = researchConfidenceOptions
+
+function StrategyWorkspace({
+  client,
+  data,
+  savingId,
+  createDocument,
+  loadData,
+  commitPatch,
+}: {
+  client: StudioClient
+  data: MarketingData
+  savingId: string | null
+  createDocument: (document: MarketingDocumentInput) => Promise<string>
+  loadData: () => Promise<void>
+  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+}) {
+  const [workspaceMode, setWorkspaceMode] = useState<StrategyWorkspaceMode>('foundation')
+  const [sectionId, setSectionId] = useState<StrategyAssetKind>('audiences')
+  const section = STRATEGY_SECTIONS.find((candidate) => candidate.id === sectionId) || STRATEGY_SECTIONS[0]
+  const items = getStrategySectionItems(data, section.id)
+  const [selectedId, setSelectedId] = useState<string | null>(items[0]?._id || null)
+  const selected = items.find((item) => item._id === selectedId) || items[0] || null
+  const [draft, setDraft] = useState<Record<string, unknown>>(selected ? { ...selected } : {})
+  const [fillLoading, setFillLoading] = useState(false)
+  const [fillMessage, setFillMessage] = useState('')
+  const [fillError, setFillError] = useState('')
+  const [fillGuidance, setFillGuidance] = useState<Record<string, string>>({})
+  const [fillNotes, setFillNotes] = useState('')
+
+  useEffect(() => {
+    const nextItems = getStrategySectionItems(data, sectionId)
+    const nextSelected = nextItems.find((item) => item._id === selectedId) || nextItems[0] || null
+    setSelectedId(nextSelected?._id || null)
+    setDraft(nextSelected ? { ...nextSelected } : {})
+  }, [data, sectionId, selectedId])
+
+  useEffect(() => {
+    setFillMessage('')
+    setFillError('')
+  }, [sectionId, selectedId])
+
+  const readiness = getStrategyReadiness(data)
+  const researchResultsForFill = useMemo(() => getStrategyResearchResults(data), [data])
+  const approvedResearchCount = useMemo(() => data.researchResults.filter(isResearchResultApproved).length, [data.researchResults])
+
+  const handleAdd = async () => {
+    const createdId = await createDocument(buildEmptyStrategyDocument(section))
+    if (createdId) setSelectedId(createdId)
+  }
+
+  const handleSave = async () => {
+    if (!selected) return
+    await commitPatch(selected._id, buildStrategyPatch(section.id, draft))
+  }
+
+  const handleFillFromResearch = async () => {
+    if (!selected) {
+      setFillError(`Add or select a ${section.singular} before filling it from research.`)
+      return
+    }
+    if (researchResultsForFill.length === 0) {
+      setFillError('Run or approve research first, then use it to fill strategy fields.')
+      return
+    }
+
+    setFillLoading(true)
+    setFillMessage('')
+    setFillError('')
+    const fallbackDraft = buildStrategyDraftFromResearch(section.id, data, draft)
+
+    try {
+      const response = await fetch('/api/marketing/assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'strategyAsset',
+          draft: {
+            ...buildStrategyResearchAssistDraft(section.id, draft, data),
+            autofillGuidance: fillGuidance,
+          },
+          prompt: buildAutofillGuidedPrompt({
+            basePrompt: `Fill the selected ${section.singular} from approved Research findings. Use the supplied research results as evidence and keep fields concise enough for designers to review before saving.`,
+            guidance: fillGuidance,
+            notes: fillNotes,
+            questions: getStrategyFillQuestions(section.id),
+          }),
+          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
+        }),
+      })
+      const payload = (await response.json()) as MarketingAiAssistResponse
+      const suggestedDraft =
+        response.ok && payload.usedAi && payload.suggestion?.strategyAsset
+          ? strategyAssetSuggestionToDraft(section.id, payload.suggestion.strategyAsset, fallbackDraft)
+          : fallbackDraft
+      setDraft((current) => ({ ...current, ...suggestedDraft }))
+      setFillMessage(
+        payload.usedAi
+          ? `Filled this draft from ${researchResultsForFill.length} research finding${researchResultsForFill.length === 1 ? '' : 's'} with AI. Review, then save.`
+          : `Filled this draft from ${researchResultsForFill.length} stored research finding${researchResultsForFill.length === 1 ? '' : 's'} with the rule-based fallback. Review, then save.`,
+      )
+    } catch (requestError) {
+      console.error('Strategy research fill used fallback:', requestError)
+      setDraft((current) => ({ ...current, ...fallbackDraft }))
+      setFillMessage(`Filled this draft from ${researchResultsForFill.length} stored research finding${researchResultsForFill.length === 1 ? '' : 's'} with the rule-based fallback. Review, then save.`)
+    } finally {
+      setFillLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <div style={{ ...styles.panel, display: 'grid', gap: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <div>
+            <div style={styles.kicker}>Strategy foundation</div>
+            <h2 style={{ margin: 0, fontSize: 24 }}>Reusable inputs before research and content</h2>
+            <p style={{ ...styles.muted, margin: '8px 0 0', maxWidth: 780 }}>
+              Designers should be able to pick the audience, message, proof, CTA, tracking rule, and review checklist before asking AI or the calendar to create work.
+            </p>
+          </div>
+          <button type="button" style={styles.primaryButton} onClick={handleAdd} disabled={savingId === 'new'}>
+            Add {section.singular}
+          </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          {readiness.map((item) => (
+            <div key={item.label} style={{ ...styles.card, padding: 12 }}>
+              <div style={{ ...styles.small, ...styles.muted }}>{item.label}</div>
+              <div style={{ fontSize: 24, fontWeight: 850, marginTop: 4 }}>{item.value}</div>
+              <div style={{ ...styles.small, color: item.ready ? '#7dd69e' : '#d6a93f' }}>{item.ready ? 'Ready' : 'Needs setup'}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
+          <StrategyModeButton active={workspaceMode === 'foundation'} onClick={() => setWorkspaceMode('foundation')}>
+            Foundation
+          </StrategyModeButton>
+          <StrategyModeButton active={workspaceMode === 'campaigns'} onClick={() => setWorkspaceMode('campaigns')}>
+            Campaign plans
+          </StrategyModeButton>
+          <StrategyModeButton active={workspaceMode === 'funnels'} onClick={() => setWorkspaceMode('funnels')}>
+            Funnel paths
+          </StrategyModeButton>
+        </div>
+      </div>
+
+      {workspaceMode === 'campaigns' && (
+        <CampaignWorkspace data={data} savingId={savingId} createDocument={createDocument} commitPatch={commitPatch} />
+      )}
+
+      {workspaceMode === 'funnels' && (
+        <FunnelWorkspace
+          client={client}
+          data={data}
+          savingId={savingId}
+          createDocument={createDocument}
+          loadData={loadData}
+          commitPatch={commitPatch}
+        />
+      )}
+
+      {workspaceMode === 'foundation' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.7fr) minmax(0, 1.5fr)', gap: 16, alignItems: 'start' }}>
+        <div style={{ ...styles.panel, display: 'grid', gap: 10 }}>
+          {STRATEGY_SECTIONS.map((candidate) => {
+            const count = getStrategySectionItems(data, candidate.id).length
+            const active = candidate.id === section.id
+            return (
+              <button
+                key={candidate.id}
+                type="button"
+                style={{
+                  ...styles.templateButton,
+                  textAlign: 'left',
+                  justifyContent: 'space-between',
+                  borderColor: active ? '#007385' : 'var(--card-border-color)',
+                  background: active ? 'rgba(0, 115, 133, 0.12)' : 'var(--card-bg-color)',
+                }}
+                onClick={() => {
+                  setSectionId(candidate.id)
+                  setSelectedId(getStrategySectionItems(data, candidate.id)[0]?._id || null)
+                }}
+              >
+                <span>{candidate.title}</span>
+                <span style={{ ...styles.small, ...styles.muted }}>{count}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{ ...styles.panel, display: 'grid', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.8fr) minmax(0, 1.2fr)', gap: 16 }}>
+            <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
+              <div>
+                <h3 style={{ margin: 0 }}>{section.title}</h3>
+                <p style={{ ...styles.muted, margin: '6px 0 0' }}>{section.why}</p>
+              </div>
+              <div style={{ ...styles.card, padding: 12 }}>
+                <strong>When to use this</strong>
+                <p style={{ ...styles.muted, margin: '6px 0 0' }}>{section.when}</p>
+              </div>
+              <div style={{ ...styles.card, padding: 12 }}>
+                <strong>What this affects</strong>
+                <p style={{ ...styles.muted, margin: '6px 0 0' }}>{section.affects}</p>
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {items.length === 0 ? (
+                  <div style={{ ...styles.card, padding: 14, ...styles.muted }}>
+                    No {section.title.toLowerCase()} yet. Click Add to create an empty record and fill it in.
+                  </div>
+                ) : (
+                  items.map((item) => {
+                    const active = item._id === selected?._id
+                    return (
+                      <button
+                        key={item._id}
+                        type="button"
+                        style={{
+                          ...styles.templateButton,
+                          textAlign: 'left',
+                          borderColor: active ? '#007385' : 'var(--card-border-color)',
+                          background: active ? 'rgba(0, 115, 133, 0.12)' : 'var(--card-bg-color)',
+                        }}
+                        onClick={() => setSelectedId(item._id)}
+                      >
+                        <strong>{item.title || `Untitled ${section.singular}`}</strong>
+                        <span style={{ ...styles.small, ...styles.muted }}>{strategyDocumentSubtitle(section.id, item)}</span>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: 12, minWidth: 0 }}>
+              {selected ? (
+                <>
+                  <div style={{ ...styles.guidePanel, boxShadow: 'none', padding: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div>
+                        <strong style={{ fontSize: 14 }}>Fill from research</strong>
+                        <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
+                          Draft this {section.singular} from approved or selected Research findings. Nothing is saved until you click Save.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        style={styles.button}
+                        disabled={fillLoading || researchResultsForFill.length === 0}
+                        onClick={() => void handleFillFromResearch()}
+                      >
+                        {fillLoading ? 'Filling...' : 'Fill from research'}
+                      </button>
+                    </div>
+                    <div style={{ ...styles.small, ...styles.muted, marginTop: 8 }}>
+                      {approvedResearchCount > 0
+                        ? `${approvedResearchCount} approved finding${approvedResearchCount === 1 ? '' : 's'} available.`
+                        : researchResultsForFill.length > 0
+                          ? `${researchResultsForFill.length} stored finding${researchResultsForFill.length === 1 ? '' : 's'} available; approve the strongest findings when possible.`
+                          : 'No research findings yet.'}
+                    </div>
+                    <GuidedAutofillControls
+                      questions={getStrategyFillQuestions(section.id)}
+                      values={fillGuidance}
+                      onChange={setFillGuidance}
+                    />
+                    <textarea
+                      aria-label={`Optional notes for filling this ${section.singular}`}
+                      rows={2}
+                      style={{ ...styles.input, marginTop: 8 }}
+                      value={fillNotes}
+                      onChange={(event) => setFillNotes(event.currentTarget.value)}
+                      placeholder="Optional: add a topic, audience, source, or constraint to guide the fill."
+                    />
+                    {fillMessage && <div style={{ ...styles.small, color: '#7dd69e', marginTop: 8 }}>{fillMessage}</div>}
+                    {fillError && <div style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>{fillError}</div>}
+                  </div>
+                  <StrategyEditorFields sectionId={section.id} draft={draft} onChange={setDraft} />
+                  <details style={{ ...styles.card, padding: 12 }}>
+                    <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced document details</summary>
+                    <div style={{ ...styles.small, ...styles.muted, marginTop: 10 }}>
+                      Sanity ID: {selected._id}
+                      <br />
+                      Updated: {selected._updatedAt || 'Unknown'}
+                    </div>
+                  </details>
+                  <button type="button" style={{ ...styles.primaryButton, width: '100%' }} onClick={handleSave} disabled={savingId === selected._id}>
+                    {savingId === selected._id ? 'Saving...' : `Save ${section.singular}`}
+                  </button>
+                </>
+              ) : (
+                <div style={{ ...styles.card, padding: 18, textAlign: 'center' }}>
+                  <strong>Select or add a {section.singular}</strong>
+                  <p style={{ ...styles.muted, margin: '8px 0 0' }}>The editor will appear here once there is a record to edit.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+      )}
+    </div>
+  )
+}
+
+function StrategyModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      style={{
+        ...styles.button,
+        borderColor: active ? '#007385' : 'var(--card-border-color)',
+        background: active ? 'rgba(0, 115, 133, 0.14)' : 'transparent',
+        color: active ? '#f7feff' : 'var(--card-fg-color)',
+      }}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  )
+}
+
+function GuidedAutofillControls({
+  questions,
+  values,
+  onChange,
+}: {
+  questions: GuidedAutofillQuestion[]
+  values: Record<string, string>
+  onChange: (values: Record<string, string>) => void
+}) {
+  if (questions.length === 0) return null
+
+  return (
+    <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+      {questions.map((question) => (
+        <div key={question.id} style={{ display: 'grid', gap: 6 }}>
+          <div style={{ ...styles.small, fontWeight: 800 }}>{question.label}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {question.choices.map((choice) => {
+              const active = values[question.id] === choice.value
+              return (
+                <button
+                  key={choice.value}
+                  type="button"
+                  title={choice.description}
+                  style={{
+                    ...styles.button,
+                    padding: '6px 9px',
+                    fontSize: 12,
+                    borderColor: active ? '#007385' : 'var(--card-border-color)',
+                    background: active ? 'rgba(0, 115, 133, 0.16)' : 'transparent',
+                    color: active ? '#f7feff' : 'var(--card-fg-color)',
+                  }}
+                  onClick={() => {
+                    onChange({
+                      ...values,
+                      [question.id]: active ? '' : choice.value,
+                    })
+                  }}
+                >
+                  {choice.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function buildAutofillGuidedPrompt({
+  basePrompt,
+  guidance,
+  notes,
+  questions,
+}: {
+  basePrompt: string
+  guidance: Record<string, string>
+  notes: string
+  questions: GuidedAutofillQuestion[]
+}) {
+  const selected = questions
+    .map((question) => {
+      const value = guidance[question.id]
+      const choice = question.choices.find((candidate) => candidate.value === value)
+      return choice ? `${question.label}: ${choice.label} (${choice.description})` : ''
+    })
+    .filter(Boolean)
+  const trimmedNotes = notes.trim()
+  return [
+    basePrompt,
+    selected.length > 0 ? `Guided choices: ${selected.join(' | ')}` : '',
+    trimmedNotes ? `Optional designer notes: ${trimmedNotes}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+export function getStrategyFillQuestions(sectionId: StrategyAssetKind): GuidedAutofillQuestion[] {
+  const sourceQuestion: GuidedAutofillQuestion = {
+    id: 'source',
+    label: 'Which research should matter most?',
+    choices: [
+      { value: 'approved', label: 'Approved findings', description: 'Prefer findings marked approved or selected for synthesis.' },
+      { value: 'seo', label: 'SEO demand', description: 'Prefer keyword/search intent and content-gap findings.' },
+      { value: 'evidence', label: 'Source evidence', description: 'Prefer claims, sources, proof, and validation notes.' },
+      { value: 'signals', label: 'Performance signals', description: 'Prefer analytics and first-party signal findings.' },
+    ],
+  }
+  const useQuestion: GuidedAutofillQuestion = {
+    id: 'use',
+    label: 'What should this support?',
+    choices: [
+      { value: 'oneItem', label: 'One item', description: 'Support a single post, carousel, link, or page update.' },
+      { value: 'runway', label: 'Content runway', description: 'Support a repeatable thread across several releases.' },
+      { value: 'campaign', label: 'Campaign plan', description: 'Support a campaign and connected funnel path.' },
+    ],
+  }
+  if (sectionId === 'ctas') {
+    return [
+      sourceQuestion,
+      {
+        id: 'intent',
+        label: 'What should the CTA do?',
+        choices: [
+          { value: 'read', label: 'Read/open', description: 'Send people to the source or canonical destination.' },
+          { value: 'save', label: 'Save/share', description: 'Optimize for social usefulness and sharing.' },
+          { value: 'contact', label: 'Contact', description: 'Move qualified visitors toward a conversation.' },
+        ],
+      },
+    ]
+  }
+  if (sectionId === 'tracking' || sectionId === 'performance' || sectionId === 'experiments') {
+    return [
+      sourceQuestion,
+      {
+        id: 'measurement',
+        label: 'What should we learn?',
+        choices: [
+          { value: 'traffic', label: 'Useful visits', description: 'Focus on visits to the destination or source.' },
+          { value: 'engagement', label: 'Saves/replies', description: 'Focus on social proof and audience response.' },
+          { value: 'conversion', label: 'Qualified action', description: 'Focus on contact, download, or meaningful follow-up.' },
+        ],
+      },
+    ]
+  }
+  return [sourceQuestion, useQuestion]
+}
+
+function strategyAssistAssetType(sectionId: StrategyAssetKind): StrategyAssistAssetType {
+  if (sectionId === 'audiences') return 'audience'
+  if (sectionId === 'messages') return 'message'
+  if (sectionId === 'proof') return 'proof'
+  if (sectionId === 'ctas') return 'cta'
+  if (sectionId === 'tracking') return 'trackingRule'
+  if (sectionId === 'quality') return 'qualityGate'
+  if (sectionId === 'experiments') return 'experiment'
+  return 'performanceSynthesis'
+}
+
+function getStrategyResearchResults(data: MarketingData) {
+  const preferred = data.researchResults.filter((result) => isResearchResultApproved(result) || result.selectedForSynthesis)
+  const pool = preferred.length > 0 ? preferred : data.researchResults
+  const rank = (result: MarketingResearchResult) => {
+    if (isResearchResultApproved(result)) return 0
+    if (result.selectedForSynthesis) return 1
+    if (result.status === 'reviewed') return 2
+    return 3
+  }
+  const seen = new Set<string>()
+  return [...pool]
+    .sort((a, b) => rank(a) - rank(b))
+    .filter((result) => {
+      if (!result._id || seen.has(result._id)) return false
+      seen.add(result._id)
+      return true
+    })
+    .slice(0, 10)
+}
+
+function buildStrategyResearchAssistDraft(sectionId: StrategyAssetKind, draft: Record<string, unknown>, data: MarketingData) {
+  const project = getLatestActiveResearchProject(data)
+  return {
+    assetType: strategyAssistAssetType(sectionId),
+    currentDraft: draft,
+    researchProject: project
+      ? {
+          title: project.title,
+          researchType: project.researchType,
+          audience: project.audience,
+          goals: project.goals,
+          seedKeywords: project.seedKeywords,
+          canonicalUrl: project.canonicalUrl,
+          status: project.status,
+        }
+      : null,
+    researchResults: getStrategyResearchResults(data).map(serializeStrategyResearchResultForDraft),
+    channels: data.channels
+      .filter((channel) => channel.status !== 'archived')
+      .map((channel) => ({ title: channel.title, key: channel.key, platform: channel.platform }))
+      .slice(0, 8),
+    existingStrategyCounts: {
+      audiences: data.audienceProfiles.length,
+      messages: data.messagePillars.length,
+      proof: data.proofPoints.length,
+      ctas: data.ctas.length,
+      tracking: data.trackingRules.length,
+      quality: data.qualityGates.length,
+      experiments: data.experiments.length,
+      performance: data.performanceSignals.length,
+    },
+  }
+}
+
+function serializeStrategyResearchResultForDraft(result: MarketingResearchResult) {
+  return {
+    id: result._id,
+    title: result.title,
+    resultType: result.resultType,
+    status: result.status,
+    selectedForSynthesis: result.selectedForSynthesis,
+    priority: result.priority,
+    keyword: result.keyword,
+    searchIntent: result.searchIntent,
+    volume: result.volume,
+    difficulty: result.difficulty,
+    provider: result.provider,
+    scoreSource: result.scoreSource,
+    canonicalUrl: result.canonicalUrl,
+    contentGap: result.contentGap,
+    sourceTitle: result.sourceTitle,
+    sourceUrl: result.sourceUrl,
+    claim: result.claim,
+    confidence: result.confidence,
+    implication: result.implication,
+    competitorName: result.competitorName,
+    collaboratorName: result.collaboratorName,
+    organization: result.organization,
+    topicArea: result.topicArea,
+    expectedContribution: result.expectedContribution,
+  }
+}
+
+function buildStrategyDraftFromResearch(sectionId: StrategyAssetKind, data: MarketingData, currentDraft: Record<string, unknown> = {}) {
+  const results = getStrategyResearchResults(data)
+  const project = getLatestActiveResearchProject(data)
+  const first = results[0]
+  const topic = strategyResearchTopic(project, results)
+  const claims = uniqueStrategyStrings(results.map((result) => result.claim || result.contentGap || result.implication || result.title)).slice(0, 6)
+  const keywords = uniqueStrategyStrings(results.map((result) => result.keyword || result.topicArea || result.competitorName)).slice(0, 6)
+  const destination = first?.canonicalUrl || first?.sourceUrl || project?.canonicalUrl || '/contact'
+  const sourceTitle = first?.sourceTitle || first?.title || project?.title || ''
+  const sourceUrl = first?.sourceUrl || first?.canonicalUrl || project?.canonicalUrl || ''
+  const notes = strategyResearchBasisNote(results)
+  const title = textFieldValue(currentDraft.title)
+
+  if (sectionId === 'audiences') {
+    const needs = claims.length > 0 ? claims.slice(0, 4) : [`Understand why ${topic} matters`, 'See the evidence behind the claim', 'Know what next step to take']
+    const desiredActions = destination ? ['Open the source or destination', 'Save or share the useful finding', 'Explore related GoInvo work'] : ['Save or share the useful finding', 'Start a conversation']
+    return withStrategyListText({
+      title: title || `${topic} audience`,
+      priority: data.audienceProfiles.length === 0 ? 'primary' : 'secondary',
+      audience: project?.audience || `People who need a clear, evidence-backed explanation of ${topic}.`,
+      needs,
+      pains: ['The topic feels abstract or hard to trust', 'Relevant evidence is scattered across sources', 'The useful next step is unclear'],
+      misconceptions: ['A strong visual is enough without a source destination', 'Everyone already understands the project context'],
+      trustTriggers: ['Reviewed research findings', 'Concrete source links', 'Plain-language explanation', 'Visible proof or examples'],
+      desiredActions,
+      objections: ['Too abstract', 'Unsupported claim', 'No clear next step'],
+      notes,
+    })
+  }
+
+  if (sectionId === 'messages') {
+    return withStrategyListText({
+      title: title || `${topic} message pillar`,
+      coreClaim: first?.claim || first?.contentGap || `${topic} needs an evidence-backed explanation people can understand and act on.`,
+      supportingClaims: claims.length > 0 ? claims : ['Use approved research as the source of the claim', 'Connect the useful idea to a clear destination'],
+      approvedPhrases: keywords.length > 0 ? keywords : ['evidence-backed', 'clear source path', 'useful explanation'],
+      phrasesToAvoid: ['revolutionary', 'game-changing', 'world-class', 'trust us'],
+      topicCluster: keywords[0] || topic,
+      notes,
+    })
+  }
+
+  if (sectionId === 'proof') {
+    return {
+      title: title || `${topic} proof point`,
+      claim: first?.claim || first?.contentGap || describeResearchResult(first),
+      proofType: first?.resultType === 'seoKeyword' ? 'researchFinding' : first?.evidenceType || 'researchFinding',
+      sourceTitle,
+      sourceUrl,
+      confidence: first?.confidence || (first && isResearchResultApproved(first) ? 'medium' : 'needsValidation'),
+      topicCluster: keywords[0] || topic,
+      usageNotes: notes,
+    }
+  }
+
+  if (sectionId === 'ctas') {
+    return {
+      title: title || `${topic} CTA`,
+      label: destination && destination !== '/contact' ? 'Read the source' : 'Start a conversation',
+      funnelStage: 'interest',
+      destination,
+      successSignal: destination && destination !== '/contact' ? 'People click through to the source or related work.' : 'People start a qualified conversation.',
+      priority: 'contextual',
+      notes,
+    }
+  }
+
+  if (sectionId === 'tracking') {
+    const sources = data.channels.map((channel) => channel.key || channel.title).filter(Boolean) as string[]
+    const allowedSources = sources.length > 0 ? sources : ['instagram', 'linkedin', 'newsletter', 'website']
+    return {
+      title: title || `${topic} tracking rule`,
+      status: 'active',
+      utmSourceRule: 'Use the channel where the link is promoted.',
+      utmMediumRule: 'Use social, email, referral, organic, or paid to group traffic consistently.',
+      utmCampaignPattern: `${slugify(topic)}-research`,
+      utmContentPattern: 'channel-format-angle',
+      allowedSourcesText: allowedSources.join('\n'),
+      allowedMediumsText: ['social', 'email', 'referral', 'organic'].join('\n'),
+      notes,
+    }
+  }
+
+  if (sectionId === 'quality') {
+    const checks = [
+      { _key: randomKey(), _type: 'qualityGateCheck', label: 'Claim is backed by an approved research finding', category: 'claims', guidance: 'Reference the selected research result before final copy.', required: false },
+      { _key: randomKey(), _type: 'qualityGateCheck', label: 'CTA points to the intended destination', category: 'cta', guidance: 'Use one clear next step.', required: false },
+      { _key: randomKey(), _type: 'qualityGateCheck', label: 'Source and UTM links are present where needed', category: 'utm', guidance: 'Use the tracking rule before publishing.', required: false },
+      { _key: randomKey(), _type: 'qualityGateCheck', label: 'Alt text explains the useful information', category: 'altText', guidance: 'Describe meaningful visuals in plain language.', required: false },
+    ]
+    return {
+      title: title || `${topic} quality gate`,
+      status: 'active',
+      whenToUse: `Use before publishing content based on ${topic} research.`,
+      checks,
+      checksText: qualityCheckText(checks),
+      notes,
+    }
+  }
+
+  if (sectionId === 'experiments') {
+    return {
+      title: title || `${topic} experiment`,
+      status: 'idea',
+      hypothesis: `If ${topic} content leads with the strongest approved research finding and one clear CTA, more visitors will reach the intended destination because the value and next step are easier to understand.`,
+      expectedSignal: 'Higher useful visits, saves, replies, or CTA clicks than a generic post.',
+      decision: 'inconclusive',
+      notes,
+    }
+  }
+
+  const analyticsResult = results.find((result) => result.resultType === 'analyticsSignal' || result.provider === 'analytics')
+  const signal = analyticsResult?.performanceSignals?.[0]
+  const metrics = signal?.metrics || [{ _key: randomKey(), _type: 'performanceMetric', label: 'Useful visits', unit: 'visits', change: '' }]
+  return {
+    title: title || `${topic} performance signal`,
+    provider: signal?.provider || 'manual',
+    status: 'new',
+    signalType: signal?.signalType || analyticsResult?.resultType || 'research-backed content',
+    sourceLabel: signal?.sourceLabel || analyticsResult?.sourceTitle || sourceTitle || 'Research review',
+    query: analyticsResult?.keyword || keywords[0] || '',
+    pageUrl: signal?.pageUrl || analyticsResult?.canonicalUrl || destination,
+    metrics,
+    metricsText: performanceMetricText(metrics),
+    interpretation: analyticsResult?.claim || analyticsResult?.implication || `Review whether ${topic} content is moving people toward the intended destination.`,
+    recommendation: analyticsResult?.contentGap || 'Use this signal to decide whether the hook, CTA, destination, or channel should change.',
+    rawImport: '',
+  }
+}
+
+function strategyAssetSuggestionToDraft(
+  sectionId: StrategyAssetKind,
+  suggestion: MarketingStrategyAssetSuggestion,
+  fallback: Record<string, unknown>,
+) {
+  const merged = { ...fallback }
+  const title = textFieldValue(suggestion.title) || textFieldValue(merged.title)
+  if (title) merged.title = title
+  if (textFieldValue(suggestion.notes) || textFieldValue(suggestion.summary)) merged.notes = textFieldValue(suggestion.notes) || textFieldValue(suggestion.summary)
+
+  if (sectionId === 'audiences') {
+    copyStrategyText(merged, suggestion, ['priority', 'audience'])
+    copyStrategyLists(merged, suggestion, ['needs', 'pains', 'misconceptions', 'trustTriggers', 'desiredActions', 'objections'])
+    return merged
+  }
+  if (sectionId === 'messages') {
+    copyStrategyText(merged, suggestion, ['coreClaim', 'topicCluster'])
+    copyStrategyLists(merged, suggestion, ['supportingClaims', 'approvedPhrases', 'phrasesToAvoid'])
+    return merged
+  }
+  if (sectionId === 'proof') {
+    copyStrategyText(merged, suggestion, ['proofType', 'claim', 'sourceTitle', 'sourceUrl', 'confidence', 'topicCluster', 'usageNotes'])
+    return merged
+  }
+  if (sectionId === 'ctas') {
+    merged.label = textFieldValue(suggestion.label) || textFieldValue(suggestion.ctaLabel) || textFieldValue(merged.label)
+    copyStrategyText(merged, suggestion, ['funnelStage', 'destination', 'successSignal', 'priority'])
+    return merged
+  }
+  if (sectionId === 'tracking') {
+    copyStrategyText(merged, suggestion, ['status', 'utmSourceRule', 'utmMediumRule', 'utmCampaignPattern', 'utmContentPattern'])
+    const sources = strategyStringArray(suggestion.allowedSources)
+    const mediums = strategyStringArray(suggestion.allowedMediums)
+    if (sources.length > 0) merged.allowedSourcesText = sources.join('\n')
+    if (mediums.length > 0) merged.allowedMediumsText = mediums.join('\n')
+    return merged
+  }
+  if (sectionId === 'quality') {
+    copyStrategyText(merged, suggestion, ['status', 'whenToUse'])
+    const checks = Array.isArray(suggestion.qualityChecklist) && suggestion.qualityChecklist.length > 0 ? suggestion.qualityChecklist : suggestion.checks
+    if (Array.isArray(checks) && checks.length > 0) {
+      merged.checks = checks
+      merged.checksText = qualityCheckText(checks)
+    }
+    return merged
+  }
+  if (sectionId === 'experiments') {
+    copyStrategyText(merged, suggestion, ['status', 'hypothesis', 'expectedSignal', 'result', 'decision', 'decisionDate'])
+    return merged
+  }
+  copyStrategyText(merged, suggestion, ['provider', 'status', 'signalType', 'sourceLabel', 'query', 'pageUrl', 'metricDate', 'interpretation', 'recommendation', 'rawImport'])
+  if (Array.isArray(suggestion.metrics) && suggestion.metrics.length > 0) {
+    merged.metrics = suggestion.metrics
+    merged.metricsText = performanceMetricText(suggestion.metrics)
+  }
+  return merged
+}
+
+function copyStrategyText(target: Record<string, unknown>, source: Record<string, unknown>, fields: string[]) {
+  fields.forEach((field) => {
+    const value = textFieldValue(source[field])
+    if (value) target[field] = value
+  })
+}
+
+function copyStrategyLists(target: Record<string, unknown>, source: Record<string, unknown>, fields: string[]) {
+  fields.forEach((field) => {
+    const values = strategyStringArray(source[field])
+    if (values.length > 0) {
+      target[field] = values
+      target[`${field}Text`] = values.join('\n')
+    }
+  })
+}
+
+function withStrategyListText<T extends Record<string, unknown>>(draft: T) {
+  ;['needs', 'pains', 'misconceptions', 'trustTriggers', 'desiredActions', 'objections', 'supportingClaims', 'approvedPhrases', 'phrasesToAvoid'].forEach((field) => {
+    const values = strategyStringArray(draft[field])
+    if (values.length > 0) draft[`${field}Text` as keyof T] = values.join('\n') as T[keyof T]
+  })
+  return draft
+}
+
+function strategyStringArray(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return item.trim()
+      if (item && typeof item === 'object') {
+        const record = item as { label?: string; title?: string; value?: string; guidance?: string }
+        return (record.label || record.title || record.value || record.guidance || '').trim()
+      }
+      return ''
+    })
+    .filter(Boolean)
+}
+
+function uniqueStrategyStrings(values: Array<string | undefined>) {
+  const seen = new Set<string>()
+  return values
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter((value) => {
+      if (!value || seen.has(value.toLowerCase())) return false
+      seen.add(value.toLowerCase())
+      return true
+    })
+}
+
+function strategyResearchTopic(project: MarketingResearchProject | null, results: MarketingResearchResult[]) {
+  const keyword = results.find((result) => result.keyword)?.keyword
+  const topic = keyword || project?.seedKeywords?.[0] || project?.title || results[0]?.title || 'research-backed content'
+  return stripResearchProjectSuffix(topic).replace(/\s+research\s*$/i, '').trim() || 'research-backed content'
+}
+
+function strategyResearchBasisNote(results: MarketingResearchResult[]) {
+  if (results.length === 0) return 'Drafted before research findings were available. Review carefully before saving.'
+  return `Drafted from ${results.length} Research finding${results.length === 1 ? '' : 's'}: ${results
+    .slice(0, 3)
+    .map((result) => result.title || result.keyword || result.sourceTitle || 'Untitled finding')
+    .join('; ')}.`
+}
+
+function StrategyEditorFields({
+  sectionId,
+  draft,
+  onChange,
+}: {
+  sectionId: StrategyAssetKind
+  draft: Record<string, unknown>
+  onChange: (draft: Record<string, unknown>) => void
+}) {
+  const setField = (name: string, value: unknown) => onChange({ ...draft, [name]: value })
+
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <StrategyTextField label="Title" value={textFieldValue(draft.title)} onChange={(value) => setField('title', value)} />
+
+      {sectionId === 'audiences' && (
+        <>
+          <StrategySelectField label="Priority" value={textFieldValue(draft.priority) || 'secondary'} options={audiencePriorityOptions} onChange={(value) => setField('priority', value)} />
+          <StrategyTextareaField label="Who they are" value={textFieldValue(draft.audience)} onChange={(value) => setField('audience', value)} />
+          <StrategyTextareaField label="Needs" value={editedTextValue(draft, 'needsText', stringListValue(draft.needs))} onChange={(value) => setField('needsText', value)} />
+          <StrategyTextareaField label="Pains" value={editedTextValue(draft, 'painsText', stringListValue(draft.pains))} onChange={(value) => setField('painsText', value)} />
+          <StrategyTextareaField label="Misconceptions" value={editedTextValue(draft, 'misconceptionsText', stringListValue(draft.misconceptions))} onChange={(value) => setField('misconceptionsText', value)} />
+          <StrategyTextareaField label="Trust triggers" value={editedTextValue(draft, 'trustTriggersText', stringListValue(draft.trustTriggers))} onChange={(value) => setField('trustTriggersText', value)} />
+          <StrategyTextareaField label="Desired actions" value={editedTextValue(draft, 'desiredActionsText', stringListValue(draft.desiredActions))} onChange={(value) => setField('desiredActionsText', value)} />
+          <StrategyTextareaField label="Objections" value={editedTextValue(draft, 'objectionsText', stringListValue(draft.objections))} onChange={(value) => setField('objectionsText', value)} />
+          <StrategyTextareaField label="Designer notes" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
+        </>
+      )}
+
+      {sectionId === 'messages' && (
+        <>
+          <StrategyTextareaField label="Core claim" value={textFieldValue(draft.coreClaim)} onChange={(value) => setField('coreClaim', value)} />
+          <StrategyTextareaField label="Supporting claims" value={editedTextValue(draft, 'supportingClaimsText', stringListValue(draft.supportingClaims))} onChange={(value) => setField('supportingClaimsText', value)} />
+          <StrategyTextareaField label="Approved phrases" value={editedTextValue(draft, 'approvedPhrasesText', stringListValue(draft.approvedPhrases))} onChange={(value) => setField('approvedPhrasesText', value)} />
+          <StrategyTextareaField label="Phrases to avoid" value={editedTextValue(draft, 'phrasesToAvoidText', stringListValue(draft.phrasesToAvoid))} onChange={(value) => setField('phrasesToAvoidText', value)} />
+          <StrategyTextField label="Topic / keyword cluster" value={textFieldValue(draft.topicCluster)} onChange={(value) => setField('topicCluster', value)} />
+          <StrategyTextareaField label="Designer notes" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
+        </>
+      )}
+
+      {sectionId === 'proof' && (
+        <>
+          <StrategyTextareaField label="Evidence / claim" value={textFieldValue(draft.claim)} onChange={(value) => setField('claim', value)} />
+          <StrategySelectField label="Proof type" value={textFieldValue(draft.proofType) || 'researchFinding'} options={proofTypeOptions} onChange={(value) => setField('proofType', value)} />
+          <StrategyTextField label="Source title" value={textFieldValue(draft.sourceTitle)} onChange={(value) => setField('sourceTitle', value)} />
+          <StrategyTextField label="Source URL" value={textFieldValue(draft.sourceUrl)} onChange={(value) => setField('sourceUrl', value)} />
+          <StrategySelectField label="Confidence" value={textFieldValue(draft.confidence) || 'medium'} options={confidenceOptions} onChange={(value) => setField('confidence', value)} />
+          <StrategyTextField label="Topic / keyword cluster" value={textFieldValue(draft.topicCluster)} onChange={(value) => setField('topicCluster', value)} />
+          <StrategyTextareaField label="Usage notes" value={textFieldValue(draft.usageNotes)} onChange={(value) => setField('usageNotes', value)} />
+        </>
+      )}
+
+      {sectionId === 'ctas' && (
+        <>
+          <StrategyTextField label="CTA label" value={textFieldValue(draft.label)} onChange={(value) => setField('label', value)} />
+          <StrategySelectField label="Funnel stage" value={textFieldValue(draft.funnelStage) || 'awareness'} options={funnelStageOptions} onChange={(value) => setField('funnelStage', value)} />
+          <StrategyTextField label="Destination" value={textFieldValue(draft.destination)} onChange={(value) => setField('destination', value)} />
+          <StrategyTextField label="Success signal" value={textFieldValue(draft.successSignal)} onChange={(value) => setField('successSignal', value)} />
+          <StrategySelectField label="Priority" value={textFieldValue(draft.priority) || 'contextual'} options={ctaPriorityOptions} onChange={(value) => setField('priority', value)} />
+          <StrategyTextareaField label="Designer notes" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
+        </>
+      )}
+
+      {sectionId === 'tracking' && (
+        <>
+          <StrategySelectField label="Status" value={textFieldValue(draft.status) || 'active'} options={documentStatusOptions} onChange={(value) => setField('status', value)} />
+          <StrategyTextareaField label="UTM source rule" value={textFieldValue(draft.utmSourceRule)} onChange={(value) => setField('utmSourceRule', value)} />
+          <StrategyTextareaField label="UTM medium rule" value={textFieldValue(draft.utmMediumRule)} onChange={(value) => setField('utmMediumRule', value)} />
+          <StrategyTextField label="UTM campaign pattern" value={textFieldValue(draft.utmCampaignPattern)} onChange={(value) => setField('utmCampaignPattern', value)} />
+          <StrategyTextField label="UTM content pattern" value={textFieldValue(draft.utmContentPattern)} onChange={(value) => setField('utmContentPattern', value)} />
+          <StrategyTextareaField label="Allowed source values" value={editedTextValue(draft, 'allowedSourcesText', trackingValueText(draft.allowedSources))} onChange={(value) => setField('allowedSourcesText', value)} />
+          <StrategyTextareaField label="Allowed medium values" value={editedTextValue(draft, 'allowedMediumsText', trackingValueText(draft.allowedMediums))} onChange={(value) => setField('allowedMediumsText', value)} />
+          <StrategyTextareaField label="Designer notes" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
+        </>
+      )}
+
+      {sectionId === 'quality' && (
+        <>
+          <StrategySelectField label="Status" value={textFieldValue(draft.status) || 'active'} options={documentStatusOptions} onChange={(value) => setField('status', value)} />
+          <StrategyTextareaField label="When to use" value={textFieldValue(draft.whenToUse)} onChange={(value) => setField('whenToUse', value)} />
+          <StrategyTextareaField label="Checklist" value={editedTextValue(draft, 'checksText', qualityCheckText(draft.checks))} onChange={(value) => setField('checksText', value)} />
+          <StrategyTextareaField label="Designer notes" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
+        </>
+      )}
+
+      {sectionId === 'experiments' && (
+        <>
+          <StrategySelectField label="Status" value={textFieldValue(draft.status) || 'idea'} options={experimentStatusOptions} onChange={(value) => setField('status', value)} />
+          <StrategyTextareaField label="Hypothesis" value={textFieldValue(draft.hypothesis)} onChange={(value) => setField('hypothesis', value)} />
+          <StrategyTextField label="Expected signal" value={textFieldValue(draft.expectedSignal)} onChange={(value) => setField('expectedSignal', value)} />
+          <StrategyTextareaField label="Result" value={textFieldValue(draft.result)} onChange={(value) => setField('result', value)} />
+          <StrategySelectField label="Decision" value={textFieldValue(draft.decision)} options={experimentDecisionOptions} onChange={(value) => setField('decision', value)} />
+          <StrategyTextField label="Decision date" value={textFieldValue(draft.decisionDate)} type="date" onChange={(value) => setField('decisionDate', value)} />
+          <StrategyTextareaField label="Notes" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
+        </>
+      )}
+
+      {sectionId === 'performance' && (
+        <>
+          <StrategySelectField label="Provider" value={textFieldValue(draft.provider) || 'manual'} options={performanceProviderOptions} onChange={(value) => setField('provider', value)} />
+          <StrategySelectField label="Status" value={textFieldValue(draft.status) || 'new'} options={performanceStatusOptions} onChange={(value) => setField('status', value)} />
+          <StrategyTextField label="Signal type" value={textFieldValue(draft.signalType)} onChange={(value) => setField('signalType', value)} />
+          <StrategyTextField label="Source label" value={textFieldValue(draft.sourceLabel)} onChange={(value) => setField('sourceLabel', value)} />
+          <StrategyTextField label="Query" value={textFieldValue(draft.query)} onChange={(value) => setField('query', value)} />
+          <StrategyTextField label="Page URL" value={textFieldValue(draft.pageUrl)} onChange={(value) => setField('pageUrl', value)} />
+          <StrategyTextField label="Metric date" value={textFieldValue(draft.metricDate)} type="date" onChange={(value) => setField('metricDate', value)} />
+          <StrategyTextareaField label="Metrics" value={editedTextValue(draft, 'metricsText', performanceMetricText(draft.metrics))} onChange={(value) => setField('metricsText', value)} />
+          <StrategyTextareaField label="Interpretation" value={textFieldValue(draft.interpretation)} onChange={(value) => setField('interpretation', value)} />
+          <StrategyTextareaField label="Recommendation" value={textFieldValue(draft.recommendation)} onChange={(value) => setField('recommendation', value)} />
+          <StrategyTextareaField label="Raw import data" value={textFieldValue(draft.rawImport)} onChange={(value) => setField('rawImport', value)} />
+        </>
+      )}
+    </div>
+  )
+}
+
+function StrategyTextField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  type?: string
+}) {
+  return (
+    <label>
+      <span style={styles.label}>{label}</span>
+      <input type={type} value={value} onChange={(event) => onChange(event.currentTarget.value)} style={styles.input} />
+    </label>
+  )
+}
+
+function StrategyTextareaField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  return (
+    <label>
+      <span style={styles.label}>{label}</span>
+      <textarea value={value} onChange={(event) => onChange(event.currentTarget.value)} style={{ ...styles.input, minHeight: 86, resize: 'vertical' }} />
+    </label>
+  )
+}
+
+function StrategySelectField({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: SelectOption[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <label>
+      <span style={styles.label}>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.currentTarget.value)} style={{ ...styles.input, paddingRight: 34 }}>
+        <option value="">No selection</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.title}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function getStrategyReadiness(data: MarketingData) {
+  return [
+    { label: 'Audiences', value: data.audienceProfiles.length, ready: data.audienceProfiles.length > 0 },
+    { label: 'Messages', value: data.messagePillars.length, ready: data.messagePillars.length > 0 },
+    { label: 'Proof', value: data.proofPoints.length, ready: data.proofPoints.length > 0 },
+    { label: 'CTAs', value: data.ctas.length, ready: data.ctas.length > 0 },
+    { label: 'Tracking', value: data.trackingRules.length, ready: data.trackingRules.length > 0 },
+    { label: 'Quality', value: data.qualityGates.length, ready: data.qualityGates.length > 0 },
+    { label: 'Experiments', value: data.experiments.length, ready: data.experiments.length > 0 },
+    { label: 'Signals', value: data.performanceSignals.length, ready: data.performanceSignals.length > 0 },
+  ]
+}
+
+function getStrategySectionItems(data: MarketingData, sectionId: StrategyAssetKind): StrategyDocument[] {
+  if (sectionId === 'audiences') return data.audienceProfiles
+  if (sectionId === 'messages') return data.messagePillars
+  if (sectionId === 'proof') return data.proofPoints
+  if (sectionId === 'ctas') return data.ctas
+  if (sectionId === 'tracking') return data.trackingRules
+  if (sectionId === 'quality') return data.qualityGates
+  if (sectionId === 'experiments') return data.experiments
+  return data.performanceSignals
+}
+
+function buildEmptyStrategyDocument(section: StrategySectionConfig): MarketingDocumentInput {
+  const base = { _type: section.documentType, title: '' }
+  if (section.id === 'audiences') return { ...base, priority: 'secondary' }
+  if (section.id === 'messages') return { ...base, coreClaim: '' }
+  if (section.id === 'proof') return { ...base, proofType: 'researchFinding', confidence: 'medium' }
+  if (section.id === 'ctas') return { ...base, priority: 'contextual' }
+  if (section.id === 'tracking') return { ...base, status: 'active' }
+  if (section.id === 'quality') return { ...base, status: 'active', checks: [] }
+  if (section.id === 'experiments') return { ...base, status: 'idea' }
+  return { ...base, provider: 'manual', status: 'new' }
+}
+
+function buildStrategyPatch(sectionId: StrategyAssetKind, draft: Record<string, unknown>): Record<string, unknown> {
+  const title = textFieldValue(draft.title)
+  if (sectionId === 'audiences') {
+    return {
+      title,
+      priority: textFieldValue(draft.priority) || 'secondary',
+      audience: textFieldValue(draft.audience),
+      needs: linesFromDraft(draft, 'needs'),
+      pains: linesFromDraft(draft, 'pains'),
+      misconceptions: linesFromDraft(draft, 'misconceptions'),
+      trustTriggers: linesFromDraft(draft, 'trustTriggers'),
+      desiredActions: linesFromDraft(draft, 'desiredActions'),
+      objections: linesFromDraft(draft, 'objections'),
+      notes: textFieldValue(draft.notes),
+    }
+  }
+  if (sectionId === 'messages') {
+    return {
+      title,
+      coreClaim: textFieldValue(draft.coreClaim),
+      supportingClaims: linesFromDraft(draft, 'supportingClaims'),
+      approvedPhrases: linesFromDraft(draft, 'approvedPhrases'),
+      phrasesToAvoid: linesFromDraft(draft, 'phrasesToAvoid'),
+      topicCluster: textFieldValue(draft.topicCluster),
+      notes: textFieldValue(draft.notes),
+    }
+  }
+  if (sectionId === 'proof') {
+    return {
+      title,
+      claim: textFieldValue(draft.claim),
+      proofType: textFieldValue(draft.proofType) || 'researchFinding',
+      sourceTitle: textFieldValue(draft.sourceTitle),
+      sourceUrl: textFieldValue(draft.sourceUrl),
+      confidence: textFieldValue(draft.confidence) || 'medium',
+      topicCluster: textFieldValue(draft.topicCluster),
+      usageNotes: textFieldValue(draft.usageNotes),
+    }
+  }
+  if (sectionId === 'ctas') {
+    return {
+      title,
+      label: textFieldValue(draft.label),
+      funnelStage: textFieldValue(draft.funnelStage),
+      destination: textFieldValue(draft.destination),
+      successSignal: textFieldValue(draft.successSignal),
+      priority: textFieldValue(draft.priority) || 'contextual',
+      notes: textFieldValue(draft.notes),
+    }
+  }
+  if (sectionId === 'tracking') {
+    return {
+      title,
+      status: textFieldValue(draft.status) || 'active',
+      utmSourceRule: textFieldValue(draft.utmSourceRule),
+      utmMediumRule: textFieldValue(draft.utmMediumRule),
+      utmCampaignPattern: textFieldValue(draft.utmCampaignPattern),
+      utmContentPattern: textFieldValue(draft.utmContentPattern),
+      allowedSources: trackingValuesFromDraft(draft, 'allowedSources'),
+      allowedMediums: trackingValuesFromDraft(draft, 'allowedMediums'),
+      notes: textFieldValue(draft.notes),
+    }
+  }
+  if (sectionId === 'quality') {
+    return {
+      title,
+      status: textFieldValue(draft.status) || 'active',
+      whenToUse: textFieldValue(draft.whenToUse),
+      checks: qualityChecksFromDraft(draft),
+      notes: textFieldValue(draft.notes),
+    }
+  }
+  if (sectionId === 'experiments') {
+    return {
+      title,
+      status: textFieldValue(draft.status) || 'idea',
+      hypothesis: textFieldValue(draft.hypothesis),
+      expectedSignal: textFieldValue(draft.expectedSignal),
+      result: textFieldValue(draft.result),
+      decision: textFieldValue(draft.decision),
+      decisionDate: textFieldValue(draft.decisionDate),
+      notes: textFieldValue(draft.notes),
+    }
+  }
+  return {
+    title,
+    provider: textFieldValue(draft.provider) || 'manual',
+    status: textFieldValue(draft.status) || 'new',
+    signalType: textFieldValue(draft.signalType),
+    sourceLabel: textFieldValue(draft.sourceLabel),
+    query: textFieldValue(draft.query),
+    pageUrl: textFieldValue(draft.pageUrl),
+    metricDate: textFieldValue(draft.metricDate),
+    metrics: performanceMetricsFromDraft(draft),
+    interpretation: textFieldValue(draft.interpretation),
+    recommendation: textFieldValue(draft.recommendation),
+    rawImport: textFieldValue(draft.rawImport),
+  }
+}
+
+function strategyDocumentSubtitle(sectionId: StrategyAssetKind, item: StrategyDocument) {
+  if (sectionId === 'audiences') return [textFieldValue((item as MarketingAudienceProfile).priority), textFieldValue((item as MarketingAudienceProfile).audience)].filter(Boolean).join(' / ') || 'No audience detail'
+  if (sectionId === 'messages') return textFieldValue((item as MarketingMessagePillar).topicCluster) || textFieldValue((item as MarketingMessagePillar).coreClaim) || 'No claim yet'
+  if (sectionId === 'proof') return [textFieldValue((item as MarketingProofPoint).confidence), textFieldValue((item as MarketingProofPoint).sourceTitle)].filter(Boolean).join(' / ') || 'No source yet'
+  if (sectionId === 'ctas') return [textFieldValue((item as MarketingCta).label), textFieldValue((item as MarketingCta).funnelStage)].filter(Boolean).join(' / ') || 'No CTA label yet'
+  if (sectionId === 'tracking') return textFieldValue((item as MarketingTrackingRule).utmCampaignPattern) || textFieldValue((item as MarketingTrackingRule).status) || 'No pattern yet'
+  if (sectionId === 'quality') return `${((item as MarketingQualityGate).checks || []).length} checks`
+  if (sectionId === 'experiments') return textFieldValue((item as MarketingExperiment).hypothesis) || textFieldValue((item as MarketingExperiment).status) || 'No hypothesis yet'
+  return [textFieldValue((item as MarketingPerformanceSignal).provider), textFieldValue((item as MarketingPerformanceSignal).signalType)].filter(Boolean).join(' / ') || 'No signal detail'
+}
+
+function textFieldValue(value: unknown) {
+  return typeof value === 'string' ? value : ''
+}
+
+function editedTextValue(draft: Record<string, unknown>, name: string, fallback: string) {
+  return typeof draft[name] === 'string' ? (draft[name] as string) : fallback
+}
+
+function stringListValue(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => (typeof item === 'string' ? item : ''))
+        .filter(Boolean)
+        .join('\n')
+    : ''
+}
+
+function trackingValueText(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => {
+          const record = item && typeof item === 'object' ? (item as { value?: string; label?: string }) : {}
+          return record.value || record.label || ''
+        })
+        .filter(Boolean)
+        .join('\n')
+    : ''
+}
+
+function qualityCheckText(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => {
+          const record = item && typeof item === 'object' ? (item as { label?: string; category?: string; guidance?: string }) : {}
+          return [record.label, record.category, record.guidance].filter(Boolean).join(' | ')
+        })
+        .filter(Boolean)
+        .join('\n')
+    : ''
+}
+
+function performanceMetricText(value: unknown) {
+  return Array.isArray(value)
+    ? value
+        .map((item) => {
+          const record = item && typeof item === 'object' ? (item as { label?: string; value?: number; unit?: string; change?: string }) : {}
+          return [record.label, typeof record.value === 'number' ? record.value : '', record.unit, record.change].filter((part) => part !== undefined && part !== '').join(' | ')
+        })
+        .filter(Boolean)
+        .join('\n')
+    : ''
+}
+
+function linesFromDraft(draft: Record<string, unknown>, name: string) {
+  const edited = textFieldValue(draft[`${name}Text`])
+  return splitLines(edited || stringListValue(draft[name]))
+}
+
+function trackingValuesFromDraft(draft: Record<string, unknown>, name: string) {
+  const edited = textFieldValue(draft[`${name}Text`])
+  return splitLines(edited || trackingValueText(draft[name])).map((value) => ({
+    _key: randomKey(),
+    _type: 'trackingValue',
+    label: value,
+    value: slugify(value),
+  }))
+}
+
+function qualityChecksFromDraft(draft: Record<string, unknown>) {
+  const edited = textFieldValue(draft.checksText)
+  return splitLines(edited || qualityCheckText(draft.checks)).map((line) => {
+    const [label, category, guidance] = line.split('|').map((part) => part.trim())
+    return {
+      _key: randomKey(),
+      _type: 'qualityGateCheck',
+      label,
+      category: category || 'reviewReadiness',
+      guidance: guidance || '',
+      required: false,
+    }
+  })
+}
+
+function performanceMetricsFromDraft(draft: Record<string, unknown>) {
+  const edited = textFieldValue(draft.metricsText)
+  return splitLines(edited || performanceMetricText(draft.metrics)).map((line) => {
+    const [label, value, unit, change] = line.split('|').map((part) => part.trim())
+    const numeric = Number(value)
+    return {
+      _key: randomKey(),
+      _type: 'performanceMetric',
+      label,
+      value: Number.isFinite(numeric) ? numeric : undefined,
+      unit: unit || '',
+      change: change || '',
+    }
+  })
+}
+
+function splitLines(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+function MarketingGuidanceWidget({
+  data,
+  savingId,
+  tutorialRequest,
+  tutorialLibraryRequest,
+  tutorialId,
+  tutorialDemoRecommendation,
+  onOpenView,
+  onGenerateInstagramCarousel,
+  onGenerateMarketingPlan,
+}: {
+  data: MarketingData
+  savingId: string | null
+  tutorialRequest: number
+  tutorialLibraryRequest: number
+  tutorialId: string
+  tutorialDemoRecommendation: boolean
+  onOpenView: (view: MarketingViewId) => void
+  onGenerateInstagramCarousel: (questionnaire: MarketingPlanQuestionnaire) => Promise<CarouselWizardResult>
+  onGenerateMarketingPlan: (questionnaire: MarketingPlanQuestionnaire) => Promise<CarouselWizardResult>
+}) {
   const [open, setOpen] = useState(false)
-  const items = getMarketingAttentionItems(data)
-  const attentionCount = items.length
+  const [sessionsOpen, setSessionsOpen] = useState(false)
+  const [hasWorkflowBack, setHasWorkflowBack] = useState(false)
+  const [backSignal, setBackSignal] = useState(0)
+  const [tutorialOpen, setTutorialOpen] = useState(false)
+  const [tutorialLibraryOpen, setTutorialLibraryOpen] = useState(false)
+  const [activeTutorialId, setActiveTutorialId] = useState(tutorialId || defaultDesignerWorkflowTutorial.id)
+  const [tutorialStepIndex, setTutorialStepIndex] = useState(0)
+  const [tutorialPrepareSignal, setTutorialPrepareSignal] = useState<DesignerWorkflowTutorialPrepareSignal>(null)
+  const activeTutorial = getDesignerWorkflowTutorial(activeTutorialId)
   const openViewFromGuide = (view: MarketingViewId) => {
     onOpenView(view)
     setOpen(false)
   }
 
+  const startTutorial = (nextTutorialId = activeTutorialId, options: { demoRecommendation?: boolean } = {}) => {
+    const nextTutorial = getDesignerWorkflowTutorial(nextTutorialId)
+    setActiveTutorialId(nextTutorial.id)
+    setTutorialLibraryOpen(false)
+    setTutorialStepIndex(0)
+    setTutorialOpen(true)
+    prepareTutorialShell(nextTutorial.steps[0]?.id || '')
+    setTutorialPrepareSignal({
+      stepId: nextTutorial.steps[0]?.id || '',
+      tutorialId: nextTutorial.id,
+      demoRecommendation: options.demoRecommendation,
+      token: Date.now(),
+    })
+  }
+
+  const completeTutorial = () => {
+    markDesignerWorkflowTutorialComplete(activeTutorial.id)
+  }
+
+  const closeTutorial = () => {
+    markDesignerWorkflowTutorialComplete(activeTutorial.id)
+    setTutorialOpen(false)
+  }
+
+  const changeTutorialStep = (nextStepIndex: number) => {
+    setTutorialStepIndex(nextStepIndex)
+    const nextStep = activeTutorial.steps[nextStepIndex]
+    if (nextStep) {
+      prepareTutorialShell(nextStep.id)
+      setTutorialPrepareSignal({
+        stepId: nextStep.id,
+        tutorialId: activeTutorial.id,
+        demoRecommendation: tutorialPrepareSignal?.demoRecommendation,
+        token: Date.now(),
+      })
+    }
+  }
+
+  const prepareTutorialShell = (stepId: string) => {
+    if (!stepId) return
+    if (stepId === 'open-widget') {
+      setOpen(false)
+      setSessionsOpen(false)
+      return
+    }
+    setOpen(true)
+    if (stepId === 'sessions-list') {
+      setSessionsOpen(true)
+      return
+    }
+    if (['choose-path', 'suggest-next-step', 'optional-direction', 'recommendation-steps', 'open-next-step', 'create-suggested-setup'].includes(stepId)) {
+      setSessionsOpen(false)
+    }
+  }
+
+  const advanceTutorialForAction = (action: string) => {
+    if (action === 'strategy-suggestion-ready') {
+      if (!hasDesignerWorkflowTutorialCompleted('designer-workflow-recommendation')) {
+        startTutorial('designer-workflow-recommendation', { demoRecommendation: false })
+      }
+      return
+    }
+    if (!tutorialOpen) return
+    const currentStep = activeTutorial.steps[tutorialStepIndex]
+    const actionByStep: Record<string, string[]> = {
+      'open-widget': ['open-workflow'],
+      sessions: ['open-sessions'],
+      'choose-path': ['choose-plan', 'choose-single-item'],
+      'suggest-next-step': ['suggest-next-step'],
+      'optional-direction': ['fill-optional-direction'],
+    }
+    if (currentStep && actionByStep[currentStep.id]?.includes(action)) {
+      const nextStepIndex = Math.min(activeTutorial.steps.length, tutorialStepIndex + 1)
+      if (nextStepIndex >= activeTutorial.steps.length) completeTutorial()
+      changeTutorialStep(nextStepIndex)
+    }
+  }
+
+  useEffect(() => {
+    if (tutorialRequest <= 0) return
+    startTutorial(tutorialId, { demoRecommendation: tutorialDemoRecommendation })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialRequest])
+
+  useEffect(() => {
+    if (tutorialLibraryRequest <= 0) return
+    setOpen(true)
+    setTutorialOpen(false)
+    setTutorialLibraryOpen(true)
+  }, [tutorialLibraryRequest])
+
   return (
     <div style={styles.guideWidget}>
       {open && (
-        <section style={{ ...styles.guidePanel, ...styles.guidePopover }}>
+        <section style={{ ...styles.guidePanel, ...styles.guidePopover }} data-tour-id="designer-workflow-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 12 }}>
             <div>
-              <div style={{ ...styles.kicker, marginBottom: 6 }}>Designer workflow</div>
-              <h2 style={{ margin: 0, fontSize: 20 }}>Set up the system, then make the content.</h2>
+              {hasWorkflowBack && (
+                <button
+                  type="button"
+                  style={{ ...styles.inlineLink, padding: 0, border: 'none', background: 'transparent', fontSize: 12, marginBottom: 6 }}
+                  onClick={() => setBackSignal((current) => current + 1)}
+                >
+                  <ChevronLeftIcon style={{ width: 15, height: 15 }} />
+                  Back
+                </button>
+              )}
+              <h2 style={{ margin: 0, fontSize: 20 }}>Let's see what needs to be done next!</h2>
             </div>
-            <button
-              type="button"
-              aria-label="Close designer workflow"
-              style={{ ...styles.button, width: 34, height: 34, padding: 0 }}
-              onClick={() => setOpen(false)}
-            >
-              <CloseIcon style={{ width: 18, height: 18 }} />
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                style={{ ...styles.button, height: 34, padding: '0 10px', fontSize: 12 }}
+                aria-expanded={sessionsOpen}
+                data-tour-id="designer-workflow-sessions-button"
+                onClick={() => {
+                  setSessionsOpen((current) => !current)
+                  advanceTutorialForAction('open-sessions')
+                }}
+              >
+                Sessions
+              </button>
+              <button
+                type="button"
+                aria-label="Close designer workflow"
+                style={{ ...styles.button, width: 34, height: 34, padding: 0 }}
+                onClick={() => setOpen(false)}
+              >
+                <CloseIcon style={{ width: 18, height: 18 }} />
+              </button>
+            </div>
           </div>
-          <p style={{ ...styles.muted, margin: '0 0 12px', lineHeight: 1.55 }}>
-            The workflow should make the marketing decisions explicit enough that designers only need to create the actual post, page, image, or email.
-          </p>
-          <DesignerSetupPath steps={workflowSetupSteps} onOpenView={openViewFromGuide} />
-          <WorkflowHelpSection items={workflowHelpItems} onOpenView={openViewFromGuide} />
-          <div style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Needs attention</h3>
-            {items.length === 0 ? (
-              <div style={{ ...styles.small, ...styles.muted }}>Nothing is flagged right now.</div>
-            ) : (
-              <div style={{ display: 'grid', gap: 8 }}>
-                {items.slice(0, 5).map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      openViewFromGuide(item.view)
-                    }}
-                    style={{
-                      ...styles.templateButton,
-                      borderColor: item.severity === 'content' ? 'rgba(227, 98, 22, 0.45)' : 'var(--card-border-color)',
-                    }}
-                  >
-                    <strong style={{ fontSize: 13 }}>{item.title}</strong>
-                    <span style={{ ...styles.small, ...styles.muted }}>{item.detail}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <CarouselWorkflowWizard
+            data={data}
+            saving={savingId?.startsWith('carousel-') || savingId?.startsWith('marketing-plan-') || false}
+            sessionsOpen={sessionsOpen}
+            backSignal={backSignal}
+            onBackAvailableChange={setHasWorkflowBack}
+            onOpenView={openViewFromGuide}
+            onGenerateSingleItem={onGenerateInstagramCarousel}
+            onGenerateMarketingPlan={onGenerateMarketingPlan}
+            tutorialPrepareSignal={tutorialPrepareSignal}
+            onTutorialAction={advanceTutorialForAction}
+          />
+          {tutorialLibraryOpen && (
+          <DesignerWorkflowTutorialLibrary
+              onStart={(nextTutorialId) => startTutorial(nextTutorialId, { demoRecommendation: nextTutorialId === 'designer-workflow-recommendation' })}
+              onClose={() => setTutorialLibraryOpen(false)}
+            />
+          )}
         </section>
       )}
       <button
         type="button"
         style={styles.guideToggle}
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        data-tour-id="designer-workflow-toggle"
+        onClick={() => {
+          setOpen((current) => !current)
+          advanceTutorialForAction('open-workflow')
+        }}
       >
         <DashboardIcon style={{ width: 18, height: 18 }} />
         Designer workflow
-        {attentionCount > 0 && (
-          <span
+      </button>
+      <GuidedTutorialOverlay
+        active={tutorialOpen}
+        tutorial={activeTutorial}
+        stepIndex={tutorialStepIndex}
+        onStepChange={changeTutorialStep}
+        onClose={closeTutorial}
+        onRestart={() => startTutorial(activeTutorial.id)}
+        onShowLibrary={() => {
+          setTutorialOpen(false)
+          setOpen(true)
+          setTutorialLibraryOpen(true)
+        }}
+        onComplete={completeTutorial}
+      />
+    </div>
+  )
+}
+
+function DesignerWorkflowTutorialLibrary({
+  onStart,
+  onClose,
+}: {
+  onStart: (tutorialId: string) => void
+  onClose: () => void
+}) {
+  return (
+    <section style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG, marginTop: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+        <div>
+          <div style={{ ...styles.kicker, marginBottom: 6 }}>Tutorials</div>
+          <h3 style={{ margin: 0, fontSize: 17 }}>Designer Workflow tutorials</h3>
+        </div>
+        <button type="button" aria-label="Close tutorial library" style={{ ...styles.button, width: 32, height: 32, padding: 0 }} onClick={onClose}>
+          <CloseIcon style={{ width: 16, height: 16 }} />
+        </button>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        <button
+          type="button"
+          style={styles.primaryButton}
+          onClick={() => onStart(defaultDesignerWorkflowTutorial.id)}
+        >
+          Start Marketing view tour
+        </button>
+        <a
+          href="/studio/getting-started?article=marketing.designer-workflow-tutorials"
+          style={{ ...styles.button, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
+        >
+          See more...
+        </a>
+      </div>
+    </section>
+  )
+}
+
+function CarouselWorkflowWizard({
+  data,
+  saving,
+  sessionsOpen,
+  backSignal,
+  tutorialPrepareSignal,
+  onBackAvailableChange,
+  onOpenView,
+  onGenerateSingleItem,
+  onGenerateMarketingPlan,
+  onTutorialAction,
+}: {
+  data: MarketingData
+  saving: boolean
+  sessionsOpen: boolean
+  backSignal: number
+  tutorialPrepareSignal: DesignerWorkflowTutorialPrepareSignal
+  onBackAvailableChange: (available: boolean) => void
+  onOpenView: (view: MarketingViewId) => void
+  onGenerateSingleItem: (questionnaire: MarketingPlanQuestionnaire) => Promise<CarouselWizardResult>
+  onGenerateMarketingPlan: (questionnaire: MarketingPlanQuestionnaire) => Promise<CarouselWizardResult>
+  onTutorialAction: (action: string) => void
+}) {
+  const [sessions, setSessions] = useState<DesignerWorkflowSession[]>(() => loadDesignerWorkflowSessions())
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(() => loadActiveDesignerWorkflowSessionId())
+  const [error, setError] = useState('')
+  const [strategyLoading, setStrategyLoading] = useState(false)
+  const [suggestedPlanCreating, setSuggestedPlanCreating] = useState(false)
+  const [strategyError, setStrategyError] = useState('')
+  const activeSession = sessions.find((session) => session.id === activeSessionId) || null
+  const mode = activeSession?.mode || null
+  const stepIndex = activeSession?.stepIndex || 0
+  const strategyStepIndex = activeSession?.strategyStepIndex || 0
+  const questionnaire = activeSession?.questionnaire || defaultMarketingPlanQuestionnaire()
+  const strategyPrompt = activeSession?.strategyPrompt || ''
+  const strategySuggestion = activeSession?.strategySuggestion || null
+  const strategyUsedAi = activeSession?.strategyUsedAi ?? null
+  const result = activeSession?.result || null
+  const hasInstagram = data.channels.some((channel) => channel.key === 'instagram' && channel.status !== 'archived')
+  const hasAnalytics = data.analyticsSources.some((source) => source.status === 'connected')
+  const currentCampaignCount = data.campaigns.filter((campaign) => getCampaignChannelKeys(campaign).includes('instagram')).length
+  const steps = mode === 'plan' ? CAMPAIGN_PLAN_WIZARD_STEPS : SINGLE_ITEM_WIZARD_STEPS
+  const currentStep = steps[Math.min(stepIndex, steps.length - 1)]
+  const preparedQuestionnaire = normalizeMarketingPlanQuestionnaire(questionnaire)
+
+  useEffect(() => {
+    saveDesignerWorkflowSessions(sessions)
+  }, [sessions])
+
+  useEffect(() => {
+    saveActiveDesignerWorkflowSessionId(activeSession?.ephemeral ? null : activeSessionId)
+  }, [activeSessionId, activeSession?.ephemeral])
+
+  useEffect(() => {
+    if (activeSessionId && !sessions.some((session) => session.id === activeSessionId)) {
+      setActiveSessionId(null)
+    }
+  }, [activeSessionId, sessions])
+
+  useEffect(() => {
+    onBackAvailableChange(!!mode)
+  }, [mode, onBackAvailableChange])
+
+  useEffect(() => {
+    if (backSignal <= 0) return
+    if (mode === 'singleItem' && stepIndex > 0) {
+      updateActiveSession({ stepIndex: Math.max(0, stepIndex - 1) })
+      return
+    }
+    returnToPathSelection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backSignal])
+
+  const updateActiveSession = (patch: Partial<DesignerWorkflowSession>) => {
+    if (!activeSessionId) return
+    setSessions((current) => {
+      const updated = current.map((session) =>
+        session.id === activeSessionId
+          ? prepareDesignerWorkflowSession({ ...session, ...patch, updatedAt: new Date().toISOString() })
+          : session,
+      )
+      const active = updated.find((session) => session.id === activeSessionId)
+      return active ? [active, ...updated.filter((session) => session.id !== activeSessionId)] : updated
+    })
+  }
+
+  const startSession = (nextMode: DesignerWizardMode) => {
+    const session = createDesignerWorkflowSession(nextMode)
+    setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].slice(0, 24))
+    setActiveSessionId(session.id)
+    setError('')
+    setStrategyError('')
+  }
+
+  const startDemoRecommendationSession = () => {
+    const demoSuggestion = buildDesignerWorkflowDemoRecommendation()
+    const demoQuestionnaire = questionnaireFromStrategySuggestion(demoSuggestion, defaultMarketingPlanQuestionnaire(), data)
+    const session = prepareDesignerWorkflowSession({
+      ...createDesignerWorkflowSession('plan'),
+      id: `designer-demo-${Date.now()}-${randomKey()}`,
+      questionnaire: demoQuestionnaire,
+      strategyPrompt: 'Demo: plan Instagram content for a housing statistics story.',
+      strategySuggestion: demoSuggestion,
+      strategyUsedAi: null,
+      result: null,
+      tutorialDemo: true,
+      ephemeral: true,
+    })
+    setSessions((current) => [session, ...current.filter((item) => !item.tutorialDemo)].slice(0, 24))
+    setActiveSessionId(session.id)
+    setError('')
+    setStrategyError('')
+  }
+
+  const deleteSession = (sessionId: string) => {
+    setSessions((current) => current.filter((session) => session.id !== sessionId))
+    if (sessionId === activeSessionId) setActiveSessionId(null)
+  }
+
+  const updateQuestionnaire = (next: Partial<MarketingPlanQuestionnaire>) => {
+    updateActiveSession({
+      questionnaire: { ...questionnaire, ...next },
+      result: null,
+      strategySuggestion: null,
+      strategyUsedAi: null,
+    })
+    setError('')
+    setStrategyError('')
+  }
+
+  const chooseMode = (nextMode: DesignerWizardMode) => {
+    startSession(nextMode)
+    onTutorialAction(nextMode === 'plan' ? 'choose-plan' : 'choose-single-item')
+  }
+
+  const returnToPathSelection = () => {
+    setActiveSessionId(null)
+    setError('')
+  }
+
+  const requestStrategySuggestion = async () => {
+    setStrategyLoading(true)
+    setStrategyError('')
+    updateActiveSession({ result: null })
+    try {
+      const response = await fetch('/api/marketing/assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'researchProject',
+          draft: buildWizardStrategyDraft(data, questionnaire),
+          prompt: buildWizardStrategyPrompt(data, questionnaire, strategyPrompt),
+          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
+        }),
+      })
+      const payload = (await response.json()) as MarketingAiAssistResponse
+      if (!response.ok || !payload.suggestion) throw new Error(payload.error || 'The strategy assistant could not create a suggestion.')
+      updateActiveSession({ strategySuggestion: payload.suggestion, strategyUsedAi: !!payload.usedAi, strategyStepIndex: 0, result: null })
+    } catch (requestError) {
+      console.error('Strategy assistant used rule-based fallback:', requestError)
+      updateActiveSession({
+        strategySuggestion: buildFallbackWizardStrategySuggestion(data, questionnaire, strategyPrompt),
+        strategyUsedAi: false,
+        strategyStepIndex: 0,
+        result: null,
+      })
+      setStrategyError('')
+    } finally {
+      setStrategyLoading(false)
+      onTutorialAction('strategy-suggestion-ready')
+    }
+  }
+
+  const generate = async () => {
+    if (!mode) return
+    setError('')
+    updateActiveSession({ result: null })
+    try {
+      const normalized = normalizeMarketingPlanQuestionnaire(questionnaire)
+      const created = mode === 'singleItem' ? await onGenerateSingleItem(normalized) : await onGenerateMarketingPlan(normalized)
+      updateActiveSession({ questionnaire: normalized, result: created })
+    } catch (err) {
+      console.error('Carousel workflow generation failed:', err)
+      setError(err instanceof Error ? err.message : 'Research project could not be created.')
+    }
+  }
+
+  const generateSuggestedPlan = async () => {
+    if (saving || suggestedPlanCreating || result) return
+    const nextQuestionnaire = strategySuggestion
+      ? questionnaireFromStrategySuggestion(strategySuggestion, questionnaire, data)
+      : normalizeMarketingPlanQuestionnaire(questionnaire)
+    setSuggestedPlanCreating(true)
+    setError('')
+    updateActiveSession({ questionnaire: nextQuestionnaire, result: null })
+    try {
+      if (activeSession?.tutorialDemo) {
+        updateActiveSession({
+          questionnaire: nextQuestionnaire,
+          result: buildDesignerWorkflowDemoResult(nextQuestionnaire),
+        })
+        return
+      }
+      const created = await onGenerateMarketingPlan(nextQuestionnaire)
+      updateActiveSession({ questionnaire: nextQuestionnaire, result: created })
+    } catch (err) {
+      console.error('Marketing plan generation failed:', err)
+      setError(err instanceof Error ? err.message : 'Research project could not be created.')
+    } finally {
+      setSuggestedPlanCreating(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!tutorialPrepareSignal?.stepId) return
+    const stepId = tutorialPrepareSignal.stepId
+    const tutorialId = tutorialPrepareSignal.tutorialId
+
+    if (stepId === 'choose-path') {
+      returnToPathSelection()
+      return
+    }
+
+    if (tutorialId === 'designer-workflow-recommendation' && tutorialPrepareSignal.demoRecommendation && !activeSession?.tutorialDemo) {
+      startDemoRecommendationSession()
+      return
+    }
+
+    if (['suggest-next-step', 'optional-direction', 'recommendation-steps', 'open-next-step', 'create-suggested-setup'].includes(stepId)) {
+      if (mode !== 'plan') {
+        startSession('plan')
+        return
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tutorialPrepareSignal?.token])
+
+  if (!mode) {
+    return (
+      <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
+        {sessionsOpen && (
+          <WorkflowSessionManager
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelect={setActiveSessionId}
+            onNew={() => setActiveSessionId(null)}
+            onDelete={deleteSession}
+          />
+        )}
+        <div style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG }}>
+          <div style={{ ...styles.kicker, marginBottom: 6 }}>Guided wizard</div>
+          <h3 style={{ margin: '0 0 8px', fontSize: 18 }}>What are we here to do?</h3>
+          <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.55 }}>
+            Pick the scale of the work first. The next screen will walk through only the decisions needed for that path.
+          </p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+          <button type="button" data-tour-id="designer-workflow-path-single" style={{ ...styles.templateButton, background: MARKETING_OPAQUE_CARD_BG }} onClick={() => chooseMode('singleItem')}>
+            <strong style={{ fontSize: 14 }}>Add one content item</strong>
+            <span style={{ ...styles.small, ...styles.muted }}>
+              For a single carousel, post, email, or page update that needs research before scheduling.
+            </span>
+          </button>
+          <button type="button" data-tour-id="designer-workflow-path-plan" style={{ ...styles.templateButton, background: MARKETING_OPAQUE_CARD_BG }} onClick={() => chooseMode('plan')}>
+            <strong style={{ fontSize: 14 }}>Do larger-scale planning</strong>
+            <span style={{ ...styles.small, ...styles.muted }}>
+              For a small campaign with a goal, audience, funnel, content runway, links, and measurement.
+            </span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (mode === 'plan') {
+    return (
+      <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
+        {sessionsOpen && (
+          <WorkflowSessionManager
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onSelect={setActiveSessionId}
+            onNew={() => setActiveSessionId(null)}
+            onDelete={deleteSession}
+          />
+        )}
+        <StrategyAgentStep
+          data={data}
+          questionnaire={questionnaire}
+          prompt={strategyPrompt}
+          loading={strategyLoading}
+          saving={saving}
+          error={strategyError || error}
+          suggestion={strategySuggestion}
+          usedAi={strategyUsedAi}
+          result={result}
+          demoRecommendation={!!activeSession?.tutorialDemo}
+          creatingSuggestion={suggestedPlanCreating}
+          strategyStepIndex={strategyStepIndex}
+          onPromptChange={(nextPrompt) => {
+            onTutorialAction('fill-optional-direction')
+            updateActiveSession({
+              strategyPrompt: nextPrompt,
+              strategySuggestion: null,
+              strategyUsedAi: null,
+              strategyStepIndex: 0,
+              result: null,
+            })
+            setStrategyError('')
+          }}
+          onSuggest={() => {
+            onTutorialAction('suggest-next-step')
+            void requestStrategySuggestion()
+          }}
+          onGenerate={() => void generateSuggestedPlan()}
+          onResetSuggestion={() => {
+            updateActiveSession({
+              strategySuggestion: null,
+              strategyUsedAi: null,
+              strategyStepIndex: 0,
+              result: null,
+            })
+            setStrategyError('')
+          }}
+          onOpenView={onOpenView}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
+      {sessionsOpen && (
+        <WorkflowSessionManager
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelect={setActiveSessionId}
+          onNew={() => setActiveSessionId(null)}
+          onDelete={deleteSession}
+        />
+      )}
+      <div style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ ...styles.kicker, marginBottom: 6 }}>{mode === 'singleItem' ? 'One item walkthrough' : 'Planning walkthrough'}</div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18 }}>{currentStep.title}</h3>
+          </div>
+          <button
+            type="button"
+            style={{ ...styles.button, padding: '6px 9px', fontSize: 12 }}
+            onClick={returnToPathSelection}
+          >
+            Change path
+          </button>
+        </div>
+        <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.55 }}>
+          {currentStep.detail}
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, gap: 6 }}>
+        {steps.map((step, index) => (
+          <div
+            key={step.title}
             style={{
-              display: 'inline-flex',
-              minWidth: 20,
-              height: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 999,
-              background: '#E36216',
-              color: '#fff',
-              fontSize: 12,
+              ...styles.templateButton,
+              padding: 8,
+              borderColor: index === stepIndex ? '#007385' : 'var(--card-border-color)',
+              background: index === stepIndex ? '#102932' : MARKETING_OPAQUE_CARD_BG,
+              cursor: 'default',
             }}
           >
-            {attentionCount}
-          </span>
+            <span style={{ ...styles.small, fontWeight: 800 }}>Step {index + 1}</span>
+            <span style={{ ...styles.small, ...styles.muted }}>{step.title}</span>
+          </div>
+        ))}
+      </div>
+
+      {stepIndex === 0 && (
+        <div style={{ ...styles.card, boxShadow: 'none', padding: 12, display: 'grid', gap: 10 }}>
+          <InputField label={mode === 'singleItem' ? 'What content item are we making?' : 'What is this plan about?'}>
+            <input
+              style={styles.input}
+              value={questionnaire.topic}
+              placeholder={mode === 'singleItem' ? 'Example: Instagram carousel about health data privacy' : 'Example: Housing affordability launch plan'}
+              onChange={(event) => updateQuestionnaire({ topic: event.currentTarget.value })}
+            />
+          </InputField>
+          <InputField label="Who should this reach?">
+            <textarea
+              style={{ ...styles.input, minHeight: 86, resize: 'vertical' }}
+              value={questionnaire.audience}
+              placeholder="Describe the people this should help, persuade, or invite."
+              onChange={(event) => updateQuestionnaire({ audience: event.currentTarget.value })}
+            />
+          </InputField>
+          <InputField label="Main objective">
+            <Select
+              value={questionnaire.objective}
+              options={campaignObjectiveOptions}
+              onChange={(value) => updateQuestionnaire({ objective: value })}
+            />
+          </InputField>
+        </div>
+      )}
+
+      {stepIndex === 1 && (
+        <div style={{ ...styles.card, boxShadow: 'none', padding: 12, display: 'grid', gap: 10 }}>
+          <InputField label="Where should people go?">
+            <input
+              style={styles.input}
+              value={questionnaire.destinationUrl}
+              placeholder="https://..."
+              onChange={(event) => updateQuestionnaire({ destinationUrl: event.currentTarget.value })}
+            />
+          </InputField>
+          <InputField label="How will we know it worked?">
+            <input
+              style={styles.input}
+              value={questionnaire.primaryMetric}
+              placeholder="Example: qualified visits, saves, replies, or link clicks"
+              onChange={(event) => updateQuestionnaire({ primaryMetric: event.currentTarget.value })}
+            />
+          </InputField>
+          <InputField label="Notes, constraints, or source material">
+            <textarea
+              style={{ ...styles.input, minHeight: 86, resize: 'vertical' }}
+              value={questionnaire.notes}
+              placeholder="Add source pages, examples, design constraints, or anything the planner should know."
+              onChange={(event) => updateQuestionnaire({ notes: event.currentTarget.value })}
+            />
+          </InputField>
+        </div>
+      )}
+
+      {stepIndex === 2 && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+            <section style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Content questions to research</h3>
+              <ol style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 5 }}>
+                {buildCarouselFramePlan(preparedQuestionnaire).map((frame) => (
+                  <li key={frame} style={{ ...styles.small, lineHeight: 1.45 }}>
+                    {frame}
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            <section style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>What the project stores now</h3>
+              <div style={{ display: 'grid', gap: 7 }}>
+                {getWizardCreationSummary({ mode, hasInstagram, hasAnalytics, questionnaire: preparedQuestionnaire }).map((item) => (
+                  <div key={item} style={{ display: 'grid', gridTemplateColumns: '10px minmax(0, 1fr)', gap: 8, alignItems: 'start', ...styles.small }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 999, background: '#007385', marginTop: 5 }} />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div style={{ ...styles.card, boxShadow: 'none', padding: 12, display: 'grid', gap: 8 }}>
+            <div style={{ ...styles.small, ...styles.muted }}>
+              Current Instagram campaigns: {currentCampaignCount}.
+            </div>
+            <details style={{ ...styles.small, ...styles.muted }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--card-fg-color)', fontWeight: 800 }}>
+                Planning skills this uses
+              </summary>
+              <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                {MARKETING_SKILL_INSPIRATIONS.map((skill) => (
+                  <a
+                    key={skill.name}
+                    href={skill.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ ...styles.inlineLink, fontSize: 12, fontWeight: 700 }}
+                  >
+                    {skill.name}: {skill.lesson}
+                  </a>
+                ))}
+              </div>
+            </details>
+            <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void generate()}>
+              {saving
+                ? 'Creating research project...'
+                : mode === 'singleItem'
+                  ? 'Create one-item research project'
+                  : 'Create planning research project'}
+            </button>
+            {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800 }}>{error}</div>}
+            {result && (
+              <div
+                style={{
+                  display: 'grid',
+                  gap: 8,
+                  border: '1px solid rgba(54, 139, 87, 0.36)',
+                  background: 'rgba(54, 139, 87, 0.12)',
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                <strong style={{ fontSize: 13 }}>Research project created: {result.title}</strong>
+                <div style={{ ...styles.small, ...styles.muted }}>
+                  Review the research findings first. When they are selected and approved, generate the campaign, funnel, calendar items, and Quick Links from Research.
+                </div>
+                <div data-tour-id="designer-workflow-created-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {(result.researchProjectId || result.researchPlanId) && (
+                    <button type="button" style={styles.button} onClick={() => onOpenView('research')}>
+                      Open research project
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          style={styles.primaryButton}
+          disabled={stepIndex >= steps.length - 1}
+          onClick={() => updateActiveSession({ stepIndex: Math.min(steps.length - 1, stepIndex + 1) })}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function WorkflowSessionManager({
+  sessions,
+  activeSessionId,
+  onSelect,
+  onNew,
+  onDelete,
+}: {
+  sessions: DesignerWorkflowSession[]
+  activeSessionId: string | null
+  onSelect: (sessionId: string) => void
+  onNew: () => void
+  onDelete: (sessionId: string) => void
+}) {
+  const visibleSessions = sessions.filter((session) => !session.ephemeral)
+
+  return (
+    <section style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 10, background: MARKETING_OPAQUE_PANEL_BG }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontSize: 15 }}>Sessions {visibleSessions.length > 0 ? `(${visibleSessions.length})` : ''}</h3>
+        <button type="button" style={{ ...styles.button, padding: '6px 9px', fontSize: 12 }} onClick={onNew}>
+          New session
+        </button>
+      </div>
+      <div style={{ display: 'grid', gap: 8, marginTop: 10 }} data-tour-id="designer-workflow-sessions-list">
+        {visibleSessions.length === 0 ? (
+          <div style={{ ...styles.small, ...styles.muted }}>No workflow sessions yet.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 6, maxHeight: 210, overflowY: 'auto' }}>
+            {visibleSessions.map((session) => {
+              const active = session.id === activeSessionId
+              return (
+                <div
+                  key={session.id}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(0, 1fr) auto',
+                    gap: 6,
+                    alignItems: 'stretch',
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      ...styles.templateButton,
+                      background: active ? '#102932' : MARKETING_OPAQUE_CARD_BG,
+                      borderColor: active ? '#007385' : 'var(--card-border-color)',
+                    }}
+                    onClick={() => onSelect(session.id)}
+                  >
+                    <strong style={{ fontSize: 13 }}>{session.title}</strong>
+                    <span style={{ ...styles.small, ...styles.muted }}>
+                      {session.mode === 'plan' ? 'Planning' : 'One item'} / {formatWorkflowSessionTime(session.updatedAt)}
+                      {session.result ? ' / research created' : ''}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${session.title}`}
+                    style={{ ...styles.button, width: 34, padding: 0 }}
+                    onClick={() => onDelete(session.id)}
+                  >
+                    <CloseIcon style={{ width: 15, height: 15 }} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         )}
-      </button>
+      </div>
+    </section>
+  )
+}
+
+function StrategyAgentStep({
+  data,
+  questionnaire,
+  prompt,
+  loading,
+  saving,
+  error,
+  suggestion,
+  usedAi,
+  result,
+  demoRecommendation,
+  creatingSuggestion,
+  strategyStepIndex,
+  onPromptChange,
+  onSuggest,
+  onGenerate,
+  onResetSuggestion,
+  onOpenView,
+}: {
+  data: MarketingData
+  questionnaire: MarketingPlanQuestionnaire
+  prompt: string
+  loading: boolean
+  saving: boolean
+  error: string
+  suggestion: MarketingAiSuggestion | null
+  usedAi: boolean | null
+  result: CarouselWizardResult | null
+  demoRecommendation: boolean
+  creatingSuggestion: boolean
+  strategyStepIndex: number
+  onPromptChange: (prompt: string) => void
+  onSuggest: () => void
+  onGenerate: () => void
+  onResetSuggestion: () => void
+  onOpenView: (view: MarketingViewId) => void
+}) {
+  const recommendation = getStrategyAssistantRecommendation(data, suggestion, questionnaire, prompt, demoRecommendation)
+  const safeStrategyStepIndex = Math.min(strategyStepIndex, Math.max(0, recommendation.steps.length - 1))
+  const hasExistingPlan = !!getLatestActiveResearchProject(data)
+  const canCreateResearchProject = !hasExistingPlan || demoRecommendation
+
+  return (
+    <div style={{ ...styles.card, boxShadow: 'none', padding: 12, display: 'grid', gap: 12, background: MARKETING_OPAQUE_CARD_BG }}>
+      {!suggestion && (
+        <div style={{ display: 'grid', gap: 12 }}>
+          <button type="button" data-tour-id="designer-workflow-suggest-button" style={{ ...styles.primaryButton, width: '100%' }} disabled={loading} onClick={onSuggest}>
+            {loading ? 'Thinking...' : 'Suggest next step'}
+          </button>
+
+          <div data-tour-id="designer-workflow-optional-direction">
+            <InputField label="Optional direction">
+              <textarea
+                style={{ ...styles.input, minHeight: 84, resize: 'vertical' }}
+                value={prompt}
+                onChange={(event) => onPromptChange(event.currentTarget.value)}
+                placeholder={'Example: I want to make a plan for our Instagram content'}
+              />
+            </InputField>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ ...styles.small, color: '#E36216' }}>
+          {error}
+        </div>
+      )}
+
+      {suggestion && (
+        <section style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG }}>
+          {recommendation.steps.length > 1 && (
+            <WorkflowProgressMeter
+              steps={recommendation.steps}
+              currentIndex={safeStrategyStepIndex}
+              complete={!!result}
+            />
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>
+                {demoRecommendation ? 'Tutorial sample' : usedAi ? 'AI recommendation' : 'Rule-based next step'}
+              </div>
+              <h3 style={{ margin: '4px 0', fontSize: 18 }}>{recommendation.title}</h3>
+              <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>{recommendation.detail}</p>
+              {!demoRecommendation && usedAi === false && (
+                <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0', lineHeight: 1.45 }}>
+                  This was generated from CMS state and deterministic rules only. Run research before treating it as evidence.
+                </p>
+              )}
+            </div>
+            <button type="button" data-tour-id="designer-workflow-open-next-step" style={styles.button} onClick={() => onOpenView(recommendation.view)}>
+              Open {getMarketingViewTitle(recommendation.view)}
+            </button>
+            <button type="button" style={styles.button} onClick={onResetSuggestion}>
+              Change request
+            </button>
+          </div>
+          {recommendation.strategicContext.length > 0 && (
+            <details open style={{ borderTop: '1px solid var(--card-border-color)', marginTop: 12, paddingTop: 12 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 800, fontSize: 14, marginBottom: 8 }}>
+                Why this matters over time
+              </summary>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                {recommendation.strategicContext.map((item) => (
+                  <div
+                    key={item.title}
+                    style={{
+                      border: '1px solid var(--card-border-color)',
+                      borderRadius: 8,
+                      background: MARKETING_OPAQUE_CARD_BG,
+                      padding: 10,
+                      minHeight: 120,
+                    }}
+                  >
+                    <strong style={{ ...styles.small, color: '#007385', display: 'block', marginBottom: 6 }}>{item.title}</strong>
+                    <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>{item.detail}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+          {recommendation.steps.length > 0 && (
+            <ol data-tour-id="designer-workflow-recommendation-steps" style={{ margin: '14px 0 0', paddingLeft: 0, display: 'grid', gap: 14, listStyle: 'none' }}>
+              {recommendation.steps.map((step, index) => {
+                const active = index === safeStrategyStepIndex && !result
+                const done = index < safeStrategyStepIndex || !!result
+
+                return (
+                  <li
+                    key={step}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '68px minmax(0, 1fr)',
+                      gap: 12,
+                      alignItems: 'start',
+                      color: 'var(--card-fg-color)',
+                      padding: '0 0 12px',
+                      borderBottom: index === recommendation.steps.length - 1 ? 'none' : '1px solid var(--card-border-color)',
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: done || active ? '#007385' : 'var(--card-muted-fg-color)',
+                        fontSize: 14,
+                        fontWeight: 900,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      Step {index + 1}
+                    </span>
+                    <span
+                      style={{
+                        color: active ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)',
+                        fontSize: 15,
+                        fontWeight: active ? 800 : 650,
+                        lineHeight: 1.45,
+                      }}
+                    >
+                      {step}
+                    </span>
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+          {!result && <ResearchOpportunityPreviewList opportunities={suggestion.researchPlan?.contentOpportunities || []} />}
+          {!result && canCreateResearchProject && (
+            <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+              <button type="button" data-tour-id="designer-workflow-create-suggested-setup" style={{ ...styles.primaryButton, width: '100%' }} disabled={saving || creatingSuggestion || !!result} onClick={onGenerate}>
+                {saving || creatingSuggestion
+                  ? 'Creating...'
+                  : demoRecommendation
+                    ? 'Create demo research project'
+                    : 'Create first research project'}
+              </button>
+            </div>
+          )}
+          {!result && !canCreateResearchProject && (
+            <div style={{ ...styles.small, ...styles.muted, marginTop: 12, lineHeight: 1.5 }}>
+              The latest research project already exists, so the assistant is pointing you to the next place to work instead of creating a duplicate.
+            </div>
+          )}
+        </section>
+      )}
+
+      {result && (
+        <section style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG }}>
+          <strong>{result.demo ? 'Demo research project created locally' : 'Research project created'}: {result.title}</strong>
+          {result.demo && (
+            <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0' }}>
+              No CMS records were saved. Closing or replacing this tutorial removes the demo effect.
+            </p>
+          )}
+          <div data-tour-id="designer-workflow-created-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+            <button type="button" style={styles.button} onClick={() => onOpenView('research')}>Open Research</button>
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function WorkflowProgressMeter({
+  steps,
+  currentIndex,
+  complete,
+}: {
+  steps: string[]
+  currentIndex: number
+  complete: boolean
+}) {
+  const safeIndex = Math.min(Math.max(currentIndex, 0), Math.max(0, steps.length - 1))
+  const completedSteps = complete ? steps.length : Math.min(steps.length, safeIndex + 1)
+
+  return (
+    <div style={{ display: 'grid', gap: 6, marginBottom: 2 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', gap: 10, alignItems: 'center' }}>
+        <span style={{ ...styles.small, fontWeight: 800 }}>
+          {complete ? 'Flow complete' : `Step ${safeIndex + 1} of ${steps.length}`}
+        </span>
+      </div>
+      <div
+        aria-label="Recommendation progress"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={steps.length}
+        aria-valuenow={completedSteps}
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))`, gap: 4 }}
+      >
+        {steps.map((step, index) => {
+          const active = index === safeIndex && !complete
+          const done = complete || index < safeIndex
+          return (
+            <div
+              key={`${index}-${step}`}
+              title={step}
+              aria-label={`Recommendation step ${index + 1}: ${step}`}
+              style={{
+                height: 8,
+                borderRadius: 999,
+                background: done || active ? '#007385' : 'rgba(255, 255, 255, 0.14)',
+                opacity: active ? 1 : done ? 0.75 : 0.45,
+              }}
+            />
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1876,6 +5685,7 @@ function MarketingAiAssistPanel({
   onApply: (suggestion: MarketingAiSuggestion) => void
 }) {
   const [prompt, setPrompt] = useState('')
+  const [guidedAnswers, setGuidedAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [suggestion, setSuggestion] = useState<MarketingAiSuggestion | null>(null)
@@ -1885,6 +5695,7 @@ function MarketingAiAssistPanel({
   const copy = marketingAiAssistCopy[kind]
   const section = suggestion ? getAiSuggestionSection(suggestion, kind) : null
   const suggestedFields = section ? getAiSuggestedFieldLabels(section).slice(0, 8) : []
+  const guidedQuestions = getMarketingAutofillQuestions(kind)
 
   const requestSuggestion = async () => {
     setLoading(true)
@@ -1896,8 +5707,16 @@ function MarketingAiAssistPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           kind,
-          draft,
-          prompt,
+          draft: {
+            ...draft,
+            autofillGuidance: guidedAnswers,
+          },
+          prompt: buildAutofillGuidedPrompt({
+            basePrompt: `Auto-fill this ${copy.target} from existing GoInvo site/CMS content, strategy records, research, analytics takeaways, and the current draft.`,
+            guidance: guidedAnswers,
+            notes: prompt,
+            questions: guidedQuestions,
+          }),
           analyticsTakeaways: serializeAnalyticsTakeawaysForAi(analyticsTakeaways),
         }),
       })
@@ -1923,9 +5742,9 @@ function MarketingAiAssistPanel({
     <div data-testid={`marketing-ai-assist-${kind}`} style={{ ...styles.guidePanel, boxShadow: 'none', padding: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
         <div>
-          <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>AI setup assistant</h3>
+          <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Auto-fill from existing content</h3>
           <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-            Creates a starter {copy.target} from the current draft, GoInvo site context, analytics takeaways, and best-practice prompts for designers.
+            Auto-fills a starter {copy.target} from existing GoInvo site/CMS content, strategy records, research, analytics takeaways, and the current draft.
           </p>
         </div>
         <button
@@ -1935,7 +5754,7 @@ function MarketingAiAssistPanel({
           disabled={loading}
           onClick={() => void requestSuggestion()}
         >
-          {loading ? 'Thinking...' : 'Suggest setup'}
+          {loading ? 'Thinking...' : 'Auto-fill draft'}
         </button>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
@@ -1970,13 +5789,14 @@ function MarketingAiAssistPanel({
         )}
       </div>
       <textarea
-        aria-label={`Describe what this ${copy.target} should support`}
+        aria-label={`Optional notes for this ${copy.target} autofill`}
         rows={2}
         style={{ ...styles.input, marginTop: 10 }}
         value={prompt}
         onChange={(event) => setPrompt(event.currentTarget.value)}
-        placeholder={copy.prompt}
+        placeholder={`${copy.prompt} Optional: add a constraint, example, or direction.`}
       />
+      <GuidedAutofillControls questions={guidedQuestions} values={guidedAnswers} onChange={setGuidedAnswers} />
       {error && (
         <div style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>
           {error}
@@ -2007,7 +5827,7 @@ function MarketingAiAssistPanel({
                 fontWeight: 800,
               }}
             >
-              {usedAi ? 'AI generated' : 'Starter rules'}
+              {usedAi ? 'AI generated' : 'Rule-based draft'}
             </span>
             {context && (
               <span style={{ ...styles.small, ...styles.muted }}>
@@ -2029,6 +5849,11 @@ function MarketingAiAssistPanel({
             <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
               <strong style={{ color: 'var(--card-fg-color)' }}>Will fill: </strong>
               {suggestedFields.join(', ')}
+            </div>
+          )}
+          {usedAi === false && (
+            <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
+              This is not researched evidence. It is a deterministic draft from the current CMS state and should be reviewed before saving.
             </div>
           )}
           {section && (
@@ -2056,6 +5881,1584 @@ function MarketingAiAssistPanel({
         </div>
       )}
     </div>
+  )
+}
+
+export function getMarketingAutofillQuestions(kind: MarketingAssistKind): GuidedAutofillQuestion[] {
+  const sourceQuestion: GuidedAutofillQuestion = {
+    id: 'source',
+    label: 'What should it use first?',
+    choices: [
+      { value: 'site', label: 'Site/CMS content', description: 'Prefer existing articles, case studies, links, and CMS records.' },
+      { value: 'research', label: 'Research findings', description: 'Prefer approved/selected research results and source evidence.' },
+      { value: 'strategy', label: 'Strategy records', description: 'Prefer existing audiences, messages, proof, CTAs, and quality gates.' },
+      { value: 'analytics', label: 'Analytics signals', description: 'Prefer analytics takeaways and performance signals.' },
+    ],
+  }
+  const scopeQuestion: GuidedAutofillQuestion = {
+    id: 'scope',
+    label: 'How much should it create?',
+    choices: [
+      { value: 'minimal', label: 'Minimal', description: 'Fill only the fields needed to keep moving.' },
+      { value: 'complete', label: 'Complete draft', description: 'Fill as many relevant fields as possible for review.' },
+      { value: 'repair', label: 'Repair gaps', description: 'Focus on missing or weak fields in the current draft.' },
+    ],
+  }
+
+  if (kind === 'researchProject' || kind === 'researchSynthesis' || kind === 'researchPlan') {
+    return [
+      sourceQuestion,
+      {
+        id: 'researchType',
+        label: 'What kind of research?',
+        choices: [
+          { value: 'topic', label: 'Topic', description: 'Understand one topic, source, keyword cluster, or content opportunity.' },
+          { value: 'strategy', label: 'Strategy', description: 'Clarify positioning, audience, channels, and release direction.' },
+          { value: 'competitor', label: 'Competitor', description: 'Compare peer examples, content patterns, and positioning gaps.' },
+        ],
+      },
+      scopeQuestion,
+    ]
+  }
+
+  if (kind === 'campaign' || kind === 'funnel' || kind === 'template') {
+    return [
+      sourceQuestion,
+      {
+        id: 'goal',
+        label: 'What is the main goal?',
+        choices: [
+          { value: 'awareness', label: 'Awareness', description: 'Help more people understand the idea or artifact.' },
+          { value: 'engagement', label: 'Engagement', description: 'Encourage saves, replies, shares, or repeat attention.' },
+          { value: 'conversion', label: 'Conversion', description: 'Move qualified visitors to a source, contact, download, or action.' },
+        ],
+      },
+      scopeQuestion,
+    ]
+  }
+
+  if (kind === 'calendarItem') {
+    return [
+      sourceQuestion,
+      {
+        id: 'format',
+        label: 'What are we making?',
+        choices: [
+          { value: 'instagramCarousel', label: 'IG carousel', description: 'Turn one idea into a slide-by-slide social artifact.' },
+          { value: 'articleLink', label: 'Article/link post', description: 'Point people to a canonical source or deeper article.' },
+          { value: 'email', label: 'Email/newsletter', description: 'Frame the content for a subscriber or relationship-building audience.' },
+        ],
+      },
+      scopeQuestion,
+    ]
+  }
+
+  if (kind === 'linkItem') {
+    return [
+      sourceQuestion,
+      {
+        id: 'destination',
+        label: 'What should the link do?',
+        choices: [
+          { value: 'source', label: 'Open source', description: 'Send visitors to the primary article, project, or source.' },
+          { value: 'campaign', label: 'Support campaign', description: 'Connect the link to a campaign or calendar item.' },
+          { value: 'evergreen', label: 'Evergreen', description: 'Keep it useful beyond one social post.' },
+        ],
+      },
+      scopeQuestion,
+    ]
+  }
+
+  if (kind === 'channel') {
+    return [
+      sourceQuestion,
+      {
+        id: 'channelUse',
+        label: 'How will the channel be used?',
+        choices: [
+          { value: 'social', label: 'Social publishing', description: 'Use formats like carousel, post, story, or short video.' },
+          { value: 'owned', label: 'Owned audience', description: 'Use email, newsletter, website, or recurring updates.' },
+          { value: 'partner', label: 'Partner/collab', description: 'Use collaborations, universities, guests, or partner orgs.' },
+        ],
+      },
+      scopeQuestion,
+    ]
+  }
+
+  if (kind === 'analyticsSource') {
+    return [
+      {
+        ...sourceQuestion,
+        choices: sourceQuestion.choices.filter((choice) => choice.value !== 'site'),
+      },
+      {
+        id: 'measurement',
+        label: 'What should it measure?',
+        choices: [
+          { value: 'traffic', label: 'Useful visits', description: 'Track destination visits, source clicks, and page engagement.' },
+          { value: 'social', label: 'Social response', description: 'Track saves, shares, replies, and follower/content signals.' },
+          { value: 'conversion', label: 'Qualified action', description: 'Track contact, downloads, signup, or other concrete action.' },
+        ],
+      },
+      scopeQuestion,
+    ]
+  }
+
+  return [sourceQuestion, scopeQuestion]
+}
+
+function ResearchWorkspace({
+  client,
+  data,
+  savingId,
+  createDocument,
+  loadData,
+  commitPatch,
+  onOpenView,
+}: {
+  client: StudioClient
+  data: MarketingData
+  savingId: string | null
+  createDocument: (document: MarketingDocumentInput) => Promise<string>
+  loadData: () => Promise<void>
+  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+  onOpenView: (view: MarketingViewId) => void
+}) {
+  const [selectedId, setSelectedId] = useState(data.researchProjects[0]?._id || '')
+  const [migrationMessage, setMigrationMessage] = useState('')
+
+  useEffect(() => {
+    if (selectedId && data.researchProjects.some((project) => project._id === selectedId)) return
+    setSelectedId(data.researchProjects[0]?._id || '')
+  }, [data.researchProjects, selectedId])
+
+  const selectedProject = data.researchProjects.find((project) => project._id === selectedId) || null
+
+  const createProject = async () => {
+    const id = await createDocument(createResearchProjectDocument(data))
+    setSelectedId(id)
+  }
+
+  const importLegacyPlan = async (plan: MarketingResearchPlan) => {
+    setMigrationMessage('')
+    const project = await migrateLegacyResearchPlanToProject(client, plan)
+    await loadData()
+    setSelectedId(project._id)
+    setMigrationMessage(`Imported "${plan.title || 'legacy plan'}" as a research project. The original plan was left intact.`)
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+      <section style={styles.panel}>
+        <PanelHeading
+          title="Research projects"
+          description="Start with a directive, gather findings, then generate records only from reviewed results."
+        />
+        <button type="button" style={{ ...styles.primaryButton, width: '100%', marginBottom: 12 }} onClick={() => void createProject()}>
+          Add research project
+        </button>
+        {data.researchProjects.length === 0 ? (
+          <EmptyInline title="No research projects yet. Add one before generating release plans or records." />
+        ) : (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {data.researchProjects.map((project) => {
+              const resultCount = data.researchResults.filter((result) => result.project?._id === project._id).length
+              const approvedCount = data.researchResults.filter((result) => result.project?._id === project._id && isResearchResultApproved(result)).length
+              return (
+              <button
+                key={project._id}
+                type="button"
+                style={{
+                  ...styles.templateButton,
+                  borderColor: project._id === selectedId ? '#007385' : 'var(--card-border-color)',
+                  background: project._id === selectedId ? 'rgba(0, 115, 133, 0.1)' : 'var(--card-bg-color)',
+                }}
+                onClick={() => setSelectedId(project._id)}
+              >
+                <span style={{ fontWeight: 800 }}>{project.title || 'Untitled research project'}</span>
+                <span style={{ ...styles.small, ...styles.muted }}>
+                  {labelFor(researchProjectStatusOptions, project.status) || 'Draft'} / {labelFor(researchProjectTypeOptions, project.researchType) || 'Topic research'} / {project.targetGeography || 'us'}
+                </span>
+                <span style={{ ...styles.small, ...styles.muted }}>
+                  {approvedCount}/{resultCount} reviewed result{resultCount === 1 ? '' : 's'}
+                </span>
+              </button>
+            )})}
+          </div>
+        )}
+        {data.researchPlans.length > 0 && (
+          <details style={{ marginTop: 14 }}>
+            <summary style={{ ...styles.small, fontWeight: 800, cursor: 'pointer' }}>Legacy research plans ({data.researchPlans.length})</summary>
+            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+              {migrationMessage && <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>{migrationMessage}</div>}
+              {data.researchPlans.map((plan) => (
+                <div key={plan._id} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
+                  <strong style={{ fontSize: 13 }}>{plan.title || 'Untitled legacy plan'}</strong>
+                  <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 8px' }}>
+                    Legacy plan docs are preserved. Import one to map its fields into project/results.
+                  </p>
+                  <button type="button" style={styles.button} onClick={() => void importLegacyPlan(plan)}>
+                    Import as project
+                  </button>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+      </section>
+
+      <ResearchProjectEditor
+        client={client}
+        project={selectedProject}
+        data={data}
+        saving={!!selectedProject && savingId === selectedProject._id}
+        onSave={commitPatch}
+        loadData={loadData}
+        onOpenView={onOpenView}
+      />
+    </div>
+  )
+}
+
+function ResearchProjectEditor({
+  client,
+  project,
+  data,
+  saving,
+  onSave,
+  loadData,
+  onOpenView,
+}: {
+  client: StudioClient
+  project: MarketingResearchProject | null
+  data: MarketingData
+  saving: boolean
+  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+  loadData: () => Promise<void>
+  onOpenView: (view: MarketingViewId) => void
+}) {
+  const [draft, setDraft] = useState<MarketingResearchProject | null>(project)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [running, setRunning] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [converting, setConverting] = useState(false)
+  const [researchPage, setResearchPage] = useState<'setup' | 'review' | 'synthesize'>('setup')
+  const analyticsTakeaways = useMemo(() => buildAnalyticsInterpretations(data), [data])
+
+  useEffect(() => {
+    setDraft(project)
+    setMessage('')
+    setError('')
+    setResearchPage('setup')
+  }, [project])
+
+  const projectResults = draft ? getResearchResultsForProject(data, draft._id) : []
+  const projectRuns = draft ? getResearchRunsForProject(data, draft._id) : []
+  const selectedRefIds = (draft?.selectedResults || []).map((result) => result._id).filter(Boolean)
+  const selectedResultIds = Array.from(
+    new Set([
+      ...selectedRefIds,
+      ...projectResults.filter((result) => result.selectedForSynthesis || result.status === 'selected').map((result) => result._id),
+    ]),
+  )
+  const approvedResultIds = projectResults.filter(isResearchResultApproved).map((result) => result._id)
+  const selectedApprovedIds = selectedResultIds.filter((id) => approvedResultIds.includes(id))
+  const hasGeneratedResearch = projectRuns.length > 0 || projectResults.length > 0
+
+  if (!draft) {
+    return <EmptyPanel icon={SearchIcon} title="Select a research project" description="Create or reopen a project before making plans, campaigns, calendar items, or Quick Links." />
+  }
+
+  const updateDraft = <K extends keyof MarketingResearchProject>(key: K, value: MarketingResearchProject[K]) => {
+    setDraft((current) => (current ? { ...current, [key]: value } : current))
+    setMessage('')
+    setError('')
+  }
+
+  const saveDraft = async () => {
+    if (!draft._id) return
+    await onSave(draft._id, buildResearchProjectSavePayload(draft))
+    setMessage('Research project saved.')
+  }
+
+  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
+    const projectSuggestion = suggestion.researchProject || {}
+    setDraft((current) => (current ? mergeResearchProjectSuggestion(current, projectSuggestion) : current))
+    setMessage('Suggested research setup applied. Review it, then run research.')
+    setError('')
+  }
+
+  const regenerateResearchSetup = async () => {
+    if (!draft._id) return
+    if (!hasGeneratedResearch) {
+      setMessage('Run research once before regenerating it.')
+      return
+    }
+    setRegenerating(true)
+    setError('')
+    setMessage('')
+    try {
+      const prompt = [
+        `Regenerate this as ${labelFor(researchProjectTypeOptions, draft.researchType) || 'topic research'}.`,
+        'Use the current title, directive, audience, seed inputs, and GoInvo site context.',
+        'Refresh the methods, seed keywords, seed URLs, and research questions so the project matches the selected research type.',
+        'Preserve reviewed results and downstream records; only update the project setup.',
+      ].join(' ')
+      const response = await fetch('/api/marketing/assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'researchProject',
+          draft,
+          prompt,
+          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(analyticsTakeaways),
+        }),
+      })
+      const payload = (await response.json()) as MarketingAiAssistResponse
+      if (!response.ok || !payload.suggestion?.researchProject) throw new Error(payload.error || 'Research setup could not be regenerated.')
+      const nextDraft = mergeResearchProjectSuggestion(draft, payload.suggestion.researchProject)
+      setDraft(nextDraft)
+      await onSave(draft._id, buildResearchProjectSavePayload(nextDraft))
+      await loadData()
+      setMessage(`Research setup regenerated${payload.usedAi ? ' with AI' : ' from rule-based drafting'}. Review the updated questions, then run research again when ready.`)
+    } catch (regenerateError) {
+      setError(regenerateError instanceof Error ? regenerateError.message : 'Research setup could not be regenerated.')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  const runResearch = async () => {
+    if (!draft._id) return
+    setRunning(true)
+    setError('')
+    setMessage('')
+    try {
+      await onSave(draft._id, buildResearchProjectSavePayload(draft))
+      const response = await fetch('/api/marketing/research/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: draft._id,
+          methods: draft.methods && draft.methods.length > 0 ? draft.methods : defaultResearchMethodsForType(draft.researchType),
+          seedKeywords: draft.seedKeywords || [],
+          seedUrls: draft.seedUrls || [],
+          database: draft.targetGeography || 'us',
+        }),
+      })
+      const payload = (await response.json()) as { runId?: string; createdResults?: number; warnings?: string[]; errors?: string[]; error?: string }
+      if (!response.ok) throw new Error(payload.error || payload.errors?.[0] || 'Research run failed.')
+      await loadData()
+      const warningText = payload.warnings && payload.warnings.length > 0 ? ` Warnings: ${payload.warnings.join(' ')}` : ''
+      setMessage(`Research run complete. Created ${payload.createdResults || 0} finding${payload.createdResults === 1 ? '' : 's'}.${warningText}`)
+      setResearchPage('review')
+    } catch (runError) {
+      setError(runError instanceof Error ? runError.message : 'Research run failed.')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  const setResultSelected = async (result: MarketingResearchResult, selected: boolean) => {
+    const nextSelected = selected
+      ? Array.from(new Set([...selectedResultIds, result._id]))
+      : selectedResultIds.filter((id) => id !== result._id)
+    await client
+      .patch(result._id)
+      .set({
+        selectedForSynthesis: selected,
+        status: selected ? (result.status === 'approved' ? 'approved' : 'selected') : result.status === 'selected' ? 'needsReview' : result.status || 'needsReview',
+      })
+      .commit()
+    await onSave(draft._id, { selectedResults: refsFromIds(nextSelected) }, nextSelected.length > 0 ? [] : ['selectedResults'])
+    await loadData()
+  }
+
+  const approveResult = async (result: MarketingResearchResult) => {
+    const nextSelected = Array.from(new Set([...selectedResultIds, result._id]))
+    const nextApproved = Array.from(new Set([...approvedResultIds, result._id]))
+    await client
+      .patch(result._id)
+      .set({
+        status: 'approved',
+        selectedForSynthesis: true,
+        approvedAt: new Date().toISOString(),
+      })
+      .commit()
+    await onSave(draft._id, {
+      selectedResults: refsFromIds(nextSelected),
+      approvedResults: refsFromIds(nextApproved),
+    })
+    await loadData()
+  }
+
+  const generateLinkedRecords = async () => {
+    if (!draft._id) return
+    setConverting(true)
+    setError('')
+    setMessage('')
+    try {
+      if (selectedApprovedIds.length === 0) throw new Error('Approve and select at least one research finding before generating records.')
+      await onSave(draft._id, buildResearchProjectSavePayload(draft))
+      const result = await createResearchProjectGeneratedRecords(client, data, draft, selectedApprovedIds)
+      await loadData()
+      setMessage(`Generated ${result.calendarItemIds.length} draft calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, campaign, funnel, and Quick Link records from approved research findings.`)
+    } catch (conversionError) {
+      setError(conversionError instanceof Error ? conversionError.message : 'Could not generate linked records.')
+    } finally {
+      setConverting(false)
+    }
+  }
+
+  const addQuestion = () => updateDraft('researchQuestions', [...(draft.researchQuestions || []), createResearchProjectQuestion(draft)])
+  const addCollaborator = () => updateDraft('collaborators', [...(draft.collaborators || []), createResearchProjectCollaborator()])
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <section style={styles.panel}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <div style={styles.kicker}>Research first</div>
+            <h2 style={{ margin: 0, fontSize: 24 }}>{draft.title || 'Untitled research project'}</h2>
+            <p style={{ ...styles.muted, margin: '5px 0 0', lineHeight: 1.55 }}>
+              Projects direct the research. Results store the evidence. Campaigns, funnels, calendar items, and Quick Links come after review.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {['converted', 'archived'].includes(draft.status || '') && (
+              <button type="button" style={styles.button} onClick={() => updateDraft('status', 'reviewing')}>
+                Reopen
+              </button>
+            )}
+            <button type="button" style={styles.button} onClick={() => void saveDraft()} disabled={saving}>
+              {saving ? 'Saving...' : 'Save project'}
+            </button>
+            <button
+              type="button"
+              style={{
+                ...styles.button,
+                opacity: hasGeneratedResearch ? 1 : 0.45,
+                cursor: hasGeneratedResearch ? 'pointer' : 'not-allowed',
+              }}
+              title={hasGeneratedResearch ? 'Refresh this project setup from the latest research state.' : 'Run research once before regenerating it.'}
+              onClick={() => void regenerateResearchSetup()}
+              disabled={!hasGeneratedResearch || regenerating || running || saving}
+            >
+              {regenerating ? 'Regenerating...' : 'Regenerate research'}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+          {[
+            ['1', 'Define project', draft.brief ? 'Ready' : 'Needs directive'],
+            ['2', 'Run research', `${projectRuns.length} run${projectRuns.length === 1 ? '' : 's'}`],
+            ['3', 'Review findings', `${selectedApprovedIds.length}/${projectResults.length} selected`],
+            ['4', 'Generate records', selectedApprovedIds.length > 0 ? 'Ready' : 'Waiting'],
+          ].map(([step, title, detail]) => (
+            <div key={step} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
+              <div style={styles.kicker}>Step {step}</div>
+              <strong>{title}</strong>
+              <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>{detail}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+          {[
+            { id: 'setup', label: 'Research setup', enabled: true },
+            { id: 'review', label: 'Review findings', enabled: hasGeneratedResearch },
+            { id: 'synthesize', label: 'Synthesize and generate', enabled: hasGeneratedResearch },
+          ].map((page) => {
+            const active = researchPage === page.id
+            return (
+              <button
+                key={page.id}
+                type="button"
+                style={{
+                  ...(active ? styles.primaryButton : styles.button),
+                  opacity: page.enabled ? 1 : 0.45,
+                  cursor: page.enabled ? 'pointer' : 'not-allowed',
+                }}
+                onClick={() => page.enabled && setResearchPage(page.id as 'setup' | 'review' | 'synthesize')}
+                disabled={!page.enabled}
+                title={page.enabled ? undefined : 'Run research before opening this page.'}
+              >
+                {page.label}
+              </button>
+            )
+          })}
+        </div>
+
+        <MarketingAiAssistPanel
+          kind="researchProject"
+          draft={draft as unknown as Record<string, unknown>}
+          analyticsTakeaways={analyticsTakeaways}
+          onApply={applyAiSuggestion}
+        />
+
+        {message && <div style={{ ...styles.small, color: '#007385', fontWeight: 800, marginTop: 12 }}>{message}</div>}
+        {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
+      </section>
+
+      {researchPage === 'setup' && (
+        <>
+      <section style={styles.panel}>
+        <PanelHeading title="Research project inputs" description="Give the research enough direction to know what to score, scan, and review." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          <InputField label="Project title">
+            <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Status">
+            <Select value={draft.status || 'draft'} options={researchProjectStatusOptions} onChange={(value) => updateDraft('status', value)} />
+          </InputField>
+          <InputField label="Research type">
+            <Select
+              value={draft.researchType || 'topic'}
+              options={researchProjectTypeOptions}
+              onChange={(value) => {
+                const nextType = value || 'topic'
+                updateDraft('researchType', nextType)
+                updateDraft('methods', defaultResearchMethodsForType(nextType))
+                updateDraft('researchQuestions', defaultResearchQuestionsForType(nextType, draft.title || 'this research project'))
+              }}
+            />
+          </InputField>
+          <InputField label="Objective">
+            <Select value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
+          </InputField>
+          <InputField label="Semrush database">
+            <input style={styles.input} value={draft.targetGeography || 'us'} onChange={(event) => updateDraft('targetGeography', event.currentTarget.value)} />
+          </InputField>
+        </div>
+        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+          <InputField label="Research directive">
+            <textarea rows={4} style={styles.input} value={draft.brief || ''} onChange={(event) => updateDraft('brief', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Audience">
+            <textarea rows={3} style={styles.input} value={draft.audience || ''} onChange={(event) => updateDraft('audience', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Goals">
+            <textarea rows={3} style={styles.input} value={stringListToText(draft.goals)} onChange={(event) => updateDraft('goals', textToStringList(event.currentTarget.value))} />
+          </InputField>
+          <InputField label="Positioning hypothesis">
+            <textarea rows={3} style={styles.input} value={draft.positioning || ''} onChange={(event) => updateDraft('positioning', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Likely canonical URL">
+            <input style={styles.input} value={draft.canonicalUrl || ''} onChange={(event) => updateDraft('canonicalUrl', event.currentTarget.value)} />
+          </InputField>
+        </div>
+      </section>
+
+      <section style={styles.panel}>
+        <PanelHeading title="Run research" description="Semrush creates provider-scored keyword findings. CMS and source scans summarize evidence, implications, and gaps for review." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+          <InputField label="Seed keywords">
+            <textarea rows={5} style={styles.input} value={stringListToText(draft.seedKeywords)} onChange={(event) => updateDraft('seedKeywords', textToStringList(event.currentTarget.value))} />
+          </InputField>
+          <InputField label="Seed URLs">
+            <textarea rows={5} style={styles.input} value={stringListToText(draft.seedUrls)} onChange={(event) => updateDraft('seedUrls', textToStringList(event.currentTarget.value))} />
+          </InputField>
+        </div>
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12 }}>
+          {[
+            { title: 'Semrush keyword scores', value: 'seoReview' },
+            { title: 'CMS / site scan', value: 'cmsScan' },
+            { title: 'Source evidence review', value: 'sourceReview' },
+            { title: 'Analytics review', value: 'analyticsReview' },
+            { title: 'Competitive scan', value: 'competitiveScan' },
+          ].map((method) => (
+            <label key={method.value} style={{ display: 'inline-flex', gap: 7, alignItems: 'center', ...styles.small }}>
+              <input
+                type="checkbox"
+                checked={(draft.methods || defaultResearchMethodsForType(draft.researchType)).includes(method.value)}
+                onChange={(event) => {
+                  const current = draft.methods || defaultResearchMethodsForType(draft.researchType)
+                  updateDraft('methods', event.currentTarget.checked ? Array.from(new Set([...current, method.value])) : current.filter((item) => item !== method.value))
+                }}
+              />
+              {method.title}
+            </label>
+          ))}
+        </div>
+        {projectRuns.length > 0 && (
+          <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
+            {projectRuns.slice(0, 4).map((run) => (
+              <div key={run._id} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                  <strong style={{ fontSize: 13 }}>{run.title || 'Research run'}</strong>
+                  <StatusPill status={run.status} options={researchRunStatusOptions} />
+                </div>
+                <div style={{ ...styles.small, ...styles.muted, marginTop: 5 }}>
+                  {(run.methods || []).join(', ') || 'No methods'} / {(run.createdResults || []).length} finding{(run.createdResults || []).length === 1 ? '' : 's'}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
+          <button type="button" style={styles.button} onClick={() => void saveDraft()} disabled={saving || running}>
+            {saving ? 'Saving...' : 'Save project'}
+          </button>
+          <button type="button" style={styles.primaryButton} onClick={() => void runResearch()} disabled={running || saving}>
+            {running ? 'Running...' : 'Run research'}
+          </button>
+        </div>
+      </section>
+        </>
+      )}
+
+      {researchPage === 'review' && (
+      <section style={styles.panel}>
+        <PanelHeading title="Review research findings" description="Approve only the findings that contain usable evidence, gaps, or keyword signals for downstream work." />
+        {projectResults.length === 0 ? (
+          <EmptyInline title="No research findings yet. Run research to fetch SEO scores, scan CMS content, and summarize source pages." />
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {projectResults.map((result) => {
+              const selected = selectedResultIds.includes(result._id)
+              return (
+                <div key={result._id} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'auto minmax(0, 1fr) auto', gap: 10, alignItems: 'start' }}>
+                    <input type="checkbox" checked={selected} onChange={(event) => void setResultSelected(result, event.currentTarget.checked)} />
+                    <div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <strong>{result.title || result.keyword || 'Research finding'}</strong>
+                        <StatusPill status={result.resultType} options={researchResultTypeOptions} />
+                        <StatusPill status={result.status} options={researchResultStatusOptions} />
+                      </div>
+                      <div style={{ ...styles.small, ...styles.muted, marginTop: 6, lineHeight: 1.5 }}>
+                        {describeResearchResult(result)}
+                      </div>
+                      {(result.sourceUrl || result.competitorUrl || result.canonicalUrl) && (
+                        <a
+                          href={result.sourceUrl || result.competitorUrl || result.canonicalUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ ...styles.small, color: '#00A0B6', display: 'inline-block', marginTop: 7, fontWeight: 800 }}
+                        >
+                          Open source
+                        </a>
+                      )}
+                      {result.provider === 'semrush' && result.scoreSource === 'provider' && (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                          <MetricBadge label="Volume" value={formatOptionalNumber(result.volume)} />
+                          <MetricBadge label="KD" value={formatOptionalNumber(result.difficulty)} />
+                          <MetricBadge label="CPC" value={formatOptionalMoney(result.cpc)} />
+                          <MetricBadge label="Competition" value={formatOptionalNumber(result.competition)} />
+                        </div>
+                      )}
+                      {result.implication && <FindingDetail label="Content implication" text={result.implication} />}
+                      {result.contentGap && <FindingDetail label={result.resultType === 'contentGap' ? 'Gap to resolve' : 'Gap / review check'} text={result.contentGap} />}
+                    </div>
+                    <button type="button" style={styles.button} onClick={() => void approveResult(result)} disabled={result.status === 'approved'}>
+                      {result.status === 'approved' ? 'Approved' : 'Approve'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+      )}
+
+      {researchPage === 'synthesize' && (
+      <section style={styles.panel}>
+        <PanelHeading title="Synthesize and generate" description="Use selected findings to generate downstream records with research provenance attached." />
+        <MarketingAiAssistPanel
+          kind="researchSynthesis"
+          draft={{
+            projectId: draft._id,
+            title: draft.title,
+            brief: draft.brief,
+            selectedResultIds: selectedApprovedIds,
+            selectedResults: projectResults.filter((result) => selectedApprovedIds.includes(result._id)).map(summarizeResearchResultForAi),
+          }}
+          analyticsTakeaways={analyticsTakeaways}
+          onApply={(suggestion) => {
+            const synthesis = suggestion.researchSynthesis
+            setMessage(synthesis?.releaseRecommendation || synthesis?.summary || 'Research synthesis received. Review selected findings before generating records.')
+          }}
+        />
+        <button
+          type="button"
+          style={{ ...styles.primaryButton, width: '100%', marginTop: 12 }}
+          onClick={() => void generateLinkedRecords()}
+          disabled={converting || selectedApprovedIds.length === 0}
+        >
+          {converting ? 'Generating...' : 'Generate records from approved findings'}
+        </button>
+        {selectedApprovedIds.length === 0 && (
+          <p style={{ ...styles.small, ...styles.muted, margin: '8px 0 0' }}>
+            Approve and select at least one finding before creating campaigns, funnels, calendar items, or Quick Links.
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <button type="button" style={styles.button} onClick={() => onOpenView('campaigns')}>Open Campaigns</button>
+          <button type="button" style={styles.button} onClick={() => onOpenView('funnels')}>Open Funnels</button>
+          <button type="button" style={styles.button} onClick={() => onOpenView('calendar')}>Open Calendar</button>
+          <button type="button" style={styles.button} onClick={() => onOpenView('linkTree')}>Open Quick Links</button>
+        </div>
+      </section>
+      )}
+
+      {researchPage === 'setup' && (
+        <>
+      <ResearchArrayModule
+        title="Research questions"
+        description="Manual questions stay on the project; answers should become result records."
+        actionLabel="Add question"
+        onAdd={addQuestion}
+      >
+        {(draft.researchQuestions || []).length === 0 ? (
+          <EmptyInline title="No research questions yet." />
+        ) : (
+          (draft.researchQuestions || []).map((question, index) => (
+            <div key={question._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(150px, 0.4fr) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Question">
+                  <input
+                    style={styles.input}
+                    value={question.question || ''}
+                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { question: event.currentTarget.value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+                <InputField label="Method">
+                  <Select
+                    value={question.method || 'deskResearch'}
+                    options={researchMethodOptions}
+                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { method: value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('researchQuestions', removeResearchArrayItem(draft.researchQuestions, index))}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Collaborators and interns"
+        description="Add people and capacity signals before research synthesis so timing can shift around real availability."
+        actionLabel="Add collaborator"
+        onAdd={addCollaborator}
+      >
+        {(draft.collaborators || []).length === 0 ? (
+          <EmptyInline title="No collaborators yet." />
+        ) : (
+          (draft.collaborators || []).map((collaborator, index) => (
+            <div key={collaborator._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                <InputField label="Name">
+                  <input
+                    style={styles.input}
+                    value={collaborator.name || ''}
+                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { name: event.currentTarget.value, _type: 'researchCollaborator' }))}
+                  />
+                </InputField>
+                <InputField label="Organization">
+                  <input
+                    style={styles.input}
+                    value={collaborator.organization || ''}
+                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { organization: event.currentTarget.value, _type: 'researchCollaborator' }))}
+                  />
+                </InputField>
+                <InputField label="Topic area">
+                  <input
+                    style={styles.input}
+                    value={collaborator.topicArea || ''}
+                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { topicArea: event.currentTarget.value, _type: 'researchCollaborator' }))}
+                  />
+                </InputField>
+                <InputField label="Capacity">
+                  <input
+                    style={styles.input}
+                    value={collaborator.capacity || ''}
+                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { capacity: event.currentTarget.value, _type: 'researchCollaborator' }))}
+                  />
+                </InputField>
+              </div>
+              <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('collaborators', removeResearchArrayItem(draft.collaborators, index))}>
+                Remove collaborator
+              </button>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ResearchPlanEditor({
+  client,
+  plan,
+  data,
+  saving,
+  onSave,
+  loadData,
+  onOpenView,
+}: {
+  client: StudioClient
+  plan: MarketingResearchPlan | null
+  data: MarketingData
+  saving: boolean
+  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+  loadData: () => Promise<void>
+  onOpenView: (view: MarketingViewId) => void
+}) {
+  const [draft, setDraft] = useState<MarketingResearchPlan | null>(plan)
+  const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([])
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [converting, setConverting] = useState(false)
+  const analyticsTakeaways = useMemo(() => buildAnalyticsInterpretations(data), [data])
+
+  useEffect(() => {
+    setDraft(plan)
+    setSelectedOpportunities((plan?.contentOpportunities || []).map((opportunity) => opportunity._key || '').filter(Boolean))
+    setMessage('')
+    setError('')
+  }, [plan])
+
+  if (!draft) {
+    return <EmptyPanel icon={SearchIcon} title="Select a research plan" description="Create or reopen a plan to turn research inputs into release timing." />
+  }
+
+  const updateDraft = <K extends keyof MarketingResearchPlan>(key: K, value: MarketingResearchPlan[K]) => {
+    setDraft((current) => (current ? { ...current, [key]: value } : current))
+    setMessage('')
+    setError('')
+  }
+
+  const saveDraft = async () => {
+    if (!draft._id) return
+    await onSave(draft._id, buildResearchPlanSavePayload(draft))
+    setMessage('Research plan saved.')
+  }
+
+  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
+    const researchSuggestion = suggestion.researchPlan || {}
+    setDraft((current) => (current ? mergeResearchPlanSuggestion(current, researchSuggestion) : current))
+    setMessage('Suggested plan applied. Review the editable fields, then save.')
+    setError('')
+  }
+
+  const generateLinkedRecords = async () => {
+    if (!draft._id) return
+    setConverting(true)
+    setError('')
+    setMessage('')
+    try {
+      const opportunityKeys = selectedOpportunities.length > 0 ? selectedOpportunities : (draft.contentOpportunities || []).map((item) => item._key || '').filter(Boolean)
+      if (opportunityKeys.length === 0) throw new Error('Select or add at least one content opportunity first.')
+      await onSave(draft._id, buildResearchPlanSavePayload(draft))
+      const result = await createResearchPlanGeneratedRecords(client, data, draft, opportunityKeys)
+      await loadData()
+      setMessage(`Generated ${result.calendarItemIds.length} calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, campaign, funnel, and Quick Link records.`)
+    } catch (conversionError) {
+      setError(conversionError instanceof Error ? conversionError.message : 'Could not generate linked records.')
+    } finally {
+      setConverting(false)
+    }
+  }
+
+  const addSeoTarget = () => updateDraft('seoTargets', [...(draft.seoTargets || []), createResearchSeoTarget(draft)])
+  const addResearchQuestion = () => updateDraft('researchQuestions', [...(draft.researchQuestions || []), createResearchQuestion(draft)])
+  const addEvidenceNote = () => updateDraft('evidenceNotes', [...(draft.evidenceNotes || []), createResearchEvidenceNote(draft)])
+  const addAssumption = () => updateDraft('assumptions', [...(draft.assumptions || []), createResearchAssumption(draft)])
+  const addCollaboration = () => updateDraft('collaborations', [...(draft.collaborations || []), createResearchCollaboration()])
+  const addWindow = () => updateDraft('releaseWindows', [...(draft.releaseWindows || []), createResearchReleaseWindow(draft)])
+  const addOpportunity = () => {
+    const opportunity = createResearchContentOpportunity(draft, data)
+    updateDraft('contentOpportunities', [...(draft.contentOpportunities || []), opportunity])
+    setSelectedOpportunities((current) => [...current, opportunity._key || ''].filter(Boolean))
+  }
+  const addAdjustment = () => updateDraft('strategyAdjustments', [...(draft.strategyAdjustments || []), createResearchStrategyAdjustment()])
+
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      <section style={styles.panel}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 16 }}>
+          <div>
+            <div style={styles.kicker}>Adaptive research</div>
+            <h2 style={{ margin: 0, fontSize: 24 }}>{draft.title || 'Untitled research plan'}</h2>
+            <p style={{ ...styles.muted, margin: '5px 0 0', lineHeight: 1.55 }}>
+              Gather only the strategy inputs that affect release timing: audience, SEO, collaborators, source material, and what designers can make next.
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {['complete', 'archived'].includes(draft.status || '') && (
+              <button type="button" style={styles.button} onClick={() => updateDraft('status', 'active')}>
+                Reopen
+              </button>
+            )}
+            <button type="button" style={styles.button} onClick={() => void saveDraft()} disabled={saving}>
+              {saving ? 'Saving...' : 'Save plan'}
+            </button>
+            <button type="button" style={styles.primaryButton} onClick={() => void generateLinkedRecords()} disabled={converting}>
+              {converting ? 'Generating...' : 'Generate linked records'}
+            </button>
+          </div>
+        </div>
+
+        <MarketingAiAssistPanel
+          kind="researchPlan"
+          draft={draft as unknown as Record<string, unknown>}
+          analyticsTakeaways={analyticsTakeaways}
+          onApply={applyAiSuggestion}
+        />
+
+        {message && <div style={{ ...styles.small, color: '#007385', fontWeight: 800, marginTop: 12 }}>{message}</div>}
+        {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
+      </section>
+
+      <section style={styles.panel}>
+        <PanelHeading title="Strategy brief" description="The smallest useful strategy frame before content gets made." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          <InputField label="Plan title">
+            <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Status">
+            <Select value={draft.status || 'draft'} options={researchPlanStatusOptions} onChange={(value) => updateDraft('status', value)} />
+          </InputField>
+          <InputField label="Release cadence">
+            <Select value={draft.releaseCadence || 'weekly'} options={researchPlanCadenceOptions} onChange={(value) => updateDraft('releaseCadence', value)} />
+          </InputField>
+          <InputField label="Primary objective">
+            <Select value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
+          </InputField>
+        </div>
+        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+          <InputField label="Research summary">
+            <textarea rows={4} style={styles.input} value={draft.summary || ''} onChange={(event) => updateDraft('summary', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Audience">
+            <textarea rows={3} style={styles.input} value={draft.audience || ''} onChange={(event) => updateDraft('audience', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Positioning">
+            <textarea rows={3} style={styles.input} value={draft.positioning || ''} onChange={(event) => updateDraft('positioning', event.currentTarget.value)} />
+          </InputField>
+          <InputField label="Canonical destination URL">
+            <input style={styles.input} value={draft.canonicalUrl || ''} onChange={(event) => updateDraft('canonicalUrl', event.currentTarget.value)} />
+          </InputField>
+        </div>
+      </section>
+
+      <ResearchArrayModule
+        title="Research questions"
+        description="Frame the decisions the plan needs to answer before content production starts."
+        actionLabel="Add question"
+        onAdd={addResearchQuestion}
+      >
+        {(draft.researchQuestions || []).length === 0 ? (
+          <EmptyInline title="No research questions yet. Add the question that would change what designers make." />
+        ) : (
+          (draft.researchQuestions || []).map((question, index) => (
+            <div key={question._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.4fr) repeat(2, minmax(140px, 0.8fr)) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Question">
+                  <input
+                    style={styles.input}
+                    value={question.question || ''}
+                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { question: event.currentTarget.value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+                <InputField label="Method">
+                  <Select
+                    value={question.method || 'deskResearch'}
+                    options={researchMethodOptions}
+                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { method: value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+                <InputField label="Status">
+                  <Select
+                    value={question.status || 'idea'}
+                    options={opportunityReadinessOptions}
+                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { status: value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('researchQuestions', removeResearchArrayItem(draft.researchQuestions, index))}>
+                  Remove
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+                <InputField label="Why it matters">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={question.whyItMatters || ''}
+                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { whyItMatters: event.currentTarget.value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+                <InputField label="Decision it supports">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={question.decisionNeeded || ''}
+                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { decisionNeeded: event.currentTarget.value, _type: 'researchQuestion' }))}
+                  />
+                </InputField>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Evidence log"
+        description="Track claims, sources, confidence, and implications so AI output stays reviewable."
+        actionLabel="Add evidence"
+        onAdd={addEvidenceNote}
+      >
+        {(draft.evidenceNotes || []).length === 0 ? (
+          <EmptyInline title="No evidence yet. Add the source, signal, or observation the plan relies on." />
+        ) : (
+          (draft.evidenceNotes || []).map((note, index) => (
+            <div key={note._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.3fr) repeat(2, minmax(140px, 0.75fr)) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Claim / finding">
+                  <input
+                    style={styles.input}
+                    value={note.claim || ''}
+                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { claim: event.currentTarget.value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+                <InputField label="Evidence type">
+                  <Select
+                    value={note.evidenceType || 'siteContent'}
+                    options={researchEvidenceTypeOptions}
+                    onChange={(value) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { evidenceType: value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+                <InputField label="Confidence">
+                  <Select
+                    value={note.confidence || 'early'}
+                    options={researchConfidenceOptions}
+                    onChange={(value) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { confidence: value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('evidenceNotes', removeResearchArrayItem(draft.evidenceNotes, index))}>
+                  Remove
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
+                <InputField label="Source title">
+                  <input
+                    style={styles.input}
+                    value={note.sourceTitle || ''}
+                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { sourceTitle: event.currentTarget.value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+                <InputField label="Source URL">
+                  <input
+                    style={styles.input}
+                    value={note.sourceUrl || ''}
+                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { sourceUrl: event.currentTarget.value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+                <InputField label="Implication for content">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={note.implication || ''}
+                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { implication: event.currentTarget.value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+                <InputField label="Still unknown">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={note.gap || ''}
+                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { gap: event.currentTarget.value, _type: 'evidenceNote' }))}
+                  />
+                </InputField>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Assumptions to validate"
+        description="Name the parts of the plan that might be wrong before they become expensive production work."
+        actionLabel="Add assumption"
+        onAdd={addAssumption}
+      >
+        {(draft.assumptions || []).length === 0 ? (
+          <EmptyInline title="No assumptions yet. Add what needs to be true for this plan to work." />
+        ) : (
+          (draft.assumptions || []).map((assumption, index) => (
+            <div key={assumption._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(140px, 0.35fr) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Assumption">
+                  <input
+                    style={styles.input}
+                    value={assumption.assumption || ''}
+                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { assumption: event.currentTarget.value, _type: 'researchAssumption' }))}
+                  />
+                </InputField>
+                <InputField label="Confidence">
+                  <Select
+                    value={assumption.confidence || 'needsValidation'}
+                    options={researchConfidenceOptions}
+                    onChange={(value) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { confidence: value, _type: 'researchAssumption' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('assumptions', removeResearchArrayItem(draft.assumptions, index))}>
+                  Remove
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
+                <InputField label="Risk if wrong">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={assumption.risk || ''}
+                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { risk: event.currentTarget.value, _type: 'researchAssumption' }))}
+                  />
+                </InputField>
+                <InputField label="Validation signal">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={assumption.validationSignal || ''}
+                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { validationSignal: event.currentTarget.value, _type: 'researchAssumption' }))}
+                  />
+                </InputField>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="SEO targeting"
+        description="Target queries, intent, canonical destinations, gaps, and priority."
+        actionLabel="Add SEO target"
+        onAdd={addSeoTarget}
+      >
+        {(draft.seoTargets || []).length === 0 ? (
+          <EmptyInline title="No SEO targets yet. Add queries people might search or ask." />
+        ) : (
+          (draft.seoTargets || []).map((target, index) => (
+            <div key={target._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1.4fr) repeat(2, minmax(140px, 0.8fr)) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Keyword / query">
+                  <input
+                    style={styles.input}
+                    value={target.query || ''}
+                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { query: event.currentTarget.value, _type: 'seoTarget' }))}
+                  />
+                </InputField>
+                <InputField label="Intent">
+                  <Select
+                    value={target.intent || 'learn'}
+                    options={searchIntentOptions}
+                    onChange={(value) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { intent: value, _type: 'seoTarget' }))}
+                  />
+                </InputField>
+                <InputField label="Priority">
+                  <Select
+                    value={target.priority || 'medium'}
+                    options={researchPriorityOptions}
+                    onChange={(value) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { priority: value, _type: 'seoTarget' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('seoTargets', removeResearchArrayItem(draft.seoTargets, index))}>
+                  Remove
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
+                <InputField label="Canonical destination">
+                  <input
+                    style={styles.input}
+                    value={target.canonicalUrl || ''}
+                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { canonicalUrl: event.currentTarget.value, _type: 'seoTarget' }))}
+                  />
+                </InputField>
+                <InputField label="Content gap">
+                  <input
+                    style={styles.input}
+                    value={target.contentGap || ''}
+                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { contentGap: event.currentTarget.value, _type: 'seoTarget' }))}
+                  />
+                </InputField>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Collaborations"
+        description="University interns, advisors, partner orgs, guests, and communities that can change the release plan."
+        actionLabel="Add collaboration"
+        onAdd={addCollaboration}
+      >
+        {(draft.collaborations || []).length === 0 ? (
+          <EmptyInline title="No collaborators yet. Add interns, universities, advisors, or partners when they change capacity or topics." />
+        ) : (
+          (draft.collaborations || []).map((collaboration, index) => (
+            <div key={collaboration._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+                <InputField label="Name">
+                  <input
+                    style={styles.input}
+                    value={collaboration.name || ''}
+                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { name: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+                <InputField label="Organization">
+                  <input
+                    style={styles.input}
+                    value={collaboration.organization || ''}
+                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { organization: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+                <InputField label="Relationship">
+                  <Select
+                    value={collaboration.relationshipType || 'universityIntern'}
+                    options={collaborationRelationshipOptions}
+                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { relationshipType: value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+                <InputField label="Contribution">
+                  <Select
+                    value={collaboration.contributionType || 'research'}
+                    options={contributionTypeOptions}
+                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { contributionType: value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+                <InputField label="Status">
+                  <Select
+                    value={collaboration.status || 'idea'}
+                    options={collaborationStatusOptions}
+                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { status: value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginTop: 10 }}>
+                <InputField label="Topic area">
+                  <input
+                    style={styles.input}
+                    value={collaboration.topicArea || ''}
+                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { topicArea: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+                <InputField label="Available starting">
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={collaboration.availabilityStart || ''}
+                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { availabilityStart: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+                <InputField label="Available until">
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={collaboration.availabilityEnd || ''}
+                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { availabilityEnd: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
+                  />
+                </InputField>
+              </div>
+              <InputField label="Expected contribution">
+                <textarea
+                  rows={2}
+                  style={styles.input}
+                  value={collaboration.expectedContribution || ''}
+                  onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { expectedContribution: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
+                />
+              </InputField>
+              <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('collaborations', removeResearchArrayItem(draft.collaborations, index))}>
+                Remove collaboration
+              </button>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Release windows"
+        description="Flexible date ranges centered on when content should go live, not fixed research phases."
+        actionLabel="Add release window"
+        onAdd={addWindow}
+      >
+        {(draft.releaseWindows || []).length === 0 ? (
+          <EmptyInline title="No release windows yet. Add the next useful publishing windows." />
+        ) : (
+          (draft.releaseWindows || []).map((window, index) => (
+            <div key={window._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) repeat(3, minmax(130px, 0.7fr)) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Label">
+                  <input
+                    style={styles.input}
+                    value={window.label || ''}
+                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { label: event.currentTarget.value, _type: 'releaseWindow' }))}
+                  />
+                </InputField>
+                <InputField label="Start">
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={window.startDate || ''}
+                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { startDate: event.currentTarget.value, _type: 'releaseWindow' }))}
+                  />
+                </InputField>
+                <InputField label="End">
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={window.endDate || ''}
+                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { endDate: event.currentTarget.value, _type: 'releaseWindow' }))}
+                  />
+                </InputField>
+                <InputField label="Priority">
+                  <Select
+                    value={window.priority || 'medium'}
+                    options={researchPriorityOptions}
+                    onChange={(value) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { priority: value, _type: 'releaseWindow' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('releaseWindows', removeResearchArrayItem(draft.releaseWindows, index))}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Content opportunities"
+        description="The editable backlog designers can convert into campaigns, funnels, calendar items, and Quick Links."
+        actionLabel="Add opportunity"
+        onAdd={addOpportunity}
+      >
+        {(draft.contentOpportunities || []).length === 0 ? (
+          <EmptyInline title="No content opportunities yet. Use AI setup or add one manually." />
+        ) : (
+          (draft.contentOpportunities || []).map((opportunity, index) => {
+            const key = opportunity._key || `${index}`
+            const checked = selectedOpportunities.includes(key)
+            return (
+              <div key={key} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(event) => {
+                      setSelectedOpportunities((current) =>
+                        event.currentTarget.checked ? Array.from(new Set([...current, key])) : current.filter((item) => item !== key),
+                      )
+                    }}
+                  />
+                  <strong>Generate from this opportunity</strong>
+                  {getRecordId(opportunity.generatedCalendarItem) && <StatusPill status="scheduled" options={[{ title: 'Generated', value: 'scheduled' }]} />}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.5fr) repeat(3, minmax(140px, 0.8fr))', gap: 10 }}>
+                  <InputField label="Proposed item">
+                    <input
+                      style={styles.input}
+                      value={opportunity.title || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { title: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="Channel">
+                    <Select
+                      value={opportunity.channel || 'instagram'}
+                      options={getResearchChannelOptions(data)}
+                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { channel: value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="Format">
+                    <Select
+                      value={opportunity.format || 'carousel'}
+                      options={contentFormatOptions}
+                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { format: value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="Readiness">
+                    <Select
+                      value={opportunity.readiness || 'idea'}
+                      options={opportunityReadinessOptions}
+                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { readiness: value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
+                  <InputField label="Owner / contributor">
+                    <input
+                      style={styles.input}
+                      value={opportunity.owner || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { owner: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="Release window">
+                    <input
+                      style={styles.input}
+                      value={opportunity.releaseWindow || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { releaseWindow: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="CTA">
+                    <input
+                      style={styles.input}
+                      value={opportunity.callToAction || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { callToAction: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="SEO query">
+                    <input
+                      style={styles.input}
+                      value={opportunity.seoQuery || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { seoQuery: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
+                  <InputField label="Destination URL">
+                    <input
+                      style={styles.input}
+                      value={opportunity.destinationUrl || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { destinationUrl: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                  <InputField label="Source material">
+                    <input
+                      style={styles.input}
+                      value={opportunity.sourceMaterial || ''}
+                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { sourceMaterial: event.currentTarget.value, _type: 'contentOpportunity' }))}
+                    />
+                  </InputField>
+                </div>
+                <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('contentOpportunities', removeResearchArrayItem(draft.contentOpportunities, index))}>
+                  Remove opportunity
+                </button>
+              </div>
+            )
+          })
+        )}
+      </ResearchArrayModule>
+
+      <ResearchArrayModule
+        title="Strategy adjustments"
+        description="When new collaborators, SEO opportunities, or analytics takeaways change the plan, document the why and the decision."
+        actionLabel="Add adjustment"
+        onAdd={addAdjustment}
+      >
+        {(draft.strategyAdjustments || []).length === 0 ? (
+          <EmptyInline title="No plan changes recorded yet." />
+        ) : (
+          (draft.strategyAdjustments || []).map((adjustment, index) => (
+            <div key={adjustment._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '160px minmax(0, 1fr) auto', gap: 10, alignItems: 'end' }}>
+                <InputField label="Decision date">
+                  <input
+                    type="date"
+                    style={styles.input}
+                    value={adjustment.decisionDate || ''}
+                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { decisionDate: event.currentTarget.value, _type: 'strategyAdjustment' }))}
+                  />
+                </InputField>
+                <InputField label="Trigger">
+                  <input
+                    style={styles.input}
+                    value={adjustment.trigger || ''}
+                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { trigger: event.currentTarget.value, _type: 'strategyAdjustment' }))}
+                  />
+                </InputField>
+                <button type="button" style={styles.button} onClick={() => updateDraft('strategyAdjustments', removeResearchArrayItem(draft.strategyAdjustments, index))}>
+                  Remove
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
+                <InputField label="Why it changed">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={adjustment.reason || ''}
+                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { reason: event.currentTarget.value, _type: 'strategyAdjustment' }))}
+                  />
+                </InputField>
+                <InputField label="Recommendation">
+                  <textarea
+                    rows={2}
+                    style={styles.input}
+                    value={adjustment.recommendation || ''}
+                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { recommendation: event.currentTarget.value, _type: 'strategyAdjustment' }))}
+                  />
+                </InputField>
+              </div>
+            </div>
+          ))
+        )}
+      </ResearchArrayModule>
+
+      <section style={styles.panel}>
+        <PanelHeading title="Generated records" description="Objects created from this research plan stay linked back here for reopening and iteration." />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
+          <GeneratedRecordCard label="Campaigns" records={draft.generatedCampaigns || []} onOpen={() => onOpenView('campaigns')} />
+          <GeneratedRecordCard label="Funnels" records={draft.generatedFunnels || []} onOpen={() => onOpenView('funnels')} />
+          <GeneratedRecordCard label="Calendar items" records={draft.generatedCalendarItems || []} onOpen={() => onOpenView('calendar')} />
+          <GeneratedRecordCard label="Quick Links" records={draft.generatedLinkItems || []} onOpen={() => onOpenView('linkTree')} />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function ResearchArrayModule({
+  title,
+  description,
+  actionLabel,
+  onAdd,
+  children,
+}: {
+  title: string
+  description: string
+  actionLabel: string
+  onAdd: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <section style={styles.panel}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
+        <PanelHeading title={title} description={description} />
+        <button type="button" style={{ ...styles.button, whiteSpace: 'nowrap' }} onClick={onAdd}>
+          {actionLabel}
+        </button>
+      </div>
+      <div style={{ display: 'grid', gap: 10 }}>{children}</div>
+    </section>
+  )
+}
+
+function GeneratedRecordCard({
+  label,
+  records,
+  onOpen,
+}: {
+  label: string
+  records: Array<{ _id?: string; title?: string; status?: string }>
+  onOpen: () => void
+}) {
+  return (
+    <button type="button" style={{ ...styles.templateButton, minHeight: 108 }} onClick={onOpen}>
+      <strong>{label}</strong>
+      <span style={{ fontSize: 28, lineHeight: 1, fontWeight: 900 }}>{records.length}</span>
+      <span style={{ ...styles.small, ...styles.muted }}>
+        {records.length > 0 ? records.slice(0, 2).map((record) => record.title || 'Untitled').join(', ') : 'None generated yet'}
+      </span>
+    </button>
   )
 }
 
@@ -2294,6 +7697,7 @@ function CalendarWorkspace({
   const calendarCells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
   const itemsByDay = useMemo(() => groupCalendarItemsByDay(data.calendarItems), [data.calendarItems])
   const unscheduled = data.calendarItems.filter((item) => !item.publishAt)
+  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(data.calendarItems), [data.calendarItems])
 
   const createCalendarItem = async (publishDate?: Date) => {
     const createdId = await createDocument({
@@ -2390,9 +7794,7 @@ function CalendarWorkspace({
                   {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
                 </div>
                 <div style={{ display: 'grid', gap: 5 }}>
-                  {dayItems.slice(0, 4).map((item) => (
-                    <CalendarChip key={item._id} item={item} channels={channels} active={item._id === selectedId} />
-                  ))}
+                  {renderCalendarDayItems(dayItems, channels, selectedId)}
                   {dayItems.length > 4 && (
                     <div style={{ ...styles.small, ...styles.muted }}>+{dayItems.length - 4} more</div>
                   )}
@@ -2400,6 +7802,19 @@ function CalendarWorkspace({
               </button>
             )
           })}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }}>
+          <CalendarGroupSummary
+            group="draft"
+            count={savedCalendarGroups.draft.length}
+            description="Saved calendar items that still need content or review."
+          />
+          <CalendarGroupSummary
+            group="final"
+            count={savedCalendarGroups.final.length}
+            description="Scheduled or published items with real release timing."
+          />
         </div>
 
         {unscheduled.length > 0 && (
@@ -2445,12 +7860,14 @@ function CalendarChip({
   item,
   channels,
   active,
+  group = getCalendarItemDisplayGroup(item),
 }: {
   item: MarketingCalendarItem
   channels: MarketingChannel[]
   active: boolean
+  group?: CalendarDisplayGroup
 }) {
-  const colors = getStatusColor(item.status)
+  const colors = getStatusColor(group === 'preview' ? 'preview' : item.status)
   const channel = getChannelByKey(channels, item.channel) || item.channelRef
   const contentTypeOptionsForChannel = getContentTypeOptionsForChannel(item.channel, channels)
 
@@ -2459,6 +7876,7 @@ function CalendarChip({
       style={{
         padding: '6px 7px',
         border: `1px solid ${active ? '#007385' : colors.border}`,
+        borderStyle: group === 'preview' ? 'dotted' : 'solid',
         borderRadius: 6,
         background: colors.bg,
         color: colors.fg,
@@ -2472,6 +7890,97 @@ function CalendarChip({
         {[channel?.title || item.channel, labelFor(contentTypeOptionsForChannel, item.contentType), item.campaign?.title]
           .filter(Boolean)
           .join(' / ')}
+      </div>
+      <div style={{ fontSize: 10, opacity: 0.78, fontWeight: 800, marginTop: 3 }}>
+        {getCalendarGroupLabel(group)}
+      </div>
+    </div>
+  )
+}
+
+function renderCalendarDayItems(
+  dayItems: MarketingCalendarItem[],
+  channels: MarketingChannel[],
+  selectedId: string | null,
+) {
+  return getCalendarItemsByDisplayGroup(dayItems)
+    .slice(0, 4)
+    .map(({ item, group }) => (
+      <CalendarChip key={item._id} item={item} channels={channels} active={item._id === selectedId} group={group} />
+    ))
+}
+
+function ResearchOpportunityPreviewList({ opportunities }: { opportunities: ResearchContentOpportunity[] }) {
+  const previewOpportunities = opportunities.filter((opportunity) => opportunity.title).slice(0, 4)
+  if (previewOpportunities.length === 0) return null
+
+  const colors = getStatusColor('preview')
+
+  return (
+    <div style={{ borderTop: '1px solid var(--card-border-color)', marginTop: 12, paddingTop: 12 }}>
+      <div style={{ ...styles.small, color: '#007385', fontWeight: 900, marginBottom: 8 }}>
+        Research preview
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {previewOpportunities.map((opportunity, index) => (
+          <div
+            key={opportunity._key || `${opportunity.title}-${index}`}
+            style={{
+              border: `1px dotted ${colors.border}`,
+              borderRadius: 6,
+              background: colors.bg,
+              color: colors.fg,
+              padding: '8px 9px',
+            }}
+          >
+            <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.35 }}>
+              {opportunity.title}
+            </strong>
+            <div style={{ fontSize: 11, opacity: 0.82, marginTop: 4 }}>
+              {[opportunity.channel, opportunity.format, opportunity.releaseWindow].filter(Boolean).join(' / ')}
+            </div>
+            <div style={{ fontSize: 10, opacity: 0.78, fontWeight: 800, marginTop: 3 }}>
+              Preview
+            </div>
+          </div>
+        ))}
+      </div>
+      {opportunities.length > previewOpportunities.length && (
+        <div style={{ ...styles.small, ...styles.muted, marginTop: 6 }}>
+          +{opportunities.length - previewOpportunities.length} more preview item{opportunities.length - previewOpportunities.length === 1 ? '' : 's'}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CalendarGroupSummary({
+  group,
+  count,
+  description,
+}: {
+  group: CalendarDisplayGroup
+  count: number
+  description: string
+}) {
+  const colors = getStatusColor(group)
+  return (
+    <div
+      style={{
+        border: `1px ${group === 'preview' ? 'dotted' : 'solid'} ${colors.border}`,
+        borderRadius: 8,
+        background: colors.bg,
+        color: colors.fg,
+        padding: 10,
+        minHeight: 98,
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+        <strong>{getCalendarGroupLabel(group)}</strong>
+        <span style={{ fontSize: 22, fontWeight: 900 }}>{count}</span>
+      </div>
+      <div style={{ ...styles.small, color: 'inherit', opacity: 0.82, lineHeight: 1.45, marginTop: 6 }}>
+        {description}
       </div>
     </div>
   )
@@ -2547,11 +8056,19 @@ function CalendarItemEditor({
       contentType: draft.contentType,
       channel: channelKey,
       brief: draft.brief,
+      contentDraft: draft.contentDraft,
+      draftFrames: normalizeDraftContentFrames(draft.draftFrames),
+      draftAltText: draft.draftAltText,
+      draftHashtags: draft.draftHashtags || [],
+      contentProductionNotes: draft.contentProductionNotes,
       callToAction: draft.callToAction,
       workingUrl: draft.workingUrl,
       publishedUrl: draft.publishedUrl,
       utmCampaign: draft.utmCampaign,
       funnelStage: draft.funnelStage,
+      topicCluster: draft.topicCluster,
+      searchIntent: draft.searchIntent,
+      targetQueries: draft.targetQueries || [],
     }
 
     if (linkedLinkIds.length > 0) {
@@ -2792,6 +8309,34 @@ function CalendarItemEditor({
             onChange={(funnelStage) => setDraft({ ...draft, funnelStage })}
           />
         </InputField>
+        <details style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 12 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 800 }}>SEO and targeting</summary>
+          <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+            <InputField label="Topic / keyword cluster">
+              <input
+                style={styles.input}
+                value={draft.topicCluster || ''}
+                onChange={(event) => setDraft({ ...draft, topicCluster: event.currentTarget.value })}
+              />
+            </InputField>
+            <InputField label="Search / visitor intent">
+              <Select
+                value={draft.searchIntent || ''}
+                options={[{ title: 'None', value: '' }, ...searchIntentOptions]}
+                onChange={(searchIntent) => setDraft({ ...draft, searchIntent })}
+              />
+            </InputField>
+            <InputField label="Target queries / phrases">
+              <textarea
+                rows={3}
+                style={styles.input}
+                value={(draft.targetQueries || []).join('\n')}
+                onChange={(event) => setDraft({ ...draft, targetQueries: stringListFromText(event.currentTarget.value) })}
+                placeholder="One phrase per line"
+              />
+            </InputField>
+          </div>
+        </details>
         <InputField label="Analytics source">
           <Select
             value={analyticsSourceId}
@@ -2811,6 +8356,144 @@ function CalendarItemEditor({
             style={styles.input}
             value={draft.brief || ''}
             onChange={(event) => setDraft({ ...draft, brief: event.currentTarget.value })}
+          />
+        </InputField>
+        <InputField label="Draft content / caption">
+          <textarea
+            rows={8}
+            style={styles.input}
+            value={draft.contentDraft || ''}
+            onChange={(event) => setDraft({ ...draft, contentDraft: event.currentTarget.value })}
+            placeholder="Write or generate the actual post, caption, newsletter section, or page copy here."
+          />
+        </InputField>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <label style={styles.label}>Draft frames / slides</label>
+            <button
+              type="button"
+              style={styles.button}
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  draftFrames: [
+                    ...(draft.draftFrames || []),
+                    { _key: randomKey(), title: '', body: '', visualDirection: '', altText: '' },
+                  ],
+                })
+              }
+            >
+              Add frame
+            </button>
+          </div>
+          {(draft.draftFrames || []).length === 0 ? (
+            <EmptyInline title="No frame copy yet." />
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {(draft.draftFrames || []).map((frame, index) => (
+                <div key={frame._key || index} style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'center' }}>
+                    <InputField label={`Frame ${index + 1} title`}>
+                      <input
+                        style={styles.input}
+                        value={frame.title || ''}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, title: event.currentTarget.value } : item,
+                            ),
+                          })
+                        }
+                      />
+                    </InputField>
+                    <button
+                      type="button"
+                      style={{ ...styles.button, width: 40, height: 40, padding: 0 }}
+                      aria-label={`Remove frame ${index + 1}`}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          draftFrames: (draft.draftFrames || []).filter((_, itemIndex) => itemIndex !== index),
+                        })
+                      }
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                  <InputField label="Body copy">
+                    <textarea
+                      rows={3}
+                      style={styles.input}
+                      value={frame.body || ''}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, body: event.currentTarget.value } : item,
+                          ),
+                        })
+                      }
+                    />
+                  </InputField>
+                  <InputField label="Visual direction">
+                    <textarea
+                      rows={2}
+                      style={styles.input}
+                      value={frame.visualDirection || ''}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, visualDirection: event.currentTarget.value } : item,
+                          ),
+                        })
+                      }
+                    />
+                  </InputField>
+                  <InputField label="Alt text">
+                    <textarea
+                      rows={2}
+                      style={styles.input}
+                      value={frame.altText || ''}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, altText: event.currentTarget.value } : item,
+                          ),
+                        })
+                      }
+                    />
+                  </InputField>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <InputField label="Overall draft alt text">
+          <textarea
+            rows={3}
+            style={styles.input}
+            value={draft.draftAltText || ''}
+            onChange={(event) => setDraft({ ...draft, draftAltText: event.currentTarget.value })}
+          />
+        </InputField>
+        <InputField label="Draft hashtags / tags">
+          <textarea
+            rows={2}
+            style={styles.input}
+            value={(draft.draftHashtags || []).join('\n')}
+            onChange={(event) => setDraft({ ...draft, draftHashtags: stringListFromText(event.currentTarget.value) })}
+            placeholder="One tag per line"
+          />
+        </InputField>
+        <InputField label="Content production notes">
+          <textarea
+            rows={4}
+            style={styles.input}
+            value={draft.contentProductionNotes || ''}
+            onChange={(event) => setDraft({ ...draft, contentProductionNotes: event.currentTarget.value })}
           />
         </InputField>
         <InputField label="Call to action">
@@ -6616,6 +12299,10 @@ function getAiSuggestionSection(suggestion: MarketingAiSuggestion, kind: Marketi
   if (kind === 'channel') return suggestion.channel
   if (kind === 'analyticsSource') return suggestion.analyticsSource
   if (kind === 'template') return suggestion.template
+  if (kind === 'researchProject') return suggestion.researchProject
+  if (kind === 'researchSynthesis') return suggestion.researchSynthesis
+  if (kind === 'researchPlan') return suggestion.researchPlan
+  if (kind === 'strategyAsset') return suggestion.strategyAsset
   return suggestion.linkItem
 }
 
@@ -6998,6 +12685,22 @@ function getMarketingDashboardStats(data: MarketingData) {
 function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[] {
   const stats = getMarketingDashboardStats(data)
   const gaps: MarketingDashboardGap[] = []
+  const missingStrategy = getMissingFoundationalStrategyInputs(data)
+
+  if (missingStrategy.length > 0) {
+    const hasResearchFindings = data.researchResults.length > 0
+    gaps.push({
+      id: 'dashboard-strategy-foundation-gap',
+      title: 'Strategy foundation is incomplete',
+      why: `The assistant and designers are missing reusable ${missingStrategy.join(', ')} inputs, so content is more likely to be generated in a vacuum.`,
+      action: hasResearchFindings
+        ? 'Open Strategy and fill the missing foundation records from approved research.'
+        : 'Open Research first, gather findings, then fill the missing Strategy records from those findings.',
+      view: hasResearchFindings ? 'strategy' : 'research',
+      severity: 'setup',
+      affected: missingStrategy,
+    })
+  }
 
   if (stats.upcomingItems.length === 0) {
     gaps.push({
@@ -7155,6 +12858,1425 @@ function getDashboardGapTone(severity: MarketingDashboardGap['severity']) {
   }
 }
 
+function createResearchProjectDocument(data: MarketingData): MarketingDocumentInput {
+  const today = new Date()
+  const firstUrl = data.linkItems.find((link) => link.status !== 'archived' && link.url)?.url || 'https://www.goinvo.com/'
+  const researchType = 'topic'
+
+  return {
+    _type: 'marketingResearchProject',
+    title: `Research project ${toDateInputValue(today)}`,
+    status: 'draft',
+    researchType,
+    brief: 'Define what we need to learn before generating campaigns, funnels, calendar items, or Quick Links.',
+    audience: 'People who can benefit from GoInvo work, articles, projects, or open resources.',
+    goals: [
+      'Find provider-backed keyword signals when SEO matters.',
+      'Review source material before turning it into content.',
+      'Identify what designers can safely make next.',
+    ],
+    campaignObjective: 'awareness',
+    positioning: 'Treat this as a research hypothesis until results are reviewed.',
+    canonicalUrl: firstUrl,
+    seedKeywords: [],
+    seedUrls: [firstUrl],
+    targetGeography: 'us',
+    language: 'en',
+    methods: defaultResearchMethodsForType(researchType),
+    researchQuestions: [createResearchProjectQuestion({ title: 'New research project', researchType } as MarketingResearchProject)],
+    collaborators: [],
+  }
+}
+
+function createResearchProjectQuestion(project: MarketingResearchProject): ResearchQuestion {
+  const researchType = project.researchType || 'topic'
+  const topic = stripResearchProjectSuffix(project.title || 'this research project')
+  if (researchType === 'competitor') {
+    return {
+      _key: randomKey(),
+      _type: 'researchQuestion',
+      question: `What are comparable organizations publishing or ranking for around ${topic}?`,
+      whyItMatters: 'Competitor research should reveal gaps, patterns, and positioning opportunities before we copy effort into production.',
+      method: 'competitiveScan',
+      decisionNeeded: 'Choose which gaps or examples are worth responding to in GoInvo content.',
+      status: 'idea',
+    }
+  }
+  if (researchType === 'strategy') {
+    return {
+      _key: randomKey(),
+      _type: 'researchQuestion',
+      question: `Which strategic direction should ${topic} support next?`,
+      whyItMatters: 'Strategy research should decide the goal, audience, channel mix, and measurement before release work starts.',
+      method: 'deskResearch',
+      decisionNeeded: 'Choose the campaign/funnel direction and what evidence would change it.',
+      status: 'idea',
+    }
+  }
+  return {
+    _key: randomKey(),
+    _type: 'researchQuestion',
+    question: `What evidence would make ${topic} worth scheduling?`,
+    whyItMatters: 'Calendar items should be created from reviewed signals, not from topic guesses.',
+    method: 'sourceReview',
+    decisionNeeded: 'Approve results and choose whether to synthesize opportunities.',
+    status: 'idea',
+  }
+}
+
+function defaultResearchMethodsForType(researchType?: string) {
+  if (researchType === 'competitor') return ['competitiveScan', 'seoReview', 'cmsScan', 'sourceReview']
+  if (researchType === 'strategy') return ['cmsScan', 'deskResearch', 'analyticsReview', 'sourceReview']
+  return ['seoReview', 'cmsScan', 'sourceReview']
+}
+
+function defaultResearchQuestionsForType(researchType: string | undefined, title: string): ResearchQuestion[] {
+  return [createResearchProjectQuestion({ title, researchType } as MarketingResearchProject)]
+}
+
+function buildResearchQuestionsForType(researchType: string | undefined, topic: string): ResearchQuestion[] {
+  const subject = stripResearchProjectSuffix(topic || 'this research project')
+  if (researchType === 'competitor') {
+    return [
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: `Who is already publishing, ranking, or getting attention around ${subject}?`,
+        whyItMatters: 'This shows which competitors or peer examples are shaping audience expectations.',
+        method: 'competitiveScan',
+        decisionNeeded: 'Choose the examples worth learning from and the gaps GoInvo can own.',
+        status: 'idea',
+      },
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: `What content gaps or positioning openings exist around ${subject}?`,
+        whyItMatters: 'Competitor research should produce a differentiated angle, not a duplicate post.',
+        method: 'seoReview',
+        decisionNeeded: 'Choose the first gap or contrast to turn into a content opportunity.',
+        status: 'needsSource',
+      },
+    ]
+  }
+  if (researchType === 'strategy') {
+    return [
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: `What strategic decision should ${subject} help us make next?`,
+        whyItMatters: 'Strategy research should clarify direction before production starts.',
+        method: 'deskResearch',
+        decisionNeeded: 'Choose the goal, audience, channel mix, and measurement focus.',
+        status: 'idea',
+      },
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: `What signals would prove this strategy is worth turning into campaign, funnel, and calendar records?`,
+        whyItMatters: 'This keeps planning tied to evidence instead of internal preference.',
+        method: 'analyticsReview',
+        decisionNeeded: 'Choose what evidence is enough to move from research into release planning.',
+        status: 'needsSource',
+      },
+    ]
+  }
+  return [
+    {
+      _key: randomKey(),
+      _type: 'researchQuestion',
+      question: `Which audience-language queries should lead people to ${subject}?`,
+      whyItMatters: 'This keeps titles, captions, and Quick Links grounded in audience language.',
+      method: 'seoReview',
+      decisionNeeded: 'Pick reviewed target queries and the first content angle.',
+      status: 'idea',
+    },
+    {
+      _key: randomKey(),
+      _type: 'researchQuestion',
+      question: `Which claims, visuals, examples, or proof points from ${subject} are strong enough to become reviewed content opportunities?`,
+      whyItMatters: 'Content should not be generated until the evidence is reviewable.',
+      method: 'sourceReview',
+      decisionNeeded: 'Approve source findings before synthesis.',
+      status: 'needsSource',
+    },
+  ]
+}
+
+function createResearchProjectCollaborator(): ResearchProjectCollaborator {
+  return {
+    _key: randomKey(),
+    _type: 'researchCollaborator',
+    name: '',
+    organization: '',
+    relationshipType: 'universityIntern',
+    topicArea: '',
+    contributionType: 'research',
+    capacity: '',
+    status: 'idea',
+  }
+}
+
+function buildResearchProjectSavePayload(project: MarketingResearchProject): Record<string, unknown> {
+  return {
+    title: project.title || 'Untitled research project',
+    status: project.status || 'draft',
+    researchType: project.researchType || 'topic',
+    brief: project.brief || '',
+    audience: project.audience || '',
+    goals: normalizeStringList(project.goals || []),
+    campaignObjective: project.campaignObjective || 'awareness',
+    positioning: project.positioning || '',
+    canonicalUrl: project.canonicalUrl || '',
+    seedKeywords: normalizeStringList(project.seedKeywords || []),
+    seedUrls: normalizeStringList(project.seedUrls || []),
+    targetGeography: project.targetGeography || 'us',
+    language: project.language || 'en',
+    methods: normalizeStringList(project.methods || defaultResearchMethodsForType(project.researchType)),
+    researchQuestions: normalizeResearchQuestions(project.researchQuestions),
+    collaborators: normalizeResearchProjectCollaborators(project.collaborators),
+    selectedResults: refsFromRecords(project.selectedResults),
+    approvedResults: refsFromRecords(project.approvedResults),
+    generatedCampaigns: refsFromRecords(project.generatedCampaigns),
+    generatedFunnels: refsFromRecords(project.generatedFunnels),
+    generatedCalendarItems: refsFromRecords(project.generatedCalendarItems),
+    generatedLinkItems: refsFromRecords(project.generatedLinkItems),
+    ...(getRecordId(project.legacyPlan) ? { legacyPlan: referenceFromId(getRecordId(project.legacyPlan)) } : {}),
+    internalNotes: project.internalNotes || '',
+  }
+}
+
+function mergeResearchProjectSuggestion(
+  current: MarketingResearchProject,
+  suggestion: Partial<MarketingResearchProject>,
+): MarketingResearchProject {
+  const next: MarketingResearchProject = {
+    ...current,
+    title: aiString(suggestion.title) || current.title,
+    status: aiOption(suggestion.status, researchProjectStatusOptions) || current.status || 'draft',
+    researchType: aiOption(suggestion.researchType, researchProjectTypeOptions) || current.researchType || 'topic',
+    brief: aiString(suggestion.brief) || current.brief,
+    audience: aiString(suggestion.audience) || current.audience,
+    campaignObjective: aiOption(suggestion.campaignObjective, campaignObjectiveOptions) || current.campaignObjective || 'awareness',
+    positioning: aiString(suggestion.positioning) || current.positioning,
+    canonicalUrl: aiString(suggestion.canonicalUrl) || current.canonicalUrl,
+    targetGeography: aiString(suggestion.targetGeography) || current.targetGeography || 'us',
+    language: aiString(suggestion.language) || current.language || 'en',
+  }
+  const goals = aiStringList(suggestion.goals)
+  const seedKeywords = aiStringList(suggestion.seedKeywords)
+  const seedUrls = aiStringList(suggestion.seedUrls)
+  const methods = aiStringList(suggestion.methods)
+  if (goals) next.goals = goals
+  if (seedKeywords) next.seedKeywords = seedKeywords
+  if (seedUrls) next.seedUrls = seedUrls
+  if (methods) next.methods = methods
+  if (Array.isArray(suggestion.researchQuestions)) next.researchQuestions = normalizeResearchQuestions(suggestion.researchQuestions)
+  if (Array.isArray(suggestion.collaborators)) next.collaborators = normalizeResearchProjectCollaborators(suggestion.collaborators as ResearchProjectCollaborator[])
+  if (aiString(suggestion.internalNotes)) next.internalNotes = aiString(suggestion.internalNotes)
+  return next
+}
+
+function normalizeResearchProjectCollaborators(values: ResearchProjectCollaborator[] | undefined): ResearchProjectCollaborator[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'researchCollaborator' as const,
+      name: item.name || '',
+      organization: item.organization || '',
+      relationshipType: item.relationshipType || 'other',
+      topicArea: item.topicArea || '',
+      availabilityStart: item.availabilityStart || '',
+      availabilityEnd: item.availabilityEnd || '',
+      contributionType: item.contributionType || 'research',
+      capacity: item.capacity || '',
+      expectedContribution: item.expectedContribution || '',
+      status: item.status || 'idea',
+      relatedResults: refsFromRecords(item.relatedResults) as unknown as MarketingResearchResult[],
+      notes: item.notes || '',
+    }))
+    .filter((item) => item.name.trim() || item.organization.trim() || item.topicArea.trim() || item.capacity.trim())
+}
+
+async function migrateLegacyResearchPlanToProject(client: StudioClient, plan: MarketingResearchPlan) {
+  const project = await client.create({
+    _type: 'marketingResearchProject',
+    title: `${plan.title || 'Legacy research plan'} project`,
+    status: 'reviewing',
+    researchType: 'strategy',
+    brief: plan.summary || 'Imported from the legacy plan-centered research model.',
+    audience: plan.audience || '',
+    goals: normalizeStringList([
+      plan.positioning || '',
+      ...(plan.measurementGoals || []).map((goal) => goal.label || ''),
+    ]),
+    campaignObjective: plan.campaignObjective || 'awareness',
+    positioning: plan.positioning || '',
+    canonicalUrl: plan.canonicalUrl || '',
+    seedKeywords: normalizeStringList((plan.seoTargets || []).map((target) => target.query || '')),
+    seedUrls: normalizeStringList([
+      plan.canonicalUrl || '',
+      ...(plan.evidenceNotes || []).map((note) => note.sourceUrl || ''),
+    ]),
+    targetGeography: 'us',
+    language: 'en',
+    methods: normalizeStringList([
+      ...(plan.seoTargets || []).length > 0 ? ['seoReview'] : [],
+      ...(plan.evidenceNotes || []).length > 0 ? ['sourceReview'] : [],
+    ]),
+    researchQuestions: normalizeResearchQuestions(plan.researchQuestions),
+    collaborators: normalizeResearchProjectCollaborators((plan.collaborations || []) as ResearchProjectCollaborator[]),
+    legacyPlan: referenceFromId(plan._id),
+    internalNotes: 'Imported from marketingResearchPlan. Original plan was preserved for compatibility.',
+  })
+
+  const resultIds: string[] = []
+  for (const target of plan.seoTargets || []) {
+    if (!target.query?.trim()) continue
+    const result = await client.create({
+      _type: 'marketingResearchResult',
+      title: `${target.query} legacy SEO target`,
+      resultType: 'seoKeyword',
+      status: 'needsReview',
+      project: referenceFromId(project._id),
+      selectedForSynthesis: false,
+      priority: target.priority || 'medium',
+      provider: 'manual',
+      sourceMethod: 'legacy-plan-migration',
+      scoreSource: 'none',
+      keyword: target.query,
+      searchIntent: target.intent || 'learn',
+      canonicalUrl: target.canonicalUrl || plan.canonicalUrl || '',
+      contentGap: target.contentGap || '',
+      claim: target.notes || `Legacy plan listed "${target.query}" as an SEO target.`,
+      evidenceType: 'searchSignal',
+      confidence: 'early',
+      implication: target.notes || '',
+    })
+    resultIds.push(result._id)
+  }
+
+  for (const note of plan.evidenceNotes || []) {
+    if (!note.claim?.trim()) continue
+    const result = await client.create({
+      _type: 'marketingResearchResult',
+      title: note.sourceTitle || 'Legacy evidence note',
+      resultType: note.evidenceType === 'competitorExample' ? 'competitorExample' : 'sourceEvidence',
+      status: 'needsReview',
+      project: referenceFromId(project._id),
+      selectedForSynthesis: false,
+      priority: 'medium',
+      provider: 'manual',
+      sourceMethod: 'legacy-plan-migration',
+      scoreSource: 'none',
+      sourceTitle: note.sourceTitle || '',
+      sourceUrl: note.sourceUrl || '',
+      claim: note.claim,
+      evidenceType: note.evidenceType || 'teamKnowledge',
+      confidence: note.confidence || 'early',
+      implication: note.implication || '',
+      contentGap: note.gap || '',
+    })
+    resultIds.push(result._id)
+  }
+
+  if (resultIds.length > 0) {
+    await client.patch(project._id).set({ approvedResults: [], selectedResults: [] }).commit()
+  }
+
+  return project
+}
+
+function createResearchPlanDocument(data: MarketingData): MarketingDocumentInput {
+  const today = new Date()
+  const title = `Research plan ${toDateInputValue(today)}`
+  const firstUrl = data.linkItems.find((link) => link.status !== 'archived' && link.url)?.url || 'https://www.goinvo.com/'
+
+  return {
+    _type: 'marketingResearchPlan',
+    title,
+    status: 'draft',
+    summary: 'Use this plan to turn fast research inputs into a release schedule designers can execute.',
+    audience: 'People who can benefit from GoInvo work, articles, projects, or open resources.',
+    positioning: 'Lead with a useful insight, show evidence visually, and give people a clear next step.',
+    campaignObjective: 'awareness',
+    canonicalUrl: firstUrl,
+    releaseCadence: 'weekly',
+    researchQuestions: [
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: 'What audience need should this plan answer first?',
+        whyItMatters: 'The strongest content plan starts with the decision or need the audience already has, not only the topic GoInvo wants to share.',
+        method: 'deskResearch',
+        decisionNeeded: 'Pick the first content opportunity and the message angle.',
+        status: 'idea',
+      },
+    ],
+    evidenceNotes: [
+      {
+        _key: randomKey(),
+        _type: 'evidenceNote',
+        claim: 'Existing GoInvo links and site pages can provide the first canonical destinations.',
+        sourceTitle: 'Current Quick Links / site content',
+        sourceUrl: firstUrl,
+        evidenceType: 'siteContent',
+        confidence: 'medium',
+        implication: 'Start with a visual explanation that routes people to the most relevant source page.',
+        gap: 'Confirm which source page best answers the audience question.',
+      },
+    ],
+    assumptions: [
+      {
+        _key: randomKey(),
+        _type: 'researchAssumption',
+        assumption: 'A short visual post can make the source material easier to discover.',
+        risk: 'If the source material is too broad, the post may attract attention without sending people to a clear next step.',
+        validationSignal: 'Look for saves, shares, replies, or useful visits to the canonical destination.',
+        confidence: 'early',
+      },
+    ],
+    releaseWindows: [
+      {
+        _key: randomKey(),
+        _type: 'releaseWindow',
+        label: 'Upcoming release window',
+        startDate: toDateInputValue(addDays(today, 7)),
+        endDate: toDateInputValue(addDays(today, 14)),
+        goal: 'Ship the first useful content artifact and learn what follow-up is needed.',
+        priority: 'high',
+      },
+    ],
+    seoTargets: [],
+    collaborations: [],
+    contentOpportunities: [],
+    measurementGoals: [
+      {
+        _key: randomKey(),
+        _type: 'measurementGoal',
+        label: 'Useful visits',
+        target: 'People reach the canonical destination from campaign links or Quick Links.',
+      },
+    ],
+  }
+}
+
+function createResearchQuestion(plan: MarketingResearchPlan): ResearchQuestion {
+  return {
+    _key: randomKey(),
+    _type: 'researchQuestion',
+    question: plan.title ? `What should ${plan.title} help the audience decide or understand?` : 'What should this plan help the audience decide or understand?',
+    whyItMatters: 'This keeps the plan tied to an audience need instead of turning research into a topic dump.',
+    method: 'deskResearch',
+    decisionNeeded: 'Choose the content angle, destination, and release priority.',
+    status: 'idea',
+  }
+}
+
+function createResearchEvidenceNote(plan: MarketingResearchPlan): ResearchEvidenceNote {
+  return {
+    _key: randomKey(),
+    _type: 'evidenceNote',
+    claim: '',
+    sourceTitle: '',
+    sourceUrl: plan.canonicalUrl || '',
+    evidenceType: plan.canonicalUrl ? 'siteContent' : 'teamKnowledge',
+    confidence: 'early',
+    implication: '',
+    gap: '',
+  }
+}
+
+function createResearchAssumption(plan: MarketingResearchPlan): ResearchAssumption {
+  return {
+    _key: randomKey(),
+    _type: 'researchAssumption',
+    assumption: plan.audience ? `${plan.audience} will recognize the value of this topic from a short content artifact.` : '',
+    risk: 'The content may be clear to the team but not to the intended audience.',
+    validationSignal: 'Useful visits, saves, shares, replies, or follow-up conversations after publishing.',
+    confidence: 'needsValidation',
+  }
+}
+
+function createResearchSeoTarget(plan: MarketingResearchPlan): ResearchSeoTarget {
+  const title = plan.title || 'GoInvo design work'
+  return {
+    _key: randomKey(),
+    _type: 'seoTarget',
+    query: title,
+    intent: 'learn',
+    priority: 'medium',
+    canonicalUrl: plan.canonicalUrl || '',
+    contentGap: 'Need a clear public destination or supporting post that answers this query.',
+  }
+}
+
+function createResearchCollaboration(): ResearchCollaboration {
+  return {
+    _key: randomKey(),
+    _type: 'collaborationOpportunity',
+    name: '',
+    organization: '',
+    relationshipType: 'universityIntern',
+    topicArea: '',
+    contributionType: 'research',
+    status: 'idea',
+  }
+}
+
+function createResearchReleaseWindow(plan: MarketingResearchPlan): ResearchReleaseWindow {
+  const count = (plan.releaseWindows || []).length
+  const start = addDays(new Date(), 7 + count * 7)
+  return {
+    _key: randomKey(),
+    _type: 'releaseWindow',
+    label: `Window ${count + 1}`,
+    startDate: toDateInputValue(start),
+    endDate: toDateInputValue(addDays(start, 7)),
+    goal: 'Release the next planned content item and capture the follow-up signal.',
+    priority: 'medium',
+  }
+}
+
+function createResearchContentOpportunity(plan: MarketingResearchPlan, data: MarketingData): ResearchContentOpportunity {
+  const firstChannel = data.channels.find((channel) => channel.status !== 'archived')?.key || 'instagram'
+  const firstWindow = plan.releaseWindows?.[0]?.label || ''
+  const firstSeo = plan.seoTargets?.[0]?.query || ''
+  return {
+    _key: randomKey(),
+    _type: 'contentOpportunity',
+    title: plan.title ? `${plan.title} content item` : 'New content opportunity',
+    channel: firstChannel,
+    format: firstChannel === 'instagram' ? 'carousel' : 'linkPost',
+    releaseWindow: firstWindow,
+    callToAction: plan.canonicalUrl ? 'Read the source' : 'Learn more',
+    destinationUrl: plan.canonicalUrl || '',
+    readiness: 'idea',
+    seoQuery: firstSeo,
+    priority: 'medium',
+  }
+}
+
+function createResearchStrategyAdjustment(): ResearchStrategyAdjustment {
+  return {
+    _key: randomKey(),
+    _type: 'strategyAdjustment',
+    decisionDate: toDateInputValue(new Date()),
+    trigger: '',
+    reason: '',
+    recommendation: '',
+    decision: '',
+  }
+}
+
+function updateResearchArrayItem<T extends { _key?: string; _type?: string }>(
+  items: T[] | undefined,
+  index: number,
+  patch: Partial<T>,
+) {
+  return (items || []).map((item, itemIndex) =>
+    itemIndex === index
+      ? {
+          ...item,
+          ...patch,
+          _key: item._key || randomKey(),
+        }
+      : item,
+  )
+}
+
+function MetricBadge({ label, value }: { label: string; value: string }) {
+  return (
+    <span
+      style={{
+        ...styles.small,
+        border: '1px solid rgba(0, 115, 133, 0.24)',
+        borderRadius: 6,
+        padding: '4px 7px',
+        background: 'rgba(0, 115, 133, 0.08)',
+        fontWeight: 800,
+      }}
+    >
+      {label}: {value}
+    </span>
+  )
+}
+
+function FindingDetail({ label, text }: { label: string; text: string }) {
+  return (
+    <div style={{ ...styles.small, marginTop: 8, lineHeight: 1.5 }}>
+      <strong style={{ color: '#93A4C8' }}>{label}: </strong>
+      <span style={styles.muted}>{text}</span>
+    </div>
+  )
+}
+
+function removeResearchArrayItem<T>(items: T[] | undefined, index: number) {
+  return (items || []).filter((_, itemIndex) => itemIndex !== index)
+}
+
+function getResearchChannelOptions(data: MarketingData): SelectOption[] {
+  const channelOptions = data.channels
+    .filter((channel) => channel.status !== 'archived')
+    .map((channel) => ({ title: channel.title || channel.key || 'Untitled channel', value: channel.key || channel._id }))
+  const fallback = [
+    { title: 'Instagram', value: 'instagram' },
+    { title: 'LinkedIn', value: 'linkedin' },
+    { title: 'Website', value: 'website' },
+    { title: 'Email', value: 'email' },
+    { title: 'Newsletter', value: 'newsletter' },
+  ]
+
+  return uniqueOptions([...channelOptions, ...fallback])
+}
+
+function uniqueOptions(options: SelectOption[]) {
+  const seen = new Set<string>()
+  return options.filter((option) => {
+    if (seen.has(option.value)) return false
+    seen.add(option.value)
+    return true
+  })
+}
+
+function buildResearchPlanSavePayload(plan: MarketingResearchPlan): Record<string, unknown> {
+  return {
+    title: plan.title || 'Untitled research plan',
+    status: plan.status || 'draft',
+    summary: plan.summary || '',
+    audience: plan.audience || '',
+    positioning: plan.positioning || '',
+    campaignObjective: plan.campaignObjective || 'awareness',
+    canonicalUrl: plan.canonicalUrl || '',
+    releaseCadence: plan.releaseCadence || 'weekly',
+    contentPillars: normalizeResearchContentPillars(plan.contentPillars),
+    researchQuestions: normalizeResearchQuestions(plan.researchQuestions),
+    evidenceNotes: normalizeResearchEvidenceNotes(plan.evidenceNotes),
+    assumptions: normalizeResearchAssumptions(plan.assumptions),
+    seoTargets: normalizeResearchSeoTargets(plan.seoTargets),
+    channels: normalizeResearchChannels(plan.channels),
+    collaborations: normalizeResearchCollaborations(plan.collaborations),
+    releaseWindows: normalizeResearchReleaseWindows(plan.releaseWindows),
+    contentOpportunities: normalizeResearchContentOpportunities(plan.contentOpportunities),
+    measurementGoals: normalizeResearchMeasurementGoals(plan.measurementGoals),
+    strategyAdjustments: normalizeResearchStrategyAdjustments(plan.strategyAdjustments),
+    generatedCampaigns: refsFromRecords(plan.generatedCampaigns),
+    generatedFunnels: refsFromRecords(plan.generatedFunnels),
+    generatedCalendarItems: refsFromRecords(plan.generatedCalendarItems),
+    generatedLinkItems: refsFromRecords(plan.generatedLinkItems),
+    generatedAnalyticsSources: refsFromRecords(plan.generatedAnalyticsSources),
+    internalNotes: plan.internalNotes || '',
+  }
+}
+
+function mergeResearchPlanSuggestion(current: MarketingResearchPlan, suggestion: Partial<MarketingResearchPlan>): MarketingResearchPlan {
+  const next: MarketingResearchPlan = {
+    ...current,
+    title: aiString(suggestion.title) || current.title,
+    status: aiString(suggestion.status) || current.status || 'draft',
+    summary: aiString(suggestion.summary) || current.summary,
+    audience: aiString(suggestion.audience) || current.audience,
+    positioning: aiString(suggestion.positioning) || current.positioning,
+    campaignObjective: aiOption(suggestion.campaignObjective, campaignObjectiveOptions) || current.campaignObjective || 'awareness',
+    canonicalUrl: aiString(suggestion.canonicalUrl) || current.canonicalUrl,
+    releaseCadence: aiOption(suggestion.releaseCadence, researchPlanCadenceOptions) || current.releaseCadence || 'weekly',
+  }
+
+  if (Array.isArray(suggestion.contentPillars)) next.contentPillars = normalizeResearchContentPillars(suggestion.contentPillars)
+  if (Array.isArray(suggestion.researchQuestions)) next.researchQuestions = normalizeResearchQuestions(suggestion.researchQuestions)
+  if (Array.isArray(suggestion.evidenceNotes)) next.evidenceNotes = normalizeResearchEvidenceNotes(suggestion.evidenceNotes)
+  if (Array.isArray(suggestion.assumptions)) next.assumptions = normalizeResearchAssumptions(suggestion.assumptions)
+  if (Array.isArray(suggestion.seoTargets)) next.seoTargets = normalizeResearchSeoTargets(suggestion.seoTargets)
+  if (Array.isArray(suggestion.channels)) next.channels = normalizeResearchChannels(suggestion.channels)
+  if (Array.isArray(suggestion.collaborations)) next.collaborations = normalizeResearchCollaborations(suggestion.collaborations)
+  if (Array.isArray(suggestion.releaseWindows)) next.releaseWindows = normalizeResearchReleaseWindows(suggestion.releaseWindows)
+  if (Array.isArray(suggestion.contentOpportunities)) {
+    next.contentOpportunities = normalizeResearchContentOpportunities(suggestion.contentOpportunities).map((opportunity) => ({
+      ...opportunity,
+      destinationUrl: opportunity.destinationUrl || next.canonicalUrl || '',
+    }))
+  }
+  if (Array.isArray(suggestion.measurementGoals)) next.measurementGoals = normalizeResearchMeasurementGoals(suggestion.measurementGoals)
+  if (Array.isArray(suggestion.strategyAdjustments)) next.strategyAdjustments = normalizeResearchStrategyAdjustments(suggestion.strategyAdjustments)
+
+  return next
+}
+
+function normalizeResearchContentPillars(values: ResearchContentPillar[] | undefined): ResearchContentPillar[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'contentPillar' as const,
+      title: item.title || '',
+      audienceNeed: item.audienceNeed || '',
+      angle: item.angle || '',
+      exampleFormats: (item.exampleFormats || []).filter(Boolean),
+    }))
+    .filter((item) => item.title.trim())
+}
+
+function normalizeResearchQuestions(values: ResearchQuestion[] | undefined): ResearchQuestion[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'researchQuestion' as const,
+      question: item.question || '',
+      whyItMatters: item.whyItMatters || '',
+      method: item.method || 'deskResearch',
+      decisionNeeded: item.decisionNeeded || '',
+      status: item.status || 'idea',
+    }))
+    .filter((item) => item.question.trim())
+}
+
+function normalizeResearchEvidenceNotes(values: ResearchEvidenceNote[] | undefined): ResearchEvidenceNote[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'evidenceNote' as const,
+      claim: item.claim || '',
+      sourceTitle: item.sourceTitle || '',
+      sourceUrl: item.sourceUrl || '',
+      evidenceType: item.evidenceType || 'teamKnowledge',
+      confidence: item.confidence || 'early',
+      implication: item.implication || '',
+      gap: item.gap || '',
+    }))
+    .filter((item) => item.claim.trim())
+}
+
+function normalizeResearchAssumptions(values: ResearchAssumption[] | undefined): ResearchAssumption[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'researchAssumption' as const,
+      assumption: item.assumption || '',
+      risk: item.risk || '',
+      validationSignal: item.validationSignal || '',
+      confidence: item.confidence || 'needsValidation',
+    }))
+    .filter((item) => item.assumption.trim())
+}
+
+function normalizeResearchSeoTargets(values: ResearchSeoTarget[] | undefined): ResearchSeoTarget[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'seoTarget' as const,
+      query: item.query || '',
+      intent: item.intent || 'learn',
+      priority: item.priority || 'medium',
+      canonicalUrl: item.canonicalUrl || '',
+      contentGap: item.contentGap || '',
+      notes: item.notes || '',
+    }))
+    .filter((item) => item.query.trim())
+}
+
+function normalizeResearchChannels(values: ResearchRecommendedChannel[] | undefined): ResearchRecommendedChannel[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'recommendedChannel' as const,
+      channelKey: item.channelKey || '',
+      rationale: item.rationale || '',
+      cadence: item.cadence || '',
+      priority: item.priority || 'medium',
+    }))
+    .filter((item) => item.channelKey.trim())
+}
+
+function normalizeResearchCollaborations(values: ResearchCollaboration[] | undefined): ResearchCollaboration[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'collaborationOpportunity' as const,
+      name: item.name || '',
+      organization: item.organization || '',
+      relationshipType: item.relationshipType || 'other',
+      topicArea: item.topicArea || '',
+      availabilityStart: item.availabilityStart || '',
+      availabilityEnd: item.availabilityEnd || '',
+      contributionType: item.contributionType || 'research',
+      expectedContribution: item.expectedContribution || '',
+      status: item.status || 'idea',
+      notes: item.notes || '',
+    }))
+    .filter((item) => item.name.trim() || item.organization.trim() || item.topicArea.trim())
+}
+
+function normalizeResearchReleaseWindows(values: ResearchReleaseWindow[] | undefined): ResearchReleaseWindow[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'releaseWindow' as const,
+      label: item.label || '',
+      startDate: item.startDate || '',
+      endDate: item.endDate || '',
+      goal: item.goal || '',
+      priority: item.priority || 'medium',
+    }))
+    .filter((item) => item.label.trim())
+}
+
+function normalizeResearchContentOpportunities(values: ResearchContentOpportunity[] | undefined): ResearchContentOpportunity[] {
+  return (values || [])
+    .map((item) => {
+      const generatedCalendarId = getRecordId(item.generatedCalendarItem)
+      const generatedLinkId = getRecordId(item.generatedLinkItem)
+      return {
+        _key: item._key || randomKey(),
+        _type: 'contentOpportunity' as const,
+        title: item.title || '',
+        channel: item.channel || 'instagram',
+        format: item.format || 'carousel',
+        owner: item.owner || '',
+        releaseWindow: item.releaseWindow || '',
+        callToAction: item.callToAction || '',
+        sourceMaterial: item.sourceMaterial || '',
+        destinationUrl: item.destinationUrl || '',
+        readiness: item.readiness || 'idea',
+        seoQuery: item.seoQuery || '',
+        priority: item.priority || 'medium',
+        notes: item.notes || '',
+        ...(generatedCalendarId ? { generatedCalendarItem: referenceFromId(generatedCalendarId) } : {}),
+        ...(generatedLinkId ? { generatedLinkItem: referenceFromId(generatedLinkId) } : {}),
+      }
+    })
+    .filter((item) => item.title.trim())
+}
+
+function normalizeResearchMeasurementGoals(values: ResearchMeasurementGoal[] | undefined): ResearchMeasurementGoal[] {
+  return (values || [])
+    .map((item) => {
+      const sourceId = getRecordId(item.source)
+      return {
+        _key: item._key || randomKey(),
+        _type: 'measurementGoal' as const,
+        label: item.label || '',
+        target: item.target || '',
+        ...(sourceId ? { source: referenceFromId(sourceId) } : {}),
+      }
+    })
+    .filter((item) => item.label.trim())
+}
+
+function normalizeResearchStrategyAdjustments(values: ResearchStrategyAdjustment[] | undefined): ResearchStrategyAdjustment[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'strategyAdjustment' as const,
+      decisionDate: item.decisionDate || '',
+      trigger: item.trigger || '',
+      reason: item.reason || '',
+      recommendation: item.recommendation || '',
+      affectedItems: (item.affectedItems || []).filter(Boolean),
+      decision: item.decision || '',
+    }))
+    .filter((item) => item.trigger.trim() || item.reason.trim() || item.recommendation.trim())
+}
+
+function normalizeDraftContentFrames(values: DraftContentFrame[] | undefined): DraftContentFrame[] {
+  return (values || [])
+    .map((item) => ({
+      _key: item._key || randomKey(),
+      _type: 'draftFrame' as const,
+      title: item.title || '',
+      body: item.body || '',
+      visualDirection: item.visualDirection || '',
+      altText: item.altText || '',
+    }))
+    .filter((item) => item.title.trim() || item.body.trim() || item.visualDirection.trim() || item.altText.trim())
+}
+
+async function createResearchProjectGeneratedRecords(
+  client: StudioClient,
+  data: MarketingData,
+  project: MarketingResearchProject,
+  selectedResultIds: string[],
+) {
+  const selected = getResearchResultsForProject(data, project._id).filter((result) =>
+    selectedResultIds.includes(result._id) && isResearchResultApproved(result),
+  )
+  if (selected.length === 0) throw new Error('No approved selected research findings were found.')
+
+  const today = new Date()
+  const title = project.title || 'Research-backed marketing setup'
+  const slug = slugify(title)
+  const destinationUrl = project.canonicalUrl || selected.find((result) => result.canonicalUrl)?.canonicalUrl || selected.find((result) => result.sourceUrl)?.sourceUrl || 'https://www.goinvo.com/'
+  const topicCluster = inferTopicCluster(title)
+  const targetQueries = selected.map((result) => result.keyword || '').filter(Boolean)
+  const primaryKeyword = targetQueries[0] || topicCluster
+  const searchIntent = selected.find((result) => result.searchIntent)?.searchIntent || 'learn'
+  const channels = ['instagram', 'linkedin', 'website']
+  const channelIds: Record<string, string> = {}
+  for (const channelKey of channels) {
+    channelIds[channelKey] = await ensureMarketingChannel(client, data, channelKey)
+  }
+
+  const resultRefs = refsFromIds(selected.map((result) => result._id))
+  const funnel = await client.create({
+    _type: 'marketingFunnel',
+    title: `${title} research path`,
+    status: 'draft',
+    audience: project.audience || 'People who need this topic explained through useful GoInvo content.',
+    conversionGoal: `Move from a research-backed content artifact to ${destinationUrl}.`,
+    targetSites: [{ _key: randomKey(), _type: 'targetSite', label: title, url: destinationUrl }],
+    stages: normalizeFunnelStages([
+      {
+        stage: 'awareness',
+        goal: 'Use a reviewed finding as the first visible hook.',
+        offer: primaryKeyword,
+        callToAction: 'Open the source',
+        destinationUrl,
+        metrics: ['Reach', 'Saves', 'Profile visits'],
+      },
+      {
+        stage: 'interest',
+        goal: 'Show enough evidence for the audience to understand why the topic matters.',
+        offer: 'Reviewed research result',
+        callToAction: 'Read the source',
+        destinationUrl,
+        metrics: ['Engaged visits', 'Quick Link clicks'],
+      },
+      {
+        stage: 'conversion',
+        goal: 'Invite the right people to contact GoInvo, reuse the work, or explore related work.',
+        offer: 'Canonical destination',
+        callToAction: 'Start a conversation',
+        destinationUrl,
+        metrics: ['CTA clicks', 'Contact starts', 'Qualified conversations'],
+      },
+    ]),
+    researchProject: referenceFromId(project._id),
+    researchResults: resultRefs,
+    notes: buildResearchResultEvidenceSummary(project, selected),
+  })
+
+  const campaign = await client.create({
+    _type: 'marketingCampaign',
+    title,
+    slug: { _type: 'slug', current: slug },
+    status: 'planned',
+    startDate: toDateInputValue(today),
+    endDate: toDateInputValue(addDays(today, 21)),
+    primaryGoal: project.brief || `Turn approved ${title} research into a small content runway.`,
+    campaignObjective: project.campaignObjective || 'awareness',
+    audience: project.audience || '',
+    topicCluster,
+    searchIntent,
+    targetQueries,
+    positioning: project.positioning || '',
+    canonicalUrl: destinationUrl,
+    targetSites: [{ _key: randomKey(), _type: 'targetSite', label: title, url: destinationUrl }],
+    channels,
+    channelRefs: refsFromIds(Object.values(channelIds)),
+    funnels: refsFromIds([funnel._id]),
+    primaryKpi: 'Useful visits from reviewed research-backed content',
+    utmCampaign: slug,
+    successMetrics: normalizeSuccessMetrics([
+      { label: 'Useful visits', target: 'People reach the canonical destination from promoted links.' },
+      { label: 'Saved or shared content', target: 'The audience signals the finding was useful enough to keep or pass along.' },
+    ]),
+    researchProject: referenceFromId(project._id),
+    researchResults: resultRefs,
+    notes: 'Generated from approved Research findings. Edit before publishing if strategy changes.',
+  })
+
+  const opportunities = buildResearchResultOpportunities(project, selected, destinationUrl)
+  const createdCalendarItems: string[] = []
+  const createdLinkItems: string[] = []
+
+  for (const [index, opportunity] of opportunities.entries()) {
+    const publishDate = dateInputToIso(toDateInputValue(addDays(today, 7 + index * 4)))
+    const createdCalendar = await client.create({
+      _type: 'marketingCalendarItem',
+      title: opportunity.title,
+      status: 'drafting',
+      publishAt: publishDate,
+      contentType: opportunity.format,
+      channel: opportunity.channel,
+      channelRef: { _type: 'reference', _ref: channelIds[opportunity.channel] || channelIds.instagram },
+      campaign: { _type: 'reference', _ref: campaign._id },
+      funnel: { _type: 'reference', _ref: funnel._id },
+      funnelStage: index === 0 ? 'awareness' : 'interest',
+      workingUrl: opportunity.destinationUrl,
+      brief: opportunity.notes,
+      callToAction: opportunity.callToAction,
+      utmCampaign: slug,
+      topicCluster,
+      searchIntent,
+      targetQueries: Array.from(new Set([opportunity.seoQuery, ...targetQueries].filter(Boolean))),
+      researchProject: referenceFromId(project._id),
+      researchResults: refsFromIds(opportunity.resultIds),
+    })
+    createdCalendarItems.push(createdCalendar._id)
+
+    const createdLink = await client.create({
+      _type: 'marketingLinkItem',
+      title: opportunity.title,
+      url: opportunity.destinationUrl,
+      description: opportunity.sourceMaterial || `Research-backed link for ${title}.`,
+      type: 'article',
+      status: 'draft',
+      featured: index === 0,
+      order: nextLinkOrder(data.linkItems) + index,
+      publishAt: publishDate,
+      sourceChannel: opportunity.channel,
+      campaign: { _type: 'reference', _ref: campaign._id },
+      calendarItem: { _type: 'reference', _ref: createdCalendar._id },
+      calendarItems: refsFromIds([createdCalendar._id]),
+      researchProject: referenceFromId(project._id),
+      researchResults: refsFromIds(opportunity.resultIds),
+    })
+    createdLinkItems.push(createdLink._id)
+    await client.patch(createdCalendar._id).set({ linkItems: refsFromIds([createdLink._id]) }).commit()
+  }
+
+  await client
+    .patch(project._id)
+    .set({
+      status: 'converted',
+      selectedResults: refsFromIds(selected.map((result) => result._id)),
+      approvedResults: refsFromIds(selected.map((result) => result._id)),
+      generatedCampaigns: refsFromIds(mergeIds(refIdsFromRecords(project.generatedCampaigns), [campaign._id])),
+      generatedFunnels: refsFromIds(mergeIds(refIdsFromRecords(project.generatedFunnels), [funnel._id])),
+      generatedCalendarItems: refsFromIds(mergeIds(refIdsFromRecords(project.generatedCalendarItems), createdCalendarItems)),
+      generatedLinkItems: refsFromIds(mergeIds(refIdsFromRecords(project.generatedLinkItems), createdLinkItems)),
+    })
+    .commit()
+
+  return {
+    campaignId: campaign._id,
+    funnelId: funnel._id,
+    calendarItemIds: createdCalendarItems,
+    linkItemIds: createdLinkItems,
+  }
+}
+
+function buildResearchResultOpportunities(
+  project: MarketingResearchProject,
+  results: MarketingResearchResult[],
+  destinationUrl: string,
+) {
+  const seoResults = results.filter((result) => result.resultType === 'seoKeyword')
+  const evidenceResults = results.filter((result) => result.resultType !== 'seoKeyword')
+  const primary = seoResults[0] || results[0]
+  const secondary = seoResults[1] || evidenceResults[0] || results[1]
+  const baseTitle = project.title || primary?.keyword || primary?.title || 'Research-backed content'
+  const opportunities = [
+    {
+      title: `${baseTitle} Instagram carousel`,
+      channel: 'instagram',
+      format: 'carousel',
+      callToAction: 'See link in bio',
+      destinationUrl,
+      sourceMaterial: primary ? describeResearchResult(primary) : '',
+      seoQuery: primary?.keyword || '',
+      notes: buildGeneratedCalendarBrief(project, [primary].filter(Boolean) as MarketingResearchResult[]),
+      resultIds: [primary?._id].filter(Boolean) as string[],
+    },
+  ]
+
+  if (secondary && secondary._id !== primary?._id) {
+    opportunities.push({
+      title: `${baseTitle} follow-up post`,
+      channel: 'linkedin',
+      format: 'linkPost',
+      callToAction: 'Read the source',
+      destinationUrl,
+      sourceMaterial: describeResearchResult(secondary),
+      seoQuery: secondary.keyword || primary?.keyword || '',
+      notes: buildGeneratedCalendarBrief(project, [secondary]),
+      resultIds: [secondary._id],
+    })
+  }
+
+  return opportunities
+}
+
+function buildGeneratedCalendarBrief(project: MarketingResearchProject, results: MarketingResearchResult[]) {
+  return [
+    `Research project: ${project.title || 'Untitled project'}`,
+    project.brief ? `Directive: ${project.brief}` : '',
+    project.audience ? `Audience: ${project.audience}` : '',
+    ...results.map((result) => `Approved result: ${describeResearchResult(result)}`),
+    'Designer task: make the content from the approved finding without inventing scores or unsupported claims.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function buildResearchResultEvidenceSummary(project: MarketingResearchProject, results: MarketingResearchResult[]) {
+  return [
+    `Generated from research project: ${project.title || 'Untitled project'}`,
+    project.brief ? `Directive: ${project.brief}` : '',
+    'Approved findings:',
+    ...results.map((result) => `- ${describeResearchResult(result)}`),
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+async function createResearchPlanGeneratedRecords(
+  client: StudioClient,
+  data: MarketingData,
+  plan: MarketingResearchPlan,
+  selectedOpportunityKeys: string[],
+) {
+  const selected = (plan.contentOpportunities || []).filter((opportunity) =>
+    selectedOpportunityKeys.includes(opportunity._key || ''),
+  )
+  if (selected.length === 0) throw new Error('No selected opportunities were found.')
+
+  const today = new Date()
+  const selectedChannels = Array.from(new Set(selected.map((opportunity) => opportunity.channel || 'instagram')))
+  const channelIds: Record<string, string> = {}
+  for (const channelKey of selectedChannels) {
+    channelIds[channelKey] = await ensureMarketingChannel(client, data, channelKey)
+  }
+
+  const title = plan.title || 'Research release plan'
+  const slug = slugify(title)
+  const startDate = firstReleaseWindowDate(plan) || toDateInputValue(today)
+  const endDate = lastReleaseWindowDate(plan) || toDateInputValue(addDays(today, 21))
+  const destinationUrl = plan.canonicalUrl || selected.find((opportunity) => opportunity.destinationUrl)?.destinationUrl || 'https://www.goinvo.com/'
+  const targetQueries = Array.from(
+    new Set([
+      ...(plan.seoTargets || []).map((target) => target.query || '').filter(Boolean),
+      ...selected.map((opportunity) => opportunity.seoQuery || '').filter(Boolean),
+    ]),
+  )
+  const topicCluster = inferTopicCluster(title)
+  const searchIntent = plan.seoTargets?.[0]?.intent || 'learn'
+
+  const funnel = await client.create({
+    _type: 'marketingFunnel',
+    title: `${title} release path`,
+    status: 'active',
+    audience: plan.audience || 'People who need this topic explained through useful GoInvo content.',
+    conversionGoal: `Move from discovery to ${destinationUrl}, then to a useful next action.`,
+    targetSites: [{ _key: randomKey(), _type: 'targetSite', label: title, url: destinationUrl }],
+    stages: normalizeFunnelStages([
+      {
+        stage: 'awareness',
+        goal: 'Make the topic visible with a short, specific insight.',
+        offer: selected[0]?.title || 'First content opportunity',
+        callToAction: selected[0]?.callToAction || 'Learn more',
+        destinationUrl,
+        metrics: ['Reach', 'Saves', 'Profile visits'],
+      },
+      {
+        stage: 'interest',
+        goal: 'Give people enough context to understand why this matters.',
+        offer: 'Source article, project page, or supporting post',
+        callToAction: 'Read the source',
+        destinationUrl,
+        metrics: ['Engaged visits', 'Quick Link clicks'],
+      },
+      {
+        stage: 'conversion',
+        goal: 'Invite the right people to contact GoInvo, reuse the work, or explore related work.',
+        offer: 'Canonical destination',
+        callToAction: 'Start a conversation',
+        destinationUrl,
+        metrics: ['CTA clicks', 'Contact starts', 'Qualified conversations'],
+      },
+    ]),
+    notes: [
+      'Generated from a marketing research plan.',
+      plan.summary ? `Research summary: ${plan.summary}` : '',
+      selected.length > 0 ? `Generated from opportunities: ${selected.map((opportunity) => opportunity.title).join(', ')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  })
+
+  const campaign = await client.create({
+    _type: 'marketingCampaign',
+    title,
+    slug: { _type: 'slug', current: slug },
+    status: 'planned',
+    startDate,
+    endDate,
+    primaryGoal: plan.summary || `Turn ${title} research into a timed content release plan.`,
+    campaignObjective: plan.campaignObjective || 'awareness',
+    audience: plan.audience || '',
+    topicCluster,
+    searchIntent,
+    targetQueries,
+    positioning: plan.positioning || '',
+    canonicalUrl: destinationUrl,
+    targetSites: [{ _key: randomKey(), _type: 'targetSite', label: title, url: destinationUrl }],
+    channels: selectedChannels,
+    channelRefs: refsFromIds(Object.values(channelIds)),
+    funnels: refsFromIds([funnel._id]),
+    primaryKpi: plan.measurementGoals?.[0]?.label || 'Useful visits',
+    utmCampaign: slug,
+    successMetrics: normalizeSuccessMetrics(
+      (plan.measurementGoals || []).length > 0
+        ? (plan.measurementGoals || []).map((goal) => ({ label: goal.label || 'Metric', target: goal.target || 'Review after launch.' }))
+        : [
+            { label: 'Useful visits', target: 'People reach the canonical destination from promoted links.' },
+            { label: 'Content saves or replies', target: 'The audience signals the content helped clarify the topic.' },
+          ],
+    ),
+    notes: 'Generated from the Research workspace. Edit the campaign before publishing if the target audience, KPI, or channels change.',
+  })
+
+  const createdCalendarItems: Array<{ _id: string; key: string }> = []
+  const createdLinkItems: Array<{ _id: string; key: string }> = []
+
+  for (const [index, opportunity] of selected.entries()) {
+    const channelKey = opportunity.channel || 'instagram'
+    const publishDate = dateInputToIso(resolveOpportunityDate(plan, opportunity, index))
+    const contentType = opportunity.format || (channelKey === 'instagram' ? 'carousel' : 'linkPost')
+    const url = opportunity.destinationUrl || destinationUrl
+    const createdCalendar = await client.create({
+      _type: 'marketingCalendarItem',
+      title: opportunity.title || `${title} content item`,
+      status: 'drafting',
+      publishAt: publishDate,
+      contentType,
+      channel: channelKey,
+      channelRef: { _type: 'reference', _ref: channelIds[channelKey] || channelIds.instagram },
+      campaign: { _type: 'reference', _ref: campaign._id },
+      funnel: { _type: 'reference', _ref: funnel._id },
+      funnelStage: index === 0 ? 'awareness' : 'interest',
+      workingUrl: url,
+      brief: buildResearchOpportunityBrief(plan, opportunity),
+      callToAction: opportunity.callToAction || 'See link in bio',
+      utmCampaign: slug,
+      topicCluster,
+      searchIntent: opportunity.seoQuery ? searchIntent : 'learn',
+      targetQueries: Array.from(new Set([opportunity.seoQuery || '', ...targetQueries].filter(Boolean))),
+    })
+    createdCalendarItems.push({ _id: createdCalendar._id, key: opportunity._key || '' })
+
+    const createdLink = await client.create({
+      _type: 'marketingLinkItem',
+      title: opportunity.title || title,
+      url,
+      description: opportunity.notes || opportunity.sourceMaterial || plan.summary || `Follow-up link for ${title}.`,
+      type: contentType === 'caseStudy' ? 'caseStudy' : contentType === 'event' ? 'event' : 'article',
+      status: 'draft',
+      featured: index === 0,
+      order: nextLinkOrder(data.linkItems) + index,
+      publishAt: publishDate,
+      sourceChannel: channelKey,
+      campaign: { _type: 'reference', _ref: campaign._id },
+      calendarItem: { _type: 'reference', _ref: createdCalendar._id },
+      calendarItems: refsFromIds([createdCalendar._id]),
+    })
+    createdLinkItems.push({ _id: createdLink._id, key: opportunity._key || '' })
+
+    await client.patch(createdCalendar._id).set({ linkItems: refsFromIds([createdLink._id]) }).commit()
+  }
+
+  const nextOpportunities = normalizeResearchContentOpportunities(plan.contentOpportunities).map((opportunity) => {
+    const calendar = createdCalendarItems.find((item) => item.key === opportunity._key)
+    const link = createdLinkItems.find((item) => item.key === opportunity._key)
+    return {
+      ...opportunity,
+      readiness: calendar ? 'scheduled' : opportunity.readiness,
+      ...(calendar ? { generatedCalendarItem: referenceFromId(calendar._id) } : {}),
+      ...(link ? { generatedLinkItem: referenceFromId(link._id) } : {}),
+    }
+  })
+
+  await client
+    .patch(plan._id)
+    .set({
+      generatedCampaigns: refsFromIds(mergeIds(refIdsFromRecords(plan.generatedCampaigns), [campaign._id])),
+      generatedFunnels: refsFromIds(mergeIds(refIdsFromRecords(plan.generatedFunnels), [funnel._id])),
+      generatedCalendarItems: refsFromIds(mergeIds(refIdsFromRecords(plan.generatedCalendarItems), createdCalendarItems.map((item) => item._id))),
+      generatedLinkItems: refsFromIds(mergeIds(refIdsFromRecords(plan.generatedLinkItems), createdLinkItems.map((item) => item._id))),
+      contentOpportunities: nextOpportunities,
+      strategyAdjustments: normalizeResearchStrategyAdjustments([
+        ...(plan.strategyAdjustments || []),
+        {
+          _key: randomKey(),
+          _type: 'strategyAdjustment',
+          decisionDate: toDateInputValue(new Date()),
+          trigger: 'Generated linked records from selected research opportunities',
+          reason: 'The plan had enough SEO, release timing, or contributor context to start production.',
+          recommendation: 'Review the generated campaign, funnel, calendar items, and Quick Links before publishing.',
+          affectedItems: selected.map((opportunity) => opportunity.title || 'Content opportunity'),
+          decision: 'Generated linked CMS records.',
+        },
+      ]),
+    })
+    .commit()
+
+  return {
+    campaignId: campaign._id,
+    funnelId: funnel._id,
+    calendarItemIds: createdCalendarItems.map((item) => item._id),
+    linkItemIds: createdLinkItems.map((item) => item._id),
+  }
+}
+
+function buildResearchOpportunityBrief(plan: MarketingResearchPlan, opportunity: ResearchContentOpportunity) {
+  const firstQuestion = plan.researchQuestions?.[0]
+  const topEvidence = plan.evidenceNotes?.[0]
+  const assumption = plan.assumptions?.[0]
+
+  return [
+    `Research plan: ${plan.title || 'Untitled plan'}`,
+    plan.summary ? `Summary: ${plan.summary}` : '',
+    plan.audience ? `Audience: ${plan.audience}` : '',
+    firstQuestion?.question ? `Research question: ${firstQuestion.question}` : '',
+    topEvidence?.claim ? `Evidence: ${topEvidence.claim}${topEvidence.confidence ? ` (${labelFor(researchConfidenceOptions, topEvidence.confidence) || topEvidence.confidence} confidence)` : ''}` : '',
+    assumption?.assumption ? `Assumption to validate: ${assumption.assumption}` : '',
+    opportunity.seoQuery ? `SEO target: ${opportunity.seoQuery}` : '',
+    opportunity.sourceMaterial ? `Source material: ${opportunity.sourceMaterial}` : '',
+    opportunity.owner ? `Owner/contributor: ${opportunity.owner}` : '',
+    'Designer task: turn this opportunity into the selected format without re-solving the marketing strategy.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+function firstReleaseWindowDate(plan: MarketingResearchPlan) {
+  return (plan.releaseWindows || [])
+    .map((window) => window.startDate)
+    .filter(Boolean)
+    .sort()[0]
+}
+
+function lastReleaseWindowDate(plan: MarketingResearchPlan) {
+  return (plan.releaseWindows || [])
+    .map((window) => window.endDate || window.startDate)
+    .filter(Boolean)
+    .sort()
+    .at(-1)
+}
+
+function resolveOpportunityDate(plan: MarketingResearchPlan, opportunity: ResearchContentOpportunity, index: number) {
+  const window = (plan.releaseWindows || []).find((candidate) => candidate.label === opportunity.releaseWindow)
+  const base = window?.startDate || firstReleaseWindowDate(plan)
+  if (base) return toDateInputValue(addDays(new Date(`${base}T12:00:00`), index * 3))
+  return toDateInputValue(addDays(new Date(), 7 + index * 3))
+}
+
+function getResearchResultsForProject(data: MarketingData, projectId: string) {
+  return data.researchResults.filter((result) => result.project?._id === projectId)
+}
+
+function getResearchRunsForProject(data: MarketingData, projectId: string) {
+  return data.researchRuns.filter((run) => run.project?._id === projectId)
+}
+
+function getLatestActiveResearchProject(data: MarketingData) {
+  return data.researchProjects.find((project) => (project.status || 'draft') !== 'archived') || null
+}
+
+function getCalendarItemsForResearchProject(data: MarketingData, project: MarketingResearchProject) {
+  const generatedIds = new Set((project.generatedCalendarItems || []).map((item) => item._id).filter(Boolean))
+  const related = data.calendarItems.filter((item) => item.researchProject?._id === project._id || generatedIds.has(item._id))
+  return Array.from(new Map(related.map((item) => [item._id, item])).values())
+}
+
+function countGeneratedRecordsForResearchProject(data: MarketingData, project: MarketingResearchProject) {
+  const ids = new Set<string>()
+  for (const item of project.generatedCampaigns || []) if (item._id) ids.add(`campaign:${item._id}`)
+  for (const item of project.generatedFunnels || []) if (item._id) ids.add(`funnel:${item._id}`)
+  for (const item of project.generatedCalendarItems || []) if (item._id) ids.add(`calendar:${item._id}`)
+  for (const item of project.generatedLinkItems || []) if (item._id) ids.add(`link:${item._id}`)
+  data.campaigns.forEach((item) => item.researchProject?._id === project._id && ids.add(`campaign:${item._id}`))
+  data.funnels.forEach((item) => item.researchProject?._id === project._id && ids.add(`funnel:${item._id}`))
+  data.calendarItems.forEach((item) => item.researchProject?._id === project._id && ids.add(`calendar:${item._id}`))
+  data.linkItems.forEach((item) => item.researchProject?._id === project._id && ids.add(`link:${item._id}`))
+  return ids.size
+}
+
+function getSelectedResearchResultIds(project: MarketingResearchProject) {
+  return new Set((project.selectedResults || []).map((result) => result._id).filter(Boolean))
+}
+
+function isResearchResultApproved(result: MarketingResearchResult) {
+  return result.status === 'approved'
+}
+
+function describeResearchResult(result: MarketingResearchResult) {
+  if (result.resultType === 'seoKeyword') {
+    const scoreLabel =
+      result.scoreSource === 'provider'
+        ? [
+            result.volume !== undefined ? `volume ${formatOptionalNumber(result.volume)}` : '',
+            result.difficulty !== undefined ? `KD ${formatOptionalNumber(result.difficulty)}` : '',
+          ]
+            .filter(Boolean)
+            .join(', ')
+        : result.scoreSource === 'aiEstimate'
+          ? 'AI-estimated keyword signal, not provider-scored'
+          : 'keyword signal without provider scores'
+    return `${result.keyword || result.title || 'Keyword'}${scoreLabel ? ` (${scoreLabel})` : ''}`
+  }
+  if (result.claim) return result.claim
+  if (result.sourceTitle || result.sourceUrl) return [result.sourceTitle, result.sourceUrl].filter(Boolean).join(' / ')
+  if (result.collaboratorName || result.organization) return [result.collaboratorName, result.organization, result.topicArea].filter(Boolean).join(' / ')
+  return result.title || 'Research result'
+}
+
+function summarizeResearchResultForAi(result: MarketingResearchResult) {
+  return {
+    id: result._id,
+    title: result.title,
+    resultType: result.resultType,
+    status: result.status,
+    keyword: result.keyword,
+    scoreSource: result.scoreSource,
+    provider: result.provider,
+    volume: result.scoreSource === 'provider' ? result.volume : undefined,
+    difficulty: result.scoreSource === 'provider' ? result.difficulty : undefined,
+    cpc: result.scoreSource === 'provider' ? result.cpc : undefined,
+    competition: result.scoreSource === 'provider' ? result.competition : undefined,
+    sourceTitle: result.sourceTitle,
+    sourceUrl: result.sourceUrl,
+    claim: result.claim,
+    implication: result.implication,
+    contentGap: result.contentGap,
+  }
+}
+
+function formatOptionalNumber(value?: number) {
+  return value === undefined || Number.isNaN(value) ? 'n/a' : new Intl.NumberFormat().format(value)
+}
+
+function formatOptionalMoney(value?: number) {
+  return value === undefined || Number.isNaN(value) ? 'n/a' : `$${value.toFixed(2)}`
+}
+
+function stringListToText(items?: string[]) {
+  return (items || []).join('\n')
+}
+
+function textToStringList(value: string) {
+  return normalizeStringList(value.split(/\r?\n|,/))
+}
+
+function getRecordId(record?: { _id?: string } | ReferenceValue) {
+  if (!record) return ''
+  if ('_ref' in record) return record._ref
+  return record._id || ''
+}
+
+function referenceFromId(id: string): ReferenceValue {
+  return { _type: 'reference', _ref: id }
+}
+
+function refsFromRecords(records: Array<{ _id?: string } | ReferenceValue> | undefined) {
+  return refsFromIds(refIdsFromRecords(records))
+}
+
+function refIdsFromRecords(records: Array<{ _id?: string } | ReferenceValue> | undefined) {
+  return (records || []).map((record) => getRecordId(record)).filter(Boolean)
+}
+
+function mergeIds(existing: string[], next: string[]) {
+  return Array.from(new Set([...existing, ...next].filter(Boolean)))
+}
+
 function getMarketingViewTitle(viewId: MarketingViewId) {
   return MARKETING_TOOL_VIEWS.find((view) => view.id === viewId)?.title || 'Section'
 }
@@ -7240,6 +14362,20 @@ function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem
   const now = new Date()
   const upcomingLimit = addDays(now, 30)
   const items: MarketingAttentionItem[] = []
+  const missingStrategy = getMissingFoundationalStrategyInputs(data)
+
+  if (missingStrategy.length > 0) {
+    const hasResearchFindings = data.researchResults.length > 0
+    items.push({
+      id: 'strategy-foundation',
+      title: 'Strategy foundation needs setup',
+      detail: hasResearchFindings
+        ? `Fill reusable ${missingStrategy.join(', ')} records from approved research before generating campaigns, funnels, calendar items, or drafts.`
+        : `Run Research first, then use those findings to fill reusable ${missingStrategy.join(', ')} records.`,
+      view: hasResearchFindings ? 'strategy' : 'research',
+      severity: 'setup',
+    })
+  }
 
   if (data.channels.length === 0) {
     items.push({
@@ -7302,6 +14438,22 @@ function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem
           severity: 'setup',
         })
       }
+      const missingStrategyRefs = [
+        (campaign.audienceProfiles || []).length === 0 ? 'audience profile' : '',
+        (campaign.ctas || []).length === 0 ? 'CTA' : '',
+        (campaign.proofPoints || []).length === 0 ? 'proof point' : '',
+        (campaign.experiments || []).length === 0 ? 'experiment' : '',
+        !campaign.trackingRule?._id && !campaign.utmCampaign?.trim() ? 'tracking rule or UTM campaign' : '',
+      ].filter(Boolean)
+      if (missingStrategyRefs.length > 0) {
+        items.push({
+          id: `campaign-strategy-${campaign._id}`,
+          title: `${campaign.title || 'Campaign'} needs strategy inputs`,
+          detail: `Missing: ${missingStrategyRefs.join(', ')}.`,
+          view: 'strategy',
+          severity: 'setup',
+        })
+      }
     })
 
   data.calendarItems
@@ -7316,6 +14468,7 @@ function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem
         !item.callToAction?.trim() ? 'CTA' : '',
         !item.workingUrl?.trim() ? 'working URL' : '',
         !item.campaign?._id && !item.funnel?._id ? 'campaign/funnel' : '',
+        ['scheduled', 'published'].includes(item.status || '') && (item.qualityGates || []).length === 0 ? 'quality gate' : '',
       ].filter(Boolean)
 
       if (missing.length > 0) {
@@ -7327,6 +14480,50 @@ function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem
           severity: 'content',
         })
       }
+    })
+
+  data.linkItems
+    .filter(isMarketingLinkActive)
+    .forEach((link) => {
+      const missing = [
+        !link.cta?._id ? 'CTA strategy' : '',
+        !link.trackingRule?._id ? 'tracking rule' : '',
+      ].filter(Boolean)
+      if (missing.length > 0) {
+        items.push({
+          id: `link-strategy-${link._id}`,
+          title: `${link.title || 'Quick Link'} needs destination strategy`,
+          detail: `Missing: ${missing.join(', ')}.`,
+          view: 'linkTree',
+          severity: 'setup',
+        })
+      }
+    })
+
+  data.researchProjects
+    .filter((project) => (project.status || 'draft') !== 'archived')
+    .forEach((project) => {
+      if ((project.audienceProfiles || []).length === 0 && (project.messagePillars || []).length === 0 && (project.proofPoints || []).length === 0 && (project.performanceSignals || []).length === 0) {
+        items.push({
+          id: `research-strategy-${project._id}`,
+          title: `${project.title || 'Research project'} needs a strategy input`,
+          detail: 'Connect at least one audience, message, proof point, or performance signal so research is directed by strategy rather than a generic topic.',
+          view: 'research',
+          severity: 'setup',
+        })
+      }
+    })
+
+  data.performanceSignals
+    .filter((signal) => signal.status === 'suggestsUpdate')
+    .forEach((signal) => {
+      items.push({
+        id: `performance-update-${signal._id}`,
+        title: `${signal.title || 'Performance signal'} suggests a strategy update`,
+        detail: signal.recommendation || signal.interpretation || 'Review this signal and decide whether audiences, messages, CTAs, channels, or timing should change.',
+        view: 'strategy',
+        severity: 'measurement',
+      })
     })
 
   data.funnels
@@ -7424,6 +14621,1454 @@ function getChannelOptions(channels: MarketingChannel[]) {
       title: channel.title || channel.key || 'Untitled channel',
       value: channel.key || '',
     }))
+}
+
+function defaultMarketingPlanQuestionnaire(): MarketingPlanQuestionnaire {
+  return {
+    topic: '',
+    objective: 'awareness',
+    audience: '',
+    destinationUrl: '',
+    runway: 'twoWeeks',
+    contentCapacity: 'multiChannel',
+    primaryMetric: '',
+    notes: '',
+  }
+}
+
+function buildDesignerWorkflowDemoRecommendation(): MarketingAiSuggestion {
+  const today = new Date()
+  const startDate = toDateInputValue(addDays(today, 7))
+  const endDate = toDateInputValue(addDays(today, 21))
+
+  return {
+    summary: 'Demo recommendation for a Housing Truths Instagram carousel about Boston housing statistics.',
+    rationale: [
+      'The example shows how the assistant turns a broad content idea into an editable research plan first.',
+      'A short release window keeps the work practical for designers while still delaying campaign, funnel, calendar, and Quick Link creation until Research is reviewed.',
+      'The demo is local-only and does not save CMS records when created.',
+    ],
+    siteReferences: [
+      {
+        title: 'Housing Truths',
+        url: 'https://housingtruths.org',
+        note: 'Example destination for the demo Quick Link and calendar item.',
+      },
+    ],
+    researchPlan: {
+      title: 'Housing Truths Boston Instagram plan',
+      status: 'draft',
+      summary: 'Use one carousel to make Boston housing statistics legible, then point people to the Housing Truths site for deeper context.',
+      audience: 'People in Boston who care about housing policy, civic data, and visual explanations.',
+      positioning: 'Lead with one concrete statistic, show what it means visually, and give people a durable place to keep reading.',
+      campaignObjective: 'awareness',
+      canonicalUrl: 'https://housingtruths.org',
+      releaseCadence: 'campaignBased',
+      contentPillars: [
+        {
+          _key: 'demo-pillar-boston-housing',
+          _type: 'contentPillar',
+          title: 'Boston housing pressure',
+          audienceNeed: 'Understand the scale of the housing problem without reading a policy brief.',
+          angle: 'Use one memorable visual comparison as the entry point.',
+          exampleFormats: ['carousel', 'linkPost'],
+        },
+      ],
+      seoTargets: [
+        {
+          _key: 'demo-seo-boston-housing-statistics',
+          _type: 'seoTarget',
+          query: 'Boston housing statistics',
+          intent: 'learn',
+          priority: 'medium',
+          canonicalUrl: 'https://housingtruths.org',
+          contentGap: 'The linked page should clearly explain where the statistic comes from and why it matters.',
+        },
+      ],
+      channels: [
+        {
+          _key: 'demo-channel-instagram',
+          _type: 'recommendedChannel',
+          channelKey: 'instagram',
+          rationale: 'Best fit for a visual carousel that can point to the link page.',
+          cadence: 'One carousel, then one follow-up story or post if the topic gets attention.',
+          priority: 'high',
+        },
+      ],
+      releaseWindows: [
+        {
+          _key: 'demo-window-two-week',
+          _type: 'releaseWindow',
+          label: 'Two-week demo release window',
+          startDate,
+          endDate,
+          goal: 'Draft the carousel, publish it, and review whether people click through.',
+          priority: 'medium',
+        },
+      ],
+      contentOpportunities: [
+        {
+          _key: 'demo-opportunity-carousel',
+          _type: 'contentOpportunity',
+          title: 'Housing Truths Boston statistics carousel',
+          channel: 'instagram',
+          format: 'carousel',
+          owner: 'Designer',
+          releaseWindow: 'Two-week demo release window',
+          callToAction: 'See the source on Housing Truths',
+          sourceMaterial: 'Housing Truths public site and Boston housing data references.',
+          destinationUrl: 'https://housingtruths.org',
+          readiness: 'ready',
+          seoQuery: 'Boston housing statistics',
+          priority: 'high',
+          selected: true,
+          notes: 'Demo-only recommendation. Creating this from the tutorial does not save records.',
+        },
+      ],
+      measurementGoals: [
+        {
+          _key: 'demo-measurement-clicks',
+          _type: 'measurementGoal',
+          label: 'Instagram profile/link clicks',
+          target: 'Use as a directional signal that the carousel made people want the source.',
+        },
+      ],
+    },
+  }
+}
+
+function buildDesignerWorkflowDemoResult(questionnaire: MarketingPlanQuestionnaire): CarouselWizardResult {
+  return {
+    demo: true,
+    researchProjectId: 'demo-research-project',
+    title: `${normalizeMarketingPlanQuestionnaire(questionnaire).topic} demo research project`,
+  }
+}
+
+function loadDesignerWorkflowTutorialCompletions(): Record<string, boolean> {
+  if (typeof window === 'undefined') return {}
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY) || '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function hasDesignerWorkflowTutorialCompleted(tutorialId: string) {
+  return Boolean(loadDesignerWorkflowTutorialCompletions()[tutorialId])
+}
+
+function markDesignerWorkflowTutorialComplete(tutorialId: string) {
+  if (typeof window === 'undefined') return
+  const completions = loadDesignerWorkflowTutorialCompletions()
+  window.localStorage.setItem(DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY, JSON.stringify({ ...completions, [tutorialId]: true }))
+}
+
+function loadDesignerWorkflowSessions(): DesignerWorkflowSession[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(DESIGNER_WORKFLOW_SESSIONS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .map(normalizeDesignerWorkflowSession)
+      .filter((session): session is DesignerWorkflowSession => !!session)
+      .sort((first, second) => new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime())
+      .slice(0, 24)
+  } catch (err) {
+    console.error('Designer workflow sessions could not load:', err)
+    return []
+  }
+}
+
+function saveDesignerWorkflowSessions(sessions: DesignerWorkflowSession[]) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(DESIGNER_WORKFLOW_SESSIONS_STORAGE_KEY, JSON.stringify(sessions.filter((session) => !session.ephemeral).slice(0, 24)))
+  } catch (err) {
+    console.error('Designer workflow sessions could not save:', err)
+  }
+}
+
+function loadActiveDesignerWorkflowSessionId() {
+  if (typeof window === 'undefined') return null
+  return window.localStorage.getItem(DESIGNER_WORKFLOW_ACTIVE_SESSION_STORAGE_KEY) || null
+}
+
+function saveActiveDesignerWorkflowSessionId(sessionId: string | null) {
+  if (typeof window === 'undefined') return
+  if (sessionId) {
+    window.localStorage.setItem(DESIGNER_WORKFLOW_ACTIVE_SESSION_STORAGE_KEY, sessionId)
+  } else {
+    window.localStorage.removeItem(DESIGNER_WORKFLOW_ACTIVE_SESSION_STORAGE_KEY)
+  }
+}
+
+function normalizeDesignerWorkflowSession(value: unknown): DesignerWorkflowSession | null {
+  if (!value || typeof value !== 'object') return null
+  const record = value as Partial<DesignerWorkflowSession>
+  const mode = record.mode === 'singleItem' || record.mode === 'plan' ? record.mode : null
+  if (!record.id || !mode) return null
+  const questionnaire = normalizeStoredQuestionnaire(record.questionnaire)
+  return prepareDesignerWorkflowSession({
+    id: String(record.id),
+    title: typeof record.title === 'string' ? record.title : '',
+    mode,
+    stepIndex: typeof record.stepIndex === 'number' ? Math.max(0, Math.min(2, record.stepIndex)) : 0,
+    strategyStepIndex: typeof record.strategyStepIndex === 'number' ? Math.max(0, record.strategyStepIndex) : 0,
+    questionnaire,
+    strategyPrompt: typeof record.strategyPrompt === 'string' ? record.strategyPrompt : '',
+    strategySuggestion: record.strategySuggestion && typeof record.strategySuggestion === 'object' ? record.strategySuggestion : null,
+    strategyUsedAi: typeof record.strategyUsedAi === 'boolean' ? record.strategyUsedAi : null,
+    result: record.result && typeof record.result === 'object' ? record.result : null,
+    createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : new Date().toISOString(),
+  })
+}
+
+function normalizeStoredQuestionnaire(value: unknown): MarketingPlanQuestionnaire {
+  const defaults = defaultMarketingPlanQuestionnaire()
+  if (!value || typeof value !== 'object') return defaults
+  const record = value as Partial<MarketingPlanQuestionnaire>
+  return {
+    topic: typeof record.topic === 'string' ? record.topic : defaults.topic,
+    objective: typeof record.objective === 'string' ? record.objective : defaults.objective,
+    audience: typeof record.audience === 'string' ? record.audience : defaults.audience,
+    destinationUrl: typeof record.destinationUrl === 'string' ? record.destinationUrl : defaults.destinationUrl,
+    runway: record.runway === 'oneWeek' || record.runway === 'twoWeeks' || record.runway === 'oneMonth' ? record.runway : defaults.runway,
+    contentCapacity:
+      record.contentCapacity === 'oneItem' || record.contentCapacity === 'weeklyCarousel' || record.contentCapacity === 'multiChannel'
+        ? record.contentCapacity
+        : defaults.contentCapacity,
+    primaryMetric: typeof record.primaryMetric === 'string' ? record.primaryMetric : defaults.primaryMetric,
+    notes: typeof record.notes === 'string' ? record.notes : defaults.notes,
+  }
+}
+
+function createDesignerWorkflowSession(mode: DesignerWizardMode): DesignerWorkflowSession {
+  const now = new Date().toISOString()
+  const questionnaire = {
+    ...defaultMarketingPlanQuestionnaire(),
+    contentCapacity: mode === 'singleItem' ? 'oneItem' : 'multiChannel',
+  } satisfies MarketingPlanQuestionnaire
+  return prepareDesignerWorkflowSession({
+    id: `designer-${Date.now()}-${randomKey()}`,
+    title: '',
+    mode,
+    stepIndex: 0,
+    strategyStepIndex: 0,
+    questionnaire,
+    strategyPrompt: '',
+    strategySuggestion: null,
+    strategyUsedAi: null,
+    result: null,
+    createdAt: now,
+    updatedAt: now,
+  })
+}
+
+function prepareDesignerWorkflowSession(session: DesignerWorkflowSession): DesignerWorkflowSession {
+  return {
+    ...session,
+    title: designerWorkflowSessionTitle(session),
+  }
+}
+
+function designerWorkflowSessionTitle(session: DesignerWorkflowSession) {
+  return (
+    session.result?.title ||
+    session.questionnaire.topic?.trim() ||
+    inferPromptTitle(session.strategyPrompt) ||
+    (session.mode === 'plan' ? 'New planning session' : 'New content item session')
+  )
+}
+
+function formatWorkflowSessionTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'recently'
+  return date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
+function normalizeMarketingPlanQuestionnaire(questionnaire: MarketingPlanQuestionnaire): MarketingPlanQuestionnaire {
+  const topic = questionnaire.topic.trim() || 'Untitled marketing setup'
+  return {
+    topic,
+    objective: questionnaire.objective || 'awareness',
+    audience: questionnaire.audience.trim() || 'People who need a clear, useful explanation of this work.',
+    destinationUrl: questionnaire.destinationUrl.trim() || 'https://www.goinvo.com',
+    runway: questionnaire.runway || 'twoWeeks',
+    contentCapacity: questionnaire.contentCapacity || 'multiChannel',
+    primaryMetric: questionnaire.primaryMetric.trim() || 'Qualified visits or replies',
+    notes: questionnaire.notes.trim(),
+  }
+}
+
+function buildWizardStrategyDraft(data: MarketingData, questionnaire: MarketingPlanQuestionnaire): Record<string, unknown> {
+  const stats = getMarketingDashboardStats(data)
+  const gaps = getMarketingDashboardGaps(data).slice(0, 6)
+  const latestProject = getLatestActiveResearchProject(data)
+  const starterTitle = latestProject?.title || questionnaire.topic || ''
+  const researchType = latestProject?.researchType || inferResearchProjectType(`${questionnaire.topic} ${questionnaire.notes || ''}`)
+
+  return {
+    title: starterTitle,
+    status: 'draft',
+    researchType,
+    brief: latestProject?.brief || [
+      `Content runway: ${stats.contentRunwayDays} days.`,
+      `${stats.upcomingItems.length} upcoming calendar items; ${stats.coveredDaysNext30}/30 days covered.`,
+      `${stats.activeCampaigns} active campaigns; ${stats.campaignsWithUpcomingContent} have upcoming content.`,
+      `${data.channels.filter((channel) => channel.status !== 'archived').length} active channels.`,
+      `${data.linkItems.filter((link) => link.status !== 'archived').length} Quick Links.`,
+      `${data.researchProjects.filter((project) => project.status !== 'archived').length} research projects.`,
+    ].join(' '),
+    audience: questionnaire.audience,
+    campaignObjective: questionnaire.objective || 'awareness',
+    canonicalUrl: questionnaire.destinationUrl || '',
+    planningNeed: stats.upcomingItems.length === 0 ? 'No upcoming content is scheduled.' : 'Find the next research-backed content opportunity.',
+    currentResearchProject: latestProject
+      ? {
+          title: latestProject.title,
+          status: latestProject.status,
+          researchType: latestProject.researchType,
+          brief: latestProject.brief,
+          seedKeywords: latestProject.seedKeywords,
+          resultCount: getResearchResultsForProject(data, latestProject._id).length,
+          approvedResultCount: getResearchResultsForProject(data, latestProject._id).filter(isResearchResultApproved).length,
+          generatedRecordCount: countGeneratedRecordsForResearchProject(data, latestProject),
+        }
+      : null,
+    releaseCadence: 'campaignBased',
+    internalNotes: [
+      'Designer Workflow strategy agent should recommend the next setup move based on the full marketing state.',
+      'If a current research project exists, recommend the next action inside it rather than creating a duplicate.',
+      'Treat research projects as the planning wrapper; campaigns and funnels are downstream generated records paired to that project.',
+      'If the optional prompt names a channel, topic, location, post, contributor, or project, use that as direction.',
+      gaps.length > 0 ? `Current gaps: ${gaps.map((gap) => `${gap.title} (${gap.action})`).join('; ')}` : 'No urgent dashboard gaps found.',
+      stats.channelCoverage.length > 0
+        ? `Channel coverage: ${stats.channelCoverage.map((channel) => `${channel.title}: ${channel.upcoming30Count} upcoming`).join('; ')}`
+        : 'No channel coverage data yet.',
+    ].join('\n'),
+  }
+}
+
+function buildWizardStrategyPrompt(data: MarketingData, questionnaire: MarketingPlanQuestionnaire, userPrompt: string) {
+  const stats = getMarketingDashboardStats(data)
+  const gaps = getMarketingDashboardGaps(data).slice(0, 5)
+  const direction = userPrompt.trim()
+  const latestProject = getLatestActiveResearchProject(data)
+  const latestProjectLine = latestProject
+    ? `Latest research project: ${latestProject.title || 'Untitled research project'} with ${getResearchResultsForProject(data, latestProject._id).length} research findings and ${countGeneratedRecordsForResearchProject(data, latestProject)} paired downstream records.`
+    : 'Latest research project: none. The next step may be creating the first research project.'
+
+  return [
+    'Act like a marketing strategist for designers. Review the current GoInvo marketing state and suggest the next setup step.',
+    'Return a researchProject setup only when no usable current project exists. If a current project exists, explain the next action inside it instead of creating another project.',
+    'Treat the research project as the planning wrapper. Campaigns, funnels, calendar items, and Quick Links are paired downstream after selected research findings justify them.',
+    'Do not ask the designer to invent marketing strategy from scratch. Pick the best next move and make the fields or action reviewable.',
+    'Make the long-term thinking obvious: why this work matters, how it builds a durable topic thread, and what signal should be checked next.',
+    direction ? `User direction: ${direction}` : 'User direction: none. Choose the most useful next planning move from the current state.',
+    `Current state: ${stats.contentRunwayDays} runway days, ${stats.upcomingItems.length} upcoming items, ${stats.activeCampaigns} active campaigns, ${data.channels.length} channels, ${data.linkItems.length} Quick Links.`,
+    latestProjectLine,
+    gaps.length > 0 ? `Known gaps: ${gaps.map((gap) => `${gap.title}: ${gap.action}`).join(' | ')}` : 'Known gaps: no critical gaps detected.',
+  ].join('\n')
+}
+
+function questionnaireFromStrategySuggestion(
+  suggestion: MarketingAiSuggestion,
+  current: MarketingPlanQuestionnaire,
+  data: MarketingData,
+): MarketingPlanQuestionnaire {
+  const project = suggestion.researchProject || {}
+  const plan = suggestion.researchPlan || {}
+  const opportunity = plan.contentOpportunities?.find((item) => item.selected) || plan.contentOpportunities?.[0]
+  const seoTarget = plan.seoTargets?.[0]
+  const measurement = plan.measurementGoals?.[0]
+  const releaseWindow = plan.releaseWindows?.[0]
+  const destinationUrl =
+    aiString(opportunity?.destinationUrl) ||
+    aiString(project.canonicalUrl) ||
+    aiString(plan.canonicalUrl) ||
+    aiString(seoTarget?.canonicalUrl) ||
+    data.linkItems.find((link) => link.status !== 'archived' && link.url)?.url ||
+    current.destinationUrl
+  const notes = [
+    aiString(project.brief),
+    aiString(project.positioning),
+    project.seedKeywords?.length ? `Seed keywords: ${project.seedKeywords.join(', ')}` : '',
+    aiString(plan.summary),
+    aiString(plan.positioning),
+    opportunity?.sourceMaterial ? `Source: ${opportunity.sourceMaterial}` : '',
+    opportunity?.notes ? `Opportunity notes: ${opportunity.notes}` : '',
+    seoTarget?.query ? `SEO/query target: ${seoTarget.query}` : '',
+    suggestion.rationale?.length ? `Why this setup: ${suggestion.rationale.slice(0, 3).join(' ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  return {
+    topic: stripResearchProjectSuffix(aiString(opportunity?.title) || aiString(project.title) || aiString(plan.title) || aiString(suggestion.summary) || current.topic),
+    objective: aiOption(project.campaignObjective, campaignObjectiveOptions) || aiOption(plan.campaignObjective, campaignObjectiveOptions) || current.objective || 'awareness',
+    audience: aiString(project.audience) || aiString(plan.audience) || current.audience,
+    destinationUrl: destinationUrl || current.destinationUrl,
+    runway: inferQuestionnaireRunway(releaseWindow) || current.runway,
+    contentCapacity: inferQuestionnaireCapacity(plan) || current.contentCapacity,
+    primaryMetric: [measurement?.label, measurement?.target].filter(Boolean).join(': ') || current.primaryMetric,
+    notes: notes || current.notes,
+  }
+}
+
+function inferQuestionnaireRunway(window?: ResearchReleaseWindow): MarketingPlanQuestionnaire['runway'] | undefined {
+  if (!window?.startDate || !window.endDate) return undefined
+  const start = new Date(window.startDate)
+  const end = new Date(window.endDate)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return undefined
+  const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)))
+  if (days <= 8) return 'oneWeek'
+  if (days <= 17) return 'twoWeeks'
+  return 'oneMonth'
+}
+
+function inferQuestionnaireCapacity(plan: Partial<MarketingResearchPlan>): MarketingPlanQuestionnaire['contentCapacity'] | undefined {
+  const opportunityCount = plan.contentOpportunities?.length || 0
+  const channelCount = new Set((plan.channels || []).map((channel) => channel.channelKey).filter(Boolean)).size
+  if (opportunityCount > 2 || channelCount > 2) return 'multiChannel'
+  if (opportunityCount === 2) return 'weeklyCarousel'
+  if (opportunityCount === 1) return 'oneItem'
+  return undefined
+}
+
+function buildFallbackWizardStrategySuggestion(
+  data: MarketingData,
+  questionnaire: MarketingPlanQuestionnaire,
+  prompt: string,
+): MarketingAiSuggestion {
+  const stats = getMarketingDashboardStats(data)
+  const today = new Date()
+  const fallbackSource = data.linkItems.find((link) => link.status !== 'archived' && link.title && link.url)
+  const title = stripResearchProjectSuffix(
+    inferPromptTitle(prompt) ||
+      (isDashboardGapTopic(questionnaire.topic) ? '' : questionnaire.topic) ||
+      fallbackSource?.title ||
+      (stats.upcomingItems.length === 0 ? 'GoInvo site content' : 'GoInvo marketing content'),
+  )
+  const destinationUrl =
+    questionnaire.destinationUrl ||
+    fallbackSource?.url ||
+    data.linkItems.find((link) => link.status !== 'archived' && link.url)?.url ||
+    ''
+  const startDate = toDateInputValue(today)
+  const endDate = toDateInputValue(addDays(today, 14))
+  const seedKeywords = inferTargetQueries(title).slice(0, 6)
+  const researchType = inferResearchProjectType(`${prompt} ${questionnaire.topic} ${questionnaire.notes || ''}`)
+
+  return {
+    summary: `Suggested ${title} as the next research project because release records should be generated from reviewed evidence, not from an empty plan.`,
+    rationale: [
+      stats.contentRunwayDays < 14
+        ? 'The current content runway is short, so the next useful move is a scheduled, connected content item.'
+        : 'The current plan has enough baseline coverage, so the next useful move should strengthen a clear topic opportunity.',
+      'The setup should collect SEO scores, source evidence, and content gaps before campaign or funnel records are created.',
+      'The campaign and funnel should stay paired to this plan once research has enough reviewed results.',
+    ],
+    siteReferences: [],
+    researchProject: {
+      title: `${stripResearchProjectSuffix(title)} research project`,
+      status: 'draft',
+      researchType,
+      brief: `Research ${stripResearchProjectSuffix(title)} before generating campaigns, funnels, calendar items, or Quick Links. Focus first on SEO demand, source evidence, and content gaps for the ${startDate} to ${endDate} release window.`,
+      audience: questionnaire.audience || 'People who need a clear, visual explanation of the topic.',
+      positioning: 'Lead with a useful visual insight, support it with one concrete statistic or artifact, then point to the source destination.',
+      campaignObjective: questionnaire.objective || 'awareness',
+      canonicalUrl: destinationUrl,
+      seedKeywords,
+      seedUrls: [destinationUrl].filter(Boolean),
+      targetGeography: 'us',
+      language: 'en',
+      methods: defaultResearchMethodsForType(researchType),
+      researchQuestions: buildResearchQuestionsForType(researchType, stripResearchProjectSuffix(title)),
+      collaborators: [],
+      internalNotes: 'Rule-based fallback from Designer Workflow. Run research and approve results before generating downstream campaign, funnel, calendar, or Quick Link records.',
+    },
+  }
+}
+
+function inferPromptTitle(prompt: string) {
+  const normalized = prompt.trim().replace(/\s+/g, ' ')
+  const quoted = normalized.match(/["']([^"']+)["']/)?.[1]?.trim()
+  if (quoted) return quoted
+  const called = normalized.match(/\bcalled\s+(.+)$/i)?.[1]?.trim()
+  if (called) return called.replace(/[.!?]+$/, '')
+  const planFor = normalized.match(/\b(?:plan|strategy|calendar)\s+for\s+(?:our\s+|the\s+)?(.+)$/i)?.[1]?.trim()
+  if (planFor) return planFor.replace(/[.!?]+$/, '')
+  const about = normalized.match(/\babout\s+(.+?)(?:\s+called\b|[.!?]?$)/i)?.[1]?.trim()
+  if (about) return about.replace(/[.!?]+$/, '')
+  return normalized ? normalized.slice(0, 90) : ''
+}
+
+function inferResearchProjectType(value: string | undefined) {
+  const text = (value || '').toLowerCase()
+  if (/\b(competitor|competitive|comparables?|benchmark|landscape|others?|peer|rival)\b/.test(text)) return 'competitor'
+  if (/\b(strategy|strategic|positioning|goals?|funnel|campaign direction|roadmap|plan|planning|prioriti[sz]e)\b/.test(text)) return 'strategy'
+  return 'topic'
+}
+
+function stripResearchProjectSuffix(value: string) {
+  const stripped = value.trim().replace(/\s+research\s+(?:project|plan)$/i, '')
+  return stripped || value
+}
+
+function normalizeResearchProjectTopic(value: string, fallback: string) {
+  const stripped = stripResearchProjectSuffix(value)
+    .replace(/\s+content\s+thread$/i, '')
+    .trim()
+  if (!stripped || isDashboardGapTopic(stripped)) return fallback || 'GoInvo site content'
+  return stripped
+}
+
+function labelFromUrl(value: string) {
+  if (!value) return 'GoInvo site content'
+  try {
+    const url = new URL(value)
+    const pathParts = url.pathname.split('/').filter(Boolean)
+    if (url.hostname.includes('housingtruths.org')) return 'Housing Truths'
+    if (pathParts.length > 0) return labelizeAiField(pathParts[pathParts.length - 1])
+    if (url.hostname.includes('goinvo.com')) return 'GoInvo site content'
+    return url.hostname.replace(/^www\./, '')
+  } catch {
+    return value.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '') || 'GoInvo site content'
+  }
+}
+
+function getResearchProjectNextStepRecommendation(
+  data: MarketingData,
+  project: MarketingResearchProject,
+  questionnaire: MarketingPlanQuestionnaire,
+  prompt: string,
+): StrategyAssistantRecommendation {
+  const topic = stripResearchProjectSuffix(project.title || inferPromptTitle(prompt) || questionnaire.topic || 'the current plan')
+  const projectResults = getResearchResultsForProject(data, project._id)
+  const approvedResults = projectResults.filter(isResearchResultApproved)
+  const selectedIds = getSelectedResearchResultIds(project)
+  const selectedApprovedResults = approvedResults.filter((result) => selectedIds.has(result._id) || result.selectedForSynthesis)
+  const generatedCount = countGeneratedRecordsForResearchProject(data, project)
+  const relatedCalendarItems = getCalendarItemsForResearchProject(data, project)
+  const draftCalendarItems = relatedCalendarItems.filter((item) => getCalendarItemDisplayGroup(item) === 'draft')
+  const finalCalendarItems = relatedCalendarItems.filter((item) => getCalendarItemDisplayGroup(item) === 'final')
+  const runs = getResearchRunsForProject(data, project._id)
+  const strategicContext = buildStrategyAssistantContext({
+    data,
+    project,
+    questionnaire,
+    recommendationTopic: topic,
+  })
+
+  if (projectResults.length === 0) {
+    return {
+      title: `Run research for ${topic}`,
+      detail: runs.length > 0
+        ? 'The latest research project has a run, but no stored findings are ready yet. Re-run or inspect the run before making release records.'
+        : 'The latest research project exists. The next step is to gather SEO, CMS, and source findings before generating any campaign, funnel, calendar, or Quick Link records.',
+      view: 'research',
+      strategicContext,
+      steps: [
+        'Open Research and confirm the seed keywords, URLs, and collaborators.',
+        'Run Semrush, CMS, and source research for the current project.',
+        'Review the findings before creating downstream records.',
+      ],
+    }
+  }
+
+  if (approvedResults.length === 0) {
+    return {
+      title: `Review research findings for ${topic}`,
+      detail: `${projectResults.length} finding${projectResults.length === 1 ? '' : 's'} are stored, but none are approved yet. Designers should approve the findings that are strong enough to shape content.`,
+      view: 'research',
+      strategicContext,
+      steps: [
+        'Open the Research findings page for the latest project.',
+        'Approve credible SEO, source, analytics, or collaborator findings.',
+        'Select the approved findings that should drive the generated records.',
+      ],
+    }
+  }
+
+  if (selectedApprovedResults.length === 0) {
+    return {
+      title: `Select the strongest findings for ${topic}`,
+      detail: `${approvedResults.length} approved finding${approvedResults.length === 1 ? '' : 's'} are available. Select the ones that should justify the paired campaign, funnel, calendar, and Quick Link records.`,
+      view: 'research',
+      strategicContext,
+      steps: [
+        'Open the latest Research project.',
+        'Select the approved findings that support a real release.',
+        'Use those selected findings to synthesize opportunities.',
+      ],
+    }
+  }
+
+  if (generatedCount === 0) {
+    return {
+      title: `Create paired records for ${topic}`,
+      detail: `${selectedApprovedResults.length} approved finding${selectedApprovedResults.length === 1 ? ' is' : 's are'} selected. Now the research project is ready to generate its linked campaign, funnel, draft calendar items, and Quick Links.`,
+      view: 'research',
+      strategicContext,
+      steps: [
+        'Open the latest Research project.',
+        'Generate records from selected approved findings.',
+        'Review the paired campaign and funnel before writing the content.',
+      ],
+    }
+  }
+
+  if (draftCalendarItems.length > 0) {
+    return {
+      title: `Finish draft content for ${topic}`,
+      detail: `${draftCalendarItems.length} draft item${draftCalendarItems.length === 1 ? '' : 's'} are paired to this research project. The next useful move is to assign dates and write the actual content.`,
+      view: 'calendar',
+      strategicContext,
+      steps: [
+        'Open Calendar and filter around the project draft items.',
+        'Assign publish dates, working URLs, and owners.',
+        'Move ready items to scheduled once the content is final.',
+      ],
+    }
+  }
+
+  if (finalCalendarItems.length > 0) {
+    return {
+      title: `Check signals for ${topic}`,
+      detail: `${finalCalendarItems.length} item${finalCalendarItems.length === 1 ? ' is' : 's are'} scheduled or published. Look for early evidence before expanding the plan.`,
+      view: 'analytics',
+      strategicContext,
+      steps: [
+        'Review the connected analytics signals for the research-backed release.',
+        'Note whether visits, saves, replies, or conversions are improving.',
+        'Use the takeaway to decide whether to reuse, adjust, or pause the next release.',
+      ],
+    }
+  }
+
+  return {
+    title: `Review the paired records for ${topic}`,
+    detail: 'This research project has generated downstream records, but no calendar item is clearly draft or final. Check the Research links before adding more.',
+    view: 'research',
+    strategicContext,
+    steps: [
+      'Open the latest Research project.',
+      'Confirm the paired campaign and funnel still match the approved findings.',
+      'Create or repair draft calendar items from the selected research if needed.',
+    ],
+  }
+}
+
+function getStrategyAssistantRecommendation(
+  data: MarketingData,
+  suggestion: MarketingAiSuggestion | null,
+  questionnaire: MarketingPlanQuestionnaire,
+  prompt: string,
+  preferSuggestion = false,
+): StrategyAssistantRecommendation {
+  const missingStrategy = getMissingFoundationalStrategyInputs(data)
+  const latestProject = getLatestActiveResearchProject(data)
+  const strategyResearchResults = getStrategyResearchResults(data)
+  if (missingStrategy.length > 0 && !preferSuggestion) {
+    if (strategyResearchResults.length > 0) {
+      const approvedCount = data.researchResults.filter(isResearchResultApproved).length
+      return {
+        title: 'Fill strategy from research',
+        detail: `${strategyResearchResults.length} research finding${strategyResearchResults.length === 1 ? ' is' : 's are'} available. Use them to draft the missing ${missingStrategy.join(', ')} strategy inputs, then save only the records that feel right.`,
+        view: 'strategy',
+        strategicContext: [
+          {
+            title: 'Why research first',
+            detail: 'The strategy foundation should reuse evidence we have already gathered instead of asking designers to invent audiences, messages, proof, and CTAs from scratch.',
+          },
+          {
+            title: 'How to use it',
+            detail: 'Open Strategy, choose a missing foundation section, add or select a record, then use Fill from research to draft the fields from stored findings.',
+          },
+          {
+            title: 'Review standard',
+            detail: approvedCount > 0 ? `${approvedCount} approved finding${approvedCount === 1 ? ' is' : 's are'} ready to use as stronger source material.` : 'No findings are approved yet, so treat the filled fields as a draft and approve the strongest research when possible.',
+          },
+          {
+            title: 'Designer impact',
+            detail: 'Once saved, these strategy records can carry into campaigns, funnels, calendar items, Quick Links, and content drafts.',
+          },
+        ],
+        steps: [
+          'Open Strategy and choose Foundation.',
+          `Add or select a missing record: ${missingStrategy.join(', ')}.`,
+          'Click Fill from research, review the draft, then save it.',
+        ],
+      }
+    }
+
+    return {
+      title: 'Start with research',
+      detail: `The strategy foundation is missing ${missingStrategy.join(', ')}, but there are no research findings to draw from yet. Create or run a Research project first, then use those findings to fill strategy records.`,
+      view: 'research',
+      strategicContext: [
+        {
+          title: 'Why research first',
+          detail: 'Research gives the strategy foundation real inputs: SEO demand, source evidence, content gaps, competitor examples, analytics signals, and collaborator notes.',
+        },
+        {
+          title: 'Designer impact',
+          detail: 'Designers should be able to fill strategy from reviewed findings, then focus on making the actual content.',
+        },
+        {
+          title: 'Next move',
+          detail: 'Open Research, define the project, run research, approve findings, then return to Strategy to fill the reusable records.',
+        },
+        {
+          title: 'Scope',
+          detail: 'A small research project is enough. You only need the findings that justify the next audience, message, proof point, CTA, tracking rule, and quality gate.',
+        },
+      ],
+      steps: [
+        'Open Research from the top navigation.',
+        'Create or run the research project for the topic.',
+        'Approve the useful findings, then fill Strategy from those findings.',
+      ],
+    }
+  }
+
+  if (latestProject && !preferSuggestion) {
+    return getResearchProjectNextStepRecommendation(data, latestProject, questionnaire, prompt)
+  }
+
+  const project = suggestion?.researchProject
+  const plan = suggestion?.researchPlan
+  const opportunity = plan?.contentOpportunities?.find((item) => item.selected) || plan?.contentOpportunities?.[0]
+  const suggestedQuestionnaire = suggestion ? questionnaireFromStrategySuggestion(suggestion, questionnaire, data) : questionnaire
+  const channelKey = opportunity?.channel || plan?.channels?.[0]?.channelKey || (prompt.toLowerCase().includes('instagram') ? 'instagram' : undefined)
+  const recommendationTopic = getStrategyRecommendationTopic({
+    data,
+    opportunityTitle: opportunity?.title,
+    planTitle: project?.title || plan?.title,
+    questionnaireTopic: suggestedQuestionnaire.topic,
+    prompt,
+    channelKey,
+    format: opportunity?.format,
+  })
+  const channelExists = channelKey
+    ? data.channels.some((channel) => channel.status !== 'archived' && (channel.key === channelKey || channel.title?.toLowerCase() === channelKey.toLowerCase()))
+    : true
+  const strategicContext = buildStrategyAssistantContext({
+    data,
+    project,
+    plan,
+    opportunity,
+    questionnaire: suggestedQuestionnaire,
+    recommendationTopic,
+    channelKey,
+  })
+
+  if (channelKey && !channelExists) {
+    return {
+      title: `Set up ${labelFor(getChannelOptions(data.channels), channelKey) || channelKey} first`,
+      detail: 'The idea needs a channel recommendation before the later calendar records can offer the right formats.',
+      view: 'channels',
+      strategicContext,
+      steps: [
+        `Add or confirm ${channelKey} as a channel.`,
+        'Create the first research project with that channel in mind.',
+        'Run and review research before generating paired campaign and funnel records.',
+      ],
+    }
+  }
+
+  if (project || prompt.toLowerCase().includes('plan') || (plan?.contentOpportunities?.length || 0) > 1) {
+    return {
+      title: `Create the first research project for ${lowercaseGenericPlanningPhrase(recommendationTopic)}`,
+      detail: 'No reusable research project exists yet. Start in Research; campaigns, funnels, calendar items, and Quick Links should be generated from selected findings after review.',
+      view: 'research',
+      strategicContext,
+      steps: [
+        'Create the first research project from this recommendation.',
+        'Run Semrush/source research and approve the findings worth using.',
+        'Generate paired campaign, funnel, calendar, and Quick Link records from selected findings.',
+      ],
+    }
+  }
+
+  if (opportunity) {
+    return {
+      title: `Research ${recommendationTopic}`,
+      detail: 'This looks like one content item, but the clean path is still to capture the research project before creating a calendar item.',
+      view: 'research',
+      strategicContext,
+      steps: [
+        'Create the first research project.',
+        'Review the source material and SEO inputs in Research.',
+        'Generate the calendar item and Quick Link only after findings are approved.',
+      ],
+    }
+  }
+
+  return {
+    title: 'Start in Research',
+    detail: 'The next move is to create a Research project, then let approved findings drive any campaign, funnel, calendar, or link records.',
+    view: 'research',
+    strategicContext,
+    steps: [
+      'Create the first research project.',
+      'Run and review SEO/source research.',
+      'Generate downstream records only from selected approved findings.',
+    ],
+  }
+}
+
+function buildStrategyAssistantContext({
+  data,
+  project,
+  plan,
+  opportunity,
+  questionnaire,
+  recommendationTopic,
+  channelKey,
+}: {
+  data: MarketingData
+  project?: Partial<MarketingResearchProject>
+  plan?: Partial<MarketingResearchPlan>
+  opportunity?: ResearchContentOpportunity
+  questionnaire: MarketingPlanQuestionnaire
+  recommendationTopic: string
+  channelKey?: string
+}): StrategyAssistantRecommendation['strategicContext'] {
+  const stats = getMarketingDashboardStats(data)
+  const channelLabel = channelKey ? labelFor(getChannelOptions(data.channels), channelKey) || labelizeAiField(channelKey) : 'the clearest channel'
+  const destination = opportunity?.destinationUrl || project?.canonicalUrl || plan?.canonicalUrl || questionnaire.destinationUrl || 'the canonical page'
+  const releaseWindow = plan?.releaseWindows?.[0]
+  const windowText = releaseWindow?.label || (questionnaire.runway === 'oneMonth' ? 'the next month' : questionnaire.runway === 'oneWeek' ? 'the next week' : 'the next two weeks')
+  const metric = plan?.measurementGoals?.[0]?.label || questionnaire.primaryMetric || 'clicks, saves, replies, and qualified visits'
+  const opportunities = plan?.contentOpportunities?.length || (opportunity ? 1 : 0) || (project?.approvedResults?.length || 0)
+  const topic = lowercaseGenericPlanningPhrase(recommendationTopic || questionnaire.topic || 'this topic')
+  const releaseWindowText = lowercaseGenericPlanningPhrase(windowText)
+
+  return [
+    {
+      title: 'Long-term',
+      detail: `Use ${topic} as a repeatable topic thread, not a one-off post. Start with research so the later campaign, funnel, and destination path are based on reviewed opportunities.`,
+    },
+    {
+      title: 'Relevance',
+      detail: `${channelLabel} is the near-term surface, but the durable value is sending interested people to ${destination}. That gives the work a place to accumulate attention, evidence, and follow-up content.`,
+    },
+    {
+      title: 'Over time',
+      detail: `In ${releaseWindowText}, expect directional signals like ${metric}. If those improve, reuse the setup with another angle; if not, adjust the hook, CTA, or channel before adding more content.`,
+    },
+    {
+      title: 'Cadence',
+      detail:
+        opportunities > 1
+          ? `This plan has ${opportunities} opportunities, so review the release windows before turning them into calendar items. Current coverage is ${stats.contentRunwayDays} days.`
+          : `Start with one reviewed research opportunity, then decide whether it deserves a calendar item based on the source, CTA, and content gap. Current coverage is ${stats.contentRunwayDays} days.`,
+    },
+  ]
+}
+
+function getStrategyRecommendationTopic({
+  data,
+  opportunityTitle,
+  planTitle,
+  questionnaireTopic,
+  prompt,
+  channelKey,
+  format,
+}: {
+  data: MarketingData
+  opportunityTitle?: string
+  planTitle?: string
+  questionnaireTopic?: string
+  prompt: string
+  channelKey?: string
+  format?: string
+}) {
+  const channelLabel = channelKey ? labelFor(getChannelOptions(data.channels), channelKey) || labelizeAiField(channelKey) : ''
+  const formatLabel = format ? labelFor(getContentTypeOptionsForChannel(channelKey, data.channels), format) || labelizeAiField(format) : ''
+  const promptTopic = cleanStrategyTopic(inferPromptTitle(prompt))
+  const candidates = [opportunityTitle, questionnaireTopic, planTitle].map((value) => cleanStrategyTopic(value || ''))
+  const contentTopic = candidates.find((value) => value && !isDashboardGapTopic(value))
+
+  if (contentTopic) return contentTopic
+  if (promptTopic && !isDashboardGapTopic(promptTopic)) return promptTopic
+  if (channelLabel && formatLabel) return `${channelLabel} ${formatLabel}`.trim()
+  if (channelLabel) return `${channelLabel} content`
+  return 'the next content push'
+}
+
+function cleanStrategyTopic(value: string) {
+  let next = stripResearchProjectSuffix(value).trim().replace(/\s+/g, ' ')
+  if (!next) return ''
+
+  const replacements: RegExp[] = [
+    /^make\s+a\s+plan\s+for\s+/i,
+    /^plan\s+/i,
+    /^schedule\s+/i,
+    /^no\s+upcoming\s+content\s+is\s+scheduled\b[\s:,-]*/i,
+    /^content\s+runway\s+is\s+under\s+two\s+weeks\b[\s:,-]*/i,
+    /^the\s+next\s+30\s+days\s+have\s+a\s+thin\s+publishing\s+cadence\b[\s:,-]*/i,
+    /^\d+\s+active\s+campaigns?\s+have\s+no\s+upcoming\s+content\b[\s:,-]*/i,
+    /^\d+\s+active\s+channels?\s+have\s+no\s+upcoming\s+content\b[\s:,-]*/i,
+    /^upcoming\s+content\s+is\s+not\s+tied\s+to\s+later\s+funnel\s+stages\b[\s:,-]*/i,
+  ]
+
+  for (const replacement of replacements) {
+    next = next.replace(replacement, '').trim()
+  }
+
+  return next
+}
+
+function getMissingFoundationalStrategyInputs(data: MarketingData) {
+  const missing: string[] = []
+  if (data.audienceProfiles.length === 0) missing.push('audience')
+  if (data.messagePillars.length === 0) missing.push('message')
+  if (data.proofPoints.length === 0) missing.push('proof')
+  if (data.ctas.length === 0) missing.push('CTA')
+  if (data.trackingRules.length === 0) missing.push('tracking rule')
+  if (data.qualityGates.length === 0) missing.push('quality gate')
+  return missing
+}
+
+function isDashboardGapTopic(value: string) {
+  const normalized = stripResearchProjectSuffix(value).trim().toLowerCase()
+  if (!normalized) return true
+  return [
+    'untitled marketing setup',
+    'next marketing setup',
+    'next content runway',
+    'next visible content plan',
+    'content runway extension',
+    'next content runway content thread',
+    'no upcoming content is scheduled',
+    'content runway is under two weeks',
+    'the next 30 days have a thin publishing cadence',
+    'upcoming content is not tied to later funnel stages',
+  ].includes(normalized) ||
+    /^\d+\s+active\s+campaigns?\s+have\s+no\s+upcoming\s+content$/i.test(value) ||
+    /^\d+\s+active\s+channels?\s+have\s+no\s+upcoming\s+content$/i.test(value)
+}
+
+function formatStrategyPlanTitle(topic: string) {
+  const cleanTopic = topic.trim() || 'the next content push'
+  const lower = cleanTopic.toLowerCase()
+
+  if (lower.startsWith('the ') || lower.startsWith('our ') || lower.startsWith('next ')) {
+    return `Plan ${lowercaseFirstCharacter(cleanTopic)}`
+  }
+
+  if (/^(content|runway|campaign)\b/i.test(cleanTopic)) {
+    return `Plan ${lowercaseFirstCharacter(cleanTopic)}`
+  }
+
+  if (lower.includes('content') || lower.includes('runway') || lower.includes('campaign')) {
+    return `Plan ${cleanTopic}`
+  }
+
+  if (lower.includes('carousel') || lower.includes('post') || lower.includes('email') || lower.includes('page')) {
+    return `Plan ${withIndefiniteArticle(cleanTopic)}`
+  }
+
+  return `Plan ${cleanTopic}`
+}
+
+function lowercaseFirstCharacter(value: string) {
+  if (!value) return value
+  return value.charAt(0).toLowerCase() + value.slice(1)
+}
+
+function lowercaseGenericPlanningPhrase(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return trimmed
+
+  if (/^(next|the next|our next|content|runway|campaign)\b/i.test(trimmed)) {
+    return lowercaseFirstCharacter(trimmed)
+  }
+
+  return trimmed
+}
+
+function withIndefiniteArticle(value: string) {
+  const normalized = value.trim()
+  if (!normalized) return value
+  if (/^(a|an|the)\s+/i.test(normalized)) return normalized
+  return `${/^[aeiou]/i.test(normalized) ? 'an' : 'a'} ${normalized}`
+}
+
+function buildCarouselFramePlan(questionnaire: MarketingPlanQuestionnaire) {
+  const topic = questionnaire.topic || 'this idea'
+  return [
+    `Hook: name why ${topic} matters in one plain sentence.`,
+    'Context: show the situation or problem without assuming prior knowledge.',
+    'Evidence: introduce the strongest visual, quote, chart, or artifact.',
+    'Breakdown: explain the evidence in smaller pieces.',
+    'Meaning: say what someone should understand differently now.',
+    'Next step: connect the idea to the destination link.',
+    'CTA: invite people to use the link in bio or follow up.',
+  ]
+}
+
+function inferTopicCluster(topic: string) {
+  const normalized = topic.trim()
+  if (!normalized) return 'Design insight'
+  return normalized.length > 80 ? normalized.slice(0, 77).trim() + '...' : normalized
+}
+
+function inferTargetQueries(topic: string) {
+  const normalized = topic.trim()
+  if (!normalized) return ['design insight', 'visual explanation', 'healthcare design']
+  return Array.from(new Set([normalized, `${normalized} design`, `${normalized} examples`]))
+}
+
+function getWizardCreationSummary({
+  mode,
+  hasInstagram,
+  hasAnalytics,
+  questionnaire,
+}: {
+  mode: DesignerWizardMode
+  hasInstagram: boolean
+  hasAnalytics: boolean
+  questionnaire: MarketingPlanQuestionnaire
+}) {
+  if (mode === 'singleItem') {
+    return [
+      'Create one research project first, with the audience, destination, seed keywords, source URLs, and measurement goal kept editable.',
+      'Store the research questions that must be answered before any calendar item is created.',
+      hasInstagram ? 'Use Instagram as a channel assumption for the research brief.' : 'Flag Instagram as an intended channel without creating it automatically.',
+      'Keep the calendar empty until someone runs research, approves findings, and generates linked records from Research.',
+      hasAnalytics ? 'Include the measurement goal so it can be paired with analytics later.' : 'Record what should be measured once an analytics source is connected.',
+    ]
+  }
+
+  const itemCount =
+    questionnaire.contentCapacity === 'multiChannel' ? 4 : questionnaire.contentCapacity === 'weeklyCarousel' ? 2 : 1
+
+  return [
+    'Create a Research project first so the brief, audience, seed keywords, source URLs, and research questions stay editable.',
+    hasInstagram ? 'Use Instagram as one channel assumption in the research brief.' : 'Flag Instagram as an intended channel without creating it automatically.',
+    'Capture supporting website, LinkedIn, and newsletter ideas as research context, not permanent records yet.',
+    `Estimate that this could become ${itemCount} content opportunit${itemCount === 1 ? 'y' : 'ies'} after findings are reviewed.`,
+    'Keep campaign, funnel, calendar, and Quick Link records uncreated until approved findings are converted from Research.',
+    hasAnalytics ? 'Include measurement context so the generated records can connect to analytics later.' : 'Record what should be measured once an analytics source is connected.',
+  ]
+}
+
+async function generateQuestionnaireMarketingPlan(
+  client: StudioClient,
+  data: MarketingData,
+  questionnaireInput: MarketingPlanQuestionnaire,
+): Promise<CarouselWizardResult> {
+  return createQuestionnaireResearchSetup(client, data, questionnaireInput)
+}
+
+async function createQuestionnaireResearchSetup(
+  client: StudioClient,
+  _data: MarketingData,
+  questionnaireInput: MarketingPlanQuestionnaire,
+): Promise<CarouselWizardResult> {
+  const questionnaire = normalizeMarketingPlanQuestionnaire(questionnaireInput)
+  const today = new Date()
+  const startDate = toDateInputValue(today)
+  const endDate = toDateInputValue(addDays(today, questionnaire.runway === 'oneMonth' ? 30 : questionnaire.runway === 'twoWeeks' ? 14 : 7))
+  const destinationUrl = questionnaire.destinationUrl
+  const researchProject = await client.create(buildQuestionnaireResearchProjectDocument(questionnaire, startDate, endDate, destinationUrl))
+
+  return {
+    researchProjectId: researchProject._id,
+    title: String(researchProject.title || `${questionnaire.topic} research project`),
+  }
+}
+
+function buildQuestionnaireResearchProjectDocument(
+  questionnaire: MarketingPlanQuestionnaire,
+  startDate: string,
+  endDate: string,
+  destinationUrl: string,
+): MarketingDocumentInput {
+  const sourceLabel = labelFromUrl(destinationUrl)
+  const topic = normalizeResearchProjectTopic(questionnaire.topic, sourceLabel)
+  const targetQueries = inferTargetQueries(topic)
+  const researchType = inferResearchProjectType(`${questionnaire.topic} ${questionnaire.notes || ''}`)
+
+  return {
+    _type: 'marketingResearchProject',
+    title: `${topic} research project`,
+    status: 'researching',
+    researchType,
+    brief: `Research ${topic} before generating a release plan. Use ${destinationUrl || sourceLabel} as the source context, then confirm SEO scores, source evidence, and content gaps for the ${startDate} to ${endDate} window.`,
+    audience: questionnaire.audience,
+    goals: normalizeStringList([
+      `Determine whether ${topic} is ready for an Instagram or multi-channel content runway.`,
+      'Gather provider-backed keyword scores rather than using AI estimates as scores.',
+      'Approve source evidence before any campaign, funnel, calendar item, or Quick Link is created.',
+      questionnaire.primaryMetric ? `Decide how to measure ${questionnaire.primaryMetric}.` : '',
+    ]),
+    campaignObjective: questionnaire.objective,
+    positioning: questionnaire.notes || `Lead with the useful idea, show evidence visually, and point people to ${destinationUrl}.`,
+    canonicalUrl: destinationUrl,
+    seedKeywords: targetQueries,
+    seedUrls: normalizeStringList([destinationUrl]),
+    targetGeography: 'us',
+    language: 'en',
+    methods: defaultResearchMethodsForType(researchType),
+    researchQuestions: buildResearchQuestionsForType(researchType, topic),
+    collaborators: [],
+    internalNotes: 'Created by the Designer Workflow. Run research and approve results before generating downstream records.',
+  }
+}
+
+function buildQuestionnaireResearchPlanDocument(
+  questionnaire: MarketingPlanQuestionnaire,
+  startDate: string,
+  endDate: string,
+  destinationUrl: string,
+): MarketingDocumentInput {
+  const targetQueries = inferTargetQueries(questionnaire.topic)
+  const topicCluster = inferTopicCluster(questionnaire.topic)
+  const windowLabel = `${questionnaire.topic} release window`
+
+  return {
+    _type: 'marketingResearchPlan',
+    title: `${questionnaire.topic} research plan`,
+    status: 'active',
+    summary: `Research-first planning scaffold for ${questionnaire.topic}. Review the audience, SEO targets, release window, and opportunities before generating campaign, funnel, calendar, or link records.`,
+    audience: questionnaire.audience,
+    positioning: questionnaire.notes || `Lead with the useful idea, show evidence visually, and point people to ${destinationUrl}.`,
+    campaignObjective: questionnaire.objective,
+    canonicalUrl: destinationUrl,
+    releaseCadence: questionnaire.contentCapacity === 'multiChannel' ? 'weekly' : 'campaignBased',
+    contentPillars: [
+      {
+        _key: randomKey(),
+        _type: 'contentPillar',
+        title: topicCluster,
+        audienceNeed: 'A clear explanation that makes the topic useful without marketing background.',
+        angle: 'Use a concrete visual artifact, example, or source link as the center of the story.',
+        exampleFormats: questionnaire.contentCapacity === 'multiChannel' ? ['carousel', 'linkPost', 'newsletter'] : ['carousel'],
+      },
+    ],
+    researchQuestions: [
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: `What does ${questionnaire.audience || 'the audience'} need to understand before ${questionnaire.topic} is useful?`,
+        whyItMatters: 'This keeps the release plan centered on audience need instead of internal topic interest.',
+        method: 'deskResearch',
+        decisionNeeded: 'Choose the hook, proof point, and first content opportunity.',
+        status: 'readyToBrief',
+      },
+      {
+        _key: randomKey(),
+        _type: 'researchQuestion',
+        question: `Which words would someone use to search for ${questionnaire.topic}?`,
+        whyItMatters: 'Audience language should shape titles, captions, alt text, and Quick Link copy.',
+        method: 'seoReview',
+        decisionNeeded: 'Pick the strongest target query and canonical destination.',
+        status: 'readyToBrief',
+      },
+    ],
+    evidenceNotes: [
+      {
+        _key: randomKey(),
+        _type: 'evidenceNote',
+        claim: `${questionnaire.topic} has enough designer-provided context to create a first release scaffold.`,
+        sourceTitle: 'Designer Workflow questionnaire',
+        sourceUrl: destinationUrl,
+        evidenceType: destinationUrl ? 'siteContent' : 'teamKnowledge',
+        confidence: 'medium',
+        implication: 'Create the initial content shell, then validate with engagement and click signals.',
+        gap: 'Needs post-publication signal review before expanding the thread.',
+      },
+    ],
+    assumptions: [
+      {
+        _key: randomKey(),
+        _type: 'researchAssumption',
+        assumption: `A visual sequence can make ${questionnaire.topic} understandable for ${questionnaire.audience || 'the intended audience'}.`,
+        risk: 'The content may be visually polished but still too abstract to drive useful action.',
+        validationSignal: `${questionnaire.primaryMetric || 'Useful visits'}, saves, shares, replies, and Quick Link clicks.`,
+        confidence: 'early',
+      },
+    ],
+    seoTargets: targetQueries.map((query, index) => ({
+      _key: randomKey(),
+      _type: 'seoTarget',
+      query,
+      intent: index === 0 ? 'learn' : 'compare',
+      priority: index === 0 ? 'high' : 'medium',
+      canonicalUrl: destinationUrl,
+      contentGap: 'Use this phrase to shape titles, captions, alt text, and the canonical page copy.',
+      notes: 'Generated from the Designer Workflow questionnaire.',
+    })),
+    channels: (questionnaire.contentCapacity === 'multiChannel' ? ['instagram', 'linkedin', 'newsletter', 'website'] : ['instagram']).map((channelKey, index) => ({
+      _key: randomKey(),
+      _type: 'recommendedChannel',
+      channelKey,
+      rationale: channelKey === 'instagram' ? 'Best fit for visual explanation and carousel production.' : 'Supports reuse of the same idea in another audience context.',
+      cadence: index === 0 ? 'First release' : 'Supporting release',
+      priority: index === 0 ? 'high' : 'medium',
+    })),
+    releaseWindows: [
+      {
+        _key: randomKey(),
+        _type: 'releaseWindow',
+        label: windowLabel,
+        startDate,
+        endDate,
+        goal: 'Release the planned content sequence and learn which follow-up is needed.',
+        priority: 'high',
+      },
+    ],
+    contentOpportunities: buildQuestionnaireResearchOpportunities(questionnaire, destinationUrl, buildQuestionnaireCalendarPlan(questionnaire, destinationUrl), [], ''),
+    measurementGoals: [
+      {
+        _key: randomKey(),
+        _type: 'measurementGoal',
+        label: questionnaire.primaryMetric,
+        target: 'Review after the planned runway ends.',
+      },
+      {
+        _key: randomKey(),
+        _type: 'measurementGoal',
+        label: 'Quick Link clicks',
+        target: 'Watch whether social visitors reach the destination through /links.',
+      },
+    ],
+    strategyAdjustments: [],
+    internalNotes: 'Created by the Designer Workflow research-first setup. Generate linked campaign, funnel, calendar, and Quick Link records from selected Research opportunities when ready.',
+  }
+}
+
+function buildQuestionnaireResearchOpportunities(
+  questionnaire: MarketingPlanQuestionnaire,
+  destinationUrl: string,
+  calendarPlan: ReturnType<typeof buildQuestionnaireCalendarPlan>,
+  createdCalendarItems: Array<{ _id: string }>,
+  linkItemId: string,
+): ResearchContentOpportunity[] {
+  const queries = inferTargetQueries(questionnaire.topic)
+  return calendarPlan.map((item, index) => ({
+    _key: randomKey(),
+    _type: 'contentOpportunity',
+    title: item.title,
+    channel: item.channel,
+    format: item.contentType,
+    owner: '',
+    releaseWindow: `${questionnaire.topic} release window`,
+    callToAction: item.callToAction,
+    sourceMaterial: destinationUrl,
+    destinationUrl,
+    readiness: createdCalendarItems[index]?._id ? 'scheduled' : 'readyToBrief',
+    seoQuery: queries[index] || queries[0] || questionnaire.topic,
+    priority: index === 0 ? 'high' : 'medium',
+    notes: item.brief,
+    ...(createdCalendarItems[index]?._id ? { generatedCalendarItem: referenceFromId(createdCalendarItems[index]._id) } : {}),
+    ...(linkItemId && index === 0 ? { generatedLinkItem: referenceFromId(linkItemId) } : {}),
+  }))
+}
+
+function buildQuestionnaireCalendarPlan(
+  questionnaire: MarketingPlanQuestionnaire,
+  destinationUrl: string,
+) {
+  const carouselBrief = [
+    buildCarouselBrief(questionnaire),
+    '',
+    'Questionnaire context:',
+    `Topic: ${questionnaire.topic}`,
+    `Audience: ${questionnaire.audience}`,
+    `Metric: ${questionnaire.primaryMetric}`,
+    questionnaire.notes ? `Notes: ${questionnaire.notes}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  const items = [
+    {
+      title: `${questionnaire.topic} Instagram carousel`,
+      channel: 'instagram',
+      contentType: 'carousel',
+      funnelStage: 'awareness',
+      offsetDays: 7,
+      brief: carouselBrief,
+      callToAction: 'See link in bio',
+    },
+  ]
+
+  if (questionnaire.contentCapacity === 'weeklyCarousel') {
+    items.push({
+      title: `${questionnaire.topic} follow-up carousel`,
+      channel: 'instagram',
+      contentType: 'carousel',
+      funnelStage: 'interest',
+      offsetDays: questionnaire.runway === 'oneWeek' ? 6 : 14,
+      brief: [
+        'Create a second carousel that answers one question raised by the first carousel.',
+        'Use the strongest comment, objection, or missing context as the hook.',
+        `Destination: ${destinationUrl}`,
+      ].join('\n'),
+      callToAction: 'Read the full story',
+    })
+  }
+
+  if (questionnaire.contentCapacity === 'multiChannel') {
+    items.push(
+      {
+        title: `${questionnaire.topic} LinkedIn evidence post`,
+        channel: 'linkedin',
+        contentType: 'linkPost',
+        funnelStage: 'interest',
+        offsetDays: 10,
+        brief: [
+          'Repurpose the carousel into a short evidence-led LinkedIn post.',
+          'Start with the strongest data point or visual claim.',
+          'End by pointing readers to the full destination.',
+          `Destination: ${destinationUrl}`,
+        ].join('\n'),
+        callToAction: 'Read the full piece',
+      },
+      {
+        title: `${questionnaire.topic} newsletter note`,
+        channel: 'newsletter',
+        contentType: 'newsletter',
+        funnelStage: 'consideration',
+        offsetDays: questionnaire.runway === 'oneWeek' ? 6 : 14,
+        brief: [
+          'Write a short newsletter section that frames why this topic matters now.',
+          'Include one image or quote from the carousel.',
+          'Keep the copy useful without assuming the reader saw Instagram.',
+          `Destination: ${destinationUrl}`,
+        ].join('\n'),
+        callToAction: 'Explore the full project',
+      },
+      {
+        title: `${questionnaire.topic} destination check`,
+        channel: 'website',
+        contentType: 'landingPage',
+        funnelStage: 'conversion',
+        offsetDays: questionnaire.runway === 'oneMonth' ? 21 : 12,
+        brief: [
+          'Check that the destination page supports the social campaign.',
+          'Make sure the title, intro, preview image, and next step match the carousel promise.',
+          'Add or verify tracking links before publishing the social posts.',
+          `Destination: ${destinationUrl}`,
+        ].join('\n'),
+        callToAction: 'Talk with GoInvo',
+      },
+    )
+  }
+
+  return items
+}
+
+async function ensureMarketingChannel(client: StudioClient, data: MarketingData, key: string): Promise<string> {
+  const existing = data.channels.find((channel) => channel.key === key && channel.status !== 'archived')
+  if (existing) return existing._id
+
+  const defaults: Record<string, Omit<MarketingChannel, '_id'>> = {
+    instagram: {
+      title: 'Instagram',
+      key: 'instagram',
+      status: 'active',
+      platform: 'social',
+      description: 'Instagram content for visual explainers, carousels, reels, stories, and project updates.',
+      defaultFunnelStage: 'awareness',
+      contentTypes: [
+        { label: 'Post', value: 'post' },
+        { label: 'Carousel', value: 'carousel', description: 'Multi-slide visual story that can promote a deeper article or project.' },
+        { label: 'Reel', value: 'reel' },
+        { label: 'Story', value: 'story' },
+      ],
+    },
+    linkedin: {
+      title: 'LinkedIn',
+      key: 'linkedin',
+      status: 'active',
+      platform: 'social',
+      description: 'B2B and professional network posts for evidence, thought leadership, and project updates.',
+      defaultFunnelStage: 'interest',
+      contentTypes: [
+        { label: 'Text Post', value: 'textPost' },
+        { label: 'Link Post', value: 'linkPost' },
+        { label: 'Carousel', value: 'carousel' },
+        { label: 'Video', value: 'video' },
+      ],
+    },
+    newsletter: {
+      title: 'Newsletter',
+      key: 'newsletter',
+      status: 'active',
+      platform: 'email',
+      description: 'Owned audience updates that connect current work to durable articles, projects, and resources.',
+      defaultFunnelStage: 'consideration',
+      contentTypes: [
+        { label: 'Newsletter', value: 'newsletter' },
+        { label: 'Feature', value: 'feature' },
+        { label: 'Announcement', value: 'announcement' },
+      ],
+    },
+    website: {
+      title: 'Website',
+      key: 'website',
+      status: 'active',
+      platform: 'website',
+      description: 'Durable GoInvo site content, landing pages, articles, and case studies.',
+      defaultFunnelStage: 'conversion',
+      contentTypes: [
+        { label: 'Article', value: 'article' },
+        { label: 'Case Study', value: 'caseStudy' },
+        { label: 'Landing Page', value: 'landingPage' },
+      ],
+    },
+  }
+
+  const fallback = defaults[key] || {
+    title: key,
+    key,
+    status: 'active',
+    platform: 'other',
+    contentTypes: [{ label: 'Post', value: 'post' }],
+  }
+
+  const created = await client.create({
+    _type: 'marketingChannel',
+    ...fallback,
+    contentTypes: normalizeContentTypes(fallback.contentTypes || []),
+  })
+
+  return created._id
+}
+
+async function generateInstagramCarouselSetup(
+  client: StudioClient,
+  data: MarketingData,
+  questionnaireInput: MarketingPlanQuestionnaire,
+): Promise<CarouselWizardResult> {
+  return createQuestionnaireResearchSetup(client, data, { ...questionnaireInput, contentCapacity: 'oneItem' })
+}
+
+function buildCarouselBrief(questionnaire: MarketingPlanQuestionnaire) {
+  return [
+    'What designers still need to make:',
+    '- Final slide copy',
+    '- Final visuals or chart exports',
+    '- Instagram caption',
+    '- Alt text for each slide',
+    '',
+    'Frame plan:',
+    ...buildCarouselFramePlan(questionnaire).map((frame, index) => `${index + 1}. ${frame}`),
+    '',
+    `Destination: ${questionnaire.destinationUrl}`,
+    'CTA: See link in bio',
+  ].join('\n')
 }
 
 function getChannelByKey(channels: MarketingChannel[], key?: string) {
@@ -7705,6 +16350,34 @@ function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
     map.set(key, [...(map.get(key) || []), item])
   })
   return map
+}
+
+function getCalendarItemDisplayGroup(item: Pick<MarketingCalendarItem, 'status'>): SavedCalendarDisplayGroup {
+  return ['scheduled', 'published'].includes(item.status || '') ? 'final' : 'draft'
+}
+
+function getCalendarGroupLabel(group: CalendarDisplayGroup) {
+  if (group === 'preview') return 'Preview'
+  if (group === 'final') return 'Final'
+  return 'Draft'
+}
+
+function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
+  const grouped = items.map((item) => ({ item, group: getCalendarItemDisplayGroup(item) }))
+  return [
+    ...grouped.filter((record) => record.group === 'final'),
+    ...grouped.filter((record) => record.group === 'draft'),
+  ]
+}
+
+function getSavedCalendarGroups(items: MarketingCalendarItem[]) {
+  return items.reduce(
+    (groups, item) => {
+      groups[getCalendarItemDisplayGroup(item)].push(item)
+      return groups
+    },
+    { draft: [] as MarketingCalendarItem[], final: [] as MarketingCalendarItem[] },
+  )
 }
 
 export const marketingTool: Tool = {
