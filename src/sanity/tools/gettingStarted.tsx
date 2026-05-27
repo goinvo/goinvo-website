@@ -278,7 +278,7 @@ const categories: Category[] = [
   {
     id: 'marketing',
     title: 'Marketing suite',
-    blurb: 'Calendar, campaigns, funnels, channels, analytics, and Quick Links.',
+    blurb: 'Research, calendar, campaigns, funnels, channels, analytics, and Quick Links.',
     icon: ChartUpwardIcon,
     articles: [
       {
@@ -295,17 +295,18 @@ const categories: Category[] = [
             body: (
               <>
                 The Marketing workspace is designed for GoInvo designers, not
-                full-time marketers. Its job is to set up the campaign, funnel,
-                channel, calendar, analytics, and Quick Link framework so the
-                remaining work is the actual post, page, image, email, or
-                artifact people will see.
+                full-time marketers. Its job is to start with research, then
+                convert reviewed opportunities into campaign, funnel, channel,
+                calendar, analytics, and Quick Link records so the remaining
+                work is the actual post, page, image, email, or artifact
+                people will see.
               </>
             ),
             tip: (
               <>
                 Treat the Designer workflow and Needs attention flags like an
-                internal setup queue: resolve the framework first, then start
-                drafting the content only when the shell is connected.
+                internal setup queue: resolve the research first, then create
+                the connected shells only when the opportunities are ready.
               </>
             ),
           },
@@ -315,10 +316,11 @@ const categories: Category[] = [
             body: (
               <>
                 Start with the broad intent, then move toward the thing you
-                need to make: campaigns set the goal and audience, funnels
-                define the next step, channels constrain the format, calendar
-                items become the actual posts or pages, and analytics explains
-                whether the work helped.
+                need to make: research plans collect SEO, collaboration, and
+                release timing inputs; campaigns set the goal and audience;
+                funnels define the next step; channels constrain the format;
+                calendar items become the actual posts or pages; and analytics
+                explains whether the work helped.
               </>
             ),
           },
@@ -331,6 +333,122 @@ const categories: Category[] = [
                 funnel, or content pattern, then rewrite the goal, audience,
                 CTA, and brief in plain language so designers do not need to
                 invent the marketing strategy before making the content.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.research',
+        title: 'Use Research for release planning',
+        blurb: 'Turn fast strategy inputs, SEO, collaborators, and contributors into an editable content plan.',
+        minutes: 7,
+        keywords: ['research', 'seo', 'collaborations', 'interns', 'release windows', 'content opportunities', 'strategy'],
+        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        steps: [
+          {
+            id: 'marketing.research.inputs',
+            title: 'Gather only the inputs that change release timing',
+            body: (
+              <>
+                Use <strong>Research</strong> when you need a larger plan, not
+                just one calendar item. Capture the audience, positioning, SEO
+                targets, content pillars, collaborators, and release windows
+                quickly so the plan can turn into content opportunities.
+              </>
+            ),
+            tip: (
+              <>
+                Research here is not a 30-day phase. It is the minimum useful
+                synthesis needed to decide what should ship, when, and why.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.research.collaborators',
+            title: 'Treat collaborators as strategy inputs',
+            body: (
+              <>
+                Add university interns, advisors, partner organizations,
+                guests, or communities with their topic area, availability, and
+                contribution type. If someone new can help, the release plan
+                should suggest what moves earlier, what gets added, and what
+                needs their review.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.research.seo',
+            title: 'Use SEO as wording and destination guidance',
+            body: (
+              <>
+                SEO targets should include the query, search intent, canonical
+                destination, and content gap. These fields flow into campaigns
+                and calendar items as topic clusters, target queries, and
+                production prompts.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.research.convert',
+            title: 'Convert opportunities when the plan is good enough',
+            body: (
+              <>
+                Content opportunities are the bridge from strategy to making.
+                Select the opportunities that are ready, then generate the
+                linked campaign, funnel, calendar items, and Quick Links. Keep
+                editing after generation if the plan changes.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.designer-workflow-tutorials',
+        title: 'Designer Workflow tutorials',
+        blurb: 'Practice the Marketing view tour and learn how sessions, AI suggestions, and next-step routing fit together.',
+        minutes: 4,
+        keywords: ['designer workflow', 'tutorial', 'tour', 'sessions', 'ai assistant', 'guided setup'],
+        links: [
+          { path: '/marketing?designerWorkflowTutorial=marketing-view-tour', label: 'Run Marketing view tour' },
+          { path: '/marketing?designerWorkflowTutorial=designer-workflow-recommendation', label: 'Run demo recommendation tour' },
+          { path: '/marketing?designerWorkflowTutorial=designer-workflow-sessions', label: 'Run sessions tour' },
+        ],
+        steps: [
+          {
+            id: 'marketing.designer-workflow-tutorials.launch',
+            title: 'Launch the Marketing view tour',
+            body: (
+              <>
+                Use <strong>Run Marketing view tour</strong> to open Marketing
+                and start the same guided overlay that appears the first time
+                someone visits the Marketing tab. It highlights the active UI,
+                explains the decision in plain language, and advances with
+                either the bubble arrows or the real action.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.designer-workflow-tutorials.sessions',
+            title: 'Use sessions instead of restarting',
+            body: (
+              <>
+                The sessions tutorial shows how to reopen saved setup runs.
+                This keeps designers from wasting prompts when they are still
+                working through the same planning question.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.designer-workflow-tutorials.non-mutating',
+            title: 'Tours do not create records',
+            body: (
+              <>
+                Tutorials stop before the create action. They can prepare the
+                interface and generate a recommendation preview, but research
+                plans are only created by an explicit user action. Campaigns,
+                funnels, calendar items, and Quick Links are created later from
+                selected Research opportunities.
               </>
             ),
           },
@@ -1541,6 +1659,7 @@ const categories: Category[] = [
 
 const articleAliases: Record<string, string> = {
   'basics.marketing': 'marketing.overview',
+  'marketing.workflow': 'marketing.designer-workflow-tutorials',
 }
 
 /* -----------------------------------------------------------------
