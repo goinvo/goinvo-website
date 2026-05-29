@@ -20,6 +20,7 @@ export default defineType({
         { title: 'Body paragraph', value: 'normal' },
         { title: 'Large serif paragraph', value: 'serifLarge' },
         { title: 'Section heading (H2)', value: 'h2' },
+        { title: 'Centered section title', value: 'sectionTitle' },
         { title: 'Subheading (H3)', value: 'h3' },
         { title: 'Small heading (H4)', value: 'h4' },
         { title: 'Quote', value: 'blockquote' },
