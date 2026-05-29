@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     description: "How citizens of the USA really die (from 2007-2014).",
     type: "article",
     images: [
-      "https://www.goinvo.com/old/images/features/killer-truths/Killer_Truths_Slide.png",
+      "/images/features/killer-truths/Killer_Truths_Slide.png",
     ],
   },
   twitter: {
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     title: "Killer Truths",
     description: "How citizens of the USA really die (from 2007-2014).",
     images: [
-      "https://www.goinvo.com/old/images/features/killer-truths/Killer_Truths_Slide.png",
+      "/images/features/killer-truths/Killer_Truths_Slide.png",
     ],
   },
 };
@@ -52,7 +52,7 @@ export default function KillerTruthsPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt="Killer Truths"
-            src="https://www.goinvo.com/old/images/features/killer-truths/killer_truths_title.png"
+            src="/images/features/killer-truths/killer_truths_title.png"
           />
         </div>
       </header>
@@ -94,7 +94,7 @@ export default function KillerTruthsPage() {
             </li>
             <li className="download">
               <a
-                href="https://www.goinvo.com/old/images/features/killer-truths/Killer_Truths_Slide.png"
+                href="/images/features/killer-truths/Killer_Truths_Slide.png"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -190,7 +190,7 @@ export default function KillerTruthsPage() {
                 <img
                   alt="Sharon Lee"
                   className="scale-with-grid"
-                  src="https://www.goinvo.com/old/images/features/killer-truths/author_sharon.jpg"
+                  src="/images/features/killer-truths/author_sharon.jpg"
                 />
               </div>
               <div className="authtext">
@@ -215,7 +215,7 @@ export default function KillerTruthsPage() {
                 <img
                   alt="Jen Patel"
                   className="scale-with-grid"
-                  src="https://www.goinvo.com/old/images/features/killer-truths/contributer_jen.jpg"
+                  src="/images/features/killer-truths/contributer_jen.jpg"
                 />
               </div>
               <div className="authtext">
@@ -237,7 +237,7 @@ export default function KillerTruthsPage() {
                 <img
                   alt="Juhan Sonin"
                   className="scale-with-grid"
-                  src="https://www.goinvo.com/old/images/features/killer-truths/contributer_juhan.jpg"
+                  src="/images/features/killer-truths/contributer_juhan.jpg"
                 />
               </div>
               <div className="authtext">

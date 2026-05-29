@@ -5,7 +5,7 @@ import { VotingCarousel } from './VotingCarousel'
 import './redesign-democracy.css'
 
 const IMG = (path: string) =>
-  `https://www.goinvo.com/old/images/features/democracy/${path}`
+  `/images/features/democracy/${path}`
 
 export const metadata: Metadata = {
   title: 'Redesign Democracy',
@@ -1407,7 +1407,7 @@ export default function RedesignDemocracyPage() {
             {/* Author */}
             <div className="md:w-[65%]">
               <Image
-                src="https://www.goinvo.com/old/images/people/dirk/dk_nofilter.jpg"
+                src="/images/people/dirk/dk_nofilter.jpg"
                 alt="Dirk Knemeyer"
                 width={600}
                 height={400}

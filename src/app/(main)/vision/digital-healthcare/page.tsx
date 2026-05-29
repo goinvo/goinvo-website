@@ -5,7 +5,7 @@ import { Author } from '@/components/ui/Author'
 import { ScrollNav, SectionFadeIn } from './ScrollNav'
 import './digital-healthcare.css'
 
-const IMG_BASE = 'https://www.goinvo.com/old/images/features/digital-healthcare'
+const IMG_BASE = '/images/features/digital-healthcare'
 
 export const metadata: Metadata = {
   title: 'Digital Healthcare: 2016 and Beyond',
@@ -514,7 +514,7 @@ export default function DigitalHealthcarePage() {
           <Author name="Courtney McGorrill" company="Web Developer & Designer" image={`${IMG_BASE}/contrib/courtney.jpg`}>
             <a href="http://twitter.com/court_mcgort" target="_blank" rel="noopener noreferrer">@court_mcgort</a>
           </Author>
-          <Author name="Juhan Sonin" company="Contributing Author" image="https://www.goinvo.com/old/images/features/democracy/contrib/juhan.jpg">
+          <Author name="Juhan Sonin" company="Contributing Author" image="/images/features/democracy/contrib/juhan.jpg">
             <a href="http://twitter.com/jsonin" target="_blank" rel="noopener noreferrer">@jsonin</a>
           </Author>
         </div>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="52px" height="39px" viewBox="0 0 52 39" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
+    <!-- Generator: Sketch 3.4.4 (17249) - http://www.bohemiancoding.com/sketch -->
+    <title>Group</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke-width="1" fill-rule="evenodd" sketch:type="MSPage">
+        <g id="artboard" sketch:type="MSArtboardGroup" transform="translate(-1762.000000, -3650.000000)">
+            <g id="Group" sketch:type="MSLayerGroup" transform="translate(1762.000000, 3650.000000)">
+                <path d="M15.5,4.5 L49.5172367,4.5" id="Line" fill="none" stroke-width="5" stroke-linecap="round" sketch:type="MSShapeGroup"></path>
+                <path d="M15.5,19.5 L49.5172367,19.5" id="Line-Copy" fill="none" stroke-width="5" stroke-linecap="round" sketch:type="MSShapeGroup"></path>
+                <path d="M15.5,34.5 L49.5172367,34.5" id="Line-Copy-2" fill="none" stroke-width="5" stroke-linecap="round" sketch:type="MSShapeGroup"></path>
+                <circle id="Oval-19" stroke="none" sketch:type="MSShapeGroup" cx="4.5" cy="4.5" r="4.5"></circle>
+                <circle id="Oval-19-Copy" stroke="none" sketch:type="MSShapeGroup" cx="4.5" cy="19.5" r="4.5"></circle>
+                <circle id="Oval-19-Copy-2" stroke="none" sketch:type="MSShapeGroup" cx="4.5" cy="34.5" r="4.5"></circle>
+            </g>
+        </g>
+    </g>
+</svg>
