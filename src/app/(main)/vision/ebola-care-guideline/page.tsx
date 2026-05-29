@@ -11,10 +11,10 @@ export const metadata: Metadata = {
 export default function EbolaCareGuidelinePage() {
   return (
     <div>
-      <SetCaseStudyHero image="https://www.goinvo.com/old/images/features/ebola-care-guideline/haz_zoom_bg.png" />
+      <SetCaseStudyHero image="/images/features/ebola-care-guideline/haz_zoom_bg.png" />
 
       <div className="bg-white">
-        {/* Title — cover image is the hero above */}
+        {/* Title - cover image is the hero above */}
         <div className="max-w-[1238px] mx-auto pt-8 px-4">
           <h1 className="header-xl mb-2">Ebola Care Guideline</h1>
           <p className="font-serif text-lg text-gray">An Illustrated Process on Personal Protective Equipment</p>
@@ -56,7 +56,7 @@ export default function EbolaCareGuidelinePage() {
           <div className="credits-author">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://www.goinvo.com/old/images/team_photos/xinyu_liu.jpg"
+              src="/images/team_photos/xinyu_liu.jpg"
               alt="Xinyu Liu"
               className="w-full mb-4"
             />
@@ -75,7 +75,7 @@ export default function EbolaCareGuidelinePage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/democracy/contrib/emily.jpg"
+                    src="/images/features/democracy/contrib/emily.jpg"
                     alt="Emily Twaddell"
                     className="w-full"
                   />
@@ -92,7 +92,7 @@ export default function EbolaCareGuidelinePage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/democracy/contrib/juhan.jpg"
+                    src="/images/features/democracy/contrib/juhan.jpg"
                     alt="Juhan Sonin"
                     className="w-full"
                   />
@@ -109,7 +109,7 @@ export default function EbolaCareGuidelinePage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/ebola/contrib/sarah.jpeg"
+                    src="/images/features/ebola/contrib/sarah.jpeg"
                     alt="Sarah Kaiser"
                     className="w-full"
                   />
@@ -126,7 +126,7 @@ export default function EbolaCareGuidelinePage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/ebola/contrib/adam.jpeg"
+                    src="/images/features/ebola/contrib/adam.jpeg"
                     alt="Adam Pere"
                     className="w-full"
                   />

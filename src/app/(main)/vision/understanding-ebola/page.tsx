@@ -1,10 +1,5 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
-import { cloudfrontImage } from '@/lib/utils'
-import { Divider } from '@/components/ui/Divider'
-import { Author } from '@/components/ui/Author'
-import { Button } from '@/components/ui/Button'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import Link from 'next/link'
 import './understanding-ebola.css'
 
@@ -35,78 +30,71 @@ export default function UnderstandingEbolaPage() {
       <article className="bg-white">
         <section id="section1">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-01.png"
+            src="/images/features/ebola/Ebola-01.png"
             alt="Understanding Ebola - Introduction to Ebola: origins, history, and overview of the virus"
-            width={1400}
-            height={2000}
+            width={2869}
+            height={1659}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
         <section id="section2">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-02.png"
+            src="/images/features/ebola/Ebola-02.png"
             alt="Ebola cases by year - a timeline of outbreaks and their scope"
-            width={1400}
-            height={2000}
+            width={2867}
+            height={12354}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
         <section id="section3">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-03.png"
+            src="/images/features/ebola/Ebola-03.png"
             alt="Ebola transmission - how the virus spreads from person to person"
-            width={1400}
-            height={2000}
+            width={2869}
+            height={5396}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
         <section id="section4">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-04.png"
+            src="/images/features/ebola/Ebola-04.png"
             alt="Ebola symptoms - the progression of symptoms from early to late stages"
-            width={1400}
-            height={2000}
+            width={2869}
+            height={2904}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
         <section id="section5">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-05.png"
+            src="/images/features/ebola/Ebola-05.png"
             alt="Ebola diagnosis and treatment - medical procedures and care protocols"
-            width={1400}
-            height={2000}
+            width={2869}
+            height={4475}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
         <section id="section6">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-06.png"
+            src="/images/features/ebola/Ebola-06.png"
             alt="Ebola prevention and control - measures to stop the spread of the virus"
-            width={1400}
-            height={2000}
+            width={2869}
+            height={2923}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
         <section id="section7">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-07.png"
+            src="/images/features/ebola/Ebola-07.png"
             alt="Potential spread of Ebola - risk factors and global implications"
-            width={1400}
-            height={2000}
+            width={2866}
+            height={2662}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
 
@@ -125,7 +113,7 @@ export default function UnderstandingEbolaPage() {
           <div className="credits-author">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://www.goinvo.com/old/images/team_photos/xinyu_liu.jpg"
+              src="/images/team_photos/xinyu_liu.jpg"
               alt="Xinyu Liu"
               className="w-full max-w-[200px] mb-4"
             />
@@ -144,7 +132,7 @@ export default function UnderstandingEbolaPage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/democracy/contrib/emily.jpg"
+                    src="/images/features/democracy/contrib/emily.jpg"
                     alt="Emily Twaddell"
                     className="w-full"
                   />
@@ -161,7 +149,7 @@ export default function UnderstandingEbolaPage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/democracy/contrib/juhan.jpg"
+                    src="/images/features/democracy/contrib/juhan.jpg"
                     alt="Juhan Sonin"
                     className="w-full"
                   />
@@ -178,7 +166,7 @@ export default function UnderstandingEbolaPage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/ebola/contrib/sarah.jpeg"
+                    src="/images/features/ebola/contrib/sarah.jpeg"
                     alt="Sarah Kaiser"
                     className="w-full"
                   />
@@ -195,7 +183,7 @@ export default function UnderstandingEbolaPage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/features/ebola/contrib/adam.jpeg"
+                    src="/images/features/ebola/contrib/adam.jpeg"
                     alt="Adam Pere"
                     className="w-full"
                   />
@@ -212,7 +200,7 @@ export default function UnderstandingEbolaPage() {
                 <div className="contributor-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="https://www.goinvo.com/old/images/designsoap.png"
+                    src="/images/designsoap.png"
                     alt="Designsoap"
                     className="w-full border-2 border-[#51697b]"
                   />
@@ -226,7 +214,7 @@ export default function UnderstandingEbolaPage() {
 
             <div className="mt-5">
               <a
-                href="https://www.goinvo.com/features/ebola/files/understanding_ebola.pdf"
+                href="/pdf/vision/understanding-ebola.pdf"
                 className="text-[#aaa] hover:text-[#e0e0e0] text-lg"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -242,12 +230,11 @@ export default function UnderstandingEbolaPage() {
       <article className="bg-white">
         <section id="section8">
           <Image
-            src="https://www.goinvo.com/old/images/features/ebola/Ebola-08.png"
+            src="/images/features/ebola/Ebola-08.png"
             alt="References and sources for the Understanding Ebola infographic"
-            width={1400}
-            height={2000}
+            width={2867}
+            height={2520}
             className="w-full h-auto block mx-auto"
-            unoptimized
           />
         </section>
       </article>

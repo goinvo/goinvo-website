@@ -151,7 +151,7 @@
   color: white;
   height: 80vh;
   text-align: center;
-  background: url("https://www.goinvo.com/old/images/features/us-healthcare/jumbotron3.jpg");
+  background: url("/images/features/us-healthcare/jumbotron3.jpg");
   background-size: cover;
   background-position: top center;
   position: relative;
@@ -839,7 +839,7 @@
 
 /* ───────────────── Verbatim-Gatsby chart CSS (scoped) ─────────────────
    D3 v3 scripts generate SVGs with these classes. Copied verbatim from
-   goinvo.com/old/stylesheets/features/us-healthcare.css and scoped to
+   the legacy U.S. Healthcare feature stylesheet and scoped to
    our article wrapper so they don't leak elsewhere. */
 .us-healthcare-legacy svg circle:hover,
 .us-healthcare-legacy svg rect:hover,
