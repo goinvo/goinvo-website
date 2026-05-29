@@ -4,7 +4,7 @@ import { useCallback, useState, useRef, useEffect } from 'react'
 import { VerbatimChartScripts } from './VerbatimChartScripts'
 
 /* ── Image helpers ──────────────────────────────── */
-const IMG = 'https://www.goinvo.com/old/images/features/us-healthcare'
+const IMG = '/images/features/us-healthcare'
 
 export function UsHealthcareContent() {
   /* ── Interactive state ─────────────────────────── */

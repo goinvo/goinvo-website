@@ -14,7 +14,7 @@ export const metadata: Metadata = {
       'An easy-to-digest, visual guide to understanding the Zika virus.',
     images: [
       {
-        url: 'https://www.goinvo.com/old/images/features/zika/zika-twitter-card.jpg',
+        url: '/images/features/zika/zika-twitter-card.jpg',
       },
     ],
   },
@@ -25,12 +25,12 @@ export const metadata: Metadata = {
     description:
       'An easy-to-digest, visual guide to understanding the Zika virus.',
     images: [
-      'https://www.goinvo.com/old/images/features/zika/zika-twitter-card.jpg',
+      '/images/features/zika/zika-twitter-card.jpg',
     ],
   },
 }
 
-const IMG = 'https://www.goinvo.com/old/images/features/zika'
+const IMG = '/images/features/zika'
 
 export default function UnderstandingZikaPage() {
   return (

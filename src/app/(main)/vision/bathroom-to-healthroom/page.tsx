@@ -8,8 +8,8 @@ import { TimelineSlider } from './TimelineSlider'
 import './healthroom.css'
 
 const IMG_BASE =
-  'https://www.goinvo.com/old/images/features/design-for-life'
-const VID_BASE = 'https://www.goinvo.com/old/videos/dfl'
+  '/images/features/design-for-life'
+const VID_BASE = '/videos/dfl'
 
 const legacyImage = (path: string) => `${IMG_BASE}/${path}`
 
@@ -56,7 +56,7 @@ export default function BathroomToHealthroomPage() {
           <BackgroundVideo
             mp4Src={`${VID_BASE}/header.mp4`}
             webmSrc={`${VID_BASE}/header.webm`}
-            posterSrc="https://www.goinvo.com/old/videos/dfl/header.jpg"
+            posterSrc="/videos/dfl/header.jpg"
           />
           {/* Dark overlay for text readability */}
           <div className="absolute inset-0 bg-black/40 z-[1]" />
@@ -331,7 +331,7 @@ export default function BathroomToHealthroomPage() {
               <div className="video relative overflow-hidden" id="hgraph">
                 <BackgroundVideo
                   mp4Src={`${VID_BASE}/hgraph.mp4`}
-                  posterSrc={legacyImage('hgraph-poster.jpg')}
+                  posterSrc={`${VID_BASE}/hgraph.jpg`}
                 />
                 {/* Spacer to maintain aspect ratio */}
                 <div className="relative z-[1]" style={{ paddingTop: '66.67%' }} />
@@ -390,7 +390,7 @@ export default function BathroomToHealthroomPage() {
               <div className="relative overflow-hidden" id="eye-tracking">
                 <BackgroundVideo
                   mp4Src={`${VID_BASE}/blade_runner.mp4`}
-                  posterSrc={legacyImage('blade-runner-poster.jpg')}
+                  posterSrc={`${VID_BASE}/blade_runner.jpg`}
                 />
                 <p className="caption relative z-[1]">
                   These days, my thoughts turn pretty frequently to the image of
@@ -610,7 +610,7 @@ export default function BathroomToHealthroomPage() {
               <div className="full relative overflow-hidden" id="crane" style={{ margin: '2em 0' }}>
                 <BackgroundVideo
                   mp4Src={`${VID_BASE}/crane.mp4`}
-                  posterSrc={legacyImage('crane-poster.jpg')}
+                  posterSrc={`${VID_BASE}/crane.jpg`}
                 />
                 {/* Spacer to maintain aspect ratio */}
                 <div className="relative z-[1]" style={{ paddingTop: '50%' }} />
@@ -660,7 +660,7 @@ export default function BathroomToHealthroomPage() {
               <div className="video relative overflow-hidden" id="sleeper-video">
                 <BackgroundVideo
                   mp4Src={`${VID_BASE}/sleeper.mp4`}
-                  posterSrc={legacyImage('sleeper-poster.jpg')}
+                  posterSrc={`${VID_BASE}/sleeper.jpg`}
                 />
                 {/* Spacer to maintain aspect ratio */}
                 <div className="relative z-[1]" style={{ paddingTop: '66.67%' }} />
@@ -1022,7 +1022,7 @@ export default function BathroomToHealthroomPage() {
           <div className="footer-logo">
             <div className="logo">
               <Image
-                src="https://www.goinvo.com/old/images/logo_blue.png"
+                src="/images/logo_blue.png"
                 alt="GoInvo logo"
                 width={100}
                 height={50}

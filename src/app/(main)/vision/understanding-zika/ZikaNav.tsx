@@ -111,7 +111,7 @@ export function ZikaNav() {
           ))}
           <li>
             <a
-              href="https://www.goinvo.com/old/images/features/zika/understanding_zika.pdf"
+              href="/images/features/zika/understanding_zika.pdf"
               target="_blank"
               rel="noopener noreferrer"
             >

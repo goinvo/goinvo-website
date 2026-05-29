@@ -36,6 +36,18 @@ const containerVariants = {
   exit: { opacity: 0 },
 }
 
+const localHeroImagePrefixes = [
+  '/images/features/ebola-care-guideline/',
+]
+
+function heroImageSrc(src: string) {
+  if (localHeroImagePrefixes.some((prefix) => src.startsWith(prefix))) {
+    return src
+  }
+
+  return cloudfrontImage(src)
+}
+
 /* ------------------------------------------------------------------ */
 /*  Multi-image hero content (e.g. vision page panorama)               */
 /* ------------------------------------------------------------------ */
@@ -63,7 +75,7 @@ function MultiImageContent({
         {desktop.map((src, i) => (
           <div key={src} className="relative h-full">
             <Image
-              src={cloudfrontImage(src)}
+              src={heroImageSrc(src)}
               alt=""
               fill
               className="object-cover"
@@ -79,7 +91,7 @@ function MultiImageContent({
       {/* Mobile: stacked (first image fills, rest hidden in collapsed) */}
       <div className="sm:hidden w-full h-full relative">
         <Image
-          src={cloudfrontImage(mobile[0])}
+          src={heroImageSrc(mobile[0])}
           alt=""
           fill
           className="object-cover"
@@ -183,7 +195,7 @@ export function PersistentHero() {
                 return (
                   <img
                     key={mobileSrc}
-                    src={cloudfrontImage(mobileSrc)}
+                    src={heroImageSrc(mobileSrc)}
                     alt=""
                     width={dims?.width}
                     height={dims?.height}
@@ -246,7 +258,7 @@ export function PersistentHero() {
                   />
                 ) : (
                   <Image
-                    src={cloudfrontImage(displayImage)}
+                    src={heroImageSrc(displayImage)}
                     alt=""
                     fill
                     className="object-cover"

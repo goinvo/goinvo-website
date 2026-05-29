@@ -36,7 +36,7 @@
 
 #oral-history-legacy .rslides-dot.active,#oral-history-legacy .rslides-dot[aria-current="true"]{background:#6d6e6a;transform:scale(1.25)}
 
-#oral-history-legacy .rslides1_nav{position:absolute;-webkit-tap-highlight-color:transparent;top:calc(50% - 18px);left:70px;z-index:99;opacity:0.8;text-indent:-9999px;overflow:hidden;text-decoration:none;height:38px;width:38px;background:transparent url("https://www.goinvo.com/old/images/features/an-oral-history/slides/arrows.gif") no-repeat left center;margin-top:-45px;border-radius:50%}
+#oral-history-legacy .rslides1_nav{position:absolute;-webkit-tap-highlight-color:transparent;top:calc(50% - 18px);left:70px;z-index:99;opacity:0.8;text-indent:-9999px;overflow:hidden;text-decoration:none;height:38px;width:38px;background:transparent url("/images/features/an-oral-history/slides/arrows.gif") no-repeat left center;margin-top:-45px;border-radius:50%}
 
 @media only screen and (max-width: 750px){
 #oral-history-legacy .rslides1_nav{left:25px}
@@ -72,15 +72,15 @@
 
 #oral-history-legacy #feature-article header{width:100%;background-color:gray;color:white;min-height:640px;position:relative;background-size:cover;background-position:center}
 
-#oral-history-legacy #feature-article header#section1-origins{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_1.jpg")}
+#oral-history-legacy #feature-article header#section1-origins{background-image:url("/images/features/an-oral-history/hero-part_1.jpg")}
 
-#oral-history-legacy #feature-article header#section2-silicon{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_2.jpg")}
+#oral-history-legacy #feature-article header#section2-silicon{background-image:url("/images/features/an-oral-history/hero-part_2.jpg")}
 
-#oral-history-legacy #feature-article header#section3-interesting-times{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_3.jpg");background-position:top}
+#oral-history-legacy #feature-article header#section3-interesting-times{background-image:url("/images/features/an-oral-history/hero-part_3.jpg");background-position:top}
 
-#oral-history-legacy #feature-article header#section4-boston{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_4.jpg")}
+#oral-history-legacy #feature-article header#section4-boston{background-image:url("/images/features/an-oral-history/hero-part_4.jpg")}
 
-#oral-history-legacy #feature-article header#section5-todaytomorrow{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/hero-part_5.jpg");background-position:top}
+#oral-history-legacy #feature-article header#section5-todaytomorrow{background-image:url("/images/features/an-oral-history/hero-part_5.jpg");background-position:top}
 
 #oral-history-legacy #feature-article header .header-wrapper{position:absolute;bottom:40px;left:0px;width:100%}
 
@@ -251,25 +251,25 @@
 #oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar{margin-bottom:0px;float:left;width:0px;height:0px}
 }
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.dirk{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-dirk.jpg");background-size:42px 42px}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.dirk{background-image:url("/images/features/an-oral-history/icon-dirk.jpg");background-size:42px 42px}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.andrei{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-andrei.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.andrei{background-image:url("/images/features/an-oral-history/icon-andrei.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.juhan{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-juhan.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.juhan{background-image:url("/images/features/an-oral-history/icon-juhan.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.donna{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-donna.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.donna{background-image:url("/images/features/an-oral-history/icon-donna.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.ben{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-ben.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.ben{background-image:url("/images/features/an-oral-history/icon-ben.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.uday{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-uday.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.uday{background-image:url("/images/features/an-oral-history/icon-uday.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.eric{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-eric.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.eric{background-image:url("/images/features/an-oral-history/icon-eric.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jon{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-jon.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jon{background-image:url("/images/features/an-oral-history/icon-jon.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.sarah{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-sarah.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.sarah{background-image:url("/images/features/an-oral-history/icon-sarah.jpg")}
 
-#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jen{background-image:url("https://www.goinvo.com/old/images/features/an-oral-history/icon-jen.jpg")}
+#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jen{background-image:url("/images/features/an-oral-history/icon-jen.jpg")}
 
 @media only screen and (max-width: 750px){
 #oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.dirk,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.andrei,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.juhan,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.donna,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.ben,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.uday,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.eric,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jon,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.sarah,#oral-history-legacy .row .interview-wrapper .interview-content .speaker-avatar.jen{width:50px;height:50px;background-size:51px 51px}
