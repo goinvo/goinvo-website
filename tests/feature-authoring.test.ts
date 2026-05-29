@@ -103,6 +103,7 @@ describe('Portable Text authoring contract', () => {
       'normal',
       'serifLarge',
       'h2',
+      'sectionTitle',
       'h3',
       'h4',
       'blockquote',
