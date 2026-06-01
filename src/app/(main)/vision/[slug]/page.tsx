@@ -23,6 +23,9 @@ import {
 } from '@/lib/featureAuthoring'
 import { featureSectionBackgroundFallbacks } from '@/lib/featureSectionBackgroundFallbacks'
 import { findPortableHeading, stripAuthorHeading, stripTitleHeading } from '@/lib/utils'
+import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
+import { applyFeatureExperimentVariant } from '@/lib/experiments/featureVariants'
+import type { ExperimentExposure as ExperimentExposureData } from '@/lib/experiments/registry'
 import type { Feature } from '@/types'
 import type { PortableTextBlock } from '@portabletext/types'
 
@@ -1673,8 +1676,7 @@ export async function generateStaticParams() {
   }
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params
+export async function generateVisionFeatureMetadata(slug: string, experimentVariant = 'control'): Promise<Metadata> {
   const { data: feature } = (await sanityFetch({
     query: featureBySlugQuery,
     params: { slug },
@@ -1684,17 +1686,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Vision Project Not Found' }
   }
 
-  const ogSourceImage = feature.articleHeroImage || feature.image
+  const renderedFeature = applyFeatureExperimentVariant(feature, experimentVariant)
+
+  const ogSourceImage = renderedFeature.articleHeroImage || renderedFeature.image
   const ogImage = ogSourceImage
     ? urlForImage(ogSourceImage).width(1200).height(630).url()
     : undefined
 
-  const metadataTitle = feature.metaTitle?.trim()
-  const pageTitle = metadataTitle || feature.title
-  const description = feature.metaDescription || feature.description
+  const metadataTitle = renderedFeature.metaTitle?.trim()
+  const pageTitle = metadataTitle || renderedFeature.title
+  const description = renderedFeature.metaDescription || renderedFeature.description
 
   return {
-    title: metadataTitle ? { absolute: metadataTitle } : feature.title,
+    title: metadataTitle ? { absolute: metadataTitle } : renderedFeature.title,
     description,
     openGraph: ogImage
       ? { title: pageTitle, description, images: [{ url: ogImage, width: 1200, height: 630 }] }
@@ -1705,19 +1709,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function VisionFeaturePage({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
+  return generateVisionFeatureMetadata(slug)
+}
 
+export async function renderVisionFeaturePage(
+  slug: string,
+  experimentVariant = 'control',
+  experiment?: ExperimentExposureData,
+) {
   const { isEnabled: isDraftMode } = await draftMode()
-  const { data: feature } = (await sanityFetch({
+  const { data: fetchedFeature } = (await sanityFetch({
     query: featureBySlugQuery,
     params: { slug },
     perspective: isDraftMode ? 'drafts' : undefined,
   })) as { data: Feature | null }
 
-  if (!feature) {
+  if (!fetchedFeature) {
     notFound()
   }
+
+  const feature = applyFeatureExperimentVariant(fetchedFeature, experimentVariant)
 
   if (feature.externalLink) {
     redirect(feature.externalLink)
@@ -1780,6 +1793,8 @@ export default async function VisionFeaturePage({ params }: Props) {
 
   return (
     <div className={slug === 'coronavirus' ? 'font-coronavirus' : undefined}>
+      {experiment && <ExperimentExposure experiment={experiment} />}
+
       {/* Standard hero (cropped 16:9) — only for non-fullImageCover pages */}
       {!fullImageCover && heroImageUrl && (
         <SetCaseStudyHero
@@ -1995,4 +2010,9 @@ export default async function VisionFeaturePage({ params }: Props) {
       )}
     </div>
   )
+}
+
+export default async function VisionFeaturePage({ params }: Props) {
+  const { slug } = await params
+  return renderVisionFeaturePage(slug)
 }
