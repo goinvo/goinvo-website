@@ -24,6 +24,7 @@ import {
   LonelinessTimelineSection,
 } from '@/components/portable-text/LonelinessFeatureSections'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
+import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
 import { parseDataTableSource } from '@/lib/dataTable'
 
 /* ------------------------------------------------------------------ */
@@ -1096,8 +1097,12 @@ const components: PortableTextComponents = {
     customComponent: ({ value }) => {
       // Dispatch by name to a hard-coded React component. Used for
       // page-specific tables and visualizations that don't fit the
-      // generic block types.
-      switch (value?.name) {
+      // generic block types. In Presentation/visual-editing mode the
+      // name arrives stega-encoded, so strip the invisible markers and
+      // normalize the first letter before matching.
+      const rawName = (stegaClean(value?.name) || '').trim()
+      const name = rawName ? rawName.charAt(0).toLowerCase() + rawName.slice(1) : ''
+      switch (name) {
         case 'virtualCareTop15Table':
           return (
             <ArticleReveal intensity="visual">
@@ -1152,10 +1157,22 @@ const components: PortableTextComponents = {
               <LonelinessResilienceSection />
             </ArticleReveal>
           )
+        case 'ipsosWorkflowWidget':
+        case 'ipsosResearchWorkflowWidget':
+        case 'ipsosResearchWorkflow':
+        case 'ipsosWorkflow':
+        case 'ipsosFlowWidget':
+        case 'ipsosFlowWorkflow':
+        case 'ipsosWorkflowDiagram':
+          return (
+            <ArticleReveal intensity="visual">
+              <IpsosWorkflowWidget />
+            </ArticleReveal>
+          )
         default:
           return (
             <div className="my-4 p-3 bg-yellow-50 border border-yellow-300 text-sm text-gray-700">
-              Unknown custom component: <code>{value?.name || '(no name)'}</code>
+              Unknown custom component: <code>{rawName || '(no name)'}</code>
             </div>
           )
       }
