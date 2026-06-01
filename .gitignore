@@ -32,7 +32,11 @@ yarn-error.log*
 .next*.log
 .codex-logs/
 scripts/tmp-*.mjs
-image/QA-FEEDBACK/*.png
+# Local QA / verification artifacts — not part of the site
+/image/
+/audit-screenshots/
+/studio-*.png
+/scripts/_tmp-*.ts
 .lighthouse/
 lh-test.json
 lighthouse-*.bat
@@ -73,3 +77,11 @@ deploy-cleanup.bat
 deploy-cleanup.log
 deploy-finalize.bat
 deploy-finalize.log
+
+# local dev/QA artifacts (logs, auth session state, throwaway harnesses)
+/.logs/
+/.auth/
+next-dev*.log
+next-start*.log
+/public/__marketing-mobile-harness.html
+/scripts/_tmp-*.mjs

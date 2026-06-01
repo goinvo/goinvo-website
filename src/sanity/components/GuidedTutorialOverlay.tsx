@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@sanity/icons'
 
 export type GuidedTutorialStep = {
@@ -27,8 +27,14 @@ type Rect = {
 type BubblePlacement = {
   top: number
   left: number
-  arrowSide: 'top' | 'bottom'
-  arrowLeft: number
+  arrowSide: 'top' | 'bottom' | 'left' | 'right'
+  arrowLeft?: number
+  arrowTop?: number
+}
+
+type BubbleSize = {
+  width: number
+  height: number
 }
 
 const BUBBLE_WIDTH = 340
@@ -55,8 +61,15 @@ export function GuidedTutorialOverlay({
   onComplete?: () => void
 }) {
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
+  const [bubbleSize, setBubbleSize] = useState<BubbleSize>({ width: BUBBLE_WIDTH, height: 310 })
+  const bubbleRef = useRef<HTMLElement | null>(null)
+  const scrolledTargetRef = useRef<string | null>(null)
   const completed = stepIndex >= tutorial.steps.length
   const currentStep = tutorial.steps[Math.min(stepIndex, Math.max(0, tutorial.steps.length - 1))]
+
+  useEffect(() => {
+    scrolledTargetRef.current = null
+  }, [currentStep?.targetId])
 
   useEffect(() => {
     if (!active || completed) return undefined
@@ -77,8 +90,13 @@ export function GuidedTutorialOverlay({
         }
 
         const rect = element.getBoundingClientRect()
-        if (!isRectMostlyVisible(rect)) {
-          element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
+        if (!isRectUsablyVisible(rect) && scrolledTargetRef.current !== currentStep.targetId) {
+          element.scrollIntoView({
+            block: rect.height > window.innerHeight - EDGE_GAP * 2 ? 'nearest' : 'center',
+            inline: 'nearest',
+            behavior: 'smooth',
+          })
+          scrolledTargetRef.current = currentStep.targetId
         }
         setTargetRect({
           top: rect.top,
@@ -102,10 +120,34 @@ export function GuidedTutorialOverlay({
     }
   }, [active, completed, currentStep?.targetId])
 
+  useEffect(() => {
+    if (!active || completed) return undefined
+    const element = bubbleRef.current
+    if (!element) return undefined
+
+    const updateBubbleSize = () => {
+      setBubbleSize({
+        width: element.offsetWidth || BUBBLE_WIDTH,
+        height: element.offsetHeight || 310,
+      })
+    }
+
+    updateBubbleSize()
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateBubbleSize) : null
+    observer?.observe(element)
+    window.addEventListener('resize', updateBubbleSize)
+
+    return () => {
+      observer?.disconnect()
+      window.removeEventListener('resize', updateBubbleSize)
+    }
+  }, [active, completed, currentStep?.id])
+
   const bubblePlacement = useMemo(() => {
-    if (!targetRect) return centeredBubblePlacement()
-    return placeBubble(targetRect)
-  }, [targetRect])
+    if (!targetRect) return centeredBubblePlacement(bubbleSize)
+    return placeBubble(targetRect, bubbleSize)
+  }, [bubbleSize, targetRect])
+  const highlightRect = useMemo(() => (targetRect ? visibleHighlightRect(targetRect) : null), [targetRect])
 
   if (!active) return null
 
@@ -113,7 +155,7 @@ export function GuidedTutorialOverlay({
     return (
       <div style={styles.root}>
         <div style={styles.scrim} />
-        <section style={{ ...styles.bubble, ...styles.completeBubble }}>
+        <section data-tour-id="guided-tutorial-bubble" style={{ ...styles.bubble, ...styles.completeBubble }}>
           <button type="button" aria-label="Close tutorial" style={styles.closeButton} onClick={onClose}>
             <CloseIcon style={{ width: 16, height: 16 }} />
           </button>
@@ -142,20 +184,23 @@ export function GuidedTutorialOverlay({
 
   return (
     <div style={styles.root}>
-      <div style={styles.scrim} />
-      {targetRect && (
+      <div style={highlightRect ? styles.clearScrim : styles.scrim} />
+      {highlightRect && (
         <div
           aria-hidden="true"
+          data-tour-id="guided-tutorial-highlight"
           style={{
             ...styles.highlight,
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
+            top: highlightRect.top,
+            left: highlightRect.left,
+            width: highlightRect.width,
+            height: highlightRect.height,
           }}
         />
       )}
       <section
+        ref={bubbleRef}
+        data-tour-id="guided-tutorial-bubble"
         style={{
           ...styles.bubble,
           top: bubblePlacement.top,
@@ -165,13 +210,7 @@ export function GuidedTutorialOverlay({
       >
         <div
           aria-hidden="true"
-          style={{
-            ...styles.arrow,
-            left: bubblePlacement.arrowLeft,
-            ...(bubblePlacement.arrowSide === 'top'
-              ? { top: -8, borderTop: 0, borderBottomColor: '#151a26' }
-              : { bottom: -8, borderBottom: 0, borderTopColor: '#151a26' }),
-          }}
+          style={{ ...styles.arrow, ...arrowStyle(bubblePlacement) }}
         />
         <button type="button" aria-label="Close tutorial" style={styles.closeButton} onClick={onClose}>
           <CloseIcon style={{ width: 16, height: 16 }} />
@@ -200,41 +239,145 @@ export function GuidedTutorialOverlay({
   )
 }
 
-function centeredBubblePlacement(): BubblePlacement {
-  if (typeof window === 'undefined') return { top: 120, left: 120, arrowSide: 'top', arrowLeft: BUBBLE_WIDTH / 2 }
+function centeredBubblePlacement(size: BubbleSize): BubblePlacement {
+  if (typeof window === 'undefined') return { top: 120, left: 120, arrowSide: 'top', arrowLeft: size.width / 2 }
   return {
-    top: Math.max(EDGE_GAP, window.innerHeight / 2 - 180),
-    left: clamp(window.innerWidth / 2 - BUBBLE_WIDTH / 2, EDGE_GAP, window.innerWidth - BUBBLE_WIDTH - EDGE_GAP),
+    top: clamp(window.innerHeight / 2 - size.height / 2, EDGE_GAP, Math.max(EDGE_GAP, window.innerHeight - size.height - EDGE_GAP)),
+    left: clamp(window.innerWidth / 2 - size.width / 2, EDGE_GAP, Math.max(EDGE_GAP, window.innerWidth - size.width - EDGE_GAP)),
     arrowSide: 'top',
-    arrowLeft: BUBBLE_WIDTH / 2,
+    arrowLeft: size.width / 2,
   }
 }
 
-function placeBubble(rect: Rect): BubblePlacement {
+function placeBubble(rect: Rect, size: BubbleSize): BubblePlacement {
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
-  const estimatedHeight = 310
   const preferredTop = rect.top + rect.height + BUBBLE_GAP
-  const shouldPlaceAbove = preferredTop + estimatedHeight > viewportHeight && rect.top > estimatedHeight + BUBBLE_GAP
+  const maxTop = Math.max(EDGE_GAP, viewportHeight - size.height - EDGE_GAP)
+  const shouldPlaceAbove = preferredTop + size.height > viewportHeight - EDGE_GAP && rect.top > size.height + BUBBLE_GAP
+  const targetCenter = clamp(rect.left + rect.width / 2, EDGE_GAP, viewportWidth - EDGE_GAP)
   const top = shouldPlaceAbove
-    ? Math.max(EDGE_GAP, rect.top - estimatedHeight - BUBBLE_GAP)
-    : Math.min(Math.max(EDGE_GAP, preferredTop), viewportHeight - estimatedHeight - EDGE_GAP)
-  const targetCenter = rect.left + rect.width / 2
-  const left = clamp(targetCenter - BUBBLE_WIDTH / 2, EDGE_GAP, viewportWidth - BUBBLE_WIDTH - EDGE_GAP)
-  return {
+    ? clamp(rect.top - size.height - BUBBLE_GAP, EDGE_GAP, maxTop)
+    : clamp(preferredTop, EDGE_GAP, maxTop)
+  const left = clamp(targetCenter - size.width / 2, EDGE_GAP, Math.max(EDGE_GAP, viewportWidth - size.width - EDGE_GAP))
+  const verticalPlacement: BubblePlacement = {
     top,
     left,
     arrowSide: shouldPlaceAbove ? 'bottom' : 'top',
-    arrowLeft: clamp(targetCenter - left, 24, BUBBLE_WIDTH - 24),
+    arrowLeft: clamp(targetCenter - left, 24, size.width - 24),
   }
+
+  if (!rectsIntersect(placementRect(verticalPlacement, size), rect)) return verticalPlacement
+
+  const sidePlacement = placeBubbleBesideTarget(rect, size)
+  return sidePlacement || verticalPlacement
+}
+
+function visibleHighlightRect(rect: Rect): Rect {
+  if (typeof window === 'undefined') {
+    return {
+      top: rect.top - 8,
+      left: rect.left - 8,
+      width: rect.width + 16,
+      height: rect.height + 16,
+    }
+  }
+
+  const minSize = 24
+  const rawTop = rect.top - 8
+  const rawLeft = rect.left - 8
+  const rawRight = rect.left + rect.width + 8
+  const rawBottom = rect.top + rect.height + 8
+  const maxLeft = Math.max(EDGE_GAP, window.innerWidth - EDGE_GAP - minSize)
+  const maxTop = Math.max(EDGE_GAP, window.innerHeight - EDGE_GAP - minSize)
+  const left = clamp(rawLeft, EDGE_GAP, maxLeft)
+  const top = clamp(rawTop, EDGE_GAP, maxTop)
+  const right = Math.min(window.innerWidth - EDGE_GAP, Math.max(left + minSize, rawRight))
+  const bottom = Math.min(window.innerHeight - EDGE_GAP, Math.max(top + minSize, rawBottom))
+
+  return {
+    top,
+    left,
+    width: right - left,
+    height: bottom - top,
+  }
+}
+
+function placeBubbleBesideTarget(rect: Rect, size: BubbleSize): BubblePlacement | null {
+  if (typeof window === 'undefined') return null
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  const targetCenterY = clamp(rect.top + rect.height / 2, EDGE_GAP, viewportHeight - EDGE_GAP)
+  const top = clamp(targetCenterY - size.height / 2, EDGE_GAP, Math.max(EDGE_GAP, viewportHeight - size.height - EDGE_GAP))
+  const arrowTop = clamp(targetCenterY - top, 24, size.height - 24)
+  const spaceLeft = rect.left - EDGE_GAP
+  const spaceRight = viewportWidth - (rect.left + rect.width) - EDGE_GAP
+
+  if (spaceLeft >= size.width + BUBBLE_GAP) {
+    return {
+      top,
+      left: clamp(rect.left - size.width - BUBBLE_GAP, EDGE_GAP, Math.max(EDGE_GAP, viewportWidth - size.width - EDGE_GAP)),
+      arrowSide: 'right',
+      arrowTop,
+    }
+  }
+
+  if (spaceRight >= size.width + BUBBLE_GAP) {
+    return {
+      top,
+      left: clamp(rect.left + rect.width + BUBBLE_GAP, EDGE_GAP, Math.max(EDGE_GAP, viewportWidth - size.width - EDGE_GAP)),
+      arrowSide: 'left',
+      arrowTop,
+    }
+  }
+
+  return null
+}
+
+function placementRect(placement: BubblePlacement, size: BubbleSize): Rect {
+  return {
+    top: placement.top,
+    left: placement.left,
+    width: size.width,
+    height: size.height,
+  }
+}
+
+function rectsIntersect(first: Rect, second: Rect) {
+  return (
+    first.left < second.left + second.width &&
+    first.left + first.width > second.left &&
+    first.top < second.top + second.height &&
+    first.top + first.height > second.top
+  )
+}
+
+function arrowStyle(placement: BubblePlacement): CSSProperties {
+  if (placement.arrowSide === 'top') {
+    return { left: placement.arrowLeft, top: -8, borderTop: 0, borderBottomColor: '#151a26' }
+  }
+  if (placement.arrowSide === 'bottom') {
+    return { left: placement.arrowLeft, bottom: -8, borderBottom: 0, borderTopColor: '#151a26' }
+  }
+  if (placement.arrowSide === 'left') {
+    return { left: -8, top: placement.arrowTop, borderLeft: 0, borderRightColor: '#151a26' }
+  }
+  return { right: -8, top: placement.arrowTop, borderRight: 0, borderLeftColor: '#151a26' }
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
 
-function isRectMostlyVisible(rect: DOMRect) {
-  return rect.top >= EDGE_GAP && rect.left >= EDGE_GAP && rect.bottom <= window.innerHeight - EDGE_GAP && rect.right <= window.innerWidth - EDGE_GAP
+function isRectUsablyVisible(rect: DOMRect) {
+  const viewportHeight = window.innerHeight
+  const viewportWidth = window.innerWidth
+  const verticalOverlap = Math.min(rect.bottom, viewportHeight - EDGE_GAP) - Math.max(rect.top, EDGE_GAP)
+  const horizontalOverlap = Math.min(rect.right, viewportWidth - EDGE_GAP) - Math.max(rect.left, EDGE_GAP)
+  const neededHeight = Math.min(rect.height, viewportHeight - EDGE_GAP * 2, 220)
+  const neededWidth = Math.min(rect.width, viewportWidth - EDGE_GAP * 2, 220)
+
+  return verticalOverlap >= Math.max(24, neededHeight) && horizontalOverlap >= Math.max(24, neededWidth)
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -249,6 +392,11 @@ const styles: Record<string, CSSProperties> = {
     inset: 0,
     background: 'rgba(2, 6, 23, 0.42)',
   },
+  clearScrim: {
+    position: 'absolute',
+    inset: 0,
+    background: 'transparent',
+  },
   highlight: {
     position: 'fixed',
     border: '2px solid #00A6B8',
@@ -261,6 +409,8 @@ const styles: Record<string, CSSProperties> = {
     position: 'fixed',
     width: BUBBLE_WIDTH,
     maxWidth: 'calc(100vw - 32px)',
+    maxHeight: 'calc(100vh - 32px)',
+    overflowY: 'auto',
     border: '1px solid rgba(0, 115, 133, 0.42)',
     borderRadius: 8,
     background: '#151a26',

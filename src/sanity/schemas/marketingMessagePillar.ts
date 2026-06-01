@@ -34,19 +34,19 @@ export default defineType({
     }),
     defineField({
       name: 'approvedPhrases',
-      title: 'Approved Phrases',
+      title: 'Reusable Message Themes',
       type: 'array',
       group: 'message',
       of: [{ type: 'string' }],
-      description: 'Language that is safe to reuse in captions, headlines, and briefs.',
+      description: 'Ideas, language patterns, or short phrases that are safe to reuse in captions, headlines, and briefs.',
     }),
     defineField({
       name: 'phrasesToAvoid',
-      title: 'Phrases To Avoid',
+      title: 'Framing To Avoid',
       type: 'array',
       group: 'message',
       of: [{ type: 'string' }],
-      description: 'Words or claims that are too vague, risky, off-brand, or unsupported.',
+      description: 'Words, claims, or angles that are too vague, risky, off-brand, or unsupported.',
     }),
     defineField({
       name: 'topicCluster',

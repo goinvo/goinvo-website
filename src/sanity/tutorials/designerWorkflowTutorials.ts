@@ -6,12 +6,12 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
   {
     id: 'marketing-view-tour',
     title: 'Marketing view tour',
-    description: 'Learn how the Marketing view and Designer Workflow help you start connected planning work without creating records during the tour.',
+    description: 'Learn how the Marketing view and Marketing autopilot help you start connected planning work without creating records during the tour.',
     steps: [
       {
         id: 'open-widget',
         targetId: 'designer-workflow-toggle',
-        instruction: 'Start with the Designer Workflow',
+        instruction: 'Start with Marketing autopilot',
         description: 'This bottom-right tool is the fastest path from a loose content idea to the research plan designers need before scheduling content.',
         nextLabel: 'Open it',
       },
@@ -30,8 +30,8 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
       {
         id: 'choose-path',
         targetId: 'designer-workflow-path-plan',
-        instruction: 'Choose the scale of work',
-        description: 'Use one item for a single post or page. Use larger-scale planning when you need release windows, content opportunities, links, and measurement. After you choose a path, the next tutorial starts only when you actually ask for a suggestion.',
+        instruction: 'Choose an action',
+        description: 'Search the assistant actions, then choose a recommended setup path or jump straight into the section that needs work. After you choose a setup path, the next tutorial starts only when you actually ask for a suggestion.',
         nextLabel: 'Finish tour',
       },
     ],
@@ -58,13 +58,13 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
   },
   {
     id: 'designer-workflow-sessions',
-    title: 'Designer Workflow sessions',
-    description: 'Learn how to resume, switch, and clear local Designer Workflow setup sessions.',
+    title: 'Marketing autopilot sessions',
+    description: 'Learn how to resume, switch, and clear local Marketing autopilot setup sessions.',
     steps: [
       {
         id: 'open-widget',
         targetId: 'designer-workflow-toggle',
-        instruction: 'Open the Designer Workflow',
+        instruction: 'Open Marketing autopilot',
         description: 'Sessions live inside the workflow panel so setup history stays close to the task.',
       },
       {
