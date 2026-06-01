@@ -143,7 +143,12 @@ export const mainCategoriesQuery = groq`
 
 // Team Members
 export const teamMembersQuery = groq`
-  *[_type == "teamMember" && _id match "team-*" && isAlumni != true] | order(orderRank asc) {
+  *[
+    _type == "teamMember"
+    && _id match "team-*"
+    && isAlumni != true
+    && (!defined(showOnAboutPage) || showOnAboutPage != false)
+  ] | order(orderRank asc) {
     _id,
     name,
     role,
