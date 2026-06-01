@@ -5,6 +5,7 @@ import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
 import Image from 'next/image'
+import { stegaClean } from '@sanity/client/stega'
 import { urlForImage } from '@/sanity/lib/image'
 import { cn } from '@/lib/utils'
 import { Quote } from '@/components/ui/Quote'
@@ -1059,7 +1060,7 @@ const components: PortableTextComponents = {
 
       return (
         <ArticleReveal intensity="visual">
-          <ImageCarousel images={images} caption={value.caption} thumbnailSize={value.thumbnailSize || 'sm'} />
+          <ImageCarousel images={images} caption={value.caption} thumbnailSize={stegaClean(value.thumbnailSize) || 'sm'} />
         </ArticleReveal>
       )
     },
