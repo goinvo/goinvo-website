@@ -89,6 +89,7 @@ export interface TeamMember {
     website?: string
     email?: string
   }
+  showOnAboutPage?: boolean
   isAlumni?: boolean
 }
 
