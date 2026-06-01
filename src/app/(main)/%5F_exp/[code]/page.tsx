@@ -1,0 +1,39 @@
+import { generatePermutations } from 'flags/next'
+import { HomePageRenderer } from '@/components/home/HomePageRenderer'
+import {
+  getExperimentExposure,
+  getPrecomputedExperimentVariant,
+} from '@/lib/experiments/registry'
+import { getMarketingFlagsSecret, marketingExperimentFlags, type Home2026Variant } from '@/flags'
+
+interface Props {
+  params: Promise<{ code: string }>
+}
+
+export const revalidate = 3600
+export const dynamicParams = true
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
+
+export async function generateStaticParams() {
+  const secret = getMarketingFlagsSecret()
+  if (!secret) return []
+
+  const codes = await generatePermutations(marketingExperimentFlags, null, secret)
+  return codes.map((code) => ({ code }))
+}
+
+export default async function ExperimentHomePage({ params }: Props) {
+  const { code } = await params
+  const resolved = await getPrecomputedExperimentVariant('/', code)
+  const variant = (resolved?.variant || 'control') as Home2026Variant
+  const experiment = resolved
+    ? getExperimentExposure(resolved.experiment, variant, '/')
+    : undefined
+
+  return <HomePageRenderer variant={variant} experiment={experiment} />
+}

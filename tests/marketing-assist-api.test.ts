@@ -11,6 +11,11 @@ vi.mock('@/sanity/lib/client', () => ({
 import { POST } from '@/app/api/marketing/assist/route'
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY
+const originalAiGatewayKey = process.env.AI_GATEWAY_API_KEY
+const originalVercelAiGatewayKey = process.env.VERCEL_AI_GATEWAY_API_KEY
+const originalVercelOidcToken = process.env.VERCEL_OIDC_TOKEN
+const originalVercel = process.env.VERCEL
+const originalVercelEnv = process.env.VERCEL_ENV
 
 const siteContext = {
   features: [
@@ -48,17 +53,27 @@ const siteContext = {
   },
 }
 
-function assistRequest(kind: string, draft: Record<string, unknown> = {}, analyticsTakeaways: unknown[] = []) {
+function assistRequest(
+  kind: string,
+  draft: Record<string, unknown> = {},
+  analyticsTakeaways: unknown[] = [],
+  overrides: Record<string, unknown> = {},
+) {
   return new Request('http://localhost/api/marketing/assist', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ kind, draft, prompt: 'Help a designer set this up.', analyticsTakeaways }),
+    body: JSON.stringify({ kind, draft, prompt: 'Help a designer set this up.', analyticsTakeaways, ...overrides }),
   })
 }
 
 beforeEach(() => {
   clientFetch.mockResolvedValue(siteContext)
   delete process.env.OPENAI_API_KEY
+  delete process.env.AI_GATEWAY_API_KEY
+  delete process.env.VERCEL_AI_GATEWAY_API_KEY
+  delete process.env.VERCEL_OIDC_TOKEN
+  delete process.env.VERCEL
+  delete process.env.VERCEL_ENV
 })
 
 afterEach(() => {
@@ -69,6 +84,16 @@ afterEach(() => {
   } else {
     delete process.env.OPENAI_API_KEY
   }
+  if (originalAiGatewayKey) process.env.AI_GATEWAY_API_KEY = originalAiGatewayKey
+  else delete process.env.AI_GATEWAY_API_KEY
+  if (originalVercelAiGatewayKey) process.env.VERCEL_AI_GATEWAY_API_KEY = originalVercelAiGatewayKey
+  else delete process.env.VERCEL_AI_GATEWAY_API_KEY
+  if (originalVercelOidcToken) process.env.VERCEL_OIDC_TOKEN = originalVercelOidcToken
+  else delete process.env.VERCEL_OIDC_TOKEN
+  if (originalVercel) process.env.VERCEL = originalVercel
+  else delete process.env.VERCEL
+  if (originalVercelEnv) process.env.VERCEL_ENV = originalVercelEnv
+  else delete process.env.VERCEL_ENV
 })
 
 describe('marketing assistant API', () => {
@@ -82,6 +107,8 @@ describe('marketing assistant API', () => {
       ['linkItem', 'linkItem'],
       ['template', 'template'],
       ['strategyAsset', 'strategyAsset'],
+      ['experiment', 'experiment'],
+      ['strategistChat', 'strategistChat'],
     ] as const
 
     for (const [kind, section] of cases) {
@@ -95,6 +122,89 @@ describe('marketing assistant API', () => {
       expect(payload.suggestion[section], `${kind} should include its editable field section`).toBeTruthy()
       expect(payload.context).toEqual({ features: 1, caseStudies: 1, campaigns: 1, references: 1, analyticsTakeaways: 0 })
     }
+  })
+
+  it('returns a first-class A/B test setup suggestion', async () => {
+    const response = await POST(
+      assistRequest('experiment', {
+        title: 'Homepage concept',
+        targetPath: '/',
+        flagKey: 'home-2026-variant',
+      }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(false)
+    expect(payload.suggestion.experiment).toMatchObject({
+      status: 'idea',
+      targetType: 'homepage',
+      targetPath: '/',
+      flagKey: 'home-2026-variant',
+      primaryMetric: 'Qualified discovery-call clicks',
+    })
+    expect(payload.suggestion.experiment.variants.map((variant: { key: string }) => variant.key)).toContain('control')
+    expect(payload.suggestion.experiment.variants.map((variant: { key: string }) => variant.key)).toContain('concept')
+    expect(payload.suggestion.experiment.qaNotes).toContain('experiment_id')
+    expect(payload.suggestion.experiment.qaNotes).toContain('page_path')
+  })
+
+  it('uses the OpenAI path for strategist chat when OPENAI_API_KEY is set, and falls back gracefully on error', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+    const rawOpenAiFetch = vi.fn().mockResolvedValue(new Response('error', { status: 500 }))
+    vi.stubGlobal('fetch', rawOpenAiFetch)
+
+    const response = await POST(
+      assistRequest('strategistChat', {}, [], {
+        prompt: 'Should we make a video sales letter for our healthcare design work?',
+        messages: [{ role: 'user', content: 'Should we make a VSL?' }],
+      }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    // The strategist now attempts the OpenAI Responses path when a key is present
+    // (no AI Gateway required), instead of being stuck on the rule-based fallback.
+    expect(rawOpenAiFetch).toHaveBeenCalled()
+    // ...but a failed call still degrades cleanly to the deterministic fallback.
+    expect(payload.usedAi).toBe(false)
+    expect(payload.suggestion.strategistChat.primaryRecommendation).toMatchObject({
+      opportunityType: 'videoSalesLetter',
+      recommendation: 'testSmall',
+    })
+  })
+
+  it('uses collaboration inputs to shape strategist fallback recommendations', async () => {
+    const response = await POST(
+      assistRequest('strategistChat', {}, [], {
+        prompt: 'We have interns from universities who can collaborate on Boston housing statistics content.',
+        messages: [{ role: 'user', content: 'Use university interns if that changes the plan.' }],
+      }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(false)
+    expect(payload.suggestion.strategistChat.primaryRecommendation).toMatchObject({
+      opportunityType: 'collaboration',
+    })
+    expect(payload.suggestion.strategistChat.primaryRecommendation.setupPrompt).toMatch(/collaborator|intern|availability/i)
+  })
+
+  it('does not attach unrelated site references to strategist fallback output', async () => {
+    const response = await POST(
+      assistRequest('strategistChat', {}, [], {
+        prompt: 'Should we make a video sales letter for aerospace supply chain compliance?',
+        messages: [{ role: 'user', content: 'Should we make a VSL for aerospace supply chain compliance?' }],
+      }),
+    )
+    const payload = await response.json()
+    const setupPrompt = payload.suggestion.strategistChat.primaryRecommendation.setupPrompt
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(false)
+    expect(payload.suggestion.siteReferences).toEqual([])
+    expect(setupPrompt).not.toContain('?.')
   })
 
   it('uses structured OpenAI output when an API key is available', async () => {
@@ -170,6 +280,64 @@ describe('marketing assistant API', () => {
     expect(payload.usedAi).toBe(true)
     expect(payload.suggestion.campaign.title).toBe('Housing Truths Social Push')
     expect(payload.context.analyticsTakeaways).toBe(1)
+  })
+
+  it('uses structured OpenAI output for experiment setup', async () => {
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body))
+      expect(body.text.format.name).toBe('marketing_experiment_suggestion')
+      expect(body.text.format.schema.required).toContain('experiment')
+      const userPayload = JSON.parse(body.input[1].content)
+      expect(userPayload.outputContract.experiment).toMatchObject({
+        targetPath: 'Public path such as / or /vision/example-slug',
+        flagKey: 'Vercel flag key such as home-2026-variant',
+      })
+
+      return new Response(
+        JSON.stringify({
+          output_text: JSON.stringify({
+            summary: 'AI suggested a homepage page-test setup.',
+            rationale: ['Keep control explicit.', 'Measure the qualified CTA.'],
+            siteReferences: [],
+            experiment: {
+              title: 'Homepage concept A/B test',
+              status: 'idea',
+              hypothesis: 'If the concept homepage leads with enterprise software outcomes, qualified CTA clicks should improve because the offer is clearer.',
+              expectedSignal: 'Qualified discovery-call clicks',
+              targetType: 'homepage',
+              targetPath: '/',
+              flagKey: 'home-2026-variant',
+              variants: [
+                { key: 'control', label: 'Current homepage', notes: 'Current public experience.' },
+                { key: 'concept', label: 'Concept homepage', notes: 'Ported concept homepage variant.' },
+              ],
+              primaryMetric: 'Qualified discovery-call clicks',
+              qaNotes: 'Confirm experiment_exposure includes experiment_id, flag_key, variant, and page_path.',
+              rolloutStart: null,
+              rolloutEnd: null,
+              vercelDashboardUrl: null,
+              result: null,
+              decision: null,
+              notes: 'Review before rollout.',
+            },
+          }),
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+    vi.stubGlobal('fetch', openAiFetch)
+
+    const response = await POST(assistRequest('experiment', { title: 'Homepage concept', targetPath: '/' }))
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(true)
+    expect(payload.suggestion.experiment).toMatchObject({
+      title: 'Homepage concept A/B test',
+      targetType: 'homepage',
+      flagKey: 'home-2026-variant',
+    })
   })
 
   it('sanitizes analytics takeaways before sending them to OpenAI', async () => {

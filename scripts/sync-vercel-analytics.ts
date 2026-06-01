@@ -199,7 +199,7 @@ async function run(): Promise<void> {
 
   const docs = [
     {
-      _id: 'marketingAnalyticsSource.vercelWebAnalytics',
+      _id: 'marketingAnalyticsSource-vercelWebAnalytics',
       _type: 'marketingAnalyticsSource',
       title: `Vercel Web Analytics - ${projectName}`,
       provider: 'vercelAnalytics',
@@ -214,7 +214,7 @@ async function run(): Promise<void> {
       ...common,
     },
     {
-      _id: 'marketingAnalyticsSource.vercelSpeedInsights',
+      _id: 'marketingAnalyticsSource-vercelSpeedInsights',
       _type: 'marketingAnalyticsSource',
       title: `Vercel Speed Insights - ${projectName}`,
       provider: 'vercelSpeedInsights',

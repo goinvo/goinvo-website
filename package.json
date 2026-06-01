@@ -17,6 +17,7 @@
     "audit:linebreaks": "tsx scripts/manage.ts audit:linebreaks"
   },
   "dependencies": {
+    "@flags-sdk/vercel": "^1.3.0",
     "@hello-pangea/dnd": "^18.0.1",
     "@portabletext/react": "^4.0.3",
     "@portabletext/types": "^2.0.15",
@@ -31,11 +32,14 @@
     "@types/d3-sankey": "^0.12.5",
     "@types/d3-scale": "^4.0.9",
     "@vercel/analytics": "^1.6.1",
+    "@vercel/kv": "^3.0.0",
     "@vercel/speed-insights": "^1.3.1",
+    "ai": "^6.0.0",
     "d3": "^7.9.0",
     "d3-sankey": "^0.12.3",
     "d3-scale": "^4.0.2",
     "embla-carousel-react": "^8.6.0",
+    "flags": "^4.0.6",
     "framer-motion": "^12.34.0",
     "groq": "^3.99.0",
     "lexorank": "^1.0.4",
@@ -49,7 +53,8 @@
     "sanity": "^3.99.0",
     "styled-components": "^6.3.9",
     "three": "^0.183.2",
-    "web-vitals": "^5.1.0"
+    "web-vitals": "^5.1.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

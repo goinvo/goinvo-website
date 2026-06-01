@@ -24,6 +24,18 @@ const performanceMetricFields = [
     validation: (Rule) => Rule.required(),
   }),
   defineField({
+    name: 'variantKey',
+    title: 'Variant Key',
+    type: 'string',
+    description: 'Optional A/B test variant key, such as control or concept.',
+  }),
+  defineField({
+    name: 'eventName',
+    title: 'Event Name',
+    type: 'string',
+    description: 'Optional analytics event name, such as experiment_exposure, qualified_discovery_call_click, view_work_click, or discovery_form_start.',
+  }),
+  defineField({
     name: 'value',
     title: 'Value',
     type: 'number',
