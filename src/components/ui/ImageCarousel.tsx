@@ -8,8 +8,9 @@ interface ImageCarouselProps {
   images: { url: string; alt?: string }[]
   /** Optional caption displayed below the carousel */
   caption?: string
-  /** Thumbnail size: 'sm' (30x24), 'md' (60x40), 'lg' (100x65) */
-  thumbnailSize?: 'sm' | 'md' | 'lg'
+  /** Thumbnail size: 'sm' (30x24), 'md' (60x40), 'lg' (100x65). CMS-driven, so
+   * any string may arrive; unknown values fall back to 'sm'. */
+  thumbnailSize?: string
 }
 
 const thumbSizes = {
@@ -20,6 +21,9 @@ const thumbSizes = {
 
 export function ImageCarousel({ images, caption, thumbnailSize = 'sm' }: ImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
+  // Tolerate unknown/legacy thumbnailSize values from the CMS instead of
+  // crashing the whole page on `thumbSizes[unknown].cls`.
+  const size = thumbSizes[thumbnailSize as keyof typeof thumbSizes] ?? thumbSizes.sm
 
   const goTo = useCallback((i: number) => {
     if (i < 0 || i >= images.length) return
@@ -82,7 +86,7 @@ export function ImageCarousel({ images, caption, thumbnailSize = 'sm' }: ImageCa
             <button
               key={img.url}
               className={cn(
-                `${thumbSizes[thumbnailSize].cls} flex-shrink-0 p-0 cursor-pointer border transition-colors overflow-hidden`,
+                `${size.cls} flex-shrink-0 p-0 cursor-pointer border transition-colors overflow-hidden`,
                 activeIndex === i
                   ? 'border-primary'
                   : 'border-gray-light hover:border-gray-medium'
@@ -90,12 +94,12 @@ export function ImageCarousel({ images, caption, thumbnailSize = 'sm' }: ImageCa
               onClick={() => goTo(i)}
               aria-label={`Go to slide ${i + 1}`}
             >
-              {thumbSizes[thumbnailSize].cover ? (
+              {size.cover ? (
                 <Image
                   src={img.url}
                   alt=""
-                  width={thumbSizes[thumbnailSize].w}
-                  height={thumbSizes[thumbnailSize].h}
+                  width={size.w}
+                  height={size.h}
                   className="w-full h-full object-cover block"
                 />
               ) : (
