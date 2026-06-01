@@ -28,8 +28,19 @@ export function CaseStudyCard({
 
   const hasHeroAsset = Boolean(caseStudy.image?.asset)
 
+  // Honor the editor's chosen crop in the card: features use the heroPosition
+  // dropdown, case studies use the image hotspot (crosshair). Fall back to the
+  // historical 'center top'. The card URL keeps the image's natural aspect (no
+  // forced server-side crop) so object-cover + objectPosition is the single,
+  // predictable crop layer that the hotspot/position actually controls.
+  const hotspot = caseStudy.image?.hotspot
+  const heroPosition = (caseStudy as { heroPosition?: string }).heroPosition?.trim()
+  const imagePosition =
+    heroPosition ||
+    (hotspot ? `${(hotspot.x * 100).toFixed(2)}% ${(hotspot.y * 100).toFixed(2)}%` : 'center top')
+
   const imageUrl = hasHeroAsset
-    ? urlForImage(caseStudy.image!).width(800).height(500).url()
+    ? urlForImage(caseStudy.image!).width(800).fit('max').url()
     : null
 
   // Higher-res URL for the hero (overlay morph + PersistentHero).
@@ -115,7 +126,7 @@ export function CaseStudyCard({
                   'object-cover [backface-visibility:hidden] transition-transform will-change-transform',
                   'duration-500 ease-out group-hover:scale-[1.025]',
                 )}
-                style={{ objectPosition: 'center top' }}
+                style={{ objectPosition: imagePosition }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray text-sm">

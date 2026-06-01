@@ -17,23 +17,20 @@ export function ArticleMeta({ date, categories, className }: ArticleMetaProps) {
   return (
     <div
       className={cn(
-        'mb-4 grid gap-3 sm:flex sm:items-start',
-        hasDate ? 'sm:justify-between' : 'sm:justify-start',
+        // Keep the date and tags together as one compact, left-aligned row
+        // (they wrap to a second line only when they truly don't fit) rather
+        // than pushing the date hard-left and the tags hard-right.
+        'mb-4 flex flex-wrap items-center gap-x-3 gap-y-2',
         className,
       )}
     >
       {hasDate && (
-        <span className="text-sm leading-[1.625rem] text-gray sm:shrink-0">
+        <span className="text-sm leading-[1.625rem] text-gray">
           {date}
         </span>
       )}
       {tags.length > 0 && (
-        <div
-          className={cn(
-            'flex flex-wrap gap-2',
-            hasDate ? 'sm:ml-auto sm:justify-end' : 'sm:justify-start',
-          )}
-        >
+        <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
             <span
               key={tag}
