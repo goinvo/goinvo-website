@@ -39,8 +39,11 @@ export function CaseStudyCard({
     heroPosition ||
     (hotspot ? `${(hotspot.x * 100).toFixed(2)}% ${(hotspot.y * 100).toFixed(2)}%` : 'center top')
 
+  // Source the card image large enough to stay crisp on retina at the widest
+  // card size (the 2-col /work grid ~600px CSS px → ~1200 device px). Next/Image
+  // can only downscale from this source, so 800px was upscaling/softening it.
   const imageUrl = hasHeroAsset
-    ? urlForImage(caseStudy.image!).width(800).fit('max').url()
+    ? urlForImage(caseStudy.image!).width(1600).fit('max').url()
     : null
 
   // Higher-res URL for the hero (overlay morph + PersistentHero).
@@ -121,7 +124,7 @@ export function CaseStudyCard({
                 src={imageUrl}
                 alt={displayTitle}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 620px"
                 className={cn(
                   'object-cover [backface-visibility:hidden] transition-transform will-change-transform',
                   'duration-500 ease-out group-hover:scale-[1.025]',
