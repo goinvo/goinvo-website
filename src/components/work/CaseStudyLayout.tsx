@@ -70,7 +70,7 @@ function getMetadataInsertIndex(content: PortableTextBlock[]): number {
   return content.length
 }
 
-function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
+export function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
   const displayTags = caseStudy.displayTags?.trim()
   const categories = caseStudy.categories || []
   const categoryTags = [
@@ -88,7 +88,7 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
 
   const metadataLayout = caseStudy.metadataLayout || 'stacked'
 
-  if (metadataLayout === 'inline' && hasTime && hasTags) {
+  if ((metadataLayout === 'inline' || metadataLayout === 'inlineHeader') && hasTime && hasTags) {
     return (
       <div>
         <p className="text-gray mt-0 mb-8">
@@ -156,7 +156,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
           {contentBeforeMetadata.length > 0 && (
             <PortableTextRenderer content={contentBeforeMetadata} variant="case-study" />
           )}
-          {showMetadata && <CaseStudyMetadata caseStudy={caseStudy} />}
+          {showMetadata && caseStudy.metadataLayout !== 'inlineHeader' && <CaseStudyMetadata caseStudy={caseStudy} />}
           {contentAfterMetadata.length > 0 && (
             <PortableTextRenderer content={contentAfterMetadata} variant="case-study" />
           )}
