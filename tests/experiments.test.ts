@@ -275,10 +275,15 @@ describe('experiment analytics', () => {
       cta_url: '/contact',
     })
 
-    expect(gtag).toHaveBeenCalledTimes(3)
-    expect(gtag).toHaveBeenNthCalledWith(1, 'event', 'experiment_exposure', exposure)
+    expect(gtag).toHaveBeenCalledTimes(4)
+    expect(gtag).toHaveBeenNthCalledWith(1, 'set', 'user_properties', {
+      experiment_id: 'home-2026',
+      experiment_variant: 'concept',
+      experiment_flag: 'home-2026-variant',
+    })
+    expect(gtag).toHaveBeenNthCalledWith(2, 'event', 'experiment_exposure', exposure)
     expect(gtag).toHaveBeenNthCalledWith(
-      2,
+      3,
       'event',
       'cta_click',
       expect.objectContaining({
@@ -290,7 +295,7 @@ describe('experiment analytics', () => {
       }),
     )
     expect(gtag).toHaveBeenNthCalledWith(
-      3,
+      4,
       'event',
       'experiment_conversion',
       expect.objectContaining({
