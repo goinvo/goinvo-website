@@ -634,6 +634,19 @@ export default defineType({
           initialValue: '4',
         },
         {
+          name: 'variant',
+          title: 'Variant',
+          type: 'string',
+          description: 'Card style. "Stat" renders each card label as a big, bold, brand-orange number.',
+          options: {
+            list: [
+              { title: 'Default (small uppercase label)', value: 'default' },
+              { title: 'Stat — big orange numbers', value: 'statNumber' },
+            ],
+          },
+          initialValue: 'default',
+        },
+        {
           name: 'items',
           title: 'Cards',
           type: 'array',

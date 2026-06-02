@@ -516,13 +516,20 @@ const components: PortableTextComponents = {
       const items: { label: string; description: string }[] = value.items || []
       const cols = value.columns || '4'
       const gridCols = cols === '2' ? 'sm:grid-cols-2' : cols === '3' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'
+      // "statNumber" variant renders each card's label as a big, bold, brand-orange
+      // number (for stat grids) instead of the small uppercase label.
+      const isStatNumber = value.variant === 'statNumber'
 
       return (
         <ArticleReveal intensity="visual">
           <div className={cn('grid grid-cols-1 gap-4 my-8', gridCols)}>
             {items.map((item, i) => (
               <div key={i} className="border border-gray-medium rounded-md bg-white p-4">
-                <strong className="block text-xs uppercase tracking-[2px] text-black mb-2">{item.label}</strong>
+                {isStatNumber ? (
+                  <span className="block font-bold text-[2.25rem] leading-[1.1] text-primary mb-1">{item.label}</span>
+                ) : (
+                  <strong className="block text-xs uppercase tracking-[2px] text-black mb-2">{item.label}</strong>
+                )}
                 <p className="text-sm text-gray leading-relaxed m-0">{item.description}</p>
               </div>
             ))}
