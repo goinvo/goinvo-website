@@ -175,11 +175,14 @@ export default defineType({
       title: 'Metadata Layout',
       type: 'string',
       group: 'advanced',
-      description: 'How Time and Tags are grouped in the page metadata row.',
+      description:
+        'How Time and Tags are shown. "Stacked" and "Inline" render them in the body. ' +
+        '"Below client name" puts them in the page header right under the client subtitle, each on its own row.',
       options: {
         list: [
           { title: 'Stacked', value: 'stacked' },
           { title: 'Inline', value: 'inline' },
+          { title: 'Below client name', value: 'inlineHeader' },
         ],
         layout: 'radio',
       },

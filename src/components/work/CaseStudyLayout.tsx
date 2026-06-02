@@ -70,7 +70,7 @@ function getMetadataInsertIndex(content: PortableTextBlock[]): number {
   return content.length
 }
 
-function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
+export function CaseStudyMetadata({ caseStudy, variant = 'body' }: { caseStudy: CaseStudy; variant?: 'body' | 'header' }) {
   const displayTags = caseStudy.displayTags?.trim()
   const categories = caseStudy.categories || []
   const categoryTags = [
@@ -87,6 +87,31 @@ function CaseStudyMetadata({ caseStudy }: { caseStudy: CaseStudy }) {
   if (!hasTime && !hasTags) return null
 
   const metadataLayout = caseStudy.metadataLayout || 'stacked'
+
+  // Header variant: Time and Tags as their own tight rows, rendered in the page
+  // header right under the client subtitle (used by metadataLayout 'inlineHeader').
+  if (variant === 'header') {
+    return (
+      <div className="mb-8">
+        {hasTime && (
+          <p className="text-gray !mt-0 !mb-1">
+            <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+              Time:
+            </span>{' '}
+            {caseStudy.time}
+          </p>
+        )}
+        {hasTags && (
+          <p className="text-gray !mt-0 !mb-0">
+            <span className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray">
+              Tags:
+            </span>{' '}
+            {tagsText}
+          </p>
+        )}
+      </div>
+    )
+  }
 
   if (metadataLayout === 'inline' && hasTime && hasTags) {
     return (
@@ -156,7 +181,7 @@ export function CaseStudyLayout({ caseStudy }: CaseStudyLayoutProps) {
           {contentBeforeMetadata.length > 0 && (
             <PortableTextRenderer content={contentBeforeMetadata} variant="case-study" />
           )}
-          {showMetadata && <CaseStudyMetadata caseStudy={caseStudy} />}
+          {showMetadata && caseStudy.metadataLayout !== 'inlineHeader' && <CaseStudyMetadata caseStudy={caseStudy} />}
           {contentAfterMetadata.length > 0 && (
             <PortableTextRenderer content={contentAfterMetadata} variant="case-study" />
           )}
