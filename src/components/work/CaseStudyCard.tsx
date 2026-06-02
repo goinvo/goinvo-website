@@ -28,8 +28,22 @@ export function CaseStudyCard({
 
   const hasHeroAsset = Boolean(caseStudy.image?.asset)
 
+  // Honor the editor's chosen crop in the card: features use the heroPosition
+  // dropdown, case studies use the image hotspot (crosshair). Fall back to the
+  // historical 'center top'. The card URL keeps the image's natural aspect (no
+  // forced server-side crop) so object-cover + objectPosition is the single,
+  // predictable crop layer that the hotspot/position actually controls.
+  const hotspot = caseStudy.image?.hotspot
+  const heroPosition = (caseStudy as { heroPosition?: string }).heroPosition?.trim()
+  const imagePosition =
+    heroPosition ||
+    (hotspot ? `${(hotspot.x * 100).toFixed(2)}% ${(hotspot.y * 100).toFixed(2)}%` : 'center top')
+
+  // Source the card image large enough to stay crisp on retina at the widest
+  // card size (the 2-col /work grid ~600px CSS px → ~1200 device px). Next/Image
+  // can only downscale from this source, so 800px was upscaling/softening it.
   const imageUrl = hasHeroAsset
-    ? urlForImage(caseStudy.image!).width(800).height(500).url()
+    ? urlForImage(caseStudy.image!).width(1600).fit('max').url()
     : null
 
   // Higher-res URL for the hero (overlay morph + PersistentHero).
@@ -110,12 +124,12 @@ export function CaseStudyCard({
                 src={imageUrl}
                 alt={displayTitle}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 620px"
                 className={cn(
                   'object-cover [backface-visibility:hidden] transition-transform will-change-transform',
                   'duration-500 ease-out group-hover:scale-[1.025]',
                 )}
-                style={{ objectPosition: 'center top' }}
+                style={{ objectPosition: imagePosition }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray text-sm">
