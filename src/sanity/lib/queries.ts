@@ -6,7 +6,7 @@ import { groq } from 'next-sanity'
 // They're safe to delete in Studio; until then, hide from the public list.
 export const allCaseStudiesQuery = groq`
   *[_type == "caseStudy"
-    && !hidden
+    && hidden != true
     && title != "Untitled"
     && !(slug.current match "untitled-*")
   ] | order(orderRank asc) {
