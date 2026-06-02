@@ -44,7 +44,7 @@ export interface CaseStudy {
   caption?: string
   categories?: Category[]
   displayTags?: string
-  metadataLayout?: 'stacked' | 'inline'
+  metadataLayout?: 'stacked' | 'inline' | 'inlineHeader'
   authors?: TeamMember[] | null
   time?: string
   content?: PortableTextBlock[]
