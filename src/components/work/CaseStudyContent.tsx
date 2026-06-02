@@ -3,7 +3,7 @@
 import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import { caseStudyBySlugQuery } from '@/sanity/lib/queries'
 import { useLiveData } from '@/components/sanity/LiveData'
-import { CaseStudyLayout } from '@/components/work/CaseStudyLayout'
+import { CaseStudyLayout, CaseStudyMetadata } from '@/components/work/CaseStudyLayout'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
@@ -559,6 +559,11 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
   const showClientSubtitle =
     (hasLeadingClientSubtitle || (!!clientName && clientName !== 'GoInvo')) &&
     !caseStudy.hideClientSubtitle
+  // When metadataLayout is "inlineHeader", show Time + Tags as their own rows in
+  // the header, right under the client subtitle (instead of in the body).
+  const showHeaderMeta =
+    caseStudy.metadataLayout === 'inlineHeader' &&
+    Boolean(caseStudy.time || caseStudy.displayTags?.trim() || (caseStudy.categories || []).length > 0)
   const normalizedCaseStudy = hasLeadingClientSubtitle
     ? { ...caseStudy, content: caseStudy.content?.slice(1) }
     : caseStudy
@@ -588,7 +593,7 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
             {caseStudy.heading || caseStudy.title}
           </h1>
           {showClientSubtitle && (
-            <p className="text-gray mt-0 mb-8">
+            <p className={`text-gray mt-0 ${showHeaderMeta ? '!mb-2' : 'mb-8'}`}>
               {hasLeadingClientSubtitle
                 ? firstContentChildren.map((child, index) => {
                     const text = child.text || ''
@@ -607,6 +612,7 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
                 : <>for {clientName}</>}
             </p>
           )}
+          {showHeaderMeta && <CaseStudyMetadata caseStudy={caseStudy} variant="header" />}
         </div>
       </Reveal>
 
