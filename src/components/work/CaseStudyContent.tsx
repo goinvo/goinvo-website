@@ -612,7 +612,7 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
                 : <>for {clientName}</>}
             </p>
           )}
-          {showHeaderMeta && <CaseStudyMetadata caseStudy={caseStudy} />}
+          {showHeaderMeta && <CaseStudyMetadata caseStudy={caseStudy} variant="header" />}
         </div>
       </Reveal>
 
