@@ -87,7 +87,25 @@ export function trackExperimentExposure(params: ExperimentAnalyticsParams) {
   if (trackedExperimentExposures.has(exposureKey)) return
 
   trackedExperimentExposures.add(exposureKey)
+  // Attribute this visitor's GA4 data to their variant cohort (user-scoped) so
+  // the experiment can be split with GA4 Comparisons across every report. Set
+  // before the exposure event so that event is attributed too.
+  setGa4ExperimentUserProperties(params)
   trackEvent('experiment_exposure', params)
+}
+
+// Set the assigned variant as GA4 user properties so GA4 can segment all of a
+// visitor's events and sessions by their experiment cohort. Register
+// `experiment_variant` (and optionally experiment_id / experiment_flag) as
+// user-scoped custom dimensions in GA4 to use them in reports and Comparisons.
+function setGa4ExperimentUserProperties(params: ExperimentAnalyticsParams) {
+  if (typeof window === 'undefined') return
+  ensureClientAnalyticsQueues()
+  window.gtag?.('set', 'user_properties', {
+    experiment_id: params.experiment_id,
+    experiment_variant: params.variant,
+    experiment_flag: params.flag_key,
+  })
 }
 
 export function getExperimentContextForAnalytics() {
