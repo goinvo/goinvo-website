@@ -16,10 +16,15 @@ interface HomePageRendererProps {
 async function getHomeTeamMembers() {
   const { data: members } = (await sanityFetch({ query: teamMembersQuery })) as { data: TeamMember[] }
 
-  return members.map((member) => ({
-    name: member.name,
-    image: member.image ? urlForImage(member.image).width(300).height(300).url() : '',
-  }))
+  // Skip members without a photo so the scrolling portraits never render a
+  // blank/broken box (e.g. Alexandra, whose photo is coming soon). autoFill on
+  // the marquees keeps the rows full even with fewer portraits.
+  return members
+    .filter((member) => member.image)
+    .map((member) => ({
+      name: member.name,
+      image: urlForImage(member.image!).width(300).height(300).url(),
+    }))
 }
 
 export async function HomePageRenderer({
