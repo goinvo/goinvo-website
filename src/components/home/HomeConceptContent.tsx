@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
-import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { HomeConceptCalendlyCta } from '@/components/home/HomeConceptCalendlyCta'
 import { HomeConceptCtaLink } from '@/components/home/HomeConceptCtaLink'
 import { HomeConceptInteractions } from '@/components/home/HomeConceptInteractions'
@@ -208,7 +207,7 @@ export function HomeConceptContent() {
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
-      <section className="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[#1d1b1a] text-white">
+      <section className="relative overflow-hidden bg-[#1d1b1a] text-white">
         <Image
           src={`${imageBase}/ipsosherodark.jpg`}
           alt=""
@@ -218,8 +217,7 @@ export function HomeConceptContent() {
           className="object-cover opacity-70"
         />
         <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(20,18,17,.95)_0%,rgba(20,18,17,.68)_52%,rgba(20,18,17,.18)_100%)]" />
-        <div className="relative max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 py-24 lg:py-32 min-h-[calc(100vh-80px)] flex flex-col justify-center">
-          <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary mb-5">GoInvo - Boston</p>
+        <div className="relative max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 pt-[clamp(72px,10vw,120px)] pb-[clamp(72px,10vw,96px)] min-h-[clamp(480px,60vw,720px)] flex flex-col justify-center">
           <h1
             className="text-[2.25rem] leading-[1.02] sm:text-[4.5rem] font-medium tracking-[-0.025em] max-w-[16ch] mb-6"
             style={{
@@ -454,7 +452,7 @@ export function HomeConceptContent() {
               </Button>
             </div>
           </div>
-          <Link href="/about/careers" className="relative block aspect-[5/4] overflow-hidden bg-[#ece7dc]">
+          <div className="relative block aspect-[5/4] overflow-hidden bg-[#ece7dc]">
             <Image
               src={`${imageBase}/teamphoto.jpg`}
               alt="GoInvo team"
@@ -462,7 +460,7 @@ export function HomeConceptContent() {
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover"
             />
-          </Link>
+          </div>
         </div>
       </section>
 
@@ -500,10 +498,6 @@ export function HomeConceptContent() {
       </section>
 
       <HomeConceptCalendlyCta />
-
-      <div id="concept-newsletter">
-        <NewsletterSection background="white" shadowClassName="shadow-none" />
-      </div>
     </div>
   )
 }
