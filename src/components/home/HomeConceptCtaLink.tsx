@@ -24,12 +24,25 @@ export function HomeConceptCtaLink({
   qualifiedDiscoveryCall = false,
   children,
 }: HomeConceptCtaLinkProps) {
-  const handleClick = () => {
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     const params = { cta_text: label, cta_location: location, cta_url: href }
     if (qualifiedDiscoveryCall) {
       trackQualifiedDiscoveryCallClick(params)
     } else {
       trackCtaClick(params)
+    }
+
+    // Smoothly slide to the in-page target (e.g. the #book scheduler) instead of
+    // the browser's instant hash jump. Next's Link bails on navigation once the
+    // click's default is prevented, so we own the scroll here.
+    if (href.startsWith('#')) {
+      const target = document.getElementById(href.slice(1))
+      if (target) {
+        event.preventDefault()
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+        window.history.replaceState(null, '', href)
+      }
     }
   }
 

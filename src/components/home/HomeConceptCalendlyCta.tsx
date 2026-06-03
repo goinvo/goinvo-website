@@ -9,8 +9,12 @@ import { trackCtaClick } from '@/lib/analytics'
 const calendlyUrl = 'https://calendly.com/goinvo/open-office-hours?hide_event_type_details=1&hide_gdpr_banner=1&primary_color=d94d2f'
 const calendlyScriptUrl = 'https://assets.calendly.com/assets/external/widget.js'
 const calendlyStylesheetUrl = 'https://assets.calendly.com/assets/external/widget.css'
-const conceptButtonPrimary =
-  'group !normal-case !tracking-normal !text-[15px] !px-[22px] !py-[14px] !gap-[10px] !rounded-[2px] !bg-[#d94d2f] !text-white !border-[#d94d2f] hover:!bg-[#c44228] hover:!border-[#c44228] hover:-translate-y-px active:translate-y-0 hover:shadow-[0_10px_28px_-10px_rgba(217,77,47,.55)]'
+// EmailOctopus popup ("toggle") form — opened by any element carrying a
+// matching data-eo-form-toggle-id. Distinct from the inline subscribe form.
+const newsletterPopupFormId = '58b8a4d4-5ab4-11f1-94ee-711f5f86d0dd'
+// Dark button reads clearly on the orange CTA band (an orange button would not).
+const conceptButtonDark =
+  'group !normal-case !tracking-normal !text-[15px] !px-[22px] !py-[14px] !gap-[10px] !rounded-[2px] !bg-[#1d1b1a] !text-white !border-[#1d1b1a] hover:!bg-black hover:!border-black hover:-translate-y-px active:translate-y-0 hover:shadow-[0_10px_28px_-10px_rgba(29,27,26,.55)]'
 
 declare global {
   interface Window {
@@ -123,6 +127,18 @@ export function HomeConceptCalendlyCta() {
     }
   }, [])
 
+  // Load the EmailOctopus popup form once. Its embed script wires up any element
+  // bearing data-eo-form-toggle-id={newsletterPopupFormId} to open the popup.
+  useEffect(() => {
+    const src = `https://eocampaign1.com/form/${newsletterPopupFormId}.js`
+    if (document.querySelector(`script[src="${src}"]`)) return
+    const script = document.createElement('script')
+    script.src = src
+    script.async = true
+    script.dataset.form = newsletterPopupFormId
+    document.body.appendChild(script)
+  }, [])
+
   // Calendly runs in a cross-origin iframe, so field focus is not observable.
   // The shared hook reports discovery_form_start on date/time selection and a
   // form submit on event_scheduled. On the homepage these carry the experiment
@@ -153,7 +169,7 @@ export function HomeConceptCalendlyCta() {
   }
 
   return (
-    <section id="book" className="py-16 lg:py-24 bg-[#24434d] text-white">
+    <section id="book" className="py-16 lg:py-24 bg-[#d94d2f] text-white">
       <div className="max-w-[960px] mx-auto px-5 sm:px-8 text-center">
         <h2 className="font-serif text-3xl lg:text-5xl leading-tight mb-5 max-w-[20ch] mx-auto">
           Have a product that needs to ship?
@@ -200,8 +216,8 @@ export function HomeConceptCalendlyCta() {
 
         <div className="mt-9 md:hidden">
           <Button
-            variant="primary"
-            className={conceptButtonPrimary}
+            variant="transparent"
+            className={conceptButtonDark}
             onClick={openCalendlyPopup}
           >
             <span>Book a discovery call</span>
@@ -218,10 +234,14 @@ export function HomeConceptCalendlyCta() {
         <p className="mt-7 text-sm text-white/75">
           Not ready? The newsletter sends our latest ideas, visualizations, and studio news twice a month.
           {' '}
-          <a href="#concept-newsletter" className="group inline-flex items-baseline gap-1 text-white underline underline-offset-4">
+          <button
+            type="button"
+            data-eo-form-toggle-id={newsletterPopupFormId}
+            className="group inline-flex items-baseline gap-1 text-white underline underline-offset-4"
+          >
             Subscribe
             <ConceptReferenceArrow className="group-hover:translate-x-[5px]" />
-          </a>
+          </button>
         </p>
       </div>
     </section>
