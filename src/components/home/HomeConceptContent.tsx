@@ -502,7 +502,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               alt="Eric Topol"
               width={72}
               height={72}
-              className="rounded-full object-cover"
+              className="h-[72px] w-[72px] shrink-0 rounded-full object-cover"
             />
             <p className="text-left text-sm text-[#6a6560]">
               <span className="block font-bold text-[#1d1b1a]">Eric Topol, MD</span>
