@@ -169,7 +169,7 @@ export function HomeConceptCalendlyCta() {
   }
 
   return (
-    <section id="book" className="py-16 lg:py-24 bg-[#d94d2f] text-white">
+    <section id="book" className="py-16 lg:py-24 bg-[#b84a0e] text-white">
       <div className="max-w-[960px] mx-auto px-5 sm:px-8 text-center">
         <h2 className="font-serif text-3xl lg:text-5xl leading-tight mb-5 max-w-[20ch] mx-auto">
           Have a product that needs to ship?
