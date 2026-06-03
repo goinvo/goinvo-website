@@ -8,7 +8,7 @@ interface ButtonProps {
   className?: string
   children: React.ReactNode
   external?: boolean
-  onClick?: () => void
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void
   type?: 'button' | 'submit'
 }
 

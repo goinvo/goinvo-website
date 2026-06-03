@@ -36,6 +36,7 @@
     "d3-sankey": "^0.12.3",
     "d3-scale": "^4.0.2",
     "embla-carousel-react": "^8.6.0",
+    "flags": "^4.0.6",
     "framer-motion": "^12.34.0",
     "groq": "^3.99.0",
     "lexorank": "^1.0.4",
