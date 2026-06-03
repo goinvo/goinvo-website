@@ -1,5 +1,4 @@
 import { flag } from 'flags/next'
-import { vercelAdapter } from '@flags-sdk/vercel'
 import type { ReadonlyHeaders, ReadonlyRequestCookies } from 'flags'
 import { getOrGenerateMarketingVisitorId } from '@/lib/experiments/visitor'
 
@@ -33,8 +32,29 @@ const identifyMarketingVisitor = async ({
   }
 }
 
+// Deterministic in-code 50/50 assignment from the visitor id (FNV-1a hash →
+// bucket 0-99), so the experiment needs no external flag service. The same
+// visitor always resolves to the same variant, and it runs at the edge.
+// To shift the ratio later, change the `< 50` threshold.
+export function assignHome2026Variant(visitorId?: string): Home2026Variant {
+  if (!visitorId) return 'control'
+  const input = `home-2026-variant:${visitorId}`
+  let hash = 2166136261
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0) % 100 < 50 ? 'control' : 'concept'
+}
+
+// FLAGS acts as a simple on/off gate (set to any value to make the split live
+// on an environment). Dormant by default, so merging the code never auto-starts
+// the experiment on production until FLAGS is explicitly set there.
 const home2026FlagProvider = process.env.FLAGS
-  ? { adapter: vercelAdapter<Home2026Variant, MarketingFlagEntities>() }
+  ? {
+      decide: ({ entities }: { entities?: MarketingFlagEntities }) =>
+        assignHome2026Variant(entities?.visitor?.id),
+    }
   : { decide: () => 'control' as Home2026Variant }
 
 export const home2026Variant = flag<Home2026Variant, MarketingFlagEntities>({
