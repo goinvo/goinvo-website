@@ -31,16 +31,16 @@ export async function HomePageRenderer({
   variant = 'control',
   experiment,
 }: HomePageRendererProps = {}) {
+  const teamMembers = await getHomeTeamMembers()
+
   if (variant === 'concept') {
     return (
       <>
         {experiment && <ExperimentExposure experiment={experiment} />}
-        <HomeConceptContent />
+        <HomeConceptContent teamMembers={teamMembers} />
       </>
     )
   }
-
-  const teamMembers = await getHomeTeamMembers()
 
   return (
     <>

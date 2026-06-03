@@ -29,7 +29,7 @@ const stats = [
     value: '20',
     suffix: 'yrs',
     description: 'designing enterprise and healthcare software. One studio, deep specialism.',
-    label: 'Founded 2009 - Boston, MA',
+    label: 'Founded 2009 · Boston, MA',
   },
   {
     value: '60',
@@ -46,7 +46,7 @@ const stats = [
   {
     value: '65',
     suffix: '+',
-    description: 'sponsored open-source projects since 2009, used in universities and on product teams.',
+    description: 'sponsored open source projects since 2009, used in universities and on product teams.',
     label: 'CC BY 4.0 or Apache 2.0',
   },
 ]
@@ -203,7 +203,14 @@ function ArrowLink({
   )
 }
 
-export function HomeConceptContent() {
+interface HomeConceptContentProps {
+  teamMembers?: { name: string; image: string }[]
+}
+
+export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps = {}) {
+  // A 3x3 grid of individual headshots stands in for the outdated group photo
+  // until a new one is taken; falls back to the group photo if there aren't nine.
+  const studioPhotos = teamMembers.filter((member) => member.image).slice(0, 9)
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
@@ -261,6 +268,9 @@ export function HomeConceptContent() {
               Ipsos Facto. The share of analysts using the AI research platform we shipped across the firm, with 10M+ API calls and 700K prompts per month.
             </p>
           </div>
+        </div>
+        <div className="pointer-events-none absolute bottom-5 right-5 font-mono text-[10px] uppercase tracking-[0.08em] text-white/50 sm:right-8 lg:right-14">
+          Ipsos · Facto AI platform
         </div>
       </section>
 
@@ -452,15 +462,31 @@ export function HomeConceptContent() {
               </Button>
             </div>
           </div>
-          <div className="relative block aspect-[5/4] overflow-hidden bg-[#ece7dc]">
-            <Image
-              src={`${imageBase}/teamphoto.jpg`}
-              alt="GoInvo team"
-              fill
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover"
-            />
-          </div>
+          {studioPhotos.length === 9 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {studioPhotos.map((member) => (
+                <div key={member.name} className="relative aspect-square overflow-hidden bg-[#ece7dc]">
+                  <Image
+                    src={member.image}
+                    alt={member.name}
+                    fill
+                    sizes="(min-width: 1024px) 17vw, 33vw"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="relative block aspect-[5/4] overflow-hidden bg-[#ece7dc]">
+              <Image
+                src={`${imageBase}/teamphoto.jpg`}
+                alt="GoInvo team"
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+              />
+            </div>
+          )}
         </div>
       </section>
 
