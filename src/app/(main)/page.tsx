@@ -1,9 +1,5 @@
 import type { Metadata } from 'next'
-import { HomeContent } from '@/components/home/HomeContent'
-import { sanityFetch } from '@/sanity/lib/live'
-import { teamMembersQuery } from '@/sanity/lib/queries'
-import { urlForImage } from '@/sanity/lib/image'
-import type { TeamMember } from '@/types'
+import { HomePageRenderer } from '@/components/home/HomePageRenderer'
 
 export const metadata: Metadata = {
   title: {
@@ -14,12 +10,5 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  const { data: members } = await sanityFetch({ query: teamMembersQuery }) as { data: TeamMember[] }
-
-  const teamMembers = members.map((m) => ({
-    name: m.name,
-    image: m.image ? urlForImage(m.image).width(300).height(300).url() : '',
-  }))
-
-  return <HomeContent teamMembers={teamMembers} />
+  return <HomePageRenderer />
 }
