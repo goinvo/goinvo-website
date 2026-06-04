@@ -13,21 +13,21 @@ const ogImage = cloudfrontImage(heroImage)
 const pageUrl = 'https://www.goinvo.com/vision/us-healthcare-problems'
 
 export const metadata: Metadata = {
-  title: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+  title: 'US Healthcare Problems',
   description:
     'What are the biggest problems in US healthcare? GoInvo ranks the top 50, from cost, access, and fraud to burnout and fragmented data, by deaths, dollars lost, and people impacted.',
   alternates: { canonical: '/vision/us-healthcare-problems' },
   openGraph: {
     type: 'article',
     url: pageUrl,
-    title: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+    title: 'US Healthcare Problems',
     description:
       'GoInvo ranks the top 50 problems in US healthcare, from cost and access to fraud, burnout, and fragmented data, by deaths, dollars lost, and people impacted.',
     images: [{ url: ogImage, alt: 'US Healthcare Problems, ranked by GoInvo' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+    title: 'US Healthcare Problems',
     description:
       'GoInvo ranks the top 50 problems in US healthcare by deaths, dollars lost, and people impacted.',
     images: [ogImage],
@@ -60,7 +60,7 @@ const usHealthcareJsonLd = {
     {
       '@type': 'Article',
       '@id': `${pageUrl}#article`,
-      headline: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+      headline: 'US Healthcare Problems',
       description:
         'An open, research-backed ranking of the top 50 problems in US healthcare, scored by deaths, dollars lost, and people impacted.',
       image: ogImage,
