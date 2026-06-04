@@ -208,15 +208,19 @@ interface HomeConceptContentProps {
 }
 
 export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps = {}) {
-  // A 3x3 grid of individual headshots stands in for the outdated group photo
-  // until a new one is taken; falls back to the group photo if there aren't nine.
-  // Uses the first nine photographed members, but shows Jonathan Follett in place
-  // of Tala Habbab per request.
+  // A headshot grid stands in for the outdated group photo until a new one is
+  // taken: ten photographed members (Jonathan Follett shown in place of Tala
+  // Habbab, plus Alexandra Coston) followed by a 2-wide studio placeholder tile.
+  // Falls back to the group photo if there aren't enough headshots.
   const photographed = teamMembers.filter((member) => member.image)
   const jon = photographed.find((member) => member.name === 'Jonathan Follett')
+  const alexandra = photographed.find((member) => member.name === 'Alexandra Coston')
   const studioPhotos = photographed
     .slice(0, 9)
     .map((member) => (member.name === 'Tala Habbab' && jon ? jon : member))
+  if (alexandra && !studioPhotos.some((member) => member.name === 'Alexandra Coston')) {
+    studioPhotos.push(alexandra)
+  }
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
@@ -458,9 +462,6 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
             <p className="text-lg leading-8 text-[#3a3633] max-w-[600px]">
               The people who scope your project are the people who do it. Boston-based and deliberately small.
             </p>
-            <p className="mt-5 text-base leading-7 text-[#3a3633] max-w-[600px]">
-              Trained at Apple, MITRE, and NCSA, our principals chose this work and never left. Two decades on, that decision is the whole studio.
-            </p>
             <div className="mt-8">
               <Button href="/about" variant="outline" className={conceptButtonGhost}>
                 <span>Meet the team</span>
@@ -468,7 +469,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               </Button>
             </div>
           </div>
-          {studioPhotos.length === 9 ? (
+          {studioPhotos.length >= 9 ? (
             <div className="grid grid-cols-3 gap-2">
               {studioPhotos.map((member) => (
                 <div key={member.name} className="relative aspect-square overflow-hidden bg-[#ece7dc]">
@@ -481,6 +482,16 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
                   />
                 </div>
               ))}
+              {/* 2-wide studio placeholder — swap in an interior studio photo when available */}
+              <div className="relative col-span-2 flex aspect-[2/1] items-center justify-center overflow-hidden bg-[#ece7dc]">
+                <Image
+                  src={`${imageBase}/goinvologodark.png`}
+                  alt="Inside the GoInvo studio"
+                  width={160}
+                  height={48}
+                  className="h-auto w-[42%] max-w-[180px] object-contain opacity-80"
+                />
+              </div>
             </div>
           ) : (
             <div className="relative block aspect-[5/4] overflow-hidden bg-[#ece7dc]">
