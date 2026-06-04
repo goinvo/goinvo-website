@@ -12,21 +12,21 @@ const ogImage = cloudfrontImage(heroImage)
 const pageUrl = 'https://www.goinvo.com/vision/determinants-of-health'
 
 export const metadata: Metadata = {
-  title: 'The 5 Determinants of Health, Visualized',
+  title: 'Determinants of Health Visualized',
   description:
     "89% of your health happens outside the clinic. Explore the 5 determinants of health (behavior, social circumstances, genetics, environment, and medical care) in GoInvo's open-source, research-backed visualization.",
   alternates: { canonical: '/vision/determinants-of-health' },
   openGraph: {
     type: 'article',
     url: pageUrl,
-    title: 'The 5 Determinants of Health, Visualized',
+    title: 'Determinants of Health Visualized',
     description:
       '89% of your health happens outside the clinic. Explore the 5 determinants of health, behavior, social circumstances, genetics, environment, and medical care, in an open-source visualization.',
     images: [{ url: ogImage, alt: 'Determinants of Health visualization by GoInvo' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The 5 Determinants of Health, Visualized',
+    title: 'Determinants of Health Visualized',
     description:
       "89% of your health happens outside the clinic. Explore the 5 determinants of health in GoInvo's open-source visualization.",
     images: [ogImage],
@@ -59,7 +59,7 @@ const determinantsJsonLd = {
     {
       '@type': 'Article',
       '@id': `${pageUrl}#article`,
-      headline: 'The 5 Determinants of Health',
+      headline: 'Determinants of Health',
       description:
         'An open-source visualization of the five determinants of health (behavior, social circumstances, genetics, medical care, and environment) with the research and methodology behind their estimated impact.',
       image: ogImage,
