@@ -14,6 +14,9 @@ type PageOpp = {
   ctr: number
   position: number
   pageViews: number
+  quality?: number
+  topQuery?: string
+  legacy?: boolean
   score: number
   fix: string
   fixHint: string
@@ -231,6 +234,12 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
                       {p.path}
                     </a>
+                    {p.legacy ? (
+                      <span style={{ marginLeft: 6, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>(legacy → redirect)</span>
+                    ) : null}
+                    {p.topQuery ? (
+                      <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>{p.topQuery}</div>
+                    ) : null}
                   </td>
                   <td style={{ ...s.td, ...s.num }}>{p.impressions.toLocaleString()}</td>
                   <td style={{ ...s.td, ...s.num }}>{pct(p.ctr)}</td>
