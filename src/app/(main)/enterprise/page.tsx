@@ -5,6 +5,7 @@ import { ClientLogos } from '@/components/ui/ClientLogos'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { Button } from '@/components/ui/Button'
 import { cloudfrontImage } from '@/lib/utils'
+import { JsonLd } from '@/components/seo/JsonLd'
 
 export const metadata: Metadata = {
   title: 'Design for Enterprise Software',
@@ -119,10 +120,7 @@ const enterpriseJsonLd = {
 export default function EnterprisePage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(enterpriseJsonLd) }}
-      />
+      <JsonLd data={enterpriseJsonLd} />
       {/* Hero */}
       <section
         className="relative h-[450px] bg-cover bg-top-center"
