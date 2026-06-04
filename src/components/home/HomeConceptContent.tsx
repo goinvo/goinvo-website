@@ -210,7 +210,13 @@ interface HomeConceptContentProps {
 export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps = {}) {
   // A 3x3 grid of individual headshots stands in for the outdated group photo
   // until a new one is taken; falls back to the group photo if there aren't nine.
-  const studioPhotos = teamMembers.filter((member) => member.image).slice(0, 9)
+  // Uses the first nine photographed members, but shows Jonathan Follett in place
+  // of Tala Habbab per request.
+  const photographed = teamMembers.filter((member) => member.image)
+  const jon = photographed.find((member) => member.name === 'Jonathan Follett')
+  const studioPhotos = photographed
+    .slice(0, 9)
+    .map((member) => (member.name === 'Tala Habbab' && jon ? jon : member))
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
