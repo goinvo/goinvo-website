@@ -10,6 +10,24 @@ export const metadata: Metadata = {
   title: 'Design for Enterprise Software',
   description:
     'Beautiful software design for the Enterprise to catapult your business forward.',
+  alternates: { canonical: '/enterprise' },
+  // Page-specific Open Graph so shares don't inherit the global healthcare
+  // homepage card.
+  openGraph: {
+    type: 'website',
+    url: '/enterprise',
+    title: 'Design for Enterprise Software | GoInvo',
+    description:
+      'Beautiful software design for the Enterprise to catapult your business forward.',
+    images: [
+      {
+        url: cloudfrontImage('/images/enterprise/enterprise-hero-1.jpg'),
+        width: 1200,
+        height: 630,
+        alt: 'GoInvo — design for enterprise software',
+      },
+    ],
+  },
 }
 
 const reasons = [
@@ -45,9 +63,66 @@ const results = [
   'A vision to rally the company.',
 ]
 
+const faqs = [
+  {
+    q: 'What is enterprise software design?',
+    a: "Enterprise software design is the practice of designing the complex, large-scale software that runs companies, hospitals, and agencies so it's genuinely usable, adopted, and shippable. It spans UX, workflow, and the regulatory and legacy constraints that come with software used by thousands of people. The bar isn't just whether it's delightful — it's whether it moves real business numbers.",
+  },
+  {
+    q: 'How is enterprise software design different from consumer or product design?',
+    a: 'Enterprise software carries constraints consumer products do not: many stakeholders, entrenched workflows, legacy systems, and regulations such as HIPAA or FDA. Success is measured in adoption and outcomes — productivity, cost, revenue — not downloads. The design has to satisfy those constraints without becoming unusable.',
+  },
+  {
+    q: 'How does GoInvo approach enterprise software design?',
+    a: "We embed with your team at any stage — from a blank page to a backlog that's been stuck for months — and design the product into shipped, adopted software. Because we've designed software together for over a decade, we start fast, find the features that drive profit, and make design a lasting influence in your organization.",
+  },
+  {
+    q: 'What results can enterprise software design deliver?',
+    a: 'Real outcomes. For 3M CodeRyte, a 200% productivity gain contributed to a $146M exit. For InfoBionic, a product vision helped secure a $17M Series B. Across our work, GoInvo designs have impacted more than 160 million people, and 90% of clients return for more.',
+  },
+  {
+    q: 'Can you design regulated or complex enterprise software (HIPAA, FDA)?',
+    a: 'Yes — regulated and complex software is our specialty. HIPAA, FDA, payer, and federal constraints are our starting conditions, not a late surprise, so we design software that satisfies them and still ships.',
+  },
+  {
+    q: 'How do we get started?',
+    a: "Tell us about your project and what shipping it would take. You'll talk with a principal about whether GoInvo is the right fit — no obligation.",
+  },
+]
+
+const enterpriseJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Service',
+      '@id': 'https://www.goinvo.com/enterprise#service',
+      name: 'Enterprise Software Design',
+      serviceType: 'Enterprise software design and UX',
+      url: 'https://www.goinvo.com/enterprise',
+      description:
+        'Design for complex, large-scale, and regulated enterprise software that ships and gets adopted — for Fortune 500s, hospitals, federal agencies, and funded startups.',
+      provider: { '@type': 'Organization', name: 'GoInvo', url: 'https://www.goinvo.com' },
+      areaServed: 'US',
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': 'https://www.goinvo.com/enterprise#faq',
+      mainEntity: faqs.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    },
+  ],
+}
+
 export default function EnterprisePage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(enterpriseJsonLd) }}
+      />
       {/* Hero */}
       <section
         className="relative h-[450px] bg-cover bg-top-center"
@@ -70,8 +145,18 @@ export default function EnterprisePage() {
         </div>
       </section>
 
+      {/* On this page — server-rendered TOC for crawlers and AI answer engines */}
+      <nav aria-label="On this page" className="toc border-b border-black/10">
+        <ul className="max-width content-padding m-0 flex flex-wrap justify-center gap-x-6 gap-y-1 list-none py-3 text-sm text-gray">
+          <li><a href="#results" className="no-underline hover:text-primary">Results</a></li>
+          <li><a href="#why-goinvo" className="no-underline hover:text-primary">Why GoInvo</a></li>
+          <li><a href="#case-studies" className="no-underline hover:text-primary">Case studies</a></li>
+          <li><a href="#faq" className="no-underline hover:text-primary">FAQ</a></li>
+        </ul>
+      </nav>
+
       {/* Results */}
-      <section className="bg-primary-lightest py-16 text-tertiary">
+      <section id="results" className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding">
           <h2 className="header-xl text-tertiary mt-0 mb-8">What results are you looking for?</h2>
           <ul className="ul grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 list-none pl-0">
@@ -83,7 +168,7 @@ export default function EnterprisePage() {
       </section>
 
       {/* Why Choose GoInvo */}
-      <section className="py-16 text-tertiary">
+      <section id="why-goinvo" className="py-16 text-tertiary">
         <div className="max-width content-padding text-center">
           <h2 className="header-xl text-tertiary mt-0 mb-12">Why choose GoInvo?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
@@ -122,7 +207,7 @@ export default function EnterprisePage() {
       </section>
 
       {/* Case Studies */}
-      <section className="bg-primary-lightest py-16 text-tertiary">
+      <section id="case-studies" className="bg-primary-lightest py-16 text-tertiary">
         <div className="max-width content-padding text-center">
           <h2 className="header-xl text-tertiary mt-0 mb-8">
             Driving results for Enterprise software<span className="text-primary font-serif">.</span>
@@ -138,10 +223,10 @@ export default function EnterprisePage() {
           >
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
-                <h4 className="header-xl text-tertiary mt-0 mb-4">
+                <h3 className="header-xl text-tertiary mt-0 mb-4">
                   A 200% productivity gain
                   <br />= $146M exit.
-                </h4>
+                </h3>
                 <p className="header-lg text-tertiary mt-0 mb-4">
                   &ldquo;We needed to make sure we could do this. Invo proved we could. We needed
                   to make sure we could sell this. Invo gave us the tools to do that, too.&rdquo;
@@ -172,9 +257,9 @@ export default function EnterprisePage() {
           >
             <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_400px]">
               <div className="p-8 lg:p-12">
-                <h4 className="header-xl text-tertiary mt-0 mb-4">
+                <h3 className="header-xl text-tertiary mt-0 mb-4">
                   A vision to secure $17M Series B.
-                </h4>
+                </h3>
                 <p className="header-lg text-tertiary mt-0 mb-4">
                   &ldquo;We absolutely love everything GoInvo has created for us, it has by far
                   exceeded our expectations.&rdquo;
@@ -197,6 +282,21 @@ export default function EnterprisePage() {
               </div>
             </div>
           </Link>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-16 text-tertiary">
+        <div className="max-width-md content-padding mx-auto">
+          <h2 className="header-xl text-tertiary mt-0 mb-8 text-center">
+            Enterprise software design FAQ
+          </h2>
+          {faqs.map((item) => (
+            <div key={item.q} className="border-t border-black/10 py-6">
+              <h3 className="header-lg text-tertiary mt-0 mb-2">{item.q}</h3>
+              <p className="text-gray m-0 leading-relaxed">{item.a}</p>
+            </div>
+          ))}
         </div>
       </section>
 
