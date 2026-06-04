@@ -3496,7 +3496,7 @@ function MarketingComponent() {
                 onAutopilotComplete={reportAutopilotCompletion}
               />
             )}
-            {view === 'seo' && <SeoWorkspace />}
+            {view === 'seo' && <SeoWorkspace client={client} />}
             {view === 'abTesting' && (
               <AbTestingWorkspace
                 data={data}

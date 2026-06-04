@@ -15,6 +15,7 @@ import marketingCta from './marketingCta'
 import marketingExperiment from './marketingExperiment'
 import marketingFunnel from './marketingFunnel'
 import marketingLinkItem from './marketingLinkItem'
+import marketingIdea from './marketingIdea'
 import marketingMessagePillar from './marketingMessagePillar'
 import marketingPerformanceSignal from './marketingPerformanceSignal'
 import marketingProofPoint from './marketingProofPoint'
@@ -53,6 +54,7 @@ export const schemaTypes = [
   marketingQualityGate,
   marketingExperiment,
   marketingPerformanceSignal,
+  marketingIdea,
   marketingResearchProject,
   marketingResearchResult,
   marketingResearchRun,

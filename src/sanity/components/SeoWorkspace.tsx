@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import type { SanityClient } from '@sanity/client'
 
 // Surfaces the SEO opportunities engine (/api/marketing/seo) and the cached
 // citation checker (/api/marketing/citation-check) inside the marketing tool,
@@ -46,6 +47,18 @@ type CiteData = {
   pageUrl?: string
   checkedAt?: string
 }
+type Idea = {
+  _id: string
+  title?: string
+  summary?: string
+  category?: string
+  status?: string
+  priority?: string
+  nextAction?: string
+  relatedUrl?: string
+  source?: string
+}
+type SeoWorkspaceProps = { client?: SanityClient }
 
 const FIX_COLORS: Record<string, string> = { ranking: '#2276fc', ctr: '#d98a00', maintain: '#7d8694' }
 const VERDICT_COLORS: Record<string, string> = {
@@ -54,6 +67,8 @@ const VERDICT_COLORS: Record<string, string> = {
   questionable: '#e0463c',
   unverifiable: '#7d8694',
 }
+const STATUS_COLORS: Record<string, string> = { idea: '#7d8694', exploring: '#2276fc', planned: '#2276fc', inProgress: '#d98a00', shipped: '#1f9d55', dropped: '#9aa0a6' }
+const PRIORITY_COLORS: Record<string, string> = { high: '#e0463c', medium: '#d98a00', low: '#7d8694' }
 
 const s: Record<string, CSSProperties> = {
   wrap: { padding: 16, color: 'var(--card-fg-color)', fontSize: 13 },
@@ -80,8 +95,9 @@ const badge = (c: string): CSSProperties => ({
   background: c,
 })
 
-export function SeoWorkspace() {
+export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [data, setData] = useState<SeoData | null>(null)
+  const [ideas, setIdeas] = useState<Idea[]>([])
   const [loading, setLoading] = useState(true)
   const [citeUrl, setCiteUrl] = useState('https://www.goinvo.com/')
   const [cite, setCite] = useState<CiteData | null>(null)
@@ -101,6 +117,19 @@ export function SeoWorkspace() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    if (!client) return
+    void client
+      .fetch<Idea[]>(
+        '*[_type == "marketingIdea" && status != "dropped"]{ _id, title, summary, category, status, priority, nextAction, relatedUrl, source }',
+      )
+      .then((rows) => {
+        const rank = (p?: string) => (p === 'high' ? 0 : p === 'medium' ? 1 : 2)
+        setIdeas((Array.isArray(rows) ? rows : []).slice().sort((a, b) => rank(a.priority) - rank(b.priority)))
+      })
+      .catch(() => setIdeas([]))
+  }, [client])
 
   const runCitation = useCallback(async (url: string) => {
     const target = url.trim()
@@ -136,6 +165,42 @@ export function SeoWorkspace() {
           {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
+
+      {!!ideas.length && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Ideas &amp; findings ({ideas.length})</div>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>Priority</th>
+                <th style={s.th}>Idea</th>
+                <th style={s.th}>Category</th>
+                <th style={s.th}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ideas.map((idea) => (
+                <tr key={idea._id}>
+                  <td style={s.td}>
+                    <span style={badge(PRIORITY_COLORS[idea.priority || 'low'] || PRIORITY_COLORS.low)}>
+                      {idea.priority || 'low'}
+                    </span>
+                  </td>
+                  <td style={s.td} title={idea.nextAction || idea.summary}>
+                    {idea.title}
+                  </td>
+                  <td style={s.td}>{idea.category}</td>
+                  <td style={s.td}>
+                    <span style={badge(STATUS_COLORS[idea.status || 'idea'] || STATUS_COLORS.idea)}>
+                      {idea.status || 'idea'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {data?.configured === false && (
         <div style={s.card}>
