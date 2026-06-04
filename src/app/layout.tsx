@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { siteConfig } from '@/lib/config'
+import { JsonLd } from '@/components/seo/JsonLd'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -62,35 +63,32 @@ export default function RootLayout({
           rel="stylesheet"
           href={`https://use.typekit.net/${siteConfig.typekitId}.css`}
         />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'Organization',
-              name: 'GoInvo',
-              url: siteConfig.url,
-              logo: `${siteConfig.cloudfrontUrl}/images/goinvo-logo.png`,
-              description: siteConfig.description,
-              address: {
-                '@type': 'PostalAddress',
-                streetAddress: '661 Massachusetts Ave, 3rd Floor',
-                addressLocality: 'Arlington',
-                addressRegion: 'MA',
-                postalCode: '02476',
-                addressCountry: 'US',
-              },
-              contactPoint: {
-                '@type': 'ContactPoint',
-                email: siteConfig.email.info,
-                contactType: 'customer service',
-              },
-              sameAs: [
-                siteConfig.social.linkedin,
-                siteConfig.social.twitter,
-                siteConfig.social.medium,
-              ],
-            }),
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'GoInvo',
+            url: siteConfig.url,
+            logo: `${siteConfig.cloudfrontUrl}/images/goinvo-logo.png`,
+            description: siteConfig.description,
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: '661 Massachusetts Ave, 3rd Floor',
+              addressLocality: 'Arlington',
+              addressRegion: 'MA',
+              postalCode: '02476',
+              addressCountry: 'US',
+            },
+            contactPoint: {
+              '@type': 'ContactPoint',
+              email: siteConfig.email.info,
+              contactType: 'customer service',
+            },
+            sameAs: [
+              siteConfig.social.linkedin,
+              siteConfig.social.twitter,
+              siteConfig.social.medium,
+            ],
           }}
         />
       </head>

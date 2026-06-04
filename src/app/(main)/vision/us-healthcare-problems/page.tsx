@@ -6,6 +6,7 @@ import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { ProblemCard } from './ProblemCard'
 import problems from '@/data/vision/us-healthcare-problems/problems.json'
 import { cloudfrontImage } from '@/lib/utils'
+import { JsonLd } from '@/components/seo/JsonLd'
 import './us-healthcare.css'
 
 const heroImage = '/images/features/us-healthcare-problems/us_healthcare_problems_hero_v01.jpg'
@@ -93,10 +94,7 @@ export default function USHealthcareProblemsFeature() {
     return (
       <>
         <SetCaseStudyHero image={cloudfrontImage(heroImage)} />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(usHealthcareJsonLd) }}
-        />
+        <JsonLd data={usHealthcareJsonLd} />
         <div className="us-healthcare-problems">
           <div className="pad-vertical--double">
             <div className="max-width max-width--md content-padding">
