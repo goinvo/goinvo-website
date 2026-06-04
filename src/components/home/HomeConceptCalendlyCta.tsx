@@ -237,7 +237,7 @@ export function HomeConceptCalendlyCta() {
           <button
             type="button"
             data-eo-form-toggle-id={newsletterPopupFormId}
-            className="group inline-flex items-baseline gap-1 text-white underline underline-offset-4"
+            className="group inline-flex cursor-pointer items-baseline gap-1 text-white underline underline-offset-4"
           >
             Subscribe
             <ConceptReferenceArrow className="group-hover:translate-x-[5px]" />
