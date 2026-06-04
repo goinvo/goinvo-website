@@ -6,6 +6,7 @@ import { Divider } from '@/components/ui/Divider'
 import { References } from '@/components/ui/References'
 import { DeterminantsExplorer } from './DeterminantsExplorer'
 import { cloudfrontImage } from '@/lib/utils'
+import { JsonLd } from '@/components/seo/JsonLd'
 
 const heroImage = '/images/services/doh-preview.jpg'
 const ogImage = cloudfrontImage(heroImage)
@@ -91,10 +92,7 @@ export default function DeterminantsOfHealthPage() {
   return (
     <>
       <SetCaseStudyHero image={cloudfrontImage(heroImage)} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(determinantsJsonLd) }}
-      />
+      <JsonLd data={determinantsJsonLd} />
       <div className="determinants-of-health gatsby-article">
         <div className="pad-vertical--double">
           <div className="max-width max-width--md content-padding">
