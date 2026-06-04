@@ -9,6 +9,12 @@ export const metadata: Metadata = {
   },
   description: siteConfig.description,
   metadataBase: new URL(siteConfig.url),
+  // Google Search Console verification. Set GOOGLE_SITE_VERIFICATION to the
+  // HTML-tag token from the GSC property; the <meta google-site-verification>
+  // tag is emitted only when it's set, so this is a no-op until configured.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
