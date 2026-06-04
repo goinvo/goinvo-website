@@ -8,22 +8,98 @@ import { DeterminantsExplorer } from './DeterminantsExplorer'
 import { cloudfrontImage } from '@/lib/utils'
 
 const heroImage = '/images/services/doh-preview.jpg'
+const ogImage = cloudfrontImage(heroImage)
+const pageUrl = 'https://www.goinvo.com/vision/determinants-of-health'
 
 export const metadata: Metadata = {
-  title: 'Determinants of Health Visualized',
+  title: 'The 5 Determinants of Health, Visualized',
   description:
-    'A comprehensive open source visualization of the social determinants of health. Order your poster today!',
+    "89% of your health happens outside the clinic. Explore the 5 determinants of health (behavior, social circumstances, genetics, environment, and medical care) in GoInvo's open-source, research-backed visualization.",
+  alternates: { canonical: '/vision/determinants-of-health' },
+  openGraph: {
+    type: 'article',
+    url: pageUrl,
+    title: 'The 5 Determinants of Health, Visualized',
+    description:
+      '89% of your health happens outside the clinic. Explore the 5 determinants of health, behavior, social circumstances, genetics, environment, and medical care, in an open-source visualization.',
+    images: [{ url: ogImage, alt: 'Determinants of Health visualization by GoInvo' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The 5 Determinants of Health, Visualized',
+    description:
+      "89% of your health happens outside the clinic. Explore the 5 determinants of health in GoInvo's open-source visualization.",
+    images: [ogImage],
+  },
+}
+
+// Answers mirror the on-page content so the FAQPage structured data stays valid.
+const faqs = [
+  {
+    q: 'What are the 5 determinants of health?',
+    a: 'GoInvo groups them into five categories, with their estimated contribution to overall health: individual behavior (about 36%), social circumstances (about 24%), genetics and biology (about 22%), medical care (about 11%), and environment (about 7%).',
+  },
+  {
+    q: 'What are the social determinants of health?',
+    a: 'The social determinants of health are the non-medical conditions in which people are born, live, work, and age, such as education, income, employment, housing, and community, that shape health outcomes. They account for roughly a quarter of overall health.',
+  },
+  {
+    q: 'How much of our health is determined by medical care?',
+    a: "Medical care accounts for only about 11% of health outcomes in GoInvo's analysis. The other 89% is shaped by behavior, social circumstances, genetics, and environment, outside the clinical setting.",
+  },
+  {
+    q: "How much of health happens outside the doctor's office?",
+    a: 'About 89% of health happens outside the clinical space, driven by our genetics, behavior, environment, and social circumstances.',
+  },
+]
+
+const determinantsJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Article',
+      '@id': `${pageUrl}#article`,
+      headline: 'The 5 Determinants of Health',
+      description:
+        'An open-source visualization of the five determinants of health (behavior, social circumstances, genetics, medical care, and environment) with the research and methodology behind their estimated impact.',
+      image: ogImage,
+      author: [
+        { '@type': 'Person', name: 'Juhan Sonin' },
+        { '@type': 'Person', name: 'Edwin Choi' },
+      ],
+      publisher: {
+        '@type': 'Organization',
+        name: 'GoInvo',
+        url: 'https://www.goinvo.com',
+      },
+      about: 'Social determinants of health',
+      mainEntityOfPage: pageUrl,
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${pageUrl}#faq`,
+      mainEntity: faqs.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    },
+  ],
 }
 
 export default function DeterminantsOfHealthPage() {
   return (
     <>
       <SetCaseStudyHero image={cloudfrontImage(heroImage)} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(determinantsJsonLd) }}
+      />
       <div className="determinants-of-health gatsby-article">
         <div className="pad-vertical--double">
           <div className="max-width max-width--md content-padding">
             <h1 className="header--xl">Determinants of Health</h1>
-            <h4 className="header--sm">Health is more than medical care</h4>
+            <h2 className="header--sm">Health is more than medical care</h2>
             <p className="text--grey">
               89% of health occurs outside of the clinical space through our
               genetics, behavior, environment and social circumstances. These
@@ -40,6 +116,51 @@ export default function DeterminantsOfHealthPage() {
               on their experience of mapping complex systems within
               healthcare, GoInvo created a comprehensive open source
               visualization of the social determinants of health.
+            </p>
+          </div>
+
+          <div className="max-width max-width--md content-padding">
+            <h2 className="header--lg margin-top--double margin-bottom--half">
+              What are the 5 determinants of health?
+            </h2>
+            <p className="text--gray">
+              Researchers group the many factors that shape our health into five
+              broad determinants. Based on GoInvo&apos;s review of leading
+              sources (the World Health Organization, the Kaiser Family
+              Foundation, the Institute of Medicine, and others), here is their
+              estimated contribution to overall health:
+            </p>
+            <ul className="ul text--gray">
+              <li>
+                <strong className="text--black">Individual behavior</strong>,
+                about 36% (diet, activity, smoking, and other daily choices)
+              </li>
+              <li>
+                <strong className="text--black">Social circumstances</strong>,
+                about 24% (education, income, employment, and community)
+              </li>
+              <li>
+                <strong className="text--black">Genetics &amp; biology</strong>,
+                about 22% (inherited traits and biological factors)
+              </li>
+              <li>
+                <strong className="text--black">Medical care</strong>, about 11%
+                (access to and quality of clinical care)
+              </li>
+              <li>
+                <strong className="text--black">Environment</strong>, about 7%
+                (air, water, housing, and physical surroundings)
+              </li>
+            </ul>
+            <p className="text--gray">
+              Together, the four non-clinical determinants account for roughly{' '}
+              <strong className="text--black">
+                89% of our health outcomes
+              </strong>
+              , which is why care that stops at the clinic door misses most of
+              what keeps us healthy. These percentages are GoInvo&apos;s
+              estimates, averaged across multiple peer-reviewed sources; the full
+              calculation is documented in the methodology below.
             </p>
           </div>
 
@@ -834,6 +955,20 @@ export default function DeterminantsOfHealthPage() {
                 calculations. Translation by Roberto Laureles.
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="pad-vertical--double">
+          <div className="max-width max-width--md content-padding">
+            <h2 className="header--xl text--center margin-bottom--double">
+              Frequently asked questions
+            </h2>
+            {faqs.map((item) => (
+              <div key={item.q} className="margin-bottom--double">
+                <h3 className="header--md margin-bottom--half">{item.q}</h3>
+                <p className="text--gray">{item.a}</p>
+              </div>
+            ))}
           </div>
         </div>
 
