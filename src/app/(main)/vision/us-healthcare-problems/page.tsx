@@ -3,24 +3,100 @@ import { Author } from '@/components/ui/Author'
 import { References } from '@/components/ui/References'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { NewsletterSection } from '@/components/forms/NewsletterSection'
-import { Divider } from '@/components/ui/Divider'
 import { ProblemCard } from './ProblemCard'
 import problems from '@/data/vision/us-healthcare-problems/problems.json'
 import { cloudfrontImage } from '@/lib/utils'
 import './us-healthcare.css'
 
+const heroImage = '/images/features/us-healthcare-problems/us_healthcare_problems_hero_v01.jpg'
+const ogImage = cloudfrontImage(heroImage)
+const pageUrl = 'https://www.goinvo.com/vision/us-healthcare-problems'
+
 export const metadata: Metadata = {
-  title: 'US Healthcare Problems',
+  title: 'US Healthcare Problems: The Top 50, Ranked by Impact',
   description:
-    'The United States is home to some of the best and worst care. The list serves as a call to action for everyone to close the gap.',
+    'What are the biggest problems in US healthcare? GoInvo ranks the top 50, from cost, access, and fraud to burnout and fragmented data, by deaths, dollars lost, and people impacted.',
+  alternates: { canonical: '/vision/us-healthcare-problems' },
+  openGraph: {
+    type: 'article',
+    url: pageUrl,
+    title: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+    description:
+      'GoInvo ranks the top 50 problems in US healthcare, from cost and access to fraud, burnout, and fragmented data, by deaths, dollars lost, and people impacted.',
+    images: [{ url: ogImage, alt: 'US Healthcare Problems, ranked by GoInvo' }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+    description:
+      'GoInvo ranks the top 50 problems in US healthcare by deaths, dollars lost, and people impacted.',
+    images: [ogImage],
+  },
 }
 
-const heroImage = '/images/features/us-healthcare-problems/us_healthcare_problems_hero_v01.jpg'
+// Answers mirror the on-page content so the FAQPage structured data stays valid.
+const faqs = [
+  {
+    q: 'What are the biggest problems in US healthcare?',
+    a: 'GoInvo ranks the top 50, weighing deaths, dollars lost, and people impacted. Recurring themes include high cost and surprise billing, lack of access and the uninsured, administrative waste and fraud, fragmented and hard-to-share health data, clinician burnout, chronic disease driven by behavior and environment, and deep health inequities, most traceable to the fee-for-service payment system.',
+  },
+  {
+    q: 'Why is US healthcare so expensive?',
+    a: 'The United States spends more per person on healthcare than any comparable country, largely because of a fee-for-service system that pays for the quantity of care rather than its quality, plus administrative complexity, high drug and procedure prices, and an estimated hundreds of billions of dollars in waste each year.',
+  },
+  {
+    q: 'How does GoInvo rank the problems?',
+    a: 'Each problem is scored on a weighted average of four quantitative indicators: number of deaths, dollars spent or lost, number of Americans impacted, and number of related problems, so the ranking reflects measurable impact rather than opinion.',
+  },
+  {
+    q: 'What is the root cause of most US healthcare problems?',
+    a: "In GoInvo's analysis, nearly every problem can be traced in some way to the fee-for-service model, which rewards the volume of care delivered instead of patient outcomes. Shifting toward value-based care would relieve much of this burden.",
+  },
+]
+
+const usHealthcareJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Article',
+      '@id': `${pageUrl}#article`,
+      headline: 'US Healthcare Problems: The Top 50, Ranked by Impact',
+      description:
+        'An open, research-backed ranking of the top 50 problems in US healthcare, scored by deaths, dollars lost, and people impacted.',
+      image: ogImage,
+      author: [
+        { '@type': 'Person', name: 'Hannah Sennik' },
+        { '@type': 'Person', name: 'Juhan Sonin' },
+        { '@type': 'Person', name: 'Eric Benoit' },
+      ],
+      publisher: {
+        '@type': 'Organization',
+        name: 'GoInvo',
+        url: 'https://www.goinvo.com',
+      },
+      about: 'Problems in the United States healthcare system',
+      mainEntityOfPage: pageUrl,
+    },
+    {
+      '@type': 'FAQPage',
+      '@id': `${pageUrl}#faq`,
+      mainEntity: faqs.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: { '@type': 'Answer', text: item.a },
+      })),
+    },
+  ],
+}
 
 export default function USHealthcareProblemsFeature() {
     return (
       <>
         <SetCaseStudyHero image={cloudfrontImage(heroImage)} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(usHealthcareJsonLd) }}
+        />
         <div className="us-healthcare-problems">
           <div className="pad-vertical--double">
             <div className="max-width max-width--md content-padding">
@@ -57,6 +133,57 @@ export default function USHealthcareProblemsFeature() {
                 solutions. Create an interesting data viz. However you choose to
                 get started, this is an opportunity to understand healthcare's
                 complexity and contribute to the efforts of improvement.
+              </p>
+
+              <h2 className="header--lg margin-top--double margin-bottom--half">
+                What are the biggest problems in US healthcare?
+              </h2>
+              <p className="text--gray">
+                GoInvo ranks the top 50 problems below, scored by deaths, dollars
+                lost, and the number of Americans impacted. The same themes
+                surface again and again:
+              </p>
+              <ul className="ul text--gray">
+                <li>
+                  <strong className="text--black">Cost.</strong> The US spends
+                  more per person than any comparable country, with surprise
+                  bills and unaffordable care.
+                </li>
+                <li>
+                  <strong className="text--black">Access.</strong> Millions
+                  remain uninsured or underinsured and skip needed care.
+                </li>
+                <li>
+                  <strong className="text--black">
+                    Administrative waste and fraud.
+                  </strong>{' '}
+                  Hundreds of billions of dollars lost every year.
+                </li>
+                <li>
+                  <strong className="text--black">Fragmented data.</strong>{' '}
+                  Records that don&apos;t follow the patient or talk to each
+                  other.
+                </li>
+                <li>
+                  <strong className="text--black">Clinician burnout.</strong>{' '}
+                  Driven in part by paperwork and electronic health records.
+                </li>
+                <li>
+                  <strong className="text--black">
+                    Behavior and environment.
+                  </strong>{' '}
+                  Chronic disease, diet, and the conditions people live in.
+                </li>
+                <li>
+                  <strong className="text--black">Health inequity.</strong> Gaps
+                  in outcomes by income, race, and geography.
+                </li>
+              </ul>
+              <p className="text--gray">
+                Nearly all of them trace back to one root cause: a{' '}
+                <strong className="text--black">fee-for-service</strong> system
+                that pays for the volume of care instead of its value. Explore
+                the full ranked list below.
               </p>
             </div>
           </div>
@@ -99,9 +226,9 @@ export default function USHealthcareProblemsFeature() {
               <p className="text--gray">
                 Licensed under Creative Commons Attribution 4.0 license.
               </p>
-              <h4 className="header--sm margin-bottom--half margin-top--double">
+              <h3 className="header--sm margin-bottom--half margin-top--double">
                 About GoInvo
-              </h4>
+              </h3>
               <p className="text--gray">
                 GoInvo is a healthcare design company that crafts innovative
                 digital and physical solutions. Our deep expertise in Health IT,
@@ -181,6 +308,20 @@ export default function USHealthcareProblemsFeature() {
                 height="600"
                 title="Airtable Top Healthcare Problems"
               ></iframe>
+            </div>
+          </div>
+
+          <div className="pad-vertical--double">
+            <div className="max-width max-width--md content-padding">
+              <h2 className="header--xl text--center margin-bottom--double">
+                Frequently asked questions
+              </h2>
+              {faqs.map((item) => (
+                <div key={item.q} className="margin-bottom--double">
+                  <h3 className="header--md margin-bottom--half">{item.q}</h3>
+                  <p className="text--gray">{item.a}</p>
+                </div>
+              ))}
             </div>
           </div>
 
