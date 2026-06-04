@@ -25,6 +25,18 @@ async function getHomeTeamMembers() {
   }))
 }
 
+// The concept studio grid also shows Alexandra Coston, who is hidden from the
+// team query (showOnAboutPage: false). Fetch her by id and append her for the
+// concept variant only, so the A/B control marquee stays unchanged.
+async function withConceptGridMembers(base: { name: string; image: string }[]) {
+  if (base.some((member) => member.name === 'Alexandra Coston')) return base
+  const { data } = (await sanityFetch({
+    query: '*[_id == "team-alexandra" && defined(image)][0]{ name, image }',
+  })) as { data: Pick<TeamMember, 'name' | 'image'> | null }
+  if (!data?.image) return base
+  return [...base, { name: data.name, image: urlForImage(data.image).width(300).height(300).url() }]
+}
+
 export async function HomePageRenderer({
   variant = 'control',
   experiment,
@@ -32,10 +44,11 @@ export async function HomePageRenderer({
   const teamMembers = await getHomeTeamMembers()
 
   if (variant === 'concept') {
+    const conceptMembers = await withConceptGridMembers(teamMembers)
     return (
       <>
         {experiment && <ExperimentExposure experiment={experiment} />}
-        <HomeConceptContent teamMembers={teamMembers} />
+        <HomeConceptContent teamMembers={conceptMembers} />
       </>
     )
   }
