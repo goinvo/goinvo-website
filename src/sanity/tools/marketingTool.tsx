@@ -41,6 +41,7 @@ import { researchResultStatusOptions, researchResultTypeOptions } from '../schem
 import { researchRunStatusOptions } from '../schemas/marketingResearchRun'
 import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '../schemas/marketingTemplate'
 import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
+import { SeoWorkspace } from '../components/SeoWorkspace'
 import {
   DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY,
   defaultDesignerWorkflowTutorial,
@@ -663,6 +664,7 @@ type MarketingViewId =
   | 'channels'
   | 'analytics'
   | 'linkTree'
+  | 'seo'
 type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 type MarketingAssistKind =
   | 'campaign'
@@ -724,6 +726,12 @@ export const MARKETING_TOOL_VIEWS: Array<{
     icon: SearchIcon,
   },
   {
+    id: 'seo',
+    title: 'SEO',
+    description: 'Live Search Console + GA4 opportunities and a cached citation checker.',
+    icon: TrendUpwardIcon,
+  },
+  {
     id: 'strategy',
     title: 'Strategy',
     description: 'Answer the reusable questions content needs before design work starts.',
@@ -782,6 +790,7 @@ export const MARKETING_TOOL_VIEWS: Array<{
 export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
   'dashboard',
   'research',
+  'seo',
   'strategy',
   'abTesting',
   'calendar',
@@ -3487,6 +3496,7 @@ function MarketingComponent() {
                 onAutopilotComplete={reportAutopilotCompletion}
               />
             )}
+            {view === 'seo' && <SeoWorkspace />}
             {view === 'abTesting' && (
               <AbTestingWorkspace
                 data={data}
