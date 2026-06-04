@@ -18,6 +18,21 @@ const GA4_PROPERTY_ID = process.env.GOINVO_GA4_PROPERTY_ID || '321528631'
 // Brand queries to exclude from the non-brand opportunity list.
 const BRAND_RE = /goinvo|go invo|involution/i
 
+// A query is junk/scraper noise (not real demand) if it is a boolean-quote
+// search or an encyclopedia/name lookup. Long natural-language questions are NOT
+// junk — they are answer/snippet opportunities, so length is deliberately not used.
+function isJunkQuery(query: string): boolean {
+  if (!query) return false
+  const quotes = (query.match(/"/g) || []).length
+  return quotes >= 2 || /\bwikipedia\b/i.test(query)
+}
+
+// Legacy/duplicate URLs (old /features/ + /old/ paths, .html files) are redirect
+// candidates, not optimization targets, so they are flagged and demoted.
+function isLegacyPath(path: string): boolean {
+  return /^\/(features|old)\//.test(path) || path.endsWith('.html')
+}
+
 type ServiceAccount = { client_email: string; private_key: string }
 
 type GscRow = { keys?: string[]; clicks?: number; impressions?: number; ctr?: number; position?: number }
@@ -30,6 +45,9 @@ type PageOpportunity = {
   ctr: number
   position: number
   pageViews: number
+  quality: number
+  topQuery: string
+  legacy: boolean
   score: number
   fix: 'ranking' | 'ctr' | 'maintain'
   fixHint: string
@@ -200,8 +218,9 @@ export async function GET() {
       'https://www.googleapis.com/auth/analytics.readonly',
     ])
 
-    const [pageRows, queryRows] = await Promise.all([
+    const [pageRows, pageQueryRows, queryRows] = await Promise.all([
       gscQuery(token, { startDate, endDate, dimensions: ['page'], rowLimit: 500 }),
+      gscQuery(token, { startDate, endDate, dimensions: ['page', 'query'], rowLimit: 10000 }),
       gscQuery(token, { startDate, endDate, dimensions: ['query'], rowLimit: 1000 }),
     ])
 
@@ -212,8 +231,10 @@ export async function GET() {
       warnings.push(`GA4 page views unavailable: ${gaError instanceof Error ? gaError.message : 'unknown error'}`)
     }
 
-    // Merge trailing-slash page variants into one logical page.
-    const pageMap = new Map<string, { impressions: number; clicks: number; posWeighted: number }>()
+    // Accurate per-page totals from the [page] dimension (merging trailing-slash
+    // variants into one logical page).
+    type PageTotal = { impressions: number; clicks: number; posWeighted: number }
+    const pageMap = new Map<string, PageTotal>()
     for (const row of pageRows) {
       const path = normalizePath(row.keys?.[0] || '')
       const impressions = row.impressions || 0
@@ -224,10 +245,31 @@ export async function GET() {
       pageMap.set(path, entry)
     }
 
+    // Demand quality from the [page, query] dimension: what share of a page's
+    // impressions comes from junk/scraper queries, plus its top real query.
+    type PageQuality = { junk: number; total: number; topQuery: string; topImpr: number }
+    const qualityMap = new Map<string, PageQuality>()
+    for (const row of pageQueryRows) {
+      const path = normalizePath(row.keys?.[0] || '')
+      const query = row.keys?.[1] || ''
+      const impressions = row.impressions || 0
+      const q = qualityMap.get(path) || { junk: 0, total: 0, topQuery: '', topImpr: 0 }
+      q.total += impressions
+      if (isJunkQuery(query)) q.junk += impressions
+      else if (impressions > q.topImpr) {
+        q.topQuery = query
+        q.topImpr = impressions
+      }
+      qualityMap.set(path, q)
+    }
+
     const pages: PageOpportunity[] = [...pageMap.entries()]
       .map(([path, e]) => {
         const ctr = e.impressions > 0 ? e.clicks / e.impressions : 0
         const position = e.impressions > 0 ? e.posWeighted / e.impressions : 0
+        const q = qualityMap.get(path)
+        const quality = q && q.total > 0 ? 1 - q.junk / q.total : 1
+        const legacy = isLegacyPath(path)
         const { fix, fixHint } = classifyFix(position, ctr)
         return {
           path,
@@ -237,7 +279,12 @@ export async function GET() {
           ctr: Number(ctr.toFixed(4)),
           position: Number(position.toFixed(1)),
           pageViews: pageViews.get(path) || 0,
-          score: Math.round(e.impressions * positionFactor(position)),
+          quality: Number(quality.toFixed(2)),
+          topQuery: q?.topQuery || '',
+          legacy,
+          // Demote pages that only rank for junk queries, and legacy/duplicate
+          // URLs (redirect candidates, not optimization targets).
+          score: Math.round(e.impressions * positionFactor(position) * Math.max(0.1, quality) * (legacy ? 0.25 : 1)),
           fix,
           fixHint,
         }
