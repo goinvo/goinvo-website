@@ -2,12 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   auditAiCrawlerAccess,
   auditAiReadiness,
+  auditCwv,
   auditEeat,
   auditIndexation,
   auditOnPage,
   auditRenderGap,
   auditStructuredData,
   computeHealthScore,
+  mapCwv,
   mapInspection,
   mapRenderGap,
   type SeoFinding,
@@ -816,6 +818,182 @@ describe('computeHealthScore (§5: only errors move the score)', () => {
   it('assigns the correct bands at boundaries', () => {
     expect(computeHealthScore([{ ...stub('error'), affectedUrls: ['u'] }], 10).band).toBe('Good') // 90
     expect(computeHealthScore([], 10).band).toBe('Excellent') // 100
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Core Web Vitals pack — CrUX field data (PRIMARY) via the free PageSpeed
+// Insights API, with a Lighthouse lab fallback. mapCwv is the pure mapper
+// (no fetch); auditCwv is tested by stubbing global fetch so we never hit
+// Google. §12 correction: field data is primary and must be labeled "field";
+// lab is the fallback and must be labeled "lab"; any failure is one graceful
+// notice with no throw.
+// ---------------------------------------------------------------------------
+
+// A PageSpeed payload with CrUX FIELD data whose LCP is Poor (4.2s > 2.5s),
+// CLS Good, INP Good. (CrUX reports CLS as score ×100, LCP/INP in ms.)
+const FIELD_POOR_LCP_PAYLOAD = {
+  loadingExperience: {
+    metrics: {
+      LARGEST_CONTENTFUL_PAINT_MS: { percentile: 4200, category: 'SLOW' },
+      CUMULATIVE_LAYOUT_SHIFT_SCORE: { percentile: 5, category: 'FAST' }, // 0.05
+      INTERACTION_TO_NEXT_PAINT: { percentile: 120, category: 'FAST' },
+    },
+  },
+  // Lab data is ALSO present — the mapper must still PREFER the field data.
+  lighthouseResult: {
+    audits: {
+      'largest-contentful-paint': { numericValue: 1000, displayValue: '1.0 s' },
+    },
+  },
+}
+
+// A PageSpeed payload with NO field data (low-traffic URL) but Lighthouse LAB
+// data whose LCP is Poor (4.5s).
+const LAB_POOR_LCP_PAYLOAD = {
+  // No loadingExperience.metrics → forces the lab fallback.
+  lighthouseResult: {
+    audits: {
+      'largest-contentful-paint': { numericValue: 4500, displayValue: '4.5 s' },
+      'cumulative-layout-shift': { numericValue: 0.02, displayValue: '0.02' },
+      'total-blocking-time': { numericValue: 50, displayValue: '50 ms' },
+    },
+  },
+}
+
+// Build a fetch stub that returns `payload` for the PageSpeed endpoint.
+function stubPageSpeedFetch(payload: unknown, status = 200) {
+  return vi.fn(async (input: unknown) => {
+    const reqUrl = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+    if (reqUrl.includes('pagespeedonline/v5/runPagespeed')) {
+      return new Response(JSON.stringify(payload), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+    throw new Error(`unexpected fetch in test: ${reqUrl}`)
+  })
+}
+
+describe('mapCwv (pure PageSpeed → findings, field vs lab provenance)', () => {
+  it('prefers CrUX field data and labels a Poor LCP as a field-data warning', () => {
+    const findings = mapCwv(URL, FIELD_POOR_LCP_PAYLOAD)
+    const f = findings.find((x) => x.id === 'performance:lcp-slow')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('performance')
+    expect(f?.severity).toBe('warning') // Poor → warning
+    // §7 provenance label: must say it's real-user field data, not lab.
+    expect(f?.what).toContain('field data (real Chrome users, CrUX)')
+    expect(f?.what).not.toContain('lab data')
+    // §6: quotes the actual value and verdict.
+    expect(f?.what).toContain('4.20s')
+    expect(f?.what).toContain('Poor')
+    // The Good CLS / INP must NOT produce findings.
+    expect(idsOf(findings)).not.toContain('performance:cls-high')
+    expect(idsOf(findings)).not.toContain('performance:inp-slow')
+  })
+
+  it('falls back to lab data and labels it "lab" when there is no field data', () => {
+    const findings = mapCwv(URL, LAB_POOR_LCP_PAYLOAD)
+    const f = findings.find((x) => x.id === 'performance:lcp-slow')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('warning')
+    // Provenance: must be labeled lab (simulated), NOT field data.
+    expect(f?.what).toContain('lab data (simulated)')
+    expect(f?.what).not.toContain('field data (real Chrome users, CrUX)')
+    expect(f?.what).toContain('4.50s')
+  })
+
+  it('reports a healthy field-data state when all three vitals are Good', () => {
+    const findings = mapCwv(URL, {
+      loadingExperience: {
+        metrics: {
+          LARGEST_CONTENTFUL_PAINT_MS: { percentile: 1800, category: 'FAST' },
+          CUMULATIVE_LAYOUT_SHIFT_SCORE: { percentile: 3, category: 'FAST' },
+          INTERACTION_TO_NEXT_PAINT: { percentile: 90, category: 'FAST' },
+        },
+      },
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('performance:cwv-good')
+    expect(findings[0].severity).toBe('notice')
+    expect(findings[0].what).toContain('field data (real Chrome users, CrUX)')
+  })
+
+  it('returns the unavailable notice when the payload has neither field nor lab data', () => {
+    const findings = mapCwv(URL, {})
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('performance:cwv-unavailable')
+    expect(findings[0].severity).toBe('notice')
+  })
+})
+
+describe('auditCwv (graceful PageSpeed layer — never throws)', () => {
+  const realFetch = globalThis.fetch
+  const realKey = process.env.GOOGLE_PAGESPEED_API_KEY
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    globalThis.fetch = realFetch
+    if (realKey === undefined) delete process.env.GOOGLE_PAGESPEED_API_KEY
+    else process.env.GOOGLE_PAGESPEED_API_KEY = realKey
+  })
+
+  it('maps a poor-LCP FIELD payload → warning labeled field data', async () => {
+    vi.stubGlobal('fetch', stubPageSpeedFetch(FIELD_POOR_LCP_PAYLOAD))
+    const findings = await auditCwv(URL)
+    const f = findings.find((x) => x.id === 'performance:lcp-slow')
+    expect(f?.severity).toBe('warning')
+    expect(f?.what).toContain('field data (real Chrome users, CrUX)')
+  })
+
+  it('appends the API key only when GOOGLE_PAGESPEED_API_KEY is set', async () => {
+    process.env.GOOGLE_PAGESPEED_API_KEY = 'test-key-123'
+    const fetchStub = stubPageSpeedFetch(FIELD_POOR_LCP_PAYLOAD)
+    vi.stubGlobal('fetch', fetchStub)
+    await auditCwv(URL)
+    const calledWith = String(fetchStub.mock.calls[0]?.[0])
+    expect(calledWith).toContain('key=test-key-123')
+    expect(calledWith).toContain('strategy=mobile')
+    expect(calledWith).toContain('category=performance')
+  })
+
+  it('does NOT append a key param when the env var is unset', async () => {
+    delete process.env.GOOGLE_PAGESPEED_API_KEY
+    const fetchStub = stubPageSpeedFetch(FIELD_POOR_LCP_PAYLOAD)
+    vi.stubGlobal('fetch', fetchStub)
+    await auditCwv(URL)
+    const calledWith = String(fetchStub.mock.calls[0]?.[0])
+    expect(calledWith).not.toContain('key=')
+  })
+
+  it('falls back to lab data (labeled lab) when the payload has no field data', async () => {
+    vi.stubGlobal('fetch', stubPageSpeedFetch(LAB_POOR_LCP_PAYLOAD))
+    const findings = await auditCwv(URL)
+    const f = findings.find((x) => x.id === 'performance:lcp-slow')
+    expect(f?.severity).toBe('warning')
+    expect(f?.what).toContain('lab data (simulated)')
+  })
+
+  it('returns the graceful notice (no throw) on a non-2xx PageSpeed response', async () => {
+    vi.stubGlobal('fetch', stubPageSpeedFetch('rate limited', 429))
+    const findings = await auditCwv(URL)
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('performance:cwv-unavailable')
+    expect(findings[0].severity).toBe('notice')
+  })
+
+  it('returns the graceful notice when fetch throws outright', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network down')
+      }),
+    )
+    const findings = await auditCwv(URL)
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('performance:cwv-unavailable')
+    expect(findings[0].what).toContain('Core Web Vitals data unavailable')
   })
 })
 
