@@ -109,11 +109,19 @@ export async function GET(request: Request) {
   // is only enabled for the single ?url= mode. The multi-page sweep keeps it
   // OFF to stay under GSC's URL-Inspection rate limits (~2k/day, low QPS).
   const includeIndexation = Boolean(single)
+  // AI-crawler access reads the site-wide robots.txt, so it's a once-per-site
+  // check — only run it in single-page mode so it shows up exactly once, not
+  // re-fetched per page across the multi-page sweep.
+  const includeAiCrawlerAccess = Boolean(single)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
+    warnings.push('AI-crawler access (robots.txt) is included for single-page audits.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
+    )
+    warnings.push(
+      'AI-crawler access (robots.txt) is a site-wide check; pass ?url=<page> to include it once.',
     )
   }
 
@@ -159,7 +167,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation })
+        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
