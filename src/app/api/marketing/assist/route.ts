@@ -303,6 +303,7 @@ const VALID_STRATEGIST_OPPORTUNITY_TYPES = [
   'landingPage',
   'productizedOffer',
   'commercialSearch',
+  'seoOptimization',
   'researchFirst',
 ]
 const VALID_STRATEGIST_RECOMMENDATIONS = ['doNow', 'testSmall', 'later', 'no']
@@ -500,6 +501,23 @@ const COMMERCIAL_SEARCH_GAPS = [
   'The highest-ROI commercial move is a focused services or "healthcare UX design agency" landing page backed by the strongest case-study proof and a clear discovery-call CTA, rather than more informational content.',
 ]
 
+// The SEO suite lives in the marketing tool's SEO tab; designers can run it themselves.
+// The strategist should know what it does and point to the concrete task, not just say "do SEO".
+const SEO_SUITE_CAPABILITIES = [
+  'Page audit (/api/marketing/seo-audit): scans a single page for on-page issues (title, meta description, headings, canonical, Open Graph, image alt text), structured-data gaps (missing Dataset, Author, or BreadcrumbList schema), live Google index status, GEO / AI-readiness (uncited statistics, no direct-answer-first opening, missing FAQ or freshness signals - i.e. whether ChatGPT, Perplexity, and Google AI Overviews can cite it), E-E-A-T (author byline/bio plus Person schema and citations to authoritative sources - important because GoInvo is YMYL healthcare), and AI-crawler access. Everything rolls up into a Health Score with a "promote to backlog" button.',
+  'Opportunity engine (Google Search Console demand): surfaces title/meta-rewrite CTR-gap quick-wins for pages ranking on page 2, flags keyword cannibalization, and ranks fixes by lead/business value once GA4 key-events are configured.',
+]
+
+// Concrete situations where the strategist should proactively name an SEO/GEO/E-E-A-T task
+// and point the designer to the SEO tab + promote-to-backlog, instead of just mentioning SEO exists.
+const SEO_ADVICE_TRIGGERS = [
+  'A designer is creating or editing a content, service, or landing page: recommend running the page audit on it before/after publish and promoting the flagged fixes to the backlog.',
+  'A page ranks on page 2 (positions ~11-30): point to the opportunity engine CTR-gap title/meta rewrite as a quick win.',
+  'Content cites statistics without an inline source: flag the GEO citability gap so it can be cited by ChatGPT, Perplexity, and Google AI Overviews (add inline sources, a direct-answer-first opening, FAQ, and freshness).',
+  'An essay or YMYL healthcare piece lacks an author byline/bio, Person schema, or citations to authoritative sources: flag the E-E-A-T gap.',
+  'GoInvo open data or a dataset page lacks Dataset structured data: recommend adding Dataset schema so it earns rich results and AI citations.',
+]
+
 async function generateStrategistSdkSuggestion(
   draft: Record<string, unknown>,
   siteContext: SiteContext,
@@ -526,6 +544,9 @@ async function generateStrategistSdkSuggestion(
         'Keep the primary answer compact and designer-friendly. Put deeper reasoning in rationale bullets.',
         'Watch the gap between informational reach and commercial intent: GoInvo vision pieces and posters earn lots of search impressions but rarely convert to clients, while the studio ranks poorly (page 2 to 3) for the high-intent terms prospects use to find a design studio, for example "healthcare UX design agency", "UX design agency", or "UX audit". That gap is the biggest under-exploited revenue lever, so bring it up proactively even when the designer did not ask about it. When the designer asks what to focus on or the biggest opportunity, lead with this commercial-search gap (see knownCommercialSearchGaps) before proposing content like webinars or essays.',
         'For commercial-search opportunities use opportunityType commercialSearch: recommend winning client-intent search with a focused services or "healthcare UX design agency" landing page, backed by the strongest existing case-study proof and a clear discovery-call CTA. Frame the upside in pipeline terms (qualified inquiries and discovery calls), not raw traffic, and prefer reusing an existing services page or case study over building net-new.',
+        'You can work with the SEO suite in the SEO tab (see seoSuiteCapabilities): recommend running the page audit on a specific page, and advise concrete on-page, structured-data, GEO / AI-readiness, and E-E-A-T fixes. Stay designer-friendly and compact.',
+        'Advise SEO tasks proactively WHEN RELEVANT (see seoAdviceTriggers): a designer creating or editing a content/service/landing page, a page ranking on page 2 (CTR-gap quick-win), content with uncited statistics (GEO citability), an essay lacking author byline/bio/citations (E-E-A-T, and GoInvo is YMYL healthcare), or GoInvo open data without Dataset schema. Name the CONCRETE task, point to the SEO tab and its promote-to-backlog button - do not merely say SEO exists.',
+        'For SEO/GEO/E-E-A-T opportunities use opportunityType seoOptimization: tie the fix to the page or essay, say which audit findings to chase (e.g. add inline sources + a direct-answer-first opening for AI citability, add an author bio + Person schema for E-E-A-T, add Dataset schema, or rewrite a page-2 title/meta to close a CTR gap), and route it through the page audit and promote-to-backlog rather than a brand-new content asset.',
         `Best-practice reminders: ${BEST_PRACTICE_NOTES.join(' ')}`,
       ].join('\n'),
       prompt: JSON.stringify({
@@ -542,6 +563,8 @@ async function generateStrategistSdkSuggestion(
           noCmsRecordsAreSavedByThisResponse: true,
         },
         knownCommercialSearchGaps: COMMERCIAL_SEARCH_GAPS,
+        seoSuiteCapabilities: SEO_SUITE_CAPABILITIES,
+        seoAdviceTriggers: SEO_ADVICE_TRIGGERS,
         siteContext: promptContext,
       }),
       output: Output.object({ schema: strategistChatOutputSchema }),
@@ -590,6 +613,8 @@ async function generateOpenAiSuggestion(
               'Ground siteReferences only in the supplied availableReferences list. Do not make up URLs, titles, or published pages.',
               'Return JSON only. Keep suggestions concise and directly applicable to the requested kind.',
               'For strategy or prioritization questions, weigh the commercial-search gap heavily and raise it proactively: GoInvo ranks only page 2 to 3 for client-acquisition terms (see knownCommercialSearchGaps) such as "healthcare UX design agency", "UX design agency", and "UX audit", capturing little revenue-driving demand. Lead with winning those via a focused services or "healthcare UX design agency" landing page plus case-study proof and a discovery-call CTA, before recommending more informational content like webinars or essays.',
+              'You can work with the SEO suite in the SEO tab (see seoSuiteCapabilities): recommend running the page audit on a specific page and advise concrete on-page, structured-data, GEO / AI-readiness, and E-E-A-T fixes, in compact designer-friendly language.',
+              'Advise SEO tasks proactively WHEN RELEVANT (see seoAdviceTriggers): a designer creating/editing a content, service, or landing page, a page ranking on page 2 (CTR-gap title/meta rewrite), content with uncited statistics (GEO citability for ChatGPT, Perplexity, and Google AI Overviews), an essay lacking author byline/bio/citations (E-E-A-T, since GoInvo is YMYL healthcare), or GoInvo open data lacking Dataset schema. Name the CONCRETE task and point to the SEO tab and its promote-to-backlog button rather than just saying SEO exists. For these recommendations use opportunityType seoOptimization and route the fix through the page audit and backlog instead of a brand-new content asset.',
               `Best-practice reminders: ${BEST_PRACTICE_NOTES.join(' ')}`,
             ].join('\n'),
           },
@@ -608,6 +633,8 @@ async function generateOpenAiSuggestion(
                 ifNoReferenceFitsUseEmptySiteReferences: true,
               },
               knownCommercialSearchGaps: COMMERCIAL_SEARCH_GAPS,
+              seoSuiteCapabilities: SEO_SUITE_CAPABILITIES,
+              seoAdviceTriggers: SEO_ADVICE_TRIGGERS,
               siteContext: promptContext,
             }),
           },
@@ -1627,7 +1654,7 @@ function outputContractForKind(kind: MarketingAssistKind) {
         assistantMessage: 'Short conversational response for the designer',
         primaryRecommendation: {
           title: 'One recommended strategic move',
-          opportunityType: 'course | workshop | webinar | videoSalesLetter | leadMagnet | diagnosticTool | seoPillar | emailNurture | collaboration | eventTalk | caseStudyPackage | landingPage | productizedOffer | researchFirst',
+          opportunityType: 'course | workshop | webinar | videoSalesLetter | leadMagnet | diagnosticTool | seoPillar | emailNurture | collaboration | eventTalk | caseStudyPackage | landingPage | productizedOffer | commercialSearch | seoOptimization | researchFirst',
           recommendation: 'doNow | testSmall | later | no',
           summary: 'Plain-language recommendation',
           rationale: ['Why this is the best next move now'],
@@ -3837,6 +3864,7 @@ function inferStrategistOpportunityType(text: string) {
   if (/\b(webinar|seminar|live session)\b/.test(text)) return 'webinar'
   if (/\b(lead magnet|download|checklist|guide|worksheet|pdf)\b/.test(text)) return 'leadMagnet'
   if (/\b(diagnostic|assessment|calculator|quiz|tool)\b/.test(text)) return 'diagnosticTool'
+  if (/\b(seo audit|page audit|on.?page|meta description|title tag|canonical|structured data|schema|dataset schema|breadcrumb|alt text|geo|ai readiness|ai overview|citab|e-?e-?a-?t|eeat|author byline|index status|crawler|ctr gap|cannibal|health score)\b/.test(text)) return 'seoOptimization'
   if (/\b(seo|pillar|search|rank|keyword)\b/.test(text)) return 'seoPillar'
   if (/\b(nurture|email sequence|drip)\b/.test(text)) return 'emailNurture'
   if (/\b(event|talk|conference|presentation)\b/.test(text)) return 'eventTalk'
@@ -3852,6 +3880,7 @@ function fallbackStrategistTitle(opportunityType: string, recommendation: string
   if (opportunityType === 'course') return 'Validate course demand with a small learning asset'
   if (opportunityType === 'workshop') return 'Prototype the workshop as a small guided offer'
   if (opportunityType === 'seoPillar') return 'Research the search pillar before building the page'
+  if (opportunityType === 'seoOptimization') return 'Run the SEO page audit and promote the fixes to the backlog'
   if (opportunityType === 'leadMagnet') return 'Test a lightweight lead magnet'
   if (recommendation === 'doNow') return `Use existing proof to set up ${title}`
   return 'Start with a research-backed small test'
@@ -3860,6 +3889,9 @@ function fallbackStrategistTitle(opportunityType: string, recommendation: string
 function fallbackStrategistSummary(opportunityType: string, recommendation: string, strongEnoughForBigMove: boolean, title: string) {
   if (opportunityType === 'collaboration') {
     return 'Use the collaborator or intern as a planning input: confirm their topic, capacity, and availability, then build a small release window around what they can actually help make.'
+  }
+  if (opportunityType === 'seoOptimization') {
+    return `Run the SEO page audit on ${title} in the SEO tab, then promote the flagged on-page, structured-data, GEO citability (inline sources, direct-answer-first opening, FAQ), and E-E-A-T (author bio plus Person schema and citations) fixes to the backlog instead of building a new asset.`
   }
   if (['course', 'workshop', 'videoSalesLetter', 'productizedOffer'].includes(opportunityType) && !strongEnoughForBigMove) {
     return `Treat ${title} as a test, not a full launch yet. First prove the audience, message, CTA, destination, and signal.`
@@ -3882,6 +3914,9 @@ function fallbackStrategistSetupPrompt(opportunityType: string, direction: strin
   if (opportunityType === 'course' || opportunityType === 'workshop') {
     return `${lead} Validate the learning offer with audience, proof, CTA, and a small experiment before building the full ${opportunityType}.${source}`
   }
+  if (opportunityType === 'seoOptimization') {
+    return `${lead} Run the SEO page audit on the target page in the SEO tab, then promote the highest-value on-page, structured-data (Dataset / Author / BreadcrumbList), GEO citability, and E-E-A-T fixes to the backlog; for a page-2 ranking, start with the CTR-gap title/meta rewrite from the opportunity engine.${source}`
+  }
   return `${lead} Start with research, reuse fitting strategy records, then create the smallest confirmed setup path.${source}`
 }
 
@@ -3897,11 +3932,24 @@ function fallbackStrategistExperimentHypothesis(opportunityType: string, title: 
   if (['course', 'workshop', 'videoSalesLetter'].includes(opportunityType)) {
     return `If we test the promise for ${title} with a small asset first, then we can measure interest before committing to the full production effort.`
   }
+  if (opportunityType === 'seoOptimization') {
+    return `If we clear the audit findings for ${title} (on-page, structured data, inline-cited statistics, and an author byline), then index status, AI-citation readiness, and click-through should improve without producing a new content asset.`
+  }
   return `If ${title} is grounded in reviewed research and a clear CTA, then the first draft should produce a stronger signal than an unconnected one-off post.`
 }
 
 function fallbackStrategistScores(opportunityType: string, strongEnoughForBigMove: boolean) {
   const highEffort = ['course', 'workshop', 'webinar', 'videoSalesLetter', 'productizedOffer'].includes(opportunityType)
+  if (opportunityType === 'seoOptimization') {
+    // Fixing existing pages via the audit is low-effort, low-maintenance, and high-confidence.
+    return {
+      effort: 25,
+      confidence: 74,
+      proofStrength: strongEnoughForBigMove ? 70 : 55,
+      upside: 60,
+      maintenanceBurden: 20,
+    }
+  }
   return {
     effort: highEffort ? 75 : opportunityType === 'collaboration' ? 45 : 30,
     confidence: strongEnoughForBigMove ? 72 : 48,
@@ -3922,6 +3970,12 @@ function fallbackStrategistAlternatives(opportunityType: string, title: string) 
     return [
       { title: 'Lead magnet test', recommendation: 'testSmall', reason: 'Lower effort way to test whether the promise gets useful clicks or replies.' },
       { title: 'Full production', recommendation: 'later', reason: 'Worth revisiting once proof, CTA, and destination are strong.' },
+    ]
+  }
+  if (opportunityType === 'seoOptimization') {
+    return [
+      { title: 'CTR-gap title/meta rewrite', recommendation: 'doNow', reason: 'If the page already ranks on page 2, the opportunity engine rewrite is the fastest click-through win.' },
+      { title: 'GEO citability pass', recommendation: 'testSmall', reason: 'Add inline sources, a direct-answer-first opening, and an FAQ so ChatGPT, Perplexity, and Google AI Overviews can cite it.' },
     ]
   }
   return [
