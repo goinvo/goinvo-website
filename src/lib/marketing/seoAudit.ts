@@ -172,9 +172,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'error',
         'title-missing',
-        'This page has no <title> tag (or it is empty).',
+        'This page has no title tag (the page title in the HTML, or it is empty).',
         'The title is the clickable headline in Google results and the browser tab. Without one, Google invents text from the page and the listing looks broken — directly costing clicks.',
-        'Add a unique <title> of about 30–60 characters that names the page and "GoInvo", e.g. "Healthcare Data Visualization — GoInvo".',
+        'Add a unique page title of about 30–60 characters that names the page and "GoInvo", e.g. "Healthcare Data Visualization — GoInvo".',
       ),
     )
   } else if (title.length > 60) {
@@ -182,7 +182,7 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'warning',
         'title-too-long',
-        `The <title> is ${title.length} characters: "${title}".`,
+        `The page title is ${title.length} characters: "${title}".`,
         'Google truncates titles past ~60 characters with an ellipsis, so the end of your headline is cut off in results.',
         `Trim it to 60 characters or fewer. Lead with the most important words; the current title loses everything after roughly "${title.slice(0, 57).trimEnd()}…".`,
       ),
@@ -192,7 +192,7 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'notice',
         'title-too-short',
-        `The <title> is only ${title.length} characters: "${title}".`,
+        `The page title is only ${title.length} characters: "${title}".`,
         'Very short titles waste the most valuable space in the result and usually omit the keywords people actually search for.',
         `Expand "${title}" toward 30–60 characters by adding the page's topic and "GoInvo" (e.g. "${title} — GoInvo").`,
       ),
@@ -207,9 +207,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'warning',
         'meta-description-missing',
-        'This page has no meta description.',
+        'This page has no meta description (the snippet shown under the page title in search results).',
         'The meta description is the grey snippet under your title in search results. Without one Google auto-generates text that is often off-message, lowering click-through.',
-        'Add <meta name="description" content="…"> of about 70–160 characters summarizing the page with a reason to click.',
+        'Add a meta description tag of about 70–160 characters summarizing the page with a reason to click.',
       ),
     )
   } else if (desc.length > 160) {
@@ -241,9 +241,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'error',
         'h1-missing',
-        'This page has no <h1> heading.',
-        'The H1 is the page’s main on-page headline; search engines and screen readers use it to understand the primary topic. A page with no H1 reads as having no clear subject.',
-        'Add exactly one <h1> at the top of the main content that states what the page is about.',
+        'This page has no main heading (the H1, the single most important heading on the page).',
+        'The main heading (H1) is the page’s primary on-page headline; search engines and screen readers use it to understand the primary topic. A page with no main heading reads as having no clear subject.',
+        'Add exactly one main heading (H1) at the top of the main content that states what the page is about.',
       ),
     )
   } else if (h1s.length > 1) {
@@ -255,9 +255,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'warning',
         'h1-multiple',
-        `This page has ${h1s.length} <h1> headings (e.g. ${texts}).`,
-        'Multiple H1s blur which heading is the page’s true subject and dilute the topical signal; assistive tech also expects a single top-level heading.',
-        'Keep one <h1> for the page title and demote the others to <h2>/<h3> so there is a single, clear main heading.',
+        `This page has ${h1s.length} main headings (H1 — the top-level heading there should only be one of) (e.g. ${texts}).`,
+        'Multiple main headings (H1s) blur which heading is the page’s true subject and dilute the topical signal; assistive tech also expects a single top-level heading.',
+        'Keep one main heading (H1) for the page title and demote the others to second- or third-level headings (H2/H3) so there is a single, clear main heading.',
       ),
     )
   }
@@ -272,9 +272,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
         base(
           'notice',
           'heading-order-skip',
-          `Heading levels skip from <h${prevLevel}> to <h${level}> at "${collapse(h.text).slice(0, 80)}".`,
-          'Skipped heading levels break the document outline that search engines and screen-reader users rely on to navigate the page structure.',
-          `Change this <h${level}> to <h${prevLevel + 1}>, or add the missing intermediate heading, so levels increase one step at a time.`,
+          `The headings jump from a level-${prevLevel} heading (an <h${prevLevel}> tag) straight to a level-${level} heading (an <h${level}> tag), skipping the levels in between, at "${collapse(h.text).slice(0, 80)}".`,
+          'Skipped heading levels break the document outline (the heading hierarchy H1 → H2 → H3 …) that search engines and screen-reader users rely on to navigate the page structure.',
+          `Change this level-${level} heading (the <h${level}> tag) to a level-${prevLevel + 1} heading (an <h${prevLevel + 1}> tag), or add the missing intermediate heading, so levels increase one step at a time.`,
         ),
       )
       break // one representative finding per page; drill-to-URL covers the rest
@@ -289,9 +289,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'warning',
         'canonical-missing',
-        'This page has no canonical link (<link rel="canonical">).',
-        'The canonical tag tells Google which URL is the "real" one. Without it, duplicate or parameterized versions of this page can split ranking signals or get indexed instead of the page you want.',
-        `Add <link rel="canonical" href="${url}"> to the <head>, pointing at this page’s preferred URL.`,
+        'This page has no canonical tag (the tag that tells search engines which URL is the primary version of this page).',
+        'The canonical tag tells Google which URL is the "real" one. Without it, duplicate or parameter-laden (extra-query-string) versions of this page can split ranking signals or get indexed instead of the page you want.',
+        `Add a canonical tag pointing at this page’s preferred URL (${url}) in the page’s <head> section (the hidden top section of the HTML where metadata lives).`,
       ),
     )
   }
@@ -303,9 +303,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'notice',
         'og-title-missing',
-        'This page has no og:title meta tag.',
-        'og:title is the headline shown when the page is shared on LinkedIn, Slack, Facebook, etc. Without it the share card falls back to a generic or wrong title, hurting referral clicks.',
-        'Add <meta property="og:title" content="…"> with a share-friendly headline for this page.',
+        'This page has no Open Graph title (the og:title tag — an Open Graph / social-share preview tag that sets the headline on shared links).',
+        'The Open Graph title is the headline shown when the page is shared on LinkedIn, Slack, Facebook, etc. Without it the share card falls back to a generic or wrong title, hurting referral clicks.',
+        'Add an Open Graph title tag (og:title) with a share-friendly headline for this page.',
       ),
     )
   }
@@ -315,9 +315,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'notice',
         'og-image-missing',
-        'This page has no og:image meta tag.',
-        'og:image is the preview thumbnail on social shares. Without it links to this page appear as a bare text card, which gets far fewer clicks.',
-        'Add <meta property="og:image" content="…"> pointing at a 1200×630 preview image for this page.',
+        'This page has no Open Graph image (the og:image tag — the Open Graph / social-share preview tag that sets the thumbnail on shared links).',
+        'The Open Graph image is the preview thumbnail on social shares. Without it links to this page appear as a bare text card, which gets far fewer clicks.',
+        'Add an Open Graph image tag (og:image) pointing at a 1200×630 preview image for this page.',
       ),
     )
   }
@@ -329,9 +329,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
       base(
         'notice',
         'twitter-card-missing',
-        'This page has no twitter:card meta tag.',
-        'twitter:card controls how the page renders when shared on X/Twitter. Without it the link shows as plain text instead of a rich preview.',
-        'Add <meta name="twitter:card" content="summary_large_image"> (plus twitter:title/image) to the <head>.',
+        'This page has no Twitter/X card tag (the twitter:card tag, which controls how the page looks when shared on Twitter/X).',
+        'The Twitter/X card tag controls how the page renders when shared on X/Twitter. Without it the link shows as plain text instead of a rich preview.',
+        'Add a Twitter/X card tag (twitter:card) set to a large-image summary card, plus a Twitter/X title and image tag, in the page’s <head> section.',
       ),
     )
   }
@@ -357,9 +357,9 @@ export function auditOnPage(url: string, html: string): SeoFinding[] {
         base(
           missing.length === imgs.length ? 'warning' : 'notice',
           'image-alt-missing',
-          `${missing.length} of ${imgs.length} images (${pct}%) have no alt attribute, e.g. ${examples}.`,
-          'Alt text is how Google Images and screen readers understand a picture. Missing alt text loses image-search traffic and is an accessibility failure.',
-          'Add a short, descriptive alt to each flagged image (or alt="" if it is purely decorative). Start with the examples listed above.',
+          `${missing.length} of ${imgs.length} images (${pct}%) have no alternative text (the description screen readers and search engines use for an image), e.g. ${examples}.`,
+          'Alternative text is how Google Images and screen readers understand a picture. Missing alternative text loses image-search traffic and is an accessibility failure.',
+          'Add a short, descriptive alternative text to each flagged image (or mark it as decorative with an empty alternative text if it is purely decorative). Start with the examples listed above.',
         ),
       )
     }
@@ -457,9 +457,9 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
         make(
           'error',
           `json-ld-invalid-${i}`,
-          `JSON-LD block #${i + 1} is not valid JSON (${reason}).`,
-          'Invalid structured data is ignored by Google entirely, so any rich result (stars, FAQ, breadcrumbs) this block was meant to produce silently fails.',
-          `Fix the JSON syntax in this <script type="application/ld+json"> block (the parser failed near: ${reason}). Validate it at search.google.com/test/rich-results.`,
+          `Structured-data block #${i + 1} contains broken code (it is not valid JSON: ${reason}). Structured data is the JSON-LD code that gives Google machine-readable facts about the page.`,
+          'Invalid structured data is ignored by Google entirely, so any rich result (an enhanced search listing such as star ratings, FAQ drop-downs, or breadcrumb trails) this block was meant to produce silently fails.',
+          `Fix the broken code in this structured-data (JSON-LD) block (the parser failed near: ${reason}). Validate it with Google’s free Rich Results Test at search.google.com/test/rich-results.`,
         ),
       )
     }
@@ -475,9 +475,9 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
       make(
         'warning',
         'schema-organization-missing',
-        `The homepage has no Organization schema (found: ${typesLabel}).`,
-        'Organization structured data feeds Google’s knowledge panel — your logo, name, and social profiles. Without it Google may show no brand entity for GoInvo.',
-        'Add an Organization JSON-LD block with name, url, logo, and sameAs links to the homepage <head>.',
+        `The homepage has no Organization structured data — the JSON-LD code that describes the company to Google (found instead: ${typesLabel}).`,
+        'Organization structured data feeds Google’s knowledge panel (the brand info box on the right of search results) — your logo, name, and social profiles. Without it Google may show no brand entity for GoInvo.',
+        'Add an Organization structured-data (JSON-LD) block with the company name, website URL, logo, and links to your official social profiles in the homepage’s <head> section.',
       ),
     )
   }
@@ -487,9 +487,9 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
       make(
         'notice',
         'schema-article-missing',
-        `This content page has no Article schema (found: ${typesLabel}).`,
-        'Article structured data makes a page eligible for richer results (headline, author, date) and helps Google and AI engines treat it as authored content rather than a generic page.',
-        'Add an Article (or BlogPosting) JSON-LD block with headline, author, datePublished, and image.',
+        `This content page has no Article structured data — the JSON-LD code that marks it up as an article for Google (found instead: ${typesLabel}).`,
+        'Article structured data makes a page eligible for richer results (a search listing showing the headline, author, and date) and helps Google and AI engines treat it as authored content rather than a generic page.',
+        'Add an Article (or blog-post) structured-data (JSON-LD) block listing the headline, author, publication date, and a representative image.',
       ),
     )
   }
@@ -499,9 +499,9 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
       make(
         'notice',
         'schema-faqpage-missing',
-        `This page reads like an FAQ but has no FAQPage schema (found: ${typesLabel}).`,
-        'FAQPage structured data can show your questions and answers directly in search results and is a strong signal for AI answer engines, which lift Q&A content verbatim.',
-        'Add a FAQPage JSON-LD block listing each question/answer pair shown on the page.',
+        `This page reads like an FAQ (a frequently-asked-questions page) but has no FAQ-page structured data — the JSON-LD code that marks up its question-and-answer pairs for Google (found instead: ${typesLabel}).`,
+        'FAQ-page structured data can show your questions and answers directly in search results and is a strong signal for AI answer engines (chatbots and AI Overviews), which lift question-and-answer content verbatim.',
+        'Add an FAQ-page structured-data (JSON-LD) block listing each question and answer pair shown on the page.',
       ),
     )
   }
@@ -514,9 +514,9 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
       make(
         'notice',
         'json-ld-none',
-        'This page has no JSON-LD structured data at all.',
-        'Structured data is how search and AI engines reliably extract facts (who, what, when). Pages without any are eligible for zero rich results.',
-        'Add at least one relevant JSON-LD block (Organization on the homepage, Article on content pages, FAQPage on Q&A pages).',
+        'This page has no structured data at all (no JSON-LD code — the machine-readable facts that give Google details about the page).',
+        'Structured data is how search and AI engines reliably extract facts (who, what, when). Pages without any are eligible for zero rich results (enhanced search listings).',
+        'Add at least one relevant structured-data (JSON-LD) block: Organization on the homepage, Article on content pages, FAQ-page on question-and-answer pages.',
       ),
     )
   }
@@ -618,9 +618,9 @@ export async function auditPage(
       urlsAffected: 1,
       pctSite: 0,
       indexable: false,
-      what: `The page could not be fetched (${reason}).`,
-      why: 'If the audit tool — using a normal browser User-Agent — cannot load the page, search-engine crawlers may not be able to either, which means it cannot rank at all.',
-      howToFix: `Open ${url} in a browser to confirm it loads. Check for a server error, a redirect loop, a robots/firewall block on automated requests, or a slow response exceeding the ${FETCH_TIMEOUT_MS}ms timeout.`,
+      what: `The page could not be loaded (${reason}).`,
+      why: 'If the audit tool — which identifies itself like a normal web browser — cannot load the page, search-engine crawlers (the bots that read pages for Google) may not be able to either, which means it cannot rank at all.',
+      howToFix: `Open ${url} in a browser to confirm it loads. Check for a server error, a redirect loop (the page bouncing endlessly between URLs), a robots-file or firewall block on automated requests, or a slow response exceeding the ${FETCH_TIMEOUT_MS}ms timeout.`,
       affectedUrls: [url],
       source: 'html-parse',
       status: 'open',
