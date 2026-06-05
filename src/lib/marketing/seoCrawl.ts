@@ -42,10 +42,17 @@ const SITEMAP_URL =
 const HOMEPAGE_URL =
   process.env.GOINVO_HOMEPAGE_URL || 'https://www.goinvo.com/'
 
-// Cap the number of distinct pages we will FETCH-and-parse. ~40 keeps the
-// whole crawl to a few seconds even on a slow origin while still covering the
-// shallow, high-value part of the site (the part designers care about).
-const DEFAULT_MAX_PAGES = Number(process.env.MARKETING_SEO_CRAWL_MAX_PAGES || 40)
+// Cap the number of distinct pages we will FETCH-and-parse. The orphan-page and
+// sitemap↔crawl reconciliation findings are only trustworthy after a COMPLETE
+// (un-capped) crawl — when the crawl stops early, un-reached sitemap URLs look
+// like orphans even though they simply weren't visited yet, so those findings
+// are suppressed while capped (see the `!capped` gates below). The default must
+// therefore be high enough to crawl a typical sitemap to completion: the goinvo
+// sitemap is ~80 URLs, so 120 leaves comfortable headroom for the whole site to
+// be reached in one pass. Still env-overridable for tuning. Even at 120 the
+// crawl stays bounded (page cap + depth bound + per-fetch timeout) and finishes
+// in a handful of seconds on a healthy origin.
+const DEFAULT_MAX_PAGES = Number(process.env.MARKETING_SEO_CRAWL_MAX_PAGES || 120)
 
 // Bound the BFS depth too, so a deeply-nested site can't blow the page cap on
 // one long chain. 4 = homepage (0) + three clicks, which is exactly the
@@ -564,6 +571,15 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
   // --- (c) Orphan pages ----------------------------------------------------
   // A sitemap URL that the crawl reached the page itself (or not) but which has
   // ZERO internal inbound links discovered. The homepage is never an orphan.
+  //
+  // CRITICAL: "no inbound links" is only trustworthy after a COMPLETE crawl. If
+  // the crawl was CAPPED, most sitemap URLs were simply never reached — their
+  // inbound count is 0 only because we stopped early, not because nothing links
+  // to them. Reporting those as orphans is a false positive (a maxPages=8 crawl
+  // of the ~80-URL goinvo sitemap wrongly flagged 31). So the orphan finding is
+  // gated on `!capped`, exactly like the `sitemap-not-crawled` finding below
+  // (both depend on a complete crawl). We still tally orphanUrls for the stats
+  // either way, but only emit the finding when the crawl is un-capped.
   const orphanUrls: string[] = []
   if (sitemapAvailable) {
     for (const u of sitemapUrls) {
@@ -572,7 +588,7 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
       if (inbound === 0) orphanUrls.push(u)
     }
   }
-  if (orphanUrls.length > 0) {
+  if (orphanUrls.length > 0 && !capped) {
     const sample = orphanUrls.slice(0, 8)
     findings.push(
       makeFinding(
