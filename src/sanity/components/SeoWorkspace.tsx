@@ -62,6 +62,40 @@ type Idea = {
   relatedUrl?: string
   source?: string
 }
+// --- Page Audit (Phase 1 audit engine; see docs/seo-suite-revamp-plan.md) ---
+// Mirrors the SeoFinding / HealthScore / route shapes from
+// src/lib/marketing/seoAudit.ts + src/app/api/marketing/seo-audit/route.ts.
+type FindingSeverity = 'error' | 'warning' | 'notice'
+type Finding = {
+  id: string
+  category: string
+  severity: FindingSeverity
+  priorityWeight: number
+  urlsAffected: number
+  pctSite: number
+  indexable: boolean
+  what: string
+  why: string
+  howToFix: string
+  affectedUrls: string[]
+  source: string
+  status: string
+}
+type HealthScore = {
+  score: number
+  band: 'Weak' | 'Fair' | 'Good' | 'Excellent'
+  errors: number
+  warnings: number
+  notices: number
+}
+type PageResult = { url: string; findings: Finding[]; healthScore: HealthScore }
+type AuditData = {
+  error?: string
+  results?: PageResult[]
+  summary?: { byCategory?: Record<string, number>; bySeverity?: Record<string, number>; avgHealthScore?: number }
+  warnings?: string[]
+}
+
 type SeoWorkspaceProps = { client?: SanityClient }
 
 const FIX_COLORS: Record<string, string> = { ranking: '#2276fc', ctr: '#d98a00', maintain: '#7d8694' }
@@ -74,6 +108,51 @@ const VERDICT_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = { idea: '#7d8694', exploring: '#2276fc', planned: '#2276fc', inProgress: '#d98a00', shipped: '#1f9d55', dropped: '#9aa0a6' }
 const PRIORITY_COLORS: Record<string, string> = { high: '#e0463c', medium: '#d98a00', low: '#7d8694' }
 const STATUS_ORDER = ['idea', 'exploring', 'planned', 'inProgress', 'shipped', 'dropped']
+
+// §7 severity colors: red error / yellow warning / blue notice.
+const SEVERITY_COLORS: Record<FindingSeverity, string> = { error: '#e0463c', warning: '#d98a00', notice: '#2276fc' }
+const SEVERITY_LABELS: Record<FindingSeverity, string> = { error: 'Errors', warning: 'Warnings', notice: 'Notices' }
+const SEVERITY_ORDER: FindingSeverity[] = ['error', 'warning', 'notice']
+const SEVERITY_RANK: Record<FindingSeverity, number> = { error: 0, warning: 1, notice: 2 }
+// Band → color (Weak/Fair red, Fair orange, Good/Excellent green per the brief).
+const BAND_COLORS: Record<HealthScore['band'], string> = {
+  Weak: '#e0463c',
+  Fair: '#d98a00',
+  Good: '#1f9d55',
+  Excellent: '#1f9d55',
+}
+// Map a finding.category → a marketingIdea category option value.
+const FINDING_CATEGORY_TO_IDEA: Record<string, string> = {
+  technical: 'technical',
+  indexation: 'technical',
+  onpage: 'seo',
+  content: 'content',
+  'structured-data': 'seo',
+  performance: 'technical',
+  'internal-linking': 'seo',
+  eeat: 'content',
+  geo: 'seo',
+}
+// error→high / warning→medium / notice→low for the backlog priority field.
+const SEVERITY_TO_PRIORITY: Record<FindingSeverity, string> = { error: 'high', warning: 'medium', notice: 'low' }
+
+// Quick-wins lane: easiest high-value fixes first. Rank by severity, then by
+// priorityWeight (desc), then favor single-page / low-spread (easy to fix).
+function rankQuickWins(findings: Finding[]): Finding[] {
+  return findings
+    .slice()
+    .sort(
+      (a, b) =>
+        SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+        b.priorityWeight - a.priorityWeight ||
+        a.urlsAffected - b.urlsAffected,
+    )
+}
+// A concise title for the backlog from a finding's `what` headline.
+function conciseTitle(what: string): string {
+  const firstSentence = what.split(/(?<=[.?!])\s/)[0] || what
+  return firstSentence.length > 90 ? `${firstSentence.slice(0, 87).trimEnd()}...` : firstSentence
+}
 function sortIdeas(list: Idea[], by: 'priority' | 'category' | 'status'): Idea[] {
   const rankP = (p?: string) => (p === 'high' ? 0 : p === 'medium' ? 1 : 2)
   const copy = list.slice()
@@ -119,6 +198,15 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [citeUrl, setCiteUrl] = useState('https://www.goinvo.com/')
   const [cite, setCite] = useState<CiteData | null>(null)
   const [citeLoading, setCiteLoading] = useState(false)
+
+  // --- Page Audit state ---
+  const [auditUrl, setAuditUrl] = useState('https://www.goinvo.com/')
+  const [audit, setAudit] = useState<AuditData | null>(null)
+  const [auditLoading, setAuditLoading] = useState(false)
+  const [openFinding, setOpenFinding] = useState<string | null>(null)
+  // Track promote-to-backlog state per finding (keyed by url + finding id) so a
+  // successful create disables that one button without affecting the others.
+  const [promoted, setPromoted] = useState<Record<string, 'saving' | 'done' | 'error'>>({})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -168,6 +256,53 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     }
   }, [])
 
+  // Run the Phase-1 audit. With a URL → single-page mode (?url=, incl.
+  // indexation); without → the multi-page sitemap sweep. Never crashes on a
+  // failed fetch — a thrown error becomes an { error } payload.
+  const runAudit = useCallback(async (url: string) => {
+    const target = url.trim()
+    setAuditLoading(true)
+    setAudit(null)
+    setOpenFinding(null)
+    setPromoted({})
+    try {
+      const qs = target ? `?url=${encodeURIComponent(target)}` : ''
+      const res = await fetch(`/api/marketing/seo-audit${qs}`)
+      setAudit((await res.json()) as AuditData)
+    } catch {
+      setAudit({ error: 'Could not run the page audit.' })
+    } finally {
+      setAuditLoading(false)
+    }
+  }, [])
+
+  // Promote-to-backlog: write a finding straight into marketingIdea (closes the
+  // engine ↔ backlog gap from the plan). Disables itself after a success.
+  const promote = useCallback(
+    async (key: string, finding: Finding) => {
+      if (!client || promoted[key] === 'saving' || promoted[key] === 'done') return
+      setPromoted((prev) => ({ ...prev, [key]: 'saving' }))
+      try {
+        await client.create({
+          _type: 'marketingIdea',
+          title: conciseTitle(finding.what),
+          summary: finding.why,
+          nextAction: finding.howToFix,
+          relatedUrl: finding.affectedUrls[0],
+          category: FINDING_CATEGORY_TO_IDEA[finding.category] || 'seo',
+          priority: SEVERITY_TO_PRIORITY[finding.severity],
+          effort: 'small',
+          source: 'seo-audit',
+          status: 'idea',
+        })
+        setPromoted((prev) => ({ ...prev, [key]: 'done' }))
+      } catch {
+        setPromoted((prev) => ({ ...prev, [key]: 'error' }))
+      }
+    },
+    [client, promoted],
+  )
+
   return (
     <div style={s.wrap}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
@@ -181,6 +316,262 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
         <button type="button" style={s.btn} onClick={() => void load()} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </button>
+      </div>
+
+      {/* --- Page Audit (Phase 1: fetch + parse → Health Score + findings) --- */}
+      <div style={s.card}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>Page audit</div>
+        <p style={{ ...s.sub, marginBottom: 10 }}>
+          Fetch and parse a page for concrete, fixable issues. Audit one URL (incl. indexation), or run a sweep of the
+          top key pages from the sitemap.
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <input
+            style={s.input}
+            value={auditUrl}
+            onChange={(e) => setAuditUrl(e.target.value)}
+            placeholder="https://www.goinvo.com/vision/..."
+          />
+          <button type="button" style={s.btn} onClick={() => void runAudit(auditUrl)} disabled={auditLoading}>
+            {auditLoading ? 'Auditing...' : 'Audit page'}
+          </button>
+          <button type="button" style={s.btn} onClick={() => void runAudit('')} disabled={auditLoading}>
+            {auditLoading ? 'Running...' : 'Run sweep'}
+          </button>
+        </div>
+
+        {audit?.error && <div style={{ color: SEVERITY_COLORS.error }}>{audit.error}</div>}
+
+        {audit && !audit.error && !audit.results?.length && (
+          <div style={{ color: 'var(--card-muted-fg-color)' }}>No pages were audited.</div>
+        )}
+
+        {audit && !audit.error && !!audit.results?.length && (
+          (() => {
+            const results = audit.results
+            const isSweep = results.length > 1
+            // Union of findings across the audited pages, then quick-wins ranked.
+            const allFindings = results.flatMap((r) =>
+              r.findings.map((f) => ({ finding: f, url: f.affectedUrls[0] || r.url, pageUrl: r.url })),
+            )
+            const quickWins = rankQuickWins(allFindings.map((x) => x.finding))
+              .slice(0, 5)
+              .map((f) => allFindings.find((x) => x.finding === f)!)
+            const avg = audit.summary?.avgHealthScore ?? results[0].healthScore.score
+            const avgBand: HealthScore['band'] = avg <= 30 ? 'Weak' : avg <= 70 ? 'Fair' : avg <= 90 ? 'Good' : 'Excellent'
+            const totals = SEVERITY_ORDER.map((sev) => ({
+              sev,
+              n: audit.summary?.bySeverity?.[sev] ?? results.reduce(
+                (acc, r) => acc + r.findings.filter((f) => f.severity === sev).length,
+                0,
+              ),
+            }))
+
+            const findingRow = (finding: Finding, url: string, pageUrl: string, ctx: string) => {
+              const key = `${ctx}|${pageUrl}|${finding.id}`
+              const open = openFinding === key
+              const state = promoted[key]
+              return (
+                <Fragment key={key}>
+                  <tr style={{ cursor: 'pointer' }} onClick={() => setOpenFinding(open ? null : key)}>
+                    <td style={s.td}>
+                      <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
+                    </td>
+                    <td style={s.td}>
+                      <span
+                        style={{
+                          ...badge('#7d8694'),
+                          background: 'transparent',
+                          color: 'var(--card-muted-fg-color)',
+                          border: '1px solid var(--card-border-color)',
+                        }}
+                      >
+                        {finding.category}
+                      </span>
+                    </td>
+                    <td style={s.td}>
+                      {open ? '▾ ' : '▸ '}
+                      {finding.what}
+                      {finding.urlsAffected > 1 ? (
+                        <span style={{ marginLeft: 6, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                          ({finding.urlsAffected} pages · {finding.pctSite}%)
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                  {open && (
+                    <tr>
+                      <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={3}>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                          <div style={{ marginBottom: 6 }}>
+                            <strong>What.</strong> {finding.what}
+                          </div>
+                          <div style={{ marginBottom: 6 }}>
+                            <strong>Why it matters.</strong> {finding.why}
+                          </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <strong>How to fix.</strong> {finding.howToFix}
+                          </div>
+                          <div style={{ marginBottom: 10, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                            Affected:{' '}
+                            <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                              {url}
+                            </a>
+                            {' · '}source: {finding.source}
+                          </div>
+                          <button
+                            type="button"
+                            style={{ ...s.btn, opacity: !client || state === 'done' ? 0.6 : 1 }}
+                            disabled={!client || state === 'saving' || state === 'done'}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void promote(key, finding)
+                            }}
+                          >
+                            {state === 'done'
+                              ? 'Added to backlog ✓'
+                              : state === 'saving'
+                                ? 'Adding...'
+                                : state === 'error'
+                                  ? 'Retry — add to backlog'
+                                  : 'Promote to backlog'}
+                          </button>
+                          {!client && (
+                            <span style={{ marginLeft: 8, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                              (connect a client to enable)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            }
+
+            return (
+              <Fragment>
+                {/* Health Score */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    padding: 12,
+                    borderRadius: 8,
+                    border: '1px solid var(--card-border-color)',
+                    marginBottom: 14,
+                  }}
+                >
+                  <div style={{ textAlign: 'center', minWidth: 92 }}>
+                    <div style={{ fontSize: 40, fontWeight: 700, lineHeight: 1, color: BAND_COLORS[avgBand] }}>
+                      {avg}
+                    </div>
+                    <div style={{ ...badge(BAND_COLORS[avgBand]), marginTop: 6 }}>{avgBand}</div>
+                  </div>
+                  <div style={{ fontSize: 12.5 }}>
+                    <div style={{ marginBottom: 4, color: 'var(--card-muted-fg-color)' }}>
+                      {isSweep ? `Average health across ${results.length} pages` : 'Health score (only errors move it)'}
+                    </div>
+                    <div style={{ display: 'flex', gap: 14 }}>
+                      {totals.map((t) => (
+                        <span key={t.sev}>
+                          <span style={{ ...badge(SEVERITY_COLORS[t.sev]), marginRight: 5 }}>{t.n}</span>
+                          {SEVERITY_LABELS[t.sev]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Per-page scores for a sweep */}
+                {isSweep && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 6 }}>Per-page scores</div>
+                    <table style={s.table}>
+                      <thead>
+                        <tr>
+                          <th style={s.th}>Page</th>
+                          <th style={{ ...s.th, ...s.num }}>Score</th>
+                          <th style={{ ...s.th, ...s.num }}>Err</th>
+                          <th style={{ ...s.th, ...s.num }}>Warn</th>
+                          <th style={{ ...s.th, ...s.num }}>Notice</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {results.map((r) => (
+                          <tr key={r.url}>
+                            <td style={s.td}>{r.url}</td>
+                            <td style={{ ...s.td, ...s.num, color: BAND_COLORS[r.healthScore.band], fontWeight: 600 }}>
+                              {r.healthScore.score}
+                            </td>
+                            <td style={{ ...s.td, ...s.num }}>{r.healthScore.errors}</td>
+                            <td style={{ ...s.td, ...s.num }}>{r.healthScore.warnings}</td>
+                            <td style={{ ...s.td, ...s.num }}>{r.healthScore.notices}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Quick-wins lane */}
+                {!!quickWins.length && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Quick wins — do these first</div>
+                    <div style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+                      The easiest high-value fixes, ranked by severity then impact.
+                    </div>
+                    <table style={s.table}>
+                      <thead>
+                        <tr>
+                          <th style={s.th}>Severity</th>
+                          <th style={s.th}>Category</th>
+                          <th style={s.th}>Fix (click for the what / why / how)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {quickWins.map((x) => findingRow(x.finding, x.url, x.pageUrl, 'quick'))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Findings grouped by severity */}
+                {SEVERITY_ORDER.map((sev) => {
+                  const group = allFindings.filter((x) => x.finding.severity === sev)
+                  if (!group.length) return null
+                  return (
+                    <div key={sev} style={{ marginBottom: 14 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                        <span style={{ ...badge(SEVERITY_COLORS[sev]), marginRight: 6 }}>{group.length}</span>
+                        {SEVERITY_LABELS[sev]}
+                      </div>
+                      <table style={s.table}>
+                        <thead>
+                          <tr>
+                            <th style={s.th}>Severity</th>
+                            <th style={s.th}>Category</th>
+                            <th style={s.th}>Issue (click for the what / why / how)</th>
+                          </tr>
+                        </thead>
+                        <tbody>{group.map((x) => findingRow(x.finding, x.url, x.pageUrl, sev))}</tbody>
+                      </table>
+                    </div>
+                  )
+                })}
+
+                {!!audit.warnings?.length && (
+                  <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11, marginTop: 6 }}>
+                    {audit.warnings.map((w, i) => (
+                      <div key={i}>{w}</div>
+                    ))}
+                  </div>
+                )}
+              </Fragment>
+            )
+          })()
+        )}
       </div>
 
       {!!ideas.length && (
