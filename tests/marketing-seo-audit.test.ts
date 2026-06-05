@@ -9,13 +9,19 @@ import {
   auditLlmsTxt,
   auditOnPage,
   auditRenderGap,
+  auditSemanticGap,
   auditStructuredData,
   computeHealthScore,
+  decodePhpContext,
+  deriveKeyword,
   generateLlmsTxt,
   mapConversion,
   mapCwv,
   mapInspection,
   mapRenderGap,
+  mapSemanticGap,
+  parseSemanticResult,
+  type SemanticModel,
   type SeoFinding,
 } from '@/lib/marketing/seoAudit'
 
@@ -1303,6 +1309,277 @@ describe('generateLlmsTxt (pure curated-file builder)', () => {
     ])
     expect(out).toContain('- [Kept](https://www.goinvo.com/b/)')
     expect(out).not.toContain('No URL')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Semantic-gap / topical-coverage pack (marketingIdea seo-semantic-gap) —
+// TextFocus tf_semantic. The pure pieces (parseSemanticResult, decodePhpContext,
+// deriveKeyword, mapSemanticGap) are tested directly with a captured-shape
+// payload. auditSemanticGap is tested by stubbing global fetch so we never hit
+// TextFocus: the stub serves the tf_account health probe, the page HTML, and a
+// tf_semantic envelope (or 403 / no key) to exercise the graceful path.
+//
+// The tf_semantic `result` shape below mirrors the LIVE response verified
+// against the API (semantic is an OBJECT map of string indices with GAPS; every
+// numeric field is a STRING; `used` is the % of the ranking cohort that uses the
+// term; `inhn` is the % using it in a heading; `context` is PHP-serialized).
+// ---------------------------------------------------------------------------
+
+// A page whose visible text covers "patient outcomes" and "experience" but NOT
+// the competitor terms "integration", "interoperability", "security", etc.
+const SEMANTIC_PAGE_HTML =
+  '<html><head><title>Healthcare Software Development — GoInvo</title></head><body>' +
+  '<h1>Healthcare Software Development</h1>' +
+  '<p>We design software that improves patient outcomes and the clinician experience. ' +
+  'Our team has decades of experience building tools for hospitals and patients.</p>' +
+  '</body></html>'
+
+// A captured-shape tf_semantic envelope `result`. The ranking cohort widely uses
+// "integration", "interoperability", "security", "compliance", "monitoring",
+// "analytics", "scalability", "workflow", "telemedicine", and the stopword "the"
+// — but the page above contains none of them, so they are the gap. "experience"
+// and "outcomes" are widely used AND present on the page, so they are NOT a gap.
+// "ehr" is short but a real domain term. "the" must be filtered as a stopword.
+function semanticResult(): Record<string, unknown> {
+  const term = (
+    keyword: string,
+    used: number,
+    inhn: number,
+    ngram = 1,
+    context = '',
+  ) => ({
+    id: 'healthcare software development',
+    keyword,
+    kei: '95.00',
+    ngram: String(ngram),
+    used: used.toFixed(2),
+    occ: '20',
+    omin: '1',
+    omax: '10',
+    omoy: '4.0',
+    osd: '2.0',
+    nbwmoy: '750',
+    intitle: '0.00',
+    inhn: inhn.toFixed(2),
+    frequency: '3.00',
+    tfidf: '0.0400',
+    context,
+  })
+  return {
+    nbCompete: 20,
+    nbFound: 120,
+    nbWordsContentMoy: 2505.25,
+    nbWordsTitleMoy: 5.25,
+    semantic: {
+      // present on the page → NOT gaps
+      '0': term('experience', 85, 20),
+      '1': term('outcomes', 80, 10),
+      // widely used, ABSENT from the page → gaps (some appear in headings)
+      '2': term('integration', 85, 50, 1, 'a:2:{i:0;s:20:"seamless integration";i:1;s:24:"integration with systems";}'),
+      '3': term('interoperability', 80, 40),
+      '4': term('security', 90, 55),
+      '5': term('compliance', 85, 30, 1, 'a:1:{i:0;s:21:"regulatory compliance";}'),
+      '6': term('monitoring', 85, 45),
+      '7': term('analytics', 85, 40),
+      '8': term('scalability', 75, 10),
+      '9': term('workflow', 80, 25),
+      '10': term('telemedicine', 75, 15),
+      // a stopword that is widely used but must be FILTERED, not reported
+      '12': term('the', 95, 60),
+      // a long-tail term below the widely-used threshold → ignored
+      '13': term('blockchain', 30, 0),
+    },
+  }
+}
+
+describe('decodePhpContext (PHP-serialized context → phrases)', () => {
+  it('extracts the example phrases from a serialized array', () => {
+    const out = decodePhpContext(
+      'a:3:{i:0;s:20:"enhance patient care";i:1;s:31:"efficiency enhance patient care";i:2;s:26:"efficiency enhance patient";}',
+    )
+    expect(out).toEqual([
+      'enhance patient care',
+      'efficiency enhance patient care',
+      'efficiency enhance patient',
+    ])
+  })
+
+  it('returns an empty array for an empty serialized array or non-string', () => {
+    expect(decodePhpContext('a:0:{}')).toEqual([])
+    expect(decodePhpContext(undefined)).toEqual([])
+    expect(decodePhpContext(123)).toEqual([])
+  })
+})
+
+describe('parseSemanticResult (loose tf_semantic result → typed model)', () => {
+  it('maps the captured-shape envelope onto a typed model with numeric fields', () => {
+    const model = parseSemanticResult(semanticResult())
+    expect(model).not.toBeNull()
+    expect(model?.competitors).toBe(20)
+    expect(model?.avgWords).toBeCloseTo(2505.25)
+    // 13 entries in the map (string keys with a gap at "11"), all keep their term.
+    expect(model?.terms.length).toBe(13)
+    const integration = model?.terms.find((t) => t.term === 'integration')
+    expect(integration?.used).toBe(85)
+    expect(integration?.inHeadings).toBe(50)
+    expect(integration?.contexts).toContain('seamless integration')
+  })
+
+  it('returns null when the payload has no semantic block (or is null)', () => {
+    expect(parseSemanticResult(null)).toBeNull()
+    expect(parseSemanticResult({})).toBeNull()
+    expect(parseSemanticResult({ semantic: {} })).toBeNull()
+  })
+})
+
+describe('deriveKeyword (page → target query)', () => {
+  it('uses the title minus the GoInvo brand suffix', () => {
+    expect(deriveKeyword(URL, SEMANTIC_PAGE_HTML)).toBe('Healthcare Software Development')
+  })
+
+  it('falls back to a de-slugged URL segment when there is no title or h1', () => {
+    const html = '<html><head></head><body><p>no heading</p></body></html>'
+    expect(deriveKeyword('https://www.goinvo.com/enterprise-software/', html)).toBe('enterprise software')
+  })
+})
+
+describe('mapSemanticGap (pure page-vs-cohort → findings)', () => {
+  const model = parseSemanticResult(semanticResult()) as SemanticModel
+
+  it('lists the widely-used competitor terms that are MISSING from the page', () => {
+    const text = mapSemanticGap(URL, SEMANTIC_PAGE_HTML.toLowerCase(), model, 'healthcare software development')
+    const f = text.find((x) => x.id === 'content:semantic-gap')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('content')
+    expect(f?.source).toBe('textfocus')
+    // 9 gaps → at/above the warning threshold (8).
+    expect(f?.severity).toBe('warning')
+    // The specific missing terms are named.
+    expect(f?.what).toContain('integration')
+    expect(f?.what).toContain('security')
+    expect(f?.what).toContain('interoperability')
+    // The target keyword is quoted.
+    expect(f?.what).toContain('healthcare software development')
+  })
+
+  it('does NOT list terms the page already covers, nor stopwords/long-tail', () => {
+    const f = mapSemanticGap(URL, SEMANTIC_PAGE_HTML.toLowerCase(), model, 'kw').find(
+      (x) => x.id === 'content:semantic-gap',
+    )
+    const blob = `${f?.what} ${f?.howToFix}`.toLowerCase()
+    // present on the page → not a gap
+    expect(blob).not.toContain('experience')
+    expect(blob).not.toContain('outcomes')
+    // stopword → filtered
+    expect(blob).not.toMatch(/\bthe\b term/)
+    // below the widely-used threshold → ignored
+    expect(blob).not.toContain('blockchain')
+  })
+
+  it('highlights heading-level terms as subtopics in the how-to-fix', () => {
+    const f = mapSemanticGap(URL, SEMANTIC_PAGE_HTML.toLowerCase(), model, 'kw').find(
+      (x) => x.id === 'content:semantic-gap',
+    )
+    // "security" (inhn 55) is the top heading-level gap → flagged as a subtopic.
+    expect(f?.howToFix.toLowerCase()).toContain('section headings')
+    expect(f?.howToFix).toContain('security')
+  })
+
+  it('emits a coverage-ok notice (no gap) when the page covers everything', () => {
+    // A page that contains every widely-used non-stopword term → no gap.
+    const fullText =
+      'experience outcomes integration interoperability security compliance ' +
+      'monitoring analytics scalability workflow telemedicine'
+    const findings = mapSemanticGap(URL, fullText, model, 'kw')
+    expect(idsOf(findings)).toContain('content:semantic-coverage-ok')
+    expect(idsOf(findings)).not.toContain('content:semantic-gap')
+    expect(findings[0].severity).toBe('notice')
+  })
+})
+
+describe('auditSemanticGap (graceful TextFocus layer — never throws)', () => {
+  const realFetch = globalThis.fetch
+  const realKey = process.env.TEXTFOCUS_API_KEY
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    globalThis.fetch = realFetch
+    if (realKey === undefined) delete process.env.TEXTFOCUS_API_KEY
+    else process.env.TEXTFOCUS_API_KEY = realKey
+  })
+
+  // Build a fetch stub: the free tf_account health probe (so withTextFocus
+  // proceeds), the page HTML for the page fetch, and a tf_semantic envelope.
+  function stubSemanticFetch(html: string, semantic: Record<string, unknown>) {
+    return vi.fn(async (input: unknown) => {
+      const reqUrl = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+      if (reqUrl.includes('/apis/tf_account/')) {
+        return new Response(
+          JSON.stringify({ message: 'ok', result: { credits: { remaining: 750 } } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      if (reqUrl.includes('/apis/tf_semantic/')) {
+        return new Response(JSON.stringify({ message: 'ok', result: semantic }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      // Otherwise it's the page-HTML fetch.
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
+    })
+  }
+
+  it('lists the missing terms from a mocked tf_semantic result', async () => {
+    process.env.TEXTFOCUS_API_KEY = 'test-key'
+    vi.stubGlobal('fetch', stubSemanticFetch(SEMANTIC_PAGE_HTML, semanticResult()))
+    const findings = await auditSemanticGap(URL, { keyword: 'healthcare software development' })
+    const f = findings.find((x) => x.id === 'content:semantic-gap')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('content')
+    expect(f?.source).toBe('textfocus')
+    expect(f?.what).toContain('integration')
+    expect(f?.what).toContain('security')
+  })
+
+  it('returns no findings (no throw) when TextFocus is down — health check fails', async () => {
+    process.env.TEXTFOCUS_API_KEY = 'test-key'
+    // tf_account 403 → withTextFocus health check reports not-ok → short-circuit
+    // to [] WITHOUT ever calling the page fetch or tf_semantic.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const reqUrl = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+        if (reqUrl.includes('/apis/tf_account/')) {
+          return new Response('forbidden', { status: 403 })
+        }
+        throw new Error('TextFocus is down — nothing else should be called')
+      }),
+    )
+    const findings = await auditSemanticGap(URL, { keyword: 'healthcare software development' })
+    expect(findings).toEqual([])
+  })
+
+  it('returns no findings (no throw) when the TEXTFOCUS_API_KEY is missing', async () => {
+    delete process.env.TEXTFOCUS_API_KEY
+    // No key → the health check throws-then-degrades inside withTextFocus → [].
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('fetch must not be reached without an API key')
+      }),
+    )
+    const findings = await auditSemanticGap(URL, { keyword: 'healthcare software development' })
+    expect(findings).toEqual([])
+  })
+
+  it('returns no findings when tf_semantic yields no usable result', async () => {
+    process.env.TEXTFOCUS_API_KEY = 'test-key'
+    // tf_account ok, but tf_semantic returns an empty result → parse → null → [].
+    vi.stubGlobal('fetch', stubSemanticFetch(SEMANTIC_PAGE_HTML, { semantic: {} }))
+    const findings = await auditSemanticGap(URL, { keyword: 'healthcare software development' })
+    expect(findings).toEqual([])
   })
 })
 

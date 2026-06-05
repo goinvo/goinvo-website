@@ -103,6 +103,11 @@ function summarize(results: PageAuditResult[]) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const single = (searchParams.get('url') || '').trim()
+  // Optional overrides for the semantic-gap (topical-coverage) check: the target
+  // search query and market. When omitted, the keyword is inferred from the
+  // page's title / H1 / URL.
+  const semanticKeyword = (searchParams.get('keyword') || '').trim() || undefined
+  const semanticLang = (searchParams.get('lang') || '').trim() || undefined
   const warnings: string[] = []
 
   // Indexation (GSC URL Inspection) is a slower per-page call to Google, so it
@@ -125,12 +130,17 @@ export async function GET(request: Request) {
   // page — a per-page network round-trip, and only meaningful on money pages —
   // so only enable it for the single ?url= mode, never the multi-page sweep.
   const includeConversion = Boolean(single)
+  // Semantic-gap (topical-coverage) calls TextFocus's paid tf_semantic endpoint
+  // per page, so only enable it for the single ?url= mode — never the
+  // multi-page sweep, which would spend credits on every page.
+  const includeSemanticGap = Boolean(single)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
     warnings.push('AI-crawler access (robots.txt) and llms.txt are included for single-page audits.')
     warnings.push('Render check (raw HTML vs rendered page) is included for single-page audits.')
     warnings.push('Core Web Vitals (PageSpeed Insights — real-user field data) is included for single-page audits.')
     warnings.push('Conversion-rate checks (GA4 conversion rate + form/CTA design) are included for single-page audits on money pages.')
+    warnings.push('Semantic-gap / topical-coverage (TextFocus — compares the page against the pages ranking for a target keyword) is included for single-page audits; pass &keyword= to set the target query.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
@@ -146,6 +156,9 @@ export async function GET(request: Request) {
     )
     warnings.push(
       'Core Web Vitals (PageSpeed Insights) is a per-page API call with a low keyless quota; pass ?url=<page> to include it.',
+    )
+    warnings.push(
+      'Semantic-gap / topical-coverage (TextFocus) is a paid per-page call; pass ?url=<page> (optionally &keyword=) to include it.',
     )
   }
 
@@ -191,7 +204,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion })
+        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion, includeSemanticGap, semanticKeyword, semanticLang })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
