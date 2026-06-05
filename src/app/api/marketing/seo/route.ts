@@ -47,6 +47,7 @@ type PageOpportunity = {
   pageViews: number
   quality: number
   topQuery: string
+  topQueries: string[]
   legacy: boolean
   score: number
   fix: 'ranking' | 'ctr' | 'maintain'
@@ -247,18 +248,24 @@ export async function GET() {
 
     // Demand quality from the [page, query] dimension: what share of a page's
     // impressions comes from junk/scraper queries, plus its top real query.
-    type PageQuality = { junk: number; total: number; topQuery: string; topImpr: number }
+    type PageQuality = { junk: number; total: number; topQuery: string; topImpr: number; queries: Array<{ query: string; impr: number }> }
     const qualityMap = new Map<string, PageQuality>()
     for (const row of pageQueryRows) {
       const path = normalizePath(row.keys?.[0] || '')
       const query = row.keys?.[1] || ''
       const impressions = row.impressions || 0
-      const q = qualityMap.get(path) || { junk: 0, total: 0, topQuery: '', topImpr: 0 }
+      const q = qualityMap.get(path) || { junk: 0, total: 0, topQuery: '', topImpr: 0, queries: [] }
       q.total += impressions
-      if (isJunkQuery(query)) q.junk += impressions
-      else if (impressions > q.topImpr) {
-        q.topQuery = query
-        q.topImpr = impressions
+      if (isJunkQuery(query)) {
+        q.junk += impressions
+      } else {
+        if (impressions > q.topImpr) {
+          q.topQuery = query
+          q.topImpr = impressions
+        }
+        // Keep the real (non-brand) queries so the dashboard can show a designer
+        // exactly which questions to answer on the page.
+        if (query && !BRAND_RE.test(query)) q.queries.push({ query, impr: impressions })
       }
       qualityMap.set(path, q)
     }
@@ -281,6 +288,7 @@ export async function GET() {
           pageViews: pageViews.get(path) || 0,
           quality: Number(quality.toFixed(2)),
           topQuery: q?.topQuery || '',
+          topQueries: (q?.queries || []).slice().sort((a, b) => b.impr - a.impr).slice(0, 8).map((x) => x.query),
           legacy,
           // Demote pages that only rank for junk queries, and legacy/duplicate
           // URLs (redirect candidates, not optimization targets).
