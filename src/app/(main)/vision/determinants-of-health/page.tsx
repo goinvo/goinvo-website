@@ -16,7 +16,14 @@ export const metadata: Metadata = {
   title: 'Determinants of Health Visualized',
   description:
     "89% of your health happens outside the clinic. Explore the 5 determinants of health (behavior, social circumstances, genetics, environment, and medical care) in GoInvo's open-source, research-backed visualization.",
-  alternates: { canonical: '/vision/determinants-of-health' },
+  alternates: {
+    canonical: '/vision/determinants-of-health',
+    languages: {
+      en: '/vision/determinants-of-health',
+      es: '/vision/determinantes-de-la-salud',
+      'x-default': '/vision/determinants-of-health',
+    },
+  },
   openGraph: {
     type: 'article',
     url: pageUrl,
