@@ -117,10 +117,15 @@ export async function GET(request: Request) {
   // through Puppeteer, which is far too slow for the multi-page sweep — only
   // enable it for the single ?url= mode.
   const includeRenderDiff = Boolean(single)
+  // Core Web Vitals calls Google's PageSpeed Insights API (CrUX field data) —
+  // a network round-trip with a low keyless quota, so only enable it for the
+  // single ?url= mode, never the multi-page sweep.
+  const includeCwv = Boolean(single)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
     warnings.push('AI-crawler access (robots.txt) is included for single-page audits.')
     warnings.push('Render check (raw HTML vs rendered page) is included for single-page audits.')
+    warnings.push('Core Web Vitals (PageSpeed Insights — real-user field data) is included for single-page audits.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
@@ -130,6 +135,9 @@ export async function GET(request: Request) {
     )
     warnings.push(
       'Render check (raw HTML vs rendered page) uses headless Chrome and is too slow for the sweep; pass ?url=<page> to include it.',
+    )
+    warnings.push(
+      'Core Web Vitals (PageSpeed Insights) is a per-page API call with a low keyless quota; pass ?url=<page> to include it.',
     )
   }
 
@@ -175,7 +183,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff })
+        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
