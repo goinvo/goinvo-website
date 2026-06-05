@@ -9,6 +9,7 @@ import { auditRenderGap } from './seoAuditRender'
 import { auditCwv } from './seoAuditCwv'
 import { auditConversion } from './seoAuditConversion'
 import { auditLlmsTxt } from './seoAuditLlms'
+import { auditSemanticGap } from './seoAuditSemantic'
 
 // Re-export the indexation layer so callers can import everything from the
 // engine entry point. (seoAuditIndexation imports the finding model + weights
@@ -72,6 +73,25 @@ export {
   generateLlmsTxt,
   type LlmsTxtPage,
 } from './seoAuditLlms'
+
+// Re-export the semantic-gap / topical-coverage pack (marketingIdea
+// seo-semantic-gap). It's powered by TextFocus's tf_semantic endpoint — a paid,
+// per-page call that compares this page against the pages currently ranking for
+// a target keyword and flags the related terms/subtopics the page is missing —
+// so auditPage only runs it behind opts.includeSemanticGap (the route enables it
+// for the single ?url= mode, never the credit-spending multi-page sweep). Same
+// import-only cycle as the other packs: seoAuditSemantic imports the finding
+// model + fetchPageHtml from here, resolved lazily at call time. Graceful: a
+// down / out-of-credits / misconfigured TextFocus degrades to no findings.
+export {
+  auditSemanticGap,
+  mapSemanticGap,
+  parseSemanticResult,
+  deriveKeyword,
+  decodePhpContext,
+  type SemanticModel,
+  type SemanticTerm,
+} from './seoAuditSemantic'
 
 // SEO audit engine — Phase 1 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md). This is the "actually inspect the page"
@@ -863,6 +883,17 @@ export type AuditPageOptions = {
   // ?url= mode only, never the multi-page sweep. Graceful: a GA4/parse failure
   // degrades to one notice, never throws.
   includeConversion?: boolean
+  // Opt-in: also run the semantic-gap / topical-coverage check. It calls
+  // TextFocus's tf_semantic endpoint — a PAID, per-page call that compares this
+  // page against the pages currently ranking for a target keyword — so it's OFF
+  // by default and the route only enables it for the single ?url= mode, never
+  // the credit-spending multi-page sweep. `semanticKeyword` / `semanticLang`
+  // override the target query / market; when omitted the keyword is inferred
+  // from the page title/H1/URL. Graceful: a down / out-of-credits TextFocus
+  // degrades to no findings, never throws.
+  includeSemanticGap?: boolean
+  semanticKeyword?: string
+  semanticLang?: string
 }
 
 export async function auditPage(
@@ -948,6 +979,20 @@ export async function auditPage(
   // nothing at all for non-money pages.
   if (opts.includeConversion) {
     findings.push(...(await auditConversion(url)))
+  }
+
+  // Opt-in semantic-gap / topical-coverage check (TextFocus tf_semantic — a
+  // PAID, per-page call comparing this page against the pages ranking for a
+  // target keyword). The route only enables it for single-page audits, never
+  // the credit-spending sweep. Graceful — a down / out-of-credits /
+  // misconfigured TextFocus degrades to no findings, never a throw.
+  if (opts.includeSemanticGap) {
+    findings.push(
+      ...(await auditSemanticGap(url, {
+        keyword: opts.semanticKeyword,
+        lang: opts.semanticLang,
+      })),
+    )
   }
 
   return { url, findings, healthScore: computeHealthScore(findings, 1) }
