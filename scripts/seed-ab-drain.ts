@@ -73,6 +73,13 @@ function buildRows(args: ReturnType<typeof parseArgs>): DrainRow[] {
 
 async function run() {
   const args = parseArgs(process.argv.slice(2))
+  // Guard: this fabricates synthetic per-variant counts. Refuse to write them to
+  // any non-local target (which would pollute the real production readout)
+  // unless an explicit --force-prod opt-in is passed.
+  const isLocalTarget = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(args.base)
+  if (!isLocalTarget && !process.argv.includes('--force-prod')) {
+    throw new Error(`Refusing to seed SYNTHETIC drain data to non-local target "${args.base}". Pass --force-prod only if you truly intend to.`)
+  }
   const secret = process.env.MARKETING_VERCEL_DRAIN_SECRET
   if (!secret) {
     throw new Error('Set MARKETING_VERCEL_DRAIN_SECRET in .env.local before seeding drain events.')
