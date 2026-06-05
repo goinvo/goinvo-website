@@ -1,4 +1,10 @@
 import { parse, type HTMLElement } from 'node-html-parser'
+import { auditIndexation } from './seoAuditIndexation'
+
+// Re-export the indexation layer so callers can import everything from the
+// engine entry point. (seoAuditIndexation imports the finding model + weights
+// from here; the cycle is import-only and resolved lazily at call time.)
+export { auditIndexation, mapInspection } from './seoAuditIndexation'
 
 // SEO audit engine — Phase 1 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md). This is the "actually inspect the page"
@@ -588,7 +594,17 @@ export type PageAuditResult = {
   healthScore: HealthScore
 }
 
-export async function auditPage(url: string): Promise<PageAuditResult> {
+export type AuditPageOptions = {
+  // Opt-in: also run the GSC URL Inspection indexation layer. Off by default
+  // because it is a slower network round-trip to Google (auth + inspect) per
+  // page, so the multi-page sweep keeps it off to stay under GSC rate limits.
+  includeIndexation?: boolean
+}
+
+export async function auditPage(
+  url: string,
+  opts: AuditPageOptions = {},
+): Promise<PageAuditResult> {
   let html: string
   try {
     html = await fetchPageHtml(url)
@@ -614,5 +630,13 @@ export async function auditPage(url: string): Promise<PageAuditResult> {
   }
 
   const findings = [...auditOnPage(url, html), ...auditStructuredData(url, html)]
+
+  // Opt-in indexation layer (GSC URL Inspection). auditIndexation never throws
+  // — it degrades to a single `notice` if GSC is unreachable — so this stays
+  // safe even when the service account is missing or rate-limited.
+  if (opts.includeIndexation) {
+    findings.push(...(await auditIndexation(url)))
+  }
+
   return { url, findings, healthScore: computeHealthScore(findings, 1) }
 }
