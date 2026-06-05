@@ -83,7 +83,10 @@ export async function GET(request: Request) {
       rows = await ga4RunReport(token, GA4_PROPERTY_ID, {
         dateRanges: [{ startDate: `${days}daysAgo`, endDate: 'today' }],
         dimensions: [{ name: 'eventName' }, { name: 'customEvent:variant' }, { name: 'pagePath' }],
-        metrics: [{ name: 'eventCount' }],
+        // totalUsers (unique users), NOT eventCount — so the readout is a true
+        // per-visitor conversion rate (converting users / exposed users) that
+        // can't exceed 100% just because one visitor fired an event many times.
+        metrics: [{ name: 'totalUsers' }],
         dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: [...eventNames] } } },
         limit: 2000,
       })
