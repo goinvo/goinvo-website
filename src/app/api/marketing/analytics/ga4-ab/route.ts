@@ -15,6 +15,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const GA4_PROPERTY_ID = process.env.GOINVO_GA4_PROPERTY_ID || '321528631'
+// Only count production-host traffic — never localhost / *.vercel.app preview
+// sessions (which include synthetic test traffic from scripts/traffic-test.mjs).
+const GA4_HOST = process.env.GOINVO_GA4_HOST || 'www.goinvo.com'
 
 type ExperimentRow = {
   _id: string
@@ -87,7 +90,14 @@ export async function GET(request: Request) {
         // per-visitor conversion rate (converting users / exposed users) that
         // can't exceed 100% just because one visitor fired an event many times.
         metrics: [{ name: 'totalUsers' }],
-        dimensionFilter: { filter: { fieldName: 'eventName', inListFilter: { values: [...eventNames] } } },
+        dimensionFilter: {
+          andGroup: {
+            expressions: [
+              { filter: { fieldName: 'eventName', inListFilter: { values: [...eventNames] } } },
+              { filter: { fieldName: 'hostName', stringFilter: { matchType: 'EXACT', value: GA4_HOST } } },
+            ],
+          },
+        },
         limit: 2000,
       })
     } catch (error) {

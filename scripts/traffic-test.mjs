@@ -67,6 +67,17 @@ const CAPTURE_INIT = () => {
       /* keep our recorder even if @vercel/analytics injects its own */
     },
   })
+  // Block GA4 entirely so synthetic sessions never emit real gtag events into
+  // the production GA4 property (the A/B readout pulls from GA4).
+  Object.defineProperty(window, 'gtag', {
+    configurable: true,
+    get() {
+      return function gtag() {}
+    },
+    set() {
+      /* keep our no-op gtag even if the GA script injects its own */
+    },
+  })
   document.addEventListener(
     'click',
     (event) => {
