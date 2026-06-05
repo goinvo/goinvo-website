@@ -113,15 +113,23 @@ export async function GET(request: Request) {
   // check — only run it in single-page mode so it shows up exactly once, not
   // re-fetched per page across the multi-page sweep.
   const includeAiCrawlerAccess = Boolean(single)
+  // Render-diff (raw HTML vs headless-Chrome rendered DOM) drives the page
+  // through Puppeteer, which is far too slow for the multi-page sweep — only
+  // enable it for the single ?url= mode.
+  const includeRenderDiff = Boolean(single)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
     warnings.push('AI-crawler access (robots.txt) is included for single-page audits.')
+    warnings.push('Render check (raw HTML vs rendered page) is included for single-page audits.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
     )
     warnings.push(
       'AI-crawler access (robots.txt) is a site-wide check; pass ?url=<page> to include it once.',
+    )
+    warnings.push(
+      'Render check (raw HTML vs rendered page) uses headless Chrome and is too slow for the sweep; pass ?url=<page> to include it.',
     )
   }
 
@@ -167,7 +175,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess })
+        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
