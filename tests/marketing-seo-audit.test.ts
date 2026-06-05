@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  auditAiCrawlerAccess,
+  auditAiReadiness,
+  auditEeat,
   auditIndexation,
   auditOnPage,
   auditStructuredData,
@@ -189,6 +192,61 @@ describe('auditStructuredData', () => {
     const findings = auditStructuredData('https://www.goinvo.com/', html)
     // Organization was found inside @graph, so no missing-Organization finding.
     expect(idsOf(findings)).not.toContain('structured-data:schema-organization-missing')
+  })
+
+  // --- §12 structured-data corrections ------------------------------------
+
+  it('recommends Dataset schema on a page that looks like open data', () => {
+    const html =
+      '<html><head><title>Open data visualizations</title></head><body><h1>Determinants of Health</h1>' +
+      '<p>An open-source dataset and visualization of the social determinants of health.</p></body></html>'
+    const findings = auditStructuredData('https://www.goinvo.com/vision/determinants-of-health/', html)
+    expect(idsOf(findings)).toContain('structured-data:schema-dataset-missing')
+  })
+
+  it('does NOT frame FAQPage as a rich-result win (it is demoted to GEO/AI extraction)', () => {
+    const html =
+      '<html><head></head><body><h2>What is GoInvo?</h2><p>A studio.</p><h2>Where is GoInvo?</h2><p>Boston.</p><h2>Who runs GoInvo?</h2><p>Juhan.</p></body></html>'
+    const findings = auditStructuredData('https://www.goinvo.com/about/', html)
+    const faq = findings.find((f) => f.id === 'structured-data:schema-faqpage-missing')
+    expect(faq).toBeDefined()
+    // The whole finding (what/why/how) must not promise a rich result; it must
+    // say the rich result is retired and frame the value as AI extraction.
+    const blob = `${faq?.what} ${faq?.why} ${faq?.howToFix}`.toLowerCase()
+    expect(blob).toContain('retired')
+    expect(blob).toContain('ai answer engines')
+    expect(faq?.why).not.toMatch(/can show your questions and answers directly in search results/i)
+  })
+
+  it('validates missing Article required properties (author + date)', () => {
+    const html =
+      '<html><head><title>x</title><script type="application/ld+json">' +
+      '{"@context":"https://schema.org","@type":"Article","headline":"A headline"}' +
+      '</script></head><body><h1>Body</h1></body></html>'
+    const findings = auditStructuredData(URL, html)
+    const f = findings.find((x) => x.id === 'structured-data:schema-article-incomplete')
+    expect(f).toBeDefined()
+    expect(f?.what).toContain('author')
+    expect(f?.what).toContain('datePublished or dateModified')
+    expect(f?.what).not.toContain('headline') // headline IS present
+  })
+
+  it('validates missing Organization required properties', () => {
+    const html =
+      '<html><head><script type="application/ld+json">' +
+      '{"@context":"https://schema.org","@type":"Organization","name":"GoInvo"}' +
+      '</script></head><body><h1>GoInvo</h1></body></html>'
+    const findings = auditStructuredData('https://www.goinvo.com/', html)
+    const f = findings.find((x) => x.id === 'structured-data:schema-organization-incomplete')
+    expect(f).toBeDefined()
+    expect(f?.what).toContain('url')
+    expect(f?.what).toContain('logo')
+  })
+
+  it('recommends a BreadcrumbList on a non-home page that lacks it', () => {
+    const html = '<html><head><title>x</title></head><body><h1>Page</h1></body></html>'
+    const findings = auditStructuredData('https://www.goinvo.com/about/', html)
+    expect(idsOf(findings)).toContain('structured-data:schema-breadcrumb-missing')
   })
 })
 
@@ -439,6 +497,169 @@ describe('auditIndexation (graceful GSC layer — never throws)', () => {
     const findings = await auditIndexation(URL)
     expect(findings[0].id).toBe('indexation:status-unavailable')
     expect(findings[0].what).toContain('Index status unavailable')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// GEO / AI-readiness pack — parse-based `geo` and `eeat` findings. Pure
+// (url, html) so no network stubbing is needed except auditAiCrawlerAccess,
+// which fetches robots.txt and is tested with a stubbed global fetch.
+// ---------------------------------------------------------------------------
+
+// A long content page with enough prose to clear the isContentPage gate, an
+// uncited statistic, no author, no authoritative citation, and no date.
+function geoBodyText(extra = ''): string {
+  const filler = 'GoInvo designs open-source healthcare software and data tools for clinicians and patients. '
+  return filler.repeat(20) + extra
+}
+
+describe('auditAiReadiness (geo findings)', () => {
+  it('flags a quotable statistic that has no inline source', () => {
+    const html =
+      '<html><head><title>x</title></head><body><h1>Healthcare costs</h1>' +
+      `<p>${geoBodyText()}</p>` +
+      '<p>Roughly 30% of US healthcare spending is wasteful overhead.</p>' +
+      '</body></html>'
+    const findings = auditAiReadiness('https://www.goinvo.com/vision/cost/', html)
+    const f = findings.find((x) => x.id === 'geo:stats-uncited')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('geo')
+    expect(f?.what).toContain('30%')
+  })
+
+  it('does NOT flag a statistic that sits next to an inline citation link', () => {
+    const html =
+      '<html><head><title>x</title></head><body><h1>Healthcare costs</h1>' +
+      `<p>${geoBodyText()}</p>` +
+      '<p>Roughly 30% of US healthcare spending is wasteful <a href="https://www.nih.gov/study">(source)</a>.</p>' +
+      '</body></html>'
+    const findings = auditAiReadiness('https://www.goinvo.com/vision/cost/', html)
+    expect(idsOf(findings)).not.toContain('geo:stats-uncited')
+  })
+
+  it('flags missing freshness when there is no visible date and no schema date', () => {
+    const html =
+      '<html><head><title>x</title></head><body><h1>Healthcare guidance</h1>' +
+      `<p>${geoBodyText()}</p></body></html>`
+    const findings = auditAiReadiness('https://www.goinvo.com/vision/guidance/', html)
+    const f = findings.find((x) => x.id === 'geo:freshness-missing')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('notice')
+  })
+
+  it('does NOT flag freshness when dateModified is present in schema', () => {
+    const html =
+      '<html><head><title>x</title>' +
+      '<script type="application/ld+json">{"@type":"Article","dateModified":"2026-01-01"}</script>' +
+      '</head><body><h1>Healthcare guidance</h1>' +
+      `<p>${geoBodyText()}</p></body></html>`
+    const findings = auditAiReadiness('https://www.goinvo.com/vision/guidance/', html)
+    expect(idsOf(findings)).not.toContain('geo:freshness-missing')
+  })
+
+  it('does not hold the homepage to the content-page GEO bar', () => {
+    const html = '<html><head><title>x</title></head><body><h1>GoInvo</h1><p>15% growth.</p></body></html>'
+    const findings = auditAiReadiness('https://www.goinvo.com/', html)
+    // No content-page findings on the homepage.
+    expect(idsOf(findings)).not.toContain('geo:stats-uncited')
+    expect(idsOf(findings)).not.toContain('geo:freshness-missing')
+  })
+})
+
+describe('auditEeat (eeat findings)', () => {
+  it('flags a content page with no named author', () => {
+    const html =
+      '<html><head><title>x</title></head><body><h1>Healthcare guidance</h1>' +
+      `<p>${geoBodyText()}</p>` +
+      '<p>We cite <a href="https://www.cdc.gov/data">the CDC</a>.</p></body></html>'
+    const findings = auditEeat('https://www.goinvo.com/vision/guidance/', html)
+    const f = findings.find((x) => x.id === 'eeat:author-missing')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('eeat')
+    expect(f?.severity).toBe('warning')
+  })
+
+  it('flags a content page with no authoritative citation', () => {
+    const html =
+      '<html><head><title>x</title></head><body><h1>Healthcare guidance</h1>' +
+      '<p class="byline">By Juhan Sonin</p>' +
+      `<p>${geoBodyText()}</p>` +
+      '<p>See <a href="https://example.com/blog">this blog</a>.</p></body></html>'
+    const findings = auditEeat('https://www.goinvo.com/vision/guidance/', html)
+    const f = findings.find((x) => x.id === 'eeat:citations-missing')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('warning')
+  })
+
+  it('does NOT flag missing citations when an authoritative source is linked', () => {
+    const html =
+      '<html><head><title>x</title></head><body><h1>Healthcare guidance</h1>' +
+      '<p class="byline">By Juhan Sonin</p>' +
+      `<p>${geoBodyText()}</p>` +
+      '<p>Per <a href="https://pubmed.ncbi.nlm.nih.gov/12345/">PubMed</a>.</p></body></html>'
+    const findings = auditEeat('https://www.goinvo.com/vision/guidance/', html)
+    expect(idsOf(findings)).not.toContain('eeat:citations-missing')
+    expect(idsOf(findings)).toContain('eeat:citations-present')
+  })
+})
+
+describe('auditAiCrawlerAccess (geo — graceful robots.txt audit)', () => {
+  const realFetch = globalThis.fetch
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    globalThis.fetch = realFetch
+  })
+
+  function stubRobots(body: string, status = 200) {
+    return vi.fn(async () => new Response(body, { status }))
+  }
+
+  it('errors when a search/citation bot (PerplexityBot) is fully disallowed', async () => {
+    vi.stubGlobal('fetch', stubRobots('User-agent: PerplexityBot\nDisallow: /\n'))
+    const findings = await auditAiCrawlerAccess('https://www.goinvo.com/')
+    const f = findings.find((x) => x.id === 'geo:ai-search-bot-blocked')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('geo')
+    expect(f?.severity).toBe('error')
+    expect(f?.what).toContain('PerplexityBot')
+  })
+
+  it('only notices (not errors) when a training bot (GPTBot) is disallowed', async () => {
+    vi.stubGlobal('fetch', stubRobots('User-agent: GPTBot\nDisallow: /\n'))
+    const findings = await auditAiCrawlerAccess('https://www.goinvo.com/')
+    const f = findings.find((x) => x.id === 'geo:ai-training-bot-blocked')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('notice')
+    expect(f?.what).toContain('GPTBot')
+    // It must NOT be escalated to the search-bot error.
+    expect(idsOf(findings)).not.toContain('geo:ai-search-bot-blocked')
+  })
+
+  it('returns the access-OK notice when nothing is blocked', async () => {
+    vi.stubGlobal('fetch', stubRobots('User-agent: *\nDisallow:\n'))
+    const findings = await auditAiCrawlerAccess('https://www.goinvo.com/')
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:ai-crawler-access-ok')
+  })
+
+  it('degrades to a graceful notice (no throw) when the robots fetch fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network down')
+      }),
+    )
+    const findings = await auditAiCrawlerAccess('https://www.goinvo.com/')
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:ai-crawler-access-unavailable')
+    expect(findings[0].severity).toBe('notice')
+  })
+
+  it('degrades to the graceful notice on a non-2xx robots response', async () => {
+    vi.stubGlobal('fetch', stubRobots('not found', 404))
+    const findings = await auditAiCrawlerAccess('https://www.goinvo.com/')
+    expect(findings[0].id).toBe('geo:ai-crawler-access-unavailable')
   })
 })
 
