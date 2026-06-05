@@ -55,11 +55,14 @@ function beaconExperimentEvent(name: string) {
 
 function ensureClientAnalyticsQueues() {
   window.dataLayer = window.dataLayer || []
-  window.gtag =
-    window.gtag ||
-    ((...args: unknown[]) => {
-      window.dataLayer?.push(args)
-    })
+  if (typeof window.gtag !== 'function') {
+    // Canonical gtag stub: queue the live `arguments` object (not a copied array)
+    // so GA replays events fired before the lazy-loaded library initializes.
+    window.gtag = function gtag() {
+      // eslint-disable-next-line prefer-rest-params
+      ;(window.dataLayer = window.dataLayer || []).push(arguments)
+    }
+  }
   window.va =
     window.va ||
     ((event: 'beforeSend' | 'event' | 'pageview', properties?: unknown) => {
