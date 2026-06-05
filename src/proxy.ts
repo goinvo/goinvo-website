@@ -53,6 +53,19 @@ export async function proxy(request: NextRequest) {
     secure: process.env.NODE_ENV === 'production',
   })
 
+  // Persist the assigned home-2026 variant in a JS-readable cookie so the
+  // canonical (CDN-cached) homepage can fire experiment_exposure client-side,
+  // independent of whether the rewrite path was served from cache.
+  const home2026Index = marketingExperimentFlags.findIndex((flag) => flag.key === 'home-2026-variant')
+  if (home2026Index >= 0) {
+    response.cookies.set('home-2026-variant', String(values[home2026Index] ?? 'control'), {
+      path: '/',
+      maxAge: visitorCookieMaxAge,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    })
+  }
+
   if (forcedVariant) {
     response.headers.set('x-goinvo-experiment-forced-variant', forcedVariant.variant)
     response.headers.set('x-robots-tag', 'noindex, nofollow')
