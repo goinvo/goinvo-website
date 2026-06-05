@@ -121,17 +121,25 @@ export async function GET(request: Request) {
   // a network round-trip with a low keyless quota, so only enable it for the
   // single ?url= mode, never the multi-page sweep.
   const includeCwv = Boolean(single)
+  // Conversion-rate checks read GA4 (sessions + key-events) for the landing
+  // page — a per-page network round-trip, and only meaningful on money pages —
+  // so only enable it for the single ?url= mode, never the multi-page sweep.
+  const includeConversion = Boolean(single)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
-    warnings.push('AI-crawler access (robots.txt) is included for single-page audits.')
+    warnings.push('AI-crawler access (robots.txt) and llms.txt are included for single-page audits.')
     warnings.push('Render check (raw HTML vs rendered page) is included for single-page audits.')
     warnings.push('Core Web Vitals (PageSpeed Insights — real-user field data) is included for single-page audits.')
+    warnings.push('Conversion-rate checks (GA4 conversion rate + form/CTA design) are included for single-page audits on money pages.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
     )
     warnings.push(
-      'AI-crawler access (robots.txt) is a site-wide check; pass ?url=<page> to include it once.',
+      'AI-crawler access (robots.txt) and llms.txt are site-wide checks; pass ?url=<page> to include them once.',
+    )
+    warnings.push(
+      'Conversion-rate checks (GA4) are a per-page money-page call; pass ?url=<page> to include them.',
     )
     warnings.push(
       'Render check (raw HTML vs rendered page) uses headless Chrome and is too slow for the sweep; pass ?url=<page> to include it.',
@@ -183,7 +191,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv })
+        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
