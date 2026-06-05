@@ -174,6 +174,37 @@ type AuditData = {
   warnings?: string[]
 }
 
+// --- Site crawl (Phase 2 crawl-graph; see docs/seo-suite-revamp-plan.md §12) ---
+// Mirrors the CrawlStats shape from src/lib/marketing/seoCrawl.ts and the
+// { generatedAt, findings, stats } response from
+// src/app/api/marketing/seo-crawl/route.ts. Crawl findings reuse the same
+// SeoFinding model (local `Finding` type) — all category 'technical'.
+type CrawlStats = {
+  seedUrl: string
+  pagesCrawled: number
+  pagesAttempted: number
+  maxPages: number
+  capped: boolean
+  maxDepthReached: number
+  sitemapUrlCount: number
+  sitemapAvailable: boolean
+  internalLinksSeen: number
+  brokenLinks: number
+  redirectChains: number
+  orphanPages: number
+  underLinkedPages: number
+  genericAnchorLinks: number
+  tooDeepPages: number
+  sitemapNotCrawled: number
+  crawledNotInSitemap: number
+}
+type CrawlData = {
+  generatedAt?: string
+  error?: string
+  findings?: Finding[]
+  stats?: CrawlStats | null
+}
+
 type SeoWorkspaceProps = { client?: SanityClient }
 
 const FIX_COLORS: Record<string, string> = { ranking: '#2276fc', ctr: '#d98a00', maintain: '#7d8694' }
@@ -313,6 +344,13 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   // Ref on the Page-audit card so a row-level "Audit" can scroll it into view.
   const auditRef = useRef<HTMLDivElement | null>(null)
 
+  // --- Site crawl state (Phase 2 crawl-graph findings) ---
+  const [crawl, setCrawl] = useState<CrawlData | null>(null)
+  const [crawlLoading, setCrawlLoading] = useState(false)
+  // Expanded-finding key for the crawl section (separate from the audit's so
+  // expanding a crawl finding never collapses an audit finding, and vice versa).
+  const [openCrawlFinding, setOpenCrawlFinding] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -378,6 +416,25 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       setAudit({ error: 'Could not run the page audit.' })
     } finally {
       setAuditLoading(false)
+    }
+  }, [])
+
+  // Run the Phase-2 site crawl. Walks the internal link graph in one bounded
+  // breadth-first pass (broken links, redirect chains, orphans, click-depth,
+  // under-linked, generic anchors). Slow (~2 min) — the button shows a clear
+  // loading state. Never crashes: a thrown error becomes an { error } payload.
+  const runCrawl = useCallback(async () => {
+    setCrawlLoading(true)
+    setCrawl(null)
+    setOpenCrawlFinding(null)
+    setPromoted({})
+    try {
+      const res = await fetch('/api/marketing/seo-crawl')
+      setCrawl((await res.json()) as CrawlData)
+    } catch {
+      setCrawl({ error: 'Could not run the site crawl.' })
+    } finally {
+      setCrawlLoading(false)
     }
   }, [])
 
@@ -682,6 +739,228 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     ))}
                   </div>
                 )}
+              </Fragment>
+            )
+          })()
+        )}
+      </div>
+
+      {/* --- Site crawl (Phase 2: walk the internal link graph) --- */}
+      <div style={s.card}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>Site crawl</div>
+        <p style={{ ...s.sub, marginBottom: 10 }}>
+          Walk the internal link graph from the sitemap + homepage to find graph-level issues a per-page audit can&apos;t
+          see: broken internal links, redirect chains, orphan and under-linked pages, pages buried too deep, and generic
+          link text.
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <button type="button" style={s.btn} onClick={() => void runCrawl()} disabled={crawlLoading}>
+            {crawlLoading ? 'Crawling...' : 'Run crawl'}
+          </button>
+        </div>
+
+        {crawlLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--card-muted-fg-color)', padding: '4px 0' }}>
+            <style>{'@keyframes seo-audit-spin{to{transform:rotate(360deg)}}'}</style>
+            <span
+              aria-hidden
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: '50%',
+                border: '2px solid var(--card-border-color)',
+                borderTopColor: '#2276fc',
+                display: 'inline-block',
+                animation: 'seo-audit-spin 0.7s linear infinite',
+              }}
+            />
+            <span>Crawling the site… this can take a couple of minutes.</span>
+          </div>
+        )}
+
+        {!crawlLoading && crawl?.error && <div style={{ color: SEVERITY_COLORS.error }}>{crawl.error}</div>}
+
+        {!crawlLoading && crawl && !crawl.error && !crawl.findings?.length && (
+          <div style={{ color: SEVERITY_COLORS.notice }}>
+            No internal-link issues found — the crawl reached the site cleanly.
+          </div>
+        )}
+
+        {!crawlLoading && crawl && !crawl.error && !!crawl.findings?.length && (
+          (() => {
+            const findings = crawl.findings
+            const stats = crawl.stats
+            // Quick-wins ranked across all crawl findings — surfaced inline as
+            // a ⚡ badge, exactly like the page-audit section (no separate lane).
+            const quickWinIds = new Set(
+              rankQuickWins(findings)
+                .slice(0, 3)
+                .map((f) => f.id),
+            )
+            const totals = SEVERITY_ORDER.map((sev) => ({
+              sev,
+              n: findings.filter((f) => f.severity === sev).length,
+            }))
+
+            const crawlFindingRow = (finding: Finding, sev: string) => {
+              // Prefix the promote key so a crawl finding never collides with an
+              // audit finding of the same id in the shared `promoted` map.
+              const key = `crawl|${sev}|${finding.id}`
+              const open = openCrawlFinding === key
+              const state = promoted[key]
+              const url = finding.affectedUrls[0] || stats?.seedUrl || ''
+              return (
+                <Fragment key={key}>
+                  <tr style={{ cursor: 'pointer' }} onClick={() => setOpenCrawlFinding(open ? null : key)}>
+                    <td style={s.td}>
+                      <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+                        <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
+                        {quickWinIds.has(finding.id) && (
+                          <span style={badge('#7b2ff7')} title="One of the top quick wins — do these first">
+                            ⚡ Quick win
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                    <td style={s.td}>
+                      <span
+                        style={{
+                          ...badge('#7d8694'),
+                          background: 'transparent',
+                          color: 'var(--card-muted-fg-color)',
+                          border: '1px solid var(--card-border-color)',
+                        }}
+                      >
+                        {finding.category}
+                      </span>
+                    </td>
+                    <td style={s.td}>
+                      {open ? '▾ ' : '▸ '}
+                      {finding.what}
+                      {finding.urlsAffected > 1 ? (
+                        <span style={{ marginLeft: 6, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                          ({finding.urlsAffected} pages)
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                  {open && (
+                    <tr>
+                      <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={3}>
+                        <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                          <div style={{ marginBottom: 6 }}>
+                            <strong>What.</strong> {finding.what}
+                          </div>
+                          <div style={{ marginBottom: 6 }}>
+                            <strong>Why it matters.</strong> {finding.why}
+                          </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <strong>How to fix.</strong> {finding.howToFix}
+                          </div>
+                          <div style={{ marginBottom: 10, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                            Affected:{' '}
+                            {url ? (
+                              <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                {url}
+                              </a>
+                            ) : (
+                              '—'
+                            )}
+                            {' · '}source: {finding.source}
+                          </div>
+                          <button
+                            type="button"
+                            style={{ ...s.btn, opacity: !client || state === 'done' ? 0.6 : 1 }}
+                            disabled={!client || state === 'saving' || state === 'done'}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              void promote(key, finding)
+                            }}
+                          >
+                            {state === 'done'
+                              ? 'Added to backlog ✓'
+                              : state === 'saving'
+                                ? 'Adding...'
+                                : state === 'error'
+                                  ? 'Retry — add to backlog'
+                                  : 'Promote to backlog'}
+                          </button>
+                          {!client && (
+                            <span style={{ marginLeft: 8, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                              (connect a client to enable)
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            }
+
+            return (
+              <Fragment>
+                {/* Compact coverage + counts summary from stats. */}
+                {stats && (
+                  <div
+                    style={{
+                      ...s.sub,
+                      marginBottom: 14,
+                      fontSize: 11,
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid var(--card-border-color)',
+                      background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))',
+                    }}
+                  >
+                    Crawled <strong>{stats.pagesCrawled.toLocaleString()}</strong> page
+                    {stats.pagesCrawled === 1 ? '' : 's'} ({stats.internalLinksSeen.toLocaleString()} internal links,
+                    max depth {stats.maxDepthReached}
+                    {stats.capped ? ', capped' : ''}) · {stats.brokenLinks} broken link
+                    {stats.brokenLinks === 1 ? '' : 's'} · {stats.redirectChains} redirect chain
+                    {stats.redirectChains === 1 ? '' : 's'} · {stats.orphanPages} orphan
+                    {stats.orphanPages === 1 ? '' : 's'} · {stats.underLinkedPages} under-linked ·{' '}
+                    {stats.tooDeepPages} too deep · {stats.genericAnchorLinks} generic anchor
+                    {stats.genericAnchorLinks === 1 ? '' : 's'}
+                    {stats.sitemapAvailable
+                      ? ` · ${stats.sitemapNotCrawled} sitemap page${stats.sitemapNotCrawled === 1 ? '' : 's'} not reached`
+                      : ' · sitemap unavailable'}
+                  </div>
+                )}
+
+                {/* Severity totals strip (mirrors the audit Health Score row). */}
+                <div style={{ display: 'flex', gap: 14, marginBottom: 14, fontSize: 12.5 }}>
+                  {totals.map((t) => (
+                    <span key={t.sev}>
+                      <span style={{ ...badge(SEVERITY_COLORS[t.sev]), marginRight: 5 }}>{t.n}</span>
+                      {SEVERITY_LABELS[t.sev]}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Findings grouped by severity (quick wins inline via ⚡). */}
+                {SEVERITY_ORDER.map((sev) => {
+                  const group = findings.filter((f) => f.severity === sev)
+                  if (!group.length) return null
+                  return (
+                    <div key={sev} style={{ marginBottom: 14 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                        <span style={{ ...badge(SEVERITY_COLORS[sev]), marginRight: 6 }}>{group.length}</span>
+                        {SEVERITY_LABELS[sev]}
+                      </div>
+                      <table style={s.table}>
+                        <thead>
+                          <tr>
+                            <th style={s.th}>Severity</th>
+                            <th style={s.th}>Category</th>
+                            <th style={s.th}>Issue (click for the what / why / how)</th>
+                          </tr>
+                        </thead>
+                        <tbody>{group.map((f) => crawlFindingRow(f, sev))}</tbody>
+                      </table>
+                    </div>
+                  )
+                })}
               </Fragment>
             )
           })()
