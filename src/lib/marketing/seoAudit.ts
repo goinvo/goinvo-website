@@ -5,6 +5,7 @@ import {
   auditEeat,
   auditAiCrawlerAccess,
 } from './seoAuditGeo'
+import { auditRenderGap } from './seoAuditRender'
 
 // Re-export the indexation layer so callers can import everything from the
 // engine entry point. (seoAuditIndexation imports the finding model + weights
@@ -21,6 +22,17 @@ export {
   mapRobotsAccess,
   parseRobots,
 } from './seoAuditGeo'
+
+// Re-export the render-diff pack (raw HTML vs hydrated DOM) so callers can pull
+// the whole engine from this one entry point. Same import-only cycle as the
+// other packs — seoAuditRender imports the finding model + fetchPageHtml from
+// here, resolved lazily at call time. Puppeteer is slow, so auditPage only runs
+// it behind opts.includeRenderDiff (the route enables it for single-page mode).
+export {
+  auditRenderGap,
+  mapRenderGap,
+  fetchRenderedHtml,
+} from './seoAuditRender'
 
 // SEO audit engine — Phase 1 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md). This is the "actually inspect the page"
@@ -432,6 +444,13 @@ function classifyPageKind(url: string, root: HTMLElement): 'home' | 'faq' | 'con
 // which is a citation magnet AI engines rarely see marked up in this space?
 // Structural signal only: the URL path or the visible body copy. (§12 says add
 // Dataset-schema recommendations for exactly these pages.)
+//
+// Tightened (§12 correction): the old version over-flagged the HOMEPAGE, which
+// naturally mentions GoInvo's open-source data work in its overview copy. A
+// genuine dataset page lives under a content route (/vision/ or /work/) — the
+// determinants essay (/vision/determinants-of-health) is the canonical example
+// — OR carries an unmistakable in-content data signal. The homepage / root path
+// is exempt outright: it is a brand overview, not a citable dataset.
 function looksLikeDataPage(url: string, root: HTMLElement): boolean {
   let path = url
   try {
@@ -439,20 +458,36 @@ function looksLikeDataPage(url: string, root: HTMLElement): boolean {
   } catch {
     // keep raw url as path
   }
-  if (/data|visuali[sz]ation|open-source|opensource|dataset|determinants/i.test(path)) {
-    return true
-  }
+  const normalized = path.replace(/\/+$/, '')
+
+  // The homepage / root is a brand overview, never a dataset page — exempt it
+  // outright so its open-data mentions don't trip this.
+  if (normalized === '' || normalized === '/') return false
+
+  // A genuine content/data page lives under one of GoInvo's article routes.
+  const isContentRoute = /^\/(vision|work)\//.test(path)
+
+  // The URL path itself names data/visualization/open-source/dataset — a strong
+  // signal on its own, but only when it's NOT the root (handled above).
+  const pathNamesData =
+    /data|visuali[sz]ation|open-source|opensource|dataset|determinants/i.test(path)
+
   const body = root.querySelector('body') || root
   const text = collapse(body.text).toLowerCase()
-  // Require two distinct data signals in the copy so a one-off mention of the
-  // word "data" on an unrelated page doesn't trip this.
+  // Distinct data signals in the copy; two is the "strong in-content data
+  // signal" bar so a one-off mention of the word "data" doesn't qualify.
   const signals = [
     /\bdata\s?set\b|\bdatasets\b/.test(text),
     /\bvisuali[sz]ation/.test(text),
     /\bopen[-\s]?source\b/.test(text),
     /\bdeterminants of health\b/.test(text),
   ].filter(Boolean).length
-  return signals >= 2
+
+  // Fire when the page is on a content route AND looks like data (its path names
+  // it, or the copy carries two data signals), OR — off a content route — only
+  // when the path itself unambiguously names a dataset and the copy backs it up.
+  if (isContentRoute) return pathNamesData || signals >= 2
+  return pathNamesData && signals >= 2
 }
 
 // Collect the top-level schema OBJECTS (not just @type strings) so property
@@ -768,6 +803,12 @@ export type AuditPageOptions = {
   // only enables it for the single ?url= mode — running it once per page in the
   // multi-page sweep would just re-fetch the same robots.txt N times.
   includeAiCrawlerAccess?: boolean
+  // Opt-in: also run the render-diff (raw HTML vs hydrated DOM) check. It drives
+  // the page through headless Chrome (Puppeteer), so it's by far the slowest
+  // check — OFF by default. The route enables it for the single ?url= mode only;
+  // the multi-page sweep keeps it off. Graceful: degrades to one notice, never
+  // throws.
+  includeRenderDiff?: boolean
 }
 
 export async function auditPage(
@@ -826,6 +867,13 @@ export async function auditPage(
       }
     })()
     findings.push(...(await auditAiCrawlerAccess(siteUrl)))
+  }
+
+  // Opt-in render-diff (raw HTML vs headless-Chrome rendered DOM). Puppeteer is
+  // slow, so the route only enables it for single-page audits. Graceful — a
+  // launch/timeout/throw degrades to a single notice, never a throw.
+  if (opts.includeRenderDiff) {
+    findings.push(...(await auditRenderGap(url)))
   }
 
   return { url, findings, healthScore: computeHealthScore(findings, 1) }

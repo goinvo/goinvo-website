@@ -5,9 +5,11 @@ import {
   auditEeat,
   auditIndexation,
   auditOnPage,
+  auditRenderGap,
   auditStructuredData,
   computeHealthScore,
   mapInspection,
+  mapRenderGap,
   type SeoFinding,
 } from '@/lib/marketing/seoAudit'
 
@@ -247,6 +249,28 @@ describe('auditStructuredData', () => {
     const html = '<html><head><title>x</title></head><body><h1>Page</h1></body></html>'
     const findings = auditStructuredData('https://www.goinvo.com/about/', html)
     expect(idsOf(findings)).toContain('structured-data:schema-breadcrumb-missing')
+  })
+
+  // --- §12 Dataset tighten: the homepage must NOT get a Dataset notice, but a
+  // genuine data essay (the determinants page) still must. Exercised through
+  // auditStructuredData since looksLikeDataPage is an internal helper.
+  it('does NOT recommend Dataset schema on the homepage even when its copy mentions open data', () => {
+    // Homepage overview copy that name-drops GoInvo's open-source data + viz —
+    // exactly the language that used to over-flag the root path.
+    const html =
+      '<html><head><title>GoInvo — Healthcare Design Studio</title></head><body><h1>GoInvo</h1>' +
+      '<p>GoInvo is a healthcare design studio. We build open-source datasets and data visualizations ' +
+      'of the social determinants of health for clinicians, patients, and researchers.</p></body></html>'
+    const findings = auditStructuredData('https://www.goinvo.com/', html)
+    expect(idsOf(findings)).not.toContain('structured-data:schema-dataset-missing')
+  })
+
+  it('STILL recommends Dataset schema on the determinants-of-health essay', () => {
+    const html =
+      '<html><head><title>Determinants of Health</title></head><body><h1>Determinants of Health</h1>' +
+      '<p>An open-source dataset and visualization of the social determinants of health.</p></body></html>'
+    const findings = auditStructuredData('https://www.goinvo.com/vision/determinants-of-health/', html)
+    expect(idsOf(findings)).toContain('structured-data:schema-dataset-missing')
   })
 })
 
@@ -660,6 +684,97 @@ describe('auditAiCrawlerAccess (geo — graceful robots.txt audit)', () => {
     vi.stubGlobal('fetch', stubRobots('not found', 404))
     const findings = await auditAiCrawlerAccess('https://www.goinvo.com/')
     expect(findings[0].id).toBe('geo:ai-crawler-access-unavailable')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Render-diff pack — raw HTML vs hydrated DOM. mapRenderGap is the pure mapper
+// (no browser, no fetch). auditRenderGap is tested with injected raw/rendered
+// HTML sources so we never launch headless Chrome: the `rendered` stub returns
+// canned post-JavaScript HTML, or throws to exercise the graceful path.
+// ---------------------------------------------------------------------------
+
+// A bare server shell — almost no body text, no H1, no JSON-LD, no body links —
+// standing in for what a no-JavaScript crawler sees on a client-rendered page.
+const RAW_SHELL =
+  '<!doctype html><html><head><title>GoInvo</title></head><body><div id="root"></div></body></html>'
+
+// The same page AFTER hydration: real heading, lots of prose, structured data,
+// and in-content links — everything that only exists once JavaScript runs.
+const RENDERED_FULL =
+  '<!doctype html><html><head><title>GoInvo</title>' +
+  '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Healthcare data"}</script>' +
+  '</head><body><main><h1>Healthcare Data Visualization</h1>' +
+  '<p>GoInvo designs open-source healthcare software and data tools for clinicians and patients. ' +
+  'We publish original datasets and visualizations of the social determinants of health, and we ' +
+  'build human-centered software for hospitals, researchers, and the people they serve every day.</p>' +
+  '<p>See our <a href="/vision/determinants-of-health/">determinants of health</a> work.</p>' +
+  '</main></body></html>'
+
+describe('mapRenderGap (pure raw-vs-rendered comparison)', () => {
+  it('flags body text, H1, structured data, and links that exist only after render', () => {
+    const findings = mapRenderGap(URL, RAW_SHELL, RENDERED_FULL)
+    const ids = idsOf(findings)
+    expect(ids).toContain('geo:text-only-after-render')
+    expect(ids).toContain('geo:h1-only-after-render')
+    expect(ids).toContain('geo:schema-only-after-render')
+    expect(ids).toContain('geo:links-only-after-render')
+    // §3/§5: text/H1/schema gaps are warnings; the link gap is the softer notice.
+    expect(findings.find((f) => f.id === 'geo:text-only-after-render')?.severity).toBe('warning')
+    expect(findings.find((f) => f.id === 'geo:h1-only-after-render')?.severity).toBe('warning')
+    expect(findings.find((f) => f.id === 'geo:schema-only-after-render')?.severity).toBe('warning')
+    expect(findings.find((f) => f.id === 'geo:links-only-after-render')?.severity).toBe('notice')
+    for (const f of findings) {
+      expect(f.category).toBe('geo')
+      expect(f.affectedUrls).toEqual([URL])
+    }
+  })
+
+  it('produces no render-gap findings when raw and rendered already match', () => {
+    const findings = mapRenderGap(URL, RENDERED_FULL, RENDERED_FULL)
+    expect(findings).toEqual([])
+  })
+})
+
+describe('auditRenderGap (graceful — never throws)', () => {
+  it('maps a stubbed rendered source where rendered text >> raw → warning', async () => {
+    const findings = await auditRenderGap(URL, {
+      raw: async () => RAW_SHELL,
+      rendered: async () => RENDERED_FULL,
+    })
+    const f = findings.find((x) => x.id === 'geo:text-only-after-render')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('geo')
+    expect(f?.severity).toBe('warning')
+    // §6: the designer-facing copy must spell out the no-JavaScript risk.
+    expect(f?.why.toLowerCase()).toContain('in the initial html')
+    expect(f?.why.toLowerCase()).toContain("don’t run javascript".toLowerCase())
+  })
+
+  it('degrades to a single graceful notice (no throw) when the renderer throws', async () => {
+    const findings = await auditRenderGap(URL, {
+      raw: async () => RAW_SHELL,
+      rendered: async () => {
+        throw new Error('headless Chrome failed to launch')
+      },
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:render-check-unavailable')
+    expect(findings[0].severity).toBe('notice')
+    // The diagnostic reason is surfaced for debugging.
+    expect(findings[0].howToFix).toContain('headless Chrome failed to launch')
+  })
+
+  it('degrades to the graceful notice when the raw fetch throws', async () => {
+    const findings = await auditRenderGap(URL, {
+      raw: async () => {
+        throw new Error('raw fetch 500')
+      },
+      rendered: async () => RENDERED_FULL,
+    })
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:render-check-unavailable')
+    expect(findings[0].severity).toBe('notice')
   })
 })
 
