@@ -345,13 +345,32 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           </button>
         </div>
 
-        {audit?.error && <div style={{ color: SEVERITY_COLORS.error }}>{audit.error}</div>}
+        {auditLoading && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--card-muted-fg-color)', padding: '4px 0' }}>
+            <style>{'@keyframes seo-audit-spin{to{transform:rotate(360deg)}}'}</style>
+            <span
+              aria-hidden
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: '50%',
+                border: '2px solid var(--card-border-color)',
+                borderTopColor: '#2276fc',
+                display: 'inline-block',
+                animation: 'seo-audit-spin 0.7s linear infinite',
+              }}
+            />
+            <span>Auditing {auditUrl || 'the top key pages'}…</span>
+          </div>
+        )}
 
-        {audit && !audit.error && !audit.results?.length && (
+        {!auditLoading && audit?.error && <div style={{ color: SEVERITY_COLORS.error }}>{audit.error}</div>}
+
+        {!auditLoading && audit && !audit.error && !audit.results?.length && (
           <div style={{ color: 'var(--card-muted-fg-color)' }}>No pages were audited.</div>
         )}
 
-        {audit && !audit.error && !!audit.results?.length && (
+        {!auditLoading && audit && !audit.error && !!audit.results?.length && (
           (() => {
             const results = audit.results
             const isSweep = results.length > 1
@@ -359,9 +378,13 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
             const allFindings = results.flatMap((r) =>
               r.findings.map((f) => ({ finding: f, url: f.affectedUrls[0] || r.url, pageUrl: r.url })),
             )
-            const quickWins = rankQuickWins(allFindings.map((x) => x.finding))
-              .slice(0, 5)
-              .map((f) => allFindings.find((x) => x.finding === f)!)
+            // Top-3 quick-win finding ids — surfaced inline as a ⚡ badge in the
+            // severity groups (no standalone lane, so each finding renders once).
+            const quickWinIds = new Set(
+              rankQuickWins(allFindings.map((x) => x.finding))
+                .slice(0, 3)
+                .map((f) => f.id),
+            )
             const avg = audit.summary?.avgHealthScore ?? results[0].healthScore.score
             const avgBand: HealthScore['band'] = avg <= 30 ? 'Weak' : avg <= 70 ? 'Fair' : avg <= 90 ? 'Good' : 'Excellent'
             const totals = SEVERITY_ORDER.map((sev) => ({
@@ -380,7 +403,14 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 <Fragment key={key}>
                   <tr style={{ cursor: 'pointer' }} onClick={() => setOpenFinding(open ? null : key)}>
                     <td style={s.td}>
-                      <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
+                      <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
+                        <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
+                        {quickWinIds.has(finding.id) && (
+                          <span style={badge('#7b2ff7')} title="One of the top quick wins — do these first">
+                            ⚡ Quick win
+                          </span>
+                        )}
+                      </span>
                     </td>
                     <td style={s.td}>
                       <span
@@ -520,29 +550,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                   </div>
                 )}
 
-                {/* Quick-wins lane */}
-                {!!quickWins.length && (
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Quick wins — do these first</div>
-                    <div style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
-                      The easiest high-value fixes, ranked by severity then impact.
-                    </div>
-                    <table style={s.table}>
-                      <thead>
-                        <tr>
-                          <th style={s.th}>Severity</th>
-                          <th style={s.th}>Category</th>
-                          <th style={s.th}>Fix (click for the what / why / how)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {quickWins.map((x) => findingRow(x.finding, x.url, x.pageUrl, 'quick'))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Findings grouped by severity */}
+                {/* Findings grouped by severity (single source — quick wins are
+                    surfaced inline via the ⚡ badge, not a separate lane). */}
                 {SEVERITY_ORDER.map((sev) => {
                   const group = allFindings.filter((x) => x.finding.severity === sev)
                   if (!group.length) return null
