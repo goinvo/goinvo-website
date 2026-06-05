@@ -24,6 +24,7 @@ type ExperimentRow = {
   title?: string
   flagKey?: string
   targetPath?: string
+  measurementStartDate?: string
   variants?: Array<{ key?: string; label?: string }>
   trackedMetrics?: Array<{ eventName?: string; source?: string }>
 }
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
 
   const experiments = await client.fetch<ExperimentRow[]>(
     `*[_type == "marketingExperiment" && status in ["running", "reviewing"]${flagKey ? ' && flagKey == $flagKey' : ''}]{
-      _id, title, flagKey, targetPath, variants[]{key, label}, trackedMetrics[]{eventName, source}
+      _id, title, flagKey, targetPath, measurementStartDate, variants[]{key, label}, trackedMetrics[]{eventName, source}
     }`,
     flagKey ? { flagKey } : {},
   )
@@ -84,7 +85,10 @@ export async function GET(request: Request) {
     let rows
     try {
       rows = await ga4RunReport(token, GA4_PROPERTY_ID, {
-        dateRanges: [{ startDate: `${days}daysAgo`, endDate: 'today' }],
+        // Only count from the experiment's measurement-start date (set when the
+        // instrumentation was fixed) so pre-fix, unreliable data never distorts
+        // the readout. Falls back to the rolling window if unset.
+        dateRanges: [{ startDate: exp.measurementStartDate || `${days}daysAgo`, endDate: 'today' }],
         dimensions: [{ name: 'eventName' }, { name: 'customEvent:variant' }, { name: 'pagePath' }],
         // totalUsers (unique users), NOT eventCount — so the readout is a true
         // per-visitor conversion rate (converting users / exposed users) that
