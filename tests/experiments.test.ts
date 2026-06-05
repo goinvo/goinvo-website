@@ -45,6 +45,7 @@ vi.mock('@/sanity/lib/live', () => ({
     data: [
       {
         name: 'Ada GoInvo',
+        image: { asset: { _ref: 'image-ada' } },
       },
     ],
   })),
