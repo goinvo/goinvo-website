@@ -116,6 +116,7 @@ describe('Marketing CMS schemas', () => {
       'dashboard',
       'attention',
       'research',
+      'seo',
       'strategy',
       'abTesting',
       'calendar',
@@ -129,6 +130,7 @@ describe('Marketing CMS schemas', () => {
     expect(PRIMARY_MARKETING_VIEW_IDS).toEqual([
       'dashboard',
       'research',
+      'seo',
       'strategy',
       'abTesting',
       'calendar',
