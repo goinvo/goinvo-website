@@ -144,15 +144,31 @@ describe('crawlSite — bounded BFS over a fake site', () => {
     expect(f?.affectedUrls).toContain(`${ORIGIN}/chain-start`)
   })
 
-  it('detects an orphan page (in sitemap, no inbound links)', async () => {
+  it('detects an orphan page (in sitemap, no inbound links) on a COMPLETE crawl', async () => {
     vi.stubGlobal('fetch', stubSiteFetch())
-    const { findings } = await crawlSite()
+    // Default maxPages (120) far exceeds the ~10-page fake site, so the crawl
+    // runs to completion — only then is "no inbound links" trustworthy.
+    const { findings, stats } = await crawlSite()
+    expect(stats.capped).toBe(false)
     const f = findings.find((x) => x.id === 'technical:crawl-orphan-pages')
     expect(f).toBeDefined()
     expect(f?.severity).toBe('warning')
     expect(f?.affectedUrls).toContain(`${ORIGIN}/orphan`)
     // A page WITH inbound links must NOT be reported as an orphan.
     expect(f?.affectedUrls).not.toContain(`${ORIGIN}/work`)
+  })
+
+  it('does NOT report orphans on a CAPPED crawl (un-reached pages are not orphans)', async () => {
+    vi.stubGlobal('fetch', stubSiteFetch())
+    // Cap below the crawlable page count so the crawl stops early. Un-reached
+    // sitemap URLs would look like orphans (zero inbound links seen), but that
+    // is a false positive — the finding must be suppressed entirely when capped.
+    const { findings, stats } = await crawlSite({ maxPages: 2 })
+    expect(stats.capped).toBe(true)
+    expect(idsOf(findings)).not.toContain('technical:crawl-orphan-pages')
+    // The sitemap-reconciliation finding is suppressed the same way, for the
+    // same reason — both require a complete crawl.
+    expect(idsOf(findings)).not.toContain('technical:crawl-sitemap-not-crawled')
   })
 
   it('detects excessive click-depth (>3 clicks from the homepage)', async () => {
