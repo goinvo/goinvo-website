@@ -6,6 +6,7 @@ import {
   auditAiCrawlerAccess,
 } from './seoAuditGeo'
 import { auditRenderGap } from './seoAuditRender'
+import { auditCwv } from './seoAuditCwv'
 
 // Re-export the indexation layer so callers can import everything from the
 // engine entry point. (seoAuditIndexation imports the finding model + weights
@@ -33,6 +34,14 @@ export {
   mapRenderGap,
   fetchRenderedHtml,
 } from './seoAuditRender'
+
+// Re-export the Core Web Vitals pack (CrUX field data via the free PageSpeed
+// Insights API, with a Lighthouse lab fallback) so callers can pull the whole
+// engine from this one entry point. Same import-only cycle as the other packs —
+// seoAuditCwv imports the finding model + weights from here, resolved lazily at
+// call time. It's a network round-trip to Google, so auditPage only runs it
+// behind opts.includeCwv (the route enables it for single-page mode).
+export { auditCwv, mapCwv } from './seoAuditCwv'
 
 // SEO audit engine — Phase 1 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md). This is the "actually inspect the page"
@@ -809,6 +818,13 @@ export type AuditPageOptions = {
   // the multi-page sweep keeps it off. Graceful: degrades to one notice, never
   // throws.
   includeRenderDiff?: boolean
+  // Opt-in: also run the Core Web Vitals check. It's a network round-trip to
+  // Google's PageSpeed Insights API (CrUX field data as PRIMARY, with a
+  // Lighthouse lab fallback), so it's OFF by default. The route enables it for
+  // the single ?url= mode only — the multi-page sweep keeps it off to avoid N
+  // PageSpeed calls (and its low keyless quota). Graceful: degrades to one
+  // notice, never throws.
+  includeCwv?: boolean
 }
 
 export async function auditPage(
@@ -874,6 +890,14 @@ export async function auditPage(
   // launch/timeout/throw degrades to a single notice, never a throw.
   if (opts.includeRenderDiff) {
     findings.push(...(await auditRenderGap(url)))
+  }
+
+  // Opt-in Core Web Vitals (PageSpeed Insights — CrUX field data as primary,
+  // Lighthouse lab as fallback). It's a network round-trip to Google, so the
+  // route only enables it for single-page audits. Graceful — a non-2xx /
+  // timeout / throw degrades to a single notice, never a throw.
+  if (opts.includeCwv) {
+    findings.push(...(await auditCwv(url)))
   }
 
   return { url, findings, healthScore: computeHealthScore(findings, 1) }
