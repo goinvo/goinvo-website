@@ -1,10 +1,26 @@
 import { parse, type HTMLElement } from 'node-html-parser'
 import { auditIndexation } from './seoAuditIndexation'
+import {
+  auditAiReadiness,
+  auditEeat,
+  auditAiCrawlerAccess,
+} from './seoAuditGeo'
 
 // Re-export the indexation layer so callers can import everything from the
 // engine entry point. (seoAuditIndexation imports the finding model + weights
 // from here; the cycle is import-only and resolved lazily at call time.)
 export { auditIndexation, mapInspection } from './seoAuditIndexation'
+
+// Re-export the GEO / AI-readiness pack so callers (route + tests) can import
+// the whole engine from this one entry point. Same import-only cycle as the
+// indexation layer (seoAuditGeo imports the finding model + weights from here).
+export {
+  auditAiReadiness,
+  auditEeat,
+  auditAiCrawlerAccess,
+  mapRobotsAccess,
+  parseRobots,
+} from './seoAuditGeo'
 
 // SEO audit engine — Phase 1 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md). This is the "actually inspect the page"
@@ -412,6 +428,64 @@ function classifyPageKind(url: string, root: HTMLElement): 'home' | 'faq' | 'con
   return 'content'
 }
 
+// Does this page look like a dataset / data visualization — GoInvo's open data,
+// which is a citation magnet AI engines rarely see marked up in this space?
+// Structural signal only: the URL path or the visible body copy. (§12 says add
+// Dataset-schema recommendations for exactly these pages.)
+function looksLikeDataPage(url: string, root: HTMLElement): boolean {
+  let path = url
+  try {
+    path = new URL(url).pathname
+  } catch {
+    // keep raw url as path
+  }
+  if (/data|visuali[sz]ation|open-source|opensource|dataset|determinants/i.test(path)) {
+    return true
+  }
+  const body = root.querySelector('body') || root
+  const text = collapse(body.text).toLowerCase()
+  // Require two distinct data signals in the copy so a one-off mention of the
+  // word "data" on an unrelated page doesn't trip this.
+  const signals = [
+    /\bdata\s?set\b|\bdatasets\b/.test(text),
+    /\bvisuali[sz]ation/.test(text),
+    /\bopen[-\s]?source\b/.test(text),
+    /\bdeterminants of health\b/.test(text),
+  ].filter(Boolean).length
+  return signals >= 2
+}
+
+// Collect the top-level schema OBJECTS (not just @type strings) so property
+// validation can read required fields like headline/author/datePublished. Walks
+// the same @graph / array / nested shape collectTypes does, but keeps the object
+// whenever it carries an @type, keyed by its first @type for quick lookup.
+function collectObjectsByType(node: unknown, out: Map<string, Record<string, unknown>>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectObjectsByType(item, out)
+    return
+  }
+  if (node && typeof node === 'object') {
+    const obj = node as Record<string, unknown>
+    const t = obj['@type']
+    const types: string[] = []
+    if (typeof t === 'string') types.push(t)
+    else if (Array.isArray(t)) for (const v of t) if (typeof v === 'string') types.push(v)
+    for (const type of types) if (!out.has(type)) out.set(type, obj)
+    if (Array.isArray(obj['@graph'])) collectObjectsByType(obj['@graph'], out)
+  }
+}
+
+// Is a JSON-LD property present and non-empty (string, object, or array)?
+function hasProp(obj: Record<string, unknown> | undefined, key: string): boolean {
+  if (!obj) return false
+  const v = obj[key]
+  if (v == null) return false
+  if (typeof v === 'string') return v.trim().length > 0
+  if (Array.isArray(v)) return v.length > 0
+  if (typeof v === 'object') return Object.keys(v as object).length > 0
+  return true
+}
+
 export function auditStructuredData(url: string, html: string): SeoFinding[] {
   const findings: SeoFinding[] = []
   const detectedAt = new Date().toISOString()
@@ -442,6 +516,7 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
 
   const blocks = root.querySelectorAll('script[type="application/ld+json"]')
   const types = new Set<string>()
+  const objectsByType = new Map<string, Record<string, unknown>>()
   let parsedOk = 0
 
   blocks.forEach((block, i) => {
@@ -451,6 +526,7 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
       const data = JSON.parse(raw)
       parsedOk++
       collectTypes(data, types)
+      collectObjectsByType(data, objectsByType)
     } catch (e) {
       const reason = e instanceof Error ? e.message : 'unknown parse error'
       findings.push(
@@ -482,6 +558,24 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
     )
   }
 
+  // Organization is present — validate the properties that actually power the
+  // knowledge panel so a stub block doesn't silently pass.
+  if (types.has('Organization')) {
+    const org = objectsByType.get('Organization')
+    const missingOrg = (['name', 'url', 'logo'] as const).filter((p) => !hasProp(org, p))
+    if (missingOrg.length > 0) {
+      findings.push(
+        make(
+          'notice',
+          'schema-organization-incomplete',
+          `The Organization structured data is missing recommended propert${missingOrg.length === 1 ? 'y' : 'ies'}: ${missingOrg.join(', ')}.`,
+          'Google’s knowledge panel (the brand info box beside search results) is built from these Organization fields. A block missing the company name, website URL, or logo gives Google an incomplete brand entity and may show nothing at all.',
+          `Add the missing Organization propert${missingOrg.length === 1 ? 'y' : 'ies'} (${missingOrg.join(', ')}) to the structured-data (JSON-LD) block — the official company name, the canonical website URL, and a logo image URL.`,
+        ),
+      )
+    }
+  }
+
   if (kind === 'content' && !types.has('Article') && !types.has('BlogPosting') && !types.has('NewsArticle')) {
     findings.push(
       make(
@@ -494,14 +588,84 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
     )
   }
 
+  // Article is present — validate the properties that make it eligible for the
+  // richer result AND that AI engines lean on (headline, author, a date).
+  const articleType = ['Article', 'BlogPosting', 'NewsArticle'].find((t) => types.has(t))
+  if (articleType) {
+    const article = objectsByType.get(articleType)
+    const missingArticle: string[] = []
+    if (!hasProp(article, 'headline')) missingArticle.push('headline')
+    if (!hasProp(article, 'author')) missingArticle.push('author')
+    if (!hasProp(article, 'datePublished') && !hasProp(article, 'dateModified')) {
+      missingArticle.push('datePublished or dateModified')
+    }
+    if (missingArticle.length > 0) {
+      findings.push(
+        make(
+          'notice',
+          'schema-article-incomplete',
+          `The ${articleType} structured data is missing recommended propert${missingArticle.length === 1 ? 'y' : 'ies'}: ${missingArticle.join(', ')}.`,
+          'These are the fields Google and AI answer engines read to show (and trust) the headline, who wrote it, and how fresh it is. Without an author or a date especially, a healthcare ("Your Money or Your Life") page is held to a higher trust bar and is less likely to be surfaced or cited.',
+          `Add the missing propert${missingArticle.length === 1 ? 'y' : 'ies'} (${missingArticle.join(', ')}) to the ${articleType} structured-data (JSON-LD) block — a headline, a named author, and a publication or last-modified date.`,
+        ),
+      )
+    }
+  }
+
+  // Recommend author / Person schema on content pages — the YMYL trust signal
+  // AI engines lean on. (Separate from the E-E-A-T page-level byline check; this
+  // is specifically the machine-readable structured-data half.)
+  if (kind === 'content' && !types.has('Person') && !objectsByType.get(articleType || '')?.['author']) {
+    findings.push(
+      make(
+        'notice',
+        'schema-person-missing',
+        `This content page has no author identified in structured data — there is no Person structured data (the JSON-LD code that names and describes the author) and no author on an Article block (found instead: ${typesLabel}).`,
+        'For healthcare and other "Your Money or Your Life" (YMYL) topics, Google and AI answer engines weigh a named, credentialed author heavily as a trust signal. Marking the author up as a Person (with their role and a link to a bio) makes that expertise machine-readable.',
+        'Add an author to the page’s Article structured data (JSON-LD) as a Person — with the author’s name and a link to a bio page that establishes their relevant expertise.',
+      ),
+    )
+  }
+
+  // Recommend Dataset schema on pages that look like GoInvo's open data /
+  // visualizations — a citation magnet AI engines rarely see marked up here.
+  if (looksLikeDataPage(url, root) && !types.has('Dataset')) {
+    findings.push(
+      make(
+        'notice',
+        'schema-dataset-missing',
+        `This page looks like open data or a data visualization but has no Dataset structured data — the JSON-LD code that describes a dataset to search and AI engines (found instead: ${typesLabel}).`,
+        'Dataset structured data makes GoInvo’s open data discoverable in Google’s Dataset Search and gives AI answer engines a machine-readable handle on the underlying data — and GoInvo’s open healthcare data is exactly the kind of original, citable source AI engines rarely see marked up in this space.',
+        'Add a Dataset structured-data (JSON-LD) block describing the data — its name, description, the license, the creator (GoInvo), and a link to download or explore it.',
+      ),
+    )
+  }
+
+  // Recommend BreadcrumbList everywhere off the homepage — cheap, and it feeds
+  // the breadcrumb trail in search listings and the page’s place in the site.
+  if (kind !== 'home' && !types.has('BreadcrumbList')) {
+    findings.push(
+      make(
+        'notice',
+        'schema-breadcrumb-missing',
+        `This page has no breadcrumb structured data — the BreadcrumbList JSON-LD code that tells search engines where the page sits in the site hierarchy (found instead: ${typesLabel}).`,
+        'Breadcrumb structured data lets Google show a breadcrumb trail (Home › Section › Page) in the search listing instead of a bare URL, and helps search and AI engines understand how the page relates to the rest of the site.',
+        'Add a BreadcrumbList structured-data (JSON-LD) block listing the path from the homepage to this page, each step with its name and URL.',
+      ),
+    )
+  }
+
+  // FAQ markup — DEMOTED. FAQ rich results are being retired (May 2026), so we
+  // do NOT present FAQPage as a rich-result win. If the page reads like an FAQ
+  // and lacks the markup, suggest it ONLY as an AI-extraction (GEO) aid.
   if (kind === 'faq' && !types.has('FAQPage')) {
     findings.push(
       make(
         'notice',
         'schema-faqpage-missing',
-        `This page reads like an FAQ (a frequently-asked-questions page) but has no FAQ-page structured data — the JSON-LD code that marks up its question-and-answer pairs for Google (found instead: ${typesLabel}).`,
-        'FAQ-page structured data can show your questions and answers directly in search results and is a strong signal for AI answer engines (chatbots and AI Overviews), which lift question-and-answer content verbatim.',
-        'Add an FAQ-page structured-data (JSON-LD) block listing each question and answer pair shown on the page.',
+        `This page reads like an FAQ (a frequently-asked-questions page) but has no FAQ-page structured data — the JSON-LD code that marks up its question-and-answer pairs (found instead: ${typesLabel}).`,
+        'FAQ-page structured data no longer earns the question-and-answer rich result in Google (that listing is being retired in 2026), so this is NOT a rich-result win. It is still useful for AI answer engines (chatbots and AI Overviews), which lift clearly marked question-and-answer pairs to answer prompts.',
+        'Optional, for AI extraction only: add an FAQ-page structured-data (JSON-LD) block listing each question and answer pair. Do not expect a rich result from it — the value now is helping AI answer engines quote your answers.',
       ),
     )
   }
@@ -599,6 +763,11 @@ export type AuditPageOptions = {
   // because it is a slower network round-trip to Google (auth + inspect) per
   // page, so the multi-page sweep keeps it off to stay under GSC rate limits.
   includeIndexation?: boolean
+  // Opt-in: also run the AI-crawler access audit (fetches the site's
+  // robots.txt). It's a SITE-level check, not a page-level one, so the route
+  // only enables it for the single ?url= mode — running it once per page in the
+  // multi-page sweep would just re-fetch the same robots.txt N times.
+  includeAiCrawlerAccess?: boolean
 }
 
 export async function auditPage(
@@ -629,13 +798,34 @@ export async function auditPage(
     return { url, findings: [finding], healthScore: computeHealthScore([finding], 1) }
   }
 
-  const findings = [...auditOnPage(url, html), ...auditStructuredData(url, html)]
+  // On-page + structured-data + the parse-based GEO / AI-readiness + E-E-A-T
+  // packs always run: they're pure HTML parsing with no network cost, and GEO /
+  // AI-search is the strategic center of the suite (plan §12).
+  const findings = [
+    ...auditOnPage(url, html),
+    ...auditStructuredData(url, html),
+    ...auditAiReadiness(url, html),
+    ...auditEeat(url, html),
+  ]
 
   // Opt-in indexation layer (GSC URL Inspection). auditIndexation never throws
   // — it degrades to a single `notice` if GSC is unreachable — so this stays
   // safe even when the service account is missing or rate-limited.
   if (opts.includeIndexation) {
     findings.push(...(await auditIndexation(url)))
+  }
+
+  // Opt-in AI-crawler access audit (fetches robots.txt). Site-level, so the
+  // route only turns it on for single-page audits. Graceful — never throws.
+  if (opts.includeAiCrawlerAccess) {
+    const siteUrl = (() => {
+      try {
+        return new URL(url).origin + '/'
+      } catch {
+        return undefined
+      }
+    })()
+    findings.push(...(await auditAiCrawlerAccess(siteUrl)))
   }
 
   return { url, findings, healthScore: computeHealthScore(findings, 1) }
