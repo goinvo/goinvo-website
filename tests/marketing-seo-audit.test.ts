@@ -2,13 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   auditAiCrawlerAccess,
   auditAiReadiness,
+  auditConversion,
   auditCwv,
   auditEeat,
   auditIndexation,
+  auditLlmsTxt,
   auditOnPage,
   auditRenderGap,
   auditStructuredData,
   computeHealthScore,
+  generateLlmsTxt,
+  mapConversion,
   mapCwv,
   mapInspection,
   mapRenderGap,
@@ -994,6 +998,311 @@ describe('auditCwv (graceful PageSpeed layer — never throws)', () => {
     expect(findings).toHaveLength(1)
     expect(findings[0].id).toBe('performance:cwv-unavailable')
     expect(findings[0].what).toContain('Core Web Vitals data unavailable')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Conversion-rate pack — GA4 conversion rate on money pages + the form-length /
+// competing-CTA design checks. mapConversion is the pure mapper (no fetch / no
+// GA4); auditConversion is tested by stubbing global fetch so we never hit
+// Google. §12: a money page with real traffic converting far below benchmark is
+// a warning; any GA4/parse failure is one graceful notice with no throw.
+// ---------------------------------------------------------------------------
+
+// A services (money) page with a short, sane form and a single primary CTA, so
+// the only conversion finding comes from the GA4 rate (not the design checks).
+const MONEY_PAGE_HTML =
+  '<html><head><title>Our Services — GoInvo</title></head><body>' +
+  '<h1>Healthcare Design Services</h1>' +
+  '<p>We design healthcare software and data tools.</p>' +
+  '<form>' +
+  '<input type="text" name="name">' +
+  '<input type="email" name="email">' +
+  '<textarea name="message"></textarea>' +
+  '<input type="hidden" name="csrf" value="x">' +
+  '<button type="submit">Send</button>' +
+  '</form>' +
+  '<a class="btn-primary" href="/contact">Contact us</a>' +
+  '</body></html>'
+
+const CONVERSION_URL = 'https://www.goinvo.com/services/'
+
+describe('mapConversion (pure money-page + GA4 → findings)', () => {
+  it('flags a low conversion rate on a money page with real traffic as a warning', () => {
+    const findings = mapConversion(CONVERSION_URL, MONEY_PAGE_HTML, {
+      sessions: 500,
+      keyEvents: 1, // 0.2% — far below the ~1% benchmark
+    })
+    const f = findings.find((x) => x.id === 'conversion:low-conversion-rate')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('conversion')
+    expect(f?.severity).toBe('warning')
+    expect(f?.source).toBe('ga4')
+    // §6: names the actual numbers.
+    expect(f?.what).toContain('500')
+    expect(f?.what).toContain('0.20%')
+  })
+
+  it('does NOT flag a healthy conversion rate (emits a notice instead)', () => {
+    const findings = mapConversion(CONVERSION_URL, MONEY_PAGE_HTML, {
+      sessions: 500,
+      keyEvents: 25, // 5% — well above benchmark
+    })
+    expect(idsOf(findings)).not.toContain('conversion:low-conversion-rate')
+    expect(idsOf(findings)).toContain('conversion:conversion-rate-ok')
+  })
+
+  it('does not judge the rate on thin traffic (low-traffic notice)', () => {
+    const findings = mapConversion(CONVERSION_URL, MONEY_PAGE_HTML, {
+      sessions: 5,
+      keyEvents: 0,
+    })
+    expect(idsOf(findings)).not.toContain('conversion:low-conversion-rate')
+    expect(idsOf(findings)).toContain('conversion:conversion-low-traffic')
+  })
+
+  it('emits nothing on a non-money page', () => {
+    const html =
+      '<html><head><title>An article about healthcare data over time</title></head><body>' +
+      '<h1>An essay</h1><p>Just prose, no form and no call-to-action.</p></body></html>'
+    const findings = mapConversion('https://www.goinvo.com/vision/essay/', html, {
+      sessions: 500,
+      keyEvents: 0,
+    })
+    expect(findings).toEqual([])
+  })
+
+  it('flags a long form (> ~5 fields) as a notice', () => {
+    const html =
+      '<html><head><title>Contact GoInvo about your project today</title></head><body>' +
+      '<h1>Contact</h1><form>' +
+      '<input name="a"><input name="b"><input name="c">' +
+      '<input name="d"><input name="e"><input name="f"><input name="g">' +
+      '<button type="submit">Send</button></form></body></html>'
+    const findings = mapConversion('https://www.goinvo.com/contact/', html, null)
+    const f = findings.find((x) => x.id === 'conversion:form-too-long')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('notice')
+    expect(f?.what).toContain('7 fields')
+  })
+
+  it('flags multiple competing primary CTAs as a notice', () => {
+    const html =
+      '<html><head><title>Work with GoInvo on healthcare design</title></head><body>' +
+      '<h1>Work with us</h1>' +
+      '<a href="/x">Contact us</a>' +
+      '<a href="/y">Request a proposal</a>' +
+      '<a href="/z">Book a call</a></body></html>'
+    const findings = mapConversion('https://www.goinvo.com/work/', html, null)
+    const f = findings.find((x) => x.id === 'conversion:multiple-primary-ctas')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('notice')
+  })
+
+  it('returns the unavailable notice on a money page with no GA4 and no design issue', () => {
+    const findings = mapConversion(CONVERSION_URL, MONEY_PAGE_HTML, null)
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('conversion:conversion-unavailable')
+    expect(findings[0].severity).toBe('notice')
+  })
+})
+
+describe('auditConversion (graceful GA4 layer — never throws)', () => {
+  const realFetch = globalThis.fetch
+  const realSa = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    globalThis.fetch = realFetch
+    if (realSa === undefined) delete process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+    else process.env.GOOGLE_SERVICE_ACCOUNT_JSON = realSa
+  })
+
+  // Build a fetch stub: the money-page HTML for the page fetch, an access token
+  // for the OAuth endpoint, and `ga4Rows` for the GA4 runReport endpoint.
+  function stubConversionFetch(html: string, ga4Rows: unknown[]) {
+    return vi.fn(async (input: unknown) => {
+      const reqUrl = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+      if (reqUrl.includes('oauth2.googleapis.com/token')) {
+        return new Response(JSON.stringify({ access_token: 'test-token' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (reqUrl.includes('analyticsdata.googleapis.com')) {
+        return new Response(JSON.stringify({ rows: ga4Rows }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      // Otherwise it's the page-HTML fetch.
+      return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
+    })
+  }
+
+  it('maps a stubbed low-conversion GA4 payload → warning on a money page', async () => {
+    setTestServiceAccount()
+    vi.stubGlobal(
+      'fetch',
+      stubConversionFetch(MONEY_PAGE_HTML, [
+        { dimensionValues: [{ value: '/services/' }], metricValues: [{ value: '500' }, { value: '1' }] },
+      ]),
+    )
+    const findings = await auditConversion(CONVERSION_URL)
+    const f = findings.find((x) => x.id === 'conversion:low-conversion-rate')
+    expect(f).toBeDefined()
+    expect(f?.severity).toBe('warning')
+    expect(f?.what).toContain('500')
+  })
+
+  it('degrades to the graceful notice (no throw) when GA4 is unavailable', async () => {
+    // No service account → readGa4Conversion returns null → unavailable notice
+    // (the money page has no design issue, so nothing else fires).
+    delete process.env.GOOGLE_SERVICE_ACCOUNT_JSON
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const reqUrl = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+        if (reqUrl.includes('analyticsdata') || reqUrl.includes('oauth2')) {
+          throw new Error('should not be called without a service account')
+        }
+        return new Response(MONEY_PAGE_HTML, { status: 200, headers: { 'Content-Type': 'text/html' } })
+      }),
+    )
+    const findings = await auditConversion(CONVERSION_URL)
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('conversion:conversion-unavailable')
+    expect(findings[0].severity).toBe('notice')
+  })
+
+  it('degrades to the graceful notice when the page fetch fails', async () => {
+    setTestServiceAccount()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('boom', { status: 500 })),
+    )
+    const findings = await auditConversion(CONVERSION_URL)
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('conversion:conversion-unavailable')
+  })
+
+  it('emits nothing for a non-money page (no GA4 call spent)', async () => {
+    setTestServiceAccount()
+    const html =
+      '<html><head><title>An essay about healthcare data over the years</title></head>' +
+      '<body><h1>Essay</h1><p>Prose only.</p></body></html>'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const reqUrl = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+        if (reqUrl.includes('analyticsdata') || reqUrl.includes('oauth2')) {
+          throw new Error('GA4 must not be called for a non-money page')
+        }
+        return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html' } })
+      }),
+    )
+    const findings = await auditConversion('https://www.goinvo.com/vision/essay/')
+    expect(findings).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// llms.txt pack — presence/validity check + a curated-file generator.
+// auditLlmsTxt fetches <site>/llms.txt and is tested with a stubbed global
+// fetch; generateLlmsTxt is pure. §12 + brief: a missing/invalid file is only
+// ever an honest `notice`, a present valid file emits NO finding, and any
+// failure degrades to one notice with no throw.
+// ---------------------------------------------------------------------------
+
+describe('auditLlmsTxt (geo — graceful, honest notice)', () => {
+  const realFetch = globalThis.fetch
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    globalThis.fetch = realFetch
+  })
+
+  function stubLlms(body: string, status = 200) {
+    return vi.fn(async () => new Response(body, { status }))
+  }
+
+  it('emits an honest notice when llms.txt is missing (404)', async () => {
+    vi.stubGlobal('fetch', stubLlms('not found', 404))
+    const findings = await auditLlmsTxt('https://www.goinvo.com/')
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:llms-txt-missing')
+    expect(findings[0].category).toBe('geo')
+    expect(findings[0].severity).toBe('notice')
+    // The copy must be HONEST: no proven citation lift, emerging standard.
+    const blob = `${findings[0].what} ${findings[0].why} ${findings[0].howToFix}`.toLowerCase()
+    expect(blob).toContain('emerging')
+    expect(blob).toContain('not a citation lever')
+  })
+
+  it('emits NO finding when a valid llms.txt is present', async () => {
+    vi.stubGlobal(
+      'fetch',
+      stubLlms('# GoInvo\n\n> A healthcare design studio.\n\n## Pages\n\n- [Home](https://www.goinvo.com/)\n'),
+    )
+    const findings = await auditLlmsTxt('https://www.goinvo.com/')
+    expect(findings).toEqual([])
+  })
+
+  it('treats an HTML soft-404 served as text as missing', async () => {
+    vi.stubGlobal('fetch', stubLlms('<!doctype html><html><body>Not found</body></html>'))
+    const findings = await auditLlmsTxt('https://www.goinvo.com/')
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:llms-txt-missing')
+  })
+
+  it('degrades to the graceful notice (no throw) when the fetch throws', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new Error('network down')
+      }),
+    )
+    const findings = await auditLlmsTxt('https://www.goinvo.com/')
+    expect(findings).toHaveLength(1)
+    expect(findings[0].id).toBe('geo:llms-txt-missing')
+    expect(findings[0].severity).toBe('notice')
+  })
+})
+
+describe('generateLlmsTxt (pure curated-file builder)', () => {
+  it('produces a spec-shaped body: H1 title, blockquote summary, and link list', () => {
+    const out = generateLlmsTxt(
+      [
+        {
+          url: 'https://www.goinvo.com/vision/determinants-of-health/',
+          title: 'Determinants of Health',
+          description: 'An open dataset and visualization.',
+        },
+        { url: 'https://www.goinvo.com/work/', title: 'Our Work' },
+      ],
+      { siteName: 'GoInvo', summary: 'A healthcare design studio.' },
+    )
+    expect(out.startsWith('# GoInvo\n')).toBe(true)
+    expect(out).toContain('> A healthcare design studio.')
+    expect(out).toContain('## Pages')
+    expect(out).toContain(
+      '- [Determinants of Health](https://www.goinvo.com/vision/determinants-of-health/): An open dataset and visualization.',
+    )
+    // A page with no description still produces a clean link (no trailing colon).
+    expect(out).toContain('- [Our Work](https://www.goinvo.com/work/)\n')
+    expect(out).not.toContain('[Our Work](https://www.goinvo.com/work/):')
+    // Ends with a clean trailing newline.
+    expect(out.endsWith('\n')).toBe(true)
+  })
+
+  it('skips pages with no title or no url', () => {
+    const out = generateLlmsTxt([
+      { url: 'https://www.goinvo.com/a/', title: '' },
+      { url: '', title: 'No URL' },
+      { url: 'https://www.goinvo.com/b/', title: 'Kept' },
+    ])
+    expect(out).toContain('- [Kept](https://www.goinvo.com/b/)')
+    expect(out).not.toContain('No URL')
   })
 })
 

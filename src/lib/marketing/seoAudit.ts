@@ -7,6 +7,8 @@ import {
 } from './seoAuditGeo'
 import { auditRenderGap } from './seoAuditRender'
 import { auditCwv } from './seoAuditCwv'
+import { auditConversion } from './seoAuditConversion'
+import { auditLlmsTxt } from './seoAuditLlms'
 
 // Re-export the indexation layer so callers can import everything from the
 // engine entry point. (seoAuditIndexation imports the finding model + weights
@@ -43,6 +45,34 @@ export {
 // behind opts.includeCwv (the route enables it for single-page mode).
 export { auditCwv, mapCwv } from './seoAuditCwv'
 
+// Re-export the conversion-rate pack (GA4 conversion rate on money pages + the
+// form-length / competing-CTA design checks) so callers can pull the whole
+// engine from this one entry point. Same import-only cycle as the other packs —
+// seoAuditConversion imports the finding model + fetchPageHtml from here,
+// resolved lazily at call time. It's a GA4 network round-trip, so auditPage only
+// runs it behind opts.includeConversion (the route enables it for the single
+// ?url= mode).
+export {
+  auditConversion,
+  mapConversion,
+  isMoneyPage,
+  countFormFields,
+  countPrimaryCtas,
+  type ConversionGa4,
+} from './seoAuditConversion'
+
+// Re-export the llms.txt pack (presence/validity check + a curated-file
+// generator) so callers can pull the whole engine from this one entry point.
+// auditLlmsTxt is a site-level once-per-site check (it fetches <site>/llms.txt),
+// so auditPage runs it behind the same opts.includeAiCrawlerAccess flag that
+// already gates the once-per-site robots.txt audit. Honest by design: a missing
+// file is only ever a notice (no proven citation lift).
+export {
+  auditLlmsTxt,
+  generateLlmsTxt,
+  type LlmsTxtPage,
+} from './seoAuditLlms'
+
 // SEO audit engine — Phase 1 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md). This is the "actually inspect the page"
 // half the old suite never had: it fetches a page, parses the HTML with a real
@@ -74,6 +104,7 @@ export type SeoFindingCategory =
   | 'internal-linking'
   | 'eeat'
   | 'geo'
+  | 'conversion'
 
 export type SeoFindingSeverity = 'error' | 'warning' | 'notice'
 
@@ -825,6 +856,13 @@ export type AuditPageOptions = {
   // PageSpeed calls (and its low keyless quota). Graceful: degrades to one
   // notice, never throws.
   includeCwv?: boolean
+  // Opt-in: also run the conversion-rate check on "money pages" (services /
+  // work / contact / about routes, or any page with a form or primary CTA). It
+  // reads GA4 (sessions + key-events for this landing page) over a network
+  // round-trip, so it's OFF by default — the route enables it for the single
+  // ?url= mode only, never the multi-page sweep. Graceful: a GA4/parse failure
+  // degrades to one notice, never throws.
+  includeConversion?: boolean
 }
 
 export async function auditPage(
@@ -872,8 +910,10 @@ export async function auditPage(
     findings.push(...(await auditIndexation(url)))
   }
 
-  // Opt-in AI-crawler access audit (fetches robots.txt). Site-level, so the
-  // route only turns it on for single-page audits. Graceful — never throws.
+  // Opt-in AI-crawler access audit (fetches robots.txt) + the once-per-site
+  // llms.txt check, which share the same site-level gate so they each run
+  // exactly once for the single ?url= mode rather than per page in the sweep.
+  // Both are graceful — never throw.
   if (opts.includeAiCrawlerAccess) {
     const siteUrl = (() => {
       try {
@@ -883,6 +923,7 @@ export async function auditPage(
       }
     })()
     findings.push(...(await auditAiCrawlerAccess(siteUrl)))
+    findings.push(...(await auditLlmsTxt(siteUrl)))
   }
 
   // Opt-in render-diff (raw HTML vs headless-Chrome rendered DOM). Puppeteer is
@@ -898,6 +939,15 @@ export async function auditPage(
   // timeout / throw degrades to a single notice, never a throw.
   if (opts.includeCwv) {
     findings.push(...(await auditCwv(url)))
+  }
+
+  // Opt-in conversion-rate check (GA4 sessions + key-events for money pages,
+  // plus the form-length / competing-CTA design checks). It's a GA4 network
+  // round-trip, so the route only enables it for single-page audits. Graceful —
+  // a GA4/parse failure degrades to a single notice, never a throw. It emits
+  // nothing at all for non-money pages.
+  if (opts.includeConversion) {
+    findings.push(...(await auditConversion(url)))
   }
 
   return { url, findings, healthScore: computeHealthScore(findings, 1) }
