@@ -73,6 +73,16 @@ const FETCH_TIMEOUT_MS = Number(
 // more hops is the wasteful pattern that bleeds crawl budget and link equity.
 const REDIRECT_CHAIN_THRESHOLD = 2
 
+// Internal-linking analysis (§12). A page with this many inbound internal links
+// or fewer (but more than zero — zero is an "orphan", reported separately) is
+// "under-linked": almost nothing points to it, so it gets little of the ranking
+// strength internal links pass around. 1 is the conservative default — exactly
+// one other page links in. Like the orphan finding, this is only trustworthy on
+// a COMPLETE (un-capped) crawl, so it is gated on `!capped`.
+const UNDER_LINKED_INBOUND_THRESHOLD = Number(
+  process.env.MARKETING_SEO_CRAWL_UNDER_LINKED_THRESHOLD || 1,
+)
+
 const USER_AGENT = 'GoInvo marketing SEO crawl (+https://www.goinvo.com)'
 
 // ---------------------------------------------------------------------------
@@ -92,6 +102,8 @@ export type CrawlStats = {
   brokenLinks: number
   redirectChains: number
   orphanPages: number
+  underLinkedPages: number // crawled pages with very few (e.g. 1) inbound links
+  genericAnchorLinks: number // internal links whose anchor text is generic
   tooDeepPages: number
   sitemapNotCrawled: number
   crawledNotInSitemap: number
@@ -332,15 +344,63 @@ async function fetchWithRedirects(
 // Link extraction — pull same-site internal <a href> targets from a page's
 // HTML, normalized + deduped. Off-site, mailto:, tel:, javascript:, and #-only
 // links are dropped here so the graph only ever contains crawlable page nodes.
+//
+// We ALSO read each link's visible anchor text (the words a reader/crawler
+// actually sees and clicks). Generic anchor text ("click here", "read more")
+// tells search and AI engines nothing about the target page, so the internal-
+// linking analysis (§12) flags it — which is why we capture it here, in the
+// same parse pass the crawl already runs, with NO extra fetches.
 // ---------------------------------------------------------------------------
+
+// One discovered internal link edge: where it points + the visible words.
+type InternalLink = {
+  target: string // normalized destination URL (a crawlable page node)
+  anchorText: string // collapsed visible text of the <a>, '' if none
+}
+
+// Anchor text that describes nothing about the destination. Lower-cased and
+// trimmed before comparison. These are the classic SEO "non-descriptive"
+// anchors — they pass no topical signal to the linked page.
+const GENERIC_ANCHOR_TEXTS = new Set([
+  'click here',
+  'read more',
+  'learn more',
+  'here',
+  'this',
+  'link',
+  'more',
+  'this page',
+  'read this',
+  'click',
+  'go',
+])
+
+// Collapse an anchor's visible text: strip tags' whitespace, fold runs of
+// whitespace to single spaces, trim. node-html-parser gives us .text already
+// decoded; we only normalize spacing so "Read\n  More" === "read more".
+function normalizeAnchorText(raw: string): string {
+  return raw.replace(/\s+/g, ' ').trim()
+}
+
+// Is this visible anchor text generic / non-descriptive? Empty text (e.g. an
+// image-only link) is NOT counted here — that is an alt-text concern handled
+// elsewhere, not an anchor-text-quality concern.
+function isGenericAnchor(text: string): boolean {
+  const t = text.toLowerCase()
+  if (!t) return false
+  return GENERIC_ANCHOR_TEXTS.has(t)
+}
 
 function extractInternalLinks(
   html: string,
   pageUrl: string,
   siteOrigin: string,
-): string[] {
+): InternalLink[] {
   const root = parse(html, { comment: false })
-  const out = new Set<string>()
+  // Dedupe by target so the same destination linked twice from one page is one
+  // graph edge — but keep the first non-empty anchor text we saw for it, so a
+  // descriptive anchor elsewhere on the page isn't masked by a generic one.
+  const byTarget = new Map<string, InternalLink>()
   for (const a of root.querySelectorAll('a')) {
     const href = (a.getAttribute('href') || '').trim()
     if (!href) continue
@@ -349,9 +409,16 @@ function extractInternalLinks(
     if (!normalized) continue
     if (!isSameSite(normalized, siteOrigin)) continue
     if (normalized === pageUrl) continue // self-link is not a graph edge
-    out.add(normalized)
+    const anchorText = normalizeAnchorText(a.text || '')
+    const existing = byTarget.get(normalized)
+    if (!existing) {
+      byTarget.set(normalized, { target: normalized, anchorText })
+    } else if (!existing.anchorText && anchorText) {
+      // Upgrade a previously-empty anchor to the first text we find.
+      existing.anchorText = anchorText
+    }
   }
-  return [...out]
+  return [...byTarget.values()]
 }
 
 // ---------------------------------------------------------------------------
@@ -443,6 +510,13 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
   const brokenLinkUrls: string[] = []
   const redirectChainUrls: string[] = []
 
+  // Source pages that link out using generic / non-descriptive anchor text
+  // ("click here", "read more", …). Keyed by the SOURCE page so the finding can
+  // tell the designer WHICH of their pages to fix the wording on. We also keep a
+  // running total of such links for the stats.
+  const genericAnchorSources = new Set<string>()
+  let genericAnchorLinks = 0
+
   // --- The BFS loop --------------------------------------------------------
   // Bounded by `maxPages` distinct fetched pages and an exhausted frontier.
   while (pending.size > 0) {
@@ -484,9 +558,16 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
 
     // Extract + record the internal link graph for this page.
     const links = extractInternalLinks(outcome.html, url, siteOrigin)
-    for (const target of links) {
+    for (const { target, anchorText } of links) {
       internalLinksSeen++
       inboundCount.set(target, (inboundCount.get(target) || 0) + 1)
+
+      // (f) Generic / non-descriptive anchor text. Recorded against the SOURCE
+      // page (`url`) — that's where the link wording lives and gets fixed.
+      if (isGenericAnchor(anchorText)) {
+        genericAnchorLinks++
+        genericAnchorSources.add(url)
+      }
 
       // Newly-discovered page → enqueue at depth+1 (only finite depths grow
       // the BFS tree; we never expand from a sitemap-seeded Infinity node).
@@ -603,6 +684,65 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
     )
   }
 
+  // --- (c2) Under-linked pages ---------------------------------------------
+  // Distinct from orphans (zero inbound): these pages DO have internal links
+  // pointing in, but very few — at or below UNDER_LINKED_INBOUND_THRESHOLD
+  // (default 1). They are weakly woven into the site, so little ranking strength
+  // reaches them. We only consider sitemap pages (the pages we WANT found) and
+  // exclude the homepage and any page already flagged as an orphan, so the two
+  // findings never double-count the same URL.
+  //
+  // Same completeness caveat as orphans: an inbound count is only trustworthy
+  // after a COMPLETE crawl, so this is gated on `!capped`. On a capped crawl a
+  // page can look under-linked purely because we stopped before reaching the
+  // pages that link to it.
+  const underLinkedUrls: string[] = []
+  if (sitemapAvailable) {
+    for (const u of sitemapUrls) {
+      if (u === seedUrl) continue
+      const inbound = inboundCount.get(u) || 0
+      if (inbound > 0 && inbound <= UNDER_LINKED_INBOUND_THRESHOLD) {
+        underLinkedUrls.push(u)
+      }
+    }
+  }
+  if (underLinkedUrls.length > 0 && !capped) {
+    const sample = underLinkedUrls.slice(0, 8)
+    findings.push(
+      makeFinding(
+        'under-linked-pages',
+        'notice',
+        `The crawl found ${underLinkedUrls.length} page${underLinkedUrls.length === 1 ? '' : 's'} with very weak internal linking — only ${UNDER_LINKED_INBOUND_THRESHOLD === 1 ? 'a single other page links' : `${UNDER_LINKED_INBOUND_THRESHOLD} or fewer other pages link`} to ${underLinkedUrls.length === 1 ? 'it' : 'each of them'}. Examples: ${sample.map((u) => pathOf(u)).join(', ')}.`,
+        'These pages are not invisible like orphan pages, but almost nothing on the site points to them, so they receive very little of the ranking strength that internal links pass between pages. Search and AI engines also read internal links as a vote of importance — a page that other pages rarely link to looks unimportant, even if its content is strong.',
+        `Add internal links to each of these pages from related, higher-traffic pages — a section index, a parent page, or a "related work / related reading" list is ideal. Use descriptive wording in the link so it reinforces what the page is about. The under-linked pages are: ${sample.join(', ')}${underLinkedUrls.length > sample.length ? `, and ${underLinkedUrls.length - sample.length} more` : ''}.`,
+        underLinkedUrls,
+        true,
+      ),
+    )
+  }
+
+  // --- (f) Generic / non-descriptive internal anchor text ------------------
+  // Internal links whose visible words ("click here", "read more", "here", …)
+  // say nothing about the destination. We list the SOURCE pages that contain
+  // such links, since that is where a designer edits the wording. This does NOT
+  // depend on a complete crawl — every link we actually saw is real evidence —
+  // so it is reported even when the crawl is capped.
+  if (genericAnchorSources.size > 0) {
+    const sources = [...genericAnchorSources]
+    const sample = sources.slice(0, 8)
+    findings.push(
+      makeFinding(
+        'generic-anchor-text',
+        'notice',
+        `The crawl found ${genericAnchorLinks} internal link${genericAnchorLinks === 1 ? '' : 's'} that use generic, non-descriptive wording (like "click here", "read more", or just "here") instead of words that describe the page being linked to. ${sources.length === 1 ? 'This appears on' : `These appear across ${sources.length} pages, for example`}: ${sample.map((u) => pathOf(u)).join(', ')}.`,
+        'The visible words in a link are one of the strongest signals search and AI engines use to understand what the linked page is about. Generic wording like "click here" wastes that signal — it tells the engines (and screen-reader users scanning a list of links) nothing about the destination, so the linked page misses out on relevant ranking strength.',
+        `On each page below, rewrite these links so the clickable words describe the destination — e.g. change "read more" to "read our Ebola care-guideline study". The pages containing generic link text are: ${sample.join(', ')}${sources.length > sample.length ? `, and ${sources.length - sample.length} more` : ''}.`,
+        sources,
+        true,
+      ),
+    )
+  }
+
   // --- (d) Excessive click-depth -------------------------------------------
   // Pages whose shortest real path from the homepage is more than 3 clicks.
   const tooDeep: { url: string; depth: number }[] = []
@@ -702,6 +842,8 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
     brokenLinks: brokenLinkUrls.length,
     redirectChains: redirectChainUrls.length,
     orphanPages: orphanUrls.length,
+    underLinkedPages: underLinkedUrls.length,
+    genericAnchorLinks,
     tooDeepPages: tooDeep.length,
     sitemapNotCrawled: sitemapNotCrawled.length,
     crawledNotInSitemap: crawledNotInSitemap.length,
@@ -729,6 +871,8 @@ function emptyStats(
     brokenLinks: 0,
     redirectChains: 0,
     orphanPages: 0,
+    underLinkedPages: 0,
+    genericAnchorLinks: 0,
     tooDeepPages: 0,
     sitemapNotCrawled: 0,
     crawledNotInSitemap: 0,

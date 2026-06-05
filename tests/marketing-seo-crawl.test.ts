@@ -9,15 +9,22 @@ import { crawlSite, type CrawlStats } from '@/lib/marketing/seoCrawl'
 //
 // The fake site (all under https://www.goinvo.com/):
 //   /                — homepage; links to /about, /work, /broken,
-//                      /chain-start, and /a (the click-depth chain root)
+//                      /chain-start, /a (the click-depth chain root), and
+//                      /under-linked (via generic "click here" anchor text)
 //   /about           — links to /work and /outside-sitemap
-//   /work            — leaf, in the sitemap, has inbound links (NOT an orphan)
+//   /work            — leaf, in the sitemap, TWO inbound links (NOT an orphan,
+//                      NOT under-linked)
+//   /under-linked    — in the sitemap, exactly ONE inbound link (from the
+//                      homepage) → under-linked, distinct from an orphan
 //   /outside-sitemap — reachable by link but ABSENT from the sitemap
 //   /orphan          — in the sitemap, NOTHING links to it (an orphan)
 //   /broken          — returns 404 (a broken internal link)
 //   /chain-start     — 301 → /chain-mid → 301 → /chain-end (a redirect chain)
 //   /chain-end       — 200 leaf
 //   /a → /b → /c → /deep — a 4-deep chain; /deep is >3 clicks (too deep)
+//
+// The homepage's link to /under-linked uses the generic anchor text
+// "click here", which the generic-anchor-text check must flag.
 // ---------------------------------------------------------------------------
 
 const ORIGIN = 'https://www.goinvo.com'
@@ -29,6 +36,7 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>${ORIGIN}/</loc></url>
   <url><loc>${ORIGIN}/about</loc></url>
   <url><loc>${ORIGIN}/work</loc></url>
+  <url><loc>${ORIGIN}/under-linked</loc></url>
   <url><loc>${ORIGIN}/orphan</loc></url>
   <url><loc>${ORIGIN}/broken</loc></url>
   <url><loc>${ORIGIN}/chain-start</loc></url>
@@ -38,11 +46,24 @@ const SITEMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>${ORIGIN}/deep</loc></url>
 </urlset>`
 
-// Each page's outgoing internal links (as full hrefs in the HTML).
-const PAGE_LINKS: Record<string, string[]> = {
-  '/': ['/about', '/work', '/broken', '/chain-start', '/a'],
+// Each page's outgoing internal links. An entry is either a bare href (which
+// renders with descriptive anchor text) or an [href, anchorText] pair so a test
+// can model a specific (e.g. generic) anchor.
+type LinkSpec = string | [href: string, anchorText: string]
+
+const PAGE_LINKS: Record<string, LinkSpec[]> = {
+  // The homepage links to /under-linked with the generic anchor "click here".
+  '/': [
+    '/about',
+    '/work',
+    '/broken',
+    '/chain-start',
+    '/a',
+    ['/under-linked', 'click here'],
+  ],
   '/about': ['/work', '/outside-sitemap'],
   '/work': [],
+  '/under-linked': [],
   '/outside-sitemap': [],
   '/orphan': [],
   '/chain-end': [],
@@ -52,9 +73,20 @@ const PAGE_LINKS: Record<string, string[]> = {
   '/deep': [],
 }
 
+function hrefOf(link: LinkSpec): string {
+  return Array.isArray(link) ? link[0] : link
+}
+
+// Default anchor text is descriptive (derived from the destination path) so the
+// generic-anchor check only fires for the links we deliberately make generic.
+function anchorOf(link: LinkSpec): string {
+  if (Array.isArray(link)) return link[1]
+  return `Visit ${link}`
+}
+
 function pageHtml(path: string): string {
   const links = (PAGE_LINKS[path] || [])
-    .map((href) => `<a href="${href}">link</a>`)
+    .map((link) => `<a href="${hrefOf(link)}">${anchorOf(link)}</a>`)
     .join('\n')
   return `<!doctype html><html><head><title>${path}</title></head><body>
     <h1>${path}</h1>
@@ -158,6 +190,46 @@ describe('crawlSite — bounded BFS over a fake site', () => {
     expect(f?.affectedUrls).not.toContain(`${ORIGIN}/work`)
   })
 
+  it('detects an under-linked page (in sitemap, exactly ONE inbound link)', async () => {
+    vi.stubGlobal('fetch', stubSiteFetch())
+    const { findings, stats } = await crawlSite()
+    expect(stats.capped).toBe(false)
+    const f = findings.find((x) => x.id === 'technical:crawl-under-linked-pages')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('technical')
+    expect(f?.severity).toBe('notice')
+    // /under-linked has a single inbound link (from the homepage).
+    expect(f?.affectedUrls).toContain(`${ORIGIN}/under-linked`)
+    // /work has TWO inbound links → not under-linked.
+    expect(f?.affectedUrls).not.toContain(`${ORIGIN}/work`)
+    // /orphan has ZERO inbound → reported as an orphan, NOT as under-linked
+    // (the two findings must not double-count the same URL).
+    expect(f?.affectedUrls).not.toContain(`${ORIGIN}/orphan`)
+  })
+
+  it('does NOT report under-linked pages on a CAPPED crawl', async () => {
+    vi.stubGlobal('fetch', stubSiteFetch())
+    // Like orphans, an inbound count is only trustworthy after a complete crawl.
+    const { findings, stats } = await crawlSite({ maxPages: 2 })
+    expect(stats.capped).toBe(true)
+    expect(idsOf(findings)).not.toContain('technical:crawl-under-linked-pages')
+  })
+
+  it('detects generic / non-descriptive internal anchor text', async () => {
+    vi.stubGlobal('fetch', stubSiteFetch())
+    const { findings, stats } = await crawlSite()
+    const f = findings.find((x) => x.id === 'technical:crawl-generic-anchor-text')
+    expect(f).toBeDefined()
+    expect(f?.category).toBe('technical')
+    expect(f?.severity).toBe('notice')
+    // The homepage links to /under-linked with the anchor text "click here".
+    expect(f?.affectedUrls).toContain(`${ORIGIN}/`)
+    expect(stats.genericAnchorLinks).toBeGreaterThanOrEqual(1)
+    // Descriptive anchors ("Visit /about", …) must NOT trip the check, so the
+    // count stays small — only our one deliberately-generic link.
+    expect(stats.genericAnchorLinks).toBe(1)
+  })
+
   it('does NOT report orphans on a CAPPED crawl (un-reached pages are not orphans)', async () => {
     vi.stubGlobal('fetch', stubSiteFetch())
     // Cap below the crawlable page count so the crawl stops early. Un-reached
@@ -198,12 +270,14 @@ describe('crawlSite — bounded BFS over a fake site', () => {
     vi.stubGlobal('fetch', stubSiteFetch())
     const { stats } = await crawlSite()
     expect(stats.sitemapAvailable).toBe(true)
-    expect(stats.sitemapUrlCount).toBe(10)
+    expect(stats.sitemapUrlCount).toBe(11)
     expect(stats.pagesCrawled).toBeGreaterThan(0)
     expect(stats.capped).toBe(false)
     expect(stats.brokenLinks).toBeGreaterThanOrEqual(1)
     expect(stats.redirectChains).toBeGreaterThanOrEqual(1)
     expect(stats.orphanPages).toBeGreaterThanOrEqual(1)
+    expect(stats.underLinkedPages).toBeGreaterThanOrEqual(1)
+    expect(stats.genericAnchorLinks).toBeGreaterThanOrEqual(1)
     expect(stats.tooDeepPages).toBeGreaterThanOrEqual(1)
   })
 })
