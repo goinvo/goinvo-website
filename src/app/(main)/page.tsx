@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { HomePageRenderer } from '@/components/home/HomePageRenderer'
+import { HomeExperimentExposure } from '@/components/analytics/HomeExperimentExposure'
 
 export const metadata: Metadata = {
   title: {
@@ -10,5 +11,10 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  return <HomePageRenderer />
+  return (
+    <>
+      <HomeExperimentExposure />
+      <HomePageRenderer />
+    </>
+  )
 }
