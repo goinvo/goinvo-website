@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   buildCannibalization,
   buildCtrGaps,
@@ -8,10 +8,14 @@ import {
   classifyIntent,
   ctrGapFor,
   decayActionFor,
+  difficultyRerankFactor,
+  enrichQueriesWithKeywordMetrics,
   expectedCtrForPosition,
   keyEventBoost,
   pageIntentFromPath,
+  parseKeywordMetrics,
 } from '@/app/api/marketing/seo/route'
+import { tfKeyword, withTextFocus } from '@/lib/marketing/textfocus'
 
 // These cover the additive OPPORTUNITY-ENGINE features (SEO suite revamp §12):
 // the position-adjusted CTR-gap quick-win lane, keyword cannibalization, the
@@ -419,5 +423,253 @@ describe('buildIntentMismatches (query intent vs ranking-page intent)', () => {
       pageQueryRow('/features/old.html', 'design agency', 600, 5, 4), // legacy → excluded
     ]
     expect(buildIntentMismatches(rows)).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TextFocus keyword enrichment (marketingIdea: seo-keyword-enrichment).
+// The opportunity engine folds keyword volume + difficulty (+ CPC) from a
+// SINGLE batched tf_keyword call onto the ranked query opportunities. These
+// cover: the raw-payload parser (string/number coercion), the modest difficulty
+// re-rank, the enrichment merge, and — via a stubbed `fetch` — that the batch is
+// ONE array-form call and that a down TextFocus leaves opportunities unchanged.
+// ---------------------------------------------------------------------------
+
+// A bare QueryOpportunity for the enrichment tests (only the fields the merge
+// reads; the engine produces the rest).
+function queryOpp(query: string, impressions: number, score: number) {
+  return {
+    query,
+    impressions,
+    clicks: 0,
+    ctr: 0,
+    position: 5,
+    score,
+    fix: 'ranking' as const,
+    fixHint: '',
+  }
+}
+
+describe('parseKeywordMetrics (tf_keyword batch → query→metrics map)', () => {
+  it('parses the live keyed-object shape, coercing string OR number fields', () => {
+    // The exact shape verified against the live API: keyed by the keyword, with
+    // volume/difficulty/cost arriving as strings in some entries, numbers in
+    // others. cost is the CPC.
+    const raw = {
+      'healthcare design': { id: 'healthcare design', volume: 720, difficulty: 37, cost: '3.00' },
+      'open source healthcare': { id: 'open source healthcare', volume: '20', difficulty: '38', cost: '1.09' },
+    }
+    const map = parseKeywordMetrics(raw)
+    expect(map.get('healthcare design')).toEqual({ volume: 720, difficulty: 37, cpc: 3 })
+    expect(map.get('open source healthcare')).toEqual({ volume: 20, difficulty: 38, cpc: 1.09 })
+  })
+
+  it('degrades to an empty map on a missing/odd payload (no throw)', () => {
+    expect(parseKeywordMetrics(null).size).toBe(0)
+    expect(parseKeywordMetrics(undefined).size).toBe(0)
+    expect(parseKeywordMetrics('nope').size).toBe(0)
+    // An entry with no usable numeric field is dropped, not kept as undefined.
+    expect(parseKeywordMetrics({ foo: { id: 'foo' } }).size).toBe(0)
+    expect(parseKeywordMetrics({ foo: { volume: 'n/a', difficulty: '' } }).size).toBe(0)
+  })
+})
+
+describe('difficultyRerankFactor (modest, bounded winnability adjustment)', () => {
+  it('is neutral (1.0) for no difficulty and for the mid-difficulty value', () => {
+    expect(difficultyRerankFactor(undefined)).toBe(1)
+    expect(difficultyRerankFactor(50)).toBeCloseTo(1, 5)
+  })
+
+  it('boosts easy keywords and demotes hard ones, both modestly (±15% max)', () => {
+    expect(difficultyRerankFactor(0)).toBeCloseTo(1.15, 5) // easiest
+    expect(difficultyRerankFactor(100)).toBeCloseTo(0.85, 5) // hardest
+    // A low-difficulty keyword reads as more winnable than a high-difficulty one.
+    expect(difficultyRerankFactor(20)).toBeGreaterThan(difficultyRerankFactor(80))
+    // The adjustment stays modest — never more than ±15%.
+    expect(difficultyRerankFactor(0)).toBeLessThanOrEqual(1.15)
+    expect(difficultyRerankFactor(100)).toBeGreaterThanOrEqual(0.85)
+  })
+
+  it('clamps out-of-range difficulty into the bounded factor', () => {
+    expect(difficultyRerankFactor(-50)).toBeCloseTo(1.15, 5)
+    expect(difficultyRerankFactor(500)).toBeCloseTo(0.85, 5)
+  })
+})
+
+describe('enrichQueriesWithKeywordMetrics (attach volume/difficulty + re-rank)', () => {
+  it('attaches volume/difficulty/cpc to covered queries and leaves others untouched', () => {
+    const queries = [queryOpp('healthcare design', 1000, 1000), queryOpp('uncovered query', 500, 500)]
+    const metrics = new Map([['healthcare design', { volume: 720, difficulty: 37, cpc: 3 }]])
+    const out = enrichQueriesWithKeywordMetrics(queries, metrics)
+    const covered = out.find((q) => q.query === 'healthcare design')!
+    expect(covered.volume).toBe(720)
+    expect(covered.difficulty).toBe(37)
+    expect(covered.cpc).toBe(3)
+    const uncovered = out.find((q) => q.query === 'uncovered query')!
+    expect(uncovered.volume).toBeUndefined()
+    expect(uncovered.difficulty).toBeUndefined()
+  })
+
+  it('keeps raw demand visible — impressions are never mutated by the re-rank', () => {
+    const queries = [queryOpp('easy term', 1000, 1000)]
+    const metrics = new Map([['easy term', { volume: 900, difficulty: 10 }]])
+    const out = enrichQueriesWithKeywordMetrics(queries, metrics)
+    expect(out[0].impressions).toBe(1000) // demand untouched
+    // Easy keyword (difficulty 10) edges the score UP, modestly.
+    expect(out[0].score).toBeGreaterThan(1000)
+    expect(out[0].score).toBeLessThanOrEqual(1150) // ≤ +15%
+  })
+
+  it('folds difficulty into the order — a winnable runner-up can overtake a hard leader', () => {
+    // Leader has marginally more demand, but is very hard; the runner-up is very
+    // easy. The modest re-rank lets the winnable query overtake.
+    const queries = [queryOpp('hard leader', 1000, 1000), queryOpp('easy runner up', 950, 950)]
+    const metrics = new Map([
+      ['hard leader', { volume: 100, difficulty: 95 }], // ×~0.865 → ~865
+      ['easy runner up', { volume: 800, difficulty: 5 }], // ×~1.135 → ~1078
+    ])
+    const out = enrichQueriesWithKeywordMetrics(queries, metrics)
+    expect(out[0].query).toBe('easy runner up')
+    expect(out[0].score).toBeGreaterThan(out[1].score)
+  })
+
+  it('returns the queries unchanged (same order) when the metrics map is empty', () => {
+    const queries = [queryOpp('a', 1000, 1000), queryOpp('b', 500, 500)]
+    const out = enrichQueriesWithKeywordMetrics(queries, new Map())
+    expect(out).toEqual(queries)
+    expect(out[0].volume).toBeUndefined()
+  })
+})
+
+// --- Integration: the single batched tf_keyword call + graceful down path ---
+// Stub the global `fetch` so the real TextFocus client (textfocus.ts) runs
+// through withTextFocus + tfKeyword exactly as the route does, without the
+// network. Mirrors the fetch-stub pattern in marketing-textfocus.test.ts.
+describe('batched TextFocus enrichment (route integration via stubbed fetch)', () => {
+  const ORIGINAL_KEY = process.env.TEXTFOCUS_API_KEY
+
+  function jsonResponse(body: unknown, status = 200): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  // The two TextFocus ops the flow hits, in order: the free health-check
+  // (tf_account) gate, then the ONE paid tf_keyword batch.
+  function accountEnvelope() {
+    return { result: { credits: { remaining: 700 } }, response: 200, message: 'ok' }
+  }
+  function keywordEnvelope(map: Record<string, unknown>) {
+    return { result: map, response: 200, message: 'ok' }
+  }
+
+  // Capture every fetch so we can assert the keyword op is called exactly once.
+  function stubFetch(handler: (url: string, init: RequestInit) => Response | Promise<Response>) {
+    const calls: Array<{ url: string; init: RequestInit }> = []
+    const fn = vi.fn(async (input: unknown, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : String((input as { url?: string })?.url)
+      calls.push({ url, init: init ?? {} })
+      return handler(url, init ?? {})
+    })
+    vi.stubGlobal('fetch', fn)
+    return calls
+  }
+
+  function keywordCalls(calls: Array<{ url: string; init: RequestInit }>) {
+    return calls.filter((c) => c.url.includes('tf_keyword'))
+  }
+  function keywordField(call: { init: RequestInit }): string {
+    const body = call.init.body
+    const params = body instanceof URLSearchParams ? body : new URLSearchParams(String(body ?? ''))
+    return params.get('keyword') ?? ''
+  }
+
+  // Replicate the route's enrichment step (one withTextFocus → one tfKeyword
+  // batch in array form → parse → enrich) so the test drives the real wiring.
+  async function enrichViaBatch(queries: ReturnType<typeof queryOpp>[]) {
+    const batchTerms = queries.map((q) => q.query)
+    return withTextFocus(async () => {
+      const raw = await tfKeyword(JSON.stringify(batchTerms), { lang: 'en-US' })
+      return enrichQueriesWithKeywordMetrics(queries, parseKeywordMetrics(raw))
+    }, queries)
+  }
+
+  beforeEach(() => {
+    process.env.TEXTFOCUS_API_KEY = 'test-key-123'
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    if (ORIGINAL_KEY === undefined) delete process.env.TEXTFOCUS_API_KEY
+    else process.env.TEXTFOCUS_API_KEY = ORIGINAL_KEY
+  })
+
+  it('makes ONE batched tf_keyword call (JSON-array form) for the top queries', async () => {
+    const calls = stubFetch((url) => {
+      if (url.includes('tf_account')) return jsonResponse(accountEnvelope())
+      if (url.includes('tf_keyword')) {
+        return jsonResponse(
+          keywordEnvelope({
+            'healthcare design': { volume: 720, difficulty: 37, cost: '3.00' },
+            'open source healthcare': { volume: '20', difficulty: '38', cost: '1.09' },
+          }),
+        )
+      }
+      return jsonResponse({}, 404)
+    })
+
+    const queries = [queryOpp('healthcare design', 1000, 1000), queryOpp('open source healthcare', 800, 800)]
+    const out = await enrichViaBatch(queries)
+
+    // Exactly ONE tf_keyword call (not one-per-query) — the credit/daily-cap rule.
+    const kw = keywordCalls(calls)
+    expect(kw).toHaveLength(1)
+    // …and it used the array (batch) form carrying BOTH terms in one request.
+    const field = keywordField(kw[0])
+    expect(field).toBe(JSON.stringify(['healthcare design', 'open source healthcare']))
+    expect(JSON.parse(field)).toEqual(['healthcare design', 'open source healthcare'])
+
+    // Both opportunities came back enriched from the single batch.
+    const hd = out.find((q) => q.query === 'healthcare design')!
+    expect(hd.volume).toBe(720)
+    expect(hd.difficulty).toBe(37)
+    expect(hd.cpc).toBe(3)
+    const osh = out.find((q) => q.query === 'open source healthcare')!
+    expect(osh.volume).toBe(20)
+    expect(osh.difficulty).toBe(38)
+  })
+
+  it('graceful: TextFocus down (health-check fails) → opportunities UNCHANGED, no keyword call, no throw', async () => {
+    // The free health-check fails, so withTextFocus short-circuits to the
+    // fallback and never spends a credit on tf_keyword.
+    const calls = stubFetch((url) => {
+      if (url.includes('tf_account')) return jsonResponse({ message: 'forbidden' }, 403)
+      return jsonResponse({}, 500)
+    })
+
+    const queries = [queryOpp('healthcare design', 1000, 1000), queryOpp('open source healthcare', 800, 800)]
+    const out = await enrichViaBatch(queries)
+
+    // No tf_keyword call was made (the gate blocked it).
+    expect(keywordCalls(calls)).toHaveLength(0)
+    // Opportunities are returned exactly as today — no volume/difficulty fields.
+    expect(out).toEqual(queries)
+    expect(out[0].volume).toBeUndefined()
+    expect(out[0].difficulty).toBeUndefined()
+  })
+
+  it('graceful: tf_keyword itself errors → opportunities UNCHANGED, still one call attempted, no throw', async () => {
+    // Health-check passes but the batch call 500s. withTextFocus catches and
+    // returns the fallback, so the engine keeps the demand-only opportunities.
+    const calls = stubFetch((url) => {
+      if (url.includes('tf_account')) return jsonResponse(accountEnvelope())
+      return jsonResponse({ message: 'server error' }, 500)
+    })
+
+    const queries = [queryOpp('healthcare design', 1000, 1000)]
+    const out = await enrichViaBatch(queries)
+
+    expect(keywordCalls(calls)).toHaveLength(1) // attempted once, not retried per-query
+    expect(out).toEqual(queries) // unchanged
+    expect(out[0].volume).toBeUndefined()
   })
 })

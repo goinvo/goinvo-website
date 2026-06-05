@@ -31,6 +31,13 @@ type QueryOpp = {
   position: number
   score: number
   fix: string
+  // TextFocus keyword enrichment (seo-keyword-enrichment). Present only when
+  // TextFocus is healthy and returned this query; absent when it's down/capped,
+  // in which case the row renders exactly as before. volume = monthly search
+  // volume, difficulty = 0–100 keyword difficulty, cpc = paid cost-per-click.
+  volume?: number
+  difficulty?: number
+  cpc?: number
 }
 // A page-1 query earning far fewer clicks than its position should — a
 // title/meta-rewrite quick win (matches CtrGap in api/marketing/seo/route.ts).
@@ -300,6 +307,10 @@ const s: Record<string, CSSProperties> = {
 }
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`
+// TextFocus keyword difficulty (0–100, higher = harder) → a color so designers
+// can spot the winnable keywords at a glance: low = green (easy), mid = orange,
+// high = red (hard). Used by the keyword-enrichment columns.
+const difficultyColor = (d: number): string => (d <= 30 ? '#1f9d55' : d <= 60 ? '#d98a00' : '#e0463c')
 const isQuestion = (q: string) => /^(what|how|why|which|when|who|where|is|are|do|does|can|should)\b/i.test(q) || q.includes('?')
 const badge = (c: string): CSSProperties => ({
   display: 'inline-block',
@@ -1579,14 +1590,37 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
 
       {!!data?.queries?.length && (
         <div style={s.card}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Query opportunities (non-brand)</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Query opportunities (non-brand)</div>
+          {/* Volume / Difficulty come from TextFocus keyword enrichment — only
+              populated when the service is reachable. Note that when it's down. */}
+          {data.queries.some((q) => q.volume !== undefined || q.difficulty !== undefined) ? (
+            <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+              <strong>Search Volume</strong> (monthly searches) and <strong>Keyword Difficulty</strong> (0–100, higher =
+              harder to rank) come from TextFocus — a query is worth pursuing when it has high volume <em>and</em> low
+              difficulty.
+            </p>
+          ) : (
+            <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+              Ranked by Search Console demand. Search volume + keyword difficulty appear here when TextFocus is reachable.
+            </p>
+          )}
           <table style={s.table}>
             <thead>
               <tr>
                 <th style={s.th}>Query</th>
-                <th style={{ ...s.th, ...s.num }}>Impr</th>
+                <th style={{ ...s.th, ...s.num }} title="Search Console impressions over the period">
+                  Impressions
+                </th>
                 <th style={{ ...s.th, ...s.num }}>CTR</th>
-                <th style={{ ...s.th, ...s.num }}>Pos</th>
+                <th style={{ ...s.th, ...s.num }} title="Average Search Console position">
+                  Position
+                </th>
+                <th style={{ ...s.th, ...s.num }} title="TextFocus monthly search volume (blank if unavailable)">
+                  Search Volume
+                </th>
+                <th style={{ ...s.th, ...s.num }} title="TextFocus keyword difficulty, 0–100 (higher = harder to rank)">
+                  Keyword Difficulty
+                </th>
                 <th style={s.th}>Fix</th>
               </tr>
             </thead>
@@ -1597,6 +1631,16 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                   <td style={{ ...s.td, ...s.num }}>{q.impressions.toLocaleString()}</td>
                   <td style={{ ...s.td, ...s.num }}>{pct(q.ctr)}</td>
                   <td style={{ ...s.td, ...s.num }}>{q.position}</td>
+                  <td style={{ ...s.td, ...s.num }} title={q.cpc !== undefined ? `~$${q.cpc.toFixed(2)} CPC` : undefined}>
+                    {q.volume !== undefined ? q.volume.toLocaleString() : '—'}
+                  </td>
+                  <td style={{ ...s.td, ...s.num }}>
+                    {q.difficulty !== undefined ? (
+                      <span style={badge(difficultyColor(q.difficulty))}>{Math.round(q.difficulty)}</span>
+                    ) : (
+                      <span style={{ color: 'var(--card-muted-fg-color)' }}>—</span>
+                    )}
+                  </td>
                   <td style={s.td}>
                     <span style={badge(FIX_COLORS[q.fix] || FIX_COLORS.maintain)}>{q.fix}</span>
                   </td>
