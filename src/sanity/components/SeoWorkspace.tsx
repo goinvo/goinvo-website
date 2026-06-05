@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { Fragment, useCallback, useEffect, useState, type CSSProperties } from 'react'
 import type { SanityClient } from '@sanity/client'
 
 // Surfaces the SEO opportunities engine (/api/marketing/seo) and the cached
@@ -72,6 +72,15 @@ const VERDICT_COLORS: Record<string, string> = {
 }
 const STATUS_COLORS: Record<string, string> = { idea: '#7d8694', exploring: '#2276fc', planned: '#2276fc', inProgress: '#d98a00', shipped: '#1f9d55', dropped: '#9aa0a6' }
 const PRIORITY_COLORS: Record<string, string> = { high: '#e0463c', medium: '#d98a00', low: '#7d8694' }
+const STATUS_ORDER = ['idea', 'exploring', 'planned', 'inProgress', 'shipped', 'dropped']
+function sortIdeas(list: Idea[], by: 'priority' | 'category' | 'status'): Idea[] {
+  const rankP = (p?: string) => (p === 'high' ? 0 : p === 'medium' ? 1 : 2)
+  const copy = list.slice()
+  if (by === 'category') copy.sort((a, b) => (a.category || '').localeCompare(b.category || '') || rankP(a.priority) - rankP(b.priority))
+  else if (by === 'status') copy.sort((a, b) => STATUS_ORDER.indexOf(a.status || 'idea') - STATUS_ORDER.indexOf(b.status || 'idea') || rankP(a.priority) - rankP(b.priority))
+  else copy.sort((a, b) => rankP(a.priority) - rankP(b.priority))
+  return copy
+}
 
 const s: Record<string, CSSProperties> = {
   wrap: { padding: 16, color: 'var(--card-fg-color)', fontSize: 13 },
@@ -101,6 +110,8 @@ const badge = (c: string): CSSProperties => ({
 export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [data, setData] = useState<SeoData | null>(null)
   const [ideas, setIdeas] = useState<Idea[]>([])
+  const [ideaSort, setIdeaSort] = useState<'priority' | 'category' | 'status'>('priority')
+  const [openIdea, setOpenIdea] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [citeUrl, setCiteUrl] = useState('https://www.goinvo.com/')
   const [cite, setCite] = useState<CiteData | null>(null)
@@ -171,34 +182,67 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
 
       {!!ideas.length && (
         <div style={s.card}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>Ideas &amp; findings ({ideas.length})</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Ideas &amp; findings ({ideas.length})</div>
+          <div style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>Click a column to sort, click a row for the details.</div>
           <table style={s.table}>
             <thead>
               <tr>
-                <th style={s.th}>Priority</th>
+                <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('priority')}>
+                  Priority{ideaSort === 'priority' ? ' ▾' : ''}
+                </th>
                 <th style={s.th}>Idea</th>
-                <th style={s.th}>Category</th>
-                <th style={s.th}>Status</th>
+                <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('category')}>
+                  Category{ideaSort === 'category' ? ' ▾' : ''}
+                </th>
+                <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('status')}>
+                  Status{ideaSort === 'status' ? ' ▾' : ''}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {ideas.map((idea) => (
-                <tr key={idea._id}>
-                  <td style={s.td}>
-                    <span style={badge(PRIORITY_COLORS[idea.priority || 'low'] || PRIORITY_COLORS.low)}>
-                      {idea.priority || 'low'}
-                    </span>
-                  </td>
-                  <td style={s.td} title={idea.nextAction || idea.summary}>
-                    {idea.title}
-                  </td>
-                  <td style={s.td}>{idea.category}</td>
-                  <td style={s.td}>
-                    <span style={badge(STATUS_COLORS[idea.status || 'idea'] || STATUS_COLORS.idea)}>
-                      {idea.status || 'idea'}
-                    </span>
-                  </td>
-                </tr>
+              {sortIdeas(ideas, ideaSort).map((idea) => (
+                <Fragment key={idea._id}>
+                  <tr style={{ cursor: 'pointer' }} onClick={() => setOpenIdea(openIdea === idea._id ? null : idea._id)}>
+                    <td style={s.td}>
+                      <span style={badge(PRIORITY_COLORS[idea.priority || 'low'] || PRIORITY_COLORS.low)}>
+                        {idea.priority || 'low'}
+                      </span>
+                    </td>
+                    <td style={s.td}>
+                      {openIdea === idea._id ? '▾ ' : '▸ '}
+                      {idea.title}
+                    </td>
+                    <td style={s.td}>{idea.category}</td>
+                    <td style={s.td}>
+                      <span style={badge(STATUS_COLORS[idea.status || 'idea'] || STATUS_COLORS.idea)}>
+                        {idea.status || 'idea'}
+                      </span>
+                    </td>
+                  </tr>
+                  {openIdea === idea._id && (
+                    <tr>
+                      <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={4}>
+                        {idea.summary ? <div style={{ marginBottom: 6 }}>{idea.summary}</div> : null}
+                        {idea.nextAction ? (
+                          <div style={{ marginBottom: 6 }}>
+                            <strong>Next:</strong> {idea.nextAction}
+                          </div>
+                        ) : null}
+                        <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                          {idea.source ? `Source: ${idea.source}` : ''}
+                          {idea.relatedUrl ? (
+                            <Fragment>
+                              {idea.source ? ' · ' : ''}
+                              <a href={idea.relatedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                {idea.relatedUrl}
+                              </a>
+                            </Fragment>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
