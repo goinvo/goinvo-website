@@ -212,6 +212,43 @@ type CrawlData = {
   stats?: CrawlStats | null
 }
 
+// --- AI citation share-of-voice (marketingIdea seo-ai-citation-tracking) ---
+// Mirrors the STORED snapshot doc shape read back by GET /api/marketing/ai-citation
+// (the list projection in src/app/api/marketing/ai-citation/route.ts), which
+// flattens the aggregate onto the document and projects the heavy answerText out.
+// Field names match src/lib/marketing/aiCitation.ts + the aiCitationSnapshot schema.
+type CompetitorTally = { name: string; count: number }
+type AiCitationPromptResult = {
+  prompt: string
+  goinvoMentioned: boolean
+  goinvoCited: boolean
+  citedGoinvoUrls?: string[]
+  competitorsMentioned?: string[]
+}
+type AiCitationSnapshot = {
+  _id?: string
+  runDate?: string
+  model?: string
+  promptCount?: number
+  answeredCount?: number
+  // Rates are 0–1 over answered prompts; render as %.
+  mentionRate?: number
+  citationRate?: number
+  mentionedCount?: number
+  citedCount?: number
+  unavailable?: boolean
+  unavailableReason?: string
+  topCompetitors?: CompetitorTally[]
+  results?: AiCitationPromptResult[]
+}
+// GET list payload — { snapshots: [...] } (or { error, snapshots: [] } when the
+// write token is missing). Newest first.
+type AiCitationData = { error?: string; snapshots?: AiCitationSnapshot[] }
+// POST run payload — { stored, snapshot, ... }; snapshot.aggregate is NESTED here
+// (PanelSnapshot), unlike the flattened GET doc. We refresh via GET after a run,
+// so we only need to read the run's status/warning off the POST response.
+type AiCitationRunResult = { error?: string; stored?: boolean; storeWarning?: string }
+
 type SeoWorkspaceProps = { client?: SanityClient }
 
 const FIX_COLORS: Record<string, string> = { ranking: '#2276fc', ctr: '#d98a00', maintain: '#7d8694' }
@@ -362,6 +399,15 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   // expanding a crawl finding never collapses an audit finding, and vice versa).
   const [openCrawlFinding, setOpenCrawlFinding] = useState<string | null>(null)
 
+  // --- AI citation share-of-voice state ---
+  // `aiCite` holds the GET list (cheap — reads stored snapshots, runs nothing).
+  // `aiCiteLoading` = loading the list; `aiCiteRunning` = a live panel run (slow,
+  // spends OpenAI credits). `aiCiteRunNote` carries a post-run store warning.
+  const [aiCite, setAiCite] = useState<AiCitationData | null>(null)
+  const [aiCiteLoading, setAiCiteLoading] = useState(true)
+  const [aiCiteRunning, setAiCiteRunning] = useState(false)
+  const [aiCiteRunNote, setAiCiteRunNote] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -448,6 +494,50 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       setCrawlLoading(false)
     }
   }, [])
+
+  // Load the recent AI-citation snapshots. CHEAP: GET reads stored data and runs
+  // NO live searches. Called on mount and from the section's Refresh button.
+  // Never crashes — a thrown error becomes an { error } payload.
+  const loadAiCitation = useCallback(async () => {
+    setAiCiteLoading(true)
+    try {
+      const res = await fetch('/api/marketing/ai-citation')
+      setAiCite((await res.json()) as AiCitationData)
+    } catch {
+      setAiCite({ error: 'Could not load AI-citation snapshots.' })
+    } finally {
+      setAiCiteLoading(false)
+    }
+  }, [])
+  useEffect(() => {
+    void loadAiCitation()
+  }, [loadAiCitation])
+
+  // Run the live AI-citation panel. SLOW (~1–2 min) and spends OpenAI credits:
+  // POST runs 12 live AI web-searches. On completion, refresh the list (GET) so
+  // the new snapshot shows up. Never crashes — failures surface a clear note.
+  const runAiCitation = useCallback(async () => {
+    if (aiCiteRunning) return
+    setAiCiteRunning(true)
+    setAiCiteRunNote(null)
+    try {
+      const res = await fetch('/api/marketing/ai-citation', { method: 'POST' })
+      const payload = (await res.json()) as AiCitationRunResult
+      if (payload.error) {
+        setAiCiteRunNote(payload.error)
+      } else if (payload.storeWarning) {
+        // The run succeeded but the snapshot was not stored — it won't appear in
+        // the refreshed list, so say so explicitly.
+        setAiCiteRunNote(payload.storeWarning)
+      }
+      // Refresh the stored list either way so a successful run shows up.
+      await loadAiCitation()
+    } catch {
+      setAiCiteRunNote('The AI-citation check failed to run.')
+    } finally {
+      setAiCiteRunning(false)
+    }
+  }, [aiCiteRunning, loadAiCitation])
 
   // Promote-to-backlog: write a finding straight into marketingIdea (closes the
   // engine ↔ backlog gap from the plan). Disables itself after a success.
@@ -972,6 +1062,268 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     </div>
                   )
                 })}
+              </Fragment>
+            )
+          })()
+        )}
+      </div>
+
+      {/* --- AI citation share-of-voice (do AI answer engines name + cite us?) --- */}
+      <div style={s.card}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>AI citation share-of-voice</div>
+          <button type="button" style={s.btn} onClick={() => void loadAiCitation()} disabled={aiCiteLoading || aiCiteRunning}>
+            {aiCiteLoading ? 'Loading...' : 'Refresh'}
+          </button>
+        </div>
+        <p style={{ ...s.sub, marginBottom: 10 }}>
+          When a prospect asks an AI answer engine (ChatGPT-style web search) about GoInvo&apos;s topics — best healthcare
+          design firms, FHIR/EHR design, health data viz — does the answer <strong>name GoInvo</strong> and{' '}
+          <strong>link goinvo.com</strong>? Tracked over time as a share-of-voice. The numbers below read stored snapshots
+          (free); running a new check is what costs.
+        </p>
+
+        {/* Run button — the SLOW, paid action. Loading state + cost caveat are
+            spelled out so designers know exactly what they're triggering. */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button type="button" style={s.btn} onClick={() => void runAiCitation()} disabled={aiCiteRunning}>
+            {aiCiteRunning ? 'Running…' : 'Run AI-citation check'}
+          </button>
+          <span style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+            Runs 12 live AI web-searches — takes ~1–2 min and spends OpenAI credits. Run it occasionally to refresh the
+            trend, not on every visit.
+          </span>
+        </div>
+
+        {aiCiteRunning && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--card-muted-fg-color)', padding: '4px 0', marginBottom: 10 }}>
+            <style>{'@keyframes seo-audit-spin{to{transform:rotate(360deg)}}'}</style>
+            <span
+              aria-hidden
+              style={{
+                width: 13,
+                height: 13,
+                borderRadius: '50%',
+                border: '2px solid var(--card-border-color)',
+                borderTopColor: '#2276fc',
+                display: 'inline-block',
+                animation: 'seo-audit-spin 0.7s linear infinite',
+              }}
+            />
+            <span>Running 12 live AI searches… ~1–2 min, uses OpenAI credits.</span>
+          </div>
+        )}
+
+        {aiCiteRunNote && !aiCiteRunning && (
+          <div style={{ color: SEVERITY_COLORS.warning, fontSize: 12, marginBottom: 10 }}>{aiCiteRunNote}</div>
+        )}
+
+        {/* Loading the stored list (only when we have nothing to show yet). */}
+        {aiCiteLoading && !aiCite && <div style={{ color: 'var(--card-muted-fg-color)' }}>Loading snapshots…</div>}
+
+        {/* GET failed (e.g. no Sanity write token) → clear message, never crash. */}
+        {!aiCiteLoading && aiCite?.error && <div style={{ color: SEVERITY_COLORS.error }}>{aiCite.error}</div>}
+
+        {/* GET succeeded but there are no stored snapshots yet. */}
+        {!aiCiteLoading && aiCite && !aiCite.error && !aiCite.snapshots?.length && (
+          <div style={{ color: 'var(--card-muted-fg-color)' }}>
+            No AI-citation snapshots yet. Run the check above to capture the first one.
+          </div>
+        )}
+
+        {!aiCiteLoading && aiCite && !aiCite.error && !!aiCite.snapshots?.length && (
+          (() => {
+            const snapshots = aiCite.snapshots!
+            const latest = snapshots[0]
+            const fmtPct = (n?: number) => (typeof n === 'number' ? pct(n) : '—')
+            const fmtDate = (d?: string) => (typeof d === 'string' && d ? d.slice(0, 10) : 'unknown')
+
+            // Latest snapshot couldn't run (e.g. missing OPENAI_API_KEY) → say so
+            // and fall back to the most recent snapshot that DID run, if any.
+            const latestUnavailable = Boolean(latest.unavailable) || (latest.answeredCount ?? 0) === 0
+            const headline = latestUnavailable
+              ? snapshots.find((snap) => !snap.unavailable && (snap.answeredCount ?? 0) > 0)
+              : latest
+
+            return (
+              <Fragment>
+                {latestUnavailable && (
+                  <div style={{ color: SEVERITY_COLORS.warning, fontSize: 12, marginBottom: 12 }}>
+                    The latest run ({fmtDate(latest.runDate)}) couldn&apos;t complete
+                    {latest.unavailableReason ? ` — ${latest.unavailableReason}` : ' (the AI engine returned no answers, e.g. OPENAI_API_KEY is not set).'}
+                    {headline ? ' Showing the most recent successful run below.' : ''}
+                  </div>
+                )}
+
+                {headline ? (
+                  <Fragment>
+                    {/* Headline: mention rate + citation rate, big and labelled. */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 28,
+                        flexWrap: 'wrap',
+                        padding: 12,
+                        borderRadius: 8,
+                        border: '1px solid var(--card-border-color)',
+                        marginBottom: 14,
+                      }}
+                    >
+                      <div style={{ minWidth: 150 }}>
+                        <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: '#2276fc' }}>
+                          {fmtPct(headline.mentionRate)}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--card-muted-fg-color)', marginTop: 4 }}>
+                          Mention rate — % of AI answers that name GoInvo
+                        </div>
+                      </div>
+                      <div style={{ minWidth: 150 }}>
+                        <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: '#1f9d55' }}>
+                          {fmtPct(headline.citationRate)}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--card-muted-fg-color)', marginTop: 4 }}>
+                          Citation rate — % that link goinvo.com
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12.5, color: 'var(--card-muted-fg-color)' }}>
+                        <div>
+                          Answered <strong style={{ color: 'var(--card-fg-color)' }}>{headline.answeredCount ?? 0}</strong> of{' '}
+                          {headline.promptCount ?? 0} prompts
+                        </div>
+                        <div style={{ marginTop: 2 }}>
+                          Run {fmtDate(headline.runDate)}
+                          {headline.model ? ` · ${headline.model}` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Top competitors named in the same answers. */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12.5 }}>
+                        Top competitors — firms named alongside us (name · times mentioned across the panel)
+                      </div>
+                      {headline.topCompetitors?.length ? (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {headline.topCompetitors.slice(0, 12).map((c) => (
+                            <span
+                              key={c.name}
+                              style={{
+                                ...badge('#7d8694'),
+                                background: 'transparent',
+                                color: 'var(--card-fg-color)',
+                                border: '1px solid var(--card-border-color)',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {c.name}
+                              <span style={{ color: 'var(--card-muted-fg-color)', marginLeft: 6 }}>{c.count}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 12 }}>
+                          No competitors were detected in this run&apos;s answers.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Per-prompt breakdown: mentioned ✓/✗, cited ✓/✗, cited URLs. */}
+                    {!!headline.results?.length && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12.5 }}>
+                          Per-prompt breakdown — the {headline.results.length} fixed questions, latest run
+                        </div>
+                        <table style={s.table}>
+                          <thead>
+                            <tr>
+                              <th style={s.th}>Prompt</th>
+                              <th style={s.th} title="The AI answer named GoInvo">
+                                Mentioned
+                              </th>
+                              <th style={s.th} title="The AI answer linked goinvo.com">
+                                Cited
+                              </th>
+                              <th style={s.th}>Cited goinvo.com URL(s)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {headline.results.map((r, i) => (
+                              <tr key={`${r.prompt}|${i}`}>
+                                <td style={s.td}>{r.prompt}</td>
+                                <td style={s.td}>
+                                  <span style={badge(r.goinvoMentioned ? '#1f9d55' : '#7d8694')}>
+                                    {r.goinvoMentioned ? '✓' : '✗'}
+                                  </span>
+                                </td>
+                                <td style={s.td}>
+                                  <span style={badge(r.goinvoCited ? '#1f9d55' : '#7d8694')}>
+                                    {r.goinvoCited ? '✓' : '✗'}
+                                  </span>
+                                </td>
+                                <td style={{ ...s.td, fontSize: 11 }}>
+                                  {r.citedGoinvoUrls?.length ? (
+                                    r.citedGoinvoUrls.map((u) => (
+                                      <div key={u}>
+                                        <a href={u} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                          {u}
+                                        </a>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span style={{ color: 'var(--card-muted-fg-color)' }}>—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Fragment>
+                ) : null}
+
+                {/* Trend across the recent snapshots (newest first). */}
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12.5 }}>
+                    Trend — mention &amp; citation rate by run date (newest first)
+                  </div>
+                  <table style={s.table}>
+                    <thead>
+                      <tr>
+                        <th style={s.th}>Run date</th>
+                        <th style={{ ...s.th, ...s.num }} title="% of answers that named GoInvo">
+                          Mention rate
+                        </th>
+                        <th style={{ ...s.th, ...s.num }} title="% of answers that linked goinvo.com">
+                          Citation rate
+                        </th>
+                        <th style={{ ...s.th, ...s.num }} title="Prompts answered / prompts run">
+                          Answered
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {snapshots.map((snap) => (
+                        <tr key={snap._id || snap.runDate}>
+                          <td style={s.td}>
+                            {fmtDate(snap.runDate)}
+                            {snap.unavailable || (snap.answeredCount ?? 0) === 0 ? (
+                              <span style={{ marginLeft: 6, color: SEVERITY_COLORS.warning, fontSize: 11 }}>
+                                (did not run)
+                              </span>
+                            ) : null}
+                          </td>
+                          <td style={{ ...s.td, ...s.num, color: '#2276fc', fontWeight: 600 }}>{fmtPct(snap.mentionRate)}</td>
+                          <td style={{ ...s.td, ...s.num, color: '#1f9d55', fontWeight: 600 }}>{fmtPct(snap.citationRate)}</td>
+                          <td style={{ ...s.td, ...s.num }}>
+                            {snap.answeredCount ?? 0}/{snap.promptCount ?? 0}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Fragment>
             )
           })()
