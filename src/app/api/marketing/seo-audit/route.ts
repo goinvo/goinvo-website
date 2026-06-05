@@ -105,6 +105,18 @@ export async function GET(request: Request) {
   const single = (searchParams.get('url') || '').trim()
   const warnings: string[] = []
 
+  // Indexation (GSC URL Inspection) is a slower per-page call to Google, so it
+  // is only enabled for the single ?url= mode. The multi-page sweep keeps it
+  // OFF to stay under GSC's URL-Inspection rate limits (~2k/day, low QPS).
+  const includeIndexation = Boolean(single)
+  if (single) {
+    warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
+  } else {
+    warnings.push(
+      'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
+    )
+  }
+
   let targets: string[]
   if (single) {
     targets = [single]
@@ -147,7 +159,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url)
+        return await auditPage(url, { includeIndexation })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
