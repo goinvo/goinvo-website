@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { SanityClient } from '@sanity/client'
 
 // Surfaces the SEO opportunities engine (/api/marketing/seo) and the cached
@@ -194,6 +194,9 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [ideaSort, setIdeaSort] = useState<'priority' | 'category' | 'status'>('priority')
   const [openIdea, setOpenIdea] = useState<string | null>(null)
   const [openPage, setOpenPage] = useState<string | null>(null)
+  // Per-row hovered key for the page-opportunity table — drives the hover-only
+  // "Audit" button (inline styles, so no :hover available).
+  const [hoveredOpp, setHoveredOpp] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [citeUrl, setCiteUrl] = useState('https://www.goinvo.com/')
   const [cite, setCite] = useState<CiteData | null>(null)
@@ -207,6 +210,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   // Track promote-to-backlog state per finding (keyed by url + finding id) so a
   // successful create disables that one button without affecting the others.
   const [promoted, setPromoted] = useState<Record<string, 'saving' | 'done' | 'error'>>({})
+  // Ref on the Page-audit card so a row-level "Audit" can scroll it into view.
+  const auditRef = useRef<HTMLDivElement | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -319,7 +324,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       </div>
 
       {/* --- Page Audit (Phase 1: fetch + parse → Health Score + findings) --- */}
-      <div style={s.card}>
+      <div ref={auditRef} style={s.card}>
         <div style={{ fontWeight: 600, marginBottom: 4 }}>Page audit</div>
         <p style={{ ...s.sub, marginBottom: 10 }}>
           Fetch and parse a page for concrete, fixable issues. Audit one URL (incl. indexation), or run a sweep of the
@@ -671,15 +676,44 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 const questions = queries.filter(isQuestion)
                 const briefQs = (questions.length ? questions : queries).slice(0, 6)
                 const heading = questions[0] || p.topQuery || queries[0] || ''
+                const hovered = hoveredOpp === p.path
                 return (
                   <Fragment key={p.path}>
-                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenPage(open ? null : p.path)}>
-                      <td style={s.td}>
+                    <tr
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setOpenPage(open ? null : p.path)}
+                      onMouseEnter={() => setHoveredOpp(p.path)}
+                      onMouseLeave={() => setHoveredOpp((prev) => (prev === p.path ? null : prev))}
+                    >
+                      <td style={{ ...s.td, position: 'relative' }}>
                         {open ? '▾ ' : '▸ '}
                         {p.path}
                         {p.legacy ? (
                           <span style={{ marginLeft: 6, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>(legacy → redirect)</span>
                         ) : null}
+                        {/* Hover-only: audit this exact page straight from the row. */}
+                        <button
+                          type="button"
+                          style={{
+                            ...s.btn,
+                            position: 'absolute',
+                            top: '50%',
+                            right: 8,
+                            transform: 'translateY(-50%)',
+                            padding: '2px 8px',
+                            fontSize: 11,
+                            opacity: hovered ? 1 : 0,
+                            pointerEvents: hovered ? 'auto' : 'none',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setAuditUrl(p.url)
+                            void runAudit(p.url)
+                            auditRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }}
+                        >
+                          Audit
+                        </button>
                       </td>
                       <td style={{ ...s.td, ...s.num }}>{p.impressions.toLocaleString()}</td>
                       <td style={{ ...s.td, ...s.num }}>{pct(p.ctr)}</td>
