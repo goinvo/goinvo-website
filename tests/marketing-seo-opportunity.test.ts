@@ -2,16 +2,23 @@ import { describe, expect, it } from 'vitest'
 import {
   buildCannibalization,
   buildCtrGaps,
+  buildDecay,
+  buildIntentMismatches,
+  buildIntentProfile,
+  classifyIntent,
   ctrGapFor,
+  decayActionFor,
   expectedCtrForPosition,
   keyEventBoost,
+  pageIntentFromPath,
 } from '@/app/api/marketing/seo/route'
 
-// These cover the three additive OPPORTUNITY-ENGINE features (SEO suite revamp
-// §12): the position-adjusted CTR-gap quick-win lane, keyword cannibalization,
-// and the GA4 key-events business-value boost. All exercise the pure helpers
-// exported from the route (no network), matching the route-helper test pattern
-// in marketing-research-run.test.ts.
+// These cover the additive OPPORTUNITY-ENGINE features (SEO suite revamp §12):
+// the position-adjusted CTR-gap quick-win lane, keyword cannibalization, the
+// GA4 key-events business-value boost, the content-decay watchlist (period
+// comparison), and the search-intent classification + mismatch detection. All
+// exercise the pure helpers exported from the route (no network), matching the
+// route-helper test pattern in marketing-research-run.test.ts.
 
 // A GSC [page, query] row, as searchAnalytics returns it.
 function pageQueryRow(
@@ -22,6 +29,16 @@ function pageQueryRow(
   position: number,
 ) {
   return { keys: [page, query], impressions, clicks, position, ctr: impressions > 0 ? clicks / impressions : 0 }
+}
+
+// A GSC [page] row (single dimension) for the decay period comparison.
+function pageRow(page: string, impressions: number, clicks: number, position: number) {
+  return { keys: [page], impressions, clicks, position, ctr: impressions > 0 ? clicks / impressions : 0 }
+}
+
+// A GSC [query] row (single dimension) for the intent profile.
+function queryRow(query: string, impressions: number, clicks: number, position: number) {
+  return { keys: [query], impressions, clicks, position, ctr: impressions > 0 ? clicks / impressions : 0 }
 }
 
 describe('expectedCtrForPosition (position→expected-CTR baseline curve)', () => {
@@ -201,5 +218,206 @@ describe('keyEventBoost (business-value score multiplier)', () => {
 
   it('caps the boost so a single huge page cannot dominate (≤ +100%)', () => {
     expect(keyEventBoost(1_000_000)).toBeLessThanOrEqual(2)
+  })
+})
+
+describe('buildDecay (content-decay watchlist — 90d vs prior 90d)', () => {
+  it('flags a page that lost impressions, clicks, and position across both windows', () => {
+    const recent = [pageRow('/vision/decaying/', 400, 8, 9)]
+    const prior = [pageRow('/vision/decaying/', 1000, 30, 4)]
+    const out = buildDecay(recent, prior)
+    const watch = out.find((d) => d.path === '/vision/decaying')
+    expect(watch).toBeDefined()
+    // All three signals declined (impressions -60%, clicks -73%, position +5).
+    expect(watch!.decliningSignals).toBe(3)
+    expect(watch!.impressionsPctChange).toBeLessThan(0)
+    expect(watch!.positionDelta).toBeGreaterThan(0)
+    // A real, non-legacy page with a sustained decline → refresh.
+    expect(watch!.action).toBe('refresh')
+    // Copy gate: the refresh hint must demand a SUBSTANTIVE change, not a date bump.
+    expect(watch!.fixHint).toMatch(/SUBSTANTIVE/)
+    expect(watch!.fixHint).toMatch(/date/i)
+  })
+
+  it('does NOT flag a single-signal blip (only impressions dipped a little)', () => {
+    // Impressions -10% (below the 20% floor), clicks/position steady → no flag.
+    const recent = [pageRow('/vision/steady/', 900, 30, 4)]
+    const prior = [pageRow('/vision/steady/', 1000, 30, 4)]
+    expect(buildDecay(recent, prior)).toEqual([])
+  })
+
+  it('does NOT flag pages that never had real prior demand', () => {
+    // Big % drop, but only 40 prior impressions → below the demand floor.
+    const recent = [pageRow('/vision/tiny/', 5, 0, 20)]
+    const prior = [pageRow('/vision/tiny/', 40, 4, 5)]
+    expect(buildDecay(recent, prior)).toEqual([])
+  })
+
+  it('recommends consolidate for a fading legacy/duplicate URL', () => {
+    const recent = [pageRow('/features/old-thing.html', 300, 2, 18)]
+    const prior = [pageRow('/features/old-thing.html', 1200, 40, 6)]
+    const out = buildDecay(recent, prior)
+    const watch = out.find((d) => d.path === '/features/old-thing.html')
+    expect(watch).toBeDefined()
+    expect(watch!.action).toBe('consolidate')
+    expect(watch!.fixHint).toMatch(/301-redirect/)
+  })
+
+  it('handles a page that vanished entirely from the recent window', () => {
+    // No recent row at all → 0 impressions/clicks now, was strong before.
+    const out = buildDecay([], [pageRow('/vision/gone/', 800, 25, 3)])
+    const watch = out.find((d) => d.path === '/vision/gone')
+    expect(watch).toBeDefined()
+    expect(watch!.recentImpressions).toBe(0)
+    expect(watch!.impressionsPctChange).toBeCloseTo(-1, 5)
+    expect(watch!.action).toBe('refresh')
+  })
+
+  it('sorts by lost impressions × declining signals (biggest sustained loss first)', () => {
+    const recent = [pageRow('/big/', 500, 10, 9), pageRow('/small/', 600, 12, 8)]
+    const prior = [pageRow('/big/', 3000, 90, 4), pageRow('/small/', 1000, 40, 5)]
+    const out = buildDecay(recent, prior)
+    expect(out[0].path).toBe('/big')
+    expect(out[0].score).toBeGreaterThan(out[1].score)
+  })
+})
+
+describe('decayActionFor (refresh / consolidate / leave)', () => {
+  it('always recommends consolidate for a legacy path regardless of magnitude', () => {
+    expect(decayActionFor('/features/x.html', -0.5, 4, 3)).toBe('consolidate')
+    expect(decayActionFor('/old/y', -0.25, 1, 2)).toBe('consolidate')
+  })
+
+  it('recommends refresh for a real page with a sustained (2+ signal) decline', () => {
+    expect(decayActionFor('/vision/a', -0.4, 2, 3)).toBe('refresh')
+    expect(decayActionFor('/vision/b', -0.25, 0.8, 2)).toBe('refresh')
+  })
+})
+
+describe('classifyIntent (rule-based search-intent heuristic)', () => {
+  it('classifies informational how/what/why queries', () => {
+    expect(classifyIntent('how to design an ehr').intent).toBe('informational')
+    expect(classifyIntent('what is open source healthcare').intent).toBe('informational')
+    expect(classifyIntent('why interoperability matters').intent).toBe('informational')
+  })
+
+  it('classifies commercial provider-evaluation queries', () => {
+    expect(classifyIntent('healthcare design agency').intent).toBe('commercial')
+    expect(classifyIntent('best ux firm for medical software').intent).toBe('commercial')
+    expect(classifyIntent('health design studio portfolio').intent).toBe('commercial')
+  })
+
+  it('classifies transactional ready-to-act queries above commercial ones', () => {
+    expect(classifyIntent('hire a healthcare design agency').intent).toBe('transactional')
+    expect(classifyIntent('ux design agency cost').intent).toBe('transactional')
+    expect(classifyIntent('contact goinvo').intent).toBe('transactional')
+  })
+
+  it('classifies navigational brand/site lookups', () => {
+    expect(classifyIntent('goinvo careers').intent).toBe('navigational')
+    expect(classifyIntent('login').intent).toBe('navigational')
+  })
+
+  it('returns the matched signal words for auditability and an LLM-refinable confidence', () => {
+    const r = classifyIntent('how to hire a design agency')
+    // "hire" is transactional and beats "how"/"agency".
+    expect(r.intent).toBe('transactional')
+    expect(r.signals).toContain('hire')
+    expect(r.confidence).toBeGreaterThan(0)
+  })
+
+  it('falls back: a long no-signal query reads informational, a short one navigational', () => {
+    // No keyword from any rule matches → falls back on word count.
+    expect(classifyIntent('precision medicine genomics visualization').intent).toBe('informational')
+    expect(classifyIntent('mediopia').intent).toBe('navigational')
+  })
+})
+
+describe('pageIntentFromPath (page-type intent from the URL shape)', () => {
+  it('reads service/work/enterprise paths as commercial', () => {
+    expect(pageIntentFromPath('/services')).toBe('commercial')
+    expect(pageIntentFromPath('/work/care-plan')).toBe('commercial')
+    expect(pageIntentFromPath('/enterprise')).toBe('commercial')
+  })
+  it('reads contact/quote paths as transactional', () => {
+    expect(pageIntentFromPath('/contact')).toBe('transactional')
+    expect(pageIntentFromPath('/get-started')).toBe('transactional')
+  })
+  it('reads vision/article/research paths as informational', () => {
+    expect(pageIntentFromPath('/vision/open-source-healthcare')).toBe('informational')
+    expect(pageIntentFromPath('/research/foo')).toBe('informational')
+  })
+})
+
+describe('buildIntentProfile (classifies + ranks top non-brand queries)', () => {
+  it('labels each query and sorts by impressions, dropping brand/junk/low-volume', () => {
+    const rows = [
+      queryRow('healthcare design agency', 800, 20, 3), // commercial
+      queryRow('how to design an ehr', 1200, 10, 6), // informational
+      queryRow('goinvo agency', 500, 5, 2), // brand → excluded
+      queryRow('"exact" "phrase"', 900, 1, 4), // junk (quotes) → excluded
+      queryRow('rare term', 5, 0, 9), // below the impressions floor → excluded
+    ]
+    const profile = buildIntentProfile(rows)
+    const queries = profile.map((p) => p.query)
+    expect(queries).toContain('healthcare design agency')
+    expect(queries).toContain('how to design an ehr')
+    expect(queries).not.toContain('goinvo agency')
+    expect(queries).not.toContain('"exact" "phrase"')
+    expect(queries).not.toContain('rare term')
+    // Sorted by impressions (the informational one has more).
+    expect(profile[0].query).toBe('how to design an ehr')
+    expect(profile.find((p) => p.query === 'healthcare design agency')!.intent).toBe('commercial')
+  })
+})
+
+describe('buildIntentMismatches (query intent vs ranking-page intent)', () => {
+  it('flags a commercial query ranking a purely informational page', () => {
+    const rows = [
+      // A buy-stage "agency" query whose best page is a vision article.
+      pageQueryRow('/vision/health-design/', 'healthcare design agency', 600, 5, 4),
+    ]
+    const out = buildIntentMismatches(rows)
+    const m = out.find((x) => x.query === 'healthcare design agency')
+    expect(m).toBeDefined()
+    expect(m!.queryIntent).toBe('commercial')
+    expect(m!.pageIntent).toBe('informational')
+    expect(m!.fixHint).toMatch(/buy-stage/)
+  })
+
+  it('does NOT flag a commercial query already ranking a commercial (services/work) page', () => {
+    const rows = [pageQueryRow('/work/ehr-redesign/', 'healthcare design agency', 600, 30, 3)]
+    expect(buildIntentMismatches(rows)).toEqual([])
+  })
+
+  it('does NOT flag an informational query ranking an informational page (intents agree)', () => {
+    const rows = [pageQueryRow('/vision/ehr-guide/', 'how to design an ehr', 600, 30, 3)]
+    expect(buildIntentMismatches(rows)).toEqual([])
+  })
+
+  it('picks the BEST (most-impressions) ranking page and requires real total demand', () => {
+    const rows = [
+      // Two pages for one commercial query; the article draws the most impressions.
+      pageQueryRow('/vision/article/', 'design agency for healthcare', 500, 4, 5),
+      pageQueryRow('/work/case/', 'design agency for healthcare', 80, 6, 3),
+      // A second commercial query with too little total demand → excluded.
+      pageQueryRow('/vision/aside/', 'ux firm', 30, 0, 8),
+    ]
+    const out = buildIntentMismatches(rows)
+    const m = out.find((x) => x.query === 'design agency for healthcare')
+    expect(m).toBeDefined()
+    // Best page is the high-impressions article → informational → mismatch.
+    expect(m!.page).toBe('/vision/article')
+    expect(m!.impressions).toBe(580) // total across both competing pages
+    expect(out.find((x) => x.query === 'ux firm')).toBeUndefined()
+  })
+
+  it('ignores brand, junk, and legacy-path rows', () => {
+    const rows = [
+      pageQueryRow('/vision/a/', 'goinvo agency', 600, 5, 4), // brand → excluded
+      pageQueryRow('/vision/b/', '"agency" "firm"', 600, 5, 4), // junk → excluded
+      pageQueryRow('/features/old.html', 'design agency', 600, 5, 4), // legacy → excluded
+    ]
+    expect(buildIntentMismatches(rows)).toEqual([])
   })
 })

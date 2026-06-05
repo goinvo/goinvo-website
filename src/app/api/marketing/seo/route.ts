@@ -166,6 +166,66 @@ type QueryOpportunity = {
   fixHint: string
 }
 
+// A page that is losing search ground — its trailing-90d performance has
+// declined vs the prior 90d. Each carries a recommended action so a designer
+// knows whether to refresh the content, consolidate it, or leave it alone.
+type DecayAction = 'refresh' | 'consolidate' | 'leave'
+type DecayWatch = {
+  path: string
+  url: string
+  // Recent (trailing ~90d) vs prior (the ~90d before that).
+  recentImpressions: number
+  priorImpressions: number
+  recentClicks: number
+  priorClicks: number
+  recentPosition: number
+  priorPosition: number
+  // Signed deltas (negative impressions/clicks = decline; positive position
+  // delta = slipped down the SERP, since a bigger position number is worse).
+  impressionsDelta: number
+  clicksDelta: number
+  impressionsPctChange: number
+  clicksPctChange: number
+  positionDelta: number
+  // How many of the three signals (impressions, clicks, position) declined —
+  // 2+ is a "sustained" decline, not a single-metric blip.
+  decliningSignals: number
+  action: DecayAction
+  score: number
+  fixHint: string
+}
+
+// A search-intent class for a non-brand query, from the rule-based heuristic.
+type SearchIntent = 'informational' | 'commercial' | 'transactional' | 'navigational'
+// The classified profile of one top non-brand query.
+type IntentProfileEntry = {
+  query: string
+  intent: SearchIntent
+  // Confidence the heuristic places in the label (matched-pattern strength).
+  confidence: number
+  // The pattern keyword(s) that drove the classification — keeps it auditable
+  // and gives an LLM refinement pass a starting signal.
+  signals: string[]
+  impressions: number
+  clicks: number
+  position: number
+}
+// A query whose intent doesn't match the kind of page currently ranking for it
+// (e.g. a commercial query landing on a purely informational article).
+type IntentMismatch = {
+  query: string
+  queryIntent: SearchIntent
+  page: string
+  url: string
+  // The intent the ranking page reads as, from its URL/path shape.
+  pageIntent: SearchIntent
+  impressions: number
+  clicks: number
+  position: number
+  score: number
+  fixHint: string
+}
+
 function getServiceAccount(): ServiceAccount | null {
   const raw = process.env.GOOGLE_SERVICE_ACCOUNT_JSON
   if (!raw) return null
@@ -461,6 +521,291 @@ export function buildCannibalization(rows: GscRow[]): Cannibalization[] {
   return out.sort((a, b) => b.score - a.score)
 }
 
+// --- Content decay / freshness (GSC period comparison) ---------------------
+// Compare each page's trailing ~90 days against the prior ~90 days. A page is
+// "losing ground" when it has a SUSTAINED decline — 2+ of {impressions, clicks,
+// avg-position} moving the wrong way — with enough prior demand for the signal
+// to be real. Each watch-list entry carries a recommended action:
+//   • refresh     — real demand still exists; rework the content (see copy note)
+//   • consolidate — a legacy/duplicate page bleeding out → fold into the live one
+//   • leave       — the drop is small or the page never had real demand → monitor
+// IMPORTANT copy note (Google's "freshness" signals): the refresh recommendation
+// is gated on SUBSTANTIVE content change — new sections, updated data, fresh
+// examples — NOT a date bump or a one-line tweak, which Google detects and
+// discounts. The fixHint says so explicitly.
+const DECAY_MIN_PRIOR_IMPRESSIONS = 100 // ignore pages that never had real demand
+const DECAY_MIN_IMPRESSIONS_DROP = 0.2 // ≥20% fewer impressions counts as a decline
+const DECAY_MIN_CLICKS_DROP = 0.2 // ≥20% fewer clicks counts as a decline
+const DECAY_MIN_POSITION_SLIP = 0.7 // ≥0.7 avg-position worse counts as a slip
+const DECAY_MIN_SIGNALS = 2 // need a SUSTAINED (multi-signal) decline, not a blip
+
+// Pick the recommended action for a decaying page from its shape + magnitude.
+export function decayActionFor(
+  path: string,
+  impressionsPctChange: number,
+  positionDelta: number,
+  decliningSignals: number,
+): DecayAction {
+  // A legacy/duplicate URL that's fading is a consolidation/redirect target, not
+  // a content-refresh candidate — folding it into the live page recovers equity.
+  if (isLegacyPath(path)) return 'consolidate'
+  // A genuine, sustained decline on a real page → refresh (substantively).
+  if (decliningSignals >= DECAY_MIN_SIGNALS && (impressionsPctChange <= -0.3 || positionDelta >= 1)) {
+    return 'refresh'
+  }
+  if (decliningSignals >= DECAY_MIN_SIGNALS) return 'refresh'
+  return 'leave'
+}
+
+// Build the decay watch-list from the two [page] period pulls (recent + prior).
+// Pure + exported so the test can exercise it without the network.
+export function buildDecay(recentRows: GscRow[], priorRows: GscRow[]): DecayWatch[] {
+  type Tot = { impressions: number; clicks: number; posWeighted: number }
+  const fold = (rows: GscRow[]): Map<string, Tot> => {
+    const m = new Map<string, Tot>()
+    for (const row of rows) {
+      const path = normalizePath(row.keys?.[0] || '')
+      const impressions = row.impressions || 0
+      const entry = m.get(path) || { impressions: 0, clicks: 0, posWeighted: 0 }
+      entry.impressions += impressions
+      entry.clicks += row.clicks || 0
+      entry.posWeighted += (row.position || 0) * impressions
+      m.set(path, entry)
+    }
+    return m
+  }
+  const recent = fold(recentRows)
+  const prior = fold(priorRows)
+
+  const out: DecayWatch[] = []
+  for (const [path, p] of prior) {
+    // Only judge pages that had REAL demand in the prior window — otherwise a
+    // drop from a handful of impressions is noise, not decay.
+    if (p.impressions < DECAY_MIN_PRIOR_IMPRESSIONS) continue
+    const r = recent.get(path) || { impressions: 0, clicks: 0, posWeighted: 0 }
+    const recentPos = r.impressions > 0 ? r.posWeighted / r.impressions : 0
+    const priorPos = p.impressions > 0 ? p.posWeighted / p.impressions : 0
+
+    const impressionsDelta = r.impressions - p.impressions
+    const clicksDelta = r.clicks - p.clicks
+    const impressionsPctChange = p.impressions > 0 ? impressionsDelta / p.impressions : 0
+    const clicksPctChange = p.clicks > 0 ? clicksDelta / p.clicks : 0
+    // A bigger position number is a worse rank, so a positive delta = slipped.
+    const positionDelta = recentPos > 0 ? recentPos - priorPos : 0
+
+    // Count how many of the three signals moved the wrong way past their floor.
+    let decliningSignals = 0
+    if (impressionsPctChange <= -DECAY_MIN_IMPRESSIONS_DROP) decliningSignals += 1
+    if (p.clicks > 0 && clicksPctChange <= -DECAY_MIN_CLICKS_DROP) decliningSignals += 1
+    if (recentPos > 0 && positionDelta >= DECAY_MIN_POSITION_SLIP) decliningSignals += 1
+    if (decliningSignals < DECAY_MIN_SIGNALS) continue
+
+    const action = decayActionFor(path, impressionsPctChange, positionDelta, decliningSignals)
+    const refreshNote =
+      'Make a SUBSTANTIVE update — add/rewrite sections, refresh the data and examples, answer new questions — ' +
+      'not just a date change or one-line tweak (Google detects and discounts date-only edits).'
+    const fixHint =
+      action === 'consolidate'
+        ? `Legacy/duplicate URL losing ground (impressions ${(impressionsPctChange * 100).toFixed(0)}%). ` +
+          '301-redirect it into the live page in redirects.json to recover its link equity rather than reviving it.'
+        : action === 'refresh'
+          ? `Lost ground over the last 90 days (impressions ${(impressionsPctChange * 100).toFixed(0)}%, ` +
+            `position ${positionDelta >= 0 ? '+' : ''}${positionDelta.toFixed(1)}). ${refreshNote}`
+          : `Minor softening — monitor; only act if the decline continues. If you do refresh, ${refreshNote.charAt(0).toLowerCase()}${refreshNote.slice(1)}`
+
+    out.push({
+      path,
+      url: `https://www.goinvo.com${path}`,
+      recentImpressions: Math.round(r.impressions),
+      priorImpressions: Math.round(p.impressions),
+      recentClicks: Math.round(r.clicks),
+      priorClicks: Math.round(p.clicks),
+      recentPosition: Number(recentPos.toFixed(1)),
+      priorPosition: Number(priorPos.toFixed(1)),
+      impressionsDelta: Math.round(impressionsDelta),
+      clicksDelta: Math.round(clicksDelta),
+      impressionsPctChange: Number(impressionsPctChange.toFixed(3)),
+      clicksPctChange: Number(clicksPctChange.toFixed(3)),
+      positionDelta: Number(positionDelta.toFixed(1)),
+      decliningSignals,
+      action,
+      // Rank by lost impressions × number of declining signals — the biggest,
+      // most-sustained losses first. (Negative delta → positive magnitude.)
+      score: Math.round(-impressionsDelta * decliningSignals),
+      fixHint,
+    })
+  }
+  return out.sort((a, b) => b.score - a.score)
+}
+
+// --- Search-intent classification (rule-based heuristic) -------------------
+// Classify a non-brand query into one of the four standard search intents using
+// documented keyword patterns. Structured as an ordered, weighted ruleset so an
+// LLM pass can later refine or override the label while keeping this as the
+// cheap, deterministic first pass. Each pattern carries the signal word(s) it
+// matched, so the result stays auditable.
+//
+//   • transactional — ready-to-act: hire, contact, request a quote, pricing/cost,
+//     "near me", book/buy. The bottom of the funnel.
+//   • commercial    — comparing/evaluating providers: agency, firm, studio,
+//     consultancy, services, company, "best", reviews, portfolio, examples.
+//   • navigational  — looking for a specific site/brand/known page (login, etc.).
+//   • informational — learning: how/what/why/guide/definition/"is …". Default.
+//
+// Transactional is checked before commercial (a "hire a design agency" query is
+// transactional even though it also contains a commercial word).
+type IntentRule = { intent: SearchIntent; re: RegExp; confidence: number }
+const INTENT_RULES: IntentRule[] = [
+  {
+    intent: 'transactional',
+    re: /\b(hire|hiring|contact|quote|rfp|pricing|price|cost|costs|rates?|budget|book|buy|get a|request|near me|for hire)\b/i,
+    confidence: 0.9,
+  },
+  {
+    intent: 'commercial',
+    re: /\b(agency|agencies|firm|firms|studio|studios|consultancy|consultant|consultants|company|companies|vendor|provider|providers|services?|solutions?|best|top|reviews?|portfolio|case stud(?:y|ies)|examples?|vs\.?|compare|comparison|alternatives?)\b/i,
+    confidence: 0.8,
+  },
+  {
+    intent: 'navigational',
+    re: /\b(login|log in|sign in|dashboard|careers?|jobs?|contact page|homepage|official site|\.com)\b/i,
+    confidence: 0.75,
+  },
+  {
+    intent: 'informational',
+    re: /\b(how|what|why|when|which|who|where|guide|tutorial|tips?|ideas?|examples? of|definition|meaning|explained?|learn|vs|difference|benefits?|types? of)\b/i,
+    confidence: 0.7,
+  },
+]
+
+export function classifyIntent(query: string): { intent: SearchIntent; confidence: number; signals: string[] } {
+  const q = (query || '').toLowerCase()
+  for (const rule of INTENT_RULES) {
+    const match = q.match(rule.re)
+    if (match) {
+      // Collect the distinct matched signal words (global pass over the pattern).
+      const all = q.match(new RegExp(rule.re.source, 'gi')) || [match[0]]
+      const signals = [...new Set(all.map((m) => m.trim().toLowerCase()))].slice(0, 4)
+      return { intent: rule.intent, confidence: rule.confidence, signals }
+    }
+  }
+  // A long natural-language query with no signal word reads as informational
+  // (people researching), a short one as navigational (a brand/name lookup).
+  const words = q.split(/\s+/).filter(Boolean).length
+  return words >= 3
+    ? { intent: 'informational', confidence: 0.4, signals: [] }
+    : { intent: 'navigational', confidence: 0.35, signals: [] }
+}
+
+// The intent a RANKING PAGE reads as, from its URL/path shape — the cheap
+// proxy for "what kind of page is this" without fetching it. Service/contact
+// paths read commercial/transactional; article/vision/blog paths read
+// informational. Same family as classifyIntent so the two are comparable.
+export function pageIntentFromPath(path: string): SearchIntent {
+  const p = (path || '').toLowerCase()
+  if (/(contact|get-started|request|quote|pricing|rfp)/.test(p)) return 'transactional'
+  if (/(services?|work|portfolio|enterprise|consulting|agency|studio|hire)/.test(p)) return 'commercial'
+  if (/(vision|article|blog|guide|news|research|about|story|stories)/.test(p)) return 'informational'
+  // A short top-level path (e.g. /, /open-source) is hard to call → informational.
+  return 'informational'
+}
+
+// Two intents "mismatch" when a buy-stage query (commercial/transactional) is
+// answered by a purely informational page, or an informational query lands on a
+// hard-sell commercial/transactional page. Same-family intents (commercial vs
+// transactional) are close enough not to flag.
+function intentsMismatch(queryIntent: SearchIntent, pageIntent: SearchIntent): boolean {
+  const buyStage = (i: SearchIntent) => i === 'commercial' || i === 'transactional'
+  if (buyStage(queryIntent) && pageIntent === 'informational') return true
+  if (queryIntent === 'informational' && buyStage(pageIntent)) return true
+  return false
+}
+
+// Build the per-query intent profile from the [query] rows, and the
+// intent-mismatch list from the [page, query] rows (where a query's best
+// ranking page disagrees with the query's intent). Both pure + exported.
+const INTENT_PROFILE_MIN_IMPRESSIONS = 20
+const INTENT_MISMATCH_MIN_IMPRESSIONS = 50
+
+export function buildIntentProfile(queryRows: GscRow[]): IntentProfileEntry[] {
+  const out: IntentProfileEntry[] = []
+  for (const row of queryRows) {
+    const query = row.keys?.[0] || ''
+    if (!query || BRAND_RE.test(query) || isJunkQuery(query)) continue
+    const impressions = row.impressions || 0
+    if (impressions < INTENT_PROFILE_MIN_IMPRESSIONS) continue
+    const { intent, confidence, signals } = classifyIntent(query)
+    out.push({
+      query,
+      intent,
+      confidence,
+      signals,
+      impressions: Math.round(impressions),
+      clicks: Math.round(row.clicks || 0),
+      position: Number((row.position || 0).toFixed(1)),
+    })
+  }
+  return out.sort((a, b) => b.impressions - a.impressions)
+}
+
+export function buildIntentMismatches(pageQueryRows: GscRow[]): IntentMismatch[] {
+  // For each non-brand query, keep only the single best (most-impressions)
+  // ranking page — that's the page Google is actually serving for it.
+  type Best = { path: string; impressions: number; clicks: number; posWeighted: number }
+  const byQuery = new Map<string, Best>()
+  const queryTotals = new Map<string, number>()
+  for (const row of pageQueryRows) {
+    const path = normalizePath(row.keys?.[0] || '')
+    const query = row.keys?.[1] || ''
+    if (!query || BRAND_RE.test(query) || isJunkQuery(query)) continue
+    if (isLegacyPath(path)) continue
+    const impressions = row.impressions || 0
+    if (impressions <= 0) continue
+    queryTotals.set(query, (queryTotals.get(query) || 0) + impressions)
+    const best = byQuery.get(query)
+    if (!best || impressions > best.impressions) {
+      byQuery.set(query, {
+        path,
+        impressions,
+        clicks: row.clicks || 0,
+        posWeighted: (row.position || 0) * impressions,
+      })
+    }
+  }
+
+  const out: IntentMismatch[] = []
+  for (const [query, best] of byQuery) {
+    const total = queryTotals.get(query) || 0
+    if (total < INTENT_MISMATCH_MIN_IMPRESSIONS) continue
+    const { intent: queryIntent } = classifyIntent(query)
+    const pageIntent = pageIntentFromPath(best.path)
+    if (!intentsMismatch(queryIntent, pageIntent)) continue
+    const position = best.impressions > 0 ? best.posWeighted / best.impressions : 0
+    const buyStageQuery = queryIntent === 'commercial' || queryIntent === 'transactional'
+    const fixHint = buyStageQuery
+      ? `"${query}" is a ${queryIntent} (buy-stage) query, but it ranks an informational page. ` +
+        'Point it at a services/contact page (or add a clear CTA + "work with us" path to this page), ' +
+        'and internally link the buy-stage page so Google serves it instead.'
+      : `"${query}" is an informational (research-stage) query, but it ranks a ${pageIntent} sales page. ` +
+        'Searchers want to learn, not buy yet — add an explainer/guide page for this query and link it, ' +
+        'so you capture the research-stage visit and nurture toward the sales page.'
+    out.push({
+      query,
+      queryIntent,
+      page: best.path,
+      url: `https://www.goinvo.com${best.path}`,
+      pageIntent,
+      impressions: Math.round(total),
+      clicks: Math.round(best.clicks),
+      position: Number(position.toFixed(1)),
+      // Bigger demand on a mismatched query = a bigger leak to fix.
+      score: Math.round(total),
+      fixHint,
+    })
+  }
+  return out.sort((a, b) => b.score - a.score)
+}
+
 function ymd(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
@@ -482,6 +827,15 @@ export async function GET() {
   start.setDate(start.getDate() - 90)
   const startDate = ymd(start)
   const endDate = ymd(today)
+  // The prior ~90-day window (the 90 days before the trailing window) for the
+  // content-decay period comparison. End it the day before `start` so the two
+  // windows don't overlap.
+  const priorEnd = new Date(start)
+  priorEnd.setDate(priorEnd.getDate() - 1)
+  const priorStart = new Date(priorEnd)
+  priorStart.setDate(priorStart.getDate() - 90)
+  const priorStartDate = ymd(priorStart)
+  const priorEndDate = ymd(priorEnd)
   const warnings: string[] = []
 
   try {
@@ -495,6 +849,24 @@ export async function GET() {
       gscQuery(token, { startDate, endDate, dimensions: ['page', 'query'], rowLimit: 10000 }),
       gscQuery(token, { startDate, endDate, dimensions: ['query'], rowLimit: 1000 }),
     ])
+
+    // Prior-period [page] pull for the content-decay comparison. Graceful: if
+    // GSC doesn't have data for the older window (a young property) or the call
+    // fails, the decay watch-list is simply empty and the rest of the engine is
+    // unaffected.
+    let priorPageRows: GscRow[] = []
+    try {
+      priorPageRows = await gscQuery(token, {
+        startDate: priorStartDate,
+        endDate: priorEndDate,
+        dimensions: ['page'],
+        rowLimit: 500,
+      })
+    } catch (decayError) {
+      warnings.push(
+        `Content-decay comparison unavailable: ${decayError instanceof Error ? decayError.message : 'unknown error'}`,
+      )
+    }
 
     let pageViews = new Map<string, number>()
     try {
@@ -621,23 +993,47 @@ export async function GET() {
     const ctrGaps = buildCtrGaps(pageQueryRows).slice(0, 20)
     const cannibalization = buildCannibalization(pageQueryRows).slice(0, 15)
 
+    // Content decay (trailing 90d vs prior 90d, [page] dimension) + search-intent
+    // classification (per top non-brand query) and intent mismatches (a query's
+    // best ranking page disagreeing with the query's intent). All derived from
+    // the rows already pulled — no extra API calls beyond the prior-period one.
+    const decay = buildDecay(pageRows, priorPageRows).slice(0, 20)
+    const intentProfile = buildIntentProfile(queryRows).slice(0, 50)
+    const intentMismatches = buildIntentMismatches(pageQueryRows).slice(0, 20)
+
     return NextResponse.json({
       configured: true,
       generatedAt: new Date().toISOString(),
       range: { startDate, endDate },
+      priorRange: { startDate: priorStartDate, endDate: priorEndDate },
       site: GSC_SITE_URL,
       keyEventsConfigured,
       pages,
       queries,
       ctrGaps,
       cannibalization,
+      decay,
+      intentProfile,
+      intentMismatches,
       warnings,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'SEO opportunities request failed.'
     console.error('Marketing SEO opportunities failed:', error)
     return NextResponse.json(
-      { configured: true, error: message, keyEventsConfigured: false, pages: [], queries: [], ctrGaps: [], cannibalization: [], warnings },
+      {
+        configured: true,
+        error: message,
+        keyEventsConfigured: false,
+        pages: [],
+        queries: [],
+        ctrGaps: [],
+        cannibalization: [],
+        decay: [],
+        intentProfile: [],
+        intentMismatches: [],
+        warnings,
+      },
       { status: 500 },
     )
   }

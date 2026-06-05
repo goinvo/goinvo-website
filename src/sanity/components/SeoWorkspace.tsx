@@ -58,16 +58,64 @@ type Cannibalization = {
   bestPosition: number
   score: number
 }
+// A page losing search ground over the trailing 90d vs the prior 90d, with a
+// recommended action (matches DecayWatch in api/marketing/seo/route.ts).
+type DecayWatch = {
+  path: string
+  url: string
+  recentImpressions: number
+  priorImpressions: number
+  recentClicks: number
+  priorClicks: number
+  recentPosition: number
+  priorPosition: number
+  impressionsDelta: number
+  clicksDelta: number
+  impressionsPctChange: number
+  clicksPctChange: number
+  positionDelta: number
+  decliningSignals: number
+  action: 'refresh' | 'consolidate' | 'leave'
+  score: number
+  fixHint: string
+}
+// A non-brand query classified into a search intent (matches IntentProfileEntry).
+type IntentProfileEntry = {
+  query: string
+  intent: 'informational' | 'commercial' | 'transactional' | 'navigational'
+  confidence: number
+  signals: string[]
+  impressions: number
+  clicks: number
+  position: number
+}
+// A query whose intent doesn't match its ranking page (matches IntentMismatch).
+type IntentMismatch = {
+  query: string
+  queryIntent: 'informational' | 'commercial' | 'transactional' | 'navigational'
+  page: string
+  url: string
+  pageIntent: 'informational' | 'commercial' | 'transactional' | 'navigational'
+  impressions: number
+  clicks: number
+  position: number
+  score: number
+  fixHint: string
+}
 type SeoData = {
   configured?: boolean
   message?: string
   error?: string
   range?: { startDate: string; endDate: string }
+  priorRange?: { startDate: string; endDate: string }
   keyEventsConfigured?: boolean
   pages?: PageOpp[]
   queries?: QueryOpp[]
   ctrGaps?: CtrGap[]
   cannibalization?: Cannibalization[]
+  decay?: DecayWatch[]
+  intentProfile?: IntentProfileEntry[]
+  intentMismatches?: IntentMismatch[]
   warnings?: string[]
 }
 type Claim = { claim: string; verdict: string; confidence: number; note: string; hasOnPageCitation: boolean }
@@ -138,6 +186,20 @@ const VERDICT_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = { idea: '#7d8694', exploring: '#2276fc', planned: '#2276fc', inProgress: '#d98a00', shipped: '#1f9d55', dropped: '#9aa0a6' }
 const PRIORITY_COLORS: Record<string, string> = { high: '#e0463c', medium: '#d98a00', low: '#7d8694' }
 const STATUS_ORDER = ['idea', 'exploring', 'planned', 'inProgress', 'shipped', 'dropped']
+
+// Decay watch-list action → color (refresh = act, consolidate = redirect,
+// leave = monitor) and the matching [page, query]-style intent palette.
+const DECAY_ACTION_COLORS: Record<DecayWatch['action'], string> = {
+  refresh: '#d98a00',
+  consolidate: '#2276fc',
+  leave: '#7d8694',
+}
+const INTENT_COLORS: Record<IntentProfileEntry['intent'], string> = {
+  informational: '#2276fc',
+  commercial: '#d98a00',
+  transactional: '#1f9d55',
+  navigational: '#7d8694',
+}
 
 // §7 severity colors: red error / yellow warning / blue notice.
 const SEVERITY_COLORS: Record<FindingSeverity, string> = { error: '#e0463c', warning: '#d98a00', notice: '#2276fc' }
@@ -227,6 +289,11 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   // Expanded-row keys for the CTR-gap and cannibalization tables.
   const [openGap, setOpenGap] = useState<string | null>(null)
   const [openCannibal, setOpenCannibal] = useState<string | null>(null)
+  // Expanded-row keys for the decay and intent-mismatch tables, plus the
+  // intent-profile filter (null = all intents).
+  const [openDecay, setOpenDecay] = useState<string | null>(null)
+  const [openMismatch, setOpenMismatch] = useState<string | null>(null)
+  const [intentFilter, setIntentFilter] = useState<IntentProfileEntry['intent'] | null>(null)
   // Per-row hovered key for the page-opportunity table — drives the hover-only
   // "Audit" button (inline styles, so no :hover available).
   const [hoveredOpp, setHoveredOpp] = useState<string | null>(null)
@@ -1001,6 +1068,233 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* --- Losing ground — content decay watchlist (90d vs prior 90d) --- */}
+      {!!data?.decay?.length && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Losing ground — decay watchlist</div>
+          <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+            Pages whose search performance has slipped over the trailing 90 days vs the prior 90 days
+            {data.priorRange && data.range
+              ? ` (${data.range.startDate}…${data.range.endDate} vs ${data.priorRange.startDate}…${data.priorRange.endDate})`
+              : ''}
+            . A sustained drop across impressions, clicks, or average position. Each row recommends whether to{' '}
+            <strong>refresh</strong> (rework the content), <strong>consolidate</strong> (redirect a fading
+            legacy/duplicate), or <strong>leave</strong> (monitor). Note: a real refresh means substantive content changes
+            — Google detects and discounts date-only edits.
+          </p>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>Page (click for the fix)</th>
+                <th style={{ ...s.th, ...s.num }} title="Impressions: recent 90d vs prior 90d">
+                  Impr Δ
+                </th>
+                <th style={{ ...s.th, ...s.num }} title="Average position change (negative = improved, positive = slipped)">
+                  Pos Δ
+                </th>
+                <th style={{ ...s.th, ...s.num }} title="How many of impressions / clicks / position declined">
+                  Signals
+                </th>
+                <th style={s.th}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.decay.slice(0, 15).map((d) => {
+                const open = openDecay === d.path
+                return (
+                  <Fragment key={d.path}>
+                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenDecay(open ? null : d.path)}>
+                      <td style={s.td}>
+                        {open ? '▾ ' : '▸ '}
+                        {d.path}
+                      </td>
+                      <td style={{ ...s.td, ...s.num, color: '#e0463c', fontWeight: 600 }}>
+                        {(d.impressionsPctChange * 100).toFixed(0)}%
+                      </td>
+                      <td
+                        style={{
+                          ...s.td,
+                          ...s.num,
+                          color: d.positionDelta > 0 ? '#e0463c' : 'var(--card-muted-fg-color)',
+                          fontWeight: d.positionDelta > 0 ? 600 : 400,
+                        }}
+                      >
+                        {d.positionDelta > 0 ? '+' : ''}
+                        {d.positionDelta}
+                      </td>
+                      <td style={{ ...s.td, ...s.num }}>{d.decliningSignals}/3</td>
+                      <td style={s.td}>
+                        <span style={badge(DECAY_ACTION_COLORS[d.action])}>{d.action}</span>
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr>
+                        <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={5}>
+                          <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                            <div style={{ marginBottom: 6 }}>
+                              <strong>Why.</strong> {d.fixHint}
+                            </div>
+                            <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                              Impressions {d.priorImpressions.toLocaleString()} → {d.recentImpressions.toLocaleString()} ·
+                              clicks {d.priorClicks.toLocaleString()} → {d.recentClicks.toLocaleString()} · position{' '}
+                              {d.priorPosition} → {d.recentPosition} ·{' '}
+                              <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                {d.url}
+                              </a>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* --- Search-intent profile + intent mismatches --- */}
+      {(!!data?.intentProfile?.length || !!data?.intentMismatches?.length) && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Search intent</div>
+          <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+            Top non-brand queries classified by intent (a rule-based keyword heuristic). <strong>Mismatches</strong> are
+            buy-stage queries (commercial/transactional) answered by a purely informational page, or research-stage
+            queries landing on a hard-sell page — point each at the right kind of page.
+          </p>
+
+          {!!data?.intentMismatches?.length && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12.5 }}>
+                <span style={{ ...badge('#e0463c'), marginRight: 6 }}>{data.intentMismatches.length}</span>
+                Intent mismatches (query vs ranking page)
+              </div>
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    <th style={s.th}>Query (click for the fix)</th>
+                    <th style={s.th}>Ranking page</th>
+                    <th style={s.th}>Query → page intent</th>
+                    <th style={{ ...s.th, ...s.num }}>Impr</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.intentMismatches.slice(0, 12).map((m) => {
+                    const key = `${m.query}|${m.page}`
+                    const open = openMismatch === key
+                    return (
+                      <Fragment key={key}>
+                        <tr style={{ cursor: 'pointer' }} onClick={() => setOpenMismatch(open ? null : key)}>
+                          <td style={s.td}>
+                            {open ? '▾ ' : '▸ '}
+                            {m.query}
+                          </td>
+                          <td style={s.td}>{m.page}</td>
+                          <td style={s.td}>
+                            <span style={{ ...badge(INTENT_COLORS[m.queryIntent]), marginRight: 4 }}>{m.queryIntent}</span>
+                            <span style={{ color: 'var(--card-muted-fg-color)' }}>→</span>{' '}
+                            <span style={badge(INTENT_COLORS[m.pageIntent])}>{m.pageIntent}</span>
+                          </td>
+                          <td style={{ ...s.td, ...s.num }}>{m.impressions.toLocaleString()}</td>
+                        </tr>
+                        {open && (
+                          <tr>
+                            <td
+                              style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }}
+                              colSpan={4}
+                            >
+                              <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                                <div style={{ marginBottom: 6 }}>
+                                  <strong>Why.</strong> {m.fixHint}
+                                </div>
+                                <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                                  {m.impressions.toLocaleString()} impressions/qtr · ranks #{m.position} ·{' '}
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                    {m.url}
+                                  </a>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {!!data?.intentProfile?.length && (
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  marginBottom: 6,
+                  flexWrap: 'wrap',
+                  fontSize: 12.5,
+                }}
+              >
+                <span style={{ fontWeight: 600 }}>Intent profile</span>
+                {/* Filter chips — click an intent to filter, click again to clear. */}
+                {(['informational', 'commercial', 'transactional', 'navigational'] as const).map((it) => {
+                  const n = data.intentProfile!.filter((e) => e.intent === it).length
+                  if (!n) return null
+                  const active = intentFilter === it
+                  return (
+                    <button
+                      key={it}
+                      type="button"
+                      onClick={() => setIntentFilter(active ? null : it)}
+                      style={{
+                        ...badge(INTENT_COLORS[it]),
+                        cursor: 'pointer',
+                        border: 'none',
+                        opacity: !intentFilter || active ? 1 : 0.4,
+                      }}
+                    >
+                      {it} {n}
+                    </button>
+                  )
+                })}
+              </div>
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    <th style={s.th}>Query</th>
+                    <th style={s.th}>Intent</th>
+                    <th style={s.th}>Signals</th>
+                    <th style={{ ...s.th, ...s.num }}>Impr</th>
+                    <th style={{ ...s.th, ...s.num }}>Pos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.intentProfile
+                    .filter((e) => !intentFilter || e.intent === intentFilter)
+                    .slice(0, 20)
+                    .map((e) => (
+                      <tr key={e.query}>
+                        <td style={s.td}>{e.query}</td>
+                        <td style={s.td}>
+                          <span style={badge(INTENT_COLORS[e.intent])}>{e.intent}</span>
+                        </td>
+                        <td style={{ ...s.td, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                          {e.signals.length ? e.signals.join(', ') : '—'}
+                        </td>
+                        <td style={{ ...s.td, ...s.num }}>{e.impressions.toLocaleString()}</td>
+                        <td style={{ ...s.td, ...s.num }}>{e.position}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
