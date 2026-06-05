@@ -14,6 +14,7 @@ type PageOpp = {
   ctr: number
   position: number
   pageViews: number
+  keyEvents?: number
   quality?: number
   topQuery?: string
   topQueries?: string[]
@@ -31,13 +32,42 @@ type QueryOpp = {
   score: number
   fix: string
 }
+// A page-1 query earning far fewer clicks than its position should — a
+// title/meta-rewrite quick win (matches CtrGap in api/marketing/seo/route.ts).
+type CtrGap = {
+  query: string
+  page: string
+  url: string
+  impressions: number
+  clicks: number
+  position: number
+  ctr: number
+  expectedCtr: number
+  gap: number
+  missedClicks: number
+  score: number
+  fixHint: string
+}
+// One query that multiple goinvo.com pages compete for (matches Cannibalization
+// in the route) → consolidate or differentiate.
+type Cannibalization = {
+  query: string
+  impressions: number
+  clicks: number
+  pages: Array<{ path: string; url: string; impressions: number; clicks: number; position: number }>
+  bestPosition: number
+  score: number
+}
 type SeoData = {
   configured?: boolean
   message?: string
   error?: string
   range?: { startDate: string; endDate: string }
+  keyEventsConfigured?: boolean
   pages?: PageOpp[]
   queries?: QueryOpp[]
+  ctrGaps?: CtrGap[]
+  cannibalization?: Cannibalization[]
   warnings?: string[]
 }
 type Claim = { claim: string; verdict: string; confidence: number; note: string; hasOnPageCitation: boolean }
@@ -194,6 +224,9 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [ideaSort, setIdeaSort] = useState<'priority' | 'category' | 'status'>('priority')
   const [openIdea, setOpenIdea] = useState<string | null>(null)
   const [openPage, setOpenPage] = useState<string | null>(null)
+  // Expanded-row keys for the CTR-gap and cannibalization tables.
+  const [openGap, setOpenGap] = useState<string | null>(null)
+  const [openCannibal, setOpenCannibal] = useState<string | null>(null)
   // Per-row hovered key for the page-opportunity table — drives the hover-only
   // "Audit" button (inline styles, so no :hover available).
   const [hoveredOpp, setHoveredOpp] = useState<string | null>(null)
@@ -667,6 +700,23 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       {!!data?.pages?.length && (
         <div style={s.card}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Page opportunities</div>
+          {data.configured && data.keyEventsConfigured === false && (
+            <div
+              style={{
+                ...s.sub,
+                marginBottom: 10,
+                fontSize: 11,
+                padding: '6px 10px',
+                borderRadius: 6,
+                border: '1px solid var(--card-border-color)',
+                background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))',
+              }}
+            >
+              <strong style={{ color: '#d98a00' }}>Leads column is off.</strong> GA4 key-events aren&apos;t configured, so the
+              score uses search demand only. Mark the contact-form / RFP-CTA actions as GA4 key events to rank converting
+              pages higher and light up this column.
+            </div>
+          )}
           <table style={s.table}>
             <thead>
               <tr>
@@ -674,6 +724,9 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 <th style={{ ...s.th, ...s.num }}>Impr</th>
                 <th style={{ ...s.th, ...s.num }}>CTR</th>
                 <th style={{ ...s.th, ...s.num }}>Pos</th>
+                <th style={{ ...s.th, ...s.num }} title="GA4 key-events (leads) attributed to this page">
+                  Leads
+                </th>
                 <th style={{ ...s.th, ...s.num }}>Score</th>
                 <th style={s.th}>Fix</th>
               </tr>
@@ -727,6 +780,21 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                       <td style={{ ...s.td, ...s.num }}>{p.impressions.toLocaleString()}</td>
                       <td style={{ ...s.td, ...s.num }}>{pct(p.ctr)}</td>
                       <td style={{ ...s.td, ...s.num }}>{p.position}</td>
+                      <td
+                        style={{
+                          ...s.td,
+                          ...s.num,
+                          color: p.keyEvents ? '#1f9d55' : 'var(--card-muted-fg-color)',
+                          fontWeight: p.keyEvents ? 600 : 400,
+                        }}
+                        title={
+                          data?.keyEventsConfigured
+                            ? 'GA4 key-events (leads) in the last 28 days'
+                            : 'GA4 key-events not configured yet — see the note above'
+                        }
+                      >
+                        {data?.keyEventsConfigured ? (p.keyEvents ?? 0).toLocaleString() : '—'}
+                      </td>
                       <td style={{ ...s.td, ...s.num }}>{p.score.toLocaleString()}</td>
                       <td style={s.td}>
                         <span style={badge(FIX_COLORS[p.fix] || FIX_COLORS.maintain)}>{p.fix}</span>
@@ -734,7 +802,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     </tr>
                     {open && (
                       <tr>
-                        <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={6}>
+                        <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={7}>
                           <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
                             <div style={{ marginBottom: 8 }}>
                               <strong>Diagnosis.</strong> Ranks #{p.position} for &ldquo;{p.topQuery}&rdquo; — {p.impressions.toLocaleString()} impressions/qtr at {pct(p.ctr)} click-through. {p.fixHint}
@@ -774,6 +842,156 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                             <button type="button" style={s.btn} onClick={() => void runCitation(p.url)}>
                               Verify facts (check citations)
                             </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* --- Title/meta rewrite quick wins (position-adjusted CTR gap) --- */}
+      {!!data?.ctrGaps?.length && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>
+            <span style={{ ...badge('#7b2ff7'), marginRight: 6 }}>⚡ Quick wins</span>
+            Title/meta rewrite — quick wins
+          </div>
+          <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+            These queries already rank on page 1 but earn far fewer clicks than their position should. They aren&apos;t
+            earning the click — rewrite the page title + meta description to match intent. Cheapest, highest-yield win (no
+            re-ranking needed).
+          </p>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>Query (click for the fix)</th>
+                <th style={s.th}>Page</th>
+                <th style={{ ...s.th, ...s.num }}>Pos</th>
+                <th style={{ ...s.th, ...s.num }} title="Actual vs expected click-through at this position">
+                  CTR / exp
+                </th>
+                <th style={{ ...s.th, ...s.num }} title="Clicks/quarter left on the table at the expected CTR">
+                  Missed
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.ctrGaps.slice(0, 15).map((g) => {
+                const key = `${g.page}|${g.query}`
+                const open = openGap === key
+                return (
+                  <Fragment key={key}>
+                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenGap(open ? null : key)}>
+                      <td style={s.td}>
+                        {open ? '▾ ' : '▸ '}
+                        {g.query}
+                      </td>
+                      <td style={s.td}>{g.page}</td>
+                      <td style={{ ...s.td, ...s.num }}>{g.position}</td>
+                      <td style={{ ...s.td, ...s.num }}>
+                        <span style={{ color: '#e0463c', fontWeight: 600 }}>{pct(g.ctr)}</span>
+                        <span style={{ color: 'var(--card-muted-fg-color)' }}> / {pct(g.expectedCtr)}</span>
+                      </td>
+                      <td style={{ ...s.td, ...s.num, fontWeight: 600 }}>+{g.missedClicks.toLocaleString()}</td>
+                    </tr>
+                    {open && (
+                      <tr>
+                        <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={5}>
+                          <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                            <div style={{ marginBottom: 6 }}>
+                              <strong>Why.</strong> {g.fixHint}
+                            </div>
+                            <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                              {g.impressions.toLocaleString()} impressions/qtr ·{' '}
+                              <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                {g.url}
+                              </a>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* --- Keyword cannibalization (multiple pages, one query) --- */}
+      {!!data?.cannibalization?.length && (
+        <div style={s.card}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Keyword cannibalization</div>
+          <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
+            Queries where several goinvo.com pages compete with each other. Google has to split the query across them, so
+            none ranks as well as one focused page would. Consolidate the weaker pages into the strongest (301-redirect),
+            or clearly differentiate their intent and cross-link.
+          </p>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>Query (click for the competing pages)</th>
+                <th style={{ ...s.th, ...s.num }}>Pages</th>
+                <th style={{ ...s.th, ...s.num }}>Impr</th>
+                <th style={{ ...s.th, ...s.num }} title="Best (lowest) position any of the competing pages reaches">
+                  Best pos
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.cannibalization.slice(0, 12).map((c) => {
+                const open = openCannibal === c.query
+                return (
+                  <Fragment key={c.query}>
+                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenCannibal(open ? null : c.query)}>
+                      <td style={s.td}>
+                        {open ? '▾ ' : '▸ '}
+                        {c.query}
+                      </td>
+                      <td style={{ ...s.td, ...s.num }}>
+                        <span style={badge('#d98a00')}>{c.pages.length}</span>
+                      </td>
+                      <td style={{ ...s.td, ...s.num }}>{c.impressions.toLocaleString()}</td>
+                      <td style={{ ...s.td, ...s.num }}>{c.bestPosition}</td>
+                    </tr>
+                    {open && (
+                      <tr>
+                        <td style={{ ...s.td, background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))' }} colSpan={4}>
+                          <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                            <div style={{ marginBottom: 6 }}>
+                              <strong>Competing pages</strong> for &ldquo;{c.query}&rdquo; — keep the strongest, consolidate
+                              or differentiate the rest:
+                            </div>
+                            <table style={s.table}>
+                              <thead>
+                                <tr>
+                                  <th style={s.th}>Page</th>
+                                  <th style={{ ...s.th, ...s.num }}>Impr</th>
+                                  <th style={{ ...s.th, ...s.num }}>Clicks</th>
+                                  <th style={{ ...s.th, ...s.num }}>Pos</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {c.pages.map((pg) => (
+                                  <tr key={pg.path}>
+                                    <td style={s.td}>
+                                      <a href={pg.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                        {pg.path}
+                                      </a>
+                                    </td>
+                                    <td style={{ ...s.td, ...s.num }}>{pg.impressions.toLocaleString()}</td>
+                                    <td style={{ ...s.td, ...s.num }}>{pg.clicks.toLocaleString()}</td>
+                                    <td style={{ ...s.td, ...s.num }}>{pg.position}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </td>
                       </tr>
