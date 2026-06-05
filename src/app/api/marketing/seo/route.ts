@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSign } from 'node:crypto'
+import { tfKeyword, withTextFocus } from '@/lib/marketing/textfocus'
 
 // The SEO opportunities engine. Authenticates as the marketing service account
 // (the same one wired for the GA/GSC MCPs), pulls Search Console + GA4, and
@@ -164,6 +165,15 @@ type QueryOpportunity = {
   score: number
   fix: 'ranking' | 'ctr' | 'maintain'
   fixHint: string
+  // TextFocus keyword enrichment (marketingIdea: seo-keyword-enrichment).
+  // Present only when TextFocus is healthy AND returned this query in the one
+  // batched tf_keyword call; absent (undefined) when TextFocus is down/capped or
+  // didn't have the keyword, so the row renders exactly as before. `volume` =
+  // monthly search volume, `difficulty` = 0–100 keyword difficulty (higher =
+  // harder to rank), `cpc` = paid cost-per-click (TextFocus `cost`).
+  volume?: number
+  difficulty?: number
+  cpc?: number
 }
 
 // A page that is losing search ground — its trailing-90d performance has
@@ -381,6 +391,96 @@ const KEY_EVENT_BOOST_CAP = 1.0 // at most +100%
 export function keyEventBoost(keyEvents: number): number {
   if (!Number.isFinite(keyEvents) || keyEvents <= 0) return 1
   return 1 + Math.min(KEY_EVENT_BOOST_CAP, KEY_EVENT_BOOST_PER_LEAD * Math.log2(1 + keyEvents))
+}
+
+// --- TextFocus keyword enrichment (marketingIdea: seo-keyword-enrichment) ----
+// Fold third-party keyword volume + difficulty (+ CPC) onto the ranked query
+// opportunities so the engine reads "valuable AND winnable", not just "high
+// demand in our own GSC". This is ADDITIVE and ENRICHMENT-ONLY: GSC impressions
+// stay the primary demand signal; TextFocus is never a hard dependency, and a
+// down/capped/misconfigured TextFocus leaves every opportunity exactly as it
+// was (no volume/difficulty fields, original score + order). To respect both the
+// 1-credit-per-batch economics and the 30-calls/day TextFocus cap, the whole
+// refresh makes at most ONE tf_keyword call, batching the top-N queries' primary
+// term into the JSON-array form.
+
+// Cap on how many top opportunities we enrich in the single batched call. Keeps
+// one refresh to ~1 credit and well under the daily cap; if the list is longer
+// we enrich the top slice and log that we capped (we never split into N calls).
+const KEYWORD_ENRICH_MAX = 25
+
+// tf_keyword returns a map keyed by the keyword string, each value carrying
+// loosely-typed (string OR number) `volume`, `difficulty` and `cost` (CPC).
+// Verified live: e.g. { "healthcare design": { volume: 720, difficulty: 37,
+// cost: "3.00", ... } }. Values come back as strings in some responses and
+// numbers in others, so every field is coerced through Number().
+type TfKeywordEntry = { volume?: unknown; difficulty?: unknown; cost?: unknown }
+export type KeywordMetrics = { volume?: number; difficulty?: number; cpc?: number }
+
+// Coerce a possibly-string/number/blank field to a finite number, or undefined.
+function toFiniteNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined
+  const n = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(n) ? n : undefined
+}
+
+// Parse the raw tf_keyword batch payload into a query→metrics map. Tolerant of
+// missing/odd shapes (returns an empty map) so a malformed response degrades
+// gracefully rather than throwing. Exported for the test.
+export function parseKeywordMetrics(raw: unknown): Map<string, KeywordMetrics> {
+  const out = new Map<string, KeywordMetrics>()
+  if (!raw || typeof raw !== 'object') return out
+  for (const [keyword, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!value || typeof value !== 'object') continue
+    const entry = value as TfKeywordEntry
+    const metrics: KeywordMetrics = {
+      volume: toFiniteNumber(entry.volume),
+      difficulty: toFiniteNumber(entry.difficulty),
+      cpc: toFiniteNumber(entry.cost),
+    }
+    if (metrics.volume === undefined && metrics.difficulty === undefined && metrics.cpc === undefined) continue
+    out.set(keyword, metrics)
+  }
+  return out
+}
+
+// A MODEST, documented re-rank multiplier from keyword difficulty: a low-
+// difficulty keyword is more winnable, so it edges up; a high-difficulty one
+// edges down. Bounded to ±~15% so the raw GSC demand still dominates the order
+// (the demand score and the raw volume/difficulty stay visible on the row). No
+// difficulty → 1 (no change). difficulty is 0..100 (higher = harder); we map it
+// to a factor in [0.85, 1.15], centered at the mid-difficulty 50.
+const DIFFICULTY_RERANK_SPREAD = 0.15
+export function difficultyRerankFactor(difficulty: number | undefined): number {
+  if (difficulty === undefined || !Number.isFinite(difficulty)) return 1
+  const clamped = Math.max(0, Math.min(100, difficulty))
+  // 0 → +spread (easiest, boost), 50 → 0 (neutral), 100 → −spread (hardest).
+  return 1 + ((50 - clamped) / 50) * DIFFICULTY_RERANK_SPREAD
+}
+
+// Attach { volume, difficulty, cpc } to each opportunity whose primary query
+// TextFocus returned, and fold difficulty into the score with the modest factor
+// above (re-sorting after). Pure + exported so the test can drive it without the
+// network. Opportunities TextFocus didn't cover are returned unchanged.
+export function enrichQueriesWithKeywordMetrics(
+  queries: QueryOpportunity[],
+  metricsByQuery: Map<string, KeywordMetrics>,
+): QueryOpportunity[] {
+  if (metricsByQuery.size === 0) return queries
+  const enriched = queries.map((q) => {
+    const m = metricsByQuery.get(q.query)
+    if (!m) return q
+    return {
+      ...q,
+      volume: m.volume,
+      difficulty: m.difficulty,
+      cpc: m.cpc,
+      // Modest "winnability" re-rank — keep raw demand (impressions) visible.
+      score: Math.round(q.score * difficultyRerankFactor(m.difficulty)),
+    }
+  })
+  // Re-sort so the difficulty adjustment actually reorders the list.
+  return enriched.sort((a, b) => b.score - a.score)
 }
 
 // Normalize a page path/URL so the trailing-slash duplicates GSC and GA report
@@ -967,7 +1067,7 @@ export async function GET() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 30)
 
-    const queries: QueryOpportunity[] = queryRows
+    let queries: QueryOpportunity[] = queryRows
       .filter((row) => row.keys?.[0] && !BRAND_RE.test(row.keys[0]))
       .map((row) => {
         const impressions = row.impressions || 0
@@ -987,6 +1087,29 @@ export async function GET() {
       })
       .sort((a, b) => b.score - a.score)
       .slice(0, 30)
+
+    // TextFocus keyword enrichment (marketingIdea: seo-keyword-enrichment).
+    // ONE batched tf_keyword call for the top-N opportunities' primary query —
+    // credit-efficient (1 credit) and within the 30-calls/day cap. Gated by
+    // withTextFocus so a down/capped/misconfigured TextFocus returns the
+    // opportunities UNCHANGED (no volume/difficulty, original order). When it's
+    // healthy, each covered opportunity gains { volume, difficulty, cpc } and a
+    // modest difficulty re-rank (raw GSC demand stays the primary signal).
+    if (queries.length > 0) {
+      const batchTerms = queries.slice(0, KEYWORD_ENRICH_MAX).map((q) => q.query)
+      if (queries.length > KEYWORD_ENRICH_MAX) {
+        console.warn(
+          `SEO keyword enrichment: ${queries.length} query opportunities exceed the ${KEYWORD_ENRICH_MAX}-term batch cap; ` +
+            `enriching only the top ${KEYWORD_ENRICH_MAX} in the single tf_keyword call.`,
+        )
+      }
+      queries = await withTextFocus(async () => {
+        // Array form → one tf_keyword call returning a keyword→metrics map.
+        const raw = await tfKeyword(JSON.stringify(batchTerms), { lang: 'en-US' })
+        const metricsByQuery = parseKeywordMetrics(raw)
+        return enrichQueriesWithKeywordMetrics(queries, metricsByQuery)
+      }, queries)
+    }
 
     // Title/meta-rewrite quick wins + keyword cannibalization, both derived
     // from the [page, query] rows already pulled (no extra API calls).
