@@ -10,6 +10,7 @@ import { JsonLd } from '@/components/seo/JsonLd'
 
 const heroImage = '/images/services/doh-preview.jpg'
 const ogImage = cloudfrontImage(heroImage)
+const posterImage = cloudfrontImage('/images/features/determinants-of-health/determinants-of-health-poster.jpg')
 const pageUrl = 'https://www.goinvo.com/vision/determinants-of-health'
 
 export const metadata: Metadata = {
@@ -63,7 +64,7 @@ const determinantsJsonLd = {
       headline: 'Determinants of Health',
       description:
         'An open-source visualization of the five determinants of health (behavior, social circumstances, genetics, medical care, and environment) with the research and methodology behind their estimated impact.',
-      image: ogImage,
+      image: { '@id': `${pageUrl}#poster` },
       author: [
         { '@type': 'Person', name: 'Juhan Sonin' },
         { '@type': 'Person', name: 'Edwin Choi' },
@@ -75,6 +76,19 @@ const determinantsJsonLd = {
       },
       about: 'Social determinants of health',
       mainEntityOfPage: pageUrl,
+    },
+    {
+      '@type': 'ImageObject',
+      '@id': `${pageUrl}#poster`,
+      contentUrl: posterImage,
+      url: posterImage,
+      name: 'Determinants of Health visualization',
+      caption:
+        'The Determinants of Health: individual behavior (about 36%), social circumstances (24%), genetics (22%), medical care (11%), and environment (7%).',
+      description:
+        'An open-source diagram visualizing the five determinants of health and their estimated contribution to overall health outcomes.',
+      creditText: 'GoInvo',
+      creator: { '@type': 'Organization', name: 'GoInvo' },
     },
     {
       '@type': 'FAQPage',
@@ -232,7 +246,7 @@ export default function DeterminantsOfHealthPage() {
               <img
                 src={cloudfrontImage('/images/features/determinants-of-health/determinants-of-health-poster.jpg')}
                 className="image--max-width"
-                alt="Determinants of Health Poster"
+                alt="Determinants of Health diagram: the five determinants — individual behavior (about 36%), social circumstances (24%), genetics (22%), medical care (11%), and environment (7%)"
               />
             </div>
             <div className="button-group">
