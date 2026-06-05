@@ -11,6 +11,7 @@ import {
   LinkIcon,
   MasterDetailIcon,
   RefreshIcon,
+  RocketIcon,
   SearchIcon,
   TagIcon,
   TargetIcon,
@@ -42,6 +43,7 @@ import { researchRunStatusOptions } from '../schemas/marketingResearchRun'
 import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '../schemas/marketingTemplate'
 import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
 import { SeoWorkspace } from '../components/SeoWorkspace'
+import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import {
   DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY,
   defaultDesignerWorkflowTutorial,
@@ -655,6 +657,7 @@ type MarketingViewId =
   | 'dashboard'
   | 'attention'
   | 'strategy'
+  | 'strategyBrief'
   | 'abTesting'
   | 'research'
   | 'calendar'
@@ -738,6 +741,12 @@ export const MARKETING_TOOL_VIEWS: Array<{
     icon: TargetIcon,
   },
   {
+    id: 'strategyBrief',
+    title: 'Strategy Brief',
+    description: 'The positioning + plan: who we are, the money terms, AI visibility, and the Red Team play',
+    icon: RocketIcon,
+  },
+  {
     id: 'abTesting',
     title: 'A/B Tests',
     description: 'Compare page design choices, QA them, and keep the decision trail.',
@@ -792,6 +801,7 @@ export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
   'research',
   'seo',
   'strategy',
+  'strategyBrief',
   'abTesting',
   'calendar',
   'channels',
@@ -3483,6 +3493,7 @@ function MarketingComponent() {
                 onAutopilotComplete={reportAutopilotCompletion}
               />
             )}
+            {view === 'strategyBrief' && <StrategyBriefWorkspace client={client} />}
             {view === 'research' && (
               <ResearchWorkspace
                 client={client}
