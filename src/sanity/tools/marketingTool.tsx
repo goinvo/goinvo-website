@@ -18213,6 +18213,11 @@ export function getAbTestingVariantEventRows(experiment: MarketingExperiment): A
   ]
 }
 
+// Minimum per-variant exposures before a readout is trusted to show a rate or
+// declare a winner. A low bar to prevent "winner on 1 visit" / >100% rates from
+// tiny samples — not a statistical-significance test.
+const AB_MIN_EXPOSURES_PER_VARIANT = 30
+
 function getAbTestingMeasurementGaps(experiment: MarketingExperiment) {
   const variants = getAbTestingVariantOptions(experiment)
   const rows = getAbTestingVariantEventRows(experiment)
@@ -18225,13 +18230,19 @@ function getAbTestingMeasurementGaps(experiment: MarketingExperiment) {
   const missingExposure = !exposureRow || exposureRow.cells.some((cell) => cell.value === null)
   const missingEvents = metricRows.length === 0 || metricRows.some((row) => row.cells.some((cell) => cell.value === null))
   const missingRates = metricRows.some((row) => row.cells.some((cell) => cell.value !== null && cell.denominator === null))
+  // Too few exposures per variant to trust any rate or winner.
+  const lowSample =
+    !exposureRow ||
+    exposureRow.cells.length === 0 ||
+    exposureRow.cells.some((cell) => (cell.value ?? 0) < AB_MIN_EXPOSURES_PER_VARIANT)
 
   return {
     missingVariantBreakout,
     missingExposure,
     missingEvents,
     missingRates,
-    ready: !missingVariantBreakout && !missingExposure && !missingEvents && !missingRates,
+    lowSample,
+    ready: !missingVariantBreakout && !missingExposure && !missingEvents && !missingRates && !lowSample,
   }
 }
 
@@ -18485,7 +18496,11 @@ function formatAbTestingEventRate(cell: AbTestingVariantEventCell) {
   if (cell.value === null) return 'Event count missing'
   if (cell.denominator === null) return 'Visit count missing'
   if (cell.denominator <= 0) return '0 visits'
-  return `${formatAbTestingPercent(cell.rate || 0)} of visits`
+  const rate = cell.rate || 0
+  // A rate above 100% means more events than exposures (a sample/instrumentation
+  // artifact). Show the honest ratio instead of a misleading "500% of visits".
+  if (rate > 100) return `${formatOptionalNumber(cell.value)} events / ${formatOptionalNumber(cell.denominator)} visits`
+  return `${formatAbTestingPercent(rate)} of visits`
 }
 
 function formatAbTestingPercent(value: number) {
