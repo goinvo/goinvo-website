@@ -83,4 +83,20 @@ describe('Portable Text authoring', () => {
     expect(fields.find((field) => field.name === 'css')?.components?.input).toBeDefined()
     expect(fields.find((field) => field.name === 'js')?.components?.input).toBeDefined()
   })
+
+  it('offers the Ipsos workflow as a custom component option', () => {
+    type SchemaMember = {
+      name?: string
+      type?: string
+      fields?: SchemaMember[]
+      options?: { list?: Array<{ title: string; value: string }> }
+    }
+
+    const customComponent = portableTextSchema.of?.find((member) => member.name === 'customComponent') as
+      | SchemaMember
+      | undefined
+    const nameField = customComponent?.fields?.find((field) => field.name === 'name')
+
+    expect(nameField?.options?.list?.map((option) => option.value)).toContain('ipsosWorkflowWidget')
+  })
 })
