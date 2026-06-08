@@ -73,7 +73,6 @@ export function KillerTruthsChart({ rows }: { rows: KillerTruthsRow[] }) {
         >
           {rows.map((row, index) => {
             const y = index * rowHeight;
-            const textY = y + rowHeight / 2;
             const barWidth = getBarWidth(row.value);
 
             if (isMobile) {
@@ -118,7 +117,7 @@ export function KillerTruthsChart({ rows }: { rows: KillerTruthsRow[] }) {
                 <text
                   className="value"
                   x={275}
-                  y={textY}
+                  y={rowHeight / 2}
                   dominantBaseline="middle"
                 >
                   {formatValue(row.value)}
@@ -126,7 +125,7 @@ export function KillerTruthsChart({ rows }: { rows: KillerTruthsRow[] }) {
                 <text
                   className="name"
                   x={200}
-                  y={textY}
+                  y={rowHeight / 2}
                   dominantBaseline="middle"
                 >
                   {row.name}
