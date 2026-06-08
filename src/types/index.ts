@@ -89,6 +89,7 @@ export interface TeamMember {
     website?: string
     email?: string
   }
+  showOnAboutPage?: boolean
   isAlumni?: boolean
 }
 
@@ -127,6 +128,16 @@ export interface Feature {
   specialThanksHeading?: string
   specialThanksHeadingStyle?: 'subheading' | 'legacy-centered-h2'
   specialThanks?: PortableTextBlock[]
+  experimentVariants?: Array<{
+    _key?: string
+    key?: string
+    label?: string
+    title?: string
+    description?: string
+    metaTitle?: string
+    metaDescription?: string
+    content?: PortableTextBlock[]
+  }>
   showAboutGoInvo?: boolean
   aboutGoInvoPosition?: 'beforeNewsletter' | 'afterNewsletter'
   aboutGoInvoVariant?: 'default' | 'practice'

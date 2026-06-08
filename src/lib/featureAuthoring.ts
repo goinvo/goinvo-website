@@ -45,6 +45,7 @@ export const LEGACY_TRANSFORM_FEATURE_SLUGS = new Set([
   'open-pro',
   'open-source-healthcare',
   'own-your-health-data',
+  'vapepocolypse',
   'virtual-care',
 ])
 

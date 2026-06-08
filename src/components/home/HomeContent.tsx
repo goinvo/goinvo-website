@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Reveal } from '@/components/ui/Reveal'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { usePageTransition } from '@/context/PageTransitionContext'
+import { trackEvent, trackQualifiedDiscoveryCallClick } from '@/lib/analytics'
 import { cloudfrontImage } from '@/lib/utils'
 
 interface HomeContentProps {
@@ -133,10 +134,18 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
             <span className="text-gray">For complex systems and real constraints.</span>
           </h1>
           <div className="flex gap-4 mt-6">
-            <Button href="/contact" variant="primary">
+            <Button
+              href="/contact"
+              variant="primary"
+              onClick={() => trackQualifiedDiscoveryCallClick({ cta_text: 'Start a Convo', cta_location: 'control hero', cta_url: '/contact' })}
+            >
               Start a Convo
             </Button>
-            <Button href="/work" variant="outline">
+            <Button
+              href="/work"
+              variant="outline"
+              onClick={() => trackEvent('view_work_click', { link_text: 'View Our Work', click_location: 'control hero', destination: '/work' })}
+            >
               View Our Work
             </Button>
           </div>
@@ -162,7 +171,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
           sizes="100vw"
           priority
           fetchPriority="high"
-          quality={85}
+          quality={95}
           className="object-cover object-center"
         />
         <div className="relative z-10 max-width flex justify-start w-full">

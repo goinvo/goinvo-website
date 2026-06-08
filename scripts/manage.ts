@@ -89,6 +89,11 @@ const tasks = {
     file: 'generate-verification.mjs',
     description: 'Generate the manual verification checklist.',
   },
+  'marketing:vercel-analytics': {
+    runner: 'tsx',
+    file: 'sync-vercel-analytics.ts',
+    description: 'Enable/confirm Vercel Web Analytics and Speed Insights, then sync them into the Marketing Analytics view.',
+  },
   'sanity:schema': {
     runner: 'sanity',
     command: ['sanity', 'schema', 'extract', '--path', '.audit/sanity-schema.json'],

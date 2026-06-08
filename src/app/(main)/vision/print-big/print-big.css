@@ -13,6 +13,7 @@
 
 @media (min-width: 1000px) {
   .print-big__wide-img,
+  .print-big__inline-pix,
   .print-big img:not(.tall-boy) {
     width: 150%;
     max-width: 150%;

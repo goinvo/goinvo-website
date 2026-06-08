@@ -646,6 +646,8 @@
 
 /* ── Social buttons ──────────────────────────────── */
 .us-healthcare-legacy .social-buttons svg {
+  display: inline-block;
+  vertical-align: middle;
   width: 28px;
   height: 28px;
   background: #474751;
