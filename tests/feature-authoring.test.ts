@@ -42,10 +42,12 @@ describe('Feature authoring configuration', () => {
 
   it('keeps article body and people controls in the guided authoring groups', () => {
     const contentField = getSchemaField(featureSchema, 'content')
+    const experimentVariantsField = getSchemaField(featureSchema, 'experimentVariants')
     const authorsField = getSchemaField(featureSchema, 'authors')
     const newsletterField = getSchemaField(featureSchema, 'newsletterBackground')
 
     expect(contentField.group).toBe('content')
+    expect(experimentVariantsField.group).toBe('content')
     expect(authorsField.group).toBe('extras')
     expect(newsletterField.group).toBe('extras')
   })
@@ -61,6 +63,13 @@ describe('Feature authoring configuration', () => {
     expect(contributorsLayout.hidden?.({ document: { contributors: [{}] } })).toBe(false)
     expect(aboutPosition.hidden?.({ document: { showAboutGoInvo: false } })).toBe(true)
     expect(aboutPosition.hidden?.({ document: { showAboutGoInvo: true } })).toBe(false)
+  })
+
+  it('hides Sanity-authored experiment variants for static article overrides', () => {
+    const experimentVariantsField = getSchemaField(featureSchema, 'experimentVariants')
+
+    expect(experimentVariantsField.hidden?.({ document: { slug: { current: 'digital-healthcare' } } })).toBe(true)
+    expect(experimentVariantsField.hidden?.({ document: { slug: { current: 'brand-new-feature' } } })).toBe(false)
   })
 
   it('ships article templates and replaces the generic Feature new-document option', () => {

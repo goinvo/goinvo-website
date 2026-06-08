@@ -85,3 +85,6 @@ next-dev*.log
 next-start*.log
 /public/__marketing-mobile-harness.html
 /scripts/_tmp-*.mjs
+
+# Local MCP server config (contains API keys)
+.mcp.json

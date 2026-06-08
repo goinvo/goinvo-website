@@ -30,6 +30,14 @@ export function featureToDisplay(feature: Feature): StaticFeature {
       imageUrl = ''
     }
   }
+
+  // Card crop focus: prefer the heroPosition dropdown, then fall back to the
+  // image hotspot (crosshair) so an editor's crop selection is reflected on
+  // listing cards. Leave undefined when neither is set (VisionGrid defaults it).
+  const hotspot = feature.image?.hotspot
+  const imagePosition =
+    feature.heroPosition?.trim() ||
+    (hotspot ? `${(hotspot.x * 100).toFixed(2)}% ${(hotspot.y * 100).toFixed(2)}%` : undefined)
   if (!imageUrl && feature.video) {
     imageUrl = feature.video
   }
@@ -50,6 +58,6 @@ export function featureToDisplay(feature: Feature): StaticFeature {
     externalLink: isExternal,
     hiddenWorkPage: feature.hiddenWorkPage,
     featured: feature.featured,
-    imagePosition: feature.heroPosition,
+    imagePosition,
   }
 }
