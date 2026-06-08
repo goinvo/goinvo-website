@@ -508,7 +508,10 @@ function transformOwnYourHealthDataActions(content: any[]) { // eslint-disable-l
         ...columnsBlock,
         layout: '2',
         content: [
-          { ...comicImage, link: comicUrl },
+          // Gatsby wrapped both covers in `.poster { border: 15px #ffeee4 solid }`.
+          // The image renderer maps `border: 'peach'` to `border-[15px] border-[#FFEEE4]`,
+          // so set it on both covers to restore the lost peach poster frame.
+          { ...comicImage, link: comicUrl, border: 'peach' },
           { ...content[downloadComicIndex], layout: 'fullWidth' },
           createPortableBlock(
             'own-your-health-data-github-link',
@@ -516,7 +519,7 @@ function transformOwnYourHealthDataActions(content: any[]) { // eslint-disable-l
             'normal',
             [{ _key: 'github-link', _type: 'link', href: githubUrl, blank: true }],
           ),
-          { ...whitepaperImage, link: whitepaperUrl },
+          { ...whitepaperImage, link: whitepaperUrl, border: 'peach' },
           { ...content[viewWhitepaperIndex], layout: 'fullWidth' },
         ],
       }

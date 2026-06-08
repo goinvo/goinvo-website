@@ -12,7 +12,7 @@
   padding: 17% 60px 5%;
   color: #0b5e94;
   background-color: white;
-  background-image: url('https://www.goinvo.com/old/images/features/digital-healthcare/digital_health_cover_transp.gif');
+  background-image: url('/images/features/digital-healthcare/digital_health_cover_transp.gif');
   background-size: auto 100%;
   background-repeat: no-repeat;
   background-position: right;
@@ -53,6 +53,18 @@
     font-size: 0.9em;
     text-align: center;
   }
+}
+
+/* Semantic page <h1> that replaces the inline title text node — reset the
+   browser h1 defaults so it renders identically to the original text. */
+.digital-healthcare .overall-header .title .title-heading {
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
+  display: block;
 }
 
 /* ===== HEADER QUOTE ===== */
@@ -319,6 +331,17 @@
   line-height: 1em;
   margin-bottom: 10px;
   font-family: 'adobe-jenson-pro', Georgia, 'Times New Roman', Times, serif;
+}
+
+/* The section title is now a semantic <h2>; reset browser defaults so it
+   renders identically to the original inner <div>. */
+.digital-healthcare .item-content .section-header h2 {
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  color: inherit;
+  margin: 0;
 }
 
 .digital-healthcare .item-content .section-header.left {

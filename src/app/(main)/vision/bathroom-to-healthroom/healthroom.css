@@ -1,7 +1,7 @@
 /*
  * Legacy CSS for "From Bathroom to Healthroom"
  * Scoped under .healthroom-legacy to prevent style leaks.
- * Ported from: /old/stylesheets/features/from-bathroom-to-healthroom.css
+ * Ported from: /stylesheets/features/from-bathroom-to-healthroom.css
  */
 
 /* ---- Article container ---- */
@@ -171,6 +171,25 @@
 }
 .healthroom-legacy .bathroom-header .header-contents .email {
   margin-bottom: 0.75em;
+}
+
+/* ---- Social share buttons (ported from from-bathroom-to-healthroom.css) ---- */
+.healthroom-legacy .social-buttons svg {
+  display: inline-block;
+  vertical-align: middle;
+  width: 28px;
+  height: 28px;
+  background: #474751;
+  padding: 6px;
+  fill: #f2f2f2;
+  transition: background 250ms ease-in-out;
+}
+.healthroom-legacy .social-buttons svg:hover {
+  background: #83838e;
+}
+.healthroom-legacy .social-buttons.right-align {
+  float: right;
+  margin-right: 9%;
 }
 
 /* ---- Section headers ---- */
@@ -390,7 +409,7 @@
 }
 
 .healthroom-legacy #timeline .slide.one {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide1.png");
+  background-image: url("/images/features/design-for-life/timeline/slide1.png");
 }
 .healthroom-legacy #timeline .slide.one .slide-content {
   bottom: 4%;
@@ -399,7 +418,7 @@
 }
 
 .healthroom-legacy #timeline .slide.two {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide2.png");
+  background-image: url("/images/features/design-for-life/timeline/slide2.png");
 }
 .healthroom-legacy #timeline .slide.two .slide-content {
   bottom: 8%;
@@ -408,7 +427,7 @@
 }
 
 .healthroom-legacy #timeline .slide.three {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide3.png");
+  background-image: url("/images/features/design-for-life/timeline/slide3.png");
 }
 .healthroom-legacy #timeline .slide.three .slide-content {
   margin: 0 auto;
@@ -419,7 +438,7 @@
 }
 
 .healthroom-legacy #timeline .slide.four {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide4.png");
+  background-image: url("/images/features/design-for-life/timeline/slide4.png");
 }
 .healthroom-legacy #timeline .slide.four .slide-content {
   margin: 0 auto;
@@ -430,7 +449,7 @@
 }
 
 .healthroom-legacy #timeline .slide.five {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide5.png");
+  background-image: url("/images/features/design-for-life/timeline/slide5.png");
 }
 .healthroom-legacy #timeline .slide.five .slide-content {
   margin-top: 15%;
@@ -439,7 +458,7 @@
 }
 
 .healthroom-legacy #timeline .slide.six {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide6.png");
+  background-image: url("/images/features/design-for-life/timeline/slide6.png");
 }
 .healthroom-legacy #timeline .slide.six .slide-content {
   margin: 0 auto;
@@ -450,7 +469,7 @@
 }
 
 .healthroom-legacy #timeline .slide.seven {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide7.png");
+  background-image: url("/images/features/design-for-life/timeline/slide7.png");
 }
 .healthroom-legacy #timeline .slide.seven .slide-content {
   top: 70%;
@@ -458,7 +477,7 @@
 }
 
 .healthroom-legacy #timeline .slide.eight {
-  background-image: url("https://www.goinvo.com/old/images/features/design-for-life/timeline/slide8.png");
+  background-image: url("/images/features/design-for-life/timeline/slide8.png");
 }
 .healthroom-legacy #timeline .slide.eight .slide-content {
   margin: 0 auto;
@@ -559,7 +578,7 @@
   height: 40px;
   padding: 0;
   border: 0;
-  background: url("https://www.goinvo.com/old/images/arrow.png") no-repeat center / contain;
+  background: url("/images/arrow.png") no-repeat center / contain;
   cursor: pointer;
   opacity: 0.65;
   transition: opacity 250ms ease-in-out;

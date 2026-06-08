@@ -13,6 +13,7 @@
 
 @media (min-width: 1000px) {
   .print-big__wide-img,
+  .print-big__inline-pix,
   .print-big img:not(.tall-boy) {
     width: 150%;
     max-width: 150%;
@@ -38,7 +39,7 @@
 .print-big__hero {
   position: relative;
   height: 300px;
-  background-image: url('https://www.goinvo.com/old/images/features/print-big/hero.jpg');
+  background-image: url('/images/features/print-big/hero.jpg');
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
