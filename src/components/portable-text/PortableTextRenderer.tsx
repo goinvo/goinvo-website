@@ -16,6 +16,7 @@ import { DataTable } from '@/components/ui/DataTable'
 import { References } from '@/components/ui/References'
 import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
+import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
 import {
   LonelinessFeelingSection,
   LonelinessIsolationCostsSection,
@@ -24,7 +25,6 @@ import {
   LonelinessTimelineSection,
 } from '@/components/portable-text/LonelinessFeatureSections'
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
-import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
 import { parseDataTableSource } from '@/lib/dataTable'
 import { buildHtmlEmbedSrcDoc, hasHtmlEmbedCode } from '@/lib/htmlEmbed'
 
@@ -110,6 +110,17 @@ const imageAlignClasses: Record<string, string> = {
   right: 'ml-auto',
 }
 
+// Mirrors Gatsby's `.poster { border: 15px #ffeee4 solid }` (and its gray/teal
+// variants). Shared so both the standalone image renderer and the columns
+// image-grid branch mount the same framed-poster border off an image's
+// `border` field.
+const imageBorderClasses: Record<string, string> = {
+  none: '',
+  peach: 'border-[15px] border-[#FFEEE4]',
+  gray: 'border-[15px] border-[#e0e0e0]',
+  teal: 'border-[15px] border-secondary',
+}
+
 const bgSectionColors: Record<string, string> = {
   gray: 'bg-gray-lightest',
   teal: 'bg-[#e5f5f5]',
@@ -135,12 +146,7 @@ function PortableImage({
   const size = value.size || 'full'
   const align = value.align || 'center'
   const border = value.border || 'none'
-  const borderClasses: Record<string, string> = {
-    none: '',
-    peach: 'border-[15px] border-[#FFEEE4]',
-    gray: 'border-[15px] border-[#e0e0e0]',
-    teal: 'border-[15px] border-secondary',
-  }
+  const borderClasses = imageBorderClasses
   const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 2400 : 1200
   const imageBuilder = value.asset ? urlForImage(value).width(width) : null
   const imageUrl = vectorImageUrl || (imageBuilder ? (size === 'bleed' ? imageBuilder.fit('max') : imageBuilder).url() : '')
@@ -880,22 +886,39 @@ const components: PortableTextComponents = {
                   const caption = group.image.caption || ''
                   const hasRichContent = group.content.length > 0
                   const centeredGroup = centeredVariant && groups.length >= 2
+                  const borderClass = imageBorderClasses[group.image.border || 'none'] || ''
+                  // Optional link wrapper (e.g. own-your-health-data covers link
+                  // to the comic PDF / whitepaper, matching Gatsby's anchored poster).
+                  const groupLink = typeof group.image.link === 'string' ? group.image.link.trim() : ''
+                  const isExternalGroupLink = /^(https?:\/\/|mailto:)/i.test(groupLink)
                   // Check if content is just a short caption (bold text < 60 chars)
                   const isShortCaption = group.content.length === 1 && group.content[0]._type === 'block' &&
                     (group.content[0].children || []).map((c: {text: string}) => c.text).join('').length < 60
                   const isBoldCaption = isShortCaption && (group.content[0].children || []).some((c: {marks?: string[]}) => c.marks?.includes('strong'))
+                  const groupImageElement = (
+                    <Image
+                      src={imgUrl}
+                      alt={group.image.alt || ''}
+                      width={800}
+                      height={600}
+                      className={cn('w-full h-auto', borderClass, centeredGroup && 'mx-auto')}
+                    />
+                  )
                   return (
                     <div
                       key={group.image._key}
                       className={cn('m-0', centeredGroup && 'mx-auto max-w-[300px] text-center')}
                     >
-                      <Image
-                        src={imgUrl}
-                        alt={group.image.alt || ''}
-                        width={800}
-                        height={600}
-                        className={cn('w-full h-auto', centeredGroup && 'mx-auto')}
-                      />
+                      {groupLink ? (
+                        <a
+                          href={groupLink}
+                          target={isExternalGroupLink ? '_blank' : undefined}
+                          rel={isExternalGroupLink ? 'noopener noreferrer' : undefined}
+                          className="block"
+                        >
+                          {groupImageElement}
+                        </a>
+                      ) : groupImageElement}
                       {caption && !hasRichContent && (
                         <p className="mt-2 text-base text-gray text-center">{caption}</p>
                       )}
@@ -1162,9 +1185,9 @@ const components: PortableTextComponents = {
     customComponent: ({ value }) => {
       // Dispatch by name to a hard-coded React component. Used for
       // page-specific tables and visualizations that don't fit the
-      // generic block types. In Presentation/visual-editing mode the
-      // name arrives stega-encoded, so strip the invisible markers and
-      // normalize the first letter before matching.
+      // generic block types. stegaClean strips visual-editing metadata so the
+      // name matches in Presentation/preview; normalize the first letter so an
+      // editor-entered PascalCase name ("IpsosWorkflowWidget") matches the cases.
       const rawName = (stegaClean(value?.name) || '').trim()
       const name = rawName ? rawName.charAt(0).toLowerCase() + rawName.slice(1) : ''
       switch (name) {
@@ -1190,6 +1213,18 @@ const components: PortableTextComponents = {
           return (
             <ArticleReveal intensity="visual">
               <FIHCPersuasionEmotionSection />
+            </ArticleReveal>
+          )
+        case 'ipsosWorkflowWidget':
+        case 'ipsosResearchWorkflowWidget':
+        case 'ipsosResearchWorkflow':
+        case 'ipsosWorkflow':
+        case 'ipsosFlowWidget':
+        case 'ipsosFlowWorkflow':
+        case 'ipsosWorkflowDiagram':
+          return (
+            <ArticleReveal intensity="visual">
+              <IpsosWorkflowWidget />
             </ArticleReveal>
           )
         case 'lonelinessIsolationCosts':
