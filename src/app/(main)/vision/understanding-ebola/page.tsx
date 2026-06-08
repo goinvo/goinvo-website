@@ -12,6 +12,10 @@ export const metadata: Metadata = {
 export default function UnderstandingEbolaPage() {
   return (
     <div className="pt-[var(--spacing-header-height)]">
+      {/* Page title is baked into the first infographic image (Ebola-01.png),
+          so expose it as a visually-hidden semantic <h1> for SEO + a11y. */}
+      <h1 className="sr-only">Understanding Ebola: A Visual Guide</h1>
+
       {/* Sticky Navigation */}
       <nav className="ebola-nav">
         <div className="max-width content-padding mx-auto flex">

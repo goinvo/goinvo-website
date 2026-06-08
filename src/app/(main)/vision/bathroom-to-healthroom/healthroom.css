@@ -173,6 +173,25 @@
   margin-bottom: 0.75em;
 }
 
+/* ---- Social share buttons (ported from from-bathroom-to-healthroom.css) ---- */
+.healthroom-legacy .social-buttons svg {
+  display: inline-block;
+  vertical-align: middle;
+  width: 28px;
+  height: 28px;
+  background: #474751;
+  padding: 6px;
+  fill: #f2f2f2;
+  transition: background 250ms ease-in-out;
+}
+.healthroom-legacy .social-buttons svg:hover {
+  background: #83838e;
+}
+.healthroom-legacy .social-buttons.right-align {
+  float: right;
+  margin-right: 9%;
+}
+
 /* ---- Section headers ---- */
 .healthroom-legacy .sec-header {
   margin: 5em 0;

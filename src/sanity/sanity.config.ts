@@ -9,6 +9,7 @@ import { featureArticleTemplates, resolveFeatureNewDocumentOptions } from './fea
 import { featureAuthoringBadge } from './featureBadges'
 import { locations, mainDocuments } from './presentation/resolve'
 import { structure } from './structure'
+import { marketingPlugin } from './tools/marketingTool'
 import './studio.css'
 
 export default defineConfig({
@@ -19,7 +20,8 @@ export default defineConfig({
   apiVersion,
   basePath: '/studio',
   plugins: [
-    structureTool({ structure }),
+    structureTool({ name: 'content', title: 'Content', structure }),
+    marketingPlugin(),
     presentationTool({
       previewUrl: {
         previewMode: {

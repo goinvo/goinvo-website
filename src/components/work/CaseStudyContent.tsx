@@ -559,8 +559,8 @@ export function CaseStudyContent({ initialData, slug, isDraftMode }: Props) {
   const showClientSubtitle =
     (hasLeadingClientSubtitle || (!!clientName && clientName !== 'GoInvo')) &&
     !caseStudy.hideClientSubtitle
-  // When metadataLayout is "inlineHeader", show Time + Tags on one line in the
-  // header, right under the client subtitle (instead of in the body).
+  // When metadataLayout is "inlineHeader", show Time + Tags as their own rows in
+  // the header, right under the client subtitle (instead of in the body).
   const showHeaderMeta =
     caseStudy.metadataLayout === 'inlineHeader' &&
     Boolean(caseStudy.time || caseStudy.displayTags?.trim() || (caseStudy.categories || []).length > 0)

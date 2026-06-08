@@ -1,6 +1,7 @@
 import { defineType, defineArrayMember } from 'sanity'
 import { AsteriskIcon, OlistIcon, UlistIcon } from '@sanity/icons'
 import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
+import { CodeTextareaInput, HtmlEmbedInput } from '../../components/HtmlEmbedInput'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
 
@@ -236,10 +237,23 @@ export default defineType({
       title: 'Columns',
       type: 'object',
       options: collapsibleCustomBlockOptions,
+      initialValue: {
+        layout: '2',
+        size: 'default',
+        variant: 'default',
+        columnContent: [
+          { _key: 'column1', _type: 'column', content: [] },
+          { _key: 'column2', _type: 'column', content: [] },
+        ],
+      },
       preview: {
-        select: { layout: 'layout', caption: 'caption' },
-        prepare({ layout, caption }) {
-          return { title: caption || `${layout || '2'}-column layout`, subtitle: 'Columns' }
+        select: { layout: 'layout', caption: 'caption', columnContent: 'columnContent' },
+        prepare({ layout, caption, columnContent }) {
+          const explicitColumns = Array.isArray(columnContent) ? columnContent.length : 0
+          return {
+            title: caption || `${layout || '2'}-column layout`,
+            subtitle: explicitColumns ? `${explicitColumns} editable columns` : 'Columns',
+          }
         },
       },
       fields: [
@@ -289,10 +303,116 @@ export default defineType({
           initialValue: 'default',
         },
         {
-          name: 'content',
-          title: 'Content',
+          name: 'columnContent',
+          title: 'Column content',
           type: 'array',
-          description: 'Text and images distributed across the columns',
+          description: 'Add one entry per visual column. Each entry has its own editor so column breaks are explicit.',
+          of: [
+            {
+              name: 'column',
+              title: 'Column',
+              type: 'object',
+              fields: [
+                {
+                  name: 'content',
+                  title: 'Content',
+                  type: 'array',
+                  of: [
+                    { type: 'block' },
+                    { type: 'image', options: { hotspot: true } },
+                    {
+                      name: 'buttonGroup',
+                      title: 'Buttons',
+                      type: 'object',
+                      description: 'One or more buttons displayed beneath this column',
+                      fields: [
+                        {
+                          name: 'buttons',
+                          title: 'Buttons',
+                          type: 'array',
+                          of: [
+                            {
+                              type: 'object',
+                              fields: [
+                                { name: 'label', title: 'Label', type: 'string', validation: (Rule) => Rule.required() },
+                                { name: 'url', title: 'URL', type: 'url', validation: (Rule) => Rule.required().uri({ allowRelative: true, scheme: ['https', 'http', 'mailto'] }) },
+                                { name: 'variant', title: 'Variant', type: 'string', options: { list: [{ title: 'Primary', value: 'primary' }, { title: 'Secondary', value: 'secondary' }] }, initialValue: 'secondary' },
+                                { name: 'external', title: 'New tab', type: 'boolean', initialValue: true },
+                              ],
+                            },
+                          ],
+                        },
+                        {
+                          name: 'layout',
+                          title: 'Layout',
+                          type: 'string',
+                          description: 'How the buttons are displayed',
+                          options: {
+                            list: [
+                              { title: 'Inline (side by side)', value: 'inline' },
+                              { title: 'Full width (equal share)', value: 'fullWidth' },
+                              { title: 'Centered', value: 'centered' },
+                            ],
+                          },
+                          initialValue: 'inline',
+                        },
+                        {
+                          name: 'size',
+                          title: 'Size',
+                          type: 'string',
+                          description: 'Use "Large" for Gatsby-style CTA buttons with a wider desktop footprint.',
+                          options: {
+                            list: [
+                              { title: 'Default', value: 'default' },
+                              { title: 'Large CTA', value: 'large' },
+                            ],
+                          },
+                          initialValue: 'default',
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+              preview: {
+                select: { content: 'content' },
+                prepare({ content }) {
+                  const block = Array.isArray(content)
+                    ? content.find((item) => item?._type === 'block')
+                    : undefined
+                  const text = block?.children
+                    ?.map((child: { text?: string }) => child.text || '')
+                    .join('')
+                    .trim()
+
+                  return { title: text || 'Empty column', subtitle: 'Column content' }
+                },
+              },
+            },
+          ],
+          validation: (Rule) =>
+            Rule.custom((columns, context) => {
+              const parent = context.parent as { layout?: string; content?: unknown[] } | undefined
+              const hasLegacyContent = Array.isArray(parent?.content) && parent.content.length > 0
+              if (hasLegacyContent || !Array.isArray(columns) || columns.length === 0) return true
+
+              const expectedColumns = parent?.layout === '4' ? 4 : parent?.layout === '3' ? 3 : parent?.layout === 'storyboard' ? undefined : 2
+              if (expectedColumns && columns.length !== expectedColumns) {
+                return `Add ${expectedColumns} column entries for the selected layout.`
+              }
+
+              return true
+            }).warning(),
+        },
+        {
+          name: 'content',
+          title: 'Legacy flat content',
+          type: 'array',
+          description: 'Older column blocks use one shared editor. Prefer Column content for new blocks.',
+          options: {
+            collapsible: true,
+            collapsed: true,
+          },
           of: [
             { type: 'block' },
             { type: 'image', options: { hotspot: true } },
@@ -838,22 +958,101 @@ export default defineType({
     }),
     defineArrayMember({
       name: 'iframeEmbed',
-      title: 'Iframe Embed',
+      title: 'HTML Embed',
       type: 'object',
       options: collapsibleCustomBlockOptions,
+      components: {
+        input: HtmlEmbedInput,
+      },
+      initialValue: {
+        embedMode: 'html',
+        aspectRatio: '16/9',
+        fullWidth: false,
+      },
       preview: {
-        select: { url: 'url', caption: 'caption' },
-        prepare({ url, caption }) {
-          return { title: caption || url || 'Embed', subtitle: 'Iframe Embed' }
+        select: { url: 'url', caption: 'caption', html: 'html', css: 'css', js: 'js' },
+        prepare({ url, caption, html, css, js }) {
+          const hasCode = Boolean(html?.trim() || css?.trim() || js?.trim())
+          return {
+            title: caption || url || (hasCode ? 'Custom HTML embed' : 'HTML embed'),
+            subtitle: hasCode ? 'HTML/CSS/JS Embed' : 'URL Embed',
+          }
         },
       },
       fields: [
         {
+          name: 'embedMode',
+          title: 'Embed source',
+          type: 'string',
+          description: 'Choose whether this block uses custom code or an external embed URL.',
+          options: {
+            layout: 'radio',
+            list: [
+              { title: 'Custom HTML/CSS/JS', value: 'html' },
+              { title: 'External URL', value: 'url' },
+            ],
+          },
+          initialValue: 'html',
+        },
+        {
+          name: 'html',
+          title: 'HTML',
+          type: 'text',
+          rows: 12,
+          description: 'Markup rendered inside the sandboxed embed iframe.',
+          components: {
+            input: CodeTextareaInput,
+          },
+          hidden: ({ parent }) =>
+            parent?.embedMode === 'url' || (!parent?.embedMode && Boolean(parent?.url) && !parent?.html && !parent?.css && !parent?.js),
+          validation: (Rule) =>
+            Rule.custom((html, context) => {
+              const parent = context.parent as { embedMode?: string; url?: string; css?: string; js?: string } | undefined
+              const mode = parent?.embedMode || (parent?.url && !html && !parent?.css && !parent?.js ? 'url' : 'html')
+              if (mode === 'html' && !html && !parent?.css && !parent?.js) {
+                return 'Add HTML, CSS, or JavaScript for the embed.'
+              }
+              return true
+            }),
+        },
+        {
+          name: 'css',
+          title: 'CSS',
+          type: 'text',
+          rows: 10,
+          description: 'Styles scoped inside the embed iframe. Do not include a <style> tag.',
+          components: {
+            input: CodeTextareaInput,
+          },
+          hidden: ({ parent }) =>
+            parent?.embedMode === 'url' || (!parent?.embedMode && Boolean(parent?.url) && !parent?.html && !parent?.css && !parent?.js),
+        },
+        {
+          name: 'js',
+          title: 'JavaScript',
+          type: 'text',
+          rows: 10,
+          description: 'Script run inside the sandboxed embed iframe. Do not include a <script> tag.',
+          components: {
+            input: CodeTextareaInput,
+          },
+          hidden: ({ parent }) =>
+            parent?.embedMode === 'url' || (!parent?.embedMode && Boolean(parent?.url) && !parent?.html && !parent?.css && !parent?.js),
+        },
+        {
           name: 'url',
-          title: 'URL',
+          title: 'External embed URL',
           type: 'url',
-          description: 'URL to embed (Figma prototype, Miro board, KnightLab Timeline, Google Sheets, etc.)',
-          validation: (Rule) => Rule.required(),
+          description: 'Optional fallback for external embeds such as Figma prototypes, Miro boards, KnightLab timelines, or Google Sheets.',
+          hidden: ({ parent }) =>
+            parent?.embedMode === 'html' || Boolean(parent?.html || parent?.css || parent?.js),
+          validation: (Rule) =>
+            Rule.custom((url, context) => {
+              const parent = context.parent as { embedMode?: string; html?: string; css?: string; js?: string } | undefined
+              const mode = parent?.embedMode || (parent?.html || parent?.css || parent?.js ? 'html' : 'url')
+              if (mode === 'url' && !url) return 'Add an external embed URL.'
+              return true
+            }).uri({ scheme: ['https', 'http'] }),
         },
         {
           name: 'caption',

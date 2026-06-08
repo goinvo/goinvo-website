@@ -38,10 +38,11 @@ export default function UnderstandingZikaPage() {
       <ZikaNav />
 
       <div className="header">
-        <div className="title">
+        <h1 className="title">
           <span id="title-understanding">Understanding</span>
           <span id="title-zika">Zika</span>
-        </div>
+        </h1>
+        <div className="header-note">Images from USDA &amp; Felipe Dana/AP</div>
       </div>
 
       <div className="article">

@@ -1,0 +1,388 @@
+import { defineField, defineType } from 'sanity'
+import { searchIntentOptions } from './marketingCampaign'
+import {
+  collaborationRelationshipOptions,
+  collaborationStatusOptions,
+  contributionTypeOptions,
+  researchConfidenceOptions,
+  researchEvidenceTypeOptions,
+  researchPriorityOptions,
+} from './marketingResearchPlan'
+
+const researchResultTypeOptions = [
+  { title: 'SEO Keyword', value: 'seoKeyword' },
+  { title: 'Source Evidence', value: 'sourceEvidence' },
+  { title: 'Content Gap', value: 'contentGap' },
+  { title: 'Analytics Signal', value: 'analyticsSignal' },
+  { title: 'Competitor Example', value: 'competitorExample' },
+  { title: 'Collaboration Signal', value: 'collaborationSignal' },
+]
+
+const researchResultStatusOptions = [
+  { title: 'New', value: 'new' },
+  { title: 'Needs Review', value: 'needsReview' },
+  { title: 'Selected', value: 'selected' },
+  { title: 'Approved', value: 'approved' },
+  { title: 'Rejected', value: 'rejected' },
+  { title: 'Archived', value: 'archived' },
+]
+
+const researchResultProviderOptions = [
+  { title: 'Semrush', value: 'semrush' },
+  { title: 'CMS / Site Context', value: 'cms' },
+  { title: 'Source Scan', value: 'sourceScan' },
+  { title: 'Analytics', value: 'analytics' },
+  { title: 'Collaborator', value: 'collaborator' },
+  { title: 'AI Estimate', value: 'aiEstimate' },
+  { title: 'Manual', value: 'manual' },
+]
+
+const researchScoreSourceOptions = [
+  { title: 'Provider Score', value: 'provider' },
+  { title: 'AI Estimate', value: 'aiEstimate' },
+  { title: 'Manual Estimate', value: 'manual' },
+  { title: 'Not Scored', value: 'none' },
+]
+
+export default defineType({
+  name: 'marketingResearchResult',
+  title: 'Marketing Research Result',
+  type: 'document',
+  groups: [
+    { name: 'overview', title: 'Overview', default: true },
+    { name: 'seo', title: 'SEO Scores' },
+    { name: 'evidence', title: 'Evidence' },
+    { name: 'collaboration', title: 'Collaboration' },
+    { name: 'provider', title: 'Provider Metadata' },
+  ],
+  fields: [
+    defineField({
+      name: 'title',
+      title: 'Result Title',
+      type: 'string',
+      group: 'overview',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'resultType',
+      title: 'Result Type',
+      type: 'string',
+      group: 'overview',
+      options: { list: researchResultTypeOptions, layout: 'radio' },
+      initialValue: 'sourceEvidence',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'status',
+      title: 'Review Status',
+      type: 'string',
+      group: 'overview',
+      options: { list: researchResultStatusOptions, layout: 'radio' },
+      initialValue: 'new',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'project',
+      title: 'Research Project',
+      type: 'reference',
+      group: 'overview',
+      to: [{ type: 'marketingResearchProject' }],
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'run',
+      title: 'Research Run',
+      type: 'reference',
+      group: 'overview',
+      to: [{ type: 'marketingResearchRun' }],
+    }),
+    defineField({
+      name: 'selectedForSynthesis',
+      title: 'Selected For Synthesis',
+      type: 'boolean',
+      group: 'overview',
+      initialValue: false,
+      description: 'Only selected and approved results should be used to generate opportunities or release records.',
+    }),
+    defineField({
+      name: 'proofPoints',
+      title: 'Related Proof Points',
+      type: 'array',
+      group: 'overview',
+      of: [{ type: 'reference', to: [{ type: 'marketingProofPoint' }] }],
+      description: 'Reusable proof records created from or supported by this finding.',
+    }),
+    defineField({
+      name: 'performanceSignals',
+      title: 'Related Performance Signals',
+      type: 'array',
+      group: 'overview',
+      of: [{ type: 'reference', to: [{ type: 'marketingPerformanceSignal' }] }],
+      description: 'First-party performance signals that generated or support this finding.',
+    }),
+    defineField({
+      name: 'approvedAt',
+      title: 'Approved At',
+      type: 'datetime',
+      group: 'overview',
+    }),
+    defineField({
+      name: 'priority',
+      title: 'Priority',
+      type: 'string',
+      group: 'overview',
+      options: { list: researchPriorityOptions },
+      initialValue: 'medium',
+    }),
+    defineField({
+      name: 'provider',
+      title: 'Provider',
+      type: 'string',
+      group: 'provider',
+      options: { list: researchResultProviderOptions },
+      initialValue: 'manual',
+    }),
+    defineField({
+      name: 'sourceMethod',
+      title: 'Source Method',
+      type: 'string',
+      group: 'provider',
+      description: 'Example: semrush:phrase_these, semrush:phrase_kdi, cmsScan, manualInterview.',
+    }),
+    defineField({
+      name: 'scoreSource',
+      title: 'Score Source',
+      type: 'string',
+      group: 'provider',
+      options: { list: researchScoreSourceOptions },
+      initialValue: 'none',
+      description: 'AI-generated estimates must use AI Estimate and should not be displayed as provider scores.',
+    }),
+    defineField({
+      name: 'database',
+      title: 'Provider Database',
+      type: 'string',
+      group: 'provider',
+      description: 'Semrush regional database, such as us.',
+    }),
+    defineField({
+      name: 'fetchedAt',
+      title: 'Fetched At',
+      type: 'datetime',
+      group: 'provider',
+    }),
+    defineField({
+      name: 'rawProviderMetadata',
+      title: 'Raw Provider Metadata',
+      type: 'text',
+      rows: 5,
+      group: 'provider',
+      description: 'JSON payload or CSV row used for debugging provider-backed results.',
+    }),
+    defineField({
+      name: 'keyword',
+      title: 'Keyword / Query',
+      type: 'string',
+      group: 'seo',
+    }),
+    defineField({
+      name: 'searchIntent',
+      title: 'Search Intent',
+      type: 'string',
+      group: 'seo',
+      options: { list: searchIntentOptions },
+    }),
+    defineField({
+      name: 'volume',
+      title: 'Search Volume',
+      type: 'number',
+      group: 'seo',
+      description: 'Provider-scored search volume. Leave blank for AI-only estimates.',
+    }),
+    defineField({
+      name: 'difficulty',
+      title: 'Keyword Difficulty',
+      type: 'number',
+      group: 'seo',
+      description: 'Provider-scored keyword difficulty when available.',
+    }),
+    defineField({
+      name: 'cpc',
+      title: 'CPC',
+      type: 'number',
+      group: 'seo',
+    }),
+    defineField({
+      name: 'competition',
+      title: 'Competition',
+      type: 'number',
+      group: 'seo',
+    }),
+    defineField({
+      name: 'resultsCount',
+      title: 'Results Count',
+      type: 'number',
+      group: 'seo',
+    }),
+    defineField({
+      name: 'canonicalUrl',
+      title: 'Canonical Destination',
+      type: 'url',
+      group: 'seo',
+    }),
+    defineField({
+      name: 'contentGap',
+      title: 'Content Gap',
+      type: 'text',
+      rows: 3,
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'sourceTitle',
+      title: 'Source Title',
+      type: 'string',
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'sourceUrl',
+      title: 'Source URL',
+      type: 'url',
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'claim',
+      title: 'Claim / Finding',
+      type: 'text',
+      rows: 3,
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'evidenceType',
+      title: 'Evidence Type',
+      type: 'string',
+      group: 'evidence',
+      options: { list: researchEvidenceTypeOptions },
+    }),
+    defineField({
+      name: 'confidence',
+      title: 'Confidence',
+      type: 'string',
+      group: 'evidence',
+      options: { list: researchConfidenceOptions },
+      initialValue: 'early',
+    }),
+    defineField({
+      name: 'implication',
+      title: 'Implication For Content',
+      type: 'text',
+      rows: 3,
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'competitorName',
+      title: 'Competitor / Example Name',
+      type: 'string',
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'competitorUrl',
+      title: 'Competitor / Example URL',
+      type: 'url',
+      group: 'evidence',
+    }),
+    defineField({
+      name: 'collaboratorName',
+      title: 'Collaborator Name',
+      type: 'string',
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'organization',
+      title: 'Organization',
+      type: 'string',
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'relationshipType',
+      title: 'Relationship Type',
+      type: 'string',
+      group: 'collaboration',
+      options: { list: collaborationRelationshipOptions },
+    }),
+    defineField({
+      name: 'topicArea',
+      title: 'Topic Area',
+      type: 'string',
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'availabilityStart',
+      title: 'Available Starting',
+      type: 'date',
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'availabilityEnd',
+      title: 'Available Until',
+      type: 'date',
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'contributionType',
+      title: 'Contribution Type',
+      type: 'string',
+      group: 'collaboration',
+      options: { list: contributionTypeOptions },
+    }),
+    defineField({
+      name: 'capacity',
+      title: 'Capacity',
+      type: 'string',
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'expectedContribution',
+      title: 'Expected Contribution',
+      type: 'text',
+      rows: 2,
+      group: 'collaboration',
+    }),
+    defineField({
+      name: 'collaborationStatus',
+      title: 'Collaboration Status',
+      type: 'string',
+      group: 'collaboration',
+      options: { list: collaborationStatusOptions },
+    }),
+  ],
+  preview: {
+    select: {
+      title: 'title',
+      resultType: 'resultType',
+      status: 'status',
+      keyword: 'keyword',
+    },
+    prepare({ title, resultType, status, keyword }) {
+      const typeLabel = researchResultTypeOptions.find((option) => option.value === resultType)?.title || 'Result'
+      const statusLabel = researchResultStatusOptions.find((option) => option.value === status)?.title || 'New'
+      return {
+        title: title || keyword || 'Untitled research result',
+        subtitle: `${typeLabel} / ${statusLabel}`,
+      }
+    },
+  },
+  orderings: [
+    {
+      title: 'Updated, newest first',
+      name: 'updatedDesc',
+      by: [{ field: '_updatedAt', direction: 'desc' }],
+    },
+  ],
+})
+
+export {
+  researchResultProviderOptions,
+  researchResultStatusOptions,
+  researchResultTypeOptions,
+  researchScoreSourceOptions,
+}

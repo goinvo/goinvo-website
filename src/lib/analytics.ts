@@ -28,15 +28,41 @@ export function trackEvent(name: string, params?: EventParams) {
     window.gtag('event', name, enrichedParams)
   }
   trackVercelEvent(name, enrichedParams)
+  beaconExperimentEvent(name)
+}
+
+// Mirror experiment-tagged events to our first-party collector so the A/B
+// measurement suite gets real per-variant counts. Vercel Web Analytics does not
+// forward custom events to our endpoint, so we also beacon them here (counts
+// only, never visitor identifiers). No-ops outside an experiment or where
+// sendBeacon is unavailable, and never throws.
+function beaconExperimentEvent(name: string) {
+  if (!experimentContext) return
+  if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return
+  try {
+    const body = JSON.stringify({
+      eventName: name,
+      flag_key: experimentContext.flag_key,
+      experiment_id: experimentContext.experiment_id,
+      variant: experimentContext.variant,
+      page_path: experimentContext.page_path,
+    })
+    navigator.sendBeacon('/api/marketing/analytics/collect', new Blob([body], { type: 'application/json' }))
+  } catch {
+    // Best-effort: collection must never affect the page.
+  }
 }
 
 function ensureClientAnalyticsQueues() {
   window.dataLayer = window.dataLayer || []
-  window.gtag =
-    window.gtag ||
-    ((...args: unknown[]) => {
-      window.dataLayer?.push(args)
-    })
+  if (typeof window.gtag !== 'function') {
+    // Canonical gtag stub: queue the live `arguments` object (not a copied array)
+    // so GA replays events fired before the lazy-loaded library initializes.
+    window.gtag = function gtag() {
+      // eslint-disable-next-line prefer-rest-params
+      ;(window.dataLayer = window.dataLayer || []).push(arguments)
+    }
+  }
   window.va =
     window.va ||
     ((event: 'beforeSend' | 'event' | 'pageview', properties?: unknown) => {

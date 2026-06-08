@@ -14,15 +14,19 @@ interface HomePageRendererProps {
 }
 
 async function getHomeTeamMembers() {
-  // Mirror the existing homepage mapping exactly so the A/B control stays
-  // byte-for-byte the current site (the blank-photo filter is a separate,
-  // deferred homepage change and intentionally not bundled into the A/B test).
   const { data: members } = (await sanityFetch({ query: teamMembersQuery })) as { data: TeamMember[] }
 
-  return members.map((member) => ({
-    name: member.name,
-    image: member.image ? urlForImage(member.image).width(300).height(300).url() : '',
-  }))
+  // Keep the homepage mapping aligned with the current site so the A/B control
+  // mirrors production, but skip members without a photo so the scrolling
+  // portraits never render a blank/broken box (next/image rejects an empty src;
+  // e.g. Alexandra, whose photo is coming soon). autoFill on the marquees keeps
+  // the rows full even with fewer portraits.
+  return members
+    .filter((member) => member.image)
+    .map((member) => ({
+      name: member.name,
+      image: urlForImage(member.image!).width(300).height(300).url(),
+    }))
 }
 
 // The concept studio grid also shows Alexandra Coston, who is hidden from the

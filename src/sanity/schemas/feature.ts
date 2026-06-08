@@ -534,6 +534,78 @@ export default defineType({
       description: 'Full page content for internal vision pages',
     }),
     defineField({
+      name: 'experimentVariants',
+      title: 'A/B Test Variants',
+      type: 'array',
+      group: 'content',
+      hidden: ({ document }) => isStaticOverrideDocument(document),
+      description:
+        'Optional Sanity-authored article variants. Static page overrides ignore these unless code explicitly opts the page into an experiment.',
+      of: [
+        {
+          name: 'featureExperimentVariant',
+          title: 'Article Variant',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'key',
+              title: 'Variant Key',
+              type: 'string',
+              description: 'Must match the code/Vercel flag variant key, such as concept or short-cta.',
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'label',
+              title: 'Label',
+              type: 'string',
+              description: 'Internal label for editors and experiment reports.',
+            }),
+            defineField({
+              name: 'title',
+              title: 'Variant Title',
+              type: 'string',
+              description: 'Optional page title override. Leave blank to use the control title.',
+            }),
+            defineField({
+              name: 'description',
+              title: 'Variant Description',
+              type: 'text',
+              rows: 2,
+              description: 'Optional article summary override. Leave blank to use the control description.',
+            }),
+            defineField({
+              name: 'metaTitle',
+              title: 'Variant Meta Title',
+              type: 'string',
+              description: 'Optional SEO/browser title override for this variant.',
+            }),
+            defineField({
+              name: 'metaDescription',
+              title: 'Variant Meta Description',
+              type: 'text',
+              rows: 2,
+              description: 'Optional SEO description override for this variant.',
+            }),
+            defineField({
+              name: 'content',
+              title: 'Variant Content',
+              type: 'portableText',
+              description: 'Optional body override. Leave blank to use the control body.',
+            }),
+          ],
+          preview: {
+            select: { title: 'label', subtitle: 'key' },
+            prepare({ title, subtitle }) {
+              return {
+                title: title || subtitle || 'Article variant',
+                subtitle,
+              }
+            },
+          },
+        },
+      ],
+    }),
+    defineField({
       name: 'publishingChecklist',
       title: 'Publishing Checklist',
       type: 'string',
