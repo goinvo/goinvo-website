@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { LegacyCarousel } from './LegacyCarousel'
 
 const IMG = (path: string) =>
-  `https://www.goinvo.com/old/images/features/democracy/${path}`
+  `/images/features/democracy/${path}`
 
 interface VotingSlide {
   title: string

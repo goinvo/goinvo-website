@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
-import { Author } from '@/components/ui/Author'
 import { ScrollNav, SectionFadeIn } from './ScrollNav'
 import './digital-healthcare.css'
 
-const IMG_BASE = 'https://www.goinvo.com/old/images/features/digital-healthcare'
+const IMG_BASE = '/images/features/digital-healthcare'
 
 export const metadata: Metadata = {
   title: 'Digital Healthcare: 2016 and Beyond',
@@ -33,7 +32,7 @@ export default function DigitalHealthcarePage() {
       {/* ===== HERO ===== */}
       <div className="overall-header">
         <div className="title">
-          Digital Healthcare: 2016 and Beyond
+          <h1 className="title-heading">Digital Healthcare: 2016 and Beyond</h1>
           <h4 className="header-quote">
             Your business will be obsolete if you aren&apos;t engaging in these
             8 things next year.
@@ -78,7 +77,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>1. Medication Adherence</div>
+                  <h2>1. Medication Adherence</h2>
                 </div>
                 <h4 className="intro-quote">
                   ...gets a boost from sensor tech
@@ -126,7 +125,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>2. Talking to Technology</div>
+                  <h2>2. Talking to Technology</h2>
                 </div>
                 <h4 className="intro-quote">
                   Conversational interfaces go mainstream.
@@ -175,7 +174,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>3. Predicting Health</div>
+                  <h2>3. Predicting Health</h2>
                 </div>
                 <h4 className="intro-quote">
                   Analytics debut for patients and clinicians, not just payers.
@@ -224,7 +223,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>4. Disease Detection</div>
+                  <h2>4. Disease Detection</h2>
                 </div>
                 <h4 className="intro-quote">...on your smart phone</h4>
                 <div className="item-img-container phone-image">
@@ -272,7 +271,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>5. Digital Care Planning</div>
+                  <h2>5. Digital Care Planning</h2>
                 </div>
                 <h4 className="intro-quote">
                   It&apos;s how to get better patient outcomes in a tech driven
@@ -323,7 +322,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  6. Computable Records
+                  <h2>6. Computable Records</h2>
                 </div>
                 <h4 className="intro-quote right">
                   The next generation of the EMR conversation.
@@ -421,7 +420,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>7. Patient Engagement</div>
+                  <h2>7. Patient Engagement</h2>
                 </div>
                 <h4 className="intro-quote">Most care is self care.</h4>
                 <div className="item-img-container phone-image">
@@ -469,7 +468,7 @@ export default function DigitalHealthcarePage() {
               </div>
               <div className="item-content right">
                 <div className="section-header right">
-                  <div>8. Virtual Helpers</div>
+                  <h2>8. Virtual Helpers</h2>
                 </div>
                 <h4 className="intro-quote">
                   The digital health companion in your pocket: Siri meets Dr.
@@ -501,24 +500,107 @@ export default function DigitalHealthcarePage() {
         </section>
       </div>
 
-      {/* ===== CREDITS / CONTRIBUTORS (standard Author component) ===== */}
-      <section className="pb-12">
-        <div className="max-width max-width-md content-padding mx-auto">
-          <h2 className="header-xl font-light mt-8 mb-4 text-center">Contributors</h2>
-          <Author name="Beckett Rucker" company="Contributing Author & Illustrator" image={`${IMG_BASE}/contrib/beckett.jpg`}>
-            <a href="https://twitter.com/beckettrucker" target="_blank" rel="noopener noreferrer">@beckettrucker</a>
-          </Author>
-          <Author name="Jon Follett" company="Contributing Author" image={`${IMG_BASE}/contrib/jon.jpg`}>
-            <a href="https://twitter.com/jonfollett" target="_blank" rel="noopener noreferrer">@jonfollett</a>
-          </Author>
-          <Author name="Courtney McGorrill" company="Web Developer & Designer" image={`${IMG_BASE}/contrib/courtney.jpg`}>
-            <a href="http://twitter.com/court_mcgort" target="_blank" rel="noopener noreferrer">@court_mcgort</a>
-          </Author>
-          <Author name="Juhan Sonin" company="Contributing Author" image="https://www.goinvo.com/old/images/features/democracy/contrib/juhan.jpg">
-            <a href="http://twitter.com/jsonin" target="_blank" rel="noopener noreferrer">@jsonin</a>
-          </Author>
+      {/* ===== CREDITS / CONTRIBUTORS ===== */}
+      <div className="credit-wrapper">
+        <div className="credits">
+          <div className="contributors-box">
+            <div className="contributor">
+              <div className="contributor-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${IMG_BASE}/contrib/beckett.jpg`}
+                  alt="Beckett Rucker"
+                />
+              </div>
+              <div className="contributor-info">
+                <h3>Contributing Author &amp; Illustrator</h3>
+                <p>Beckett Rucker</p>
+                <small>
+                  <a
+                    href="https://twitter.com/beckettrucker"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    @beckettrucker
+                  </a>
+                </small>
+              </div>
+            </div>
+
+            <hr />
+
+            <div className="contributor">
+              <div className="contributor-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`${IMG_BASE}/contrib/jon.jpg`} alt="Jon Follett" />
+              </div>
+              <div className="contributor-info">
+                <h3>Contributing Author</h3>
+                <p>Jon Follett</p>
+                <small>
+                  <a
+                    href="https://twitter.com/jonfollett"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    @jonfollett
+                  </a>
+                </small>
+              </div>
+            </div>
+
+            <hr />
+
+            <div className="contributor">
+              <div className="contributor-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${IMG_BASE}/contrib/courtney.jpg`}
+                  alt="Courtney McGorrill"
+                />
+              </div>
+              <div className="contributor-info">
+                <h3>Web Developer &amp; Designer</h3>
+                <p>Courtney McGorrill</p>
+                <small>
+                  <a
+                    href="https://twitter.com/court_mcgort"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    @court_mcgort
+                  </a>
+                </small>
+              </div>
+            </div>
+
+            <hr />
+
+            <div className="contributor">
+              <div className="contributor-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/features/democracy/contrib/juhan.jpg"
+                  alt="Juhan Sonin"
+                />
+              </div>
+              <div className="contributor-info">
+                <h3>Contributing Author</h3>
+                <p>Juhan Sonin</p>
+                <small>
+                  <a
+                    href="https://twitter.com/jsonin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    @jsonin
+                  </a>
+                </small>
+              </div>
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
 
     </div>
   )
