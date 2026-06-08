@@ -3,7 +3,7 @@
  */
 
 export const legacyImage = (path: string) =>
-  `https://www.goinvo.com/old/images/features/disrupt/${path}`
+  `/images/features/disrupt/${path}`
 
 export const parts = [
   {

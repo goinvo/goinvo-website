@@ -211,7 +211,7 @@ export function HeroSection({ partNumber, position, children }: HeroSectionProps
     return () => window.removeEventListener('scroll', onScroll)
   }, [position])
 
-  const imageSrc = `https://www.goinvo.com/old/images/features/disrupt/video_fallbacks/section-${partNumber}-${position}.jpg`
+  const imageSrc = `/images/features/disrupt/video_fallbacks/section-${partNumber}-${position}.jpg`
 
   return (
     <div ref={ref} className="video-container" style={{ position: 'relative' }}>
@@ -255,9 +255,9 @@ export function DisruptHeroVideo({ partNumber, position }: DisruptHeroVideoProps
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const videoBase = `https://www.goinvo.com/old/videos/disrupt/section-${partNumber}-${position}`
-  const posterSrc = `https://www.goinvo.com/old/images/features/disrupt/video_posters/section-${partNumber}-${position}.jpg`
-  const fallbackSrc = `https://www.goinvo.com/old/images/features/disrupt/video_fallbacks/section-${partNumber}-${position}.jpg`
+  const videoBase = `/videos/disrupt/section-${partNumber}-${position}`
+  const posterSrc = `/images/features/disrupt/video_posters/section-${partNumber}-${position}.jpg`
+  const fallbackSrc = `/images/features/disrupt/video_fallbacks/section-${partNumber}-${position}.jpg`
 
   if (isDesktop) {
     return (
@@ -345,7 +345,7 @@ export function DisruptNavBar({ currentPart }: DisruptNavProps) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className={`toggle-arrow ${mobileOpen ? 'open' : ''}`}
-          src="https://www.goinvo.com/old/images/features/disrupt/mobilenavutil.png"
+          src="/images/features/disrupt/mobilenavutil.png"
           alt="Toggle navigation"
         />
       </div>
