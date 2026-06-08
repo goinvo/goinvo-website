@@ -94,7 +94,7 @@
   max-width: 100%;
   padding: 30% 5rem 5%;
   margin-bottom: 2em;
-  background: url('https://www.goinvo.com/old/images/features/democracy/flag-hero.jpg') no-repeat center / cover;
+  background: url('/images/features/democracy/flag-hero.jpg') no-repeat center / cover;
   color: #fff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -202,7 +202,7 @@
   margin-bottom: 2em;
   color: #fff;
   background: linear-gradient(to bottom, rgba(126, 138, 147, 0.8), rgba(126, 138, 147, 0.8)),
-    url('https://www.goinvo.com/old/images/features/democracy/ipad.jpg') center / cover no-repeat;
+    url('/images/features/democracy/ipad.jpg') center / cover no-repeat;
   text-align: center;
   box-shadow: inset 0 20px 20px -20px #000, inset 0 -20px 20px -20px #000;
 }
@@ -238,6 +238,27 @@
   transform: translateY(5px);
   box-shadow: 0 -1px 0 #394a56, 0 -2px 0 #394a56, 0 -3px 0 #394a56, 0 -4px 0 #394a56, 0 -5px 0 #394a56,
     inset 0 0 5px #000;
+}
+
+/* Embedded "request a copy" download form (legacy `.action iframe`). The
+   "Request a Copy" button toggles the `.open` class to reveal the iframe,
+   matching the original collapsed-by-default reveal interaction. */
+.redesign-democracy .action-section .action-form {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: 275px;
+  max-height: 0;
+  margin: 0 auto;
+  border: 0;
+  opacity: 0;
+  transition: max-height 400ms ease, opacity 200ms ease;
+}
+
+.redesign-democracy .action-section .action-form.open {
+  max-height: 360px;
+  height: 360px;
+  opacity: 1;
 }
 
 /* Government slides / alternative forms */
@@ -507,11 +528,23 @@
 }
 
 /* Credits section */
+/* Faithful to legacy #credits: full breakout band ~90rem wide with 8em side
+   padding (Gatsby had `padding:2em 8em 4em; max-width:90rem`), NOT a narrow
+   900px column. */
 .redesign-democracy .credits-section {
-  padding: 2em 0 4em;
-  max-width: 900px;
+  padding: 2em 8em 4em;
+  max-width: 90rem;
   margin: 0 auto;
   overflow: hidden;
+}
+
+/* Legacy responsive: at <=978px the band drops to 3em side padding and the
+   author/contributor columns stack to full width. */
+@media (max-width: 978px) {
+  .redesign-democracy .credits-section {
+    padding-left: 3em;
+    padding-right: 3em;
+  }
 }
 
 .redesign-democracy .credits-section h2 {
