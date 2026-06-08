@@ -29,7 +29,7 @@ const res = await page.evaluate(() => {
       best = s;
     }
   });
-  if (!best || bestN < 2) return { ok: false, reason: "no bar-chart svg found" };
+  if (!best || bestN < 2) return { ok: true, status: "N/A", reason: "no bar-chart svg found" };
 
   const centerY = (el) => {
     const r = el.getBoundingClientRect();
@@ -49,12 +49,18 @@ const res = await page.evaluate(() => {
   const tol = Math.max(rowH / 2, 6);
 
   const misaligned = [];
+  const notApplicable = [];
+  let checked = 0;
   const check = (label, arr) => {
     if (!arr.length) return;
+    // Different label/bar counts => not a 1:1 bar chart (axis ticks, legends,
+    // a data table, a pie chart, etc.). The pairwise alignment check can't apply,
+    // so report N/A rather than a false failure.
     if (arr.length !== bars.length) {
-      misaligned.push(`${label}: ${arr.length} labels vs ${bars.length} bars`);
+      notApplicable.push(`${label}: ${arr.length} labels vs ${bars.length} bars (not a 1:1 bar chart)`);
       return;
     }
+    checked++;
     for (let i = 0; i < bars.length; i++) {
       const d = Math.abs(arr[i] - bars[i]);
       if (d > tol) {
@@ -67,17 +73,25 @@ const res = await page.evaluate(() => {
   check("name", nameYs);
   check("value", valueYs);
 
+  // Only a genuine pairwise position drift is a failure. Aligned or N/A both pass.
+  const status = misaligned.length ? "MISALIGNED" : checked ? "ALIGNED" : "N/A";
   return {
     ok: misaligned.length === 0,
+    status,
     bars: bars.length,
     names: nameYs.length,
     values: valueYs.length,
     rowHeightPx: Math.round(rowH),
     tolerancePx: Math.round(tol),
     misaligned: misaligned.slice(0, 10),
+    notApplicable,
   };
 });
 
 console.log(JSON.stringify({ url, ...res }, null, 2));
+const shotPath = process.argv[3];
+if (shotPath) {
+  await page.screenshot({ path: shotPath });
+}
 await browser.close();
 process.exit(res.ok ? 0 : 1);

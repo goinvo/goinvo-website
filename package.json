@@ -14,7 +14,8 @@
     "test:pages": "vitest run tests/page-render.test.ts",
     "manage": "tsx scripts/manage.ts",
     "audit:superscripts": "tsx scripts/manage.ts audit:superscripts",
-    "audit:linebreaks": "tsx scripts/manage.ts audit:linebreaks"
+    "audit:linebreaks": "tsx scripts/manage.ts audit:linebreaks",
+    "check:charts": "node scripts/check-chart-pages.mjs"
   },
   "dependencies": {
     "@flags-sdk/vercel": "^1.3.0",
