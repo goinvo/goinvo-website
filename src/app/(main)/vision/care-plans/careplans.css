@@ -1,9 +1,3 @@
-@import url('https://fonts.googleapis.com/css?family=Open+Sans:400,600');
-@import url('https://fonts.googleapis.com/css?family=Work+Sans:400,300,700');
-@import url('https://www.goinvo.com/old/stylesheets/vendor/bootstrap.min.css');
-@import url('https://www.goinvo.com/old/stylesheets/features/careplans.css');
-@import url('https://www.goinvo.com/old/stylesheets/feature-elements.css');
-
 /* ----------------------------------------------------------------- */
 /* Bootstrap (loaded above for the legacy careplans markup) clobbers   */
 /* the global header's flex layout. These overrides re-establish the   */
