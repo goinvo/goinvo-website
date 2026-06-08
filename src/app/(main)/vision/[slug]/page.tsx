@@ -1043,6 +1043,29 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
     })
   }
 
+  if (slug === 'vapepocolypse') {
+    // Gatsby wrapped the lone "Download Poster" link in `.button-group`, which
+    // stretched the button to ~95% of the column width (a wide, prominent CTA).
+    // The migrated buttonGroup defaults to `inline`, rendering a narrow chip that
+    // hugs its text on the left. Promote this single button to the full-width CTA
+    // treatment so it reads as the same prominent download action as the original.
+    return content.map((block) => {
+      if (
+        block?._type === 'buttonGroup' &&
+        block.layout !== 'fullWidth' &&
+        Array.isArray(block.buttons) &&
+        block.buttons.some((button: any) => button?.label === 'Download Poster') // eslint-disable-line @typescript-eslint/no-explicit-any
+      ) {
+        return {
+          ...block,
+          layout: 'fullWidth',
+        }
+      }
+
+      return block
+    })
+  }
+
   if (slug === 'open-pro') {
     const regularGrayParagraphs = new Set([
       'The patient can initiate communication of relevant medical data with the doctor to send outcomes, align priorities, and arrange the care they need.',

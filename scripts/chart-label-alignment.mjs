@@ -46,7 +46,9 @@ const res = await page.evaluate(() => {
   const valueYs = valueEls.map(centerY).sort((a, b) => a - b);
 
   const rowH = bars.length > 1 ? (bars[bars.length - 1] - bars[0]) / (bars.length - 1) : 40;
-  const tol = Math.max(rowH / 2, 6);
+  // Tight: a label should sit ON its bar, not just within the same row. Allow only
+  // a few px of font-metric slop (the loose rowH/2 tolerance let a -5px drift pass).
+  const tol = Math.max(rowH * 0.1, 4);
 
   const misaligned = [];
   const notApplicable = [];
