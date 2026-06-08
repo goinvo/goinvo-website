@@ -117,7 +117,7 @@ export function KillerTruthsChart({ rows }: { rows: KillerTruthsRow[] }) {
                 <text
                   className="value"
                   x={275}
-                  y={rowHeight / 2}
+                  y={8 + (rowHeight - 8) / 2}
                   dominantBaseline="middle"
                 >
                   {formatValue(row.value)}
@@ -125,7 +125,7 @@ export function KillerTruthsChart({ rows }: { rows: KillerTruthsRow[] }) {
                 <text
                   className="name"
                   x={200}
-                  y={rowHeight / 2}
+                  y={8 + (rowHeight - 8) / 2}
                   dominantBaseline="middle"
                 >
                   {row.name}
