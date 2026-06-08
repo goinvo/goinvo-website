@@ -108,7 +108,7 @@ export default function OpenOfficeHoursPage() {
       <section className="py-16" id="calendly">
         <div className="max-width content-padding">
           <h2 className="font-serif text-2xl text-center mb-8">Choose a Time</h2>
-          <CalendlyEmbed />
+          <CalendlyEmbed formLocation="open-office-hours" formName="office_hours" />
         </div>
       </section>
     </div>

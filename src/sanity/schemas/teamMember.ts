@@ -91,6 +91,13 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'showOnAboutPage',
+      title: 'Show on About page',
+      type: 'boolean',
+      description: 'Uncheck to keep a team member entry in Sanity without showing it in the public team roster.',
+      initialValue: true,
+    }),
+    defineField({
       name: 'isAlumni',
       title: 'Is Alumni',
       type: 'boolean',

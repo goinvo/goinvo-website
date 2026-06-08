@@ -26,6 +26,7 @@ import {
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
 import { parseDataTableSource } from '@/lib/dataTable'
+import { buildHtmlEmbedSrcDoc, hasHtmlEmbedCode } from '@/lib/htmlEmbed'
 
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
@@ -545,6 +546,14 @@ const components: PortableTextComponents = {
     columns: ({ value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: any[] = value.content || []
+      const explicitColumns: Array<{ key: string; content: PortableTextBlock[] }> = Array.isArray(value.columnContent)
+        ? value.columnContent
+          .map((column: any, index: number) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+            key: column?._key || `column-${index}`,
+            content: Array.isArray(column?.content) ? column.content as PortableTextBlock[] : [],
+          }))
+          .filter((column: { content: unknown[] }) => column.content.length > 0)
+        : []
       const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2 // 2:1 and 1:2 also count as 2
       const isStoryboard = value.layout === 'storyboard'
       const isCardVariant = value.variant === 'cards'
@@ -557,6 +566,45 @@ const components: PortableTextComponents = {
         gray: 'bg-[#f1f6f6] rounded-sm',
         teal: 'bg-[#cbe1df] rounded-sm',
         warm: 'bg-[#faf6f3] rounded-sm',
+      }
+
+      if (explicitColumns.length > 0) {
+        const gridClasses = value.layout === '4'
+          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+          : value.layout === '3'
+            ? 'grid-cols-1 md:grid-cols-3'
+            : value.layout === '2:1'
+              ? 'grid-cols-1 md:grid-cols-[2fr_1fr]'
+              : value.layout === '1:2'
+                ? 'grid-cols-1 md:grid-cols-[1fr_2fr]'
+                : 'grid-cols-1 md:grid-cols-2'
+
+        return (
+          <Wrap>
+            <ArticleReveal intensity="visual">
+              <figure className={cn('my-8', bg !== 'none' && 'p-5', bgClasses[bg])}>
+                <div className={cn('grid gap-6 items-start', gridClasses)}>
+                  {explicitColumns.map((column) => (
+                    <div
+                      key={column.key}
+                      className={cn(
+                        'min-w-0 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+                        isCardVariant && 'h-full border border-gray-medium bg-white p-4 shadow-sm'
+                      )}
+                    >
+                      <PortableText value={column.content} components={components} />
+                    </div>
+                  ))}
+                </div>
+                {value.caption && (
+                  <figcaption className="mt-2 text-base text-gray text-center">
+                    {value.caption}
+                  </figcaption>
+                )}
+              </figure>
+            </ArticleReveal>
+          </Wrap>
+        )
       }
 
       const images = items.filter(i => i._type === 'image' && i.asset?._ref)
@@ -904,33 +952,43 @@ const components: PortableTextComponents = {
       )
     },
     videoEmbed: ({ value }) => <PortableVideoEmbed value={value} />,
-    iframeEmbed: ({ value }) => (
-      <ArticleReveal intensity="visual">
-        <figure className={cn('my-8', value.fullWidth && 'w-screen relative left-1/2 -ml-[50vw]')}>
-          <div
-            className="relative w-full overflow-hidden"
-            style={
-              value.height
-                ? { height: `${value.height}px` }
-                : { aspectRatio: value.aspectRatio || '16/9' }
-            }
-          >
-            <iframe
-              src={value.url}
-              className="absolute inset-0 w-full h-full border-0"
-              allowFullScreen
-              loading="lazy"
-              title={value.caption || 'Embedded content'}
-            />
-          </div>
-          {value.caption && (
-            <figcaption className="mt-2 text-base text-gray text-center">
-              {value.caption}
-            </figcaption>
-          )}
-        </figure>
-      </ArticleReveal>
-    ),
+    iframeEmbed: ({ value }) => {
+      const hasCode = hasHtmlEmbedCode(value)
+      const srcDoc = hasCode ? buildHtmlEmbedSrcDoc(value) : undefined
+      const src = hasCode ? undefined : value.url
+
+      if (!srcDoc && !src) return null
+
+      return (
+        <ArticleReveal intensity="visual">
+          <figure className={cn('my-8', value.fullWidth && 'w-screen relative left-1/2 -ml-[50vw]')}>
+            <div
+              className="relative w-full overflow-hidden"
+              style={
+                value.height
+                  ? { height: `${value.height}px` }
+                  : { aspectRatio: value.aspectRatio || '16/9' }
+              }
+            >
+              <iframe
+                src={src}
+                srcDoc={srcDoc}
+                className="absolute inset-0 w-full h-full border-0"
+                sandbox={hasCode ? 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox' : undefined}
+                allowFullScreen
+                loading="lazy"
+                title={value.caption || 'Embedded content'}
+              />
+            </div>
+            {value.caption && (
+              <figcaption className="mt-2 text-base text-gray text-center">
+                {value.caption}
+              </figcaption>
+            )}
+          </figure>
+        </ArticleReveal>
+      )
+    },
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
       const layout = value.layout || 'inline'

@@ -278,7 +278,7 @@ export default function ServicesPage() {
           >
             Choose a time to talk about your project.
           </h2>
-          <CalendlyEmbed />
+          <CalendlyEmbed formLocation="services-page" formName="services_call" />
         </div>
       </div>
 

@@ -8,7 +8,6 @@ const NAV_ITEMS = [
   { id: 'transmission', label: 'Transmission' },
   { id: 'prevention', label: 'Prevention' },
   { id: 'zika-symptoms', label: 'Symptoms' },
-  { id: 'guillain-barre-syndrome', label: 'Guillain Barr\u00e9 Syndrome' },
   { id: 'treatments', label: 'Treatment' },
   { id: 'action-plan', label: 'Action Plan' },
 ]

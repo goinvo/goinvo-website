@@ -144,7 +144,12 @@ export const mainCategoriesQuery = groq`
 
 // Team Members
 export const teamMembersQuery = groq`
-  *[_type == "teamMember" && _id match "team-*" && isAlumni != true] | order(orderRank asc) {
+  *[
+    _type == "teamMember"
+    && _id match "team-*"
+    && isAlumni != true
+    && (!defined(showOnAboutPage) || showOnAboutPage != false)
+  ] | order(orderRank asc) {
     _id,
     name,
     role,
@@ -162,6 +167,40 @@ export const alumniQuery = groq`
     bio,
     image,
     social
+  }
+`
+
+export const linkInBioItemsQuery = groq`
+  *[
+    _type == "marketingLinkItem"
+    && (!defined(expiresAt) || dateTime(expiresAt) > dateTime(now()))
+    && status != "archived"
+    && (
+      (
+        status == "active"
+        && (!defined(publishAt) || dateTime(publishAt) <= dateTime(now()))
+      )
+      || (
+        defined(calendarItem)
+        && calendarItem->status in ["scheduled", "published"]
+        && (!defined(calendarItem->publishAt) || dateTime(calendarItem->publishAt) <= dateTime(now()))
+      )
+      || count(*[
+        _type == "marketingCalendarItem"
+        && references(^._id)
+        && status in ["scheduled", "published"]
+        && (!defined(publishAt) || dateTime(publishAt) <= dateTime(now()))
+      ]) > 0
+    )
+  ] | order(coalesce(order, 100) asc, _updatedAt desc) {
+    _id,
+    title,
+    description,
+    url,
+    type,
+    featured,
+    image,
+    sourceChannel
   }
 `
 
@@ -265,6 +304,16 @@ export const featureBySlugQuery = groq`
     bulletStyle,
     specialThanksHeading,
     specialThanksHeadingStyle,
+    experimentVariants[]{
+      _key,
+      key,
+      label,
+      title,
+      description,
+      metaTitle,
+      metaDescription,
+      content
+    },
     content,
     metaTitle,
     metaDescription

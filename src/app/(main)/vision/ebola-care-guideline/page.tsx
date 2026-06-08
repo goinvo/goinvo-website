@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import './ebola-care-guideline.css'
 
 export const metadata: Metadata = {
@@ -11,15 +10,18 @@ export const metadata: Metadata = {
 export default function EbolaCareGuidelinePage() {
   return (
     <div>
-      <SetCaseStudyHero image="/images/features/ebola-care-guideline/haz_zoom_bg.png" />
+      {/* Hero — translucent box over the hazmat background, serif title, accent rule */}
+      <header id="article-header" className="ebola-care-hero">
+        <div className="headline">
+          <div className="head-container">
+            <h1>Ebola Care Guideline</h1>
+            <hr />
+            <h2>An Illustrated Process on Personal Protective Equipment</h2>
+          </div>
+        </div>
+      </header>
 
       <div className="bg-white">
-        {/* Title - cover image is the hero above */}
-        <div className="max-w-[1238px] mx-auto pt-8 px-4">
-          <h1 className="header-xl mb-2">Ebola Care Guideline</h1>
-          <p className="font-serif text-lg text-gray">An Illustrated Process on Personal Protective Equipment</p>
-        </div>
-
         {/* Intro */}
         <section className="max-w-[1238px] mx-auto mt-6 px-4 mb-8">
           <p className="leading-[1.4em] text-[#58504a] mb-4">
