@@ -29,8 +29,8 @@ export default function OralHistoryGoinvoPage() {
 </div>
 <div className='right-header-content'>
 <div className='two-images'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/andrei-sqr.jpg' />
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/dirk-sqr.jpg' />
+<img src='/images/features/an-oral-history/andrei-sqr.jpg' />
+<img src='/images/features/an-oral-history/dirk-sqr.jpg' />
 </div>
 <div className='content'>Andrei Herasimchuk and Dirk Knemeyer incorporated GoInvo in Palo Alto, California, on June 29, 2004.</div>
 </div>
@@ -358,59 +358,59 @@ So it all started with a{' '}
 </div>
 <div className='sidebar'>
 <div className='sidebar-box solid boxes-and-arrows mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/3_boxes_arrows_logo.gif' />
+<img className='center' src='/images/features/an-oral-history/3_boxes_arrows_logo.gif' />
 <p>The venerable Boxes & Arrows was one of the first online UX publications, a favourite of the early intelligentsia.</p>
 </div>
 <div className='sidebar-box solid boxes-and-arrows extra-top-margin mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/4-adobe_logo.gif' />
+<img className='center' src='/images/features/an-oral-history/4-adobe_logo.gif' />
 <p>Andrei dropped out of Amherst College in 1990 to join Specular International, an early digital graphics company, as a founding member. In 1995 he left to join Adobe as their first interface designer. Andrei envisioned the creative strategy that resulted in the Adobe Creative Suite and built the Adobe design team from the ground up. After leaving Adobe for a few years to work on startups, Andrei returned in 2002 to serve as the project lead for Lightroom.</p>
 </div>
 <div className='sidebar-box dotted usability-guy extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/5-jakob_neilson.jpg' />
+<img src='/images/features/an-oral-history/5-jakob_neilson.jpg' />
 <p>“Usability Guy” Jakob Nielsen was the premier thought leader in UX-related disciplines prior to the emergence of Jeffrey Zeldman Dirk predicted the decline of Nielsen and his left-brained approach to the Internet with the controversial <a href="http://www.digital-web.com/articles/end_of_usability_culture/">The End of Usability Culture</a>.</p>
 </div>
 <div className='sidebar-box dotted bob-baxely extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/6-bob_baxley.jpg' />
+<img src='/images/features/an-oral-history/6-bob_baxley.jpg' />
 <p>Bob Baxley authored one of the first books on interaction design, “<a href="http://www.amazon.com/Making-Web-Work-Designing-Applications/dp/0735711968">Making the Web Work</a>”. After noodling around at Invo for a few months he moved on to Director-level design roles at Yahoo! and then Apple, where he oversaw design for Apple.com. Today Bob is Head of Product Design & Research at Pinterest.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/7-w3c_logo.png' />
+<img src='/images/features/an-oral-history/7-w3c_logo.png' />
 <p>Andrei’s logo design for Syntex was later donated to the W3C.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/8-business_card_small.png' />
+<img src='/images/features/an-oral-history/8-business_card_small.png' />
 <p>Like any good design firm, our first business cards were designed to impress.</p>
 </div>
 <div className='sidebar-box dotted dave-bedingfield extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/9-dave_bedingfield.jpg' />
+<img src='/images/features/an-oral-history/9-dave_bedingfield.jpg' />
 <p>Notoriously avoiding photographs, Dave Bedingfield is one of the best digital designers alive. He was part of Invo Silicon Valley from its earliest days.</p>
 </div>
 <div className='sidebar-box dotted williams-croft extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/10-josh_williams_jeff_croft.png' />
+<img src='/images/features/an-oral-history/10-josh_williams_jeff_croft.png' />
 <p>Before being ready to hire full-time staff, GoInvo worked with top guns like Josh Williams and Jeff Croft. Williams was the founder of Gowalla; Croft wrote Pro CSS Techniques.</p>
 </div>
 <div className='sidebar-box solid extra-top-margin protrade mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/11-protrade.png' />
+<img className='center' src='/images/features/an-oral-history/11-protrade.png' />
 <p>PROTRADE was re-branded to Citizen Sports, then purchased by Yahoo! Sports for more than $40M.</p>
 </div>
 <div className='sidebar-box dotted jeff-ma extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/12-jeff_ma.png' />
+<img src='/images/features/an-oral-history/12-jeff_ma.png' />
 <p>Jeff Ma was one of the leaders of the infamous MIT blackjack team and the real person behind protagonist “Kevin Lewis” in the best-selling book, <a href="http://www.amazon.com/Bringing-Down-House-Students-Millions/dp/B001AQY05Y">Bringing Down the House</a>.</p>
 </div>
 <div className='sidebar-box dotted juhan-sonin extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/13-juhan_sonin.png' />
+<img src='/images/features/an-oral-history/13-juhan_sonin.png' />
 <p>Juhan Sonin became part of the Invo orbit as a client in 2005. He went on to open the Boston studio with Dirk in 2009.</p>
 </div>
 <div className='sidebar-box dotted donna-driscol extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/14-donna_driscoll.jpg' />
+<img src='/images/features/an-oral-history/14-donna_driscoll.jpg' />
 <p>Donna Driscoll was one of the first hires at GoInvo. A usability engineer at Netscape and WebTV. She was early at PayPal, and became a design manager. At GoInvo she spent time in senior design and research roles, as well as directing the Silicon Valley studio.</p>
 </div>
 <div className='sidebar-box dotted ben-listwon extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/15-ben_listwon.jpg' />
+<img src='/images/features/an-oral-history/15-ben_listwon.jpg' />
 <p>A boy wonder, Ben left Cornell to start a calendaring application, Jump!, which was purchased by Microsoft and became MS Calendar. He went on to be a lead UI designer and architect for Microsoft, PayPal, Idealab!, and Yelp, the latter two of which he also helped to found.</p>
 </div>
 <div className='sidebar-box solid dana-street-roasting solid extra-top-margin mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/16-dana-_st_roasting_logo.png' />
+<img className='center' src='/images/features/an-oral-history/16-dana-_st_roasting_logo.png' />
 <p>The favourite of various movers-and-shakers in Silicon Valley, Dana Street Roasting Company was Ben’s go-to hangout and meeting place.</p>
 </div>
 </div>
@@ -775,54 +775,54 @@ So it all started with a{' '}
 </div>
 <div className='sidebar'>
 <div className='sidebar-box solid extra-top-margin agile-software mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/1-agile_logo.png' />
+<img className='center' src='/images/features/an-oral-history/1-agile_logo.png' />
 <p>Agile Software Corporation was a San Jose, California-based provider of Product Lifecycle Management (PLM) software.</p>
 </div>
 <div className='sidebar-box dotted raj-nav extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/2-raj_bhargava_joel_nave.png' />
+<img src='/images/features/an-oral-history/2-raj_bhargava_joel_nave.png' />
 <p>Executive leader Raj Bhargava and UX leader Joel Nave worked together to get Agile to invest in a complete redesign of their massive PLM suite.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin tiffany-altieri mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/4-tiffany_altieri.jpg' />
+<img src='/images/features/an-oral-history/4-tiffany_altieri.jpg' />
 <p>The talented and hard-working Tiffany Altieri was the first young creative to start and grow up at GoInvo, part of the Silicon Valley studio through its rise. A prototypical designer-engineer, Tiffany gravitated to the engineering side and today is a Silicon Valley veteran.</p>
 </div>
 <div className='sidebar-box dotted stairwell extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/3-invo_first_studio.jpg' />
+<img src='/images/features/an-oral-history/3-invo_first_studio.jpg' />
 <p>GoInvo’s first studio, in a residential condo complex that was converted from old industrial space at 1777 Lafayette St. in Santa Clara, California shared characteristics with all subsequent Invo locations: high ceilings, open spaces, and a spirit of creativity.</p>
 </div>
 <div className='sidebar-box dotted whiteboards extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/5-invo_whiteboard.jpg' />
+<img src='/images/features/an-oral-history/5-invo_whiteboard.jpg' />
 <p>As handy with physical tools as he was with digital, Ben provided low-cost furniture and collaboration tools in that first studio.</p>
 </div>
 <div className='sidebar-box solid wine extra-top-margin mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/6-wine.jpg' />
+<img className='center' src='/images/features/an-oral-history/6-wine.jpg' />
 <p>A joy in wine was shared by the Invo SV team, with most of us traveling up to wine country from time to time.</p>
 </div>
 <div className='sidebar-box solid oracle extra-top-margin mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/7-oracle_logo.png' />
+<img className='center' src='/images/features/an-oral-history/7-oracle_logo.png' />
 <p>In May 2007 Oracle acquired Agile for $495M.</p>
 </div>
 <div className='sidebar-box dotted uday-gajendar extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/8-uday_gajendar.jpg' />
+<img src='/images/features/an-oral-history/8-uday_gajendar.jpg' />
 <p>A senior designer with a philosophical bent, Uday Gajendar joined Invo from frog design at the beginning of 2007. He has worked for many top enterprise software companies, including Oracle, Citrix, and BEA. Today he is on the Design Council for VC Kleiner Perkins Caufield & Byers and the Director of UX for CloudPhysics.</p>
 </div>
 <div className='sidebar-box dotted box-ex extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/9-box_exercise.jpg' />
+<img src='/images/features/an-oral-history/9-box_exercise.jpg' />
 <p>“The Box Exercise” was Andrei’s name for GoInvo’s unique approach to product architecture.</p>
 </div>
 <div className='sidebar-box solid uday-pdf extra-top-margin mobile-hide'>
-<p>In 2008, Uday published a paper on The Box Exercise. <a href="/old/images/features/an-oral-history/10-the_box_exercise.pdf">Download the PDF</a>.</p>
+<p>In 2008, Uday published a paper on The Box Exercise. <a href="/images/features/an-oral-history/10-the_box_exercise.pdf">Download the PDF</a>.</p>
 </div>
 <div className='sidebar-box dotted box-ex extra-top-margin double-top'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/11-stokes.jpg' />
+<img src='/images/features/an-oral-history/11-stokes.jpg' />
 <p>A fresh-faced young designer/ developer when working with Invo, the irreverent Noah Stokes is now the owner of <a href="http://hellobold.com/">Bold</a>.</p>
 </div>
 <div className='sidebar-box dotted spivot extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/12-spivot.jpg' />
+<img src='/images/features/an-oral-history/12-spivot.jpg' />
 <p>Spivot was Flipboard three years early and before the iPad made that style of content consumption more of a living room (as opposed to office) activity.</p>
 </div>
 <div className='sidebar-box dotted sunnyvale extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/13-kifer_studio.jpg' />
+<img src='/images/features/an-oral-history/13-kifer_studio.jpg' />
 <p>The office condos at 1294 Kifer Rd. in Sunnyvale, California featured Class A office space in the front and warehouse space in the back. We turned our warehouse into a studio.</p>
 </div>
 </div>
@@ -831,55 +831,55 @@ So it all started with a{' '}
 <div className='rslides-container'>
 <ul className='rslides' id='slideshow'>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/a.jpg' />
+<img src='/images/features/an-oral-history/slides/a.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/b.jpg' />
+<img src='/images/features/an-oral-history/slides/b.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/c.jpg' />
+<img src='/images/features/an-oral-history/slides/c.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/e.jpg' />
+<img src='/images/features/an-oral-history/slides/e.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/f.jpg' />
+<img src='/images/features/an-oral-history/slides/f.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/g.jpg' />
+<img src='/images/features/an-oral-history/slides/g.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/h.jpg' />
+<img src='/images/features/an-oral-history/slides/h.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/i.jpg' />
+<img src='/images/features/an-oral-history/slides/i.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/j.jpg' />
+<img src='/images/features/an-oral-history/slides/j.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/k.jpg' />
+<img src='/images/features/an-oral-history/slides/k.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/l.jpg' />
+<img src='/images/features/an-oral-history/slides/l.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/q.jpg' />
+<img src='/images/features/an-oral-history/slides/q.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/r.jpg' />
+<img src='/images/features/an-oral-history/slides/r.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/m.jpg' />
+<img src='/images/features/an-oral-history/slides/m.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/n.jpg' />
+<img src='/images/features/an-oral-history/slides/n.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/o.jpg' />
+<img src='/images/features/an-oral-history/slides/o.jpg' />
 </li>
 <li>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/slides/p.jpg' />
+<img src='/images/features/an-oral-history/slides/p.jpg' />
 </li>
 </ul>
 <div className='caption'>Memorable moments from our SV team and studio</div>
@@ -1052,26 +1052,26 @@ So it all started with a{' '}
 </div>
 <div className='sidebar'>
 <div className='sidebar-box dotted steel-sign extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/15-invo_lobby.jpg' />
+<img src='/images/features/an-oral-history/15-invo_lobby.jpg' />
 <p>Over 500 pounds of metal hanging with distinction in the Kifer Rd. lobby.</p>
 </div>
 <div className='sidebar-box dotted rob-bracket extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/16-rob_brackett.jpg' />
+<img src='/images/features/an-oral-history/16-rob_brackett.jpg' />
 <p>Rob Brackett joined Invo soon after leaving university and quickly established himself as Ben’s top engineer. He went on to serve as an engineer at Apple and a fellow at Code for America.</p>
 </div>
 <div className='sidebar-box dotted dennis-fong extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/17-dennis_fong.jpg' />
+<img src='/images/features/an-oral-history/17-dennis_fong.jpg' />
 <p>Dennis Fong, aka “Thresh”, was the first professional video game superstar. He sold Xfire to Viacom for $102M in 2006, then picked GoInvo to create his next gaming idea.</p>
 </div>
 <div className='sidebar-box solid extra-top-margin plug-n-play mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/18-plug_and_play_logo.png' />
+<img className='center' src='/images/features/an-oral-history/18-plug_and_play_logo.png' />
 <p>An early open workspace, the Plug & Play Tech Center has multiple offices in Silicon Valley and housed a handful of GoInvo clients.</p>
 </div>
 <div className='sidebar-box dotted guitar-hero extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/19-rob_ms_pacman.jpg' />
+<img src='/images/features/an-oral-history/19-rob_ms_pacman.jpg' />
 </div>
 <div className='sidebar-box dotted extra-top-margin invo-friends mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/20-wroblewski_portigal_rosenfeld.png' />
+<img src='/images/features/an-oral-history/20-wroblewski_portigal_rosenfeld.png' />
 <p>Invo often works with our friends, as was the case involving Luke Wroblewski, Lou Rosenfeld, Steve Portigal in the Invo Master Academy.</p>
 </div>
 </div>
@@ -1641,36 +1641,36 @@ So it all started with a{' '}
 </div>
 <div className='sidebar'>
 <div className='sidebar-box solid mcafee-total mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/1-mcafee_box.png' />
+<img className='center' src='/images/features/an-oral-history/1-mcafee_box.png' />
 <p>GoInvo designed McAfee Total Protection 2010, a complete redesign of the venerable security suite. Citing the improved quality of design and user experience, PC Mag increased their rating of the product to 4 stars.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin question-mark extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/question_mark.png' />
+<img src='/images/features/an-oral-history/question_mark.png' />
 <p>The other four designers on the expansion list were never publicly revealed. Two are now running their own companies, one works directly for a top Silicon Valley VC, and the fourth has a C-level creative position in a major technology corporation.</p>
 </div>
 <div className='sidebar-box dotted seascape-retreat extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/2-seascape_resort.jpg' />
+<img src='/images/features/an-oral-history/2-seascape_resort.jpg' />
 <p>An all-company retreat at the Seascape Resort in Santa Cruz, CA represented the high-water mark for the Silicon Valley studio and later proved to be the beginning of the end.</p>
 </div>
 <div className='sidebar-box solid time-cover extra-top-margin mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/3-time_cover.jpg' />
+<img className='center' src='/images/features/an-oral-history/3-time_cover.jpg' />
 <p>“The Great Recession” of 2008 crippled GoInvo and led to the company’s Boston expansion turning into an all-out relocation.</p>
 </div>
 <div className='sidebar-box dotted time-cover extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/4-sean_parker.jpg' />
+<img src='/images/features/an-oral-history/4-sean_parker.jpg' />
 <p>During the later days of the Silicon Valley studio, while there was no business from large companies, power-playing VC’s like Sean Parker came to GoInvo for help on smaller initiatives.</p>
 </div>
 <div className='sidebar-box dotted andrei-bookcase extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/5-andreis_bookshelf.png' />
+<img src='/images/features/an-oral-history/5-andreis_bookshelf.png' />
 <p>Andrei’s bookcase reflected the many facets of his personality, as well as design influences.</p>
 </div>
 <div className='sidebar-box dotted pilates-studio extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/6-pilates_1.jpg' />
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/7-pilates_2.jpg' />
+<img src='/images/features/an-oral-history/6-pilates_1.jpg' />
+<img src='/images/features/an-oral-history/7-pilates_2.jpg' />
 <p>The space in Arlington before we converted it from a pilates studio to our design studio.</p>
 </div>
 <div className='sidebar-box dotted rani-brian extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/9-staats_rani.jpg' />
+<img src='/images/features/an-oral-history/9-staats_rani.jpg' />
 <p>Rani Manoharan and Brian Staats were the first creators contracted at Invo Boston. Exceptional talents, they continue to grow in their careers.</p>
 </div>
 <div className='sidebar-box dotted early-boston-studio extra-top-margin'>
@@ -1678,27 +1678,27 @@ So it all started with a{' '}
 <p>The early days of the studio featured lots of open space, along with some boredom and loneliness.</p>
 </div>
 <div className='sidebar-box dotted eric-benoit extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/11-eric_benoit.jpg' />
+<img src='/images/features/an-oral-history/11-eric_benoit.jpg' />
 <p>The first full-time hire at Invo Boston, Eric Benoit had a lot of talent but little software experience. Taking a chance on each other couldn’t have turned out better; he is now a creative director for the firm.</p>
 </div>
 <div className='sidebar-box dotted erics-new-car extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/12-hyundai_accent.jpg' />
+<img src='/images/features/an-oral-history/12-hyundai_accent.jpg' />
 <p>Eric’s first new car, a silver 2010 Hyundai Accent, bought for the long daily commute to Invo. The cheapest new car he could find, it didn’t even come with a stereo.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/13-juhan_eric_helicopter.jpg' />
+<img src='/images/features/an-oral-history/13-juhan_eric_helicopter.jpg' />
 <p>Juhan and Eric have now collaborated on more than 20 software design projects.</p>
 </div>
 <div className='sidebar-box dotted jonathan-follet extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/14-jon_follett.jpg' />
+<img src='/images/features/an-oral-history/14-jon_follett.jpg' />
 <p>Jonathan Follett joined GoInvo Boston in the summer of 2010 as a third principal, with Juhan and Dirk. While in the early days he still flexed his creative muscles, over the last four years Jon has spearheaded new business development.</p>
 </div>
 <div className='sidebar-box solid extra-top-margin iiid mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/15-IIID_Logo.png' />
+<img className='center' src='/images/features/an-oral-history/15-IIID_Logo.png' />
 <p>Jon and Dirk met in 2005 when Dirk gave a presentation called “Innovating the Online Experience: Financial Services” at the International Institute for Information Design’s Financial Communications Conference.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin zeldman-et-al mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/16-zeldman_wodtke_pabini_finck.jpg' />
+<img src='/images/features/an-oral-history/16-zeldman_wodtke_pabini_finck.jpg' />
 <p>The Invo team is grateful to Jeffrey Zeldman, Christina Wodtke, Pabini Gabriel-Petit, and Nick Finck as publishers of the seminal UX publications to which we frequently and humbly contributed.</p>
 </div>
 <div className='sidebar-box blank'></div>
@@ -1707,7 +1707,7 @@ So it all started with a{' '}
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box solid extra-top-margin mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/17-ixda_boston_logo.png' />
+<img className='center' src='/images/features/an-oral-history/17-ixda_boston_logo.png' />
 <p>The 2008 IxDA Boston Christmas party brought Juhan and Jon together for the first time, in a wince-worthy way.</p>
 </div>
 </div>
@@ -2213,12 +2213,12 @@ So it all started with a{' '}
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box solid ptc mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/1-ptc_logo.png' />
+<img className='center' src='/images/features/an-oral-history/1-ptc_logo.png' />
 <p>PTC’s Creo software, with a new UI by GoInvo, was released in June, 2011 to replace and supersede products formerly known as Pro/ENGINEER, CoCreate, and ProductView.</p>
 </div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box solid ssi mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/2-ssi_logo.png' />
+<img className='center' src='/images/features/an-oral-history/2-ssi_logo.png' />
 <p>Survey Sampling International (SSI) is the premier global provider of sampling, data collection and data analytic solutions for consumer and business-to-business survey research.</p>
 </div>
 <div className='sidebar-box blank'></div>
@@ -2227,35 +2227,35 @@ So it all started with a{' '}
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box dotted george-moon extra-top-margin mobile-hide'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/3-george_moon.jpg' />
+<img src='/images/features/an-oral-history/3-george_moon.jpg' />
 <p>George Moon, VP of Product, CodeRyte Inc.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin yang-dan'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/4-yang_dan.jpg' />
+<img src='/images/features/an-oral-history/4-yang_dan.jpg' />
 <p>Yang Dan graduated from our apprenticeship program and later joined Microsoft as a UX Designer.</p>
 </div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box solid data-xu mobile-hide'>
-<img className='center' src='https://www.goinvo.com/old/images/features/an-oral-history/5-data_xu.png' />
+<img className='center' src='/images/features/an-oral-history/5-data_xu.png' />
 <p>Inc. magazine ranked DataXu, a provider of programmatic marketing solutions for brands and agencies, as the #1 fastest growing private company in the advertising and marketing industry and #5 overall on the 2013 Inc. 500.</p>
 </div>
 <div className='sidebar-box dotted extra-top-margin double-top inspired-ehr'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/6-inspired_ehr.jpg' />
+<img src='/images/features/an-oral-history/6-inspired_ehr.jpg' />
 <p><a href="http://inspiredehrs.org/">Inspired EHRs: Designing for Clinicians</a></p>
 </div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box dotted extra-top-margin double-top lindsey-food'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/7-real_food.jpg' />
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/8-lindsey.jpg' />
+<img src='/images/features/an-oral-history/7-real_food.jpg' />
+<img src='/images/features/an-oral-history/8-lindsey.jpg' />
 <p>Lindsey’s work with Invo Boston helped us incorporate healthy eating and lifestyle habits into the studio culture.</p>
 </div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box dotted media-lab-photos'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/9-mit_2009.jpg' />
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/10-mit_crowd.jpg' />
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/11-mit_thing.jpg' />
+<img src='/images/features/an-oral-history/9-mit_2009.jpg' />
+<img src='/images/features/an-oral-history/10-mit_crowd.jpg' />
+<img src='/images/features/an-oral-history/11-mit_thing.jpg' />
 <p>Invo Boston’s culture of learning is most evident in our tight integration with MIT’s product design and engineering class 2.009. GoInvo designers and engineers help teach and mentor students.</p>
 </div>
 <div className='sidebar-box blank'></div>
@@ -2263,7 +2263,7 @@ So it all started with a{' '}
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box dotted eric-dahl'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/12-erik_dahl.jpg' />
+<img src='/images/features/an-oral-history/12-erik_dahl.jpg' />
 <p>Erik Dahl joins GoInvo to open up the Columbus studio.</p>
 </div>
 </div>
@@ -2485,20 +2485,20 @@ So it all started with a{' '}
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box dotted design-axioms extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/1-design_axioms.jpg' />
+<img src='/images/features/an-oral-history/1-design_axioms.jpg' />
 <p>The Design Axioms describe the minimal rule set for designing interfaces: the 16 foundational concepts that are required knowledge for engineers and designers to create usable and elegant interfaces.</p>
 </div>
 <div className='sidebar-box dotted health-axioms extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/2-design_axiom_sketches.jpg' />
+<img src='/images/features/an-oral-history/2-design_axiom_sketches.jpg' />
 <p>Preliminary sketches of the Care Cards</p>
 </div>
 <div className='sidebar-box dotted hgraph extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/3-hgraph.jpg' />
+<img src='/images/features/an-oral-history/3-hgraph.jpg' />
 <p>hGraph (Health Graph) is a standardized visual representation of a patient’s health status. This single picture method provides a person with a significant understanding of his or her total well being because it compiles multiple metrics into a unified graph that can be viewed at a glance.</p>
 </div>
 <div className='sidebar-box blank'></div>
 <div className='sidebar-box dotted studio-lunch extra-top-margin'>
-<img src='https://www.goinvo.com/old/images/features/an-oral-history/4-friday_lunch.jpg' />
+<img src='/images/features/an-oral-history/4-friday_lunch.jpg' />
 <p>The Friday afternoon family dinner at Invo Boston.</p>
 </div>
 </div>
@@ -2527,7 +2527,7 @@ So it all started with a{' '}
 <h1>Where are they now?</h1>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/1-andrei_herasimchuk.png" alt="1 andrei herasimchuk" />
+<img src="/images/features/an-oral-history/credits/1-andrei_herasimchuk.png" alt="1 andrei herasimchuk" />
 </div>
 <div className='content'>
 <h2>Andrei Herasimchuk <small><a href="https://twitter.com/trenti">@trenti</a></small></h2>
@@ -2537,7 +2537,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/2-ben_listwon.png" alt="2 ben listwon" />
+<img src="/images/features/an-oral-history/credits/2-ben_listwon.png" alt="2 ben listwon" />
 </div>
 <div className='content'>
 <h2>Ben Listwon <small><a href="https://twitter.com/benjaminlistwon">@benjaminlistwon</a></small></h2>
@@ -2547,7 +2547,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/3-dirk_knemeyer.png" alt="3 dirk knemeyer" />
+<img src="/images/features/an-oral-history/credits/3-dirk_knemeyer.png" alt="3 dirk knemeyer" />
 </div>
 <div className='content'>
 <h2>Dirk Knemeyer <small><a href="https://twitter.com/dknemeyer">@dknemeyer</a></small></h2>
@@ -2557,7 +2557,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/4-donna_driscoll.png" alt="4 donna driscoll" />
+<img src="/images/features/an-oral-history/credits/4-donna_driscoll.png" alt="4 donna driscoll" />
 </div>
 <div className='content'>
 <h2>Donna Driscoll <small><a href="https://twitter.com/dahnahdee">@dahnahdee</a></small></h2>
@@ -2567,7 +2567,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/5-eric_benoit.png" alt="5 eric benoit" />
+<img src="/images/features/an-oral-history/credits/5-eric_benoit.png" alt="5 eric benoit" />
 </div>
 <div className='content'>
 <h2>Eric Benoit <small><a href="https://twitter.com/ebenoit">@ebenoit</a></small></h2>
@@ -2577,7 +2577,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/6-jen_patel.png" alt="6 jen patel" />
+<img src="/images/features/an-oral-history/credits/6-jen_patel.png" alt="6 jen patel" />
 </div>
 <div className='content'>
 <h2>Jennifer Patel <small><a href="https://twitter.com/catamariface">@catamariface</a></small></h2>
@@ -2587,7 +2587,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/7-jon_follett.png" alt="7 jon follett" />
+<img src="/images/features/an-oral-history/credits/7-jon_follett.png" alt="7 jon follett" />
 </div>
 <div className='content'>
 <h2>Jon Follett <small><a href="https://twitter.com/jonfollett">@jonfollett</a></small></h2>
@@ -2597,7 +2597,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/8-juhan_sonin.png" alt="8 juhan sonin" />
+<img src="/images/features/an-oral-history/credits/8-juhan_sonin.png" alt="8 juhan sonin" />
 </div>
 <div className='content'>
 <h2>Juhan Sonin <small><a href="https://twitter.com/jsonin">@jsonin</a></small></h2>
@@ -2607,7 +2607,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/9-sarah_kaiser.png" alt="9 sarah kaiser" />
+<img src="/images/features/an-oral-history/credits/9-sarah_kaiser.png" alt="9 sarah kaiser" />
 </div>
 <div className='content'>
 <h2>Sarah Kaiser <small><a href="https://twitter.com/damntorren">@DamnTorren</a></small></h2>
@@ -2617,7 +2617,7 @@ So it all started with a{' '}
 </div>
 <div className='person'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/an-oral-history/credits/10-uday_gajender.png" alt="10 uday gajender" />
+<img src="/images/features/an-oral-history/credits/10-uday_gajender.png" alt="10 uday gajender" />
 </div>
 <div className='content'>
 <h2>Uday Gajendar <small><a href="https://twitter.com/udanium">@udanium</a></small></h2>
@@ -2631,7 +2631,7 @@ So it all started with a{' '}
 <h2>Design Team</h2>
 <div className='contributor'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/democracy/contrib/brian.jpg" alt="Brian" />
+<img src="/images/features/democracy/contrib/brian.jpg" alt="Brian" />
 </div>
 <div className='info'>
 <h3>Designer</h3>
@@ -2640,7 +2640,7 @@ So it all started with a{' '}
 </div>
 <div className='contributor'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/ebola/contrib/adam.jpeg" alt="Adam" />
+<img src="/images/features/ebola/contrib/adam.jpeg" alt="Adam" />
 </div>
 <div className='info'>
 <h3>Web Designer</h3>
@@ -2649,7 +2649,7 @@ So it all started with a{' '}
 </div>
 <div className='contributor'>
 <div className='image'>
-<img src="https://www.goinvo.com/old/images/features/democracy/contrib/emily.jpg" alt="Emily" />
+<img src="/images/features/democracy/contrib/emily.jpg" alt="Emily" />
 </div>
 <div className='info'>
 <h3>Editor</h3>

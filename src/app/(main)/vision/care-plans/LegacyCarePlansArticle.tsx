@@ -20,7 +20,6 @@ const CARE_PLANS_ROUTE = "/vision/care-plans";
 const CARE_PLANS_PART_1_ROUTE = "/vision/care-plans/part-1";
 const CARE_PLANS_PART_2_ROUTE = "/vision/care-plans/part-2";
 const CARE_PLANS_PART_3_ROUTE = "/vision/care-plans/part-3";
-const GOINVO_ASSET_PREFIX = "https://www.goinvo.com";
 
 const LEGACY_PAGE_FILES: Record<LegacyCarePlansPage, string> = {
   overview: "part1.html",
@@ -128,7 +127,7 @@ function rewriteLegacyLinks(page: LegacyCarePlansPage, html: string) {
     .replace(
       /(src|href)=(['"])\/old\//g,
       (_match, attr: string, quote: string) =>
-        `${attr}=${quote}${GOINVO_ASSET_PREFIX}/old/`,
+        `${attr}=${quote}/`,
     );
 
   if (page === "part1") {
@@ -264,6 +263,9 @@ export function LegacyCarePlansArticle({
         rel="stylesheet"
         href="https://fonts.googleapis.com/css?family=Work+Sans:400,300,700"
       />
+      <link rel="stylesheet" href="/stylesheets/vendor/bootstrap.min.css" />
+      <link rel="stylesheet" href="/stylesheets/features/careplans.css" />
+      <link rel="stylesheet" href="/stylesheets/feature-elements.css" />
       <div
         className="legacy-careplans"
         style={{ paddingTop: "var(--spacing-header-height)" }}
