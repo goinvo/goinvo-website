@@ -101,6 +101,16 @@ export function referenceFromId(id: string): SanityReference {
   }
 }
 
+/**
+ * Dedupes an array of records by their `_id`, keeping the LAST occurrence of
+ * each id (Map insertion semantics) while preserving first-seen position.
+ *
+ * Ported verbatim from marketingTool.tsx.
+ */
+export function uniqueById<T extends { _id: string }>(items: T[]): T[] {
+  return Array.from(new Map(items.map((item) => [item._id, item])).values())
+}
+
 /** Plain object shape for array items that may carry a Sanity `_key`/`_type`. */
 export type KeyedItem = Record<string, unknown>
 
