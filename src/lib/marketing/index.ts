@@ -58,4 +58,4 @@ export type {
 export { getMarketingWriteClient } from './client'
 
 // API authentication.
-export { MarketingAuthError, assertMarketingApiKey } from './auth'
+export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey } from './auth'

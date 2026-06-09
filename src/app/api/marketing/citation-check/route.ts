@@ -2,6 +2,7 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // Citation / fact-check route for the marketing software. Given a page URL (or
 // raw text), it extracts the page's factual + statistical claims and flags any
@@ -97,6 +98,15 @@ function countFlagged(claims: Claim[]): number {
 }
 
 export async function POST(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   let body: { pageUrl?: string; text?: string; refresh?: boolean }
   try {
     body = (await request.json()) as typeof body
