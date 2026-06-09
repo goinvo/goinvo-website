@@ -61,3 +61,27 @@ never silently "passes").
   `codex/marketing-cms` and reaches prod by merging to `main`.
 - The Gatsby→Next port shipped "dead-CSS" regressions (generic markup not mounting a page's own
   ported CSS); compare against the Gatsby legacy refs, not just structural DOM checks.
+
+## Marketing suite architecture — portable + testable (decided 2026-06)
+
+Goal: decompose the `marketingTool.tsx` monolith, expose every CMS write as a testable HTTP
+endpoint, and keep the suite **portable** (extractable to other Sanity sites). The tool's
+write/derive logic moves into a shared core that both the Studio tool AND the REST API import
+(single source of truth — no drift).
+
+- **Portable core: `src/lib/marketing/`** (site-agnostic; config via env, no hardcoding):
+  `derive` (slugify, randomKey, refs, slug/UTM/date derivations, inferences),
+  `defaults` (per-type `initialValue` + array-item `_type` maps + required-field map for the
+  ~20 managed `marketingXxx` types), `crud` (buildCreatePayload / buildPatch + channel-delete
+  cascade + ensureMarketingChannel), `cascades` (create-linked-drafts + clones),
+  `client` (write client from `@/sanity/env`), `auth` (MARKETING_API_KEY).
+- **REST API: `/api/marketing/doc/[type]`** — POST create / PATCH / DELETE / GET for every
+  managed type, applying the SAME server-side defaults/derivations the Studio applies; plus
+  special-flow endpoints (cascade, AI-persist, seed, clone). **All gated by `MARKETING_API_KEY`**
+  (`Authorization: Bearer <key>` or `x-marketing-api-key`); **fail-closed** if the key is unset.
+  This is how to test + headlessly drive marketing writes without the Studio UI.
+- **Tool rewire:** `marketingTool.tsx` imports the core (drops its inline
+  slugify/randomKey/defaults/cascades) → smaller, no duplicated logic.
+- **Auth gap closed:** ai-citation, citation-check, research/run, ga4-ab (write routes that had
+  no request auth) move behind `MARKETING_API_KEY`.
+- **Env:** set `MARKETING_API_KEY` in `.env.local` and on Vercel.
