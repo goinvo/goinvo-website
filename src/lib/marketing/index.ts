@@ -59,3 +59,20 @@ export { getMarketingWriteClient } from './client'
 
 // API authentication.
 export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey } from './auth'
+
+// Channel seeding (DEFAULT_CHANNELS + ensureMarketingChannel).
+export { DEFAULT_CHANNELS, ensureMarketingChannel } from './seed'
+export type {
+  MarketingChannelDef,
+  ChannelContentTypeDef,
+  MarketingChannelDocument,
+} from './seed'
+
+// Clone / derive builders (link-from-post, proof-from-result).
+export { buildLinkFromPost, buildProofPointFromResult } from './clone'
+export type {
+  CalendarItemForLink,
+  ResearchResultForProof,
+  ResearchProjectForProof,
+  MarketingFieldBag,
+} from './clone'
