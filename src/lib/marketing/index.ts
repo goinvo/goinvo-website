@@ -16,8 +16,22 @@ export {
   refsFromIds,
   referenceFromId,
   withArrayKeys,
+  uniqueById,
 } from './derive'
 export type { SanityReference, KeyedItem } from './derive'
+
+// Pure date utilities (ported verbatim).
+export {
+  startOfMonth,
+  addMonths,
+  addDays,
+  monthLabel,
+  toDateInputValue,
+  dateInputToIso,
+} from './dates'
+
+// Pure free-text inference helpers (ported verbatim).
+export { inferResearchProjectType, inferTopicCluster, inferTargetQueries } from './infer'
 
 // Managed type registry.
 export { MANAGED_MARKETING_TYPES, isManagedMarketingType } from './types'
