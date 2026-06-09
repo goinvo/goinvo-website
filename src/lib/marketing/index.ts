@@ -76,3 +76,13 @@ export type {
   ResearchProjectForProof,
   MarketingFieldBag,
 } from './clone'
+
+// Linked-draft cascade (create-linked-drafts from a research project).
+export { createResearchProjectRecords } from './cascades'
+export type {
+  CascadeResearchProject,
+  CascadeResearchResult,
+  CascadeRefSummary,
+  CreateResearchProjectRecordsOptions,
+  CreatedResearchProjectRecords,
+} from './cascades'
