@@ -85,3 +85,13 @@ write/derive logic moves into a shared core that both the Studio tool AND the RE
 - **Auth gap closed:** ai-citation, citation-check, research/run, ga4-ab (write routes that had
   no request auth) move behind `MARKETING_API_KEY`.
 - **Env:** set `MARKETING_API_KEY` in `.env.local` and on Vercel.
+
+**BUILT (2026-06, on `codex/marketing-cms`).** Core: `src/lib/marketing/{derive,dates,infer,types,defaults,crud,seed,clone,cascades,client,auth,index}.ts`. Endpoints (all auth-gated):
+- CRUD: `POST|GET /api/marketing/doc/[type]`, `GET|PATCH|DELETE /api/marketing/doc/[type]/[id]`
+- Seed: `POST /api/marketing/seed/channels` (bootstrap default channels — for new sites)
+- Clone: `POST /api/marketing/clone/link-from-post`, `/clone/proof-from-result`
+- Cascade: `POST /api/marketing/cascade/research-records` (one call → funnel+campaign+calendar+links+channels, project→converted)
+
+Auth reality: the 3 Studio-called write routes (ai-citation / citation-check / research/run POST) use `assertStudioOrApiKey` — a valid `MARKETING_API_KEY` **OR** an `x-sanity-session` token validated against Sanity `users/me` (the Studio tool sends it from its localStorage auth token). `ga4-ab` uses the existing drain-cron secret. Read GETs stay open. The generic CRUD routes use `MARKETING_API_KEY` only.
+
+Rough edge to fix later: `DELETE /doc/[type]/[id]` returns **500** when the doc is still referenced by another doc (Sanity refuses) — delete interlinked docs in ONE transaction, or unset refs first; a follow-up should return a clean 409.
