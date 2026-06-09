@@ -840,6 +840,30 @@ function saveStoredMarketingView(view: MarketingViewId) {
   window.localStorage.setItem(MARKETING_ACTIVE_VIEW_STORAGE_KEY, view)
 }
 
+// Reads the logged-in Studio user's auth token so WRITE routes can authenticate
+// the request as a real Studio session. Studio stores it under
+// `__studio_auth_token_<projectId>` as either a raw string or a {"token":"..."}
+// JSON envelope. Returns null when absent (callers then omit the header).
+function studioSessionToken(): string | null {
+  if (typeof window === 'undefined') return null
+  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
+  if (!projectId) return null
+  try {
+    const raw = window.localStorage.getItem(`__studio_auth_token_${projectId}`)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as { token?: unknown } | string
+      if (typeof parsed === 'string') return parsed.trim() || null
+      if (parsed && typeof parsed.token === 'string') return parsed.token.trim() || null
+    } catch {
+      // Not JSON — treat the stored value as the raw token.
+    }
+    return raw.trim() || null
+  } catch {
+    return null
+  }
+}
+
 interface RefSummary {
   _id: string
   title?: string
@@ -9701,9 +9725,13 @@ function ResearchProjectEditor({
     setMessage('')
     try {
       await onSave(draft._id, buildResearchProjectSavePayload(draft))
+      const token = studioSessionToken()
       const response = await fetch('/api/marketing/research/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'x-sanity-session': token } : {}),
+        },
         body: JSON.stringify({
           projectId: draft._id,
           methods: draft.methods && draft.methods.length > 0 ? draft.methods : defaultResearchMethodsForType(draft.researchType),
