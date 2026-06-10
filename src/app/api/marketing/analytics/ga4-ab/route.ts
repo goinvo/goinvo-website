@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { getServiceAccount, getGoogleAccessToken, ga4RunReport } from '@/lib/marketing/googleServiceAccount'
 import { upsertDrainSignalForFlag } from '@/lib/marketing/drainSink'
-import type { DrainAggregate } from '@/lib/marketing/vercelDrain'
+import type { DrainAggregate, VariantEngagementInput } from '@/lib/marketing/vercelDrain'
 
 // GA4-sourced A/B measurement. The homepage experiment fires its events
 // (experiment_exposure + the tracked conversions) to GA4 with a `variant` event
@@ -138,9 +138,52 @@ export async function GET(request: Request) {
       continue
     }
 
+    // SECOND report: per-variant SESSION engagement (visits / bounce / avg time).
+    // `variant` is an event-scoped custom dimension, so a session is attributed to
+    // a variant when it fired experiment_exposure with that variant — these are
+    // "sessions exposed to the variant", an acceptable per-variant engagement
+    // approximation. Wrapped in its own try/catch so a failure here never breaks
+    // the event-count path above (which has already produced `aggregates`).
+    let variantEngagement: VariantEngagementInput[] | undefined
     try {
-      const upsert = await upsertDrainSignalForFlag(client, exp.flagKey, aggregates, { metricDate })
-      results.push({ flagKey: exp.flagKey, aggregates: aggregates.length, updated: upsert.updated, warnings: upsert.warnings })
+      const engagementRows = await ga4RunReport(token, GA4_PROPERTY_ID, {
+        dateRanges: [{ startDate: exp.measurementStartDate || `${days}daysAgo`, endDate: 'today' }],
+        dimensions: [{ name: 'customEvent:variant' }],
+        metrics: [{ name: 'sessions' }, { name: 'bounceRate' }, { name: 'averageSessionDuration' }],
+        dimensionFilter: {
+          andGroup: {
+            expressions: [
+              { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: 'experiment_exposure' } } },
+              { filter: { fieldName: 'hostName', stringFilter: { matchType: 'EXACT', value: GA4_HOST } } },
+            ],
+          },
+        },
+        limit: 2000,
+      })
+      const engagement: VariantEngagementInput[] = []
+      for (const row of engagementRows) {
+        const variant = row.dimensionValues?.[0]?.value || ''
+        // Keep only variants in this experiment's variant set (drops "(not set)").
+        if (!variant || !variantKeys.has(variant)) continue
+        const sessions = Number(row.metricValues?.[0]?.value)
+        const bounceRate = Number(row.metricValues?.[1]?.value)
+        const averageSessionDuration = Number(row.metricValues?.[2]?.value)
+        engagement.push({
+          variantKey: variant,
+          sessions: Number.isFinite(sessions) ? sessions : undefined,
+          bounceRate: Number.isFinite(bounceRate) ? bounceRate : undefined,
+          averageSessionDuration: Number.isFinite(averageSessionDuration) ? averageSessionDuration : undefined,
+        })
+      }
+      if (engagement.length > 0) variantEngagement = engagement
+    } catch {
+      // Engagement is best-effort; leave it undefined and keep the count readout.
+      variantEngagement = undefined
+    }
+
+    try {
+      const upsert = await upsertDrainSignalForFlag(client, exp.flagKey, aggregates, { metricDate, variantEngagement })
+      results.push({ flagKey: exp.flagKey, aggregates: aggregates.length, engagement: variantEngagement?.length || 0, updated: upsert.updated, warnings: upsert.warnings })
     } catch (error) {
       results.push({ flagKey: exp.flagKey, error: error instanceof Error ? error.message : 'Signal upsert failed.' })
     }
