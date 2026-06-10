@@ -9,6 +9,7 @@ import {
   ENG_VISIBLE_MS_FIELD,
   ENG_BOUNCES_FIELD,
 } from '@/lib/marketing/drainSink'
+import { sendGa4MpEvents } from '@/lib/marketing/ga4MeasurementProtocol'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -39,6 +40,12 @@ export async function POST(request: NextRequest) {
   const variant = String(body.variant ?? '').trim()
   const pagePath = normalizeDrainPagePath(String(body.page_path ?? body.pagePath ?? ''))
   const beaconType = String(body.type ?? '').trim()
+  const experimentId = String(body.experiment_id ?? body.experimentId ?? '').trim()
+  // The visitor's GA client_id (from their own _ga cookie, or the marketing
+  // visitor cookie when _ga is blocked) and, when present, their GA session_id.
+  // Only used to forward EVENT beacons to GA4 via the Measurement Protocol.
+  const gaClientId = String(body.ga_client_id ?? body.gaClientId ?? '').trim()
+  const gaSessionId = String(body.ga_session_id ?? body.gaSessionId ?? '').trim()
 
   // First-party ENGAGEMENT beacon (time-on-page + bounce). Increments the
   // RESERVED `__eng_*` fields on the SAME per-flag hash so they can never collide
@@ -71,13 +78,41 @@ export async function POST(request: NextRequest) {
   if (!flagKey || !variant || !eventName) return noContent()
 
   const kv = getKvClient()
-  if (!kv) return noContent()
-
-  try {
-    await kv.hincrby(kvCounterKey(flagKey), kvCounterField(variant, pagePath, eventName), 1)
-    await kv.sadd(KV_FLAGS_KEY, flagKey)
-  } catch {
-    // Never surface collection errors to the page.
+  if (kv) {
+    try {
+      await kv.hincrby(kvCounterKey(flagKey), kvCounterField(variant, pagePath, eventName), 1)
+      await kv.sadd(KV_FLAGS_KEY, flagKey)
+    } catch {
+      // Never surface collection errors to the page.
+    }
   }
+
+  // Forward the EVENT to GA4 via the Measurement Protocol so experiment events
+  // recover the ~95% that the client gtag loses to blockers. Inert until
+  // GA4_MP_API_SECRET is set (sendGa4MpEvents returns false). Best-effort: a
+  // short awaited call wrapped in try/catch so it can never throw or change the
+  // 204 response. The client gtag is skipped for these events, so MP is their
+  // single path to GA4 (no double-count). The engagement beacon is NOT forwarded.
+  try {
+    // Stable fallback id so a forward still groups when ga_client_id is absent;
+    // GA4 requires a non-empty client_id. Counts only — no new identifier minted.
+    const clientId = gaClientId || `${flagKey}.${variant}`
+    await sendGa4MpEvents(clientId, [
+      {
+        name: eventName,
+        params: {
+          variant,
+          flag_key: flagKey,
+          experiment_id: experimentId,
+          page_path: pagePath,
+          ...(gaSessionId ? { session_id: gaSessionId } : {}),
+          engagement_time_msec: 1,
+        },
+      },
+    ])
+  } catch {
+    // Best-effort: a GA4 forward failure must never affect the 204 response.
+  }
+
   return noContent()
 }

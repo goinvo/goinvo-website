@@ -267,47 +267,30 @@ describe('experiment analytics', () => {
 
     const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
 
-    trackExperimentExposure(exposure)
-    trackExperimentExposure(exposure)
+    // Mirror the real component (ExperimentExposure): context is set BEFORE the
+    // exposure fires, so the exposure event is in experiment context too.
     setExperimentContext(exposure)
+    trackExperimentExposure(exposure)
+    trackExperimentExposure(exposure)
     trackCtaClick({
       cta_text: 'Book a discovery call',
       cta_location: 'concept hero',
       cta_url: '/contact',
     })
 
-    expect(gtag).toHaveBeenCalledTimes(4)
+    // Experiment-context events are forwarded to GA4 server-side via the
+    // Measurement Protocol (from /collect), so the client gtag must NOT also send
+    // them — no double-count. The only client gtag call is the user_properties
+    // `set` (kept so GA4 can segment a visitor's general analytics by variant).
+    expect(gtag).toHaveBeenCalledTimes(1)
     expect(gtag).toHaveBeenNthCalledWith(1, 'set', 'user_properties', {
       experiment_id: 'home-2026',
       experiment_variant: 'concept',
       experiment_flag: 'home-2026-variant',
     })
-    expect(gtag).toHaveBeenNthCalledWith(2, 'event', 'experiment_exposure', exposure)
-    expect(gtag).toHaveBeenNthCalledWith(
-      3,
-      'event',
-      'cta_click',
-      expect.objectContaining({
-        experiment_id: 'home-2026',
-        flag_key: 'home-2026-variant',
-        variant: 'concept',
-        page_path: '/',
-        cta_text: 'Book a discovery call',
-      }),
-    )
-    expect(gtag).toHaveBeenNthCalledWith(
-      4,
-      'event',
-      'experiment_conversion',
-      expect.objectContaining({
-        experiment_id: 'home-2026',
-        flag_key: 'home-2026-variant',
-        variant: 'concept',
-        page_path: '/',
-        conversion_type: 'cta_click',
-        conversion_name: 'Book a discovery call',
-      }),
-    )
+    // No `gtag('event', …)` is fired while an experiment context is set.
+    expect(gtag.mock.calls.some((call) => call[0] === 'event')).toBe(false)
+    // The Vercel track + first-party beacon paths still fire for every event.
     expect(trackVercelEvent).toHaveBeenCalledTimes(3)
     expect(trackVercelEvent).toHaveBeenNthCalledWith(1, 'experiment_exposure', exposure)
     expect(window.vaq).toContainEqual(['event', { name: 'experiment_exposure', data: exposure }])
@@ -334,12 +317,22 @@ describe('experiment analytics', () => {
 
     trackQualifiedDiscoveryCallClick({ cta_text: 'Book a discovery call', cta_location: 'concept hero', cta_url: '#book' })
 
-    const firedEvents = gtag.mock.calls.filter((call) => call[0] === 'event').map((call) => call[1])
+    // Under experiment context these events reach GA4 via the Measurement Protocol
+    // (server-side from /collect), not via the client gtag — so assert on the
+    // Vercel track path, which still fires for every event. The point of the test
+    // stands: the specific qualified event + cta_click fire, the broad
+    // experiment_conversion does NOT (trackQualifiedDiscoveryCallClick omits it).
+    const firedEvents = vi.mocked(trackVercelEvent).mock.calls.map((call) => call[0])
     expect(firedEvents).toContain('qualified_discovery_call_click')
     expect(firedEvents).toContain('cta_click')
     expect(firedEvents).not.toContain('experiment_conversion')
 
-    const qualifiedCall = gtag.mock.calls.find((call) => call[1] === 'qualified_discovery_call_click')
-    expect(qualifiedCall?.[2]).toMatchObject({ variant: 'concept', experiment_id: 'home-2026' })
+    // No experiment event is double-counted through the client gtag.
+    expect(gtag.mock.calls.some((call) => call[0] === 'event')).toBe(false)
+
+    const qualifiedCall = vi
+      .mocked(trackVercelEvent)
+      .mock.calls.find((call) => call[0] === 'qualified_discovery_call_click')
+    expect(qualifiedCall?.[1]).toMatchObject({ variant: 'concept', experiment_id: 'home-2026' })
   })
 })

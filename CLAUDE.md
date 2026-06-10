@@ -3,6 +3,11 @@
 > Append durable operational facts here (auth, deploy steps, gotchas). This file
 > loads every session; uncommitted scratch notes get lost. **Commit changes to it.**
 
+> **Practices & open work:** durable engineering practices + architecture decisions live in
+> [`docs/engineering-practices.md`](docs/engineering-practices.md); anything that still needs
+> work is tracked in [GitHub Issues](https://github.com/goinvo/goinvo-website/issues) (labeled
+> `tech-debt` / `analytics` / `seo` / `infra`) — file an issue rather than leaving it implicit.
+
 ## Driving / screenshotting the Sanity Studio with an authenticated session
 
 To see or headlessly drive the Studio UI (e.g. the Marketing **Calendar**), use the
@@ -45,6 +50,34 @@ never silently "passes").
   same as the Studio forms. **REST endpoints under `/api/marketing/` that mirror the UI's
   writes (for testability) are in progress** — see the audit/endpoint work.
 
+### GA4 Measurement Protocol forward for A/B events (recovers blocker loss)
+
+The homepage A/B experiment events reach GA4 even when the client GA tag is blocked.
+The first-party beacon already delivers ~100% of experiment events server-side to
+`/api/marketing/analytics/collect`; GA4's client gtag only delivers ~5% (ad/tracking
+blockers). The `/collect` route re-sends each **event** to GA4 via the **Measurement
+Protocol** to recover the rest.
+
+- Lib: `src/lib/marketing/ga4MeasurementProtocol.ts` —
+  `sendGa4MpEvents(clientId, events)` POSTs `{ client_id, events }` to
+  `https://www.google-analytics.com/mp/collect?measurement_id=<id>&api_secret=<secret>`.
+  Reads `GA4_MP_API_SECRET` + `GA4_MEASUREMENT_ID` (default `G-P00K4KL2Y9`). **INERT
+  until `GA4_MP_API_SECRET` is set** (returns false, forwards nothing — no errors).
+  Best-effort: short timeout, swallows errors, never throws. Injects
+  `engagement_time_msec: 1` per event so hits land as engaged sessions.
+- **No double-count:** in `src/lib/analytics.ts`, `trackEvent` skips `window.gtag('event', …)`
+  when `experimentContext` is set (those go to GA4 via MP only). Non-experiment events still
+  use gtag (GA's normal role); the `gtag('set','user_properties', …)` call is kept.
+- **client_id:** the client adds `ga_client_id` to BOTH experiment beacons (event +
+  engagement). It is derived from the `_ga` cookie (`GA1.<n>.<clientId>` → last two
+  dot-segments), falling back to the `goinvo_marketing_visitor_id` cookie when `_ga` is
+  absent (blocked visitors). A `ga_session_id` from `_ga_<container>` is added when readily
+  available. Only the engagement beacon is **not** forwarded to GA4 (stays first-party).
+- **Env:** `GA4_MP_API_SECRET` (GA4 Admin → Data streams → web stream → Measurement Protocol
+  API secrets) and optional `GA4_MEASUREMENT_ID`. Set in `.env.local` and on Vercel; the
+  feature is inert until the secret exists. Privacy: only experiment dimensions + the GA
+  client_id the visitor's own GA cookie already holds — no new identifiers.
+
 ## Key checks & scripts
 
 - `npm run check:charts` — chart-label alignment (catches dead-CSS / label-drift regressions).
@@ -85,13 +118,3 @@ write/derive logic moves into a shared core that both the Studio tool AND the RE
 - **Auth gap closed:** ai-citation, citation-check, research/run, ga4-ab (write routes that had
   no request auth) move behind `MARKETING_API_KEY`.
 - **Env:** set `MARKETING_API_KEY` in `.env.local` and on Vercel.
-
-**BUILT (2026-06, on `codex/marketing-cms`).** Core: `src/lib/marketing/{derive,dates,infer,types,defaults,crud,seed,clone,cascades,client,auth,index}.ts`. Endpoints (all auth-gated):
-- CRUD: `POST|GET /api/marketing/doc/[type]`, `GET|PATCH|DELETE /api/marketing/doc/[type]/[id]`
-- Seed: `POST /api/marketing/seed/channels` (bootstrap default channels — for new sites)
-- Clone: `POST /api/marketing/clone/link-from-post`, `/clone/proof-from-result`
-- Cascade: `POST /api/marketing/cascade/research-records` (one call → funnel+campaign+calendar+links+channels, project→converted)
-
-Auth reality: the 3 Studio-called write routes (ai-citation / citation-check / research/run POST) use `assertStudioOrApiKey` — a valid `MARKETING_API_KEY` **OR** an `x-sanity-session` token validated against Sanity `users/me` (the Studio tool sends it from its localStorage auth token). `ga4-ab` uses the existing drain-cron secret. Read GETs stay open. The generic CRUD routes use `MARKETING_API_KEY` only.
-
-Rough edge to fix later: `DELETE /doc/[type]/[id]` returns **500** when the doc is still referenced by another doc (Sanity refuses) — delete interlinked docs in ONE transaction, or unset refs first; a follow-up should return a clean 409.
