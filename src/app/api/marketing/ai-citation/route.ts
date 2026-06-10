@@ -2,6 +2,7 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { runAiCitationPanel, type PanelSnapshot } from '@/lib/marketing/aiCitation'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // AI-citation share-of-voice tracker route (marketingIdea seo-ai-citation-tracking).
 //
@@ -44,7 +45,16 @@ const SNAPSHOT_LIST_QUERY = `*[_type == "aiCitationSnapshot"]|order(runDate desc
   "results": results[]{ prompt, goinvoMentioned, goinvoCited, citedGoinvoUrls, competitorsMentioned }
 }`
 
-export async function POST() {
+export async function POST(req: Request) {
+  try {
+    await assertStudioOrApiKey(req)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   let snapshot: PanelSnapshot
   try {
     snapshot = await runAiCitationPanel()
