@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import {
+  getGaIdentity,
   hasExperimentConversionFired,
   setExperimentContext,
   trackExperimentExposure,
@@ -55,6 +56,7 @@ export function ExperimentExposure({ experiment }: ExperimentExposureProps) {
       try {
         if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return
         const engaged = visibleMs >= ENGAGED_VISIBLE_MS || hasExperimentConversionFired()
+        const identity = getGaIdentity()
         const body = JSON.stringify({
           type: 'engagement',
           flag_key: experiment.flag_key,
@@ -63,6 +65,11 @@ export function ExperimentExposure({ experiment }: ExperimentExposureProps) {
           page_path: experiment.page_path,
           visibleMs,
           engaged,
+          // GA identity carried for parity with the event beacon (counts only,
+          // from the visitor's own GA cookie). The engagement beacon stays
+          // first-party — /collect does NOT forward it to GA4.
+          ga_client_id: identity.clientId,
+          ...(identity.sessionId ? { ga_session_id: identity.sessionId } : {}),
         })
         navigator.sendBeacon(
           '/api/marketing/analytics/collect',

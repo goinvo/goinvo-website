@@ -24,7 +24,12 @@ export function trackEvent(name: string, params?: EventParams) {
 
   ensureClientAnalyticsQueues()
   const enrichedParams = withExperimentContext(params)
-  if (window.gtag) {
+  // Avoid double-counting in GA4: when this event carries experiment context it
+  // is forwarded to GA4 server-side via the Measurement Protocol (from /collect,
+  // keyed off the beacon's ga_client_id), so the client gtag must NOT also send
+  // it — the server MP send is its single path to GA4. NON-experiment events keep
+  // using window.gtag (GA's normal, general-analytics role).
+  if (window.gtag && !experimentContext) {
     window.gtag('event', name, enrichedParams)
   }
   trackVercelEvent(name, enrichedParams)
@@ -40,17 +45,101 @@ function beaconExperimentEvent(name: string) {
   if (!experimentContext) return
   if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return
   try {
+    const identity = getGaIdentity()
     const body = JSON.stringify({
       eventName: name,
       flag_key: experimentContext.flag_key,
       experiment_id: experimentContext.experiment_id,
       variant: experimentContext.variant,
       page_path: experimentContext.page_path,
+      // The GA client_id (from the visitor's own _ga cookie, or the marketing
+      // visitor cookie when _ga is blocked) so /collect can forward this event to
+      // GA4 via the Measurement Protocol. No new identifier is minted here.
+      ga_client_id: identity.clientId,
+      ...(identity.sessionId ? { ga_session_id: identity.sessionId } : {}),
     })
     navigator.sendBeacon('/api/marketing/analytics/collect', new Blob([body], { type: 'application/json' }))
   } catch {
     // Best-effort: collection must never affect the page.
   }
+}
+
+// First-party marketing visitor cookie (set by the experiments middleware). Used
+// as a stable client_id fallback when the _ga cookie is absent (blocked GA), so a
+// blocked visitor still has ONE consistent GA4 client_id across their events.
+// Kept as a local literal (the canonical constant lives in a server-only module).
+const MARKETING_VISITOR_COOKIE = 'goinvo_marketing_visitor_id'
+
+export interface GaIdentity {
+  clientId: string
+  sessionId?: string
+}
+
+/**
+ * Reads a cookie value by name from document.cookie. Returns undefined when the
+ * cookie is absent or document is unavailable. Never throws.
+ */
+function readCookie(name: string): string | undefined {
+  if (typeof document === 'undefined' || typeof document.cookie !== 'string') return undefined
+  const prefix = `${name}=`
+  for (const part of document.cookie.split('; ')) {
+    if (part.startsWith(prefix)) {
+      try {
+        return decodeURIComponent(part.slice(prefix.length))
+      } catch {
+        return part.slice(prefix.length)
+      }
+    }
+  }
+  return undefined
+}
+
+/**
+ * Derives the GA4 client_id from the GA `_ga` cookie. The cookie is
+ * `GA1.<scope>.<clientId>` where clientId is itself two dot-segments
+ * (`<randomNumber>.<firstVisitSeconds>`), e.g. `_ga=GA1.1.1234567890.1681234567`
+ * → client_id `1234567890.1681234567` (the last two dot-segments). Returns
+ * undefined when `_ga` is absent or malformed. Never throws.
+ */
+export function parseGaClientId(gaCookieValue: string | undefined): string | undefined {
+  if (!gaCookieValue) return undefined
+  const segments = gaCookieValue.split('.')
+  // GA1.<scope>.<n>.<t> → need the trailing two segments as the client_id.
+  if (segments.length < 4) return undefined
+  const clientId = segments.slice(-2).join('.')
+  return clientId || undefined
+}
+
+/**
+ * Derives a GA4 session_id from a `_ga_<container>` cookie when readily
+ * available. That cookie looks like `GS1.1.<sessionId>.<...>`; the session_id is
+ * the 3rd dot-segment. Returns undefined when no such cookie exists or it cannot
+ * be parsed — the caller then simply omits ga_session_id.
+ */
+function readGaSessionId(): string | undefined {
+  if (typeof document === 'undefined' || typeof document.cookie !== 'string') return undefined
+  for (const part of document.cookie.split('; ')) {
+    if (!part.startsWith('_ga_')) continue
+    const eq = part.indexOf('=')
+    if (eq === -1) continue
+    const value = part.slice(eq + 1)
+    // GS1.<scope>.<sessionId>.<...> — the session_id is the 3rd segment.
+    const segments = value.split('.')
+    if (segments.length >= 3 && segments[2]) return segments[2]
+  }
+  return undefined
+}
+
+/**
+ * Resolves the GA identity attached to experiment beacons: the GA4 client_id
+ * (from `_ga`, falling back to the marketing visitor cookie so blocked visitors
+ * keep a stable id) and, when readily available, the GA4 session_id. Never throws.
+ */
+export function getGaIdentity(): GaIdentity {
+  const clientId =
+    parseGaClientId(readCookie('_ga')) || readCookie(MARKETING_VISITOR_COOKIE) || ''
+  const sessionId = readGaSessionId()
+  return sessionId ? { clientId, sessionId } : { clientId }
 }
 
 function ensureClientAnalyticsQueues() {
