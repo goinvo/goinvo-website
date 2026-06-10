@@ -73,8 +73,24 @@ function ensureClientAnalyticsQueues() {
 let experimentContext: ExperimentAnalyticsParams | null = null
 const trackedExperimentExposures = new Set<string>()
 
+// Set true the first time a tracked experiment conversion fires during this
+// page-session. The first-party engagement tracker reads it so a session that
+// converted counts as "engaged" even if it spent < 10s visible (GA4-aligned).
+// Module-scoped (not per-context) so it survives a brief context reset; the
+// engagement tracker only sends one beacon per page-session anyway.
+let experimentConversionFired = false
+
 export function setExperimentContext(context: ExperimentAnalyticsParams | null) {
   experimentContext = context
+}
+
+/**
+ * Whether a tracked experiment conversion has fired during this page-session.
+ * The engagement tracker (ExperimentExposure) reads this so an `engaged` beacon
+ * reflects a conversion regardless of visible time. Read-only; never throws.
+ */
+export function hasExperimentConversionFired(): boolean {
+  return experimentConversionFired
 }
 
 export function withExperimentContext(params?: EventParams): EventParams | undefined {
@@ -122,12 +138,16 @@ export function trackExperimentConversion(params: {
   conversion_url?: string
 }) {
   if (!experimentContext) return
+  // Mark this page-session as converted so first-party engagement counts it as
+  // "engaged" regardless of visible time (counts only — no visitor identifiers).
+  experimentConversionFired = true
   trackEvent('experiment_conversion', params)
 }
 
 export function resetExperimentAnalyticsForTests() {
   experimentContext = null
   trackedExperimentExposures.clear()
+  experimentConversionFired = false
 }
 
 // CTA button interactions

@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizeDrainPagePath } from '@/lib/marketing/vercelDrain'
-import { getKvClient, kvCounterKey, kvCounterField, KV_FLAGS_KEY } from '@/lib/marketing/drainSink'
+import {
+  getKvClient,
+  kvCounterKey,
+  kvCounterField,
+  KV_FLAGS_KEY,
+  ENG_SESSIONS_FIELD,
+  ENG_VISIBLE_MS_FIELD,
+  ENG_BOUNCES_FIELD,
+} from '@/lib/marketing/drainSink'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,8 +37,37 @@ export async function POST(request: NextRequest) {
 
   const flagKey = String(body.flag_key ?? body.flagKey ?? '').trim()
   const variant = String(body.variant ?? '').trim()
-  const eventName = String(body.eventName ?? body.event ?? body.name ?? '').trim()
   const pagePath = normalizeDrainPagePath(String(body.page_path ?? body.pagePath ?? ''))
+  const beaconType = String(body.type ?? '').trim()
+
+  // First-party ENGAGEMENT beacon (time-on-page + bounce). Increments the
+  // RESERVED `__eng_*` fields on the SAME per-flag hash so they can never collide
+  // with event-count fields. Counts/durations only — never visitor identifiers.
+  if (beaconType === 'engagement') {
+    if (!flagKey || !variant) return noContent()
+    const rawVisibleMs = Number(body.visibleMs)
+    // Clamp/validate: ignore non-finite or negative durations.
+    const visibleMs = Number.isFinite(rawVisibleMs) && rawVisibleMs > 0 ? Math.round(rawVisibleMs) : 0
+    const engaged = body.engaged === true
+
+    const kv = getKvClient()
+    if (!kv) return noContent()
+
+    try {
+      const counterKey = kvCounterKey(flagKey)
+      await kv.hincrby(counterKey, kvCounterField(variant, pagePath, ENG_SESSIONS_FIELD), 1)
+      if (visibleMs > 0) {
+        await kv.hincrby(counterKey, kvCounterField(variant, pagePath, ENG_VISIBLE_MS_FIELD), visibleMs)
+      }
+      await kv.hincrby(counterKey, kvCounterField(variant, pagePath, ENG_BOUNCES_FIELD), engaged ? 0 : 1)
+      await kv.sadd(KV_FLAGS_KEY, flagKey)
+    } catch {
+      // Never surface collection errors to the page.
+    }
+    return noContent()
+  }
+
+  const eventName = String(body.eventName ?? body.event ?? body.name ?? '').trim()
   if (!flagKey || !variant || !eventName) return noContent()
 
   const kv = getKvClient()
