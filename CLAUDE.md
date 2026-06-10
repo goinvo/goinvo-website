@@ -3,6 +3,11 @@
 > Append durable operational facts here (auth, deploy steps, gotchas). This file
 > loads every session; uncommitted scratch notes get lost. **Commit changes to it.**
 
+> **Practices & open work:** durable engineering practices + architecture decisions live in
+> [`docs/engineering-practices.md`](docs/engineering-practices.md); anything that still needs
+> work is tracked in [GitHub Issues](https://github.com/goinvo/goinvo-website/issues) (labeled
+> `tech-debt` / `analytics` / `seo` / `infra`) — file an issue rather than leaving it implicit.
+
 ## Driving / screenshotting the Sanity Studio with an authenticated session
 
 To see or headlessly drive the Studio UI (e.g. the Marketing **Calendar**), use the
