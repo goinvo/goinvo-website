@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main, codex/marketing-cms]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so the latest commit wins.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Type-check · Lint · Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Type-check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      - name: Unit & integration tests
+        # page-render, media-integrity, and link-parity hit a running/served app
+        # (they hard-fail rather than silently skip), so they're excluded from this
+        # fast gate — a served-suite job is a follow-up.
+        run: npx vitest run --exclude "**/page-render.test.ts" --exclude "**/media-integrity.test.ts" --exclude "**/link-parity.test.ts"
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
