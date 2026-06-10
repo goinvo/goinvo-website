@@ -2,14 +2,16 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { getServiceAccount, getGoogleAccessToken, ga4RunReport } from '@/lib/marketing/googleServiceAccount'
-import { upsertDrainSignalForFlag } from '@/lib/marketing/drainSink'
-import type { DrainAggregate, VariantEngagementInput } from '@/lib/marketing/vercelDrain'
+import { buildVariantEngagementEntries, drainSignalId } from '@/lib/marketing/vercelDrain'
+import type { VariantEngagementInput } from '@/lib/marketing/vercelDrain'
 
-// GA4-sourced A/B measurement. The homepage experiment fires its events
-// (experiment_exposure + the tracked conversions) to GA4 with a `variant` event
-// parameter, so this pulls per-variant counts from the GA4 Data API and writes
-// them through the SAME upsertDrainSignalForFlag the Vercel drain uses — which
-// unblocks the A/B suite. Run on demand or from a cron.
+// GA4-sourced A/B ENGAGEMENT refresh. The exposure/conversion COUNTS on each
+// `marketing-vercel-drain-<flagKey>` signal are owned authoritatively by the
+// Vercel drain (drain-cron rolls up Vercel KV counters via upsertDrainSignalForFlag).
+// This route must NOT touch those metrics. It only adds per-variant SESSION
+// engagement (sessions / bounceRate / averageSessionDuration) pulled from GA4 and
+// patches it onto the EXISTING signal so the Vercel visit/conversion counts stay
+// intact. Run on demand or from a cron.
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,7 +28,6 @@ type ExperimentRow = {
   targetPath?: string
   measurementStartDate?: string
   variants?: Array<{ key?: string; label?: string }>
-  trackedMetrics?: Array<{ eventName?: string; source?: string }>
 }
 
 function getSanityClient(): SanityClient | null {
@@ -62,7 +63,7 @@ export async function GET(request: Request) {
 
   const experiments = await client.fetch<ExperimentRow[]>(
     `*[_type == "marketingExperiment" && status in ["running", "reviewing"]${flagKey ? ' && flagKey == $flagKey' : ''}]{
-      _id, title, flagKey, targetPath, measurementStartDate, variants[]{key, label}, trackedMetrics[]{eventName, source}
+      _id, title, flagKey, targetPath, measurementStartDate, variants[]{key, label}
     }`,
     flagKey ? { flagKey } : {},
   )
@@ -88,65 +89,17 @@ export async function GET(request: Request) {
       continue
     }
 
-    // The exposure event plus every tracked conversion event.
-    const eventNames = new Set<string>(['experiment_exposure'])
-    for (const metric of exp.trackedMetrics || []) {
-      if (metric.eventName?.trim()) eventNames.add(metric.eventName.trim())
-    }
-
-    let rows
+    // Per-variant SESSION engagement (sessions / bounce / avg time). `variant` is
+    // an event-scoped custom dimension, so a session is attributed to a variant
+    // when it fired experiment_exposure with that variant — these are "sessions
+    // exposed to the variant", an acceptable per-variant engagement approximation.
+    // This is the ONLY thing GA4 contributes: the exposure/conversion COUNTS on the
+    // signal stay owned by the Vercel drain and are never written here.
     try {
-      rows = await ga4RunReport(token, GA4_PROPERTY_ID, {
+      const engagementRows = await ga4RunReport(token, GA4_PROPERTY_ID, {
         // Only count from the experiment's measurement-start date (set when the
         // instrumentation was fixed) so pre-fix, unreliable data never distorts
         // the readout. Falls back to the rolling window if unset.
-        dateRanges: [{ startDate: exp.measurementStartDate || `${days}daysAgo`, endDate: 'today' }],
-        dimensions: [{ name: 'eventName' }, { name: 'customEvent:variant' }, { name: 'pagePath' }],
-        // totalUsers (unique users), NOT eventCount — so the readout is a true
-        // per-visitor conversion rate (converting users / exposed users) that
-        // can't exceed 100% just because one visitor fired an event many times.
-        metrics: [{ name: 'totalUsers' }],
-        dimensionFilter: {
-          andGroup: {
-            expressions: [
-              { filter: { fieldName: 'eventName', inListFilter: { values: [...eventNames] } } },
-              { filter: { fieldName: 'hostName', stringFilter: { matchType: 'EXACT', value: GA4_HOST } } },
-            ],
-          },
-        },
-        limit: 2000,
-      })
-    } catch (error) {
-      results.push({ flagKey: exp.flagKey, error: error instanceof Error ? error.message : 'GA4 query failed.' })
-      continue
-    }
-
-    // Keep only rows whose variant belongs to this experiment (drops the
-    // "(not set)" rows from the same events firing outside the test).
-    const aggregates: DrainAggregate[] = []
-    for (const row of rows) {
-      const eventName = row.dimensionValues?.[0]?.value || ''
-      const variant = row.dimensionValues?.[1]?.value || ''
-      const pagePath = row.dimensionValues?.[2]?.value || '/'
-      const count = Number(row.metricValues?.[0]?.value || 0)
-      if (!eventName || !variantKeys.has(variant) || !Number.isFinite(count) || count <= 0) continue
-      aggregates.push({ experimentId: exp._id, flagKey: exp.flagKey, variant, pagePath, eventName, count: Math.round(count) })
-    }
-
-    if (!aggregates.length) {
-      results.push({ flagKey: exp.flagKey, aggregates: 0, note: 'No per-variant GA4 events in range yet.' })
-      continue
-    }
-
-    // SECOND report: per-variant SESSION engagement (visits / bounce / avg time).
-    // `variant` is an event-scoped custom dimension, so a session is attributed to
-    // a variant when it fired experiment_exposure with that variant — these are
-    // "sessions exposed to the variant", an acceptable per-variant engagement
-    // approximation. Wrapped in its own try/catch so a failure here never breaks
-    // the event-count path above (which has already produced `aggregates`).
-    let variantEngagement: VariantEngagementInput[] | undefined
-    try {
-      const engagementRows = await ga4RunReport(token, GA4_PROPERTY_ID, {
         dateRanges: [{ startDate: exp.measurementStartDate || `${days}daysAgo`, endDate: 'today' }],
         dimensions: [{ name: 'customEvent:variant' }],
         metrics: [{ name: 'sessions' }, { name: 'bounceRate' }, { name: 'averageSessionDuration' }],
@@ -154,13 +107,14 @@ export async function GET(request: Request) {
           andGroup: {
             expressions: [
               { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: 'experiment_exposure' } } },
+              // Only production-host traffic — never localhost / preview / test sessions.
               { filter: { fieldName: 'hostName', stringFilter: { matchType: 'EXACT', value: GA4_HOST } } },
             ],
           },
         },
         limit: 2000,
       })
-      const engagement: VariantEngagementInput[] = []
+      const engagementInputs: VariantEngagementInput[] = []
       for (const row of engagementRows) {
         const variant = row.dimensionValues?.[0]?.value || ''
         // Keep only variants in this experiment's variant set (drops "(not set)").
@@ -168,24 +122,40 @@ export async function GET(request: Request) {
         const sessions = Number(row.metricValues?.[0]?.value)
         const bounceRate = Number(row.metricValues?.[1]?.value)
         const averageSessionDuration = Number(row.metricValues?.[2]?.value)
-        engagement.push({
+        engagementInputs.push({
           variantKey: variant,
           sessions: Number.isFinite(sessions) ? sessions : undefined,
           bounceRate: Number.isFinite(bounceRate) ? bounceRate : undefined,
           averageSessionDuration: Number.isFinite(averageSessionDuration) ? averageSessionDuration : undefined,
         })
       }
-      if (engagement.length > 0) variantEngagement = engagement
-    } catch {
-      // Engagement is best-effort; leave it undefined and keep the count readout.
-      variantEngagement = undefined
-    }
 
-    try {
-      const upsert = await upsertDrainSignalForFlag(client, exp.flagKey, aggregates, { metricDate, variantEngagement })
-      results.push({ flagKey: exp.flagKey, aggregates: aggregates.length, engagement: variantEngagement?.length || 0, updated: upsert.updated, warnings: upsert.warnings })
+      const variantEngagement = buildVariantEngagementEntries(engagementInputs, variantKeys)
+      if (variantEngagement.length === 0) {
+        results.push({ flagKey: exp.flagKey, engagement: 0, note: 'No per-variant GA4 engagement in range yet.' })
+        continue
+      }
+
+      // Targeted patch onto the EXISTING Vercel-sourced signal. We never CREATE a
+      // signal here — the Vercel drain owns the metrics, so GA4 must never produce
+      // a metrics-less signal. Fetch-guard the patch so a missing signal leaves
+      // nothing behind: we only set { variantEngagement } when the drain signal
+      // already exists, leaving every Vercel-sourced metric untouched.
+      const signalId = drainSignalId(exp.flagKey)
+      const existing = await client.fetch<{ _id: string } | null>(
+        `*[_id == $signalId][0]{_id}`,
+        { signalId },
+      )
+      if (!existing) {
+        results.push({ flagKey: exp.flagKey, engagement: variantEngagement.length, updated: false, note: 'No Vercel drain signal yet — run the Vercel drain first; engagement is only added to an existing signal.' })
+        continue
+      }
+      await client.patch(signalId).set({ variantEngagement }).commit()
+      results.push({ flagKey: exp.flagKey, engagement: variantEngagement.length, updated: true })
     } catch (error) {
-      results.push({ flagKey: exp.flagKey, error: error instanceof Error ? error.message : 'Signal upsert failed.' })
+      // Engagement is best-effort and per-experiment: a failure here never affects
+      // the Vercel-sourced metrics or the other experiments in this run.
+      results.push({ flagKey: exp.flagKey, error: error instanceof Error ? error.message : 'GA4 engagement refresh failed.' })
     }
   }
 
