@@ -175,6 +175,27 @@ export async function DELETE(req: Request, context: RouteContext) {
     await client.delete(id)
     return NextResponse.json({ id, deleted: true, cascadedUnset })
   } catch (error) {
+    // Reference integrity is the common cause: Sanity refuses to delete a
+    // document that is still referenced by others. Surface that as a clean 409
+    // listing the referencing docs, instead of an opaque 500. (Delete them
+    // together in one transaction, or unset the references first.)
+    try {
+      const referencedBy = await getMarketingWriteClient().fetch<Array<{ _id: string; _type: string }>>(
+        '*[references($id)]{_id, _type}[0...50]',
+        { id },
+      )
+      if (referencedBy.length > 0) {
+        return NextResponse.json(
+          {
+            error: `Cannot delete ${type}/${id}: still referenced by ${referencedBy.length} document(s). Unset or delete those references first, or delete them together in one transaction.`,
+            referencedBy,
+          },
+          { status: 409 },
+        )
+      }
+    } catch {
+      // fall through to the generic 500 below
+    }
     const message = error instanceof Error ? error.message : 'Failed to delete document.'
     console.error(`Marketing delete (${type}/${id}) failed:`, error)
     return NextResponse.json({ error: message }, { status: 500 })
