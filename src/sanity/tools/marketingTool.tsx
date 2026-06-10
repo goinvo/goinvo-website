@@ -404,7 +404,7 @@ const MARKETING_QUERY = `{
     vercelDashboardUrl,
     "campaign": campaign->{_id, title, status},
     "calendarItem": calendarItem->{_id, title, status, publishAt},
-    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, interpretation, recommendation},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, interpretation, recommendation},
     result,
     decision,
     decisionDate,
@@ -429,6 +429,7 @@ const MARKETING_QUERY = `{
     periodStart,
     periodEnd,
     metrics[]{_key, label, value, unit, change, variantKey, eventName},
+    variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration},
     interpretation,
     recommendation,
     rawImport
@@ -1161,6 +1162,7 @@ interface MarketingPerformanceSignal {
   periodStart?: string
   periodEnd?: string
   metrics?: Array<{ _key?: string; label?: string; value?: number; unit?: string; change?: string; variantKey?: string; eventName?: string }>
+  variantEngagement?: Array<{ _key?: string; variantKey?: string; sessions?: number; bounceRate?: number; averageSessionDuration?: number }>
   interpretation?: string
   recommendation?: string
   rawImport?: string
@@ -12596,7 +12598,15 @@ function AbTestingWorkspace({
   const selectedLaunchPercent = selectedLaunchItems.length > 0 ? Math.round((selectedLaunchReady / selectedLaunchItems.length) * 100) : 0
   const selectedComparisons = draft ? getAbTestingComparativeResults(draft, 5) : []
   const selectedResultSummary = draft ? getAbTestingComparisonSummary(draft, selectedComparisons) : null
-  const hasAnyTests = data.experiments.length > 0
+  // The main dashboard list hides both archived and 'idea' (draft) tests so the
+  // initial view only shows tests that are at least scheduled/launched. A newly
+  // created test starts as 'idea' and is reached through the create flow, which
+  // selects it and opens its editor directly (pageMode 'configuration') rather
+  // than relying on this list — so hidden idea tests are never lost.
+  const listedExperiments = data.experiments.filter(
+    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
+  )
+  const hasAnyTests = listedExperiments.length > 0
   const workspaceGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: compactLayout ? 12 : 16, alignItems: 'start' }
   const setupGridStyle: CSSProperties = compactLayout
     ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, alignItems: 'start' }
@@ -12886,7 +12896,7 @@ function AbTestingWorkspace({
 
           {hasAnyTests ? (
             <div data-mobile-stack="true" style={abTestCardGridStyle}>
-              {data.experiments.map((experiment) => (
+              {listedExperiments.map((experiment) => (
                 <AbTestingDashboardCard
                   key={experiment._id}
                   experiment={experiment}
@@ -13328,12 +13338,24 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
   const variants = getAbTestingVariantOptions(experiment)
   const gridTemplateColumns = `minmax(190px, 1.1fr) repeat(${variants.length}, minmax(150px, 1fr))`
 
+  // Per-variant SESSION engagement (visits, bounce rate, avg time on page) read
+  // off the linked signals. Backward-compatible: missing values render as '—'.
+  const engagementByVariant = variants.map((variant) => ({ variant, engagement: getAbTestingVariantEngagement(experiment, variant) }))
+  const engagementRows: Array<{ key: string; label: string; format: (engagement: AbTestingVariantEngagement) => string }> = [
+    { key: 'engagement-visits', label: 'Visits', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
+    { key: 'engagement-bounce', label: 'Bounce rate', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
+    { key: 'engagement-avg-time', label: 'Avg time on page', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
+  ]
+  const hasEngagement = engagementByVariant.some(
+    ({ engagement }) => engagement.sessions !== null || engagement.bounceRate !== null || engagement.averageSessionDuration !== null,
+  )
+
   return (
     <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12, display: 'grid', gap: 10 }}>
       <div>
         <h3 style={{ margin: 0, fontSize: 16 }}>Visits and events</h3>
         <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Shows total visits or exposures for each version, then how many visitors triggered each tracked event.
+          Shows total visits or exposures for each version, then how many visitors triggered each tracked event, plus per-version visits, bounce rate, and avg time on page.
         </p>
       </div>
       <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>
@@ -13371,8 +13393,26 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
               ))}
             </Fragment>
           ))}
+          {engagementRows.map((engagementRow) => (
+            <Fragment key={engagementRow.key}>
+              <div style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
+                <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.25 }}>{engagementRow.label}</strong>
+                <span style={{ ...styles.small, ...styles.muted }}>session engagement</span>
+              </div>
+              {engagementByVariant.map(({ variant, engagement }) => (
+                <div key={`${engagementRow.key}-${variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
+                  <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{engagementRow.format(engagement)}</strong>
+                </div>
+              ))}
+            </Fragment>
+          ))}
         </div>
       </div>
+      {!hasEngagement && (
+        <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>
+          Visits, bounce rate, and avg time on page fill in once the GA4 session readout has run for this test.
+        </p>
+      )}
     </div>
   )
 }
@@ -15183,7 +15223,11 @@ function isCalendarItemPublishReady(item: MarketingCalendarItem) {
 }
 
 export function getAbTestingStats(data: MarketingData) {
-  const activeTests = data.experiments.filter((experiment) => experiment.status !== 'archived')
+  // Active tests exclude archived AND 'idea' drafts, mirroring the main list so
+  // the summary chips count the same tests the dashboard shows.
+  const activeTests = data.experiments.filter(
+    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
+  )
   const pageTests = activeTests.filter(isPageExperiment)
   const runningTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'running')
   const blockedTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'blocked')
@@ -15212,7 +15256,10 @@ export function getAbTestingStats(data: MarketingData) {
 
 export function buildAbTestingInsights(data: MarketingData): AbTestingInsight[] {
   const insights: AbTestingInsight[] = []
-  const activeTests = data.experiments.filter((experiment) => experiment.status !== 'archived')
+  // Active tests exclude archived AND 'idea' drafts, mirroring the main list.
+  const activeTests = data.experiments.filter(
+    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
+  )
   const pageTests = activeTests.filter(isPageExperiment)
   const runningTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'running')
   const connectedSources = data.analyticsSources.filter((source) => source.status !== 'disabled' && isConnectedAnalyticsSource(source))
@@ -16037,6 +16084,59 @@ function getAbTestingMetricMatchScore(metric: PerformanceSignalMetric, trackedMe
 function numericPerformanceMetricValue(metric?: PerformanceSignalMetric) {
   if (!metric || typeof metric.value !== 'number' || !Number.isFinite(metric.value)) return null
   return metric.value
+}
+
+type AbTestingVariantEngagement = {
+  sessions: number | null
+  bounceRate: number | null
+  averageSessionDuration: number | null
+}
+
+/**
+ * Reads per-variant session engagement (visits, bounce rate, avg time on page)
+ * off the experiment's linked signals. Optional + backward-compatible: signals
+ * without a variantEngagement field simply yield empty cells (rendered as '—').
+ * Matches a variant by its key (case-insensitive) so it lines up with the same
+ * variant columns the event table renders.
+ */
+function getAbTestingVariantEngagement(
+  experiment: MarketingExperiment,
+  variant: AbTestingVariantOption,
+): AbTestingVariantEngagement {
+  const target = normalizeAbTestingMetricKey(variant.key)
+  const targetLabel = normalizeAbTestingMetricKey(variant.label)
+  for (const signal of uniqueById((experiment.performanceSignals || []).filter(Boolean))) {
+    for (const entry of signal.variantEngagement || []) {
+      const entryKey = normalizeAbTestingMetricKey(entry.variantKey)
+      if (!entryKey || (entryKey !== target && entryKey !== targetLabel)) continue
+      return {
+        sessions: typeof entry.sessions === 'number' && Number.isFinite(entry.sessions) ? entry.sessions : null,
+        bounceRate: typeof entry.bounceRate === 'number' && Number.isFinite(entry.bounceRate) ? entry.bounceRate : null,
+        averageSessionDuration:
+          typeof entry.averageSessionDuration === 'number' && Number.isFinite(entry.averageSessionDuration)
+            ? entry.averageSessionDuration
+            : null,
+      }
+    }
+  }
+  return { sessions: null, bounceRate: null, averageSessionDuration: null }
+}
+
+/** Formats a 0–1 fraction or 0–100 percent bounce rate as a whole-ish percent. */
+function formatAbTestingBounceRate(value: number | null): string {
+  if (value === null) return '—'
+  const percent = value <= 1 ? value * 100 : value
+  const rounded = Math.round(percent * 10) / 10
+  return `${rounded}%`
+}
+
+/** Formats average session duration (seconds) as m:ss. */
+function formatAbTestingAvgTime(seconds: number | null): string {
+  if (seconds === null || seconds < 0) return '—'
+  const total = Math.round(seconds)
+  const minutes = Math.floor(total / 60)
+  const secs = total % 60
+  return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
 function isAbTestingExposureMetric(metric: ExperimentTrackedMetric) {
