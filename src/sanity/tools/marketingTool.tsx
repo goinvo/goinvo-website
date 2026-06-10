@@ -13339,15 +13339,16 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
   const gridTemplateColumns = `minmax(190px, 1.1fr) repeat(${variants.length}, minmax(150px, 1fr))`
 
   // Per-variant SESSION engagement (bounce rate, avg time on page) read off the
-  // linked signals. The Vercel "Visits / exposures" rows above remain the
-  // authoritative visits; here GA4 only contributes engagement, and its `sessions`
-  // figure is the SAMPLE SIZE the bounce/time are based on — NOT a second "Visits"
-  // count. Backward-compatible: missing values render as '—'.
+  // linked signals. This is now FIRST-PARTY measured — the same reliable pipeline
+  // as the Vercel visit/event counts above (a client engagement beacon ->
+  // /api/marketing/analytics/collect -> Vercel KV -> drain-cron rollup), NOT a
+  // separate GA4 sample. `sessions` is the count of measured page-sessions the
+  // bounce/time are based on. Backward-compatible: missing values render as '—'.
   const engagementByVariant = variants.map((variant) => ({ variant, engagement: getAbTestingVariantEngagement(experiment, variant) }))
   const engagementRows: Array<{ key: string; label: string; sublabel: string; format: (engagement: AbTestingVariantEngagement) => string }> = [
-    { key: 'engagement-bounce', label: 'Bounce rate', sublabel: 'GA4 engagement', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
-    { key: 'engagement-avg-time', label: 'Avg time on page', sublabel: 'GA4 engagement', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
-    { key: 'engagement-sessions', label: 'Sessions (GA4)', sublabel: 'GA4 sample size', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
+    { key: 'engagement-bounce', label: 'Bounce rate', sublabel: 'First-party measured', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
+    { key: 'engagement-avg-time', label: 'Avg time on page', sublabel: 'First-party measured', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
+    { key: 'engagement-sessions', label: 'Sessions', sublabel: 'First-party measured', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
   ]
   const hasEngagement = engagementByVariant.some(
     ({ engagement }) => engagement.sessions !== null || engagement.bounceRate !== null || engagement.averageSessionDuration !== null,
@@ -13358,10 +13359,10 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
       <div>
         <h3 style={{ margin: 0, fontSize: 16 }}>Visits and events</h3>
         <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Shows total visits or exposures for each version (from the Vercel drain), then how many visitors triggered each tracked event, plus per-version bounce rate and avg time on page.
+          Shows total visits or exposures for each version, then how many visitors triggered each tracked event, plus per-version bounce rate and avg time on page.
         </p>
         <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
-          Bounce rate and avg time on page are GA4-sourced over GA4&apos;s exposed-session sample (shown as &ldquo;Sessions (GA4)&rdquo;), which can be smaller than the Vercel visits above when GA4 exposure events are sparse.
+          Every metric here is first-party measured from the same on-page pipeline. Bounce rate and avg time on page come from each session&apos;s visible time on the page (a session counts as engaged at 10s visible or once it converts); Sessions is the number of measured page-sessions behind those figures.
         </p>
       </div>
       <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>
@@ -13416,7 +13417,7 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
       </div>
       {!hasEngagement && (
         <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>
-          Bounce rate, avg time on page, and the GA4 session sample fill in once the GA4 engagement readout has run for this test.
+          Bounce rate, avg time on page, and measured sessions fill in once the first-party engagement rollup has run for this test.
         </p>
       )}
     </div>
