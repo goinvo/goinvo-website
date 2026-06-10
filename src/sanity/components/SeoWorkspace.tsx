@@ -251,6 +251,31 @@ type AiCitationRunResult = { error?: string; stored?: boolean; storeWarning?: st
 
 type SeoWorkspaceProps = { client?: SanityClient }
 
+// The marketing WRITE routes require either a server API key or a logged-in
+// Studio session. Studio stores the user's auth token in localStorage under
+// `__studio_auth_token_<projectId>`; the value is sometimes a raw string and
+// sometimes a JSON envelope like {"token":"..."}. Returns null when there's no
+// token (so callers can simply omit the header).
+function studioSessionToken(): string | null {
+  if (typeof window === 'undefined') return null
+  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
+  if (!projectId) return null
+  try {
+    const raw = window.localStorage.getItem(`__studio_auth_token_${projectId}`)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as { token?: unknown } | string
+      if (typeof parsed === 'string') return parsed.trim() || null
+      if (parsed && typeof parsed.token === 'string') return parsed.token.trim() || null
+    } catch {
+      // Not JSON — treat the stored value as the raw token.
+    }
+    return raw.trim() || null
+  } catch {
+    return null
+  }
+}
+
 const FIX_COLORS: Record<string, string> = { ranking: '#2276fc', ctr: '#d98a00', maintain: '#7d8694' }
 const VERDICT_COLORS: Record<string, string> = {
   supported: '#1f9d55',
@@ -443,9 +468,13 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setCiteLoading(true)
     setCite(null)
     try {
+      const token = studioSessionToken()
       const res = await fetch('/api/marketing/citation-check', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'x-sanity-session': token } : {}),
+        },
         body: JSON.stringify({ pageUrl: target }),
       })
       setCite((await res.json()) as CiteData)
@@ -521,7 +550,11 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setAiCiteRunning(true)
     setAiCiteRunNote(null)
     try {
-      const res = await fetch('/api/marketing/ai-citation', { method: 'POST' })
+      const token = studioSessionToken()
+      const res = await fetch('/api/marketing/ai-citation', {
+        method: 'POST',
+        ...(token ? { headers: { 'x-sanity-session': token } } : {}),
+      })
       const payload = (await res.json()) as AiCitationRunResult
       if (payload.error) {
         setAiCiteRunNote(payload.error)

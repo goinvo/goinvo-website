@@ -1,6 +1,7 @@
 import { createClient, type SanityClient } from '@sanity/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 type ResearchRunRequest = {
   projectId?: string
@@ -134,6 +135,15 @@ function getSanityClient() {
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   const sanityClient = getSanityClient()
   if (!sanityClient) {
     return NextResponse.json({ error: 'Sanity write token is not configured.' }, { status: 500 })
