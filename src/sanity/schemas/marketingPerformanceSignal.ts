@@ -16,6 +16,34 @@ const performanceSignalStatusOptions = [
   { title: 'Archived', value: 'archived' },
 ]
 
+const performanceVariantEngagementFields = [
+  defineField({
+    name: 'variantKey',
+    title: 'Variant Key',
+    type: 'string',
+    description: 'A/B test variant key, such as control or concept.',
+    validation: (Rule) => Rule.required(),
+  }),
+  defineField({
+    name: 'sessions',
+    title: 'Visits (Sessions)',
+    type: 'number',
+    description: 'GA4 sessions exposed to this variant.',
+  }),
+  defineField({
+    name: 'bounceRate',
+    title: 'Bounce Rate',
+    type: 'number',
+    description: 'GA4 bounce rate (0–1 fraction or 0–100 percent).',
+  }),
+  defineField({
+    name: 'averageSessionDuration',
+    title: 'Avg Time On Page (Seconds)',
+    type: 'number',
+    description: 'GA4 average session duration in seconds.',
+  }),
+]
+
 const performanceMetricFields = [
   defineField({
     name: 'label',
@@ -182,6 +210,22 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'variantEngagement',
+      title: 'Per-Variant Engagement',
+      type: 'array',
+      group: 'signal',
+      description: 'Optional per-variant session engagement (visits, bounce rate, avg time on page) from GA4. Backward-compatible: older signals omit this.',
+      of: [
+        {
+          name: 'performanceVariantEngagement',
+          title: 'Variant Engagement',
+          type: 'object',
+          fields: performanceVariantEngagementFields,
+          preview: { select: { title: 'variantKey', subtitle: 'sessions' } },
+        },
+      ],
+    }),
+    defineField({
       name: 'interpretation',
       title: 'Interpretation',
       type: 'text',
@@ -224,4 +268,4 @@ export default defineType({
   ],
 })
 
-export { performanceMetricFields, performanceProviderOptions, performanceSignalStatusOptions }
+export { performanceMetricFields, performanceVariantEngagementFields, performanceProviderOptions, performanceSignalStatusOptions }
