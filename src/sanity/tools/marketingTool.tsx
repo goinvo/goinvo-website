@@ -49,6 +49,23 @@ import {
   defaultDesignerWorkflowTutorial,
   getDesignerWorkflowTutorial,
 } from '../tutorials/designerWorkflowTutorials'
+import {
+  slugify,
+  optionalSlug,
+  stringListFromText,
+  randomKey,
+  refsFromIds,
+  uniqueById,
+  startOfMonth,
+  addMonths,
+  addDays,
+  monthLabel,
+  toDateInputValue,
+  dateInputToIso,
+  inferResearchProjectType,
+  inferTopicCluster,
+  inferTargetQueries,
+} from '@/lib/marketing'
 
 const API_VERSION = '2024-01-01'
 const ADD_CHANNEL_VALUE = '__add_new_channel__'
@@ -821,6 +838,30 @@ function loadStoredMarketingView(fallback: MarketingViewId = 'dashboard'): Marke
 function saveStoredMarketingView(view: MarketingViewId) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(MARKETING_ACTIVE_VIEW_STORAGE_KEY, view)
+}
+
+// Reads the logged-in Studio user's auth token so WRITE routes can authenticate
+// the request as a real Studio session. Studio stores it under
+// `__studio_auth_token_<projectId>` as either a raw string or a {"token":"..."}
+// JSON envelope. Returns null when absent (callers then omit the header).
+function studioSessionToken(): string | null {
+  if (typeof window === 'undefined') return null
+  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
+  if (!projectId) return null
+  try {
+    const raw = window.localStorage.getItem(`__studio_auth_token_${projectId}`)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as { token?: unknown } | string
+      if (typeof parsed === 'string') return parsed.trim() || null
+      if (parsed && typeof parsed.token === 'string') return parsed.token.trim() || null
+    } catch {
+      // Not JSON — treat the stored value as the raw token.
+    }
+    return raw.trim() || null
+  } catch {
+    return null
+  }
 }
 
 interface RefSummary {
@@ -9684,9 +9725,13 @@ function ResearchProjectEditor({
     setMessage('')
     try {
       await onSave(draft._id, buildResearchProjectSavePayload(draft))
+      const token = studioSessionToken()
       const response = await fetch('/api/marketing/research/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'x-sanity-session': token } : {}),
+        },
         body: JSON.stringify({
           projectId: draft._id,
           methods: draft.methods && draft.methods.length > 0 ? draft.methods : defaultResearchMethodsForType(draft.researchType),
@@ -23460,13 +23505,6 @@ function inferPromptTitle(prompt: string) {
   return normalized ? normalized.slice(0, 90) : ''
 }
 
-function inferResearchProjectType(value: string | undefined) {
-  const text = (value || '').toLowerCase()
-  if (/\b(competitor|competitive|comparables?|benchmark|landscape|others?|peer|rival)\b/.test(text)) return 'competitor'
-  if (/\b(strategy|strategic|positioning|goals?|funnel|campaign direction|roadmap|plan|planning|prioriti[sz]e)\b/.test(text)) return 'strategy'
-  return 'topic'
-}
-
 function stripResearchProjectSuffix(value: string) {
   const stripped = value.trim().replace(/\s+research\s+(?:project|plan)$/i, '')
   return stripped || value
@@ -23965,18 +24003,6 @@ function buildCarouselFramePlan(questionnaire: MarketingPlanQuestionnaire) {
     'Next step: connect the idea to the destination link.',
     'CTA: invite people to use the link in bio or follow up.',
   ]
-}
-
-function inferTopicCluster(topic: string) {
-  const normalized = topic.trim()
-  if (!normalized) return 'Design insight'
-  return normalized.length > 80 ? normalized.slice(0, 77).trim() + '...' : normalized
-}
-
-function inferTargetQueries(topic: string) {
-  const normalized = topic.trim()
-  if (!normalized) return ['design insight', 'visual explanation', 'healthcare design']
-  return Array.from(new Set([normalized, `${normalized} design`, `${normalized} examples`]))
 }
 
 function getWizardCreationSummary({
@@ -24558,36 +24584,6 @@ function normalizeFunnelStages(stages: Array<Omit<FunnelStage, '_key' | '_type'>
   }))
 }
 
-function uniqueById<T extends { _id: string }>(items: T[]) {
-  return Array.from(new Map(items.map((item) => [item._id, item])).values())
-}
-
-function refsFromIds(ids: string[]) {
-  return ids.map((id) => ({
-    _key: id.replace(/[^a-zA-Z0-9_-]/g, ''),
-    _type: 'reference',
-    _ref: id,
-  }))
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 96) || 'untitled'
-}
-
-function optionalSlug(value: string) {
-  const trimmed = value.trim()
-  return trimmed ? slugify(trimmed) : ''
-}
-
-function stringListFromText(value: string) {
-  return Array.from(new Set(value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean)))
-}
-
 function normalizeStringList(items: string[]) {
   return Array.from(new Set((items || []).map((item) => item.trim()).filter(Boolean)))
 }
@@ -24619,45 +24615,8 @@ function defaultMarketingTemplateDocument(kind: 'campaign' | 'funnel'): Marketin
   }
 }
 
-function randomKey() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID().replace(/-/g, '')
-  return Math.random().toString(36).slice(2)
-}
-
 function advancedEditHref(type: string, id: string) {
   return `/studio/content/intent/edit/id=${encodeURIComponent(id)};type=${encodeURIComponent(type)}`
-}
-
-function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1)
-}
-
-function addMonths(date: Date, months: number) {
-  return new Date(date.getFullYear(), date.getMonth() + months, 1)
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date)
-  next.setDate(date.getDate() + days)
-  return next
-}
-
-function monthLabel(date: Date) {
-  return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
-}
-
-function toDateInputValue(value?: string | Date) {
-  if (!value) return ''
-  if (typeof value === 'string') {
-    const dateOnly = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
-    if (dateOnly) return dateOnly
-  }
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  const year = date.getFullYear()
-  const month = `${date.getMonth() + 1}`.padStart(2, '0')
-  const day = `${date.getDate()}`.padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 function formatDateOnly(value?: string | Date) {
@@ -24667,10 +24626,6 @@ function formatDateOnly(value?: string | Date) {
   const date = new Date(year, month - 1, day)
   if (Number.isNaN(date.getTime())) return ''
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-}
-
-function dateInputToIso(value: string) {
-  return value ? new Date(`${value}T12:00:00`).toISOString() : undefined
 }
 
 function dateRange(start?: string, end?: string) {

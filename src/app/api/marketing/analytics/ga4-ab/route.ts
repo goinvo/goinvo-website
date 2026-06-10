@@ -35,6 +35,18 @@ function getSanityClient(): SanityClient | null {
 }
 
 export async function GET(request: Request) {
+  // Gate the same way the drain-cron rollup is gated (it shares this drain sink
+  // and is also a GET that writes via upsertDrainSignalForFlag): a shared secret
+  // presented as `Authorization: Bearer ${secret}`, CRON_SECRET falling back to
+  // MARKETING_VERCEL_DRAIN_SECRET. Fail closed when neither is configured.
+  const secret = process.env.CRON_SECRET || process.env.MARKETING_VERCEL_DRAIN_SECRET || ''
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET (or MARKETING_VERCEL_DRAIN_SECRET) is not configured.' }, { status: 500 })
+  }
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+  }
+
   const sa = getServiceAccount()
   if (!sa) {
     return NextResponse.json({ configured: false, message: 'GOOGLE_SERVICE_ACCOUNT_JSON is not set.' })
