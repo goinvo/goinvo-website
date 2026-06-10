@@ -44,6 +44,13 @@ import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '..
 import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
 import { SeoWorkspace } from '../components/SeoWorkspace'
 import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
+import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
+import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
+import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
+import { LinkTreeWorkspace } from '../components/marketing/LinkTreeWorkspace'
+import { TemplateWorkspace } from '../components/marketing/TemplateWorkspace'
+import type { ChannelContentType } from '../components/marketing/types'
+import { getChannelUsage, normalizeContentTypes } from '../components/marketing/shared'
 import {
   DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY,
   defaultDesignerWorkflowTutorial,
@@ -397,7 +404,7 @@ const MARKETING_QUERY = `{
     vercelDashboardUrl,
     "campaign": campaign->{_id, title, status},
     "calendarItem": calendarItem->{_id, title, status, publishAt},
-    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, interpretation, recommendation},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, interpretation, recommendation},
     result,
     decision,
     decisionDate,
@@ -422,6 +429,7 @@ const MARKETING_QUERY = `{
     periodStart,
     periodEnd,
     metrics[]{_key, label, value, unit, change, variantKey, eventName},
+    variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration},
     interpretation,
     recommendation,
     rawImport
@@ -667,8 +675,8 @@ const MARKETING_QUERY = `{
   }
 }`
 
-type StudioClient = ReturnType<typeof useClient>
-type MarketingDocumentInput = { _type: string } & Record<string, unknown>
+export type StudioClient = ReturnType<typeof useClient>
+export type MarketingDocumentInput = { _type: string } & Record<string, unknown>
 
 type MarketingViewId =
   | 'dashboard'
@@ -864,7 +872,7 @@ function studioSessionToken(): string | null {
   }
 }
 
-interface RefSummary {
+export interface RefSummary {
   _id: string
   title?: string
   status?: string
@@ -874,15 +882,10 @@ interface RefSummary {
 type ReferenceValue = { _type: 'reference'; _ref: string }
 type SuccessMetric = { _key?: string; _type?: 'successMetric'; label?: string; target?: string; source?: RefSummary | ReferenceValue }
 
-interface ChannelContentType {
-  _key?: string
-  _type?: 'channelContentType'
-  label?: string
-  value?: string
-  description?: string
-}
+// ChannelContentType is imported from ../components/marketing/types (shared by
+// the channel workspace + analytics workspace + AI mapping + channel defaults).
 
-interface MarketingChannel {
+export interface MarketingChannel {
   _id: string
   _updatedAt?: string
   title?: string
@@ -895,7 +898,7 @@ interface MarketingChannel {
   contentTypes?: ChannelContentType[]
 }
 
-interface MarketingCalendarItem {
+export interface MarketingCalendarItem {
   _id: string
   _updatedAt?: string
   title?: string
@@ -942,7 +945,7 @@ type DraftContentFrame = {
   altText?: string
 }
 
-interface MarketingCampaign {
+export interface MarketingCampaign {
   _id: string
   _updatedAt?: string
   title?: string
@@ -977,7 +980,7 @@ interface MarketingCampaign {
   performanceSignals?: MarketingPerformanceSignal[]
 }
 
-interface FunnelStage {
+export interface FunnelStage {
   _key: string
   _type?: 'funnelStage'
   stage?: string
@@ -988,7 +991,7 @@ interface FunnelStage {
   metrics?: string[]
 }
 
-interface MarketingFunnel {
+export interface MarketingFunnel {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1008,7 +1011,7 @@ interface MarketingFunnel {
   experiments?: MarketingExperiment[]
 }
 
-interface MarketingAnalyticsSource {
+export interface MarketingAnalyticsSource {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1159,12 +1162,13 @@ interface MarketingPerformanceSignal {
   periodStart?: string
   periodEnd?: string
   metrics?: Array<{ _key?: string; label?: string; value?: number; unit?: string; change?: string; variantKey?: string; eventName?: string }>
+  variantEngagement?: Array<{ _key?: string; variantKey?: string; sessions?: number; bounceRate?: number; averageSessionDuration?: number }>
   interpretation?: string
   recommendation?: string
   rawImport?: string
 }
 
-interface MarketingLinkItem {
+export interface MarketingLinkItem {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1199,7 +1203,7 @@ interface MarketingLinkItem {
   performanceSignals?: MarketingPerformanceSignal[]
 }
 
-interface MarketingTemplate {
+export interface MarketingTemplate {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1508,7 +1512,7 @@ interface MarketingResearchRun {
   createdResults?: MarketingResearchResult[]
 }
 
-interface MarketingData {
+export interface MarketingData {
   calendarItems: MarketingCalendarItem[]
   campaigns: MarketingCampaign[]
   funnels: MarketingFunnel[]
@@ -1530,7 +1534,7 @@ interface MarketingData {
   templates: MarketingTemplate[]
 }
 
-type MarketingAiSuggestion = {
+export type MarketingAiSuggestion = {
   summary?: string
   rationale?: string[]
   siteReferences?: Array<{ title?: string; url?: string; note?: string }>
@@ -1681,7 +1685,7 @@ type CalendarItemTemplate = {
 type CalendarDisplayGroup = 'preview' | 'draft' | 'final'
 type SavedCalendarDisplayGroup = Exclude<CalendarDisplayGroup, 'preview'>
 
-type CampaignTemplate = {
+export type CampaignTemplate = {
   id: string
   title: string
   description: string
@@ -1700,7 +1704,7 @@ type CampaignTemplate = {
   notes: string
 }
 
-type FunnelTemplate = {
+export type FunnelTemplate = {
   id: string
   title: string
   description: string
@@ -1862,7 +1866,7 @@ type AutopilotCompletionAction =
   | 'calendar:saveDraft'
   | 'link:save'
 
-type AutopilotWorkspaceTarget = {
+export type AutopilotWorkspaceTarget = {
   view: MarketingViewId
   targetId: string
   strategySection?: StrategyAssetKind
@@ -1931,7 +1935,7 @@ type AutopilotCompletionSignal = {
   token: number
 }
 
-type AutopilotCompletionPayload = Omit<AutopilotCompletionSignal, 'token'>
+export type AutopilotCompletionPayload = Omit<AutopilotCompletionSignal, 'token'>
 
 export type MarketingAutopilotStep = AutopilotWorkspaceTarget & {
   id: string
@@ -2753,7 +2757,7 @@ const marketingAiAssistCopy: Record<
   },
 }
 
-const styles = {
+export const styles = {
   shell: {
     minHeight: '100%',
     padding: 24,
@@ -9089,7 +9093,7 @@ function WorkflowProgressMeter({
   )
 }
 
-function MarketingAiAssistPanel({
+export function MarketingAiAssistPanel({
   kind,
   draft,
   analyticsTakeaways = [],
@@ -12390,2503 +12394,6 @@ function CalendarItemEditor({
   )
 }
 
-function CampaignWorkspace({
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-}: {
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [selectedId, setSelectedId] = useState<string | null>(data.campaigns[0]?._id || null)
-  const [openCampaignIds, setOpenCampaignIds] = useState<string[]>([])
-  const [activeTab, setActiveTab] = useState<string>('browser')
-  const activeCampaign = activeTab === 'browser' ? null : data.campaigns.find((campaign) => campaign._id === activeTab) || null
-  const campaignTemplates = useMemo(() => getCampaignTemplates(data), [data])
-
-  useEffect(() => {
-    if (!selectedId && data.campaigns.length > 0) setSelectedId(data.campaigns[0]._id)
-  }, [data.campaigns, selectedId])
-
-  useEffect(() => {
-    setOpenCampaignIds((current) => current.filter((id) => data.campaigns.some((campaign) => campaign._id === id)))
-    if (activeTab !== 'browser' && !data.campaigns.some((campaign) => campaign._id === activeTab)) {
-      setActiveTab('browser')
-    }
-  }, [activeTab, data.campaigns])
-
-  const openCampaign = (id: string) => {
-    setOpenCampaignIds((current) => (current.includes(id) ? current : [...current, id]))
-    setSelectedId(id)
-    setActiveTab(id)
-  }
-
-  const closeCampaign = (id: string) => {
-    setOpenCampaignIds((current) => current.filter((openId) => openId !== id))
-    if (activeTab === id) setActiveTab('browser')
-  }
-
-  const createCampaign = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingCampaign',
-      title: '',
-      slug: { _type: 'slug', current: `new-campaign-${Date.now()}` },
-      status: 'idea',
-    })
-    openCampaign(createdId)
-  }
-  const showCampaignTabs = activeTab !== 'browser'
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
-        <PanelHeading title="Campaigns" description="Organize campaign strategy, timing, content, funnels, and measurement." />
-        <button type="button" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createCampaign()}>
-          Add campaign
-        </button>
-      </div>
-
-      {showCampaignTabs && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 6,
-            overflowX: 'auto',
-            borderBottom: '1px solid var(--card-border-color)',
-            marginBottom: 16,
-            paddingBottom: 1,
-          }}
-        >
-          <FunnelTabButton active={activeTab === 'browser'} onClick={() => setActiveTab('browser')}>
-            All campaigns
-          </FunnelTabButton>
-          {openCampaignIds.map((id) => {
-            const campaign = data.campaigns.find((candidate) => candidate._id === id)
-            if (!campaign) return null
-            return (
-              <FunnelTabButton key={id} active={activeTab === id} onClick={() => setActiveTab(id)}>
-                <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {campaign.title || 'Untitled campaign'}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Close ${campaign.title || 'campaign'}`}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    closeCampaign(id)
-                  }}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'inherit',
-                    display: 'inline-flex',
-                    padding: 2,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <CloseIcon style={{ width: 14, height: 14 }} />
-                </button>
-              </FunnelTabButton>
-            )
-          })}
-        </div>
-      )}
-
-      {activeTab === 'browser' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
-          {data.campaigns.map((campaign) => {
-            const campaignCalendarItems = data.calendarItems.filter((item) => item.campaign?._id === campaign._id)
-            return (
-              <div
-                key={campaign._id}
-                style={{
-                  ...styles.card,
-                  padding: 14,
-                  display: 'grid',
-                  gap: 10,
-                  borderColor: selectedId === campaign._id ? '#007385' : 'var(--card-border-color)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                  <strong>{campaign.title || 'Untitled campaign'}</strong>
-                  <StatusPill status={campaign.status} options={campaignStatusOptions} />
-                </div>
-                <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-                  {trimDescription(campaign.primaryGoal) || 'No goal written yet.'}
-                </p>
-                <div style={{ ...styles.small, ...styles.muted }}>
-                  {[
-                    labelFor(campaignObjectiveOptions, campaign.campaignObjective) || 'No objective',
-                    dateRange(campaign.startDate, campaign.endDate) || 'No dates',
-                    campaign.primaryKpi || 'No KPI',
-                    `${campaignCalendarItems.length} calendar item${campaignCalendarItems.length === 1 ? '' : 's'}`,
-                    `${campaign.funnels?.length || 0} funnel link${(campaign.funnels?.length || 0) === 1 ? '' : 's'}`,
-                  ].join(' / ')}
-                </div>
-                {getCampaignChannelKeys(campaign).length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {getCampaignChannelKeys(campaign).slice(0, 5).map((channel) => (
-                      <span key={channel} style={{ ...styles.small, border: '1px solid var(--card-border-color)', borderRadius: 999, padding: '3px 8px' }}>
-                        {getChannelByKey(data.channels, channel)?.title || channel}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <button type="button" style={styles.primaryButton} onClick={() => openCampaign(campaign._id)}>
-                  Open campaign
-                </button>
-              </div>
-            )
-          })}
-          {data.campaigns.length === 0 && (
-            <EmptyPanel
-              icon={TargetIcon}
-              title="No campaigns yet"
-              description="Add a campaign, then fill its strategy in the editor."
-            />
-          )}
-        </div>
-      ) : (
-        <CampaignEditor
-          campaign={activeCampaign}
-          channels={data.channels}
-          funnels={data.funnels}
-          analyticsSources={data.analyticsSources}
-          calendarItems={data.calendarItems}
-          campaignTemplates={campaignTemplates}
-          analyticsTakeaways={buildAnalyticsInterpretations(data)}
-          saving={savingId === activeCampaign?._id}
-          onSave={commitPatch}
-        />
-      )}
-    </section>
-  )
-}
-
-function CampaignEditor({
-  campaign,
-  channels,
-  funnels,
-  analyticsSources,
-  calendarItems,
-  campaignTemplates,
-  analyticsTakeaways,
-  saving,
-  onSave,
-}: {
-  campaign: MarketingCampaign | null
-  channels: MarketingChannel[]
-  funnels: MarketingFunnel[]
-  analyticsSources: MarketingAnalyticsSource[]
-  calendarItems: MarketingCalendarItem[]
-  campaignTemplates: CampaignTemplate[]
-  analyticsTakeaways: AnalyticsInterpretation[]
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<MarketingCampaign | null>(campaign)
-
-  useEffect(() => setDraft(campaign), [campaign])
-
-  if (!draft || !campaign) {
-    return (
-      <EmptyPanel
-        icon={TargetIcon}
-        title="Select a campaign"
-        description="Create or choose a campaign to edit its strategy."
-      />
-    )
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled campaign',
-      slug: { _type: 'slug', current: slugify(draft.title || 'untitled-campaign') },
-      status: draft.status || 'idea',
-      startDate: draft.startDate,
-      endDate: draft.endDate,
-      primaryGoal: draft.primaryGoal,
-      campaignObjective: draft.campaignObjective,
-      audience: draft.audience,
-      topicCluster: draft.topicCluster,
-      searchIntent: draft.searchIntent,
-      targetQueries: draft.targetQueries || [],
-      positioning: draft.positioning,
-      canonicalUrl: draft.canonicalUrl,
-      channels: draft.channels || [],
-      channelRefs: refsFromIds((draft.channelRefs || []).map((channel) => channel._id)),
-      funnels: refsFromIds((draft.funnels || []).map((funnel) => funnel._id)),
-      analyticsSources: refsFromIds((draft.analyticsSources || []).map((source) => source._id)),
-      successMetrics: normalizeSuccessMetrics(draft.successMetrics || []),
-      primaryKpi: draft.primaryKpi,
-      utmCampaign: draft.utmCampaign,
-      notes: draft.notes,
-    }
-    const unset = emptyKeys(set)
-    unset.forEach((key) => delete set[key])
-    await onSave(campaign._id, set, unset)
-  }
-
-  const applyCampaignTemplate = (template: CampaignTemplate) => {
-    const channelRefs = template.channels
-      .map((key) => getChannelByKey(channels, key))
-      .filter(Boolean) as MarketingChannel[]
-
-    setDraft({
-      ...draft,
-      campaignObjective: draft.campaignObjective || template.campaignObjective,
-      primaryGoal: draft.primaryGoal || template.primaryGoal,
-      primaryKpi: draft.primaryKpi || template.primaryKpi,
-      audience: draft.audience || template.audience,
-      topicCluster: draft.topicCluster || template.topicCluster,
-      searchIntent: draft.searchIntent || template.searchIntent,
-      targetQueries: draft.targetQueries?.length ? draft.targetQueries : template.targetQueries,
-      positioning: draft.positioning || template.positioning,
-      utmCampaign: draft.utmCampaign || slugify(draft.title || template.title),
-      channels: Array.from(new Set([...(draft.channels || []), ...template.channels])),
-      channelRefs: uniqueById([...(draft.channelRefs || []), ...channelRefs]),
-      successMetrics: draft.successMetrics?.length ? draft.successMetrics : normalizeSuccessMetrics(template.successMetrics),
-      notes: draft.notes || template.notes,
-    })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const campaignSuggestion = suggestion.campaign || {}
-    setDraft({
-      ...draft,
-      title: aiString(campaignSuggestion.title) || draft.title,
-      campaignObjective: aiOption(campaignSuggestion.campaignObjective, campaignObjectiveOptions) || draft.campaignObjective,
-      primaryGoal: aiString(campaignSuggestion.primaryGoal) || draft.primaryGoal,
-      primaryKpi: aiString(campaignSuggestion.primaryKpi) || draft.primaryKpi,
-      audience: aiString(campaignSuggestion.audience) || draft.audience,
-      topicCluster: aiString(campaignSuggestion.topicCluster) || draft.topicCluster,
-      searchIntent: aiOption(campaignSuggestion.searchIntent, searchIntentOptions) || draft.searchIntent,
-      targetQueries: aiStringList(campaignSuggestion.targetQueries) || draft.targetQueries,
-      positioning: aiString(campaignSuggestion.positioning) || draft.positioning,
-      canonicalUrl: aiString(campaignSuggestion.canonicalUrl) || draft.canonicalUrl,
-      utmCampaign: aiString(campaignSuggestion.utmCampaign) || draft.utmCampaign,
-      notes: aiString(campaignSuggestion.notes) || draft.notes,
-    })
-  }
-
-  return (
-    <section style={styles.panel}>
-      <PanelTitle title="Campaign editor" type="marketingCampaign" id={campaign._id} />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
-        <Stack gap={12}>
-          <TemplateRail
-            title="Campaign templates"
-            description="Pick the closest pattern. It fills the strategy prompts, channels, and starter metrics."
-            templates={campaignTemplates}
-            onApply={applyCampaignTemplate}
-          />
-          <MarketingAiAssistPanel
-            kind="campaign"
-            draft={draft as unknown as Record<string, unknown>}
-            analyticsTakeaways={analyticsTakeaways}
-            onApply={applyAiSuggestion}
-          />
-          <GuidanceChecklist
-            title="Strategy checklist"
-            items={[
-              { label: 'Objective is broader than one post', done: !!draft.campaignObjective },
-              { label: 'Primary goal says what should change', done: !!draft.primaryGoal?.trim() },
-              { label: 'Primary KPI names the success metric', done: !!draft.primaryKpi?.trim() },
-              { label: 'Audience is specific enough to design for', done: !!draft.audience?.trim() },
-              {
-                label: 'Topic, intent, or target phrases guide titles and captions',
-                done: !!draft.topicCluster?.trim() || !!draft.searchIntent || (draft.targetQueries || []).length > 0,
-              },
-              { label: 'Positioning explains the useful idea', done: !!draft.positioning?.trim() },
-              { label: 'Stable UTM campaign name is set', done: !!draft.utmCampaign?.trim() },
-              { label: 'At least one channel is selected', done: (draft.channels || []).length > 0 || (draft.channelRefs || []).length > 0 },
-              { label: 'A funnel or next-step path is attached', done: (draft.funnels || []).length > 0 },
-            ]}
-          />
-          <InputField label="What should we call this campaign?" help="Use a simple name designers can recognize when linking calendar items.">
-            <input
-              style={styles.input}
-              value={draft.title || ''}
-              onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-            />
-          </InputField>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InputField label="What is the main goal?">
-              <Select
-                value={draft.campaignObjective || ''}
-                options={[{ title: 'Choose objective...', value: '' }, ...campaignObjectiveOptions]}
-                onChange={(campaignObjective) => setDraft({ ...draft, campaignObjective })}
-              />
-            </InputField>
-            <InputField label="How will we know it worked?">
-              <input
-                style={styles.input}
-                value={draft.primaryKpi || ''}
-                onChange={(event) => setDraft({ ...draft, primaryKpi: event.currentTarget.value })}
-                placeholder="e.g. qualified conversations"
-              />
-            </InputField>
-          </div>
-          <InputField label="What should change because this campaign exists?" help="Write the outcome in plain language, not a slogan.">
-            <textarea
-              rows={3}
-              style={styles.input}
-              value={draft.primaryGoal || ''}
-              onChange={(event) => setDraft({ ...draft, primaryGoal: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Who should this reach?">
-            <textarea
-              rows={3}
-              style={styles.input}
-              value={draft.audience || ''}
-              onChange={(event) => setDraft({ ...draft, audience: event.currentTarget.value })}
-            />
-          </InputField>
-          <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-            <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Discovery and search cues</h3>
-            <p style={{ ...styles.small, ...styles.muted, margin: '0 0 10px', lineHeight: 1.5 }}>
-              Optional, but useful when captions, titles, articles, or social posts need to meet how people actually describe the problem.
-            </p>
-            <Stack gap={10}>
-              <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <InputField label="Topic / keyword cluster">
-                  <input
-                    style={styles.input}
-                    value={draft.topicCluster || ''}
-                    onChange={(event) => setDraft({ ...draft, topicCluster: event.currentTarget.value })}
-                    placeholder="e.g. healthcare service design"
-                  />
-                </InputField>
-                <InputField label="Visitor intent">
-                  <Select
-                    value={draft.searchIntent || ''}
-                    options={[{ title: 'No intent selected', value: '' }, ...searchIntentOptions]}
-                    onChange={(searchIntent) => setDraft({ ...draft, searchIntent })}
-                  />
-                </InputField>
-              </div>
-              <InputField label="Target queries / phrases">
-                <textarea
-                  rows={3}
-                  style={styles.input}
-                  value={(draft.targetQueries || []).join('\n')}
-                  onChange={(event) => setDraft({ ...draft, targetQueries: stringListFromText(event.currentTarget.value) })}
-                  placeholder={'One phrase per line\ne.g. healthcare design case study'}
-                />
-              </InputField>
-            </Stack>
-          </div>
-          <InputField label="What useful idea should the campaign carry?">
-            <textarea
-              rows={5}
-              style={styles.input}
-              value={draft.positioning || ''}
-              onChange={(event) => setDraft({ ...draft, positioning: event.currentTarget.value })}
-            />
-          </InputField>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InputField label="Where should interested people go?">
-              <input
-                style={styles.input}
-                value={draft.canonicalUrl || ''}
-                onChange={(event) => setDraft({ ...draft, canonicalUrl: event.currentTarget.value })}
-                placeholder="https://..."
-              />
-            </InputField>
-            <InputField label="How should analytics name this campaign?">
-              <input
-                style={styles.input}
-                value={draft.utmCampaign || ''}
-                onChange={(event) => setDraft({ ...draft, utmCampaign: optionalSlug(event.currentTarget.value) })}
-                placeholder={slugify(draft.title || 'campaign-name')}
-              />
-            </InputField>
-          </div>
-          <InputField label="What should the team remember?">
-            <textarea
-              rows={5}
-              style={styles.input}
-              value={draft.notes || ''}
-              onChange={(event) => setDraft({ ...draft, notes: event.currentTarget.value })}
-            />
-          </InputField>
-        </Stack>
-
-        <Stack gap={12}>
-          <InputField label="Where is this campaign in the workflow?">
-            <Select
-              value={draft.status || 'idea'}
-              options={campaignStatusOptions}
-              onChange={(status) => setDraft({ ...draft, status })}
-            />
-          </InputField>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InputField label="When should it start?">
-              <input
-                type="date"
-                style={styles.input}
-                value={draft.startDate || ''}
-                onChange={(event) => setDraft({ ...draft, startDate: event.currentTarget.value })}
-              />
-            </InputField>
-            <InputField label="When should it end?">
-              <input
-                type="date"
-                style={styles.input}
-                value={draft.endDate || ''}
-                onChange={(event) => setDraft({ ...draft, endDate: event.currentTarget.value })}
-              />
-            </InputField>
-          </div>
-          <InputField label="Where will we publish or promote it?">
-            <div style={{ display: 'grid', gap: 8 }}>
-              {getChannelOptions(channels).map((option) => {
-                const checked = draft.channels?.includes(option.value) || false
-                const channel = getChannelByKey(channels, option.value)
-                return (
-                  <label key={option.value} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(event) => {
-                        const current = draft.channels || []
-                        const nextChannels = event.currentTarget.checked
-                          ? [...current, option.value]
-                          : current.filter((value) => value !== option.value)
-                        const currentRefs = draft.channelRefs || []
-                        const nextRefs = event.currentTarget.checked && channel
-                          ? [...currentRefs.filter((ref) => ref._id !== channel._id), channel]
-                          : currentRefs.filter((ref) => ref.key !== option.value)
-                        setDraft({ ...draft, channels: nextChannels, channelRefs: nextRefs })
-                      }}
-                    />
-                    {option.title}
-                  </label>
-                )
-              })}
-            </div>
-          </InputField>
-          <RelationshipChecklist
-            title="Funnels"
-            items={funnels}
-            selectedIds={(draft.funnels || []).map((funnel) => funnel._id)}
-            getSubtitle={(funnel) =>
-              [
-                labelFor(funnelStatusOptions, funnel.status),
-                `${funnel.stages?.length || 0} stages`,
-              ].filter(Boolean).join(' / ')
-            }
-            onChange={(ids) => setDraft({ ...draft, funnels: ids.map((id) => funnels.find((funnel) => funnel._id === id)).filter(Boolean) as RefSummary[] })}
-          />
-          <RelationshipChecklist
-            title="Analytics sources"
-            items={analyticsSources}
-            selectedIds={(draft.analyticsSources || []).map((source) => source._id)}
-            getSubtitle={(source) => labelFor(analyticsProviderOptions, source.provider)}
-            onChange={(ids) =>
-              setDraft({
-                ...draft,
-                analyticsSources: ids.map((id) => analyticsSources.find((source) => source._id === id)).filter(Boolean) as RefSummary[],
-              })
-            }
-          />
-          <RelationshipUsagePanel
-            title="Calendar items in this campaign"
-            items={calendarItems.filter((item) => item.campaign?._id === campaign._id)}
-            emptyText="No calendar items are assigned to this campaign yet."
-            renderMeta={(item) =>
-              [
-                toDateInputValue(item.publishAt),
-                item.channelRef?.title || getChannelByKey(channels, item.channel)?.title || item.channel,
-                item.funnel?.title,
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <MetricSummary metrics={draft.successMetrics || []} />
-          <AdvancedFieldsDropdown type="marketingCampaign" id={campaign._id} />
-          <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-            {saving ? 'Saving...' : 'Save campaign'}
-          </button>
-        </Stack>
-      </div>
-    </section>
-  )
-}
-
-function FunnelWorkspace({
-  client,
-  data,
-  savingId,
-  createDocument,
-  loadData,
-  commitPatch,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [selectedId, setSelectedId] = useState<string | null>(data.funnels[0]?._id || null)
-  const [openFunnelIds, setOpenFunnelIds] = useState<string[]>([])
-  const [activeTab, setActiveTab] = useState<string>('browser')
-  const activeFunnel = activeTab === 'browser' ? null : data.funnels.find((funnel) => funnel._id === activeTab) || null
-  const funnelTemplates = useMemo(() => getFunnelTemplates(data), [data])
-
-  useEffect(() => {
-    if (!selectedId && data.funnels.length > 0) setSelectedId(data.funnels[0]._id)
-  }, [data.funnels, selectedId])
-
-  useEffect(() => {
-    setOpenFunnelIds((current) => current.filter((id) => data.funnels.some((funnel) => funnel._id === id)))
-    if (activeTab !== 'browser' && !data.funnels.some((funnel) => funnel._id === activeTab)) {
-      setActiveTab('browser')
-    }
-  }, [activeTab, data.funnels])
-
-  const openFunnel = (id: string) => {
-    setOpenFunnelIds((current) => (current.includes(id) ? current : [...current, id]))
-    setSelectedId(id)
-    setActiveTab(id)
-  }
-
-  const closeFunnel = (id: string) => {
-    setOpenFunnelIds((current) => current.filter((openId) => openId !== id))
-    if (activeTab === id) setActiveTab('browser')
-  }
-
-  const createFunnel = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingFunnel',
-      title: '',
-      status: 'draft',
-      stages: [],
-    })
-    openFunnel(createdId)
-  }
-
-  const addStage = async (funnelId: string, stage: FunnelStage) => {
-    await client
-      .patch(funnelId)
-      .setIfMissing({ stages: [] })
-      .append('stages', [{ ...stage, _key: randomKey(), _type: 'funnelStage' }])
-      .commit()
-    await loadData()
-  }
-  const showFunnelTabs = activeTab !== 'browser'
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
-        <PanelHeading title="Funnels" description="Build reusable stage maps for campaigns, pages, and CTAs." />
-        <button type="button" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createFunnel()}>
-          Add funnel
-        </button>
-      </div>
-
-      {showFunnelTabs && (
-        <div
-          style={{
-            display: 'flex',
-            gap: 6,
-            overflowX: 'auto',
-            borderBottom: '1px solid var(--card-border-color)',
-            marginBottom: 16,
-            paddingBottom: 1,
-          }}
-        >
-          <FunnelTabButton active={activeTab === 'browser'} onClick={() => setActiveTab('browser')}>
-            All funnels
-          </FunnelTabButton>
-          {openFunnelIds.map((id) => {
-            const funnel = data.funnels.find((candidate) => candidate._id === id)
-            if (!funnel) return null
-            return (
-              <FunnelTabButton key={id} active={activeTab === id} onClick={() => setActiveTab(id)}>
-                <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {funnel.title || 'Untitled funnel'}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Close ${funnel.title || 'funnel'}`}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    closeFunnel(id)
-                  }}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: 'inherit',
-                    display: 'inline-flex',
-                    padding: 2,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <CloseIcon style={{ width: 14, height: 14 }} />
-                </button>
-              </FunnelTabButton>
-            )
-          })}
-        </div>
-      )}
-
-      {activeTab === 'browser' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
-          {data.funnels.map((funnel) => (
-            <div
-              key={funnel._id}
-              style={{
-                ...styles.card,
-                padding: 14,
-                display: 'grid',
-                gap: 10,
-                borderColor: selectedId === funnel._id ? '#007385' : 'var(--card-border-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                <strong>{funnel.title || 'Untitled funnel'}</strong>
-                <StatusPill status={funnel.status} options={funnelStatusOptions} />
-              </div>
-              <div style={{ ...styles.small, ...styles.muted }}>
-                {[
-                  `${funnel.stages?.length || 0} stage${(funnel.stages?.length || 0) === 1 ? '' : 's'}`,
-                  `${data.campaigns.filter((campaign) => (campaign.funnels || []).some((ref) => ref._id === funnel._id)).length} campaign links`,
-                  `${data.calendarItems.filter((item) => item.funnel?._id === funnel._id).length} calendar items`,
-                ].join(' / ')}
-              </div>
-              <button type="button" style={styles.primaryButton} onClick={() => openFunnel(funnel._id)}>
-                Open funnel
-              </button>
-            </div>
-          ))}
-          {data.funnels.length === 0 && (
-            <EmptyPanel
-              icon={MasterDetailIcon}
-              title="No funnels yet"
-              description="Add a funnel, then fill its stage map in the editor."
-            />
-          )}
-        </div>
-      ) : (
-        <FunnelManager
-          funnel={activeFunnel}
-          data={data}
-          funnelTemplates={funnelTemplates}
-          saving={savingId === activeFunnel?._id}
-          onSave={commitPatch}
-          onAddStage={addStage}
-        />
-      )}
-    </section>
-  )
-}
-
-function FunnelManager({
-  funnel,
-  data,
-  funnelTemplates,
-  saving,
-  onSave,
-  onAddStage,
-}: {
-  funnel: MarketingFunnel | null
-  data: MarketingData
-  funnelTemplates: FunnelTemplate[]
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onAddStage: (funnelId: string, stage: FunnelStage) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<MarketingFunnel | null>(funnel)
-  const [newStage, setNewStage] = useState<FunnelStage>({ _key: '', stage: 'awareness', goal: '', callToAction: '' })
-
-  useEffect(() => setDraft(funnel), [funnel])
-
-  if (!draft || !funnel) {
-    return (
-      <EmptyPanel
-        icon={MasterDetailIcon}
-        title="Select a funnel"
-        description="Create or choose a funnel to manage its stage map."
-      />
-    )
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled funnel',
-      status: draft.status || 'draft',
-      audience: draft.audience,
-      conversionGoal: draft.conversionGoal,
-      notes: draft.notes,
-      stages: normalizeFunnelStages(draft.stages || []),
-      analyticsSources: refsFromIds((draft.analyticsSources || []).map((source) => source._id)),
-    }
-    const unset = emptyKeys(set)
-    unset.forEach((key) => delete set[key])
-    await onSave(funnel._id, set, unset)
-  }
-
-  const stagesByType = new Map<string, FunnelStage[]>()
-  ;(draft.stages || []).forEach((stage) => {
-    const key = stage.stage || 'awareness'
-    stagesByType.set(key, [...(stagesByType.get(key) || []), stage])
-  })
-
-  const applyFunnelTemplate = (template: FunnelTemplate) => {
-    setDraft({
-      ...draft,
-      audience: draft.audience || template.audience,
-      conversionGoal: draft.conversionGoal || template.conversionGoal,
-      stages: normalizeFunnelStages(template.stages),
-    })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const funnelSuggestion = suggestion.funnel || {}
-    setDraft({
-      ...draft,
-      title: aiString(funnelSuggestion.title) || draft.title,
-      audience: aiString(funnelSuggestion.audience) || draft.audience,
-      conversionGoal: aiString(funnelSuggestion.conversionGoal) || draft.conversionGoal,
-      notes: aiString(funnelSuggestion.notes) || draft.notes,
-      stages: aiFunnelStages(funnelSuggestion.stages) || draft.stages,
-    })
-  }
-
-  return (
-    <section style={styles.panel}>
-      <PanelTitle title="Funnels manager" type="marketingFunnel" id={funnel._id} />
-      <GuidanceChecklist
-        title="Funnel checklist"
-        items={[
-          { label: 'Audience is defined', done: !!draft.audience?.trim() },
-          { label: 'Conversion goal is specific', done: !!draft.conversionGoal?.trim() },
-          { label: 'Stages cover the path from awareness to action', done: (draft.stages || []).length >= 3 },
-          { label: 'Each stage has a goal', done: (draft.stages || []).length > 0 && (draft.stages || []).every((stage) => !!stage.goal?.trim()) },
-          { label: 'CTAs tell the visitor what to do next', done: (draft.stages || []).some((stage) => !!stage.callToAction?.trim()) },
-          { label: 'Analytics sources are connected', done: (draft.analyticsSources || []).length > 0 },
-        ]}
-      />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 18 }}>
-        <div>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 14 }}>
-            <InputField label="Funnel name">
-              <input
-                style={styles.input}
-                value={draft.title || ''}
-                onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-              />
-            </InputField>
-            <InputField label="Status">
-              <Select
-                value={draft.status || 'draft'}
-                options={funnelStatusOptions}
-                onChange={(status) => setDraft({ ...draft, status })}
-              />
-            </InputField>
-            <div style={{ alignSelf: 'end' }}>
-              <button type="button" style={{ ...styles.primaryButton, width: '100%' }} disabled={saving} onClick={() => void save()}>
-                {saving ? 'Saving...' : 'Save funnel'}
-              </button>
-            </div>
-          </div>
-
-          <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(160px, 1fr))', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
-            {funnelStageOptions.map((option) => (
-              <div key={option.value} style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, minHeight: 300 }}>
-                <div
-                  style={{
-                    padding: '10px 12px',
-                    borderBottom: '1px solid var(--card-border-color)',
-                    fontWeight: 800,
-                    background: 'rgba(0, 115, 133, 0.08)',
-                  }}
-                >
-                  {option.title}
-                </div>
-                <div style={{ padding: 10, display: 'grid', gap: 10 }}>
-                  {(stagesByType.get(option.value) || []).map((stage) => (
-                    <StageCard key={stage._key} stage={stage} />
-                  ))}
-                  {(stagesByType.get(option.value) || []).length === 0 && (
-                    <div style={{ ...styles.muted, ...styles.small }}>No step yet.</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <Stack gap={12}>
-          <TemplateRail
-            title="Funnel templates"
-            description="Apply a complete stage map, then tune the audience, offers, and CTAs for this campaign."
-            templates={funnelTemplates}
-            onApply={applyFunnelTemplate}
-          />
-          <MarketingAiAssistPanel
-            kind="funnel"
-            draft={draft as unknown as Record<string, unknown>}
-            analyticsTakeaways={buildAnalyticsInterpretations(data)}
-            onApply={applyAiSuggestion}
-          />
-          <InputField label="Audience">
-            <textarea
-              rows={3}
-              style={styles.input}
-              value={draft.audience || ''}
-              onChange={(event) => setDraft({ ...draft, audience: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Conversion goal">
-            <textarea
-              rows={3}
-              style={styles.input}
-              value={draft.conversionGoal || ''}
-              onChange={(event) => setDraft({ ...draft, conversionGoal: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Notes">
-            <textarea
-              rows={4}
-              style={styles.input}
-              value={draft.notes || ''}
-              onChange={(event) => setDraft({ ...draft, notes: event.currentTarget.value })}
-            />
-          </InputField>
-          <RelationshipChecklist
-            title="Analytics sources"
-            items={data.analyticsSources}
-            selectedIds={(draft.analyticsSources || []).map((source) => source._id)}
-            getSubtitle={(source) => labelFor(analyticsProviderOptions, source.provider)}
-            onChange={(ids) =>
-              setDraft({
-                ...draft,
-                analyticsSources: ids.map((id) => data.analyticsSources.find((source) => source._id === id)).filter(Boolean) as RefSummary[],
-              })
-            }
-          />
-          <RelationshipUsagePanel
-            title="Campaigns using this funnel"
-            items={data.campaigns.filter((campaign) => (campaign.funnels || []).some((ref) => ref._id === funnel._id))}
-            emptyText="No campaigns are linked to this funnel yet."
-            renderMeta={(campaign) =>
-              [
-                labelFor(campaignStatusOptions, campaign.status),
-                dateRange(campaign.startDate, campaign.endDate),
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <RelationshipUsagePanel
-            title="Calendar items in this funnel"
-            items={data.calendarItems.filter((item) => item.funnel?._id === funnel._id)}
-            emptyText="No calendar items are assigned to this funnel yet."
-            renderMeta={(item) =>
-              [
-                toDateInputValue(item.publishAt),
-                item.campaign?.title,
-                item.channelRef?.title || item.channel,
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Add funnel stage</h3>
-            <Stack gap={10}>
-              <InputField label="Stage">
-                <Select
-                  value={newStage.stage || 'awareness'}
-                  options={funnelStageOptions}
-                  onChange={(stage) => setNewStage({ ...newStage, stage })}
-                />
-              </InputField>
-              <InputField label="Goal">
-                <textarea
-                  rows={2}
-                  style={styles.input}
-                  value={newStage.goal || ''}
-                  onChange={(event) => setNewStage({ ...newStage, goal: event.currentTarget.value })}
-                />
-              </InputField>
-              <InputField label="CTA">
-                <input
-                  style={styles.input}
-                  value={newStage.callToAction || ''}
-                  onChange={(event) => setNewStage({ ...newStage, callToAction: event.currentTarget.value })}
-                />
-              </InputField>
-              <button
-                type="button"
-                style={styles.primaryButton}
-                onClick={() => {
-                  void onAddStage(funnel._id, newStage)
-                  setNewStage({ _key: '', stage: 'awareness', goal: '', callToAction: '' })
-                }}
-              >
-                Add funnel stage
-              </button>
-            </Stack>
-          </div>
-          <AdvancedFieldsDropdown type="marketingFunnel" id={funnel._id} />
-        </Stack>
-      </div>
-    </section>
-  )
-}
-
-function StageCard({ stage }: { stage: FunnelStage }) {
-  return (
-    <div style={{ border: '1px solid var(--card-border-color)', borderRadius: 6, padding: 10, background: 'var(--card-bg-color)' }}>
-      {stage.goal && <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{stage.goal}</div>}
-      {stage.offer && <div style={{ ...styles.small, ...styles.muted }}>Offer: {stage.offer}</div>}
-      {stage.callToAction && <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>CTA: {stage.callToAction}</div>}
-      {stage.destinationUrl && (
-        <a href={stage.destinationUrl} target="_blank" rel="noreferrer" style={{ ...styles.small, color: '#007385' }}>
-          Destination
-        </a>
-      )}
-    </div>
-  )
-}
-
-function TemplateWorkspace({
-  client,
-  data,
-  savingId,
-  createDocument,
-  loadData,
-  commitPatch,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [selectedId, setSelectedId] = useState<string | null>(data.templates[0]?._id || null)
-  const [kindFilter, setKindFilter] = useState('all')
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const filteredTemplates = useMemo(
-    () => data.templates.filter((template) => kindFilter === 'all' || template.kind === kindFilter),
-    [data.templates, kindFilter],
-  )
-  const selected = data.templates.find((template) => template._id === selectedId) || null
-
-  useEffect(() => {
-    if (selectedId && data.templates.some((template) => template._id === selectedId)) return
-    setSelectedId(filteredTemplates[0]?._id || data.templates[0]?._id || null)
-  }, [data.templates, filteredTemplates, selectedId])
-
-  const createTemplate = async (kind: 'campaign' | 'funnel') => {
-    const createdId = await createDocument(defaultMarketingTemplateDocument(kind))
-    setKindFilter(kind)
-    setSelectedId(createdId)
-  }
-
-  const deleteTemplate = async (template: MarketingTemplate) => {
-    const message = `Delete "${template.title || 'Untitled template'}"? Existing campaigns and funnels created from it will not change, but this template will disappear from future pickers.`
-    if (!window.confirm(message)) return
-
-    setDeletingId(template._id)
-    try {
-      await client.delete(template._id)
-      setSelectedId(data.templates.find((candidate) => candidate._id !== template._id)?._id || null)
-      await loadData()
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  return (
-    <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '390px minmax(0, 1fr)', gap: 16 }}>
-      <section style={styles.panel}>
-        <PanelHeading
-          title="Templates"
-          description="Create reusable campaign and funnel setup patterns that designers can pick from instead of rebuilding strategy every time."
-        />
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-          <button type="button" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createTemplate('campaign')}>
-            Add campaign template
-          </button>
-          <button type="button" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createTemplate('funnel')}>
-            Add funnel template
-          </button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
-          {[
-            { title: 'All', value: 'all' },
-            { title: 'Campaigns', value: 'campaign' },
-            { title: 'Funnels', value: 'funnel' },
-          ].map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              style={{
-                ...styles.button,
-                padding: '8px 10px',
-                borderColor: kindFilter === option.value ? '#007385' : 'var(--card-border-color)',
-                background: kindFilter === option.value ? 'rgba(0, 115, 133, 0.10)' : 'var(--card-bg-color)',
-              }}
-              onClick={() => setKindFilter(option.value)}
-            >
-              {option.title}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {filteredTemplates.map((template) => (
-            <button
-              key={template._id}
-              type="button"
-              style={{
-                ...styles.templateButton,
-                borderColor: selectedId === template._id ? '#007385' : 'var(--card-border-color)',
-                background: selectedId === template._id ? 'rgba(0, 115, 133, 0.08)' : 'var(--card-bg-color)',
-              }}
-              onClick={() => setSelectedId(template._id)}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                <strong style={{ fontSize: 13 }}>{template.title || 'Untitled template'}</strong>
-                <StatusPill status={template.status} options={marketingTemplateStatusOptions} />
-              </div>
-              <span style={{ ...styles.small, ...styles.muted }}>
-                {labelFor(marketingTemplateKindOptions, template.kind)} / {template.description || 'No description yet'}
-              </span>
-            </button>
-          ))}
-          {filteredTemplates.length === 0 && (
-            <EmptyInline title="No managed templates in this category yet. Built-in starter templates still appear in the campaign and funnel creation flows." />
-          )}
-        </div>
-      </section>
-
-      <TemplateEditor
-        template={selected}
-        data={data}
-        saving={savingId === selected?._id || deletingId === selected?._id}
-        onSave={commitPatch}
-        onDelete={deleteTemplate}
-      />
-    </div>
-  )
-}
-
-function TemplateEditor({
-  template,
-  data,
-  saving,
-  onSave,
-  onDelete,
-}: {
-  template: MarketingTemplate | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onDelete: (template: MarketingTemplate) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<MarketingTemplate | null>(template)
-
-  useEffect(() => setDraft(template), [template])
-
-  if (!draft || !template) {
-    return <EmptyPanel icon={DashboardIcon} title="Select a template" description="Create or choose a template to manage its reusable setup fields." />
-  }
-
-  const isCampaign = draft.kind !== 'funnel'
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const templateSuggestion = suggestion.template || {}
-    const nextKind = aiOption(templateSuggestion.kind, marketingTemplateKindOptions) || draft.kind || 'campaign'
-    const nextDraft: MarketingTemplate = {
-      ...draft,
-      title: aiString(templateSuggestion.title) || draft.title,
-      kind: nextKind,
-      status: aiOption(templateSuggestion.status, marketingTemplateStatusOptions) || draft.status || 'active',
-      description: aiString(templateSuggestion.description) || draft.description,
-      whenToUse: aiString(templateSuggestion.whenToUse) || draft.whenToUse,
-      audience: aiString(templateSuggestion.audience) || draft.audience,
-    }
-
-    if (nextKind === 'funnel') {
-      nextDraft.conversionGoal = aiString(templateSuggestion.conversionGoal) || draft.conversionGoal
-      nextDraft.stages = aiFunnelStages(templateSuggestion.stages) || draft.stages
-    } else {
-      nextDraft.campaignObjective = aiOption(templateSuggestion.campaignObjective, campaignObjectiveOptions) || draft.campaignObjective
-      nextDraft.primaryGoal = aiString(templateSuggestion.primaryGoal) || draft.primaryGoal
-      nextDraft.primaryKpi = aiString(templateSuggestion.primaryKpi) || draft.primaryKpi
-      nextDraft.topicCluster = aiString(templateSuggestion.topicCluster) || draft.topicCluster
-      nextDraft.searchIntent = aiOption(templateSuggestion.searchIntent, searchIntentOptions) || draft.searchIntent
-      nextDraft.targetQueries = aiStringList(templateSuggestion.targetQueries) || draft.targetQueries
-      nextDraft.positioning = aiString(templateSuggestion.positioning) || draft.positioning
-      nextDraft.channels = aiStringList(templateSuggestion.channels) || draft.channels
-      nextDraft.successMetrics = aiTemplateSuccessMetrics(templateSuggestion.successMetrics) || draft.successMetrics
-      nextDraft.designerGuidance = aiStringList(templateSuggestion.designerGuidance) || draft.designerGuidance
-      nextDraft.notes = aiString(templateSuggestion.notes) || draft.notes
-    }
-
-    setDraft(nextDraft)
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled template',
-      kind: isCampaign ? 'campaign' : 'funnel',
-      status: draft.status || 'active',
-      description: draft.description,
-      whenToUse: draft.whenToUse,
-      order: draft.order,
-      audience: draft.audience,
-    }
-    const unset: string[] = []
-
-    if (isCampaign) {
-      Object.assign(set, {
-        campaignObjective: draft.campaignObjective || 'awareness',
-        primaryGoal: draft.primaryGoal,
-        primaryKpi: draft.primaryKpi,
-        topicCluster: draft.topicCluster,
-        searchIntent: draft.searchIntent || 'learn',
-        targetQueries: normalizeStringList(draft.targetQueries || []),
-        positioning: draft.positioning,
-        channels: normalizeStringList(draft.channels || []),
-        successMetrics: normalizeSuccessMetrics(draft.successMetrics || []),
-        designerGuidance: normalizeStringList(draft.designerGuidance || []),
-        notes: draft.notes,
-      })
-      unset.push('conversionGoal', 'stages')
-    } else {
-      Object.assign(set, {
-        conversionGoal: draft.conversionGoal,
-        stages: normalizeFunnelStages(draft.stages || []),
-      })
-      unset.push('campaignObjective', 'primaryGoal', 'primaryKpi', 'topicCluster', 'searchIntent', 'targetQueries', 'positioning', 'channels', 'successMetrics', 'designerGuidance', 'notes')
-    }
-
-    const empty = emptyKeys(set)
-    empty.forEach((key) => delete set[key])
-    await onSave(template._id, set, [...unset, ...empty])
-  }
-
-  return (
-    <section style={styles.panel}>
-      <PanelTitle title="Template editor" type="marketingTemplate" id={template._id} />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
-        <Stack gap={12}>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 150px 150px', gap: 10 }}>
-            <InputField label="Template title">
-              <input style={styles.input} value={draft.title || ''} onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })} />
-            </InputField>
-            <InputField label="Type">
-              <Select value={draft.kind || 'campaign'} options={marketingTemplateKindOptions} onChange={(kind) => setDraft({ ...draft, kind })} />
-            </InputField>
-            <InputField label="Status">
-              <Select value={draft.status || 'active'} options={marketingTemplateStatusOptions} onChange={(status) => setDraft({ ...draft, status })} />
-            </InputField>
-          </div>
-          <InputField label="Short description">
-            <textarea rows={2} style={styles.input} value={draft.description || ''} onChange={(event) => setDraft({ ...draft, description: event.currentTarget.value })} />
-          </InputField>
-          <InputField label="When to use">
-            <textarea rows={3} style={styles.input} value={draft.whenToUse || ''} onChange={(event) => setDraft({ ...draft, whenToUse: event.currentTarget.value })} />
-          </InputField>
-          <InputField label="Audience">
-            <textarea rows={3} style={styles.input} value={draft.audience || ''} onChange={(event) => setDraft({ ...draft, audience: event.currentTarget.value })} />
-          </InputField>
-
-          {isCampaign ? (
-            <CampaignTemplateFields draft={draft} onChange={setDraft} />
-          ) : (
-            <FunnelTemplateFields draft={draft} onChange={setDraft} />
-          )}
-        </Stack>
-
-        <Stack gap={12}>
-          <MarketingAiAssistPanel
-            kind="template"
-            draft={draft as unknown as Record<string, unknown>}
-            analyticsTakeaways={buildAnalyticsInterpretations(data)}
-            onApply={applyAiSuggestion}
-          />
-          <GuidanceChecklist
-            title="Template checklist"
-            items={[
-              { label: 'Title is specific', done: !!draft.title?.trim() },
-              { label: 'When to use is clear', done: !!draft.whenToUse?.trim() },
-              { label: 'Audience is defined', done: !!draft.audience?.trim() },
-              isCampaign
-                ? { label: 'Campaign has KPI and goal', done: !!draft.primaryGoal?.trim() && !!draft.primaryKpi?.trim() }
-                : { label: 'Funnel has stages and CTA', done: (draft.stages || []).length > 0 && (draft.stages || []).some((stage) => !!stage.callToAction?.trim()) },
-            ]}
-          />
-          <div style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Used by creation flows</h3>
-            <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-              Active managed templates appear before built-in fallbacks when designers create a new campaign or funnel.
-            </p>
-          </div>
-          <AdvancedFieldsDropdown type="marketingTemplate" id={template._id} />
-          <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-            {saving ? 'Saving...' : 'Save template'}
-          </button>
-          <button
-            type="button"
-            style={{ ...styles.button, borderColor: 'rgba(227, 98, 22, 0.45)', color: '#E36216' }}
-            disabled={saving}
-            onClick={() => void onDelete(template)}
-          >
-            Delete template
-          </button>
-        </Stack>
-      </div>
-    </section>
-  )
-}
-
-function CampaignTemplateFields({
-  draft,
-  onChange,
-}: {
-  draft: MarketingTemplate
-  onChange: (draft: MarketingTemplate) => void
-}) {
-  return (
-    <Stack gap={12}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 120px', gap: 10 }}>
-        <InputField label="Objective">
-          <Select
-            value={draft.campaignObjective || 'awareness'}
-            options={campaignObjectiveOptions}
-            onChange={(campaignObjective) => onChange({ ...draft, campaignObjective })}
-          />
-        </InputField>
-        <InputField label="Search intent">
-          <Select
-            value={draft.searchIntent || 'learn'}
-            options={searchIntentOptions}
-            onChange={(searchIntent) => onChange({ ...draft, searchIntent })}
-          />
-        </InputField>
-        <InputField label="Order">
-          <input
-            type="number"
-            style={styles.input}
-            value={draft.order ?? 100}
-            onChange={(event) => onChange({ ...draft, order: Number(event.currentTarget.value) })}
-          />
-        </InputField>
-      </div>
-      <InputField label="Primary goal">
-        <textarea rows={3} style={styles.input} value={draft.primaryGoal || ''} onChange={(event) => onChange({ ...draft, primaryGoal: event.currentTarget.value })} />
-      </InputField>
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <InputField label="Primary KPI">
-          <input style={styles.input} value={draft.primaryKpi || ''} onChange={(event) => onChange({ ...draft, primaryKpi: event.currentTarget.value })} />
-        </InputField>
-        <InputField label="Topic / keyword cluster">
-          <input style={styles.input} value={draft.topicCluster || ''} onChange={(event) => onChange({ ...draft, topicCluster: event.currentTarget.value })} />
-        </InputField>
-      </div>
-      <InputField label="Positioning">
-        <textarea rows={3} style={styles.input} value={draft.positioning || ''} onChange={(event) => onChange({ ...draft, positioning: event.currentTarget.value })} />
-      </InputField>
-      <StringListEditor title="Target queries" items={draft.targetQueries || []} placeholder="Add a search phrase" onChange={(targetQueries) => onChange({ ...draft, targetQueries })} />
-      <StringListEditor title="Starter channel keys" items={draft.channels || []} placeholder="website, instagram, linkedin..." onChange={(channels) => onChange({ ...draft, channels })} />
-      <SuccessMetricListEditor metrics={draft.successMetrics || []} onChange={(successMetrics) => onChange({ ...draft, successMetrics })} />
-      <StringListEditor title="Designer guidance" items={draft.designerGuidance || []} placeholder="Add a production note" onChange={(designerGuidance) => onChange({ ...draft, designerGuidance })} />
-      <InputField label="Notes">
-        <textarea rows={4} style={styles.input} value={draft.notes || ''} onChange={(event) => onChange({ ...draft, notes: event.currentTarget.value })} />
-      </InputField>
-    </Stack>
-  )
-}
-
-function FunnelTemplateFields({
-  draft,
-  onChange,
-}: {
-  draft: MarketingTemplate
-  onChange: (draft: MarketingTemplate) => void
-}) {
-  return (
-    <Stack gap={12}>
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 10 }}>
-        <InputField label="Conversion goal">
-          <textarea rows={3} style={styles.input} value={draft.conversionGoal || ''} onChange={(event) => onChange({ ...draft, conversionGoal: event.currentTarget.value })} />
-        </InputField>
-        <InputField label="Order">
-          <input
-            type="number"
-            style={styles.input}
-            value={draft.order ?? 100}
-            onChange={(event) => onChange({ ...draft, order: Number(event.currentTarget.value) })}
-          />
-        </InputField>
-      </div>
-      <FunnelStageListEditor stages={draft.stages || []} onChange={(stages) => onChange({ ...draft, stages })} />
-    </Stack>
-  )
-}
-
-function StringListEditor({
-  title,
-  items,
-  placeholder,
-  onChange,
-}: {
-  title: string
-  items: string[]
-  placeholder: string
-  onChange: (items: string[]) => void
-}) {
-  const [newItem, setNewItem] = useState('')
-  const normalized = normalizeStringList(items)
-
-  const addItem = () => {
-    if (!newItem.trim()) return
-    onChange([...normalized, newItem.trim()])
-    setNewItem('')
-  }
-
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-      <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>{title}</h3>
-      <div style={{ display: 'grid', gap: 8 }}>
-        {normalized.map((item, index) => (
-          <div key={`${item}-${index}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-            <input
-              style={styles.input}
-              value={item}
-              onChange={(event) => onChange(normalized.map((value, valueIndex) => (valueIndex === index ? event.currentTarget.value : value)))}
-            />
-            <button type="button" style={styles.button} onClick={() => onChange(normalized.filter((_, valueIndex) => valueIndex !== index))}>
-              Remove
-            </button>
-          </div>
-        ))}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-          <input style={styles.input} value={newItem} placeholder={placeholder} onChange={(event) => setNewItem(event.currentTarget.value)} />
-          <button type="button" style={styles.button} onClick={addItem}>
-            Add item
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SuccessMetricListEditor({
-  metrics,
-  onChange,
-}: {
-  metrics: Array<{ _key?: string; label?: string; target?: string }>
-  onChange: (metrics: Array<{ _key?: string; label?: string; target?: string }>) => void
-}) {
-  const normalized = (metrics || []).map((metric) => ({ ...metric, _key: metric._key || randomKey() }))
-  const updateMetric = (key: string, patch: { label?: string; target?: string }) => {
-    onChange(normalized.map((metric) => (metric._key === key ? { ...metric, ...patch } : metric)))
-  }
-
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 16 }}>Success metrics</h3>
-        <button type="button" style={styles.button} onClick={() => onChange([...normalized, { _key: randomKey(), label: '', target: '' }])}>
-          Add metric
-        </button>
-      </div>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {normalized.map((metric) => (
-          <div key={metric._key} style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
-              <input style={styles.input} value={metric.label || ''} placeholder="Metric" onChange={(event) => updateMetric(metric._key || '', { label: event.currentTarget.value })} />
-              <button type="button" style={styles.button} onClick={() => onChange(normalized.filter((candidate) => candidate._key !== metric._key))}>
-                Remove
-              </button>
-            </div>
-            <textarea rows={2} style={styles.input} value={metric.target || ''} placeholder="How should we judge it?" onChange={(event) => updateMetric(metric._key || '', { target: event.currentTarget.value })} />
-          </div>
-        ))}
-        {normalized.length === 0 && <EmptyInline title="No metrics yet. Add the one or two signals designers should care about." />}
-      </div>
-    </div>
-  )
-}
-
-function FunnelStageListEditor({
-  stages,
-  onChange,
-}: {
-  stages: FunnelStage[]
-  onChange: (stages: FunnelStage[]) => void
-}) {
-  const normalized = normalizeFunnelStages(stages || [])
-  const updateStage = (key: string, patch: Partial<FunnelStage>) => {
-    onChange(normalized.map((stage) => (stage._key === key ? { ...stage, ...patch } : stage)))
-  }
-
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-        <h3 style={{ margin: 0, fontSize: 16 }}>Funnel stages</h3>
-        <button
-          type="button"
-          style={styles.button}
-          onClick={() => onChange([...normalized, { _key: randomKey(), _type: 'funnelStage', stage: 'awareness', goal: '', callToAction: '', metrics: [] }])}
-        >
-          Add funnel stage
-        </button>
-      </div>
-      <div style={{ display: 'grid', gap: 10 }}>
-        {normalized.map((stage) => (
-          <div key={stage._key} style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 10 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr auto', gap: 8, marginBottom: 8 }}>
-              <Select value={stage.stage || 'awareness'} options={funnelStageOptions} onChange={(value) => updateStage(stage._key, { stage: value })} />
-              <input style={styles.input} value={stage.callToAction || ''} placeholder="CTA" onChange={(event) => updateStage(stage._key, { callToAction: event.currentTarget.value })} />
-              <button type="button" style={styles.button} onClick={() => onChange(normalized.filter((candidate) => candidate._key !== stage._key))}>
-                Remove
-              </button>
-            </div>
-            <textarea rows={2} style={{ ...styles.input, marginBottom: 8 }} value={stage.goal || ''} placeholder="Stage goal" onChange={(event) => updateStage(stage._key, { goal: event.currentTarget.value })} />
-            <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <input style={styles.input} value={stage.offer || ''} placeholder="Offer" onChange={(event) => updateStage(stage._key, { offer: event.currentTarget.value })} />
-              <input
-                style={styles.input}
-                value={(stage.metrics || []).join(', ')}
-                placeholder="Metrics"
-                onChange={(event) =>
-                  updateStage(stage._key, {
-                    metrics: event.currentTarget.value
-                      .split(',')
-                      .map((metric) => metric.trim())
-                      .filter(Boolean),
-                  })
-                }
-              />
-            </div>
-          </div>
-        ))}
-        {normalized.length === 0 && <EmptyInline title="No stages yet. Add the path a visitor should move through." />}
-      </div>
-    </div>
-  )
-}
-
-function ChannelWorkspace({
-  client,
-  data,
-  savingId,
-  createDocument,
-  loadData,
-  commitPatch,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [selectedId, setSelectedId] = useState<string | null>(data.channels[0]?._id || null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const selected = data.channels.find((channel) => channel._id === selectedId) || null
-
-  useEffect(() => {
-    if (!selectedId && data.channels.length > 0) setSelectedId(data.channels[0]._id)
-  }, [data.channels, selectedId])
-
-  const createChannel = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingChannel',
-      title: '',
-      key: `new-channel-${Date.now()}`,
-      status: 'active',
-      platform: 'social',
-      contentTypes: [],
-    })
-    setSelectedId(createdId)
-  }
-
-  const deleteChannel = async (channel: MarketingChannel) => {
-    const usage = getChannelUsage(data, channel)
-    const usageText = [
-      usage.calendarCount ? `${usage.calendarCount} calendar item${usage.calendarCount === 1 ? '' : 's'}` : '',
-      usage.campaignCount ? `${usage.campaignCount} campaign${usage.campaignCount === 1 ? '' : 's'}` : '',
-    ]
-      .filter(Boolean)
-      .join(' and ')
-
-    const message = usage.total > 0
-      ? `Delete "${channel.title || channel.key}"? It is currently used by ${usageText}. Calendar items will keep their saved channel key, but the managed channel and its content type options will be removed.`
-      : `Delete "${channel.title || channel.key}"?`
-
-    if (!window.confirm(message)) return
-
-    setDeletingId(channel._id)
-    try {
-      const calendarItemsWithChannelRef = data.calendarItems.filter((item) => item.channelRef?._id === channel._id)
-      await Promise.all(
-        calendarItemsWithChannelRef.map((item) => client.patch(item._id).unset(['channelRef']).commit()),
-      )
-      await client.delete(channel._id)
-      setSelectedId(data.channels.find((candidate) => candidate._id !== channel._id)?._id || null)
-      await loadData()
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
-  return (
-    <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '390px minmax(0, 1fr)', gap: 16 }}>
-      <section style={styles.panel}>
-        <PanelHeading
-          title="Channels"
-          description="Manage where calendar content goes and which content types each channel supports."
-        />
-        <button
-          type="button"
-          style={{ ...styles.primaryButton, width: '100%', marginBottom: 16 }}
-          disabled={savingId === 'new'}
-          onClick={() => void createChannel()}
-        >
-          Add channel
-        </button>
-
-        <div style={{ display: 'grid', gap: 8 }}>
-          {data.channels.map((channel) => (
-            <button
-              key={channel._id}
-              type="button"
-              onClick={() => setSelectedId(channel._id)}
-              style={{
-                ...styles.card,
-                padding: 12,
-                textAlign: 'left',
-                cursor: 'pointer',
-                color: 'var(--card-fg-color)',
-                borderColor: channel._id === selectedId ? '#007385' : 'var(--card-border-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                <strong>{channel.title || channel.key || 'Untitled channel'}</strong>
-                <StatusPill status={channel.status} options={channelStatusOptions} />
-              </div>
-              <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-                {(channel.contentTypes || []).map((type) => type.label || type.value).filter(Boolean).join(', ') ||
-                  'No content types yet'}
-              </div>
-            </button>
-          ))}
-          {data.channels.length === 0 && (
-            <EmptyInline title="No channels yet. Add one here, then add its content types in the manager." />
-          )}
-        </div>
-      </section>
-
-      <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
-          <PanelHeading
-            title="Channel manager"
-            description="Calendar content type menus are generated from the selected channel's content types."
-          />
-          <div style={{ ...styles.small, ...styles.muted, textAlign: 'right' }}>
-            {data.channels.length} channels available to calendar
-          </div>
-        </div>
-        <ChannelEditor
-          channel={selected}
-          data={data}
-          saving={savingId === selected?._id || deletingId === selected?._id}
-          onSave={commitPatch}
-          onDelete={deleteChannel}
-        />
-      </section>
-    </div>
-  )
-}
-
-function ChannelEditor({
-  channel,
-  data,
-  saving,
-  onSave,
-  onDelete,
-}: {
-  channel: MarketingChannel | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onDelete: (channel: MarketingChannel) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<MarketingChannel | null>(channel)
-  const [newTypeLabel, setNewTypeLabel] = useState('')
-  const [newTypeValue, setNewTypeValue] = useState('')
-  const [newTypeDescription, setNewTypeDescription] = useState('')
-
-  useEffect(() => {
-    setDraft(channel ? { ...channel, contentTypes: normalizeContentTypes(channel.contentTypes || []) } : null)
-    setNewTypeLabel('')
-    setNewTypeValue('')
-    setNewTypeDescription('')
-  }, [channel])
-
-  if (!draft || !channel) {
-    return <EmptyPanel icon={TagIcon} title="Select a channel" description="Add a channel, then choose it to edit." />
-  }
-
-  const updateContentType = (key: string, patch: Partial<ChannelContentType>) => {
-    setDraft({
-      ...draft,
-      contentTypes: normalizeContentTypes(draft.contentTypes || []).map((type) =>
-        type._key === key ? { ...type, ...patch } : type,
-      ),
-    })
-  }
-
-  const addContentType = () => {
-    const label = newTypeLabel.trim()
-    if (!label) return
-
-    setDraft({
-      ...draft,
-      contentTypes: [
-        ...normalizeContentTypes(draft.contentTypes || []),
-        {
-          _key: randomKey(),
-          _type: 'channelContentType',
-          label,
-          value: slugify(newTypeValue || label),
-          description: newTypeDescription.trim() || undefined,
-        },
-      ],
-    })
-    setNewTypeLabel('')
-    setNewTypeValue('')
-    setNewTypeDescription('')
-  }
-
-  const removeContentType = (contentType: ChannelContentType) => {
-    const usage = getContentTypeUsage(data, channel, contentType)
-    const message = usage > 0
-      ? `Remove "${contentType.label || contentType.value}" from "${channel.title || channel.key}"? It is used by ${usage} calendar item${usage === 1 ? '' : 's'}. Existing items will keep the saved content type value, but it will no longer be a managed option.`
-      : `Remove "${contentType.label || contentType.value}" from "${channel.title || channel.key}"?`
-
-    if (!window.confirm(message)) return
-
-    setDraft({
-      ...draft,
-      contentTypes: normalizeContentTypes(draft.contentTypes || []).filter((type) => type._key !== contentType._key),
-    })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const channelSuggestion = suggestion.channel || {}
-    setDraft({
-      ...draft,
-      title: aiString(channelSuggestion.title) || draft.title,
-      key: aiString(channelSuggestion.key) || draft.key,
-      platform: aiChannelPlatform(channelSuggestion.platform) || draft.platform,
-      description: aiString(channelSuggestion.description) || draft.description,
-      defaultFunnelStage: aiOption(channelSuggestion.defaultFunnelStage, funnelStageOptions) || draft.defaultFunnelStage,
-      contentTypes: aiContentTypes(channelSuggestion.contentTypes) || draft.contentTypes,
-    })
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled channel',
-      key: slugify(draft.key || draft.title || 'channel'),
-      status: draft.status || 'active',
-      platform: draft.platform || 'other',
-      description: draft.description,
-      defaultFunnelStage: draft.defaultFunnelStage,
-      contentTypes: normalizeContentTypes(draft.contentTypes || []),
-    }
-    const unset = emptyKeys(set)
-    unset.forEach((key) => delete set[key])
-    await onSave(channel._id, set, unset)
-  }
-
-  const usage = getChannelUsage(data, channel)
-
-  return (
-    <Stack gap={12}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: 22 }}>Channel setup</h2>
-        <button
-          type="button"
-          style={{
-            ...styles.button,
-            borderColor: 'rgba(227, 98, 22, 0.6)',
-            color: '#e36216',
-            alignSelf: 'flex-start',
-          }}
-          disabled={saving}
-          onClick={() => void onDelete(channel)}
-        >
-          Delete channel
-        </button>
-      </div>
-      {usage.total > 0 && (
-        <div style={{ ...styles.panel, boxShadow: 'none', padding: 12, borderColor: 'rgba(214, 169, 63, 0.35)' }}>
-          <strong style={{ fontSize: 13 }}>Currently in use</strong>
-          <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-            {usage.calendarCount} calendar item{usage.calendarCount === 1 ? '' : 's'} and {usage.campaignCount} campaign
-            {usage.campaignCount === 1 ? '' : 's'} reference this channel key.
-          </div>
-        </div>
-      )}
-      <MarketingAiAssistPanel
-        kind="channel"
-        draft={draft as unknown as Record<string, unknown>}
-        analyticsTakeaways={buildAnalyticsInterpretations(data)}
-        onApply={applyAiSuggestion}
-      />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 10 }}>
-        <InputField label="Channel name">
-          <input
-            style={styles.input}
-            value={draft.title || ''}
-            onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Key">
-          <input
-            style={styles.input}
-            value={draft.key || ''}
-            onChange={(event) => setDraft({ ...draft, key: event.currentTarget.value })}
-          />
-        </InputField>
-      </div>
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-        <InputField label="Status">
-          <Select
-            value={draft.status || 'active'}
-            options={channelStatusOptions}
-            onChange={(status) => setDraft({ ...draft, status })}
-          />
-        </InputField>
-        <InputField label="Platform">
-          <Select
-            value={draft.platform || 'other'}
-            options={channelPlatformOptions}
-            onChange={(platform) => setDraft({ ...draft, platform })}
-          />
-        </InputField>
-        <InputField label="Default funnel stage">
-          <Select
-            value={draft.defaultFunnelStage || ''}
-            options={[{ title: 'None', value: '' }, ...funnelStageOptions]}
-            onChange={(defaultFunnelStage) => setDraft({ ...draft, defaultFunnelStage })}
-          />
-        </InputField>
-      </div>
-      <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Content types</h3>
-        <Stack gap={10}>
-          {normalizeContentTypes(draft.contentTypes || []).map((contentType) => {
-            const usageCount = getContentTypeUsage(data, channel, contentType)
-            return (
-              <div
-                data-mobile-stack="true"
-                key={contentType._key}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 150px 1fr auto',
-                  gap: 8,
-                  alignItems: 'start',
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 8,
-                  padding: 10,
-                }}
-              >
-                <InputField label="Label">
-                  <input
-                    style={styles.input}
-                    value={contentType.label || ''}
-                    onChange={(event) => updateContentType(contentType._key || '', { label: event.currentTarget.value })}
-                  />
-                </InputField>
-                <InputField label="Value">
-                  <input
-                    style={styles.input}
-                    value={contentType.value || ''}
-                    onChange={(event) => updateContentType(contentType._key || '', { value: slugify(event.currentTarget.value) })}
-                  />
-                  {usageCount > 0 && (
-                    <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-                      Used by {usageCount} item{usageCount === 1 ? '' : 's'}
-                    </div>
-                  )}
-                </InputField>
-                <InputField label="Description">
-                  <input
-                    style={styles.input}
-                    value={contentType.description || ''}
-                    onChange={(event) =>
-                      updateContentType(contentType._key || '', { description: event.currentTarget.value })
-                    }
-                  />
-                </InputField>
-                <button
-                  type="button"
-                  style={{
-                    ...styles.button,
-                    borderColor: usageCount > 0 ? 'rgba(227, 98, 22, 0.6)' : 'var(--card-border-color)',
-                    color: usageCount > 0 ? '#e36216' : 'var(--card-fg-color)',
-                    marginTop: 20,
-                  }}
-                  onClick={() => removeContentType(contentType)}
-                >
-                  Delete
-                </button>
-              </div>
-            )
-          })}
-          {normalizeContentTypes(draft.contentTypes || []).length === 0 && (
-            <EmptyInline title="No content types yet. Add each option as its own managed object." />
-          )}
-          <div
-            data-mobile-stack="true"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 150px 1fr auto',
-              gap: 8,
-              alignItems: 'end',
-              borderTop: '1px solid var(--card-border-color)',
-              paddingTop: 12,
-            }}
-          >
-            <InputField label="New label">
-              <input
-                style={styles.input}
-                value={newTypeLabel}
-                onChange={(event) => setNewTypeLabel(event.currentTarget.value)}
-                placeholder="Carousel"
-              />
-            </InputField>
-            <InputField label="New value">
-              <input
-                style={styles.input}
-                value={newTypeValue}
-                onChange={(event) => setNewTypeValue(event.currentTarget.value)}
-                placeholder="carousel"
-              />
-            </InputField>
-            <InputField label="Description">
-              <input
-                style={styles.input}
-                value={newTypeDescription}
-                onChange={(event) => setNewTypeDescription(event.currentTarget.value)}
-              />
-            </InputField>
-            <button type="button" style={styles.button} disabled={!newTypeLabel.trim()} onClick={addContentType}>
-              Add content type
-            </button>
-          </div>
-        </Stack>
-      </div>
-      <InputField label="Description">
-        <textarea
-          rows={3}
-          style={styles.input}
-          value={draft.description || ''}
-          onChange={(event) => setDraft({ ...draft, description: event.currentTarget.value })}
-        />
-      </InputField>
-      <details style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-        <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced fields</summary>
-        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-          <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-            Use the full Sanity document only when this manager does not expose the field you need.
-          </p>
-          <a href={advancedEditHref('marketingChannel', channel._id)} style={styles.inlineLink}>
-            <LaunchIcon style={{ width: 15, height: 15 }} />
-            Open full channel document
-          </a>
-        </div>
-      </details>
-      <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-        {saving ? 'Saving...' : 'Save channel'}
-      </button>
-    </Stack>
-  )
-}
-
-function LinkTreeWorkspace({
-  client,
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-  autopilotTarget,
-  onAutopilotComplete,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  autopilotTarget?: AutopilotWorkspaceTarget | null
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [selectedId, setSelectedId] = useState<string | null>(data.linkItems[0]?._id || null)
-  const selected = data.linkItems.find((item) => item._id === selectedId) || null
-  const calendarCandidates = data.calendarItems.filter((item) => {
-    const url = item.publishedUrl || item.workingUrl
-    if (!url) return false
-    return !data.linkItems.some((link) => link.calendarItem?._id === item._id || normalizeUrl(link.url) === normalizeUrl(url))
-  })
-
-  useEffect(() => {
-    if (!selectedId && data.linkItems.length > 0) setSelectedId(data.linkItems[0]._id)
-  }, [data.linkItems, selectedId])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'linkTree') return
-    const targetItem = autopilotTarget.recordId
-      ? data.linkItems.find((item) => item._id === autopilotTarget.recordId)
-      : null
-    if (targetItem || data.linkItems[0]) setSelectedId(targetItem?._id || data.linkItems[0]._id)
-  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.linkItems])
-
-  const createLink = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingLinkItem',
-      title: '',
-      status: 'draft',
-      type: 'other',
-      order: nextLinkOrder(data.linkItems),
-    })
-    setSelectedId(createdId)
-  }
-
-  const addFromCalendarItem = async (item: MarketingCalendarItem) => {
-    const url = item.publishedUrl || item.workingUrl
-    if (!url) return
-
-    const createdId = await createDocument({
-      _type: 'marketingLinkItem',
-      title: item.title || 'Untitled calendar link',
-      url,
-      description: trimDescription(item.brief),
-      type: calendarContentTypeToLinkType(item.contentType),
-      status: ['published', 'scheduled'].includes(item.status || '') ? 'active' : 'draft',
-      sourceChannel: item.channelRef?.key || item.channel || 'instagram',
-      order: nextLinkOrder(data.linkItems),
-      publishAt: item.publishAt ? dateInputToIso(toDateInputValue(item.publishAt)) : undefined,
-      calendarItem: { _type: 'reference', _ref: item._id },
-      calendarItems: refsFromIds([item._id]),
-      ...(item.campaign?._id ? { campaign: { _type: 'reference', _ref: item.campaign._id } } : {}),
-    })
-    await commitPatch(item._id, {
-      linkItems: refsFromIds(Array.from(new Set([...(item.linkItems || []).map((link) => link._id), createdId]))),
-    })
-    setSelectedId(createdId)
-  }
-
-  const uploadCoverImage = async (file: File) => {
-    if (!selected) return
-    const asset = await client.assets.upload('image', file, { filename: file.name })
-    await commitPatch(selected._id, {
-      image: {
-        _type: 'image',
-        asset: { _type: 'reference', _ref: asset._id },
-      },
-    })
-  }
-
-  const removeCoverImage = async () => {
-    if (!selected) return
-    await commitPatch(selected._id, {}, ['image'])
-  }
-
-  return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '430px minmax(0, 1fr)', gap: 16 }}>
-        <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
-          <PanelHeading
-            title="Quick Links"
-            description="Manage the public /links page for Instagram, social posts, and launch moments."
-          />
-          <button
-            type="button"
-            data-tour-id="autopilot-link-add"
-            style={{ ...styles.primaryButton, whiteSpace: 'nowrap' }}
-            disabled={savingId === 'new'}
-            onClick={() => void createLink()}
-          >
-            Create quick link
-          </button>
-        </div>
-        <div style={{ ...styles.panel, boxShadow: 'none', padding: 12, marginBottom: 14 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-            <div>
-              <strong style={{ fontSize: 13 }}>Public page</strong>
-            </div>
-            <a
-              href="/links"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Open Quick Links page"
-              title="/links is ready for the Instagram bio. /ig redirects there too."
-              style={{
-                ...styles.button,
-                width: 48,
-                height: 48,
-                padding: 0,
-                border: 'none',
-                background: 'transparent',
-                boxShadow: 'none',
-                color: '#007385',
-              }}
-            >
-              <LaunchIcon style={{ width: 26, height: 26 }} />
-            </a>
-          </div>
-        </div>
-        <LinkItemList
-          items={data.linkItems}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
-        <details style={{ ...styles.panel, boxShadow: 'none', padding: 12, marginTop: 14 }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Create from calendar</summary>
-          <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-            {calendarCandidates.length === 0 ? (
-              <div style={{ ...styles.small, ...styles.muted }}>
-                Calendar items with working or published URLs will appear here when they are not already on /links.
-              </div>
-            ) : (
-              calendarCandidates.slice(0, 5).map((item) => (
-                <button
-                  key={item._id}
-                  type="button"
-                  style={styles.templateButton}
-                  onClick={() => void addFromCalendarItem(item)}
-                >
-                  <strong style={{ fontSize: 13 }}>{item.title || 'Untitled calendar item'}</strong>
-                  <span style={{ ...styles.small, ...styles.muted }}>
-                    Create Quick Link from {[item.channelRef?.title || item.channel, item.publishedUrl ? 'published URL' : 'working URL'].filter(Boolean).join(' / ')}
-                  </span>
-                </button>
-              ))
-            )}
-          </div>
-        </details>
-        </section>
-
-        <LinkItemEditor
-          item={selected}
-          campaigns={data.campaigns}
-          calendarItems={data.calendarItems}
-          analyticsTakeaways={buildAnalyticsInterpretations(data)}
-          saving={savingId === selected?._id}
-          onSave={commitPatch}
-          onUploadCover={uploadCoverImage}
-          onRemoveCover={removeCoverImage}
-          onAutopilotComplete={onAutopilotComplete}
-        />
-      </div>
-    </div>
-  )
-}
-
-function LinkItemList({
-  items,
-  selectedId,
-  onSelect,
-}: {
-  items: MarketingLinkItem[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-}) {
-  if (items.length === 0) {
-    return (
-      <EmptyInline title="No managed links yet. Add a link above or create one from a calendar item to control what appears on /links." />
-    )
-  }
-
-  return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      {items.map((item) => {
-        const imageUrl = getLinkImageUrl(item)
-        const active = item._id === selectedId
-        return (
-          <button
-            key={item._id}
-            type="button"
-            onClick={() => onSelect(item._id)}
-            style={{
-              ...styles.card,
-              padding: 12,
-              textAlign: 'left',
-              cursor: 'pointer',
-              color: 'var(--card-fg-color)',
-              borderColor: active ? '#007385' : 'var(--card-border-color)',
-              background: active ? 'rgba(0, 115, 133, 0.08)' : 'var(--card-bg-color)',
-              display: 'grid',
-              gridTemplateColumns: '64px minmax(0, 1fr)',
-              gap: 12,
-              alignItems: 'center',
-            }}
-          >
-            <span
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 8,
-                overflow: 'hidden',
-                border: '1px solid var(--card-border-color)',
-                background: 'rgba(0, 115, 133, 0.08)',
-                display: 'grid',
-                placeItems: 'center',
-                color: '#007385',
-                fontWeight: 800,
-              }}
-            >
-              {imageUrl ? (
-                <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                item.title?.slice(0, 2).toUpperCase() || 'LI'
-              )}
-            </span>
-            <span style={{ minWidth: 0 }}>
-              <span style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-                <strong style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.title || 'Untitled link'}
-                </strong>
-                <StatusPill status={item.status} options={linkItemStatusOptions} />
-              </span>
-              <span
-                style={{
-                  ...styles.small,
-                  color: '#007385',
-                  display: 'block',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  marginTop: 4,
-                }}
-              >
-                {item.url || 'No URL yet'}
-              </span>
-              {item.description && (
-                <span
-                  style={{
-                    ...styles.small,
-                    ...styles.muted,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    marginTop: 4,
-                    lineHeight: 1.45,
-                  }}
-                >
-                  {item.description}
-                </span>
-              )}
-              <span style={{ ...styles.small, ...styles.muted, display: 'block', marginTop: 6 }}>
-                {[labelFor(linkItemTypeOptions, item.type), item.featured ? 'Featured' : '', item.sourceChannel ? `Promoted from ${item.sourceChannel}` : '']
-                  .filter(Boolean)
-                  .join(' / ') || 'No metadata yet'}
-              </span>
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function LinkItemEditor({
-  item,
-  campaigns,
-  calendarItems,
-  analyticsTakeaways,
-  saving,
-  onSave,
-  onUploadCover,
-  onRemoveCover,
-  onAutopilotComplete,
-}: {
-  item: MarketingLinkItem | null
-  campaigns: MarketingCampaign[]
-  calendarItems: MarketingCalendarItem[]
-  analyticsTakeaways: AnalyticsInterpretation[]
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onUploadCover: (file: File) => Promise<void>
-  onRemoveCover: () => Promise<void>
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [draft, setDraft] = useState<MarketingLinkItem | null>(item)
-  const [campaignId, setCampaignId] = useState('')
-  const [calendarItemId, setCalendarItemId] = useState('')
-  const [uploading, setUploading] = useState(false)
-
-  useEffect(() => {
-    setDraft(item)
-    setCampaignId(item?.campaign?._id || '')
-    setCalendarItemId(item?.calendarItem?._id || '')
-  }, [item])
-
-  if (!draft || !item) {
-    return (
-      <EmptyPanel
-        icon={LinkIcon}
-        title="Select a link"
-        description="Add or choose a link to manage the public /links page."
-      />
-    )
-  }
-
-  const relationshipRequired = !['site', 'project', 'other'].includes(draft.type || 'other')
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const linkSuggestion = suggestion.linkItem || {}
-    setDraft({
-      ...draft,
-      title: aiString(linkSuggestion.title) || draft.title,
-      description: aiString(linkSuggestion.description) || draft.description,
-      type: aiOption(linkSuggestion.type, linkItemTypeOptions) || draft.type,
-      sourceChannel: aiString(linkSuggestion.sourceChannel) || draft.sourceChannel,
-    })
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled link',
-      url: draft.url,
-      description: draft.description,
-      type: draft.type || 'other',
-      status: draft.status || 'active',
-      featured: !!draft.featured,
-      order: Number.isFinite(draft.order) ? draft.order : 100,
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
-      expiresAt: draft.expiresAt ? dateInputToIso(toDateInputValue(draft.expiresAt)) : undefined,
-      sourceChannel: draft.sourceChannel,
-    }
-    const unset: string[] = []
-
-    if (campaignId) {
-      set.campaign = { _type: 'reference', _ref: campaignId }
-    } else {
-      unset.push('campaign')
-    }
-
-    if (calendarItemId) {
-      set.calendarItem = { _type: 'reference', _ref: calendarItemId }
-      set.calendarItems = refsFromIds(Array.from(new Set([...(item.calendarItems || []).map((calendarItem) => calendarItem._id), calendarItemId])))
-    } else {
-      unset.push('calendarItem')
-    }
-
-    emptyKeys(set).forEach((key) => {
-      delete set[key]
-      unset.push(key)
-    })
-
-    await onSave(item._id, set, unset)
-    onAutopilotComplete?.({ action: 'link:save', recordId: item._id })
-  }
-
-  return (
-    <section data-tour-id="autopilot-link-editor" style={styles.panel}>
-      <PanelTitle title="Link editor" type="marketingLinkItem" id={item._id} />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
-        <Stack gap={12}>
-          <GuidanceChecklist
-            title="Link checklist"
-            items={[
-              { label: 'Title is clear without Instagram context', done: !!draft.title?.trim() },
-              { label: 'URL is set', done: !!draft.url?.trim() },
-              { label: 'Short description explains why to click', done: !!draft.description?.trim() },
-              {
-                label: 'Campaign or calendar item is connected for timed posts, events, or campaign links',
-                done: !relationshipRequired || !!campaignId || !!calendarItemId,
-              },
-            ]}
-          />
-          <MarketingAiAssistPanel
-            kind="linkItem"
-            draft={draft as unknown as Record<string, unknown>}
-            analyticsTakeaways={analyticsTakeaways}
-            onApply={applyAiSuggestion}
-          />
-          <InputField label="What should the link say?" help="This has to make sense outside Instagram or any one post.">
-            <input
-              style={styles.input}
-              value={draft.title || ''}
-              onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Where should it send people?">
-            <input
-              style={styles.input}
-              value={draft.url || ''}
-              onChange={(event) => setDraft({ ...draft, url: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Why should someone click it?" help="One or two short sentences that explain the value of the destination.">
-            <textarea
-              rows={4}
-              style={styles.input}
-              value={draft.description || ''}
-              onChange={(event) => setDraft({ ...draft, description: event.currentTarget.value })}
-            />
-          </InputField>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InputField label="What kind of destination is it?">
-              <Select
-                value={draft.type || 'other'}
-                options={linkItemTypeOptions}
-                onChange={(type) => setDraft({ ...draft, type })}
-              />
-            </InputField>
-            <InputField label="Is it mainly promoted from one place?" help="Optional. Use this only when the link exists because of a specific source like Instagram.">
-              <input
-                style={styles.input}
-                value={draft.sourceChannel || ''}
-                onChange={(event) => setDraft({ ...draft, sourceChannel: optionalSlug(event.currentTarget.value) })}
-                placeholder="instagram"
-              />
-              <div style={{ ...styles.small, ...styles.muted, marginTop: 5, lineHeight: 1.45 }}>
-                Only use this when a link is mainly promoted somewhere specific, like the Instagram bio. Evergreen links can leave it blank.
-              </div>
-            </InputField>
-          </div>
-        </Stack>
-        <Stack gap={12}>
-          <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Cover image</h3>
-            {draft.image?.asset?.url ? (
-              <img
-                src={draft.image.asset.url}
-                alt=""
-                style={{
-                  width: '100%',
-                  aspectRatio: '1 / 1',
-                  objectFit: 'cover',
-                  borderRadius: 8,
-                  border: '1px solid var(--card-border-color)',
-                  marginBottom: 10,
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  border: '1px dashed var(--card-border-color)',
-                  borderRadius: 8,
-                  aspectRatio: '1 / 1',
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: 'var(--card-muted-fg-color)',
-                  marginBottom: 10,
-                }}
-              >
-                No image
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              disabled={uploading || saving}
-              style={{ ...styles.input, padding: 8 }}
-              onChange={(event) => {
-                const input = event.currentTarget
-                const file = input.files?.[0]
-                if (!file) return
-                setUploading(true)
-                void onUploadCover(file).finally(() => {
-                  setUploading(false)
-                  input.value = ''
-                })
-              }}
-            />
-            {draft.image?.asset?.url && (
-              <button
-                type="button"
-                style={{ ...styles.button, width: '100%', marginTop: 8 }}
-                disabled={uploading || saving}
-                onClick={() => void onRemoveCover()}
-              >
-                Remove image
-              </button>
-            )}
-            <div style={{ ...styles.small, ...styles.muted, marginTop: 8 }}>
-              {uploading ? 'Uploading image...' : 'Used as the thumbnail on /links.'}
-            </div>
-          </div>
-          <InputField label="Should this show on the public page?">
-            <Select
-              value={draft.status || 'active'}
-              options={linkItemStatusOptions}
-              onChange={(status) => setDraft({ ...draft, status })}
-            />
-          </InputField>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
-            <input
-              type="checkbox"
-              checked={!!draft.featured}
-              onChange={(event) => setDraft({ ...draft, featured: event.currentTarget.checked })}
-            />
-            Featured
-          </label>
-          <InputField label="Where should it appear in the list?">
-            <input
-              type="number"
-              style={styles.input}
-              value={draft.order ?? 100}
-              onChange={(event) => setDraft({ ...draft, order: Number(event.currentTarget.value) })}
-            />
-          </InputField>
-          <InputField label="When should it start showing?">
-            <input
-              type="date"
-              style={styles.input}
-              value={toDateInputValue(draft.publishAt)}
-              onChange={(event) => setDraft({ ...draft, publishAt: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="When should it stop showing?">
-            <input
-              type="date"
-              style={styles.input}
-              value={toDateInputValue(draft.expiresAt)}
-              onChange={(event) => setDraft({ ...draft, expiresAt: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Which campaign is this connected to?">
-            <Select
-              value={campaignId}
-              options={[{ title: 'No campaign', value: '' }, ...campaigns.map((campaign) => ({ title: campaign.title || 'Untitled campaign', value: campaign._id }))]}
-              onChange={setCampaignId}
-            />
-          </InputField>
-          <InputField label="Which post or content item uses this link?">
-            <Select
-              value={calendarItemId}
-              options={[{ title: 'No calendar item', value: '' }, ...calendarItems.map((calendarItem) => ({ title: calendarItem.title || 'Untitled item', value: calendarItem._id }))]}
-              onChange={setCalendarItemId}
-            />
-          </InputField>
-          <AdvancedFieldsDropdown type="marketingLinkItem" id={item._id} />
-          <button type="button" data-tour-id="autopilot-link-save" style={styles.primaryButton} disabled={saving || !draft.url?.trim()} onClick={() => void save()}>
-            {saving ? 'Saving...' : 'Save link'}
-          </button>
-        </Stack>
-      </div>
-    </section>
-  )
-}
-
 type AbTestingEditorTab = 'setup' | 'launch' | 'results'
 type AbTestingPageMode = 'dashboard' | 'configuration'
 
@@ -15091,7 +12598,15 @@ function AbTestingWorkspace({
   const selectedLaunchPercent = selectedLaunchItems.length > 0 ? Math.round((selectedLaunchReady / selectedLaunchItems.length) * 100) : 0
   const selectedComparisons = draft ? getAbTestingComparativeResults(draft, 5) : []
   const selectedResultSummary = draft ? getAbTestingComparisonSummary(draft, selectedComparisons) : null
-  const hasAnyTests = data.experiments.length > 0
+  // The main dashboard list hides both archived and 'idea' (draft) tests so the
+  // initial view only shows tests that are at least scheduled/launched. A newly
+  // created test starts as 'idea' and is reached through the create flow, which
+  // selects it and opens its editor directly (pageMode 'configuration') rather
+  // than relying on this list — so hidden idea tests are never lost.
+  const listedExperiments = data.experiments.filter(
+    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
+  )
+  const hasAnyTests = listedExperiments.length > 0
   const workspaceGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: compactLayout ? 12 : 16, alignItems: 'start' }
   const setupGridStyle: CSSProperties = compactLayout
     ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, alignItems: 'start' }
@@ -15381,7 +12896,7 @@ function AbTestingWorkspace({
 
           {hasAnyTests ? (
             <div data-mobile-stack="true" style={abTestCardGridStyle}>
-              {data.experiments.map((experiment) => (
+              {listedExperiments.map((experiment) => (
                 <AbTestingDashboardCard
                   key={experiment._id}
                   experiment={experiment}
@@ -15823,12 +13338,24 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
   const variants = getAbTestingVariantOptions(experiment)
   const gridTemplateColumns = `minmax(190px, 1.1fr) repeat(${variants.length}, minmax(150px, 1fr))`
 
+  // Per-variant SESSION engagement (visits, bounce rate, avg time on page) read
+  // off the linked signals. Backward-compatible: missing values render as '—'.
+  const engagementByVariant = variants.map((variant) => ({ variant, engagement: getAbTestingVariantEngagement(experiment, variant) }))
+  const engagementRows: Array<{ key: string; label: string; format: (engagement: AbTestingVariantEngagement) => string }> = [
+    { key: 'engagement-visits', label: 'Visits', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
+    { key: 'engagement-bounce', label: 'Bounce rate', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
+    { key: 'engagement-avg-time', label: 'Avg time on page', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
+  ]
+  const hasEngagement = engagementByVariant.some(
+    ({ engagement }) => engagement.sessions !== null || engagement.bounceRate !== null || engagement.averageSessionDuration !== null,
+  )
+
   return (
     <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12, display: 'grid', gap: 10 }}>
       <div>
         <h3 style={{ margin: 0, fontSize: 16 }}>Visits and events</h3>
         <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Shows total visits or exposures for each version, then how many visitors triggered each tracked event.
+          Shows total visits or exposures for each version, then how many visitors triggered each tracked event, plus per-version visits, bounce rate, and avg time on page.
         </p>
       </div>
       <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>
@@ -15866,8 +13393,26 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
               ))}
             </Fragment>
           ))}
+          {engagementRows.map((engagementRow) => (
+            <Fragment key={engagementRow.key}>
+              <div style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
+                <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.25 }}>{engagementRow.label}</strong>
+                <span style={{ ...styles.small, ...styles.muted }}>session engagement</span>
+              </div>
+              {engagementByVariant.map(({ variant, engagement }) => (
+                <div key={`${engagementRow.key}-${variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
+                  <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{engagementRow.format(engagement)}</strong>
+                </div>
+              ))}
+            </Fragment>
+          ))}
         </div>
       </div>
+      {!hasEngagement && (
+        <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>
+          Visits, bounce rate, and avg time on page fill in once the GA4 session readout has run for this test.
+        </p>
+      )}
     </div>
   )
 }
@@ -17037,7 +14582,7 @@ function DocumentList<T extends { _id: string; title?: string; status?: string }
   )
 }
 
-function FunnelTabButton({
+export function FunnelTabButton({
   active,
   onClick,
   children,
@@ -17076,7 +14621,7 @@ function FunnelTabButton({
   )
 }
 
-function TemplateRail<T extends { id: string; title: string; description: string }>({
+export function TemplateRail<T extends { id: string; title: string; description: string }>({
   title,
   description,
   templates,
@@ -17103,7 +14648,7 @@ function TemplateRail<T extends { id: string; title: string; description: string
   )
 }
 
-function GuidanceChecklist({
+export function GuidanceChecklist({
   id,
   title,
   items,
@@ -17151,7 +14696,7 @@ function GuidanceChecklist({
   )
 }
 
-function RelationshipChecklist<T extends { _id: string; title?: string }>({
+export function RelationshipChecklist<T extends { _id: string; title?: string }>({
   title,
   items,
   selectedIds,
@@ -17199,7 +14744,7 @@ function RelationshipChecklist<T extends { _id: string; title?: string }>({
   )
 }
 
-function RelationshipUsagePanel<T extends { _id: string; title?: string }>({
+export function RelationshipUsagePanel<T extends { _id: string; title?: string }>({
   title,
   items,
   emptyText,
@@ -17230,7 +14775,7 @@ function RelationshipUsagePanel<T extends { _id: string; title?: string }>({
   )
 }
 
-function PanelTitle({ title, type, id }: { title: string; type: string; id: string }) {
+export function PanelTitle({ title, type, id }: { title: string; type: string; id: string }) {
   void type
   void id
   return (
@@ -17240,7 +14785,7 @@ function PanelTitle({ title, type, id }: { title: string; type: string; id: stri
   )
 }
 
-function AdvancedFieldsDropdown({ type, id }: { type: string; id: string }) {
+export function AdvancedFieldsDropdown({ type, id }: { type: string; id: string }) {
   return (
     <details style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
       <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced fields</summary>
@@ -17257,7 +14802,7 @@ function AdvancedFieldsDropdown({ type, id }: { type: string; id: string }) {
   )
 }
 
-function PanelHeading({ title, description }: { title: string; description: string }) {
+export function PanelHeading({ title, description }: { title: string; description: string }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <h2 style={{ margin: 0, fontSize: 22 }}>{title}</h2>
@@ -17266,7 +14811,7 @@ function PanelHeading({ title, description }: { title: string; description: stri
   )
 }
 
-function EmptyPanel({
+export function EmptyPanel({
   icon: Icon,
   title,
   description,
@@ -17295,7 +14840,7 @@ function EmptyPanel({
   )
 }
 
-function EmptyInline({ title }: { title: string }) {
+export function EmptyInline({ title }: { title: string }) {
   return (
     <div
       style={{
@@ -17311,7 +14856,7 @@ function EmptyInline({ title }: { title: string }) {
   )
 }
 
-function InputField({
+export function InputField({
   label,
   help,
   children,
@@ -17334,7 +14879,7 @@ function InputField({
   )
 }
 
-function Select({
+export function Select({
   value,
   options,
   onChange,
@@ -17371,11 +14916,11 @@ function Select({
   )
 }
 
-function Stack({ children, gap }: { children: React.ReactNode; gap: number }) {
+export function Stack({ children, gap }: { children: React.ReactNode; gap: number }) {
   return <div style={{ display: 'grid', gap, minWidth: 0 }}>{children}</div>
 }
 
-function StatusPill({ status, options }: { status?: string; options?: SelectOption[] }) {
+export function StatusPill({ status, options }: { status?: string; options?: SelectOption[] }) {
   const colors = getStatusColor(status)
   return (
     <span
@@ -17407,7 +14952,7 @@ function StatusPill({ status, options }: { status?: string; options?: SelectOpti
   )
 }
 
-function MetricSummary({
+export function MetricSummary({
   metrics,
   title = 'Success metrics',
 }: {
@@ -17472,22 +15017,22 @@ function labelizeAiField(key: string) {
     .replace(/^\w/, (letter) => letter.toUpperCase())
 }
 
-function aiString(value: unknown) {
+export function aiString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
-function aiOption(value: unknown, options: Array<{ value: string }>) {
+export function aiOption(value: unknown, options: Array<{ value: string }>) {
   const candidate = aiString(value)
   return candidate && options.some((option) => option.value === candidate) ? candidate : undefined
 }
 
-function aiChannelPlatform(value: unknown) {
+export function aiChannelPlatform(value: unknown) {
   const candidate = aiString(value)?.toLowerCase()
   if (candidate === 'instagram' || candidate === 'linkedin' || candidate === 'socialmedia') return 'social'
   return aiOption(value, channelPlatformOptions)
 }
 
-function aiStringList(value: unknown) {
+export function aiStringList(value: unknown) {
   if (!Array.isArray(value)) return undefined
   const strings = Array.from(new Set(value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean)))
   return strings.length > 0 ? strings : undefined
@@ -17499,7 +15044,7 @@ function aiRecords(value: unknown) {
     : []
 }
 
-function aiFunnelStages(value: unknown) {
+export function aiFunnelStages(value: unknown) {
   const stages = aiRecords(value)
     .map((stage): FunnelStage => ({
       _key: aiString(stage._key) || randomKey(),
@@ -17515,7 +15060,7 @@ function aiFunnelStages(value: unknown) {
   return stages.length > 0 ? stages : undefined
 }
 
-function aiContentTypes(value: unknown) {
+export function aiContentTypes(value: unknown) {
   const contentTypes = aiRecords(value)
     .map((contentType): ChannelContentType => {
       const label = aiString(contentType.label) || aiString(contentType.value) || 'Content type'
@@ -17639,7 +15184,7 @@ function aiExperimentSuccessTrackers(value: unknown) {
   return trackers.length > 0 ? trackers : undefined
 }
 
-function aiTemplateSuccessMetrics(value: unknown) {
+export function aiTemplateSuccessMetrics(value: unknown) {
   const metrics: Array<{ _key: string; label: string; target?: string }> = []
   aiRecords(value).forEach((metric) => {
     const label = aiString(metric.label)
@@ -17661,10 +15206,6 @@ function getStatusColor(status?: string) {
   }
 }
 
-function getLinkImageUrl(item: MarketingLinkItem) {
-  return item.image?.asset?.url || ''
-}
-
 function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLinkItem[]) {
   const explicitLinks = item.linkItems || []
   const linkedByReference = linkItems.filter(
@@ -17682,7 +15223,11 @@ function isCalendarItemPublishReady(item: MarketingCalendarItem) {
 }
 
 export function getAbTestingStats(data: MarketingData) {
-  const activeTests = data.experiments.filter((experiment) => experiment.status !== 'archived')
+  // Active tests exclude archived AND 'idea' drafts, mirroring the main list so
+  // the summary chips count the same tests the dashboard shows.
+  const activeTests = data.experiments.filter(
+    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
+  )
   const pageTests = activeTests.filter(isPageExperiment)
   const runningTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'running')
   const blockedTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'blocked')
@@ -17711,7 +15256,10 @@ export function getAbTestingStats(data: MarketingData) {
 
 export function buildAbTestingInsights(data: MarketingData): AbTestingInsight[] {
   const insights: AbTestingInsight[] = []
-  const activeTests = data.experiments.filter((experiment) => experiment.status !== 'archived')
+  // Active tests exclude archived AND 'idea' drafts, mirroring the main list.
+  const activeTests = data.experiments.filter(
+    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
+  )
   const pageTests = activeTests.filter(isPageExperiment)
   const runningTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'running')
   const connectedSources = data.analyticsSources.filter((source) => source.status !== 'disabled' && isConnectedAnalyticsSource(source))
@@ -18536,6 +16084,59 @@ function getAbTestingMetricMatchScore(metric: PerformanceSignalMetric, trackedMe
 function numericPerformanceMetricValue(metric?: PerformanceSignalMetric) {
   if (!metric || typeof metric.value !== 'number' || !Number.isFinite(metric.value)) return null
   return metric.value
+}
+
+type AbTestingVariantEngagement = {
+  sessions: number | null
+  bounceRate: number | null
+  averageSessionDuration: number | null
+}
+
+/**
+ * Reads per-variant session engagement (visits, bounce rate, avg time on page)
+ * off the experiment's linked signals. Optional + backward-compatible: signals
+ * without a variantEngagement field simply yield empty cells (rendered as '—').
+ * Matches a variant by its key (case-insensitive) so it lines up with the same
+ * variant columns the event table renders.
+ */
+function getAbTestingVariantEngagement(
+  experiment: MarketingExperiment,
+  variant: AbTestingVariantOption,
+): AbTestingVariantEngagement {
+  const target = normalizeAbTestingMetricKey(variant.key)
+  const targetLabel = normalizeAbTestingMetricKey(variant.label)
+  for (const signal of uniqueById((experiment.performanceSignals || []).filter(Boolean))) {
+    for (const entry of signal.variantEngagement || []) {
+      const entryKey = normalizeAbTestingMetricKey(entry.variantKey)
+      if (!entryKey || (entryKey !== target && entryKey !== targetLabel)) continue
+      return {
+        sessions: typeof entry.sessions === 'number' && Number.isFinite(entry.sessions) ? entry.sessions : null,
+        bounceRate: typeof entry.bounceRate === 'number' && Number.isFinite(entry.bounceRate) ? entry.bounceRate : null,
+        averageSessionDuration:
+          typeof entry.averageSessionDuration === 'number' && Number.isFinite(entry.averageSessionDuration)
+            ? entry.averageSessionDuration
+            : null,
+      }
+    }
+  }
+  return { sessions: null, bounceRate: null, averageSessionDuration: null }
+}
+
+/** Formats a 0–1 fraction or 0–100 percent bounce rate as a whole-ish percent. */
+function formatAbTestingBounceRate(value: number | null): string {
+  if (value === null) return '—'
+  const percent = value <= 1 ? value * 100 : value
+  const rounded = Math.round(percent * 10) / 10
+  return `${rounded}%`
+}
+
+/** Formats average session duration (seconds) as m:ss. */
+function formatAbTestingAvgTime(seconds: number | null): string {
+  if (seconds === null || seconds < 0) return '—'
+  const total = Math.round(seconds)
+  const minutes = Math.floor(total / 60)
+  const secs = total % 60
+  return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
 function isAbTestingExposureMetric(metric: ExperimentTrackedMetric) {
@@ -21776,7 +19377,7 @@ function getCalendarTemplate(id: string) {
   return CALENDAR_ITEM_TEMPLATES.find((template) => template.id === id)
 }
 
-function getCampaignTemplates(data?: Pick<MarketingData, 'templates'>) {
+export function getCampaignTemplates(data?: Pick<MarketingData, 'templates'>) {
   const managed = (data?.templates || [])
     .filter((template) => template.kind === 'campaign' && template.status !== 'archived')
     .map(marketingTemplateToCampaignTemplate)
@@ -21788,7 +19389,7 @@ function getCampaignTemplate(id: string, data?: Pick<MarketingData, 'templates'>
   return getCampaignTemplates(data).find((template) => template.id === id)
 }
 
-function getFunnelTemplates(data?: Pick<MarketingData, 'templates'>) {
+export function getFunnelTemplates(data?: Pick<MarketingData, 'templates'>) {
   const managed = (data?.templates || [])
     .filter((template) => template.kind === 'funnel' && template.status !== 'archived')
     .map(marketingTemplateToFunnelTemplate)
@@ -21843,7 +19444,7 @@ function normalizeTemplateSuccessMetrics(metrics: Array<{ label?: string; target
     .filter((metric) => metric.label || metric.target)
 }
 
-function getChannelOptions(channels: MarketingChannel[]) {
+export function getChannelOptions(channels: MarketingChannel[]) {
   return channels
     .filter((channel) => channel.key && channel.status !== 'archived')
     .map((channel) => ({
@@ -24449,7 +22050,7 @@ function buildCarouselBrief(questionnaire: MarketingPlanQuestionnaire) {
   ].join('\n')
 }
 
-function getChannelByKey(channels: MarketingChannel[], key?: string) {
+export function getChannelByKey(channels: MarketingChannel[], key?: string) {
   if (!key) return undefined
   return channels.find((channel) => channel.key === key)
 }
@@ -24465,40 +22066,6 @@ function getContentTypeOptionsForChannel(channelKey: string | undefined, channel
   }))
 }
 
-function normalizeContentTypes(types: ChannelContentType[]): ChannelContentType[] {
-  return types
-    .filter((type) => type.label || type.value)
-    .map((type): ChannelContentType => {
-      const label = type.label || type.value || 'Untitled type'
-      return {
-        _key: type._key || randomKey(),
-        _type: 'channelContentType',
-        label,
-        value: slugify(type.value || label),
-        description: type.description || undefined,
-      }
-    })
-}
-
-function getChannelUsage(data: MarketingData, channel: MarketingChannel) {
-  const channelKey = channel.key || ''
-  const calendarCount = data.calendarItems.filter((item) => {
-    return item.channelRef?._id === channel._id || (channelKey && item.channel === channelKey)
-  }).length
-  const campaignCount = data.campaigns.filter((campaign) => {
-    return (
-      (channelKey && (campaign.channels || []).includes(channelKey)) ||
-      (campaign.channelRefs || []).some((ref) => ref._id === channel._id)
-    )
-  }).length
-
-  return {
-    calendarCount,
-    campaignCount,
-    total: calendarCount + campaignCount,
-  }
-}
-
 function getCampaignCalendarCount(data: MarketingData, campaignId: string) {
   return data.calendarItems.filter((item) => item.campaign?._id === campaignId).length
 }
@@ -24507,18 +22074,7 @@ function getFunnelCampaignCount(data: MarketingData, funnelId: string) {
   return data.campaigns.filter((campaign) => (campaign.funnels || []).some((ref) => ref._id === funnelId)).length
 }
 
-function getContentTypeUsage(data: MarketingData, channel: MarketingChannel, contentType: ChannelContentType) {
-  const channelKey = channel.key || ''
-  const typeValue = contentType.value || ''
-  if (!channelKey || !typeValue) return 0
-
-  return data.calendarItems.filter((item) => {
-    const matchesChannel = item.channelRef?._id === channel._id || item.channel === channelKey
-    return matchesChannel && item.contentType === typeValue
-  }).length
-}
-
-function getCampaignChannelKeys(campaign: MarketingCampaign) {
+export function getCampaignChannelKeys(campaign: MarketingCampaign) {
   return Array.from(
     new Set([
       ...(campaign.channels || []),
@@ -24527,30 +22083,26 @@ function getCampaignChannelKeys(campaign: MarketingCampaign) {
   )
 }
 
-function labelFor(options: SelectOption[], value?: string) {
+export function labelFor(options: SelectOption[], value?: string) {
   return options.find((option) => option.value === value)?.title || value || ''
 }
 
-function emptyKeys(record: Record<string, unknown>) {
+export function emptyKeys(record: Record<string, unknown>) {
   return Object.keys(record).filter((key) => record[key] === undefined || record[key] === '')
 }
 
-function normalizeUrl(value?: string) {
-  return (value || '').trim().replace(/\/+$/, '').toLowerCase()
-}
-
-function nextLinkOrder(items: MarketingLinkItem[]) {
+export function nextLinkOrder(items: MarketingLinkItem[]) {
   const highest = items.reduce((max, item) => Math.max(max, item.order || 0), 0)
   return highest + 10
 }
 
-function trimDescription(value?: string) {
+export function trimDescription(value?: string) {
   const trimmed = (value || '').replace(/\s+/g, ' ').trim()
   if (!trimmed) return undefined
   return trimmed.length > 150 ? `${trimmed.slice(0, 147)}...` : trimmed
 }
 
-function calendarContentTypeToLinkType(contentType?: string) {
+export function calendarContentTypeToLinkType(contentType?: string) {
   if (contentType === 'caseStudy') return 'caseStudy'
   if (['article', 'newsletter', 'socialPost', 'carousel', 'reel', 'post', 'video'].includes(contentType || '')) return 'article'
   if (contentType === 'event') return 'event'
@@ -24558,7 +22110,7 @@ function calendarContentTypeToLinkType(contentType?: string) {
   return 'other'
 }
 
-function normalizeSuccessMetrics(metrics: Array<{ _key?: string; label?: string; target?: string; source?: RefSummary | ReferenceValue }>): SuccessMetric[] {
+export function normalizeSuccessMetrics(metrics: Array<{ _key?: string; label?: string; target?: string; source?: RefSummary | ReferenceValue }>): SuccessMetric[] {
   return metrics
     .filter((metric) => metric.label || metric.target)
     .map((metric) => {
@@ -24576,7 +22128,7 @@ function normalizeSuccessMetrics(metrics: Array<{ _key?: string; label?: string;
     })
 }
 
-function normalizeFunnelStages(stages: Array<Omit<FunnelStage, '_key' | '_type'> | FunnelStage>): FunnelStage[] {
+export function normalizeFunnelStages(stages: Array<Omit<FunnelStage, '_key' | '_type'> | FunnelStage>): FunnelStage[] {
   return stages.map((stage): FunnelStage => ({
     ...stage,
     _key: '_key' in stage && stage._key ? stage._key : randomKey(),
@@ -24584,38 +22136,11 @@ function normalizeFunnelStages(stages: Array<Omit<FunnelStage, '_key' | '_type'>
   }))
 }
 
-function normalizeStringList(items: string[]) {
+export function normalizeStringList(items: string[]) {
   return Array.from(new Set((items || []).map((item) => item.trim()).filter(Boolean)))
 }
 
-function defaultMarketingTemplateDocument(kind: 'campaign' | 'funnel'): MarketingDocumentInput {
-  if (kind === 'campaign') {
-    return {
-      _type: 'marketingTemplate',
-      title: '',
-      kind: 'campaign',
-      status: 'active',
-      order: 100,
-      campaignObjective: 'awareness',
-      searchIntent: 'learn',
-      targetQueries: [],
-      channels: [],
-      successMetrics: [],
-      designerGuidance: [],
-    }
-  }
-
-  return {
-    _type: 'marketingTemplate',
-    title: '',
-    kind: 'funnel',
-    status: 'active',
-    order: 100,
-    stages: [],
-  }
-}
-
-function advancedEditHref(type: string, id: string) {
+export function advancedEditHref(type: string, id: string) {
   return `/studio/content/intent/edit/id=${encodeURIComponent(id)};type=${encodeURIComponent(type)}`
 }
 
@@ -24628,7 +22153,7 @@ function formatDateOnly(value?: string | Date) {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function dateRange(start?: string, end?: string) {
+export function dateRange(start?: string, end?: string) {
   if (start && end) return `${start} to ${end}`
   return start || end || ''
 }

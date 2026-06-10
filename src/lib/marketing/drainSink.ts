@@ -16,12 +16,14 @@ import { createClient as createKvClient, type VercelKV } from '@vercel/kv'
 import {
   buildDrainPerformanceSignalDoc,
   buildSignalMetricsFromAggregates,
+  buildVariantEngagementEntries,
   drainSignalId,
   summarizeDrainSignal,
   DEFAULT_EXPOSURE_EVENT,
   type DrainAggregate,
   type DrainConversionEvent,
   type DrainSignalVariant,
+  type VariantEngagementInput,
 } from '@/lib/marketing/vercelDrain'
 
 export type ExperimentForDrain = {
@@ -85,7 +87,7 @@ export async function upsertDrainSignalForFlag(
   client: SanityClient,
   flagKey: string,
   flagAggregates: DrainAggregate[],
-  options: { metricDate?: string } = {},
+  options: { metricDate?: string; variantEngagement?: VariantEngagementInput[] } = {},
 ): Promise<UpsertDrainResult> {
   const experiment = await client.fetch<ExperimentForDrain | null>(
     `*[_type == "marketingExperiment" && flagKey == $flagKey][0]${EXPERIMENT_FOR_DRAIN_PROJECTION}`,
@@ -112,6 +114,13 @@ export async function upsertDrainSignalForFlag(
   })
   const interpretation = summarizeDrainSignal({ metrics, variants, conversionEvents, exposureEventName: DEFAULT_EXPOSURE_EVENT })
 
+  // Per-variant session engagement is optional and backward-compatible: only the
+  // GA4 path supplies it today, and it is kept only for known variant keys.
+  const variantEngagement = buildVariantEngagementEntries(
+    options.variantEngagement,
+    variants.map((variant) => variant.key),
+  )
+
   const metricDate = options.metricDate || new Date().toISOString().slice(0, 10)
   const signalId = drainSignalId(flagKey)
   const pageUrl = experiment.targetPath
@@ -123,6 +132,7 @@ export async function upsertDrainSignalForFlag(
     flagKey,
     pageUrl,
     metrics,
+    variantEngagement,
     interpretation,
     metricDate,
     periodEnd: metricDate,
