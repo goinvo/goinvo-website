@@ -6,6 +6,7 @@ import {
   getKvClient,
   kvCounterKey,
   upsertDrainSignalForFlag,
+  variantEngagementFromKvHash,
   KV_FLAGS_KEY,
 } from '@/lib/marketing/drainSink'
 
@@ -48,7 +49,11 @@ export async function GET(request: NextRequest) {
     const hash = (await kv.hgetall(kvCounterKey(flagKey))) as Record<string, unknown> | null
     const aggregates = aggregatesFromKvHash(flagKey, hash)
     if (aggregates.length === 0) continue
-    const result = await upsertDrainSignalForFlag(client, flagKey, aggregates, { metricDate })
+    // First-party per-variant engagement (time-on-page + bounce) from the same
+    // hash's reserved `__eng_*` fields. This now OWNS engagement on the signal —
+    // GA4 (ga4-ab) no longer writes it.
+    const variantEngagement = variantEngagementFromKvHash(hash)
+    const result = await upsertDrainSignalForFlag(client, flagKey, aggregates, { metricDate, variantEngagement })
     warnings.push(...result.warnings)
     if (result.updated) updatedSignals += 1
   }

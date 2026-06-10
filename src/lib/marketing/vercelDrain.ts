@@ -60,12 +60,12 @@ export interface DrainSignalMetric {
 }
 
 /**
- * Per-variant SESSION engagement, sourced from GA4's sessions / bounceRate /
- * averageSessionDuration. Because `variant` is an event-scoped custom dimension,
- * these are "sessions that were exposed to the variant" — an acceptable
- * per-variant engagement approximation, not strictly variant-partitioned
- * sessions. Stored alongside (not inside) the per-event count metrics so older
- * signals without this field still load and render.
+ * Per-variant SESSION engagement: sessions / bounceRate / averageSessionDuration.
+ * Now sourced FIRST-PARTY from the on-page engagement beacon (visible time +
+ * bounce), rolled up by drain-cron from the reserved `__eng_*` KV fields — the
+ * same reliable pipeline as the exposure/conversion counts. Stored alongside
+ * (not inside) the per-event count metrics so older signals without this field
+ * still load and render.
  */
 export interface DrainSignalVariantEngagement {
   _key: string
@@ -76,7 +76,7 @@ export interface DrainSignalVariantEngagement {
   averageSessionDuration?: number
 }
 
-/** Raw per-variant engagement input (e.g. from a GA4 session report). */
+/** Raw per-variant engagement input (from the first-party engagement rollup). */
 export interface VariantEngagementInput {
   variantKey: string
   sessions?: number
