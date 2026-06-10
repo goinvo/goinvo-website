@@ -13338,13 +13338,16 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
   const variants = getAbTestingVariantOptions(experiment)
   const gridTemplateColumns = `minmax(190px, 1.1fr) repeat(${variants.length}, minmax(150px, 1fr))`
 
-  // Per-variant SESSION engagement (visits, bounce rate, avg time on page) read
-  // off the linked signals. Backward-compatible: missing values render as '—'.
+  // Per-variant SESSION engagement (bounce rate, avg time on page) read off the
+  // linked signals. The Vercel "Visits / exposures" rows above remain the
+  // authoritative visits; here GA4 only contributes engagement, and its `sessions`
+  // figure is the SAMPLE SIZE the bounce/time are based on — NOT a second "Visits"
+  // count. Backward-compatible: missing values render as '—'.
   const engagementByVariant = variants.map((variant) => ({ variant, engagement: getAbTestingVariantEngagement(experiment, variant) }))
-  const engagementRows: Array<{ key: string; label: string; format: (engagement: AbTestingVariantEngagement) => string }> = [
-    { key: 'engagement-visits', label: 'Visits', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
-    { key: 'engagement-bounce', label: 'Bounce rate', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
-    { key: 'engagement-avg-time', label: 'Avg time on page', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
+  const engagementRows: Array<{ key: string; label: string; sublabel: string; format: (engagement: AbTestingVariantEngagement) => string }> = [
+    { key: 'engagement-bounce', label: 'Bounce rate', sublabel: 'GA4 engagement', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
+    { key: 'engagement-avg-time', label: 'Avg time on page', sublabel: 'GA4 engagement', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
+    { key: 'engagement-sessions', label: 'Sessions (GA4)', sublabel: 'GA4 sample size', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
   ]
   const hasEngagement = engagementByVariant.some(
     ({ engagement }) => engagement.sessions !== null || engagement.bounceRate !== null || engagement.averageSessionDuration !== null,
@@ -13355,7 +13358,10 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
       <div>
         <h3 style={{ margin: 0, fontSize: 16 }}>Visits and events</h3>
         <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Shows total visits or exposures for each version, then how many visitors triggered each tracked event, plus per-version visits, bounce rate, and avg time on page.
+          Shows total visits or exposures for each version (from the Vercel drain), then how many visitors triggered each tracked event, plus per-version bounce rate and avg time on page.
+        </p>
+        <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
+          Bounce rate and avg time on page are GA4-sourced over GA4&apos;s exposed-session sample (shown as &ldquo;Sessions (GA4)&rdquo;), which can be smaller than the Vercel visits above when GA4 exposure events are sparse.
         </p>
       </div>
       <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>
@@ -13397,7 +13403,7 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
             <Fragment key={engagementRow.key}>
               <div style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
                 <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.25 }}>{engagementRow.label}</strong>
-                <span style={{ ...styles.small, ...styles.muted }}>session engagement</span>
+                <span style={{ ...styles.small, ...styles.muted }}>{engagementRow.sublabel}</span>
               </div>
               {engagementByVariant.map(({ variant, engagement }) => (
                 <div key={`${engagementRow.key}-${variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
@@ -13410,7 +13416,7 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
       </div>
       {!hasEngagement && (
         <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>
-          Visits, bounce rate, and avg time on page fill in once the GA4 session readout has run for this test.
+          Bounce rate, avg time on page, and the GA4 session sample fill in once the GA4 engagement readout has run for this test.
         </p>
       )}
     </div>
