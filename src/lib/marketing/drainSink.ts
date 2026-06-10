@@ -114,8 +114,9 @@ export async function upsertDrainSignalForFlag(
   })
   const interpretation = summarizeDrainSignal({ metrics, variants, conversionEvents, exposureEventName: DEFAULT_EXPOSURE_EVENT })
 
-  // Per-variant session engagement is optional and backward-compatible: only the
-  // GA4 path supplies it today, and it is kept only for known variant keys.
+  // Per-variant session engagement is optional and backward-compatible: the
+  // first-party drain-cron rollup supplies it, and it is kept only for known
+  // variant keys.
   const variantEngagement = buildVariantEngagementEntries(
     options.variantEngagement,
     variants.map((variant) => variant.key),
@@ -183,6 +184,99 @@ export function parseKvCounterField(field: string): { variant: string; pagePath:
   return { variant, pagePath, eventName }
 }
 
+/* ------------------------------------------------------------------ */
+/*  First-party ENGAGEMENT fields (time-on-page + bounce)              */
+/* ------------------------------------------------------------------ */
+//
+// Engagement is stored on the SAME per-flag counter hash as the event counts,
+// but under RESERVED field "event names" that begin with `__eng_` so they can
+// never collide with a real tracked event. The field still encodes
+// variant | pagePath | <reserved> so it round-trips through kvCounterField /
+// parseKvCounterField, but the rollup treats `__eng_*` as engagement, NOT events.
+export const ENG_FIELD_PREFIX = '__eng_'
+/** Reserved engagement "event name" suffixes (the 3rd field segment). */
+export const ENG_SESSIONS_FIELD = '__eng_sessions'
+export const ENG_VISIBLE_MS_FIELD = '__eng_visible_ms'
+export const ENG_BOUNCES_FIELD = '__eng_bounces'
+
+/** True when a parsed counter field's event name is a reserved engagement field. */
+export function isEngagementField(eventName: string): boolean {
+  return eventName.startsWith(ENG_FIELD_PREFIX)
+}
+
+export interface EngagementCounters {
+  variant: string
+  pagePath: string
+  sessions: number
+  visibleMs: number
+  bounces: number
+}
+
+/**
+ * Reads the reserved `__eng_*` fields out of a KV counter hash and groups them
+ * per (variant, pagePath). Counts/durations only — no visitor identifiers exist
+ * in the hash. Non-finite / negative values are ignored. Rows without sessions
+ * are dropped (no denominator).
+ */
+export function engagementCountersFromKvHash(
+  hash: Record<string, unknown> | null | undefined,
+): EngagementCounters[] {
+  if (!hash) return []
+  const grouped = new Map<string, EngagementCounters>()
+  for (const [field, raw] of Object.entries(hash)) {
+    const parsed = parseKvCounterField(field)
+    if (!parsed || !isEngagementField(parsed.eventName)) continue
+    const value = typeof raw === 'number' ? raw : Number(raw)
+    if (!Number.isFinite(value)) continue
+    const key = `${parsed.variant}${FIELD_DELIM}${parsed.pagePath}`
+    let counters = grouped.get(key)
+    if (!counters) {
+      counters = { variant: parsed.variant, pagePath: parsed.pagePath, sessions: 0, visibleMs: 0, bounces: 0 }
+      grouped.set(key, counters)
+    }
+    if (parsed.eventName === ENG_SESSIONS_FIELD) counters.sessions += value
+    else if (parsed.eventName === ENG_VISIBLE_MS_FIELD) counters.visibleMs += value
+    else if (parsed.eventName === ENG_BOUNCES_FIELD) counters.bounces += value
+  }
+  return Array.from(grouped.values()).filter((counters) => counters.sessions > 0)
+}
+
+/**
+ * Turns the per-(variant, pagePath) engagement counters into the per-variant
+ * VariantEngagementInput[] the readout signal expects:
+ *   sessions               = __eng_sessions (summed across that variant's pages)
+ *   averageSessionDuration = (__eng_visible_ms / __eng_sessions) / 1000  seconds
+ *   bounceRate             = __eng_bounces / __eng_sessions               (0..1)
+ * Counters for the same variant across multiple page paths are summed before the
+ * ratios are computed, so the averages stay weighted by session volume.
+ */
+export function variantEngagementFromKvHash(
+  hash: Record<string, unknown> | null | undefined,
+): VariantEngagementInput[] {
+  const byVariant = new Map<string, { sessions: number; visibleMs: number; bounces: number }>()
+  for (const counters of engagementCountersFromKvHash(hash)) {
+    let totals = byVariant.get(counters.variant)
+    if (!totals) {
+      totals = { sessions: 0, visibleMs: 0, bounces: 0 }
+      byVariant.set(counters.variant, totals)
+    }
+    totals.sessions += counters.sessions
+    totals.visibleMs += counters.visibleMs
+    totals.bounces += counters.bounces
+  }
+  const inputs: VariantEngagementInput[] = []
+  for (const [variant, totals] of byVariant) {
+    if (totals.sessions <= 0) continue
+    inputs.push({
+      variantKey: variant,
+      sessions: totals.sessions,
+      averageSessionDuration: totals.visibleMs / totals.sessions / 1000,
+      bounceRate: Math.min(1, Math.max(0, totals.bounces / totals.sessions)),
+    })
+  }
+  return inputs
+}
+
 /**
  * Returns a Vercel KV client when configured, else null so collection is a
  * graceful no-op in local/dev environments without KV. Accepts the standard
@@ -202,6 +296,9 @@ export function aggregatesFromKvHash(flagKey: string, hash: Record<string, unkno
   for (const [field, raw] of Object.entries(hash)) {
     const parsed = parseKvCounterField(field)
     if (!parsed) continue
+    // Reserved `__eng_*` engagement fields live on the same hash but are NOT
+    // events — exclude them so they never appear as fake event counts.
+    if (isEngagementField(parsed.eventName)) continue
     const count = typeof raw === 'number' ? raw : Number(raw)
     if (!Number.isFinite(count) || count <= 0) continue
     aggregates.push({
