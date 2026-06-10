@@ -28,9 +28,10 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Unit & integration tests
-        # The page-render and media-integrity suites need a running/served app;
-        # they run in a dedicated job (see issue tracker), not this fast gate.
-        run: npx vitest run --exclude "**/page-render.test.ts" --exclude "**/media-integrity.test.ts"
+        # page-render, media-integrity, and link-parity hit a running/served app
+        # (they hard-fail rather than silently skip), so they're excluded from this
+        # fast gate — a served-suite job is a follow-up.
+        run: npx vitest run --exclude "**/page-render.test.ts" --exclude "**/media-integrity.test.ts" --exclude "**/link-parity.test.ts"
 
   build:
     name: Production build
