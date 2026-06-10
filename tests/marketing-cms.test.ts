@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { schemaTypes } from '@/sanity/schemas'
 import analyticsSchema from '@/sanity/schemas/marketingAnalyticsSource'
@@ -142,7 +142,18 @@ describe('Marketing CMS schemas', () => {
   })
 
   it('keeps custom marketing tool actions discoverable and wired to visible feedback', () => {
-    const source = readFileSync(new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url), 'utf8')
+    // The marketing tool's views are progressively extracted into
+    // src/sanity/components/marketing/*; audit the tool source PLUS the extracted
+    // workspace files so relocated action strings stay discoverable.
+    const marketingDir = new URL('../src/sanity/components/marketing/', import.meta.url)
+    const source = [
+      readFileSync(new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url), 'utf8'),
+      readFileSync(new URL('../src/sanity/components/SeoWorkspace.tsx', import.meta.url), 'utf8'),
+      readFileSync(new URL('../src/sanity/components/StrategyBriefWorkspace.tsx', import.meta.url), 'utf8'),
+      ...readdirSync(marketingDir)
+        .filter((file) => file.endsWith('.tsx') || file.endsWith('.ts'))
+        .map((file) => readFileSync(new URL(file, marketingDir), 'utf8')),
+    ].join('\n')
     expect(source.length, 'Expected marketing tool source to be available for the action audit').toBeGreaterThan(1000)
 
     const anchorTags = [...source.matchAll(/<a\b[\s\S]*?>/g)].map((match) => match[0])
