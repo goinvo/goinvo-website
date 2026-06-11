@@ -226,12 +226,12 @@ export function HomeConceptCalendlyCta() {
         </div>
 
         {loadError && (
-          <p className="mt-5 text-sm text-white/75">
+          <p className="mt-5 text-sm text-white/90">
             Scheduling is taking a moment. The contact page is always available.
           </p>
         )}
 
-        <p className="mt-7 text-sm text-white/75">
+        <p className="mt-7 text-sm text-white/90">
           Not ready? The newsletter sends our latest ideas, visualizations, and studio news twice a month.
           {' '}
           <button

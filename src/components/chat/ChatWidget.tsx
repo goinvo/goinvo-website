@@ -527,7 +527,6 @@ export function ChatWidget() {
           onClick={() => setIsOpen(true)}
           className="group flex min-h-12 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[18px] rounded-br-none bg-[#252a3c] py-3 pl-4 pr-5 text-left text-white shadow-[0_12px_30px_rgba(29,27,26,0.22)] transition-colors hover:bg-tertiary sm:max-w-none"
           aria-expanded={isOpen}
-          aria-label="Open GoInvo chat"
         >
           <span className="block h-3 w-3 shrink-0 rounded-full border-2 border-white bg-[#44c961]" aria-hidden="true" />
           <span className="block text-sm font-semibold leading-5 tracking-normal sm:text-[15px]">
