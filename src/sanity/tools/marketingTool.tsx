@@ -44,12 +44,24 @@ import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '..
 import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
 import { SeoWorkspace } from '../components/SeoWorkspace'
 import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
+import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
+import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
+import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
 import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
 import { LinkTreeWorkspace } from '../components/marketing/LinkTreeWorkspace'
+import { MarketingAttentionWorkspace } from '../components/marketing/MarketingAttentionWorkspace'
+import { ResearchWorkspace } from '../components/marketing/ResearchWorkspace'
+import { StrategyWorkspace } from '../components/marketing/StrategyWorkspace'
 import { TemplateWorkspace } from '../components/marketing/TemplateWorkspace'
-import type { ChannelContentType } from '../components/marketing/types'
+import type {
+  AbTestingEditorTab,
+  ChannelContentType,
+  WorkflowHelpItem,
+  WorkflowSetupStep,
+  WorkflowTerm,
+} from '../components/marketing/types'
 import { getChannelUsage, normalizeContentTypes } from '../components/marketing/shared'
 import {
   DESIGNER_WORKFLOW_TUTORIAL_STORAGE_KEY,
@@ -75,8 +87,8 @@ import {
 } from '@/lib/marketing'
 
 const API_VERSION = '2024-01-01'
-const ADD_CHANNEL_VALUE = '__add_new_channel__'
-const EXPERIMENT_FORCE_VARIANT_PARAM = 'goinvo_ab_variant'
+export const ADD_CHANNEL_VALUE = '__add_new_channel__'
+export const EXPERIMENT_FORCE_VARIANT_PARAM = 'goinvo_ab_variant'
 const MARKETING_CONTROL_CSS = `
   [data-marketing-tool],
   [data-marketing-tool] * {
@@ -169,7 +181,7 @@ const MARKETING_CONTROL_CSS = `
   }
 `
 
-const MARKETING_OPAQUE_CARD_BG = '#11141f'
+export const MARKETING_OPAQUE_CARD_BG = '#11141f'
 const MARKETING_OPAQUE_PANEL_BG = '#151a26'
 const DESIGNER_WORKFLOW_SESSIONS_STORAGE_KEY = 'goinvo.marketing.designerWorkflow.sessions.v2'
 const DESIGNER_WORKFLOW_ACTIVE_SESSION_STORAGE_KEY = 'goinvo.marketing.designerWorkflow.activeSession.v2'
@@ -678,7 +690,7 @@ const MARKETING_QUERY = `{
 export type StudioClient = ReturnType<typeof useClient>
 export type MarketingDocumentInput = { _type: string } & Record<string, unknown>
 
-type MarketingViewId =
+export type MarketingViewId =
   | 'dashboard'
   | 'attention'
   | 'strategy'
@@ -693,7 +705,7 @@ type MarketingViewId =
   | 'analytics'
   | 'linkTree'
   | 'seo'
-type MarketingViewOpener = (view: MarketingViewId) => boolean | void
+export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 type MarketingAssistKind =
   | 'campaign'
   | 'funnel'
@@ -709,7 +721,7 @@ type MarketingAssistKind =
   | 'strategyAsset'
 
 const MARKETING_UNSAVED_CHANGES_MESSAGE = 'You have unsaved marketing edits. Leaving now will discard the fields you have not saved.'
-const MARKETING_UNSAVED_FORM_ID = 'marketing-form-fields'
+export const MARKETING_UNSAVED_FORM_ID = 'marketing-form-fields'
 
 type MarketingUnsavedChangesContextValue = {
   hasUnsavedChanges: boolean
@@ -725,7 +737,7 @@ const MarketingUnsavedChangesContext = createContext<MarketingUnsavedChangesCont
   confirmDiscardUnsavedChanges: () => true,
 })
 
-function useMarketingUnsavedGuard() {
+export function useMarketingUnsavedGuard() {
   return useContext(MarketingUnsavedChangesContext)
 }
 
@@ -852,7 +864,7 @@ function saveStoredMarketingView(view: MarketingViewId) {
 // the request as a real Studio session. Studio stores it under
 // `__studio_auth_token_<projectId>` as either a raw string or a {"token":"..."}
 // JSON envelope. Returns null when absent (callers then omit the header).
-function studioSessionToken(): string | null {
+export function studioSessionToken(): string | null {
   if (typeof window === 'undefined') return null
   const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
   if (!projectId) return null
@@ -879,7 +891,7 @@ export interface RefSummary {
   provider?: string
 }
 
-type ReferenceValue = { _type: 'reference'; _ref: string }
+export type ReferenceValue = { _type: 'reference'; _ref: string }
 type SuccessMetric = { _key?: string; _type?: 'successMetric'; label?: string; target?: string; source?: RefSummary | ReferenceValue }
 
 // ChannelContentType is imported from ../components/marketing/types (shared by
@@ -1032,7 +1044,7 @@ export interface MarketingAnalyticsSource {
   keyMetrics?: Array<{ _key?: string; _type?: 'keyMetric'; label?: string; definition?: string }>
 }
 
-interface MarketingAudienceProfile {
+export interface MarketingAudienceProfile {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1047,7 +1059,7 @@ interface MarketingAudienceProfile {
   notes?: string
 }
 
-interface MarketingMessagePillar {
+export interface MarketingMessagePillar {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1061,7 +1073,7 @@ interface MarketingMessagePillar {
   notes?: string
 }
 
-interface MarketingProofPoint {
+export interface MarketingProofPoint {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1076,7 +1088,7 @@ interface MarketingProofPoint {
   usageNotes?: string
 }
 
-interface MarketingCta {
+export interface MarketingCta {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1089,7 +1101,7 @@ interface MarketingCta {
   notes?: string
 }
 
-interface MarketingTrackingRule {
+export interface MarketingTrackingRule {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1104,7 +1116,7 @@ interface MarketingTrackingRule {
   notes?: string
 }
 
-interface MarketingQualityGate {
+export interface MarketingQualityGate {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1114,7 +1126,7 @@ interface MarketingQualityGate {
   notes?: string
 }
 
-interface MarketingExperiment {
+export interface MarketingExperiment {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1143,7 +1155,7 @@ interface MarketingExperiment {
   notes?: string
 }
 
-interface MarketingPerformanceSignal {
+export interface MarketingPerformanceSignal {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1243,7 +1255,7 @@ interface ResearchContentPillar {
   exampleFormats?: string[]
 }
 
-interface ResearchQuestion {
+export interface ResearchQuestion {
   _key?: string
   _type?: 'researchQuestion'
   question?: string
@@ -1319,7 +1331,7 @@ interface ResearchReleaseWindow {
   priority?: string
 }
 
-interface ResearchContentOpportunity {
+export interface ResearchContentOpportunity {
   _key?: string
   _type?: 'contentOpportunity'
   title?: string
@@ -1358,7 +1370,7 @@ interface ResearchStrategyAdjustment {
   decision?: string
 }
 
-interface MarketingResearchPlan {
+export interface MarketingResearchPlan {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1388,7 +1400,7 @@ interface MarketingResearchPlan {
   internalNotes?: string
 }
 
-interface MarketingResearchProject {
+export interface MarketingResearchProject {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1438,7 +1450,7 @@ interface ResearchProjectCollaborator {
   notes?: string
 }
 
-type ResearchInspirationDraft = {
+export type ResearchInspirationDraft = {
   sourceKind: string
   action: string
   title: string
@@ -1446,7 +1458,7 @@ type ResearchInspirationDraft = {
   note: string
 }
 
-interface MarketingResearchResult {
+export interface MarketingResearchResult {
   _id: string
   _updatedAt?: string
   title?: string
@@ -1597,7 +1609,7 @@ type MarketingStrategistMessage = {
   createdAt: string
 }
 
-type MarketingStrategyAssetSuggestion = Partial<MarketingAudienceProfile> &
+export type MarketingStrategyAssetSuggestion = Partial<MarketingAudienceProfile> &
   Partial<MarketingMessagePillar> &
   Partial<MarketingProofPoint> &
   Partial<MarketingCta> &
@@ -1623,7 +1635,7 @@ type MarketingResearchSynthesisSuggestion = {
   internalNotes?: string
 }
 
-type StrategyAssetKind =
+export type StrategyAssetKind =
   | 'audiences'
   | 'messages'
   | 'proof'
@@ -1633,8 +1645,8 @@ type StrategyAssetKind =
   | 'experiments'
   | 'performance'
 
-type StrategyWorkspaceMode = 'foundation' | 'campaigns' | 'funnels'
-type StrategyAssistAssetType =
+export type StrategyWorkspaceMode = 'foundation' | 'campaigns' | 'funnels'
+export type StrategyAssistAssetType =
   | 'audience'
   | 'message'
   | 'proof'
@@ -1644,7 +1656,7 @@ type StrategyAssistAssetType =
   | 'experiment'
   | 'performanceSynthesis'
 
-type GuidedAutofillQuestion = {
+export type GuidedAutofillQuestion = {
   id: string
   label: string
   choices: Array<{
@@ -1654,7 +1666,7 @@ type GuidedAutofillQuestion = {
   }>
 }
 
-type MarketingAiAssistResponse = {
+export type MarketingAiAssistResponse = {
   suggestion?: MarketingAiSuggestion
   error?: string
   usedAi?: boolean
@@ -1666,12 +1678,12 @@ type MarketingAiAssistResponse = {
   }
 }
 
-type SelectOption = {
+export type SelectOption = {
   title: string
   value: string
 }
 
-type CalendarItemTemplate = {
+export type CalendarItemTemplate = {
   id: string
   title: string
   description: string
@@ -1682,8 +1694,8 @@ type CalendarItemTemplate = {
   callToAction: string
 }
 
-type CalendarDisplayGroup = 'preview' | 'draft' | 'final'
-type SavedCalendarDisplayGroup = Exclude<CalendarDisplayGroup, 'preview'>
+export type CalendarDisplayGroup = 'preview' | 'draft' | 'final'
+export type SavedCalendarDisplayGroup = Exclude<CalendarDisplayGroup, 'preview'>
 
 export type CampaignTemplate = {
   id: string
@@ -1713,7 +1725,7 @@ export type FunnelTemplate = {
   stages: Array<Omit<FunnelStage, '_key' | '_type'>>
 }
 
-type MarketingAttentionItem = {
+export type MarketingAttentionItem = {
   id: string
   title: string
   detail: string
@@ -1758,7 +1770,7 @@ type AbTestingSignalMetricRecord = {
 
 type AbTestingComparisonStatus = 'variant' | 'control' | 'even' | 'needsComparison'
 
-type AbTestingComparisonResult = {
+export type AbTestingComparisonResult = {
   key: string
   metricLabel: string
   metricRole?: string
@@ -1769,7 +1781,7 @@ type AbTestingComparisonResult = {
   score: number
 }
 
-type AbTestingComparisonSummary = {
+export type AbTestingComparisonSummary = {
   label: string
   detail: string
   status: AbTestingComparisonStatus
@@ -1790,7 +1802,7 @@ type AbTestingVariantOption = {
   label: string
 }
 
-type AbTestingVariantEventCell = {
+export type AbTestingVariantEventCell = {
   variant: AbTestingVariantOption
   value: number | null
   denominator: number | null
@@ -1815,29 +1827,6 @@ type MarketingDashboardGap = {
   view: MarketingViewId
   severity: MarketingAttentionItem['severity'] | AnalyticsInterpretationSeverity
   affected?: string[]
-}
-
-type WorkflowTerm = {
-  label: string
-  definition: string
-}
-
-type WorkflowHelpItem = {
-  question: string
-  answer: Array<string | WorkflowTerm>
-  action?: {
-    label: string
-    view: MarketingViewId
-  }
-}
-
-type WorkflowSetupStep = {
-  label: string
-  title: string
-  outcome: string
-  designerAction: string
-  view: MarketingViewId
-  terms?: WorkflowTerm[]
 }
 
 type CarouselWizardResult = {
@@ -1959,10 +1948,10 @@ export type MarketingAutopilotPlan = {
   createdRefs?: Record<string, string>
 }
 
-const MARKETING_AUTOPILOT_ACTION_EVENT = 'marketing-autopilot-action'
+export const MARKETING_AUTOPILOT_ACTION_EVENT = 'marketing-autopilot-action'
 const MARKETING_AUTOPILOT_STATUS_EVENT = 'marketing-autopilot-status'
 
-type MarketingAutopilotActionDetail = {
+export type MarketingAutopilotActionDetail = {
   intent: 'confirm' | 'dependency'
   step: Pick<MarketingAutopilotStep, 'id' | 'view' | 'targetId' | 'strategySection' | 'expectedAction' | 'recordId'>
 }
@@ -2121,7 +2110,7 @@ const statusColors: Record<string, { bg: string; fg: string; border: string }> =
   disabled: { bg: 'rgba(120, 120, 120, 0.14)', fg: '#b8b8b8', border: 'rgba(184, 184, 184, 0.26)' },
 }
 
-const CALENDAR_ITEM_TEMPLATES: CalendarItemTemplate[] = [
+export const CALENDAR_ITEM_TEMPLATES: CalendarItemTemplate[] = [
   {
     id: 'insight-carousel',
     title: 'Insight carousel',
@@ -2184,7 +2173,7 @@ const CALENDAR_ITEM_TEMPLATES: CalendarItemTemplate[] = [
   },
 ]
 
-const workflowTerms: WorkflowTerm[] = [
+export const workflowTerms: WorkflowTerm[] = [
   {
     label: 'Campaign',
     definition: 'The strategy container: goal, audience, message, timing, content, and measurement for one marketing effort.',
@@ -2960,7 +2949,7 @@ export const styles = {
   },
 } satisfies Record<string, CSSProperties>
 
-function useMarketingCompactLayout(breakpoint = 760) {
+export function useMarketingCompactLayout(breakpoint = 760) {
   const [compact, setCompact] = useState(false)
 
   useEffect(() => {
@@ -3920,95 +3909,7 @@ function MarketingDashboard({
   )
 }
 
-function MarketingAttentionWorkspace({
-  items,
-  onOpenView,
-}: {
-  items: MarketingAttentionItem[]
-  onOpenView: MarketingViewOpener
-}) {
-  const severitySummary: Array<{ severity: MarketingAttentionItem['severity']; label: string }> = [
-    { severity: 'content', label: 'Content tasks' },
-    { severity: 'measurement', label: 'Measurement tasks' },
-    { severity: 'setup', label: 'Setup tasks' },
-  ]
-
-  return (
-    <section style={{ display: 'grid', gap: 16 }}>
-      <div style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <div>
-            <div style={styles.kicker}>Needs attention</div>
-            <h2 style={{ margin: 0, fontSize: 24 }}>What is blocking easy content work?</h2>
-            <p style={{ ...styles.subtitle, marginTop: 8 }}>
-              These are the places where a designer would otherwise have to stop and ask what to do next.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {severitySummary.map(({ severity, label }) => {
-              const count = items.filter((item) => item.severity === severity).length
-              const tone = getDashboardGapTone(severity)
-              return (
-                <span
-                  key={severity}
-                  style={{
-                    border: `1px solid ${tone.border}`,
-                    background: tone.bg,
-                    color: tone.fg,
-                    borderRadius: 999,
-                    padding: '6px 10px',
-                    fontSize: 12,
-                    fontWeight: 800,
-                  }}
-                >
-                  {count} {label}
-                </span>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {items.length === 0 ? (
-        <EmptyInline title="Nothing needs attention right now." />
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {items.map((item) => {
-            const tone = getDashboardGapTone(item.severity)
-            return (
-              <article
-                key={item.id}
-                style={{
-                  ...styles.card,
-                  borderColor: tone.border,
-                  background: tone.bg,
-                  padding: 14,
-                  display: 'grid',
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ ...styles.small, color: tone.fg, fontWeight: 800, textTransform: 'capitalize', marginBottom: 4 }}>
-                      {item.severity}
-                    </div>
-                    <h3 style={{ margin: 0, fontSize: 17 }}>{item.title}</h3>
-                    <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0' }}>{item.detail}</p>
-                  </div>
-                  <button type="button" style={styles.button} onClick={() => onOpenView(item.view)}>
-                    Open {getMarketingViewTitle(item.view)}
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      )}
-    </section>
-  )
-}
-
-type StrategyDocument =
+export type StrategyDocument =
   | MarketingAudienceProfile
   | MarketingMessagePillar
   | MarketingProofPoint
@@ -4018,7 +3919,7 @@ type StrategyDocument =
   | MarketingExperiment
   | MarketingPerformanceSignal
 
-type StrategySectionConfig = {
+export type StrategySectionConfig = {
   id: StrategyAssetKind
   title: string
   singular: string
@@ -4028,7 +3929,7 @@ type StrategySectionConfig = {
   affects: string
 }
 
-const STRATEGY_SECTIONS: StrategySectionConfig[] = [
+export const STRATEGY_SECTIONS: StrategySectionConfig[] = [
   {
     id: 'audiences',
     title: 'Audiences',
@@ -4112,7 +4013,7 @@ type StrategySectionQuestion = {
   shortLabel: string
 }
 
-function getStrategySectionQuestion(sectionId: StrategyAssetKind): StrategySectionQuestion {
+export function getStrategySectionQuestion(sectionId: StrategyAssetKind): StrategySectionQuestion {
   if (sectionId === 'audiences') {
     return {
       question: 'Who is this for?',
@@ -4193,72 +4094,31 @@ function getStrategySectionQuestion(sectionId: StrategyAssetKind): StrategySecti
   }
 }
 
-function strategySectionActionLabel(sectionId: StrategyAssetKind) {
+export function strategySectionActionLabel(sectionId: StrategyAssetKind) {
   return getStrategySectionQuestion(sectionId).addLabel
 }
 
-const audiencePriorityOptions: SelectOption[] = [
-  { title: 'Primary', value: 'primary' },
-  { title: 'Secondary', value: 'secondary' },
-  { title: 'Niche / Experimental', value: 'niche' },
-  { title: 'Paused', value: 'paused' },
-]
-const proofTypeOptions: SelectOption[] = [
-  { title: 'Statistic', value: 'statistic' },
-  { title: 'Quote', value: 'quote' },
-  { title: 'Case Evidence', value: 'caseEvidence' },
-  { title: 'Research Item', value: 'researchFinding' },
-  { title: 'Visual Artifact', value: 'visualArtifact' },
-  { title: 'Team Knowledge', value: 'teamKnowledge' },
-  { title: 'Other', value: 'other' },
-]
-const ctaPriorityOptions: SelectOption[] = [
-  { title: 'Primary', value: 'primary' },
-  { title: 'Secondary', value: 'secondary' },
-  { title: 'Contextual', value: 'contextual' },
-  { title: 'Experimental', value: 'experimental' },
-]
-const documentStatusOptions: SelectOption[] = [
-  { title: 'Active', value: 'active' },
-  { title: 'Draft', value: 'draft' },
-  { title: 'Archived', value: 'archived' },
-]
-const experimentStatusOptions: SelectOption[] = [
+export const experimentStatusOptions: SelectOption[] = [
   { title: 'Idea', value: 'idea' },
   { title: 'Running', value: 'running' },
   { title: 'Reviewing', value: 'reviewing' },
   { title: 'Decided', value: 'decided' },
   { title: 'Archived', value: 'archived' },
 ]
-const experimentDecisionOptions: SelectOption[] = [
+export const experimentDecisionOptions: SelectOption[] = [
   { title: 'Keep', value: 'keep' },
   { title: 'Iterate', value: 'iterate' },
   { title: 'Stop', value: 'stop' },
   { title: 'Inconclusive', value: 'inconclusive' },
 ]
-const performanceProviderOptions: SelectOption[] = [
-  { title: 'Google Search Console', value: 'gsc' },
-  { title: 'GA4', value: 'ga4' },
-  { title: 'Instagram', value: 'instagram' },
-  { title: 'Vercel Analytics', value: 'vercel' },
-  { title: 'Manual', value: 'manual' },
-  { title: 'Other', value: 'other' },
-]
-const performanceStatusOptions: SelectOption[] = [
-  { title: 'New', value: 'new' },
-  { title: 'Reviewed', value: 'reviewed' },
-  { title: 'Suggests Strategy Update', value: 'suggestsUpdate' },
-  { title: 'Archived', value: 'archived' },
-]
-const confidenceOptions = researchConfidenceOptions
-const inspirationKindOptions: SelectOption[] = [
+export const inspirationKindOptions: SelectOption[] = [
   { title: 'Loose idea', value: 'idea' },
   { title: 'Article or report', value: 'article' },
   { title: 'Resource or dataset', value: 'resource' },
   { title: 'Website or page', value: 'website' },
   { title: 'Competitor or peer example', value: 'competitor' },
 ]
-const inspirationActionOptions: SelectOption[] = [
+export const inspirationActionOptions: SelectOption[] = [
   { title: 'Respond to it', value: 'respond' },
   { title: 'Use as evidence', value: 'evidence' },
   { title: 'Contrast with it', value: 'contrast' },
@@ -4266,741 +4126,7 @@ const inspirationActionOptions: SelectOption[] = [
   { title: 'Save as a topic idea', value: 'topic' },
 ]
 
-function StrategyWorkspace({
-  client,
-  data,
-  savingId,
-  createDocument,
-  loadData,
-  commitPatch,
-  onOpenView,
-  autopilotTarget,
-  onAutopilotComplete,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenView: (view: MarketingViewId) => void
-  autopilotTarget?: AutopilotWorkspaceTarget | null
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const { confirmDiscardUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
-  const [workspaceMode, setWorkspaceMode] = useState<StrategyWorkspaceMode>('foundation')
-  const [sectionId, setSectionId] = useState<StrategyAssetKind>('audiences')
-  const section = STRATEGY_SECTIONS.find((candidate) => candidate.id === sectionId) || STRATEGY_SECTIONS[0]
-  const items = getStrategySectionItems(data, section.id)
-  const [selectedId, setSelectedId] = useState<string | null>(items[0]?._id || null)
-  const selected = items.find((item) => item._id === selectedId) || items[0] || null
-  const [draft, setDraft] = useState<Record<string, unknown>>(selected ? { ...selected } : {})
-  const [fillLoading, setFillLoading] = useState(false)
-  const [fillMessage, setFillMessage] = useState('')
-  const [fillError, setFillError] = useState('')
-  const [fillGuidance, setFillGuidance] = useState<Record<string, string>>({})
-  const [fillNotes, setFillNotes] = useState('')
-  const [autoFillAfterCreateId, setAutoFillAfterCreateId] = useState<string | null>(null)
-  const [autoFilledAutopilotKeys, setAutoFilledAutopilotKeys] = useState<string[]>([])
-  const [saveAfterFill, setSaveAfterFill] = useState(false)
-  const [prefetchedStrategyDrafts, setPrefetchedStrategyDrafts] = useState<Record<string, Record<string, unknown>>>({})
-  const [prefetchingStrategyKey, setPrefetchingStrategyKey] = useState<string | null>(null)
-  const [localDraftActiveKey, setLocalDraftActiveKey] = useState<string | null>(null)
-
-  useEffect(() => {
-    const nextItems = getStrategySectionItems(data, sectionId)
-    const nextSelected = nextItems.find((item) => item._id === selectedId) || nextItems[0] || null
-    setSelectedId(nextSelected?._id || null)
-    const restoredDraft = nextSelected ? loadStrategyWorkingDraft(sectionId, nextSelected._id, nextSelected._updatedAt)?.draft : null
-    setDraft(nextSelected ? { ...nextSelected, ...(restoredDraft || {}) } : {})
-    setLocalDraftActiveKey(restoredDraft && nextSelected ? strategyWorkingDraftStorageKey(sectionId, nextSelected._id) : null)
-    if (restoredDraft && nextSelected) {
-      dispatchMarketingAutopilotStatus({
-        activity: 'restored-local-draft',
-        busy: false,
-        message: 'Restored an unsaved local draft for this answer.',
-        sectionId,
-        recordId: nextSelected._id,
-      })
-    }
-  }, [data, sectionId, selectedId])
-
-  useEffect(() => {
-    setFillMessage('')
-    setFillError('')
-  }, [sectionId, selectedId])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'strategy') return
-    setWorkspaceMode('foundation')
-    if (autopilotTarget.strategySection) {
-      const nextItems = getStrategySectionItems(data, autopilotTarget.strategySection)
-      setSectionId(autopilotTarget.strategySection)
-      const targetItem = autopilotTarget.recordId
-        ? nextItems.find((item) => item._id === autopilotTarget.recordId)
-        : null
-      setSelectedId(targetItem?._id || nextItems[0]?._id || null)
-    }
-  }, [autopilotTarget?.targetId, autopilotTarget?.strategySection, autopilotTarget?.recordId, autopilotTarget?.view, data])
-
-  const readiness = getStrategyReadiness(data)
-  const readyFoundations = readiness.filter((item) => item.ready).length
-  const missingFoundations = readiness.filter((item) => !item.ready)
-  const researchResultsForFill = useMemo(() => getStrategyResearchResults(data), [data])
-  const approvedResearchCount = useMemo(() => data.researchResults.filter(isResearchResultApproved).length, [data.researchResults])
-  const sectionQuestion = getStrategySectionQuestion(section.id)
-
-  const handleAdd = async () => {
-    const createdId = await createDocument(buildEmptyStrategyDocument(section))
-    if (createdId) {
-      setSelectedId(createdId)
-      const cachedDraft =
-        prefetchedStrategyDrafts[strategyPrefetchCacheKey(section.id, 'new')] ||
-        loadStrategyWorkingDraft(section.id, 'new')?.draft
-      if (cachedDraft) {
-        setDraft((current) => ({ ...current, ...cachedDraft, _id: createdId }))
-        setFillMessage('Pre-drafted from research while you reviewed the previous answer. Review, then save.')
-        saveStrategyWorkingDraft(section.id, createdId, cachedDraft)
-        clearStrategyWorkingDraft(section.id, 'new')
-        setLocalDraftActiveKey(strategyWorkingDraftStorageKey(section.id, createdId))
-        dispatchMarketingAutopilotStatus({
-          activity: 'restored-local-draft',
-          busy: false,
-          message: 'Applied the pre-drafted local answer. Review, then save.',
-          sectionId: section.id,
-          recordId: createdId,
-        })
-        setPrefetchedStrategyDrafts((current) => {
-          const next = { ...current }
-          delete next[strategyPrefetchCacheKey(section.id, 'new')]
-          next[strategyPrefetchCacheKey(section.id, createdId)] = cachedDraft
-          return next
-        })
-      } else if (researchResultsForFill.length > 0) {
-        setAutoFillAfterCreateId(createdId)
-      }
-    }
-  }
-
-  const handleSave = async () => {
-    if (!selected) return
-    if (savingId === selected._id) return
-    await commitPatch(selected._id, buildStrategyPatch(section.id, draft))
-    clearStrategyWorkingDraft(section.id, selected._id)
-    setLocalDraftActiveKey(null)
-    onAutopilotComplete?.({ action: `strategy:save:${section.id}`, recordId: selected._id })
-  }
-
-  const requestStrategyDraftFromResearch = async (
-    targetSectionId: StrategyAssetKind,
-    targetDraft: Record<string, unknown>,
-    options: { guidance?: Record<string, string>; notes?: string } = {},
-  ) => {
-    const targetQuestion = getStrategySectionQuestion(targetSectionId)
-    const guidance = options.guidance ?? fillGuidance
-    const notes = options.notes ?? fillNotes
-    const fallbackDraft = buildStrategyDraftFromResearch(targetSectionId, data, targetDraft)
-
-    try {
-      const response = await fetch('/api/marketing/assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'strategyAsset',
-          draft: {
-            ...buildStrategyResearchAssistDraft(targetSectionId, targetDraft, data),
-            autofillGuidance: guidance,
-          },
-          prompt: buildAutofillGuidedPrompt({
-            basePrompt: `Draft an answer for "${targetQuestion.question}" from trusted Research findings. Use the supplied findings as evidence and keep fields concise enough for designers to review before saving.`,
-            guidance,
-            notes,
-            questions: getStrategyFillQuestions(targetSectionId),
-          }),
-          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
-        }),
-      })
-      const payload = (await response.json()) as MarketingAiAssistResponse
-      return {
-        draft:
-          response.ok && payload.usedAi && payload.suggestion?.strategyAsset
-            ? strategyAssetSuggestionToDraft(targetSectionId, payload.suggestion.strategyAsset, fallbackDraft)
-            : fallbackDraft,
-        usedAi: response.ok && !!payload.usedAi,
-      }
-    } catch (requestError) {
-      console.error('Strategy research fill used fallback:', requestError)
-      return { draft: fallbackDraft, usedAi: false }
-    }
-  }
-
-  const handleFillFromResearch = async (options: { auto?: boolean } = {}) => {
-    if (!selected) {
-      setFillError('Add or select a saved answer before drafting from research.')
-      return
-    }
-    if (researchResultsForFill.length === 0) {
-      setFillError('Get evidence and trust at least one finding first, then use it to fill this answer.')
-      return
-    }
-    if (!options.auto && !confirmDiscardUnsavedChanges('Filling from research can replace fields in the current unsaved answer. Continue?')) return
-
-    setFillLoading(true)
-    setFillMessage(options.auto ? 'Drafting this from research...' : '')
-    setFillError('')
-
-    try {
-      const result = await requestStrategyDraftFromResearch(section.id, draft)
-      const nextDraft = { ...draft, ...result.draft }
-      setDraft((current) => ({ ...current, ...result.draft }))
-      markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'research-filled strategy draft')
-      saveStrategyWorkingDraft(section.id, selected._id, nextDraft, selected._updatedAt)
-      setLocalDraftActiveKey(strategyWorkingDraftStorageKey(section.id, selected._id))
-      setFillMessage(
-        result.usedAi
-          ? `Drafted this from ${researchResultsForFill.length} finding${researchResultsForFill.length === 1 ? '' : 's'} with AI. Review, then save.`
-          : `Drafted this from ${researchResultsForFill.length} stored finding${researchResultsForFill.length === 1 ? '' : 's'} with the rule-based fallback. Review, then save.`,
-      )
-    } finally {
-      setFillLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!autoFillAfterCreateId || !selected || selected._id !== autoFillAfterCreateId || fillLoading) return
-    setAutoFillAfterCreateId(null)
-    void handleFillFromResearch({ auto: true })
-  }, [autoFillAfterCreateId, selected?._id, fillLoading])
-
-  useEffect(() => {
-    if (!selected || !localDraftActiveKey) return
-    const currentKey = strategyWorkingDraftStorageKey(section.id, selected._id)
-    if (currentKey !== localDraftActiveKey) return
-    saveStrategyWorkingDraft(section.id, selected._id, draft, selected._updatedAt)
-    dispatchMarketingAutopilotStatus({
-      activity: 'autosaved-local-draft',
-      busy: false,
-      message: 'Saved this draft locally. Sanity is unchanged until you click Save.',
-      sectionId: section.id,
-      recordId: selected._id,
-    })
-  }, [draft, localDraftActiveKey, section.id, selected?._id, selected?._updatedAt])
-
-  useEffect(() => {
-    if (fillLoading) {
-      dispatchMarketingAutopilotStatus({
-        activity: 'drafting-current',
-        busy: true,
-        message: 'Drafting the current answer from research...',
-        sectionId: section.id,
-        recordId: selected?._id,
-      })
-      return
-    }
-    if (prefetchingStrategyKey) {
-      dispatchMarketingAutopilotStatus({
-        activity: 'prefetching-next',
-        busy: true,
-        message: 'Drafting the next answer in the background...',
-        sectionId: section.id,
-        recordId: selected?._id,
-      })
-      return
-    }
-  }, [fillLoading, prefetchingStrategyKey, section.id, selected?._id])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'strategy' || autopilotTarget.strategySection !== section.id) return
-    if (!selected || fillLoading || savingId === selected._id || researchResultsForFill.length === 0) return
-    if (!strategyDraftNeedsResearchFill(section.id, draft)) return
-    const autoFillKey = `${autopilotTarget.targetId}:${section.id}:${selected._id}`
-    if (autoFilledAutopilotKeys.includes(autoFillKey)) return
-    setAutoFilledAutopilotKeys((current) => [...current.filter((key) => key !== autoFillKey), autoFillKey].slice(-20))
-    void handleFillFromResearch({ auto: true })
-  }, [
-    autoFilledAutopilotKeys,
-    autopilotTarget?.targetId,
-    autopilotTarget?.strategySection,
-    autopilotTarget?.view,
-    draft,
-    fillLoading,
-    researchResultsForFill.length,
-    savingId,
-    section.id,
-    selected?._id,
-  ])
-
-  useEffect(() => {
-    if (!selected || fillLoading) return
-    const cacheKey = strategyPrefetchCacheKey(section.id, selected._id)
-    const cachedDraft = prefetchedStrategyDrafts[cacheKey]
-    if (!cachedDraft || !strategyDraftNeedsResearchFill(section.id, draft)) return
-
-    setDraft((current) => ({ ...current, ...cachedDraft }))
-    setFillMessage('Pre-drafted from research while you reviewed the previous answer. Review, then save.')
-    saveStrategyWorkingDraft(section.id, selected._id, { ...draft, ...cachedDraft }, selected._updatedAt)
-    setLocalDraftActiveKey(strategyWorkingDraftStorageKey(section.id, selected._id))
-    setPrefetchedStrategyDrafts((current) => {
-      const next = { ...current }
-      delete next[cacheKey]
-      return next
-    })
-  }, [draft, fillLoading, prefetchedStrategyDrafts, section.id, selected?._id, selected?._updatedAt])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'strategy' || autopilotTarget.strategySection !== section.id) return
-    if (!selected || fillLoading || researchResultsForFill.length === 0) return
-
-    const nextSectionId = getNextStrategySectionForPrefetch(section.id)
-    if (!nextSectionId) return
-
-    const nextSection = STRATEGY_SECTIONS.find((candidate) => candidate.id === nextSectionId)
-    if (!nextSection) return
-
-    const nextItems = getStrategySectionItems(data, nextSectionId)
-    const nextRecord = nextItems[0] || null
-    const nextDraft = nextRecord ? { ...nextRecord } : buildEmptyStrategyDocument(nextSection)
-    if (!strategyDraftNeedsResearchFill(nextSectionId, nextDraft)) return
-
-    const cacheKey = strategyPrefetchCacheKey(nextSectionId, nextRecord?._id || 'new')
-    if (prefetchedStrategyDrafts[cacheKey] || prefetchingStrategyKey === cacheKey) return
-
-    let cancelled = false
-    setPrefetchingStrategyKey(cacheKey)
-    void requestStrategyDraftFromResearch(nextSectionId, nextDraft, { guidance: {}, notes: '' }).then((result) => {
-      if (cancelled) return
-      setPrefetchedStrategyDrafts((current) => ({ ...current, [cacheKey]: result.draft }))
-      saveStrategyWorkingDraft(nextSectionId, nextRecord?._id || 'new', result.draft, nextRecord?._updatedAt)
-      setPrefetchingStrategyKey((current) => (current === cacheKey ? null : current))
-      dispatchMarketingAutopilotStatus({
-        activity: 'autosaved-local-draft',
-        busy: false,
-        message: 'Pre-drafted and saved the next answer locally.',
-        sectionId: nextSectionId,
-        recordId: nextRecord?._id,
-      })
-    })
-
-    return () => {
-      cancelled = true
-      setPrefetchingStrategyKey((current) => (current === cacheKey ? null : current))
-    }
-  }, [
-    autopilotTarget?.strategySection,
-    autopilotTarget?.targetId,
-    autopilotTarget?.view,
-    data,
-    fillLoading,
-    prefetchedStrategyDrafts,
-    researchResultsForFill.length,
-    section.id,
-    selected?._id,
-  ])
-
-  useEffect(() => {
-    if (!saveAfterFill || fillLoading) return
-    setSaveAfterFill(false)
-    if (selected) void handleSave()
-  }, [draft, fillLoading, saveAfterFill, selected?._id])
-
-  useEffect(() => {
-    const handleAutopilotAction = (event: Event) => {
-      const detail = (event as CustomEvent<MarketingAutopilotActionDetail>).detail
-      if (!detail || detail.step.view !== 'strategy' || detail.step.strategySection !== section.id) return
-
-      if (detail.intent === 'dependency') {
-        setSaveAfterFill(false)
-        const dependencyTarget = getStrategyDependencyTarget(section.id, data)
-        if (dependencyTarget.view === 'strategy' && dependencyTarget.strategySection) {
-          const dependencyItems = getStrategySectionItems(data, dependencyTarget.strategySection)
-          setWorkspaceMode('foundation')
-          setSectionId(dependencyTarget.strategySection)
-          setSelectedId(dependencyTarget.recordId || dependencyItems[0]?._id || null)
-          return
-        }
-        onOpenView(dependencyTarget.view)
-        return
-      }
-
-      if (fillLoading) {
-        setSaveAfterFill(true)
-        return
-      }
-
-      if (!selected) {
-        setSaveAfterFill(true)
-        void handleAdd()
-        return
-      }
-
-      if (strategyDraftNeedsResearchFill(section.id, draft) && researchResultsForFill.length > 0) {
-        setSaveAfterFill(true)
-        void handleFillFromResearch({ auto: true })
-        return
-      }
-
-      void handleSave()
-    }
-
-    window.addEventListener(MARKETING_AUTOPILOT_ACTION_EVENT, handleAutopilotAction)
-    return () => window.removeEventListener(MARKETING_AUTOPILOT_ACTION_EVENT, handleAutopilotAction)
-  }, [data, draft, fillLoading, onOpenView, researchResultsForFill.length, section.id, selected?._id])
-
-  return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div style={{ ...styles.panel, display: 'grid', gap: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div>
-            <div style={styles.kicker}>Guided setup questions</div>
-            <h2 style={{ margin: 0, fontSize: 24 }}>Answer the few things every piece of content needs</h2>
-            <p style={{ ...styles.muted, margin: '8px 0 0', maxWidth: 780 }}>
-              Pick the closest answer when it already exists. Let research draft a new answer only when the current one does not fit.
-            </p>
-          </div>
-          <div style={{ display: 'grid', justifyItems: 'end', gap: 6, maxWidth: 260 }}>
-            <button
-              type="button"
-              data-tour-id="autopilot-strategy-add"
-              style={styles.primaryButton}
-              onClick={handleAdd}
-              disabled={savingId === 'new'}
-              title={`Creates a saved ${sectionQuestion.shortLabel.toLowerCase()} record designers can reuse across campaigns and content.`}
-            >
-              {strategySectionActionLabel(section.id)}
-            </button>
-            <div style={{ ...styles.small, ...styles.muted, textAlign: 'right' }}>
-              Adds a saved option for the current question.
-            </div>
-          </div>
-        </div>
-        <div
-          style={{
-            borderTop: '1px solid var(--card-border-color)',
-            paddingTop: 12,
-            display: 'grid',
-            gridTemplateColumns: 'minmax(180px, auto) minmax(0, 1fr)',
-            gap: 14,
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <div style={{ ...styles.small, ...styles.muted, fontWeight: 850 }}>Questions answered</div>
-            <div style={{ fontSize: 20, fontWeight: 900, marginTop: 2 }}>
-              {readyFoundations} of {readiness.length} ready
-            </div>
-          </div>
-          <div style={{ display: 'grid', gap: 6 }}>
-            <div style={{ height: 8, borderRadius: 999, background: 'rgba(160, 171, 197, 0.18)', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: `${Math.round((readyFoundations / Math.max(1, readiness.length)) * 100)}%`,
-                  height: '100%',
-                  borderRadius: 999,
-                  background: '#007385',
-                }}
-              />
-            </div>
-            <div style={{ ...styles.small, ...styles.muted }}>
-              {missingFoundations.length > 0
-                ? `Next unanswered: ${missingFoundations.slice(0, 3).map((item) => item.label).join(', ')}${missingFoundations.length > 3 ? '...' : ''}. Use research to answer only what is missing.`
-                : 'Each setup question has at least one saved answer.'}
-            </div>
-          </div>
-        </div>
-        <div
-          role="tablist"
-          aria-label="Strategy workspace sections"
-          style={{
-            display: 'flex',
-            gap: 4,
-            overflowX: 'auto',
-            borderTop: '1px solid var(--card-border-color)',
-            borderBottom: '1px solid var(--card-border-color)',
-          }}
-        >
-          <StrategyModeButton
-            active={workspaceMode === 'foundation'}
-            onClick={() => setWorkspaceMode('foundation')}
-            description="Save reusable answers for audience, message, proof, CTA, tracking, and review."
-          >
-            Answer setup questions
-          </StrategyModeButton>
-          <StrategyModeButton
-            active={workspaceMode === 'campaigns'}
-            onClick={() => setWorkspaceMode('campaigns')}
-            description="Turn the saved answers into campaign briefs and launch plans."
-          >
-            Build campaign plans
-          </StrategyModeButton>
-          <StrategyModeButton
-            active={workspaceMode === 'funnels'}
-            onClick={() => setWorkspaceMode('funnels')}
-            description="Map the audience journey from first touch to CTA and measurement."
-          >
-            Map funnel paths
-          </StrategyModeButton>
-        </div>
-      </div>
-
-      {workspaceMode === 'campaigns' && (
-        <CampaignWorkspace data={data} savingId={savingId} createDocument={createDocument} commitPatch={commitPatch} />
-      )}
-
-      {workspaceMode === 'funnels' && (
-        <FunnelWorkspace
-          client={client}
-          data={data}
-          savingId={savingId}
-          createDocument={createDocument}
-          loadData={loadData}
-          commitPatch={commitPatch}
-        />
-      )}
-
-      {workspaceMode === 'foundation' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.7fr) minmax(0, 1.5fr)', gap: 16, alignItems: 'start' }}>
-        <div style={{ ...styles.panel, display: 'grid', gap: 10 }}>
-          {STRATEGY_SECTIONS.map((candidate) => {
-            const count = getStrategySectionItems(data, candidate.id).length
-            const active = candidate.id === section.id
-            return (
-              <button
-                key={candidate.id}
-                type="button"
-                data-tour-id={`autopilot-strategy-section-${candidate.id}`}
-                style={{
-                  ...styles.templateButton,
-                  textAlign: 'left',
-                  justifyContent: 'space-between',
-                  borderColor: active ? '#007385' : 'var(--card-border-color)',
-                  background: active ? 'rgba(0, 115, 133, 0.12)' : 'var(--card-bg-color)',
-                }}
-                onClick={() => {
-                  setSectionId(candidate.id)
-                  setSelectedId(getStrategySectionItems(data, candidate.id)[0]?._id || null)
-                }}
-              >
-                <span style={{ display: 'grid', gap: 3, minWidth: 0 }}>
-                  <strong>{candidate.title}</strong>
-                  <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.35 }}>{getStrategySectionQuestion(candidate.id).question}</span>
-                </span>
-                <span style={{ ...styles.small, ...styles.muted, alignSelf: 'start' }}>{count}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div style={{ ...styles.panel, display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.8fr) minmax(0, 1.2fr)', gap: 16 }}>
-            <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
-              <div>
-                <div style={styles.kicker}>{section.title}</div>
-                <h3 style={{ margin: '3px 0 0' }}>{sectionQuestion.question}</h3>
-                <p style={{ ...styles.muted, margin: '6px 0 0' }}>{sectionQuestion.reason}</p>
-              </div>
-              <div
-                style={{
-                  borderLeft: '3px solid #007385',
-                  padding: '2px 0 2px 12px',
-                  display: 'grid',
-                  gap: 8,
-                }}
-              >
-                <div>
-                  <div style={{ ...styles.small, color: '#007385', fontWeight: 850 }}>Choose this when</div>
-                  <p style={{ ...styles.small, ...styles.muted, margin: '3px 0 0', lineHeight: 1.45 }}>{sectionQuestion.when}</p>
-                </div>
-                <div>
-                  <div style={{ ...styles.small, color: '#007385', fontWeight: 850 }}>This helps with</div>
-                  <p style={{ ...styles.small, ...styles.muted, margin: '3px 0 0', lineHeight: 1.45 }}>{sectionQuestion.helps}</p>
-                </div>
-              </div>
-              <div style={{ display: 'grid', gap: 8 }}>
-                <div style={{ ...styles.small, ...styles.muted, fontWeight: 850 }}>
-                  Saved answers
-                </div>
-                {items.length === 0 ? (
-                  <div style={{ ...styles.card, padding: 14, ...styles.muted }}>
-                    No answer saved yet. Click {strategySectionActionLabel(section.id)} to start with an empty draft, or use research to draft one.
-                  </div>
-                ) : (
-                  items.map((item) => {
-                    const active = item._id === selected?._id
-                    return (
-                      <button
-                        key={item._id}
-                        type="button"
-                        style={{
-                          ...styles.templateButton,
-                          textAlign: 'left',
-                          borderColor: active ? '#007385' : 'var(--card-border-color)',
-                          background: active ? 'rgba(0, 115, 133, 0.12)' : 'var(--card-bg-color)',
-                        }}
-                        onClick={() => setSelectedId(item._id)}
-                      >
-                        <strong>{item.title || `Untitled ${section.singular}`}</strong>
-                        <span style={{ ...styles.small, ...styles.muted }}>{strategyDocumentSubtitle(section.id, item)}</span>
-                      </button>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-
-            <div
-              data-tour-id={selected ? `autopilot-strategy-editor-${section.id}` : undefined}
-              style={{ display: 'grid', gap: 12, minWidth: 0 }}
-            >
-              {selected ? (
-                <>
-                  <div
-                    style={{
-                      ...styles.guidePanel,
-                      background: 'rgba(0, 115, 133, 0.18)',
-                      border: '1px solid rgba(0, 166, 184, 0.58)',
-                      boxShadow: 'none',
-                      padding: 14,
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <div style={{ minWidth: 220, flex: '1 1 260px' }}>
-                        <div style={{ ...styles.kicker, marginBottom: 4 }}>Fastest path</div>
-                        <strong style={{ fontSize: 16 }}>Let research answer this</strong>
-                        <p style={{ ...styles.small, margin: '5px 0 0', lineHeight: 1.45, color: 'rgba(255, 255, 255, 0.78)' }}>
-                          Draft an answer from trusted findings, then edit anything that feels off. Nothing is saved until you click Save.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        data-tour-id="autopilot-strategy-fill"
-                        style={{ ...styles.primaryButton, minWidth: 180 }}
-                        disabled={fillLoading || researchResultsForFill.length === 0}
-                        onClick={() => void handleFillFromResearch()}
-                      >
-                        {fillLoading ? 'Drafting...' : 'Draft from research'}
-                      </button>
-                    </div>
-                    <div style={{ ...styles.small, color: 'rgba(255, 255, 255, 0.72)', marginTop: 8 }}>
-                      {approvedResearchCount > 0
-                        ? `${approvedResearchCount} trusted finding${approvedResearchCount === 1 ? '' : 's'} available.`
-                        : researchResultsForFill.length > 0
-                          ? `${researchResultsForFill.length} stored finding${researchResultsForFill.length === 1 ? '' : 's'} available; trust the strongest credible ones when possible.`
-                          : 'No findings yet.'}
-                    </div>
-                    {prefetchingStrategyKey && (
-                      <div style={{ ...styles.small, color: '#4dc4d6', marginTop: 6, fontWeight: 800 }}>
-                        Drafting the next answer in the background...
-                      </div>
-                    )}
-                    <details style={{ marginTop: 10 }}>
-                      <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
-                        Guide the draft
-                        <span style={{ ...styles.small, ...styles.muted, marginLeft: 6 }}>(optional)</span>
-                      </summary>
-                      <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-                        <GuidedAutofillControls
-                          questions={getStrategyFillQuestions(section.id)}
-                          values={fillGuidance}
-                          onChange={setFillGuidance}
-                        />
-                        <textarea
-                          aria-label={`Optional notes for filling this ${section.singular}`}
-                          rows={2}
-                          style={styles.input}
-                          value={fillNotes}
-                          onChange={(event) => setFillNotes(event.currentTarget.value)}
-                          placeholder="Optional: add a topic, audience, source, or constraint to guide the fill."
-                        />
-                      </div>
-                    </details>
-                    {fillMessage && <div style={{ ...styles.small, color: '#7dd69e', marginTop: 8 }}>{fillMessage}</div>}
-                    {fillError && <div style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>{fillError}</div>}
-                  </div>
-                  {fillLoading ? (
-                    <StrategyEditorSkeleton sectionId={section.id} />
-                  ) : (
-                    <StrategyEditorFields sectionId={section.id} draft={draft} onChange={setDraft} />
-                  )}
-                  <details style={{ ...styles.card, padding: 12 }}>
-                    <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced document details</summary>
-                    <div style={{ ...styles.small, ...styles.muted, marginTop: 10 }}>
-                      Sanity ID: {selected._id}
-                      <br />
-                      Updated: {selected._updatedAt || 'Unknown'}
-                    </div>
-                  </details>
-                  <button type="button" data-tour-id="autopilot-strategy-save" style={{ ...styles.primaryButton, width: '100%' }} onClick={handleSave} disabled={savingId === selected._id}>
-                    {savingId === selected._id ? 'Saving...' : 'Save this answer'}
-                  </button>
-                </>
-              ) : (
-                <div style={{ ...styles.card, padding: 18, textAlign: 'center' }}>
-                  <strong>Select a saved answer or add a new one</strong>
-                  <p style={{ ...styles.muted, margin: '8px 0 0' }}>The editor appears here once there is an answer to review.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      )}
-    </div>
-  )
-}
-
-function StrategyModeButton({
-  active,
-  onClick,
-  description,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  description: string
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      title={description}
-      role="tab"
-      aria-selected={active}
-      style={{
-        appearance: 'none',
-        border: 0,
-        borderBottom: `2px solid ${active ? '#4dc4d6' : 'transparent'}`,
-        borderRadius: 0,
-        background: active ? 'rgba(0, 115, 133, 0.12)' : 'transparent',
-        color: 'var(--card-fg-color)',
-        alignItems: 'flex-start',
-        cursor: 'pointer',
-        display: 'inline-flex',
-        flexDirection: 'column',
-        font: 'inherit',
-        gap: 3,
-        justifyContent: 'flex-start',
-        minWidth: 190,
-        padding: '10px 12px',
-        textAlign: 'left',
-      }}
-      onClick={onClick}
-    >
-      <span>{children}</span>
-      <span
-        style={{
-          color: active ? '#b9eaf0' : 'var(--card-muted-color)',
-          fontSize: 11,
-          fontWeight: 650,
-          lineHeight: 1.35,
-        }}
-      >
-        {description}
-      </span>
-    </button>
-  )
-}
-
-function GuidedAutofillControls({
+export function GuidedAutofillControls({
   questions,
   values,
   onChange,
@@ -5050,7 +4176,7 @@ function GuidedAutofillControls({
   )
 }
 
-function buildAutofillGuidedPrompt({
+export function buildAutofillGuidedPrompt({
   basePrompt,
   guidance,
   notes,
@@ -5129,18 +4255,7 @@ export function getStrategyFillQuestions(sectionId: StrategyAssetKind): GuidedAu
   return [sourceQuestion, useQuestion]
 }
 
-function strategyAssistAssetType(sectionId: StrategyAssetKind): StrategyAssistAssetType {
-  if (sectionId === 'audiences') return 'audience'
-  if (sectionId === 'messages') return 'message'
-  if (sectionId === 'proof') return 'proof'
-  if (sectionId === 'ctas') return 'cta'
-  if (sectionId === 'tracking') return 'trackingRule'
-  if (sectionId === 'quality') return 'qualityGate'
-  if (sectionId === 'experiments') return 'experiment'
-  return 'performanceSynthesis'
-}
-
-function getStrategyResearchResults(data: MarketingData) {
+export function getStrategyResearchResults(data: MarketingData) {
   const preferred = data.researchResults.filter((result) => isResearchResultApproved(result) || result.selectedForSynthesis)
   const pool = preferred.length > 0 ? preferred : data.researchResults
   const rank = (result: MarketingResearchResult) => {
@@ -5160,607 +4275,7 @@ function getStrategyResearchResults(data: MarketingData) {
     .slice(0, 10)
 }
 
-function buildStrategyResearchAssistDraft(sectionId: StrategyAssetKind, draft: Record<string, unknown>, data: MarketingData) {
-  const project = getLatestActiveResearchProject(data)
-  return {
-    assetType: strategyAssistAssetType(sectionId),
-    currentDraft: draft,
-    researchProject: project
-      ? {
-          title: project.title,
-          researchType: project.researchType,
-          audience: project.audience,
-          goals: project.goals,
-          seedKeywords: project.seedKeywords,
-          canonicalUrl: project.canonicalUrl,
-          status: project.status,
-        }
-      : null,
-    researchResults: getStrategyResearchResults(data).map(serializeStrategyResearchResultForDraft),
-    channels: data.channels
-      .filter((channel) => channel.status !== 'archived')
-      .map((channel) => ({ title: channel.title, key: channel.key, platform: channel.platform }))
-      .slice(0, 8),
-    existingStrategyCounts: {
-      audiences: data.audienceProfiles.length,
-      messages: data.messagePillars.length,
-      proof: data.proofPoints.length,
-      ctas: data.ctas.length,
-      tracking: data.trackingRules.length,
-      quality: data.qualityGates.length,
-      experiments: data.experiments.length,
-      performance: data.performanceSignals.length,
-    },
-  }
-}
-
-function serializeStrategyResearchResultForDraft(result: MarketingResearchResult) {
-  return {
-    id: result._id,
-    title: result.title,
-    resultType: result.resultType,
-    status: result.status,
-    selectedForSynthesis: result.selectedForSynthesis,
-    priority: result.priority,
-    keyword: result.keyword,
-    searchIntent: result.searchIntent,
-    volume: result.volume,
-    difficulty: result.difficulty,
-    provider: result.provider,
-    scoreSource: result.scoreSource,
-    canonicalUrl: result.canonicalUrl,
-    contentGap: result.contentGap,
-    sourceTitle: result.sourceTitle,
-    sourceUrl: result.sourceUrl,
-    claim: result.claim,
-    confidence: result.confidence,
-    implication: result.implication,
-    competitorName: result.competitorName,
-    collaboratorName: result.collaboratorName,
-    organization: result.organization,
-    topicArea: result.topicArea,
-    expectedContribution: result.expectedContribution,
-  }
-}
-
-function buildStrategyDraftFromResearch(sectionId: StrategyAssetKind, data: MarketingData, currentDraft: Record<string, unknown> = {}) {
-  const results = getStrategyResearchResults(data)
-  const project = getLatestActiveResearchProject(data)
-  const first = results[0]
-  const topic = strategyResearchTopic(project, results)
-  const claims = uniqueStrategyStrings(results.map((result) => result.claim || result.contentGap || result.implication || result.title)).slice(0, 6)
-  const keywords = uniqueStrategyStrings(results.map((result) => result.keyword || result.topicArea || result.competitorName)).slice(0, 6)
-  const destination = first?.canonicalUrl || first?.sourceUrl || project?.canonicalUrl || '/contact'
-  const sourceTitle = first?.sourceTitle || first?.title || project?.title || ''
-  const sourceUrl = first?.sourceUrl || first?.canonicalUrl || project?.canonicalUrl || ''
-  const notes = strategyResearchBasisNote(results)
-  const title = textFieldValue(currentDraft.title)
-
-  if (sectionId === 'audiences') {
-    const needs = claims.length > 0 ? claims.slice(0, 4) : [`Understand why ${topic} matters`, 'See the evidence behind the claim', 'Know what next step to take']
-    const desiredActions = destination ? ['Open the source or destination', 'Save or share the useful evidence', 'Explore related GoInvo work'] : ['Save or share the useful evidence', 'Start a conversation']
-    return withStrategyListText({
-      title: title || `${topic} audience`,
-      priority: data.audienceProfiles.length === 0 ? 'primary' : 'secondary',
-      audience: project?.audience || `People who need a clear, evidence-backed explanation of ${topic}.`,
-      needs,
-      pains: ['The topic feels abstract or hard to trust', 'Relevant evidence is scattered across sources', 'The useful next step is unclear'],
-      misconceptions: ['A strong visual is enough without a source destination', 'Everyone already understands the project context'],
-      trustTriggers: ['Trusted findings', 'Concrete source links', 'Plain-language explanation', 'Visible proof or examples'],
-      desiredActions,
-      objections: ['Too abstract', 'Unsupported claim', 'No clear next step'],
-      notes,
-    })
-  }
-
-  if (sectionId === 'messages') {
-    return withStrategyListText({
-      title: title || `${topic} message pillar`,
-      coreClaim: first?.claim || first?.contentGap || `${topic} needs an evidence-backed explanation people can understand and act on.`,
-      supportingClaims: claims.length > 0 ? claims : ['Use trusted findings as the source of the claim', 'Connect the useful idea to a clear destination'],
-      approvedPhrases: keywords.length > 0 ? keywords : ['evidence-backed', 'clear source path', 'useful explanation'],
-      phrasesToAvoid: ['revolutionary', 'game-changing', 'world-class', 'trust us'],
-      topicCluster: keywords[0] || topic,
-      notes,
-    })
-  }
-
-  if (sectionId === 'proof') {
-    return {
-      title: title || `${topic} proof point`,
-      claim: first?.claim || first?.contentGap || describeResearchResult(first),
-      proofType: first ? proofTypeFromResearchResult(first) : 'researchFinding',
-      sourceTitle,
-      sourceUrl,
-      confidence: first?.confidence || (first && isResearchResultApproved(first) ? 'medium' : 'needsValidation'),
-      topicCluster: keywords[0] || topic,
-      usageNotes: notes,
-    }
-  }
-
-  if (sectionId === 'ctas') {
-    return {
-      title: title || `${topic} CTA`,
-      label: destination && destination !== '/contact' ? 'Read the source' : 'Start a conversation',
-      funnelStage: 'interest',
-      destination,
-      successSignal: destination && destination !== '/contact' ? 'People click through to the source or related work.' : 'People start a qualified conversation.',
-      priority: 'contextual',
-      notes,
-    }
-  }
-
-  if (sectionId === 'tracking') {
-    const sources = data.channels.map((channel) => channel.key || channel.title).filter(Boolean) as string[]
-    const allowedSources = sources.length > 0 ? sources : ['instagram', 'linkedin', 'newsletter', 'website']
-    return {
-      title: title || `${topic} tracking rule`,
-      status: 'active',
-      utmSourceRule: 'Use the channel where the link is promoted.',
-      utmMediumRule: 'Use social, email, referral, organic, or paid to group traffic consistently.',
-      utmCampaignPattern: `${slugify(topic)}-research`,
-      utmContentPattern: 'channel-format-angle',
-      allowedSourcesText: allowedSources.join('\n'),
-      allowedMediumsText: ['social', 'email', 'referral', 'organic'].join('\n'),
-      notes,
-    }
-  }
-
-  if (sectionId === 'quality') {
-    const checks = [
-      { _key: randomKey(), _type: 'qualityGateCheck', label: 'Claim is backed by a trusted finding', category: 'claims', guidance: 'Reference the selected finding before final copy.', required: false },
-      { _key: randomKey(), _type: 'qualityGateCheck', label: 'CTA points to the intended destination', category: 'cta', guidance: 'Use one clear next step.', required: false },
-      { _key: randomKey(), _type: 'qualityGateCheck', label: 'Source and UTM links are present where needed', category: 'utm', guidance: 'Use the tracking rule before publishing.', required: false },
-      { _key: randomKey(), _type: 'qualityGateCheck', label: 'Alt text explains the useful information', category: 'altText', guidance: 'Describe meaningful visuals in plain language.', required: false },
-    ]
-    return {
-      title: title || `${topic} quality gate`,
-      status: 'active',
-      whenToUse: `Use before publishing content based on ${topic} research.`,
-      checks,
-      checksText: qualityCheckText(checks),
-      notes,
-    }
-  }
-
-  if (sectionId === 'experiments') {
-    return {
-      title: title || `${topic} experiment`,
-      status: 'idea',
-      hypothesis: `If ${topic} content leads with the strongest trusted finding and one clear CTA, more visitors will reach the intended destination because the value and next step are easier to understand.`,
-      expectedSignal: 'Higher useful visits, saves, replies, or CTA clicks than a generic post.',
-      decision: 'inconclusive',
-      notes,
-    }
-  }
-
-  const analyticsResult = results.find((result) => result.resultType === 'analyticsSignal' || result.provider === 'analytics')
-  const signal = analyticsResult?.performanceSignals?.[0]
-  const metrics = signal?.metrics || [{ _key: randomKey(), _type: 'performanceMetric', label: 'Useful visits', unit: 'visits', change: '' }]
-  return {
-    title: title || `${topic} performance signal`,
-    provider: signal?.provider || 'manual',
-    status: 'new',
-    signalType: signal?.signalType || analyticsResult?.resultType || 'research-backed content',
-    sourceLabel: signal?.sourceLabel || analyticsResult?.sourceTitle || sourceTitle || 'Research review',
-    query: analyticsResult?.keyword || keywords[0] || '',
-    pageUrl: signal?.pageUrl || analyticsResult?.canonicalUrl || destination,
-    metrics,
-    metricsText: performanceMetricText(metrics),
-    interpretation: analyticsResult?.claim || analyticsResult?.implication || `Review whether ${topic} content is moving people toward the intended destination.`,
-    recommendation: analyticsResult?.contentGap || 'Use this signal to decide whether the hook, CTA, destination, or channel should change.',
-    rawImport: '',
-  }
-}
-
-function strategyAssetSuggestionToDraft(
-  sectionId: StrategyAssetKind,
-  suggestion: MarketingStrategyAssetSuggestion,
-  fallback: Record<string, unknown>,
-) {
-  const merged = { ...fallback }
-  const title = textFieldValue(suggestion.title) || textFieldValue(merged.title)
-  if (title) merged.title = title
-  if (textFieldValue(suggestion.notes) || textFieldValue(suggestion.summary)) merged.notes = textFieldValue(suggestion.notes) || textFieldValue(suggestion.summary)
-
-  if (sectionId === 'audiences') {
-    copyStrategyText(merged, suggestion, ['priority', 'audience'])
-    copyStrategyLists(merged, suggestion, ['needs', 'pains', 'misconceptions', 'trustTriggers', 'desiredActions', 'objections'])
-    return merged
-  }
-  if (sectionId === 'messages') {
-    copyStrategyText(merged, suggestion, ['coreClaim', 'topicCluster'])
-    copyStrategyLists(merged, suggestion, ['supportingClaims', 'approvedPhrases', 'phrasesToAvoid'])
-    return merged
-  }
-  if (sectionId === 'proof') {
-    copyStrategyText(merged, suggestion, ['proofType', 'claim', 'sourceTitle', 'sourceUrl', 'confidence', 'topicCluster', 'usageNotes'])
-    return merged
-  }
-  if (sectionId === 'ctas') {
-    merged.label = textFieldValue(suggestion.label) || textFieldValue(suggestion.ctaLabel) || textFieldValue(merged.label)
-    copyStrategyText(merged, suggestion, ['funnelStage', 'destination', 'successSignal', 'priority'])
-    return merged
-  }
-  if (sectionId === 'tracking') {
-    copyStrategyText(merged, suggestion, ['status', 'utmSourceRule', 'utmMediumRule', 'utmCampaignPattern', 'utmContentPattern'])
-    const sources = strategyStringArray(suggestion.allowedSources)
-    const mediums = strategyStringArray(suggestion.allowedMediums)
-    if (sources.length > 0) merged.allowedSourcesText = sources.join('\n')
-    if (mediums.length > 0) merged.allowedMediumsText = mediums.join('\n')
-    return merged
-  }
-  if (sectionId === 'quality') {
-    copyStrategyText(merged, suggestion, ['status', 'whenToUse'])
-    const checks = Array.isArray(suggestion.qualityChecklist) && suggestion.qualityChecklist.length > 0 ? suggestion.qualityChecklist : suggestion.checks
-    if (Array.isArray(checks) && checks.length > 0) {
-      merged.checks = checks
-      merged.checksText = qualityCheckText(checks)
-    }
-    return merged
-  }
-  if (sectionId === 'experiments') {
-    copyStrategyText(merged, suggestion, ['status', 'hypothesis', 'expectedSignal', 'result', 'decision', 'decisionDate'])
-    return merged
-  }
-  copyStrategyText(merged, suggestion, ['provider', 'status', 'signalType', 'sourceLabel', 'query', 'pageUrl', 'metricDate', 'interpretation', 'recommendation', 'rawImport'])
-  if (Array.isArray(suggestion.metrics) && suggestion.metrics.length > 0) {
-    merged.metrics = suggestion.metrics
-    merged.metricsText = performanceMetricText(suggestion.metrics)
-  }
-  return merged
-}
-
-function copyStrategyText(target: Record<string, unknown>, source: Record<string, unknown>, fields: string[]) {
-  fields.forEach((field) => {
-    const value = textFieldValue(source[field])
-    if (value) target[field] = value
-  })
-}
-
-function copyStrategyLists(target: Record<string, unknown>, source: Record<string, unknown>, fields: string[]) {
-  fields.forEach((field) => {
-    const values = strategyStringArray(source[field])
-    if (values.length > 0) {
-      target[field] = values
-      target[`${field}Text`] = values.join('\n')
-    }
-  })
-}
-
-function withStrategyListText<T extends Record<string, unknown>>(draft: T) {
-  ;['needs', 'pains', 'misconceptions', 'trustTriggers', 'desiredActions', 'objections', 'supportingClaims', 'approvedPhrases', 'phrasesToAvoid'].forEach((field) => {
-    const values = strategyStringArray(draft[field])
-    if (values.length > 0) draft[`${field}Text` as keyof T] = values.join('\n') as T[keyof T]
-  })
-  return draft
-}
-
-function strategyStringArray(value: unknown) {
-  if (!Array.isArray(value)) return []
-  return value
-    .map((item) => {
-      if (typeof item === 'string') return item.trim()
-      if (item && typeof item === 'object') {
-        const record = item as { label?: string; title?: string; value?: string; guidance?: string }
-        return (record.label || record.title || record.value || record.guidance || '').trim()
-      }
-      return ''
-    })
-    .filter(Boolean)
-}
-
-function uniqueStrategyStrings(values: Array<string | undefined>) {
-  const seen = new Set<string>()
-  return values
-    .map((value) => (typeof value === 'string' ? value.trim() : ''))
-    .filter((value) => {
-      if (!value || seen.has(value.toLowerCase())) return false
-      seen.add(value.toLowerCase())
-      return true
-    })
-}
-
-function strategyResearchTopic(project: MarketingResearchProject | null, results: MarketingResearchResult[]) {
-  const keyword = results.find((result) => result.keyword)?.keyword
-  const topic = keyword || project?.seedKeywords?.[0] || project?.title || results[0]?.title || 'research-backed content'
-  return stripResearchProjectSuffix(topic).replace(/\s+research\s*$/i, '').trim() || 'research-backed content'
-}
-
-function strategyResearchBasisNote(results: MarketingResearchResult[]) {
-  if (results.length === 0) return 'Drafted before trusted findings were available. Review carefully before saving.'
-  return `Drafted from ${results.length} finding${results.length === 1 ? '' : 's'}: ${results
-    .slice(0, 3)
-    .map((result) => result.title || result.keyword || result.sourceTitle || 'Untitled research item')
-    .join('; ')}.`
-}
-
-function StrategyEditorSkeleton({ sectionId }: { sectionId: StrategyAssetKind }) {
-  return (
-    <div aria-busy="true" style={{ display: 'grid', gap: 12 }}>
-      {getStrategySkeletonLabels(sectionId).map((label, index) => (
-        <div key={`${sectionId}-${label}`} style={{ display: 'grid', gap: 7 }}>
-          <span style={{ ...styles.label, color: 'rgba(255, 255, 255, 0.72)' }}>{label}</span>
-          <div
-            style={{
-              height: index === 0 || label.toLowerCase().includes('topic') ? 47 : 86,
-              borderRadius: 6,
-              border: '1px solid rgba(160, 171, 197, 0.2)',
-              background:
-                'linear-gradient(90deg, rgba(160, 171, 197, 0.08) 0%, rgba(0, 115, 133, 0.16) 48%, rgba(160, 171, 197, 0.08) 100%)',
-            }}
-          />
-        </div>
-      ))}
-      <div style={{ ...styles.small, ...styles.muted }}>
-        Autopilot is drafting this answer from trusted findings. The draft appears here before anything is saved.
-      </div>
-    </div>
-  )
-}
-
-function getStrategySkeletonLabels(sectionId: StrategyAssetKind) {
-  if (sectionId === 'audiences') return ['Name this audience answer', 'Who are they?', 'What do they need?', 'What makes them trust us?']
-  if (sectionId === 'messages') return ['Name this message answer', 'What is the main thing people should understand?', 'What smaller points support it?', 'What topic or keyword group does this belong to?']
-  if (sectionId === 'proof') return ['Name this proof answer', 'What fact, quote, example, or source supports the claim?', 'Where did it come from?', 'How can designers use it safely?']
-  if (sectionId === 'ctas') return ['Name this CTA answer', 'What should the button or link say?', 'Where should it send someone?', 'How would we know it worked?']
-  if (sectionId === 'tracking') return ['Name this tracking answer', 'How should utm_source be chosen?', 'How should utm_medium be chosen?', 'How should campaign names be written?']
-  if (sectionId === 'quality') return ['Name this checklist answer', 'When should designers use this checklist?', 'What should be checked?', 'What should a designer remember?']
-  if (sectionId === 'experiments') return ['Name this test', 'What change are we testing?', 'Expected result', 'What should we do next?']
-  return ['Name this signal', 'What kind of signal is it?', 'What does this tell us?', 'What should change because of it?']
-}
-
-function StrategyEditorFields({
-  sectionId,
-  draft,
-  onChange,
-}: {
-  sectionId: StrategyAssetKind
-  draft: Record<string, unknown>
-  onChange: (draft: Record<string, unknown>) => void
-}) {
-  const setField = (name: string, value: unknown) => onChange({ ...draft, [name]: value })
-  const linkedResearchResults = Array.isArray(draft.researchResults)
-    ? (draft.researchResults as MarketingResearchResult[])
-    : []
-  const sectionQuestion = getStrategySectionQuestion(sectionId)
-  const nameLabel =
-    sectionId === 'ctas'
-      ? 'Name this CTA answer'
-      : sectionId === 'performance'
-        ? 'Name this signal'
-        : `Name this ${sectionQuestion.shortLabel.toLowerCase()} answer`
-
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <StrategyTextField
-        label={nameLabel}
-        help="Short internal name so we can find and reuse this later."
-        value={textFieldValue(draft.title)}
-        onChange={(value) => setField('title', value)}
-      />
-
-      {sectionId === 'audiences' && (
-        <>
-          <StrategySelectField label="How broadly should we use this audience?" help="Primary means this is a default audience for many pieces of content. Niche means use it only for specific tests." value={textFieldValue(draft.priority) || 'secondary'} options={audiencePriorityOptions} onChange={(value) => setField('priority', value)} />
-          <StrategyTextareaField label="Who are they?" help="Describe the person plainly enough that a designer can picture them." value={textFieldValue(draft.audience)} onChange={(value) => setField('audience', value)} />
-          <StrategyTextareaField label="What do they need?" help="One need per line. Focus on what would make the content useful to them." value={editedTextValue(draft, 'needsText', stringListValue(draft.needs))} onChange={(value) => setField('needsText', value)} />
-          <StrategyTextareaField label="What frustrates them?" help="One pain point per line. This helps the content feel specific instead of generic." value={editedTextValue(draft, 'painsText', stringListValue(draft.pains))} onChange={(value) => setField('painsText', value)} />
-          <StrategyTextareaField label="What might they misunderstand?" help="Use this to prevent captions or visuals from accidentally reinforcing the wrong idea." value={editedTextValue(draft, 'misconceptionsText', stringListValue(draft.misconceptions))} onChange={(value) => setField('misconceptionsText', value)} />
-          <StrategyTextareaField label="What makes them trust us?" help="Examples: source quality, visible craft, plain language, domain expertise, public work." value={editedTextValue(draft, 'trustTriggersText', stringListValue(draft.trustTriggers))} onChange={(value) => setField('trustTriggersText', value)} />
-          <StrategyTextareaField label="What would we like them to do?" help="One desired action per line. Keep it realistic for this audience." value={editedTextValue(draft, 'desiredActionsText', stringListValue(draft.desiredActions))} onChange={(value) => setField('desiredActionsText', value)} />
-          <StrategyTextareaField label="What would stop them?" help="Objections, doubts, missing context, or reasons they might ignore the content." value={editedTextValue(draft, 'objectionsText', stringListValue(draft.objections))} onChange={(value) => setField('objectionsText', value)} />
-          <StrategyTextareaField label="What should a designer remember?" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
-        </>
-      )}
-
-      {sectionId === 'messages' && (
-        <>
-          <StrategyTextareaField label="What is the main thing people should understand?" help="One clear claim. If there are three claims, the content probably needs multiple items." value={textFieldValue(draft.coreClaim)} onChange={(value) => setField('coreClaim', value)} />
-          <StrategyTextareaField label="What smaller points support it?" help="One supporting point per line. These can become slide beats, captions, or sections." value={editedTextValue(draft, 'supportingClaimsText', stringListValue(draft.supportingClaims))} onChange={(value) => setField('supportingClaimsText', value)} />
-          <StrategyTextareaField label="What themes or wording are safe to reuse?" help="These are reusable message themes, not final copy. Keep them natural." value={editedTextValue(draft, 'approvedPhrasesText', stringListValue(draft.approvedPhrases))} onChange={(value) => setField('approvedPhrasesText', value)} />
-          <StrategyTextareaField label="What framing should we avoid?" help="List wording, angles, or simplifications that would make the message weaker or misleading." value={editedTextValue(draft, 'phrasesToAvoidText', stringListValue(draft.phrasesToAvoid))} onChange={(value) => setField('phrasesToAvoidText', value)} />
-          <StrategyTextField label="What topic or keyword group does this belong to?" value={textFieldValue(draft.topicCluster)} onChange={(value) => setField('topicCluster', value)} />
-          <StrategyTextareaField label="What should a designer remember?" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
-        </>
-      )}
-
-      {sectionId === 'proof' && (
-        <>
-          {linkedResearchResults.length > 0 && (
-            <div
-              style={{
-                borderLeft: '3px solid #007385',
-                padding: '2px 0 2px 12px',
-                display: 'grid',
-                gap: 8,
-              }}
-            >
-              <div>
-                <div style={{ ...styles.small, color: '#007385', fontWeight: 850 }}>Linked inspiration / research</div>
-                <p style={{ ...styles.small, ...styles.muted, margin: '3px 0 0', lineHeight: 1.45 }}>
-                  This proof came from reviewed Research. Keep the source attached so designers know why the claim is safe to reuse.
-                </p>
-              </div>
-              {linkedResearchResults.map((result) => (
-                <div key={result._id} style={{ display: 'grid', gap: 3 }}>
-                  <strong style={{ fontSize: 13 }}>{result.title || result.keyword || 'Research item'}</strong>
-                  <span style={{ ...styles.small, ...styles.muted }}>
-                    {researchResultKindLabel(result)}: {describeResearchResult(result)}
-                  </span>
-                  {result.sourceUrl && (
-                    <a href={result.sourceUrl} target="_blank" rel="noreferrer" style={{ ...styles.small, color: '#00A0B6', fontWeight: 850 }}>
-                      Open evidence source
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          <StrategyTextareaField label="What fact, quote, example, or source supports the claim?" help="Write the usable proof, not just the source name." value={textFieldValue(draft.claim)} onChange={(value) => setField('claim', value)} />
-          <StrategySelectField label="What kind of proof is it?" value={textFieldValue(draft.proofType) || 'researchFinding'} options={proofTypeOptions} onChange={(value) => setField('proofType', value)} />
-          <StrategyTextField label="Where did it come from?" help="Source, article, report, project, or person." value={textFieldValue(draft.sourceTitle)} onChange={(value) => setField('sourceTitle', value)} />
-          <StrategyTextField label="What link should we keep with it?" value={textFieldValue(draft.sourceUrl)} onChange={(value) => setField('sourceUrl', value)} />
-          <StrategySelectField label="How confident are we using it?" help="Low confidence does not delete it. It tells designers to be careful." value={textFieldValue(draft.confidence) || 'medium'} options={confidenceOptions} onChange={(value) => setField('confidence', value)} />
-          <StrategyTextField label="What topic or keyword group does this support?" value={textFieldValue(draft.topicCluster)} onChange={(value) => setField('topicCluster', value)} />
-          <StrategyTextareaField label="How can designers use it safely?" help="Mention caveats, citation needs, or where this proof should not be used." value={textFieldValue(draft.usageNotes)} onChange={(value) => setField('usageNotes', value)} />
-        </>
-      )}
-
-      {sectionId === 'ctas' && (
-        <>
-          <StrategyTextField label="What should the button or link say?" value={textFieldValue(draft.label)} onChange={(value) => setField('label', value)} />
-          <StrategySelectField label="Where in the funnel does this fit?" help="Awareness is early interest; later stages ask for more commitment." value={textFieldValue(draft.funnelStage) || 'awareness'} options={funnelStageOptions} onChange={(value) => setField('funnelStage', value)} />
-          <StrategyTextField label="Where should it send someone?" value={textFieldValue(draft.destination)} onChange={(value) => setField('destination', value)} />
-          <StrategyTextField label="How would we know it worked?" help="Example: useful visits, saves, replies, contact form starts, downloads, or qualified conversations." value={textFieldValue(draft.successSignal)} onChange={(value) => setField('successSignal', value)} />
-          <StrategySelectField label="How often should we use this action?" value={textFieldValue(draft.priority) || 'contextual'} options={ctaPriorityOptions} onChange={(value) => setField('priority', value)} />
-          <StrategyTextareaField label="What should a designer remember?" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
-        </>
-      )}
-
-      {sectionId === 'tracking' && (
-        <>
-          <StrategySelectField label="Is this rule active?" value={textFieldValue(draft.status) || 'active'} options={documentStatusOptions} onChange={(value) => setField('status', value)} />
-          <StrategyTextareaField label="How should utm_source be chosen?" help="Usually the platform or source people came from, such as instagram, linkedin, email, or website." value={textFieldValue(draft.utmSourceRule)} onChange={(value) => setField('utmSourceRule', value)} />
-          <StrategyTextareaField label="How should utm_medium be chosen?" help="Usually the broad channel type, such as social, email, referral, paid, or organic." value={textFieldValue(draft.utmMediumRule)} onChange={(value) => setField('utmMediumRule', value)} />
-          <StrategyTextField label="How should campaign names be written?" help="Keep this consistent so similar work groups together in analytics." value={textFieldValue(draft.utmCampaignPattern)} onChange={(value) => setField('utmCampaignPattern', value)} />
-          <StrategyTextField label="How should content names be written?" help="Use this to tell different posts, links, or creative versions apart." value={textFieldValue(draft.utmContentPattern)} onChange={(value) => setField('utmContentPattern', value)} />
-          <StrategyTextareaField label="Which source values are allowed?" help="One value per line. Example: instagram, linkedin, newsletter." value={editedTextValue(draft, 'allowedSourcesText', trackingValueText(draft.allowedSources))} onChange={(value) => setField('allowedSourcesText', value)} />
-          <StrategyTextareaField label="Which medium values are allowed?" help="One value per line. Example: social, email, organic." value={editedTextValue(draft, 'allowedMediumsText', trackingValueText(draft.allowedMediums))} onChange={(value) => setField('allowedMediumsText', value)} />
-          <StrategyTextareaField label="What should a designer remember?" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
-        </>
-      )}
-
-      {sectionId === 'quality' && (
-        <>
-          <StrategySelectField label="Is this checklist active?" value={textFieldValue(draft.status) || 'active'} options={documentStatusOptions} onChange={(value) => setField('status', value)} />
-          <StrategyTextareaField label="When should designers use this checklist?" value={textFieldValue(draft.whenToUse)} onChange={(value) => setField('whenToUse', value)} />
-          <StrategyTextareaField label="What should be checked?" help="One check per line. Optional format: check | category | guidance." value={editedTextValue(draft, 'checksText', qualityCheckText(draft.checks))} onChange={(value) => setField('checksText', value)} />
-          <StrategyTextareaField label="What should a designer remember?" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
-        </>
-      )}
-
-      {sectionId === 'experiments' && (
-        <>
-          <StrategySelectField label="Where is this test?" value={textFieldValue(draft.status) || 'idea'} options={experimentStatusOptions} onChange={(value) => setField('status', value)} />
-          <StrategyTextareaField label="What do we think will happen?" help="Write the bet in plain language: if we do X, we expect Y because Z." value={textFieldValue(draft.hypothesis)} onChange={(value) => setField('hypothesis', value)} />
-          <StrategyTextField label="Expected result" value={textFieldValue(draft.expectedSignal)} onChange={(value) => setField('expectedSignal', value)} />
-          <StrategyTextField label="Which public path is being tested?" help="Example: / or /vision/determinants-of-health." value={textFieldValue(draft.targetPath)} onChange={(value) => setField('targetPath', value)} />
-          <StrategyTextField label="What traffic split key should engineering use?" help="Example: home-2026-variant." value={textFieldValue(draft.flagKey)} onChange={(value) => setField('flagKey', value)} />
-          <StrategyTextareaField label="Which page versions are in the test?" help="One version per line. Optional format: key | label | notes | custom preview link. Include control/current." value={editedTextValue(draft, 'variantsText', experimentVariantText(draft.variants))} onChange={(value) => setField('variantsText', value)} />
-          <StrategyTextField label="Primary success metric" value={textFieldValue(draft.primaryMetric)} onChange={(value) => setField('primaryMetric', value)} />
-          <StrategyTextareaField label="What should QA check before rollout?" value={textFieldValue(draft.qaNotes)} onChange={(value) => setField('qaNotes', value)} />
-          <StrategyTextareaField label="What happened?" value={textFieldValue(draft.result)} onChange={(value) => setField('result', value)} />
-          <StrategySelectField label="What should we do next?" value={textFieldValue(draft.decision)} options={experimentDecisionOptions} onChange={(value) => setField('decision', value)} />
-          <StrategyTextField label="When did we decide?" value={textFieldValue(draft.decisionDate)} type="date" onChange={(value) => setField('decisionDate', value)} />
-          <StrategyTextareaField label="What should a designer remember?" value={textFieldValue(draft.notes)} onChange={(value) => setField('notes', value)} />
-        </>
-      )}
-
-      {sectionId === 'performance' && (
-        <>
-          <StrategySelectField label="Where did this signal come from?" value={textFieldValue(draft.provider) || 'manual'} options={performanceProviderOptions} onChange={(value) => setField('provider', value)} />
-          <StrategySelectField label="What should we do with it?" value={textFieldValue(draft.status) || 'new'} options={performanceStatusOptions} onChange={(value) => setField('status', value)} />
-          <StrategyTextField label="What kind of signal is it?" help="Example: ranking query, high-exit page, saved post, qualified visit, or manual observation." value={textFieldValue(draft.signalType)} onChange={(value) => setField('signalType', value)} />
-          <StrategyTextField label="Where did you see it?" help="Dashboard name, social post, report, page title, or source label." value={textFieldValue(draft.sourceLabel)} onChange={(value) => setField('sourceLabel', value)} />
-          <StrategyTextField label="Which search query, if any?" value={textFieldValue(draft.query)} onChange={(value) => setField('query', value)} />
-          <StrategyTextField label="Which page or destination?" value={textFieldValue(draft.pageUrl)} onChange={(value) => setField('pageUrl', value)} />
-          <StrategyTextField label="When was this measured?" value={textFieldValue(draft.metricDate)} type="date" onChange={(value) => setField('metricDate', value)} />
-          <StrategyTextareaField label="What numbers matter?" help="One metric per line. Optional format: label | value | unit | change | variant key | event name." value={editedTextValue(draft, 'metricsText', performanceMetricText(draft.metrics))} onChange={(value) => setField('metricsText', value)} />
-          <StrategyTextareaField label="What does this tell us?" value={textFieldValue(draft.interpretation)} onChange={(value) => setField('interpretation', value)} />
-          <StrategyTextareaField label="What should change because of it?" value={textFieldValue(draft.recommendation)} onChange={(value) => setField('recommendation', value)} />
-          <StrategyTextareaField label="Paste raw notes or import data here if useful" value={textFieldValue(draft.rawImport)} onChange={(value) => setField('rawImport', value)} />
-        </>
-      )}
-    </div>
-  )
-}
-
-function StrategyTextField({
-  label,
-  help,
-  value,
-  onChange,
-  type = 'text',
-}: {
-  label: string
-  help?: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
-}) {
-  return (
-    <label>
-      <span style={styles.label}>{label}</span>
-      {help && <span style={{ ...styles.small, ...styles.muted, display: 'block', margin: '3px 0 6px', lineHeight: 1.4 }}>{help}</span>}
-      <input type={type} value={value} onChange={(event) => onChange(event.currentTarget.value)} style={styles.input} />
-    </label>
-  )
-}
-
-function StrategyTextareaField({
-  label,
-  help,
-  value,
-  onChange,
-}: {
-  label: string
-  help?: string
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <label>
-      <span style={styles.label}>{label}</span>
-      {help && <span style={{ ...styles.small, ...styles.muted, display: 'block', margin: '3px 0 6px', lineHeight: 1.4 }}>{help}</span>}
-      <textarea value={value} onChange={(event) => onChange(event.currentTarget.value)} style={{ ...styles.input, minHeight: 86, resize: 'vertical' }} />
-    </label>
-  )
-}
-
-function StrategySelectField({
-  label,
-  help,
-  value,
-  options,
-  onChange,
-}: {
-  label: string
-  help?: string
-  value: string
-  options: SelectOption[]
-  onChange: (value: string) => void
-}) {
-  return (
-    <label>
-      <span style={styles.label}>{label}</span>
-      {help && <span style={{ ...styles.small, ...styles.muted, display: 'block', margin: '3px 0 6px', lineHeight: 1.4 }}>{help}</span>}
-      <select value={value} onChange={(event) => onChange(event.currentTarget.value)} style={{ ...styles.input, paddingRight: 34 }}>
-        <option value="">No selection</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.title}
-          </option>
-        ))}
-      </select>
-    </label>
-  )
-}
-
-function getStrategyReadiness(data: MarketingData) {
-  return [
-    { label: getStrategySectionQuestion('audiences').shortLabel, value: data.audienceProfiles.length, ready: data.audienceProfiles.length > 0 },
-    { label: getStrategySectionQuestion('messages').shortLabel, value: data.messagePillars.length, ready: data.messagePillars.length > 0 },
-    { label: getStrategySectionQuestion('proof').shortLabel, value: data.proofPoints.length, ready: data.proofPoints.length > 0 },
-    { label: getStrategySectionQuestion('ctas').shortLabel, value: data.ctas.length, ready: data.ctas.length > 0 },
-    { label: getStrategySectionQuestion('tracking').shortLabel, value: data.trackingRules.length, ready: data.trackingRules.length > 0 },
-    { label: getStrategySectionQuestion('quality').shortLabel, value: data.qualityGates.length, ready: data.qualityGates.length > 0 },
-    { label: getStrategySectionQuestion('experiments').shortLabel, value: data.experiments.length, ready: data.experiments.length > 0 },
-    { label: getStrategySectionQuestion('performance').shortLabel, value: data.performanceSignals.length, ready: data.performanceSignals.length > 0 },
-  ]
-}
-
-function getStrategySectionItems(data: MarketingData, sectionId: StrategyAssetKind): StrategyDocument[] {
+export function getStrategySectionItems(data: MarketingData, sectionId: StrategyAssetKind): StrategyDocument[] {
   if (sectionId === 'audiences') return data.audienceProfiles
   if (sectionId === 'messages') return data.messagePillars
   if (sectionId === 'proof') return data.proofPoints
@@ -5771,7 +4286,7 @@ function getStrategySectionItems(data: MarketingData, sectionId: StrategyAssetKi
   return data.performanceSignals
 }
 
-function buildEmptyStrategyDocument(section: StrategySectionConfig): MarketingDocumentInput {
+export function buildEmptyStrategyDocument(section: StrategySectionConfig): MarketingDocumentInput {
   const base = { _type: section.documentType, title: '' }
   if (section.id === 'audiences') return { ...base, priority: 'secondary' }
   if (section.id === 'messages') return { ...base, coreClaim: '' }
@@ -5783,7 +4298,7 @@ function buildEmptyStrategyDocument(section: StrategySectionConfig): MarketingDo
   return { ...base, provider: 'manual', status: 'new' }
 }
 
-function strategyDraftNeedsResearchFill(sectionId: StrategyAssetKind, draft: Record<string, unknown>) {
+export function strategyDraftNeedsResearchFill(sectionId: StrategyAssetKind, draft: Record<string, unknown>) {
   const hasText = (name: string) => textFieldValue(draft[name]).trim().length > 0
   const hasList = (name: string) => stringListValue(draft[name]).trim().length > 0 || textFieldValue(draft[`${name}Text`]).trim().length > 0
   const hasTrackingList = (name: string) => trackingValueText(draft[name]).trim().length > 0 || textFieldValue(draft[`${name}Text`]).trim().length > 0
@@ -5801,11 +4316,11 @@ function strategyDraftNeedsResearchFill(sectionId: StrategyAssetKind, draft: Rec
   return ![hasText('signalType'), hasText('sourceLabel'), hasText('interpretation'), hasText('recommendation'), hasMetrics].some(Boolean)
 }
 
-function strategyPrefetchCacheKey(sectionId: StrategyAssetKind, recordId: string) {
+export function strategyPrefetchCacheKey(sectionId: StrategyAssetKind, recordId: string) {
   return `${sectionId}:${recordId}`
 }
 
-function strategyWorkingDraftStorageKey(sectionId: StrategyAssetKind, recordId: string) {
+export function strategyWorkingDraftStorageKey(sectionId: StrategyAssetKind, recordId: string) {
   return `${sectionId}:${recordId}`
 }
 
@@ -5834,7 +4349,7 @@ function saveStrategyWorkingDrafts(entries: Record<string, StrategyWorkingDraftE
   }
 }
 
-function loadStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string, sourceUpdatedAt?: string) {
+export function loadStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string, sourceUpdatedAt?: string) {
   const entry = loadStrategyWorkingDrafts()[strategyWorkingDraftStorageKey(sectionId, recordId)]
   if (!entry || entry.sectionId !== sectionId || entry.recordId !== recordId) return null
   if (sourceUpdatedAt && entry.sourceUpdatedAt && entry.sourceUpdatedAt !== sourceUpdatedAt) {
@@ -5845,7 +4360,7 @@ function loadStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string
   return entry
 }
 
-function saveStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string, draft: Record<string, unknown>, sourceUpdatedAt?: string) {
+export function saveStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string, draft: Record<string, unknown>, sourceUpdatedAt?: string) {
   const key = strategyWorkingDraftStorageKey(sectionId, recordId)
   saveStrategyWorkingDrafts({
     ...loadStrategyWorkingDrafts(),
@@ -5859,19 +4374,19 @@ function saveStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string
   })
 }
 
-function clearStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string) {
+export function clearStrategyWorkingDraft(sectionId: StrategyAssetKind, recordId: string) {
   const entries = loadStrategyWorkingDrafts()
   delete entries[strategyWorkingDraftStorageKey(sectionId, recordId)]
   saveStrategyWorkingDrafts(entries)
 }
 
-function getNextStrategySectionForPrefetch(sectionId: StrategyAssetKind): StrategyAssetKind | null {
+export function getNextStrategySectionForPrefetch(sectionId: StrategyAssetKind): StrategyAssetKind | null {
   const order: StrategyAssetKind[] = ['audiences', 'messages', 'proof', 'ctas', 'tracking', 'quality', 'experiments', 'performance']
   const currentIndex = order.indexOf(sectionId)
   return currentIndex >= 0 ? order[currentIndex + 1] || null : null
 }
 
-function getStrategyDependencyTarget(sectionId: StrategyAssetKind, data: MarketingData): AutopilotWorkspaceTarget {
+export function getStrategyDependencyTarget(sectionId: StrategyAssetKind, data: MarketingData): AutopilotWorkspaceTarget {
   const firstProof = data.proofPoints[0]
   const firstMessage = data.messagePillars[0]
   const firstCta = data.ctas[0]
@@ -5915,7 +4430,7 @@ function getStrategyDependencyTarget(sectionId: StrategyAssetKind, data: Marketi
   return { view: 'research', targetId: 'autopilot-research-review' }
 }
 
-function buildStrategyPatch(sectionId: StrategyAssetKind, draft: Record<string, unknown>): Record<string, unknown> {
+export function buildStrategyPatch(sectionId: StrategyAssetKind, draft: Record<string, unknown>): Record<string, unknown> {
   const title = textFieldValue(draft.title)
   if (sectionId === 'audiences') {
     return {
@@ -6020,26 +4535,15 @@ function buildStrategyPatch(sectionId: StrategyAssetKind, draft: Record<string, 
   }
 }
 
-function strategyDocumentSubtitle(sectionId: StrategyAssetKind, item: StrategyDocument) {
-  if (sectionId === 'audiences') return [textFieldValue((item as MarketingAudienceProfile).priority), textFieldValue((item as MarketingAudienceProfile).audience)].filter(Boolean).join(' / ') || 'No audience detail'
-  if (sectionId === 'messages') return textFieldValue((item as MarketingMessagePillar).topicCluster) || textFieldValue((item as MarketingMessagePillar).coreClaim) || 'No claim yet'
-  if (sectionId === 'proof') return [textFieldValue((item as MarketingProofPoint).confidence), textFieldValue((item as MarketingProofPoint).sourceTitle)].filter(Boolean).join(' / ') || 'No source yet'
-  if (sectionId === 'ctas') return [textFieldValue((item as MarketingCta).label), textFieldValue((item as MarketingCta).funnelStage)].filter(Boolean).join(' / ') || 'No CTA label yet'
-  if (sectionId === 'tracking') return textFieldValue((item as MarketingTrackingRule).utmCampaignPattern) || textFieldValue((item as MarketingTrackingRule).status) || 'No pattern yet'
-  if (sectionId === 'quality') return `${((item as MarketingQualityGate).checks || []).length} checks`
-  if (sectionId === 'experiments') return textFieldValue((item as MarketingExperiment).hypothesis) || textFieldValue((item as MarketingExperiment).status) || 'No design bet yet'
-  return [textFieldValue((item as MarketingPerformanceSignal).provider), textFieldValue((item as MarketingPerformanceSignal).signalType)].filter(Boolean).join(' / ') || 'No signal detail'
-}
-
-function textFieldValue(value: unknown) {
+export function textFieldValue(value: unknown) {
   return typeof value === 'string' ? value : ''
 }
 
-function editedTextValue(draft: Record<string, unknown>, name: string, fallback: string) {
+export function editedTextValue(draft: Record<string, unknown>, name: string, fallback: string) {
   return typeof draft[name] === 'string' ? (draft[name] as string) : fallback
 }
 
-function stringListValue(value: unknown) {
+export function stringListValue(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => (typeof item === 'string' ? item : ''))
@@ -6048,7 +4552,7 @@ function stringListValue(value: unknown) {
     : ''
 }
 
-function trackingValueText(value: unknown) {
+export function trackingValueText(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => {
@@ -6060,7 +4564,7 @@ function trackingValueText(value: unknown) {
     : ''
 }
 
-function qualityCheckText(value: unknown) {
+export function qualityCheckText(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => {
@@ -6072,7 +4576,7 @@ function qualityCheckText(value: unknown) {
     : ''
 }
 
-function experimentVariantText(value: unknown) {
+export function experimentVariantText(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => {
@@ -6084,7 +4588,7 @@ function experimentVariantText(value: unknown) {
     : ''
 }
 
-function experimentTrackedMetricText(value: unknown) {
+export function experimentTrackedMetricText(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => {
@@ -6098,7 +4602,7 @@ function experimentTrackedMetricText(value: unknown) {
     : ''
 }
 
-function experimentSuccessTrackerText(value: unknown) {
+export function experimentSuccessTrackerText(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => {
@@ -6118,7 +4622,7 @@ function experimentSuccessTrackerText(value: unknown) {
     : ''
 }
 
-function performanceMetricText(value: unknown) {
+export function performanceMetricText(value: unknown) {
   return Array.isArray(value)
     ? value
         .map((item) => {
@@ -6160,7 +4664,7 @@ function qualityChecksFromDraft(draft: Record<string, unknown>) {
   })
 }
 
-function experimentVariantsFromDraft(draft: Record<string, unknown>) {
+export function experimentVariantsFromDraft(draft: Record<string, unknown>) {
   const edited = textFieldValue(draft.variantsText)
   return splitLines(edited || experimentVariantText(draft.variants)).map((line) => {
     const [key, label, notes, previewUrl] = line.split('|').map((part) => part.trim())
@@ -6175,7 +4679,7 @@ function experimentVariantsFromDraft(draft: Record<string, unknown>) {
   })
 }
 
-function experimentTrackedMetricsFromDraft(draft: Record<string, unknown>) {
+export function experimentTrackedMetricsFromDraft(draft: Record<string, unknown>) {
   const edited = textFieldValue(draft.trackedMetricsText)
   return splitLines(edited || experimentTrackedMetricText(draft.trackedMetrics)).map((line) => {
     const [keyOrLabel, label, eventName, unit, role, notes] = line.split('|').map((part) => part.trim())
@@ -6194,7 +4698,7 @@ function experimentTrackedMetricsFromDraft(draft: Record<string, unknown>) {
   }).filter((metric) => metric.key && metric.label)
 }
 
-function experimentSuccessTrackersFromDraft(draft: Record<string, unknown>) {
+export function experimentSuccessTrackersFromDraft(draft: Record<string, unknown>) {
   const edited = textFieldValue(draft.successTrackersText)
   return splitLines(edited || experimentSuccessTrackerText(draft.successTrackers)).map((line) => {
     const [title, metricKeysText, condition, threshold, successWhen] = line.split('|').map((part) => part.trim())
@@ -8614,7 +7118,7 @@ function dispatchMarketingAutopilotAction(detail: MarketingAutopilotActionDetail
   window.dispatchEvent(new CustomEvent<MarketingAutopilotActionDetail>(MARKETING_AUTOPILOT_ACTION_EVENT, { detail }))
 }
 
-function dispatchMarketingAutopilotStatus(detail: Omit<MarketingAutopilotStatusDetail, 'token'>) {
+export function dispatchMarketingAutopilotStatus(detail: Omit<MarketingAutopilotStatusDetail, 'token'>) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(
     new CustomEvent<MarketingAutopilotStatusDetail>(MARKETING_AUTOPILOT_STATUS_EVENT, {
@@ -9429,2272 +7933,7 @@ export function getMarketingAutofillQuestions(kind: MarketingAssistKind): Guided
   return [sourceQuestion, scopeQuestion]
 }
 
-function ResearchWorkspace({
-  client,
-  data,
-  savingId,
-  createDocument,
-  loadData,
-  commitPatch,
-  onOpenView,
-  autopilotTarget,
-  onAutopilotComplete,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenView: (view: MarketingViewId) => void
-  autopilotTarget?: AutopilotWorkspaceTarget | null
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [selectedId, setSelectedId] = useState(data.researchProjects[0]?._id || '')
-  const [migrationMessage, setMigrationMessage] = useState('')
-
-  useEffect(() => {
-    if (selectedId && data.researchProjects.some((project) => project._id === selectedId)) return
-    setSelectedId(data.researchProjects[0]?._id || '')
-  }, [data.researchProjects, selectedId])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'research' || !autopilotTarget.recordId) return
-    if (data.researchProjects.some((project) => project._id === autopilotTarget.recordId)) {
-      setSelectedId(autopilotTarget.recordId)
-    }
-  }, [autopilotTarget?.recordId, autopilotTarget?.view, data.researchProjects])
-
-  const selectedProject = data.researchProjects.find((project) => project._id === selectedId) || null
-
-  const createProject = async () => {
-    const id = await createDocument(createResearchProjectDocument(data))
-    setSelectedId(id)
-    onAutopilotComplete?.({ action: 'research:createProject', recordId: id })
-  }
-
-  const importLegacyPlan = async (plan: MarketingResearchPlan) => {
-    setMigrationMessage('')
-    const project = await migrateLegacyResearchPlanToProject(client, plan)
-    await loadData()
-    setSelectedId(project._id)
-    setMigrationMessage(`Imported "${plan.title || 'legacy plan'}" as a research project. The original plan was left intact.`)
-  }
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
-      <section style={styles.panel}>
-        <PanelHeading
-          title="Research projects"
-          description="Start with a question, gather findings, then create drafts only from trusted results."
-        />
-        <button type="button" data-tour-id="autopilot-research-add-project" style={{ ...styles.primaryButton, width: '100%', marginBottom: 12 }} onClick={() => void createProject()}>
-          Add research project
-        </button>
-        {data.researchProjects.length === 0 ? (
-          <EmptyInline title="No research projects yet. Add one before creating release plans or drafts." />
-        ) : (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {data.researchProjects.map((project) => {
-              const resultCount = data.researchResults.filter((result) => result.project?._id === project._id).length
-              const approvedCount = data.researchResults.filter((result) => result.project?._id === project._id && isResearchResultApproved(result)).length
-              return (
-              <button
-                key={project._id}
-                type="button"
-                style={{
-                  ...styles.templateButton,
-                  borderColor: project._id === selectedId ? '#007385' : 'var(--card-border-color)',
-                  background: project._id === selectedId ? 'rgba(0, 115, 133, 0.1)' : 'var(--card-bg-color)',
-                }}
-                onClick={() => setSelectedId(project._id)}
-              >
-                <span style={{ fontWeight: 800 }}>{project.title || 'Untitled research project'}</span>
-                <span style={{ ...styles.small, ...styles.muted }}>
-                  {labelFor(researchProjectStatusOptions, project.status) || 'Draft'} / {labelFor(researchProjectTypeOptions, project.researchType) || 'Topic research'} / {project.targetGeography || 'us'}
-                </span>
-                <span style={{ ...styles.small, ...styles.muted }}>
-                  {approvedCount}/{resultCount} trusted finding{resultCount === 1 ? '' : 's'}
-                </span>
-              </button>
-            )})}
-          </div>
-        )}
-        {data.researchPlans.length > 0 && (
-          <details style={{ marginTop: 14 }}>
-            <summary style={{ ...styles.small, fontWeight: 800, cursor: 'pointer' }}>Legacy research plans ({data.researchPlans.length})</summary>
-            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-              {migrationMessage && <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>{migrationMessage}</div>}
-              {data.researchPlans.map((plan) => (
-                <div key={plan._id} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
-                  <strong style={{ fontSize: 13 }}>{plan.title || 'Untitled legacy plan'}</strong>
-                  <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 8px' }}>
-                    Legacy plan docs are preserved. Import one to map its fields into project/results.
-                  </p>
-                  <button type="button" style={styles.button} onClick={() => void importLegacyPlan(plan)}>
-                    Import as project
-                  </button>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-      </section>
-
-      <ResearchProjectEditor
-        client={client}
-        project={selectedProject}
-        data={data}
-        saving={!!selectedProject && savingId === selectedProject._id}
-        onSave={commitPatch}
-        loadData={loadData}
-        onOpenView={onOpenView}
-        autopilotTarget={autopilotTarget}
-        onAutopilotComplete={onAutopilotComplete}
-      />
-    </div>
-  )
-}
-
-function getResearchPageForAutopilotTarget(autopilotTarget?: AutopilotWorkspaceTarget | null): 'setup' | 'review' | 'synthesize' {
-  if (autopilotTarget?.view !== 'research') return 'setup'
-  if (autopilotTarget.targetId === 'autopilot-research-review') return 'review'
-  if (autopilotTarget.targetId === 'autopilot-research-create-setup') return 'synthesize'
-  return 'setup'
-}
-
-function ResearchProjectEditor({
-  client,
-  project,
-  data,
-  saving,
-  onSave,
-  loadData,
-  onOpenView,
-  autopilotTarget,
-  onAutopilotComplete,
-}: {
-  client: StudioClient
-  project: MarketingResearchProject | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  loadData: () => Promise<void>
-  onOpenView: (view: MarketingViewId) => void
-  autopilotTarget?: AutopilotWorkspaceTarget | null
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const { confirmDiscardUnsavedChanges } = useMarketingUnsavedGuard()
-  const [draft, setDraft] = useState<MarketingResearchProject | null>(project)
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-  const [running, setRunning] = useState(false)
-  const [regenerating, setRegenerating] = useState(false)
-  const [converting, setConverting] = useState(false)
-  const [researchPage, setResearchPage] = useState<'setup' | 'review' | 'synthesize'>('setup')
-  const [pendingResultIds, setPendingResultIds] = useState<string[]>([])
-  const [optimisticApprovedIds, setOptimisticApprovedIds] = useState<string[]>([])
-  const [optimisticRejectedIds, setOptimisticRejectedIds] = useState<string[]>([])
-  const [optimisticSelectedIds, setOptimisticSelectedIds] = useState<string[]>([])
-  const [optimisticDeselectedIds, setOptimisticDeselectedIds] = useState<string[]>([])
-  const [inspirationDraft, setInspirationDraft] = useState<ResearchInspirationDraft>(emptyResearchInspirationDraft)
-  const [capturingInspiration, setCapturingInspiration] = useState(false)
-  const [creatingProofResultIds, setCreatingProofResultIds] = useState<string[]>([])
-  const analyticsTakeaways = useMemo(() => buildAnalyticsInterpretations(data), [data])
-  const autopilotResearchPage = getResearchPageForAutopilotTarget(autopilotTarget)
-
-  useEffect(() => {
-    setDraft(project)
-    setMessage('')
-    setError('')
-    setResearchPage(autopilotResearchPage)
-    setInspirationDraft(emptyResearchInspirationDraft())
-  }, [project, autopilotResearchPage])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'research') return
-    setResearchPage(getResearchPageForAutopilotTarget(autopilotTarget))
-  }, [autopilotTarget?.targetId, autopilotTarget?.view])
-
-  const projectResults = useMemo(() => (draft ? getResearchResultsForProject(data, draft._id) : []), [data, draft?._id])
-  const projectRuns = useMemo(() => (draft ? getResearchRunsForProject(data, draft._id) : []), [data, draft?._id])
-  const projectResultIds = useMemo(() => new Set(projectResults.map((result) => result._id)), [projectResults])
-  const storedSelectedResultIds = useMemo(
-    () =>
-      Array.from(
-        new Set([
-          ...(draft?.selectedResults || []).map((result) => result._id).filter(Boolean),
-          ...projectResults.filter((result) => result.selectedForSynthesis || result.status === 'selected').map((result) => result._id),
-        ]),
-      ),
-    [draft?.selectedResults, projectResults],
-  )
-  const selectedResultIds = Array.from(new Set([...storedSelectedResultIds, ...optimisticSelectedIds, ...optimisticApprovedIds]))
-    .filter((id) => !optimisticDeselectedIds.includes(id) && !optimisticRejectedIds.includes(id))
-  const approvedResultIds = Array.from(new Set([...projectResults.filter(isResearchResultApproved).map((result) => result._id), ...optimisticApprovedIds]))
-  const selectedApprovedIds = selectedResultIds.filter((id) => approvedResultIds.includes(id))
-  const hasGeneratedResearch = projectRuns.length > 0 || projectResults.length > 0
-
-  useEffect(() => {
-    setPendingResultIds((current) => current.filter((id) => projectResultIds.has(id)))
-    setOptimisticApprovedIds((current) =>
-      current.filter((id) => {
-        const result = projectResults.find((candidate) => candidate._id === id)
-        return result && result.status !== 'approved'
-      }),
-    )
-    setOptimisticRejectedIds((current) =>
-      current.filter((id) => {
-        const result = projectResults.find((candidate) => candidate._id === id)
-        return result && result.status !== 'rejected'
-      }),
-    )
-    setOptimisticSelectedIds((current) =>
-      current.filter((id) => projectResultIds.has(id) && !storedSelectedResultIds.includes(id)),
-    )
-    setOptimisticDeselectedIds((current) =>
-      current.filter((id) => projectResultIds.has(id) && storedSelectedResultIds.includes(id)),
-    )
-  }, [projectResultIds, projectResults, storedSelectedResultIds])
-
-  if (!draft) {
-    return <EmptyPanel icon={SearchIcon} title="Select a research project" description="Create or reopen a project before making plans, campaigns, calendar items, or Quick Links." />
-  }
-
-  const updateDraft = <K extends keyof MarketingResearchProject>(key: K, value: MarketingResearchProject[K]) => {
-    setDraft((current) => (current ? { ...current, [key]: value } : current))
-    setMessage('')
-    setError('')
-  }
-
-  const saveDraft = async () => {
-    if (!draft._id) return
-    await onSave(draft._id, buildResearchProjectSavePayload(draft))
-    setMessage('Research project saved.')
-    onAutopilotComplete?.({ action: 'research:createProject', recordId: draft._id })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const projectSuggestion = suggestion.researchProject || {}
-    setDraft((current) => (current ? mergeResearchProjectSuggestion(current, projectSuggestion) : current))
-    setMessage('Suggested research setup applied. Review it, then get evidence.')
-    setError('')
-  }
-
-  const regenerateResearchSetup = async () => {
-    if (!draft._id) return
-    if (!hasGeneratedResearch) {
-      setMessage('Get evidence once before regenerating this setup.')
-      return
-    }
-    if (!confirmDiscardUnsavedChanges('Regenerating will replace the current research setup draft. Continue?')) return
-    setRegenerating(true)
-    setError('')
-    setMessage('')
-    try {
-      const prompt = [
-        `Regenerate this as ${labelFor(researchProjectTypeOptions, draft.researchType) || 'topic research'}.`,
-        'Use the current title, directive, audience, seed inputs, and GoInvo site context.',
-        'Refresh the methods, seed keywords, seed URLs, and research questions so the project matches the selected research type.',
-        'Preserve reviewed results and linked drafts; only update the project setup.',
-      ].join(' ')
-      const response = await fetch('/api/marketing/assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'researchProject',
-          draft,
-          prompt,
-          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(analyticsTakeaways),
-        }),
-      })
-      const payload = (await response.json()) as MarketingAiAssistResponse
-      if (!response.ok || !payload.suggestion?.researchProject) throw new Error(payload.error || 'Research setup could not be regenerated.')
-      const nextDraft = mergeResearchProjectSuggestion(draft, payload.suggestion.researchProject)
-      setDraft(nextDraft)
-      await onSave(draft._id, buildResearchProjectSavePayload(nextDraft))
-      await loadData()
-      setMessage(`Research setup refreshed${payload.usedAi ? ' with AI' : ' from rule-based drafting'}. Check the updated questions, then get evidence again when ready.`)
-    } catch (regenerateError) {
-      setError(regenerateError instanceof Error ? regenerateError.message : 'Research setup could not be regenerated.')
-    } finally {
-      setRegenerating(false)
-    }
-  }
-
-  const runResearch = async () => {
-    if (!draft._id) return
-    setRunning(true)
-    setError('')
-    setMessage('')
-    try {
-      await onSave(draft._id, buildResearchProjectSavePayload(draft))
-      const token = studioSessionToken()
-      const response = await fetch('/api/marketing/research/run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'x-sanity-session': token } : {}),
-        },
-        body: JSON.stringify({
-          projectId: draft._id,
-          methods: draft.methods && draft.methods.length > 0 ? draft.methods : defaultResearchMethodsForType(draft.researchType),
-          seedKeywords: draft.seedKeywords || [],
-          seedUrls: draft.seedUrls || [],
-          database: draft.targetGeography || 'us',
-        }),
-      })
-      const payload = (await response.json()) as { runId?: string; createdResults?: number; warnings?: string[]; errors?: string[]; error?: string }
-      if (!response.ok) throw new Error(payload.error || payload.errors?.[0] || 'Research run failed.')
-      await loadData()
-      const warningText = payload.warnings && payload.warnings.length > 0 ? ` Warnings: ${payload.warnings.join(' ')}` : ''
-      setMessage(`Research run complete. Created ${payload.createdResults || 0} finding${payload.createdResults === 1 ? '' : 's'} to review.${warningText}`)
-      setResearchPage('review')
-      if ((payload.createdResults || 0) > 0) onAutopilotComplete?.({ action: 'research:run', recordId: draft._id })
-    } catch (runError) {
-      setError(runError instanceof Error ? runError.message : 'Research run failed.')
-    } finally {
-      setRunning(false)
-    }
-  }
-
-  const captureInspiration = async () => {
-    if (!draft._id) return
-    if (!hasInspirationDraftContent(inspirationDraft)) {
-      setError('Add the idea, source title, URL, or note that inspired the content.')
-      return
-    }
-
-    setCapturingInspiration(true)
-    setError('')
-    setMessage('')
-    try {
-      const nextDraft = mergeInspirationIntoResearchProject(draft, inspirationDraft)
-      const created = await client.create(buildInspirationResearchResultDocument(draft, inspirationDraft))
-      await onSave(draft._id, buildResearchProjectSavePayload(nextDraft))
-      setDraft(nextDraft)
-      await loadData()
-      setInspirationDraft(emptyResearchInspirationDraft())
-      setResearchPage('review')
-      setMessage(`Captured "${created.title || 'inspiration'}" for review. Trust it only if it is useful enough to guide drafts.`)
-    } catch (captureError) {
-      setError(captureError instanceof Error ? captureError.message : 'Could not capture this inspiration.')
-    } finally {
-      setCapturingInspiration(false)
-    }
-  }
-
-  const setResultSelected = async (result: MarketingResearchResult, selected: boolean) => {
-    setPendingResultIds((current) => Array.from(new Set([...current, result._id])))
-    if (selected) {
-      setOptimisticSelectedIds((current) => Array.from(new Set([...current, result._id])))
-      setOptimisticDeselectedIds((current) => current.filter((id) => id !== result._id))
-    } else {
-      setOptimisticDeselectedIds((current) => Array.from(new Set([...current, result._id])))
-      setOptimisticSelectedIds((current) => current.filter((id) => id !== result._id))
-    }
-    setError('')
-    const nextSelected = selected
-      ? Array.from(new Set([...selectedResultIds, result._id]))
-      : selectedResultIds.filter((id) => id !== result._id)
-    try {
-      await client
-        .patch(result._id)
-        .set({
-          selectedForSynthesis: selected,
-          status: selected ? (result.status === 'approved' ? 'approved' : 'selected') : result.status === 'selected' ? 'needsReview' : result.status || 'needsReview',
-        })
-        .commit()
-      await onSave(draft._id, { selectedResults: refsFromIds(nextSelected) }, nextSelected.length > 0 ? [] : ['selectedResults'])
-      await loadData()
-    } catch (selectionError) {
-      if (selected) {
-        setOptimisticSelectedIds((current) => current.filter((id) => id !== result._id))
-      } else {
-        setOptimisticDeselectedIds((current) => current.filter((id) => id !== result._id))
-      }
-      setError(selectionError instanceof Error ? selectionError.message : 'Could not update this research item.')
-    } finally {
-      setPendingResultIds((current) => current.filter((id) => id !== result._id))
-    }
-  }
-
-  const approveResult = async (result: MarketingResearchResult) => {
-    setPendingResultIds((current) => Array.from(new Set([...current, result._id])))
-    setOptimisticApprovedIds((current) => Array.from(new Set([...current, result._id])))
-    setOptimisticRejectedIds((current) => current.filter((id) => id !== result._id))
-    setOptimisticSelectedIds((current) => Array.from(new Set([...current, result._id])))
-    setOptimisticDeselectedIds((current) => current.filter((id) => id !== result._id))
-    setError('')
-    const nextSelected = Array.from(new Set([...selectedResultIds, result._id]))
-    const nextApproved = Array.from(new Set([...approvedResultIds, result._id]))
-    try {
-      await client
-        .patch(result._id)
-        .set({
-          status: 'approved',
-          selectedForSynthesis: true,
-          approvedAt: new Date().toISOString(),
-        })
-        .commit()
-      await onSave(draft._id, {
-        selectedResults: refsFromIds(nextSelected),
-        approvedResults: refsFromIds(nextApproved),
-      })
-      await loadData()
-      onAutopilotComplete?.({ action: 'research:approve', recordId: result._id })
-    } catch (approvalError) {
-      setOptimisticApprovedIds((current) => current.filter((id) => id !== result._id))
-      setError(approvalError instanceof Error ? approvalError.message : 'Could not mark this finding as trusted.')
-    } finally {
-      setPendingResultIds((current) => current.filter((id) => id !== result._id))
-    }
-  }
-
-  const rejectResult = async (result: MarketingResearchResult) => {
-    setPendingResultIds((current) => Array.from(new Set([...current, result._id])))
-    setOptimisticRejectedIds((current) => Array.from(new Set([...current, result._id])))
-    setOptimisticApprovedIds((current) => current.filter((id) => id !== result._id))
-    setOptimisticSelectedIds((current) => current.filter((id) => id !== result._id))
-    setOptimisticDeselectedIds((current) => Array.from(new Set([...current, result._id])))
-    setError('')
-    const nextSelected = selectedResultIds.filter((id) => id !== result._id)
-    const nextApproved = approvedResultIds.filter((id) => id !== result._id)
-    try {
-      await client
-        .patch(result._id)
-        .set({
-          status: 'rejected',
-          selectedForSynthesis: false,
-        })
-        .unset(['approvedAt'])
-        .commit()
-      await onSave(
-        draft._id,
-        {
-          selectedResults: refsFromIds(nextSelected),
-          approvedResults: refsFromIds(nextApproved),
-        },
-        [
-          ...(nextSelected.length > 0 ? [] : ['selectedResults']),
-          ...(nextApproved.length > 0 ? [] : ['approvedResults']),
-        ],
-      )
-      await loadData()
-    } catch (rejectError) {
-      setOptimisticRejectedIds((current) => current.filter((id) => id !== result._id))
-      setError(rejectError instanceof Error ? rejectError.message : 'Could not reject this research item.')
-    } finally {
-      setPendingResultIds((current) => current.filter((id) => id !== result._id))
-    }
-  }
-
-  const createProofPointFromResult = async (result: MarketingResearchResult) => {
-    if (!draft._id) return
-    setCreatingProofResultIds((current) => Array.from(new Set([...current, result._id])))
-    setError('')
-    setMessage('')
-    try {
-      const created = await client.create(buildProofPointFromResearchResult(result, draft))
-      const nextProofIds = mergeIds(refIdsFromRecords(result.proofPoints), [created._id])
-      await client
-        .patch(result._id)
-        .set({ proofPoints: refsFromIds(nextProofIds) })
-        .commit()
-      await onSave(draft._id, {
-        proofPoints: refsFromIds(mergeIds(refIdsFromRecords(draft.proofPoints), [created._id])),
-      })
-      await loadData()
-      setMessage(`Created proof draft "${created.title || 'Proof point'}" and linked it to this finding. Open Strategy > Proof to review it before reuse.`)
-      onAutopilotComplete?.({ action: 'strategy:save:proof', recordId: created._id })
-    } catch (proofError) {
-      setError(proofError instanceof Error ? proofError.message : 'Could not create a proof point from this research item.')
-    } finally {
-      setCreatingProofResultIds((current) => current.filter((id) => id !== result._id))
-    }
-  }
-
-  const generateLinkedRecords = async () => {
-    if (!draft._id) return
-    setConverting(true)
-    setError('')
-    setMessage('')
-    try {
-      if (selectedApprovedIds.length === 0) throw new Error('Trust and select at least one finding before creating setup drafts.')
-      await onSave(draft._id, buildResearchProjectSavePayload(draft))
-      const result = await createResearchProjectGeneratedRecords(client, data, draft, selectedApprovedIds)
-      await loadData()
-      setMessage(`Created ${result.calendarItemIds.length} draft calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, plus campaign, funnel, and Quick Link drafts from trusted findings.`)
-      onAutopilotComplete?.({ action: 'research:generateRecords', recordId: draft._id })
-    } catch (conversionError) {
-      setError(conversionError instanceof Error ? conversionError.message : 'Could not create linked drafts.')
-    } finally {
-      setConverting(false)
-    }
-  }
-
-  const addQuestion = () => updateDraft('researchQuestions', [...(draft.researchQuestions || []), createResearchProjectQuestion(draft)])
-  const addCollaborator = () => updateDraft('collaborators', [...(draft.collaborators || []), createResearchProjectCollaborator()])
-
-  return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 14 }}>
-          <div>
-            <div style={styles.kicker}>Research first</div>
-            <h2 style={{ margin: 0, fontSize: 24 }}>{draft.title || 'Untitled research project'}</h2>
-            <p style={{ ...styles.muted, margin: '5px 0 0', lineHeight: 1.55 }}>
-              Start with the question. Research collects evidence. You choose what is useful before anything becomes a campaign, calendar item, or Quick Link.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {['converted', 'archived'].includes(draft.status || '') && (
-              <button type="button" style={styles.button} onClick={() => updateDraft('status', 'reviewing')}>
-                Reopen project
-              </button>
-            )}
-            <button type="button" data-tour-id="autopilot-research-save-project" style={styles.button} onClick={() => void saveDraft()} disabled={saving}>
-              {saving ? 'Saving...' : 'Save project'}
-            </button>
-            <button
-              type="button"
-              style={{
-                ...styles.button,
-                opacity: hasGeneratedResearch ? 1 : 0.45,
-                cursor: hasGeneratedResearch ? 'pointer' : 'not-allowed',
-              }}
-              title={hasGeneratedResearch ? 'Refresh this project setup from the latest research state.' : 'Get evidence once before regenerating it.'}
-              onClick={() => void regenerateResearchSetup()}
-              disabled={!hasGeneratedResearch || regenerating || running || saving}
-            >
-              {regenerating ? 'Regenerating...' : 'Regenerate research'}
-            </button>
-          </div>
-        </div>
-
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
-          {[
-            ['1', 'What should we learn?', draft.brief ? 'Ready' : 'Needs question'],
-            ['2', 'Get evidence', `${projectRuns.length} run${projectRuns.length === 1 ? '' : 's'}`],
-            ['3', 'What can we trust?', `${selectedApprovedIds.length}/${projectResults.length} chosen`],
-            ['4', 'Make editable drafts', selectedApprovedIds.length > 0 ? 'Ready' : 'Waiting'],
-          ].map(([step, title, detail]) => (
-            <div key={step} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
-              <div style={styles.kicker}>Step {step}</div>
-              <strong>{title}</strong>
-              <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>{detail}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-          {[
-            { id: 'setup', label: 'Start with a question', enabled: true },
-            { id: 'review', label: 'Choose useful evidence', enabled: hasGeneratedResearch },
-            { id: 'synthesize', label: 'Make drafts', enabled: hasGeneratedResearch },
-          ].map((page) => {
-            const active = researchPage === page.id
-            return (
-              <button
-                key={page.id}
-                type="button"
-                style={{
-                  ...(active ? styles.primaryButton : styles.button),
-                  opacity: page.enabled ? 1 : 0.45,
-                  cursor: page.enabled ? 'pointer' : 'not-allowed',
-                }}
-                onClick={() => page.enabled && setResearchPage(page.id as 'setup' | 'review' | 'synthesize')}
-                disabled={!page.enabled}
-                title={page.enabled ? undefined : 'Get evidence before opening this page.'}
-              >
-                {page.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <MarketingAiAssistPanel
-          kind="researchProject"
-          draft={draft as unknown as Record<string, unknown>}
-          analyticsTakeaways={analyticsTakeaways}
-          onApply={applyAiSuggestion}
-        />
-
-        {message && <div style={{ ...styles.small, color: '#007385', fontWeight: 800, marginTop: 12 }}>{message}</div>}
-        {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
-      </section>
-
-      {researchPage === 'setup' && (
-        <>
-          <ResearchInspirationIntake
-            value={inspirationDraft}
-            disabled={capturingInspiration || saving}
-            onChange={setInspirationDraft}
-            onCapture={() => void captureInspiration()}
-          />
-
-      <section data-tour-id="autopilot-research-project-editor" style={styles.panel}>
-        <PanelHeading title="What should Research answer?" description="Give the system just enough direction to know what to score, scan, and review." />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-          <InputField label="What should we call this research?" help="A short internal name is enough. It can be a topic, article, campaign idea, or source.">
-            <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Where is this research in the workflow?">
-            <Select value={draft.status || 'draft'} options={researchProjectStatusOptions} onChange={(value) => updateDraft('status', value)} />
-          </InputField>
-          <InputField label="What kind of research is this?" help="Pick the closest shape. The choice changes the starter questions and scan methods.">
-            <Select
-              value={draft.researchType || 'topic'}
-              options={researchProjectTypeOptions}
-              onChange={(value) => {
-                const nextType = value || 'topic'
-                updateDraft('researchType', nextType)
-                updateDraft('methods', defaultResearchMethodsForType(nextType))
-                updateDraft('researchQuestions', defaultResearchQuestionsForType(nextType, draft.title || 'this research project'))
-              }}
-            />
-          </InputField>
-          <InputField label="Why are we doing it?" help="This keeps the research tied to the marketing goal instead of becoming trivia collection.">
-            <Select value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
-          </InputField>
-          <InputField label="Where should keyword scores come from?" help="Use us for United States search data unless this work targets another market.">
-            <input style={styles.input} value={draft.targetGeography || 'us'} onChange={(event) => updateDraft('targetGeography', event.currentTarget.value)} />
-          </InputField>
-        </div>
-        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
-          <InputField label="What are we trying to learn?" help="Write this like a request to a careful researcher. Example: Find evidence and search demand for a Boston housing statistics carousel.">
-            <textarea rows={4} style={styles.input} value={draft.brief || ''} onChange={(event) => updateDraft('brief', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Who should the research help us understand?">
-            <textarea rows={3} style={styles.input} value={draft.audience || ''} onChange={(event) => updateDraft('audience', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="What decisions should this help us make?" help="One decision per line. Example: whether this deserves an Instagram carousel; what URL it should point to.">
-            <textarea rows={3} style={styles.input} value={stringListToText(draft.goals)} onChange={(event) => updateDraft('goals', textToStringList(event.currentTarget.value))} />
-          </InputField>
-          <InputField label="What do we think might be true?" help="Optional. The research can confirm, improve, or reject this starting idea.">
-            <textarea rows={3} style={styles.input} value={draft.positioning || ''} onChange={(event) => updateDraft('positioning', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="What page or source should this point toward?" help="Use the destination we expect to send people to, if one exists.">
-            <input style={styles.input} value={draft.canonicalUrl || ''} onChange={(event) => updateDraft('canonicalUrl', event.currentTarget.value)} />
-          </InputField>
-        </div>
-      </section>
-
-      <section data-tour-id="autopilot-research-run-panel" style={styles.panel}>
-        <PanelHeading title="Get evidence" description="This creates reviewable findings: keyword scores, source checks, site context, gaps, analytics signals, and competitor examples." />
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
-          <InputField label="What phrases should we score?" help="One phrase per line. These become keyword-score findings when Semrush is available.">
-            <textarea rows={5} style={styles.input} value={stringListToText(draft.seedKeywords)} onChange={(event) => updateDraft('seedKeywords', textToStringList(event.currentTarget.value))} />
-          </InputField>
-          <InputField label="What pages or sources should we inspect?" help="One URL per line. These become source or site-context findings to review.">
-            <textarea rows={5} style={styles.input} value={stringListToText(draft.seedUrls)} onChange={(event) => updateDraft('seedUrls', textToStringList(event.currentTarget.value))} />
-          </InputField>
-        </div>
-        <div style={{ ...styles.label, marginTop: 12 }}>Where should Research look?</div>
-        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 12 }}>
-          {[
-            { title: 'Semrush keyword scores', value: 'seoReview' },
-            { title: 'CMS / site scan', value: 'cmsScan' },
-            { title: 'Source and proof check', value: 'sourceReview' },
-            { title: 'Analytics review', value: 'analyticsReview' },
-            { title: 'Competitive scan', value: 'competitiveScan' },
-          ].map((method) => (
-            <label key={method.value} style={{ display: 'inline-flex', gap: 7, alignItems: 'center', ...styles.small }}>
-              <input
-                type="checkbox"
-                checked={(draft.methods || defaultResearchMethodsForType(draft.researchType)).includes(method.value)}
-                onChange={(event) => {
-                  const current = draft.methods || defaultResearchMethodsForType(draft.researchType)
-                  updateDraft('methods', event.currentTarget.checked ? Array.from(new Set([...current, method.value])) : current.filter((item) => item !== method.value))
-                }}
-              />
-              {method.title}
-            </label>
-          ))}
-        </div>
-        {projectRuns.length > 0 && (
-          <div style={{ display: 'grid', gap: 8, marginTop: 14 }}>
-            {projectRuns.slice(0, 4).map((run) => (
-              <div key={run._id} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-                  <strong style={{ fontSize: 13 }}>{run.title || 'Research run'}</strong>
-                  <StatusPill status={run.status} options={researchRunStatusOptions} />
-                </div>
-                <div style={{ ...styles.small, ...styles.muted, marginTop: 5 }}>
-                  {(run.methods || []).join(', ') || 'No methods'} / {(run.createdResults || []).length} finding{(run.createdResults || []).length === 1 ? '' : 's'}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(148, 163, 184, 0.2)' }}>
-          <button type="button" data-tour-id="autopilot-research-save-project" style={styles.button} onClick={() => void saveDraft()} disabled={saving || running}>
-            {saving ? 'Saving...' : 'Save project'}
-          </button>
-          <button type="button" data-tour-id="autopilot-research-run" style={styles.primaryButton} onClick={() => void runResearch()} disabled={running || saving}>
-            {running ? 'Getting evidence...' : 'Get evidence'}
-          </button>
-        </div>
-      </section>
-        </>
-      )}
-
-      {researchPage === 'review' && (
-      <section data-tour-id="autopilot-research-review" style={styles.panel}>
-        <PanelHeading title="Choose what is useful enough to guide drafts" description="Mark only the findings, sources, or inspiration that are credible and relevant enough to influence setup drafts. This does not publish anything." />
-        <ResearchReviewExplainer />
-        {projectResults.length === 0 ? (
-          <EmptyInline title="No findings yet. Get evidence to fetch SEO scores, scan CMS content, and summarize source pages." />
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {projectResults.map((result) => {
-              const approving = pendingResultIds.includes(result._id)
-              const creatingProof = creatingProofResultIds.includes(result._id)
-              const linkedProofIds = refIdsFromRecords(result.proofPoints)
-              const effectiveStatus = optimisticApprovedIds.includes(result._id)
-                ? 'approved'
-                : optimisticRejectedIds.includes(result._id)
-                  ? 'rejected'
-                  : result.status
-              const selected = selectedResultIds.includes(result._id) || optimisticApprovedIds.includes(result._id)
-              const isApproved = effectiveStatus === 'approved'
-              const isRejected = effectiveStatus === 'rejected'
-              return (
-                <div key={result._id} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 12, alignItems: 'start' }}>
-                    <div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <strong>{result.title || result.keyword || 'Untitled finding'}</strong>
-                        <StatusPill status={researchResultKindLabel(result)} options={[{ title: researchResultKindLabel(result), value: researchResultKindLabel(result) }]} />
-                        <StatusPill status={effectiveStatus} options={researchResultStatusOptions} />
-                        {result.confidence && <MetricBadge label="Confidence" value={labelFor(researchConfidenceOptions, result.confidence) || result.confidence} />}
-                        {result.priority && <MetricBadge label="Priority" value={labelFor(researchPriorityOptions, result.priority) || result.priority} />}
-                      </div>
-                      <div style={{ ...styles.small, ...styles.muted, marginTop: 6, lineHeight: 1.5 }}>
-                        {researchResultReviewerInstruction(result)}
-                      </div>
-                      <div style={{ ...styles.small, marginTop: 7, lineHeight: 1.5 }}>
-                        <strong style={{ color: '#93A4C8' }}>What this tells us: </strong>
-                        <span style={styles.muted}>{describeResearchResult(result)}</span>
-                      </div>
-                      <label style={{ display: 'inline-flex', gap: 7, alignItems: 'center', ...styles.small, marginTop: 8, fontWeight: 800 }}>
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={approving || isRejected}
-                          onChange={(event) => void setResultSelected(result, event.currentTarget.checked)}
-                        />
-                        Let this guide drafts
-                      </label>
-                      {(result.sourceUrl || result.competitorUrl || result.canonicalUrl) && (
-                        <a
-                          href={result.sourceUrl || result.competitorUrl || result.canonicalUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{ ...styles.small, color: '#00A0B6', display: 'inline-block', marginTop: 7, fontWeight: 800 }}
-                        >
-                          Open evidence source
-                        </a>
-                      )}
-                      {result.provider === 'semrush' && result.scoreSource === 'provider' && (
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-                          <MetricBadge label="Volume" value={formatOptionalNumber(result.volume)} />
-                          <MetricBadge label="KD" value={formatOptionalNumber(result.difficulty)} />
-                          <MetricBadge label="CPC" value={formatOptionalMoney(result.cpc)} />
-                          <MetricBadge label="Competition" value={formatOptionalNumber(result.competition)} />
-                        </div>
-                      )}
-                      {result.implication && <FindingDetail label="Why it matters" text={result.implication} />}
-                      {result.contentGap && <FindingDetail label={result.resultType === 'contentGap' ? 'Gap to resolve' : 'Human check before using'} text={result.contentGap} />}
-                      {linkedProofIds.length > 0 && (
-                        <FindingDetail
-                          label="Connected proof"
-                          text={`${linkedProofIds.length} proof point${linkedProofIds.length === 1 ? '' : 's'} linked. Use Strategy > Proof to review or reuse them.`}
-                        />
-                      )}
-                    </div>
-                    <div style={{ display: 'grid', gap: 8, minWidth: 112 }}>
-                      <button
-                        type="button"
-                        style={isApproved ? styles.button : styles.primaryButton}
-                        onClick={() => void approveResult(result)}
-                        disabled={approving || isApproved}
-                      >
-                        {isApproved ? 'Ready to use' : approving ? 'Marking...' : 'Trust + use'}
-                      </button>
-                      {!isApproved && (
-                        <button
-                          type="button"
-                          style={styles.button}
-                          onClick={() => void rejectResult(result)}
-                          disabled={approving || isRejected}
-                        >
-                          {approving && optimisticRejectedIds.includes(result._id) ? 'Rejecting...' : isRejected ? 'Rejected' : 'Reject'}
-                        </button>
-                      )}
-                      {linkedProofIds.length > 0 ? (
-                        <button type="button" style={styles.button} onClick={() => onOpenView('strategy')}>
-                          Review proof points
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          style={styles.button}
-                          onClick={() => void createProofPointFromResult(result)}
-                          disabled={creatingProof}
-                          title="Create an editable proof point linked to this research item. Review the proof before using it in content."
-                        >
-                          {creatingProof ? 'Creating...' : 'Create proof draft'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
-      )}
-
-      {researchPage === 'synthesize' && (
-      <section data-tour-id="autopilot-research-create-setup" style={styles.panel}>
-        <PanelHeading title="Make setup drafts from trusted findings" description="Use the trusted items you selected to create editable drafts. Nothing is published." />
-        <div style={{ ...styles.card, boxShadow: 'none', padding: 12, marginBottom: 12, background: 'rgba(0, 115, 133, 0.08)' }}>
-          <strong style={{ fontSize: 14 }}>What this creates</strong>
-          <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0', lineHeight: 1.5 }}>
-            One campaign draft, one funnel draft, draft calendar items, and a Quick Link when there is a public destination. These drafts stay connected to the findings that justified them.
-          </p>
-        </div>
-        <MarketingAiAssistPanel
-          kind="researchSynthesis"
-          draft={{
-            projectId: draft._id,
-            title: draft.title,
-            brief: draft.brief,
-            selectedResultIds: selectedApprovedIds,
-            selectedResults: projectResults.filter((result) => selectedApprovedIds.includes(result._id)).map(summarizeResearchResultForAi),
-          }}
-          analyticsTakeaways={analyticsTakeaways}
-          onApply={(suggestion) => {
-            const synthesis = suggestion.researchSynthesis
-            setMessage(synthesis?.releaseRecommendation || synthesis?.summary || 'Recommendation received. Review the selected findings before creating setup drafts.')
-          }}
-        />
-        <button
-          type="button"
-          style={{ ...styles.primaryButton, width: '100%', marginTop: 12 }}
-          onClick={() => void generateLinkedRecords()}
-          disabled={converting || selectedApprovedIds.length === 0}
-        >
-          {converting ? 'Creating...' : 'Create setup drafts'}
-        </button>
-        {selectedApprovedIds.length === 0 && (
-          <p style={{ ...styles.small, ...styles.muted, margin: '8px 0 0' }}>
-            Trust and select at least one finding before creating setup drafts.
-          </p>
-        )}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-          <button type="button" style={styles.button} onClick={() => onOpenView('campaigns')}>Review campaign drafts</button>
-          <button type="button" style={styles.button} onClick={() => onOpenView('funnels')}>Review funnel drafts</button>
-          <button type="button" style={styles.button} onClick={() => onOpenView('calendar')}>Review calendar drafts</button>
-          <button type="button" style={styles.button} onClick={() => onOpenView('linkTree')}>Review Quick Link drafts</button>
-        </div>
-      </section>
-      )}
-
-      {researchPage === 'setup' && (
-        <>
-      <ResearchArrayModule
-        title="Research questions"
-        description="Manual questions stay on the project; answers should become findings."
-        actionLabel="Add question"
-        onAdd={addQuestion}
-      >
-        {(draft.researchQuestions || []).length === 0 ? (
-          <EmptyInline title="No research questions yet." />
-        ) : (
-          (draft.researchQuestions || []).map((question, index) => (
-            <div key={question._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(150px, 0.4fr) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Question">
-                  <input
-                    style={styles.input}
-                    value={question.question || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { question: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Method">
-                  <Select
-                    value={question.method || 'deskResearch'}
-                    options={researchMethodOptions}
-                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { method: value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('researchQuestions', removeResearchArrayItem(draft.researchQuestions, index))}>
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Collaborators and interns"
-        description="Add people and capacity signals before research synthesis so timing can shift around real availability."
-        actionLabel="Add collaborator"
-        onAdd={addCollaborator}
-      >
-        {(draft.collaborators || []).length === 0 ? (
-          <EmptyInline title="No collaborators yet." />
-        ) : (
-          (draft.collaborators || []).map((collaborator, index) => (
-            <div key={collaborator._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-                <InputField label="Name">
-                  <input
-                    style={styles.input}
-                    value={collaborator.name || ''}
-                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { name: event.currentTarget.value, _type: 'researchCollaborator' }))}
-                  />
-                </InputField>
-                <InputField label="Organization">
-                  <input
-                    style={styles.input}
-                    value={collaborator.organization || ''}
-                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { organization: event.currentTarget.value, _type: 'researchCollaborator' }))}
-                  />
-                </InputField>
-                <InputField label="Topic area">
-                  <input
-                    style={styles.input}
-                    value={collaborator.topicArea || ''}
-                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { topicArea: event.currentTarget.value, _type: 'researchCollaborator' }))}
-                  />
-                </InputField>
-                <InputField label="Capacity">
-                  <input
-                    style={styles.input}
-                    value={collaborator.capacity || ''}
-                    onChange={(event) => updateDraft('collaborators', updateResearchArrayItem(draft.collaborators, index, { capacity: event.currentTarget.value, _type: 'researchCollaborator' }))}
-                  />
-                </InputField>
-              </div>
-              <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('collaborators', removeResearchArrayItem(draft.collaborators, index))}>
-                Remove collaborator
-              </button>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-        </>
-      )}
-    </div>
-  )
-}
-
-function ResearchInspirationIntake({
-  value,
-  disabled,
-  onChange,
-  onCapture,
-}: {
-  value: ResearchInspirationDraft
-  disabled: boolean
-  onChange: (value: ResearchInspirationDraft) => void
-  onCapture: () => void
-}) {
-  const setField = (field: keyof ResearchInspirationDraft, fieldValue: string) => onChange({ ...value, [field]: fieldValue })
-
-  return (
-    <section data-tour-id="autopilot-research-inspiration" style={{ ...styles.panel, borderColor: 'rgba(0, 166, 184, 0.36)', background: 'rgba(0, 115, 133, 0.08)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 14 }}>
-        <div>
-          <div style={styles.kicker}>Idea inbox</div>
-          <h3 style={{ margin: 0 }}>Save something that could become content</h3>
-          <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0', maxWidth: 760, lineHeight: 1.55 }}>
-            Use this when an article, resource, website, peer example, or stray idea makes you think "we should make something about this." It becomes a finding to review before it can guide drafts.
-          </p>
-        </div>
-        <button type="button" style={styles.primaryButton} disabled={disabled || !hasInspirationDraftContent(value)} onClick={onCapture}>
-          {disabled ? 'Saving...' : 'Save for review'}
-        </button>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-        <InputField label="What kind of thing is it?">
-          <Select value={value.sourceKind || 'idea'} options={inspirationKindOptions} onChange={(nextValue) => setField('sourceKind', nextValue)} disabled={disabled} />
-        </InputField>
-        <InputField label="What might we do with it?">
-          <Select value={value.action || 'respond'} options={inspirationActionOptions} onChange={(nextValue) => setField('action', nextValue)} disabled={disabled} />
-        </InputField>
-        <InputField label="What should we call it?">
-          <input
-            style={styles.input}
-            value={value.title}
-            disabled={disabled}
-            onChange={(event) => setField('title', event.currentTarget.value)}
-            placeholder="Example: Boston housing data article"
-          />
-        </InputField>
-        <InputField label="Where is it?">
-          <input
-            style={styles.input}
-            value={value.url}
-            disabled={disabled}
-            onChange={(event) => setField('url', event.currentTarget.value)}
-            placeholder="https://..."
-          />
-        </InputField>
-      </div>
-      <InputField label="What did it make us want to say or make?">
-        <textarea
-          rows={3}
-          style={styles.input}
-          value={value.note}
-          disabled={disabled}
-          onChange={(event) => setField('note', event.currentTarget.value)}
-          placeholder="Example: Use this as a jumping-off point for a carousel that explains what the stat means and where to learn more."
-        />
-      </InputField>
-      <p style={{ ...styles.small, ...styles.muted, margin: '8px 0 0', lineHeight: 1.5 }}>
-        Saved ideas are not trusted automatically. The next screen asks whether this is credible, relevant, and worth using.
-      </p>
-    </section>
-  )
-}
-
-function ResearchPlanEditor({
-  client,
-  plan,
-  data,
-  saving,
-  onSave,
-  loadData,
-  onOpenView,
-}: {
-  client: StudioClient
-  plan: MarketingResearchPlan | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  loadData: () => Promise<void>
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  const [draft, setDraft] = useState<MarketingResearchPlan | null>(plan)
-  const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([])
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-  const [converting, setConverting] = useState(false)
-  const analyticsTakeaways = useMemo(() => buildAnalyticsInterpretations(data), [data])
-
-  useEffect(() => {
-    setDraft(plan)
-    setSelectedOpportunities((plan?.contentOpportunities || []).map((opportunity) => opportunity._key || '').filter(Boolean))
-    setMessage('')
-    setError('')
-  }, [plan])
-
-  if (!draft) {
-    return <EmptyPanel icon={SearchIcon} title="Select a research plan" description="Create or reopen a plan to turn research inputs into release timing." />
-  }
-
-  const updateDraft = <K extends keyof MarketingResearchPlan>(key: K, value: MarketingResearchPlan[K]) => {
-    setDraft((current) => (current ? { ...current, [key]: value } : current))
-    setMessage('')
-    setError('')
-  }
-
-  const saveDraft = async () => {
-    if (!draft._id) return
-    await onSave(draft._id, buildResearchPlanSavePayload(draft))
-    setMessage('Research plan saved.')
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const researchSuggestion = suggestion.researchPlan || {}
-    setDraft((current) => (current ? mergeResearchPlanSuggestion(current, researchSuggestion) : current))
-    setMessage('Suggested plan applied. Review the editable fields, then save.')
-    setError('')
-  }
-
-  const generateLinkedRecords = async () => {
-    if (!draft._id) return
-    setConverting(true)
-    setError('')
-    setMessage('')
-    try {
-      const opportunityKeys = selectedOpportunities.length > 0 ? selectedOpportunities : (draft.contentOpportunities || []).map((item) => item._key || '').filter(Boolean)
-      if (opportunityKeys.length === 0) throw new Error('Select or add at least one content opportunity first.')
-      await onSave(draft._id, buildResearchPlanSavePayload(draft))
-      const result = await createResearchPlanGeneratedRecords(client, data, draft, opportunityKeys)
-      await loadData()
-      setMessage(`Created ${result.calendarItemIds.length} calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, plus campaign, funnel, and Quick Link drafts.`)
-    } catch (conversionError) {
-      setError(conversionError instanceof Error ? conversionError.message : 'Could not create linked drafts.')
-    } finally {
-      setConverting(false)
-    }
-  }
-
-  const addSeoTarget = () => updateDraft('seoTargets', [...(draft.seoTargets || []), createResearchSeoTarget(draft)])
-  const addResearchQuestion = () => updateDraft('researchQuestions', [...(draft.researchQuestions || []), createResearchQuestion(draft)])
-  const addEvidenceNote = () => updateDraft('evidenceNotes', [...(draft.evidenceNotes || []), createResearchEvidenceNote(draft)])
-  const addAssumption = () => updateDraft('assumptions', [...(draft.assumptions || []), createResearchAssumption(draft)])
-  const addCollaboration = () => updateDraft('collaborations', [...(draft.collaborations || []), createResearchCollaboration()])
-  const addWindow = () => updateDraft('releaseWindows', [...(draft.releaseWindows || []), createResearchReleaseWindow(draft)])
-  const addOpportunity = () => {
-    const opportunity = createResearchContentOpportunity(draft, data)
-    updateDraft('contentOpportunities', [...(draft.contentOpportunities || []), opportunity])
-    setSelectedOpportunities((current) => [...current, opportunity._key || ''].filter(Boolean))
-  }
-  const addAdjustment = () => updateDraft('strategyAdjustments', [...(draft.strategyAdjustments || []), createResearchStrategyAdjustment()])
-
-  return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 16 }}>
-          <div>
-            <div style={styles.kicker}>Adaptive research</div>
-            <h2 style={{ margin: 0, fontSize: 24 }}>{draft.title || 'Untitled research plan'}</h2>
-            <p style={{ ...styles.muted, margin: '5px 0 0', lineHeight: 1.55 }}>
-              Gather only the strategy inputs that affect release timing: audience, SEO, collaborators, source material, and what designers can make next.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {['complete', 'archived'].includes(draft.status || '') && (
-              <button type="button" style={styles.button} onClick={() => updateDraft('status', 'active')}>
-                Reopen plan
-              </button>
-            )}
-            <button type="button" style={styles.button} onClick={() => void saveDraft()} disabled={saving}>
-              {saving ? 'Saving...' : 'Save plan'}
-            </button>
-            <button type="button" style={styles.primaryButton} onClick={() => void generateLinkedRecords()} disabled={converting}>
-              {converting ? 'Creating...' : 'Create linked drafts'}
-            </button>
-          </div>
-        </div>
-
-        <MarketingAiAssistPanel
-          kind="researchPlan"
-          draft={draft as unknown as Record<string, unknown>}
-          analyticsTakeaways={analyticsTakeaways}
-          onApply={applyAiSuggestion}
-        />
-
-        {message && <div style={{ ...styles.small, color: '#007385', fontWeight: 800, marginTop: 12 }}>{message}</div>}
-        {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
-      </section>
-
-      <section style={styles.panel}>
-        <PanelHeading title="Strategy brief" description="The smallest useful strategy frame before content gets made." />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-          <InputField label="Plan title">
-            <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Status">
-            <Select value={draft.status || 'draft'} options={researchPlanStatusOptions} onChange={(value) => updateDraft('status', value)} />
-          </InputField>
-          <InputField label="Release cadence">
-            <Select value={draft.releaseCadence || 'weekly'} options={researchPlanCadenceOptions} onChange={(value) => updateDraft('releaseCadence', value)} />
-          </InputField>
-          <InputField label="Primary objective">
-            <Select value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
-          </InputField>
-        </div>
-        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
-          <InputField label="Research summary">
-            <textarea rows={4} style={styles.input} value={draft.summary || ''} onChange={(event) => updateDraft('summary', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Audience">
-            <textarea rows={3} style={styles.input} value={draft.audience || ''} onChange={(event) => updateDraft('audience', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Positioning">
-            <textarea rows={3} style={styles.input} value={draft.positioning || ''} onChange={(event) => updateDraft('positioning', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Canonical destination URL">
-            <input style={styles.input} value={draft.canonicalUrl || ''} onChange={(event) => updateDraft('canonicalUrl', event.currentTarget.value)} />
-          </InputField>
-        </div>
-      </section>
-
-      <ResearchArrayModule
-        title="Research questions"
-        description="Frame the decisions the plan needs to answer before content production starts."
-        actionLabel="Add question"
-        onAdd={addResearchQuestion}
-      >
-        {(draft.researchQuestions || []).length === 0 ? (
-          <EmptyInline title="No research questions yet. Add the question that would change what designers make." />
-        ) : (
-          (draft.researchQuestions || []).map((question, index) => (
-            <div key={question._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.4fr) repeat(2, minmax(140px, 0.8fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Question">
-                  <input
-                    style={styles.input}
-                    value={question.question || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { question: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Method">
-                  <Select
-                    value={question.method || 'deskResearch'}
-                    options={researchMethodOptions}
-                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { method: value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Status">
-                  <Select
-                    value={question.status || 'idea'}
-                    options={opportunityReadinessOptions}
-                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { status: value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('researchQuestions', removeResearchArrayItem(draft.researchQuestions, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Why it matters">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={question.whyItMatters || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { whyItMatters: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Decision it supports">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={question.decisionNeeded || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { decisionNeeded: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Evidence log"
-        description="Track claims, sources, confidence, and implications so AI output stays reviewable."
-        actionLabel="Add evidence"
-        onAdd={addEvidenceNote}
-      >
-        {(draft.evidenceNotes || []).length === 0 ? (
-          <EmptyInline title="No evidence yet. Add the source, signal, or observation the plan relies on." />
-        ) : (
-          (draft.evidenceNotes || []).map((note, index) => (
-            <div key={note._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.3fr) repeat(2, minmax(140px, 0.75fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Claim / signal">
-                  <input
-                    style={styles.input}
-                    value={note.claim || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { claim: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Evidence type">
-                  <Select
-                    value={note.evidenceType || 'siteContent'}
-                    options={researchEvidenceTypeOptions}
-                    onChange={(value) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { evidenceType: value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Confidence">
-                  <Select
-                    value={note.confidence || 'early'}
-                    options={researchConfidenceOptions}
-                    onChange={(value) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { confidence: value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('evidenceNotes', removeResearchArrayItem(draft.evidenceNotes, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Source title">
-                  <input
-                    style={styles.input}
-                    value={note.sourceTitle || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { sourceTitle: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Source URL">
-                  <input
-                    style={styles.input}
-                    value={note.sourceUrl || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { sourceUrl: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Implication for content">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={note.implication || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { implication: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Still unknown">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={note.gap || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { gap: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Assumptions to validate"
-        description="Name the parts of the plan that might be wrong before they become expensive production work."
-        actionLabel="Add assumption"
-        onAdd={addAssumption}
-      >
-        {(draft.assumptions || []).length === 0 ? (
-          <EmptyInline title="No assumptions yet. Add what needs to be true for this plan to work." />
-        ) : (
-          (draft.assumptions || []).map((assumption, index) => (
-            <div key={assumption._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(140px, 0.35fr) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Assumption">
-                  <input
-                    style={styles.input}
-                    value={assumption.assumption || ''}
-                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { assumption: event.currentTarget.value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-                <InputField label="Confidence">
-                  <Select
-                    value={assumption.confidence || 'needsValidation'}
-                    options={researchConfidenceOptions}
-                    onChange={(value) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { confidence: value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('assumptions', removeResearchArrayItem(draft.assumptions, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Risk if wrong">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={assumption.risk || ''}
-                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { risk: event.currentTarget.value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-                <InputField label="Validation signal">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={assumption.validationSignal || ''}
-                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { validationSignal: event.currentTarget.value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="SEO targeting"
-        description="Target queries, intent, canonical destinations, gaps, and priority."
-        actionLabel="Add SEO target"
-        onAdd={addSeoTarget}
-      >
-        {(draft.seoTargets || []).length === 0 ? (
-          <EmptyInline title="No SEO targets yet. Add queries people might search or ask." />
-        ) : (
-          (draft.seoTargets || []).map((target, index) => (
-            <div key={target._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1.4fr) repeat(2, minmax(140px, 0.8fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Keyword / query">
-                  <input
-                    style={styles.input}
-                    value={target.query || ''}
-                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { query: event.currentTarget.value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <InputField label="Intent">
-                  <Select
-                    value={target.intent || 'learn'}
-                    options={searchIntentOptions}
-                    onChange={(value) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { intent: value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <InputField label="Priority">
-                  <Select
-                    value={target.priority || 'medium'}
-                    options={researchPriorityOptions}
-                    onChange={(value) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { priority: value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('seoTargets', removeResearchArrayItem(draft.seoTargets, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
-                <InputField label="Canonical destination">
-                  <input
-                    style={styles.input}
-                    value={target.canonicalUrl || ''}
-                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { canonicalUrl: event.currentTarget.value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <InputField label="Content gap">
-                  <input
-                    style={styles.input}
-                    value={target.contentGap || ''}
-                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { contentGap: event.currentTarget.value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Collaborations"
-        description="University interns, advisors, partner orgs, guests, and communities that can change the release plan."
-        actionLabel="Add collaboration"
-        onAdd={addCollaboration}
-      >
-        {(draft.collaborations || []).length === 0 ? (
-          <EmptyInline title="No collaborators yet. Add interns, universities, advisors, or partners when they change capacity or topics." />
-        ) : (
-          (draft.collaborations || []).map((collaboration, index) => (
-            <div key={collaboration._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-                <InputField label="Name">
-                  <input
-                    style={styles.input}
-                    value={collaboration.name || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { name: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Organization">
-                  <input
-                    style={styles.input}
-                    value={collaboration.organization || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { organization: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Relationship">
-                  <Select
-                    value={collaboration.relationshipType || 'universityIntern'}
-                    options={collaborationRelationshipOptions}
-                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { relationshipType: value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Contribution">
-                  <Select
-                    value={collaboration.contributionType || 'research'}
-                    options={contributionTypeOptions}
-                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { contributionType: value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Status">
-                  <Select
-                    value={collaboration.status || 'idea'}
-                    options={collaborationStatusOptions}
-                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { status: value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Topic area">
-                  <input
-                    style={styles.input}
-                    value={collaboration.topicArea || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { topicArea: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Available starting">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={collaboration.availabilityStart || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { availabilityStart: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Available until">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={collaboration.availabilityEnd || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { availabilityEnd: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-              </div>
-              <InputField label="Expected contribution">
-                <textarea
-                  rows={2}
-                  style={styles.input}
-                  value={collaboration.expectedContribution || ''}
-                  onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { expectedContribution: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                />
-              </InputField>
-              <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('collaborations', removeResearchArrayItem(draft.collaborations, index))}>
-                Remove collaboration
-              </button>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Release windows"
-        description="Flexible date ranges centered on when content should go live, not fixed research phases."
-        actionLabel="Add release window"
-        onAdd={addWindow}
-      >
-        {(draft.releaseWindows || []).length === 0 ? (
-          <EmptyInline title="No release windows yet. Add the next useful publishing windows." />
-        ) : (
-          (draft.releaseWindows || []).map((window, index) => (
-            <div key={window._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) repeat(3, minmax(130px, 0.7fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Label">
-                  <input
-                    style={styles.input}
-                    value={window.label || ''}
-                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { label: event.currentTarget.value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <InputField label="Start">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={window.startDate || ''}
-                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { startDate: event.currentTarget.value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <InputField label="End">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={window.endDate || ''}
-                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { endDate: event.currentTarget.value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <InputField label="Priority">
-                  <Select
-                    value={window.priority || 'medium'}
-                    options={researchPriorityOptions}
-                    onChange={(value) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { priority: value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('releaseWindows', removeResearchArrayItem(draft.releaseWindows, index))}>
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Content opportunities"
-        description="The editable backlog designers can convert into campaigns, funnels, calendar items, and Quick Links."
-        actionLabel="Add opportunity"
-        onAdd={addOpportunity}
-      >
-        {(draft.contentOpportunities || []).length === 0 ? (
-          <EmptyInline title="No content opportunities yet. Use AI setup or add one manually." />
-        ) : (
-          (draft.contentOpportunities || []).map((opportunity, index) => {
-            const key = opportunity._key || `${index}`
-            const checked = selectedOpportunities.includes(key)
-            return (
-              <div key={key} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => {
-                      setSelectedOpportunities((current) =>
-                        event.currentTarget.checked ? Array.from(new Set([...current, key])) : current.filter((item) => item !== key),
-                      )
-                    }}
-                  />
-                  <strong>Generate from this opportunity</strong>
-                  {getRecordId(opportunity.generatedCalendarItem) && <StatusPill status="scheduled" options={[{ title: 'Generated', value: 'scheduled' }]} />}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.5fr) repeat(3, minmax(140px, 0.8fr))', gap: 10 }}>
-                  <InputField label="Proposed item">
-                    <input
-                      style={styles.input}
-                      value={opportunity.title || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { title: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Channel">
-                    <Select
-                      value={opportunity.channel || 'instagram'}
-                      options={getResearchChannelOptions(data)}
-                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { channel: value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Format">
-                    <Select
-                      value={opportunity.format || 'carousel'}
-                      options={contentFormatOptions}
-                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { format: value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Readiness">
-                    <Select
-                      value={opportunity.readiness || 'idea'}
-                      options={opportunityReadinessOptions}
-                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { readiness: value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
-                  <InputField label="Owner / contributor">
-                    <input
-                      style={styles.input}
-                      value={opportunity.owner || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { owner: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Release window">
-                    <input
-                      style={styles.input}
-                      value={opportunity.releaseWindow || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { releaseWindow: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="CTA">
-                    <input
-                      style={styles.input}
-                      value={opportunity.callToAction || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { callToAction: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="SEO query">
-                    <input
-                      style={styles.input}
-                      value={opportunity.seoQuery || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { seoQuery: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
-                  <InputField label="Destination URL">
-                    <input
-                      style={styles.input}
-                      value={opportunity.destinationUrl || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { destinationUrl: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Source material">
-                    <input
-                      style={styles.input}
-                      value={opportunity.sourceMaterial || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { sourceMaterial: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                </div>
-                <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('contentOpportunities', removeResearchArrayItem(draft.contentOpportunities, index))}>
-                  Remove opportunity
-                </button>
-              </div>
-            )
-          })
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Strategy adjustments"
-        description="When new collaborators, SEO opportunities, or analytics notes change the plan, document the why and the decision."
-        actionLabel="Add adjustment"
-        onAdd={addAdjustment}
-      >
-        {(draft.strategyAdjustments || []).length === 0 ? (
-          <EmptyInline title="No plan changes recorded yet." />
-        ) : (
-          (draft.strategyAdjustments || []).map((adjustment, index) => (
-            <div key={adjustment._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '160px minmax(0, 1fr) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Decision date">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={adjustment.decisionDate || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { decisionDate: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-                <InputField label="Trigger">
-                  <input
-                    style={styles.input}
-                    value={adjustment.trigger || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { trigger: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('strategyAdjustments', removeResearchArrayItem(draft.strategyAdjustments, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
-                <InputField label="Why it changed">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={adjustment.reason || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { reason: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-                <InputField label="Recommendation">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={adjustment.recommendation || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { recommendation: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <section style={styles.panel}>
-        <PanelHeading title="Created drafts" description="Drafts created from this research plan stay linked back here for reopening and iteration." />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-          <GeneratedRecordCard label="Campaigns" records={draft.generatedCampaigns || []} onOpen={() => onOpenView('campaigns')} />
-          <GeneratedRecordCard label="Funnels" records={draft.generatedFunnels || []} onOpen={() => onOpenView('funnels')} />
-          <GeneratedRecordCard label="Calendar items" records={draft.generatedCalendarItems || []} onOpen={() => onOpenView('calendar')} />
-          <GeneratedRecordCard label="Quick Links" records={draft.generatedLinkItems || []} onOpen={() => onOpenView('linkTree')} />
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function ResearchArrayModule({
-  title,
-  description,
-  actionLabel,
-  onAdd,
-  children,
-}: {
-  title: string
-  description: string
-  actionLabel: string
-  onAdd: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
-        <PanelHeading title={title} description={description} />
-        <button type="button" style={{ ...styles.button, whiteSpace: 'nowrap' }} onClick={onAdd}>
-          {actionLabel}
-        </button>
-      </div>
-      <div style={{ display: 'grid', gap: 10 }}>{children}</div>
-    </section>
-  )
-}
-
-function GeneratedRecordCard({
-  label,
-  records,
-  onOpen,
-}: {
-  label: string
-  records: Array<{ _id?: string; title?: string; status?: string }>
-  onOpen: () => void
-}) {
-  return (
-    <button type="button" style={{ ...styles.templateButton, minHeight: 108 }} onClick={onOpen}>
-      <strong>{label}</strong>
-      <span style={{ fontSize: 28, lineHeight: 1, fontWeight: 900 }}>{records.length}</span>
-      <span style={{ ...styles.small, ...styles.muted }}>
-        {records.length > 0 ? records.slice(0, 2).map((record) => record.title || 'Untitled').join(', ') : 'None generated yet'}
-      </span>
-    </button>
-  )
-}
-
-function DesignerSetupPath({
-  steps,
-  onOpenView,
-}: {
-  steps: WorkflowSetupStep[]
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12, marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 16 }}>Designer-friendly setup checklist</h3>
-          <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.5 }}>
-            Complete these in order before making the artifact.
-          </p>
-        </div>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            border: '1px solid rgba(0, 115, 133, 0.24)',
-            borderRadius: 999,
-            background: 'rgba(0, 115, 133, 0.12)',
-            color: '#007385',
-            padding: '3px 8px',
-            fontSize: 12,
-            fontWeight: 800,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          5 steps
-        </span>
-      </div>
-      <div style={{ display: 'grid', gap: 8 }}>
-        {steps.map((step) => {
-          const viewTitle = MARKETING_TOOL_VIEWS.find((view) => view.id === step.view)?.title || 'Section'
-
-          return (
-            <div
-              key={step.label}
-              style={{
-                border: '1px solid var(--card-border-color)',
-                borderRadius: 6,
-                background: 'var(--card-bg-color)',
-                padding: 10,
-              }}
-            >
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    width: 24,
-                    height: 24,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '0 0 auto',
-                    borderRadius: 999,
-                    background: '#007385',
-                    color: '#fff',
-                    fontSize: 12,
-                    fontWeight: 900,
-                  }}
-                >
-                  {step.label}
-                </span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong style={{ display: 'block', fontSize: 13 }}>{step.title}</strong>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 4, lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--card-fg-color)' }}>Creates: </strong>
-                    {step.outcome}
-                  </div>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 3, lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--card-fg-color)' }}>Designer does: </strong>
-                    {step.designerAction}
-                  </div>
-                  {step.terms && step.terms.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-                      {step.terms.map((term) => (
-                        <MarketingTerm key={`${step.label}-${term.label}`} term={term} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                style={{ ...styles.button, marginTop: 9, padding: '6px 9px', fontSize: 12 }}
-                onClick={() => onOpenView(step.view)}
-              >
-                Open {viewTitle}
-              </button>
-            </div>
-          )
-        })}
-      </div>
-      <div
-        style={{
-          marginTop: 10,
-          borderTop: '1px solid var(--card-border-color)',
-          paddingTop: 10,
-          ...styles.small,
-          ...styles.muted,
-          lineHeight: 1.5,
-        }}
-      >
-        Done means the framework is connected. The designer's remaining work is the thing people will actually see.
-      </div>
-    </div>
-  )
-}
-
-function WorkflowHelpSection({
-  items,
-  onOpenView,
-}: {
-  items: WorkflowHelpItem[]
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12, marginBottom: 12 }}>
-      <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Marketing questions</h3>
-      <div style={{ display: 'grid', gap: 7 }}>
-        {items.map((item, index) => (
-          <details
-            key={item.question}
-            open={index === 0}
-            style={{
-              border: '1px solid var(--card-border-color)',
-              borderRadius: 6,
-              background: 'var(--card-bg-color)',
-              padding: 0,
-            }}
-          >
-            <summary
-              style={{
-                cursor: 'pointer',
-                padding: '9px 10px',
-                fontSize: 13,
-                fontWeight: 800,
-                listStylePosition: 'inside',
-              }}
-            >
-              {item.question}
-            </summary>
-            <div style={{ padding: '0 10px 10px', display: 'grid', gap: 9 }}>
-              <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.55 }}>
-                <WorkflowAnswer parts={item.answer} />
-              </div>
-              {item.action && (
-                <button
-                  type="button"
-                  style={{ ...styles.button, justifySelf: 'start', padding: '6px 9px', fontSize: 12 }}
-                  onClick={() => onOpenView(item.action!.view)}
-                >
-                  {item.action.label}
-                </button>
-              )}
-            </div>
-          </details>
-        ))}
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <div style={{ ...styles.label, marginBottom: 6 }}>Hover glossary</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {workflowTerms.map((term) => (
-            <MarketingTerm key={term.label} term={term} />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function WorkflowAnswer({ parts }: { parts: Array<string | WorkflowTerm> }) {
-  return (
-    <>
-      {parts.map((part, index) =>
-        typeof part === 'string' ? part : <MarketingTerm key={`${part.label}-${index}`} term={part} inline />,
-      )}
-    </>
-  )
-}
-
-function MarketingTerm({ term, inline = false }: { term: WorkflowTerm; inline?: boolean }) {
-  return (
-    <span
-      tabIndex={0}
-      title={term.definition}
-      aria-label={`${term.label}: ${term.definition}`}
-      style={{
-        display: inline ? 'inline' : 'inline-flex',
-        alignItems: 'center',
-        border: inline ? 'none' : '1px solid rgba(0, 115, 133, 0.24)',
-        borderRadius: inline ? 0 : 999,
-        background: inline ? 'transparent' : 'rgba(0, 115, 133, 0.08)',
-        color: '#007385',
-        padding: inline ? 0 : '3px 8px',
-        fontSize: inline ? 'inherit' : 12,
-        fontWeight: 800,
-        cursor: 'help',
-        textDecoration: inline ? 'underline dotted' : 'none',
-        textUnderlineOffset: 3,
-      }}
-    >
-      {term.label}
-    </span>
-  )
-}
-
-function CalendarWorkspace({
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-  onOpenChannels,
-  autopilotTarget,
-  onAutopilotComplete,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenChannels: () => void
-  autopilotTarget?: AutopilotWorkspaceTarget | null
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
-  const [selectedId, setSelectedId] = useState<string | null>(data.calendarItems[0]?._id || null)
-
-  useEffect(() => {
-    if (!selectedId && data.calendarItems.length > 0) setSelectedId(data.calendarItems[0]._id)
-  }, [data.calendarItems, selectedId])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'calendar') return
-    const targetItem = autopilotTarget.recordId
-      ? data.calendarItems.find((item) => item._id === autopilotTarget.recordId)
-      : null
-    const draftItem = targetItem || data.calendarItems.find((item) => getCalendarItemDisplayGroup(item) === 'draft')
-    if (draftItem) setSelectedId(draftItem._id)
-  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.calendarItems])
-
-  const channels = data.channels
-  const selectedItem = data.calendarItems.find((item) => item._id === selectedId) || null
-  const calendarCells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
-  const itemsByDay = useMemo(() => groupCalendarItemsByDay(data.calendarItems), [data.calendarItems])
-  const unscheduled = data.calendarItems.filter((item) => !item.publishAt)
-  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(data.calendarItems), [data.calendarItems])
-
-  const createCalendarItem = async (publishDate?: Date) => {
-    const createdId = await createDocument({
-      _type: 'marketingCalendarItem',
-      title: '',
-      status: 'idea',
-      ...(publishDate ? { publishAt: dateInputToIso(toDateInputValue(publishDate)) } : {}),
-    })
-    setSelectedId(createdId)
-    onAutopilotComplete?.({ action: 'calendar:createDraft', recordId: createdId })
-  }
-
-  return (
-    <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16 }}>
-      <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 22 }}>Content Calendar</h2>
-            <p style={{ ...styles.muted, margin: '4px 0 0' }}>A month-by-month planning surface for upcoming work.</p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 12,
-            margin: '20px 0 12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: 18 }}>{monthLabel(visibleMonth)}</h3>
-          <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" style={styles.button} onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}>
-            Previous month
-          </button>
-          <button type="button" style={styles.button} onClick={() => setVisibleMonth(startOfMonth(new Date()))}>
-            Today
-          </button>
-          <button type="button" style={styles.button} onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}>
-            Next month
-          </button>
-          <button type="button" data-tour-id="autopilot-calendar-add" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createCalendarItem()}>
-            Add calendar item
-          </button>
-          </div>
-        </div>
-        <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(96px, 1fr))', gap: 1, overflowX: 'auto', paddingBottom: 4 }}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <div key={day} style={{ ...styles.small, ...styles.muted, padding: '0 8px 8px', fontWeight: 800 }}>
-              {day}
-            </div>
-          ))}
-          {calendarCells.map((cell) => {
-            const key = toDateInputValue(cell.date)
-            const dayItems = itemsByDay.get(key) || []
-            return (
-              <button
-                key={key}
-                type="button"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  minHeight: 132,
-                  padding: 8,
-                  textAlign: 'left',
-                  verticalAlign: 'top',
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 0,
-                  background: cell.inMonth ? 'var(--card-bg-color)' : 'rgba(128, 128, 128, 0.05)',
-                  color: 'var(--card-fg-color)',
-                  cursor: 'pointer',
-                }}
-                title={dayItems[0] ? 'Open first item on this day' : 'Add calendar item on this day'}
-                onClick={() => {
-                  if (dayItems[0]) {
-                    setSelectedId(dayItems[0]._id)
-                    return
-                  }
-                  void createCalendarItem(cell.date)
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    color: cell.inMonth ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)',
-                    fontWeight: cell.isToday ? 800 : 700,
-                    marginBottom: 6,
-                  }}
-                >
-                  <span>{cell.date.getDate()}</span>
-                  {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
-                </div>
-                <div style={{ display: 'grid', gap: 5 }}>
-                  {renderCalendarDayItems(dayItems, channels, selectedId)}
-                  {dayItems.length > 4 && (
-                    <div style={{ ...styles.small, ...styles.muted }}>+{dayItems.length - 4} more</div>
-                  )}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }}>
-          <CalendarGroupSummary
-            group="draft"
-            count={savedCalendarGroups.draft.length}
-            description="Saved calendar items that still need content or review."
-          />
-          <CalendarGroupSummary
-            group="final"
-            count={savedCalendarGroups.final.length}
-            description="Scheduled or published items with real release timing."
-          />
-        </div>
-
-        {unscheduled.length > 0 && (
-          <div style={{ marginTop: 18 }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Unscheduled</h3>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {unscheduled.map((item) => (
-                <button
-                  type="button"
-                  key={item._id}
-                  onClick={() => setSelectedId(item._id)}
-                  style={{
-                    ...styles.button,
-                    borderColor: item._id === selectedId ? '#007385' : 'var(--card-border-color)',
-                  }}
-                >
-                  {item.title || 'Untitled item'}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <CalendarItemEditor
-        item={selectedItem}
-        channels={channels}
-        campaigns={data.campaigns}
-        funnels={data.funnels}
-        analyticsSources={data.analyticsSources}
-        linkItems={data.linkItems}
-        analyticsTakeaways={buildAnalyticsInterpretations(data)}
-        saving={savingId === selectedItem?._id}
-        createDocument={createDocument}
-        onSave={commitPatch}
-        onOpenChannels={onOpenChannels}
-        onAutopilotComplete={onAutopilotComplete}
-      />
-    </div>
-  )
-}
-
-function CalendarChip({
-  item,
-  channels,
-  active,
-  group = getCalendarItemDisplayGroup(item),
-}: {
-  item: MarketingCalendarItem
-  channels: MarketingChannel[]
-  active: boolean
-  group?: CalendarDisplayGroup
-}) {
-  const colors = getStatusColor(group === 'preview' ? 'preview' : item.status)
-  const channel = getChannelByKey(channels, item.channel) || item.channelRef
-  const contentTypeOptionsForChannel = getContentTypeOptionsForChannel(item.channel, channels)
-
-  return (
-    <div
-      style={{
-        padding: '6px 7px',
-        border: `1px solid ${active ? '#007385' : colors.border}`,
-        borderStyle: group === 'preview' ? 'dotted' : 'solid',
-        borderRadius: 6,
-        background: colors.bg,
-        color: colors.fg,
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {item.title || 'Untitled item'}
-      </div>
-      <div style={{ fontSize: 11, opacity: 0.82 }}>
-        {[channel?.title || item.channel, labelFor(contentTypeOptionsForChannel, item.contentType), item.campaign?.title]
-          .filter(Boolean)
-          .join(' / ')}
-      </div>
-      <div style={{ fontSize: 10, opacity: 0.78, fontWeight: 800, marginTop: 3 }}>
-        {getCalendarGroupLabel(group)}
-      </div>
-    </div>
-  )
-}
-
-function renderCalendarDayItems(
-  dayItems: MarketingCalendarItem[],
-  channels: MarketingChannel[],
-  selectedId: string | null,
-) {
-  return getCalendarItemsByDisplayGroup(dayItems)
-    .slice(0, 4)
-    .map(({ item, group }) => (
-      <CalendarChip key={item._id} item={item} channels={channels} active={item._id === selectedId} group={group} />
-    ))
-}
-
-function ResearchOpportunityPreviewList({ opportunities }: { opportunities: ResearchContentOpportunity[] }) {
+export function ResearchOpportunityPreviewList({ opportunities }: { opportunities: ResearchContentOpportunity[] }) {
   const previewOpportunities = opportunities.filter((opportunity) => opportunity.title).slice(0, 4)
   if (previewOpportunities.length === 0) return null
 
@@ -11738,2193 +7977,8 @@ function ResearchOpportunityPreviewList({ opportunities }: { opportunities: Rese
   )
 }
 
-function CalendarGroupSummary({
-  group,
-  count,
-  description,
-}: {
-  group: CalendarDisplayGroup
-  count: number
-  description: string
-}) {
-  const colors = getStatusColor(group)
-  return (
-    <div
-      style={{
-        border: `1px ${group === 'preview' ? 'dotted' : 'solid'} ${colors.border}`,
-        borderRadius: 8,
-        background: colors.bg,
-        color: colors.fg,
-        padding: 10,
-        minHeight: 98,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-        <strong>{getCalendarGroupLabel(group)}</strong>
-        <span style={{ fontSize: 22, fontWeight: 900 }}>{count}</span>
-      </div>
-      <div style={{ ...styles.small, color: 'inherit', opacity: 0.82, lineHeight: 1.45, marginTop: 6 }}>
-        {description}
-      </div>
-    </div>
-  )
-}
 
-function CalendarItemEditor({
-  item,
-  channels,
-  campaigns,
-  funnels,
-  analyticsSources,
-  linkItems,
-  analyticsTakeaways,
-  saving,
-  createDocument,
-  onSave,
-  onOpenChannels,
-  onAutopilotComplete,
-}: {
-  item: MarketingCalendarItem | null
-  channels: MarketingChannel[]
-  campaigns: MarketingCampaign[]
-  funnels: MarketingFunnel[]
-  analyticsSources: MarketingAnalyticsSource[]
-  linkItems: MarketingLinkItem[]
-  analyticsTakeaways: AnalyticsInterpretation[]
-  saving: boolean
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenChannels: () => void
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [draft, setDraft] = useState<MarketingCalendarItem | null>(item)
-  const [campaignId, setCampaignId] = useState('')
-  const [funnelId, setFunnelId] = useState('')
-  const [analyticsSourceId, setAnalyticsSourceId] = useState('')
-  const [linkedLinkIds, setLinkedLinkIds] = useState<string[]>([])
-  const [linkToAddId, setLinkToAddId] = useState('')
-
-  useEffect(() => {
-    setDraft(item)
-    setCampaignId(item?.campaign?._id || '')
-    setFunnelId(item?.funnel?._id || '')
-    setAnalyticsSourceId(item?.analyticsSource?._id || '')
-    setLinkedLinkIds(item ? getPostLinkedLinks(item, linkItems).map((link) => link._id) : [])
-    setLinkToAddId('')
-  }, [item, linkItems])
-
-  const channelKey = draft?.channel || draft?.channelRef?.key || ''
-  const channelOptions = getChannelOptions(channels)
-  const selectedChannel = getChannelByKey(channels, channelKey)
-  const typeOptions = getContentTypeOptionsForChannel(channelKey, channels)
-  const linkedLinks = linkedLinkIds
-    .map((id) => linkItems.find((link) => link._id === id) || draft?.linkItems?.find((link) => link._id === id))
-    .filter(Boolean) as MarketingLinkItem[]
-  const availableLinks = linkItems.filter((link) => !linkedLinkIds.includes(link._id))
-  const postUrl = draft?.publishedUrl || draft?.workingUrl || ''
-
-  if (!draft || !item) {
-    return (
-      <EmptyPanel
-        icon={CalendarIcon}
-        title="Select a calendar item"
-        description="Create or choose a content item to edit its plan."
-      />
-    )
-  }
-
-  const save = async () => {
-    const unset: string[] = []
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled item',
-      status: draft.status || 'idea',
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
-      contentType: draft.contentType,
-      channel: channelKey,
-      brief: draft.brief,
-      contentDraft: draft.contentDraft,
-      draftFrames: normalizeDraftContentFrames(draft.draftFrames),
-      draftAltText: draft.draftAltText,
-      draftHashtags: draft.draftHashtags || [],
-      contentProductionNotes: draft.contentProductionNotes,
-      callToAction: draft.callToAction,
-      workingUrl: draft.workingUrl,
-      publishedUrl: draft.publishedUrl,
-      utmCampaign: draft.utmCampaign,
-      funnelStage: draft.funnelStage,
-      topicCluster: draft.topicCluster,
-      searchIntent: draft.searchIntent,
-      targetQueries: draft.targetQueries || [],
-    }
-
-    if (linkedLinkIds.length > 0) {
-      set.linkItems = refsFromIds(linkedLinkIds)
-    } else {
-      unset.push('linkItems')
-    }
-
-    if (campaignId) {
-      set.campaign = { _type: 'reference', _ref: campaignId }
-    } else {
-      unset.push('campaign')
-    }
-
-    if (funnelId) {
-      set.funnel = { _type: 'reference', _ref: funnelId }
-    } else {
-      unset.push('funnel')
-    }
-
-    if (analyticsSourceId) {
-      set.analyticsSource = { _type: 'reference', _ref: analyticsSourceId }
-    } else {
-      unset.push('analyticsSource')
-    }
-
-    if (selectedChannel?._id && !selectedChannel._id.startsWith('default-')) {
-      set.channelRef = { _type: 'reference', _ref: selectedChannel._id }
-    } else {
-      unset.push('channelRef')
-    }
-
-    Object.keys(set).forEach((key) => {
-      if (set[key] === undefined || set[key] === '') {
-        delete set[key]
-        unset.push(key)
-      }
-    })
-
-    await onSave(item._id, set, unset)
-    onAutopilotComplete?.({ action: 'calendar:saveDraft', recordId: item._id })
-  }
-
-  const applyTemplate = (template: CalendarItemTemplate) => {
-    const channel = getChannelByKey(channels, template.channel)
-    setDraft({
-      ...draft,
-      channel: channel?.key || draft.channel,
-      channelRef: channel || draft.channelRef,
-      contentType: template.contentType,
-      funnelStage: template.funnelStage,
-      brief: draft.brief || template.brief,
-      callToAction: draft.callToAction || template.callToAction,
-    })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const itemSuggestion = suggestion.calendarItem || {}
-    const suggestedChannel = aiString(itemSuggestion.channel)
-    const channel = getChannelByKey(channels, suggestedChannel)
-    const typeOptionsForSuggestion = getContentTypeOptionsForChannel(channel?.key || suggestedChannel || channelKey, channels)
-    const suggestedContentType = aiString(itemSuggestion.contentType)
-    const validSuggestedContentType = suggestedContentType
-      ? typeOptionsForSuggestion.some((option) => option.value === suggestedContentType)
-      : false
-
-    setDraft({
-      ...draft,
-      title: aiString(itemSuggestion.title) || draft.title,
-      channel: channel?.key || suggestedChannel || draft.channel,
-      channelRef: channel || draft.channelRef,
-      contentType: validSuggestedContentType ? suggestedContentType : draft.contentType || typeOptionsForSuggestion[0]?.value,
-      funnelStage: aiOption(itemSuggestion.funnelStage, funnelStageOptions) || draft.funnelStage,
-      brief: aiString(itemSuggestion.brief) || draft.brief,
-      callToAction: aiString(itemSuggestion.callToAction) || draft.callToAction,
-      workingUrl: aiString(itemSuggestion.workingUrl) || draft.workingUrl,
-      utmCampaign: aiString(itemSuggestion.utmCampaign) || draft.utmCampaign,
-    })
-  }
-
-  const syncPostLinks = async (nextIds: string[]) => {
-    const dedupedIds = Array.from(new Set(nextIds))
-    setLinkedLinkIds(dedupedIds)
-    await onSave(item._id, dedupedIds.length > 0 ? { linkItems: refsFromIds(dedupedIds) } : {}, dedupedIds.length > 0 ? [] : ['linkItems'])
-  }
-
-  const createLinkFromPost = async () => {
-    if (!postUrl) return
-    const linkIsPublishReady = isCalendarItemPublishReady(draft)
-    const createdId = await createDocument({
-      _type: 'marketingLinkItem',
-      title: draft.title || 'Untitled post link',
-      url: postUrl,
-      description: trimDescription(draft.brief),
-      type: calendarContentTypeToLinkType(draft.contentType),
-      status: linkIsPublishReady ? 'active' : 'draft',
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
-      sourceChannel: draft.channelRef?.key || draft.channel || 'instagram',
-      order: nextLinkOrder(linkItems),
-      calendarItem: { _type: 'reference', _ref: item._id },
-      calendarItems: refsFromIds([item._id]),
-      ...(campaignId ? { campaign: { _type: 'reference', _ref: campaignId } } : {}),
-    })
-    await syncPostLinks([...linkedLinkIds, createdId])
-  }
-
-  const addExistingLinkToPost = async () => {
-    if (!linkToAddId) return
-    const link = linkItems.find((candidate) => candidate._id === linkToAddId)
-    const nextIds = Array.from(new Set([...linkedLinkIds, linkToAddId]))
-    await syncPostLinks(nextIds)
-    if (link) {
-      const postIds = Array.from(new Set([...(link.calendarItems || []).map((post) => post._id), item._id]))
-      const set: Record<string, unknown> = { calendarItems: refsFromIds(postIds) }
-      if (!link.calendarItem?._id) set.calendarItem = { _type: 'reference', _ref: item._id }
-      await onSave(link._id, set)
-    }
-    setLinkToAddId('')
-  }
-
-  const removeLinkFromPost = async (linkId: string) => {
-    const link = linkItems.find((candidate) => candidate._id === linkId) || linkedLinks.find((candidate) => candidate._id === linkId)
-    await syncPostLinks(linkedLinkIds.filter((id) => id !== linkId))
-    if (!link) return
-
-    const remainingPostIds = (link.calendarItems || []).map((post) => post._id).filter((id) => id !== item._id)
-    const set: Record<string, unknown> = {}
-    const unset: string[] = []
-    if (remainingPostIds.length > 0) {
-      set.calendarItems = refsFromIds(remainingPostIds)
-    } else {
-      unset.push('calendarItems')
-    }
-    if (link.calendarItem?._id === item._id) unset.push('calendarItem')
-    await onSave(link._id, set, unset)
-  }
-
-  return (
-    <aside data-tour-id="autopilot-calendar-editor" style={styles.panel}>
-      <PanelTitle title="Calendar item" type="marketingCalendarItem" id={item._id} />
-      <Stack gap={12}>
-        <GuidanceChecklist
-          title="Designer checklist"
-          items={[
-            { label: 'Date is set', done: !!draft.publishAt },
-            { label: 'Channel and content type are chosen', done: !!channelKey && !!draft.contentType },
-            { label: 'Brief has enough context to make the artifact', done: !!draft.brief?.trim() },
-            { label: 'CTA says what the viewer should do next', done: !!draft.callToAction?.trim() },
-            { label: 'Campaign or funnel connection is set', done: !!campaignId || !!funnelId },
-            { label: 'Working URL points to the draft/design/source', done: !!draft.workingUrl?.trim() },
-          ]}
-        />
-        <TemplateRail
-          title="Content templates"
-          description="Apply a prompt set, then replace the bracketed thinking with the actual artifact details."
-          templates={CALENDAR_ITEM_TEMPLATES}
-          onApply={applyTemplate}
-        />
-        <MarketingAiAssistPanel
-          kind="calendarItem"
-          draft={draft as unknown as Record<string, unknown>}
-          analyticsTakeaways={analyticsTakeaways}
-          onApply={applyAiSuggestion}
-        />
-        <InputField label="What are we making?" help="Use the working title a designer would recognize on the calendar.">
-          <input
-            style={styles.input}
-            value={draft.title || ''}
-            onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-          />
-        </InputField>
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <InputField label="Where is it in the workflow?">
-            <Select
-              value={draft.status || 'idea'}
-              options={calendarStatusOptions}
-              onChange={(status) => setDraft({ ...draft, status })}
-            />
-          </InputField>
-          <InputField label="Publish date">
-            <input
-              type="date"
-              style={styles.input}
-              value={toDateInputValue(draft.publishAt)}
-              onChange={(event) => setDraft({ ...draft, publishAt: event.currentTarget.value })}
-            />
-          </InputField>
-        </div>
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <InputField label="Where will this be published?">
-            <Select
-              value={channelKey}
-              options={[
-                { title: 'None', value: '' },
-                ...channelOptions,
-                { title: 'Add new channel...', value: ADD_CHANNEL_VALUE },
-              ]}
-              onChange={(channel) => {
-                if (channel === ADD_CHANNEL_VALUE) {
-                  onOpenChannels()
-                  return
-                }
-                const nextTypes = getContentTypeOptionsForChannel(channel, channels)
-                setDraft({
-                  ...draft,
-                  channel,
-                  channelRef: getChannelByKey(channels, channel),
-                  contentType: nextTypes[0]?.value || '',
-                })
-              }}
-            />
-          </InputField>
-          <InputField label="What format is it?">
-            <Select
-              value={draft.contentType || ''}
-              options={[{ title: 'None', value: '' }, ...typeOptions]}
-              onChange={(contentType) => setDraft({ ...draft, contentType })}
-            />
-          </InputField>
-        </div>
-        <InputField label="Which campaign is it part of?" help="Leave blank if this is a one-off item or not connected yet.">
-          <Select
-            value={campaignId}
-            options={[{ title: 'No campaign', value: '' }, ...campaigns.map((campaign) => ({ title: campaign.title || 'Untitled campaign', value: campaign._id }))]}
-            onChange={setCampaignId}
-          />
-        </InputField>
-        <InputField label="Which funnel path should it support?" help="Use this when the item should lead people through a known path.">
-          <Select
-            value={funnelId}
-            options={[{ title: 'No funnel', value: '' }, ...funnels.map((funnel) => ({ title: funnel.title || 'Untitled funnel', value: funnel._id }))]}
-            onChange={setFunnelId}
-          />
-        </InputField>
-        <InputField label="What stage is this for?">
-          <Select
-            value={draft.funnelStage || ''}
-            options={[{ title: 'None', value: '' }, ...funnelStageOptions]}
-            onChange={(funnelStage) => setDraft({ ...draft, funnelStage })}
-          />
-        </InputField>
-        <details style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 12 }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 800 }}>SEO and targeting</summary>
-          <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-            <InputField label="Topic / keyword cluster">
-              <input
-                style={styles.input}
-                value={draft.topicCluster || ''}
-                onChange={(event) => setDraft({ ...draft, topicCluster: event.currentTarget.value })}
-              />
-            </InputField>
-            <InputField label="Search / visitor intent">
-              <Select
-                value={draft.searchIntent || ''}
-                options={[{ title: 'None', value: '' }, ...searchIntentOptions]}
-                onChange={(searchIntent) => setDraft({ ...draft, searchIntent })}
-              />
-            </InputField>
-            <InputField label="Target queries / phrases">
-              <textarea
-                rows={3}
-                style={styles.input}
-                value={(draft.targetQueries || []).join('\n')}
-                onChange={(event) => setDraft({ ...draft, targetQueries: stringListFromText(event.currentTarget.value) })}
-                placeholder="One phrase per line"
-              />
-            </InputField>
-          </div>
-        </details>
-        <InputField label="Analytics source">
-          <Select
-            value={analyticsSourceId}
-            options={[
-              { title: 'No analytics source', value: '' },
-              ...analyticsSources.map((source) => ({
-                title: source.title || 'Untitled analytics source',
-                value: source._id,
-              })),
-            ]}
-            onChange={setAnalyticsSourceId}
-          />
-        </InputField>
-        <InputField label="What does the designer need to know before making it?" help="Plain-language context, audience, source, angle, and must-include points.">
-          <textarea
-            rows={5}
-            style={styles.input}
-            value={draft.brief || ''}
-            onChange={(event) => setDraft({ ...draft, brief: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Write the actual copy here" help="Caption, post copy, newsletter section, page draft, or script. This can be rough.">
-          <textarea
-            rows={8}
-            style={styles.input}
-            value={draft.contentDraft || ''}
-            onChange={(event) => setDraft({ ...draft, contentDraft: event.currentTarget.value })}
-            placeholder="Write or generate the actual post, caption, newsletter section, or page copy here."
-          />
-        </InputField>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <label style={styles.label}>Frames or slides</label>
-            <button
-              type="button"
-              style={styles.button}
-              onClick={() =>
-                setDraft({
-                  ...draft,
-                  draftFrames: [
-                    ...(draft.draftFrames || []),
-                    { _key: randomKey(), title: '', body: '', visualDirection: '', altText: '' },
-                  ],
-                })
-              }
-            >
-              Add frame
-            </button>
-          </div>
-          {(draft.draftFrames || []).length === 0 ? (
-            <EmptyInline title="No frame copy yet." />
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {(draft.draftFrames || []).map((frame, index) => (
-                <div key={frame._key || index} style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'center' }}>
-                    <InputField label={`Frame ${index + 1} title`}>
-                      <input
-                        style={styles.input}
-                        value={frame.title || ''}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, title: event.currentTarget.value } : item,
-                            ),
-                          })
-                        }
-                      />
-                    </InputField>
-                    <button
-                      type="button"
-                      style={{ ...styles.button, width: 40, height: 40, padding: 0 }}
-                      aria-label={`Remove frame ${index + 1}`}
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).filter((_, itemIndex) => itemIndex !== index),
-                        })
-                      }
-                    >
-                      <CloseIcon />
-                    </button>
-                  </div>
-                  <InputField label="Body copy">
-                    <textarea
-                      rows={3}
-                      style={styles.input}
-                      value={frame.body || ''}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, body: event.currentTarget.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </InputField>
-                  <InputField label="Visual direction">
-                    <textarea
-                      rows={2}
-                      style={styles.input}
-                      value={frame.visualDirection || ''}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, visualDirection: event.currentTarget.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </InputField>
-                  <InputField label="Alt text">
-                    <textarea
-                      rows={2}
-                      style={styles.input}
-                      value={frame.altText || ''}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, altText: event.currentTarget.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </InputField>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <InputField label="Overall draft alt text">
-          <textarea
-            rows={3}
-            style={styles.input}
-            value={draft.draftAltText || ''}
-            onChange={(event) => setDraft({ ...draft, draftAltText: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Draft hashtags / tags">
-          <textarea
-            rows={2}
-            style={styles.input}
-            value={(draft.draftHashtags || []).join('\n')}
-            onChange={(event) => setDraft({ ...draft, draftHashtags: stringListFromText(event.currentTarget.value) })}
-            placeholder="One tag per line"
-          />
-        </InputField>
-        <InputField label="Content production notes">
-          <textarea
-            rows={4}
-            style={styles.input}
-            value={draft.contentProductionNotes || ''}
-            onChange={(event) => setDraft({ ...draft, contentProductionNotes: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="What should the viewer do next?">
-          <input
-            style={styles.input}
-            value={draft.callToAction || ''}
-            onChange={(event) => setDraft({ ...draft, callToAction: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Where is the draft, design, or source?">
-          <input
-            style={styles.input}
-            value={draft.workingUrl || ''}
-            onChange={(event) => setDraft({ ...draft, workingUrl: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Where will the public link go?">
-          <input
-            style={styles.input}
-            value={draft.publishedUrl || ''}
-            onChange={(event) => setDraft({ ...draft, publishedUrl: event.currentTarget.value })}
-          />
-        </InputField>
-        <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
-            <div>
-              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Quick Links</h3>
-              <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-                Linked items appear on /links automatically when this post is published or its scheduled date arrives.
-              </div>
-            </div>
-            <StatusPill status={isCalendarItemPublishReady(draft) ? 'active' : 'draft'} options={linkItemStatusOptions} />
-          </div>
-          {linkedLinks.length === 0 ? (
-            <EmptyInline title="No links connected to this post yet." />
-          ) : (
-            <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
-              {linkedLinks.map((link) => (
-                <div
-                  key={link._id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) auto',
-                    gap: 10,
-                    alignItems: 'center',
-                    border: '1px solid var(--card-border-color)',
-                    borderRadius: 8,
-                    padding: 10,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {link.title || 'Untitled link'}
-                    </strong>
-                    <div
-                      style={{
-                        ...styles.small,
-                        color: '#007385',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        marginTop: 3,
-                      }}
-                    >
-                      {link.url || 'No URL yet'}
-                    </div>
-                  </div>
-                  <button type="button" style={styles.button} onClick={() => void removeLinkFromPost(link._id)}>
-                    Remove from post
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
-            <Select
-              value={linkToAddId}
-              options={[
-                { title: availableLinks.length > 0 ? 'Choose existing link...' : 'No other links available', value: '' },
-                ...availableLinks.map((link) => ({
-                  title: link.title || link.url || 'Untitled link',
-                  value: link._id,
-                })),
-              ]}
-              onChange={setLinkToAddId}
-            />
-            <button type="button" style={styles.button} disabled={!linkToAddId} onClick={() => void addExistingLinkToPost()}>
-              Attach link
-            </button>
-          </div>
-          <button
-            type="button"
-            style={{ ...styles.primaryButton, width: '100%', marginTop: 8 }}
-            disabled={!postUrl}
-            onClick={() => void createLinkFromPost()}
-          >
-            Create link from this post
-          </button>
-          {!postUrl && (
-            <div style={{ ...styles.small, ...styles.muted, marginTop: 8 }}>
-              Add a Published URL or Working URL before creating a link from this post.
-            </div>
-          )}
-        </div>
-        <AdvancedFieldsDropdown type="marketingCalendarItem" id={item._id} />
-        <button type="button" data-tour-id="autopilot-calendar-save" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-          {saving ? 'Saving...' : 'Save calendar item'}
-        </button>
-      </Stack>
-    </aside>
-  )
-}
-
-type AbTestingEditorTab = 'setup' | 'launch' | 'results'
-type AbTestingPageMode = 'dashboard' | 'configuration'
-
-function AbTestingWorkspace({
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-  onOpenView,
-}: {
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  const compactLayout = useMarketingCompactLayout()
-  const [selectedId, setSelectedId] = useState<string | null>(data.experiments[0]?._id || null)
-  const selectedExperiment = data.experiments.find((experiment) => experiment._id === selectedId) || data.experiments[0] || null
-  const [draft, setDraft] = useState<MarketingExperiment | null>(selectedExperiment)
-  const [activeEditorTab, setActiveEditorTab] = useState<AbTestingEditorTab>('setup')
-  const [pageMode, setPageMode] = useState<AbTestingPageMode>('dashboard')
-  const stats = useMemo(() => getAbTestingStats(data), [data])
-  const insights = useMemo(() => buildAbTestingInsights(data), [data])
-
-  useEffect(() => {
-    const nextSelected = selectedExperiment || data.experiments[0] || null
-    setDraft(nextSelected)
-    if (!selectedId && nextSelected?._id) setSelectedId(nextSelected._id)
-  }, [data.experiments, selectedExperiment, selectedId])
-
-  const createHomepageExperiment = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingExperiment',
-      title: 'Homepage 2026 concept test',
-      status: 'idea',
-      hypothesis: 'If the concept homepage frames GoInvo around enterprise software outcomes, then more qualified visitors will book discovery calls because the offer is clearer.',
-      expectedSignal: 'Higher qualified discovery-call clicks without reducing work exploration.',
-      targetType: 'homepage',
-      targetPath: '/',
-      flagKey: 'home-2026-variant',
-      variants: [
-        { _key: randomKey(), _type: 'experimentVariant', key: 'control', label: 'Current homepage' },
-        { _key: randomKey(), _type: 'experimentVariant', key: 'concept', label: '2026 concept homepage' },
-      ],
-      primaryMetric: 'Qualified discovery-call clicks',
-      trackedMetrics: [
-        { _key: randomKey(), _type: 'experimentMetric', key: 'qualified-discovery-call-clicks', label: 'Qualified discovery-call clicks', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'qualified_discovery_call_click', unit: 'events' },
-        { _key: randomKey(), _type: 'experimentMetric', key: 'work-exploration-clicks', label: 'Work exploration clicks', role: 'guardrail', comparison: 'comparative', source: 'vercelEvent', eventName: 'view_work_click', unit: 'events' },
-        { _key: randomKey(), _type: 'experimentMetric', key: 'top-navbar-clicks', label: 'Top navbar clicks', role: 'diagnostic', comparison: 'comparative', source: 'vercelEvent', eventName: 'nav_click', unit: 'events' },
-        { _key: randomKey(), _type: 'experimentMetric', key: 'discovery-form-starts', label: 'Discovery form starts', role: 'diagnostic', comparison: 'conceptual', source: 'vercelEvent', eventName: 'discovery_form_start', unit: 'events' },
-      ],
-      successTrackers: [
-        {
-          _key: randomKey(),
-          _type: 'experimentSuccessTracker',
-          title: 'Primary CTA lift',
-          trackerType: 'metricRule',
-          metricKeys: ['qualified-discovery-call-clicks'],
-          condition: 'increase',
-          successWhen: 'Concept beats control on qualified discovery-call clicks.',
-        },
-        {
-          _key: randomKey(),
-          _type: 'experimentSuccessTracker',
-          title: 'Work exploration guardrail',
-          trackerType: 'metricRule',
-          metricKeys: ['work-exploration-clicks'],
-          condition: 'notDecrease',
-          successWhen: 'Work exploration clicks do not drop materially while CTA clicks improve.',
-        },
-      ],
-      qaNotes: 'Verify control and concept render at desktop and mobile, then confirm experiment_exposure, qualified_discovery_call_click, view_work_click, and discovery_form_start events include experiment_id, flag_key, variant, and page_path. Do not send raw visitor IDs.',
-    })
-    setSelectedId(createdId)
-    setActiveEditorTab('setup')
-    setPageMode('configuration')
-  }
-
-  const updateDraft = (field: keyof MarketingExperiment, value: unknown) => {
-    if (!draft) return
-    setDraft({ ...draft, [field]: value })
-  }
-
-  const updateAnalyticsSource = (sourceId: string) => {
-    if (!draft) return
-    setDraft({
-      ...draft,
-      analyticsSource: data.analyticsSources.find((source) => source._id === sourceId),
-    })
-  }
-
-  const updateSignalSelection = (signal: MarketingPerformanceSignal, checked: boolean) => {
-    if (!draft) return
-    const current = draft.performanceSignals || []
-    const next = checked
-      ? uniqueById([...current, signal])
-      : current.filter((item) => item._id !== signal._id)
-    setDraft({ ...draft, performanceSignals: next })
-  }
-
-  const updateVariantPreviewUrl = (variantKey: string, previewUrl: string) => {
-    if (!draft) return
-    setDraft({
-      ...draft,
-      variants: (draft.variants || []).map((variant) =>
-        variant.key === variantKey ? { ...variant, previewUrl } : variant,
-      ),
-    })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    if (!draft) return
-    const experimentSuggestion = suggestion.experiment || {}
-    setDraft({
-      ...draft,
-      title: aiString(experimentSuggestion.title) || draft.title,
-      status: aiOption(experimentSuggestion.status, experimentStatusOptions) || draft.status,
-      hypothesis: aiString(experimentSuggestion.hypothesis) || draft.hypothesis,
-      expectedSignal: aiString(experimentSuggestion.expectedSignal) || draft.expectedSignal,
-      targetType: aiOption(experimentSuggestion.targetType, experimentTargetTypeOptions) || draft.targetType,
-      targetPath: aiString(experimentSuggestion.targetPath) || draft.targetPath,
-      flagKey: aiString(experimentSuggestion.flagKey) || draft.flagKey,
-      variants: aiExperimentVariants(experimentSuggestion.variants) || draft.variants,
-      primaryMetric: aiString(experimentSuggestion.primaryMetric) || draft.primaryMetric,
-      trackedMetrics: aiExperimentTrackedMetrics(experimentSuggestion.trackedMetrics) || draft.trackedMetrics,
-      successTrackers: aiExperimentSuccessTrackers(experimentSuggestion.successTrackers) || draft.successTrackers,
-      qaNotes: aiString(experimentSuggestion.qaNotes) || draft.qaNotes,
-      rolloutStart: aiString(experimentSuggestion.rolloutStart) || draft.rolloutStart,
-      rolloutEnd: aiString(experimentSuggestion.rolloutEnd) || draft.rolloutEnd,
-      vercelDashboardUrl: aiString(experimentSuggestion.vercelDashboardUrl) || draft.vercelDashboardUrl,
-      result: aiString(experimentSuggestion.result) || draft.result,
-      decision: aiOption(experimentSuggestion.decision, experimentDecisionOptions) || draft.decision,
-      notes: aiString(experimentSuggestion.notes) || draft.notes,
-    })
-  }
-
-  const save = async () => {
-    if (!draft || !selectedExperiment) return
-    const signalIds = experimentSignalIds(draft)
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled experiment',
-      status: draft.status || 'idea',
-      hypothesis: draft.hypothesis,
-      expectedSignal: draft.expectedSignal,
-      targetType: draft.targetType,
-      targetPath: draft.targetPath,
-      flagKey: draft.flagKey,
-      variants: experimentVariantsFromDraft(draft as unknown as Record<string, unknown>),
-      primaryMetric: draft.primaryMetric,
-      trackedMetrics: experimentTrackedMetricsFromDraft(draft as unknown as Record<string, unknown>),
-      successTrackers: experimentSuccessTrackersFromDraft(draft as unknown as Record<string, unknown>),
-      analyticsSource: draft.analyticsSource?._id ? referenceFromId(draft.analyticsSource._id) : undefined,
-      qaNotes: draft.qaNotes,
-      rolloutStart: dateInputToIso(toDateInputValue(draft.rolloutStart)),
-      rolloutEnd: dateInputToIso(toDateInputValue(draft.rolloutEnd)),
-      vercelDashboardUrl: draft.vercelDashboardUrl,
-      performanceSignals: signalIds.length > 0 ? refsFromIds(signalIds) : undefined,
-      result: draft.result,
-      decision: draft.decision,
-      decisionDate: toDateInputValue(draft.decisionDate),
-      notes: draft.notes,
-    }
-    const unset = emptyKeys(set)
-    unset.forEach((key) => delete set[key])
-    await commitPatch(selectedExperiment._id, set, unset)
-  }
-
-  const scrollToAbTestingSection = (id: string) => {
-    if (typeof document === 'undefined') return
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  const openAbTestingEditorTab = (tab: AbTestingEditorTab, sectionId = 'ab-test-configuration') => {
-    setPageMode('configuration')
-    setActiveEditorTab(tab)
-    if (typeof window === 'undefined') return
-    window.setTimeout(() => scrollToAbTestingSection(sectionId), 0)
-  }
-
-  const openSelectedNextStep = () => {
-    if (selectedNextStep.targetId === 'ab-test-create') void createHomepageExperiment()
-    else if (selectedNextStep.targetId === 'analytics') openAbTestingEditorTab('results', 'ab-test-decision-review')
-    else if (selectedNextStep.targetId === 'ab-test-launch-checklist') openAbTestingEditorTab('launch', selectedNextStep.targetId)
-    else if (selectedNextStep.targetId === 'ab-test-decision-review' || selectedNextStep.targetId === 'ab-test-results-evidence') openAbTestingEditorTab('results', selectedNextStep.targetId)
-    else openAbTestingEditorTab('setup', selectedNextStep.targetId)
-  }
-
-  const selectedSignalIds = draft ? experimentSignalIds(draft) : []
-  const selectedSignals = selectedSignalIds
-    .map((id) => data.performanceSignals.find((signal) => signal._id === id) || draft?.performanceSignals?.find((signal) => signal._id === id))
-    .filter(Boolean) as MarketingPerformanceSignal[]
-  const selectedNextStep = getAbTestingDesignerNextStep(draft)
-  const selectedExperimentTitle = selectedExperiment ? marketingExperimentTitle(selectedExperiment) : ''
-  const selectedInsights = selectedExperiment
-    ? insights.filter((insight) => insight.experimentId === selectedExperiment._id || insight.affected.includes(selectedExperimentTitle))
-    : insights
-  const primarySelectedInsight = selectedInsights.find((insight) => insight.severity !== 'healthy') || selectedInsights[0] || null
-  const primarySelectedInsightAction = primarySelectedInsight ? getAbTestingInsightActionTarget(primarySelectedInsight) : null
-  const selectedLaunchItems = draft ? getAbTestingLaunchChecklistItems(draft, selectedSignalIds.length) : []
-  const selectedLaunchReady = selectedLaunchItems.filter((item) => item.done).length
-  const selectedLaunchPercent = selectedLaunchItems.length > 0 ? Math.round((selectedLaunchReady / selectedLaunchItems.length) * 100) : 0
-  const selectedComparisons = draft ? getAbTestingComparativeResults(draft, 5) : []
-  const selectedResultSummary = draft ? getAbTestingComparisonSummary(draft, selectedComparisons) : null
-  // The main dashboard list hides both archived and 'idea' (draft) tests so the
-  // initial view only shows tests that are at least scheduled/launched. A newly
-  // created test starts as 'idea' and is reached through the create flow, which
-  // selects it and opens its editor directly (pageMode 'configuration') rather
-  // than relying on this list — so hidden idea tests are never lost.
-  const listedExperiments = data.experiments.filter(
-    (experiment) => experiment.status !== 'archived' && experiment.status !== 'idea',
-  )
-  const hasAnyTests = listedExperiments.length > 0
-  const workspaceGridStyle: CSSProperties = { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: compactLayout ? 12 : 16, alignItems: 'start' }
-  const setupGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14, alignItems: 'start' }
-    : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 320px)', gap: 20, alignItems: 'start' }
-  const abTestCardGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }
-    : { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 460px))', gap: 8, justifyContent: 'start', alignItems: 'stretch' }
-  const twoColumnFormStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }
-    : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }
-  const decisionGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }
-    : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20 }
-
-  if (pageMode === 'configuration' && draft && selectedExperiment) {
-    return (
-      <div style={workspaceGridStyle}>
-        <section id="ab-test-configuration" style={{ ...styles.panel, display: 'grid', gap: 18, scrollMarginTop: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <div style={{ maxWidth: 760 }}>
-              <div style={{ ...styles.kicker, marginBottom: 6 }}>A/B test setup</div>
-              <PanelTitle title={marketingExperimentTitle(selectedExperiment)} type="marketingExperiment" id={selectedExperiment._id} />
-              <p style={{ ...styles.muted, margin: '6px 0 0', lineHeight: 1.55 }}>
-                Edit the page path, variants, analytics source, QA links, evidence, and decision trail here.
-              </p>
-            </div>
-            <button type="button" style={styles.button} onClick={() => setPageMode('dashboard')}>
-              Back to A/B tests
-            </button>
-          </div>
-          <div
-            role="tablist"
-            aria-label="A/B test editor sections"
-            style={{
-              display: 'flex',
-              gap: 4,
-              overflowX: 'auto',
-              borderBottom: '1px solid var(--card-border-color)',
-            }}
-          >
-            <AbTestingEditorTabButton active={activeEditorTab === 'setup'} title="Setup" detail="Bet, page, versions, metrics" onClick={() => setActiveEditorTab('setup')} />
-            <AbTestingEditorTabButton active={activeEditorTab === 'launch'} title="Launch" detail="Checklist, source, rollout" onClick={() => setActiveEditorTab('launch')} />
-            <AbTestingEditorTabButton active={activeEditorTab === 'results'} title="Results" detail="Evidence, readout, decision" onClick={() => setActiveEditorTab('results')} />
-          </div>
-
-          {activeEditorTab === 'setup' && (
-            <div style={{ maxWidth: compactLayout ? undefined : 820 }}>
-              <Stack gap={12}>
-                {primarySelectedInsight && (
-                  <div id="ab-test-suggested-improvements" style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)', padding: '10px 0', display: 'grid', gap: 6 }}>
-                    <div style={{ ...styles.kicker }}>Suggested improvements</div>
-                    <strong style={{ display: 'block', fontSize: 16 }}>{primarySelectedInsight.title}</strong>
-                    <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>{primarySelectedInsight.interpretation}</p>
-                    <p style={{ margin: 0, lineHeight: 1.45 }}>
-                      <strong>Do next: </strong>
-                      {primarySelectedInsight.action}
-                    </p>
-                    {primarySelectedInsightAction && (
-                      <button type="button" style={{ ...styles.button, justifySelf: 'start' }} onClick={() => openAbTestingEditorTab(primarySelectedInsightAction.tab, primarySelectedInsightAction.sectionId)}>
-                        {primarySelectedInsightAction.label}
-                      </button>
-                    )}
-                  </div>
-                )}
-                <MarketingAiAssistPanel
-                  kind="experiment"
-                  draft={draft as unknown as Record<string, unknown>}
-                  analyticsTakeaways={buildAnalyticsInterpretations(data)}
-                  onApply={applyAiSuggestion}
-                />
-                <InputField label="Experiment name">
-                  <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
-                </InputField>
-                <div style={twoColumnFormStyle}>
-                  <InputField label="Status">
-                    <Select value={draft.status || 'idea'} options={experimentStatusOptions} onChange={(status) => updateDraft('status', status)} />
-                  </InputField>
-                  <InputField label="Target type">
-                    <Select value={draft.targetType || 'page'} options={experimentTargetTypeOptions} onChange={(targetType) => updateDraft('targetType', targetType)} />
-                  </InputField>
-                </div>
-                <InputField label="Design bet" help="Example: If the concept homepage leads with enterprise outcomes, qualified CTA clicks should increase because the offer is clearer.">
-                  <textarea rows={4} style={styles.input} value={draft.hypothesis || ''} onChange={(event) => updateDraft('hypothesis', event.currentTarget.value)} />
-                </InputField>
-                <InputField label="Expected result">
-                  <input style={styles.input} value={draft.expectedSignal || ''} onChange={(event) => updateDraft('expectedSignal', event.currentTarget.value)} />
-                </InputField>
-                <div style={twoColumnFormStyle}>
-                  <InputField label="Public page path">
-                    <input style={styles.input} value={draft.targetPath || ''} onChange={(event) => updateDraft('targetPath', event.currentTarget.value)} />
-                  </InputField>
-                  <InputField label="Traffic split key" help="Engineering/Vercel uses this key to assign visitors. Designers usually only need to confirm it matches the test.">
-                    <input style={styles.input} value={draft.flagKey || ''} onChange={(event) => updateDraft('flagKey', event.currentTarget.value)} />
-                  </InputField>
-                </div>
-                <InputField label="Page versions" help="One version per line. Include control/current and each new version. Format: key | label | notes | custom preview link.">
-                  <textarea
-                    rows={4}
-                    style={styles.input}
-                    value={experimentVariantText(draft.variants)}
-                    onChange={(event) => updateDraft('variants', experimentVariantsFromDraft({ variantsText: event.currentTarget.value }))}
-                  />
-                </InputField>
-                <InputField label="Primary success metric">
-                  <input style={styles.input} value={draft.primaryMetric || ''} onChange={(event) => updateDraft('primaryMetric', event.currentTarget.value)} />
-                </InputField>
-                <InputField label="Tracked metrics" help="List what the test watches. Format: key | label | event name | unit | role | notes. Use primary, guardrail, or diagnostic.">
-                  <textarea
-                    rows={5}
-                    style={styles.input}
-                    value={experimentTrackedMetricText(draft.trackedMetrics)}
-                    onChange={(event) => updateDraft('trackedMetrics', experimentTrackedMetricsFromDraft({ trackedMetricsText: event.currentTarget.value }))}
-                  />
-                </InputField>
-                <InputField label="Success rules" help="Say which metric has to move and what counts as success. Format: title | metric keys | condition | threshold | success rule.">
-                  <textarea
-                    rows={5}
-                    style={styles.input}
-                    value={experimentSuccessTrackerText(draft.successTrackers)}
-                    onChange={(event) => updateDraft('successTrackers', experimentSuccessTrackersFromDraft({ successTrackersText: event.currentTarget.value }))}
-                  />
-                </InputField>
-                <InputField label="QA notes">
-                  <textarea rows={4} style={styles.input} value={draft.qaNotes || ''} onChange={(event) => updateDraft('qaNotes', event.currentTarget.value)} />
-                </InputField>
-              </Stack>
-            </div>
-          )}
-
-          {activeEditorTab === 'launch' && (
-            <div id="ab-test-launch-checklist" style={{ ...setupGridStyle, scrollMarginTop: 18 }}>
-              <GuidanceChecklist
-                title="Launch readiness"
-                items={[
-                  { label: 'Public page chosen', done: Boolean(draft.targetPath?.trim()) },
-                  { label: 'Traffic split key set', done: Boolean(draft.flagKey?.trim()) },
-                  { label: 'Control version included', done: experimentHasControlVariant(draft) },
-                  { label: 'Primary success metric named', done: Boolean(draft.primaryMetric?.trim()) },
-                  { label: 'Tracked metrics listed', done: experimentHasTrackedMetric(draft) },
-                  { label: 'Success rule set', done: experimentHasSuccessTracker(draft) },
-                  { label: 'Results source linked', done: Boolean(draft.analyticsSource?._id) },
-                  { label: 'Decision evidence linked', done: selectedSignalIds.length > 0 },
-                ]}
-              />
-              <Stack gap={12}>
-                <AbTestingVercelReadout experiment={draft} onOpenSignals={() => setActiveEditorTab('results')} />
-                <InputField label="Where results will be reviewed">
-                  <Select
-                    value={draft.analyticsSource?._id || ''}
-                    options={[
-                      { title: 'No analytics source', value: '' },
-                      ...data.analyticsSources.map((source) => ({
-                        title: `${source.title || labelFor(analyticsProviderOptions, source.provider)} (${labelFor(analyticsProviderOptions, source.provider)})`,
-                        value: source._id,
-                      })),
-                    ]}
-                    onChange={updateAnalyticsSource}
-                  />
-                </InputField>
-                <InputField label="Rollout start">
-                  <input type="date" style={styles.input} value={toDateInputValue(draft.rolloutStart)} onChange={(event) => updateDraft('rolloutStart', event.currentTarget.value)} />
-                </InputField>
-                <InputField label="Rollout end">
-                  <input type="date" style={styles.input} value={toDateInputValue(draft.rolloutEnd)} onChange={(event) => updateDraft('rolloutEnd', event.currentTarget.value)} />
-                </InputField>
-                <InputField label="Results dashboard link">
-                  <input style={styles.input} value={draft.vercelDashboardUrl || ''} onChange={(event) => updateDraft('vercelDashboardUrl', event.currentTarget.value)} />
-                </InputField>
-                {getAbTestingDashboardUrl(draft) && (
-                  <a href={getAbTestingDashboardUrl(draft)} target="_blank" rel="noreferrer" style={{ ...styles.button, width: '100%' }}>
-                    <LaunchIcon style={{ width: 15, height: 15 }} />
-                    Open Vercel results dashboard
-                  </a>
-                )}
-                <AbTestingVariantSummary experiment={draft} />
-                <ExperimentPreviewLinks experiment={draft} onPreviewUrlChange={updateVariantPreviewUrl} />
-              </Stack>
-            </div>
-          )}
-
-          {activeEditorTab === 'results' && (
-            <div id="ab-test-decision-review" style={{ ...decisionGridStyle, scrollMarginTop: 18 }}>
-              <Stack gap={12}>
-                <h3 style={{ margin: 0, fontSize: 18 }}>Result and decision</h3>
-                <AbTestingVariantEventTable experiment={draft} />
-                <AbTestingComparisonRows results={getAbTestingComparativeResults(draft, 5)} />
-                <InputField label="Result summary">
-                  <textarea rows={4} style={styles.input} value={draft.result || ''} onChange={(event) => updateDraft('result', event.currentTarget.value)} />
-                </InputField>
-                <div style={twoColumnFormStyle}>
-                  <InputField label="Decision">
-                    <Select value={draft.decision || ''} options={[{ title: 'No decision yet', value: '' }, ...experimentDecisionOptions]} onChange={(decision) => updateDraft('decision', decision)} />
-                  </InputField>
-                  <InputField label="Decision date">
-                    <input type="date" style={styles.input} value={toDateInputValue(draft.decisionDate)} onChange={(event) => updateDraft('decisionDate', event.currentTarget.value)} />
-                  </InputField>
-                </div>
-                <InputField label="Decision notes">
-                  <textarea rows={4} style={styles.input} value={draft.notes || ''} onChange={(event) => updateDraft('notes', event.currentTarget.value)} />
-                </InputField>
-              </Stack>
-
-              <div id="ab-test-results-evidence" style={{ scrollMarginTop: 18 }}>
-              <Stack gap={12}>
-                <h3 style={{ margin: 0, fontSize: 18 }}>Results evidence</h3>
-                {data.performanceSignals.length === 0 ? (
-                  <EmptyInline title="No result signals yet. Create or import one in Analytics, then link it here." />
-                ) : (
-                  <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)', maxHeight: 280, overflow: 'auto' }}>
-                    {data.performanceSignals.map((signal, index) => {
-                      const checked = selectedSignalIds.includes(signal._id)
-                      return (
-                        <label
-                          key={signal._id}
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'auto minmax(0, 1fr)',
-                            gap: 10,
-                            alignItems: 'start',
-                            cursor: 'pointer',
-                            padding: '10px 0',
-                            borderBottom: index === data.performanceSignals.length - 1 ? 'none' : '1px solid var(--card-border-color)',
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(event) => updateSignalSelection(signal, event.currentTarget.checked)}
-                          />
-                          <span>
-                            <strong style={{ display: 'block', fontSize: 13 }}>{signal.title || 'Untitled signal'}</strong>
-                            <span style={{ ...styles.small, ...styles.muted }}>
-                              {[labelFor(analyticsProviderOptions, signal.provider), signal.signalType, formatDateOnly(signal.metricDate)].filter(Boolean).join(' / ')}
-                            </span>
-                          </span>
-                        </label>
-                      )
-                    })}
-                  </div>
-                )}
-                <AbTestingSignalSummary signals={selectedSignals} />
-              </Stack>
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'grid', gap: 12 }}>
-            <AdvancedFieldsDropdown type="marketingExperiment" id={selectedExperiment._id} />
-            <button type="button" style={styles.primaryButton} disabled={savingId === selectedExperiment._id} onClick={() => void save()}>
-              {savingId === selectedExperiment._id ? 'Saving...' : 'Save experiment'}
-            </button>
-          </div>
-        </section>
-      </div>
-    )
-  }
-
-  return (
-    <div style={workspaceGridStyle}>
-      <section style={{ display: 'grid', gap: 16 }}>
-        <section style={{ ...styles.panel, display: 'grid', gap: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <PanelHeading
-              title="A/B Tests"
-              description="Compact readouts for live page tests. Click one to review the result, then open setup only when something needs editing."
-            />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
-              <button
-                type="button"
-                title="New homepage and Vision article test creation flows are coming soon."
-                style={{ ...styles.button, minHeight: 34, padding: '8px 10px', cursor: 'not-allowed', opacity: 0.78 }}
-                disabled
-              >
-                Add A/B test
-                <span style={{ ...styles.small, fontWeight: 900, color: '#4dc4d6' }}>Coming Soon</span>
-              </button>
-            </div>
-          </div>
-
-          <div data-mobile-scroll="true" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
-            <AbTestingSummaryChip label="Tests" value={`${stats.pageTests}`} detail={`${stats.active} active`} />
-            <AbTestingSummaryChip label="Running" value={`${stats.running}`} detail="measured + split" />
-            <AbTestingSummaryChip label="Blocked" value={`${stats.blocked}`} detail="measurement gaps" />
-            <AbTestingSummaryChip label="Setup" value={`${stats.ready}/${stats.pageTests}`} detail="fields complete" />
-            <AbTestingSummaryChip label="Results" value={`${stats.withSignals}/${stats.pageTests}`} detail="evidence linked" />
-          </div>
-
-          {hasAnyTests ? (
-            <div data-mobile-stack="true" style={abTestCardGridStyle}>
-              {listedExperiments.map((experiment) => (
-                <AbTestingDashboardCard
-                  key={experiment._id}
-                  experiment={experiment}
-                  selected={experiment._id === selectedExperiment?._id}
-                  onSelect={() => {
-                    setSelectedId(experiment._id)
-                    setPageMode('dashboard')
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)', padding: '18px 0', display: 'grid', gap: 8 }}>
-              <strong>A/B test creation is coming soon</strong>
-              <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-                Existing test records will show here as dashboard cards. The Add A/B test flow will include homepage and Vision article options when the next creation path is ready.
-              </p>
-              <button type="button" style={{ ...styles.button, justifySelf: 'start', cursor: 'not-allowed', opacity: 0.78 }} disabled>
-                Add A/B test
-                <span style={{ ...styles.small, fontWeight: 900, color: '#4dc4d6' }}>Coming Soon</span>
-              </button>
-            </div>
-          )}
-        </section>
-
-        {draft && selectedExperiment ? (
-          <section id="ab-test-dashboard-detail" style={{ ...styles.panel, display: 'grid', gap: 12, scrollMarginTop: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <div style={{ maxWidth: 760 }}>
-                <div style={{ ...styles.kicker, marginBottom: 6 }}>Selected test</div>
-                <h2 style={{ margin: 0, fontSize: 21 }}>How this test is going</h2>
-                <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
-                  {marketingExperimentTitle(selectedExperiment)} on {normalizeMarketingExperimentPath(selectedExperiment.targetPath) || 'an unassigned page'}.
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button type="button" style={selectedNextStep.primary ? styles.primaryButton : styles.button} disabled={selectedNextStep.targetId === 'ab-test-create' && savingId === 'new'} onClick={openSelectedNextStep}>
-                  {selectedNextStep.actionLabel}
-                </button>
-                <button
-                  type="button"
-                  style={styles.button}
-                  onClick={() => openAbTestingEditorTab('setup')}
-                >
-                  Open setup
-                </button>
-              </div>
-            </div>
-
-            <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0, borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
-              <AbTestingSummaryCell label="State" value={getAbTestingDisplayStatusLabel(draft)} detail={getAbTestingDashboardStatusDetail(draft)} />
-              <AbTestingSummaryCell label="Launch readiness" value={`${selectedLaunchReady}/${selectedLaunchItems.length}`} detail={`${selectedLaunchPercent}% complete`} />
-              <AbTestingSummaryCell label="Better page" value={selectedResultSummary?.label || 'No winner yet'} detail={draft.decision ? `Decision: ${labelFor(experimentDecisionOptions, draft.decision)}` : 'No decision yet'} last />
-            </div>
-
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'grid', gap: 10 }}>
-                <AbTestingLeaderSummary experiment={draft} results={selectedComparisons} summary={selectedResultSummary} />
-                <AbTestingVariantEventTable experiment={draft} />
-                <AbTestingComparisonRows results={selectedComparisons} />
-                <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
-                  <div style={{ ...styles.kicker, marginBottom: 6 }}>Suggested improvements</div>
-                  <strong style={{ display: 'block', fontSize: 18 }}>{primarySelectedInsight?.title || 'No blockers on this test'}</strong>
-                  <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0', lineHeight: 1.55 }}>
-                    {primarySelectedInsight?.interpretation || 'The selected test has no flagged setup or result issues. Keep checking the linked dashboard on the review cadence.'}
-                  </p>
-                  {primarySelectedInsightAction && (
-                    <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => openAbTestingEditorTab(primarySelectedInsightAction.tab, primarySelectedInsightAction.sectionId)}>
-                      {primarySelectedInsightAction.label}
-                    </button>
-                  )}
-                </div>
-
-                {selectedInsights.length > 1 && (
-                  <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
-                    {selectedInsights.slice(0, 4).map((insight, index) => (
-                      <AbTestingInsightRow key={insight.id} insight={insight} last={index === Math.min(selectedInsights.length, 4) - 1} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        ) : null}
-      </section>
-    </div>
-  )
-}
-
-function AbTestingSummaryCell({
-  label,
-  value,
-  detail,
-  last = false,
-}: {
-  label: string
-  value: string
-  detail: string
-  last?: boolean
-}) {
-  return (
-    <div
-      data-ab-summary-cell="true"
-      data-last={last ? 'true' : undefined}
-      style={{
-        padding: '9px 12px',
-        borderRight: last ? 'none' : '1px solid var(--card-border-color)',
-        minWidth: 0,
-      }}
-    >
-      <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 900, marginTop: 2 }}>{value}</div>
-      <div style={{ ...styles.small, ...styles.muted, marginTop: 2 }}>{detail}</div>
-    </div>
-  )
-}
-
-function AbTestingSummaryChip({
-  label,
-  value,
-  detail,
-}: {
-  label: string
-  value: string
-  detail: string
-}) {
-  return (
-    <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'baseline',
-        gap: 7,
-        minWidth: 0,
-        border: '1px solid var(--card-border-color)',
-        borderRadius: 999,
-        padding: '5px 9px',
-        background: MARKETING_OPAQUE_CARD_BG,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <span style={{ ...styles.small, ...styles.muted, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
-      <strong style={{ fontSize: 14 }}>{value}</strong>
-      <span style={{ ...styles.small, ...styles.muted }}>{detail}</span>
-    </div>
-  )
-}
-
-function AbTestingDashboardCard({
-  experiment,
-  selected,
-  onSelect,
-}: {
-  experiment: MarketingExperiment
-  selected: boolean
-  onSelect: () => void
-}) {
-  const displayStatus = getAbTestingDisplayStatus(experiment)
-  const tone = getStatusColor(displayStatus)
-  const launchItems = getAbTestingLaunchChecklistItems(experiment)
-  const launchReady = launchItems.filter((item) => item.done).length
-  const statusLabel = getAbTestingDisplayStatusLabel(experiment)
-  const comparisons = getAbTestingComparativeResults(experiment, 3)
-  const resultSummary = getAbTestingComparisonSummary(experiment, comparisons)
-  const variantPairLabel = getAbTestingVariantPairLabel(experiment)
-
-  return (
-    <button
-      type="button"
-      data-ab-dashboard-card="true"
-      aria-pressed={selected}
-      onClick={onSelect}
-      style={{
-        ...styles.card,
-        appearance: 'none',
-        color: 'var(--card-fg-color)',
-        cursor: 'pointer',
-        display: 'grid',
-        gap: 8,
-        padding: 10,
-        textAlign: 'left',
-        boxShadow: selected ? '0 0 0 1px rgba(77, 196, 214, 0.7)' : 'none',
-        borderColor: selected ? '#4dc4d6' : 'var(--card-border-color)',
-        background: selected ? 'rgba(0, 115, 133, 0.08)' : 'var(--card-bg-color)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ ...styles.kicker, display: 'block', marginBottom: 3 }}>{experimentListMeta(experiment)}</span>
-          <strong style={{ display: 'block', fontSize: 14, lineHeight: 1.22 }}>{marketingExperimentTitle(experiment)}</strong>
-          <span style={{ ...styles.small, ...styles.muted, display: 'block', marginTop: 3 }}>
-            {variantPairLabel}
-          </span>
-        </span>
-        <span
-          style={{
-            ...styles.small,
-            border: `1px solid ${tone.border}`,
-            background: tone.bg,
-            color: tone.fg,
-            borderRadius: 999,
-            padding: '3px 8px',
-            fontWeight: 900,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {statusLabel}
-        </span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 10, alignItems: 'end', borderTop: '1px solid var(--card-border-color)', paddingTop: 8 }}>
-        <span style={{ minWidth: 0 }}>
-          <span style={{ ...styles.small, ...styles.muted, display: 'block' }}>Better page</span>
-          <strong style={{ display: 'block', fontSize: 15, lineHeight: 1.2 }}>{resultSummary.label}</strong>
-        </span>
-        <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <span style={{ ...styles.small, border: '1px solid var(--card-border-color)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-            Ready {launchReady}/{launchItems.length}
-          </span>
-          <span style={{ ...styles.small, border: '1px solid var(--card-border-color)', borderRadius: 999, padding: '2px 7px', whiteSpace: 'nowrap' }}>
-            {comparisons.length} metric{comparisons.length === 1 ? '' : 's'}
-          </span>
-        </span>
-      </div>
-
-    </button>
-  )
-}
-
-function AbTestingInsightRow({ insight, last = false }: { insight: AbTestingInsight; last?: boolean }) {
-  const tone = getAnalyticsInterpretationTone(insight.severity)
-
-  return (
-    <div style={{ padding: '10px 0', borderBottom: last ? 'none' : '1px solid var(--card-border-color)' }}>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span style={{ ...styles.small, color: tone.fg, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.5 }}>{tone.label}</span>
-        <strong style={{ fontSize: 13 }}>{insight.title}</strong>
-      </div>
-      <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>{insight.action}</p>
-    </div>
-  )
-}
-
-function AbTestingLeaderSummary({
-  experiment,
-  results,
-  summary,
-}: {
-  experiment: MarketingExperiment
-  results: AbTestingComparisonResult[]
-  summary: AbTestingComparisonSummary | null
-}) {
-  const scoreboard = getAbTestingComparisonScoreboard(experiment, results)
-  const leader = summary || getAbTestingComparisonSummary(experiment, results)
-  const leaderTone = getAbTestingComparisonTone(leader.status)
-  const hasComparedMetrics = scoreboard.total > 0 && scoreboard.pendingCount < scoreboard.total
-
-  return (
-    <div
-      style={{
-        borderTop: '1px solid var(--card-border-color)',
-        borderBottom: '1px solid var(--card-border-color)',
-        padding: '10px 0',
-        display: 'grid',
-        gap: 9,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 0, maxWidth: 720 }}>
-          <div style={{ ...styles.kicker, marginBottom: 4 }}>Which page is performing better?</div>
-          <strong style={{ display: 'block', fontSize: 20, lineHeight: 1.15 }}>
-            {leader.status === 'needsComparison'
-              ? 'No winner yet'
-              : leader.status === 'even'
-                ? 'No clear winner yet'
-                : leader.label}
-          </strong>
-        </div>
-        <span
-          style={{
-            ...styles.small,
-            alignSelf: 'flex-start',
-            border: `1px solid ${leaderTone.border}`,
-            background: leaderTone.bg,
-            color: leaderTone.fg,
-            borderRadius: 999,
-            padding: '5px 10px',
-            fontWeight: 900,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {hasComparedMetrics ? 'Compared metrics' : 'Waiting for comparison'}
-        </span>
-      </div>
-
-      <div
-        data-mobile-stack="true"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-          borderTop: '1px solid var(--card-border-color)',
-          borderBottom: '1px solid var(--card-border-color)',
-        }}
-      >
-        <AbTestingLeaderScoreCell
-          label={scoreboard.controlLabel}
-          detail="Current page"
-          wins={scoreboard.controlWins}
-          total={scoreboard.total}
-          active={leader.status === 'control'}
-        />
-        <AbTestingLeaderScoreCell
-          label={scoreboard.variantLabel}
-          detail="Test page"
-          wins={scoreboard.variantWins}
-          total={scoreboard.total}
-          active={leader.status === 'variant'}
-          last
-        />
-      </div>
-
-    </div>
-  )
-}
-
-function AbTestingLeaderScoreCell({
-  label,
-  detail,
-  wins,
-  total,
-  active,
-  last = false,
-}: {
-  label: string
-  detail: string
-  wins: number
-  total: number
-  active: boolean
-  last?: boolean
-}) {
-  return (
-    <div
-      data-ab-summary-cell="true"
-      data-last={last ? 'true' : undefined}
-      style={{
-        padding: '9px 12px',
-        borderRight: last ? 'none' : '1px solid var(--card-border-color)',
-        background: active ? 'rgba(0, 115, 133, 0.12)' : 'transparent',
-        minWidth: 0,
-      }}
-    >
-      <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-        {detail}
-      </div>
-      <strong style={{ display: 'block', marginTop: 3, fontSize: 15, lineHeight: 1.25 }}>{label}</strong>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline', marginTop: 5 }}>
-        <span style={{ ...styles.small, ...styles.muted }}>Metric wins</span>
-        <strong style={{ fontSize: 17 }}>{wins}/{total || 0}</strong>
-      </div>
-    </div>
-  )
-}
-
-function AbTestingComparisonRows({
-  results,
-  compact = false,
-}: {
-  results: AbTestingComparisonResult[]
-  compact?: boolean
-}) {
-  if (results.length === 0) {
-    if (compact) return null
-    return (
-      <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 16 }}>Result comparison</h3>
-        <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Add tracked metrics to compare the page versions for qualified discoveries, work exploration, and other success signals.
-        </p>
-      </div>
-    )
-  }
-
-  const visibleResults = compact ? results.slice(0, 3) : results
-
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: compact ? 9 : 12, display: 'grid', gap: compact ? 7 : 10 }}>
-      {!compact && (
-        <div>
-          <h3 style={{ margin: 0, fontSize: 16 }}>Result comparison</h3>
-          <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-            Shows which page version is leading once linked signals include variant-level counts and comparison values.
-          </p>
-        </div>
-      )}
-      <div style={{ display: 'grid', gap: compact ? 6 : 8 }}>
-        {visibleResults.map((result, index) => {
-          const tone = getAbTestingComparisonTone(result.status)
-          return (
-            <div
-              key={result.key}
-              style={{
-                display: 'grid',
-                gap: compact ? 3 : 5,
-                padding: compact ? '6px 0' : '8px 0',
-                borderBottom: index === visibleResults.length - 1 ? 'none' : '1px solid var(--card-border-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
-                <span style={{ minWidth: 0 }}>
-                  <strong style={{ display: 'block', fontSize: compact ? 12 : 13, lineHeight: 1.25 }}>{result.metricLabel}</strong>
-                  {!compact && result.metricRole && <span style={{ ...styles.small, ...styles.muted }}>{result.metricRole}</span>}
-                </span>
-                <span
-                  style={{
-                    ...styles.small,
-                    color: tone.fg,
-                    border: `1px solid ${tone.border}`,
-                    background: tone.bg,
-                    borderRadius: 999,
-                    padding: '3px 8px',
-                    fontWeight: 900,
-                  }}
-                >
-                  {result.winnerLabel}
-                </span>
-              </div>
-              <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.4 }}>{result.detail}</p>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExperiment }) {
-  const rows = getAbTestingVariantEventRows(experiment)
-  const variants = getAbTestingVariantOptions(experiment)
-  const gridTemplateColumns = `minmax(190px, 1.1fr) repeat(${variants.length}, minmax(150px, 1fr))`
-
-  // Per-variant SESSION engagement (bounce rate, avg time on page) read off the
-  // linked signals. This is now FIRST-PARTY measured — the same reliable pipeline
-  // as the Vercel visit/event counts above (a client engagement beacon ->
-  // /api/marketing/analytics/collect -> Vercel KV -> drain-cron rollup), NOT a
-  // separate GA4 sample. `sessions` is the count of measured page-sessions the
-  // bounce/time are based on. Backward-compatible: missing values render as '—'.
-  const engagementByVariant = variants.map((variant) => ({ variant, engagement: getAbTestingVariantEngagement(experiment, variant) }))
-  const engagementRows: Array<{ key: string; label: string; sublabel: string; format: (engagement: AbTestingVariantEngagement) => string }> = [
-    { key: 'engagement-bounce', label: 'Bounce rate', sublabel: 'First-party measured', format: (engagement) => formatAbTestingBounceRate(engagement.bounceRate) },
-    { key: 'engagement-avg-time', label: 'Avg time on page', sublabel: 'First-party measured', format: (engagement) => formatAbTestingAvgTime(engagement.averageSessionDuration) },
-    { key: 'engagement-sessions', label: 'Sessions', sublabel: 'First-party measured', format: (engagement) => (engagement.sessions === null ? '—' : formatOptionalNumber(engagement.sessions)) },
-  ]
-  const hasEngagement = engagementByVariant.some(
-    ({ engagement }) => engagement.sessions !== null || engagement.bounceRate !== null || engagement.averageSessionDuration !== null,
-  )
-
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12, display: 'grid', gap: 10 }}>
-      <div>
-        <h3 style={{ margin: 0, fontSize: 16 }}>Visits and events</h3>
-        <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Shows total visits or exposures for each version, then how many visitors triggered each tracked event, plus per-version bounce rate and avg time on page.
-        </p>
-        <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
-          Every metric here is first-party measured from the same on-page pipeline. Bounce rate and avg time on page come from each session&apos;s visible time on the page (a session counts as engaged at 10s visible or once it converts); Sessions is the number of measured page-sessions behind those figures.
-        </p>
-      </div>
-      <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns, minWidth: 190 + variants.length * 150, borderTop: '1px solid var(--card-border-color)' }}>
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 900, padding: '8px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
-            Metric
-          </div>
-          {variants.map((variant) => (
-            <div key={variant.key} style={{ ...styles.small, ...styles.muted, fontWeight: 900, padding: '8px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)' }}>
-              {variant.label}
-            </div>
-          ))}
-          {rows.map((row) => (
-            <Fragment key={row.key}>
-              <div style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
-                <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.25 }}>{row.label}</strong>
-                <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 2 }}>
-                  {row.role && <span style={{ ...styles.small, ...styles.muted }}>{row.role}</span>}
-                  {row.comparison === 'conceptual' && (
-                    <span title="Captured for context only — it does not pick a winner or block measurement" style={{ ...styles.small, color: 'var(--card-muted-fg-color)', border: '1px solid var(--card-border-color)', borderRadius: 999, padding: '0 7px', whiteSpace: 'nowrap' }}>
-                      Captured · not compared
-                    </span>
-                  )}
-                </span>
-              </div>
-              {row.cells.map((cell) => (
-                <div key={`${row.key}-${cell.variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
-                  <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{formatAbTestingEventCount(cell.value, row.isExposure ? cell.unit || 'visits' : cell.unit || 'events')}</strong>
-                  {!row.isExposure && (
-                    <span style={{ ...styles.small, ...styles.muted }}>
-                      {formatAbTestingEventRate(cell)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </Fragment>
-          ))}
-          {engagementRows.map((engagementRow) => (
-            <Fragment key={engagementRow.key}>
-              <div style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
-                <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.25 }}>{engagementRow.label}</strong>
-                <span style={{ ...styles.small, ...styles.muted }}>{engagementRow.sublabel}</span>
-              </div>
-              {engagementByVariant.map(({ variant, engagement }) => (
-                <div key={`${engagementRow.key}-${variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
-                  <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{engagementRow.format(engagement)}</strong>
-                </div>
-              ))}
-            </Fragment>
-          ))}
-        </div>
-      </div>
-      {!hasEngagement && (
-        <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>
-          Bounce rate, avg time on page, and measured sessions fill in once the first-party engagement rollup has run for this test.
-        </p>
-      )}
-    </div>
-  )
-}
-
-function AbTestingVariantSummary({ experiment }: { experiment: MarketingExperiment }) {
-  const variants = experiment.variants || []
-
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
-      <div style={{ ...styles.kicker, marginBottom: 6 }}>Page versions</div>
-      {variants.length === 0 ? (
-        <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>No versions are defined yet.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
-          {variants.map((variant, index) => (
-            <div key={variant._key || variant.key || index} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, borderTop: index === 0 ? 'none' : '1px solid var(--card-border-color)', paddingTop: index === 0 ? 0 : 8 }}>
-              <span>
-                <strong style={{ display: 'block', fontSize: 13 }}>{variant.label || variant.key || 'Untitled version'}</strong>
-                <span style={{ ...styles.small, ...styles.muted }}>{variant.notes || (variant.key === 'control' ? 'Current page' : 'Test version')}</span>
-              </span>
-              <code style={{ ...styles.small, color: 'var(--card-muted-fg-color)' }}>{variant.key || 'missing-key'}</code>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AbTestingForcedLinkSummary({ experiment }: { experiment: MarketingExperiment }) {
-  const variants = experiment.variants || []
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.goinvo.com'
-  const linkableVariants = variants.filter((variant) => variant.key?.trim())
-
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
-      <div style={{ ...styles.kicker, marginBottom: 6 }}>QA links</div>
-      {linkableVariants.length === 0 ? (
-        <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>Add version keys before forced preview links are available.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
-          {linkableVariants.map((variant) => {
-            const baseHref = variant.previewUrl?.trim() || experiment.targetPath || '/'
-            const forcedUrl = buildMarketingForcedExperimentUrl(baseHref, variant.key || '', origin)
-            return (
-              <div key={variant._key || variant.key} style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                <span style={{ ...styles.small, ...styles.muted }}>{variant.label || variant.key}</span>
-                <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button type="button" style={styles.button} onClick={() => void copyTextToClipboard(forcedUrl)}>
-                    Copy
-                  </button>
-                  <a href={forcedUrl} target="_blank" rel="noreferrer" style={styles.button}>
-                    <LaunchIcon style={{ width: 15, height: 15 }} />
-                    Open
-                  </a>
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AbTestingVercelReadout({
-  experiment,
-  onOpenSignals,
-}: {
-  experiment: MarketingExperiment
-  onOpenSignals: () => void
-}) {
-  const source = getAbTestingVercelSource(experiment)
-  const dashboardUrl = getAbTestingDashboardUrl(experiment)
-  const trackedEvents = getAbTestingTrackedVercelEvents(experiment)
-
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
-      <div style={{ ...styles.kicker, marginBottom: 6 }}>Vercel Analytics readout</div>
-      {source || dashboardUrl ? (
-        <div style={{ display: 'grid', gap: 9 }}>
-          <div>
-            <strong style={{ display: 'block', fontSize: 14 }}>
-              {source?.title || 'Vercel dashboard connected'}
-            </strong>
-            <span style={{ ...styles.small, ...styles.muted, display: 'block', marginTop: 3, lineHeight: 1.45 }}>
-              {[labelForAnalyticsProvider(source?.provider) || 'Vercel Analytics', source?.status ? labelFor(analyticsStatusOptions, source.status) : '', source?.lastSyncedAt ? `synced ${formatDateTime(source.lastSyncedAt)}` : ''].filter(Boolean).join(' / ')}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {trackedEvents.map((eventName) => (
-              <code key={eventName} style={{ ...styles.small, color: 'var(--card-muted-fg-color)', border: '1px solid var(--card-border-color)', borderRadius: 999, padding: '3px 7px' }}>
-                {eventName}
-              </code>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {dashboardUrl && (
-              <a href={dashboardUrl} target="_blank" rel="noreferrer" style={styles.button}>
-                <LaunchIcon style={{ width: 15, height: 15 }} />
-                Open Vercel dashboard
-              </a>
-            )}
-            <button type="button" style={styles.button} onClick={onOpenSignals}>
-              Open linked signals
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
-          <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-            Choose Vercel Web Analytics in Launch setup so this test can read exposure and conversion signals from the same source as the site events.
-          </p>
-          <button type="button" style={styles.button} onClick={onOpenSignals}>
-            Open analytics sources
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function AbTestingSignalSummary({ signals }: { signals: MarketingPerformanceSignal[] }) {
-  return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <h3 style={{ margin: 0, fontSize: 16 }}>Linked result evidence</h3>
-      {signals.length === 0 ? (
-        <div style={{ ...styles.small, ...styles.muted }}>Link at least one result signal before the test moves to review.</div>
-      ) : (
-        <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
-          {signals.map((signal, index) => (
-            <div key={signal._id} style={{ padding: '10px 0', borderBottom: index === signals.length - 1 ? 'none' : '1px solid var(--card-border-color)' }}>
-              <strong style={{ display: 'block', fontSize: 13 }}>{signal.title || 'Untitled signal'}</strong>
-              <div style={{ ...styles.small, ...styles.muted, marginTop: 3 }}>
-                {[labelForAnalyticsProvider(signal.provider), signal.signalType, formatDateOnly(signal.metricDate) || formatDateTime(signal._updatedAt)].filter(Boolean).join(' / ')}
-              </div>
-              {(signal.metrics || []).length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                  {(signal.metrics || []).slice(0, 4).map((metric) => (
-                    <span key={metric._key || metric.label} style={{ ...styles.small, border: '1px solid var(--card-border-color)', borderRadius: 999, padding: '3px 8px' }}>
-                      {[metric.label, typeof metric.value === 'number' ? formatOptionalNumber(metric.value) : '', metric.unit, metric.change].filter((part) => part !== undefined && part !== '').join(' ')}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {signal.recommendation && <p style={{ ...styles.small, margin: '6px 0 0', lineHeight: 1.45 }}>{signal.recommendation}</p>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ExperimentPreviewLinks({
-  experiment,
-  onPreviewUrlChange,
-}: {
-  experiment: MarketingExperiment
-  onPreviewUrlChange: (variantKey: string, previewUrl: string) => void
-}) {
-  const variants = experiment.variants || []
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.goinvo.com'
-
-  if (variants.length === 0) {
-    return <EmptyInline title="Add page versions before creating forced preview links." />
-  }
-
-  return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <div>
-        <h3 style={{ margin: 0, fontSize: 16 }}>Forced preview links</h3>
-        <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
-          Share these links to force a specific version for QA. Normal visitors still use the Vercel traffic split.
-        </p>
-      </div>
-      <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
-        {variants.map((variant, index) => {
-          const variantKey = variant.key || ''
-          const baseHref = variant.previewUrl?.trim() || experiment.targetPath || '/'
-          const forcedUrl = variantKey ? buildMarketingForcedExperimentUrl(baseHref, variantKey, origin) : ''
-          return (
-            <div
-              key={variant._key || variantKey || index}
-              style={{
-                display: 'grid',
-                gap: 8,
-                padding: '10px 0',
-                borderBottom: index === variants.length - 1 ? 'none' : '1px solid var(--card-border-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                <div>
-                  <strong style={{ display: 'block', fontSize: 13 }}>{variant.label || variantKey || 'Untitled version'}</strong>
-                  <span style={{ ...styles.small, ...styles.muted }}>{variantKey || 'Missing variant key'}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button type="button" style={styles.button} disabled={!forcedUrl} onClick={() => void copyTextToClipboard(forcedUrl)}>
-                    Copy forced link
-                  </button>
-                  <a href={forcedUrl || '#'} target="_blank" rel="noreferrer" style={styles.button} aria-disabled={!forcedUrl}>
-                    <LaunchIcon style={{ width: 15, height: 15 }} />
-                    Open
-                  </a>
-                </div>
-              </div>
-              <InputField label="Custom link for this version" help="Optional. Use a relative path like /?utm_source=qa or a full URL. The forced-version parameter is added automatically.">
-                <input
-                  style={styles.input}
-                  placeholder={experiment.targetPath || '/'}
-                  value={variant.previewUrl || ''}
-                  onChange={(event) => variantKey && onPreviewUrlChange(variantKey, event.currentTarget.value)}
-                  disabled={!variantKey}
-                />
-              </InputField>
-              {forcedUrl && <code style={{ ...styles.small, color: 'var(--card-muted-fg-color)', overflowWrap: 'anywhere' }}>{forcedUrl}</code>}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function buildMarketingForcedExperimentUrl(href: string, variant: string, origin: string) {
-  const url = new URL(href || '/', origin)
-  url.searchParams.set(EXPERIMENT_FORCE_VARIANT_PARAM, variant)
-  return url.toString()
-}
-
-async function copyTextToClipboard(value: string) {
-  if (!value || typeof navigator === 'undefined' || !navigator.clipboard) return
-  await navigator.clipboard.writeText(value)
-}
-
-function AbTestingEditorTabButton({
-  active,
-  title,
-  detail,
-  onClick,
-}: {
-  active: boolean
-  title: string
-  detail: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      style={{
-        appearance: 'none',
-        border: 0,
-        borderBottom: `2px solid ${active ? '#4dc4d6' : 'transparent'}`,
-        borderRadius: 0,
-        background: active ? 'rgba(0, 115, 133, 0.12)' : 'transparent',
-        color: 'var(--card-fg-color)',
-        cursor: 'pointer',
-        font: 'inherit',
-        minWidth: 158,
-        padding: '10px 12px',
-        textAlign: 'left',
-      }}
-    >
-      <strong style={{ display: 'block', fontSize: 13 }}>{title}</strong>
-      <span style={{ ...styles.small, ...styles.muted, display: 'block', marginTop: 2 }}>{detail}</span>
-    </button>
-  )
-}
-
-function AbTestingStepList({ steps }: { steps: Array<[string, string, string]> }) {
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
-      {steps.map(([step, title, detail], index) => (
-        <div
-          key={step}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '52px minmax(0, 1fr)',
-            gap: 10,
-            padding: '11px 0',
-            borderBottom: index === steps.length - 1 ? 'none' : '1px solid var(--card-border-color)',
-          }}
-        >
-          <span style={{ ...styles.small, color: '#4dc4d6', fontWeight: 900, textTransform: 'uppercase' }}>Step {step}</span>
-          <span>
-            <strong style={{ display: 'block', fontSize: 13 }}>{title}</strong>
-            <span style={{ ...styles.small, ...styles.muted, display: 'block', lineHeight: 1.45, marginTop: 2 }}>{detail}</span>
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function AbTestingIntentCard({
-  eyebrow,
-  title,
-  detail,
-  actionLabel,
-  primary = false,
-  onAction,
-}: {
-  eyebrow: string
-  title: string
-  detail: string
-  actionLabel: string
-  primary?: boolean
-  onAction: () => void
-}) {
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 14, display: 'grid', gap: 9 }}>
-      <div style={{ ...styles.kicker, marginBottom: 0 }}>{eyebrow}</div>
-      <strong style={{ fontSize: 15 }}>{title}</strong>
-      <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>{detail}</p>
-      <button type="button" style={primary ? styles.primaryButton : styles.button} onClick={onAction}>
-        {actionLabel}
-      </button>
-    </div>
-  )
-}
-
-function AnalyticsWorkspace({
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-}: {
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const compactLayout = useMarketingCompactLayout()
-  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(data.analyticsSources[0]?._id || null)
-  const vercelSources = data.analyticsSources.filter((source) =>
-    source.provider === 'vercelAnalytics' || source.provider === 'vercelSpeedInsights',
-  )
-  const selectedSource = data.analyticsSources.find((source) => source._id === selectedSourceId) || null
-  const campaignLinkedCount = data.campaigns.filter((campaign) => (campaign.analyticsSources || []).length > 0).length
-  const funnelLinkedCount = data.funnels.filter((funnel) => (funnel.analyticsSources || []).length > 0).length
-  const channelLinkedCount = data.channels.filter((channel) => (channel.analyticsSources || []).length > 0).length
-  const connectedSourceCount = data.analyticsSources.filter((source) => source.status === 'connected').length
-  const analyticsInterpretations = useMemo(() => buildAnalyticsInterpretations(data), [data])
-  const workspaceGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, alignItems: 'start' }
-    : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }
-  const metricGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }
-    : { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }
-  const sidePanelStyle: CSSProperties = compactLayout
-    ? { ...styles.panel, position: 'static' }
-    : { ...styles.panel, position: 'sticky', top: 16 }
-
-  useEffect(() => {
-    if (!selectedSourceId && data.analyticsSources.length > 0) setSelectedSourceId(data.analyticsSources[0]._id)
-  }, [data.analyticsSources, selectedSourceId])
-
-  const createSource = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingAnalyticsSource',
-      title: '',
-      provider: 'ga4',
-      status: 'planned',
-      reportingCadence: 'monthly',
-    })
-    setSelectedSourceId(createdId)
-  }
-
-  const setAnalyticsSourcesForDocument = async (id: string, sourceIds: string[]) => {
-    await commitPatch(id, { analyticsSources: refsFromIds(sourceIds) }, sourceIds.length > 0 ? [] : ['analyticsSources'])
-  }
-
-  return (
-    <div style={workspaceGridStyle}>
-      <section style={{ display: 'grid', gap: 16 }}>
-        <section style={styles.panel}>
-          <PanelHeading
-            title="Analytics Dashboard"
-            description="Connect measurement sources to marketing work once, then reuse those connections across campaigns, funnels, and channels."
-          />
-          <div style={metricGridStyle}>
-            <AnalyticsMetricCard label="Sources" value={`${connectedSourceCount}/${data.analyticsSources.length}`} detail="connected" />
-            <AnalyticsMetricCard label="Campaigns" value={`${campaignLinkedCount}/${data.campaigns.length}`} detail="linked to analytics" />
-            <AnalyticsMetricCard label="Funnels" value={`${funnelLinkedCount}/${data.funnels.length}`} detail="linked to analytics" />
-            <AnalyticsMetricCard label="Channels" value={`${channelLinkedCount}/${data.channels.length}`} detail="linked to analytics" />
-          </div>
-        </section>
-
-        <AnalyticsInterpretationPanel data={data} interpretations={analyticsInterpretations} />
-
-        <VercelAnalyticsSummary sources={vercelSources} />
-
-        <AnalyticsEditor
-          source={selectedSource}
-          data={data}
-          saving={savingId === selectedSource?._id}
-          onSave={commitPatch}
-        />
-
-        <AnalyticsConnectionSection
-          title="Campaign measurement"
-          description="Attach sources to campaigns so success metrics, content, and reporting all point to the same measurement surface."
-          emptyTitle="No campaigns yet"
-          items={data.campaigns}
-          sources={data.analyticsSources}
-          savingId={savingId}
-          getStatusOptions={() => campaignStatusOptions}
-          getMeta={(campaign) =>
-            [
-              dateRange(campaign.startDate, campaign.endDate) || 'No dates',
-              `${getCampaignCalendarCount(data, campaign._id)} calendar item${getCampaignCalendarCount(data, campaign._id) === 1 ? '' : 's'}`,
-              `${campaign.funnels?.length || 0} funnel${(campaign.funnels?.length || 0) === 1 ? '' : 's'}`,
-            ].join(' / ')
-          }
-          onChange={setAnalyticsSourcesForDocument}
-        />
-
-        <AnalyticsConnectionSection
-          title="Funnel measurement"
-          description="Attach sources to reusable funnel maps so every connected campaign inherits the same measurement logic."
-          emptyTitle="No funnels yet"
-          items={data.funnels}
-          sources={data.analyticsSources}
-          savingId={savingId}
-          getStatusOptions={() => funnelStatusOptions}
-          getMeta={(funnel) =>
-            [
-              `${funnel.stages?.length || 0} stage${(funnel.stages?.length || 0) === 1 ? '' : 's'}`,
-              `${getFunnelCampaignCount(data, funnel._id)} campaign link${getFunnelCampaignCount(data, funnel._id) === 1 ? '' : 's'}`,
-            ].join(' / ')
-          }
-          onChange={setAnalyticsSourcesForDocument}
-        />
-
-        <AnalyticsConnectionSection
-          title="Channel measurement"
-          description="Attach default analytics sources to channels so new campaigns and content know how each channel is measured."
-          emptyTitle="No channels yet"
-          items={data.channels}
-          sources={data.analyticsSources}
-          savingId={savingId}
-          getStatusOptions={() => channelStatusOptions}
-          getMeta={(channel) =>
-            [
-              labelFor(channelPlatformOptions, channel.platform),
-              `${getChannelUsage(data, channel).calendarCount} calendar item${getChannelUsage(data, channel).calendarCount === 1 ? '' : 's'}`,
-              `${getChannelUsage(data, channel).campaignCount} campaign${getChannelUsage(data, channel).campaignCount === 1 ? '' : 's'}`,
-            ].filter(Boolean).join(' / ')
-          }
-          onChange={setAnalyticsSourcesForDocument}
-        />
-      </section>
-
-      <aside style={sidePanelStyle}>
-        <PanelHeading title="Sources" description="Small setup area for reporting surfaces. Most work happens in the connection dashboard." />
-        <button
-          type="button"
-          style={{ ...styles.primaryButton, width: '100%', marginBottom: 16 }}
-          disabled={savingId === 'new'}
-          onClick={() => void createSource()}
-        >
-          Add analytics source
-        </button>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {data.analyticsSources.map((source) => (
-            <button
-              key={source._id}
-              type="button"
-              onClick={() => setSelectedSourceId(source._id)}
-              style={{
-                ...styles.card,
-                padding: 10,
-                boxShadow: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                color: 'var(--card-fg-color)',
-                borderColor: source._id === selectedSourceId ? '#007385' : 'var(--card-border-color)',
-                background: source._id === selectedSourceId ? 'rgba(0, 115, 133, 0.08)' : 'var(--card-bg-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ display: 'block', fontSize: 13 }}>{source.title || 'Untitled source'}</strong>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 3 }}>
-                    {labelFor(analyticsProviderOptions, source.provider)}
-                  </div>
-                </div>
-                <StatusPill status={source.status} options={analyticsStatusOptions} />
-              </div>
-              {source.dashboardUrl && (
-                <div style={{ ...styles.small, color: '#007385', marginTop: 8 }}>Dashboard URL set</div>
-              )}
-            </button>
-          ))}
-          {data.analyticsSources.length === 0 && <EmptyInline title="No analytics sources yet" />}
-        </div>
-      </aside>
-    </div>
-  )
-}
-
-function AnalyticsMetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+export function AnalyticsMetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div style={{ ...styles.card, padding: 14, boxShadow: 'none' }}>
       <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
@@ -13936,145 +7990,7 @@ function AnalyticsMetricCard({ label, value, detail }: { label: string; value: s
   )
 }
 
-function AnalyticsInterpretationPanel({
-  data,
-  interpretations,
-}: {
-  data: MarketingData
-  interpretations: AnalyticsInterpretation[]
-}) {
-  const stats = getAnalyticsReadinessStats(data)
-  const priorityCount = interpretations.filter((insight) => insight.severity === 'urgent' || insight.severity === 'warning').length
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 14 }}>
-        <div style={{ maxWidth: 720 }}>
-          <h2 style={{ margin: 0, fontSize: 22 }}>Interpretation and next actions</h2>
-          <p style={{ ...styles.muted, margin: '4px 0 0', lineHeight: 1.55 }}>
-            A plain-language summary of what the current analytics setup implies, where measurement will break, and what to do next.
-          </p>
-        </div>
-        <div
-          style={{
-            border: '1px solid rgba(0, 115, 133, 0.35)',
-            background: 'rgba(0, 115, 133, 0.08)',
-            borderRadius: 8,
-            padding: '10px 12px',
-            minWidth: 160,
-          }}
-        >
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            Readiness
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#007385', marginTop: 2 }}>{stats.readinessScore}%</div>
-          <div style={{ ...styles.small, ...styles.muted }}>
-            {stats.measurementTargets > 0
-              ? `${stats.connectedMeasurementTargets}/${stats.measurementTargets} work items connected`
-              : 'No active work yet'}
-          </div>
-        </div>
-      </div>
-
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 14 }}>
-        <AnalyticsMetricCard
-          label="Priority actions"
-          value={`${priorityCount}`}
-          detail={priorityCount === 1 ? 'fix first' : 'fix first'}
-        />
-        <AnalyticsMetricCard
-          label="Connected sources"
-          value={`${stats.connectedSources}/${stats.activeSources}`}
-          detail="available for analysis"
-        />
-        <AnalyticsMetricCard
-          label="Review rhythm"
-          value={stats.reviewCadence}
-          detail="suggested by sources"
-        />
-      </div>
-
-      <div style={{ display: 'grid', gap: 10 }}>
-        {interpretations.map((insight) => (
-          <AnalyticsInterpretationCard key={insight.id} insight={insight} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function AnalyticsInterpretationCard({ insight }: { insight: AnalyticsInterpretation }) {
-  const tone = getAnalyticsInterpretationTone(insight.severity)
-
-  return (
-    <article
-      style={{
-        ...styles.card,
-        boxShadow: 'none',
-        padding: 14,
-        borderColor: tone.border,
-        background: tone.bg,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${tone.border}`,
-              background: 'var(--card-bg-color)',
-              color: tone.fg,
-              borderRadius: 999,
-              padding: '3px 8px',
-              fontSize: 11,
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-              marginBottom: 8,
-            }}
-          >
-            {tone.label}
-          </div>
-          <h3 style={{ margin: 0, fontSize: 17 }}>{insight.title}</h3>
-        </div>
-        {insight.affected.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 380 }}>
-            {insight.affected.map((title) => (
-              <span
-                key={title}
-                style={{
-                  ...styles.small,
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 999,
-                  padding: '3px 8px',
-                  background: 'var(--card-bg-color)',
-                  color: 'var(--card-muted-fg-color)',
-                  fontWeight: 700,
-                }}
-              >
-                {title}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12, marginTop: 10 }}>
-        <div>
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, marginBottom: 4 }}>What this means</div>
-          <p style={{ margin: 0, lineHeight: 1.5 }}>{insight.interpretation}</p>
-        </div>
-        <div>
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, marginBottom: 4 }}>Do next</div>
-          <p style={{ margin: 0, lineHeight: 1.5 }}>{insight.action}</p>
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function getAnalyticsInterpretationTone(severity: AnalyticsInterpretationSeverity) {
+export function getAnalyticsInterpretationTone(severity: AnalyticsInterpretationSeverity) {
   if (severity === 'urgent') {
     return {
       label: 'Fix first',
@@ -14107,7 +8023,7 @@ function getAnalyticsInterpretationTone(severity: AnalyticsInterpretationSeverit
   }
 }
 
-function serializeAnalyticsTakeawaysForAi(takeaways: AnalyticsInterpretation[]) {
+export function serializeAnalyticsTakeawaysForAi(takeaways: AnalyticsInterpretation[]) {
   return takeaways.slice(0, 8).map((takeaway) => ({
     severity: takeaway.severity,
     title: takeaway.title,
@@ -14115,427 +8031,6 @@ function serializeAnalyticsTakeawaysForAi(takeaways: AnalyticsInterpretation[]) 
     action: takeaway.action,
     affected: takeaway.affected.slice(0, 5),
   }))
-}
-
-function AnalyticsConnectionSection<T extends { _id: string; title?: string; status?: string; analyticsSources?: RefSummary[] }>({
-  title,
-  description,
-  emptyTitle,
-  items,
-  sources,
-  savingId,
-  getStatusOptions,
-  getMeta,
-  onChange,
-}: {
-  title: string
-  description: string
-  emptyTitle: string
-  items: T[]
-  sources: MarketingAnalyticsSource[]
-  savingId: string | null
-  getStatusOptions: (item: T) => SelectOption[]
-  getMeta: (item: T) => string
-  onChange: (id: string, sourceIds: string[]) => Promise<void>
-}) {
-  const connected = items.filter((item) => (item.analyticsSources || []).length > 0).length
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 20 }}>{title}</h2>
-          <p style={{ ...styles.muted, margin: '4px 0 0', lineHeight: 1.5 }}>{description}</p>
-        </div>
-        <div style={{ ...styles.small, ...styles.muted, textAlign: 'right', minWidth: 100 }}>
-          <strong style={{ color: 'var(--card-fg-color)', fontSize: 18 }}>{connected}/{items.length}</strong>
-          <div>connected</div>
-        </div>
-      </div>
-      {items.length === 0 ? (
-        <EmptyInline title={emptyTitle} />
-      ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
-          {items.map((item) => (
-            <AnalyticsConnectionRow
-              key={item._id}
-              item={item}
-              sources={sources}
-              saving={savingId === item._id}
-              statusOptions={getStatusOptions(item)}
-              meta={getMeta(item)}
-              onChange={onChange}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?: string; analyticsSources?: RefSummary[] }>({
-  item,
-  sources,
-  saving,
-  statusOptions,
-  meta,
-  onChange,
-}: {
-  item: T
-  sources: MarketingAnalyticsSource[]
-  saving: boolean
-  statusOptions: SelectOption[]
-  meta: string
-  onChange: (id: string, sourceIds: string[]) => Promise<void>
-}) {
-  const selectedIds = (item.analyticsSources || []).map((source) => source._id)
-  const availableSources = sources.filter((source) => !selectedIds.includes(source._id))
-
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(220px, 1fr) minmax(260px, 1.3fr) 220px',
-        gap: 12,
-        alignItems: 'center',
-        border: '1px solid var(--card-border-color)',
-        borderRadius: 8,
-        padding: 12,
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <strong>{item.title || 'Untitled'}</strong>
-          <StatusPill status={item.status} options={statusOptions} />
-        </div>
-        <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>{meta}</div>
-      </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {(item.analyticsSources || []).length === 0 && (
-          <span style={{ ...styles.small, ...styles.muted }}>No analytics connected</span>
-        )}
-        {(item.analyticsSources || []).map((source) => (
-          <button
-            key={source._id}
-            type="button"
-            title={`Remove ${source.title || 'analytics source'}`}
-            disabled={saving}
-            onClick={() => void onChange(item._id, selectedIds.filter((id) => id !== source._id))}
-            style={{
-              border: '1px solid rgba(0, 115, 133, 0.35)',
-              background: 'rgba(0, 115, 133, 0.08)',
-              color: 'var(--card-fg-color)',
-              borderRadius: 999,
-              padding: '5px 8px',
-              cursor: saving ? 'default' : 'pointer',
-              display: 'inline-flex',
-              gap: 6,
-              alignItems: 'center',
-              fontSize: 12,
-              fontWeight: 800,
-            }}
-          >
-            {source.title || 'Untitled source'}
-            <CloseIcon style={{ width: 12, height: 12 }} />
-          </button>
-        ))}
-      </div>
-      <Select
-        value=""
-        options={[
-          { title: sources.length === 0 ? 'Add analytics source first' : 'Connect source...', value: '' },
-          ...availableSources.map((source) => ({
-            title: `${source.title || 'Untitled source'} (${labelFor(analyticsProviderOptions, source.provider)})`,
-            value: source._id,
-          })),
-        ]}
-        disabled={saving || availableSources.length === 0}
-        onChange={(sourceId) => {
-          if (!sourceId) return
-          void onChange(item._id, [...selectedIds, sourceId])
-        }}
-      />
-    </div>
-  )
-}
-
-function VercelAnalyticsSummary({ sources }: { sources: MarketingAnalyticsSource[] }) {
-  if (sources.length === 0) return null
-
-  const project = sources.find((source) => source.vercelProject)?.vercelProject || 'Vercel project'
-  const productionUrl = sources.find((source) => source.productionUrl)?.productionUrl
-  const team = sources.find((source) => source.vercelTeamSlug)?.vercelTeamSlug
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 18 }}>Vercel connection</h3>
-          <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-            {[project, team ? `Team ${team}` : '', productionUrl].filter(Boolean).join(' / ')}
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, flex: '1 1 520px' }}>
-          {sources.map((source) => (
-            <div key={source._id} style={{ ...styles.card, padding: 12, boxShadow: 'none' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                <div>
-                  <strong>{labelFor(analyticsProviderOptions, source.provider)}</strong>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-                    Synced {formatDateTime(source.lastSyncedAt) || 'from Vercel CLI'}
-                  </div>
-                </div>
-                <StatusPill status={source.status} options={analyticsStatusOptions} />
-              </div>
-              {source.dashboardUrl && (
-                <a
-                  href={source.dashboardUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={`Open ${labelFor(analyticsProviderOptions, source.provider)} dashboard`}
-                  style={{ ...styles.button, marginTop: 10 }}
-                >
-                  <LaunchIcon style={{ width: 15, height: 15 }} />
-                  Open provider dashboard
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function AnalyticsEditor({
-  source,
-  data,
-  saving,
-  onSave,
-}: {
-  source: MarketingAnalyticsSource | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<MarketingAnalyticsSource | null>(source)
-
-  useEffect(() => setDraft(source), [source])
-
-  if (!draft || !source) {
-    return (
-      <EmptyPanel
-        icon={TrendUpwardIcon}
-        title="Select an analytics source"
-        description="Choose or create a source to manage its setup."
-      />
-    )
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled analytics source',
-      provider: draft.provider || 'ga4',
-      status: draft.status || 'planned',
-      propertyId: draft.propertyId,
-      measurementId: draft.measurementId,
-      containerId: draft.containerId,
-      vercelProject: draft.vercelProject,
-      dashboardUrl: draft.dashboardUrl,
-      reportingCadence: draft.reportingCadence,
-      implementationNotes: draft.implementationNotes,
-      keyMetrics: aiKeyMetrics(draft.keyMetrics),
-    }
-    const unset = emptyKeys(set)
-    unset.forEach((key) => delete set[key])
-    await onSave(source._id, set, unset)
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const analyticsSuggestion = suggestion.analyticsSource || {}
-    setDraft({
-      ...draft,
-      title: aiString(analyticsSuggestion.title) || draft.title,
-      provider: aiOption(analyticsSuggestion.provider, analyticsProviderOptions) || draft.provider,
-      reportingCadence:
-        aiOption(analyticsSuggestion.reportingCadence, [
-          { value: 'daily' },
-          { value: 'weekly' },
-          { value: 'monthly' },
-          { value: 'quarterly' },
-          { value: 'asNeeded' },
-        ]) || draft.reportingCadence,
-      implementationNotes: aiString(analyticsSuggestion.implementationNotes) || draft.implementationNotes,
-      keyMetrics: aiKeyMetrics(analyticsSuggestion.keyMetrics) || draft.keyMetrics,
-    })
-  }
-
-  return (
-    <section style={styles.panel}>
-      <PanelTitle title="Analytics setup" type="marketingAnalyticsSource" id={source._id} />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
-        <Stack gap={12}>
-          <MarketingAiAssistPanel
-            kind="analyticsSource"
-            draft={draft as unknown as Record<string, unknown>}
-            analyticsTakeaways={buildAnalyticsInterpretations(data)}
-            onApply={applyAiSuggestion}
-          />
-          <InputField label="Source name">
-            <input
-              style={styles.input}
-              value={draft.title || ''}
-              onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-            />
-          </InputField>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InputField label="Provider">
-              <Select
-                value={draft.provider || 'ga4'}
-                options={analyticsProviderOptions}
-                onChange={(provider) => setDraft({ ...draft, provider })}
-              />
-            </InputField>
-            <InputField label="Status">
-              <Select
-                value={draft.status || 'planned'}
-                options={analyticsStatusOptions}
-                onChange={(status) => setDraft({ ...draft, status })}
-              />
-            </InputField>
-          </div>
-          {draft.provider === 'ga4' && (
-            <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <InputField label="GA4 Property ID">
-                <input
-                  style={styles.input}
-                  value={draft.propertyId || ''}
-                  onChange={(event) => setDraft({ ...draft, propertyId: event.currentTarget.value })}
-                />
-              </InputField>
-              <InputField label="Measurement ID">
-                <input
-                  style={styles.input}
-                  value={draft.measurementId || ''}
-                  onChange={(event) => setDraft({ ...draft, measurementId: event.currentTarget.value })}
-                />
-              </InputField>
-            </div>
-          )}
-          {draft.provider === 'gtm' && (
-            <InputField label="GTM Container ID">
-              <input
-                style={styles.input}
-                value={draft.containerId || ''}
-                onChange={(event) => setDraft({ ...draft, containerId: event.currentTarget.value })}
-              />
-            </InputField>
-          )}
-          {(draft.provider === 'vercelAnalytics' || draft.provider === 'vercelSpeedInsights') && (
-            <Stack gap={10}>
-              <InputField label="Vercel project">
-                <input
-                  style={styles.input}
-                  value={draft.vercelProject || ''}
-                  onChange={(event) => setDraft({ ...draft, vercelProject: event.currentTarget.value })}
-                />
-              </InputField>
-              <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <InputField label="Project ID">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={draft.vercelProjectId || ''} readOnly />
-                </InputField>
-                <InputField label="Team">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={draft.vercelTeamSlug || ''} readOnly />
-                </InputField>
-              </div>
-              <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <InputField label="Production URL">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={draft.productionUrl || ''} readOnly />
-                </InputField>
-                <InputField label="Last synced">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={formatDateTime(draft.lastSyncedAt)} readOnly />
-                </InputField>
-              </div>
-            </Stack>
-          )}
-          <InputField label="Dashboard URL">
-            <input
-              style={styles.input}
-              value={draft.dashboardUrl || ''}
-              onChange={(event) => setDraft({ ...draft, dashboardUrl: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Implementation notes">
-            <textarea
-              rows={5}
-              style={styles.input}
-              value={draft.implementationNotes || ''}
-              onChange={(event) => setDraft({ ...draft, implementationNotes: event.currentTarget.value })}
-            />
-          </InputField>
-        </Stack>
-
-        <Stack gap={12}>
-          <InputField label="Reporting cadence">
-            <Select
-              value={draft.reportingCadence || 'monthly'}
-              options={[
-                { title: 'Daily', value: 'daily' },
-                { title: 'Weekly', value: 'weekly' },
-                { title: 'Monthly', value: 'monthly' },
-                { title: 'Quarterly', value: 'quarterly' },
-                { title: 'As needed', value: 'asNeeded' },
-              ]}
-              onChange={(reportingCadence) => setDraft({ ...draft, reportingCadence })}
-            />
-          </InputField>
-          <MetricSummary metrics={draft.keyMetrics || []} title="Key metrics" />
-          {draft.dashboardUrl && (
-            <a href={draft.dashboardUrl} target="_blank" rel="noreferrer" style={{ ...styles.button, width: '100%' }}>
-              <LaunchIcon style={{ width: 15, height: 15 }} />
-              Open provider dashboard
-            </a>
-          )}
-          <RelationshipUsagePanel
-            title="Campaigns using this source"
-            items={data.campaigns.filter((campaign) =>
-              (campaign.analyticsSources || []).some((ref) => ref._id === source._id) ||
-              (campaign.successMetrics || []).some((metric) => 'source' in metric && (metric as { source?: RefSummary }).source?._id === source._id),
-            )}
-            emptyText="No campaigns are linked to this analytics source yet."
-            renderMeta={(campaign) =>
-              [
-                labelFor(campaignStatusOptions, campaign.status),
-                dateRange(campaign.startDate, campaign.endDate),
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <RelationshipUsagePanel
-            title="Funnels using this source"
-            items={data.funnels.filter((funnel) => (funnel.analyticsSources || []).some((ref) => ref._id === source._id))}
-            emptyText="No funnels are linked to this analytics source yet."
-            renderMeta={(funnel) => [labelFor(funnelStatusOptions, funnel.status), `${funnel.stages?.length || 0} stages`].join(' / ')}
-          />
-          <RelationshipUsagePanel
-            title="Calendar items using this source"
-            items={data.calendarItems.filter((item) => item.analyticsSource?._id === source._id)}
-            emptyText="No calendar items are linked to this analytics source yet."
-            renderMeta={(item) =>
-              [
-                toDateInputValue(item.publishAt),
-                item.campaign?.title,
-                item.funnel?.title,
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <AdvancedFieldsDropdown type="marketingAnalyticsSource" id={source._id} />
-          <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-            {saving ? 'Saving...' : 'Save analytics source'}
-          </button>
-        </Stack>
-      </div>
-    </section>
-  )
 }
 
 function DocumentList<T extends { _id: string; title?: string; status?: string }>({
@@ -15083,7 +8578,7 @@ export function aiContentTypes(value: unknown) {
   return contentTypes.length > 0 ? normalizeContentTypes(contentTypes) : undefined
 }
 
-function aiKeyMetrics(value: unknown) {
+export function aiKeyMetrics(value: unknown) {
   const metrics: Array<{ _key: string; _type: 'keyMetric'; label: string; definition?: string }> = []
   aiRecords(value).forEach((metric) => {
     const label = aiString(metric.label)
@@ -15098,7 +8593,7 @@ function aiKeyMetrics(value: unknown) {
   return metrics.length > 0 ? metrics : undefined
 }
 
-function aiExperimentVariants(value: unknown) {
+export function aiExperimentVariants(value: unknown) {
   const variants: Array<{ _key: string; _type: 'experimentVariant'; key: string; label: string; notes?: string }> = []
   aiRecords(value).forEach((variant) => {
     const label = aiString(variant.label) || aiString(variant.key)
@@ -15124,7 +8619,7 @@ function aiExperimentVariants(value: unknown) {
   return variants.length > 0 ? variants : undefined
 }
 
-function aiExperimentTrackedMetrics(value: unknown) {
+export function aiExperimentTrackedMetrics(value: unknown) {
   const metrics: Array<{
     _key: string
     _type: 'experimentMetric'
@@ -15157,7 +8652,7 @@ function aiExperimentTrackedMetrics(value: unknown) {
   return metrics.length > 0 ? metrics : undefined
 }
 
-function aiExperimentSuccessTrackers(value: unknown) {
+export function aiExperimentSuccessTrackers(value: unknown) {
   const trackers: Array<{
     _key: string
     _type: 'experimentSuccessTracker'
@@ -15205,7 +8700,7 @@ export function aiTemplateSuccessMetrics(value: unknown) {
   return metrics.length > 0 ? metrics : undefined
 }
 
-function getStatusColor(status?: string) {
+export function getStatusColor(status?: string) {
   return statusColors[status || ''] || {
     bg: 'rgba(128, 128, 128, 0.12)',
     fg: 'var(--card-muted-fg-color)',
@@ -15213,7 +8708,7 @@ function getStatusColor(status?: string) {
   }
 }
 
-function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLinkItem[]) {
+export function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLinkItem[]) {
   const explicitLinks = item.linkItems || []
   const linkedByReference = linkItems.filter(
     (link) =>
@@ -15223,7 +8718,7 @@ function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLin
   return uniqueById([...explicitLinks, ...linkedByReference])
 }
 
-function isCalendarItemPublishReady(item: MarketingCalendarItem) {
+export function isCalendarItemPublishReady(item: MarketingCalendarItem) {
   if (!['scheduled', 'published'].includes(item.status || '')) return false
   if (!item.publishAt) return true
   return new Date(item.publishAt).getTime() <= Date.now()
@@ -15649,7 +9144,7 @@ function abTestingSignalTitle(signal: MarketingPerformanceSignal) {
   return signal.title || signal.signalType || signal.provider || 'Result signal'
 }
 
-function labelForAnalyticsProvider(provider?: string) {
+export function labelForAnalyticsProvider(provider?: string) {
   if (provider === 'vercel') return 'Vercel Analytics'
   return labelFor(analyticsProviderOptions, provider)
 }
@@ -15658,18 +9153,18 @@ function isVercelAnalyticsProvider(provider?: string) {
   return provider === 'vercel' || provider === 'vercelAnalytics' || provider === 'vercelSpeedInsights'
 }
 
-function getAbTestingVercelSource(experiment: MarketingExperiment) {
+export function getAbTestingVercelSource(experiment: MarketingExperiment) {
   const source = experiment.analyticsSource
   if (!source) return null
   if (isVercelAnalyticsProvider(source.provider) || source.vercelProject || source.dashboardUrl?.includes('vercel.com')) return source
   return null
 }
 
-function getAbTestingDashboardUrl(experiment: MarketingExperiment) {
+export function getAbTestingDashboardUrl(experiment: MarketingExperiment) {
   return experiment.vercelDashboardUrl?.trim() || experiment.analyticsSource?.dashboardUrl?.trim() || ''
 }
 
-function getAbTestingTrackedVercelEvents(experiment: MarketingExperiment) {
+export function getAbTestingTrackedVercelEvents(experiment: MarketingExperiment) {
   const events = new Set<string>()
   if (experiment.flagKey?.trim()) events.add('experiment_exposure')
   ;(experiment.trackedMetrics || []).forEach((metric) => {
@@ -15922,7 +9417,7 @@ export function getAbTestingComparisonSummary(experiment: MarketingExperiment, r
   }
 }
 
-function getAbTestingComparisonScoreboard(experiment: MarketingExperiment, results: AbTestingComparisonResult[]): AbTestingComparisonScoreboard {
+export function getAbTestingComparisonScoreboard(experiment: MarketingExperiment, results: AbTestingComparisonResult[]): AbTestingComparisonScoreboard {
   return {
     controlLabel: getAbTestingControlVariantLabel(experiment),
     variantLabel: getAbTestingTreatmentVariantLabel(experiment),
@@ -16005,13 +9500,13 @@ function getAbTestingTreatmentVariantLabel(experiment: MarketingExperiment) {
   return treatment?.label?.trim() || 'Variant'
 }
 
-function getAbTestingVariantPairLabel(experiment: MarketingExperiment) {
+export function getAbTestingVariantPairLabel(experiment: MarketingExperiment) {
   const labels = getAbTestingVariantOptions(experiment).map((variant) => variant.label)
   if (labels.length >= 2) return labels.slice(0, 3).join(' vs ')
   return `${getAbTestingControlVariantLabel(experiment)} vs ${getAbTestingTreatmentVariantLabel(experiment)}`
 }
 
-function getAbTestingVariantOptions(experiment: MarketingExperiment): AbTestingVariantOption[] {
+export function getAbTestingVariantOptions(experiment: MarketingExperiment): AbTestingVariantOption[] {
   const variants = (experiment.variants || [])
     .map((variant, index) => {
       const label = variant.label?.trim() || variant.key?.trim() || `Variant ${index + 1}`
@@ -16093,7 +9588,7 @@ function numericPerformanceMetricValue(metric?: PerformanceSignalMetric) {
   return metric.value
 }
 
-type AbTestingVariantEngagement = {
+export type AbTestingVariantEngagement = {
   sessions: number | null
   bounceRate: number | null
   averageSessionDuration: number | null
@@ -16106,7 +9601,7 @@ type AbTestingVariantEngagement = {
  * Matches a variant by its key (case-insensitive) so it lines up with the same
  * variant columns the event table renders.
  */
-function getAbTestingVariantEngagement(
+export function getAbTestingVariantEngagement(
   experiment: MarketingExperiment,
   variant: AbTestingVariantOption,
 ): AbTestingVariantEngagement {
@@ -16130,7 +9625,7 @@ function getAbTestingVariantEngagement(
 }
 
 /** Formats a 0–1 fraction or 0–100 percent bounce rate as a whole-ish percent. */
-function formatAbTestingBounceRate(value: number | null): string {
+export function formatAbTestingBounceRate(value: number | null): string {
   if (value === null) return '—'
   const percent = value <= 1 ? value * 100 : value
   const rounded = Math.round(percent * 10) / 10
@@ -16138,7 +9633,7 @@ function formatAbTestingBounceRate(value: number | null): string {
 }
 
 /** Formats average session duration (seconds) as m:ss. */
-function formatAbTestingAvgTime(seconds: number | null): string {
+export function formatAbTestingAvgTime(seconds: number | null): string {
   if (seconds === null || seconds < 0) return '—'
   const total = Math.round(seconds)
   const minutes = Math.floor(total / 60)
@@ -16151,12 +9646,12 @@ function isAbTestingExposureMetric(metric: ExperimentTrackedMetric) {
   return Array.from(keys).some((key) => ['experiment-exposure', 'page-view', 'page-views', 'visit', 'visits', 'visitor', 'visitors', 'session', 'sessions'].includes(key))
 }
 
-function formatAbTestingEventCount(value: number | null, unit?: string) {
+export function formatAbTestingEventCount(value: number | null, unit?: string) {
   if (value === null) return 'No data'
   return `${formatOptionalNumber(value)}${unit ? ` ${unit}` : ''}`
 }
 
-function formatAbTestingEventRate(cell: AbTestingVariantEventCell) {
+export function formatAbTestingEventRate(cell: AbTestingVariantEventCell) {
   if (cell.value === null) return 'Event count missing'
   if (cell.denominator === null) return 'Visit count missing'
   if (cell.denominator <= 0) return '0 visits'
@@ -16181,7 +9676,7 @@ function formatAbTestingComparisonChange(rawChange: string | undefined, changeVa
   return `${sign}${changeValue}%`
 }
 
-function getAbTestingComparisonTone(status: AbTestingComparisonStatus) {
+export function getAbTestingComparisonTone(status: AbTestingComparisonStatus) {
   if (status === 'variant') {
     return {
       fg: '#7dd69e',
@@ -16225,7 +9720,7 @@ function getAbTestingInsightForExperiment(insights: AbTestingInsight[], experime
   )
 }
 
-function getAbTestingLaunchChecklistItems(experiment: MarketingExperiment, linkedSignalCount = experimentSignalIds(experiment).length) {
+export function getAbTestingLaunchChecklistItems(experiment: MarketingExperiment, linkedSignalCount = experimentSignalIds(experiment).length) {
   const items = [
     { label: 'Public page chosen', done: Boolean(experiment.targetPath?.trim()) },
     { label: 'Traffic split key set', done: Boolean(experiment.flagKey?.trim()) },
@@ -16253,13 +9748,13 @@ export function getAbTestingDisplayStatus(experiment: MarketingExperiment) {
   return experiment.status || 'idea'
 }
 
-function getAbTestingDisplayStatusLabel(experiment: MarketingExperiment) {
+export function getAbTestingDisplayStatusLabel(experiment: MarketingExperiment) {
   const displayStatus = getAbTestingDisplayStatus(experiment)
   if (displayStatus === 'blocked') return 'Measurement blocked'
   return labelFor(experimentStatusOptions, displayStatus) || 'Idea'
 }
 
-function getAbTestingDashboardStatusDetail(experiment: MarketingExperiment) {
+export function getAbTestingDashboardStatusDetail(experiment: MarketingExperiment) {
   const displayStatus = getAbTestingDisplayStatus(experiment)
   if (displayStatus === 'archived') return 'Archived for reference.'
   if (experiment.decision) return `Decision recorded: ${labelFor(experimentDecisionOptions, experiment.decision)}.`
@@ -16320,7 +9815,7 @@ function isAbTestingAtMostCondition(condition: string) {
   return condition.includes('at-most') || condition.includes('maximum')
 }
 
-function getAbTestingDesignerNextStep(experiment: MarketingExperiment | null): {
+export function getAbTestingDesignerNextStep(experiment: MarketingExperiment | null): {
   title: string
   detail: string
   actionLabel: string
@@ -16425,7 +9920,7 @@ function getAbTestingDesignerNextStep(experiment: MarketingExperiment | null): {
   }
 }
 
-function getAbTestingInsightActionTarget(insight: AbTestingInsight): { label: string; tab: AbTestingEditorTab; sectionId: string } {
+export function getAbTestingInsightActionTarget(insight: AbTestingInsight): { label: string; tab: AbTestingEditorTab; sectionId: string } {
   const text = `${insight.id || ''} ${insight.title} ${insight.action}`
   if (/missing-flag-setup|setup-before/i.test(text)) {
     return {
@@ -16462,29 +9957,29 @@ function isPageExperiment(experiment: MarketingExperiment) {
   return Boolean(experiment.targetPath?.trim() || ['homepage', 'vision', 'page'].includes(experiment.targetType || ''))
 }
 
-function experimentHasControlVariant(experiment: MarketingExperiment) {
+export function experimentHasControlVariant(experiment: MarketingExperiment) {
   return (experiment.variants || []).some((variant) => variant.key === 'control')
 }
 
-function experimentHasTrackedMetric(experiment: MarketingExperiment) {
+export function experimentHasTrackedMetric(experiment: MarketingExperiment) {
   return (experiment.trackedMetrics || []).some((metric) => Boolean(metric.key?.trim() && metric.label?.trim()))
 }
 
-function experimentHasSuccessTracker(experiment: MarketingExperiment) {
+export function experimentHasSuccessTracker(experiment: MarketingExperiment) {
   return (experiment.successTrackers || []).some((tracker) =>
     Boolean(tracker.title?.trim() && (tracker.successWhen?.trim() || tracker.condition?.trim() || (tracker.metricKeys || []).length > 0)),
   )
 }
 
-function experimentSignalIds(experiment: MarketingExperiment) {
+export function experimentSignalIds(experiment: MarketingExperiment) {
   return (experiment.performanceSignals || []).filter(Boolean).map((signal) => signal._id).filter(Boolean)
 }
 
-function marketingExperimentTitle(experiment: MarketingExperiment) {
+export function marketingExperimentTitle(experiment: MarketingExperiment) {
   return experiment.title || experiment.flagKey || experiment.targetPath || 'Untitled experiment'
 }
 
-function experimentListMeta(experiment: MarketingExperiment) {
+export function experimentListMeta(experiment: MarketingExperiment) {
   const targetType = labelFor(experimentTargetTypeOptions, experiment.targetType)
   const path = normalizeMarketingExperimentPath(experiment.targetPath)
   if (experiment.targetType === 'homepage' || path === '/') return 'Homepage test'
@@ -16492,7 +9987,7 @@ function experimentListMeta(experiment: MarketingExperiment) {
   return targetType ? `${targetType} test` : 'Page test'
 }
 
-function normalizeMarketingExperimentPath(path?: string) {
+export function normalizeMarketingExperimentPath(path?: string) {
   const trimmed = (path || '').split('?')[0]?.trim()
   if (!trimmed) return ''
   const prefixed = trimmed.startsWith('/') ? trimmed : `/${trimmed}`
@@ -16655,7 +10150,7 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
   return insights
 }
 
-function getAnalyticsReadinessStats(data: MarketingData) {
+export function getAnalyticsReadinessStats(data: MarketingData) {
   const activeSources = data.analyticsSources.filter((source) => source.status !== 'disabled')
   const connectedSources = activeSources.filter(isConnectedAnalyticsSource)
   const activeCampaigns = data.campaigns.filter(isCampaignMeasurable)
@@ -16902,7 +10397,7 @@ function dashboardGapPriority(severity: MarketingDashboardGap['severity']) {
   )[severity]
 }
 
-function getDashboardGapTone(severity: MarketingDashboardGap['severity']) {
+export function getDashboardGapTone(severity: MarketingDashboardGap['severity']) {
   if (severity === 'urgent' || severity === 'warning' || severity === 'content') {
     return {
       bg: 'rgba(227, 98, 22, 0.08)',
@@ -17372,7 +10867,7 @@ function levenshteinDistance(first: string, second: string) {
   return previous[second.length]
 }
 
-function createResearchProjectDocument(data: MarketingData): MarketingDocumentInput {
+export function createResearchProjectDocument(data: MarketingData): MarketingDocumentInput {
   const today = new Date()
   const firstUrl = data.linkItems.find((link) => link.status !== 'archived' && link.url)?.url || 'https://www.goinvo.com/'
   const researchType = 'topic'
@@ -17402,7 +10897,7 @@ function createResearchProjectDocument(data: MarketingData): MarketingDocumentIn
   }
 }
 
-function emptyResearchInspirationDraft(): ResearchInspirationDraft {
+export function emptyResearchInspirationDraft(): ResearchInspirationDraft {
   return {
     sourceKind: 'idea',
     action: 'respond',
@@ -17412,7 +10907,7 @@ function emptyResearchInspirationDraft(): ResearchInspirationDraft {
   }
 }
 
-function hasInspirationDraftContent(inspiration: ResearchInspirationDraft) {
+export function hasInspirationDraftContent(inspiration: ResearchInspirationDraft) {
   return Boolean(inspiration.title.trim() || inspiration.url.trim() || inspiration.note.trim())
 }
 
@@ -17500,7 +10995,7 @@ export function buildProofPointFromResearchResult(
   }
 }
 
-function proofTypeFromResearchResult(result: MarketingResearchResult) {
+export function proofTypeFromResearchResult(result: MarketingResearchResult) {
   if (result.resultType === 'seoKeyword') return 'researchFinding'
   if (result.resultType === 'competitorExample' || result.evidenceType === 'competitorExample') return 'caseEvidence'
   if (result.evidenceType === 'teamKnowledge' || result.resultType === 'collaborationSignal') return 'teamKnowledge'
@@ -17511,7 +11006,7 @@ function proofTypeFromResearchResult(result: MarketingResearchResult) {
   return 'researchFinding'
 }
 
-function mergeInspirationIntoResearchProject(
+export function mergeInspirationIntoResearchProject(
   project: MarketingResearchProject,
   inspiration: ResearchInspirationDraft,
 ): MarketingResearchProject {
@@ -17629,7 +11124,7 @@ function inspirationImplication(inspiration: ResearchInspirationDraft, title: st
   return note ? `${base} ${note}` : base
 }
 
-function createResearchProjectQuestion(project: MarketingResearchProject): ResearchQuestion {
+export function createResearchProjectQuestion(project: MarketingResearchProject): ResearchQuestion {
   const researchType = project.researchType || 'topic'
   const topic = stripResearchProjectSuffix(project.title || 'this research project')
   if (researchType === 'competitor') {
@@ -17665,13 +11160,13 @@ function createResearchProjectQuestion(project: MarketingResearchProject): Resea
   }
 }
 
-function defaultResearchMethodsForType(researchType?: string) {
+export function defaultResearchMethodsForType(researchType?: string) {
   if (researchType === 'competitor') return ['competitiveScan', 'seoReview', 'cmsScan', 'sourceReview']
   if (researchType === 'strategy') return ['cmsScan', 'deskResearch', 'analyticsReview', 'sourceReview']
   return ['seoReview', 'cmsScan', 'sourceReview']
 }
 
-function defaultResearchQuestionsForType(researchType: string | undefined, title: string): ResearchQuestion[] {
+export function defaultResearchQuestionsForType(researchType: string | undefined, title: string): ResearchQuestion[] {
   return [createResearchProjectQuestion({ title, researchType } as MarketingResearchProject)]
 }
 
@@ -17743,7 +11238,7 @@ function buildResearchQuestionsForType(researchType: string | undefined, topic: 
   ]
 }
 
-function createResearchProjectCollaborator(): ResearchProjectCollaborator {
+export function createResearchProjectCollaborator(): ResearchProjectCollaborator {
   return {
     _key: randomKey(),
     _type: 'researchCollaborator',
@@ -17757,7 +11252,7 @@ function createResearchProjectCollaborator(): ResearchProjectCollaborator {
   }
 }
 
-function buildResearchProjectSavePayload(project: MarketingResearchProject): Record<string, unknown> {
+export function buildResearchProjectSavePayload(project: MarketingResearchProject): Record<string, unknown> {
   return {
     title: project.title || 'Untitled research project',
     status: project.status || 'draft',
@@ -17786,7 +11281,7 @@ function buildResearchProjectSavePayload(project: MarketingResearchProject): Rec
   }
 }
 
-function mergeResearchProjectSuggestion(
+export function mergeResearchProjectSuggestion(
   current: MarketingResearchProject,
   suggestion: Partial<MarketingResearchProject>,
 ): MarketingResearchProject {
@@ -17838,7 +11333,7 @@ function normalizeResearchProjectCollaborators(values: ResearchProjectCollaborat
     .filter((item) => item.name.trim() || item.organization.trim() || item.topicArea.trim() || item.capacity.trim())
 }
 
-async function migrateLegacyResearchPlanToProject(client: StudioClient, plan: MarketingResearchPlan) {
+export async function migrateLegacyResearchPlanToProject(client: StudioClient, plan: MarketingResearchPlan) {
   const project = await client.create({
     _type: 'marketingResearchProject',
     title: `${plan.title || 'Legacy research plan'} project`,
@@ -18001,7 +11496,7 @@ function createResearchPlanDocument(data: MarketingData): MarketingDocumentInput
   }
 }
 
-function createResearchQuestion(plan: MarketingResearchPlan): ResearchQuestion {
+export function createResearchQuestion(plan: MarketingResearchPlan): ResearchQuestion {
   return {
     _key: randomKey(),
     _type: 'researchQuestion',
@@ -18013,7 +11508,7 @@ function createResearchQuestion(plan: MarketingResearchPlan): ResearchQuestion {
   }
 }
 
-function createResearchEvidenceNote(plan: MarketingResearchPlan): ResearchEvidenceNote {
+export function createResearchEvidenceNote(plan: MarketingResearchPlan): ResearchEvidenceNote {
   return {
     _key: randomKey(),
     _type: 'evidenceNote',
@@ -18027,7 +11522,7 @@ function createResearchEvidenceNote(plan: MarketingResearchPlan): ResearchEviden
   }
 }
 
-function createResearchAssumption(plan: MarketingResearchPlan): ResearchAssumption {
+export function createResearchAssumption(plan: MarketingResearchPlan): ResearchAssumption {
   return {
     _key: randomKey(),
     _type: 'researchAssumption',
@@ -18038,7 +11533,7 @@ function createResearchAssumption(plan: MarketingResearchPlan): ResearchAssumpti
   }
 }
 
-function createResearchSeoTarget(plan: MarketingResearchPlan): ResearchSeoTarget {
+export function createResearchSeoTarget(plan: MarketingResearchPlan): ResearchSeoTarget {
   const title = plan.title || 'GoInvo design work'
   return {
     _key: randomKey(),
@@ -18051,7 +11546,7 @@ function createResearchSeoTarget(plan: MarketingResearchPlan): ResearchSeoTarget
   }
 }
 
-function createResearchCollaboration(): ResearchCollaboration {
+export function createResearchCollaboration(): ResearchCollaboration {
   return {
     _key: randomKey(),
     _type: 'collaborationOpportunity',
@@ -18064,7 +11559,7 @@ function createResearchCollaboration(): ResearchCollaboration {
   }
 }
 
-function createResearchReleaseWindow(plan: MarketingResearchPlan): ResearchReleaseWindow {
+export function createResearchReleaseWindow(plan: MarketingResearchPlan): ResearchReleaseWindow {
   const count = (plan.releaseWindows || []).length
   const start = addDays(new Date(), 7 + count * 7)
   return {
@@ -18078,7 +11573,7 @@ function createResearchReleaseWindow(plan: MarketingResearchPlan): ResearchRelea
   }
 }
 
-function createResearchContentOpportunity(plan: MarketingResearchPlan, data: MarketingData): ResearchContentOpportunity {
+export function createResearchContentOpportunity(plan: MarketingResearchPlan, data: MarketingData): ResearchContentOpportunity {
   const firstChannel = data.channels.find((channel) => channel.status !== 'archived')?.key || 'instagram'
   const firstWindow = plan.releaseWindows?.[0]?.label || ''
   const firstSeo = plan.seoTargets?.[0]?.query || ''
@@ -18097,7 +11592,7 @@ function createResearchContentOpportunity(plan: MarketingResearchPlan, data: Mar
   }
 }
 
-function createResearchStrategyAdjustment(): ResearchStrategyAdjustment {
+export function createResearchStrategyAdjustment(): ResearchStrategyAdjustment {
   return {
     _key: randomKey(),
     _type: 'strategyAdjustment',
@@ -18109,7 +11604,7 @@ function createResearchStrategyAdjustment(): ResearchStrategyAdjustment {
   }
 }
 
-function updateResearchArrayItem<T extends { _key?: string; _type?: string }>(
+export function updateResearchArrayItem<T extends { _key?: string; _type?: string }>(
   items: T[] | undefined,
   index: number,
   patch: Partial<T>,
@@ -18125,73 +11620,11 @@ function updateResearchArrayItem<T extends { _key?: string; _type?: string }>(
   )
 }
 
-function MetricBadge({ label, value }: { label: string; value: string }) {
-  return (
-    <span
-      style={{
-        ...styles.small,
-        border: '1px solid rgba(0, 115, 133, 0.24)',
-        borderRadius: 6,
-        padding: '4px 7px',
-        background: 'rgba(0, 115, 133, 0.08)',
-        fontWeight: 800,
-      }}
-    >
-      {label}: {value}
-    </span>
-  )
-}
-
-function FindingDetail({ label, text }: { label: string; text: string }) {
-  return (
-    <div style={{ ...styles.small, marginTop: 8, lineHeight: 1.5 }}>
-      <strong style={{ color: '#93A4C8' }}>{label}: </strong>
-      <span style={styles.muted}>{text}</span>
-    </div>
-  )
-}
-
-function ResearchReviewExplainer() {
-  return (
-    <details style={{ ...styles.card, boxShadow: 'none', padding: 12, margin: '10px 0 14px', background: 'rgba(0, 115, 133, 0.08)' }}>
-      <summary style={{ cursor: 'pointer', fontWeight: 850 }}>What does Trust + use mean?</summary>
-      <div style={{ display: 'grid', gap: 8, marginTop: 10, ...styles.small, ...styles.muted, lineHeight: 1.5 }}>
-        <p style={{ margin: 0 }}>
-          These cards are inputs, not finished content. Some are facts or gaps, some are source candidates, and some are inspiration someone saved.
-          Trust + use means "this is relevant and credible enough to shape the next draft." It does not publish anything.
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-          <div>
-            <strong style={{ color: '#fff' }}>Source candidate</strong>
-            <br />
-            A page, article, or URL the system found. Open it and confirm it actually supports the project.
-          </div>
-          <div>
-            <strong style={{ color: '#fff' }}>Captured inspiration</strong>
-            <br />
-            An idea, article, resource, or website someone saved because it might be worth responding to, citing, contrasting, or learning from.
-          </div>
-          <div>
-            <strong style={{ color: '#fff' }}>Finding</strong>
-            <br />
-            A claim, keyword score, content gap, analytics signal, or collaborator signal that can shape the plan.
-          </div>
-          <div>
-            <strong style={{ color: '#fff' }}>Let it guide drafts</strong>
-            <br />
-            Only trusted, selected items are allowed to generate campaigns, funnels, calendar drafts, or Quick Links.
-          </div>
-        </div>
-      </div>
-    </details>
-  )
-}
-
-function removeResearchArrayItem<T>(items: T[] | undefined, index: number) {
+export function removeResearchArrayItem<T>(items: T[] | undefined, index: number) {
   return (items || []).filter((_, itemIndex) => itemIndex !== index)
 }
 
-function getResearchChannelOptions(data: MarketingData): SelectOption[] {
+export function getResearchChannelOptions(data: MarketingData): SelectOption[] {
   const channelOptions = data.channels
     .filter((channel) => channel.status !== 'archived')
     .map((channel) => ({ title: channel.title || channel.key || 'Untitled channel', value: channel.key || channel._id }))
@@ -18215,7 +11648,7 @@ function uniqueOptions(options: SelectOption[]) {
   })
 }
 
-function buildResearchPlanSavePayload(plan: MarketingResearchPlan): Record<string, unknown> {
+export function buildResearchPlanSavePayload(plan: MarketingResearchPlan): Record<string, unknown> {
   return {
     title: plan.title || 'Untitled research plan',
     status: plan.status || 'draft',
@@ -18245,7 +11678,7 @@ function buildResearchPlanSavePayload(plan: MarketingResearchPlan): Record<strin
   }
 }
 
-function mergeResearchPlanSuggestion(current: MarketingResearchPlan, suggestion: Partial<MarketingResearchPlan>): MarketingResearchPlan {
+export function mergeResearchPlanSuggestion(current: MarketingResearchPlan, suggestion: Partial<MarketingResearchPlan>): MarketingResearchPlan {
   const next: MarketingResearchPlan = {
     ...current,
     title: aiString(suggestion.title) || current.title,
@@ -18452,7 +11885,7 @@ function normalizeResearchStrategyAdjustments(values: ResearchStrategyAdjustment
     .filter((item) => item.trigger.trim() || item.reason.trim() || item.recommendation.trim())
 }
 
-function normalizeDraftContentFrames(values: DraftContentFrame[] | undefined): DraftContentFrame[] {
+export function normalizeDraftContentFrames(values: DraftContentFrame[] | undefined): DraftContentFrame[] {
   return (values || [])
     .map((item) => ({
       _key: item._key || randomKey(),
@@ -18465,7 +11898,7 @@ function normalizeDraftContentFrames(values: DraftContentFrame[] | undefined): D
     .filter((item) => item.title.trim() || item.body.trim() || item.visualDirection.trim() || item.altText.trim())
 }
 
-async function createResearchProjectGeneratedRecords(
+export async function createResearchProjectGeneratedRecords(
   client: StudioClient,
   data: MarketingData,
   project: MarketingResearchProject,
@@ -18694,7 +12127,7 @@ function buildResearchResultEvidenceSummary(project: MarketingResearchProject, r
     .join('\n')
 }
 
-async function createResearchPlanGeneratedRecords(
+export async function createResearchPlanGeneratedRecords(
   client: StudioClient,
   data: MarketingData,
   plan: MarketingResearchPlan,
@@ -18935,7 +12368,7 @@ function resolveOpportunityDate(plan: MarketingResearchPlan, opportunity: Resear
   return toDateInputValue(addDays(new Date(), 7 + index * 3))
 }
 
-function getResearchResultsForProject(data: MarketingData, projectId: string) {
+export function getResearchResultsForProject(data: MarketingData, projectId: string) {
   const project = data.researchProjects.find((candidate) => candidate._id === projectId)
   const referencedIds = new Set([
     ...(project?.selectedResults || []).map((result) => result._id),
@@ -18944,11 +12377,11 @@ function getResearchResultsForProject(data: MarketingData, projectId: string) {
   return data.researchResults.filter((result) => result.project?._id === projectId || referencedIds.has(result._id))
 }
 
-function getResearchRunsForProject(data: MarketingData, projectId: string) {
+export function getResearchRunsForProject(data: MarketingData, projectId: string) {
   return data.researchRuns.filter((run) => run.project?._id === projectId)
 }
 
-function getLatestActiveResearchProject(data: MarketingData) {
+export function getLatestActiveResearchProject(data: MarketingData) {
   return data.researchProjects.find((project) => (project.status || 'draft') !== 'archived') || null
 }
 
@@ -18975,7 +12408,7 @@ function getSelectedResearchResultIds(project: MarketingResearchProject) {
   return new Set((project.selectedResults || []).map((result) => result._id).filter(Boolean))
 }
 
-function isResearchResultApproved(result: MarketingResearchResult) {
+export function isResearchResultApproved(result: MarketingResearchResult) {
   return result.status === 'approved' || result.status === 'selected'
 }
 
@@ -18983,7 +12416,7 @@ function isResearchResultSelectedForSynthesis(result: MarketingResearchResult, s
   return result.status === 'selected' || selectedIds.has(result._id) || result.selectedForSynthesis
 }
 
-function researchResultKindLabel(result: MarketingResearchResult) {
+export function researchResultKindLabel(result: MarketingResearchResult) {
   if (result.sourceMethod === 'manualInspiration') return result.resultType === 'competitorExample' ? 'Inspiration example' : 'Captured inspiration'
   if (result.resultType === 'sourceEvidence') {
     return result.confidence === 'needsValidation' || /source check needed/i.test(result.title || '')
@@ -18998,7 +12431,7 @@ function researchResultKindLabel(result: MarketingResearchResult) {
   return labelFor(researchResultTypeOptions, result.resultType) || 'Research item'
 }
 
-function researchResultReviewerInstruction(result: MarketingResearchResult) {
+export function researchResultReviewerInstruction(result: MarketingResearchResult) {
   if (result.sourceMethod === 'manualInspiration') {
     return 'This was saved because it inspired a content idea. Trust it only if it is credible, relevant, and worth using as source material or a prompt for a response.'
   }
@@ -19034,7 +12467,7 @@ function researchResultClaimLabel(result: MarketingResearchResult) {
   return 'What this tells us'
 }
 
-function describeResearchResult(result: MarketingResearchResult) {
+export function describeResearchResult(result: MarketingResearchResult) {
   if (result.resultType === 'seoKeyword') {
     const scoreLabel =
       result.scoreSource === 'provider'
@@ -19055,7 +12488,7 @@ function describeResearchResult(result: MarketingResearchResult) {
   return result.title || 'Research result'
 }
 
-function summarizeResearchResultForAi(result: MarketingResearchResult) {
+export function summarizeResearchResultForAi(result: MarketingResearchResult) {
   return {
     id: result._id,
     title: result.title,
@@ -19076,29 +12509,29 @@ function summarizeResearchResultForAi(result: MarketingResearchResult) {
   }
 }
 
-function formatOptionalNumber(value?: number) {
+export function formatOptionalNumber(value?: number) {
   return value === undefined || Number.isNaN(value) ? 'n/a' : new Intl.NumberFormat().format(value)
 }
 
-function formatOptionalMoney(value?: number) {
+export function formatOptionalMoney(value?: number) {
   return value === undefined || Number.isNaN(value) ? 'n/a' : `$${value.toFixed(2)}`
 }
 
-function stringListToText(items?: string[]) {
+export function stringListToText(items?: string[]) {
   return (items || []).join('\n')
 }
 
-function textToStringList(value: string) {
+export function textToStringList(value: string) {
   return normalizeStringList(value.split(/\r?\n|,/))
 }
 
-function getRecordId(record?: { _id?: string } | ReferenceValue) {
+export function getRecordId(record?: { _id?: string } | ReferenceValue) {
   if (!record) return ''
   if ('_ref' in record) return record._ref
   return record._id || ''
 }
 
-function referenceFromId(id: string): ReferenceValue {
+export function referenceFromId(id: string): ReferenceValue {
   return { _type: 'reference', _ref: id }
 }
 
@@ -19106,15 +12539,15 @@ function refsFromRecords(records: Array<{ _id?: string } | ReferenceValue> | und
   return refsFromIds(refIdsFromRecords(records))
 }
 
-function refIdsFromRecords(records: Array<{ _id?: string } | ReferenceValue> | undefined) {
+export function refIdsFromRecords(records: Array<{ _id?: string } | ReferenceValue> | undefined) {
   return (records || []).map((record) => getRecordId(record)).filter(Boolean)
 }
 
-function mergeIds(existing: string[], next: string[]) {
+export function mergeIds(existing: string[], next: string[]) {
   return Array.from(new Set([...existing, ...next].filter(Boolean)))
 }
 
-function getMarketingViewTitle(viewId: MarketingViewId) {
+export function getMarketingViewTitle(viewId: MarketingViewId) {
   return MARKETING_TOOL_VIEWS.find((view) => view.id === viewId)?.title || 'Section'
 }
 
@@ -21113,7 +14546,7 @@ function inferPromptTitle(prompt: string) {
   return normalized ? normalized.slice(0, 90) : ''
 }
 
-function stripResearchProjectSuffix(value: string) {
+export function stripResearchProjectSuffix(value: string) {
   const stripped = value.trim().replace(/\s+research\s+(?:project|plan)$/i, '')
   return stripped || value
 }
@@ -22062,7 +15495,7 @@ export function getChannelByKey(channels: MarketingChannel[], key?: string) {
   return channels.find((channel) => channel.key === key)
 }
 
-function getContentTypeOptionsForChannel(channelKey: string | undefined, channels: MarketingChannel[]) {
+export function getContentTypeOptionsForChannel(channelKey: string | undefined, channels: MarketingChannel[]) {
   const channel = getChannelByKey(channels, channelKey)
   const channelTypes = (channel?.contentTypes || []).filter((type) => type.label || type.value)
   if (channelTypes.length === 0) return contentTypeOptions
@@ -22073,11 +15506,11 @@ function getContentTypeOptionsForChannel(channelKey: string | undefined, channel
   }))
 }
 
-function getCampaignCalendarCount(data: MarketingData, campaignId: string) {
+export function getCampaignCalendarCount(data: MarketingData, campaignId: string) {
   return data.calendarItems.filter((item) => item.campaign?._id === campaignId).length
 }
 
-function getFunnelCampaignCount(data: MarketingData, funnelId: string) {
+export function getFunnelCampaignCount(data: MarketingData, funnelId: string) {
   return data.campaigns.filter((campaign) => (campaign.funnels || []).some((ref) => ref._id === funnelId)).length
 }
 
@@ -22151,7 +15584,7 @@ export function advancedEditHref(type: string, id: string) {
   return `/studio/content/intent/edit/id=${encodeURIComponent(id)};type=${encodeURIComponent(type)}`
 }
 
-function formatDateOnly(value?: string | Date) {
+export function formatDateOnly(value?: string | Date) {
   const dateOnly = toDateInputValue(value)
   if (!dateOnly) return ''
   const [year, month, day] = dateOnly.split('-').map(Number)
@@ -22165,7 +15598,7 @@ export function dateRange(start?: string, end?: string) {
   return start || end || ''
 }
 
-function formatDateTime(value?: string) {
+export function formatDateTime(value?: string) {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -22177,7 +15610,7 @@ function formatDateTime(value?: string) {
   })
 }
 
-function buildCalendarCells(month: Date) {
+export function buildCalendarCells(month: Date) {
   const first = startOfMonth(month)
   const start = new Date(first)
   start.setDate(first.getDate() - first.getDay())
@@ -22194,7 +15627,7 @@ function buildCalendarCells(month: Date) {
   })
 }
 
-function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
+export function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
   const map = new Map<string, MarketingCalendarItem[]>()
   items.forEach((item) => {
     if (!item.publishAt) return
@@ -22204,17 +15637,17 @@ function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
   return map
 }
 
-function getCalendarItemDisplayGroup(item: Pick<MarketingCalendarItem, 'status'>): SavedCalendarDisplayGroup {
+export function getCalendarItemDisplayGroup(item: Pick<MarketingCalendarItem, 'status'>): SavedCalendarDisplayGroup {
   return ['scheduled', 'published'].includes(item.status || '') ? 'final' : 'draft'
 }
 
-function getCalendarGroupLabel(group: CalendarDisplayGroup) {
+export function getCalendarGroupLabel(group: CalendarDisplayGroup) {
   if (group === 'preview') return 'Preview'
   if (group === 'final') return 'Final'
   return 'Draft'
 }
 
-function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
+export function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
   const grouped = items.map((item) => ({ item, group: getCalendarItemDisplayGroup(item) }))
   return [
     ...grouped.filter((record) => record.group === 'final'),
@@ -22222,7 +15655,7 @@ function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
   ]
 }
 
-function getSavedCalendarGroups(items: MarketingCalendarItem[]) {
+export function getSavedCalendarGroups(items: MarketingCalendarItem[]) {
   return items.reduce(
     (groups, item) => {
       groups[getCalendarItemDisplayGroup(item)].push(item)
