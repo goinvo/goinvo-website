@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd'
 import { CalendarIcon, CloseIcon } from '@sanity/icons'
 
 import { addMonths, dateInputToIso, monthLabel, randomKey, refsFromIds, startOfMonth, stringListFromText, toDateInputValue } from '@/lib/marketing'
@@ -63,6 +64,33 @@ import {
   type StudioClient,
 } from '../../tools/marketingTool'
 
+// Max chips rendered inside a day cell before the "+N more" expander appears.
+const CALENDAR_DAY_CHIP_CAP = 3
+
+// Compute a new publishAt ISO string for a calendar item dropped on a different
+// day. The destination day comes from the droppableId (a YYYY-MM-DD date key);
+// the original time-of-day is preserved from the item's existing publishAt, and
+// defaults to 09:00 local when the source had no recoverable time component.
+function computeRescheduledPublishAt(item: MarketingCalendarItem, destDateKey: string): string | null {
+  const match = destDateKey.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+  const [, year, month, day] = match
+
+  let hours = 9
+  let minutes = 0
+  if (item.publishAt) {
+    const previous = new Date(item.publishAt)
+    if (!Number.isNaN(previous.getTime())) {
+      hours = previous.getHours()
+      minutes = previous.getMinutes()
+    }
+  }
+
+  const next = new Date(Number(year), Number(month) - 1, Number(day), hours, minutes, 0, 0)
+  if (Number.isNaN(next.getTime())) return null
+  return next.toISOString()
+}
+
 interface CalendarWorkspaceProps {
   client: StudioClient
   data: MarketingData
@@ -85,6 +113,12 @@ export function CalendarWorkspace({
 }: CalendarWorkspaceProps) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
   const [selectedId, setSelectedId] = useState<string | null>(data.calendarItems[0]?._id || null)
+  // Per-day "+N more" expansion (keyed by YYYY-MM-DD date key).
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
+  // Optimistic publishAt overrides applied while a drag-reschedule save is in
+  // flight, so the chip jumps to its new day immediately. Cleared once the data
+  // reload reflects the saved value.
+  const [pendingMoves, setPendingMoves] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!selectedId && data.calendarItems.length > 0) setSelectedId(data.calendarItems[0]._id)
@@ -102,9 +136,33 @@ export function CalendarWorkspace({
   const channels = data.channels
   const selectedItem = data.calendarItems.find((item) => item._id === selectedId) || null
   const calendarCells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
-  const itemsByDay = useMemo(() => groupCalendarItemsByDay(data.calendarItems), [data.calendarItems])
-  const unscheduled = data.calendarItems.filter((item) => !item.publishAt)
-  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(data.calendarItems), [data.calendarItems])
+  // Apply any in-flight drag reschedules optimistically before grouping, so a
+  // dropped chip renders on its new day without waiting for the save round-trip.
+  const optimisticCalendarItems = useMemo(() => {
+    if (Object.keys(pendingMoves).length === 0) return data.calendarItems
+    return data.calendarItems.map((item) =>
+      pendingMoves[item._id] ? { ...item, publishAt: pendingMoves[item._id] } : item,
+    )
+  }, [data.calendarItems, pendingMoves])
+  const itemsByDay = useMemo(() => groupCalendarItemsByDay(optimisticCalendarItems), [optimisticCalendarItems])
+  const unscheduled = optimisticCalendarItems.filter((item) => !item.publishAt)
+  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(optimisticCalendarItems), [optimisticCalendarItems])
+
+  // Drop optimistic overrides once the reloaded data already matches them, so the
+  // grid follows the source of truth and stale overrides never linger.
+  useEffect(() => {
+    setPendingMoves((current) => {
+      const entries = Object.entries(current)
+      if (entries.length === 0) return current
+      const next = Object.fromEntries(
+        entries.filter(([id, publishAt]) => {
+          const item = data.calendarItems.find((candidate) => candidate._id === id)
+          return item ? item.publishAt !== publishAt : false
+        }),
+      )
+      return Object.keys(next).length === entries.length ? current : next
+    })
+  }, [data.calendarItems])
 
   const createCalendarItem = async (publishDate?: Date) => {
     const createdId = await createDocument({
@@ -116,6 +174,40 @@ export function CalendarWorkspace({
     setSelectedId(createdId)
     onAutopilotComplete?.({ action: 'calendar:createDraft', recordId: createdId })
   }
+
+  const toggleDayExpanded = useCallback((dayKey: string) => {
+    setExpandedDays((current) => ({ ...current, [dayKey]: !current[dayKey] }))
+  }, [])
+
+  const handleDragEnd = useCallback(
+    async (result: DropResult) => {
+      const { draggableId, source, destination } = result
+      // No destination (dropped outside) or dropped back on the same day: no-op.
+      if (!destination) return
+      const destDayKey = destination.droppableId
+      if (destDayKey === source.droppableId) return
+
+      const item = data.calendarItems.find((candidate) => candidate._id === draggableId)
+      if (!item) return
+
+      const nextPublishAt = computeRescheduledPublishAt(item, destDayKey)
+      if (!nextPublishAt) return
+
+      // Optimistically move the chip, then persist through the existing patch path.
+      setPendingMoves((current) => ({ ...current, [draggableId]: nextPublishAt }))
+      try {
+        await commitPatch(draggableId, { publishAt: nextPublishAt })
+      } catch {
+        // Roll back the optimistic move so a failed save never corrupts the grid.
+        setPendingMoves((current) => {
+          const next = { ...current }
+          delete next[draggableId]
+          return next
+        })
+      }
+    },
+    [commitPatch, data.calendarItems],
+  )
 
   return (
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16 }}>
@@ -153,64 +245,117 @@ export function CalendarWorkspace({
           </button>
           </div>
         </div>
-        <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(96px, 1fr))', gap: 1, overflowX: 'auto', paddingBottom: 4 }}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <div key={day} style={{ ...styles.small, ...styles.muted, padding: '0 8px 8px', fontWeight: 800 }}>
-              {day}
-            </div>
-          ))}
-          {calendarCells.map((cell) => {
-            const key = toDateInputValue(cell.date)
-            const dayItems = itemsByDay.get(key) || []
-            return (
-              <button
-                key={key}
-                type="button"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  minHeight: 132,
-                  padding: 8,
-                  textAlign: 'left',
-                  verticalAlign: 'top',
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 0,
-                  background: cell.inMonth ? 'var(--card-bg-color)' : 'rgba(128, 128, 128, 0.05)',
-                  color: 'var(--card-fg-color)',
-                  cursor: 'pointer',
-                }}
-                title={dayItems[0] ? 'Open first item on this day' : 'Add calendar item on this day'}
-                onClick={() => {
-                  if (dayItems[0]) {
-                    setSelectedId(dayItems[0]._id)
-                    return
-                  }
-                  void createCalendarItem(cell.date)
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    color: cell.inMonth ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)',
-                    fontWeight: cell.isToday ? 800 : 700,
-                    marginBottom: 6,
-                  }}
-                >
-                  <span>{cell.date.getDate()}</span>
-                  {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
-                </div>
-                <div style={{ display: 'grid', gap: 5 }}>
-                  {renderCalendarDayItems(dayItems, channels, selectedId)}
-                  {dayItems.length > 4 && (
-                    <div style={{ ...styles.small, ...styles.muted }}>+{dayItems.length - 4} more</div>
+        <DragDropContext onDragEnd={(result) => void handleDragEnd(result)}>
+          <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(96px, 1fr))', gap: 1, overflowX: 'auto', paddingBottom: 4 }}>
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              <div key={day} style={{ ...styles.small, ...styles.muted, padding: '0 8px 8px', fontWeight: 800 }}>
+                {day}
+              </div>
+            ))}
+            {calendarCells.map((cell) => {
+              const key = toDateInputValue(cell.date)
+              const dayItems = itemsByDay.get(key) || []
+              const orderedDayItems = getCalendarItemsByDisplayGroup(dayItems)
+              const expanded = !!expandedDays[key]
+              const visibleItems = expanded ? orderedDayItems : orderedDayItems.slice(0, CALENDAR_DAY_CHIP_CAP)
+              const overflowCount = orderedDayItems.length - visibleItems.length
+              return (
+                <Droppable droppableId={key} key={key}>
+                  {(dropProvided, dropSnapshot) => (
+                    <div
+                      ref={dropProvided.innerRef}
+                      {...dropProvided.droppableProps}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        minHeight: 132,
+                        padding: 8,
+                        textAlign: 'left',
+                        verticalAlign: 'top',
+                        border: '1px solid var(--card-border-color)',
+                        borderRadius: 0,
+                        background: dropSnapshot.isDraggingOver
+                          ? 'rgba(0, 115, 133, 0.08)'
+                          : cell.inMonth
+                            ? 'var(--card-bg-color)'
+                            : 'rgba(128, 128, 128, 0.05)',
+                        color: 'var(--card-fg-color)',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        style={{
+                          display: 'flex',
+                          width: '100%',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          background: 'transparent',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          color: cell.inMonth ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)',
+                          fontWeight: cell.isToday ? 800 : 700,
+                          marginBottom: 6,
+                        }}
+                        title="Add calendar item on this day"
+                        onClick={() => void createCalendarItem(cell.date)}
+                      >
+                        <span>{cell.date.getDate()}</span>
+                        {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
+                      </button>
+                      <div style={{ display: 'grid', gap: 5 }}>
+                        {visibleItems.map(({ item, group }, index) => (
+                          <Draggable draggableId={item._id} index={index} key={item._id}>
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                onClick={() => setSelectedId(item._id)}
+                                style={{
+                                  ...dragProvided.draggableProps.style,
+                                  cursor: 'grab',
+                                  opacity: savingId === item._id ? 0.55 : 1,
+                                }}
+                              >
+                                <CalendarChip
+                                  item={item}
+                                  channels={channels}
+                                  active={item._id === selectedId}
+                                  group={group}
+                                  dragging={dragSnapshot.isDragging}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {dropProvided.placeholder}
+                        {overflowCount > 0 && (
+                          <button
+                            type="button"
+                            style={{ ...styles.small, ...styles.muted, background: 'transparent', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}
+                            onClick={() => toggleDayExpanded(key)}
+                          >
+                            +{overflowCount} more
+                          </button>
+                        )}
+                        {expanded && orderedDayItems.length > CALENDAR_DAY_CHIP_CAP && (
+                          <button
+                            type="button"
+                            style={{ ...styles.small, ...styles.muted, background: 'transparent', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}
+                            onClick={() => toggleDayExpanded(key)}
+                          >
+                            Show less
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </div>
-              </button>
-            )
-          })}
-        </div>
+                </Droppable>
+              )
+            })}
+          </div>
+        </DragDropContext>
 
         <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }}>
           <CalendarGroupSummary
@@ -270,11 +415,13 @@ function CalendarChip({
   channels,
   active,
   group = getCalendarItemDisplayGroup(item),
+  dragging = false,
 }: {
   item: MarketingCalendarItem
   channels: MarketingChannel[]
   active: boolean
   group?: CalendarDisplayGroup
+  dragging?: boolean
 }) {
   const colors = getStatusColor(group === 'preview' ? 'preview' : item.status)
   const channel = getChannelByKey(channels, item.channel) || item.channelRef
@@ -285,11 +432,14 @@ function CalendarChip({
       style={{
         padding: '6px 7px',
         border: `1px solid ${active ? '#007385' : colors.border}`,
+        // Status-colored accent so each chip reads its workflow state at a glance.
+        borderLeft: `4px solid ${colors.fg}`,
         borderStyle: group === 'preview' ? 'dotted' : 'solid',
         borderRadius: 6,
         background: colors.bg,
         color: colors.fg,
         overflow: 'hidden',
+        boxShadow: dragging ? '0 6px 16px rgba(0, 0, 0, 0.18)' : undefined,
       }}
     >
       <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -305,18 +455,6 @@ function CalendarChip({
       </div>
     </div>
   )
-}
-
-function renderCalendarDayItems(
-  dayItems: MarketingCalendarItem[],
-  channels: MarketingChannel[],
-  selectedId: string | null,
-) {
-  return getCalendarItemsByDisplayGroup(dayItems)
-    .slice(0, 4)
-    .map(({ item, group }) => (
-      <CalendarChip key={item._id} item={item} channels={channels} active={item._id === selectedId} group={group} />
-    ))
 }
 
 function CalendarGroupSummary({
