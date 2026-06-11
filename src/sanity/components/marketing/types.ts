@@ -15,3 +15,38 @@ export interface ChannelContentType {
   value?: string
   description?: string
 }
+
+// Which editor sub-tab is active in the A/B Tests workspace. Used by both
+// AbTestingWorkspace (component state) and the tool's
+// getAbTestingInsightActionTarget helper (its return type), so it lives here.
+export type AbTestingEditorTab = 'setup' | 'launch' | 'results'
+
+// Glossary / workflow-help types. Shared between the ResearchWorkspace cluster
+// (MarketingTerm / WorkflowAnswer / WorkflowHelpSection / DesignerSetupPath) and
+// the tool's workflowTerms / workflowHelpItems / workflowSetupSteps data, so they
+// live in this neutral module both sides import. Type-only import of
+// MarketingViewId from the tool keeps this graph free of runtime dependencies.
+import type { MarketingViewId } from '../../tools/marketingTool'
+
+export type WorkflowTerm = {
+  label: string
+  definition: string
+}
+
+export type WorkflowHelpItem = {
+  question: string
+  answer: Array<string | WorkflowTerm>
+  action?: {
+    label: string
+    view: MarketingViewId
+  }
+}
+
+export type WorkflowSetupStep = {
+  label: string
+  title: string
+  outcome: string
+  designerAction: string
+  view: MarketingViewId
+  terms?: WorkflowTerm[]
+}
