@@ -10,11 +10,11 @@ interface Props {
 
 export const revalidate = 3600
 export const dynamicParams = true
-export const metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
+// Served at /vision/<slug> via the A/B rewrite, so it must stay indexable;
+// canonicalize to the real vision URL (Google's recommended A/B-test setup).
+export async function generateMetadata({ params }: Props) {
+  const { slug } = await params
+  return { alternates: { canonical: `/vision/${slug}` } }
 }
 
 export async function generateStaticParams() {

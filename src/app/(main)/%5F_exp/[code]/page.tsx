@@ -12,11 +12,12 @@ interface Props {
 
 export const revalidate = 3600
 export const dynamicParams = true
+// This route renders the real homepage content, served at / via the A/B rewrite,
+// so it MUST stay indexable — a `noindex` here silently de-indexed the homepage.
+// Canonicalize to / so search engines index the homepage and consolidate the
+// internal /__exp variant URLs onto it (Google's recommended A/B-test setup).
 export const metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
+  alternates: { canonical: '/' },
 }
 
 export async function generateStaticParams() {
