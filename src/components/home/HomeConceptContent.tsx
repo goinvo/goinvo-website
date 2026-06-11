@@ -273,8 +273,8 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               <span className="text-[5.5rem] lg:text-[8rem]">90</span>
               <span className="text-3xl align-top">+%</span>
             </div>
-            <div className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-white/75">Enterprise adoption</div>
-            <p className="mt-3 text-sm leading-6 text-white/75">
+            <div className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-white/90">Enterprise adoption</div>
+            <p className="mt-3 text-sm leading-6 text-white/90">
               Ipsos Facto. The share of analysts using the AI research platform we shipped across the firm, with 10M+ API calls and 700K prompts per month.
             </p>
           </div>
