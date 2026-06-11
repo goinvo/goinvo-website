@@ -28,3 +28,6 @@ jobs:
           runs: 3
           uploadArtifacts: true
           temporaryPublicStorage: true
+          # Budgets: accessibility must stay 100 (hard gate); regression floors on
+          # the rest; performance is a soft warn (mobile lab perf is network-noisy).
+          configPath: ./lighthouserc.json
