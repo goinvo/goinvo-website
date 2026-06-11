@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic'
 const GSC_SITE_URL = process.env.GOINVO_GSC_SITE_URL || 'https://www.goinvo.com/'
 const GA4_PROPERTY_ID = process.env.GOINVO_GA4_PROPERTY_ID || '321528631'
 // Only attribute GA4 key-events from the production host — never localhost /
-// *.vercel.app preview sessions (mirrors api/marketing/analytics/ga4-ab).
+// *.vercel.app preview sessions.
 const GA4_HOST = process.env.GOINVO_GA4_HOST || 'www.goinvo.com'
 
 // Brand queries to exclude from the non-brand opportunity list.

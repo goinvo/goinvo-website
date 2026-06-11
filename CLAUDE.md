@@ -115,6 +115,7 @@ write/derive logic moves into a shared core that both the Studio tool AND the RE
   This is how to test + headlessly drive marketing writes without the Studio UI.
 - **Tool rewire:** `marketingTool.tsx` imports the core (drops its inline
   slugify/randomKey/defaults/cascades) → smaller, no duplicated logic.
-- **Auth gap closed:** ai-citation, citation-check, research/run, ga4-ab (write routes that had
-  no request auth) move behind `MARKETING_API_KEY`.
+- **Auth gap closed:** ai-citation, citation-check, research/run (write routes that had
+  no request auth) move behind `MARKETING_API_KEY`. (The `ga4-ab` route, once part of this
+  set, was later retired/removed — per-variant engagement is now first-party.)
 - **Env:** set `MARKETING_API_KEY` in `.env.local` and on Vercel.
