@@ -44,10 +44,13 @@ import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '..
 import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
 import { SeoWorkspace } from '../components/SeoWorkspace'
 import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
+import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
+import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
 import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
 import { LinkTreeWorkspace } from '../components/marketing/LinkTreeWorkspace'
+import { MarketingAttentionWorkspace } from '../components/marketing/MarketingAttentionWorkspace'
 import { TemplateWorkspace } from '../components/marketing/TemplateWorkspace'
 import type { ChannelContentType } from '../components/marketing/types'
 import { getChannelUsage, normalizeContentTypes } from '../components/marketing/shared'
@@ -75,7 +78,7 @@ import {
 } from '@/lib/marketing'
 
 const API_VERSION = '2024-01-01'
-const ADD_CHANNEL_VALUE = '__add_new_channel__'
+export const ADD_CHANNEL_VALUE = '__add_new_channel__'
 const EXPERIMENT_FORCE_VARIANT_PARAM = 'goinvo_ab_variant'
 const MARKETING_CONTROL_CSS = `
   [data-marketing-tool],
@@ -693,7 +696,7 @@ type MarketingViewId =
   | 'analytics'
   | 'linkTree'
   | 'seo'
-type MarketingViewOpener = (view: MarketingViewId) => boolean | void
+export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 type MarketingAssistKind =
   | 'campaign'
   | 'funnel'
@@ -1666,12 +1669,12 @@ type MarketingAiAssistResponse = {
   }
 }
 
-type SelectOption = {
+export type SelectOption = {
   title: string
   value: string
 }
 
-type CalendarItemTemplate = {
+export type CalendarItemTemplate = {
   id: string
   title: string
   description: string
@@ -1682,8 +1685,8 @@ type CalendarItemTemplate = {
   callToAction: string
 }
 
-type CalendarDisplayGroup = 'preview' | 'draft' | 'final'
-type SavedCalendarDisplayGroup = Exclude<CalendarDisplayGroup, 'preview'>
+export type CalendarDisplayGroup = 'preview' | 'draft' | 'final'
+export type SavedCalendarDisplayGroup = Exclude<CalendarDisplayGroup, 'preview'>
 
 export type CampaignTemplate = {
   id: string
@@ -1713,7 +1716,7 @@ export type FunnelTemplate = {
   stages: Array<Omit<FunnelStage, '_key' | '_type'>>
 }
 
-type MarketingAttentionItem = {
+export type MarketingAttentionItem = {
   id: string
   title: string
   detail: string
@@ -2121,7 +2124,7 @@ const statusColors: Record<string, { bg: string; fg: string; border: string }> =
   disabled: { bg: 'rgba(120, 120, 120, 0.14)', fg: '#b8b8b8', border: 'rgba(184, 184, 184, 0.26)' },
 }
 
-const CALENDAR_ITEM_TEMPLATES: CalendarItemTemplate[] = [
+export const CALENDAR_ITEM_TEMPLATES: CalendarItemTemplate[] = [
   {
     id: 'insight-carousel',
     title: 'Insight carousel',
@@ -2960,7 +2963,7 @@ export const styles = {
   },
 } satisfies Record<string, CSSProperties>
 
-function useMarketingCompactLayout(breakpoint = 760) {
+export function useMarketingCompactLayout(breakpoint = 760) {
   const [compact, setCompact] = useState(false)
 
   useEffect(() => {
@@ -3917,94 +3920,6 @@ function MarketingDashboard({
         )}
       </section>
     </div>
-  )
-}
-
-function MarketingAttentionWorkspace({
-  items,
-  onOpenView,
-}: {
-  items: MarketingAttentionItem[]
-  onOpenView: MarketingViewOpener
-}) {
-  const severitySummary: Array<{ severity: MarketingAttentionItem['severity']; label: string }> = [
-    { severity: 'content', label: 'Content tasks' },
-    { severity: 'measurement', label: 'Measurement tasks' },
-    { severity: 'setup', label: 'Setup tasks' },
-  ]
-
-  return (
-    <section style={{ display: 'grid', gap: 16 }}>
-      <div style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <div>
-            <div style={styles.kicker}>Needs attention</div>
-            <h2 style={{ margin: 0, fontSize: 24 }}>What is blocking easy content work?</h2>
-            <p style={{ ...styles.subtitle, marginTop: 8 }}>
-              These are the places where a designer would otherwise have to stop and ask what to do next.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {severitySummary.map(({ severity, label }) => {
-              const count = items.filter((item) => item.severity === severity).length
-              const tone = getDashboardGapTone(severity)
-              return (
-                <span
-                  key={severity}
-                  style={{
-                    border: `1px solid ${tone.border}`,
-                    background: tone.bg,
-                    color: tone.fg,
-                    borderRadius: 999,
-                    padding: '6px 10px',
-                    fontSize: 12,
-                    fontWeight: 800,
-                  }}
-                >
-                  {count} {label}
-                </span>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {items.length === 0 ? (
-        <EmptyInline title="Nothing needs attention right now." />
-      ) : (
-        <div style={{ display: 'grid', gap: 10 }}>
-          {items.map((item) => {
-            const tone = getDashboardGapTone(item.severity)
-            return (
-              <article
-                key={item.id}
-                style={{
-                  ...styles.card,
-                  borderColor: tone.border,
-                  background: tone.bg,
-                  padding: 14,
-                  display: 'grid',
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ ...styles.small, color: tone.fg, fontWeight: 800, textTransform: 'capitalize', marginBottom: 4 }}>
-                      {item.severity}
-                    </div>
-                    <h3 style={{ margin: 0, fontSize: 17 }}>{item.title}</h3>
-                    <p style={{ ...styles.small, ...styles.muted, margin: '6px 0 0' }}>{item.detail}</p>
-                  </div>
-                  <button type="button" style={styles.button} onClick={() => onOpenView(item.view)}>
-                    Open {getMarketingViewTitle(item.view)}
-                  </button>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      )}
-    </section>
   )
 }
 
@@ -11440,260 +11355,6 @@ function MarketingTerm({ term, inline = false }: { term: WorkflowTerm; inline?: 
   )
 }
 
-function CalendarWorkspace({
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-  onOpenChannels,
-  autopilotTarget,
-  onAutopilotComplete,
-}: {
-  client: StudioClient
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenChannels: () => void
-  autopilotTarget?: AutopilotWorkspaceTarget | null
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
-  const [selectedId, setSelectedId] = useState<string | null>(data.calendarItems[0]?._id || null)
-
-  useEffect(() => {
-    if (!selectedId && data.calendarItems.length > 0) setSelectedId(data.calendarItems[0]._id)
-  }, [data.calendarItems, selectedId])
-
-  useEffect(() => {
-    if (autopilotTarget?.view !== 'calendar') return
-    const targetItem = autopilotTarget.recordId
-      ? data.calendarItems.find((item) => item._id === autopilotTarget.recordId)
-      : null
-    const draftItem = targetItem || data.calendarItems.find((item) => getCalendarItemDisplayGroup(item) === 'draft')
-    if (draftItem) setSelectedId(draftItem._id)
-  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.calendarItems])
-
-  const channels = data.channels
-  const selectedItem = data.calendarItems.find((item) => item._id === selectedId) || null
-  const calendarCells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth])
-  const itemsByDay = useMemo(() => groupCalendarItemsByDay(data.calendarItems), [data.calendarItems])
-  const unscheduled = data.calendarItems.filter((item) => !item.publishAt)
-  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(data.calendarItems), [data.calendarItems])
-
-  const createCalendarItem = async (publishDate?: Date) => {
-    const createdId = await createDocument({
-      _type: 'marketingCalendarItem',
-      title: '',
-      status: 'idea',
-      ...(publishDate ? { publishAt: dateInputToIso(toDateInputValue(publishDate)) } : {}),
-    })
-    setSelectedId(createdId)
-    onAutopilotComplete?.({ action: 'calendar:createDraft', recordId: createdId })
-  }
-
-  return (
-    <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16 }}>
-      <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 22 }}>Content Calendar</h2>
-            <p style={{ ...styles.muted, margin: '4px 0 0' }}>A month-by-month planning surface for upcoming work.</p>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 12,
-            margin: '20px 0 12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: 18 }}>{monthLabel(visibleMonth)}</h3>
-          <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" style={styles.button} onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}>
-            Previous month
-          </button>
-          <button type="button" style={styles.button} onClick={() => setVisibleMonth(startOfMonth(new Date()))}>
-            Today
-          </button>
-          <button type="button" style={styles.button} onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}>
-            Next month
-          </button>
-          <button type="button" data-tour-id="autopilot-calendar-add" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createCalendarItem()}>
-            Add calendar item
-          </button>
-          </div>
-        </div>
-        <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(96px, 1fr))', gap: 1, overflowX: 'auto', paddingBottom: 4 }}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <div key={day} style={{ ...styles.small, ...styles.muted, padding: '0 8px 8px', fontWeight: 800 }}>
-              {day}
-            </div>
-          ))}
-          {calendarCells.map((cell) => {
-            const key = toDateInputValue(cell.date)
-            const dayItems = itemsByDay.get(key) || []
-            return (
-              <button
-                key={key}
-                type="button"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  minHeight: 132,
-                  padding: 8,
-                  textAlign: 'left',
-                  verticalAlign: 'top',
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 0,
-                  background: cell.inMonth ? 'var(--card-bg-color)' : 'rgba(128, 128, 128, 0.05)',
-                  color: 'var(--card-fg-color)',
-                  cursor: 'pointer',
-                }}
-                title={dayItems[0] ? 'Open first item on this day' : 'Add calendar item on this day'}
-                onClick={() => {
-                  if (dayItems[0]) {
-                    setSelectedId(dayItems[0]._id)
-                    return
-                  }
-                  void createCalendarItem(cell.date)
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    color: cell.inMonth ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)',
-                    fontWeight: cell.isToday ? 800 : 700,
-                    marginBottom: 6,
-                  }}
-                >
-                  <span>{cell.date.getDate()}</span>
-                  {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
-                </div>
-                <div style={{ display: 'grid', gap: 5 }}>
-                  {renderCalendarDayItems(dayItems, channels, selectedId)}
-                  {dayItems.length > 4 && (
-                    <div style={{ ...styles.small, ...styles.muted }}>+{dayItems.length - 4} more</div>
-                  )}
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }}>
-          <CalendarGroupSummary
-            group="draft"
-            count={savedCalendarGroups.draft.length}
-            description="Saved calendar items that still need content or review."
-          />
-          <CalendarGroupSummary
-            group="final"
-            count={savedCalendarGroups.final.length}
-            description="Scheduled or published items with real release timing."
-          />
-        </div>
-
-        {unscheduled.length > 0 && (
-          <div style={{ marginTop: 18 }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Unscheduled</h3>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {unscheduled.map((item) => (
-                <button
-                  type="button"
-                  key={item._id}
-                  onClick={() => setSelectedId(item._id)}
-                  style={{
-                    ...styles.button,
-                    borderColor: item._id === selectedId ? '#007385' : 'var(--card-border-color)',
-                  }}
-                >
-                  {item.title || 'Untitled item'}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <CalendarItemEditor
-        item={selectedItem}
-        channels={channels}
-        campaigns={data.campaigns}
-        funnels={data.funnels}
-        analyticsSources={data.analyticsSources}
-        linkItems={data.linkItems}
-        analyticsTakeaways={buildAnalyticsInterpretations(data)}
-        saving={savingId === selectedItem?._id}
-        createDocument={createDocument}
-        onSave={commitPatch}
-        onOpenChannels={onOpenChannels}
-        onAutopilotComplete={onAutopilotComplete}
-      />
-    </div>
-  )
-}
-
-function CalendarChip({
-  item,
-  channels,
-  active,
-  group = getCalendarItemDisplayGroup(item),
-}: {
-  item: MarketingCalendarItem
-  channels: MarketingChannel[]
-  active: boolean
-  group?: CalendarDisplayGroup
-}) {
-  const colors = getStatusColor(group === 'preview' ? 'preview' : item.status)
-  const channel = getChannelByKey(channels, item.channel) || item.channelRef
-  const contentTypeOptionsForChannel = getContentTypeOptionsForChannel(item.channel, channels)
-
-  return (
-    <div
-      style={{
-        padding: '6px 7px',
-        border: `1px solid ${active ? '#007385' : colors.border}`,
-        borderStyle: group === 'preview' ? 'dotted' : 'solid',
-        borderRadius: 6,
-        background: colors.bg,
-        color: colors.fg,
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {item.title || 'Untitled item'}
-      </div>
-      <div style={{ fontSize: 11, opacity: 0.82 }}>
-        {[channel?.title || item.channel, labelFor(contentTypeOptionsForChannel, item.contentType), item.campaign?.title]
-          .filter(Boolean)
-          .join(' / ')}
-      </div>
-      <div style={{ fontSize: 10, opacity: 0.78, fontWeight: 800, marginTop: 3 }}>
-        {getCalendarGroupLabel(group)}
-      </div>
-    </div>
-  )
-}
-
-function renderCalendarDayItems(
-  dayItems: MarketingCalendarItem[],
-  channels: MarketingChannel[],
-  selectedId: string | null,
-) {
-  return getCalendarItemsByDisplayGroup(dayItems)
-    .slice(0, 4)
-    .map(({ item, group }) => (
-      <CalendarChip key={item._id} item={item} channels={channels} active={item._id === selectedId} group={group} />
-    ))
-}
-
 function ResearchOpportunityPreviewList({ opportunities }: { opportunities: ResearchContentOpportunity[] }) {
   const previewOpportunities = opportunities.filter((opportunity) => opportunity.title).slice(0, 4)
   if (previewOpportunities.length === 0) return null
@@ -11735,662 +11396,6 @@ function ResearchOpportunityPreviewList({ opportunities }: { opportunities: Rese
         </div>
       )}
     </div>
-  )
-}
-
-function CalendarGroupSummary({
-  group,
-  count,
-  description,
-}: {
-  group: CalendarDisplayGroup
-  count: number
-  description: string
-}) {
-  const colors = getStatusColor(group)
-  return (
-    <div
-      style={{
-        border: `1px ${group === 'preview' ? 'dotted' : 'solid'} ${colors.border}`,
-        borderRadius: 8,
-        background: colors.bg,
-        color: colors.fg,
-        padding: 10,
-        minHeight: 98,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-        <strong>{getCalendarGroupLabel(group)}</strong>
-        <span style={{ fontSize: 22, fontWeight: 900 }}>{count}</span>
-      </div>
-      <div style={{ ...styles.small, color: 'inherit', opacity: 0.82, lineHeight: 1.45, marginTop: 6 }}>
-        {description}
-      </div>
-    </div>
-  )
-}
-
-function CalendarItemEditor({
-  item,
-  channels,
-  campaigns,
-  funnels,
-  analyticsSources,
-  linkItems,
-  analyticsTakeaways,
-  saving,
-  createDocument,
-  onSave,
-  onOpenChannels,
-  onAutopilotComplete,
-}: {
-  item: MarketingCalendarItem | null
-  channels: MarketingChannel[]
-  campaigns: MarketingCampaign[]
-  funnels: MarketingFunnel[]
-  analyticsSources: MarketingAnalyticsSource[]
-  linkItems: MarketingLinkItem[]
-  analyticsTakeaways: AnalyticsInterpretation[]
-  saving: boolean
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onOpenChannels: () => void
-  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
-}) {
-  const [draft, setDraft] = useState<MarketingCalendarItem | null>(item)
-  const [campaignId, setCampaignId] = useState('')
-  const [funnelId, setFunnelId] = useState('')
-  const [analyticsSourceId, setAnalyticsSourceId] = useState('')
-  const [linkedLinkIds, setLinkedLinkIds] = useState<string[]>([])
-  const [linkToAddId, setLinkToAddId] = useState('')
-
-  useEffect(() => {
-    setDraft(item)
-    setCampaignId(item?.campaign?._id || '')
-    setFunnelId(item?.funnel?._id || '')
-    setAnalyticsSourceId(item?.analyticsSource?._id || '')
-    setLinkedLinkIds(item ? getPostLinkedLinks(item, linkItems).map((link) => link._id) : [])
-    setLinkToAddId('')
-  }, [item, linkItems])
-
-  const channelKey = draft?.channel || draft?.channelRef?.key || ''
-  const channelOptions = getChannelOptions(channels)
-  const selectedChannel = getChannelByKey(channels, channelKey)
-  const typeOptions = getContentTypeOptionsForChannel(channelKey, channels)
-  const linkedLinks = linkedLinkIds
-    .map((id) => linkItems.find((link) => link._id === id) || draft?.linkItems?.find((link) => link._id === id))
-    .filter(Boolean) as MarketingLinkItem[]
-  const availableLinks = linkItems.filter((link) => !linkedLinkIds.includes(link._id))
-  const postUrl = draft?.publishedUrl || draft?.workingUrl || ''
-
-  if (!draft || !item) {
-    return (
-      <EmptyPanel
-        icon={CalendarIcon}
-        title="Select a calendar item"
-        description="Create or choose a content item to edit its plan."
-      />
-    )
-  }
-
-  const save = async () => {
-    const unset: string[] = []
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled item',
-      status: draft.status || 'idea',
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
-      contentType: draft.contentType,
-      channel: channelKey,
-      brief: draft.brief,
-      contentDraft: draft.contentDraft,
-      draftFrames: normalizeDraftContentFrames(draft.draftFrames),
-      draftAltText: draft.draftAltText,
-      draftHashtags: draft.draftHashtags || [],
-      contentProductionNotes: draft.contentProductionNotes,
-      callToAction: draft.callToAction,
-      workingUrl: draft.workingUrl,
-      publishedUrl: draft.publishedUrl,
-      utmCampaign: draft.utmCampaign,
-      funnelStage: draft.funnelStage,
-      topicCluster: draft.topicCluster,
-      searchIntent: draft.searchIntent,
-      targetQueries: draft.targetQueries || [],
-    }
-
-    if (linkedLinkIds.length > 0) {
-      set.linkItems = refsFromIds(linkedLinkIds)
-    } else {
-      unset.push('linkItems')
-    }
-
-    if (campaignId) {
-      set.campaign = { _type: 'reference', _ref: campaignId }
-    } else {
-      unset.push('campaign')
-    }
-
-    if (funnelId) {
-      set.funnel = { _type: 'reference', _ref: funnelId }
-    } else {
-      unset.push('funnel')
-    }
-
-    if (analyticsSourceId) {
-      set.analyticsSource = { _type: 'reference', _ref: analyticsSourceId }
-    } else {
-      unset.push('analyticsSource')
-    }
-
-    if (selectedChannel?._id && !selectedChannel._id.startsWith('default-')) {
-      set.channelRef = { _type: 'reference', _ref: selectedChannel._id }
-    } else {
-      unset.push('channelRef')
-    }
-
-    Object.keys(set).forEach((key) => {
-      if (set[key] === undefined || set[key] === '') {
-        delete set[key]
-        unset.push(key)
-      }
-    })
-
-    await onSave(item._id, set, unset)
-    onAutopilotComplete?.({ action: 'calendar:saveDraft', recordId: item._id })
-  }
-
-  const applyTemplate = (template: CalendarItemTemplate) => {
-    const channel = getChannelByKey(channels, template.channel)
-    setDraft({
-      ...draft,
-      channel: channel?.key || draft.channel,
-      channelRef: channel || draft.channelRef,
-      contentType: template.contentType,
-      funnelStage: template.funnelStage,
-      brief: draft.brief || template.brief,
-      callToAction: draft.callToAction || template.callToAction,
-    })
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const itemSuggestion = suggestion.calendarItem || {}
-    const suggestedChannel = aiString(itemSuggestion.channel)
-    const channel = getChannelByKey(channels, suggestedChannel)
-    const typeOptionsForSuggestion = getContentTypeOptionsForChannel(channel?.key || suggestedChannel || channelKey, channels)
-    const suggestedContentType = aiString(itemSuggestion.contentType)
-    const validSuggestedContentType = suggestedContentType
-      ? typeOptionsForSuggestion.some((option) => option.value === suggestedContentType)
-      : false
-
-    setDraft({
-      ...draft,
-      title: aiString(itemSuggestion.title) || draft.title,
-      channel: channel?.key || suggestedChannel || draft.channel,
-      channelRef: channel || draft.channelRef,
-      contentType: validSuggestedContentType ? suggestedContentType : draft.contentType || typeOptionsForSuggestion[0]?.value,
-      funnelStage: aiOption(itemSuggestion.funnelStage, funnelStageOptions) || draft.funnelStage,
-      brief: aiString(itemSuggestion.brief) || draft.brief,
-      callToAction: aiString(itemSuggestion.callToAction) || draft.callToAction,
-      workingUrl: aiString(itemSuggestion.workingUrl) || draft.workingUrl,
-      utmCampaign: aiString(itemSuggestion.utmCampaign) || draft.utmCampaign,
-    })
-  }
-
-  const syncPostLinks = async (nextIds: string[]) => {
-    const dedupedIds = Array.from(new Set(nextIds))
-    setLinkedLinkIds(dedupedIds)
-    await onSave(item._id, dedupedIds.length > 0 ? { linkItems: refsFromIds(dedupedIds) } : {}, dedupedIds.length > 0 ? [] : ['linkItems'])
-  }
-
-  const createLinkFromPost = async () => {
-    if (!postUrl) return
-    const linkIsPublishReady = isCalendarItemPublishReady(draft)
-    const createdId = await createDocument({
-      _type: 'marketingLinkItem',
-      title: draft.title || 'Untitled post link',
-      url: postUrl,
-      description: trimDescription(draft.brief),
-      type: calendarContentTypeToLinkType(draft.contentType),
-      status: linkIsPublishReady ? 'active' : 'draft',
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
-      sourceChannel: draft.channelRef?.key || draft.channel || 'instagram',
-      order: nextLinkOrder(linkItems),
-      calendarItem: { _type: 'reference', _ref: item._id },
-      calendarItems: refsFromIds([item._id]),
-      ...(campaignId ? { campaign: { _type: 'reference', _ref: campaignId } } : {}),
-    })
-    await syncPostLinks([...linkedLinkIds, createdId])
-  }
-
-  const addExistingLinkToPost = async () => {
-    if (!linkToAddId) return
-    const link = linkItems.find((candidate) => candidate._id === linkToAddId)
-    const nextIds = Array.from(new Set([...linkedLinkIds, linkToAddId]))
-    await syncPostLinks(nextIds)
-    if (link) {
-      const postIds = Array.from(new Set([...(link.calendarItems || []).map((post) => post._id), item._id]))
-      const set: Record<string, unknown> = { calendarItems: refsFromIds(postIds) }
-      if (!link.calendarItem?._id) set.calendarItem = { _type: 'reference', _ref: item._id }
-      await onSave(link._id, set)
-    }
-    setLinkToAddId('')
-  }
-
-  const removeLinkFromPost = async (linkId: string) => {
-    const link = linkItems.find((candidate) => candidate._id === linkId) || linkedLinks.find((candidate) => candidate._id === linkId)
-    await syncPostLinks(linkedLinkIds.filter((id) => id !== linkId))
-    if (!link) return
-
-    const remainingPostIds = (link.calendarItems || []).map((post) => post._id).filter((id) => id !== item._id)
-    const set: Record<string, unknown> = {}
-    const unset: string[] = []
-    if (remainingPostIds.length > 0) {
-      set.calendarItems = refsFromIds(remainingPostIds)
-    } else {
-      unset.push('calendarItems')
-    }
-    if (link.calendarItem?._id === item._id) unset.push('calendarItem')
-    await onSave(link._id, set, unset)
-  }
-
-  return (
-    <aside data-tour-id="autopilot-calendar-editor" style={styles.panel}>
-      <PanelTitle title="Calendar item" type="marketingCalendarItem" id={item._id} />
-      <Stack gap={12}>
-        <GuidanceChecklist
-          title="Designer checklist"
-          items={[
-            { label: 'Date is set', done: !!draft.publishAt },
-            { label: 'Channel and content type are chosen', done: !!channelKey && !!draft.contentType },
-            { label: 'Brief has enough context to make the artifact', done: !!draft.brief?.trim() },
-            { label: 'CTA says what the viewer should do next', done: !!draft.callToAction?.trim() },
-            { label: 'Campaign or funnel connection is set', done: !!campaignId || !!funnelId },
-            { label: 'Working URL points to the draft/design/source', done: !!draft.workingUrl?.trim() },
-          ]}
-        />
-        <TemplateRail
-          title="Content templates"
-          description="Apply a prompt set, then replace the bracketed thinking with the actual artifact details."
-          templates={CALENDAR_ITEM_TEMPLATES}
-          onApply={applyTemplate}
-        />
-        <MarketingAiAssistPanel
-          kind="calendarItem"
-          draft={draft as unknown as Record<string, unknown>}
-          analyticsTakeaways={analyticsTakeaways}
-          onApply={applyAiSuggestion}
-        />
-        <InputField label="What are we making?" help="Use the working title a designer would recognize on the calendar.">
-          <input
-            style={styles.input}
-            value={draft.title || ''}
-            onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-          />
-        </InputField>
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <InputField label="Where is it in the workflow?">
-            <Select
-              value={draft.status || 'idea'}
-              options={calendarStatusOptions}
-              onChange={(status) => setDraft({ ...draft, status })}
-            />
-          </InputField>
-          <InputField label="Publish date">
-            <input
-              type="date"
-              style={styles.input}
-              value={toDateInputValue(draft.publishAt)}
-              onChange={(event) => setDraft({ ...draft, publishAt: event.currentTarget.value })}
-            />
-          </InputField>
-        </div>
-        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          <InputField label="Where will this be published?">
-            <Select
-              value={channelKey}
-              options={[
-                { title: 'None', value: '' },
-                ...channelOptions,
-                { title: 'Add new channel...', value: ADD_CHANNEL_VALUE },
-              ]}
-              onChange={(channel) => {
-                if (channel === ADD_CHANNEL_VALUE) {
-                  onOpenChannels()
-                  return
-                }
-                const nextTypes = getContentTypeOptionsForChannel(channel, channels)
-                setDraft({
-                  ...draft,
-                  channel,
-                  channelRef: getChannelByKey(channels, channel),
-                  contentType: nextTypes[0]?.value || '',
-                })
-              }}
-            />
-          </InputField>
-          <InputField label="What format is it?">
-            <Select
-              value={draft.contentType || ''}
-              options={[{ title: 'None', value: '' }, ...typeOptions]}
-              onChange={(contentType) => setDraft({ ...draft, contentType })}
-            />
-          </InputField>
-        </div>
-        <InputField label="Which campaign is it part of?" help="Leave blank if this is a one-off item or not connected yet.">
-          <Select
-            value={campaignId}
-            options={[{ title: 'No campaign', value: '' }, ...campaigns.map((campaign) => ({ title: campaign.title || 'Untitled campaign', value: campaign._id }))]}
-            onChange={setCampaignId}
-          />
-        </InputField>
-        <InputField label="Which funnel path should it support?" help="Use this when the item should lead people through a known path.">
-          <Select
-            value={funnelId}
-            options={[{ title: 'No funnel', value: '' }, ...funnels.map((funnel) => ({ title: funnel.title || 'Untitled funnel', value: funnel._id }))]}
-            onChange={setFunnelId}
-          />
-        </InputField>
-        <InputField label="What stage is this for?">
-          <Select
-            value={draft.funnelStage || ''}
-            options={[{ title: 'None', value: '' }, ...funnelStageOptions]}
-            onChange={(funnelStage) => setDraft({ ...draft, funnelStage })}
-          />
-        </InputField>
-        <details style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 12 }}>
-          <summary style={{ cursor: 'pointer', fontWeight: 800 }}>SEO and targeting</summary>
-          <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-            <InputField label="Topic / keyword cluster">
-              <input
-                style={styles.input}
-                value={draft.topicCluster || ''}
-                onChange={(event) => setDraft({ ...draft, topicCluster: event.currentTarget.value })}
-              />
-            </InputField>
-            <InputField label="Search / visitor intent">
-              <Select
-                value={draft.searchIntent || ''}
-                options={[{ title: 'None', value: '' }, ...searchIntentOptions]}
-                onChange={(searchIntent) => setDraft({ ...draft, searchIntent })}
-              />
-            </InputField>
-            <InputField label="Target queries / phrases">
-              <textarea
-                rows={3}
-                style={styles.input}
-                value={(draft.targetQueries || []).join('\n')}
-                onChange={(event) => setDraft({ ...draft, targetQueries: stringListFromText(event.currentTarget.value) })}
-                placeholder="One phrase per line"
-              />
-            </InputField>
-          </div>
-        </details>
-        <InputField label="Analytics source">
-          <Select
-            value={analyticsSourceId}
-            options={[
-              { title: 'No analytics source', value: '' },
-              ...analyticsSources.map((source) => ({
-                title: source.title || 'Untitled analytics source',
-                value: source._id,
-              })),
-            ]}
-            onChange={setAnalyticsSourceId}
-          />
-        </InputField>
-        <InputField label="What does the designer need to know before making it?" help="Plain-language context, audience, source, angle, and must-include points.">
-          <textarea
-            rows={5}
-            style={styles.input}
-            value={draft.brief || ''}
-            onChange={(event) => setDraft({ ...draft, brief: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Write the actual copy here" help="Caption, post copy, newsletter section, page draft, or script. This can be rough.">
-          <textarea
-            rows={8}
-            style={styles.input}
-            value={draft.contentDraft || ''}
-            onChange={(event) => setDraft({ ...draft, contentDraft: event.currentTarget.value })}
-            placeholder="Write or generate the actual post, caption, newsletter section, or page copy here."
-          />
-        </InputField>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <label style={styles.label}>Frames or slides</label>
-            <button
-              type="button"
-              style={styles.button}
-              onClick={() =>
-                setDraft({
-                  ...draft,
-                  draftFrames: [
-                    ...(draft.draftFrames || []),
-                    { _key: randomKey(), title: '', body: '', visualDirection: '', altText: '' },
-                  ],
-                })
-              }
-            >
-              Add frame
-            </button>
-          </div>
-          {(draft.draftFrames || []).length === 0 ? (
-            <EmptyInline title="No frame copy yet." />
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {(draft.draftFrames || []).map((frame, index) => (
-                <div key={frame._key || index} style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'center' }}>
-                    <InputField label={`Frame ${index + 1} title`}>
-                      <input
-                        style={styles.input}
-                        value={frame.title || ''}
-                        onChange={(event) =>
-                          setDraft({
-                            ...draft,
-                            draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, title: event.currentTarget.value } : item,
-                            ),
-                          })
-                        }
-                      />
-                    </InputField>
-                    <button
-                      type="button"
-                      style={{ ...styles.button, width: 40, height: 40, padding: 0 }}
-                      aria-label={`Remove frame ${index + 1}`}
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).filter((_, itemIndex) => itemIndex !== index),
-                        })
-                      }
-                    >
-                      <CloseIcon />
-                    </button>
-                  </div>
-                  <InputField label="Body copy">
-                    <textarea
-                      rows={3}
-                      style={styles.input}
-                      value={frame.body || ''}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, body: event.currentTarget.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </InputField>
-                  <InputField label="Visual direction">
-                    <textarea
-                      rows={2}
-                      style={styles.input}
-                      value={frame.visualDirection || ''}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, visualDirection: event.currentTarget.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </InputField>
-                  <InputField label="Alt text">
-                    <textarea
-                      rows={2}
-                      style={styles.input}
-                      value={frame.altText || ''}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          draftFrames: (draft.draftFrames || []).map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, altText: event.currentTarget.value } : item,
-                          ),
-                        })
-                      }
-                    />
-                  </InputField>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <InputField label="Overall draft alt text">
-          <textarea
-            rows={3}
-            style={styles.input}
-            value={draft.draftAltText || ''}
-            onChange={(event) => setDraft({ ...draft, draftAltText: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Draft hashtags / tags">
-          <textarea
-            rows={2}
-            style={styles.input}
-            value={(draft.draftHashtags || []).join('\n')}
-            onChange={(event) => setDraft({ ...draft, draftHashtags: stringListFromText(event.currentTarget.value) })}
-            placeholder="One tag per line"
-          />
-        </InputField>
-        <InputField label="Content production notes">
-          <textarea
-            rows={4}
-            style={styles.input}
-            value={draft.contentProductionNotes || ''}
-            onChange={(event) => setDraft({ ...draft, contentProductionNotes: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="What should the viewer do next?">
-          <input
-            style={styles.input}
-            value={draft.callToAction || ''}
-            onChange={(event) => setDraft({ ...draft, callToAction: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Where is the draft, design, or source?">
-          <input
-            style={styles.input}
-            value={draft.workingUrl || ''}
-            onChange={(event) => setDraft({ ...draft, workingUrl: event.currentTarget.value })}
-          />
-        </InputField>
-        <InputField label="Where will the public link go?">
-          <input
-            style={styles.input}
-            value={draft.publishedUrl || ''}
-            onChange={(event) => setDraft({ ...draft, publishedUrl: event.currentTarget.value })}
-          />
-        </InputField>
-        <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
-            <div>
-              <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Quick Links</h3>
-              <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-                Linked items appear on /links automatically when this post is published or its scheduled date arrives.
-              </div>
-            </div>
-            <StatusPill status={isCalendarItemPublishReady(draft) ? 'active' : 'draft'} options={linkItemStatusOptions} />
-          </div>
-          {linkedLinks.length === 0 ? (
-            <EmptyInline title="No links connected to this post yet." />
-          ) : (
-            <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
-              {linkedLinks.map((link) => (
-                <div
-                  key={link._id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) auto',
-                    gap: 10,
-                    alignItems: 'center',
-                    border: '1px solid var(--card-border-color)',
-                    borderRadius: 8,
-                    padding: 10,
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {link.title || 'Untitled link'}
-                    </strong>
-                    <div
-                      style={{
-                        ...styles.small,
-                        color: '#007385',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        marginTop: 3,
-                      }}
-                    >
-                      {link.url || 'No URL yet'}
-                    </div>
-                  </div>
-                  <button type="button" style={styles.button} onClick={() => void removeLinkFromPost(link._id)}>
-                    Remove from post
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
-            <Select
-              value={linkToAddId}
-              options={[
-                { title: availableLinks.length > 0 ? 'Choose existing link...' : 'No other links available', value: '' },
-                ...availableLinks.map((link) => ({
-                  title: link.title || link.url || 'Untitled link',
-                  value: link._id,
-                })),
-              ]}
-              onChange={setLinkToAddId}
-            />
-            <button type="button" style={styles.button} disabled={!linkToAddId} onClick={() => void addExistingLinkToPost()}>
-              Attach link
-            </button>
-          </div>
-          <button
-            type="button"
-            style={{ ...styles.primaryButton, width: '100%', marginTop: 8 }}
-            disabled={!postUrl}
-            onClick={() => void createLinkFromPost()}
-          >
-            Create link from this post
-          </button>
-          {!postUrl && (
-            <div style={{ ...styles.small, ...styles.muted, marginTop: 8 }}>
-              Add a Published URL or Working URL before creating a link from this post.
-            </div>
-          )}
-        </div>
-        <AdvancedFieldsDropdown type="marketingCalendarItem" id={item._id} />
-        <button type="button" data-tour-id="autopilot-calendar-save" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-          {saving ? 'Saving...' : 'Save calendar item'}
-        </button>
-      </Stack>
-    </aside>
   )
 }
 
@@ -13744,187 +12749,7 @@ function AbTestingIntentCard({
   )
 }
 
-function AnalyticsWorkspace({
-  data,
-  savingId,
-  createDocument,
-  commitPatch,
-}: {
-  data: MarketingData
-  savingId: string | null
-  createDocument: (document: MarketingDocumentInput) => Promise<string>
-  commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const compactLayout = useMarketingCompactLayout()
-  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(data.analyticsSources[0]?._id || null)
-  const vercelSources = data.analyticsSources.filter((source) =>
-    source.provider === 'vercelAnalytics' || source.provider === 'vercelSpeedInsights',
-  )
-  const selectedSource = data.analyticsSources.find((source) => source._id === selectedSourceId) || null
-  const campaignLinkedCount = data.campaigns.filter((campaign) => (campaign.analyticsSources || []).length > 0).length
-  const funnelLinkedCount = data.funnels.filter((funnel) => (funnel.analyticsSources || []).length > 0).length
-  const channelLinkedCount = data.channels.filter((channel) => (channel.analyticsSources || []).length > 0).length
-  const connectedSourceCount = data.analyticsSources.filter((source) => source.status === 'connected').length
-  const analyticsInterpretations = useMemo(() => buildAnalyticsInterpretations(data), [data])
-  const workspaceGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, alignItems: 'start' }
-    : { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 16, alignItems: 'start' }
-  const metricGridStyle: CSSProperties = compactLayout
-    ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }
-    : { display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 10 }
-  const sidePanelStyle: CSSProperties = compactLayout
-    ? { ...styles.panel, position: 'static' }
-    : { ...styles.panel, position: 'sticky', top: 16 }
-
-  useEffect(() => {
-    if (!selectedSourceId && data.analyticsSources.length > 0) setSelectedSourceId(data.analyticsSources[0]._id)
-  }, [data.analyticsSources, selectedSourceId])
-
-  const createSource = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingAnalyticsSource',
-      title: '',
-      provider: 'ga4',
-      status: 'planned',
-      reportingCadence: 'monthly',
-    })
-    setSelectedSourceId(createdId)
-  }
-
-  const setAnalyticsSourcesForDocument = async (id: string, sourceIds: string[]) => {
-    await commitPatch(id, { analyticsSources: refsFromIds(sourceIds) }, sourceIds.length > 0 ? [] : ['analyticsSources'])
-  }
-
-  return (
-    <div style={workspaceGridStyle}>
-      <section style={{ display: 'grid', gap: 16 }}>
-        <section style={styles.panel}>
-          <PanelHeading
-            title="Analytics Dashboard"
-            description="Connect measurement sources to marketing work once, then reuse those connections across campaigns, funnels, and channels."
-          />
-          <div style={metricGridStyle}>
-            <AnalyticsMetricCard label="Sources" value={`${connectedSourceCount}/${data.analyticsSources.length}`} detail="connected" />
-            <AnalyticsMetricCard label="Campaigns" value={`${campaignLinkedCount}/${data.campaigns.length}`} detail="linked to analytics" />
-            <AnalyticsMetricCard label="Funnels" value={`${funnelLinkedCount}/${data.funnels.length}`} detail="linked to analytics" />
-            <AnalyticsMetricCard label="Channels" value={`${channelLinkedCount}/${data.channels.length}`} detail="linked to analytics" />
-          </div>
-        </section>
-
-        <AnalyticsInterpretationPanel data={data} interpretations={analyticsInterpretations} />
-
-        <VercelAnalyticsSummary sources={vercelSources} />
-
-        <AnalyticsEditor
-          source={selectedSource}
-          data={data}
-          saving={savingId === selectedSource?._id}
-          onSave={commitPatch}
-        />
-
-        <AnalyticsConnectionSection
-          title="Campaign measurement"
-          description="Attach sources to campaigns so success metrics, content, and reporting all point to the same measurement surface."
-          emptyTitle="No campaigns yet"
-          items={data.campaigns}
-          sources={data.analyticsSources}
-          savingId={savingId}
-          getStatusOptions={() => campaignStatusOptions}
-          getMeta={(campaign) =>
-            [
-              dateRange(campaign.startDate, campaign.endDate) || 'No dates',
-              `${getCampaignCalendarCount(data, campaign._id)} calendar item${getCampaignCalendarCount(data, campaign._id) === 1 ? '' : 's'}`,
-              `${campaign.funnels?.length || 0} funnel${(campaign.funnels?.length || 0) === 1 ? '' : 's'}`,
-            ].join(' / ')
-          }
-          onChange={setAnalyticsSourcesForDocument}
-        />
-
-        <AnalyticsConnectionSection
-          title="Funnel measurement"
-          description="Attach sources to reusable funnel maps so every connected campaign inherits the same measurement logic."
-          emptyTitle="No funnels yet"
-          items={data.funnels}
-          sources={data.analyticsSources}
-          savingId={savingId}
-          getStatusOptions={() => funnelStatusOptions}
-          getMeta={(funnel) =>
-            [
-              `${funnel.stages?.length || 0} stage${(funnel.stages?.length || 0) === 1 ? '' : 's'}`,
-              `${getFunnelCampaignCount(data, funnel._id)} campaign link${getFunnelCampaignCount(data, funnel._id) === 1 ? '' : 's'}`,
-            ].join(' / ')
-          }
-          onChange={setAnalyticsSourcesForDocument}
-        />
-
-        <AnalyticsConnectionSection
-          title="Channel measurement"
-          description="Attach default analytics sources to channels so new campaigns and content know how each channel is measured."
-          emptyTitle="No channels yet"
-          items={data.channels}
-          sources={data.analyticsSources}
-          savingId={savingId}
-          getStatusOptions={() => channelStatusOptions}
-          getMeta={(channel) =>
-            [
-              labelFor(channelPlatformOptions, channel.platform),
-              `${getChannelUsage(data, channel).calendarCount} calendar item${getChannelUsage(data, channel).calendarCount === 1 ? '' : 's'}`,
-              `${getChannelUsage(data, channel).campaignCount} campaign${getChannelUsage(data, channel).campaignCount === 1 ? '' : 's'}`,
-            ].filter(Boolean).join(' / ')
-          }
-          onChange={setAnalyticsSourcesForDocument}
-        />
-      </section>
-
-      <aside style={sidePanelStyle}>
-        <PanelHeading title="Sources" description="Small setup area for reporting surfaces. Most work happens in the connection dashboard." />
-        <button
-          type="button"
-          style={{ ...styles.primaryButton, width: '100%', marginBottom: 16 }}
-          disabled={savingId === 'new'}
-          onClick={() => void createSource()}
-        >
-          Add analytics source
-        </button>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {data.analyticsSources.map((source) => (
-            <button
-              key={source._id}
-              type="button"
-              onClick={() => setSelectedSourceId(source._id)}
-              style={{
-                ...styles.card,
-                padding: 10,
-                boxShadow: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                color: 'var(--card-fg-color)',
-                borderColor: source._id === selectedSourceId ? '#007385' : 'var(--card-border-color)',
-                background: source._id === selectedSourceId ? 'rgba(0, 115, 133, 0.08)' : 'var(--card-bg-color)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                <div style={{ minWidth: 0 }}>
-                  <strong style={{ display: 'block', fontSize: 13 }}>{source.title || 'Untitled source'}</strong>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 3 }}>
-                    {labelFor(analyticsProviderOptions, source.provider)}
-                  </div>
-                </div>
-                <StatusPill status={source.status} options={analyticsStatusOptions} />
-              </div>
-              {source.dashboardUrl && (
-                <div style={{ ...styles.small, color: '#007385', marginTop: 8 }}>Dashboard URL set</div>
-              )}
-            </button>
-          ))}
-          {data.analyticsSources.length === 0 && <EmptyInline title="No analytics sources yet" />}
-        </div>
-      </aside>
-    </div>
-  )
-}
-
-function AnalyticsMetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+export function AnalyticsMetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <div style={{ ...styles.card, padding: 14, boxShadow: 'none' }}>
       <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
@@ -13936,145 +12761,7 @@ function AnalyticsMetricCard({ label, value, detail }: { label: string; value: s
   )
 }
 
-function AnalyticsInterpretationPanel({
-  data,
-  interpretations,
-}: {
-  data: MarketingData
-  interpretations: AnalyticsInterpretation[]
-}) {
-  const stats = getAnalyticsReadinessStats(data)
-  const priorityCount = interpretations.filter((insight) => insight.severity === 'urgent' || insight.severity === 'warning').length
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 14 }}>
-        <div style={{ maxWidth: 720 }}>
-          <h2 style={{ margin: 0, fontSize: 22 }}>Interpretation and next actions</h2>
-          <p style={{ ...styles.muted, margin: '4px 0 0', lineHeight: 1.55 }}>
-            A plain-language summary of what the current analytics setup implies, where measurement will break, and what to do next.
-          </p>
-        </div>
-        <div
-          style={{
-            border: '1px solid rgba(0, 115, 133, 0.35)',
-            background: 'rgba(0, 115, 133, 0.08)',
-            borderRadius: 8,
-            padding: '10px 12px',
-            minWidth: 160,
-          }}
-        >
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            Readiness
-          </div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#007385', marginTop: 2 }}>{stats.readinessScore}%</div>
-          <div style={{ ...styles.small, ...styles.muted }}>
-            {stats.measurementTargets > 0
-              ? `${stats.connectedMeasurementTargets}/${stats.measurementTargets} work items connected`
-              : 'No active work yet'}
-          </div>
-        </div>
-      </div>
-
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 14 }}>
-        <AnalyticsMetricCard
-          label="Priority actions"
-          value={`${priorityCount}`}
-          detail={priorityCount === 1 ? 'fix first' : 'fix first'}
-        />
-        <AnalyticsMetricCard
-          label="Connected sources"
-          value={`${stats.connectedSources}/${stats.activeSources}`}
-          detail="available for analysis"
-        />
-        <AnalyticsMetricCard
-          label="Review rhythm"
-          value={stats.reviewCadence}
-          detail="suggested by sources"
-        />
-      </div>
-
-      <div style={{ display: 'grid', gap: 10 }}>
-        {interpretations.map((insight) => (
-          <AnalyticsInterpretationCard key={insight.id} insight={insight} />
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function AnalyticsInterpretationCard({ insight }: { insight: AnalyticsInterpretation }) {
-  const tone = getAnalyticsInterpretationTone(insight.severity)
-
-  return (
-    <article
-      style={{
-        ...styles.card,
-        boxShadow: 'none',
-        padding: 14,
-        borderColor: tone.border,
-        background: tone.bg,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: `1px solid ${tone.border}`,
-              background: 'var(--card-bg-color)',
-              color: tone.fg,
-              borderRadius: 999,
-              padding: '3px 8px',
-              fontSize: 11,
-              fontWeight: 900,
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-              marginBottom: 8,
-            }}
-          >
-            {tone.label}
-          </div>
-          <h3 style={{ margin: 0, fontSize: 17 }}>{insight.title}</h3>
-        </div>
-        {insight.affected.length > 0 && (
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 380 }}>
-            {insight.affected.map((title) => (
-              <span
-                key={title}
-                style={{
-                  ...styles.small,
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 999,
-                  padding: '3px 8px',
-                  background: 'var(--card-bg-color)',
-                  color: 'var(--card-muted-fg-color)',
-                  fontWeight: 700,
-                }}
-              >
-                {title}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12, marginTop: 10 }}>
-        <div>
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, marginBottom: 4 }}>What this means</div>
-          <p style={{ margin: 0, lineHeight: 1.5 }}>{insight.interpretation}</p>
-        </div>
-        <div>
-          <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, marginBottom: 4 }}>Do next</div>
-          <p style={{ margin: 0, lineHeight: 1.5 }}>{insight.action}</p>
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function getAnalyticsInterpretationTone(severity: AnalyticsInterpretationSeverity) {
+export function getAnalyticsInterpretationTone(severity: AnalyticsInterpretationSeverity) {
   if (severity === 'urgent') {
     return {
       label: 'Fix first',
@@ -14115,427 +12802,6 @@ function serializeAnalyticsTakeawaysForAi(takeaways: AnalyticsInterpretation[]) 
     action: takeaway.action,
     affected: takeaway.affected.slice(0, 5),
   }))
-}
-
-function AnalyticsConnectionSection<T extends { _id: string; title?: string; status?: string; analyticsSources?: RefSummary[] }>({
-  title,
-  description,
-  emptyTitle,
-  items,
-  sources,
-  savingId,
-  getStatusOptions,
-  getMeta,
-  onChange,
-}: {
-  title: string
-  description: string
-  emptyTitle: string
-  items: T[]
-  sources: MarketingAnalyticsSource[]
-  savingId: string | null
-  getStatusOptions: (item: T) => SelectOption[]
-  getMeta: (item: T) => string
-  onChange: (id: string, sourceIds: string[]) => Promise<void>
-}) {
-  const connected = items.filter((item) => (item.analyticsSources || []).length > 0).length
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 12 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 20 }}>{title}</h2>
-          <p style={{ ...styles.muted, margin: '4px 0 0', lineHeight: 1.5 }}>{description}</p>
-        </div>
-        <div style={{ ...styles.small, ...styles.muted, textAlign: 'right', minWidth: 100 }}>
-          <strong style={{ color: 'var(--card-fg-color)', fontSize: 18 }}>{connected}/{items.length}</strong>
-          <div>connected</div>
-        </div>
-      </div>
-      {items.length === 0 ? (
-        <EmptyInline title={emptyTitle} />
-      ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
-          {items.map((item) => (
-            <AnalyticsConnectionRow
-              key={item._id}
-              item={item}
-              sources={sources}
-              saving={savingId === item._id}
-              statusOptions={getStatusOptions(item)}
-              meta={getMeta(item)}
-              onChange={onChange}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  )
-}
-
-function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?: string; analyticsSources?: RefSummary[] }>({
-  item,
-  sources,
-  saving,
-  statusOptions,
-  meta,
-  onChange,
-}: {
-  item: T
-  sources: MarketingAnalyticsSource[]
-  saving: boolean
-  statusOptions: SelectOption[]
-  meta: string
-  onChange: (id: string, sourceIds: string[]) => Promise<void>
-}) {
-  const selectedIds = (item.analyticsSources || []).map((source) => source._id)
-  const availableSources = sources.filter((source) => !selectedIds.includes(source._id))
-
-  return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(220px, 1fr) minmax(260px, 1.3fr) 220px',
-        gap: 12,
-        alignItems: 'center',
-        border: '1px solid var(--card-border-color)',
-        borderRadius: 8,
-        padding: 12,
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <strong>{item.title || 'Untitled'}</strong>
-          <StatusPill status={item.status} options={statusOptions} />
-        </div>
-        <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>{meta}</div>
-      </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {(item.analyticsSources || []).length === 0 && (
-          <span style={{ ...styles.small, ...styles.muted }}>No analytics connected</span>
-        )}
-        {(item.analyticsSources || []).map((source) => (
-          <button
-            key={source._id}
-            type="button"
-            title={`Remove ${source.title || 'analytics source'}`}
-            disabled={saving}
-            onClick={() => void onChange(item._id, selectedIds.filter((id) => id !== source._id))}
-            style={{
-              border: '1px solid rgba(0, 115, 133, 0.35)',
-              background: 'rgba(0, 115, 133, 0.08)',
-              color: 'var(--card-fg-color)',
-              borderRadius: 999,
-              padding: '5px 8px',
-              cursor: saving ? 'default' : 'pointer',
-              display: 'inline-flex',
-              gap: 6,
-              alignItems: 'center',
-              fontSize: 12,
-              fontWeight: 800,
-            }}
-          >
-            {source.title || 'Untitled source'}
-            <CloseIcon style={{ width: 12, height: 12 }} />
-          </button>
-        ))}
-      </div>
-      <Select
-        value=""
-        options={[
-          { title: sources.length === 0 ? 'Add analytics source first' : 'Connect source...', value: '' },
-          ...availableSources.map((source) => ({
-            title: `${source.title || 'Untitled source'} (${labelFor(analyticsProviderOptions, source.provider)})`,
-            value: source._id,
-          })),
-        ]}
-        disabled={saving || availableSources.length === 0}
-        onChange={(sourceId) => {
-          if (!sourceId) return
-          void onChange(item._id, [...selectedIds, sourceId])
-        }}
-      />
-    </div>
-  )
-}
-
-function VercelAnalyticsSummary({ sources }: { sources: MarketingAnalyticsSource[] }) {
-  if (sources.length === 0) return null
-
-  const project = sources.find((source) => source.vercelProject)?.vercelProject || 'Vercel project'
-  const productionUrl = sources.find((source) => source.productionUrl)?.productionUrl
-  const team = sources.find((source) => source.vercelTeamSlug)?.vercelTeamSlug
-
-  return (
-    <section style={styles.panel}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 18 }}>Vercel connection</h3>
-          <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-            {[project, team ? `Team ${team}` : '', productionUrl].filter(Boolean).join(' / ')}
-          </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, flex: '1 1 520px' }}>
-          {sources.map((source) => (
-            <div key={source._id} style={{ ...styles.card, padding: 12, boxShadow: 'none' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                <div>
-                  <strong>{labelFor(analyticsProviderOptions, source.provider)}</strong>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-                    Synced {formatDateTime(source.lastSyncedAt) || 'from Vercel CLI'}
-                  </div>
-                </div>
-                <StatusPill status={source.status} options={analyticsStatusOptions} />
-              </div>
-              {source.dashboardUrl && (
-                <a
-                  href={source.dashboardUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={`Open ${labelFor(analyticsProviderOptions, source.provider)} dashboard`}
-                  style={{ ...styles.button, marginTop: 10 }}
-                >
-                  <LaunchIcon style={{ width: 15, height: 15 }} />
-                  Open provider dashboard
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function AnalyticsEditor({
-  source,
-  data,
-  saving,
-  onSave,
-}: {
-  source: MarketingAnalyticsSource | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-}) {
-  const [draft, setDraft] = useState<MarketingAnalyticsSource | null>(source)
-
-  useEffect(() => setDraft(source), [source])
-
-  if (!draft || !source) {
-    return (
-      <EmptyPanel
-        icon={TrendUpwardIcon}
-        title="Select an analytics source"
-        description="Choose or create a source to manage its setup."
-      />
-    )
-  }
-
-  const save = async () => {
-    const set: Record<string, unknown> = {
-      title: draft.title || 'Untitled analytics source',
-      provider: draft.provider || 'ga4',
-      status: draft.status || 'planned',
-      propertyId: draft.propertyId,
-      measurementId: draft.measurementId,
-      containerId: draft.containerId,
-      vercelProject: draft.vercelProject,
-      dashboardUrl: draft.dashboardUrl,
-      reportingCadence: draft.reportingCadence,
-      implementationNotes: draft.implementationNotes,
-      keyMetrics: aiKeyMetrics(draft.keyMetrics),
-    }
-    const unset = emptyKeys(set)
-    unset.forEach((key) => delete set[key])
-    await onSave(source._id, set, unset)
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const analyticsSuggestion = suggestion.analyticsSource || {}
-    setDraft({
-      ...draft,
-      title: aiString(analyticsSuggestion.title) || draft.title,
-      provider: aiOption(analyticsSuggestion.provider, analyticsProviderOptions) || draft.provider,
-      reportingCadence:
-        aiOption(analyticsSuggestion.reportingCadence, [
-          { value: 'daily' },
-          { value: 'weekly' },
-          { value: 'monthly' },
-          { value: 'quarterly' },
-          { value: 'asNeeded' },
-        ]) || draft.reportingCadence,
-      implementationNotes: aiString(analyticsSuggestion.implementationNotes) || draft.implementationNotes,
-      keyMetrics: aiKeyMetrics(analyticsSuggestion.keyMetrics) || draft.keyMetrics,
-    })
-  }
-
-  return (
-    <section style={styles.panel}>
-      <PanelTitle title="Analytics setup" type="marketingAnalyticsSource" id={source._id} />
-      <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
-        <Stack gap={12}>
-          <MarketingAiAssistPanel
-            kind="analyticsSource"
-            draft={draft as unknown as Record<string, unknown>}
-            analyticsTakeaways={buildAnalyticsInterpretations(data)}
-            onApply={applyAiSuggestion}
-          />
-          <InputField label="Source name">
-            <input
-              style={styles.input}
-              value={draft.title || ''}
-              onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
-            />
-          </InputField>
-          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <InputField label="Provider">
-              <Select
-                value={draft.provider || 'ga4'}
-                options={analyticsProviderOptions}
-                onChange={(provider) => setDraft({ ...draft, provider })}
-              />
-            </InputField>
-            <InputField label="Status">
-              <Select
-                value={draft.status || 'planned'}
-                options={analyticsStatusOptions}
-                onChange={(status) => setDraft({ ...draft, status })}
-              />
-            </InputField>
-          </div>
-          {draft.provider === 'ga4' && (
-            <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <InputField label="GA4 Property ID">
-                <input
-                  style={styles.input}
-                  value={draft.propertyId || ''}
-                  onChange={(event) => setDraft({ ...draft, propertyId: event.currentTarget.value })}
-                />
-              </InputField>
-              <InputField label="Measurement ID">
-                <input
-                  style={styles.input}
-                  value={draft.measurementId || ''}
-                  onChange={(event) => setDraft({ ...draft, measurementId: event.currentTarget.value })}
-                />
-              </InputField>
-            </div>
-          )}
-          {draft.provider === 'gtm' && (
-            <InputField label="GTM Container ID">
-              <input
-                style={styles.input}
-                value={draft.containerId || ''}
-                onChange={(event) => setDraft({ ...draft, containerId: event.currentTarget.value })}
-              />
-            </InputField>
-          )}
-          {(draft.provider === 'vercelAnalytics' || draft.provider === 'vercelSpeedInsights') && (
-            <Stack gap={10}>
-              <InputField label="Vercel project">
-                <input
-                  style={styles.input}
-                  value={draft.vercelProject || ''}
-                  onChange={(event) => setDraft({ ...draft, vercelProject: event.currentTarget.value })}
-                />
-              </InputField>
-              <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <InputField label="Project ID">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={draft.vercelProjectId || ''} readOnly />
-                </InputField>
-                <InputField label="Team">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={draft.vercelTeamSlug || ''} readOnly />
-                </InputField>
-              </div>
-              <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <InputField label="Production URL">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={draft.productionUrl || ''} readOnly />
-                </InputField>
-                <InputField label="Last synced">
-                  <input style={{ ...styles.input, color: 'var(--card-muted-fg-color)' }} value={formatDateTime(draft.lastSyncedAt)} readOnly />
-                </InputField>
-              </div>
-            </Stack>
-          )}
-          <InputField label="Dashboard URL">
-            <input
-              style={styles.input}
-              value={draft.dashboardUrl || ''}
-              onChange={(event) => setDraft({ ...draft, dashboardUrl: event.currentTarget.value })}
-            />
-          </InputField>
-          <InputField label="Implementation notes">
-            <textarea
-              rows={5}
-              style={styles.input}
-              value={draft.implementationNotes || ''}
-              onChange={(event) => setDraft({ ...draft, implementationNotes: event.currentTarget.value })}
-            />
-          </InputField>
-        </Stack>
-
-        <Stack gap={12}>
-          <InputField label="Reporting cadence">
-            <Select
-              value={draft.reportingCadence || 'monthly'}
-              options={[
-                { title: 'Daily', value: 'daily' },
-                { title: 'Weekly', value: 'weekly' },
-                { title: 'Monthly', value: 'monthly' },
-                { title: 'Quarterly', value: 'quarterly' },
-                { title: 'As needed', value: 'asNeeded' },
-              ]}
-              onChange={(reportingCadence) => setDraft({ ...draft, reportingCadence })}
-            />
-          </InputField>
-          <MetricSummary metrics={draft.keyMetrics || []} title="Key metrics" />
-          {draft.dashboardUrl && (
-            <a href={draft.dashboardUrl} target="_blank" rel="noreferrer" style={{ ...styles.button, width: '100%' }}>
-              <LaunchIcon style={{ width: 15, height: 15 }} />
-              Open provider dashboard
-            </a>
-          )}
-          <RelationshipUsagePanel
-            title="Campaigns using this source"
-            items={data.campaigns.filter((campaign) =>
-              (campaign.analyticsSources || []).some((ref) => ref._id === source._id) ||
-              (campaign.successMetrics || []).some((metric) => 'source' in metric && (metric as { source?: RefSummary }).source?._id === source._id),
-            )}
-            emptyText="No campaigns are linked to this analytics source yet."
-            renderMeta={(campaign) =>
-              [
-                labelFor(campaignStatusOptions, campaign.status),
-                dateRange(campaign.startDate, campaign.endDate),
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <RelationshipUsagePanel
-            title="Funnels using this source"
-            items={data.funnels.filter((funnel) => (funnel.analyticsSources || []).some((ref) => ref._id === source._id))}
-            emptyText="No funnels are linked to this analytics source yet."
-            renderMeta={(funnel) => [labelFor(funnelStatusOptions, funnel.status), `${funnel.stages?.length || 0} stages`].join(' / ')}
-          />
-          <RelationshipUsagePanel
-            title="Calendar items using this source"
-            items={data.calendarItems.filter((item) => item.analyticsSource?._id === source._id)}
-            emptyText="No calendar items are linked to this analytics source yet."
-            renderMeta={(item) =>
-              [
-                toDateInputValue(item.publishAt),
-                item.campaign?.title,
-                item.funnel?.title,
-              ].filter(Boolean).join(' / ')
-            }
-          />
-          <AdvancedFieldsDropdown type="marketingAnalyticsSource" id={source._id} />
-          <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-            {saving ? 'Saving...' : 'Save analytics source'}
-          </button>
-        </Stack>
-      </div>
-    </section>
-  )
 }
 
 function DocumentList<T extends { _id: string; title?: string; status?: string }>({
@@ -15083,7 +13349,7 @@ export function aiContentTypes(value: unknown) {
   return contentTypes.length > 0 ? normalizeContentTypes(contentTypes) : undefined
 }
 
-function aiKeyMetrics(value: unknown) {
+export function aiKeyMetrics(value: unknown) {
   const metrics: Array<{ _key: string; _type: 'keyMetric'; label: string; definition?: string }> = []
   aiRecords(value).forEach((metric) => {
     const label = aiString(metric.label)
@@ -15205,7 +13471,7 @@ export function aiTemplateSuccessMetrics(value: unknown) {
   return metrics.length > 0 ? metrics : undefined
 }
 
-function getStatusColor(status?: string) {
+export function getStatusColor(status?: string) {
   return statusColors[status || ''] || {
     bg: 'rgba(128, 128, 128, 0.12)',
     fg: 'var(--card-muted-fg-color)',
@@ -15213,7 +13479,7 @@ function getStatusColor(status?: string) {
   }
 }
 
-function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLinkItem[]) {
+export function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLinkItem[]) {
   const explicitLinks = item.linkItems || []
   const linkedByReference = linkItems.filter(
     (link) =>
@@ -15223,7 +13489,7 @@ function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: MarketingLin
   return uniqueById([...explicitLinks, ...linkedByReference])
 }
 
-function isCalendarItemPublishReady(item: MarketingCalendarItem) {
+export function isCalendarItemPublishReady(item: MarketingCalendarItem) {
   if (!['scheduled', 'published'].includes(item.status || '')) return false
   if (!item.publishAt) return true
   return new Date(item.publishAt).getTime() <= Date.now()
@@ -16655,7 +14921,7 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
   return insights
 }
 
-function getAnalyticsReadinessStats(data: MarketingData) {
+export function getAnalyticsReadinessStats(data: MarketingData) {
   const activeSources = data.analyticsSources.filter((source) => source.status !== 'disabled')
   const connectedSources = activeSources.filter(isConnectedAnalyticsSource)
   const activeCampaigns = data.campaigns.filter(isCampaignMeasurable)
@@ -16902,7 +15168,7 @@ function dashboardGapPriority(severity: MarketingDashboardGap['severity']) {
   )[severity]
 }
 
-function getDashboardGapTone(severity: MarketingDashboardGap['severity']) {
+export function getDashboardGapTone(severity: MarketingDashboardGap['severity']) {
   if (severity === 'urgent' || severity === 'warning' || severity === 'content') {
     return {
       bg: 'rgba(227, 98, 22, 0.08)',
@@ -18452,7 +16718,7 @@ function normalizeResearchStrategyAdjustments(values: ResearchStrategyAdjustment
     .filter((item) => item.trigger.trim() || item.reason.trim() || item.recommendation.trim())
 }
 
-function normalizeDraftContentFrames(values: DraftContentFrame[] | undefined): DraftContentFrame[] {
+export function normalizeDraftContentFrames(values: DraftContentFrame[] | undefined): DraftContentFrame[] {
   return (values || [])
     .map((item) => ({
       _key: item._key || randomKey(),
@@ -19114,7 +17380,7 @@ function mergeIds(existing: string[], next: string[]) {
   return Array.from(new Set([...existing, ...next].filter(Boolean)))
 }
 
-function getMarketingViewTitle(viewId: MarketingViewId) {
+export function getMarketingViewTitle(viewId: MarketingViewId) {
   return MARKETING_TOOL_VIEWS.find((view) => view.id === viewId)?.title || 'Section'
 }
 
@@ -22062,7 +20328,7 @@ export function getChannelByKey(channels: MarketingChannel[], key?: string) {
   return channels.find((channel) => channel.key === key)
 }
 
-function getContentTypeOptionsForChannel(channelKey: string | undefined, channels: MarketingChannel[]) {
+export function getContentTypeOptionsForChannel(channelKey: string | undefined, channels: MarketingChannel[]) {
   const channel = getChannelByKey(channels, channelKey)
   const channelTypes = (channel?.contentTypes || []).filter((type) => type.label || type.value)
   if (channelTypes.length === 0) return contentTypeOptions
@@ -22073,11 +20339,11 @@ function getContentTypeOptionsForChannel(channelKey: string | undefined, channel
   }))
 }
 
-function getCampaignCalendarCount(data: MarketingData, campaignId: string) {
+export function getCampaignCalendarCount(data: MarketingData, campaignId: string) {
   return data.calendarItems.filter((item) => item.campaign?._id === campaignId).length
 }
 
-function getFunnelCampaignCount(data: MarketingData, funnelId: string) {
+export function getFunnelCampaignCount(data: MarketingData, funnelId: string) {
   return data.campaigns.filter((campaign) => (campaign.funnels || []).some((ref) => ref._id === funnelId)).length
 }
 
@@ -22165,7 +20431,7 @@ export function dateRange(start?: string, end?: string) {
   return start || end || ''
 }
 
-function formatDateTime(value?: string) {
+export function formatDateTime(value?: string) {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
@@ -22177,7 +20443,7 @@ function formatDateTime(value?: string) {
   })
 }
 
-function buildCalendarCells(month: Date) {
+export function buildCalendarCells(month: Date) {
   const first = startOfMonth(month)
   const start = new Date(first)
   start.setDate(first.getDate() - first.getDay())
@@ -22194,7 +20460,7 @@ function buildCalendarCells(month: Date) {
   })
 }
 
-function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
+export function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
   const map = new Map<string, MarketingCalendarItem[]>()
   items.forEach((item) => {
     if (!item.publishAt) return
@@ -22204,17 +20470,17 @@ function groupCalendarItemsByDay(items: MarketingCalendarItem[]) {
   return map
 }
 
-function getCalendarItemDisplayGroup(item: Pick<MarketingCalendarItem, 'status'>): SavedCalendarDisplayGroup {
+export function getCalendarItemDisplayGroup(item: Pick<MarketingCalendarItem, 'status'>): SavedCalendarDisplayGroup {
   return ['scheduled', 'published'].includes(item.status || '') ? 'final' : 'draft'
 }
 
-function getCalendarGroupLabel(group: CalendarDisplayGroup) {
+export function getCalendarGroupLabel(group: CalendarDisplayGroup) {
   if (group === 'preview') return 'Preview'
   if (group === 'final') return 'Final'
   return 'Draft'
 }
 
-function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
+export function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
   const grouped = items.map((item) => ({ item, group: getCalendarItemDisplayGroup(item) }))
   return [
     ...grouped.filter((record) => record.group === 'final'),
@@ -22222,7 +20488,7 @@ function getCalendarItemsByDisplayGroup(items: MarketingCalendarItem[]) {
   ]
 }
 
-function getSavedCalendarGroups(items: MarketingCalendarItem[]) {
+export function getSavedCalendarGroups(items: MarketingCalendarItem[]) {
   return items.reduce(
     (groups, item) => {
       groups[getCalendarItemDisplayGroup(item)].push(item)
