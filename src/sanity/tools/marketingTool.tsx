@@ -3684,13 +3684,30 @@ function MarketingDashboard({
       ? `We have ${stats.contentRunwayDays} day${stats.contentRunwayDays === 1 ? '' : 's'} of content mapped.`
       : 'We do not have upcoming content mapped yet.'
   const upcomingItems = stats.upcomingItems.slice(0, 6)
-  const setupPathSteps: Array<{ step: string; title: string; detail: string; view: MarketingViewId }> = [
-    { step: '1', title: 'Research', detail: 'Find evidence before making drafts.', view: 'research' },
-    { step: '2', title: 'Strategy', detail: 'Answer who it is for, what to say, why to believe it, and what to do next.', view: 'strategy' },
-    { step: '3', title: 'A/B Tests', detail: 'Turn uncertain page changes into measured experiments.', view: 'abTesting' },
-    { step: '4', title: 'Calendar', detail: 'Turn trusted setup into draft or scheduled content.', view: 'calendar' },
-    { step: '5', title: 'Quick Links', detail: 'Connect social posts to the right public destinations.', view: 'linkTree' },
+  const setupPathSteps: Array<{ step: string; title: string; detail: string; view: MarketingViewId; done: boolean }> = [
+    { step: '1', title: 'Research', detail: 'Find evidence before making drafts.', view: 'research', done: data.researchProjects.length > 0 },
+    {
+      step: '2',
+      title: 'Strategy',
+      detail: 'Answer who it is for, what to say, why to believe it, and what to do next.',
+      view: 'strategy',
+      done:
+        data.audienceProfiles.length > 0 ||
+        data.messagePillars.length > 0 ||
+        data.proofPoints.length > 0 ||
+        data.ctas.length > 0,
+    },
+    { step: '3', title: 'A/B Tests', detail: 'Turn uncertain page changes into measured experiments.', view: 'abTesting', done: data.experiments.length > 0 },
+    {
+      step: '4',
+      title: 'Calendar',
+      detail: 'Turn trusted setup into draft or scheduled content.',
+      view: 'calendar',
+      done: data.calendarItems.some((item) => ['scheduled', 'published'].includes(item.status || '')),
+    },
+    { step: '5', title: 'Quick Links', detail: 'Connect social posts to the right public destinations.', view: 'linkTree', done: data.linkItems.length > 0 },
   ]
+  const firstIncompleteStepTitle = setupPathSteps.find((pathStep) => !pathStep.done)?.title
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -3717,24 +3734,55 @@ function MarketingDashboard({
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 8, marginTop: 14 }}>
-          {setupPathSteps.map((pathStep) => (
-            <button
-              key={pathStep.title}
-              type="button"
-              style={{ ...styles.templateButton, background: MARKETING_OPAQUE_CARD_BG, minHeight: 94 }}
-              onClick={() => onOpenView(pathStep.view)}
-            >
-              <span style={{ ...styles.small, color: '#007385', fontWeight: 900 }}>Step {pathStep.step}</span>
-              <strong style={{ fontSize: 14 }}>{pathStep.title}</strong>
-              <span style={{ ...styles.small, ...styles.muted }}>{pathStep.detail}</span>
-            </button>
-          ))}
+          {setupPathSteps.map((pathStep) => {
+            const isCurrent = !pathStep.done && pathStep.title === firstIncompleteStepTitle
+            return (
+              <button
+                key={pathStep.title}
+                type="button"
+                style={{
+                  ...styles.templateButton,
+                  background: pathStep.done ? 'rgba(54, 139, 87, 0.08)' : MARKETING_OPAQUE_CARD_BG,
+                  minHeight: 94,
+                  borderColor: pathStep.done
+                    ? 'rgba(54, 139, 87, 0.45)'
+                    : isCurrent
+                      ? '#007385'
+                      : 'var(--card-border-color)',
+                  ...(isCurrent ? { boxShadow: '0 0 0 1px #007385' } : null),
+                }}
+                onClick={() => onOpenView(pathStep.view)}
+              >
+                <span
+                  style={{
+                    ...styles.small,
+                    color: pathStep.done ? '#368b57' : '#007385',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  {pathStep.done ? <span aria-hidden>✓</span> : null}
+                  Step {pathStep.step}
+                  {isCurrent ? (
+                    <span style={{ color: '#007385', fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                      · Start here
+                    </span>
+                  ) : null}
+                </span>
+                <strong style={{ fontSize: 14 }}>{pathStep.title}</strong>
+                <span style={{ ...styles.small, ...styles.muted }}>{pathStep.detail}</span>
+              </button>
+            )
+          })}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 16 }}>
           <AnalyticsMetricCard
             label="Content runway"
             value={`${stats.contentRunwayDays}`}
+            tone={stats.contentRunwayDays === 0 ? 'risk' : stats.contentRunwayDays < 7 ? 'warn' : 'ok'}
             detail={
               stats.lastUpcomingDate
                 ? `planned through ${formatDashboardDate(stats.lastUpcomingDate)}`
@@ -3744,16 +3792,19 @@ function MarketingDashboard({
           <AnalyticsMetricCard
             label="Scheduled items"
             value={`${stats.upcoming30Items.length}`}
+            tone={stats.coveredDaysNext30 < 10 ? 'warn' : 'ok'}
             detail={`${stats.coveredDaysNext30}/30 days have content`}
           />
           <AnalyticsMetricCard
             label="Active campaigns"
             value={`${stats.activeCampaigns}/${data.campaigns.length}`}
+            tone={stats.activeCampaigns === 0 ? 'warn' : 'ok'}
             detail={`${stats.campaignsWithUpcomingContent} with upcoming content`}
           />
           <AnalyticsMetricCard
             label="Measurement"
             value={`${analyticsStats.readinessScore}%`}
+            tone={analyticsStats.readinessScore === 0 ? 'risk' : analyticsStats.readinessScore < 50 ? 'warn' : 'ok'}
             detail={`${analyticsStats.connectedMeasurementTargets}/${analyticsStats.measurementTargets} work items connected`}
           />
         </div>
@@ -3817,7 +3868,8 @@ function MarketingDashboard({
                     {gap.affected && gap.affected.length > 0 && (
                       <div style={{ ...styles.small, ...styles.muted }}>
                         <strong style={{ color: 'var(--card-fg-color)' }}>Helps with: </strong>
-                        {gap.affected.join(', ')}
+                        {gap.affected.slice(0, 3).join(', ')}
+                        {gap.affected.length > 3 ? ` and ${gap.affected.length - 3} more` : ''}
                       </div>
                     )}
                     <button
@@ -3864,7 +3916,9 @@ function MarketingDashboard({
                       item.campaign?.title || 'No campaign',
                     ].join(' / ')}
                   </span>
-                  <StatusPill status={item.status} options={calendarStatusOptions} />
+                  <span style={{ justifySelf: 'start' }}>
+                    <StatusPill status={item.status} options={calendarStatusOptions} />
+                  </span>
                 </button>
               ))}
             </div>
@@ -7978,13 +8032,31 @@ export function ResearchOpportunityPreviewList({ opportunities }: { opportunitie
 }
 
 
-export function AnalyticsMetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+export function AnalyticsMetricCard({
+  label,
+  value,
+  detail,
+  tone = 'ok',
+}: {
+  label: string
+  value: string
+  detail: string
+  tone?: 'ok' | 'warn' | 'risk'
+}) {
+  const accent = tone === 'risk' ? '#E36216' : tone === 'warn' ? '#b8860b' : null
   return (
-    <div style={{ ...styles.card, padding: 14, boxShadow: 'none' }}>
+    <div
+      style={{
+        ...styles.card,
+        padding: 14,
+        boxShadow: 'none',
+        ...(accent ? { borderLeft: `4px solid ${accent}` } : null),
+      }}
+    >
       <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
         {label}
       </div>
-      <div style={{ fontSize: 28, fontWeight: 900, marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 28, fontWeight: 900, marginTop: 4, ...(accent ? { color: accent } : null) }}>{value}</div>
       <div style={{ ...styles.small, ...styles.muted, marginTop: 2 }}>{detail}</div>
     </div>
   )
