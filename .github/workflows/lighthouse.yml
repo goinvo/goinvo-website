@@ -1,0 +1,30 @@
+name: Lighthouse
+
+on:
+  push:
+    branches: [main, codex/marketing-cms]
+  workflow_dispatch:
+  schedule:
+    # Weekly drift check (Mondays, 12:00 UTC).
+    - cron: "0 12 * * 1"
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse (prod)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Audit production pages
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            https://www.goinvo.com/
+            https://www.goinvo.com/work
+          # 3 runs per URL, report the median — smooths out network noise.
+          runs: 3
+          uploadArtifacts: true
+          temporaryPublicStorage: true
