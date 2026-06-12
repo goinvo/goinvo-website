@@ -61,40 +61,100 @@ export interface ScheduleResult {
   error?: string
 }
 
-/** Enqueues the delayed QStash callback. Never throws — returns a ScheduleResult. */
-export async function schedulePublish(params: SchedulePublishParams): Promise<ScheduleResult> {
-  const callbackUrl = buildCallbackUrl(params.baseUrl, params.itemId)
-  const notBefore = notBeforeSeconds(params.publishAtIso)
-  const token = (process.env.QSTASH_TOKEN || '').trim()
-  if (!token) {
-    return { ok: false, callbackUrl, notBefore, error: 'QStash not configured: set QSTASH_TOKEN.' }
-  }
-  if (!params.forwardApiKey) {
-    return { ok: false, callbackUrl, notBefore, error: 'Cannot schedule: MARKETING_API_KEY is unset (callback would be unauthenticated).' }
-  }
+interface EnqueueResult {
+  ok: boolean
+  messageId?: string
+  error?: string
+}
 
+/**
+ * Posts one one-shot message to QStash for a given callback URL + scheduling
+ * headers (Upstash-Not-Before for absolute time, Upstash-Delay for relative).
+ * The callback authenticates via a forwarded bearer (our MARKETING_API_KEY).
+ * Never throws — returns an EnqueueResult.
+ */
+async function enqueueQStash(
+  callbackUrl: string,
+  schedulingHeaders: Record<string, string>,
+  dedupId: string,
+  forwardApiKey: string,
+  retries = 3,
+): Promise<EnqueueResult> {
+  const token = (process.env.QSTASH_TOKEN || '').trim()
+  if (!token) return { ok: false, error: 'QStash not configured: set QSTASH_TOKEN.' }
+  if (!forwardApiKey) {
+    return { ok: false, error: 'Cannot enqueue: MARKETING_API_KEY is unset (callback would be unauthenticated).' }
+  }
   try {
     const res = await fetch(`${QSTASH_PUBLISH_BASE}/${callbackUrl}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'Upstash-Not-Before': String(notBefore),
-        'Upstash-Retries': String(params.retries ?? 3),
+        'Upstash-Retries': String(retries),
         // Delivered to the callback as its Authorization header.
-        'Upstash-Forward-Authorization': `Bearer ${params.forwardApiKey}`,
-        // De-dupes re-saves of the same item+time within QStash's dedup window.
-        'Upstash-Deduplication-Id': `publish-${params.itemId}-${notBefore}`,
+        'Upstash-Forward-Authorization': `Bearer ${forwardApiKey}`,
+        'Upstash-Deduplication-Id': dedupId,
+        ...schedulingHeaders,
       },
-      body: JSON.stringify({ id: params.itemId }),
+      body: JSON.stringify({}),
       cache: 'no-store',
     })
-    if (!res.ok) {
-      return { ok: false, callbackUrl, notBefore, error: `QStash publish failed (${res.status}): ${await res.text()}` }
-    }
+    if (!res.ok) return { ok: false, error: `QStash enqueue failed (${res.status}): ${await res.text()}` }
     const json = (await res.json().catch(() => ({}))) as { messageId?: string }
-    return { ok: true, messageId: json.messageId, callbackUrl, notBefore }
+    return { ok: true, messageId: json.messageId }
   } catch (error) {
-    return { ok: false, callbackUrl, notBefore, error: error instanceof Error ? error.message : 'QStash error' }
+    return { ok: false, error: error instanceof Error ? error.message : 'QStash error' }
   }
+}
+
+/** Enqueues the exact-time QStash publish callback. Never throws. */
+export async function schedulePublish(params: SchedulePublishParams): Promise<ScheduleResult> {
+  const callbackUrl = buildCallbackUrl(params.baseUrl, params.itemId)
+  const notBefore = notBeforeSeconds(params.publishAtIso)
+  const result = await enqueueQStash(
+    callbackUrl,
+    { 'Upstash-Not-Before': String(notBefore) },
+    `publish-${params.itemId}-${notBefore}`,
+    params.forwardApiKey,
+    params.retries,
+  )
+  return { ok: result.ok, messageId: result.messageId, callbackUrl, notBefore, error: result.error }
+}
+
+export interface ScheduleFinalizeParams {
+  itemId: string
+  /** Relative delay before the re-check, in seconds. */
+  delaySeconds: number
+  /** Attempt number — part of the dedup id so each scheduled re-check is distinct. */
+  attempt: number
+  baseUrl: string
+  forwardApiKey: string
+  retries?: number
+}
+
+/** Builds the QStash finalize callback URL: /run?id=…&finalize=1. */
+export function buildFinalizeCallbackUrl(baseUrl: string, itemId: string): string {
+  const url = new URL('/api/marketing/publish/run', resolveBaseUrl(baseUrl))
+  url.searchParams.set('id', itemId)
+  url.searchParams.set('finalize', '1')
+  return url.toString()
+}
+
+/**
+ * Enqueues a delayed QStash re-check for an async (video) publish. The callback
+ * hits /run?id=…&finalize=1, which calls the adapter's finalize() on the stored
+ * container id. Never throws.
+ */
+export async function scheduleFinalize(params: ScheduleFinalizeParams): Promise<ScheduleResult> {
+  const callbackUrl = buildFinalizeCallbackUrl(params.baseUrl, params.itemId)
+  const delay = Math.max(1, Math.round(params.delaySeconds))
+  const result = await enqueueQStash(
+    callbackUrl,
+    { 'Upstash-Delay': `${delay}s` },
+    `finalize-${params.itemId}-${params.attempt}`,
+    params.forwardApiKey,
+    params.retries,
+  )
+  return { ok: result.ok, messageId: result.messageId, callbackUrl, notBefore: 0, error: result.error }
 }
