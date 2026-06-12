@@ -37,21 +37,8 @@ export interface PublishableItem {
   }> | null
 }
 
-/**
- * GROQ for items the worker should attempt. An item is due when it has opted in
- * (autoPublish), an editor has marked it Scheduled, its publish time has passed,
- * and the worker has not already claimed/finished it (publishState is unset or a
- * prior queued state — `failed`/`published`/`publishing` are excluded so the cron
- * never retries a failure on its own or races a concurrent run).
- */
-export const DUE_ITEMS_QUERY = `*[
-  _type == "marketingCalendarItem"
-  && autoPublish == true
-  && status == "scheduled"
-  && defined(publishAt)
-  && publishAt <= $now
-  && (!defined(publishState) || publishState == "queued")
-]{
+// Shared projection so the three queries below can't drift apart.
+const ITEM_PROJECTION = `{
   _id,
   _rev,
   title,
@@ -74,29 +61,37 @@ export const DUE_ITEMS_QUERY = `*[
   }
 }`
 
-/** GROQ to load a single item by id with the same projection (manual / retry path). */
-export const SINGLE_ITEM_QUERY = `*[_type == "marketingCalendarItem" && _id == $id][0]{
-  _id,
-  _rev,
-  title,
-  status,
-  publishState,
-  contentType,
-  contentDraft,
-  draftHashtags,
-  publishedUrl,
-  workingUrl,
-  "channelKey": coalesce(channelRef->key, channel),
-  "channelPlatform": channelRef->platform,
-  "socialImageUrl": socialImage.asset->url,
-  "socialImageAlt": draftAltText,
-  "frames": draftFrames[]{
-    title,
-    body,
-    altText,
-    "imageUrl": image.asset->url
-  }
-}`
+// The "due" predicate, shared between the batch sweep and the per-id callback.
+// An item is due when it has opted in (autoPublish), an editor has marked it
+// Scheduled, its publish time has passed, and the worker has not already
+// claimed/finished it (publishState unset or a prior `queued` — `failed` /
+// `published` / `publishing` are excluded so we never auto-retry a failure or
+// race a concurrent run).
+const DUE_PREDICATE = `autoPublish == true
+  && status == "scheduled"
+  && defined(publishAt)
+  && publishAt <= $now
+  && (!defined(publishState) || publishState == "queued")`
+
+/** Batch: every due item (capped by the caller). */
+export const DUE_ITEMS_QUERY = `*[
+  _type == "marketingCalendarItem" && ${DUE_PREDICATE}
+]${ITEM_PROJECTION}`
+
+/**
+ * One item by id, ignoring the due predicate — the manual "publish now" path
+ * (?id=). Loads regardless of schedule/state.
+ */
+export const SINGLE_ITEM_QUERY = `*[_type == "marketingCalendarItem" && _id == $id][0]${ITEM_PROJECTION}`
+
+/**
+ * One item by id, but ONLY if it is still due. This is what the QStash callback
+ * uses: if an editor rescheduled the item to the future, changed its status, or
+ * it already published, this returns null and the stale callback is a safe no-op.
+ */
+export const DUE_SINGLE_ITEM_QUERY = `*[
+  _type == "marketingCalendarItem" && _id == $id && ${DUE_PREDICATE}
+][0]${ITEM_PROJECTION}`
 
 /**
  * Maps a channel to its publishing adapter. Only the specific network is

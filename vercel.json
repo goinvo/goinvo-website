@@ -3,10 +3,6 @@
     {
       "path": "/api/marketing/analytics/drain-cron",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/marketing/publish/run",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
