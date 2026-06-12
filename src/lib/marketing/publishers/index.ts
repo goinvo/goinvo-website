@@ -1,49 +1,22 @@
 /**
- * Social publishing adapters + registry for the portable marketing core.
+ * Social publishing adapters + scheduling for the portable marketing core.
  *
  * Import from `@/lib/marketing/publishers` (or via the `@/lib/marketing` barrel)
- * rather than the individual adapter modules.
+ * rather than the individual modules.
  */
 
-import { instagramPublisher } from './instagram'
-import { linkedInPublisher } from './linkedin'
-import type { SocialPlatform, SocialPublisher } from './types'
+// Registry + connection status.
+export { getPublisher, getPublishers, connectionStatus } from './registry'
+export type { PlatformConnection } from './registry'
 
-const PUBLISHERS: Record<SocialPlatform, SocialPublisher> = {
-  linkedin: linkedInPublisher,
-  instagram: instagramPublisher,
-}
-
-/** Returns the adapter for a platform. */
-export function getPublisher(platform: SocialPlatform): SocialPublisher {
-  return PUBLISHERS[platform]
-}
-
-/** All registered adapters. */
-export function getPublishers(): SocialPublisher[] {
-  return Object.values(PUBLISHERS)
-}
-
-/** Connection status of one platform (for the status endpoint / Studio indicator). */
-export interface PlatformConnection {
-  platform: SocialPlatform
-  connected: boolean
-  missingConfig: string[]
-}
-
-/** Connection status of every registered platform. */
-export function connectionStatus(): PlatformConnection[] {
-  return getPublishers().map((publisher) => ({
-    platform: publisher.platform,
-    connected: publisher.isConnected(),
-    missingConfig: publisher.missingConfig(),
-  }))
-}
-
+// Adapters.
 export { instagramPublisher } from './instagram'
 export { linkedInPublisher } from './linkedin'
+
+// Content mapping, queries, and patch builders.
 export {
   DUE_ITEMS_QUERY,
+  DUE_SINGLE_ITEM_QUERY,
   SINGLE_ITEM_QUERY,
   resolveSocialPlatform,
   buildCaption,
@@ -54,9 +27,22 @@ export {
   buildFailedPatch,
 } from './content'
 export type { PublishableItem, ItemPatch } from './content'
+
+// The publish worker (shared by /run and the QStash callback).
+export { runPublish } from './worker'
+export type { RunPublishOptions, PublishResultEntry, PublishRunSummary } from './worker'
+
+// QStash exact-time scheduling.
 export {
-  SOCIAL_PLATFORMS,
-} from './types'
+  isQStashConfigured,
+  notBeforeSeconds,
+  buildCallbackUrl,
+  schedulePublish,
+} from './schedule'
+export type { SchedulePublishParams, ScheduleResult } from './schedule'
+
+// Shared types.
+export { SOCIAL_PLATFORMS } from './types'
 export type {
   SocialPlatform,
   SocialPublisher,

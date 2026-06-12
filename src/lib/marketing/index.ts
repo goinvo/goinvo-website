@@ -77,7 +77,7 @@ export type {
   MarketingFieldBag,
 } from './clone'
 
-// Social auto-publishing: adapters, registry, content mapping + patch builders.
+// Social auto-publishing: adapters, registry, content mapping, worker, scheduling.
 export {
   getPublisher,
   getPublishers,
@@ -85,6 +85,7 @@ export {
   instagramPublisher,
   linkedInPublisher,
   DUE_ITEMS_QUERY,
+  DUE_SINGLE_ITEM_QUERY,
   SINGLE_ITEM_QUERY,
   resolveSocialPlatform,
   buildCaption,
@@ -93,12 +94,22 @@ export {
   buildClaimPatch,
   buildPublishedPatch,
   buildFailedPatch,
+  runPublish,
+  isQStashConfigured,
+  notBeforeSeconds,
+  buildCallbackUrl,
+  schedulePublish,
   SOCIAL_PLATFORMS,
 } from './publishers'
 export type {
   PlatformConnection,
   PublishableItem,
   ItemPatch,
+  RunPublishOptions,
+  PublishResultEntry,
+  PublishRunSummary,
+  SchedulePublishParams,
+  ScheduleResult,
   SocialPlatform,
   SocialPublisher,
   PublishContent,
