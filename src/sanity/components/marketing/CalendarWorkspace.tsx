@@ -7,6 +7,7 @@ import { calendarStatusOptions } from '../../schemas/marketingCalendarItem'
 import { searchIntentOptions } from '../../schemas/marketingCampaign'
 import { funnelStageOptions } from '../../schemas/marketingFunnel'
 import { linkItemStatusOptions } from '../../schemas/marketingLinkItem'
+import { PublishConnectionStatus } from './PublishConnectionStatus'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports CalendarWorkspace only for JSX
@@ -245,6 +246,7 @@ export function CalendarWorkspace({
           </button>
           </div>
         </div>
+        <PublishConnectionStatus variant="banner" />
         <DragDropContext onDragEnd={(result) => void handleDragEnd(result)}>
           <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(96px, 1fr))', gap: 1, overflowX: 'auto', paddingBottom: 4 }}>
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (

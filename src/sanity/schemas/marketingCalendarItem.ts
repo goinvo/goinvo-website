@@ -40,6 +40,18 @@ const channelOptions = [
   { title: 'Other', value: 'other' },
 ]
 
+// Worker-managed lifecycle for the auto-publishing pipeline. This is distinct
+// from the human-facing `status` field: `status` is what an editor sets
+// (idea → scheduled → published), while `publishState` is what the publish
+// worker writes as it claims, posts, and confirms an item on a social channel.
+const publishStateOptions = [
+  { title: 'Queued', value: 'queued' },
+  { title: 'Publishing', value: 'publishing' },
+  { title: 'Published', value: 'published' },
+  { title: 'Failed', value: 'failed' },
+  { title: 'Skipped', value: 'skipped' },
+]
+
 export default defineType({
   name: 'marketingCalendarItem',
   title: 'Marketing Calendar Item',
@@ -48,6 +60,7 @@ export default defineType({
     { name: 'planning', title: 'Planning', default: true },
     { name: 'content', title: 'Content' },
     { name: 'measurement', title: 'Measurement' },
+    { name: 'publishing', title: 'Publishing' },
   ],
   fields: [
     defineField({
@@ -278,6 +291,13 @@ export default defineType({
             defineField({ name: 'body', title: 'Body Copy', type: 'text', rows: 3 }),
             defineField({ name: 'visualDirection', title: 'Visual Direction', type: 'text', rows: 2 }),
             defineField({ name: 'altText', title: 'Alt Text', type: 'text', rows: 2 }),
+            defineField({
+              name: 'image',
+              title: 'Slide Image',
+              type: 'image',
+              options: { hotspot: true },
+              description: 'Image for this carousel slide. Auto-publishing uploads slides in order.',
+            }),
           ],
           preview: {
             select: { title: 'title', subtitle: 'body' },
@@ -290,6 +310,15 @@ export default defineType({
           },
         },
       ],
+    }),
+    defineField({
+      name: 'socialImage',
+      title: 'Social Image',
+      type: 'image',
+      group: 'content',
+      options: { hotspot: true },
+      description:
+        'Primary image for a single-image social post (or the cover for a carousel). Required by Instagram, which cannot publish text-only posts.',
     }),
     defineField({
       name: 'draftAltText',
@@ -368,6 +397,57 @@ export default defineType({
       rows: 4,
       group: 'measurement',
     }),
+    defineField({
+      name: 'autoPublish',
+      title: 'Auto-publish to social channel',
+      type: 'boolean',
+      group: 'publishing',
+      initialValue: false,
+      description:
+        'When on, the publish worker posts this item to its social channel at the scheduled time (status "Scheduled" and a past Publish At). Off by default — scheduling alone never posts.',
+    }),
+    defineField({
+      name: 'publishState',
+      title: 'Publish State',
+      type: 'string',
+      group: 'publishing',
+      readOnly: true,
+      options: { list: publishStateOptions },
+      description: 'Set by the publish worker as it claims, posts, and confirms this item. Not edited by hand.',
+    }),
+    defineField({
+      name: 'externalPostId',
+      title: 'External Post ID',
+      type: 'string',
+      group: 'publishing',
+      readOnly: true,
+      description: 'Platform-assigned ID of the published post (e.g. Instagram media ID or LinkedIn post URN).',
+    }),
+    defineField({
+      name: 'publishAttemptedAt',
+      title: 'Last Publish Attempt',
+      type: 'datetime',
+      group: 'publishing',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'publishError',
+      title: 'Publish Error',
+      type: 'text',
+      rows: 3,
+      group: 'publishing',
+      readOnly: true,
+      description: 'The most recent failure reason, cleared on a successful publish.',
+    }),
+    defineField({
+      name: 'publishLockAt',
+      title: 'Publish Lock',
+      type: 'datetime',
+      group: 'publishing',
+      readOnly: true,
+      hidden: true,
+      description: 'Internal: when the worker claimed this item, so overlapping cron runs cannot double-post.',
+    }),
   ],
   preview: {
     select: {
@@ -401,4 +481,4 @@ export default defineType({
   ],
 })
 
-export { calendarStatusOptions, channelOptions, contentTypeOptions }
+export { calendarStatusOptions, channelOptions, contentTypeOptions, publishStateOptions }
