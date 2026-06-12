@@ -28,7 +28,12 @@ export interface PublishableItem {
   publishedUrl?: string | null
   workingUrl?: string | null
   socialImageUrl?: string | null
+  socialVideoUrl?: string | null
   socialImageAlt?: string | null
+  /** Set while an async (Reel/video) publish is processing (from a prior pending outcome). */
+  externalContainerId?: string | null
+  /** How many times the worker has re-checked an async publish (bounds re-checks). */
+  publishAttempts?: number | null
   frames?: Array<{
     title?: string | null
     body?: string | null
@@ -52,7 +57,10 @@ const ITEM_PROJECTION = `{
   "channelKey": coalesce(channelRef->key, channel),
   "channelPlatform": channelRef->platform,
   "socialImageUrl": socialImage.asset->url,
+  "socialVideoUrl": socialVideo.asset->url,
   "socialImageAlt": draftAltText,
+  externalContainerId,
+  publishAttempts,
   "frames": draftFrames[]{
     title,
     body,
@@ -92,6 +100,18 @@ export const SINGLE_ITEM_QUERY = `*[_type == "marketingCalendarItem" && _id == $
 export const DUE_SINGLE_ITEM_QUERY = `*[
   _type == "marketingCalendarItem" && _id == $id && ${DUE_PREDICATE}
 ][0]${ITEM_PROJECTION}`
+
+/**
+ * Backstop: `processing` (async video) items whose finalize re-check appears to
+ * have been lost — not re-checked since `$staleBefore`. A healthy item advances
+ * publishAttemptedAt every cycle, so only orphans match.
+ */
+export const STALE_PROCESSING_QUERY = `*[
+  _type == "marketingCalendarItem"
+  && publishState == "processing"
+  && defined(externalContainerId)
+  && (!defined(publishAttemptedAt) || publishAttemptedAt < $staleBefore)
+]${ITEM_PROJECTION}`
 
 /**
  * Maps a channel to its publishing adapter. Only the specific network is
@@ -166,9 +186,18 @@ export function buildMedia(item: PublishableItem): PublishMedia[] {
 /** Builds the platform-agnostic post payload from a calendar item. */
 export function buildPublishContent(item: PublishableItem): PublishContent {
   const link = (item.publishedUrl || item.workingUrl || '').trim() || undefined
+  const type = (item.contentType || '').toLowerCase()
+  const videoUrl = (item.socialVideoUrl || '').trim()
+  const isVideo = (type === 'reel' || type === 'video') && Boolean(videoUrl)
+
+  // A Reel/video post carries a single video; everything else carries images.
+  const media: PublishMedia[] = isVideo
+    ? [{ url: videoUrl, type: 'video', ...(item.socialImageAlt ? { altText: item.socialImageAlt } : {}) }]
+    : buildMedia(item)
+
   return {
     text: buildCaption(item),
-    media: buildMedia(item),
+    media,
     ...(link ? { link, linkTitle: (item.title || '').trim() || undefined } : {}),
     ...(item.contentType ? { contentType: item.contentType } : {}),
   }
@@ -185,6 +214,24 @@ export function buildClaimPatch(nowIso: string): ItemPatch {
   return { set: { publishState: 'publishing', publishLockAt: nowIso } }
 }
 
+/**
+ * Patch applied when an async (Reel/video) publish is accepted but still
+ * processing: records the container id + the attempt count so a later finalize
+ * re-check can publish it. Releases the lock (the finalize is id-targeted, and
+ * the due sweep skips non-queued states).
+ */
+export function buildProcessingPatch(containerId: string, attempts: number, nowIso: string): ItemPatch {
+  return {
+    set: {
+      publishState: 'processing',
+      externalContainerId: containerId,
+      publishAttempts: attempts,
+      publishAttemptedAt: nowIso,
+    },
+    unset: ['publishLockAt'],
+  }
+}
+
 /** Patch applied after a successful publish. */
 export function buildPublishedPatch(result: PublishSuccess, nowIso: string): ItemPatch {
   return {
@@ -195,7 +242,7 @@ export function buildPublishedPatch(result: PublishSuccess, nowIso: string): Ite
       publishAttemptedAt: nowIso,
       ...(result.permalink ? { publishedUrl: result.permalink } : {}),
     },
-    unset: ['publishError', 'publishLockAt'],
+    unset: ['publishError', 'publishLockAt', 'externalContainerId'],
   }
 }
 
@@ -207,6 +254,6 @@ export function buildFailedPatch(error: string, nowIso: string): ItemPatch {
       publishError: error.slice(0, 2000),
       publishAttemptedAt: nowIso,
     },
-    unset: ['publishLockAt'],
+    unset: ['publishLockAt', 'externalContainerId'],
   }
 }

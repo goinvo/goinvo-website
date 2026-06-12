@@ -45,12 +45,17 @@ export interface PublishSuccess {
 }
 
 /**
- * Outcome of a publish attempt. `notConnected` is a distinct, expected outcome
- * (credentials absent) — the worker treats it as "skip", not "error", so an
- * un-configured platform never marks items failed.
+ * Outcome of a publish attempt.
+ * - `notConnected` is a distinct, expected outcome (credentials absent) — the
+ *   worker treats it as "skip", not "error", so an un-configured platform never
+ *   marks items failed.
+ * - `pending` means the platform accepted the media but is still processing it
+ *   asynchronously (Instagram Reels/video). The worker records the `containerId`
+ *   and schedules a `finalize()` re-check rather than blocking the request.
  */
 export type PublishOutcome =
   | { ok: true; result: PublishSuccess }
+  | { ok: false; pending: true; containerId: string }
   | { ok: false; notConnected?: boolean; error: string }
 
 /** A native publishing adapter for one platform. */
@@ -62,4 +67,10 @@ export interface SocialPublisher {
   missingConfig(): string[]
   /** Publish a post. Performs network I/O; never throws — returns a PublishOutcome. */
   publish(content: PublishContent): Promise<PublishOutcome>
+  /**
+   * Finish an async publish: given a container id from a prior `pending` outcome,
+   * check whether processing finished and publish it. Only implemented by adapters
+   * with async media (Instagram video/Reels). Returns ok / pending / error.
+   */
+  finalize?(containerId: string): Promise<PublishOutcome>
 }
