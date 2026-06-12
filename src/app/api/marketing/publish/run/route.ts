@@ -1,49 +1,29 @@
 import { NextResponse } from 'next/server'
-import {
-  assertMarketingApiKey,
-  buildClaimPatch,
-  buildFailedPatch,
-  buildPublishContent,
-  buildPublishedPatch,
-  DUE_ITEMS_QUERY,
-  getMarketingWriteClient,
-  getPublisher,
-  resolveSocialPlatform,
-  SINGLE_ITEM_QUERY,
-  type PublishableItem,
-} from '@/lib/marketing'
+import { assertMarketingApiKey, getMarketingWriteClient, runPublish } from '@/lib/marketing'
 
-// Publish worker for the marketing calendar's social auto-publishing.
+// Publish worker endpoint for the marketing calendar's social auto-publishing.
 //
 //   GET|POST /api/marketing/publish/run
 //
-// Triggered two ways, both authorized:
-//   1. Vercel Cron — GET with `Authorization: Bearer ${CRON_SECRET}` (see vercel.json).
+// Triggered three ways, all authorized:
+//   1. QStash exact-time callback — POST with `?id=<doc>&onlyIfDue=1`; QStash
+//      forwards `Authorization: Bearer ${MARKETING_API_KEY}` for us.
 //   2. Manual / Studio — any request carrying a valid MARKETING_API_KEY.
+//   3. Optional sweep (external cron/pinger) — same auth, no id (publishes all due).
 //
-// It loads due items (autoPublish + scheduled + past publishAt + not already
-// claimed/published), claims each with an optimistic revision lock so overlapping
-// runs can't double-post, publishes via the platform adapter, and writes the
-// result back. Fail-closed: with no credentials a platform is "skipped", never
-// published. Query params: ?dryRun=1 (preview, no writes), ?id=<docId> (publish
-// one item now, bypassing the due filter).
+// Loads due items (autoPublish + scheduled + past publishAt + not already
+// handled), claims each with an optimistic revision lock so overlapping runs
+// can't double-post, publishes via the platform adapter, and writes the result
+// back. Fail-closed: with no credentials a platform is "skipped", never posted.
+//
+// Params: ?dryRun=1 (preview, no writes), ?id=<docId> (one item), ?onlyIfDue=1
+// (with id, only act if the item is still due — used by the QStash callback so a
+// stale/rescheduled message is a safe no-op).
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const MAX_ITEMS_PER_RUN = 25
-
-type ResultEntry = {
-  id: string
-  title?: string | null
-  platform?: string
-  outcome: 'published' | 'skipped' | 'failed' | 'would-publish'
-  reason?: string
-  externalId?: string
-  permalink?: string
-}
-
-/** Authorizes a cron call (CRON_SECRET bearer) or a keyed manual call. */
+/** Authorizes a cron call (CRON_SECRET bearer) or any keyed/forwarded call. */
 function authorize(req: Request): boolean {
   const cronSecret = process.env.CRON_SECRET || process.env.MARKETING_VERCEL_DRAIN_SECRET || ''
   if (cronSecret && req.headers.get('authorization') === `Bearer ${cronSecret}`) {
@@ -57,10 +37,11 @@ function authorize(req: Request): boolean {
   }
 }
 
-async function readParams(req: Request): Promise<{ id?: string; dryRun: boolean }> {
+async function readParams(req: Request): Promise<{ id?: string; dryRun: boolean; onlyIfDue: boolean }> {
   const url = new URL(req.url)
   let id = url.searchParams.get('id') || undefined
   let dryRun = url.searchParams.get('dryRun') === '1' || url.searchParams.get('dryRun') === 'true'
+  const onlyIfDue = url.searchParams.get('onlyIfDue') === '1' || url.searchParams.get('onlyIfDue') === 'true'
 
   if (req.method === 'POST') {
     try {
@@ -68,10 +49,10 @@ async function readParams(req: Request): Promise<{ id?: string; dryRun: boolean 
       if (typeof body?.id === 'string' && body.id.trim()) id = body.id.trim()
       if (body?.dryRun === true) dryRun = true
     } catch {
-      // No / invalid body is fine for POST; fall back to query params.
+      // No / invalid body is fine; fall back to query params.
     }
   }
-  return { id, dryRun }
+  return { id, dryRun, onlyIfDue }
 }
 
 async function handle(req: Request): Promise<NextResponse> {
@@ -89,130 +70,22 @@ async function handle(req: Request): Promise<NextResponse> {
     )
   }
 
-  const { id, dryRun } = await readParams(req)
-  const nowIso = new Date().toISOString()
+  const { id, dryRun, onlyIfDue } = await readParams(req)
 
-  let items: PublishableItem[]
   try {
-    items = id
-      ? ([await client.fetch<PublishableItem | null>(SINGLE_ITEM_QUERY, { id })].filter(
-          Boolean,
-        ) as PublishableItem[])
-      : await client.fetch<PublishableItem[]>(DUE_ITEMS_QUERY, { now: nowIso })
+    const summary = await runPublish(client, {
+      now: new Date().toISOString(),
+      id,
+      dryRun,
+      onlyIfDue,
+    })
+    return NextResponse.json(summary)
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to load calendar items.' },
+      { error: error instanceof Error ? error.message : 'Publish run failed.' },
       { status: 500 },
     )
   }
-
-  const batch = items.slice(0, MAX_ITEMS_PER_RUN)
-  const results: ResultEntry[] = []
-
-  for (const item of batch) {
-    const platform = resolveSocialPlatform(item)
-    if (!platform) {
-      results.push({
-        id: item._id,
-        title: item.title,
-        outcome: 'skipped',
-        reason: `No social adapter for channel "${item.channelKey ?? 'unknown'}".`,
-      })
-      continue
-    }
-
-    const publisher = getPublisher(platform)
-    if (!publisher.isConnected()) {
-      // Not an error: leave the item untouched so a future run picks it up once
-      // credentials are set.
-      results.push({
-        id: item._id,
-        title: item.title,
-        platform,
-        outcome: 'skipped',
-        reason: `${platform} not connected (missing ${publisher.missingConfig().join(', ')}).`,
-      })
-      continue
-    }
-
-    const content = buildPublishContent(item)
-
-    if (dryRun) {
-      results.push({
-        id: item._id,
-        title: item.title,
-        platform,
-        outcome: 'would-publish',
-        reason: `caption ${content.text.length} chars, ${content.media.length} image(s)${
-          content.link ? ', link' : ''
-        }`,
-      })
-      continue
-    }
-
-    // Claim the item with an optimistic revision lock. If another run already
-    // claimed it the revision won't match and this throws — skip it.
-    try {
-      const claim = buildClaimPatch(nowIso)
-      await client.patch(item._id).ifRevisionId(item._rev).set(claim.set!).commit({
-        autoGenerateArrayKeys: false,
-      })
-    } catch {
-      results.push({
-        id: item._id,
-        title: item.title,
-        platform,
-        outcome: 'skipped',
-        reason: 'Already claimed by a concurrent run.',
-      })
-      continue
-    }
-
-    const outcome = await publisher.publish(content)
-    const patch = outcome.ok
-      ? buildPublishedPatch(outcome.result, nowIso)
-      : buildFailedPatch(outcome.error, nowIso)
-
-    try {
-      const tx = client.patch(item._id)
-      if (patch.set) tx.set(patch.set)
-      if (patch.unset) tx.unset(patch.unset)
-      await tx.commit()
-    } catch (error) {
-      console.error(`Publish write-back failed for ${item._id}:`, error)
-    }
-
-    if (outcome.ok) {
-      results.push({
-        id: item._id,
-        title: item.title,
-        platform,
-        outcome: 'published',
-        externalId: outcome.result.externalId,
-        permalink: outcome.result.permalink,
-      })
-    } else {
-      results.push({
-        id: item._id,
-        title: item.title,
-        platform,
-        outcome: 'failed',
-        reason: outcome.error,
-      })
-    }
-  }
-
-  const summary = {
-    ranAt: nowIso,
-    dryRun,
-    considered: items.length,
-    processed: results.length,
-    published: results.filter((r) => r.outcome === 'published').length,
-    failed: results.filter((r) => r.outcome === 'failed').length,
-    skipped: results.filter((r) => r.outcome === 'skipped').length,
-    results,
-  }
-  return NextResponse.json(summary)
 }
 
 export async function GET(req: Request) {

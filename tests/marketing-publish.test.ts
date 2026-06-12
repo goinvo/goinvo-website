@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import calendarSchema, { publishStateOptions } from '@/sanity/schemas/marketingCalendarItem'
 import {
+  buildCallbackUrl,
   buildCaption,
   buildClaimPatch,
   buildFailedPatch,
@@ -8,10 +9,16 @@ import {
   buildPublishContent,
   buildPublishedPatch,
   connectionStatus,
+  DUE_SINGLE_ITEM_QUERY,
   getPublisher,
   instagramPublisher,
+  isQStashConfigured,
   linkedInPublisher,
+  notBeforeSeconds,
   resolveSocialPlatform,
+  runPublish,
+  schedulePublish,
+  SINGLE_ITEM_QUERY,
   SOCIAL_PLATFORMS,
   type PublishableItem,
 } from '@/lib/marketing/publishers'
@@ -227,5 +234,140 @@ describe('calendar schema publishing fields', () => {
       'failed',
       'skipped',
     ])
+  })
+})
+
+describe('QStash scheduling', () => {
+  const saved: Record<string, string | undefined> = {}
+  const vars = ['QSTASH_TOKEN', 'MARKETING_PUBLIC_BASE_URL']
+
+  beforeEach(() => {
+    for (const key of vars) {
+      saved[key] = process.env[key]
+      delete process.env[key]
+    }
+  })
+  afterEach(() => {
+    for (const key of vars) {
+      if (saved[key] === undefined) delete process.env[key]
+      else process.env[key] = saved[key]
+    }
+  })
+
+  it('floors publishAt to unix seconds', () => {
+    const iso = '2026-06-12T00:00:00.900Z'
+    expect(notBeforeSeconds(iso)).toBe(Math.floor(Date.parse(iso) / 1000))
+    expect(Number.isInteger(notBeforeSeconds(iso))).toBe(true)
+  })
+
+  it('builds a run callback URL with onlyIfDue, honoring the base override', () => {
+    expect(buildCallbackUrl('https://preview.example.com', 'doc-1')).toBe(
+      'https://preview.example.com/api/marketing/publish/run?id=doc-1&onlyIfDue=1',
+    )
+    process.env.MARKETING_PUBLIC_BASE_URL = 'https://www.goinvo.com'
+    expect(buildCallbackUrl('https://preview.example.com', 'doc-1')).toBe(
+      'https://www.goinvo.com/api/marketing/publish/run?id=doc-1&onlyIfDue=1',
+    )
+  })
+
+  it('isQStashConfigured reflects the token', () => {
+    expect(isQStashConfigured()).toBe(false)
+    process.env.QSTASH_TOKEN = 'tok'
+    expect(isQStashConfigured()).toBe(true)
+  })
+
+  it('schedulePublish fails closed without a token or api key (no network)', async () => {
+    const noToken = await schedulePublish({
+      itemId: 'x',
+      publishAtIso: '2030-01-01T00:00:00.000Z',
+      baseUrl: 'https://a.com',
+      forwardApiKey: 'k',
+    })
+    expect(noToken.ok).toBe(false)
+    expect(noToken.error).toMatch(/QStash not configured/)
+
+    process.env.QSTASH_TOKEN = 'tok'
+    const noKey = await schedulePublish({
+      itemId: 'x',
+      publishAtIso: '2030-01-01T00:00:00.000Z',
+      baseUrl: 'https://a.com',
+      forwardApiKey: '',
+    })
+    expect(noKey.ok).toBe(false)
+    expect(noKey.error).toMatch(/MARKETING_API_KEY/)
+  })
+})
+
+describe('runPublish worker', () => {
+  const igItem: PublishableItem = {
+    _id: 'i1',
+    _rev: 'r1',
+    title: 't',
+    status: 'scheduled',
+    contentType: 'post',
+    channelKey: 'instagram',
+    socialImageUrl: 'https://x/a.jpg',
+    contentDraft: 'hi',
+    frames: [],
+  }
+
+  // Minimal Sanity client stub: a controllable fetch; patch() throws so any
+  // accidental write on a skip/dry-run/no-item path fails loudly.
+  function fakeClient(fetchImpl: (query: string, params: unknown) => Promise<unknown>) {
+    return {
+      fetch: fetchImpl,
+      patch: () => {
+        throw new Error('patch() should not be called on this path')
+      },
+    } as never
+  }
+
+  beforeEach(() => {
+    delete process.env.INSTAGRAM_ACCESS_TOKEN
+    delete process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID
+  })
+
+  it('skips an unconnected platform without writing', async () => {
+    const client = fakeClient(async () => [igItem])
+    const summary = await runPublish(client, { now: '2026-06-12T00:00:00.000Z' })
+    expect(summary.considered).toBe(1)
+    expect(summary.skipped).toBe(1)
+    expect(summary.published).toBe(0)
+    expect(summary.results[0].outcome).toBe('skipped')
+    expect(summary.results[0].reason).toMatch(/not connected/)
+  })
+
+  it('dryRun reports would-publish when connected, still no writes', async () => {
+    process.env.INSTAGRAM_ACCESS_TOKEN = 'tok'
+    process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID = 'ig'
+    const client = fakeClient(async () => [igItem])
+    const summary = await runPublish(client, { now: '2026-06-12T00:00:00.000Z', dryRun: true })
+    expect(summary.results[0].outcome).toBe('would-publish')
+    delete process.env.INSTAGRAM_ACCESS_TOKEN
+    delete process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID
+  })
+
+  it('uses the due-single query for onlyIfDue callbacks (reschedule-safe)', async () => {
+    let usedQuery = ''
+    let usedParams: unknown
+    const client = fakeClient(async (query, params) => {
+      usedQuery = query
+      usedParams = params
+      return null
+    })
+    const summary = await runPublish(client, { now: '2026-06-12T00:00:00.000Z', id: 'i1', onlyIfDue: true })
+    expect(usedQuery).toBe(DUE_SINGLE_ITEM_QUERY)
+    expect(usedParams).toEqual({ id: 'i1', now: '2026-06-12T00:00:00.000Z' })
+    expect(summary.considered).toBe(0)
+  })
+
+  it('uses the plain single query for a manual id', async () => {
+    let usedQuery = ''
+    const client = fakeClient(async (query) => {
+      usedQuery = query
+      return null
+    })
+    await runPublish(client, { now: '2026-06-12T00:00:00.000Z', id: 'i1' })
+    expect(usedQuery).toBe(SINGLE_ITEM_QUERY)
   })
 })
