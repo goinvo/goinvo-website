@@ -47,6 +47,9 @@ const channelOptions = [
 const publishStateOptions = [
   { title: 'Queued', value: 'queued' },
   { title: 'Publishing', value: 'publishing' },
+  // Async video (Instagram Reels): the platform is still processing the upload;
+  // a follow-up finalize check publishes it once ready.
+  { title: 'Processing', value: 'processing' },
   { title: 'Published', value: 'published' },
   { title: 'Failed', value: 'failed' },
   { title: 'Skipped', value: 'skipped' },
@@ -321,6 +324,15 @@ export default defineType({
         'Primary image for a single-image social post (or the cover for a carousel). Required by Instagram, which cannot publish text-only posts.',
     }),
     defineField({
+      name: 'socialVideo',
+      title: 'Social Video',
+      type: 'file',
+      group: 'content',
+      options: { accept: 'video/mp4' },
+      description:
+        'Video for a Reel / video post (e.g. an MP4 rendered by Rendomat). When set with contentType "reel" or "video", auto-publishing posts it as an Instagram Reel.',
+    }),
+    defineField({
       name: 'draftAltText',
       title: 'Overall Draft Alt Text',
       type: 'text',
@@ -422,6 +434,32 @@ export default defineType({
       group: 'publishing',
       readOnly: true,
       description: 'Platform-assigned ID of the published post (e.g. Instagram media ID or LinkedIn post URN).',
+    }),
+    defineField({
+      name: 'externalContainerId',
+      title: 'External Container ID',
+      type: 'string',
+      group: 'publishing',
+      readOnly: true,
+      hidden: true,
+      description: 'Internal: the Instagram media-container (creation) ID while a Reel/video is still processing.',
+    }),
+    defineField({
+      name: 'publishAttempts',
+      title: 'Publish Attempts',
+      type: 'number',
+      group: 'publishing',
+      readOnly: true,
+      hidden: true,
+      description: 'Internal: how many times the worker has checked an async (video) publish, to bound re-checks.',
+    }),
+    defineField({
+      name: 'rendomatVideoId',
+      title: 'Rendomat Video ID',
+      type: 'string',
+      group: 'publishing',
+      readOnly: true,
+      description: 'Provenance + dedupe key when this item was ingested from a Rendomat render.',
     }),
     defineField({
       name: 'publishAttemptedAt',

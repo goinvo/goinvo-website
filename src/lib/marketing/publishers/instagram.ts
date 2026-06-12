@@ -13,8 +13,9 @@
  * Publishing is a two-step "container then publish" flow. Instagram fetches the
  * media from a PUBLIC url server-side, so images must be on a reachable CDN.
  *
- * v1 scope: single image + carousel. Reels/video need a video asset and async
- * status polling across runs, so they are rejected with a clear message for now.
+ * Scope: single image + carousel (published synchronously) and Reels/video
+ * (asynchronous — a REELS container is created, then a status check publishes it
+ * once Instagram finishes processing; the worker drives re-checks via finalize()).
  *
  * Docs (verify before going live):
  *   https://developers.facebook.com/docs/instagram-platform/content-publishing
@@ -73,6 +74,42 @@ async function fetchPermalink(mediaId: string): Promise<string | undefined> {
   }
 }
 
+/** Reads a media container's processing status (Reels/video are processed async). */
+async function getContainerStatus(containerId: string): Promise<string> {
+  const url = `${graphUrl(containerId)}?fields=status_code&access_token=${encodeURIComponent(token())}`
+  const res = await fetch(url, { cache: 'no-store' })
+  const json = (await res.json().catch(() => ({}))) as { status_code?: string; error?: { message?: string } }
+  if (!res.ok || json.error) {
+    throw new Error(json.error?.message || `container status check failed (${res.status})`)
+  }
+  return json.status_code || 'IN_PROGRESS'
+}
+
+/**
+ * Checks an async (Reels) container and publishes it if ready. One check per
+ * call — the caller (worker) schedules re-checks via QStash rather than blocking.
+ * Returns ok (FINISHED + published), pending (still IN_PROGRESS), or error
+ * (ERROR/EXPIRED).
+ */
+async function checkAndPublishContainer(user: string, containerId: string): Promise<PublishOutcome> {
+  const status = await getContainerStatus(containerId)
+  if (status === 'FINISHED') {
+    const published = await graphPost(`${user}/media_publish`, { creation_id: containerId })
+    if (!published.id) return { ok: false, error: 'Instagram publish returned no media id.' }
+    const permalink = await fetchPermalink(published.id)
+    return { ok: true, result: { externalId: published.id, ...(permalink ? { permalink } : {}) } }
+  }
+  if (status === 'ERROR' || status === 'EXPIRED') {
+    return { ok: false, error: `Instagram video processing ${status.toLowerCase()} (container ${containerId}).` }
+  }
+  // IN_PROGRESS or any other non-terminal state — re-check later. Log anything
+  // unexpected so silent API drift (a new status_code) is visible.
+  if (status !== 'IN_PROGRESS') {
+    console.warn(`Instagram container ${containerId} returned unexpected status_code "${status}"; re-checking later.`)
+  }
+  return { ok: false, pending: true, containerId }
+}
+
 export const instagramPublisher: SocialPublisher = {
   platform: 'instagram',
 
@@ -94,17 +131,33 @@ export const instagramPublisher: SocialPublisher = {
     }
 
     const type = (content.contentType || '').toLowerCase()
+    const user = igUserId()
+
+    // Reel / video: create a REELS container, then check (and publish if ready).
+    // Video processing is async, so this may return `pending` — the worker then
+    // re-checks via finalize() on a QStash schedule.
     if (type === 'reel' || type === 'video') {
-      return {
-        ok: false,
-        error: 'Instagram Reels/video auto-publishing is not supported yet (needs a video asset and async status polling).',
+      const video = content.media.find((media) => media.type === 'video')
+      if (!video) {
+        return { ok: false, error: 'Reel/video post has no video asset (set socialVideo on the item).' }
+      }
+      try {
+        const container = await graphPost(`${user}/media`, {
+          media_type: 'REELS',
+          video_url: video.url,
+          caption: content.text,
+        })
+        if (!container.id) return { ok: false, error: 'Reel container returned no id.' }
+        return await checkAndPublishContainer(user, container.id)
+      } catch (error) {
+        return { ok: false, error: error instanceof Error ? error.message : 'Instagram Reel publish error' }
       }
     }
+
     if (content.media.length === 0) {
       return { ok: false, error: 'Instagram requires at least one image — text-only posts are not allowed.' }
     }
 
-    const user = igUserId()
     try {
       let creationId: string
 
@@ -145,6 +198,18 @@ export const instagramPublisher: SocialPublisher = {
       return { ok: true, result: { externalId: published.id, ...(permalink ? { permalink } : {}) } }
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : 'Instagram publish error' }
+    }
+  },
+
+  async finalize(containerId: string): Promise<PublishOutcome> {
+    const missing = this.missingConfig()
+    if (missing.length > 0) {
+      return { ok: false, notConnected: true, error: `Instagram not configured: missing ${missing.join(', ')}` }
+    }
+    try {
+      return await checkAndPublishContainer(igUserId(), containerId)
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : 'Instagram finalize error' }
     }
   },
 }

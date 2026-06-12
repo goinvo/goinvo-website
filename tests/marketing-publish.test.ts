@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import calendarSchema, { publishStateOptions } from '@/sanity/schemas/marketingCalendarItem'
 import {
   buildCallbackUrl,
@@ -6,6 +6,7 @@ import {
   buildClaimPatch,
   buildFailedPatch,
   buildMedia,
+  buildProcessingPatch,
   buildPublishContent,
   buildPublishedPatch,
   connectionStatus,
@@ -22,6 +23,11 @@ import {
   SOCIAL_PLATFORMS,
   type PublishableItem,
 } from '@/lib/marketing/publishers'
+import {
+  buildCalendarItemFields,
+  isRendomatConfigured,
+  resolveRendomatUrl,
+} from '@/lib/marketing/rendomat'
 
 const baseItem: PublishableItem = {
   _id: 'mcal-1',
@@ -114,7 +120,7 @@ describe('patch builders', () => {
       publishedUrl: 'https://insta/p',
       publishAttemptedAt: now,
     })
-    expect(patch.unset).toEqual(['publishError', 'publishLockAt'])
+    expect(patch.unset).toEqual(['publishError', 'publishLockAt', 'externalContainerId'])
   })
 
   it('failed patch records a truncated error and clears the lock without touching status', () => {
@@ -122,7 +128,7 @@ describe('patch builders', () => {
     expect(patch.set?.publishState).toBe('failed')
     expect((patch.set?.publishError as string).length).toBe(2000)
     expect(patch.set?.status).toBeUndefined()
-    expect(patch.unset).toEqual(['publishLockAt'])
+    expect(patch.unset).toEqual(['publishLockAt', 'externalContainerId'])
   })
 })
 
@@ -160,12 +166,10 @@ describe('adapters fail closed when unconfigured', () => {
 
   it('publish() returns notConnected without doing network I/O', async () => {
     const li = await linkedInPublisher.publish({ text: 'hi', media: [] })
-    expect(li.ok).toBe(false)
-    if (!li.ok) expect(li.notConnected).toBe(true)
+    expect(li).toMatchObject({ ok: false, notConnected: true })
 
     const ig = await instagramPublisher.publish({ text: 'hi', media: [{ url: 'https://x/a.jpg', type: 'image' }] })
-    expect(ig.ok).toBe(false)
-    if (!ig.ok) expect(ig.notConnected).toBe(true)
+    expect(ig).toMatchObject({ ok: false, notConnected: true })
   })
 
   it('becomes connected once both env vars are present', () => {
@@ -198,10 +202,11 @@ describe('instagram refuses unsupported / empty content', () => {
     delete process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID
   })
 
-  it('rejects reels/video and text-only posts before any network call', async () => {
+  it('rejects a reel with no video asset, and text-only posts, before any network call', async () => {
+    // A reel needs a video asset (type: 'video'); an image is not enough.
     const reel = await instagramPublisher.publish({ text: 'hi', media: [{ url: 'https://x/a.jpg', type: 'image' }], contentType: 'reel' })
     expect(reel.ok).toBe(false)
-    if (!reel.ok) expect(reel.notConnected).toBeFalsy()
+    expect((reel as { notConnected?: boolean }).notConnected).toBeFalsy()
 
     const textOnly = await instagramPublisher.publish({ text: 'hi', media: [] })
     expect(textOnly.ok).toBe(false)
@@ -230,6 +235,7 @@ describe('calendar schema publishing fields', () => {
     expect(publishStateOptions.map((o) => o.value)).toEqual([
       'queued',
       'publishing',
+      'processing',
       'published',
       'failed',
       'skipped',
@@ -328,7 +334,9 @@ describe('runPublish worker', () => {
   })
 
   it('skips an unconnected platform without writing', async () => {
-    const client = fakeClient(async () => [igItem])
+    const client = fakeClient(async (query) =>
+      String(query).includes('publishState == "processing"') ? [] : [igItem],
+    )
     const summary = await runPublish(client, { now: '2026-06-12T00:00:00.000Z' })
     expect(summary.considered).toBe(1)
     expect(summary.skipped).toBe(1)
@@ -369,5 +377,268 @@ describe('runPublish worker', () => {
     })
     await runPublish(client, { now: '2026-06-12T00:00:00.000Z', id: 'i1' })
     expect(usedQuery).toBe(SINGLE_ITEM_QUERY)
+  })
+})
+
+describe('video (reel) content mapping', () => {
+  const reelItem: PublishableItem = {
+    _id: 'r1',
+    _rev: 'rev',
+    title: 'Reel',
+    status: 'scheduled',
+    contentType: 'reel',
+    channelKey: 'instagram',
+    contentDraft: 'watch this',
+    draftHashtags: ['health'],
+    socialVideoUrl: 'https://cdn/v.mp4',
+    socialImageAlt: 'a clip',
+    frames: [],
+  }
+
+  it('maps a reel to a single video media item', () => {
+    const content = buildPublishContent(reelItem)
+    expect(content.contentType).toBe('reel')
+    expect(content.media).toEqual([{ url: 'https://cdn/v.mp4', type: 'video', altText: 'a clip' }])
+    expect(content.text).toContain('#health')
+  })
+
+  it('falls back to images when a reel has no video url', () => {
+    const content = buildPublishContent({
+      ...reelItem,
+      socialVideoUrl: null,
+      socialImageUrl: 'https://cdn/a.jpg',
+      socialImageAlt: null,
+    })
+    expect(content.media).toEqual([{ url: 'https://cdn/a.jpg', type: 'image' }])
+  })
+})
+
+describe('processing patch builders', () => {
+  const now = '2026-06-12T00:00:00.000Z'
+
+  it('processing patch records the container + attempts and releases the lock', () => {
+    expect(buildProcessingPatch('cont1', 2, now)).toEqual({
+      set: { publishState: 'processing', externalContainerId: 'cont1', publishAttempts: 2, publishAttemptedAt: now },
+      unset: ['publishLockAt'],
+    })
+  })
+
+  it('published + failed patches clear the container id', () => {
+    expect(buildPublishedPatch({ externalId: 'm1' }, now).unset).toContain('externalContainerId')
+    expect(buildFailedPatch('x', now).unset).toContain('externalContainerId')
+  })
+})
+
+// Fake Graph API response.
+function igResponse(body: unknown, ok = true, status = 200) {
+  return {
+    ok,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+    headers: { get: () => null },
+  } as unknown as Response
+}
+
+// Sanity client stub that records the patches the worker applies.
+function recordingClient(items: PublishableItem[] | PublishableItem | null) {
+  const patches: Array<{ id: string; set: Record<string, unknown>; unset: string[] }> = []
+  const client = {
+    fetch: async (query: string) =>
+      String(query).includes('publishState == "processing"') ? [] : items,
+    patch: (id: string) => {
+      const op = { id, set: {} as Record<string, unknown>, unset: [] as string[] }
+      const chain = {
+        ifRevisionId: () => chain,
+        set: (s: Record<string, unknown>) => {
+          Object.assign(op.set, s)
+          return chain
+        },
+        unset: (u: string[]) => {
+          op.unset.push(...u)
+          return chain
+        },
+        commit: async () => {
+          patches.push(op)
+          return {}
+        },
+      }
+      return chain
+    },
+    _patches: patches,
+  }
+  return client
+}
+
+describe('instagram reels async flow (mocked graph api)', () => {
+  const videoItem: PublishableItem = {
+    _id: 'v1',
+    _rev: 'r1',
+    title: 'V',
+    status: 'scheduled',
+    contentType: 'reel',
+    channelKey: 'instagram',
+    contentDraft: 'hi',
+    socialVideoUrl: 'https://cdn/v.mp4',
+    publishAttempts: 0,
+    frames: [],
+  }
+
+  beforeEach(() => {
+    process.env.INSTAGRAM_ACCESS_TOKEN = 'tok'
+    process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID = 'ig-1'
+  })
+  afterEach(() => {
+    delete process.env.INSTAGRAM_ACCESS_TOKEN
+    delete process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID
+    vi.unstubAllGlobals()
+  })
+
+  it('publishing a reel returns processing + a finalize signal while IN_PROGRESS', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input)
+        if (url.includes('fields=status_code')) return igResponse({ status_code: 'IN_PROGRESS' })
+        if (url.includes('/media_publish')) return igResponse({ id: 'should-not-publish' })
+        if (url.includes('/ig-1/media')) return igResponse({ id: 'cont1' }) // create container
+        return igResponse({}, false, 404)
+      }),
+    )
+    const client = recordingClient([videoItem])
+    const summary = await runPublish(client as never, { now: '2026-06-12T00:00:00.000Z' })
+
+    expect(summary.processing).toBe(1)
+    expect(summary.published).toBe(0)
+    expect(summary.results[0].outcome).toBe('processing')
+    expect(summary.results[0].finalize).toMatchObject({ containerId: 'cont1', attempt: 1 })
+    const last = client._patches.at(-1)
+    expect(last?.set).toMatchObject({ publishState: 'processing', externalContainerId: 'cont1', publishAttempts: 1 })
+  })
+
+  it('finalize publishes once the container is FINISHED', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input)
+        if (url.includes('fields=status_code')) return igResponse({ status_code: 'FINISHED' })
+        if (url.includes('/media_publish')) return igResponse({ id: 'media999' })
+        if (url.includes('fields=permalink')) return igResponse({ permalink: 'https://insta/p' })
+        return igResponse({}, false, 404)
+      }),
+    )
+    const processingItem: PublishableItem = {
+      ...videoItem,
+      publishState: 'processing',
+      externalContainerId: 'cont1',
+      publishAttempts: 1,
+    }
+    const client = recordingClient(processingItem)
+    const summary = await runPublish(client as never, {
+      now: '2026-06-12T00:00:00.000Z',
+      id: 'v1',
+      finalizeOnly: true,
+    })
+
+    expect(summary.published).toBe(1)
+    expect(summary.results[0].outcome).toBe('published')
+    expect(summary.results[0].externalId).toBe('media999')
+    const last = client._patches.at(-1)
+    expect(last?.set).toMatchObject({
+      publishState: 'published',
+      status: 'published',
+      externalPostId: 'media999',
+      publishedUrl: 'https://insta/p',
+    })
+    expect(last?.unset).toContain('externalContainerId')
+  })
+
+  it('finalize marks failed when the container reports ERROR', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input)
+        if (url.includes('fields=status_code')) return igResponse({ status_code: 'ERROR' })
+        return igResponse({}, false, 404)
+      }),
+    )
+    const processingItem: PublishableItem = {
+      ...videoItem,
+      publishState: 'processing',
+      externalContainerId: 'cont1',
+      publishAttempts: 1,
+    }
+    const client = recordingClient(processingItem)
+    const summary = await runPublish(client as never, {
+      now: '2026-06-12T00:00:00.000Z',
+      id: 'v1',
+      finalizeOnly: true,
+    })
+
+    expect(summary.failed).toBe(1)
+    expect(summary.results[0].outcome).toBe('failed')
+    const last = client._patches.at(-1)
+    expect(last?.set).toMatchObject({ publishState: 'failed' })
+    expect(last?.unset).toContain('externalContainerId')
+  })
+})
+
+describe('rendomat client', () => {
+  const saved: Record<string, string | undefined> = {}
+  const vars = ['RENDOMAT_API_BASE', 'RENDOMAT_API_KEY']
+
+  beforeEach(() => {
+    for (const key of vars) {
+      saved[key] = process.env[key]
+      delete process.env[key]
+    }
+  })
+  afterEach(() => {
+    for (const key of vars) {
+      if (saved[key] === undefined) delete process.env[key]
+      else process.env[key] = saved[key]
+    }
+  })
+
+  it('isRendomatConfigured needs both base + key', () => {
+    expect(isRendomatConfigured()).toBe(false)
+    process.env.RENDOMAT_API_BASE = 'https://r.example.com'
+    expect(isRendomatConfigured()).toBe(false)
+    process.env.RENDOMAT_API_KEY = 'rmk_x'
+    expect(isRendomatConfigured()).toBe(true)
+  })
+
+  it('resolveRendomatUrl makes relative URLs absolute and passes http(s) through', () => {
+    process.env.RENDOMAT_API_BASE = 'https://r.example.com/'
+    expect(resolveRendomatUrl('/api/files/renders/x.mp4')).toBe('https://r.example.com/api/files/renders/x.mp4')
+    expect(resolveRendomatUrl('https://cdn.r2.dev/x.mp4')).toBe('https://cdn.r2.dev/x.mp4')
+    expect(resolveRendomatUrl('')).toBe('')
+  })
+
+  it('buildCalendarItemFields maps a render to a scheduled IG reel', () => {
+    const fields = buildCalendarItemFields({
+      id: 42,
+      title: 'History of Health',
+      status: 'completed',
+      aspect_ratio: '1:1',
+      duration_seconds: 45,
+      download_url: '/api/files/x.mp4',
+      caption: 'cap',
+      alt_text: 'alt',
+      publish_at: '2026-06-20T15:00:00Z',
+      created_at: '',
+      updated_at: '',
+    })
+    expect(fields).toMatchObject({
+      title: 'History of Health',
+      status: 'scheduled',
+      autoPublish: true,
+      channel: 'instagram',
+      contentType: 'reel',
+      contentDraft: 'cap',
+      draftAltText: 'alt',
+      publishAt: '2026-06-20T15:00:00Z',
+      rendomatVideoId: '42',
+    })
   })
 })

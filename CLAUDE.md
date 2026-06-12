@@ -146,9 +146,18 @@ extension of the core, **fail-closed**: with no platform credentials nothing is 
 - **Core:** `src/lib/marketing/publishers/` — `types` (SocialPublisher interface), `content`
   (pure `buildPublishContent` + GROQ `DUE_ITEMS_QUERY` + claim/published/failed patch builders,
   all unit-tested), `linkedin` (Posts API + Images upload: text / single-image / link share),
-  `instagram` (Graph container→publish: single image + carousel), `index` (registry +
-  `connectionStatus`). Reels/video are NOT yet supported (need async status polling) — they fail
-  with a clear message.
+  `instagram` (Graph container→publish: single image + carousel, **plus Reels/video**), `index`
+  (registry + `connectionStatus`). **Reels/video are async:** publishing a `reel`/`video` item
+  (with a `socialVideo` asset) creates a REELS container, then a single status check publishes it
+  if FINISHED or returns `pending` (still processing). On pending the worker sets
+  `publishState: processing` + `externalContainerId` and the `/run` route enqueues a QStash
+  **finalize** re-check (`/run?id=&finalize=1` → `publisher.finalize(containerId)`), bounded to
+  ~15 checks × 90s (override via `INSTAGRAM_REEL_MAX_CHECKS` / `INSTAGRAM_REEL_CHECK_DELAY_SEC`).
+  No serverless function blocks waiting on the render. The finalize path takes its own revision
+  lock (QStash is at-least-once, so a duplicate delivery can't double-publish). **Backstop:** a
+  batch `/run` (no `id`) also sweeps **stale `processing` items** (not re-checked in ~3 cycles) and
+  re-finalizes them — so a lost QStash callback or a failed write-back still recovers if you run a
+  periodic `/run` (e.g. a daily Vercel cron).
 - **Endpoints** (under `/api/marketing/publish/`): `POST /schedule` (enqueue a QStash callback for
   one item, or publish-now if already due; `?dryRun=1` previews; accepts `?id=`/`body.id`/webhook
   `_id`); `GET|POST /run` (the worker; cron-secret OR `MARKETING_API_KEY` auth; `?dryRun=1`,
@@ -180,3 +189,34 @@ extension of the core, **fail-closed**: with no platform credentials nothing is 
 - **Verify locally** (dev server on :3000 + `MARKETING_API_KEY` in `.env.local`):
   `curl -X POST -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/publish/schedule?dryRun=1&id=<doc>"`
   and `curl -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/publish/run?dryRun=1"`.
+
+## Rendomat → Instagram ingest (auto-post rendered videos as Reels, built 2026-06)
+
+Pulls completed renders from **Rendomat** (the `vsl-generator` project at
+`C:\Users\quest\Programming\vsl-generator`) and turns them into scheduled, auto-publishing
+Instagram **Reels**. Rendomat is export-only (it renders; our calendar owns scheduling + tokens),
+which matches the publishing suite exactly.
+
+- **Flow:** `POST /api/marketing/rendomat/ingest` lists completed Rendomat videos with a `publish_at`
+  in a look-ahead window, **dedupes by `rendomatVideoId`**, pulls each export manifest, downloads
+  the MP4 (with the `rmk_` key) and **re-uploads it to Sanity** (stable public URL Instagram can
+  fetch), creates a `marketingCalendarItem` (`contentType: reel`, `autoPublish`, `status: scheduled`,
+  `socialVideo` asset, caption→`contentDraft`, alt→`draftAltText`, `publish_at`→`publishAt`), and
+  enqueues the exact-time QStash publish. From there the normal publish worker posts the Reel.
+- **Core:** `src/lib/marketing/rendomat.ts` — `isRendomatConfigured`, `listCompletedVideos`,
+  `getRendomatExport`, `downloadRendomatAsset`, `resolveRendomatUrl` (relative `/api/files/…` →
+  absolute), `buildCalendarItemFields` (pure, unit-tested). Route:
+  `src/app/api/marketing/rendomat/ingest/route.ts` (cron-secret OR `MARKETING_API_KEY`; `?dryRun=1`,
+  `?days=N`, `?limit=N`). Fail-closed: nothing ingests unless `RENDOMAT_API_BASE` + `RENDOMAT_API_KEY`
+  are set (503 otherwise).
+- **Connect Rendomat:** `RENDOMAT_API_BASE` (the Rendomat app URL) + `RENDOMAT_API_KEY` (an `rmk_…`
+  key with `read` scope, from Rendomat **Account → API keys**). The external API only exposes the
+  rendered **video** (no per-slide images), so Instagram posts are **Reels**, not image carousels.
+- **Trigger:** call `/ingest` from a QStash schedule or a Vercel cron (or Rendomat's planned
+  `export.ready` webhook). Verify: `curl -X POST -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/rendomat/ingest?dryRun=1"`.
+- **Storage note:** each ingested render is **re-hosted to Sanity** (a public `cdn.sanity.io` file
+  URL) so Instagram can fetch it independently of Rendomat uptime — it counts against Sanity asset
+  storage/bandwidth, and the asset stays public (these are marketing videos bound for a public IG
+  post anyway). Downloads are timeout-bounded (25s) to stay within the serverless limit. If a
+  render's `publish_at` is past, schedulePublish enqueues it for immediate posting; if QStash is
+  unset the item is still created (status scheduled) and a periodic `/publish/run` sweep posts it.

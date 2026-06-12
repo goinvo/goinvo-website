@@ -18,28 +18,32 @@ export {
   DUE_ITEMS_QUERY,
   DUE_SINGLE_ITEM_QUERY,
   SINGLE_ITEM_QUERY,
+  STALE_PROCESSING_QUERY,
   resolveSocialPlatform,
   buildCaption,
   buildMedia,
   buildPublishContent,
   buildClaimPatch,
+  buildProcessingPatch,
   buildPublishedPatch,
   buildFailedPatch,
 } from './content'
 export type { PublishableItem, ItemPatch } from './content'
 
-// The publish worker (shared by /run and the QStash callback).
+// The publish worker (shared by /run, the QStash publish callback, and finalize).
 export { runPublish } from './worker'
-export type { RunPublishOptions, PublishResultEntry, PublishRunSummary } from './worker'
+export type { RunPublishOptions, PublishResultEntry, PublishRunSummary, FinalizeSignal } from './worker'
 
-// QStash exact-time scheduling.
+// QStash exact-time scheduling + async finalize re-checks.
 export {
   isQStashConfigured,
   notBeforeSeconds,
   buildCallbackUrl,
+  buildFinalizeCallbackUrl,
   schedulePublish,
+  scheduleFinalize,
 } from './schedule'
-export type { SchedulePublishParams, ScheduleResult } from './schedule'
+export type { SchedulePublishParams, ScheduleFinalizeParams, ScheduleResult } from './schedule'
 
 // Shared types.
 export { SOCIAL_PLATFORMS } from './types'

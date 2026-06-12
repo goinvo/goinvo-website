@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { assertMarketingApiKey, getMarketingWriteClient, runPublish } from '@/lib/marketing'
+import { assertMarketingApiKey, getMarketingWriteClient, runPublish, scheduleFinalize } from '@/lib/marketing'
 
 // Publish worker endpoint for the marketing calendar's social auto-publishing.
 //
@@ -37,11 +37,14 @@ function authorize(req: Request): boolean {
   }
 }
 
-async function readParams(req: Request): Promise<{ id?: string; dryRun: boolean; onlyIfDue: boolean }> {
+async function readParams(
+  req: Request,
+): Promise<{ id?: string; dryRun: boolean; onlyIfDue: boolean; finalize: boolean }> {
   const url = new URL(req.url)
   let id = url.searchParams.get('id') || undefined
   let dryRun = url.searchParams.get('dryRun') === '1' || url.searchParams.get('dryRun') === 'true'
   const onlyIfDue = url.searchParams.get('onlyIfDue') === '1' || url.searchParams.get('onlyIfDue') === 'true'
+  const finalize = url.searchParams.get('finalize') === '1' || url.searchParams.get('finalize') === 'true'
 
   if (req.method === 'POST') {
     try {
@@ -52,7 +55,7 @@ async function readParams(req: Request): Promise<{ id?: string; dryRun: boolean;
       // No / invalid body is fine; fall back to query params.
     }
   }
-  return { id, dryRun, onlyIfDue }
+  return { id, dryRun, onlyIfDue, finalize }
 }
 
 async function handle(req: Request): Promise<NextResponse> {
@@ -70,7 +73,7 @@ async function handle(req: Request): Promise<NextResponse> {
     )
   }
 
-  const { id, dryRun, onlyIfDue } = await readParams(req)
+  const { id, dryRun, onlyIfDue, finalize } = await readParams(req)
 
   try {
     const summary = await runPublish(client, {
@@ -78,7 +81,29 @@ async function handle(req: Request): Promise<NextResponse> {
       id,
       dryRun,
       onlyIfDue,
+      finalizeOnly: finalize,
     })
+
+    // Schedule QStash re-checks for any async (video) publish still processing.
+    if (!dryRun) {
+      const url = new URL(req.url)
+      const baseUrl = `${url.protocol}//${url.host}`
+      const forwardApiKey = process.env.MARKETING_API_KEY || ''
+      for (const result of summary.results) {
+        if (!result.finalize) continue
+        const scheduled = await scheduleFinalize({
+          itemId: result.id,
+          delaySeconds: result.finalize.delaySec,
+          attempt: result.finalize.attempt,
+          baseUrl,
+          forwardApiKey,
+        })
+        if (!scheduled.ok) {
+          console.warn(`Finalize re-check enqueue failed for ${result.id}: ${scheduled.error}`)
+        }
+      }
+    }
+
     return NextResponse.json(summary)
   } catch (error) {
     return NextResponse.json(
