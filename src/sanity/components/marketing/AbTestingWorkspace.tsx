@@ -643,6 +643,15 @@ export function AbTestingWorkspace({
               </div>
             </div>
 
+            <AbTestingVerdictBanner
+              experiment={draft}
+              summary={selectedResultSummary}
+              comparisons={selectedComparisons}
+              launchReady={selectedLaunchReady}
+              launchTotal={selectedLaunchItems.length}
+              launchPercent={selectedLaunchPercent}
+            />
+
             <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0, borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
               <AbTestingSummaryCell label="State" value={getAbTestingDisplayStatusLabel(draft)} detail={getAbTestingDashboardStatusDetail(draft)} />
               <AbTestingSummaryCell label="Launch readiness" value={`${selectedLaunchReady}/${selectedLaunchItems.length}`} detail={`${selectedLaunchPercent}% complete`} />
@@ -834,6 +843,102 @@ function AbTestingInsightRow({ insight, last = false }: { insight: AbTestingInsi
         <strong style={{ fontSize: 13 }}>{insight.title}</strong>
       </div>
       <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>{insight.action}</p>
+    </div>
+  )
+}
+
+function AbTestingVerdictBanner({
+  experiment,
+  summary,
+  comparisons,
+  launchReady,
+  launchTotal,
+  launchPercent,
+}: {
+  experiment: MarketingExperiment
+  summary: AbTestingComparisonSummary | null
+  comparisons: AbTestingComparisonResult[]
+  launchReady: number
+  launchTotal: number
+  launchPercent: number
+}) {
+  const scoreboard = getAbTestingComparisonScoreboard(experiment, comparisons)
+  const leader = summary || getAbTestingComparisonSummary(experiment, comparisons)
+  const setupIncomplete = launchTotal > 0 && launchReady < launchTotal
+  const noVerdict = scoreboard.total === 0 || scoreboard.pendingCount >= scoreboard.total
+  const hasClearLeader = leader.status === 'control' || leader.status === 'variant'
+  const leaderWins = leader.status === 'control' ? scoreboard.controlWins : scoreboard.variantWins
+  const decisionLabel = experiment.decision ? labelFor(experimentDecisionOptions, experiment.decision) : ''
+  const decided = Boolean(experiment.decision)
+  // Winning every compared metric AND fully launched = a confident call.
+  const winsAllMetrics = hasClearLeader && scoreboard.total > 0 && leaderWins >= scoreboard.total
+  const callable = winsAllMetrics && launchPercent >= 100
+
+  // Tone tracks the verdict branch so colors stay consistent with the rest of
+  // the suite: amber when setup is incomplete (control tone), neutral while
+  // collecting/even (needsComparison tone), leader tone once a page is ahead.
+  let tone = getAbTestingComparisonTone('needsComparison')
+  if (setupIncomplete) tone = getAbTestingComparisonTone('control')
+  else if (decided) tone = getAbTestingComparisonTone('variant')
+  else if (!noVerdict && hasClearLeader) tone = getAbTestingComparisonTone(leader.status)
+
+  let headline: string
+  let recommendation: string
+  if (setupIncomplete) {
+    headline = "Setup isn't finished yet"
+    recommendation = 'Finish the launch checklist before trusting the result.'
+  } else if (noVerdict) {
+    headline = 'Collecting data — no verdict yet'
+    recommendation = 'Keep it running and check back as visits accumulate — not enough signal to call yet.'
+  } else if (hasClearLeader) {
+    headline = `${leader.status === 'control' ? scoreboard.controlLabel : scoreboard.variantLabel} is ahead — winning ${leaderWins} of ${scoreboard.total} metrics`
+    recommendation = callable
+      ? 'Looks callable — review the evidence and record the decision.'
+      : "It's leading but not conclusive — keep running for a confident call."
+  } else {
+    headline = `No clear winner yet — ${scoreboard.controlWins}–${scoreboard.variantWins} across ${scoreboard.total} metrics`
+    recommendation = 'Keep it running and check back as visits accumulate — not enough signal to call yet.'
+  }
+
+  // A recorded decision overrides the live readout — the test is settled.
+  if (decided) {
+    headline = `Decision recorded: ${decisionLabel}`
+    recommendation = 'Roll out the winning page and archive the test.'
+  }
+
+  return (
+    <div
+      data-ab-verdict-banner="true"
+      style={{
+        borderRadius: 8,
+        border: `1px solid ${tone.border}`,
+        borderLeft: `4px solid ${tone.fg}`,
+        background: tone.bg,
+        padding: '12px 14px',
+        display: 'grid',
+        gap: 7,
+      }}
+    >
+      <span
+        style={{
+          ...styles.small,
+          justifySelf: 'start',
+          border: `1px solid ${tone.border}`,
+          color: tone.fg,
+          borderRadius: 999,
+          padding: '3px 9px',
+          fontWeight: 900,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {getAbTestingDisplayStatusLabel(experiment)}
+      </span>
+      <strong style={{ fontSize: 18, lineHeight: 1.2 }}>{headline}</strong>
+      <p style={{ ...styles.small, margin: 0, lineHeight: 1.5 }}>
+        <span style={{ fontWeight: 800 }}>Next:</span> {recommendation}
+      </p>
     </div>
   )
 }
