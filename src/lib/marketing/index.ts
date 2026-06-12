@@ -77,6 +77,47 @@ export type {
   MarketingFieldBag,
 } from './clone'
 
+// Social auto-publishing: adapters, registry, content mapping, worker, scheduling.
+export {
+  getPublisher,
+  getPublishers,
+  connectionStatus,
+  instagramPublisher,
+  linkedInPublisher,
+  DUE_ITEMS_QUERY,
+  DUE_SINGLE_ITEM_QUERY,
+  SINGLE_ITEM_QUERY,
+  resolveSocialPlatform,
+  buildCaption,
+  buildMedia,
+  buildPublishContent,
+  buildClaimPatch,
+  buildPublishedPatch,
+  buildFailedPatch,
+  runPublish,
+  isQStashConfigured,
+  notBeforeSeconds,
+  buildCallbackUrl,
+  schedulePublish,
+  SOCIAL_PLATFORMS,
+} from './publishers'
+export type {
+  PlatformConnection,
+  PublishableItem,
+  ItemPatch,
+  RunPublishOptions,
+  PublishResultEntry,
+  PublishRunSummary,
+  SchedulePublishParams,
+  ScheduleResult,
+  SocialPlatform,
+  SocialPublisher,
+  PublishContent,
+  PublishMedia,
+  PublishSuccess,
+  PublishOutcome,
+} from './publishers'
+
 // Linked-draft cascade (create-linked-drafts from a research project).
 export { createResearchProjectRecords } from './cascades'
 export type {
