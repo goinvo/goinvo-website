@@ -152,9 +152,15 @@ extension of the core, **fail-closed**: with no platform credentials nothing is 
 - **Endpoints** (under `/api/marketing/publish/`): `POST /schedule` (enqueue a QStash callback for
   one item, or publish-now if already due; `?dryRun=1` previews; accepts `?id=`/`body.id`/webhook
   `_id`); `GET|POST /run` (the worker; cron-secret OR `MARKETING_API_KEY` auth; `?dryRun=1`,
-  `?id=<docId>`, `?onlyIfDue=1`); `GET /status` (per-platform connection + due count, key-gated —
-  for a Studio indicator). Worker/scheduling logic lives in the core (`publishers/worker.ts`,
-  `publishers/schedule.ts`) so the routes stay thin.
+  `?id=<docId>`, `?onlyIfDue=1`); `GET /status` (per-platform connection + due count). Worker/
+  scheduling logic lives in the core (`publishers/worker.ts`, `publishers/schedule.ts`) so the
+  routes stay thin.
+- **Studio "not connected" indicator:** `components/marketing/PublishConnectionStatus.tsx` is a
+  banner shown on the **Calendar** (above the grid) and **Channels** (full-width) tabs. It reads
+  `/status` as the logged-in Studio user (the route uses `assertStudioOrApiKey`, so a Studio
+  `x-sanity-session` token OR `MARKETING_API_KEY` works) and shows amber "LinkedIn/Instagram · Not
+  connected" pills until credentials are set — so it's obvious that scheduled posts won't actually
+  post yet. `/status` only ever returns platform names + missing-var NAMES + a due count (no secrets).
 - **Connect a platform (only these unlock live posting — same "set the secret" gate as the rest):**
   - LinkedIn: `LINKEDIN_ACCESS_TOKEN` (w_organization_social), `LINKEDIN_AUTHOR_URN`
     (`urn:li:organization:<id>`), optional `LINKEDIN_API_VERSION` (YYYYMM). Needs the
