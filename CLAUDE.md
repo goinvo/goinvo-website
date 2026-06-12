@@ -119,3 +119,64 @@ write/derive logic moves into a shared core that both the Studio tool AND the RE
   no request auth) move behind `MARKETING_API_KEY`. (The `ga4-ab` route, once part of this
   set, was later retired/removed — per-variant engagement is now first-party.)
 - **Env:** set `MARKETING_API_KEY` in `.env.local` and on Vercel.
+
+## Social auto-publishing — scheduled posts to LinkedIn + Instagram (built 2026-06)
+
+Posts the marketing **calendar** to social channels at their scheduled time. Built as a portable
+extension of the core, **fail-closed**: with no platform credentials nothing is ever posted.
+
+- **How an item publishes:** set `autoPublish: true` on a `marketingCalendarItem`, give it
+  `status: "scheduled"`, a `publishAt`, and a `channelRef`/`channel` of `linkedin` or `instagram`.
+  At that exact time the publish worker (`/api/marketing/publish/run`) claims it with an
+  **optimistic revision lock** (no double-posts across overlapping runs), publishes via the
+  platform adapter, and writes back `status: published` + `externalPostId` + `publishedUrl`, or
+  `publishState: failed` + `publishError`.
+- **Trigger = Upstash QStash (exact-time, no cron).** When an item is scheduled,
+  `POST /api/marketing/publish/schedule` enqueues a one-shot QStash callback for its exact
+  `publishAt` (QStash `Upstash-Not-Before`). QStash POSTs `/publish/run?id=<doc>&onlyIfDue=1` at
+  that time, **forwarding our `MARKETING_API_KEY`** as the bearer (`Upstash-Forward-Authorization`)
+  so the callback authenticates with the normal API auth — no JWT verification. `onlyIfDue`
+  re-checks the item is still due, so a stale/rescheduled message is a safe no-op. (There is NO
+  Vercel publish cron — QStash replaced it, avoiding the Pro per-15-min cron limit.)
+- **Worker state** lives in new calendar fields (group "Publishing"): `autoPublish`,
+  `publishState` (queued/publishing/published/failed/skipped, worker-owned), `externalPostId`,
+  `publishAttemptedAt`, `publishError`, `publishLockAt` (hidden). Media: `socialImage` (single
+  post / carousel cover) + per-`draftFrame` `image` (carousel slides). Instagram **requires** an
+  image — text-only IG posts are rejected.
+- **Core:** `src/lib/marketing/publishers/` — `types` (SocialPublisher interface), `content`
+  (pure `buildPublishContent` + GROQ `DUE_ITEMS_QUERY` + claim/published/failed patch builders,
+  all unit-tested), `linkedin` (Posts API + Images upload: text / single-image / link share),
+  `instagram` (Graph container→publish: single image + carousel), `index` (registry +
+  `connectionStatus`). Reels/video are NOT yet supported (need async status polling) — they fail
+  with a clear message.
+- **Endpoints** (under `/api/marketing/publish/`): `POST /schedule` (enqueue a QStash callback for
+  one item, or publish-now if already due; `?dryRun=1` previews; accepts `?id=`/`body.id`/webhook
+  `_id`); `GET|POST /run` (the worker; cron-secret OR `MARKETING_API_KEY` auth; `?dryRun=1`,
+  `?id=<docId>`, `?onlyIfDue=1`); `GET /status` (per-platform connection + due count). Worker/
+  scheduling logic lives in the core (`publishers/worker.ts`, `publishers/schedule.ts`) so the
+  routes stay thin.
+- **Studio "not connected" indicator:** `components/marketing/PublishConnectionStatus.tsx` is a
+  banner shown on the **Calendar** (above the grid) and **Channels** (full-width) tabs. It reads
+  `/status` as the logged-in Studio user (the route uses `assertStudioOrApiKey`, so a Studio
+  `x-sanity-session` token OR `MARKETING_API_KEY` works) and shows amber "LinkedIn/Instagram · Not
+  connected" pills until credentials are set — so it's obvious that scheduled posts won't actually
+  post yet. `/status` only ever returns platform names + missing-var NAMES + a due count (no secrets).
+- **Connect a platform (only these unlock live posting — same "set the secret" gate as the rest):**
+  - LinkedIn: `LINKEDIN_ACCESS_TOKEN` (w_organization_social), `LINKEDIN_AUTHOR_URN`
+    (`urn:li:organization:<id>`), optional `LINKEDIN_API_VERSION` (YYYYMM). Needs the
+    **Community Management API** product approved + an org admin.
+  - Instagram: `INSTAGRAM_ACCESS_TOKEN` (instagram_content_publish), `INSTAGRAM_BUSINESS_ACCOUNT_ID`,
+    optional `INSTAGRAM_GRAPH_VERSION`/`INSTAGRAM_GRAPH_HOST`. Needs an IG **Business/Creator**
+    account + linked FB Page + Meta App Review.
+- **Wire the trigger (QStash + Sanity webhook):**
+  - Set `QSTASH_TOKEN` (Upstash console → QStash) and optional `MARKETING_PUBLIC_BASE_URL` (the
+    absolute prod URL QStash calls back; otherwise the request origin is used) in `.env.local` + Vercel.
+  - Add a **Sanity webhook** (manage.sanity.io → API → Webhooks) on `marketingCalendarItem`
+    create/update → `POST https://www.goinvo.com/api/marketing/publish/schedule` with header
+    `Authorization: Bearer <MARKETING_API_KEY>`. The webhook posts the doc `_id`; the endpoint
+    enqueues/reschedules QStash for its `publishAt`. (Or call `/schedule` from a Studio action.)
+  - Optional backstop: a daily Vercel cron (Hobby-safe) on `/publish/run` to sweep any item whose
+    QStash enqueue was missed.
+- **Verify locally** (dev server on :3000 + `MARKETING_API_KEY` in `.env.local`):
+  `curl -X POST -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/publish/schedule?dryRun=1&id=<doc>"`
+  and `curl -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/publish/run?dryRun=1"`.

@@ -5,6 +5,7 @@ import { randomKey, slugify } from '@/lib/marketing'
 import { channelPlatformOptions, channelStatusOptions } from '../../schemas/marketingChannel'
 import { funnelStageOptions } from '../../schemas/marketingFunnel'
 import { getChannelUsage, normalizeContentTypes } from './shared'
+import { PublishConnectionStatus } from './PublishConnectionStatus'
 import type { ChannelContentType } from './types'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
@@ -103,6 +104,9 @@ export function ChannelWorkspace({
 
   return (
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '390px minmax(0, 1fr)', gap: 16 }}>
+      <div style={{ gridColumn: '1 / -1' }}>
+        <PublishConnectionStatus variant="banner" />
+      </div>
       <section style={styles.panel}>
         <PanelHeading
           title="Channels"
