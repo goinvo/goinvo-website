@@ -119,3 +119,40 @@ write/derive logic moves into a shared core that both the Studio tool AND the RE
   no request auth) move behind `MARKETING_API_KEY`. (The `ga4-ab` route, once part of this
   set, was later retired/removed — per-variant engagement is now first-party.)
 - **Env:** set `MARKETING_API_KEY` in `.env.local` and on Vercel.
+
+## Social auto-publishing — scheduled posts to LinkedIn + Instagram (built 2026-06)
+
+Posts the marketing **calendar** to social channels at their scheduled time. Built as a portable
+extension of the core, **fail-closed**: with no platform credentials nothing is ever posted.
+
+- **How an item publishes:** set `autoPublish: true` on a `marketingCalendarItem`, give it
+  `status: "scheduled"`, a past-due `publishAt`, and a `channelRef`/`channel` of `linkedin` or
+  `instagram`. A Vercel cron (`/api/marketing/publish/run`, every 15 min — see `vercel.json`)
+  claims due items with an **optimistic revision lock** (no double-posts across overlapping runs),
+  publishes via the platform adapter, and writes back `status: published` + `externalPostId` +
+  `publishedUrl`, or `publishState: failed` + `publishError`.
+- **Worker state** lives in new calendar fields (group "Publishing"): `autoPublish`,
+  `publishState` (queued/publishing/published/failed/skipped, worker-owned), `externalPostId`,
+  `publishAttemptedAt`, `publishError`, `publishLockAt` (hidden). Media: `socialImage` (single
+  post / carousel cover) + per-`draftFrame` `image` (carousel slides). Instagram **requires** an
+  image — text-only IG posts are rejected.
+- **Core:** `src/lib/marketing/publishers/` — `types` (SocialPublisher interface), `content`
+  (pure `buildPublishContent` + GROQ `DUE_ITEMS_QUERY` + claim/published/failed patch builders,
+  all unit-tested), `linkedin` (Posts API + Images upload: text / single-image / link share),
+  `instagram` (Graph container→publish: single image + carousel), `index` (registry +
+  `connectionStatus`). Reels/video are NOT yet supported (need async status polling) — they fail
+  with a clear message.
+- **Endpoints** (under `/api/marketing/publish/`): `GET|POST /run` (the worker; cron-secret OR
+  `MARKETING_API_KEY` auth; `?dryRun=1` to preview, `?id=<docId>` to publish one now);
+  `GET /status` (per-platform connection + due count, key-gated — for a Studio indicator).
+- **Connect a platform (only these unlock live posting — same "set the secret" gate as the rest):**
+  - LinkedIn: `LINKEDIN_ACCESS_TOKEN` (w_organization_social), `LINKEDIN_AUTHOR_URN`
+    (`urn:li:organization:<id>`), optional `LINKEDIN_API_VERSION` (YYYYMM). Needs the
+    **Community Management API** product approved + an org admin.
+  - Instagram: `INSTAGRAM_ACCESS_TOKEN` (instagram_content_publish), `INSTAGRAM_BUSINESS_ACCOUNT_ID`,
+    optional `INSTAGRAM_GRAPH_VERSION`/`INSTAGRAM_GRAPH_HOST`. Needs an IG **Business/Creator**
+    account + linked FB Page + Meta App Review.
+- **⚠ Cron frequency needs Vercel Pro.** `*/15 * * * *` is Pro-only; on Hobby, cron is limited to
+  once/day — drop the schedule to daily before merging to `main`, or trigger `/run` externally.
+- **Verify locally** (dev server on :3000 + `MARKETING_API_KEY` in `.env.local`):
+  `curl -H "Authorization: Bearer $KEY" "localhost:3000/api/marketing/publish/run?dryRun=1"`.

@@ -632,6 +632,7 @@ describe('Marketing CMS schemas', () => {
       'planning',
       'content',
       'measurement',
+      'publishing',
     ])
 
     expect(fieldNames(calendarSchema)).toEqual(
