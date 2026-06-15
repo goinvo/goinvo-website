@@ -4,6 +4,7 @@ import { CarePlansCarousels } from "./CarePlansCarousels";
 import { CarePlansLegacyScripts } from "./CarePlansLegacyScripts";
 import { CarePlansPopovers } from "./CarePlansPopovers";
 import { CarePlansStickyNav } from "./CarePlansStickyNav";
+import { CarePlansTabs } from "./CarePlansTabs";
 
 type LegacyCarePlansPage = "overview" | "part1" | "part2" | "part3";
 
@@ -285,7 +286,8 @@ export function LegacyCarePlansArticle({
       <CarePlansStickyNav />
       <CarePlansPopovers />
       <CarePlansCarousels />
-      {page === "part1" && <CarePlansLegacyScripts />}
+      <CarePlansLegacyScripts page={page} />
+      {page === "part1" && <CarePlansTabs />}
     </>
   );
 }
