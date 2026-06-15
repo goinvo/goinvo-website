@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { ActionSection } from './ActionSection'
 import { GovernmentCarousel } from './GovernmentCarousel'
 import { VotingCarousel } from './VotingCarousel'
+import { RedesignDemocracyNav } from './RedesignDemocracyNav'
 import './redesign-democracy.css'
 
 const IMG = (path: string) =>
@@ -257,6 +258,9 @@ export default function RedesignDemocracyPage() {
           <h2 className="font-serif">A Better Solution for the Digital Era</h2>
         </div>
       </header>
+
+      {/* Sticky table-of-contents scroll-nav (restored from legacy) */}
+      <RedesignDemocracyNav />
 
       {/* ============================================================ */}
       {/*  SECTION 1: INTRODUCTION                                      */}

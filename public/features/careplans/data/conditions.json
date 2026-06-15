@@ -1,0 +1,514 @@
+[
+	{
+		"diabetes":{
+			"summary":"",
+			"care team":", Endocrinologist, Pharmacist, Personal Trainer, Diabetes Support Group",
+			"care plan":{
+				"Nutrition":{
+					"goals":"Transition to and sustain healthy Diabetes Diet.<br>Manage blood glucose levels in conjuction with diet.",
+					"instruction":"Log meals in conjuction with blood glucose levels.<br>Reduce meat intake, avoid red meat.<br>Reduce salt intake.<br>Increase non-starchy green vegetable intake.<br>Opt for fresh fruits over fruit juice.<br>Increase intake of calcium-rich foods (low-fat milk, yogurt, etc.).<br>Opt for whole grains.<br>Try a vegan diet.",
+					"review":"Review any difficulties in adhering diabetes meal plan.<br>Recommend substitutes for problematic food choices.<br>Review any misunderstandings in food's impact of blood glucose levels."
+				},
+				"Physical Activity":{
+					"goals":"Achieve and sustain regular exercise plan to reduce weight.",
+					"instruction":"Check blood glucose before exercising.<br>Prioritize 30 minutes a day for regular exercise.<br>Refer to facility/physical trainer to reinforce exercise plan.",
+					"review":"Review exercise habits and recommend resources to improve adherence to exercise plan."
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Mental Resilience":{
+					"goals":"Reduce distress with managing Diabetes.",
+					"instruction":"Refer to diabetes supports groups or therapist if needed.",
+					"review":"Review any distress in managing condition."
+				},
+				"Managing Medication":{
+					"goals":"Keep blood glucose levels within the normal range.",
+					"instruction":"Take diabetes medication as prescribed.<br>Receive education on what medications do and the importance of adherence.<br>Receive education on the the target blood glucose levels.",
+					"review":"Review effectiveness of medication and how it is impacting other health metrics.<br>Review any medication side effects."
+				},
+				"Sexual Health":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"Reduce alcohol consumption.",
+					"instruction":"Alcohol has a lot of calories, and can cause blood glucose to rise.<br>If you drink alcohol, drink occasionally and ensure glucose levels are well controlled.",
+					"review":"Review any problematic symptoms associated with alcohol consumption.<br>Review any changes in alcohol consumption.<br>Review any problems with cessation."
+				},
+				"Tracking Vitals":{
+					"goals":"Understand effect of interventions on health outcomes.<br>Reduce weight.<br>Reduce A1C below 7%.<br>Reduce spikes in blood glucose levels.",
+					"instruction":"Download diabetes management phone application.<br>Set reminders for regular tracking.<br>Keep glucometer with you at all times.<br>Enlist caregiver or friend to hold you accountable.",
+					"review":"Review logged blood glucose levels.<br>Review A1C every 6 months.<br>Review trend in weight.<br>Review vitals associated with comorbid conditions."
+				},
+				"Managing ADLs":{
+					"goals":"Prevent gum disease.<br>Prevent infection.",
+					"instruction":"Brush teeth and floss twice daily.<br>Check feet for sores with signs of infection regularly.",
+					"review":"Review general management of Diabetes with daily activities."
+				}
+			}
+		},
+		"obesity":{
+			"summary":"",
+			"care team":", Personal Trainer, Weight-Loss Program",
+			"care plan":{
+				"Nutrition":{
+					"goals":"Achieve and sustain healthy eating habits.",
+					"instruction":"Reduce total caloric intake to 1,200 - 1,800.<br>Opt for less calorie-dense, filling foods such as vegetables and fruits.<br>Avoid high density, fatty foods such as fast foods, sodas, and candies.<br>Focus diet on plant-based foods such as fruits, vegetables, whole grains, beans, and soy.",
+					"review":"Review effectiveness of meal plan on weight trend.<br>Review any problems in meal plan adherece, and recommend substitutes or resources as needed."
+				},
+				"Physical Activity":{
+					"goals":"Get 150 minutes of moderate-intensity phsyical activity.",
+					"instruction":"Find physical activities you enjoy doing to increase adherence to the exercise plan.<br>Set personal daily step activity duration goals.<br>Join a faclity or hire a trainer to hold you accountable.<br>Refer to community support groups and resources.",
+					"review":"Review any effectiveness of exercise plan on weight trend.<br>Review any problems in exercise plan adherece, and recommend substitutes or resources as needed."
+				},
+				"Sleep":{
+					"goals":"Maintain a regular sleep schedule.",
+					"instruction":"",
+					"review":"Review any obesity-related sleep disturbances."
+				},
+				"Mental Resilience":{
+					"goals":"",
+					"instruction":"",
+					"review":"Review any symptoms of comorbid mental illness such as depression, anxiety, or emotional eating."
+				},
+				"Managing Medication":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sexual Health":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"Reduce impulse to overeat.",
+					"instruction":"Refer to therapist or community support group if needed.<br>Find effective coping behaviors to mange impulses.",
+					"review":"Review effectiveness of coping strategies"
+				},
+				"Tracking Vitals":{
+					"goals":"Understand how health interventions affect weight.<br>Track weight regularly.",
+					"instruction":"Receive education about factors of weight loss.<br>Set reminders to track weight once a week.",
+					"review":"Review vitals for associated comorbid conditions."
+				},
+				"Managing ADLs":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				}
+			}
+		},
+		"smoking":{
+			"summary":"",
+			"care team":", Smoking Cessation Support Group",
+			"care plan":{
+				"Nutrition":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Physical Activity":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Mental Resilience":{
+					"goals":"",
+					"instruction":"Smoking cessation products and therapies could double or triple the chance of lasting change: try the patch or a support group.<br>Enlist the help of a friend or family member to hold you accountable.",
+					"review":"Review the need for and refer to smoking cessation resources."
+				},
+				"Managing Medication":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sexual Health":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"Quit Smoking.",
+					"instruction":"Say \"No\" to smoking for good, the health rewards begin immediately.",
+					"review":"Review smoking behaviors."
+				},
+				"Tracking Vitals":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Managing ADLs":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				}
+			}
+		},
+		"depression":{
+			"summary":"",
+			"care team":", Psychiatrist, Psychologist, Pharmacist",
+			"care plan":{
+				"Nutrition":{
+					"goals":"Reduce depression-related over-eating.",
+					"instruction":"Avoid or manage stressors through relaxation techniques such as meditation.<br>Discuss eating habits during therapy sessions.",
+					"review":"Review any dietary problems such as emotional eating."
+				},
+				"Physical Activity":{
+					"goals":"Improve mood through endorphins.",
+					"instruction":"Get regular aerobic exercise.",
+					"review":""
+				},
+				"Sleep":{
+					"goals":"Reduce depression-related fatigue and decreased energy.",
+					"instruction":"Staying active promotes better better sleep.<br>Participate in fun activities with friends and loved ones.<br>Avoid caffeine 6 hours before bedtime.",
+					"review":"Review any depression-related sleep disturbances."
+				},
+				"Mental Resilience":{
+					"goals":"Improve mood.<br>Reduce irritability and restlessness.<br>Reduce difficulty concentrating.",
+					"instruction":"Attend therapy sessions as directed/needed.",
+					"review":"Review mood improvement, irritability, restlessness, and difficulty concentrating."
+				},
+				"Managing Medication":{
+					"goals":"Improve mood.",
+					"instruction":"Take antidepressant regularly as prescribed.",
+					"review":"Review change in symptoms.<br>Review any side effects."
+				},
+				"Sexual Health":{
+					"goals":"Improve loss of interest in sex.",
+					"instruction":"",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"Avoid alcohol.",
+					"instruction":"Alcohol can worsen symptoms, seek help from clinician if help is needed to cease use.",
+					"review":"Review alcohol use."
+				},
+				"Tracking Vitals":{
+					"goals":"Understand changes in depression symptoms and how care plan changes affect them.",
+					"instruction":"Track mood daily using a phone app.<br>Track weight once every 2 weeks.",
+					"review":"Review trend in mood over time relative to interventions."
+				},
+				"Managing ADLs":{
+					"goals":"Improve interest in hobbies/activities.<br>Increase social interaction.",
+					"instruction":"",
+					"review":""
+				}
+			}
+		},
+		"option01":{
+			"summary":" Isabella recently tore her ACL during a soccer game and underwent surgery to repair the ligament. It has been 3 weeks since the surgery, and she is now in the rehabilitation process.",
+			"care team":", Orthopedic, Surgeon, Anesthetist, Nurse, Physical Therapist, Pharmacist",
+			"care plan":{
+				"Nutrition":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Physical Activity":{
+					"goals":"Get adequate rest from physical activity.<br>Complete physical therapy program.",
+					"instruction":"Attend physical therapy sessions 3 times per week.<br>Complete stretches and band strengthening exercises twice per day.",
+					"review":"Review adherence to and effectiveness of physical therapy program."
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":"Review any sleep disturbances related to pain."
+				},
+				"Mental Resilience":{
+					"goals":"",
+					"instruction":"",
+					"review":"Review any distress related to consequences of knee injury."
+				},
+				"Managing Medication":{
+					"goals":"Manage knee pain and swelling.",
+					"instruction":"Take OTC pain medication as prescribed.<br>Ice and elevate knee during swelling and after physical therapy exercises.",
+					"review":"Review any unmanagable pain or swelling."
+				},
+				"Sexual Health":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Tracking Vitals":{
+					"goals":"Prevent muscle loss.<br>Maintain adequate range of motion.",
+					"instruction":"Track weight regularly to monitor loss of muscle content. ",
+					"review":"Review muscle weight loss and adjust plan as needed.<br>Review range of motion and strength."
+				},
+				"Managing ADLs":{
+					"goals":"Protect healing ligament from reinjury.<br>Maintain proper hygiene and locomotion without harming the knee or incision site.",
+					"instruction":"Wear prescribed knee brace regularly.<br>Receive education about incision hygiene.",
+					"review":"Review any issues with ADL management."
+				}
+			}
+		},
+		"option11":{
+			"summary":" Isabella started her first menstrual cycle last month.",
+			"care team":"",
+			"care plan":{
+				"Nutrition":{
+					"goals":"Reduce risk of iron deficiency from menstruation.",
+					"instruction":"Get 8mg of iron a day, found in red meats, beans, and nutrient rich cereals.",
+					"review":"Review iron levels to ensure that action is taken when a deficiency is observed."
+				},
+				"Physical Activity":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Mental Resilience":{
+					"goals":"Grow confidence and maintain a positive body image.",
+					"instruction":"Keep an open dialog with close family members or school counselors about physical/emotial changes.<br>Received education on what changes to look for and what to do when they occur. ",
+					"review":"Review mental growth during this time to determine if a health professional or pediatrician is required for further assistance or counseling.  "
+				},
+				"Managing Medication":{
+					"goals":"Increase iron levels.",
+					"instruction":"Take a 65mg iron supplement every day.",
+					"review":"Track iron levels to determine if adjustments in medication should be made."
+				},
+				"Sexual Health":{
+					"goals":"Understand what puberty is and how to manage it.<br>Promote positive body image during major changes to the body. ",
+					"instruction":"Receive education about menstruation product options and risk factors.",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Tracking Vitals":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Managing ADLs":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				}
+			}
+		},
+		"option02":{
+			"summary":" Reggie's mother was recently moved to an intensive memory-care unit at an assisted living facility after her Alzheimer's progressed. Reggie arranges all of his mother's medical concerns, and goes to visit with her every other night and during the day on weekends.",
+			"care team":", Online Caregiver Support Group, Loved one in need of care, Assistive Care Service",
+			"care plan":{
+				"Nutrition":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Physical Activity":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Mental Resilience":{
+					"goals":"Manage mental/physical stress associated with caregiving.<br>Manage social discomfort associated with caregiver identity.<br>Cope with grief from loss of loved-one's usual personality.",
+					"instruction":"Refer to therapist, support groups, or online community support network.",
+					"review":"Review any grief/distress associated with caregiving."
+				},
+				"Managing Medication":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sexual Health":{
+					"goals":"Protect personal time and independence.",
+					"instruction":"Receive education about the importance of personal time and space, and what resources are available to allow for it.",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Tracking Vitals":{
+					"goals":"Manage both personal and loved one's medical documents.",
+					"instruction":"",
+					"review":""
+				},
+				"Managing ADLs":{
+					"goals":"Manage both personal and loved one's daily activities.<br>Manage added financial stress from caregiving services.<br>Ensure career needs are met or realistically adjusted.",
+					"instruction":"Download task management phone application.<br>Refer to affordable community resources.",
+					"review":"Review any problems in time management and offer solutions or resources."
+				}
+			}
+		},
+		"option12":{
+			"summary":" Reggie was also recently diagnosed with Chlamydia by his doctor.",
+			"care team":"Pharmacist",
+			"care plan":{
+				"Nutrition":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Physical Activity":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Mental Resilience":{
+					"goals":"",
+					"instruction":"",
+					"review":"Review any distress related to STD."
+				},
+				"Managing Medication":{
+					"goals":"Complete medication regimen.",
+					"instruction":"Take 100mg of Doxycycline twice a day for 7 days.",
+					"review":"Review medication adherence.<br>Review any side effects of medication."
+				},
+				"Sexual Health":{
+					"goals":"Understand what Chlamydia is and how it is transmitted.",
+					"instruction":"Abstain from sexual intercourse until both you and your sexual partner have completed treatment.<br>Notify all past sexual partners to get checked for Chlamydia.",
+					"review":"Review any problems with adherence to abstinence."
+				},
+				"Cessation of Bad Habits":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Tracking Vitals":{
+					"goals":"Check for any other comorbid STDs.",
+					"instruction":"Get tested for HIV, Gonorrhea, and syphilis.",
+					"review":"Review test results."
+				},
+				"Managing ADLs":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				}
+			}
+		},
+		"option03":{
+			"summary":" Donna has also been displaying early symptoms of dementia and has recently met with her doctor to address this issue.",
+			"care team":", Neurologist, Pharmacist, Live-in Professional Caregiver",
+			"care plan":{
+				"Nutrition":{
+					"goals":"Maintain current weight.",
+					"instruction":"Encourage snacks between mealtimes and if difficulty arises in chewing, provide softer foods such as eggs or soup.",
+					"review":"Consult with a dietician to assess levels of nutrition. "
+				},
+				"Physical Activity":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Sleep":{
+					"goals":"Be able to have a nights rest without waking up multiple times. ",
+					"instruction":"Reduce nighttime television consumption. ",
+					"review":"Review sleep habits a month from now."
+				},
+				"Mental Resilience":{
+					"goals":"Retain as many long term memories as possible.",
+					"instruction":"Have family and friends take time to share old memories by viewing photographs, souvenirs, and talking about the past.",
+					"review":"Discuss recent trends in memory loss with a care provider to determine if additional habits or exercises may be necessary."
+				},
+				"Managing Medication":{
+					"goals":"Remember to take prescription of Cholinesterase inhibitors such as Donepezil (medication targetting dementia symptoms).",
+					"instruction":"Explain the medication regimen to spouse to ensure that there is an additional care provider to help as a reminder.<br>Use a medication adherence product to keep track of Donepezil consumption.",
+					"review":"Review medication adherence levels a month from now."
+				},
+				"Sexual Health":{
+					"goals":"Maintain current levels of intimacy with partner.",
+					"instruction":"Make an appointment with a nurse to consult about whether appropriate sexual behavior may have been affected by the onset of dementia.<br>Consider having sex in the mornings, or at times of day when both parties are most rested.",
+					"review":"Review sexual health quality with primary care provider before determining whether an appointment with a specialized professional is needed."
+				},
+				"Cessation of Bad Habits":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Tracking Vitals":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Managing ADLs":{
+					"goals":"Be able to main current levels of daily living activities such as driving function, bathing, or brushing.",
+					"instruction":"Have a close care provider (spouse, family member) assist in daily living activities, as well as label objects such as doors and important items.",
+					"review":"Review the level of assistance required in order to live safely and independently as possible."
+				}
+			}
+		},
+		"option13":{
+			"summary":" Donna was recently diagnosed with hypertension at her last annual check-up.",
+			"care team":", Cardiologist, Pharmacist",
+			"care plan":{
+				"Nutrition":{
+					"goals":"Eat a heart-healthier diet to help reduce blood pressure.",
+					"instruction":"Do not consume more than 2,300 milligrams of sodium a day.<br>Avoid spreading butter or adding cream to any grains.<br>Eat 6 to 8 servings of grain a day, such as cereal and rice.<br>Eat 4 to 5 servings of vegetables a day, especially leafy green vegetables.",
+					"review":"Review food being consumed, and make changes in nutrition plan with blood pressure levels in mind."
+				},
+				"Physical Activity":{
+					"goals":"Maintain regular exercise regimen to help reduce blood pressure and stress.",
+					"instruction":"Prioritize aerobic activity (such as brisk walk) for your 30 mins of activity each day.",
+					"review":"Review for barriers to exercise plan adherence."
+				},
+				"Sleep":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Mental Resilience":{
+					"goals":"Reduce stress.",
+					"instruction":"Practice deep breathing, positive self-talk, or meditation to cope with and prevent stress.",
+					"review":"Consult with a care provider to discuss current levels of stress and if a specialist is needed."
+				},
+				"Managing Medication":{
+					"goals":"Reduce blood pressure by complying with the medication regimen.",
+					"instruction":"Begin with thiazide diuretics such as hydrochlorothiazide. ",
+					"review":"Review medication regimen with a care provider to determine if doses may need to be adjusted."
+				},
+				"Sexual Health":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				},
+				"Cessation of Bad Habits":{
+					"goals":"Stop use of smoking or chewing tobacco products.",
+					"instruction":"Remove tabacco products from the home.",
+					"review":"Review frequency and duration of tobacco use before consulting a care provider to consider medication options."
+				},
+				"Tracking Vitals":{
+					"goals":"Track blood pressure daily at home to monitor progress.<br>View a reduction in average resting blood pressure by 10/5 mm Hg by May.",
+					"instruction":"Purchase a digital blood pressure monitor to use at least twice a week.<br>Keep a log of blood pressure changes and trends; have other care team members assist as needed.",
+					"review":"Review average blood pressure trends half a year from now, with your primary care physician."
+				},
+				"Managing ADLs":{
+					"goals":"",
+					"instruction":"",
+					"review":""
+				}
+			}
+		}
+	}
+]

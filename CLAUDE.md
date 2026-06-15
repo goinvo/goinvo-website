@@ -8,6 +8,27 @@
 > work is tracked in [GitHub Issues](https://github.com/goinvo/goinvo-website/issues) (labeled
 > `tech-debt` / `analytics` / `seo` / `infra`) — file an issue rather than leaving it implicit.
 
+> **OLD GATSBY SITE (pre-Next migration — the migration source of truth):**
+> `C:\Users\quest\Programming\GoInvo\goinvo.com`. Reference for migration fidelity (legacy
+> markup, styles, behavior); run with `npm run develop` (Gatsby dev :8000) to compare. NOTE:
+> the legacy `/features/*` interactive microsites (careplans, disrupt, design-for-life, zika…)
+> are NOT in this repo — Gatsby only *linked* to them.
+>
+> ### Recovering legacy `/old/` feature assets — NO credentials needed
+> The deployed legacy feature microsites + their assets live in the **public** GitHub repo
+> **`goinvo/goinvo.com-2018-old-features`** (described as "still houses the live code for old
+> feature articles"), under `source/` (e.g. `source/features/careplans/data/conditions.json`,
+> `source/images/features/careplans/*_obese.png`, `source/images/features/disrupt/slideshow/*.jpg`,
+> `source/images/features/design-for-life/{timeline,dates,locations}/*`). Pull with
+> `gh`/`raw.githubusercontent.com` and drop into `public/<path-minus-source/>`. To FIND an asset
+> across the org: `gh search code "<distinctive-filename>" --owner goinvo`. Individual features
+> also have their own public repos (`goinvo/Careplans` [design PDFs], `goinvo/EmergingTechnologiesBookWebsite`
+> [disrupt], `goinvo/InvoUnderstandingZika` [the PDF], `goinvo/KillerTruths`, `goinvo/healthroom`).
+> Do NOT chase S3 creds (`www.goinvo.com-2018` is redirect-only) or CloudFront — the public repo
+> is the source. Caveat: scripts hard-code `/old/images/...`; this site serves `/images/...`
+> (redirect list `redirects.json` routes specific legacy URLs, e.g. PDFs, to `/old/` — place
+> those at `public/old/...`).
+
 ## Driving / screenshotting the Sanity Studio with an authenticated session
 
 To see or headlessly drive the Studio UI (e.g. the Marketing **Calendar**), use the

@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CarePlansCarousels } from "./CarePlansCarousels";
+import { CarePlansLegacyScripts } from "./CarePlansLegacyScripts";
 import { CarePlansPopovers } from "./CarePlansPopovers";
 import { CarePlansStickyNav } from "./CarePlansStickyNav";
 
@@ -234,16 +235,26 @@ function addMissingImageAlt(html: string) {
   });
 }
 
+// The legacy article HTML embeds `<script>` tags (jQuery + checkboxes.js +
+// case_studies.js). Browsers never execute scripts inserted via innerHTML, so
+// these are inert and misleading \u2014 the interactivity is reactivated by
+// <CarePlansLegacyScripts /> instead. Strip them so the DOM matches reality.
+function stripLegacyScriptTags(html: string) {
+  return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+}
+
 function loadLegacyArticle(page: LegacyCarePlansPage) {
   const rawHtml = readFileSync(
     join(LEGACY_HTML_DIR, LEGACY_PAGE_FILES[page]),
     "utf8",
   );
 
-  return addMissingImageAlt(
-    rewriteLegacyLinks(
-      page,
-      addSectionAnchors(page, rawHtml.replace(/^\uFEFF/, "").trim()),
+  return stripLegacyScriptTags(
+    addMissingImageAlt(
+      rewriteLegacyLinks(
+        page,
+        addSectionAnchors(page, rawHtml.replace(/^\uFEFF/, "").trim()),
+      ),
     ),
   );
 }
@@ -274,6 +285,7 @@ export function LegacyCarePlansArticle({
       <CarePlansStickyNav />
       <CarePlansPopovers />
       <CarePlansCarousels />
+      {page === "part1" && <CarePlansLegacyScripts />}
     </>
   );
 }

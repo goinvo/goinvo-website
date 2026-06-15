@@ -7,6 +7,7 @@ import {
   DisruptNavBar,
 } from '../DisruptClient'
 import { legacyImage } from '../disrupt-shared'
+import { DisruptSocialButtons } from '../DisruptSocialButtons'
 
 /**
  * Disrupt Part 6: Fukushima and Fragility
@@ -418,6 +419,9 @@ export function Part6Client() {
           </div>
         </section>
       </article>
+
+      {/* ===== Social share buttons (restored from legacy part-6.html) ===== */}
+      <DisruptSocialButtons />
 
       {/* ===== Contributions Section (purple background) ===== */}
       <div className="contributions" id="bottom">
