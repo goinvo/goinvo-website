@@ -275,9 +275,22 @@ export function LegacyCarePlansArticle({
         rel="stylesheet"
         href="https://fonts.googleapis.com/css?family=Work+Sans:400,300,700"
       />
-      <link rel="stylesheet" href="/stylesheets/vendor/bootstrap.min.css" />
-      <link rel="stylesheet" href="/stylesheets/features/careplans.css" />
-      <link rel="stylesheet" href="/stylesheets/feature-elements.css" />
+      {/* Scoped under `.legacy-careplans` (see scripts/scope-careplans-css.mjs)
+          so the legacy Bootstrap/careplans CSS styles ONLY the injected legacy
+          markup — not the Next.js header/footer/chat, which it used to bleed
+          into (wrong link/chat colors). */}
+      <link
+        rel="stylesheet"
+        href="/stylesheets/legacy-careplans-scoped/bootstrap.min.css"
+      />
+      <link
+        rel="stylesheet"
+        href="/stylesheets/legacy-careplans-scoped/careplans.css"
+      />
+      <link
+        rel="stylesheet"
+        href="/stylesheets/legacy-careplans-scoped/feature-elements.css"
+      />
       <div
         className="legacy-careplans"
         style={{ paddingTop: "var(--spacing-header-height)" }}
