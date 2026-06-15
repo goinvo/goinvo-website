@@ -27,12 +27,23 @@ import { useEffect } from 'react'
  */
 
 const JQUERY_SRC = 'https://code.jquery.com/jquery-3.6.0.min.js'
+const JS = '/javascripts/features/careplans'
 
-// Each requires jQuery (loaded first). Order between scripts is not significant.
-const LEGACY_SCRIPTS = [
-  '/javascripts/features/careplans/case_studies.js',
-  '/javascripts/features/careplans/checkboxes.js',
-]
+type LegacyCarePlansPage = 'overview' | 'part1' | 'part2' | 'part3'
+
+// Per-page legacy scripts (all require jQuery, loaded first; order between them
+// is not significant). svg.js inlines the `img.svg` icons/arrows on every page
+// (without it they render as raw, oversized images).
+const SCRIPTS_BY_PAGE: Record<LegacyCarePlansPage, string[]> = {
+  overview: [`${JS}/svg.js`],
+  part1: [`${JS}/svg.js`, `${JS}/case_studies.js`, `${JS}/checkboxes.js`],
+  // careplanII.js: barriers-carousel circle swap, score bars, circle7 +
+  // coming-soon sizing (its Bootstrap .popover() call is guarded — popovers
+  // are handled by CarePlansPopovers).
+  part2: [`${JS}/svg.js`, `${JS}/case_studies.js`, `${JS}/careplanII.js`],
+  // careplanIII.js: the 8-step "featureIII" circle progress nav (scroll-spy).
+  part3: [`${JS}/svg.js`, `${JS}/careplanIII.js`],
+}
 
 declare global {
   interface Window {
@@ -58,7 +69,11 @@ function loadScript(src: string): Promise<void> {
   })
 }
 
-export function CarePlansLegacyScripts() {
+export function CarePlansLegacyScripts({
+  page,
+}: {
+  page: LegacyCarePlansPage
+}) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     // The legacy scripts bind global, non-teardownable event handlers (clicks,
@@ -72,7 +87,7 @@ export function CarePlansLegacyScripts() {
       if (!window.jQuery) {
         await loadScript(JQUERY_SRC)
       }
-      for (const src of LEGACY_SCRIPTS) {
+      for (const src of SCRIPTS_BY_PAGE[page]) {
         await loadScript(src)
       }
     }
@@ -82,7 +97,7 @@ export function CarePlansLegacyScripts() {
       window.__carePlansLegacyScriptsLoaded = false
       console.error('[care-plans] failed to load legacy scripts', err)
     })
-  }, [])
+  }, [page])
 
   return null
 }

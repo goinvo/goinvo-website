@@ -73,10 +73,33 @@ export default function RootLayout({
           data={{
             '@context': 'https://schema.org',
             '@type': 'Organization',
+            '@id': `${siteConfig.url}/#organization`,
             name: 'GoInvo',
+            alternateName: 'Involution Studios',
             url: siteConfig.url,
-            logo: `${siteConfig.cloudfrontUrl}/images/goinvo-logo.png`,
+            logo: {
+              '@type': 'ImageObject',
+              url: `${siteConfig.cloudfrontUrl}/images/goinvo-logo.png`,
+            },
             description: siteConfig.description,
+            slogan: 'Designing the future of healthcare.',
+            foundingDate: '2004',
+            // Expertise/topic entities — gives AI answer engines an explicit,
+            // machine-readable picture of what GoInvo is authoritative about.
+            knowsAbout: [
+              'Healthcare user experience design',
+              'Electronic health records',
+              'Open source health design',
+              'Social determinants of health',
+              'Health data visualization',
+              'Patient engagement',
+              'Clinical decision support',
+              'Genomics design',
+              'Public health design',
+              'Medical software design',
+              'Artificial intelligence in healthcare',
+            ],
+            areaServed: 'Worldwide',
             address: {
               '@type': 'PostalAddress',
               streetAddress: '661 Massachusetts Ave, 3rd Floor',
@@ -94,7 +117,22 @@ export default function RootLayout({
               siteConfig.social.linkedin,
               siteConfig.social.twitter,
               siteConfig.social.medium,
+              siteConfig.social.flickr,
+              siteConfig.social.soundcloud,
+              'https://github.com/goinvo',
             ],
+          }}
+        />
+        <JsonLd
+          data={{
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            '@id': `${siteConfig.url}/#website`,
+            name: 'GoInvo',
+            url: siteConfig.url,
+            description: siteConfig.description,
+            inLanguage: 'en-US',
+            publisher: { '@id': `${siteConfig.url}/#organization` },
           }}
         />
       </head>
