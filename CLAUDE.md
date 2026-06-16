@@ -267,15 +267,18 @@ and stores them on the channel so they can default a calendar item's `publishAt`
 - **API:** `POST /api/marketing/research/posting-times` — body/query `channelId` or `all=1`,
   `dryRun=1` (returns the plan, no LLM call), optional `audience`/`goal`/`model`. Studio or
   `MARKETING_API_KEY` auth; `maxDuration=300` (live research is ~60–135s/channel, batched concurrently).
-- **Env / model setting:** set `ANTHROPIC_API_KEY` in `.env.local` **and on Vercel**.
-  **`MARKETING_CLAUDE_MODEL` is the one model setting for the whole marketing suite** (assist,
-  citation-check, ai-citation, posting-time — all route through `marketingClaudeModel()` in
-  `anthropicJson.ts`) — default **`claude-opus-4-8`** (best quality: sharper strategic judgment in a
-  head-to-head; also the FASTEST for these output-heavy generations — ~8s Opus vs ~16s Sonnet for an
-  1800-tok suggestion; cost ~cents/call → a few $/month at this volume). Set it to
-  `claude-sonnet-4-6` (~3x cheaper, ~equal quality) or `claude-haiku-4-5` (cheapest, rougher) to
-  change it suite-wide. Optional `MARKETING_RESEARCH_AI_MODEL` overrides just the research model;
-  `MARKETING_RESEARCH_TIMEOUT_MS` the timeout.
+- **Model setting (two ways to change it):** the whole suite (assist, citation-check, ai-citation,
+  posting-time) resolves its model via **`resolveMarketingModel(client)`** in `anthropicJson.ts` —
+  precedence **explicit override > in-Studio picker > `MARKETING_CLAUDE_MODEL` env > Opus default**.
+  (1) **In-Studio picker** on the Dashboard (`MarketingAiModelSetting.tsx` → `marketingSettings`
+  singleton, field `aiModel`) lets designers switch with no env var. (2) **`MARKETING_CLAUDE_MODEL`**
+  env is the deploy-level fallback. Default **`claude-opus-4-8`** (best quality: sharper strategic
+  judgment head-to-head; also the FASTEST for these output-heavy gens — ~8s Opus vs ~16s Sonnet for
+  an 1800-tok suggestion; cost ~cents/call → a few $/month). Options: `claude-sonnet-4-6` (~3× cheaper,
+  ~equal quality), `claude-haiku-4-5` (cheapest, rougher). `MARKETING_RESEARCH_AI_MODEL` overrides
+  just research; `MARKETING_RESEARCH_TIMEOUT_MS` the timeout. (`marketingClaudeModel()` = the sync
+  env-only fallback used when no client is available.) Also set `ANTHROPIC_API_KEY` in `.env.local`
+  **and on Vercel**.
 - **UI (done):** a **"Research posting times" / "Re-research" button** + recommended-times panel on
   the Channels tab (`ChannelWorkspace.tsx`), and a **"Use recommended day"** button on the calendar
   item's publish-date field (`CalendarWorkspace.tsx`) that defaults from the channel's times
