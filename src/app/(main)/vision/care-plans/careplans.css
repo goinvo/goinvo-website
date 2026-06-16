@@ -117,3 +117,17 @@ header.fixed > a[href="/contact"] span {
     padding: 96px 10px;
   }
 }
+
+/* ----------------------------------------------------------------- */
+/* The legacy icon/arrow SVGs are inlined by svg.js (img.svg → <svg   */
+/* class="svg replaced-svg">) and were designed as INLINE elements,   */
+/* centered inside their ring / control circle by the legacy          */
+/* `text-align: center`. Tailwind's preflight forces                  */
+/* `svg { display: block }`, which left-aligns them (icon sits at     */
+/* the left edge of the 96px ring; chevron off-center in its circle). */
+/* Restore inline flow for the legacy content only.                   */
+/* ----------------------------------------------------------------- */
+.legacy-careplans svg.replaced-svg {
+  display: inline-block;
+  vertical-align: middle;
+}
