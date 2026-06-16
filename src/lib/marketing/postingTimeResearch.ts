@@ -5,18 +5,19 @@
  * Flow (matches the user's "generate a plan, then consume it"):
  *   1. buildPostingTimePlan(channel)  — derive a structured research plan from
  *      the channel (platform, content types, audience, goal, timezone logic).
- *   2. researchChannelPostingTimes()  — consume the plan via the OpenAI
- *      Responses API with the built-in `web_search` tool: the model searches the
- *      live web (Buffer / Sprout / Hootsuite / platform docs…), then returns a
- *      structured recommendation with cited sources.
+ *   2. researchChannelPostingTimes()  — consume the plan via Claude
+ *      (`claude-opus-4-8`) with the built-in `web_search` server tool: Claude
+ *      searches the live web (Buffer / Sprout / Hootsuite / platform docs…),
+ *      then returns a structured recommendation with cited sources.
  *   3. applyPostingTimeResearch()     — persist the recommendation onto the
  *      channel (`recommendedPostingTimes` + `postingTimesResearch`) so it can
  *      default the calendar's publishAt.
  *
- * Self-contained + fail-closed: with no OPENAI_API_KEY it returns a clear error
- * and writes nothing.
+ * Self-contained + fail-closed: with no ANTHROPIC_API_KEY it returns a clear
+ * error and writes nothing.
  */
 
+import Anthropic from '@anthropic-ai/sdk'
 import type { SanityClient } from '@sanity/client'
 
 // ---- Types -------------------------------------------------------------
@@ -91,7 +92,7 @@ const TIMEZONE_LOGIC_GUIDANCE =
   'Vendor "best time" figures (Buffer, Sprout, Hootsuite) are reported in each follower\'s LOCAL time, so they do NOT give a single clock time for a coast-to-coast audience. Pick an ET clock time whose local-time window overlaps the productive workday from ET to PT. If the audience skews ET, bias earlier toward the ET majority.'
 
 export function isPostingTimeResearchConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY)
+  return Boolean(process.env.ANTHROPIC_API_KEY)
 }
 
 // ---- 1. Plan -----------------------------------------------------------
@@ -126,38 +127,25 @@ export function buildPostingTimePlan(
   }
 }
 
-// ---- 2. Consume (live web research) ------------------------------------
-
-interface OpenAiResponsesOutputItem {
-  type?: string
-  content?: Array<{
-    type?: string
-    text?: string
-    annotations?: Array<{ type?: string; url?: string; title?: string }>
-  }>
-}
+// ---- 2. Consume (live web research via Claude + the web_search server tool) ----
 
 export async function researchChannelPostingTimes(
   channel: PostingTimeChannel,
   opts: ResearchOptions = {},
 ): Promise<PostingTimeRecommendation> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is not configured — posting-time research is disabled.')
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not configured — posting-time research is disabled.')
   }
   const plan = buildPostingTimePlan(channel, opts)
-  const model =
-    opts.model || process.env.MARKETING_RESEARCH_AI_MODEL || process.env.MARKETING_AI_MODEL || 'gpt-4o'
-  const controller = new AbortController()
-  const timeout = setTimeout(
-    () => controller.abort(),
-    opts.timeoutMs || Number(process.env.MARKETING_RESEARCH_TIMEOUT_MS || 90000),
-  )
+  const model = opts.model || process.env.MARKETING_RESEARCH_AI_MODEL || 'claude-opus-4-8'
+  const client = new Anthropic({ apiKey, maxRetries: 1 })
 
   const system = [
     'You are a social-media timing researcher. Use the web_search tool to find CURRENT, cited evidence on best posting times before answering — do not rely on memory alone.',
     'Prefer reputable, recent sources (Buffer, Sprout Social, Hootsuite, Later, platform docs, 2024–2025 studies). Cite every recommendation.',
     'Apply the timezone logic precisely; output absolute ET clock times for a coast-to-coast US audience, not per-follower-local figures.',
-    'Return ONLY a JSON object matching the schema in the user message — no prose, no markdown fences.',
+    'Your FINAL message must be ONLY a JSON object matching the schema in the user message — no prose, no markdown fences, no commentary.',
   ].join('\n')
 
   const user = JSON.stringify({
@@ -179,44 +167,27 @@ export async function researchChannelPostingTimes(
           confidence: 'strong | medium | early',
         },
       ],
+      sources: [{ title: 'source title', url: 'https://…' }],
     },
   })
 
-  let response: Response
-  try {
-    response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        input: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-        // OpenAI Responses API built-in live web search.
-        tools: [{ type: 'web_search_preview' }],
-        temperature: 0.2,
-      }),
-    })
-  } finally {
-    clearTimeout(timeout)
-  }
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '')
-    throw new Error(`OpenAI research call failed (${response.status}): ${detail.slice(0, 300)}`)
-  }
-
-  const data = (await response.json()) as {
-    output?: OpenAiResponsesOutputItem[]
-    output_text?: string
-  }
-
-  const { text, sources } = extractTextAndSources(data)
+  // Claude runs the web_search server tool internally (it may search several
+  // times before answering). Stream so the search+synthesis loop can't trip an
+  // HTTP timeout, then read the final message. Adaptive thinking only — Opus 4.8
+  // rejects temperature / top_p / budget_tokens.
+  const stream = client.messages.stream(
+    {
+      model,
+      max_tokens: 8192,
+      thinking: { type: 'adaptive' },
+      tools: [{ type: 'web_search_20260209', name: 'web_search' }],
+      system,
+      messages: [{ role: 'user', content: user }],
+    },
+    { timeout: opts.timeoutMs || Number(process.env.MARKETING_RESEARCH_TIMEOUT_MS || 180000) },
+  )
+  const message = await stream.finalMessage()
+  const { text, sources } = extractTextAndSources(message)
   const parsed = parseRecommendationJson(text)
 
   return {
@@ -224,7 +195,7 @@ export async function researchChannelPostingTimes(
     timezoneLogic: parsed.timezoneLogic || plan.timezoneLogic,
     avoid: parsed.avoid || [],
     slots: parsed.slots || [],
-    // Prefer model-cited sources; fall back to the web_search annotations.
+    // Prefer the model's own cited sources; fall back to the web_search citations.
     sources: (parsed.sources && parsed.sources.length ? parsed.sources : sources).slice(0, 12),
     model,
     researchedAt: new Date().toISOString(),
@@ -232,26 +203,32 @@ export async function researchChannelPostingTimes(
   }
 }
 
-function extractTextAndSources(data: {
-  output?: OpenAiResponsesOutputItem[]
-  output_text?: string
-}): { text: string; sources: PostingTimeSource[] } {
-  const sources: PostingTimeSource[] = []
-  let text = data.output_text || ''
-  for (const item of data.output || []) {
-    if (item.type !== 'message' || !item.content) continue
-    for (const part of item.content) {
-      if (part.type === 'output_text' && part.text) {
-        if (!text) text = part.text
+// Concatenate the assistant's text (the JSON), and collect sources — preferring
+// the URLs Claude actually CITED over the full raw web_search result set.
+function extractTextAndSources(message: Anthropic.Message): {
+  text: string
+  sources: PostingTimeSource[]
+} {
+  const cited: PostingTimeSource[] = []
+  const allResults: PostingTimeSource[] = []
+  const push = (into: PostingTimeSource[], url?: string, title?: string) => {
+    if (url && !into.some((s) => s.url === url)) into.push({ title: title || url, url })
+  }
+  let text = ''
+  for (const block of message.content as unknown as Array<Record<string, unknown>>) {
+    if (block.type === 'text') {
+      text += (text ? '\n' : '') + ((block.text as string) || '')
+      for (const c of (block.citations as Array<Record<string, unknown>>) || []) {
+        push(cited, c.url as string, c.title as string)
       }
-      for (const ann of part.annotations || []) {
-        if (ann.url && !sources.some((s) => s.url === ann.url)) {
-          sources.push({ title: ann.title || ann.url, url: ann.url })
-        }
+    } else if (block.type === 'web_search_tool_result') {
+      const inner = Array.isArray(block.content) ? (block.content as Array<Record<string, unknown>>) : []
+      for (const r of inner) {
+        if (r?.type === 'web_search_result') push(allResults, r.url as string, r.title as string)
       }
     }
   }
-  return { text, sources }
+  return { text, sources: cited.length ? cited : allResults }
 }
 
 function parseRecommendationJson(text: string): Partial<PostingTimeRecommendation> {

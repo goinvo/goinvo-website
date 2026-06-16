@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   if (!isPostingTimeResearchConfigured()) {
     return NextResponse.json(
-      { error: 'OPENAI_API_KEY is not configured — posting-time research is disabled.' },
+      { error: 'ANTHROPIC_API_KEY is not configured — posting-time research is disabled.' },
       { status: 503 },
     )
   }
