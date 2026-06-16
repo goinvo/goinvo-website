@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { LaunchIcon, TagIcon } from '@sanity/icons'
 
 import { randomKey, slugify } from '@/lib/marketing'
@@ -28,6 +28,7 @@ import {
   Select,
   Stack,
   StatusPill,
+  studioSessionToken,
   styles,
   type MarketingAiSuggestion,
   type MarketingChannel,
@@ -163,6 +164,7 @@ export function ChannelWorkspace({
           </div>
         </div>
         <ChannelEditor
+          client={client}
           channel={selected}
           data={data}
           saving={savingId === selected?._id || deletingId === selected?._id}
@@ -175,12 +177,14 @@ export function ChannelWorkspace({
 }
 
 function ChannelEditor({
+  client,
   channel,
   data,
   saving,
   onSave,
   onDelete,
 }: {
+  client: StudioClient
   channel: MarketingChannel | null
   data: MarketingData
   saving: boolean
@@ -455,6 +459,7 @@ function ChannelEditor({
           </div>
         </Stack>
       </div>
+      <ChannelPostingTimes client={client} channelId={channel._id} />
       <InputField label="Description">
         <textarea
           rows={3}
@@ -479,6 +484,173 @@ function ChannelEditor({
         {saving ? 'Saving...' : 'Save channel'}
       </button>
     </Stack>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Recommended posting times — runs the live posting-time research for one
+// channel through the marketing CMS (POST /api/marketing/research/posting-times,
+// authed as the logged-in Studio user) and shows the stored recommendation.
+// ---------------------------------------------------------------------------
+
+interface PostingTimeSlotView {
+  _key?: string
+  dayOfWeek?: string
+  time?: string
+  timezone?: string
+  label?: string
+  contentType?: string
+  confidence?: string
+}
+
+interface PostingTimesResearchView {
+  researchedAt?: string
+  summary?: string
+  model?: string
+  sources?: Array<{ _key?: string; title?: string; url?: string }>
+}
+
+function tzAbbrev(tz?: string): string {
+  if (!tz) return 'ET'
+  if (tz === 'America/New_York') return 'ET'
+  if (tz === 'America/Los_Angeles') return 'PT'
+  if (tz === 'America/Chicago') return 'CT'
+  return tz
+}
+
+function capitalizeDay(day?: string): string {
+  if (!day) return ''
+  return day.charAt(0).toUpperCase() + day.slice(1)
+}
+
+function ChannelPostingTimes({ client, channelId }: { client: StudioClient; channelId: string }) {
+  const [slots, setSlots] = useState<PostingTimeSlotView[]>([])
+  const [research, setResearch] = useState<PostingTimesResearchView | null>(null)
+  const [researching, setResearching] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadStored = useCallback(async () => {
+    try {
+      const result = await client.fetch<{
+        recommendedPostingTimes?: PostingTimeSlotView[]
+        postingTimesResearch?: PostingTimesResearchView
+      } | null>(`*[_id == $id][0]{ recommendedPostingTimes, postingTimesResearch }`, { id: channelId })
+      setSlots(result?.recommendedPostingTimes || [])
+      setResearch(result?.postingTimesResearch || null)
+    } catch {
+      // Leave whatever is shown; the research button surfaces any real error.
+    }
+  }, [client, channelId])
+
+  useEffect(() => {
+    setSlots([])
+    setResearch(null)
+    setError(null)
+    void loadStored()
+  }, [loadStored])
+
+  const runResearch = async () => {
+    setResearching(true)
+    setError(null)
+    try {
+      const token = studioSessionToken()
+      const res = await fetch('/api/marketing/research/posting-times', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'x-sanity-session': token } : {}),
+        },
+        body: JSON.stringify({ channelId }),
+      })
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string
+        results?: Array<{ error?: string }>
+      }
+      if (!res.ok) throw new Error(json.error || `Research failed (${res.status}).`)
+      const first = Array.isArray(json.results) ? json.results[0] : null
+      if (first?.error) throw new Error(first.error)
+      await loadStored()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Research failed.')
+    } finally {
+      setResearching(false)
+    }
+  }
+
+  return (
+    <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <h3 style={{ margin: '0 0 2px', fontSize: 16 }}>Recommended posting times</h3>
+          <div style={{ ...styles.small, ...styles.muted }}>
+            Live web research (Claude) for the best times to post on this channel. Defaults the calendar publish time.
+          </div>
+        </div>
+        <button
+          type="button"
+          style={{ ...styles.button, whiteSpace: 'nowrap' }}
+          disabled={researching}
+          aria-busy={researching}
+          onClick={() => void runResearch()}
+        >
+          {researching ? 'Researching… (~1–2 min)' : slots.length ? 'Re-research' : 'Research posting times'}
+        </button>
+      </div>
+
+      {error && <div style={{ ...styles.small, color: '#e36216', marginTop: 8 }}>{error}</div>}
+      {research?.summary && <div style={{ ...styles.small, marginTop: 10, lineHeight: 1.5 }}>{research.summary}</div>}
+
+      {slots.length > 0 ? (
+        <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+          {slots.map((slot, index) => (
+            <div
+              key={slot._key || index}
+              style={{
+                display: 'flex',
+                gap: 8,
+                alignItems: 'baseline',
+                flexWrap: 'wrap',
+                borderTop: index ? '1px solid var(--card-border-color)' : 'none',
+                paddingTop: index ? 6 : 0,
+              }}
+            >
+              <strong style={{ fontSize: 13, minWidth: 140 }}>
+                {capitalizeDay(slot.dayOfWeek)} {slot.time}{' '}
+                <span style={{ ...styles.muted, fontWeight: 400 }}>{tzAbbrev(slot.timezone)}</span>
+              </strong>
+              <span style={{ ...styles.small, ...styles.muted }}>
+                {[slot.label, slot.contentType].filter(Boolean).join(' · ')}
+                {slot.confidence ? ` · ${slot.confidence}` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        !researching && (
+          <div style={{ ...styles.small, ...styles.muted, marginTop: 10 }}>
+            No research yet. Run it to populate recommended times for this channel.
+          </div>
+        )
+      )}
+
+      {research?.sources?.length ? (
+        <details style={{ marginTop: 10 }}>
+          <summary style={{ cursor: 'pointer', ...styles.small, ...styles.muted }}>
+            {research.sources.length} source{research.sources.length === 1 ? '' : 's'}
+            {research.researchedAt ? ` · researched ${new Date(research.researchedAt).toLocaleDateString()}` : ''}
+          </summary>
+          <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+            {research.sources.map((source, index) => (
+              <li key={source._key || index} style={{ ...styles.small }}>
+                <a href={source.url} target="_blank" rel="noreferrer" style={styles.inlineLink}>
+                  {source.title || source.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   )
 }
 
