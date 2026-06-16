@@ -65,6 +65,10 @@ const usHealthcareJsonLd = {
       description:
         'An open, research-backed ranking of the top 50 problems in US healthcare, scored by deaths, dollars lost, and people impacted.',
       image: ogImage,
+      // Dates from the page's own version log (Methodology): v1 published
+      // 11.Feb.2021, last revised v3 1.Apr.2021.
+      datePublished: '2021-02-11',
+      dateModified: '2021-04-01',
       author: [
         { '@type': 'Person', name: 'Hannah Sennik' },
         { '@type': 'Person', name: 'Juhan Sonin' },
@@ -99,6 +103,9 @@ export default function USHealthcareProblemsFeature() {
           <div className="pad-vertical--double">
             <div className="max-width max-width--md content-padding">
               <h1 className="header--xl">US Healthcare Problems</h1>
+              <p className="text--gray margin-bottom--half">
+                Published February 11, 2021 · Last updated April 1, 2021
+              </p>
               <p>
                 The United States is home to some of the best and worst care.
                 The US Healthcare Problems list is the product of GoInvo’s
