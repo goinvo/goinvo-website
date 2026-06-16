@@ -249,10 +249,11 @@ and stores them on the channel so they can default a calendar item's `publishAt`
 
 - **Engine = Claude `web_search`, NOT OpenAI.** `src/lib/marketing/postingTimeResearch.ts`:
   `buildPostingTimePlan(channel)` derives a research plan (platform/contentTypes/audience/goal +
-  the ET→PT timezone logic); `researchChannelPostingTimes` consumes it by calling **`claude-opus-4-8`
-  with the built-in `web_search` server tool** via `@anthropic-ai/sdk` (Claude searches the live
-  web, applies the timezone logic, returns a structured recommendation + cited sources — streamed,
-  adaptive thinking, no temperature/top_p); `applyPostingTimeResearch` persists it;
+  the ET→PT timezone logic); `researchChannelPostingTimes` consumes it by calling Claude
+  (**`claude-sonnet-4-6`** by default — see the model setting below) **with the built-in `web_search`
+  server tool** via `@anthropic-ai/sdk` (searches the live web, returns a structured recommendation +
+  cited sources — streamed, **NO `thinking`**: thinking + web_search 500s server-side, web_search alone
+  is reliable; no temperature/top_p); `applyPostingTimeResearch` persists it;
   `nextRecommendedPublishAt(slots, from, contentType?)` is the DST-aware next-slot helper for
   defaulting `publishAt`. **Gated by `ANTHROPIC_API_KEY`** (fail-closed). **Why Claude not OpenAI:**
   the OpenAI account is **`insufficient_quota`** (no billing), so **all marketing AI now runs on
@@ -266,9 +267,17 @@ and stores them on the channel so they can default a calendar item's `publishAt`
 - **API:** `POST /api/marketing/research/posting-times` — body/query `channelId` or `all=1`,
   `dryRun=1` (returns the plan, no LLM call), optional `audience`/`goal`/`model`. Studio or
   `MARKETING_API_KEY` auth; `maxDuration=300` (live research is ~60–135s/channel, batched concurrently).
-- **Env:** set `ANTHROPIC_API_KEY` in `.env.local` **and on Vercel**. Optional
-  `MARKETING_RESEARCH_AI_MODEL` (default `claude-opus-4-8`) / `MARKETING_RESEARCH_TIMEOUT_MS`.
-- **Verified** live (Instagram channel): "Wed/Thu ~12:00 ET" carousels with correct timezone
-  reasoning, 6 content-type slots, 7 cited sources, stored + read back. **Still TODO:** a
-  "Research posting times" button on the Channels tab (`ChannelWorkspace` in `marketingTool.tsx`)
-  and wiring `nextRecommendedPublishAt` into calendar-item creation.
+- **Env / model setting:** set `ANTHROPIC_API_KEY` in `.env.local` **and on Vercel**.
+  **`MARKETING_CLAUDE_MODEL` is the one model setting for the whole marketing suite** (assist,
+  citation-check, ai-citation, posting-time — all route through `marketingClaudeModel()` in
+  `anthropicJson.ts`) — default **`claude-sonnet-4-6`** (Opus is overkill AND not faster for these
+  output-heavy structured generations — measured ~16s Sonnet vs ~8s Opus for an 1800-tok suggestion,
+  latency is output-bound; Sonnet is ~40% cheaper). Optional `MARKETING_RESEARCH_AI_MODEL` overrides
+  just the research model; `MARKETING_RESEARCH_TIMEOUT_MS` the timeout.
+- **UI (done):** a **"Research posting times" / "Re-research" button** + recommended-times panel on
+  the Channels tab (`ChannelWorkspace.tsx`), and a **"Use recommended day"** button on the calendar
+  item's publish-date field (`CalendarWorkspace.tsx`) that defaults from the channel's times
+  (day-granular — the calendar stores noon-anchored dates). The scheduler is SDK-free in
+  `src/lib/marketing/postingTimeSchedule.ts` so the Studio client doesn't bundle the Anthropic SDK.
+- **Verified** live: all 7 channels researched + stored (Instagram → Wed 12:00 ET carousel), Channels
+  panel render screenshot-verified, calendar button shows the next recommended day.
