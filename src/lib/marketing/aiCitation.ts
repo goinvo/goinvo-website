@@ -3,25 +3,22 @@
 // Goal: measure whether AI answer engines MENTION and CITE goinvo.com when a
 // prospect asks about GoInvo's topics, tracked over time as a share-of-voice.
 //
-// v1 uses the OpenAI Responses API with the built-in `web_search` tool — the
-// same endpoint + auth pattern the rest of the marketing suite uses
-// (src/app/api/marketing/assist/route.ts, citation-check/route.ts):
-//   POST https://api.openai.com/v1/responses
-//   Authorization: Bearer $OPENAI_API_KEY
-//   body { model, input, tools: [{ type: "web_search" }] }
+// The live path runs Claude (`claude-opus-4-8`) with the built-in `web_search`
+// server tool via the shared helper (src/lib/marketing/anthropicJson.ts) — the
+// same engine the rest of the marketing suite uses now (the studio's OpenAI
+// account is quota-blocked). checkAiCitation asks Claude the prompt with
+// web_search enabled, then reads the answer text + cited URLs from the message
+// and builds the result via buildPromptResultFromParts.
 //
-// VERIFIED LIVE RESPONSE SHAPE (gpt-4.1 + web_search, status 200):
-//   - There is NO top-level `output_text`; the answer text lives in
-//     output[].content[] entries whose `type === "output_text"` (joined).
-//   - URL citations live in output[].content[].annotations[] as
-//     { type: "url_citation", url, title, start_index, end_index }.
-//   - A web_search_call item precedes the message item (no text/citations).
+// The OpenAI Responses-payload parsers below (extractAnswerText / extractCitedUrls
+// / buildPromptResult) are kept + unit-tested as a pure adapter for that legacy
+// shape, but they are no longer on the live path.
 //
 // Detection (confirmed against two live prompts):
 //   - GoInvo MENTIONED  = case-insensitive "goinvo" / "go invo" in the answer.
 //   - GoInvo CITED      = any url_citation URL contains "goinvo.com".
 //
-// Everything here is graceful by design: a missing OPENAI_API_KEY or a failing
+// Everything here is graceful by design: a missing ANTHROPIC_API_KEY or a failing
 // call NEVER throws — checkAiCitation returns an `error`-flagged result and
 // runAiCitationPanel returns a clearly-unavailable snapshot. The library does
 // NOT stamp wall-clock time; the ROUTE injects/stamps `runDate` so the lib stays
@@ -33,6 +30,8 @@
 // the high-intent questions a prospect would actually ask an AI answer engine
 // when looking for a studio in GoInvo's space.
 // ---------------------------------------------------------------------------
+
+import { generateClaudeText, isAnthropicConfigured, marketingClaudeModel } from './anthropicJson'
 
 export const AI_CITATION_PROMPTS: string[] = [
   'What are the best healthcare design agencies?',
@@ -49,9 +48,8 @@ export const AI_CITATION_PROMPTS: string[] = [
   'Who are leading service design firms for healthcare systems?',
 ]
 
-export const DEFAULT_AI_CITATION_MODEL = 'gpt-4.1'
-const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses'
-const DEFAULT_TIMEOUT_MS = 45000
+export const DEFAULT_AI_CITATION_MODEL = 'claude-opus-4-8'
+const DEFAULT_TIMEOUT_MS = 60000
 const DEFAULT_CONCURRENCY = 3
 
 // ---------------------------------------------------------------------------
@@ -93,7 +91,7 @@ export type PanelSnapshot = {
   answeredCount: number
   results: PromptResult[]
   aggregate: PanelAggregate
-  // True when the panel could not run at all (e.g. no OPENAI_API_KEY). The
+  // True when the panel could not run at all (e.g. no ANTHROPIC_API_KEY). The
   // snapshot is still a valid, storable object — just an empty/unavailable one.
   unavailable?: boolean
   unavailableReason?: string
@@ -102,9 +100,7 @@ export type PanelSnapshot = {
 export type CheckAiCitationOptions = {
   model?: string
   timeoutMs?: number
-  apiKey?: string
-  // Injected for tests; defaults to the global fetch.
-  fetchImpl?: typeof fetch
+  maxTokens?: number
 }
 
 export type RunPanelOptions = CheckAiCitationOptions & {
@@ -426,17 +422,21 @@ function normalizeCompetitorName(raw: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// checkAiCitation — one OpenAI web-search call for one prompt. NEVER throws.
+// checkAiCitation — one Claude web_search call for one prompt. NEVER throws.
 // ---------------------------------------------------------------------------
+
+// Make Claude answer like a search-powered AI answer engine so the panel
+// measures real mention/citation visibility, not an answer from memory.
+const AI_CITATION_SYSTEM = [
+  'You are answering a user as a search-powered AI answer engine would.',
+  'Use the web_search tool to find current information before answering.',
+  'Give a helpful, specific answer and cite the sources you actually used.',
+].join('\n')
 
 export async function checkAiCitation(
   prompt: string,
   opts: CheckAiCitationOptions = {},
 ): Promise<PromptResult> {
-  const apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY
-  const model = opts.model || process.env.AI_CITATION_MODEL || DEFAULT_AI_CITATION_MODEL
-  const fetchImpl = opts.fetchImpl ?? fetch
-
   const empty: PromptResult = {
     prompt,
     answerText: '',
@@ -447,47 +447,40 @@ export async function checkAiCitation(
     competitorsMentioned: [],
   }
 
-  if (!apiKey) {
-    return { ...empty, error: 'OPENAI_API_KEY is not configured.' }
+  if (!isAnthropicConfigured()) {
+    return { ...empty, error: 'ANTHROPIC_API_KEY is not configured.' }
   }
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS)
   try {
-    const res = await fetchImpl(OPENAI_RESPONSES_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        input: prompt,
-        tools: [{ type: 'web_search' }],
-      }),
+    const { text, citedUrls } = await generateClaudeText({
+      system: AI_CITATION_SYSTEM,
+      user: prompt,
+      webSearch: true,
+      maxTokens: opts.maxTokens ?? 1500,
+      model: opts.model,
+      timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     })
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => '')
-      return { ...empty, error: `OpenAI returned ${res.status}: ${body.slice(0, 200)}` }
-    }
-
-    const payload = await res.json()
-    return buildPromptResult(prompt, payload)
+    return buildPromptResultFromParts(prompt, text, citedUrls)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown error'
     return { ...empty, error: `AI citation call failed: ${message}` }
-  } finally {
-    clearTimeout(timeout)
   }
 }
 
 // Pure: turn a (prompt, payload) pair into a PromptResult. Exported so tests can
 // drive detection directly off a mocked Responses payload.
 export function buildPromptResult(prompt: string, payload: unknown): PromptResult {
-  const answerText = extractAnswerText(payload)
-  const allCitedUrls = extractCitedUrls(payload)
+  return buildPromptResultFromParts(prompt, extractAnswerText(payload), extractCitedUrls(payload))
+}
+
+// Build a PromptResult from already-extracted parts (answer text + cited URLs).
+// The live Claude path uses this directly; buildPromptResult adapts an OpenAI
+// Responses payload to it (kept for the payload-parser unit tests).
+export function buildPromptResultFromParts(
+  prompt: string,
+  answerText: string,
+  allCitedUrls: string[],
+): PromptResult {
   const citedGoinvoUrls = detectGoinvoCitation(allCitedUrls)
   return {
     prompt,
@@ -548,7 +541,7 @@ function round2(n: number): number {
 
 // ---------------------------------------------------------------------------
 // runAiCitationPanel — run the fixed panel with small concurrency, aggregate.
-// Graceful: missing OPENAI_API_KEY → a clearly-unavailable snapshot, no throw.
+// Graceful: missing ANTHROPIC_API_KEY → a clearly-unavailable snapshot, no throw.
 // The library does NOT stamp runDate; the route does.
 // ---------------------------------------------------------------------------
 
@@ -556,11 +549,10 @@ export async function runAiCitationPanel(
   prompts: string[] = AI_CITATION_PROMPTS,
   opts: RunPanelOptions = {},
 ): Promise<PanelSnapshot> {
-  const apiKey = opts.apiKey ?? process.env.OPENAI_API_KEY
-  const model = opts.model || process.env.AI_CITATION_MODEL || DEFAULT_AI_CITATION_MODEL
+  const model = marketingClaudeModel(opts.model)
   const panelPrompts = prompts.length ? prompts : AI_CITATION_PROMPTS
 
-  if (!apiKey) {
+  if (!isAnthropicConfigured()) {
     return {
       model,
       promptCount: panelPrompts.length,
@@ -574,13 +566,13 @@ export async function runAiCitationPanel(
         topCompetitors: [],
       },
       unavailable: true,
-      unavailableReason: 'OPENAI_API_KEY is not configured, so the AI citation panel could not run.',
+      unavailableReason: 'ANTHROPIC_API_KEY is not configured, so the AI citation panel could not run.',
     }
   }
 
   const concurrency = Math.max(1, opts.concurrency ?? DEFAULT_CONCURRENCY)
   const results = await runWithConcurrency(panelPrompts, concurrency, (prompt) =>
-    checkAiCitation(prompt, { ...opts, apiKey, model }),
+    checkAiCitation(prompt, { ...opts, model }),
   )
 
   const { answeredCount, ...aggregate } = aggregateResults(results)

@@ -12,6 +12,14 @@ import {
   runAiCitationPanel,
   type PromptResult,
 } from '@/lib/marketing/aiCitation'
+import { generateClaudeText, isAnthropicConfigured } from '@/lib/marketing/anthropicJson'
+
+// The live path now goes through Claude (web_search) via the shared helper.
+vi.mock('@/lib/marketing/anthropicJson', () => ({
+  isAnthropicConfigured: vi.fn(() => true),
+  marketingClaudeModel: (m?: string) => m || 'claude-opus-4-8',
+  generateClaudeText: vi.fn(),
+}))
 
 // Build a Responses-API payload in the LIVE shape verified against gpt-4.1 +
 // web_search: there is no top-level output_text; the answer text lives in
@@ -41,13 +49,6 @@ function mockResponsesPayload(answerText: string, citationUrls: string[]) {
       },
     ],
   }
-}
-
-// A fetch stub that returns one canned Responses payload (status 200).
-function okFetch(payload: unknown): typeof fetch {
-  return vi.fn(async () =>
-    new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } }),
-  ) as unknown as typeof fetch
 }
 
 afterEach(() => {
@@ -215,32 +216,30 @@ describe('aggregateResults — rates and competitor tally', () => {
 })
 
 describe('checkAiCitation — graceful by design', () => {
-  it('returns an error-flagged result (no throw) when there is no API key', async () => {
-    const result = await checkAiCitation('test prompt', { apiKey: '' })
-    expect(result.error).toMatch(/OPENAI_API_KEY/)
+  it('returns an error-flagged result (no throw) when Anthropic is not configured', async () => {
+    vi.mocked(isAnthropicConfigured).mockReturnValue(false)
+    const result = await checkAiCitation('test prompt')
+    expect(result.error).toMatch(/ANTHROPIC_API_KEY/)
     expect(result.goinvoMentioned).toBe(false)
     expect(result.goinvoCited).toBe(false)
   })
 
-  it('flags an error (no throw) on a non-200 response', async () => {
-    const fetchImpl = vi.fn(async () => new Response('rate limited', { status: 429 })) as unknown as typeof fetch
-    const result = await checkAiCitation('test prompt', { apiKey: 'sk-test', fetchImpl })
-    expect(result.error).toMatch(/429/)
-  })
-
-  it('flags an error (no throw) when fetch rejects', async () => {
-    const fetchImpl = vi.fn(async () => {
-      throw new Error('network down')
-    }) as unknown as typeof fetch
-    const result = await checkAiCitation('test prompt', { apiKey: 'sk-test', fetchImpl })
+  it('flags an error (no throw) when the Claude call rejects', async () => {
+    vi.mocked(isAnthropicConfigured).mockReturnValue(true)
+    vi.mocked(generateClaudeText).mockRejectedValueOnce(new Error('network down'))
+    const result = await checkAiCitation('test prompt')
     expect(result.error).toMatch(/network down/)
   })
 
   it('parses a successful web-search response into mention/citation flags', async () => {
-    const payload = mockResponsesPayload('GoInvo is a healthcare studio.', [
-      'https://www.goinvo.com/?utm_source=openai',
-    ])
-    const result = await checkAiCitation('test prompt', { apiKey: 'sk-test', fetchImpl: okFetch(payload) })
+    vi.mocked(isAnthropicConfigured).mockReturnValue(true)
+    vi.mocked(generateClaudeText).mockResolvedValueOnce({
+      text: 'GoInvo is a healthcare studio.',
+      citedUrls: ['https://www.goinvo.com/?utm_source=test'],
+      sources: [{ title: 'GoInvo', url: 'https://www.goinvo.com/?utm_source=test' }],
+      model: 'claude-opus-4-8',
+    })
+    const result = await checkAiCitation('test prompt')
     expect(result.error).toBeUndefined()
     expect(result.goinvoMentioned).toBe(true)
     expect(result.goinvoCited).toBe(true)
@@ -248,10 +247,11 @@ describe('checkAiCitation — graceful by design', () => {
 })
 
 describe('runAiCitationPanel — graceful panel', () => {
-  it('returns a clearly-unavailable snapshot (no throw) when there is no API key', async () => {
-    const snapshot = await runAiCitationPanel(['q1', 'q2'], { apiKey: '' })
+  it('returns a clearly-unavailable snapshot (no throw) when Anthropic is not configured', async () => {
+    vi.mocked(isAnthropicConfigured).mockReturnValue(false)
+    const snapshot = await runAiCitationPanel(['q1', 'q2'])
     expect(snapshot.unavailable).toBe(true)
-    expect(snapshot.unavailableReason).toMatch(/OPENAI_API_KEY/)
+    expect(snapshot.unavailableReason).toMatch(/ANTHROPIC_API_KEY/)
     expect(snapshot.results).toEqual([])
     expect(snapshot.promptCount).toBe(2)
     expect(snapshot.aggregate.mentionRate).toBe(0)
@@ -260,20 +260,21 @@ describe('runAiCitationPanel — graceful panel', () => {
   })
 
   it('runs the panel and still returns when one prompt errors mid-run', async () => {
-    const goodPayload = mockResponsesPayload('GoInvo leads open source health design.', [
-      'https://www.goinvo.com/open-source-health-design',
-    ])
-    // First prompt 200, second prompt 500 (errors), third prompt 200.
+    vi.mocked(isAnthropicConfigured).mockReturnValue(true)
+    // First prompt ok, second prompt throws (errors), third prompt ok.
     let call = 0
-    const fetchImpl = vi.fn(async () => {
+    vi.mocked(generateClaudeText).mockImplementation(async () => {
       call += 1
-      if (call === 2) return new Response('server error', { status: 500 })
-      return new Response(JSON.stringify(goodPayload), { status: 200 })
-    }) as unknown as typeof fetch
+      if (call === 2) throw new Error('Claude returned 500')
+      return {
+        text: 'GoInvo leads open source health design.',
+        citedUrls: ['https://www.goinvo.com/open-source-health-design'],
+        sources: [{ title: 'GoInvo', url: 'https://www.goinvo.com/open-source-health-design' }],
+        model: 'claude-opus-4-8',
+      }
+    })
 
     const snapshot = await runAiCitationPanel(['q1', 'q2', 'q3'], {
-      apiKey: 'sk-test',
-      fetchImpl,
       concurrency: 1, // deterministic ordering so the 2nd call is the error
     })
 

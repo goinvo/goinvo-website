@@ -1,6 +1,5 @@
-import { generateText, Output } from 'ai'
 import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import { generateClaudeText, isAnthropicConfigured, parseJsonObject } from '@/lib/marketing/anthropicJson'
 import { client } from '@/sanity/lib/client'
 
 type MarketingAssistKind =
@@ -309,50 +308,6 @@ const VALID_STRATEGIST_OPPORTUNITY_TYPES = [
 const VALID_STRATEGIST_RECOMMENDATIONS = ['doNow', 'testSmall', 'later', 'no']
 const VALID_STRATEGIST_ACTION_KINDS = ['test', 'saveForLater', 'followUp', 'useForSetup']
 
-const strategistActionSchema = z.object({
-  id: z.string().nullable(),
-  label: z.string().nullable(),
-  kind: z.string().nullable(),
-  description: z.string().nullable(),
-})
-
-const strategistRecommendationSchema = z.object({
-  title: z.string().nullable(),
-  opportunityType: z.string().nullable(),
-  recommendation: z.string().nullable(),
-  summary: z.string().nullable(),
-  rationale: z.array(z.string()).nullable(),
-  fitScores: z.object({
-    effort: z.number().nullable(),
-    confidence: z.number().nullable(),
-    proofStrength: z.number().nullable(),
-    upside: z.number().nullable(),
-    maintenanceBurden: z.number().nullable(),
-  }),
-  proposedActions: z.array(strategistActionSchema).nullable(),
-  setupPrompt: z.string().nullable(),
-  experimentHypothesis: z.string().nullable(),
-})
-
-const strategistChatOutputSchema = z.object({
-  summary: z.string(),
-  rationale: z.array(z.string()),
-  siteReferences: z.array(z.object({
-    title: z.string().nullable(),
-    url: z.string().nullable(),
-    note: z.string().nullable(),
-  })),
-  strategistChat: z.object({
-    assistantMessage: z.string().nullable(),
-    primaryRecommendation: strategistRecommendationSchema,
-    alternatives: z.array(z.object({
-      title: z.string().nullable(),
-      recommendation: z.string().nullable(),
-      reason: z.string().nullable(),
-    })).nullable(),
-  }),
-})
-
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -380,31 +335,15 @@ export async function POST(request: Request) {
     let suggestion = fallback
     let usedAi = false
 
-    if (kind === 'strategistChat') {
-      if (hasAiGatewayCredentials()) {
-        try {
-          suggestion = await generateStrategistSdkSuggestion(draft, siteContext, body.prompt || '', analyticsTakeaways)
-          usedAi = true
-        } catch (error) {
-          console.error('Marketing strategist AI SDK generation failed:', error)
-        }
-      } else if (process.env.OPENAI_API_KEY) {
-        // No AI Gateway, but a direct OpenAI key is available: use the same
-        // Responses API path the other kinds use so the strategist isn't stuck
-        // on the rule-based fallback.
-        try {
-          suggestion = await generateOpenAiSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways)
-          usedAi = true
-        } catch (error) {
-          console.error('Marketing strategist OpenAI generation failed:', error)
-        }
-      }
-    } else if (process.env.OPENAI_API_KEY) {
+    if (isAnthropicConfigured()) {
       try {
-        suggestion = await generateOpenAiSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways)
+        suggestion =
+          kind === 'strategistChat'
+            ? await generateStrategistClaudeSuggestion(draft, siteContext, body.prompt || '', analyticsTakeaways)
+            : await generateClaudeSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways)
         usedAi = true
       } catch (error) {
-        console.error('Marketing assistant OpenAI generation failed:', error)
+        console.error('Marketing assistant Claude generation failed:', error)
       }
     }
 
@@ -483,16 +422,6 @@ async function getSiteContext(): Promise<SiteContext> {
   }
 }
 
-function hasAiGatewayCredentials() {
-  return Boolean(
-    process.env.AI_GATEWAY_API_KEY ||
-      process.env.VERCEL_AI_GATEWAY_API_KEY ||
-      process.env.VERCEL_OIDC_TOKEN ||
-      process.env.VERCEL ||
-      process.env.VERCEL_ENV,
-  )
-}
-
 // Concrete revenue gaps the strategist should weigh heavily and raise proactively.
 // Specific client-intent terms (stable) without hardcoded rank numbers (which drift).
 const COMMERCIAL_SEARCH_GAPS = [
@@ -518,7 +447,7 @@ const SEO_ADVICE_TRIGGERS = [
   'GoInvo open data or a dataset page lacks Dataset structured data: recommend adding Dataset schema so it earns rich results and AI citations.',
 ]
 
-async function generateStrategistSdkSuggestion(
+async function generateStrategistClaudeSuggestion(
   draft: Record<string, unknown>,
   siteContext: SiteContext,
   prompt: string,
@@ -527,13 +456,10 @@ async function generateStrategistSdkSuggestion(
   const promptContext = buildPromptContext('strategistChat', draft, prompt, siteContext, analyticsTakeaways)
   const safeDraft = sanitizePromptRecord(draft)
   const safePrompt = sanitizeMultilineText(prompt, 900) || ''
-  const controller = new AbortController()
-  const timeoutMs = Number(process.env.MARKETING_AI_TIMEOUT_MS || 30000)
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const result = await generateText({
-      model: process.env.MARKETING_STRATEGIST_AI_MODEL || 'openai/gpt-5.4',
-      system: [
+  const { text } = await generateClaudeText({
+    maxTokens: 2600,
+    timeoutMs: Number(process.env.MARKETING_AI_TIMEOUT_MS || 60000),
+    system: [
         'You are GoInvo marketing strategist for designers, not a generic content bot.',
         'Talk through high-level marketing moves, then recommend one small next test or setup path.',
         'Evaluate existing records before suggesting new ones. Say reuse this when an existing audience, proof point, CTA, campaign, funnel, or research project is good enough.',
@@ -549,7 +475,7 @@ async function generateStrategistSdkSuggestion(
         'For SEO/GEO/E-E-A-T opportunities use opportunityType seoOptimization: tie the fix to the page or essay, say which audit findings to chase (e.g. add inline sources + a direct-answer-first opening for AI citability, add an author bio + Person schema for E-E-A-T, add Dataset schema, or rewrite a page-2 title/meta to close a CTR gap), and route it through the page audit and promote-to-backlog rather than a brand-new content asset.',
         `Best-practice reminders: ${BEST_PRACTICE_NOTES.join(' ')}`,
       ].join('\n'),
-      prompt: JSON.stringify({
+      user: JSON.stringify({
         task: 'Advise on the next strategic marketing move, then provide action cards the UI can render.',
         kind: 'strategistChat',
         draft: safeDraft,
@@ -567,17 +493,13 @@ async function generateStrategistSdkSuggestion(
         seoAdviceTriggers: SEO_ADVICE_TRIGGERS,
         siteContext: promptContext,
       }),
-      output: Output.object({ schema: strategistChatOutputSchema }),
-      temperature: 0.2,
-      abortSignal: controller.signal,
-    })
-    return result.output as AssistSuggestion
-  } finally {
-    clearTimeout(timeout)
-  }
+  })
+  const parsed = parseJsonObject<AssistSuggestion>(text)
+  if (!parsed) throw new Error('Claude response did not include parseable JSON.')
+  return parsed
 }
 
-async function generateOpenAiSuggestion(
+async function generateClaudeSuggestion(
   kind: MarketingAssistKind,
   draft: Record<string, unknown>,
   siteContext: SiteContext,
@@ -587,24 +509,14 @@ async function generateOpenAiSuggestion(
   const promptContext = buildPromptContext(kind, draft, prompt, siteContext, analyticsTakeaways)
   const safeDraft = sanitizePromptRecord(draft)
   const safePrompt = sanitizeMultilineText(prompt, 700) || ''
-  const controller = new AbortController()
-  const timeoutMs = Number(process.env.MARKETING_AI_TIMEOUT_MS || 30000)
-  const timeout = setTimeout(() => controller.abort(), timeoutMs)
-  let response: Response
-  try {
-    response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: process.env.MARKETING_AI_MODEL || 'gpt-4o-mini',
-        input: [
-          {
-            role: 'system',
-            content: [
+  const maxTokens =
+    kind === 'researchPlan' || kind === 'researchProject' || kind === 'researchSynthesis' || kind === 'strategyAsset'
+      ? 2600
+      : 1800
+  const { text } = await generateClaudeText({
+    maxTokens,
+    timeoutMs: Number(process.env.MARKETING_AI_TIMEOUT_MS || 60000),
+    system: [
               'You are a marketing setup assistant for GoInvo designers.',
               'Use best practices, but write for designers with little marketing knowledge.',
               'Use the supplied site/CMS context when relevant. Do not invent published work that is not in context.',
@@ -616,11 +528,8 @@ async function generateOpenAiSuggestion(
               'You can work with the SEO suite in the SEO tab (see seoSuiteCapabilities): recommend running the page audit on a specific page and advise concrete on-page, structured-data, GEO / AI-readiness, and E-E-A-T fixes, in compact designer-friendly language.',
               'Advise SEO tasks proactively WHEN RELEVANT (see seoAdviceTriggers): a designer creating/editing a content, service, or landing page, a page ranking on page 2 (CTR-gap title/meta rewrite), content with uncited statistics (GEO citability for ChatGPT, Perplexity, and Google AI Overviews), an essay lacking author byline/bio/citations (E-E-A-T, since GoInvo is YMYL healthcare), or GoInvo open data lacking Dataset schema. Name the CONCRETE task and point to the SEO tab and its promote-to-backlog button rather than just saying SEO exists. For these recommendations use opportunityType seoOptimization and route the fix through the page audit and backlog instead of a brand-new content asset.',
               `Best-practice reminders: ${BEST_PRACTICE_NOTES.join(' ')}`,
-            ].join('\n'),
-          },
-          {
-            role: 'user',
-            content: JSON.stringify({
+    ].join('\n'),
+    user: JSON.stringify({
               task: `Suggest setup fields for a marketing ${kind}.`,
               kind,
               draft: safeDraft,
@@ -637,633 +546,10 @@ async function generateOpenAiSuggestion(
               seoAdviceTriggers: SEO_ADVICE_TRIGGERS,
               siteContext: promptContext,
             }),
-          },
-        ],
-        text: { format: responseFormatForKind(kind) },
-        temperature: 0.2,
-        max_output_tokens: kind === 'researchPlan' || kind === 'researchProject' || kind === 'researchSynthesis' || kind === 'strategyAsset' || kind === 'strategistChat' ? 2600 : 1800,
-      }),
-    })
-  } finally {
-    clearTimeout(timeout)
-  }
-
-  if (!response.ok) {
-    throw new Error(`OpenAI returned ${response.status}`)
-  }
-
-  const payload = await response.json()
-  const text = extractOutputText(payload)
-  if (!text) throw new Error('OpenAI response did not include output text.')
-  return JSON.parse(text) as AssistSuggestion
-}
-
-function extractOutputText(payload: unknown) {
-  if (typeof payload !== 'object' || payload === null) return ''
-  const maybePayload = payload as {
-    output_text?: unknown
-    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>
-  }
-  if (typeof maybePayload.output_text === 'string') return maybePayload.output_text
-  return (maybePayload.output || [])
-    .flatMap((item) => item.content || [])
-    .filter((content) => content.type === 'output_text' && typeof content.text === 'string')
-    .map((content) => content.text)
-    .join('\n')
-}
-
-function responseFormatForKind(kind: MarketingAssistKind) {
-  const nullableString = { type: ['string', 'null'] }
-  const nullableStringArray = { type: ['array', 'null'], items: { type: 'string' } }
-  const nullableObject = (properties: Record<string, unknown>) => ({
-    type: ['object', 'null'],
-    additionalProperties: false,
-    required: Object.keys(properties),
-    properties,
   })
-  const stage = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['stage', 'goal', 'offer', 'callToAction', 'destinationUrl', 'metrics'],
-    properties: {
-      stage: nullableString,
-      goal: nullableString,
-      offer: nullableString,
-      callToAction: nullableString,
-      destinationUrl: nullableString,
-      metrics: nullableStringArray,
-    },
-  }
-  const contentType = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'value', 'description'],
-    properties: {
-      label: nullableString,
-      value: nullableString,
-      description: nullableString,
-    },
-  }
-  const metric = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'definition'],
-    properties: {
-      label: nullableString,
-      definition: nullableString,
-    },
-  }
-  const templateMetric = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'target'],
-    properties: {
-      label: nullableString,
-      target: nullableString,
-    },
-  }
-  const experimentVariant = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['key', 'label', 'notes'],
-    properties: {
-      key: nullableString,
-      label: nullableString,
-      notes: nullableString,
-    },
-  }
-  const experimentMetric = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['key', 'label', 'role', 'comparison', 'source', 'eventName', 'unit', 'notes'],
-    properties: {
-      key: nullableString,
-      label: nullableString,
-      role: nullableString,
-      comparison: nullableString,
-      source: nullableString,
-      eventName: nullableString,
-      unit: nullableString,
-      notes: nullableString,
-    },
-  }
-  const experimentSuccessTracker = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['title', 'trackerType', 'metricKeys', 'condition', 'threshold', 'successWhen', 'notes'],
-    properties: {
-      title: nullableString,
-      trackerType: nullableString,
-      metricKeys: nullableStringArray,
-      condition: nullableString,
-      threshold: { type: ['number', 'null'] },
-      successWhen: nullableString,
-      notes: nullableString,
-    },
-  }
-  const contentPillar = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['title', 'audienceNeed', 'angle', 'exampleFormats'],
-    properties: {
-      title: nullableString,
-      audienceNeed: nullableString,
-      angle: nullableString,
-      exampleFormats: nullableStringArray,
-    },
-  }
-  const researchQuestion = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['question', 'whyItMatters', 'method', 'decisionNeeded', 'status'],
-    properties: {
-      question: nullableString,
-      whyItMatters: nullableString,
-      method: nullableString,
-      decisionNeeded: nullableString,
-      status: nullableString,
-    },
-  }
-  const evidenceNote = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['claim', 'sourceTitle', 'sourceUrl', 'evidenceType', 'confidence', 'implication', 'gap'],
-    properties: {
-      claim: nullableString,
-      sourceTitle: nullableString,
-      sourceUrl: nullableString,
-      evidenceType: nullableString,
-      confidence: nullableString,
-      implication: nullableString,
-      gap: nullableString,
-    },
-  }
-  const researchAssumption = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['assumption', 'risk', 'validationSignal', 'confidence'],
-    properties: {
-      assumption: nullableString,
-      risk: nullableString,
-      validationSignal: nullableString,
-      confidence: nullableString,
-    },
-  }
-  const seoTarget = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['query', 'intent', 'priority', 'canonicalUrl', 'contentGap', 'notes'],
-    properties: {
-      query: nullableString,
-      intent: nullableString,
-      priority: nullableString,
-      canonicalUrl: nullableString,
-      contentGap: nullableString,
-      notes: nullableString,
-    },
-  }
-  const recommendedChannel = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['channelKey', 'rationale', 'cadence', 'priority'],
-    properties: {
-      channelKey: nullableString,
-      rationale: nullableString,
-      cadence: nullableString,
-      priority: nullableString,
-    },
-  }
-  const collaboration = {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'name',
-      'organization',
-      'relationshipType',
-      'topicArea',
-      'availabilityStart',
-      'availabilityEnd',
-      'contributionType',
-      'expectedContribution',
-      'status',
-      'notes',
-    ],
-    properties: {
-      name: nullableString,
-      organization: nullableString,
-      relationshipType: nullableString,
-      topicArea: nullableString,
-      availabilityStart: nullableString,
-      availabilityEnd: nullableString,
-      contributionType: nullableString,
-      expectedContribution: nullableString,
-      status: nullableString,
-      notes: nullableString,
-    },
-  }
-  const releaseWindow = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'startDate', 'endDate', 'goal', 'priority'],
-    properties: {
-      label: nullableString,
-      startDate: nullableString,
-      endDate: nullableString,
-      goal: nullableString,
-      priority: nullableString,
-    },
-  }
-  const contentOpportunity = {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'title',
-      'channel',
-      'format',
-      'owner',
-      'releaseWindow',
-      'callToAction',
-      'sourceMaterial',
-      'destinationUrl',
-      'readiness',
-      'seoQuery',
-      'priority',
-      'notes',
-    ],
-    properties: {
-      title: nullableString,
-      channel: nullableString,
-      format: nullableString,
-      owner: nullableString,
-      releaseWindow: nullableString,
-      callToAction: nullableString,
-      sourceMaterial: nullableString,
-      destinationUrl: nullableString,
-      readiness: nullableString,
-      seoQuery: nullableString,
-      priority: nullableString,
-      notes: nullableString,
-    },
-  }
-  const contentDraftFrame = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['title', 'body', 'visualDirection', 'altText'],
-    properties: {
-      title: nullableString,
-      body: nullableString,
-      visualDirection: nullableString,
-      altText: nullableString,
-    },
-  }
-  const measurementGoal = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'target'],
-    properties: {
-      label: nullableString,
-      target: nullableString,
-    },
-  }
-  const strategyAdjustment = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['decisionDate', 'trigger', 'reason', 'recommendation', 'affectedItems', 'decision'],
-    properties: {
-      decisionDate: nullableString,
-      trigger: nullableString,
-      reason: nullableString,
-      recommendation: nullableString,
-      affectedItems: nullableStringArray,
-      decision: nullableString,
-    },
-  }
-  const strategyMetric = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'value', 'unit', 'change'],
-    properties: {
-      label: nullableString,
-      value: { type: ['number', 'null'] },
-      unit: nullableString,
-      change: nullableString,
-    },
-  }
-  const strategyCheck = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['label', 'category', 'guidance', 'required'],
-    properties: {
-      label: nullableString,
-      category: nullableString,
-      guidance: nullableString,
-      required: { type: ['boolean', 'null'] },
-    },
-  }
-  const strategistFitScores = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['effort', 'confidence', 'proofStrength', 'upside', 'maintenanceBurden'],
-    properties: {
-      effort: { type: ['number', 'null'] },
-      confidence: { type: ['number', 'null'] },
-      proofStrength: { type: ['number', 'null'] },
-      upside: { type: ['number', 'null'] },
-      maintenanceBurden: { type: ['number', 'null'] },
-    },
-  }
-  const strategistAction = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['id', 'label', 'kind', 'description'],
-    properties: {
-      id: nullableString,
-      label: nullableString,
-      kind: nullableString,
-      description: nullableString,
-    },
-  }
-  const strategistAlternative = {
-    type: 'object',
-    additionalProperties: false,
-    required: ['title', 'recommendation', 'reason'],
-    properties: {
-      title: nullableString,
-      recommendation: nullableString,
-      reason: nullableString,
-    },
-  }
-  const strategistRecommendation = {
-    type: 'object',
-    additionalProperties: false,
-    required: [
-      'title',
-      'opportunityType',
-      'recommendation',
-      'summary',
-      'rationale',
-      'fitScores',
-      'proposedActions',
-      'setupPrompt',
-      'experimentHypothesis',
-    ],
-    properties: {
-      title: nullableString,
-      opportunityType: nullableString,
-      recommendation: nullableString,
-      summary: nullableString,
-      rationale: nullableStringArray,
-      fitScores: strategistFitScores,
-      proposedActions: { type: ['array', 'null'], items: strategistAction },
-      setupPrompt: nullableString,
-      experimentHypothesis: nullableString,
-    },
-  }
-  const suggestionProperties = {
-    summary: { type: 'string' },
-    rationale: { type: 'array', items: { type: 'string' } },
-    siteReferences: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['title', 'url', 'note'],
-        properties: {
-          title: nullableString,
-          url: nullableString,
-          note: nullableString,
-        },
-      },
-    },
-    campaign: nullableObject({
-      title: nullableString,
-      campaignObjective: nullableString,
-      primaryGoal: nullableString,
-      primaryKpi: nullableString,
-      audience: nullableString,
-      topicCluster: nullableString,
-      searchIntent: nullableString,
-      targetQueries: nullableStringArray,
-      positioning: nullableString,
-      canonicalUrl: nullableString,
-      utmCampaign: nullableString,
-      notes: nullableString,
-    }),
-    funnel: nullableObject({
-      title: nullableString,
-      audience: nullableString,
-      conversionGoal: nullableString,
-      stages: { type: ['array', 'null'], items: stage },
-      notes: nullableString,
-    }),
-    calendarItem: nullableObject({
-      title: nullableString,
-      contentType: nullableString,
-      channel: nullableString,
-      funnelStage: nullableString,
-      brief: nullableString,
-      callToAction: nullableString,
-      workingUrl: nullableString,
-      utmCampaign: nullableString,
-    }),
-    channel: nullableObject({
-      title: nullableString,
-      key: nullableString,
-      platform: nullableString,
-      description: nullableString,
-      defaultFunnelStage: nullableString,
-      contentTypes: { type: ['array', 'null'], items: contentType },
-    }),
-    analyticsSource: nullableObject({
-      title: nullableString,
-      provider: nullableString,
-      reportingCadence: nullableString,
-      implementationNotes: nullableString,
-      keyMetrics: { type: ['array', 'null'], items: metric },
-    }),
-    linkItem: nullableObject({
-      title: nullableString,
-      description: nullableString,
-      type: nullableString,
-      sourceChannel: nullableString,
-    }),
-    template: nullableObject({
-      title: nullableString,
-      kind: nullableString,
-      status: nullableString,
-      description: nullableString,
-      whenToUse: nullableString,
-      audience: nullableString,
-      campaignObjective: nullableString,
-      primaryGoal: nullableString,
-      primaryKpi: nullableString,
-      topicCluster: nullableString,
-      searchIntent: nullableString,
-      targetQueries: nullableStringArray,
-      positioning: nullableString,
-      channels: nullableStringArray,
-      successMetrics: { type: ['array', 'null'], items: templateMetric },
-      designerGuidance: nullableStringArray,
-      notes: nullableString,
-      conversionGoal: nullableString,
-      stages: { type: ['array', 'null'], items: stage },
-    }),
-    researchProject: nullableObject({
-      title: nullableString,
-      status: nullableString,
-      researchType: nullableString,
-      brief: nullableString,
-      audience: nullableString,
-      goals: nullableStringArray,
-      campaignObjective: nullableString,
-      positioning: nullableString,
-      canonicalUrl: nullableString,
-      seedKeywords: nullableStringArray,
-      seedUrls: nullableStringArray,
-      targetGeography: nullableString,
-      language: nullableString,
-      methods: nullableStringArray,
-      researchQuestions: { type: ['array', 'null'], items: researchQuestion },
-      collaborators: { type: ['array', 'null'], items: collaboration },
-      internalNotes: nullableString,
-    }),
-    researchSynthesis: nullableObject({
-      summary: nullableString,
-      missingInputs: nullableStringArray,
-      recommendedMethods: nullableStringArray,
-      selectedResultIds: nullableStringArray,
-      contentOpportunities: { type: ['array', 'null'], items: contentOpportunity },
-      releaseRecommendation: nullableString,
-      internalNotes: nullableString,
-    }),
-    researchPlan: nullableObject({
-      title: nullableString,
-      status: nullableString,
-      summary: nullableString,
-      audience: nullableString,
-      positioning: nullableString,
-      campaignObjective: nullableString,
-      canonicalUrl: nullableString,
-      releaseCadence: nullableString,
-      contentPillars: { type: ['array', 'null'], items: contentPillar },
-      researchQuestions: { type: ['array', 'null'], items: researchQuestion },
-      evidenceNotes: { type: ['array', 'null'], items: evidenceNote },
-      assumptions: { type: ['array', 'null'], items: researchAssumption },
-      seoTargets: { type: ['array', 'null'], items: seoTarget },
-      channels: { type: ['array', 'null'], items: recommendedChannel },
-      collaborations: { type: ['array', 'null'], items: collaboration },
-      releaseWindows: { type: ['array', 'null'], items: releaseWindow },
-      contentOpportunities: { type: ['array', 'null'], items: contentOpportunity },
-      measurementGoals: { type: ['array', 'null'], items: measurementGoal },
-      strategyAdjustments: { type: ['array', 'null'], items: strategyAdjustment },
-      internalNotes: nullableString,
-    }),
-    contentDraft: nullableObject({
-      format: nullableString,
-      channel: nullableString,
-      headline: nullableString,
-      caption: nullableString,
-      frames: { type: ['array', 'null'], items: contentDraftFrame },
-      altText: nullableString,
-      hashtags: nullableStringArray,
-      productionNotes: nullableString,
-      callToAction: nullableString,
-    }),
-    experiment: nullableObject({
-      title: nullableString,
-      status: nullableString,
-      hypothesis: nullableString,
-      expectedSignal: nullableString,
-      targetType: nullableString,
-      targetPath: nullableString,
-      flagKey: nullableString,
-      variants: { type: ['array', 'null'], items: experimentVariant },
-      primaryMetric: nullableString,
-      trackedMetrics: { type: ['array', 'null'], items: experimentMetric },
-      successTrackers: { type: ['array', 'null'], items: experimentSuccessTracker },
-      qaNotes: nullableString,
-      rolloutStart: nullableString,
-      rolloutEnd: nullableString,
-      vercelDashboardUrl: nullableString,
-      result: nullableString,
-      decision: nullableString,
-      notes: nullableString,
-    }),
-    strategyAsset: nullableObject({
-      assetType: nullableString,
-      title: nullableString,
-      status: nullableString,
-      summary: nullableString,
-      priority: nullableString,
-      audience: nullableString,
-      needs: nullableStringArray,
-      pains: nullableStringArray,
-      misconceptions: nullableStringArray,
-      trustTriggers: nullableStringArray,
-      desiredActions: nullableStringArray,
-      objections: nullableStringArray,
-      coreClaim: nullableString,
-      supportingClaims: nullableStringArray,
-      approvedPhrases: nullableStringArray,
-      phrasesToAvoid: nullableStringArray,
-      topicCluster: nullableString,
-      proofType: nullableString,
-      claim: nullableString,
-      sourceTitle: nullableString,
-      sourceUrl: nullableString,
-      confidence: nullableString,
-      usageNotes: nullableString,
-      ctaLabel: nullableString,
-      funnelStage: nullableString,
-      destination: nullableString,
-      successSignal: nullableString,
-      utmSourceRule: nullableString,
-      utmMediumRule: nullableString,
-      utmCampaignPattern: nullableString,
-      utmContentPattern: nullableString,
-      allowedSources: nullableStringArray,
-      allowedMediums: nullableStringArray,
-      qualityChecklist: { type: ['array', 'null'], items: strategyCheck },
-      hypothesis: nullableString,
-      expectedSignal: nullableString,
-      result: nullableString,
-      decision: nullableString,
-      provider: nullableString,
-      signalType: nullableString,
-      sourceLabel: nullableString,
-      query: nullableString,
-      pageUrl: nullableString,
-      metrics: { type: ['array', 'null'], items: strategyMetric },
-      interpretation: nullableString,
-      recommendation: nullableString,
-      notes: nullableString,
-    }),
-    strategistChat: nullableObject({
-      assistantMessage: nullableString,
-      primaryRecommendation: strategistRecommendation,
-      alternatives: { type: ['array', 'null'], items: strategistAlternative },
-    }),
-  }
-  const sectionKey = kind === 'calendarItem' ? 'calendarItem' : kind
-  const activeSuggestionProperties = {
-    summary: suggestionProperties.summary,
-    rationale: suggestionProperties.rationale,
-    siteReferences: suggestionProperties.siteReferences,
-    [sectionKey]: suggestionProperties[sectionKey],
-  }
-
-  return {
-    type: 'json_schema',
-    name: `marketing_${kind}_suggestion`,
-    description: 'A marketing setup suggestion that can be applied to a Sanity marketing document.',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      required: Object.keys(activeSuggestionProperties),
-      properties: activeSuggestionProperties,
-    },
-  }
+  const parsed = parseJsonObject<AssistSuggestion>(text)
+  if (!parsed) throw new Error('Claude response did not include parseable JSON.')
+  return parsed
 }
 
 function outputContractForKind(kind: MarketingAssistKind) {

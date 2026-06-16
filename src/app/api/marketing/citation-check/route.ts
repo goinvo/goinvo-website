@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { generateClaudeText, isAnthropicConfigured, marketingClaudeModel, parseJsonObject } from '@/lib/marketing/anthropicJson'
 
 // Citation / fact-check route for the marketing software. Given a page URL (or
 // raw text), it extracts the page's factual + statistical claims and flags any
@@ -49,17 +50,6 @@ function htmlToText(html: string): string {
     .trim()
 }
 
-function extractOutputText(payload: unknown): string {
-  if (typeof payload !== 'object' || payload === null) return ''
-  const p = payload as { output_text?: unknown; output?: Array<{ content?: Array<{ text?: string }> }> }
-  if (typeof p.output_text === 'string') return p.output_text
-  for (const item of p.output || []) {
-    for (const c of item.content || []) {
-      if (typeof c.text === 'string') return c.text
-    }
-  }
-  return ''
-}
 
 async function checkClaims(text: string, pageUrl: string): Promise<CitationReport> {
   const system = [
@@ -71,22 +61,13 @@ async function checkClaims(text: string, pageUrl: string): Promise<CitationRepor
     'Return ONLY a JSON object: {"summary": string, "claims": [{"claim": string, "verdict": string, "confidence": number between 0 and 1, "note": string, "hasOnPageCitation": boolean}]}. Include at most 25 claims, most important first.',
   ].join('\n')
 
-  const res = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: process.env.MARKETING_AI_MODEL || 'gpt-4o-mini',
-      input: [
-        { role: 'system', content: system },
-        { role: 'user', content: JSON.stringify({ pageUrl, pageText: text.slice(0, 14000) }) },
-      ],
-      text: { format: { type: 'json_object' } },
-      temperature: 0,
-      max_output_tokens: 2600,
-    }),
+  const { text: out } = await generateClaudeText({
+    system,
+    user: JSON.stringify({ pageUrl, pageText: text.slice(0, 14000) }),
+    maxTokens: 2600,
   })
-  if (!res.ok) throw new Error(`OpenAI returned ${res.status}: ${(await res.text()).slice(0, 300)}`)
-  const parsed = JSON.parse(extractOutputText(await res.json())) as CitationReport
+  const parsed = parseJsonObject<CitationReport>(out)
+  if (!parsed) throw new Error('Claude response did not include parseable JSON.')
   return {
     summary: typeof parsed.summary === 'string' ? parsed.summary : '',
     claims: Array.isArray(parsed.claims) ? parsed.claims.slice(0, 25) : [],
@@ -149,11 +130,11 @@ export async function POST(request: Request) {
     }
   }
 
-  if (!process.env.OPENAI_API_KEY) {
+  if (!isAnthropicConfigured()) {
     return NextResponse.json({
       cached: false,
       configured: false,
-      error: 'OPENAI_API_KEY is not configured, so claims could not be checked.',
+      error: 'ANTHROPIC_API_KEY is not configured, so claims could not be checked.',
       pageUrl,
       claims: [],
     })
@@ -170,7 +151,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const model = process.env.MARKETING_AI_MODEL || 'gpt-4o-mini'
+  const model = marketingClaudeModel()
   const result = {
     _type: 'marketingCitationCheck',
     pageUrl,

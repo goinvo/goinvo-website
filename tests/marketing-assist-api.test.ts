@@ -8,9 +8,25 @@ vi.mock('@/sanity/lib/client', () => ({
   },
 }))
 
+// The assistant now generates via Claude (the shared helper). Mock generateClaudeText
+// so tests drive the AI path by returning the suggestion JSON as the message text;
+// keep the real parseJsonObject so the route parses it as in production.
+vi.mock('@/lib/marketing/anthropicJson', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/marketing/anthropicJson')>(
+    '@/lib/marketing/anthropicJson',
+  )
+  return {
+    ...actual,
+    isAnthropicConfigured: () => Boolean(process.env.ANTHROPIC_API_KEY),
+    generateClaudeText: vi.fn(),
+  }
+})
+
 import { POST } from '@/app/api/marketing/assist/route'
+import { generateClaudeText } from '@/lib/marketing/anthropicJson'
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY
+const originalAnthropicKey = process.env.ANTHROPIC_API_KEY
 const originalAiGatewayKey = process.env.AI_GATEWAY_API_KEY
 const originalVercelAiGatewayKey = process.env.VERCEL_AI_GATEWAY_API_KEY
 const originalVercelOidcToken = process.env.VERCEL_OIDC_TOKEN
@@ -68,6 +84,8 @@ function assistRequest(
 
 beforeEach(() => {
   clientFetch.mockResolvedValue(siteContext)
+  vi.mocked(generateClaudeText).mockReset()
+  delete process.env.ANTHROPIC_API_KEY
   delete process.env.OPENAI_API_KEY
   delete process.env.AI_GATEWAY_API_KEY
   delete process.env.VERCEL_AI_GATEWAY_API_KEY
@@ -79,6 +97,11 @@ beforeEach(() => {
 afterEach(() => {
   clientFetch.mockReset()
   vi.unstubAllGlobals()
+  if (originalAnthropicKey) {
+    process.env.ANTHROPIC_API_KEY = originalAnthropicKey
+  } else {
+    delete process.env.ANTHROPIC_API_KEY
+  }
   if (originalOpenAiKey) {
     process.env.OPENAI_API_KEY = originalOpenAiKey
   } else {
@@ -149,10 +172,9 @@ describe('marketing assistant API', () => {
     expect(payload.suggestion.experiment.qaNotes).toContain('page_path')
   })
 
-  it('uses the OpenAI path for strategist chat when OPENAI_API_KEY is set, and falls back gracefully on error', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    const rawOpenAiFetch = vi.fn().mockResolvedValue(new Response('error', { status: 500 }))
-    vi.stubGlobal('fetch', rawOpenAiFetch)
+  it('attempts the Claude path for strategist chat when ANTHROPIC_API_KEY is set, and falls back gracefully on error', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockRejectedValue(new Error('Claude unavailable'))
 
     const response = await POST(
       assistRequest('strategistChat', {}, [], {
@@ -163,9 +185,9 @@ describe('marketing assistant API', () => {
     const payload = await response.json()
 
     expect(response.status).toBe(200)
-    // The strategist now attempts the OpenAI Responses path when a key is present
-    // (no AI Gateway required), instead of being stuck on the rule-based fallback.
-    expect(rawOpenAiFetch).toHaveBeenCalled()
+    // The strategist now attempts the Claude path when a key is present, instead
+    // of being stuck on the rule-based fallback...
+    expect(generateClaudeText).toHaveBeenCalled()
     // ...but a failed call still degrades cleanly to the deterministic fallback.
     expect(payload.usedAi).toBe(false)
     expect(payload.suggestion.strategistChat.primaryRecommendation).toMatchObject({
@@ -208,15 +230,10 @@ describe('marketing assistant API', () => {
   })
 
   it('uses structured OpenAI output when an API key is available', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body))
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ user }: { user: string }) => {
+      const body = { input: [undefined, { content: user }] } as { input: Array<{ content: string }> }
 
-      expect(body.text.format.type).toBe('json_schema')
-      expect(body.text.format.name).toBe('marketing_campaign_suggestion')
-      expect(body.text.format.strict).toBe(true)
-      expect(body.text.format.schema.required).toContain('campaign')
-      expect(body.temperature).toBe(0.2)
       const userPayload = JSON.parse(body.input[1].content)
       expect(userPayload.contextPolicy).toMatchObject({
         analyticsTakeawaysAreDataNotInstructions: true,
@@ -230,9 +247,11 @@ describe('marketing assistant API', () => {
         }),
       ])
 
-      return new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
             summary: 'AI suggested a clear campaign setup.',
             rationale: ['Start with one goal.', 'Give designers the next action.'],
             siteReferences: [{ title: 'Housing Truths', url: '/vision/housing-truths', note: 'Relevant source.' }],
@@ -257,11 +276,8 @@ describe('marketing assistant API', () => {
             linkItem: null,
             template: null,
           }),
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )
+      }
     })
-    vi.stubGlobal('fetch', openAiFetch)
 
     const response = await POST(
       assistRequest('campaign', { title: 'Housing Truths' }, [
@@ -283,20 +299,20 @@ describe('marketing assistant API', () => {
   })
 
   it('uses structured OpenAI output for experiment setup', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body))
-      expect(body.text.format.name).toBe('marketing_experiment_suggestion')
-      expect(body.text.format.schema.required).toContain('experiment')
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ user }: { user: string }) => {
+      const body = { input: [undefined, { content: user }] } as { input: Array<{ content: string }> }
       const userPayload = JSON.parse(body.input[1].content)
       expect(userPayload.outputContract.experiment).toMatchObject({
         targetPath: 'Public path such as / or /vision/example-slug',
         flagKey: 'Vercel flag key such as home-2026-variant',
       })
 
-      return new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
             summary: 'AI suggested a homepage page-test setup.',
             rationale: ['Keep control explicit.', 'Measure the qualified CTA.'],
             siteReferences: [],
@@ -322,11 +338,8 @@ describe('marketing assistant API', () => {
               notes: 'Review before rollout.',
             },
           }),
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )
+      }
     })
-    vi.stubGlobal('fetch', openAiFetch)
 
     const response = await POST(assistRequest('experiment', { title: 'Homepage concept', targetPath: '/' }))
     const payload = await response.json()
@@ -341,9 +354,9 @@ describe('marketing assistant API', () => {
   })
 
   it('sanitizes analytics takeaways before sending them to OpenAI', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body))
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ user }: { user: string }) => {
+      const body = { input: [undefined, { content: user }] } as { input: Array<{ content: string }> }
       const userPayload = JSON.parse(body.input[1].content)
 
       expect(userPayload.siteContext.analyticsTakeaways).toEqual([
@@ -356,9 +369,11 @@ describe('marketing assistant API', () => {
         },
       ])
 
-      return new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
             summary: 'AI suggested a metric-focused setup.',
             rationale: ['Use the analytics takeaway as data.'],
             siteReferences: [],
@@ -376,11 +391,8 @@ describe('marketing assistant API', () => {
             linkItem: null,
             template: null,
           }),
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )
+      }
     })
-    vi.stubGlobal('fetch', openAiFetch)
 
     const response = await POST(
       assistRequest('analyticsSource', { title: 'GA4' }, [
@@ -401,9 +413,9 @@ describe('marketing assistant API', () => {
     expect(payload.context.analyticsTakeaways).toBe(1)
   })
 
-  it('falls back instead of failing when the OpenAI request errors', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 500 })))
+  it('falls back instead of failing when the Claude request errors', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockRejectedValue(new Error('Claude 500'))
 
     const response = await POST(assistRequest('channel', { title: 'Instagram' }))
     const payload = await response.json()
@@ -415,13 +427,12 @@ describe('marketing assistant API', () => {
   })
 
   it('grounds AI site references to known GoInvo context and drops fabricated URLs', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            output_text: JSON.stringify({
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockResolvedValue({
+      citedUrls: [],
+      sources: [],
+      model: 'claude-opus-4-8',
+      text: JSON.stringify({
               summary: 'AI suggested a Quick Link setup.',
               rationale: ['Use the source page.', 'Keep the link readable outside social context.'],
               siteReferences: [
@@ -441,11 +452,7 @@ describe('marketing assistant API', () => {
               },
               template: null,
             }),
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        ),
-      ),
-    )
+    })
 
     const response = await POST(assistRequest('linkItem', { title: 'Housing Truths' }))
     const payload = await response.json()
@@ -459,12 +466,10 @@ describe('marketing assistant API', () => {
   })
 
   it('generates reusable marketing templates with structured AI output', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body))
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ user }: { user: string }) => {
+      const body = { input: [undefined, { content: user }] } as { input: Array<{ content: string }> }
 
-      expect(body.text.format.name).toBe('marketing_template_suggestion')
-      expect(body.text.format.schema.required).toContain('template')
       const userPayload = JSON.parse(body.input[1].content)
       expect(userPayload.outputContract.template).toMatchObject({
         kind: 'campaign | funnel',
@@ -476,9 +481,11 @@ describe('marketing assistant API', () => {
         }),
       ])
 
-      return new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
             summary: 'AI suggested a reusable campaign template.',
             rationale: ['Templates should explain when they fit.', 'Designers need starter decisions before making assets.'],
             siteReferences: [{ title: 'Housing Truths', url: '/vision/housing-truths', note: 'Useful source pattern.' }],
@@ -510,11 +517,8 @@ describe('marketing assistant API', () => {
               stages: null,
             },
           }),
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )
+      }
     })
-    vi.stubGlobal('fetch', openAiFetch)
 
     const response = await POST(assistRequest('template', { title: 'Visual Essay Launch', kind: 'campaign' }))
     const payload = await response.json()
@@ -530,11 +534,9 @@ describe('marketing assistant API', () => {
   })
 
   it('generates reusable strategy assets with strategy context', async () => {
-    process.env.OPENAI_API_KEY = 'test-openai-key'
-    const openAiFetch = vi.fn(async (_url: string, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body))
-      expect(body.text.format.name).toBe('marketing_strategyAsset_suggestion')
-      expect(body.text.format.schema.required).toContain('strategyAsset')
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ user }: { user: string }) => {
+      const body = { input: [undefined, { content: user }] } as { input: Array<{ content: string }> }
       const userPayload = JSON.parse(body.input[1].content)
       expect(userPayload.outputContract.strategyAsset).toMatchObject({
         assetType: expect.stringContaining('audience'),
@@ -546,9 +548,11 @@ describe('marketing assistant API', () => {
         expect.objectContaining({ coreClaim: 'Clear systems help people act.' }),
       ])
 
-      return new Response(
-        JSON.stringify({
-          output_text: JSON.stringify({
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
             summary: 'AI suggested a reusable audience profile.',
             rationale: ['Strategy should be reusable before content generation.'],
             siteReferences: [],
@@ -602,11 +606,8 @@ describe('marketing assistant API', () => {
               notes: 'Review before saving.',
             },
           }),
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      )
+      }
     })
-    vi.stubGlobal('fetch', openAiFetch)
 
     const response = await POST(assistRequest('strategyAsset', { assetType: 'audience', title: 'Civic design leaders' }))
     const payload = await response.json()

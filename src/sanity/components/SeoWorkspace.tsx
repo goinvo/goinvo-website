@@ -427,7 +427,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   // --- AI citation share-of-voice state ---
   // `aiCite` holds the GET list (cheap — reads stored snapshots, runs nothing).
   // `aiCiteLoading` = loading the list; `aiCiteRunning` = a live panel run (slow,
-  // spends OpenAI credits). `aiCiteRunNote` carries a post-run store warning.
+  // spends Claude credits). `aiCiteRunNote` carries a post-run store warning.
   const [aiCite, setAiCite] = useState<AiCitationData | null>(null)
   const [aiCiteLoading, setAiCiteLoading] = useState(true)
   const [aiCiteRunning, setAiCiteRunning] = useState(false)
@@ -542,7 +542,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     void loadAiCitation()
   }, [loadAiCitation])
 
-  // Run the live AI-citation panel. SLOW (~1–2 min) and spends OpenAI credits:
+  // Run the live AI-citation panel. SLOW (~1–2 min) and spends Claude credits:
   // POST runs 12 live AI web-searches. On completion, refresh the list (GET) so
   // the new snapshot shows up. Never crashes — failures surface a clear note.
   const runAiCitation = useCallback(async () => {
@@ -1123,7 +1123,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
             {aiCiteRunning ? 'Running…' : 'Run AI-citation check'}
           </button>
           <span style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
-            Runs 12 live AI web-searches — takes ~1–2 min and spends OpenAI credits. Run it occasionally to refresh the
+            Runs 12 live AI web-searches — takes ~1–2 min and spends Claude credits. Run it occasionally to refresh the
             trend, not on every visit.
           </span>
         </div>
@@ -1183,7 +1183,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 {latestUnavailable && (
                   <div style={{ color: SEVERITY_COLORS.warning, fontSize: 12, marginBottom: 12 }}>
                     The latest run ({fmtDate(latest.runDate)}) couldn&apos;t complete
-                    {latest.unavailableReason ? ` — ${latest.unavailableReason}` : ' (the AI engine returned no answers, e.g. OPENAI_API_KEY is not set).'}
+                    {latest.unavailableReason ? ` — ${latest.unavailableReason}` : ' (the AI engine returned no answers, e.g. ANTHROPIC_API_KEY is not set).'}
                     {headline ? ' Showing the most recent successful run below.' : ''}
                   </div>
                 )}
