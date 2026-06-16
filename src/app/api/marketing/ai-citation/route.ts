@@ -2,6 +2,7 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { runAiCitationPanel, type PanelSnapshot } from '@/lib/marketing/aiCitation'
+import { resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // AI-citation share-of-voice tracker route (marketingIdea seo-ai-citation-tracking).
@@ -55,9 +56,12 @@ export async function POST(req: Request) {
     throw error
   }
 
+  const sanity = getSanityClient()
+  const model = sanity ? await resolveMarketingModel(sanity) : undefined
+
   let snapshot: PanelSnapshot
   try {
-    snapshot = await runAiCitationPanel()
+    snapshot = await runAiCitationPanel(undefined, { model })
   } catch (error) {
     // runAiCitationPanel is graceful, but never let an unexpected throw 500 the
     // route without a clear message.
@@ -100,7 +104,6 @@ export async function POST(req: Request) {
     })),
   }
 
-  const sanity = getSanityClient()
   let storedId: string | null = null
   if (sanity) {
     try {

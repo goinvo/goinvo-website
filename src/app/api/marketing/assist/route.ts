@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { generateClaudeText, isAnthropicConfigured, parseJsonObject } from '@/lib/marketing/anthropicJson'
+import { generateClaudeText, isAnthropicConfigured, parseJsonObject, resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 import { client } from '@/sanity/lib/client'
 
 type MarketingAssistKind =
@@ -337,10 +337,11 @@ export async function POST(request: Request) {
 
     if (isAnthropicConfigured()) {
       try {
+        const model = await resolveMarketingModel(client)
         suggestion =
           kind === 'strategistChat'
-            ? await generateStrategistClaudeSuggestion(draft, siteContext, body.prompt || '', analyticsTakeaways)
-            : await generateClaudeSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways)
+            ? await generateStrategistClaudeSuggestion(draft, siteContext, body.prompt || '', analyticsTakeaways, model)
+            : await generateClaudeSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways, model)
         usedAi = true
       } catch (error) {
         console.error('Marketing assistant Claude generation failed:', error)
@@ -452,11 +453,13 @@ async function generateStrategistClaudeSuggestion(
   siteContext: SiteContext,
   prompt: string,
   analyticsTakeaways: AnalyticsTakeaway[],
+  model?: string,
 ): Promise<AssistSuggestion> {
   const promptContext = buildPromptContext('strategistChat', draft, prompt, siteContext, analyticsTakeaways)
   const safeDraft = sanitizePromptRecord(draft)
   const safePrompt = sanitizeMultilineText(prompt, 900) || ''
   const { text } = await generateClaudeText({
+    model,
     maxTokens: 2600,
     timeoutMs: Number(process.env.MARKETING_AI_TIMEOUT_MS || 60000),
     system: [
@@ -505,6 +508,7 @@ async function generateClaudeSuggestion(
   siteContext: SiteContext,
   prompt: string,
   analyticsTakeaways: AnalyticsTakeaway[],
+  model?: string,
 ): Promise<AssistSuggestion> {
   const promptContext = buildPromptContext(kind, draft, prompt, siteContext, analyticsTakeaways)
   const safeDraft = sanitizePromptRecord(draft)
@@ -514,6 +518,7 @@ async function generateClaudeSuggestion(
       ? 2600
       : 1800
   const { text } = await generateClaudeText({
+    model,
     maxTokens,
     timeoutMs: Number(process.env.MARKETING_AI_TIMEOUT_MS || 60000),
     system: [

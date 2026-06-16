@@ -46,6 +46,7 @@ import { SeoWorkspace } from '../components/SeoWorkspace'
 import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
 import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
+import { MarketingAiModelSetting } from '../components/marketing/MarketingAiModelSetting'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
@@ -3721,6 +3722,7 @@ function MarketingDashboard({
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
+      <MarketingAiModelSetting />
       <section style={styles.panel}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, maxWidth: 760 }}>

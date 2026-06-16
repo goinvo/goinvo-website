@@ -19,9 +19,28 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk'
+import type { SanityClient } from '@sanity/client'
 
 export function isAnthropicConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY)
+}
+
+// Resolve the suite-wide model with precedence: explicit override > the Studio
+// setting (`marketingSettings.aiModel`, picked from the marketing tool) >
+// `MARKETING_CLAUDE_MODEL` env > Opus default. The Studio setting lets non-devs
+// change the model from inside the Studio without touching env vars.
+export async function resolveMarketingModel(
+  client: Pick<SanityClient, 'fetch'>,
+  override?: string,
+): Promise<string> {
+  if (override) return override
+  try {
+    const chosen = await client.fetch<string | null>(`*[_id == "marketingSettings"][0].aiModel`)
+    if (chosen) return chosen
+  } catch {
+    // Settings unreadable → fall back to env/default.
+  }
+  return marketingClaudeModel()
 }
 
 // The single "model setting" for the marketing suite. Default: Opus 4.8 (best

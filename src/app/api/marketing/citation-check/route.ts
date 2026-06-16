@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
-import { generateClaudeText, isAnthropicConfigured, marketingClaudeModel, parseJsonObject } from '@/lib/marketing/anthropicJson'
+import { generateClaudeText, isAnthropicConfigured, marketingClaudeModel, parseJsonObject, resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 
 // Citation / fact-check route for the marketing software. Given a page URL (or
 // raw text), it extracts the page's factual + statistical claims and flags any
@@ -51,7 +51,7 @@ function htmlToText(html: string): string {
 }
 
 
-async function checkClaims(text: string, pageUrl: string): Promise<CitationReport> {
+async function checkClaims(text: string, pageUrl: string, model?: string): Promise<CitationReport> {
   const system = [
     'You are a meticulous fact-checker reviewing a web page for factual accuracy and citation integrity.',
     'Extract the specific factual and statistical claims: numbers, percentages, dollar amounts, named studies or organizations, dates, and superlatives ("most", "highest", "only"). Ignore opinions, calls to action, and navigation text.',
@@ -65,6 +65,7 @@ async function checkClaims(text: string, pageUrl: string): Promise<CitationRepor
     system,
     user: JSON.stringify({ pageUrl, pageText: text.slice(0, 14000) }),
     maxTokens: 2600,
+    model,
   })
   const parsed = parseJsonObject<CitationReport>(out)
   if (!parsed) throw new Error('Claude response did not include parseable JSON.')
@@ -140,9 +141,10 @@ export async function POST(request: Request) {
     })
   }
 
+  const model = sanity ? await resolveMarketingModel(sanity) : marketingClaudeModel()
   let report: CitationReport
   try {
-    report = await checkClaims(text, pageUrl)
+    report = await checkClaims(text, pageUrl, model)
   } catch (error) {
     console.error('Marketing citation check failed:', error)
     return NextResponse.json(
@@ -151,7 +153,6 @@ export async function POST(request: Request) {
     )
   }
 
-  const model = marketingClaudeModel()
   const result = {
     _type: 'marketingCitationCheck',
     pageUrl,
