@@ -6,7 +6,7 @@
  *   1. buildPostingTimePlan(channel)  — derive a structured research plan from
  *      the channel (platform, content types, audience, goal, timezone logic).
  *   2. researchChannelPostingTimes()  — consume the plan via Claude
- *      (`claude-opus-4-8`) with the built-in `web_search` server tool: Claude
+ *      (`claude-sonnet-4-6` by default) with the `web_search` server tool: Claude
  *      searches the live web (Buffer / Sprout / Hootsuite / platform docs…),
  *      then returns a structured recommendation with cited sources.
  *   3. applyPostingTimeResearch()     — persist the recommendation onto the
@@ -19,6 +19,7 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { SanityClient } from '@sanity/client'
+import { marketingClaudeModel } from './anthropicJson'
 import { nextRecommendedPublishAt, type PostingTimeSlot } from './postingTimeSchedule'
 
 // Re-export the SDK-free scheduling helper + slot type so existing server callers
@@ -129,7 +130,9 @@ export async function researchChannelPostingTimes(
     throw new Error('ANTHROPIC_API_KEY is not configured — posting-time research is disabled.')
   }
   const plan = buildPostingTimePlan(channel, opts)
-  const model = opts.model || process.env.MARKETING_RESEARCH_AI_MODEL || 'claude-opus-4-8'
+  // MARKETING_CLAUDE_MODEL is the master setting; MARKETING_RESEARCH_AI_MODEL
+  // optionally overrides just the research model. Default Sonnet 4.6.
+  const model = opts.model || process.env.MARKETING_RESEARCH_AI_MODEL || marketingClaudeModel()
   const client = new Anthropic({ apiKey, maxRetries: 1 })
 
   const system = [

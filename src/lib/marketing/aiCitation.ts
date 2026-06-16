@@ -3,7 +3,7 @@
 // Goal: measure whether AI answer engines MENTION and CITE goinvo.com when a
 // prospect asks about GoInvo's topics, tracked over time as a share-of-voice.
 //
-// The live path runs Claude (`claude-opus-4-8`) with the built-in `web_search`
+// The live path runs Claude (`claude-sonnet-4-6` by default) with the `web_search`
 // server tool via the shared helper (src/lib/marketing/anthropicJson.ts) — the
 // same engine the rest of the marketing suite uses now (the studio's OpenAI
 // account is quota-blocked). checkAiCitation asks Claude the prompt with
@@ -48,7 +48,7 @@ export const AI_CITATION_PROMPTS: string[] = [
   'Who are leading service design firms for healthcare systems?',
 ]
 
-export const DEFAULT_AI_CITATION_MODEL = 'claude-opus-4-8'
+export const DEFAULT_AI_CITATION_MODEL = 'claude-sonnet-4-6'
 const DEFAULT_TIMEOUT_MS = 60000
 const DEFAULT_CONCURRENCY = 3
 

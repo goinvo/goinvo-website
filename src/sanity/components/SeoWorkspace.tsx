@@ -1110,7 +1110,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           </button>
         </div>
         <p style={{ ...s.sub, marginBottom: 10 }}>
-          When a prospect asks an AI answer engine (ChatGPT-style web search) about GoInvo&apos;s topics — best healthcare
+          When a prospect asks an AI answer engine (live web search) about GoInvo&apos;s topics — best healthcare
           design firms, FHIR/EHR design, health data viz — does the answer <strong>name GoInvo</strong> and{' '}
           <strong>link goinvo.com</strong>? Tracked over time as a share-of-voice. The numbers below read stored snapshots
           (free); running a new check is what costs.

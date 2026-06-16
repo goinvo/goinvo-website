@@ -3,9 +3,11 @@
  *
  * Replaces the OpenAI Responses-API calls the marketing tools used to make — the
  * studio's OpenAI account is `insufficient_quota`, so anything on OPENAI_API_KEY
- * fails at runtime. Everything here goes through the official `@anthropic-ai/sdk`
- * (`claude-opus-4-8`) and is fail-closed: callers check `isAnthropicConfigured()`
- * or handle the thrown error.
+ * fails at runtime. Everything here goes through the official `@anthropic-ai/sdk`.
+ * The default model is **`claude-sonnet-4-6`** — fast + high-quality enough for
+ * these setup/research tasks (Opus was ~10–20x slower for no real gain here);
+ * override with the `MARKETING_CLAUDE_MODEL` env var. Fail-closed: callers check
+ * `isAnthropicConfigured()` or handle the thrown error.
  *
  * - `generateClaudeText` — one message; optionally enables the built-in
  *   `web_search` server tool (for citation/visibility checks) and returns the
@@ -20,8 +22,10 @@ export function isAnthropicConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY)
 }
 
+// The single "model setting" for the marketing suite. Default: Sonnet 4.6 (fast,
+// strong); set MARKETING_CLAUDE_MODEL to change it everywhere.
 export function marketingClaudeModel(override?: string): string {
-  return override || process.env.MARKETING_CLAUDE_MODEL || 'claude-opus-4-8'
+  return override || process.env.MARKETING_CLAUDE_MODEL || 'claude-sonnet-4-6'
 }
 
 export interface GenerateClaudeOptions {
