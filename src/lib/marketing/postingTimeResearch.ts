@@ -173,13 +173,14 @@ export async function researchChannelPostingTimes(
 
   // Claude runs the web_search server tool internally (it may search several
   // times before answering). Stream so the search+synthesis loop can't trip an
-  // HTTP timeout, then read the final message. Adaptive thinking only — Opus 4.8
-  // rejects temperature / top_p / budget_tokens.
+  // HTTP timeout, then read the final message. NO `thinking`: adaptive thinking
+  // combined with the web_search server tool currently returns a server-side 500
+  // from the API, while web_search alone is reliable. (No temperature/top_p
+  // either — Opus 4.8 rejects them.)
   const stream = client.messages.stream(
     {
       model,
       max_tokens: 8192,
-      thinking: { type: 'adaptive' },
       tools: [{ type: 'web_search_20260209', name: 'web_search' }],
       system,
       messages: [{ role: 'user', content: user }],
