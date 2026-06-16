@@ -255,8 +255,11 @@ and stores them on the channel so they can default a calendar item's `publishAt`
   adaptive thinking, no temperature/top_p); `applyPostingTimeResearch` persists it;
   `nextRecommendedPublishAt(slots, from, contentType?)` is the DST-aware next-slot helper for
   defaulting `publishAt`. **Gated by `ANTHROPIC_API_KEY`** (fail-closed). **Why Claude not OpenAI:**
-  the OpenAI account is **`insufficient_quota`** (no billing) — so the `assist`/strategist routes
-  that use `OPENAI_API_KEY` are also blocked at runtime until OpenAI billing is added.
+  the OpenAI account is **`insufficient_quota`** (no billing), so **all marketing AI now runs on
+  Claude** — the `assist`/strategist, `citation-check`, and `ai-citation` (web_search visibility
+  panel) routes were moved to the shared helper `src/lib/marketing/anthropicJson.ts`
+  (`generateClaudeText` + `parseJsonObject`); the OpenAI env vars (`OPENAI_API_KEY`,
+  `MARKETING_AI_MODEL`, `MARKETING_STRATEGIST_AI_MODEL`) are no longer used.
 - **Schema:** `marketingChannel` has `recommendedPostingTimes` (slot array: dayOfWeek/time/timezone/
   label/contentType/rationale/confidence) + `postingTimesResearch` (summary/timezoneLogic/avoid/
   model/sources) — both readOnly.
