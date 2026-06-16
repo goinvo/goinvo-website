@@ -6,7 +6,7 @@
  *   1. buildPostingTimePlan(channel)  — derive a structured research plan from
  *      the channel (platform, content types, audience, goal, timezone logic).
  *   2. researchChannelPostingTimes()  — consume the plan via Claude
- *      (`claude-sonnet-4-6` by default) with the `web_search` server tool: Claude
+ *      (`claude-opus-4-8` by default) with the `web_search` server tool: Claude
  *      searches the live web (Buffer / Sprout / Hootsuite / platform docs…),
  *      then returns a structured recommendation with cited sources.
  *   3. applyPostingTimeResearch()     — persist the recommendation onto the
