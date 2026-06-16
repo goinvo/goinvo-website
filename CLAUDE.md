@@ -241,3 +241,31 @@ which matches the publishing suite exactly.
   post anyway). Downloads are timeout-bounded (25s) to stay within the serverless limit. If a
   render's `publish_at` is past, schedulePublish enqueues it for immediate posting; if QStash is
   unset the item is still created (status scheduled) and a periodic `/publish/run` sweep posts it.
+
+## Posting-time research — "best time to post" per channel (built 2026-06, runs on Claude)
+
+Researches the best posting times for each content source (channel) via **live web research**
+and stores them on the channel so they can default a calendar item's `publishAt`.
+
+- **Engine = Claude `web_search`, NOT OpenAI.** `src/lib/marketing/postingTimeResearch.ts`:
+  `buildPostingTimePlan(channel)` derives a research plan (platform/contentTypes/audience/goal +
+  the ET→PT timezone logic); `researchChannelPostingTimes` consumes it by calling **`claude-opus-4-8`
+  with the built-in `web_search` server tool** via `@anthropic-ai/sdk` (Claude searches the live
+  web, applies the timezone logic, returns a structured recommendation + cited sources — streamed,
+  adaptive thinking, no temperature/top_p); `applyPostingTimeResearch` persists it;
+  `nextRecommendedPublishAt(slots, from, contentType?)` is the DST-aware next-slot helper for
+  defaulting `publishAt`. **Gated by `ANTHROPIC_API_KEY`** (fail-closed). **Why Claude not OpenAI:**
+  the OpenAI account is **`insufficient_quota`** (no billing) — so the `assist`/strategist routes
+  that use `OPENAI_API_KEY` are also blocked at runtime until OpenAI billing is added.
+- **Schema:** `marketingChannel` has `recommendedPostingTimes` (slot array: dayOfWeek/time/timezone/
+  label/contentType/rationale/confidence) + `postingTimesResearch` (summary/timezoneLogic/avoid/
+  model/sources) — both readOnly.
+- **API:** `POST /api/marketing/research/posting-times` — body/query `channelId` or `all=1`,
+  `dryRun=1` (returns the plan, no LLM call), optional `audience`/`goal`/`model`. Studio or
+  `MARKETING_API_KEY` auth; `maxDuration=300` (live research is ~60–135s/channel, batched concurrently).
+- **Env:** set `ANTHROPIC_API_KEY` in `.env.local` **and on Vercel**. Optional
+  `MARKETING_RESEARCH_AI_MODEL` (default `claude-opus-4-8`) / `MARKETING_RESEARCH_TIMEOUT_MS`.
+- **Verified** live (Instagram channel): "Wed/Thu ~12:00 ET" carousels with correct timezone
+  reasoning, 6 content-type slots, 7 cited sources, stored + read back. **Still TODO:** a
+  "Research posting times" button on the Channels tab (`ChannelWorkspace` in `marketingTool.tsx`)
+  and wiring `nextRecommendedPublishAt` into calendar-item creation.
