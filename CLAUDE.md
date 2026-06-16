@@ -270,10 +270,12 @@ and stores them on the channel so they can default a calendar item's `publishAt`
 - **Env / model setting:** set `ANTHROPIC_API_KEY` in `.env.local` **and on Vercel**.
   **`MARKETING_CLAUDE_MODEL` is the one model setting for the whole marketing suite** (assist,
   citation-check, ai-citation, posting-time — all route through `marketingClaudeModel()` in
-  `anthropicJson.ts`) — default **`claude-sonnet-4-6`** (Opus is overkill AND not faster for these
-  output-heavy structured generations — measured ~16s Sonnet vs ~8s Opus for an 1800-tok suggestion,
-  latency is output-bound; Sonnet is ~40% cheaper). Optional `MARKETING_RESEARCH_AI_MODEL` overrides
-  just the research model; `MARKETING_RESEARCH_TIMEOUT_MS` the timeout.
+  `anthropicJson.ts`) — default **`claude-opus-4-8`** (best quality: sharper strategic judgment in a
+  head-to-head; also the FASTEST for these output-heavy generations — ~8s Opus vs ~16s Sonnet for an
+  1800-tok suggestion; cost ~cents/call → a few $/month at this volume). Set it to
+  `claude-sonnet-4-6` (~3x cheaper, ~equal quality) or `claude-haiku-4-5` (cheapest, rougher) to
+  change it suite-wide. Optional `MARKETING_RESEARCH_AI_MODEL` overrides just the research model;
+  `MARKETING_RESEARCH_TIMEOUT_MS` the timeout.
 - **UI (done):** a **"Research posting times" / "Re-research" button** + recommended-times panel on
   the Channels tab (`ChannelWorkspace.tsx`), and a **"Use recommended day"** button on the calendar
   item's publish-date field (`CalendarWorkspace.tsx`) that defaults from the channel's times
