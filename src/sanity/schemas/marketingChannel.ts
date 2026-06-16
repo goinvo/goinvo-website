@@ -193,6 +193,68 @@ export default defineType({
       ],
       validation: (Rule) => Rule.min(1).warning('Add at least one content type so the calendar can use this channel.'),
     }),
+    defineField({
+      name: 'recommendedPostingTimes',
+      title: 'Recommended Posting Times',
+      type: 'array',
+      group: 'planning',
+      readOnly: true,
+      description:
+        'Best times to post on this channel, from live posting-time research. Used to default the calendar publishAt. Run "Research posting times" on the Channels tab to populate.',
+      of: [
+        {
+          name: 'postingTimeSlot',
+          type: 'object',
+          fields: [
+            defineField({ name: 'dayOfWeek', title: 'Day', type: 'string' }),
+            defineField({ name: 'time', title: 'Time (HH:MM, 24h)', type: 'string' }),
+            defineField({ name: 'timezone', title: 'Timezone (IANA)', type: 'string' }),
+            defineField({ name: 'label', title: 'Label', type: 'string' }),
+            defineField({ name: 'contentType', title: 'Best for content type', type: 'string' }),
+            defineField({ name: 'rationale', title: 'Rationale', type: 'text', rows: 2 }),
+            defineField({ name: 'confidence', title: 'Confidence', type: 'string' }),
+          ],
+          preview: {
+            select: { day: 'dayOfWeek', time: 'time', tz: 'timezone', label: 'label' },
+            prepare: ({ day, time, tz, label }) => ({
+              title: `${day ?? '?'} ${time ?? ''} (${tz || 'ET'})`,
+              subtitle: label,
+            }),
+          },
+        },
+      ],
+    }),
+    defineField({
+      name: 'postingTimesResearch',
+      title: 'Posting-Time Research',
+      type: 'object',
+      group: 'planning',
+      readOnly: true,
+      description: 'Provenance + cited sources for the recommended posting times.',
+      fields: [
+        defineField({ name: 'researchedAt', title: 'Researched At', type: 'datetime' }),
+        defineField({ name: 'summary', title: 'Summary', type: 'text', rows: 2 }),
+        defineField({ name: 'timezoneLogic', title: 'Timezone Logic', type: 'text', rows: 2 }),
+        defineField({ name: 'avoid', title: 'Avoid', type: 'array', of: [{ type: 'string' }] }),
+        defineField({ name: 'model', title: 'Model', type: 'string' }),
+        defineField({
+          name: 'sources',
+          title: 'Sources',
+          type: 'array',
+          of: [
+            {
+              name: 'source',
+              type: 'object',
+              fields: [
+                defineField({ name: 'title', title: 'Title', type: 'string' }),
+                defineField({ name: 'url', title: 'URL', type: 'url' }),
+              ],
+              preview: { select: { title: 'title', subtitle: 'url' } },
+            },
+          ],
+        }),
+      ],
+    }),
   ],
   preview: {
     select: {
