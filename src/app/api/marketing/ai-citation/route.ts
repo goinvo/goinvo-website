@@ -6,7 +6,7 @@ import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 
 // AI-citation share-of-voice tracker route (marketingIdea seo-ai-citation-tracking).
 //
-//   POST → run the fixed prompt panel through the OpenAI web-search engine,
+//   POST → run the fixed prompt panel through Claude web_search,
 //          stamp runDate, store an `aiCitationSnapshot`, and return it.
 //   GET  → return the most recent snapshots (last 10, newest first) for the
 //          trend chart.
@@ -14,7 +14,7 @@ import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 // Mirrors the marketing-suite conventions: the Sanity WRITE client is created
 // from src/sanity/env (research/run + citation-check pattern), and everything
 // degrades gracefully — runAiCitationPanel never throws, so a missing
-// OPENAI_API_KEY yields a clearly-unavailable (but still storable) snapshot.
+// ANTHROPIC_API_KEY yields a clearly-unavailable (but still storable) snapshot.
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
