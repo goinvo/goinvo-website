@@ -456,7 +456,8 @@ const MARKETING_QUERY = `{
     description,
     defaultFunnelStage,
     "analyticsSources": analyticsSources[]->{_id, title, provider, status},
-    contentTypes[]{_key, label, value, description}
+    contentTypes[]{_key, label, value, description},
+    recommendedPostingTimes[]{_key, dayOfWeek, time, timezone, label, contentType, confidence}
   },
   "linkItems": *[_type == "marketingLinkItem"]|order(coalesce(order, 100) asc, _updatedAt desc) {
     _id,
@@ -908,6 +909,15 @@ export interface MarketingChannel {
   defaultFunnelStage?: string
   analyticsSources?: RefSummary[]
   contentTypes?: ChannelContentType[]
+  recommendedPostingTimes?: Array<{
+    _key?: string
+    dayOfWeek?: string
+    time?: string
+    timezone?: string
+    label?: string
+    contentType?: string
+    confidence?: string
+  }>
 }
 
 export interface MarketingCalendarItem {

@@ -3,6 +3,9 @@ import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-p
 import { CalendarIcon, CloseIcon } from '@sanity/icons'
 
 import { addMonths, dateInputToIso, monthLabel, randomKey, refsFromIds, startOfMonth, stringListFromText, toDateInputValue } from '@/lib/marketing'
+// SDK-free module on purpose: keeps the Anthropic SDK (pulled in by
+// postingTimeResearch) out of the Studio client bundle.
+import { nextRecommendedPublishAt } from '@/lib/marketing/postingTimeSchedule'
 import { calendarStatusOptions } from '../../schemas/marketingCalendarItem'
 import { searchIntentOptions } from '../../schemas/marketingCampaign'
 import { funnelStageOptions } from '../../schemas/marketingFunnel'
@@ -538,6 +541,13 @@ function CalendarItemEditor({
   const channelOptions = getChannelOptions(channels)
   const selectedChannel = getChannelByKey(channels, channelKey)
   const typeOptions = getContentTypeOptionsForChannel(channelKey, channels)
+  // Next recommended publish day from the channel's researched posting times
+  // (for the content type, if set). Day-granular: the calendar stores dates.
+  const recommendedNext = nextRecommendedPublishAt(
+    selectedChannel?.recommendedPostingTimes,
+    new Date(),
+    draft?.contentType,
+  )
   const linkedLinks = linkedLinkIds
     .map((id) => linkItems.find((link) => link._id === id) || draft?.linkItems?.find((link) => link._id === id))
     .filter(Boolean) as MarketingLinkItem[]
@@ -762,6 +772,26 @@ function CalendarItemEditor({
               value={toDateInputValue(draft.publishAt)}
               onChange={(event) => setDraft({ ...draft, publishAt: event.currentTarget.value })}
             />
+            {recommendedNext && toDateInputValue(recommendedNext) !== toDateInputValue(draft.publishAt) && (
+              <button
+                type="button"
+                onClick={() => setDraft({ ...draft, publishAt: toDateInputValue(recommendedNext) })}
+                title="From this channel's researched posting times"
+                style={{
+                  ...styles.small,
+                  ...styles.muted,
+                  background: 'none',
+                  border: 'none',
+                  padding: '4px 0 0',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  textDecoration: 'underline',
+                }}
+              >
+                Use recommended day:{' '}
+                {recommendedNext.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              </button>
+            )}
           </InputField>
         </div>
         <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
