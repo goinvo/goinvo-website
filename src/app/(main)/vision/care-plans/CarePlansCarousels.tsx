@@ -4,15 +4,15 @@ import { useEffect } from 'react'
 
 /**
  * Activates Bootstrap-style `.carousel` widgets in the legacy Care Plans
- * HTML without loading Bootstrap JS.
- *
- * Two carousels on Part 2: `#carousel-barriers` (The Barriers to Care
- * Planning — 6 slides with indicator circles) and `#carousel-mobile`
- * (mobile journey-map equivalent). Same machinery:
- *   - `.carousel-indicators li[data-slide-to="N"]` — click to jump
+ * HTML without loading Bootstrap JS. Used on every part:
+ *   - Part 1: the "Care Cards" carousel — indicators use the `.card-carousel-indicators`
+ *     class (the 9 area-of-concern icons). Clicking an icon jumps to that card.
+ *   - Part 2: `#carousel-barriers` + `#carousel-mobile` (`.carousel-indicators`).
+ * Same machinery:
+ *   - `.carousel-indicators li` / `.card-carousel-indicators li` with `data-slide-to="N"` — click to jump
  *   - `a.left.control[data-slide="prev"]` / `a.right.control[data-slide="next"]`
  *   - Active slide is the `.carousel-inner > .item.active`
- *   - Active indicator is `.carousel-indicators > li.active`
+ *   - Active indicator gets `.active` (which draws the ring on Part 1's icons)
  */
 export function CarePlansCarousels() {
   useEffect(() => {
@@ -25,7 +25,11 @@ export function CarePlansCarousels() {
     carousels.forEach((carousel) => {
       const inner = carousel.querySelector<HTMLElement>('.carousel-inner')
       const items = inner ? Array.from(inner.querySelectorAll<HTMLElement>(':scope > .item')) : []
-      const indicators = Array.from(carousel.querySelectorAll<HTMLElement>('.carousel-indicators > li'))
+      const indicators = Array.from(
+        carousel.querySelectorAll<HTMLElement>(
+          '.carousel-indicators > li, .card-carousel-indicators > li',
+        ),
+      )
       const prev = carousel.querySelector<HTMLAnchorElement>('a.control[data-slide="prev"], a.left[data-slide="prev"]')
       const next = carousel.querySelector<HTMLAnchorElement>('a.control[data-slide="next"], a.right[data-slide="next"]')
       if (items.length === 0) return
