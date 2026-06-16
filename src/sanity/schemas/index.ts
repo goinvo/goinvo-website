@@ -25,6 +25,7 @@ import marketingResearchPlan from './marketingResearchPlan'
 import marketingResearchProject from './marketingResearchProject'
 import marketingResearchResult from './marketingResearchResult'
 import marketingResearchRun from './marketingResearchRun'
+import marketingSettings from './marketingSettings'
 import marketingTemplate from './marketingTemplate'
 import marketingTrackingRule from './marketingTrackingRule'
 import orderPreset from './orderPreset'
@@ -62,6 +63,7 @@ export const schemaTypes = [
   marketingResearchRun,
   marketingResearchPlan,
   marketingTemplate,
+  marketingSettings,
   orderPreset,
   // Objects
   portableText,

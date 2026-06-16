@@ -2,6 +2,7 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 import {
   applyPostingTimeResearch,
   buildPostingTimePlan,
@@ -82,7 +83,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No matching channel(s) found.' }, { status: 404 })
   }
 
-  const opts = { audience: body.audience, goal: body.goal, model: body.model }
+  const model = await resolveMarketingModel(client, body.model)
+  const opts = { audience: body.audience, goal: body.goal, model }
 
   // Research channels concurrently — each call is independent and bounded by its
   // own timeout; the batch is bounded by maxDuration.
