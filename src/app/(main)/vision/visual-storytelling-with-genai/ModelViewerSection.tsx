@@ -146,9 +146,17 @@ export function ModelViewerSection() {
     rotation: [number, number, number]
   } | null>(null)
 
-  // Check WebGL support
+  // Defer the react-three-fiber <Canvas> to the client. r3f cannot SSR-match
+  // (the server renders an empty/different canvas), which caused a hydration
+  // mismatch that made React throw away and regenerate the whole 3D subtree on
+  // every load. We render a stable, same-height placeholder on the server + the
+  // first client paint, then mount the Canvas after hydration.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
+  // Check WebGL support (only meaningful client-side, after mount)
   const isSupported = (() => {
-    if (typeof window === 'undefined') return true
+    if (typeof window === 'undefined') return false
     try {
       const canvas = document.createElement('canvas')
       const gl = canvas.getContext('webgl2') || canvas.getContext('webgl')
@@ -210,7 +218,9 @@ export function ModelViewerSection() {
         </div>
 
         <div className="model-viewport mx-5 mb-[15px] overflow-hidden rounded-lg border border-gray-medium md:mx-0">
-          {isSupported ? (
+          {!mounted ? (
+            <div className="h-[500px] bg-gray-lightest" aria-hidden="true" />
+          ) : isSupported ? (
             <ModelCanvas cameraTarget={cameraTarget} />
           ) : (
             <div className="h-[500px] flex items-center justify-center bg-gray-lightest">
