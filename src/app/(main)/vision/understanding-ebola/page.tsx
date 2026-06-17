@@ -4,6 +4,7 @@ import Link from 'next/link'
 import './understanding-ebola.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/understanding-ebola' },
   title: 'Understanding Ebola: A Visual Guide',
   description:
     'A comprehensive visual guide to understanding the Ebola virus, including its history, transmission, symptoms, diagnosis, treatment, prevention, and potential spread.',

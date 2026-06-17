@@ -3,6 +3,7 @@ import { UsHealthcareContent } from './UsHealthcareContent'
 import './us-healthcare.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/healing-us-healthcare' },
   title: 'Healing U.S. Healthcare',
   description:
     "$9,255. That's how much your health costs the U.S. every year. Follow David's healthcare journey and discover our vision for better healthcare.",

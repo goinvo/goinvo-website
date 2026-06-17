@@ -11,6 +11,7 @@ import { LivingHealthLabCarousels, LivingHealthLabAppendixCarousel } from './Liv
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/living-health-lab' },
   title: 'Living Health Lab',
   description:
     'An open source project to help people examine, understand, and improve their day-to-day health through guided exploration, self-tracking, and behavior change.',

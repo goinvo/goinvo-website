@@ -7,6 +7,7 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/ai' },
   title: 'Software Design for AI Services',
   description:
     'Beautiful software design for AI experiences, bridging human-centered design with AI capabilities.',

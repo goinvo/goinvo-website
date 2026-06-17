@@ -3,6 +3,7 @@ import { ZikaNav } from './ZikaNav'
 import './zika.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/understanding-zika' },
   title: 'Understanding Zika',
   description:
     'An easy-to-digest, visual guide to understanding the Zika virus.',

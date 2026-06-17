@@ -8,6 +8,7 @@ import { OpenSourceChart } from '@/components/open-source/OpenSourceChart'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/open-source-health-design' },
   title: 'Open Source Health Design',
   description:
     "Healthcare needs to be open. We've built 10 of our own open source products and integrated open source code with a range of clients. Our services range from guidance to design and development.",

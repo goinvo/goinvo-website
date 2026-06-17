@@ -5,6 +5,7 @@ import { ScrollNav } from './ScrollNav'
 import './oral-history.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/oral-history-goinvo' },
   title: 'An Oral History of GoInvo',
   description:
     'An interview with past and present Invoites about the past and present of GoInvo.',

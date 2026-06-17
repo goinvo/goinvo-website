@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Part2Client } from './Part2Client'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/disrupt/part-2' },
   title: 'Disrupt! From Horse to Horsepower',
   description:
     'To envision our future and the possible effects of technological disruption, it is helpful to consider the historical context of the Second Industrial Revolution.',

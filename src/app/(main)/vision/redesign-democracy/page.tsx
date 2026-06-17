@@ -10,6 +10,7 @@ const IMG = (path: string) =>
   `/images/features/democracy/${path}`
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/redesign-democracy' },
   title: 'Redesign Democracy',
   description: 'A better solution for the digital era.',
 }

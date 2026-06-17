@@ -9,6 +9,7 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/services' },
   title: 'UX Design Services in Boston',
   description:
     'Our UX design process is tailored to your project. Contact GoInvo today to get started in designing a beautiful UX for your product!',

@@ -3,6 +3,7 @@ import './disrupt.css'
 import { DisruptPageClient } from './DisruptPageClient'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/disrupt' },
   title: 'Disrupt! Emerging Technologies',
   description:
     'Emerging technologies from robotics to synthetic biology to the Internet of Things are opening up new possibilities for extending our reach, enabling us to become seemingly superhuman.',
