@@ -8,6 +8,7 @@ import { ApplicationFormEmbed } from './ApplicationFormEmbed'
 import type { Job } from '@/types'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/about/careers' },
   title: 'Join our team of UX designers & engineers',
   description:
     "If you're an independent thinker and passionate maker hunting for meaningful work, give us a holler.",

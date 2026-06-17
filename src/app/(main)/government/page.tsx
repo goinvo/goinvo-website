@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/government' },
   title: 'Software Design for Government Services',
   description:
     'Beautiful software design for government and state services for smoother processes and happy residents.',

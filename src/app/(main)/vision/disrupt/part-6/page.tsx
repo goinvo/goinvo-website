@@ -3,6 +3,7 @@ import '../disrupt.css'
 import { Part6Client } from './Part6Client'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/disrupt/part-6' },
   title: 'Disrupt! Fukushima and Fragility',
   description:
     'The Fukushima catastrophe revealed the fragility of our systems and the need for resilient design solutions to disasters.',

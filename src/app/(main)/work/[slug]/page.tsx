@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: caseStudy.heading || caseStudy.title,
     description: caseStudy.metaDescription || caseStudy.caption || undefined,
+    alternates: { canonical: `/work/${slug}` },
     openGraph: ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : undefined,
     twitter: ogImage ? { images: [ogImage] } : undefined,
   }

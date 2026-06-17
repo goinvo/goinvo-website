@@ -5,6 +5,7 @@ import { siteConfig } from '@/lib/config'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/about/open-office-hours' },
   title: 'Open Office Hours for UX Design',
   description:
     'Our UX design company is open to anyone seeking advice on design, from students to startups. Sign up!',

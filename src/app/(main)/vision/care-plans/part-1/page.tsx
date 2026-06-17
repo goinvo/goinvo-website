@@ -3,6 +3,7 @@ import { LegacyCarePlansArticle } from "../LegacyCarePlansArticle";
 import "../careplans.css";
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/care-plans/part-1' },
   title: "Care Plans Part 1: Overview",
   description: "What is a care plan, and how did they start?",
 };
