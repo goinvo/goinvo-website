@@ -1,6 +1,6 @@
 'use client'
 
-import { Children, cloneElement, Fragment, isValidElement, useEffect, useRef, useState } from 'react'
+import { Children, cloneElement, createContext, Fragment, isValidElement, useContext, useEffect, useRef, useState } from 'react'
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
 import { motion, useInView } from 'framer-motion'
@@ -296,6 +296,14 @@ function PortableVideoEmbed({
 /* ------------------------------------------------------------------ */
 /*  PortableText component map                                         */
 /* ------------------------------------------------------------------ */
+
+// A `link` mark renders an <a>. A citation (`sup` / `refCitation`) marked on the
+// SAME span renders its own <a> too — and because PortableText nests marks, that
+// produced an invalid <a>-inside-<a> and a hydration error on every page with
+// cited references (incl. content typo'd hrefs like `#reference`). This context
+// is set true inside ANY link <a>; nested citations read it and skip emitting
+// their own anchor (the surrounding <a> already makes them clickable).
+const InsideLinkContext = createContext(false)
 
 const components: PortableTextComponents = {
   types: {
@@ -1320,11 +1328,16 @@ const components: PortableTextComponents = {
           target={target}
           className={isRefLink ? '!text-primary !no-underline hover:!underline hover:!text-black' : 'hover:text-primary'}
         >
-          {children}
+          <InsideLinkContext.Provider value={true}>{children}</InsideLinkContext.Provider>
         </a>
       )
     },
     sup: ({ children }) => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- PortableText renders marks as components
+      const insideRefLink = useContext(InsideLinkContext)
+      // Inside a ref-link the surrounding <a> already links to #references;
+      // emitting another <a> here is invalid (nested <a>) — render just the sup.
+      if (insideRefLink) return <sup>{children}</sup>
       const text = Children.toArray(children)
         .map((child) => (typeof child === 'string' || typeof child === 'number' ? String(child) : ''))
         .join('')
@@ -1366,16 +1379,24 @@ const components: PortableTextComponents = {
       })()
       return <span className={className}>{children}</span>
     },
-    refCitation: ({ children, value }) => (
-      <sup>
-        <a
-          href="#references"
-          className="!text-primary !no-underline hover:!underline hover:!text-black text-xs"
-        >
-          {value?.refNumber || children}
-        </a>
-      </sup>
-    ),
+    refCitation: ({ children, value }) => {
+      // eslint-disable-next-line react-hooks/rules-of-hooks -- PortableText renders marks as components
+      const insideRefLink = useContext(InsideLinkContext)
+      const label = value?.refNumber || children
+      // Inside a ref-link the surrounding <a> already links to #references —
+      // skip the inner <a> to avoid invalid nested anchors.
+      if (insideRefLink) return <sup>{label}</sup>
+      return (
+        <sup>
+          <a
+            href="#references"
+            className="!text-primary !no-underline hover:!underline hover:!text-black text-xs"
+          >
+            {label}
+          </a>
+        </sup>
+      )
+    },
   },
   block: {
     h2: ({ children }) => (
