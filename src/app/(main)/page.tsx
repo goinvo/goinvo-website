@@ -3,6 +3,7 @@ import { HomePageRenderer } from '@/components/home/HomePageRenderer'
 import { HomeExperimentExposure } from '@/components/analytics/HomeExperimentExposure'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/' },
   title: {
     absolute: 'Boston UX Design Agency | GoInvo Boston',
   },

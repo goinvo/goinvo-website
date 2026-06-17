@@ -3,6 +3,7 @@ import { KillerTruthsChart } from "./KillerTruthsChart";
 import "./killer-truths.css";
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/killer-truths' },
   title: "Killer Truths",
   description:
     "How citizens of the USA really die (from 2007-2014). A data visualization exploring the leading causes of death in America.",

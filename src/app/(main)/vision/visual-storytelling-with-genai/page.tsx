@@ -18,6 +18,7 @@ import type { Feature } from '@/types'
 const SLUG = 'visual-storytelling-with-genai'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/visual-storytelling-with-genai' },
   title: 'Reimagining Visual Storytelling with GenAI',
   description:
     'How GoInvo uses 3D modeling and GenAI to transform healthcare visual storytelling.',

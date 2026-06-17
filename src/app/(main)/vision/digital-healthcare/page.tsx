@@ -7,6 +7,7 @@ import './digital-healthcare.css'
 const IMG_BASE = '/images/features/digital-healthcare'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/digital-healthcare' },
   title: 'Digital Healthcare: 2016 and Beyond',
   description:
     '8 health tech trends to look for in the upcoming year.',

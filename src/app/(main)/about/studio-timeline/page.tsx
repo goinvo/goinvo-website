@@ -6,6 +6,7 @@ import { Reveal } from '@/components/ui/Reveal'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/about/studio-timeline' },
   title: 'Our Studio Timeline',
   description:
     "An interactive timeline of GoInvo's history, including events, projects, and people.",

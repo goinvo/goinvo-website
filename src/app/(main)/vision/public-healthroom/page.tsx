@@ -9,6 +9,7 @@ import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { PrototypeViewer } from './PrototypeViewer'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/public-healthroom' },
   title: 'Public Restroom to Public Healthroom',
   description:
     'Preventative Health Infrastructure for cities and towns.',

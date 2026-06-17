@@ -14,6 +14,7 @@ const VID_BASE = '/videos/dfl'
 const legacyImage = (path: string) => `${IMG_BASE}/${path}`
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/bathroom-to-healthroom' },
   title: 'From Bathroom to Healthroom',
   description:
     'How magical technology will revolutionize human health.',

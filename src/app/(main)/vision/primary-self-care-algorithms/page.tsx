@@ -10,6 +10,7 @@ import { References } from '@/components/ui/References'
 import refs from '@/data/vision/primary-self-care-algorithms/references.json'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/primary-self-care-algorithms' },
   title: 'Primary Self Care Algorithms',
   description:
     'Primary self care algorithms are decision support tools for individuals to better understand their health and the steps needed to optimize their health status.',

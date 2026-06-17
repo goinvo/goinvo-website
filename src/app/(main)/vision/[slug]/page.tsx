@@ -1726,6 +1726,7 @@ export async function generateVisionFeatureMetadata(slug: string, experimentVari
   return {
     title: metadataTitle ? { absolute: metadataTitle } : renderedFeature.title,
     description,
+    alternates: { canonical: `/vision/${slug}` },
     openGraph: ogImage
       ? { title: pageTitle, description, images: [{ url: ogImage, width: 1200, height: 630 }] }
       : { title: pageTitle, description },

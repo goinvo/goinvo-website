@@ -3,6 +3,7 @@ import Image from 'next/image'
 import './print-big.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/print-big' },
   title: 'Print Big. Print Often.',
   description:
     'After almost a decade, we finally replaced our printer. Here are five ways printing big supports our commitment to think big.',

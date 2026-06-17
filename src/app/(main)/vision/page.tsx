@@ -16,6 +16,7 @@ import { featureToDisplay } from '@/lib/featureDisplay'
 import type { Feature, StaticFeature } from '@/types'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision' },
   title: 'Our vision on the future of health',
   description:
     'Our thoughts on the intersection of design, technology, and healthcare.',

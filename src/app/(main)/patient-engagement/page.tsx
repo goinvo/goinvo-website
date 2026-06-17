@@ -7,6 +7,7 @@ import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/patient-engagement' },
   title: 'Designing patient engagement experiences that connect, educate, and empower',
   description:
     'We craft impactful communication that drive adoption, trust, and outcomes.',

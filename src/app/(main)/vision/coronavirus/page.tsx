@@ -6,6 +6,7 @@ import { CovidChart } from './CovidChart'
 import './coronavirus.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/coronavirus' },
   title: 'Understanding the Novel Coronavirus (COVID-19)',
   description:
     'Learn about COVID-19, what it means for U.S. residents, and how you can protect yourself. Updated as new information emerges.',

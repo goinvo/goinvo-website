@@ -3,6 +3,7 @@ import '../disrupt.css'
 import { Part5Client } from './Part5Client'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/disrupt/part-5' },
   title: 'Disrupt! The Future of Design',
   description:
     'Designers have only just begun to think about the implications of emerging technologies for the human condition. We can and should be involved early.',

@@ -10,6 +10,7 @@ import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import type { HealthVisualization } from '@/types'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/health-visualizations' },
   title: 'Open Source Healthcare Visualizations',
   description:
     'A repo of open source health visualizations and graphics available to all for use or modification, under a Creative Commons Attribution v3 license or MIT license.',

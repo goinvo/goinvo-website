@@ -3,6 +3,7 @@ import '../disrupt.css'
 import { Part4Client } from './Part4Client'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/disrupt/part-4' },
   title: 'Disrupt! Crowdsourcing Innovation',
   description:
     'Crowdsourcing innovation through citizen scientists, engineers, designers and amateurs is increasing technological progress in unprecedented ways.',

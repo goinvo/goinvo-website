@@ -4,6 +4,7 @@ import { siteConfig } from '@/lib/config'
 import { cloudfrontImage } from '@/lib/utils'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/thank-you' },
   title: 'Thank You',
   description: 'Thank you for contacting us! We will get back to you within 2 business hours.',
   // Confirmation page — should not appear in search results.

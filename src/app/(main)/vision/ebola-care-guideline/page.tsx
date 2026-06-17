@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './ebola-care-guideline.css'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/ebola-care-guideline' },
   title: 'Ebola Care Guideline',
   description:
     'An Illustrated Process on Personal Protective Equipment (PPE) for healthcare workers in Ebola treatment areas.',

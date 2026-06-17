@@ -7,6 +7,7 @@ import { NewsletterForm } from '@/components/forms/NewsletterForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 
 export const metadata: Metadata = {
+  alternates: { canonical: '/vision/experiments' },
   title: 'Experiments in Design',
   description: 'A repo of our experiments in design.',
 }
