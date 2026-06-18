@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LaunchIcon, TagIcon } from '@sanity/icons'
+import { useToast } from '@sanity/ui'
 
 import { randomKey, slugify } from '@/lib/marketing'
 import { channelPlatformOptions, channelStatusOptions } from '../../schemas/marketingChannel'
@@ -56,6 +57,7 @@ export function ChannelWorkspace({
 }: ChannelWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(data.channels[0]?._id || null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const toast = useToast()
   const selected = data.channels.find((channel) => channel._id === selectedId) || null
 
   useEffect(() => {
@@ -63,15 +65,24 @@ export function ChannelWorkspace({
   }, [data.channels, selectedId])
 
   const createChannel = async () => {
-    const createdId = await createDocument({
-      _type: 'marketingChannel',
-      title: '',
-      key: `new-channel-${Date.now()}`,
-      status: 'active',
-      platform: 'social',
-      contentTypes: [],
-    })
-    setSelectedId(createdId)
+    try {
+      const createdId = await createDocument({
+        _type: 'marketingChannel',
+        title: '',
+        key: `new-channel-${Date.now()}`,
+        status: 'active',
+        platform: 'social',
+        contentTypes: [],
+      })
+      setSelectedId(createdId)
+      toast.push({ status: 'success', title: 'Channel created' })
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Could not create channel',
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
   }
 
   const deleteChannel = async (channel: MarketingChannel) => {
@@ -98,6 +109,14 @@ export function ChannelWorkspace({
       await client.delete(channel._id)
       setSelectedId(data.channels.find((candidate) => candidate._id !== channel._id)?._id || null)
       await loadData()
+      toast.push({ status: 'success', title: `Deleted "${channel.title || channel.key}"` })
+    } catch (error) {
+      // Previously this had only a `finally` — a failed delete surfaced nothing.
+      toast.push({
+        status: 'error',
+        title: 'Could not delete channel',
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setDeletingId(null)
     }
@@ -195,6 +214,7 @@ function ChannelEditor({
   const [newTypeLabel, setNewTypeLabel] = useState('')
   const [newTypeValue, setNewTypeValue] = useState('')
   const [newTypeDescription, setNewTypeDescription] = useState('')
+  const toast = useToast()
 
   useEffect(() => {
     setDraft(channel ? { ...channel, contentTypes: normalizeContentTypes(channel.contentTypes || []) } : null)
@@ -277,7 +297,16 @@ function ChannelEditor({
     }
     const unset = emptyKeys(set)
     unset.forEach((key) => delete set[key])
-    await onSave(channel._id, set, unset)
+    try {
+      await onSave(channel._id, set, unset)
+      toast.push({ status: 'success', title: 'Channel saved' })
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Could not save channel',
+        description: error instanceof Error ? error.message : undefined,
+      })
+    }
   }
 
   const usage = getChannelUsage(data, channel)
