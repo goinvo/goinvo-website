@@ -745,6 +745,7 @@ const components: PortableTextComponents = {
         // Multiple cells: render as 2-col grid
         const isMulti = cells.length >= 2
         return (
+          <Wrap>
           <ArticleReveal intensity="visual">
             <figure className={cn('my-8', bgClasses[bg])}>
               <div className={cn('grid gap-6', isMulti ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
@@ -769,6 +770,7 @@ const components: PortableTextComponents = {
               </div>
             </figure>
           </ArticleReveal>
+          </Wrap>
         )
       }
 
@@ -801,6 +803,7 @@ const components: PortableTextComponents = {
         if (bg !== 'none') {
           const imgUrl = imageItems[0] ? urlForImage(imageItems[0]).width(400).url() : ''
           return (
+            <Wrap>
             <ArticleReveal intensity="visual">
               <div className={cn('my-5 flex flex-col md:flex-row', bgClasses[bg])}>
                 {imageFirst && imgUrl && (
@@ -818,6 +821,7 @@ const components: PortableTextComponents = {
                 )}
               </div>
             </ArticleReveal>
+            </Wrap>
           )
         }
 
@@ -859,12 +863,14 @@ const components: PortableTextComponents = {
         )
 
         return (
+          <Wrap>
           <ArticleReveal intensity="visual">
             <div className={cn('my-8 grid gap-8 items-start', gridClass)}>
               {imageFirst ? renderImages() : renderText()}
               {imageFirst ? renderText() : renderImages()}
             </div>
           </ArticleReveal>
+          </Wrap>
         )
       }
 
@@ -957,11 +963,13 @@ const components: PortableTextComponents = {
 
       // Text-only: render in grid columns
       return (
+        <Wrap>
         <ArticleReveal intensity="visual">
           <div className={cn('my-8 grid gap-4', colCount === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
             <PortableText value={items} components={components} />
           </div>
         </ArticleReveal>
+        </Wrap>
       )
     },
     backgroundSection: ({ value }) => {
