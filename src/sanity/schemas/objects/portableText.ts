@@ -278,12 +278,13 @@ export default defineType({
           name: 'size',
           title: 'Width',
           type: 'string',
-          description: 'Override the column container width',
+          description:
+            'Override the column container width. To span the whole page, choose "Full bleed". "Wide" is a fixed 1020px (wider than the article, but not edge-to-edge). Applies to every column layout.',
           options: {
             list: [
               { title: 'Default (follow article width)', value: 'default' },
-              { title: 'Wide (1020px)', value: 'wide' },
-              { title: 'Full bleed', value: 'bleed' },
+              { title: 'Wide (fixed 1020px)', value: 'wide' },
+              { title: 'Full bleed (spans the whole page)', value: 'bleed' },
             ],
           },
           initialValue: 'default',
