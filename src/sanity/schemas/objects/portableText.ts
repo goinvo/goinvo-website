@@ -320,7 +320,7 @@ export default defineType({
                   type: 'array',
                   of: [
                     { type: 'block' },
-                    { type: 'image', options: { hotspot: true } },
+                    { type: 'image', options: { hotspot: true }, fields: [{ name: 'alt', title: 'Alt text', type: 'string', description: 'Describe the image for screen readers. Leave blank only if purely decorative.' }] },
                     {
                       name: 'buttonGroup',
                       title: 'Buttons',
@@ -416,7 +416,7 @@ export default defineType({
           },
           of: [
             { type: 'block' },
-            { type: 'image', options: { hotspot: true } },
+            { type: 'image', options: { hotspot: true }, fields: [{ name: 'alt', title: 'Alt text', type: 'string', description: 'Describe the image for screen readers. Leave blank only if purely decorative.' }] },
             {
               name: 'buttonGroup',
               title: 'Buttons',
@@ -776,7 +776,7 @@ export default defineType({
             {
               type: 'object',
               fields: [
-                { name: 'label', title: 'Label', type: 'string', description: 'Bold uppercase label (e.g. "SAFETY")' },
+                { name: 'label', title: 'Label', type: 'string', description: 'Bold uppercase label (e.g. "SAFETY"). Note: some older "stat" cards reuse this field for the large number (e.g. "15").' },
                 { name: 'description', title: 'Description', type: 'text', rows: 2, description: 'Card body text' },
               ],
               preview: {
@@ -899,7 +899,7 @@ export default defineType({
           type: 'array',
           of: [
             { type: 'block' },
-            { type: 'image', options: { hotspot: true } },
+            { type: 'image', options: { hotspot: true }, fields: [{ name: 'alt', title: 'Alt text', type: 'string', description: 'Describe the image for screen readers. Leave blank only if purely decorative.' }] },
           ],
         },
       ],
@@ -1198,9 +1198,9 @@ export default defineType({
             {
               type: 'object',
               fields: [
-                { name: 'inputImage', title: 'Input Image', type: 'image' },
+                { name: 'inputImage', title: 'Input Image', type: 'image', fields: [{ name: 'alt', title: 'Alt text', type: 'string', description: 'Describe the image for screen readers.' }] },
                 { name: 'prompt', title: 'Prompt Text', type: 'text', rows: 3 },
-                { name: 'outputImage', title: 'Output Image', type: 'image' },
+                { name: 'outputImage', title: 'Output Image', type: 'image', fields: [{ name: 'alt', title: 'Alt text', type: 'string', description: 'Describe the image for screen readers.' }] },
               ],
               preview: {
                 select: { prompt: 'prompt' },
