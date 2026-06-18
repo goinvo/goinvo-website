@@ -1133,7 +1133,7 @@ const components: PortableTextComponents = {
                     {headings[0] && <div className="md:hidden mb-2 text-base">{headings[0]}</div>}
                     {inputUrl && (
                       <div className="flex flex-1 items-center">
-                        <img src={inputUrl} alt="" loading="lazy" className="block w-full h-auto" />
+                        <img src={inputUrl} alt={row.inputImage?.alt || ''} loading="lazy" className="block w-full h-auto" />
                       </div>
                     )}
                   </div>
@@ -1147,7 +1147,7 @@ const components: PortableTextComponents = {
                   <span className="hidden md:block text-center font-sans text-[1.5rem] leading-[1.625rem] font-normal">=</span>
                   <div className="col-span-4 md:col-span-1 mt-[15px] md:mt-0">
                     {headings[2] && <div className="md:hidden mb-2 text-base">{headings[2]}</div>}
-                    {outputUrl && <img src={outputUrl} alt="" loading="lazy" className="block w-full h-auto" />}
+                    {outputUrl && <img src={outputUrl} alt={row.outputImage?.alt || ''} loading="lazy" className="block w-full h-auto" />}
                   </div>
                 </div>
               )
