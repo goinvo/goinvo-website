@@ -218,6 +218,7 @@ function ChannelEditor({
   const [newTypeValue, setNewTypeValue] = useState('')
   const [newTypeDescription, setNewTypeDescription] = useState('')
   const toast = useToast()
+  const { confirm, confirmDialog } = useConfirmDialog()
 
   useEffect(() => {
     setDraft(channel ? { ...channel, contentTypes: normalizeContentTypes(channel.contentTypes || []) } : null)
@@ -261,13 +262,13 @@ function ChannelEditor({
     setNewTypeDescription('')
   }
 
-  const removeContentType = (contentType: ChannelContentType) => {
+  const removeContentType = async (contentType: ChannelContentType) => {
     const usage = getContentTypeUsage(data, channel, contentType)
     const message = usage > 0
       ? `Remove "${contentType.label || contentType.value}" from "${channel.title || channel.key}"? It is used by ${usage} calendar item${usage === 1 ? '' : 's'}. Existing items will keep the saved content type value, but it will no longer be a managed option.`
       : `Remove "${contentType.label || contentType.value}" from "${channel.title || channel.key}"?`
 
-    if (!window.confirm(message)) return
+    if (!(await confirm({ title: 'Remove content type?', message, confirmLabel: 'Remove' }))) return
 
     setDraft({
       ...draft,
@@ -316,6 +317,7 @@ function ChannelEditor({
 
   return (
     <Stack gap={12}>
+      {confirmDialog}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
         <h2 style={{ margin: 0, fontSize: 22 }}>Channel setup</h2>
         <button
@@ -441,7 +443,7 @@ function ChannelEditor({
                     color: usageCount > 0 ? '#e36216' : 'var(--card-fg-color)',
                     marginTop: 20,
                   }}
-                  onClick={() => removeContentType(contentType)}
+                  onClick={() => void removeContentType(contentType)}
                 >
                   Delete
                 </button>
