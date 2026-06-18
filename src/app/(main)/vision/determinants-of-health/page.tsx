@@ -1045,7 +1045,7 @@ export default function DeterminantsOfHealthPage() {
                   {
                     title:
                       'The determinants of health. (n.d.). Retrieved March 14, 2016',
-                    link: 'http://www.who.int/hia/evidence/doh/en/',
+                    link: 'https://web.archive.org/web/20200423052743/http://www.who.int/hia/evidence/doh/en/',
                   },
                   {
                     title:
