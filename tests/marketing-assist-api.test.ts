@@ -22,8 +22,18 @@ vi.mock('@/lib/marketing/anthropicJson', async () => {
   }
 })
 
+// The route is auth-gated (Studio session OR MARKETING_API_KEY) via
+// assertStudioOrApiKey. Mock it as a no-op so these tests exercise route logic;
+// the dedicated test below flips it to a rejection to verify the 401 gate.
+const assertStudioOrApiKeyMock = vi.hoisted(() => vi.fn(async () => {}))
+vi.mock('@/lib/marketing/auth', () => ({
+  assertStudioOrApiKey: assertStudioOrApiKeyMock,
+  MarketingAuthError: class MarketingAuthError extends Error {},
+}))
+
 import { POST } from '@/app/api/marketing/assist/route'
 import { generateClaudeText } from '@/lib/marketing/anthropicJson'
+import { MarketingAuthError } from '@/lib/marketing/auth'
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY
 const originalAnthropicKey = process.env.ANTHROPIC_API_KEY
@@ -628,5 +638,11 @@ describe('marketing assistant API', () => {
 
     expect(response.status).toBe(400)
     expect(payload.error).toBe('Unknown marketing assistant target.')
+  })
+
+  it('rejects unauthenticated requests with 401 (gate runs before anything else)', async () => {
+    assertStudioOrApiKeyMock.mockRejectedValueOnce(new MarketingAuthError())
+    const response = await POST(assistRequest('channel', { title: 'Instagram' }))
+    expect(response.status).toBe(401)
   })
 })
