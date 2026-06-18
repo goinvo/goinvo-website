@@ -11,6 +11,7 @@ import { searchIntentOptions } from '../../schemas/marketingCampaign'
 import { funnelStageOptions } from '../../schemas/marketingFunnel'
 import { linkItemStatusOptions } from '../../schemas/marketingLinkItem'
 import { PublishConnectionStatus } from './PublishConnectionStatus'
+import { PublishPreview } from './PublishPreview'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports CalendarWorkspace only for JSX
@@ -826,6 +827,9 @@ function CalendarItemEditor({
             />
           </InputField>
         </div>
+        {item && (channelKey === 'linkedin' || channelKey === 'instagram') && (
+          <PublishPreview itemId={item._id} />
+        )}
         <InputField label="Which campaign is it part of?" help="Leave blank if this is a one-off item or not connected yet.">
           <Select
             value={campaignId}
