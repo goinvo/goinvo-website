@@ -886,6 +886,13 @@ export function studioSessionToken(): string | null {
   }
 }
 
+// Header map that authenticates a Studio→/api/marketing request as the logged-in
+// Studio user (so auth-gated routes like /assist accept it). Empty when no token.
+export function studioSessionHeader(): Record<string, string> {
+  const token = studioSessionToken()
+  return token ? { 'x-sanity-session': token } : {}
+}
+
 export interface RefSummary {
   _id: string
   title?: string
@@ -5578,7 +5585,7 @@ function CarouselWorkflowWizard({
     try {
       const response = await fetch('/api/marketing/assist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...studioSessionHeader() },
         body: JSON.stringify({
           kind: 'strategistChat',
           draft: buildStrategistChatDraft(data, activeSession, questionnaire),
@@ -5666,7 +5673,7 @@ function CarouselWorkflowWizard({
     try {
       const response = await fetch('/api/marketing/assist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...studioSessionHeader() },
         body: JSON.stringify({
           kind: 'researchProject',
           draft: buildWizardStrategyDraft(data, questionnaire),
@@ -7694,7 +7701,7 @@ export function MarketingAiAssistPanel({
     try {
       const response = await fetch('/api/marketing/assist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...studioSessionHeader() },
         body: JSON.stringify({
           kind,
           draft: {
