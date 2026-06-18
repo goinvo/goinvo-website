@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DashboardIcon } from '@sanity/icons'
+import { useToast } from '@sanity/ui'
 
 import { randomKey } from '@/lib/marketing'
+import { useConfirmDialog } from './ConfirmDialog'
 import { campaignObjectiveOptions, searchIntentOptions } from '../../schemas/marketingCampaign'
 import { funnelStageOptions } from '../../schemas/marketingFunnel'
 import { marketingTemplateKindOptions, marketingTemplateStatusOptions } from '../../schemas/marketingTemplate'
@@ -91,6 +93,8 @@ export function TemplateWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(data.templates[0]?._id || null)
   const [kindFilter, setKindFilter] = useState('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const toast = useToast()
+  const { confirm, confirmDialog } = useConfirmDialog()
   const filteredTemplates = useMemo(
     () => data.templates.filter((template) => kindFilter === 'all' || template.kind === kindFilter),
     [data.templates, kindFilter],
@@ -110,13 +114,20 @@ export function TemplateWorkspace({
 
   const deleteTemplate = async (template: MarketingTemplate) => {
     const message = `Delete "${template.title || 'Untitled template'}"? Existing campaigns and funnels created from it will not change, but this template will disappear from future pickers.`
-    if (!window.confirm(message)) return
+    if (!(await confirm({ title: 'Delete template?', message, confirmLabel: 'Delete' }))) return
 
     setDeletingId(template._id)
     try {
       await client.delete(template._id)
       setSelectedId(data.templates.find((candidate) => candidate._id !== template._id)?._id || null)
       await loadData()
+      toast.push({ status: 'success', title: `Deleted "${template.title || 'template'}"` })
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Could not delete template',
+        description: error instanceof Error ? error.message : undefined,
+      })
     } finally {
       setDeletingId(null)
     }
@@ -124,6 +135,7 @@ export function TemplateWorkspace({
 
   return (
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '390px minmax(0, 1fr)', gap: 16 }}>
+      {confirmDialog}
       <section style={styles.panel}>
         <PanelHeading
           title="Templates"

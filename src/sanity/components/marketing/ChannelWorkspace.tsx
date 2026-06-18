@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { LaunchIcon, TagIcon } from '@sanity/icons'
 import { useToast } from '@sanity/ui'
+import { useConfirmDialog } from './ConfirmDialog'
 
 import { randomKey, slugify } from '@/lib/marketing'
 import { channelPlatformOptions, channelStatusOptions } from '../../schemas/marketingChannel'
@@ -58,6 +59,7 @@ export function ChannelWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(data.channels[0]?._id || null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const toast = useToast()
+  const { confirm, confirmDialog } = useConfirmDialog()
   const selected = data.channels.find((channel) => channel._id === selectedId) || null
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function ChannelWorkspace({
       ? `Delete "${channel.title || channel.key}"? It is currently used by ${usageText}. Calendar items will keep their saved channel key, but the managed channel and its content type options will be removed.`
       : `Delete "${channel.title || channel.key}"?`
 
-    if (!window.confirm(message)) return
+    if (!(await confirm({ title: 'Delete channel?', message, confirmLabel: 'Delete' }))) return
 
     setDeletingId(channel._id)
     try {
@@ -124,6 +126,7 @@ export function ChannelWorkspace({
 
   return (
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '390px minmax(0, 1fr)', gap: 16 }}>
+      {confirmDialog}
       <div style={{ gridColumn: '1 / -1' }}>
         <PublishConnectionStatus variant="banner" />
       </div>
