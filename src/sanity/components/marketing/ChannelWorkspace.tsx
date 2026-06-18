@@ -141,7 +141,7 @@ export function ChannelWorkspace({
           disabled={savingId === 'new'}
           onClick={() => void createChannel()}
         >
-          Add channel
+          {savingId === 'new' ? 'Creating…' : 'Add channel'}
         </button>
 
         <div style={{ display: 'grid', gap: 8 }}>
@@ -179,7 +179,7 @@ export function ChannelWorkspace({
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
           <PanelHeading
             title="Channel manager"
-            description="Calendar content type menus are generated from the selected channel's content types."
+            description="These content types become the format options on the calendar when you choose this channel."
           />
           <div style={{ ...styles.small, ...styles.muted, textAlign: 'right' }}>
             {data.channels.length} channels available to calendar
@@ -615,7 +615,7 @@ function ChannelPostingTimes({ client, channelId }: { client: StudioClient; chan
         <div style={{ minWidth: 0 }}>
           <h3 style={{ margin: '0 0 2px', fontSize: 16 }}>Recommended posting times</h3>
           <div style={{ ...styles.small, ...styles.muted }}>
-            Live web research (Claude) for the best times to post on this channel. Defaults the calendar publish time.
+            Researches the best times to post on this channel. The top time becomes the default when you schedule on the calendar.
           </div>
         </div>
         <button
@@ -660,7 +660,7 @@ function ChannelPostingTimes({ client, channelId }: { client: StudioClient; chan
       ) : (
         !researching && (
           <div style={{ ...styles.small, ...styles.muted, marginTop: 10 }}>
-            No research yet. Run it to populate recommended times for this channel.
+            No recommendations yet — run the research above to find this channel&rsquo;s best posting times.
           </div>
         )
       )}

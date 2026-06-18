@@ -246,7 +246,7 @@ export function CalendarWorkspace({
             Next month
           </button>
           <button type="button" data-tour-id="autopilot-calendar-add" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createCalendarItem()}>
-            Add calendar item
+            {savingId === 'new' ? 'Creating…' : 'Add calendar item'}
           </button>
           </div>
         </div>
@@ -1064,7 +1064,7 @@ function CalendarItemEditor({
             <div>
               <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Quick Links</h3>
               <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-                Linked items appear on /links automatically when this post is published or its scheduled date arrives.
+                These links show on the public /links page automatically once this post is published (or its publish date arrives).
               </div>
             </div>
             <StatusPill status={isCalendarItemPublishReady(draft) ? 'active' : 'draft'} options={linkItemStatusOptions} />

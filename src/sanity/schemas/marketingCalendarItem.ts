@@ -84,10 +84,10 @@ export default defineType({
     }),
     defineField({
       name: 'publishAt',
-      title: 'Publish At',
+      title: 'Publish date',
       type: 'datetime',
       group: 'planning',
-      description: 'Planned or actual publishing date/time.',
+      description: 'When this post should go live.',
     }),
     defineField({
       name: 'contentType',
@@ -98,10 +98,10 @@ export default defineType({
     }),
     defineField({
       name: 'channel',
-      title: 'Primary Channel Key',
+      title: 'Channel (preset key)',
       type: 'string',
       group: 'planning',
-      description: 'Stable channel key used for reporting and fallback display. Prefer Managed Channel when available.',
+      description: 'Where this post goes, as a preset key used for reports. If this channel is set up in the system, set the Managed Channel field below instead.',
       options: { list: channelOptions },
     }),
     defineField({
@@ -256,11 +256,11 @@ export default defineType({
     }),
     defineField({
       name: 'linkItems',
-      title: 'Link in Bio Links',
+      title: 'Quick Links',
       type: 'array',
       group: 'content',
       description:
-        'Links associated with this post. These can appear on /links automatically when the post is published.',
+        'Links to show on the public /links page. They appear there automatically once this post is published.',
       of: [{ type: 'reference', to: [{ type: 'marketingLinkItem' }] }],
     }),
     defineField({
@@ -416,7 +416,7 @@ export default defineType({
       group: 'publishing',
       initialValue: false,
       description:
-        'When on, the publish worker posts this item to its social channel at the scheduled time (status "Scheduled" and a past Publish At). Off by default — scheduling alone never posts.',
+        'When on, this post is published to its social channel at the scheduled time (needs status "Scheduled" and a past Publish date). Off by default — scheduling alone never posts.',
     }),
     defineField({
       name: 'publishState',
