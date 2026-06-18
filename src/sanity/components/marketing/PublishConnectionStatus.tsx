@@ -144,8 +144,8 @@ export function PublishConnectionStatus({ variant = 'banner' }: { variant?: 'ban
         </div>
         {!loading && !error && !allConnected ? (
           <span style={{ ...styles.small, ...styles.muted }}>
-            Posts set to auto-publish are saved on the calendar but won&rsquo;t post until the
-            channel&rsquo;s tokens are set. See the publishing setup in CLAUDE.md.
+            Posts set to auto-publish are saved on the calendar but won&rsquo;t post until this
+            channel&rsquo;s LinkedIn or Instagram credentials are added. Ask an admin to set them up.
           </span>
         ) : null}
       </div>
