@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { generateClaudeText, isAnthropicConfigured, parseJsonObject, resolveMarketingModel } from '@/lib/marketing/anthropicJson'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { client } from '@/sanity/lib/client'
 
 type MarketingAssistKind =
@@ -310,6 +311,10 @@ const VALID_STRATEGIST_ACTION_KINDS = ['test', 'saveForLater', 'followUp', 'useF
 
 export async function POST(request: Request) {
   try {
+    // Gate this route like its AI siblings (ai-citation, citation-check, research/*):
+    // each POST spends Claude credits, so it must require a Studio session or the
+    // MARKETING_API_KEY rather than being an open, money-spending endpoint.
+    await assertStudioOrApiKey(request)
     const body = (await request.json()) as {
       kind?: MarketingAssistKind
       draft?: Record<string, unknown>
@@ -366,6 +371,9 @@ export async function POST(request: Request) {
       },
     })
   } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return NextResponse.json({ error: error.message }, { status: 401 })
+    }
     console.error('Marketing assistant failed:', error)
     return NextResponse.json({ error: 'Marketing assistant failed.' }, { status: 500 })
   }
