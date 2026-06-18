@@ -354,7 +354,13 @@ export async function createResearchProjectRecords(
     researchResults: resultRefs,
     notes: buildResearchResultEvidenceSummary(project, selected),
   })
+  // Best-effort transactional safety: track every doc we create so a mid-cascade
+  // failure rolls them back (in one transaction, to resolve the calendar↔link
+  // mutual references) instead of orphaning funnel/campaign/calendar/link docs.
+  const rollbackIds: string[] = []
+  try {
   const funnel = await client.create(funnelPayload)
+  rollbackIds.push(funnel._id)
 
   // 1 marketingCampaign.
   const campaignPayload = buildCreatePayload('marketingCampaign', {
@@ -394,6 +400,7 @@ export async function createResearchProjectRecords(
       'Generated from trusted Research findings. Edit before publishing if strategy changes.',
   })
   const campaign = await client.create(campaignPayload)
+  rollbackIds.push(campaign._id)
 
   // 1–2 (marketingCalendarItem + marketingLinkItem) pairs.
   const opportunities = buildResearchResultOpportunities(project, selected, destinationUrl)
@@ -427,6 +434,7 @@ export async function createResearchProjectRecords(
       researchResults: refsFromIds(opportunity.resultIds),
     })
     const createdCalendar = await client.create(calendarPayload)
+    rollbackIds.push(createdCalendar._id)
     createdCalendarItems.push(createdCalendar._id)
 
     const linkPayload = buildCreatePayload('marketingLinkItem', {
@@ -446,6 +454,7 @@ export async function createResearchProjectRecords(
       researchResults: refsFromIds(opportunity.resultIds),
     })
     const createdLink = await client.create(linkPayload)
+    rollbackIds.push(createdLink._id)
     createdLinkItems.push(createdLink._id)
 
     // Patch the calendar item to reference its link (matches the tool).
@@ -481,6 +490,27 @@ export async function createResearchProjectRecords(
     linkItemIds: createdLinkItems,
     channelKeys: channels,
     projectId: project._id,
+  }
+  } catch (error) {
+    await rollbackCreatedRecords(client, rollbackIds)
+    throw error
+  }
+}
+
+/**
+ * Best-effort rollback for a partially-created cascade. Deletes every created
+ * document in ONE transaction so the calendar↔link mutual references (each side
+ * strong-references the other) can be removed together — Sanity rejects deleting
+ * a doc that is still referenced unless its referrer is deleted in the same
+ * transaction. Swallows cleanup errors; surfacing the original failure matters more.
+ */
+export async function rollbackCreatedRecords(client: SanityClient, ids: string[]): Promise<void> {
+  if (!ids.length) return
+  try {
+    const tx = ids.reduce((transaction, id) => transaction.delete(id), client.transaction())
+    await tx.commit({ visibility: 'async' })
+  } catch {
+    // Ignore cleanup errors.
   }
 }
 
