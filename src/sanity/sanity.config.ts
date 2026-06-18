@@ -6,7 +6,7 @@ import { apiVersion, dataset, projectId } from './env'
 import { gettingStartedPlugin } from './tools/gettingStarted'
 import { feedbackPlugin } from './tools/feedbackTool'
 import { featureArticleTemplates, resolveFeatureNewDocumentOptions } from './featureTemplates'
-import { featureAuthoringBadge } from './featureBadges'
+import { featureAuthoringBadge, publishStatusBadge } from './featureBadges'
 import { locations, mainDocuments } from './presentation/resolve'
 import { structure } from './structure'
 import { marketingPlugin } from './tools/marketingTool'
@@ -37,7 +37,7 @@ export default defineConfig({
     feedbackPlugin(),
   ],
   document: {
-    badges: (prev) => [...prev, featureAuthoringBadge],
+    badges: (prev) => [...prev, publishStatusBadge, featureAuthoringBadge],
     newDocumentOptions: resolveFeatureNewDocumentOptions,
   },
   schema: {
