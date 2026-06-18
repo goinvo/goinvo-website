@@ -22,6 +22,7 @@
  */
 
 import type { PublishContent, PublishOutcome, SocialPublisher } from './types'
+import { withRetry } from './retry'
 
 const DEFAULT_GRAPH_VERSION = 'v21.0'
 const DEFAULT_GRAPH_HOST = 'https://graph.facebook.com'
@@ -64,11 +65,14 @@ async function graphPost(path: string, params: Record<string, string>): Promise<
 /** Reads a published media's permalink (best-effort; never throws). */
 async function fetchPermalink(mediaId: string): Promise<string | undefined> {
   try {
-    const url = `${graphUrl(mediaId)}?fields=permalink&access_token=${encodeURIComponent(token())}`
-    const res = await fetch(url, { cache: 'no-store' })
-    if (!res.ok) return undefined
-    const json = (await res.json()) as { permalink?: string }
-    return json.permalink
+    // Idempotent GET — retry transient blips before giving up (still best-effort).
+    return await withRetry(async () => {
+      const url = `${graphUrl(mediaId)}?fields=permalink&access_token=${encodeURIComponent(token())}`
+      const res = await fetch(url, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`permalink fetch failed (${res.status})`)
+      const json = (await res.json()) as { permalink?: string }
+      return json.permalink
+    })
   } catch {
     return undefined
   }
@@ -76,13 +80,17 @@ async function fetchPermalink(mediaId: string): Promise<string | undefined> {
 
 /** Reads a media container's processing status (Reels/video are processed async). */
 async function getContainerStatus(containerId: string): Promise<string> {
-  const url = `${graphUrl(containerId)}?fields=status_code&access_token=${encodeURIComponent(token())}`
-  const res = await fetch(url, { cache: 'no-store' })
-  const json = (await res.json().catch(() => ({}))) as { status_code?: string; error?: { message?: string } }
-  if (!res.ok || json.error) {
-    throw new Error(json.error?.message || `container status check failed (${res.status})`)
-  }
-  return json.status_code || 'IN_PROGRESS'
+  // Idempotent GET — safe to retry, so async Reel finalize polling survives a
+  // transient network hiccup instead of failing the whole publish.
+  return withRetry(async () => {
+    const url = `${graphUrl(containerId)}?fields=status_code&access_token=${encodeURIComponent(token())}`
+    const res = await fetch(url, { cache: 'no-store' })
+    const json = (await res.json().catch(() => ({}))) as { status_code?: string; error?: { message?: string } }
+    if (!res.ok || json.error) {
+      throw new Error(json.error?.message || `container status check failed (${res.status})`)
+    }
+    return json.status_code || 'IN_PROGRESS'
+  })
 }
 
 /**
