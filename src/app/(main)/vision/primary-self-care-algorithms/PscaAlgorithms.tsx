@@ -418,7 +418,7 @@ export function PscaAlgorithms() {
             </ul>
           </li>
           <li>
-            <a href="https://www.reproductiveaccess.org/wp-content/uploads/2014/06/2020-09-contra-choices.pdf" className="text-primary underline">
+            <a href="https://web.archive.org/web/20260121000632/https://www.reproductiveaccess.org/wp-content/uploads/2014/06/2020-09-contra-choices.pdf" className="text-primary underline">
               Your Birth Control Choices
             </a><sup><a href="#references">32</a></sup>
             <ul className="list-[circle] pl-6 mt-1 space-y-1">
