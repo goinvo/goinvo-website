@@ -11,6 +11,7 @@ import {
   CARDGRID_COLUMNS_OPTIONS,
   CARDGRID_VARIANT_OPTIONS,
 } from '../../../lib/portableTextOptions'
+import { CUSTOM_COMPONENT_OPTIONS, isKnownCustomComponentName } from '../../../lib/customComponents'
 
 const collapsibleCustomBlockOptions = {
   collapsible: true,
@@ -1328,23 +1329,20 @@ export default defineType({
           name: 'name',
           title: 'Component name',
           type: 'string',
-          description: 'Identifier the renderer dispatches on. Choose a known component for page-specific interactive widgets.',
+          description:
+            'Pick the page-specific widget to render here. Only the listed components exist — an unrecognized name renders nothing on the live page and blocks publishing.',
           options: {
             layout: 'dropdown',
-            list: [
-              { title: 'Virtual Care: Top 15 Table', value: 'virtualCareTop15Table' },
-              { title: 'Virtual Care: Time to Diagnosis', value: 'virtualCareTimeToDiagnosis' },
-              { title: 'FIHC: Face Development Section', value: 'fihcFaceDevelopmentSection' },
-              { title: 'FIHC: Persuasion Emotion Section', value: 'fihcPersuasionEmotionSection' },
-              { title: 'Ipsos Research Workflow Widget', value: 'ipsosWorkflowWidget' },
-              { title: 'Loneliness: Isolation Costs', value: 'lonelinessIsolationCosts' },
-              { title: 'Loneliness: Risk Overview', value: 'lonelinessRiskOverview' },
-              { title: 'Loneliness: Feeling Section', value: 'lonelinessFeelingSection' },
-              { title: 'Loneliness: Timeline Section', value: 'lonelinessTimelineSection' },
-              { title: 'Loneliness: Resilience Section', value: 'lonelinessResilienceSection' },
-            ],
+            // Single source shared with the renderer + validation (src/lib/customComponents)
+            // so the picker, the page, and "is this valid?" can never drift apart.
+            list: [...CUSTOM_COMPONENT_OPTIONS],
           },
-          validation: (Rule) => Rule.required(),
+          validation: (Rule) =>
+            Rule.required().custom((value) =>
+              !value || isKnownCustomComponentName(value as string)
+                ? true
+                : `"${value}" isn't a known component. Pick one from the list — the page can only render the listed widgets.`,
+            ),
         },
       ],
     }),

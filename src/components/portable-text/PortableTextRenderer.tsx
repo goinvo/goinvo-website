@@ -17,6 +17,7 @@ import { References } from '@/components/ui/References'
 import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceDevelopmentSection'
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
 import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
+import { resolveCustomComponentName } from '@/lib/customComponents'
 import {
   LonelinessFeelingSection,
   LonelinessIsolationCostsSection,
@@ -1238,13 +1239,14 @@ const components: PortableTextComponents = {
       </ArticleReveal>
     ),
     customComponent: ({ value }) => {
-      // Dispatch by name to a hard-coded React component. Used for
-      // page-specific tables and visualizations that don't fit the
-      // generic block types. stegaClean strips visual-editing metadata so the
-      // name matches in Presentation/preview; normalize the first letter so an
-      // editor-entered PascalCase name ("IpsosWorkflowWidget") matches the cases.
+      // Dispatch by name to a hard-coded React component for page-specific
+      // tables and visualizations. The canonical name list, alias/case handling,
+      // and the Studio dropdown + schema validation all come from one registry
+      // (src/lib/customComponents) so an editor can only pick — and only save as
+      // valid — a name this switch can actually render. stegaClean strips the
+      // visual-editing metadata so the name still matches in the Presentation preview.
       const rawName = (stegaClean(value?.name) || '').trim()
-      const name = rawName ? rawName.charAt(0).toLowerCase() + rawName.slice(1) : ''
+      const name = resolveCustomComponentName(rawName)
       switch (name) {
         case 'virtualCareTop15Table':
           return (
@@ -1271,12 +1273,6 @@ const components: PortableTextComponents = {
             </ArticleReveal>
           )
         case 'ipsosWorkflowWidget':
-        case 'ipsosResearchWorkflowWidget':
-        case 'ipsosResearchWorkflow':
-        case 'ipsosWorkflow':
-        case 'ipsosFlowWidget':
-        case 'ipsosFlowWorkflow':
-        case 'ipsosWorkflowDiagram':
           return (
             <ArticleReveal intensity="visual">
               <IpsosWorkflowWidget />
@@ -1310,18 +1306,6 @@ const components: PortableTextComponents = {
           return (
             <ArticleReveal intensity="visual">
               <LonelinessResilienceSection />
-            </ArticleReveal>
-          )
-        case 'ipsosWorkflowWidget':
-        case 'ipsosResearchWorkflowWidget':
-        case 'ipsosResearchWorkflow':
-        case 'ipsosWorkflow':
-        case 'ipsosFlowWidget':
-        case 'ipsosFlowWorkflow':
-        case 'ipsosWorkflowDiagram':
-          return (
-            <ArticleReveal intensity="visual">
-              <IpsosWorkflowWidget />
             </ArticleReveal>
           )
         default:
