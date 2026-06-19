@@ -1,7 +1,9 @@
 import { defineType, defineArrayMember } from 'sanity'
-import { AsteriskIcon, OlistIcon, UlistIcon } from '@sanity/icons'
+import { AsteriskIcon, OlistIcon, UlistIcon, WarningOutlineIcon } from '@sanity/icons'
+import { stegaClean } from '@sanity/client/stega'
 import { DataTableBlockInput, ResultsBlockInput } from '../../components/FeatureAuthoringInputs'
 import { CodeTextareaInput, HtmlEmbedInput } from '../../components/HtmlEmbedInput'
+import { CustomComponentInput } from '../../components/CustomComponentInput'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
 import {
@@ -1318,10 +1320,22 @@ export default defineType({
       type: 'object',
       description: 'Renders a hard-coded React component by name. Used for page-specific tables and visualizations that don\'t fit the generic block types.',
       options: collapsibleCustomBlockOptions,
+      // Inline "what's wrong + how to fix" card when the chosen component is
+      // unknown/empty (the field validation alone hides behind the collapsed block).
+      components: { input: CustomComponentInput },
       preview: {
         select: { name: 'name' },
         prepare({ name }) {
-          return { title: name || 'Custom Component', subtitle: 'Custom Component' }
+          // Flag an unrecognized component on the collapsed row so it's visible
+          // at a glance without opening the block. stegaClean: the Presentation
+          // tool encodes field values for visual editing.
+          const clean = (stegaClean(name) || '').trim()
+          const invalid = !isKnownCustomComponentName(clean)
+          return {
+            title: clean || 'Custom Component',
+            subtitle: invalid ? '⚠ Unknown component — open to fix' : 'Custom Component',
+            media: invalid ? WarningOutlineIcon : undefined,
+          }
         },
       },
       fields: [
