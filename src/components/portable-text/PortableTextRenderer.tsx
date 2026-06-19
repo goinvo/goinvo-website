@@ -18,6 +18,7 @@ import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceD
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
 import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
 import { resolveCustomComponentName } from '@/lib/customComponents'
+import { option } from '@/lib/sanityOptions'
 import {
   LonelinessFeelingSection,
   LonelinessIsolationCostsSection,
@@ -42,12 +43,8 @@ import {
 // (stega) appends invisible metadata to string values, which silently breaks
 // `value.x === 'literal'` in the Presentation preview while it still passes on the
 // published site — so ALWAYS read an option through option() (it strips stega) and
-// compare against the imported constants, never a bare string.
-
-/** Read a string option with stega metadata stripped, so === comparisons hold in the preview too. */
-function option(value: unknown): string {
-  return typeof value === 'string' ? stegaClean(value) : ''
-}
+// compare against the imported constants, never a bare string. The `option()`
+// helper is shared (src/lib/sanityOptions) and enforced by scripts/check-stega.mjs.
 
 /**
  * Breakout width for blocks with a Width option (cardGrid, columns).

@@ -190,6 +190,13 @@ const MARKETING_ACTIVE_VIEW_STORAGE_KEY = 'goinvo.marketing.activeView.v1'
 const MARKETING_AUTOPILOT_TARGET_STORAGE_KEY = 'goinvo.marketing.autopilotTarget.v1'
 const STRATEGY_WORKING_DRAFTS_STORAGE_KEY = 'goinvo.marketing.strategyWorkingDrafts.v1'
 
+// One dereferenced analyticsSource projection, shared by the calendar + experiments
+// queries so they can't drift. The A/B dashboard reads dashboardUrl / vercelProject /
+// lastSyncedAt off this — the experiments query used to omit them, silently hiding
+// the "Open Vercel dashboard" link and the "synced …" line. Keep in sync with the
+// fields consumers read (getAbTestingDashboardUrl / getAbTestingVercelSource).
+const ANALYTICS_SOURCE_PROJECTION = `analyticsSource->{_id, title, provider, status, vercelProject, vercelProjectId, vercelTeamSlug, productionUrl, lastSyncedAt, dashboardUrl, reportingCadence, keyMetrics[]{_key, label, definition}}`
+
 const MARKETING_QUERY = `{
   "calendarItems": *[_type == "marketingCalendarItem"]|order(publishAt asc, _updatedAt desc) {
     _id,
@@ -233,7 +240,7 @@ const MARKETING_QUERY = `{
     targetQueries,
     "campaign": campaign->{_id, title, status},
     "funnel": funnel->{_id, title, status},
-    "analyticsSource": analyticsSource->{_id, title, provider, status, vercelProject, vercelProjectId, vercelTeamSlug, productionUrl, lastSyncedAt, dashboardUrl, reportingCadence, keyMetrics[]{_key, label, definition}},
+    "analyticsSource": ${ANALYTICS_SOURCE_PROJECTION},
     "channelRef": channelRef->{_id, title, key, status, platform, contentTypes[]{_key, label, value, description}},
     "researchProject": researchProject->{_id, title, status},
     "researchResults": researchResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
@@ -410,7 +417,7 @@ const MARKETING_QUERY = `{
     primaryMetric,
     trackedMetrics[]{_key, key, label, role, comparison, source, eventName, unit, notes},
     successTrackers[]{_key, title, trackerType, metricKeys, condition, threshold, successWhen, notes},
-    "analyticsSource": analyticsSource->{_id, title, provider, status},
+    "analyticsSource": ${ANALYTICS_SOURCE_PROJECTION},
     qaNotes,
     rolloutStart,
     rolloutEnd,
