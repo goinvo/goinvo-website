@@ -1,59 +1,24 @@
 import { defineField, defineType } from 'sanity'
 import { funnelStageOptions } from './marketingFunnel'
 import { searchIntentOptions, targetSiteFields } from './marketingCampaign'
+import {
+  CALENDAR_STATUS_OPTIONS,
+  CONTENT_TYPE_OPTIONS,
+  CHANNEL_OPTIONS,
+  PUBLISH_STATE_OPTIONS,
+  CALENDAR_STATUS_VALUES,
+  CHANNEL_VALUES,
+  isSocialChannelKey,
+} from '../../lib/marketing/enums'
 
-const calendarStatusOptions = [
-  { title: 'Idea', value: 'idea' },
-  { title: 'Draft', value: 'drafting' },
-  { title: 'Review', value: 'review' },
-  { title: 'Scheduled', value: 'scheduled' },
-  { title: 'Published', value: 'published' },
-  { title: 'Canceled', value: 'canceled' },
-]
-
-const contentTypeOptions = [
-  { title: 'Article', value: 'article' },
-  { title: 'Case Study', value: 'caseStudy' },
-  { title: 'Email', value: 'email' },
-  { title: 'Newsletter', value: 'newsletter' },
-  { title: 'Social Post', value: 'socialPost' },
-  { title: 'Carousel', value: 'carousel' },
-  { title: 'Reel', value: 'reel' },
-  { title: 'Story', value: 'story' },
-  { title: 'Static Post', value: 'post' },
-  { title: 'Video', value: 'video' },
-  { title: 'Landing Page', value: 'landingPage' },
-  { title: 'Event', value: 'event' },
-  { title: 'Ad', value: 'ad' },
-  { title: 'Other', value: 'other' },
-]
-
-const channelOptions = [
-  { title: 'Website', value: 'website' },
-  { title: 'Email', value: 'email' },
-  { title: 'LinkedIn', value: 'linkedin' },
-  { title: 'Instagram', value: 'instagram' },
-  { title: 'Newsletter', value: 'newsletter' },
-  { title: 'Search', value: 'search' },
-  { title: 'Events', value: 'events' },
-  { title: 'Partner / Referral', value: 'partner' },
-  { title: 'Other', value: 'other' },
-]
-
-// Worker-managed lifecycle for the auto-publishing pipeline. This is distinct
-// from the human-facing `status` field: `status` is what an editor sets
-// (idea → scheduled → published), while `publishState` is what the publish
-// worker writes as it claims, posts, and confirms an item on a social channel.
-const publishStateOptions = [
-  { title: 'Queued', value: 'queued' },
-  { title: 'Publishing', value: 'publishing' },
-  // Async video (Instagram Reels): the platform is still processing the upload;
-  // a follow-up finalize check publishes it once ready.
-  { title: 'Processing', value: 'processing' },
-  { title: 'Published', value: 'published' },
-  { title: 'Failed', value: 'failed' },
-  { title: 'Skipped', value: 'skipped' },
-]
+// Closed-set option lists come from the shared enums module — the single source
+// for the schema dropdowns, server-side crud validation, and the publish worker,
+// so an out-of-set value can't slip in via the API and then silently never match
+// a GROQ filter (e.g. status "scheduled") or a publishing adapter.
+const calendarStatusOptions = CALENDAR_STATUS_OPTIONS
+const contentTypeOptions = CONTENT_TYPE_OPTIONS
+const channelOptions = CHANNEL_OPTIONS
+const publishStateOptions = PUBLISH_STATE_OPTIONS
 
 export default defineType({
   name: 'marketingCalendarItem',
@@ -65,6 +30,19 @@ export default defineType({
     { name: 'measurement', title: 'Measurement' },
     { name: 'publishing', title: 'Publishing' },
   ],
+  // Non-blocking guard: auto-publish only has an adapter for LinkedIn/Instagram,
+  // so flag (don't hard-block) an item that opted in on another channel — the
+  // worker would otherwise just skip it with no signal to the editor. Only a
+  // directly-set channel string is judged; a managed channelRef can't be
+  // dereferenced during validation.
+  validation: (Rule) =>
+    Rule.custom((doc) => {
+      const d = doc as { autoPublish?: boolean; channel?: unknown; channelRef?: unknown } | undefined
+      if (!d?.autoPublish || d.channelRef) return true
+      const channel = typeof d.channel === 'string' ? d.channel.trim().toLowerCase() : ''
+      if (!channel || isSocialChannelKey(channel)) return true
+      return 'Auto-publish only posts to LinkedIn or Instagram — this channel will be skipped. Change the channel or turn off Auto-publish.'
+    }).warning(),
   fields: [
     defineField({
       name: 'title',
@@ -80,7 +58,14 @@ export default defineType({
       group: 'planning',
       options: { list: calendarStatusOptions, layout: 'radio' },
       initialValue: 'idea',
-      validation: (Rule) => Rule.required(),
+      validation: (Rule) => [
+        Rule.required(),
+        Rule.custom((value) =>
+          !value || CALENDAR_STATUS_VALUES.includes(value as string)
+            ? true
+            : `Unknown status "${value}" — not a valid calendar status.`,
+        ).warning(),
+      ],
     }),
     defineField({
       name: 'publishAt',
@@ -103,6 +88,10 @@ export default defineType({
       group: 'planning',
       description: 'Where this post goes, as a preset key used for reports. If this channel is set up in the system, set the Managed Channel field below instead.',
       options: { list: channelOptions },
+      validation: (Rule) =>
+        Rule.custom((value) =>
+          !value || CHANNEL_VALUES.includes(value as string) ? true : `Unknown channel "${value}".`,
+        ).warning(),
     }),
     defineField({
       name: 'channelRef',

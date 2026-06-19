@@ -147,14 +147,66 @@ function resolveOutcome(
   }
 }
 
-async function applyPatch(client: SanityClient, id: string, patch: ItemPatch): Promise<void> {
-  try {
+/** Commits the write-back patch. Returns false if it fails (after one retry). */
+async function applyPatch(client: SanityClient, id: string, patch: ItemPatch): Promise<boolean> {
+  const commit = async () => {
     const tx = client.patch(id)
     if (patch.set) tx.set(patch.set)
     if (patch.unset) tx.unset(patch.unset)
     await tx.commit()
-  } catch (error) {
-    console.error(`Publish write-back failed for ${id}:`, error)
+  }
+  try {
+    await commit()
+    return true
+  } catch {
+    // The external post (if any) already happened and the write-back is
+    // idempotent (it sets the same fields), so a single retry can't double-post.
+    try {
+      await commit()
+      return true
+    } catch (error) {
+      console.error(`Publish write-back failed for ${id} (after retry):`, error)
+      return false
+    }
+  }
+}
+
+/**
+ * Applies the outcome's patch and returns the result entry. Critically: if the
+ * platform action SUCCEEDED (published / async-processing) but the Sanity
+ * write-back failed, the record is now out of sync with the live platform — so we
+ * report `failed` with the ids needed to reconcile, instead of falsely reporting
+ * success while the item is orphaned (stuck in `publishing`, permalink lost). A
+ * `failed`/`skipped`-type outcome means no external state changed, so its entry is
+ * returned as-is even if the write-back failed.
+ */
+async function applyAndReport(
+  client: SanityClient,
+  item: PublishableItem,
+  platform: SocialPlatform,
+  outcome: PublishOutcome,
+  now: string,
+): Promise<PublishResultEntry> {
+  const { patch, entry } = resolveOutcome(item, platform, outcome, now)
+  const written = await applyPatch(client, item._id, patch)
+  if (written) return entry
+  if (entry.outcome !== 'published' && entry.outcome !== 'processing') return entry
+
+  const externalRef =
+    entry.outcome === 'published'
+      ? `externalId ${entry.externalId ?? 'unknown'}${entry.permalink ? `, ${entry.permalink}` : ''}`
+      : `container ${entry.finalize?.containerId ?? 'unknown'}`
+  const action = entry.outcome === 'published' ? `Posted to ${platform}` : `Created a ${platform} media container`
+  // Drop any finalize signal: the container id was never persisted, so a QStash
+  // re-check could not find it anyway.
+  return {
+    id: entry.id,
+    title: entry.title,
+    platform,
+    outcome: 'failed',
+    reason: `${action} but the Sanity write-back failed — reconcile manually (${externalRef}).`,
+    ...(entry.externalId ? { externalId: entry.externalId } : {}),
+    ...(entry.permalink ? { permalink: entry.permalink } : {}),
   }
 }
 
@@ -201,9 +253,7 @@ async function processOne(
       return skip(item, platform, 'Already claimed by a concurrent run.')
     }
     const outcome = await publisher.finalize(item.externalContainerId)
-    const { patch, entry } = resolveOutcome(item, platform, outcome, now)
-    await applyPatch(client, item._id, patch)
-    return entry
+    return applyAndReport(client, item, platform, outcome, now)
   }
 
   // publish
@@ -221,9 +271,7 @@ async function processOne(
     return skip(item, platform, 'Already claimed by a concurrent run.')
   }
   const outcome = await publisher.publish(content)
-  const { patch, entry } = resolveOutcome(item, platform, outcome, now)
-  await applyPatch(client, item._id, patch)
-  return entry
+  return applyAndReport(client, item, platform, outcome, now)
 }
 
 function summarize(now: string, dryRun: boolean, considered: number, results: PublishResultEntry[]): PublishRunSummary {
