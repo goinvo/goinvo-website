@@ -29,6 +29,32 @@ const eslintConfig = defineConfig([
       "@next/next/no-html-link-for-pages": "off",
     },
   },
+  {
+    // STEGA GUARD. Sanity visual editing stega-encodes string field VALUES in the
+    // Presentation preview, so a bare `field === 'literal'` is FALSE while editing
+    // (and TRUE once published) — silently breaking any renderer/transform that
+    // branches on a closed-set Sanity option field. Force such comparisons through
+    // option() (src/lib/sanityOptions), which strips stega. Scoped to the content
+    // render/transform areas; `size` is omitted because it collides with Map/Set.
+    files: ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "BinaryExpression[operator=/^(===|!==)$/] > MemberExpression[property.name=/^(style|layout|variant|tone|columns|background|spacing|thumbnailSize)$/]",
+          message:
+            "Compare Sanity option fields through option() from '@/lib/sanityOptions' (e.g. option(block.style) === 'h4'). A bare `field === 'literal'` is FALSE in the Presentation preview because visual editing stega-encodes string values.",
+        },
+        {
+          selector:
+            "BinaryExpression[operator=/^(===|!==)$/] > ChainExpression > MemberExpression[property.name=/^(style|layout|variant|tone|columns|background|spacing|thumbnailSize)$/]",
+          message:
+            "Compare Sanity option fields through option() from '@/lib/sanityOptions' (e.g. option(block?.style) === 'h4'). A bare `field === 'literal'` is FALSE in the Presentation preview because visual editing stega-encodes string values.",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

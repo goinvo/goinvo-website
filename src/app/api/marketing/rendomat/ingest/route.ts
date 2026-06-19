@@ -108,6 +108,8 @@ export async function POST(req: Request) {
       continue
     }
 
+    // Hoisted so the catch can clean up a partial upload (avoid orphaned assets).
+    let asset: { _id: string } | null = null
     try {
       const manifest = await getRendomatExport(video.id)
       const videoUrl = manifest.assets?.video
@@ -119,7 +121,7 @@ export async function POST(req: Request) {
       // Download from Rendomat → re-upload to Sanity for a stable public URL that
       // Instagram can fetch (independent of Rendomat uptime at publish time).
       const { buffer, contentType } = await downloadRendomatAsset(videoUrl)
-      const asset = await client.assets.upload('file', Buffer.from(new Uint8Array(buffer)), {
+      asset = await client.assets.upload('file', Buffer.from(new Uint8Array(buffer)), {
         filename: `rendomat-${video.id}.mp4`,
         contentType: contentType || 'video/mp4',
       })
@@ -149,6 +151,10 @@ export async function POST(req: Request) {
         ...(scheduled.ok ? {} : { reason: `scheduled enqueue failed: ${scheduled.error}` }),
       })
     } catch (error) {
+      // Best-effort: drop the just-uploaded asset if a later step failed, so a
+      // partial failure doesn't leak an orphaned MP4 (Sanity doesn't auto-GC
+      // unreferenced assets, and dedupe means a retry re-uploads a fresh one).
+      if (asset?._id) await client.delete(asset._id).catch(() => {})
       results.push({
         rendomatVideoId: video.id,
         action: 'error',
