@@ -84,7 +84,7 @@ export default async function VisualStorytellingPage() {
       {/* Content before 3D model viewer */}
       <section className="pb-6">
         <div className="max-width content-padding mx-auto">
-          <PortableTextRenderer content={mainBefore} noGrouping />
+          <PortableTextRenderer content={mainBefore} />
         </div>
       </section>
 
@@ -95,7 +95,7 @@ export default async function VisualStorytellingPage() {
       {mainAfter.length > 0 && (
         <section className="pb-12">
           <div className="max-width content-padding mx-auto">
-            <PortableTextRenderer content={mainAfter} noGrouping />
+            <PortableTextRenderer content={mainAfter} />
           </div>
         </section>
       )}
