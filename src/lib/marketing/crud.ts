@@ -10,6 +10,7 @@ import type { SanityClient } from '@sanity/client'
 import { randomKey, slugify } from './derive'
 import { ARRAY_ITEM_TYPES, DEFAULTS, REQUIRED_FIELDS, SLUG_TYPES } from './defaults'
 import { isManagedMarketingType, type ManagedMarketingType } from './types'
+import { CALENDAR_STATUS_VALUES } from './enums'
 
 /** A loose field bag for a marketing document being created or patched. */
 export type MarketingFields = Record<string, unknown>
@@ -45,15 +46,55 @@ const UTM_DERIVED_TYPES: ReadonlySet<ManagedMarketingType> = new Set<ManagedMark
   'marketingCalendarItem',
 ])
 
-/** Thrown when required fields are missing from a create payload. */
+/** An out-of-set value supplied for a closed-set (enum) field. */
+export interface InvalidFieldValue {
+  field: string
+  value: unknown
+  allowed: readonly string[]
+}
+
+/** Thrown when required fields are missing OR an enum field has an out-of-set value. */
 export class MarketingValidationError extends Error {
   readonly missing: string[]
+  readonly invalid: InvalidFieldValue[]
 
-  constructor(missing: string[]) {
-    super(`Missing required field${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`)
+  constructor(missing: string[], invalid: InvalidFieldValue[] = []) {
+    const parts: string[] = []
+    if (missing.length > 0) {
+      parts.push(`Missing required field${missing.length === 1 ? '' : 's'}: ${missing.join(', ')}`)
+    }
+    for (const inv of invalid) {
+      parts.push(`Invalid ${inv.field} "${String(inv.value)}" (allowed: ${inv.allowed.join(', ')})`)
+    }
+    super(parts.join('; ') || 'Validation failed')
     this.name = 'MarketingValidationError'
     this.missing = missing
+    this.invalid = invalid
   }
+}
+
+// Closed-set fields enforced server-side, per managed type. Currently only the
+// calendar item's `status`: an out-of-set status persists silently via the API and
+// then never matches the publish worker's `status == "scheduled"` filter, so the
+// item never auto-publishes — with no error anywhere. (channel/contentType are set
+// from AI/opportunity variables that legitimately vary, so they stay schema-warning
+// only; the worker also reports a non-social channel as skipped in its run summary.)
+const ENUM_FIELDS: Partial<Record<ManagedMarketingType, Record<string, readonly string[]>>> = {
+  marketingCalendarItem: { status: CALENDAR_STATUS_VALUES },
+}
+
+function collectInvalidEnums(type: ManagedMarketingType, fields: MarketingFields): InvalidFieldValue[] {
+  const spec = ENUM_FIELDS[type]
+  if (!spec) return []
+  const invalid: InvalidFieldValue[] = []
+  for (const [field, allowed] of Object.entries(spec)) {
+    const value = fields[field]
+    if (value === undefined || value === null || value === '') continue
+    if (typeof value !== 'string' || !allowed.includes(value)) {
+      invalid.push({ field, value, allowed })
+    }
+  }
+  return invalid
 }
 
 function asString(value: unknown): string | undefined {
@@ -167,10 +208,11 @@ export function buildCreatePayload(
   // Key array items (objects get their _type, refs get 'reference').
   merged = injectArrayKeys(type, merged)
 
-  // Validate required fields.
+  // Validate required fields + closed-set (enum) field membership.
   const missing = REQUIRED_FIELDS[type].filter((field) => !isPresent(merged[field]))
-  if (missing.length > 0) {
-    throw new MarketingValidationError(missing)
+  const invalid = collectInvalidEnums(type, merged)
+  if (missing.length > 0 || invalid.length > 0) {
+    throw new MarketingValidationError(missing, invalid)
   }
 
   const payload: MarketingCreatePayload = { _type: type, ...merged }
@@ -220,6 +262,13 @@ export function buildPatchPayload(
   }
 
   next = injectArrayKeys(type, next)
+
+  // A patch only carries the fields the caller is changing, so validate enum
+  // membership on just those (an out-of-set status here is the same silent failure).
+  const invalid = collectInvalidEnums(type, next)
+  if (invalid.length > 0) {
+    throw new MarketingValidationError([], invalid)
+  }
   return next
 }
 
