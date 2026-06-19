@@ -9081,13 +9081,21 @@ function buildAbTestingDataInsights(data: MarketingData, pageTests: MarketingExp
     }
 
     if (neutralEvidence.length > 0) {
+      const underpowered = getAbTestingUnderpoweredMetrics(experiment)
+      const lowSample = underpowered.length > 0
       insights.push({
         id: `abtest-data-neutral-${experiment._id}`,
         severity: 'opportunity',
-        title: `${experimentTitle} needs a clearer result comparison`,
-        interpretation: `${sampleAffected(neutralEvidence).join('; ')} ${neutralEvidence.length === 1 ? 'has' : 'have'} evidence attached, but no change value or threshold comparison.`,
-        action: 'Add variant-keyed visits/exposures and event counts to the linked signal. Include a percent change, baseline comparison, or threshold when the event count should decide the winner.',
-        affected: sampleAffected(neutralEvidence),
+        title: lowSample
+          ? `${experimentTitle} does not have enough events to call yet`
+          : `${experimentTitle} needs a clearer result comparison`,
+        interpretation: lowSample
+          ? `Too few events so far on ${underpowered.slice(0, 4).join(', ')} to tell the versions apart — the difference is within normal variation.`
+          : `${sampleAffected(neutralEvidence).join('; ')} ${neutralEvidence.length === 1 ? 'has' : 'have'} evidence attached, but no change value or threshold comparison.`,
+        action: lowSample
+          ? 'Keep the test running until each version has more events for the tracked metrics, then review the result here.'
+          : 'Add variant-keyed visits/exposures and event counts to the linked signal. Include a percent change, baseline comparison, or threshold when the event count should decide the winner.',
+        affected: lowSample ? underpowered.slice(0, 4) : sampleAffected(neutralEvidence),
         experimentId: experiment._id,
       })
     }
@@ -9125,13 +9133,21 @@ function collectAbTestingMetricEvidence(experiment: MarketingExperiment, signals
       seenEvidence.add(key)
 
       const changeValue = parseAbTestingMetricChange(match.metric.change)
+      let outcome = evaluateAbTestingMetricOutcome(tracker, match.metric)
+      // Too few events on either side to trust a winner OR (worse) a guardrail
+      // FAILURE — a rate delta on a handful of events is denominator noise, so it
+      // must not read as the variant harming a protected metric. Only applies when
+      // per-variant counts are resolvable, so change-only signals are unaffected.
+      if (abTestingMetricIsUnderpowered(getAbTestingMetricVariantCounts(experiment, trackedMetric))) {
+        outcome = 'neutral'
+      }
       evidence.push({
         experiment,
         tracker,
         trackedMetric,
         signal: match.signal,
         signalMetric: match.metric,
-        outcome: evaluateAbTestingMetricOutcome(tracker, match.metric),
+        outcome,
         changeValue,
       })
     })
@@ -9264,6 +9280,58 @@ export function getAbTestingTrackedVercelEvents(experiment: MarketingExperiment)
   return Array.from(events)
 }
 
+// Minimum per-variant EVENT count before a directional winner / guardrail call is
+// trusted. Distinct from AB_MIN_EXPOSURES_PER_VARIANT (which gates visits): a test
+// can have plenty of visits but only a handful of conversions, where a rate delta
+// (e.g. 3 vs 3 events reading as "-14%") is just denominator variance, not signal.
+// A low bar that kills single-digit noise without changing the call once a metric
+// has a real number of events.
+const AB_MIN_EVENTS_PER_VARIANT = 10
+
+interface AbTestingMetricCounts {
+  control: number | null
+  variant: number | null
+}
+
+/** Per-variant event counts for one tracked metric (null when unresolved). */
+function getAbTestingMetricVariantCounts(
+  experiment: MarketingExperiment,
+  trackedMetric: ExperimentTrackedMetric,
+): AbTestingMetricCounts {
+  const variants = getAbTestingVariantOptions(experiment)
+  if (variants.length < 2) return { control: null, variant: null }
+  const controlVariant = variants.find((v) => normalizeAbTestingMetricKey(v.key) === 'control') || variants[0]
+  const treatmentVariant = variants.find((v) => v.key !== controlVariant.key) || variants[1]
+  const records = getAbTestingSignalMetricRecords(experiment)
+  const valueFor = (variant: AbTestingVariantOption) =>
+    numericPerformanceMetricValue(findAbTestingMetricForVariant(records, variant, trackedMetric, false)?.metric)
+  return { control: valueFor(controlVariant), variant: valueFor(treatmentVariant) }
+}
+
+/**
+ * True when either variant has too few events to trust a directional call. Only
+ * applies when both counts are resolvable (a change-only signal with no per-variant
+ * counts keeps its existing behavior).
+ */
+function abTestingMetricIsUnderpowered(counts: AbTestingMetricCounts): boolean {
+  return (
+    counts.control !== null &&
+    counts.variant !== null &&
+    Math.min(counts.control, counts.variant) < AB_MIN_EVENTS_PER_VARIANT
+  )
+}
+
+/** Comparative metrics whose per-variant event counts are too few to call yet. */
+function getAbTestingUnderpoweredMetrics(experiment: MarketingExperiment): string[] {
+  const labels: string[] = []
+  for (const metric of getAbTestingComparableMetrics(experiment)) {
+    if (abTestingMetricIsUnderpowered(getAbTestingMetricVariantCounts(experiment, metric))) {
+      labels.push(metric.label || metric.key || metric.eventName || 'metric')
+    }
+  }
+  return labels
+}
+
 export function getAbTestingComparativeResults(experiment: MarketingExperiment, limit = 4): AbTestingComparisonResult[] {
   const signals = uniqueById((experiment.performanceSignals || []).filter(Boolean))
   const trackedMetrics = getAbTestingComparableMetrics(experiment)
@@ -9291,6 +9359,22 @@ export function getAbTestingComparativeResults(experiment: MarketingExperiment, 
       }
     }
 
+    const counts = getAbTestingMetricVariantCounts(experiment, trackedMetric)
+    // Control has no events for this metric → no baseline to compare against, so
+    // there is no winner to call (a "+∞%" lift off a zero baseline is not meaningful).
+    if (counts.control === 0) {
+      return {
+        key,
+        metricLabel,
+        metricRole,
+        winnerLabel: 'No winner yet',
+        detail: `${controlLabel} has no events for this metric yet, so there is no baseline to compare ${variantLabel} against.`,
+        status: 'needsComparison',
+        changeValue: null,
+        score: 0,
+      }
+    }
+
     const changeValue = parseAbTestingMetricChange(match.metric.change)
     if (changeValue === null) {
       return {
@@ -9302,6 +9386,21 @@ export function getAbTestingComparativeResults(experiment: MarketingExperiment, 
         status: 'needsComparison',
         changeValue: null,
         score: 0,
+      }
+    }
+
+    // Too few events on either side to trust a directional call — a rate delta on a
+    // handful of events (e.g. 3 vs 3) is denominator noise, not a real winner.
+    if (abTestingMetricIsUnderpowered(counts)) {
+      return {
+        key,
+        metricLabel,
+        metricRole,
+        winnerLabel: 'Too few events',
+        detail: `Only ${counts.control} vs ${counts.variant} events so far — too few to call a winner on this metric.`,
+        status: 'even',
+        changeValue,
+        score: 10,
       }
     }
 
