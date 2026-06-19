@@ -534,8 +534,11 @@ const components: PortableTextComponents = {
       // "statNumber" variant renders each card's label as a big, bold, brand-orange
       // number (for stat grids) instead of the small uppercase label.
       const isStatNumber = value.variant === 'statNumber'
+      // Optional width breakout (mirrors the columns block): widen the card grid
+      // beyond the article column. "wide" caps at 1020px; "bleed" spans the viewport.
+      const sizeClass = value.size === 'wide' ? 'columns-wide' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
 
-      return (
+      const grid = (
         <ArticleReveal intensity="visual">
           <div className={cn('grid grid-cols-1 gap-4 my-8', gridCols)}>
             {items.map((item, i) => (
@@ -551,6 +554,8 @@ const components: PortableTextComponents = {
           </div>
         </ArticleReveal>
       )
+
+      return sizeClass ? <div className={sizeClass}>{grid}</div> : grid
     },
     references: ({ value }) => (
       <ArticleReveal intensity="text">
