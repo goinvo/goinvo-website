@@ -46,6 +46,18 @@ function option(value: unknown): string {
   return typeof value === 'string' ? stegaClean(value) : ''
 }
 
+/**
+ * Breakout width for blocks with a Width option (cardGrid, columns).
+ * "wide" caps at 1020px (centered); "bleed" spans the viewport but keeps a side
+ * gutter so content isn't jammed against the screen edges. Single source so both
+ * blocks stay in sync.
+ */
+function widthClass(size: string): string {
+  if (size === Width.Wide) return 'columns-wide'
+  if (size === Width.Bleed) return 'w-screen relative left-1/2 -ml-[50vw] px-6 sm:px-10 lg:px-16'
+  return ''
+}
+
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
 /* ------------------------------------------------------------------ */
@@ -554,8 +566,7 @@ const components: PortableTextComponents = {
       const isStatNumber = option(value.variant) === CardVariant.Stat
       // Optional width breakout (mirrors the columns block): widen the card grid
       // beyond the article column. "wide" caps at 1020px; "bleed" spans the viewport.
-      const size = option(value.size)
-      const sizeClass = size === Width.Wide ? 'columns-wide' : size === Width.Bleed ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
+      const sizeClass = widthClass(option(value.size))
 
       const grid = (
         <ArticleReveal intensity="visual">
@@ -595,11 +606,10 @@ const components: PortableTextComponents = {
       const layout = option(value.layout)
       const variant = option(value.variant)
       const bg = option(value.background) || Background.None
-      const size = option(value.size)
       const colCount = layout === Layout.Four ? 4 : layout === Layout.Three ? 3 : 2 // 2:1 and 1:2 also count as 2
       const isStoryboard = layout === Layout.Storyboard
       const isCardVariant = variant === ColVariant.Cards
-      const sizeClass = size === Width.Wide ? 'columns-wide' : size === Width.Bleed ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
+      const sizeClass = widthClass(option(value.size))
       // Wrapper function to apply size override
       const Wrap = ({ children }: { children: React.ReactNode }) => sizeClass ? <div className={sizeClass}>{children}</div> : <>{children}</>
       const bgClasses: Record<string, string> = {
