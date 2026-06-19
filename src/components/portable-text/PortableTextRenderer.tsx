@@ -28,6 +28,24 @@ import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/
 import { parseDataTableSource } from '@/lib/dataTable'
 import { buildHtmlEmbedSrcDoc, hasHtmlEmbedCode } from '@/lib/htmlEmbed'
 
+// --- Portable-text block options (typed, single source instead of magic strings) ---
+// Visual editing (stega) appends invisible metadata to string values, which
+// silently breaks `value.x === 'literal'` comparisons in the Sanity Presentation
+// preview — they still pass on the published site (no stega), so a block looks
+// correct live but broken while editing. ALWAYS read an option through option()
+// (it strips stega) and compare against these constants, never a bare string.
+const Width = { Default: 'default', Wide: 'wide', Bleed: 'bleed' } as const
+const Cols = { Two: '2', Three: '3', Four: '4' } as const
+const Layout = { Two: '2', TwoOne: '2:1', OneTwo: '1:2', Three: '3', Four: '4', Storyboard: 'storyboard' } as const
+const CardVariant = { Stat: 'statNumber' } as const
+const ColVariant = { Centered: 'centered', Cards: 'cards' } as const
+const Background = { None: 'none', Gray: 'gray', Teal: 'teal', Warm: 'warm' } as const
+
+/** Read a string option with stega metadata stripped, so === comparisons hold in the preview too. */
+function option(value: unknown): string {
+  return typeof value === 'string' ? stegaClean(value) : ''
+}
+
 /* ------------------------------------------------------------------ */
 /*  Scroll-triggered animation wrapper                                 */
 /* ------------------------------------------------------------------ */
@@ -143,9 +161,9 @@ function PortableImage({
 }) {
   const vectorImageUrl = typeof value.vectorImageUrl === 'string' ? value.vectorImageUrl.trim() : ''
   if (!value?.asset && !vectorImageUrl) return null
-  const size = value.size || 'full'
-  const align = value.align || 'center'
-  const border = value.border || 'none'
+  const size = option(value.size) || 'full'
+  const align = option(value.align) || 'center'
+  const border = option(value.border) || 'none'
   const borderClasses = imageBorderClasses
   const width = size === 'small' ? 400 : size === 'medium' ? 600 : size === 'bleed' ? 2400 : 1200
   const imageBuilder = value.asset ? urlForImage(value).width(width) : null
@@ -223,7 +241,7 @@ function PortableVideoEmbed({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [aspectRatio, setAspectRatio] = useState<string | undefined>(undefined)
-  const videoSize = value.size || 'default'
+  const videoSize = option(value.size) || 'default'
   const sizeClass = videoSize === 'wide'
     ? 'w-[75vw] relative left-1/2 -translate-x-1/2'
     : videoSize === 'full'
@@ -331,8 +349,8 @@ const components: PortableTextComponents = {
         refTarget?: string
       }[] = value.items || []
       const count = items.length
-      const bg = value.background || 'none'
-      const variant = value.variant || 'row'
+      const bg = option(value.background) || 'none'
+      const variant = option(value.variant) || 'row'
       const perItemBg = bg === 'gray' ? 'bg-gray-lightest' : bg === 'teal' ? 'bg-secondary/10' : ''
       const renderCitation = (item: { refNumber?: string; refTarget?: string }) => (
         item.refNumber ? (
@@ -529,14 +547,15 @@ const components: PortableTextComponents = {
     },
     cardGrid: ({ value }) => {
       const items: { label: string; description: string }[] = value.items || []
-      const cols = value.columns || '4'
-      const gridCols = cols === '2' ? 'sm:grid-cols-2' : cols === '3' ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'
+      const cols = option(value.columns) || Cols.Four
+      const gridCols = cols === Cols.Two ? 'sm:grid-cols-2' : cols === Cols.Three ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'
       // "statNumber" variant renders each card's label as a big, bold, brand-orange
       // number (for stat grids) instead of the small uppercase label.
-      const isStatNumber = value.variant === 'statNumber'
+      const isStatNumber = option(value.variant) === CardVariant.Stat
       // Optional width breakout (mirrors the columns block): widen the card grid
       // beyond the article column. "wide" caps at 1020px; "bleed" spans the viewport.
-      const sizeClass = value.size === 'wide' ? 'columns-wide' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
+      const size = option(value.size)
+      const sizeClass = size === Width.Wide ? 'columns-wide' : size === Width.Bleed ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
 
       const grid = (
         <ArticleReveal intensity="visual">
@@ -573,11 +592,14 @@ const components: PortableTextComponents = {
           }))
           .filter((column: { content: unknown[] }) => column.content.length > 0)
         : []
-      const colCount = value.layout === '4' ? 4 : value.layout === '3' ? 3 : 2 // 2:1 and 1:2 also count as 2
-      const isStoryboard = value.layout === 'storyboard'
-      const isCardVariant = value.variant === 'cards'
-      const bg = value.background || 'none'
-      const sizeClass = value.size === 'wide' ? 'columns-wide' : value.size === 'bleed' ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
+      const layout = option(value.layout)
+      const variant = option(value.variant)
+      const bg = option(value.background) || Background.None
+      const size = option(value.size)
+      const colCount = layout === Layout.Four ? 4 : layout === Layout.Three ? 3 : 2 // 2:1 and 1:2 also count as 2
+      const isStoryboard = layout === Layout.Storyboard
+      const isCardVariant = variant === ColVariant.Cards
+      const sizeClass = size === Width.Wide ? 'columns-wide' : size === Width.Bleed ? 'w-screen relative left-1/2 -ml-[50vw]' : ''
       // Wrapper function to apply size override
       const Wrap = ({ children }: { children: React.ReactNode }) => sizeClass ? <div className={sizeClass}>{children}</div> : <>{children}</>
       const bgClasses: Record<string, string> = {
@@ -588,13 +610,13 @@ const components: PortableTextComponents = {
       }
 
       if (explicitColumns.length > 0) {
-        const gridClasses = value.layout === '4'
+        const gridClasses = layout === Layout.Four
           ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-          : value.layout === '3'
+          : layout === Layout.Three
             ? 'grid-cols-1 md:grid-cols-3'
-            : value.layout === '2:1'
+            : layout === Layout.TwoOne
               ? 'grid-cols-1 md:grid-cols-[2fr_1fr]'
-              : value.layout === '1:2'
+              : layout === Layout.OneTwo
                 ? 'grid-cols-1 md:grid-cols-[1fr_2fr]'
                 : 'grid-cols-1 md:grid-cols-2'
 
@@ -831,9 +853,9 @@ const components: PortableTextComponents = {
         }
 
         // Asymmetric layout: 2:1 or 1:2 ratio
-        const isAsymmetric = value.layout === '2:1' || value.layout === '1:2'
+        const isAsymmetric = layout === Layout.TwoOne || layout === Layout.OneTwo
         const gridClass = isAsymmetric
-          ? (value.layout === '2:1' ? 'grid-cols-1 md:grid-cols-[2fr_1fr]' : 'grid-cols-1 md:grid-cols-[1fr_2fr]')
+          ? (layout === Layout.TwoOne ? 'grid-cols-1 md:grid-cols-[2fr_1fr]' : 'grid-cols-1 md:grid-cols-[1fr_2fr]')
           : 'grid-cols-1 md:grid-cols-2'
 
         // Side-by-side grid (50/50 or asymmetric)
@@ -881,7 +903,7 @@ const components: PortableTextComponents = {
 
       // Image-only: grid of images (original behavior)
       if (hasImages) {
-        const centeredVariant = value.variant === 'centered'
+        const centeredVariant = variant === ColVariant.Centered
         const groups = buildImageGroups()
 
         return (
@@ -979,7 +1001,7 @@ const components: PortableTextComponents = {
     },
     backgroundSection: ({ value }) => {
       const bgClass = bgSectionColors[value.color] || bgSectionColors.gray
-      const spacingClass = value.spacing === 'legacyFlush' ? 'py-8 my-0' : 'py-12 my-8'
+      const spacingClass = option(value.spacing) === 'legacyFlush' ? 'py-8 my-0' : 'py-12 my-8'
       const toneClass = value.tone === 'default'
         ? '[&_p:not(.methodology-label)]:!text-black [&_li]:!text-black [&_ul]:!text-black'
         : ''
@@ -1035,11 +1057,11 @@ const components: PortableTextComponents = {
     },
     buttonGroup: ({ value }) => {
       const buttons = value.buttons || []
-      const layout = value.layout || 'inline'
-      const size = value.size || 'default'
+      const layout = option(value.layout) || 'inline'
+      const size = option(value.size) || 'default'
       const isTextLinkLayout = layout === 'textLinks'
       const isLargeButtonGroup = size === 'large'
-      const useLegacyDoubleSpacing = value.spacing === 'legacyDouble'
+      const useLegacyDoubleSpacing = option(value.spacing) === 'legacyDouble'
       if (isTextLinkLayout) {
         return (
           <div className="my-2 flex flex-col gap-1">
@@ -1772,7 +1794,7 @@ function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[
     }
 
     // Skip bleed images — they should always render standalone at full viewport width
-    if (current?._type === 'image' && current?.size === 'bleed') {
+    if (current?._type === 'image' && option(current?.size) === Width.Bleed) {
       result.push(current)
       i++
       continue
