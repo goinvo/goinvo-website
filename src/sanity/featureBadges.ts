@@ -1,5 +1,5 @@
 import type { DocumentBadgeComponent, DocumentBadgeProps } from 'sanity'
-import { useDocumentPairPermissions } from 'sanity'
+import { useCurrentUser } from 'sanity'
 import { getFeatureEditorExperience } from '@/lib/featureAuthoring'
 
 export const featureAuthoringBadge: DocumentBadgeComponent = (
@@ -38,6 +38,11 @@ const PUBLISHABLE_CONTENT_TYPES = new Set([
   'category',
 ])
 
+// Sanity roles that can edit but NOT publish. Anyone with none of the project's
+// roles (e.g. not a member) can't publish either. We only flag these clear cases
+// so an editor/admin/developer (or any other role) never gets a false warning.
+const NON_PUBLISHER_ROLES = new Set(['viewer', 'contributor'])
+
 // Makes the "your edits are not live yet" state impossible to miss. A draft
 // document exists ONLY while there are edits that have not been published, so
 // its mere presence is the signal — no diffing required. The amber badge sits at
@@ -46,26 +51,24 @@ const PUBLISHABLE_CONTENT_TYPES = new Set([
 export const publishStatusBadge: DocumentBadgeComponent = (
   props: DocumentBadgeProps
 ) => {
-  // Hooks must run unconditionally, before any early return. Resolve whether the
-  // current account is actually allowed to publish THIS document — grant-aware,
-  // so it respects real Sanity roles rather than guessing from a role name.
-  const [publishPermission, isPermissionLoading] = useDocumentPairPermissions({
-    id: props.id,
-    type: props.type,
-    permission: 'publish',
-  })
+  // Hooks must run unconditionally, before any early return. (The grant-aware
+  // useDocumentPairPermissions hook does not resolve inside a document badge, so
+  // read the current user's project roles instead — reliably available here.)
+  const user = useCurrentUser()
 
   const type = (props.draft || props.published)?._type
   if (!type || !PUBLISHABLE_CONTENT_TYPES.has(type)) {
     return null
   }
 
-  // The account can edit but cannot PUBLISH this document (its role lacks the
-  // publish grant — e.g. Viewer, or not a project member). Surface it plainly so
-  // a disabled/gray Publish button is never a mystery — the most common cause of
-  // "I edited it but it won't go live". Checked before the draft state because it
-  // explains the dead button even when there are unpublished edits.
-  if (!isPermissionLoading && publishPermission && !publishPermission.granted) {
+  // The account can edit but cannot PUBLISH (Viewer / Contributor, or not a
+  // project member → no roles). Surface it so a disabled/gray Publish button is
+  // never a mystery — the most common cause of "I edited it but it won't go live".
+  // Checked before the draft state so it explains the dead button even when there
+  // are unpublished edits. Conservative: only the clearly-non-publishing cases.
+  const roleNames = user?.roles?.map((role) => role.name) ?? []
+  const cannotPublish = roleNames.length === 0 || roleNames.every((name) => NON_PUBLISHER_ROLES.has(name))
+  if (user && cannotPublish) {
     return {
       label: 'No publish access — ask an admin',
       color: 'danger',
