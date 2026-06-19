@@ -27,19 +27,21 @@ import {
 import { VirtualCareTop15Table, VirtualCareTimeToDiagnosis } from '@/components/portable-text/VirtualCareTop15Table'
 import { parseDataTableSource } from '@/lib/dataTable'
 import { buildHtmlEmbedSrcDoc, hasHtmlEmbedCode } from '@/lib/htmlEmbed'
+import {
+  Width,
+  Background,
+  CardGridColumns as Cols,
+  CardGridVariant as CardVariant,
+  ColumnLayout as Layout,
+  ColumnVariant as ColVariant,
+} from '@/lib/portableTextOptions'
 
-// --- Portable-text block options (typed, single source instead of magic strings) ---
-// Visual editing (stega) appends invisible metadata to string values, which
-// silently breaks `value.x === 'literal'` comparisons in the Sanity Presentation
-// preview — they still pass on the published site (no stega), so a block looks
-// correct live but broken while editing. ALWAYS read an option through option()
-// (it strips stega) and compare against these constants, never a bare string.
-const Width = { Default: 'default', Wide: 'wide', Bleed: 'bleed' } as const
-const Cols = { Two: '2', Three: '3', Four: '4' } as const
-const Layout = { Two: '2', TwoOne: '2:1', OneTwo: '1:2', Three: '3', Four: '4', Storyboard: 'storyboard' } as const
-const CardVariant = { Stat: 'statNumber' } as const
-const ColVariant = { Centered: 'centered', Cards: 'cards' } as const
-const Background = { None: 'none', Gray: 'gray', Teal: 'teal', Warm: 'warm' } as const
+// Block option VALUES come from the shared single source (src/lib/portableTextOptions),
+// so the schema's editor options and these comparisons can't drift. Visual editing
+// (stega) appends invisible metadata to string values, which silently breaks
+// `value.x === 'literal'` in the Presentation preview while it still passes on the
+// published site — so ALWAYS read an option through option() (it strips stega) and
+// compare against the imported constants, never a bare string.
 
 /** Read a string option with stega metadata stripped, so === comparisons hold in the preview too. */
 function option(value: unknown): string {
@@ -1761,119 +1763,16 @@ const components: PortableTextComponents = {
  * the original Gatsby `pure-g` grid wrappers. This restores the
  * side-by-side layout for pairs of consecutive images.
  */
-type PortableTextObject = PortableTextBlock & {
-  _key?: string
-  _type?: string
-  asset?: unknown
-  size?: string
-  style?: string
-  children?: Array<{ text?: string }>
-}
-
-function blockAt(blocks: PortableTextBlock[], index: number): PortableTextObject | undefined {
-  return blocks[index] as PortableTextObject | undefined
-}
-
-function isGroupableImage(block: PortableTextObject | undefined): block is PortableTextObject {
-  return block?._type === 'image' && Boolean(block.asset) && block.size !== 'bleed'
-}
-
-function isShortTextBlock(block: PortableTextObject | undefined): block is PortableTextObject {
-  if (block?._type !== 'block') return false
-  // Headings are NOT captions — don't group them with images
-  if (block.style && block.style !== 'normal') return false
-  const text = (block.children || []).map(child => child.text || '').join('')
-  return text.length > 0 && text.length < 200
-}
-
-function groupConsecutiveImages(blocks: PortableTextBlock[]): PortableTextBlock[] {
-  const result: PortableTextBlock[] = []
-  let i = 0
-
-  while (i < blocks.length) {
-    const current = blockAt(blocks, i)
-    const next = blockAt(blocks, i + 1)
-    const afterNext = blockAt(blocks, i + 2)
-    const fourth = blockAt(blocks, i + 3)
-    const fifth = blockAt(blocks, i + 4)
-    const sixth = blockAt(blocks, i + 5)
-
-    if (!current) {
-      i++
-      continue
-    }
-
-    // Skip bleed images — they should always render standalone at full viewport width
-    if (current?._type === 'image' && option(current?.size) === Width.Bleed) {
-      result.push(current)
-      i++
-      continue
-    }
-
-    // Pattern: image, caption, image, caption, image, caption → 3-column grid with captions
-    if (
-      isGroupableImage(current) && isShortTextBlock(next) &&
-      isGroupableImage(afterNext) && isShortTextBlock(fourth) &&
-      isGroupableImage(fifth) && isShortTextBlock(sixth)
-    ) {
-      result.push({
-        _type: 'columns',
-        _key: `autogrid-${current._key || i}`,
-        layout: '3',
-        content: [current, next, afterNext, fourth, fifth, sixth],
-      } as unknown as PortableTextBlock)
-      i += 6
-    // Pattern: image, caption, image, caption → 2-column grid with captions
-    } else if (
-      isGroupableImage(current) && isShortTextBlock(next) &&
-      isGroupableImage(afterNext) && isShortTextBlock(fourth) &&
-      !isGroupableImage(fifth)
-    ) {
-      result.push({
-        _type: 'columns',
-        _key: `autogrid-${current._key || i}`,
-        layout: '2',
-        content: [current, next, afterNext, fourth],
-      } as unknown as PortableTextBlock)
-      i += 4
-    // Three consecutive bare images → 3-column grid
-    } else if (isGroupableImage(current) && isGroupableImage(next) && isGroupableImage(afterNext)) {
-      result.push({
-        _type: 'columns',
-        _key: `autogrid-${current._key || i}`,
-        layout: '3',
-        content: [current, next, afterNext],
-      } as unknown as PortableTextBlock)
-      i += 3
-    // Two consecutive bare images → 2-column grid
-    } else if (isGroupableImage(current) && isGroupableImage(next)) {
-      result.push({
-        _type: 'columns',
-        _key: `autogrid-${current._key || i}`,
-        layout: '2',
-        content: [current, next],
-      } as unknown as PortableTextBlock)
-      i += 2
-    } else {
-      result.push(current)
-      i++
-    }
-  }
-
-  return result
-}
 
 interface PortableTextRendererProps {
   content: PortableTextBlock[]
   /** Content variant: 'case-study' applies gray text + double paragraph spacing; 'gray-body' applies Gatsby-like gray body copy without changing spacing */
   variant?: 'default' | 'case-study' | 'gray-body'
-  /** Disable automatic grouping of consecutive images into columns */
-  noGrouping?: boolean
   /** Bullet style: 'star' (default custom image) or 'disc' (standard round bullets) */
   bulletStyle?: 'star' | 'disc'
 }
 
-export function PortableTextRenderer({ content, variant = 'default', noGrouping = false, bulletStyle = 'star' }: PortableTextRendererProps) {
+export function PortableTextRenderer({ content, variant = 'default', bulletStyle = 'star' }: PortableTextRendererProps) {
   // Disable auto-grouping — images render full-width stacked by default.
   // Use explicit 'columns' blocks in Sanity for side-by-side layouts.
   const processed = content
