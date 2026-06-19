@@ -87,15 +87,26 @@ export const publishStatusBadge: DocumentBadgeComponent = (
   // publish (a draft exists), so a clean live page is never flagged. Takes
   // precedence over the plain "unpublished edits" badge — it is the actionable
   // reason the green button won't respond.
-  const errorCount = isValidating
-    ? 0
-    : validation.filter((marker) => marker.level === 'error').length
-  if (props.draft && errorCount > 0) {
+  //
+  // Count DISTINCT top-level fields with errors, not raw markers: Sanity emits a
+  // marker on both an array field and its offending nested field for a single bad
+  // value (one invalid custom component yields 2 markers under `content`), so a
+  // raw marker count overstates how many fields the editor actually has to fix.
+  const errorFields = isValidating
+    ? new Set<string>()
+    : new Set(
+        validation
+          .filter((marker) => marker.level === 'error')
+          .map((marker) =>
+            Array.isArray(marker.path) && marker.path.length > 0 ? String(marker.path[0]) : '(document)',
+          ),
+      )
+  if (props.draft && errorFields.size > 0) {
     return {
       label:
-        errorCount === 1
-          ? 'Publish blocked — 1 error to fix'
-          : `Publish blocked — ${errorCount} errors to fix`,
+        errorFields.size === 1
+          ? 'Publish blocked — 1 field to fix'
+          : `Publish blocked — ${errorFields.size} fields to fix`,
       color: 'danger',
       title:
         'This page has validation errors, so the Publish button is disabled. Open the error list (the red warning indicator next to Publish), fix the highlighted field(s), then click Publish.',
