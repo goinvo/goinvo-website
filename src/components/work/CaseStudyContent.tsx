@@ -7,6 +7,7 @@ import { CaseStudyLayout, CaseStudyMetadata } from '@/components/work/CaseStudyL
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
 import { EmptyContentPlaceholder } from '@/components/sanity/EmptyContentPlaceholder'
+import { option } from '@/lib/sanityOptions'
 import type { CaseStudy } from '@/types'
 import type { PortableTextBlock } from '@portabletext/types'
 
@@ -157,7 +158,7 @@ function stripMarkdownItalics(text: string): string {
 }
 
 function setBlockStyle(block: LoosePortableTextBlock, style: string): LoosePortableTextBlock {
-  if (block._type !== 'block' || block.style === style) {
+  if (block._type !== 'block' || option(block.style) === style) {
     return block
   }
 
@@ -243,7 +244,7 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
 
     if (buttonGroupIndex >= 0) {
       const buttonGroup = content[buttonGroupIndex]
-      if (buttonGroup.layout !== 'inline' || buttonGroup.size !== 'large') {
+      if (option(buttonGroup.layout) !== 'inline' || option(buttonGroup.size) !== 'large') {
         content[buttonGroupIndex] = {
           ...buttonGroup,
           layout: 'inline',
@@ -286,7 +287,7 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
 
     if (buttonGroupIndex >= 0) {
       const buttonGroup = content[buttonGroupIndex]
-      if (buttonGroup.layout !== 'centered' || buttonGroup.size !== 'large') {
+      if (option(buttonGroup.layout) !== 'centered' || option(buttonGroup.size) !== 'large') {
         content[buttonGroupIndex] = {
           ...buttonGroup,
           layout: 'centered',
@@ -321,7 +322,7 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     const resultsIndex = content.findIndex((block) => block._type === 'results')
     if (resultsIndex >= 0) {
       const resultsBlock = content[resultsIndex]
-      if (resultsBlock.variant !== 'legacyRow') {
+      if (option(resultsBlock.variant) !== 'legacyRow') {
         content[resultsIndex] = {
           ...resultsBlock,
           variant: 'legacyRow',
@@ -398,7 +399,7 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
 
   if (slug === 'inspired-ehrs') {
     const inspiredH4Content = content.map((block) =>
-      block._type === 'block' && block.style === 'h4'
+      block._type === 'block' && option(block.style) === 'h4'
         ? setBlockStyle(block, 'h4CaseStudyTight')
         : block
     )
@@ -416,7 +417,7 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     )
     if (topButtonGroupIndex >= 0) {
       const buttonGroup = content[topButtonGroupIndex]
-      if (buttonGroup.layout !== 'inline' || buttonGroup.size !== 'large') {
+      if (option(buttonGroup.layout) !== 'inline' || option(buttonGroup.size) !== 'large') {
         content[topButtonGroupIndex] = {
           ...buttonGroup,
           layout: 'inline',
@@ -459,7 +460,7 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
     const resultsIndex = content.findIndex((block) => block._type === 'results')
     if (resultsIndex >= 0) {
       const resultsBlock = content[resultsIndex]
-      if (resultsBlock.variant !== 'legacyRow') {
+      if (option(resultsBlock.variant) !== 'legacyRow') {
         content[resultsIndex] = {
           ...resultsBlock,
           variant: 'legacyRow',
@@ -473,14 +474,14 @@ function transformCaseStudyForSlug(caseStudy: CaseStudy, slug: string): CaseStud
       ) {
         const [buttonGroup] = content.splice(finalButtonGroupIndex, 1)
         const updatedButtonGroup =
-          buttonGroup.layout === 'centered' && buttonGroup.size === 'large'
+          option(buttonGroup.layout) === 'centered' && option(buttonGroup.size) === 'large'
             ? buttonGroup
             : { ...buttonGroup, layout: 'centered', size: 'large' }
         content.splice(resultsIndex, 0, updatedButtonGroup)
         changed = true
       } else if (finalButtonGroupIndex >= 0) {
         const buttonGroup = content[finalButtonGroupIndex]
-        if (buttonGroup.layout !== 'centered' || buttonGroup.size !== 'large') {
+        if (option(buttonGroup.layout) !== 'centered' || option(buttonGroup.size) !== 'large') {
           content[finalButtonGroupIndex] = {
             ...buttonGroup,
             layout: 'centered',

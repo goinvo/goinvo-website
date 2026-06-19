@@ -7,6 +7,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { featureBySlugQuery, allFeaturesQuery } from '@/sanity/lib/queries'
 import { urlForImage, PLACEHOLDER_IMAGE_URL } from '@/sanity/lib/image'
 import { PortableTextRenderer } from '@/components/portable-text/PortableTextRenderer'
+import { option } from '@/lib/sanityOptions'
 import { AuthorSection } from '@/components/ui/AuthorSection'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
@@ -922,7 +923,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
 
       if (
         block?._type === 'columns' &&
-        block?.layout === 'storyboard' &&
+        option(block?.layout) === 'storyboard' &&
         Array.isArray(block.content)
       ) {
         const jayStoryIntro = 'Jay gets home from school. AiHealth believes they may be feeling depressed based on their health data:'
@@ -963,7 +964,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
 
       if (
         block?._type === 'columns' &&
-        block?.layout === '2' &&
+        option(block?.layout) === '2' &&
         Array.isArray(block.content) &&
         block.content.length === 2 &&
         block.content[0]?._type === 'image' &&
@@ -1055,7 +1056,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
     return content.map((block) => {
       if (
         block?._type === 'buttonGroup' &&
-        block.layout !== 'fullWidth' &&
+        option(block.layout) !== 'fullWidth' &&
         Array.isArray(block.buttons) &&
         block.buttons.some((button: any) => button?.label === 'Download Poster') // eslint-disable-line @typescript-eslint/no-explicit-any
       ) {
@@ -1310,7 +1311,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
           }
         }
 
-        if (normalized?._type === 'block' && normalized.style === 'h4' && /^\d+\.\s/.test(text) && Array.isArray(normalized.children) && normalized.children[0]?.text) {
+        if (normalized?._type === 'block' && option(normalized.style) === 'h4' && /^\d+\.\s/.test(text) && Array.isArray(normalized.children) && normalized.children[0]?.text) {
           return {
             ...normalized,
           style: 'h4LegacySm',
@@ -1533,7 +1534,7 @@ function transformFeatureContentForSlug(slug: string, content: any[]) { // eslin
         continue
       }
 
-      if (inMethodologyEntries && block?._type === 'block' && block.style === 'normal') {
+      if (inMethodologyEntries && block?._type === 'block' && option(block.style) === 'normal') {
         continue
       }
 
