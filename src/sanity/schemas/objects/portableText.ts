@@ -4,6 +4,13 @@ import { DataTableBlockInput, ResultsBlockInput } from '../../components/Feature
 import { CodeTextareaInput, HtmlEmbedInput } from '../../components/HtmlEmbedInput'
 import { TextColorAnnotation } from '../../components/TextColorAnnotation'
 import { sectionBackgroundOptions } from '../../../lib/sectionBackgrounds'
+import {
+  WIDTH_OPTIONS,
+  COLUMN_LAYOUT_OPTIONS,
+  COLUMN_VARIANT_OPTIONS,
+  CARDGRID_COLUMNS_OPTIONS,
+  CARDGRID_VARIANT_OPTIONS,
+} from '../../../lib/portableTextOptions'
 
 const collapsibleCustomBlockOptions = {
   collapsible: true,
@@ -262,16 +269,7 @@ export default defineType({
           title: 'Layout',
           type: 'string',
           description: 'Column layout — equal or asymmetric widths',
-          options: {
-            list: [
-              { title: '2 columns (equal)', value: '2' },
-              { title: '2 columns (2:1 ratio)', value: '2:1' },
-              { title: '2 columns (1:2 ratio)', value: '1:2' },
-              { title: '3 columns', value: '3' },
-              { title: '4 columns', value: '4' },
-              { title: 'Storyboard (image above text, vertically stacked)', value: 'storyboard' },
-            ],
-          },
+          options: { list: COLUMN_LAYOUT_OPTIONS },
           initialValue: '2',
         },
         {
@@ -280,13 +278,7 @@ export default defineType({
           type: 'string',
           description:
             'Override the column container width. To span the whole page, choose "Full bleed". "Wide" is a fixed 1020px (wider than the article, but not edge-to-edge). Applies to every column layout.',
-          options: {
-            list: [
-              { title: 'Default (follow article width)', value: 'default' },
-              { title: 'Wide (fixed 1020px)', value: 'wide' },
-              { title: 'Full bleed (spans the whole page)', value: 'bleed' },
-            ],
-          },
+          options: { list: WIDTH_OPTIONS },
           initialValue: 'default',
         },
         {
@@ -294,13 +286,7 @@ export default defineType({
           title: 'Variant',
           type: 'string',
           description: 'Optional presentation style for the column items',
-          options: {
-            list: [
-              { title: 'Default', value: 'default' },
-              { title: 'Centered comparison', value: 'centered' },
-              { title: 'Cards', value: 'cards' },
-            ],
-          },
+          options: { list: COLUMN_VARIANT_OPTIONS },
           initialValue: 'default',
         },
         {
@@ -745,13 +731,7 @@ export default defineType({
           title: 'Columns',
           type: 'string',
           description: 'Number of columns in the grid',
-          options: {
-            list: [
-              { title: '2 columns', value: '2' },
-              { title: '3 columns', value: '3' },
-              { title: '4 columns', value: '4' },
-            ],
-          },
+          options: { list: CARDGRID_COLUMNS_OPTIONS },
           initialValue: '4',
         },
         {
@@ -760,13 +740,7 @@ export default defineType({
           type: 'string',
           description:
             'Override the card grid width. To span the whole page, choose "Full bleed". "Wide" is a fixed 1020px (wider than the article, but not edge-to-edge).',
-          options: {
-            list: [
-              { title: 'Default (follow article width)', value: 'default' },
-              { title: 'Wide (fixed 1020px)', value: 'wide' },
-              { title: 'Full bleed (spans the whole page)', value: 'bleed' },
-            ],
-          },
+          options: { list: WIDTH_OPTIONS },
           initialValue: 'default',
         },
         {
@@ -774,12 +748,7 @@ export default defineType({
           title: 'Variant',
           type: 'string',
           description: 'Card style. "Stat" renders each card label as a big, bold, brand-orange number.',
-          options: {
-            list: [
-              { title: 'Default (small uppercase label)', value: 'default' },
-              { title: 'Stat — big orange numbers', value: 'statNumber' },
-            ],
-          },
+          options: { list: CARDGRID_VARIANT_OPTIONS },
           initialValue: 'default',
         },
         {
