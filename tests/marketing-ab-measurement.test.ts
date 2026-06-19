@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildAbTestingInsights,
   getAbTestingComparisonSummary,
   getAbTestingComparativeResults,
   getAbTestingDisplayStatus,
@@ -289,6 +290,76 @@ describe('Multiple linked signals', () => {
     expect(results).toHaveLength(1)
     expect(results[0].status).toBe('variant')
     expect(getAbTestingComparisonSummary(experiment, results).status).toBe('variant')
+  })
+})
+
+describe('sample-size gating (the dashboard scenario)', () => {
+  // Mirrors the live readout: control 0 / concept 5 on the primary, and a 3-vs-3
+  // guardrail whose rate delta reads as "-14%" purely from the visit denominators.
+  function scenarioExperiment() {
+    return {
+      ...baseExperiment(),
+      performanceSignals: [
+        {
+          _id: 'signal-drain',
+          title: 'readout',
+          provider: 'vercel',
+          status: 'reviewed',
+          metrics: [
+            { _key: 'e-c', label: 'Control visits', value: 256, unit: 'visits', variantKey: 'control', eventName: 'experiment_exposure' },
+            { _key: 'e-v', label: 'Concept visits', value: 299, unit: 'visits', variantKey: 'concept', eventName: 'experiment_exposure' },
+            { _key: 'q-v', label: 'concept qualified', value: 5, unit: 'events', variantKey: 'concept', eventName: 'qualified_discovery_call_click', change: '+500% vs control' },
+            { _key: 'q-c', label: 'control qualified', value: 0, unit: 'events', variantKey: 'control', eventName: 'qualified_discovery_call_click' },
+            { _key: 'w-v', label: 'concept work', value: 3, unit: 'events', variantKey: 'concept', eventName: 'view_work_click', change: '-14% vs control' },
+            { _key: 'w-c', label: 'control work', value: 3, unit: 'events', variantKey: 'control', eventName: 'view_work_click' },
+          ],
+        },
+      ],
+    }
+  }
+
+  it('says "No winner" on the primary when control has no events', () => {
+    const results = getAbTestingComparativeResults(scenarioExperiment())
+    const qualified = results.find((r) => r.metricLabel.includes('Qualified'))
+    expect(qualified?.winnerLabel).toBe('No winner yet')
+    expect(qualified?.status).toBe('needsComparison')
+  })
+
+  it('does not declare a winner on a 3-vs-3 guardrail (too few events)', () => {
+    const results = getAbTestingComparativeResults(scenarioExperiment())
+    const work = results.find((r) => r.metricLabel.includes('Work exploration'))
+    expect(work?.status).toBe('even')
+    expect(work?.winnerLabel).toBe('Too few events')
+  })
+
+  it('does NOT raise a guardrail-failing insight on the noisy 3-vs-3 guardrail', () => {
+    const insights = buildAbTestingInsights({ ...emptyData(), experiments: [scenarioExperiment()] })
+    expect(insights.some((i) => /guardrail failing/i.test(i.title))).toBe(false)
+    expect(insights.some((i) => /enough events/i.test(i.title))).toBe(true)
+  })
+
+  it('STILL raises a guardrail-failing insight on a real drop with enough events', () => {
+    const experiment = {
+      ...baseExperiment(),
+      performanceSignals: [
+        {
+          _id: 'signal-drain',
+          title: 'readout',
+          provider: 'vercel',
+          status: 'reviewed',
+          metrics: [
+            { _key: 'e-c', label: 'Control visits', value: 1000, unit: 'visits', variantKey: 'control', eventName: 'experiment_exposure' },
+            { _key: 'e-v', label: 'Concept visits', value: 1000, unit: 'visits', variantKey: 'concept', eventName: 'experiment_exposure' },
+            { _key: 'q-v', label: 'concept qualified', value: 45, unit: 'events', variantKey: 'concept', eventName: 'qualified_discovery_call_click', change: '+12% vs control' },
+            { _key: 'q-c', label: 'control qualified', value: 40, unit: 'events', variantKey: 'control', eventName: 'qualified_discovery_call_click' },
+            { _key: 'w-v', label: 'concept work', value: 50, unit: 'events', variantKey: 'concept', eventName: 'view_work_click', change: '-50% vs control' },
+            { _key: 'w-c', label: 'control work', value: 100, unit: 'events', variantKey: 'control', eventName: 'view_work_click' },
+          ],
+        },
+      ],
+    }
+    const insights = buildAbTestingInsights({ ...emptyData(), experiments: [experiment] })
+    expect(insights.some((i) => /guardrail failing/i.test(i.title))).toBe(true)
   })
 })
 
