@@ -519,10 +519,10 @@ const components: PortableTextComponents = {
               }))}
               stripedRows={value?.stripedRows !== false}
               fullWidth={Boolean(value?.fullWidth)}
-              tone={value?.tone === 'default' ? 'default' : 'gray'}
+              tone={option(value?.tone) === 'default' ? 'default' : 'gray'}
             />
             {value?.caption ? (
-              <p className={cn('mt-2 text-base', value?.tone === 'default' ? 'text-black' : 'text-gray')}>
+              <p className={cn('mt-2 text-base', option(value?.tone) === 'default' ? 'text-black' : 'text-gray')}>
                 {value.caption}
               </p>
             ) : null}
@@ -531,7 +531,7 @@ const components: PortableTextComponents = {
       )
     },
     reviewCard: ({ value }) => {
-      const isRejected = value.status === 'rejected'
+      const isRejected = option(value.status) === 'rejected'
       const badgeColor = isRejected ? 'text-[#d62e17] bg-[#fdeaea]' : 'text-[#00a000] bg-[#e0ffef]'
       return (
         <ArticleReveal intensity="visual">
@@ -542,7 +542,7 @@ const components: PortableTextComponents = {
             </div>
             <div className="bg-white px-5 py-5">
               <span className={`inline-block text-sm font-semibold uppercase rounded-full px-3 py-1 mb-4 ${badgeColor}`}>
-                {value.status === 'rejected' ? 'Rejected' : 'Certified'}
+                {isRejected ? 'Rejected' : 'Certified'}
               </span>
               {value.quote && (
                 <p className="font-serif italic text-[1.5rem] leading-[1.35] text-black mb-3">
@@ -875,7 +875,7 @@ const components: PortableTextComponents = {
         const renderImages = () => (
           <div className="flex flex-col items-center justify-center">
             {imageItems.map((item) => {
-              const imgSize = item.size || 'full'
+              const imgSize = option(item.size) || 'full'
               const imgWidth = imgSize === 'small' ? 400 : imgSize === 'medium' ? 600 : 800
               const colImageSizeClasses: Record<string, string> = {
                 small: 'max-w-[250px]',
@@ -1015,7 +1015,7 @@ const components: PortableTextComponents = {
     backgroundSection: ({ value }) => {
       const bgClass = bgSectionColors[value.color] || bgSectionColors.gray
       const spacingClass = option(value.spacing) === 'legacyFlush' ? 'py-8 my-0' : 'py-12 my-8'
-      const toneClass = value.tone === 'default'
+      const toneClass = option(value.tone) === 'default'
         ? '[&_p:not(.methodology-label)]:!text-black [&_li]:!text-black [&_ul]:!text-black'
         : ''
       return (
@@ -1137,7 +1137,7 @@ const components: PortableTextComponents = {
                 !isBlockButtonLayout && 'items-center justify-center',
                 !isSingleFullWidthButton && !useLegacyDoubleSpacing && layout !== 'fullWidth' && largeButtonClass,
                 btnClass,
-                btn.variant === 'primary'
+                option(btn.variant) === 'primary'
                   ? 'bg-primary text-white border-primary hover:bg-primary-dark hover:border-primary-dark'
                   : 'bg-transparent text-primary border-primary-light hover:bg-primary-lightest'
               )}
@@ -1211,10 +1211,11 @@ const components: PortableTextComponents = {
     },
     spacer: ({ value }) => {
       const sizes: Record<string, string> = { sm: 'h-4', md: 'h-8', lg: 'h-12', xl: 'h-16' }
-      return <div className={sizes[value?.size || 'md']} aria-hidden="true" />
+      return <div className={sizes[option(value?.size) || 'md']} aria-hidden="true" />
     },
     divider: ({ value }) => {
-      if (value?.style === 'arrow') {
+      const dividerStyle = option(value?.style)
+      if (dividerStyle === 'arrow') {
         return (
           <div className="flex justify-center my-4">
             <svg width="38" height="56" viewBox="0 0 38 56" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1223,10 +1224,10 @@ const components: PortableTextComponents = {
           </div>
         )
       }
-      if (value?.style === 'buttonSpacing') {
+      if (dividerStyle === 'buttonSpacing') {
         return <Divider className="mt-[25px] mb-4" />
       }
-      return <Divider variant={value?.style === 'thick' ? 'thick' : 'default'} />
+      return <Divider variant={dividerStyle === 'thick' ? 'thick' : 'default'} />
     },
     contactForm: ({ value }) => (
       <ArticleReveal intensity="visual">
