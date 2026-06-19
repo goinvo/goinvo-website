@@ -1,5 +1,5 @@
 import type { DocumentBadgeComponent, DocumentBadgeProps } from 'sanity'
-import { useCurrentUser } from 'sanity'
+import { useCurrentUser, useValidationStatus } from 'sanity'
 import { getFeatureEditorExperience } from '@/lib/featureAuthoring'
 
 export const featureAuthoringBadge: DocumentBadgeComponent = (
@@ -55,6 +55,11 @@ export const publishStatusBadge: DocumentBadgeComponent = (
   // useDocumentPairPermissions hook does not resolve inside a document badge, so
   // read the current user's project roles instead — reliably available here.)
   const user = useCurrentUser()
+  // The other invisible reason Publish stays gray: validation errors. One bad
+  // field (an unknown custom component, a missing required value, a malformed
+  // URL) disables Publish with no obvious signal beyond a small red dot. Read the
+  // live validation status so we can name the cause. props.id is the published id.
+  const { validation, isValidating } = useValidationStatus(props.id, props.type)
 
   const type = (props.draft || props.published)?._type
   if (!type || !PUBLISHABLE_CONTENT_TYPES.has(type)) {
@@ -74,6 +79,26 @@ export const publishStatusBadge: DocumentBadgeComponent = (
       color: 'danger',
       title:
         'Your account can edit and save drafts, but it does not have permission to publish, so the Publish button stays disabled. Ask a site admin to publish this page (or to grant your account publish access in Sanity).',
+    }
+  }
+
+  // Validation errors disable Publish. Flag it only once validation has settled
+  // (avoid a transient mid-validation flash) and only when there is something to
+  // publish (a draft exists), so a clean live page is never flagged. Takes
+  // precedence over the plain "unpublished edits" badge — it is the actionable
+  // reason the green button won't respond.
+  const errorCount = isValidating
+    ? 0
+    : validation.filter((marker) => marker.level === 'error').length
+  if (props.draft && errorCount > 0) {
+    return {
+      label:
+        errorCount === 1
+          ? 'Publish blocked — 1 error to fix'
+          : `Publish blocked — ${errorCount} errors to fix`,
+      color: 'danger',
+      title:
+        'This page has validation errors, so the Publish button is disabled. Open the error list (the red warning indicator next to Publish), fix the highlighted field(s), then click Publish.',
     }
   }
 
