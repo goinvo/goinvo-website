@@ -129,7 +129,7 @@ export async function POST(req: Request, context: RouteContext) {
   } catch (error) {
     if (error instanceof MarketingValidationError) {
       return NextResponse.json(
-        { error: error.message, missing: error.missing },
+        { error: error.message, missing: error.missing, invalid: error.invalid },
         { status: 422 },
       )
     }

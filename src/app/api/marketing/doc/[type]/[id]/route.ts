@@ -6,6 +6,7 @@ import {
   getMarketingWriteClient,
   isManagedMarketingType,
   MarketingAuthError,
+  MarketingValidationError,
   type ManagedMarketingType,
   type MarketingFields,
 } from '@/lib/marketing'
@@ -128,6 +129,12 @@ export async function PATCH(req: Request, context: RouteContext) {
         ...(typeof deriveSlug === 'boolean' ? { deriveSlug } : {}),
       })
     } catch (error) {
+      if (error instanceof MarketingValidationError) {
+        return NextResponse.json(
+          { error: error.message, missing: error.missing, invalid: error.invalid },
+          { status: 422 },
+        )
+      }
       return NextResponse.json(
         { error: error instanceof Error ? error.message : 'Failed to build patch.' },
         { status: 400 },

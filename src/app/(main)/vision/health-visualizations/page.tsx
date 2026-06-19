@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
-import { cloudfrontImage } from '@/lib/utils'
+import { cloudfrontImage, cn } from '@/lib/utils'
 import { Reveal } from '@/components/ui/Reveal'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 interface PosterCard {
   id: string
   title: string
+  caption?: string
   imageUrl: string
   downloadUrl: string
   learnMoreLink: string
@@ -109,6 +110,7 @@ function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
     return {
       id: viz._id,
       title: viz.title,
+      caption: viz.caption ?? '',
       imageUrl: sanityImageUrl || fallbackImageUrl,
       downloadUrl: resolveDownloadUrl(viz.downloadLink ?? ''),
       learnMoreLink: normalizeLearnMoreLink(viz.learnMoreLink ?? ''),
@@ -217,7 +219,10 @@ function PosterCardComponent({ card }: { card: PosterCard }) {
         imageBlock
       )}
       <div className="p-4">
-        <h4 className="header-sm text-black mb-[21px]">{card.title}</h4>
+        <h4 className={cn('header-sm text-black', card.caption ? 'mb-2' : 'mb-[21px]')}>{card.title}</h4>
+        {card.caption && (
+          <p className="text-gray text-sm leading-relaxed mb-[21px]">{card.caption}</p>
+        )}
         {card.downloadUrl && (
           <a
             href={card.downloadUrl}

@@ -581,6 +581,57 @@ describe('instagram reels async flow (mocked graph api)', () => {
     expect(last?.set).toMatchObject({ publishState: 'failed' })
     expect(last?.unset).toContain('externalContainerId')
   })
+
+  it('reports failed (for reconciliation) when the post succeeds but the write-back fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input)
+        if (url.includes('fields=status_code')) return igResponse({ status_code: 'FINISHED' })
+        if (url.includes('/media_publish')) return igResponse({ id: 'media999' })
+        if (url.includes('fields=permalink')) return igResponse({ permalink: 'https://insta/p' })
+        return igResponse({}, false, 404)
+      }),
+    )
+    // The claim commit succeeds, but the post-publish write-back commit fails on
+    // both the initial attempt and the retry.
+    const failingClient = {
+      fetch: async (query: string) =>
+        String(query).includes('publishState == "processing"')
+          ? []
+          : { ...videoItem, publishState: 'processing', externalContainerId: 'cont1', publishAttempts: 1 },
+      patch: () => {
+        const op = { set: {} as Record<string, unknown> }
+        const chain = {
+          ifRevisionId: () => chain,
+          set: (s: Record<string, unknown>) => {
+            Object.assign(op.set, s)
+            return chain
+          },
+          unset: () => chain,
+          commit: async () => {
+            if (op.set.publishState === 'published') throw new Error('simulated write conflict')
+            return {}
+          },
+        }
+        return chain
+      },
+    }
+    const summary = await runPublish(failingClient as never, {
+      now: '2026-06-12T00:00:00.000Z',
+      id: 'v1',
+      finalizeOnly: true,
+    })
+
+    // The Reel IS live on Instagram, but the record could not be updated: the run
+    // must report `failed` (not a false `published`) and keep the ids to reconcile.
+    expect(summary.published).toBe(0)
+    expect(summary.failed).toBe(1)
+    expect(summary.results[0].outcome).toBe('failed')
+    expect(summary.results[0].externalId).toBe('media999')
+    expect(summary.results[0].reason).toMatch(/write-back failed/i)
+    expect(summary.results[0].reason).toContain('media999')
+  })
 })
 
 describe('rendomat client', () => {
