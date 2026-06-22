@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import {
+  captureAttribution,
   getGaIdentity,
   hasExperimentConversionFired,
   setExperimentContext,
@@ -30,6 +31,9 @@ const ENGAGED_VISIBLE_MS = 10000
  */
 export function ExperimentExposure({ experiment }: ExperimentExposureProps) {
   useEffect(() => {
+    // Capture utm_*/gclid from the landing URL FIRST, so the exposure beacon (and
+    // every later conversion beacon this session) carries the ad attribution.
+    captureAttribution()
     setExperimentContext(experiment)
     trackExperimentExposure(experiment)
 

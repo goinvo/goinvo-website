@@ -52,6 +52,9 @@ function beaconExperimentEvent(name: string) {
       experiment_id: experimentContext.experiment_id,
       variant: experimentContext.variant,
       page_path: experimentContext.page_path,
+      // Campaign attribution (utm_*/gclid from the landing URL) so /collect can
+      // attribute this event to the ad/channel that drove the visit (paid).
+      ...getAttribution(),
       // The GA client_id (from the visitor's own _ga cookie, or the marketing
       // visitor cookie when _ga is blocked) so /collect can forward this event to
       // GA4 via the Measurement Protocol. No new identifier is minted here.
@@ -92,6 +95,60 @@ function readCookie(name: string): string | undefined {
     }
   }
   return undefined
+}
+
+/* --- Campaign attribution (utm_* + gclid) ---------------------------------- */
+// Captured from the landing URL into a first-party cookie so a later conversion
+// beacon can be tied back to the ad/channel that drove the visit. Not PII —
+// campaign params + the Google click id only.
+const ATTRIBUTION_COOKIE = 'goinvo_attribution'
+const ATTRIBUTION_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid'] as const
+
+function writeCookie(name: string, value: string, maxAgeSec: number) {
+  if (typeof document === 'undefined') return
+  try {
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSec}; SameSite=Lax`
+  } catch {
+    // Best-effort: attribution capture must never affect the page.
+  }
+}
+
+/**
+ * Capture campaign attribution (utm_* + gclid) from the landing URL into a
+ * first-party cookie (LAST-TOUCH, 30 days). Call once on landing. No-op — keeps
+ * any prior value — when the URL carries no attribution params (organic visit),
+ * so a later same-session navigation doesn't wipe the campaign that drove entry.
+ */
+export function captureAttribution() {
+  if (typeof window === 'undefined') return
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const captured: Record<string, string> = {}
+    for (const key of ATTRIBUTION_KEYS) {
+      const value = params.get(key)
+      if (value) captured[key] = value.slice(0, 200)
+    }
+    if (Object.keys(captured).length === 0) return
+    writeCookie(ATTRIBUTION_COOKIE, JSON.stringify(captured), 60 * 60 * 24 * 30)
+  } catch {
+    // Best-effort.
+  }
+}
+
+/** Reads the captured campaign attribution (utm_* + gclid), or {} if none. */
+export function getAttribution(): Record<string, string> {
+  const raw = readCookie(ATTRIBUTION_COOKIE)
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    const out: Record<string, string> = {}
+    for (const key of ATTRIBUTION_KEYS) {
+      if (typeof parsed[key] === 'string') out[key] = parsed[key] as string
+    }
+    return out
+  } catch {
+    return {}
+  }
 }
 
 /**

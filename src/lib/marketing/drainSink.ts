@@ -185,6 +185,46 @@ export function parseKvCounterField(field: string): { variant: string; pagePath:
 }
 
 /* ------------------------------------------------------------------ */
+/*  Per-source attribution counter (paid-campaign attribution)         */
+/* ------------------------------------------------------------------ */
+//
+// A SEPARATE counter hash (never touches the authoritative per-variant counters
+// above), so we can attribute a conversion back to the ad/channel that drove it:
+// keyed by sanitized source x variant x event. Populated by /collect when a
+// beacon carries utm_*/gclid; left empty for organic traffic.
+export function kvSourceKey(flagKey: string): string {
+  return `${KV_PREFIX}source:${flagKey}`
+}
+
+export function kvSourceField(source: string, variant: string, eventName: string): string {
+  return [source, variant, eventName].join(FIELD_DELIM)
+}
+
+export function parseKvSourceField(field: string): { source: string; variant: string; eventName: string } | null {
+  const parts = field.split(FIELD_DELIM)
+  if (parts.length < 3) return null
+  const source = parts[0]
+  const eventName = parts[parts.length - 1]
+  const variant = parts.slice(1, -1).join(FIELD_DELIM)
+  if (!source || !variant || !eventName) return null
+  return { source, variant, eventName }
+}
+
+/**
+ * Normalize a utm/source token into a bounded, pipe-free KV field segment so the
+ * source counter can't be polluted by arbitrary query strings (and round-trips
+ * through kvSourceField). Lowercased, non-[a-z0-9._-] collapsed to '-', capped.
+ */
+export function sanitizeAttributionSource(raw: string | undefined | null): string {
+  return (raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64)
+}
+
+/* ------------------------------------------------------------------ */
 /*  First-party ENGAGEMENT fields (time-on-page + bounce)              */
 /* ------------------------------------------------------------------ */
 //
