@@ -337,6 +337,14 @@ export function trackDiscoveryFormStart(params: {
   trackEvent('discovery_form_start', params)
 }
 
+// Visitor sends their first message via the site chat widget — a low-friction
+// qualified-lead action (the conversational alternative to booking a call). Its
+// OWN tracked metric; deliberately NOT folded into experiment_conversion so the
+// homepage readout can weigh it separately from a booked call (a softer signal).
+export function trackChatMessageSent(params?: { source?: string }) {
+  trackEvent('chat_message_sent', { source: params?.source ?? 'chat_widget' })
+}
+
 // Case study card clicks on /work
 export function trackCaseStudyClick(params: {
   case_study_title: string
