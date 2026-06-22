@@ -40,6 +40,11 @@ export const siteConfig = {
     ga4Id: 'G-P00K4KL2Y9',
     googleAdsId: 'AW-973476681',
     googleAdsConversionLabel: 'oygPCN6t2W4QyaaY0AM',
+    // Dedicated Ads conversion for a booked discovery call — the concept flow books
+    // via Calendly (event_scheduled), not /thank-you. EMPTY = no Ads conversion is
+    // fired (fail-closed); set this to the "booked call" conversion label from
+    // Google Ads to let smart bidding optimize toward bookings.
+    googleAdsBookingConversionLabel: '',
   },
   chat: {
     allowedHosts: ['goinvo.com', 'www.goinvo.com', 'localhost', '127.0.0.1', '::1'],
