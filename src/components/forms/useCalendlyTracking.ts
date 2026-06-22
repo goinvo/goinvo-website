@@ -2,6 +2,18 @@
 
 import { useEffect } from 'react'
 import { trackDiscoveryFormStart, trackFormSubmit } from '@/lib/analytics'
+import { siteConfig } from '@/lib/config'
+
+// Fire the Google Ads "booked call" conversion on a completed Calendly booking so
+// smart bidding can optimize toward bookings (the concept flow never reaches the
+// /thank-you conversion). Fail-closed: no-op until the dedicated label is set in
+// config (googleAdsBookingConversionLabel) + Google Ads.
+function fireBookedCallAdsConversion() {
+  const { googleAdsId, googleAdsBookingConversionLabel } = siteConfig.analytics
+  if (!googleAdsBookingConversionLabel) return
+  if (typeof window === 'undefined' || typeof window.gtag !== 'function') return
+  window.gtag('event', 'conversion', { send_to: `${googleAdsId}/${googleAdsBookingConversionLabel}` })
+}
 
 interface UseCalendlyTrackingParams {
   formName: string
@@ -30,6 +42,7 @@ export function useCalendlyTracking({ formName, formLocation }: UseCalendlyTrack
         trackDiscoveryFormStart({ form_name: formName, form_location: formLocation })
       } else if (calendlyEvent === 'calendly.event_scheduled') {
         trackFormSubmit({ form_name: formName, form_location: formLocation })
+        fireBookedCallAdsConversion()
       }
     }
 
