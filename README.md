@@ -3,7 +3,7 @@
 [![CI](https://github.com/goinvo/goinvo-website/actions/workflows/ci.yml/badge.svg)](https://github.com/goinvo/goinvo-website/actions/workflows/ci.yml)
 
 The website for [GoInvo](https://www.goinvo.com), a healthcare design + engineering studio —
-rebuilt on **Next.js 16** (App Router) with a **Sanity** CMS, migrated from Gatsby. Beyond the
+rebuilt on **Next.js 16** (App Router) with a [**Sanity** CMS](https://www.sanity.io/login), migrated from Gatsby. Beyond the
 marketing site it includes a custom marketing-operations suite and a privacy-respecting,
 blocker-resilient A/B testing system.
 
