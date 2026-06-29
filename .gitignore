@@ -88,3 +88,6 @@ next-start*.log
 
 # Local MCP server config (contains API keys)
 .mcp.json
+
+# Oversized local-only video (host on CDN; exceeds GitHub 100MB limit)
+/public/videos/design-diagnostic/goinvo-design-diagnostic.mp4
