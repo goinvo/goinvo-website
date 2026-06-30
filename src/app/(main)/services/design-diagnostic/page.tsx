@@ -57,11 +57,6 @@ export default function DesignDiagnosticPage() {
           </p>
 
           <h2 className="header-lg mt-8 mb-5">We use design as a diagnostic tool.</h2>
-          <p>
-            A diagnostic is a low-risk first step. From there, we can partner on
-            the full engagement — research, strategy, design, and delivery.{' '}
-            <Link href="/services">Explore all of our services</Link>.
-          </p>
 
           <h3 className="header-md mt-8 mb-5">What we do</h3>
 
@@ -146,7 +141,8 @@ export default function DesignDiagnosticPage() {
         <p>
           Phase 1
           <br />
-          Reality Check
+          <strong>Reality Check</strong>
+     
         </p>
 
 <ul>
@@ -160,7 +156,7 @@ export default function DesignDiagnosticPage() {
   <p>
     Phase 2
     <br />
-    Design to Learn
+    <strong>Design to Learn</strong>
   </p>
 
 <ul>
@@ -176,7 +172,7 @@ export default function DesignDiagnosticPage() {
 <p>
   Phase 3
   <br />
-  Design the Future
+  <strong>Design the Future</strong>
 </p>
 
 <ul>
@@ -190,10 +186,10 @@ export default function DesignDiagnosticPage() {
 <p>
   Final
   <br />
-  Product Blueprint
+  <strong>Product Blueprint</strong>
 </p>
 
-<p>The Product Blueprint captures everything we’ve learned through six weeks of designing, testing, and challenging your product.</p>
+<p>The Product Blueprint captures everything we've learned through six weeks of designing, testing, and challenging your product.</p>
 
 <p>A practical guide for building the right product, which includes:</p>
 <ul>
@@ -207,26 +203,26 @@ export default function DesignDiagnosticPage() {
   <li>Leadership decisions: key decisions leadership should make next</li>
 </ul>
 
-<h3 className="header-md mt-8 mb-5">What you won’t get.</h3>
+<h3 className="header-md mt-8 mb-5">What you won't get.</h3>
 
-<p>You won’t get a 200-page report.</p>
+<p>You won't get a 200-page report.</p>
 
-<p>You won’t get generic UX recommendations.</p>
+<p>You won't get generic UX recommendations.</p>
 
-<p>You won’t get another backlog.</p>
+<p>You won't get another backlog.</p>
 
-<p>You’ll get a clear product direction, a working prototype, and the confidence to make your next product decisions.</p>
+<p>You'll get a clear product direction, a working prototype, and the confidence to make your next product decisions.</p>
 
 <p>Call us when…</p>
 
 <ul>
-  <li>Launch is 3–12 months away.</li>
+  <li>Launch is 3-12 months away.</li>
   <li>Clinician adoption is uncertain.</li>
   <li>AI recommendations need to earn trust.</li>
   <li>Your product feels more complicated every sprint.</li>
   <li>Executives disagree on direction.</li>
-  <li>Sales is promising features engineering can’t support.</li>
-  <li>You have a working product, but you’re not convinced it’s the right one.</li>
+  <li>Sales is promising features engineering can't support.</li>
+  <li>You have a working product, but you're not convinced it's the right one.</li>
 </ul>
 
 <h3 className="header-md mt-8 mb-5">Proof</h3>
@@ -234,7 +230,7 @@ export default function DesignDiagnosticPage() {
 <Video
   sources={[
     {
-      src: '/videos/design-diagnostic/goinvo-design-diagnostic.mp4',
+      src: 'https://cdn.sanity.io/files/a1wsimxr/production/2d7b424ab7ac15374b7d82046e47d5651a74618b.mp4',
       format: 'mp4',
     },
   ]}
@@ -244,22 +240,16 @@ export default function DesignDiagnosticPage() {
 />
 
 <p>
-  AI Clinical Workflow, Orphic<br />
-  Problem: Clinicians couldn’t understand AI recommendations.<br />
+  AI Clinical Workflow<br />
+  Problem: Clinicians couldn't understand AI recommendations.<br />
   Design Diagnostic: Redesigned evidence presentation and recommendation workflow.<br />
   Result: Shared product direction across clinical, engineering, and executive teams.
 </p>
 
-
-<p>AI Clinical Workflow, Orphic</p>
-<p>Problem: Clinicians couldn’t understand AI recommendations.</p>
-<p>Design Diagnostic: Redesigned evidence presentation and recommendation workflow.</p>
-<p>Result: Shared product direction across clinical, engineering, and executive teams.</p>
-
 <p>Software is cheap.</p>
 
 <p>Building the wrong software is expensive.<br />
-Let’s find the right product before you build the rest of it.</p>
+Let's find the right product before you build the rest of it.</p>
 
 
         </div>
