@@ -48,7 +48,7 @@ const NON_PUBLISHER_ROLES = new Set(['viewer', 'contributor'])
 // its mere presence is the signal — no diffing required. The amber badge sits at
 // the top of the editor form (and the Presentation side panel, where the preview
 // shows the draft and can look deceptively live), pointing the editor at Publish.
-export const publishStatusBadge: DocumentBadgeComponent = (
+export const PublishStatusBadge: DocumentBadgeComponent = (
   props: DocumentBadgeProps
 ) => {
   // Hooks must run unconditionally, before any early return. (The grant-aware
