@@ -139,6 +139,7 @@ export function AbTestingWorkspace({
       primaryMetric: 'Qualified discovery-call clicks',
       trackedMetrics: [
         { _key: randomKey(), _type: 'experimentMetric', key: 'qualified-discovery-call-clicks', label: 'Qualified discovery-call clicks', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'qualified_discovery_call_click', unit: 'events' },
+        { _key: randomKey(), _type: 'experimentMetric', key: 'discovery-calls-booked', label: 'Discovery calls booked', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'discovery_call_booked', unit: 'events' },
         { _key: randomKey(), _type: 'experimentMetric', key: 'work-exploration-clicks', label: 'Work exploration clicks', role: 'guardrail', comparison: 'comparative', source: 'vercelEvent', eventName: 'view_work_click', unit: 'events' },
         { _key: randomKey(), _type: 'experimentMetric', key: 'top-navbar-clicks', label: 'Top navbar clicks', role: 'diagnostic', comparison: 'comparative', source: 'vercelEvent', eventName: 'nav_click', unit: 'events' },
         { _key: randomKey(), _type: 'experimentMetric', key: 'discovery-form-starts', label: 'Discovery form starts', role: 'diagnostic', comparison: 'conceptual', source: 'vercelEvent', eventName: 'discovery_form_start', unit: 'events' },
@@ -156,6 +157,15 @@ export function AbTestingWorkspace({
         {
           _key: randomKey(),
           _type: 'experimentSuccessTracker',
+          title: 'Booked calls lift',
+          trackerType: 'metricRule',
+          metricKeys: ['discovery-calls-booked'],
+          condition: 'increase',
+          successWhen: 'Concept beats control on discovery calls actually booked, not just CTA clicks.',
+        },
+        {
+          _key: randomKey(),
+          _type: 'experimentSuccessTracker',
           title: 'Work exploration guardrail',
           trackerType: 'metricRule',
           metricKeys: ['work-exploration-clicks'],
@@ -163,7 +173,7 @@ export function AbTestingWorkspace({
           successWhen: 'Work exploration clicks do not drop materially while CTA clicks improve.',
         },
       ],
-      qaNotes: 'Verify control and concept render at desktop and mobile, then confirm experiment_exposure, qualified_discovery_call_click, view_work_click, and discovery_form_start events include experiment_id, flag_key, variant, and page_path. Do not send raw visitor IDs.',
+      qaNotes: 'Verify control and concept render at desktop and mobile, then confirm experiment_exposure, qualified_discovery_call_click, discovery_call_booked, view_work_click, and discovery_form_start events include experiment_id, flag_key, variant, and page_path. Do not send raw visitor IDs.',
     })
     setSelectedId(createdId)
     setActiveEditorTab('setup')
