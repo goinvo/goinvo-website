@@ -129,7 +129,16 @@ const MARKETING_CONTROL_CSS = `
     cursor: pointer;
   }
 
-  [data-marketing-tool] [role="tablist"] {
+  [data-marketing-tool] button:focus-visible,
+  [data-marketing-tool] a:focus-visible,
+  [data-marketing-tool] input:focus-visible,
+  [data-marketing-tool] select:focus-visible,
+  [data-marketing-tool] textarea:focus-visible {
+    outline: 2px solid #4dc4d6;
+    outline-offset: 2px;
+  }
+
+  [data-marketing-tool] [data-marketing-subtabs="true"] {
     max-width: 100%;
   }
 
@@ -157,14 +166,14 @@ const MARKETING_CONTROL_CSS = `
       border-bottom: none;
     }
 
-    [data-marketing-tool] [role="tablist"] {
+    [data-marketing-tool] [data-marketing-subtabs="true"] {
       flex-wrap: nowrap !important;
       overflow-x: auto !important;
       -webkit-overflow-scrolling: touch;
       scrollbar-gutter: stable;
     }
 
-    [data-marketing-tool] [role="tab"] {
+    [data-marketing-tool] [data-marketing-subtab="true"] {
       flex: 0 0 auto;
     }
 
@@ -877,7 +886,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
     icon: SearchIcon,
     landingView: 'research',
     tabs: [
-      { view: 'research', label: 'Foundations' },
+      { view: 'research', label: 'Research' },
       { view: 'seo', label: 'SEO' },
       { view: 'strategy', label: 'Strategy Q&A' },
       { view: 'strategyBrief', label: 'Brief' },
@@ -892,9 +901,9 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
     tabs: [
       { view: 'calendar', label: 'Calendar', group: 'Content' },
       { view: 'linkTree', label: 'Quick Links', group: 'Content' },
-      { view: 'campaigns', label: 'Campaigns', group: 'Plans' },
-      { view: 'funnels', label: 'Funnels', group: 'Plans' },
-      { view: 'templates', label: 'Templates', group: 'Plans' },
+      { view: 'campaigns', label: 'Campaigns', group: 'Structure' },
+      { view: 'funnels', label: 'Funnels', group: 'Structure' },
+      { view: 'templates', label: 'Templates', group: 'Structure' },
     ],
   },
   {
@@ -905,13 +914,13 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
     landingView: 'abTesting',
     tabs: [
       { view: 'abTesting', label: 'Experiments (A/B)' },
-      { view: 'analytics', label: 'Sources & readiness' },
+      { view: 'analytics', label: 'Analytics sources' },
     ],
   },
   {
     id: 'settings',
     title: 'Settings',
-    description: 'Channels and the connections that power publishing and analytics.',
+    description: 'Channels and their content types and publishing defaults.',
     icon: TagIcon,
     landingView: 'channels',
     tabs: [{ view: 'channels', label: 'Channels' }],
@@ -2862,7 +2871,7 @@ export const styles = {
     marginBottom: 24,
   },
   kicker: {
-    color: '#007385',
+    color: '#4dc4d6',
     fontSize: 12,
     fontWeight: 800,
     letterSpacing: 1.4,
@@ -2943,7 +2952,7 @@ export const styles = {
     gap: 6,
   },
   inlineLink: {
-    color: '#007385',
+    color: '#4dc4d6',
     fontWeight: 800,
     textDecoration: 'none',
     display: 'inline-flex',
@@ -3543,7 +3552,13 @@ function MarketingComponent() {
               key={surface.id}
               view={surface}
               active={surface.tabs.some((tab) => tab.view === activeView.id)}
-              onClick={() => requestMarketingView(surface.landingView)}
+              onClick={() => {
+                // Re-clicking the surface you're already in must NOT jump you back to its landing
+                // tab (and trigger a spurious unsaved-changes prompt) — guard on surface identity.
+                if (getMarketingSurfaceForView(activeView.id).id !== surface.id) {
+                  requestMarketingView(surface.landingView)
+                }
+              }}
             />
           ))}
         </nav>
@@ -3600,6 +3615,7 @@ function MarketingComponent() {
           <div style={styles.panel}>Loading marketing workspace...</div>
         ) : (
           <>
+            <MarketingSurfaceHeader surface={getMarketingSurfaceForView(view)} />
             <MarketingSubTabs
               surface={getMarketingSurfaceForView(view)}
               activeView={view}
@@ -3742,6 +3758,7 @@ function MarketingNavButton({
       type="button"
       onClick={onClick}
       title={view.description}
+      aria-current={active ? 'page' : undefined}
       style={{
         border: 0,
         borderBottom: `3px solid ${active ? '#007385' : 'transparent'}`,
@@ -3779,15 +3796,24 @@ function MarketingSubTabs({
   if (surface.tabs.length <= 1) return null
   const groups = Array.from(new Set(surface.tabs.map((tab) => tab.group || '')))
   return (
-    <div
-      role="tablist"
+    // These sub-tabs NAVIGATE (they re-render the surface via requestMarketingView), so this is
+    // a nav landmark, not an ARIA tablist/tabpanel. The active tab is marked aria-current="page".
+    <nav
+      data-marketing-subtabs="true"
+      data-mobile-scroll="true"
       aria-label={`${surface.title} sections`}
       style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}
     >
       {groups.map((group, groupIndex) => (
-        <div key={group || `group-${groupIndex}`} style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div
+          key={group || `group-${groupIndex}`}
+          role={group ? 'group' : undefined}
+          aria-label={group || undefined}
+          style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}
+        >
           {group && (
             <span
+              aria-hidden="true"
               style={{
                 fontSize: 11,
                 fontWeight: 800,
@@ -3807,8 +3833,8 @@ function MarketingSubTabs({
                 <button
                   key={tab.view}
                   type="button"
-                  role="tab"
-                  aria-selected={isActive}
+                  data-marketing-subtab="true"
+                  aria-current={isActive ? 'page' : undefined}
                   style={{
                     ...styles.button,
                     background: isActive ? '#102932' : MARKETING_OPAQUE_CARD_BG,
@@ -3824,6 +3850,20 @@ function MarketingSubTabs({
             })}
         </div>
       ))}
+    </nav>
+  )
+}
+
+// A compact orientation header for non-Home surfaces: the surface name + its one-line purpose.
+// (Home has its own hero, so it opts out.) Reuses the authored MARKETING_SURFACES copy.
+function MarketingSurfaceHeader({ surface }: { surface: MarketingSurface }) {
+  if (surface.id === 'home') return null
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ ...styles.kicker, marginBottom: 4 }}>{surface.title}</div>
+      <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5, maxWidth: 760 }}>
+        {surface.description}
+      </p>
     </div>
   )
 }
@@ -3915,7 +3955,7 @@ function MarketingDashboard({
             <div style={{ display: 'grid', gap: 10 }}>
               {gaps.slice(0, 8).map((gap) => {
                 const tone = getDashboardGapTone(gap.severity)
-                const viewTitle = getMarketingViewTitle(gap.view)
+                const viewTitle = getMarketingViewTabLabel(gap.view)
 
                 return (
                   <article
@@ -3998,7 +4038,7 @@ function MarketingDashboard({
                   }}
                   onClick={() => onOpenView('calendar')}
                 >
-                  <span style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>
+                  <span style={{ ...styles.small, color: '#4dc4d6', fontWeight: 800 }}>
                     {formatDashboardDate(item.publishAt)}
                   </span>
                   <strong style={{ fontSize: 14 }}>{item.title || 'Untitled content item'}</strong>
@@ -4025,8 +4065,9 @@ function MarketingDashboard({
           query={actionQuery}
           onQueryChange={setActionQuery}
           onSelect={handleAssistantSelect}
-          title="Or pick it yourself"
-          description="Every marketing move, searchable. The few most urgent are flagged Recommended."
+          title="Jump to any tool"
+          description="Every marketing surface, searchable — open the one you need. The ranked fixes are up in Next actions."
+          launcherMode
         />
       </section>
 
@@ -5241,6 +5282,7 @@ function MarketingAssistantActionList({
   title = 'Recommended actions',
   description = 'Search the marketing suite by job, section, or signal.',
   compact = false,
+  launcherMode = false,
 }: {
   actions: MarketingAssistantAction[]
   query: string
@@ -5249,6 +5291,10 @@ function MarketingAssistantActionList({
   title?: string
   description?: string
   compact?: boolean
+  // Launcher mode = an exhaustive "jump to any tool" directory: drop the Recommended
+  // pill/fill/chip and the gap-derived reason line, so it complements (not duplicates) a
+  // separate ranked "Next actions" list on the same surface.
+  launcherMode?: boolean
 }) {
   const [areaFilter, setAreaFilter] = useState<string>('all')
   const hasRecommended = actions.some((action) => action.recommended)
@@ -5262,10 +5308,10 @@ function MarketingAssistantActionList({
   const filterChips = useMemo(
     () => [
       { id: 'all', label: 'All' },
-      ...(hasRecommended ? [{ id: 'recommended', label: 'Recommended' }] : []),
+      ...(hasRecommended && !launcherMode ? [{ id: 'recommended', label: 'Recommended' }] : []),
       ...availableSurfaces.map((surface) => ({ id: surface.id, label: surface.title })),
     ],
-    [availableSurfaces, hasRecommended],
+    [availableSurfaces, hasRecommended, launcherMode],
   )
   // A stale chip (e.g. the filtered area emptied out) silently falls back to "all".
   const activeChip = filterChips.some((chip) => chip.id === areaFilter) ? areaFilter : 'all'
@@ -5346,7 +5392,7 @@ function MarketingAssistantActionList({
               action.id === 'continue-current-setup'
                 ? 'Resume'
                 : action.view
-                  ? `Open ${getMarketingViewTitle(action.view)}`
+                  ? `Open ${getMarketingViewTabLabel(action.view)}`
                   : action.mode === 'strategist'
                     ? 'Start chat'
                     : 'Start setup'
@@ -5364,15 +5410,15 @@ function MarketingAssistantActionList({
                 data-tour-id={tourId}
                 style={{
                   ...styles.templateButton,
-                  background: action.recommended ? '#102932' : MARKETING_OPAQUE_CARD_BG,
-                  borderColor: action.recommended ? '#007385' : 'var(--card-border-color)',
+                  background: !launcherMode && action.recommended ? '#102932' : MARKETING_OPAQUE_CARD_BG,
+                  borderColor: !launcherMode && action.recommended ? '#007385' : 'var(--card-border-color)',
                   padding: compact ? 9 : 11,
                 }}
                 onClick={() => onSelect(action)}
               >
                 <span style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
                   <strong style={{ fontSize: compact ? 13 : 14 }}>{action.title}</strong>
-                  {action.recommended && (
+                  {!launcherMode && action.recommended && (
                     <span
                       style={{
                         ...styles.small,
@@ -5389,9 +5435,11 @@ function MarketingAssistantActionList({
                   )}
                 </span>
                 <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.4 }}>{action.description}</span>
-                <span style={{ ...styles.small, color: action.recommended ? '#b6e8ee' : 'var(--card-muted-fg-color)', lineHeight: 1.35 }}>
-                  {action.reason}
-                </span>
+                {!launcherMode && (
+                  <span style={{ ...styles.small, color: action.recommended ? '#b6e8ee' : 'var(--card-muted-fg-color)', lineHeight: 1.35 }}>
+                    {action.reason}
+                  </span>
+                )}
                 <span style={{ ...styles.small, color: '#E36216', fontWeight: 900 }}>{actionLabel}</span>
               </button>
             )
@@ -6533,7 +6581,7 @@ function StrategistChatStep({
       {recommendation && (
         <section style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG, display: 'grid', gap: 12 }}>
           <div>
-            <div style={{ ...styles.small, color: '#007385', fontWeight: 900 }}>Autopilot recommendation</div>
+            <div style={{ ...styles.small, color: '#4dc4d6', fontWeight: 900 }}>Autopilot recommendation</div>
             <h3 style={{ margin: '4px 0', fontSize: 18 }}>{recommendation.title || 'Test the next move'}</h3>
             {assistantMessage && <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>{assistantMessage}</p>}
           </div>
@@ -6803,7 +6851,7 @@ function StrategyAgentStep({
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>
+              <div style={{ ...styles.small, color: '#4dc4d6', fontWeight: 800 }}>
                 {demoRecommendation ? 'Tutorial sample' : usedAi ? 'AI recommendation' : 'Rule-based next step'}
               </div>
               <h3 style={{ margin: '4px 0', fontSize: 18 }}>{recommendation.title}</h3>
@@ -6821,7 +6869,7 @@ function StrategyAgentStep({
                 style={styles.button}
                 onClick={() => onOpenRecommendationView(recommendation.view, Math.min(1, Math.max(0, recommendation.steps.length - 1)))}
               >
-                Open {getMarketingViewTitle(recommendation.view)}
+                Open {getMarketingViewTabLabel(recommendation.view)}
               </button>
             )}
             <button type="button" style={styles.button} onClick={onResetSuggestion}>
@@ -6862,7 +6910,7 @@ function StrategyAgentStep({
                       minHeight: 120,
                     }}
                   >
-                    <strong style={{ ...styles.small, color: '#007385', display: 'block', marginBottom: 6 }}>{item.title}</strong>
+                    <strong style={{ ...styles.small, color: '#4dc4d6', display: 'block', marginBottom: 6 }}>{item.title}</strong>
                     <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>{item.detail}</span>
                   </div>
                 ))}
@@ -7933,7 +7981,7 @@ export function MarketingAiAssistPanel({
                 border: '1px solid rgba(0, 115, 133, 0.28)',
                 borderRadius: 999,
                 padding: '4px 9px',
-                color: '#007385',
+                color: '#4dc4d6',
                 fontWeight: 800,
               }}
             >
@@ -7984,7 +8032,7 @@ export function MarketingAiAssistPanel({
             Fill current draft
           </button>
           {applied && (
-            <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>
+            <div style={{ ...styles.small, color: '#4dc4d6', fontWeight: 800 }}>
               Applied. Review the filled fields, then save this item.
             </div>
           )}
@@ -8150,7 +8198,7 @@ export function ResearchOpportunityPreviewList({ opportunities }: { opportunitie
 
   return (
     <div style={{ borderTop: '1px solid var(--card-border-color)', marginTop: 12, paddingTop: 12 }}>
-      <div style={{ ...styles.small, color: '#007385', fontWeight: 900, marginBottom: 8 }}>
+      <div style={{ ...styles.small, color: '#4dc4d6', fontWeight: 900, marginBottom: 8 }}>
         Research preview
       </div>
       <div style={{ display: 'grid', gap: 8 }}>
@@ -10653,7 +10701,7 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
       id: `attention-${item.id}`,
       title: item.title,
       why: item.detail,
-      action: `Open ${getMarketingViewTitle(item.view)} and fill the missing setup fields.`,
+      action: `Open ${getMarketingViewTabLabel(item.view)} and fill the missing setup fields.`,
       view: item.view,
       severity: item.severity,
     }),
@@ -10960,7 +11008,7 @@ export function buildMarketingAssistantActions(
   // meaningful signal instead of appearing on nearly everything.
   const RECOMMEND_SCORE_THRESHOLD = 70
   const MAX_RECOMMENDED = 3
-  const ranked = actions.sort((first, second) => {
+  const ranked = [...actions].sort((first, second) => {
     if (second.score !== first.score) return second.score - first.score
     return first.title.localeCompare(second.title)
   })
@@ -12871,6 +12919,17 @@ export function mergeIds(existing: string[], next: string[]) {
 
 export function getMarketingViewTitle(viewId: MarketingViewId) {
   return MARKETING_TOOL_VIEWS.find((view) => view.id === viewId)?.title || 'Section'
+}
+
+// The label a user actually sees on the surface they land on. After the IA rework a view's
+// flat title can differ from its sub-tab label (e.g. research → "Research" tab, abTesting →
+// "Experiments (A/B)" tab, analytics → "Analytics sources"). "Open X" CTAs must use THIS so
+// the destination word matches the tab, not the old flat title (which also collides with
+// surface names like "Measure").
+export function getMarketingViewTabLabel(viewId: MarketingViewId): string {
+  const surface = getMarketingSurfaceForView(viewId)
+  const tab = surface.tabs.find((candidate) => candidate.view === viewId)
+  return tab?.label || getMarketingViewTitle(viewId)
 }
 
 function formatDashboardDate(value?: string | Date) {
