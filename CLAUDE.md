@@ -25,9 +25,13 @@
 > also have their own public repos (`goinvo/Careplans` [design PDFs], `goinvo/EmergingTechnologiesBookWebsite`
 > [disrupt], `goinvo/InvoUnderstandingZika` [the PDF], `goinvo/KillerTruths`, `goinvo/healthroom`).
 > Do NOT chase S3 creds (`www.goinvo.com-2018` is redirect-only) or CloudFront — the public repo
-> is the source. Caveat: scripts hard-code `/old/images/...`; this site serves `/images/...`
-> (redirect list `redirects.json` routes specific legacy URLs, e.g. PDFs, to `/old/` — place
-> those at `public/old/...`).
+> is the source. Caveat: legacy scripts hard-code `/old/images/...`, but this site serves the
+> canonical `/images/...`. The careplans whitepaper + zika guide PDFs were **consolidated OUT of
+> `public/old/`** (that dir is now removed) to their canonical `public/images/features/...` path
+> and serve directly; **reverse** redirects in `redirects.json` (`old/images/.../*.pdf` →
+> `/images/.../*.pdf`) keep the historical `/old/...` URLs (which the old 308-permanent redirect may
+> have cached) resolving. Guard: `tests/legacy-pdf-urls.test.ts` pins the invariant. If you re-add a
+> legacy asset, place it at its canonical `public/images/...` path, not `/old/`.
 
 ## Driving / screenshotting the Sanity Studio with an authenticated session
 
