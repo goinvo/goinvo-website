@@ -124,6 +124,9 @@ export function CalendarWorkspace({
   // flight, so the chip jumps to its new day immediately. Cleared once the data
   // reload reflects the saved value.
   const [pendingMoves, setPendingMoves] = useState<Record<string, string>>({})
+  // Hide past-dated calendar items by default so the grid + saved lists show a
+  // today-forward view (an expired demo month or old items don't read as actionable).
+  const [hidePast, setHidePast] = useState(true)
 
   useEffect(() => {
     if (!selectedId && data.calendarItems.length > 0) setSelectedId(data.calendarItems[0]._id)
@@ -149,9 +152,22 @@ export function CalendarWorkspace({
       pendingMoves[item._id] ? { ...item, publishAt: pendingMoves[item._id] } : item,
     )
   }, [data.calendarItems, pendingMoves])
-  const itemsByDay = useMemo(() => groupCalendarItemsByDay(optimisticCalendarItems), [optimisticCalendarItems])
+  const startOfToday = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d
+  }, [])
+  // Today-forward view: drop items dated before today (undated items always stay).
+  const dateFilteredItems = useMemo(
+    () =>
+      hidePast
+        ? optimisticCalendarItems.filter((item) => !item.publishAt || new Date(item.publishAt) >= startOfToday)
+        : optimisticCalendarItems,
+    [optimisticCalendarItems, hidePast, startOfToday],
+  )
+  const itemsByDay = useMemo(() => groupCalendarItemsByDay(dateFilteredItems), [dateFilteredItems])
   const unscheduled = optimisticCalendarItems.filter((item) => !item.publishAt)
-  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(optimisticCalendarItems), [optimisticCalendarItems])
+  const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(dateFilteredItems), [dateFilteredItems])
 
   // Drop optimistic overrides once the reloaded data already matches them, so the
   // grid follows the source of truth and stale overrides never linger.
@@ -244,6 +260,15 @@ export function CalendarWorkspace({
           </button>
           <button type="button" style={styles.button} onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}>
             Next month
+          </button>
+          <button
+            type="button"
+            aria-pressed={hidePast}
+            onClick={() => setHidePast((value) => !value)}
+            title="Hide calendar items dated before today (e.g. an expired demo month). Toggle off to see history."
+            style={{ ...styles.button, ...(hidePast ? { borderColor: '#007385', color: '#4dc4d6', fontWeight: 800 } : null) }}
+          >
+            {hidePast ? '✓ Hiding past' : 'Hide past'}
           </button>
           <button type="button" data-tour-id="autopilot-calendar-add" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createCalendarItem()}>
             {savingId === 'new' ? 'Creating…' : 'Add calendar item'}
