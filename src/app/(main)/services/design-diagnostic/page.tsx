@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Image from 'next/image'
 import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
 import { Reveal } from '@/components/ui/Reveal'
@@ -8,7 +9,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Button } from '@/components/ui/Button'
 import { CalendlyEmbed } from '@/components/forms/CalendlyEmbed'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
-import { cloudfrontImage } from '@/lib/utils'
+import { cloudfrontImage, cn } from '@/lib/utils'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/services/design-diagnostic' },
@@ -56,8 +57,7 @@ const riskAreas = [
 // The engagement, phase by phase. `intro` + `highlight` mark the final deliverable.
 const phases = [
   {
-    number: '1',
-    title: 'Reality Check',
+    title: 'Phase 1: Reality Check',
     items: [
       'Stakeholder interviews',
       'Workflow review',
@@ -66,8 +66,7 @@ const phases = [
     ],
   },
   {
-    number: '2',
-    title: 'Design to Learn',
+    title: 'Phase 2:Design to Learn',
     items: [
       'Rapid concept',
       'Alternative workflows',
@@ -78,8 +77,7 @@ const phases = [
     ],
   },
   {
-    number: '3',
-    title: 'Design the Future',
+    title: 'Phase 3: Design the Future',
     items: [
       'Future-state product',
       'Product Blueprint',
@@ -89,11 +87,10 @@ const phases = [
     ],
   },
   {
-    number: 'Final',
-    title: 'Product Blueprint',
-    highlight: true,
+    title: 'Final Phase: Product Blueprint',
     intro:
-      'The Product Blueprint captures everything we’ve learned through six weeks of designing, testing, and challenging your product. A practical guide for building the right product, which includes:',
+      'The Product Blueprint captures everything we’ve learned through six weeks of designing, testing, and challenging your product. ',
+    listIntro: 'A practical guide for building the right product, which includes:',
     items: [
       'Product thesis and vision',
       'Design principles',
@@ -148,6 +145,30 @@ const callUsWhen = [
 // Paths resolve through cloudfrontImage(); the gallery section is hidden while this is empty.
 const examples: { image: string; title: string; caption?: string }[] = []
 
+const bulletListClassName = 'list-none p-0 m-0 text-gray space-y-2'
+
+function BulletListItem({ children }: { children: ReactNode }) {
+  return (
+    <li className="relative mb-0">
+      <span
+        className="absolute -left-5 top-[0.78em] w-2 h-2 -translate-y-1/2 bg-[url('/images/bullet.svg')] bg-contain bg-center bg-no-repeat"
+        aria-hidden
+      />
+      {children}
+    </li>
+  )
+}
+
+function BulletList({ items, className }: { items: string[]; className?: string }) {
+  return (
+    <ul className={cn(bulletListClassName, className)}>
+      {items.map((item) => (
+        <BulletListItem key={item}>{item}</BulletListItem>
+      ))}
+    </ul>
+  )
+}
+
 export default function DesignDiagnosticPage() {
   return (
     <div>
@@ -172,17 +193,7 @@ export default function DesignDiagnosticPage() {
             <p>Healthcare software rarely fails because of technology.</p>
             <p>It falters because:</p>
 
-            <ul className="list-none p-0 m-0 text-gray mb-4 space-y-2">
-              {failureModes.map((mode) => (
-                <li key={mode} className="relative mb-0">
-                  <span
-                    className="absolute -left-5 top-[0.78em] w-2 h-2 -translate-y-1/2 bg-[url('/images/bullet.svg')] bg-contain bg-center bg-no-repeat"
-                    aria-hidden
-                  />
-                  {mode}
-                </li>
-              ))}
-            </ul>
+            <BulletList items={failureModes} className="mb-4" />
             <p>
               Most organizations discover these problems after launch.
               <br />
@@ -266,21 +277,13 @@ export default function DesignDiagnosticPage() {
                 <h4 className="font-sans font-semibold text-base mb-3">
                   We’ve worked across
                 </h4>
-                <ul className="ul text-gray mb-0">
-                  {workedAcross.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                <BulletList items={workedAcross} />
               </div>
               <div>
                 <h4 className="font-sans font-semibold text-base mb-3">
                   We understand how it behaves once it meets
                 </h4>
-                <ul className="ul text-gray mb-0">
-                  {meets.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                <BulletList items={meets} />
               </div>
             </div>
 
@@ -299,7 +302,7 @@ export default function DesignDiagnosticPage() {
         </section>
 
         {/* The Engagement */}
-        <section className="w-screen relative left-1/2 -ml-[50vw] bg-blue-light py-12">
+        <section className="w-screen relative left-1/2 -ml-[50vw] py-12">
           <div className="max-width max-width-md content-padding mx-auto">
             <Reveal style="slide-up">
               <h2 className="header-lg mt-0 mb-8">The Engagement</h2>
@@ -314,32 +317,16 @@ export default function DesignDiagnosticPage() {
                   <div
                     className={
                       phase.highlight
-                        ? 'grid grid-cols-[auto_1fr] gap-6 bg-primary-lightest rounded-md p-6'
-                        : 'grid grid-cols-[auto_1fr] gap-6'
+                        ? 'bg-primary-lightest rounded-md p-6'
+                        : undefined
                     }
                   >
-                    <div
-                      className={
-                        phase.number === 'Final'
-                          ? 'header-md text-primary pt-1'
-                          : 'font-serif text-[2.25rem] leading-none text-primary'
-                      }
-                    >
-                      {phase.number}
-                    </div>
-                    <div>
-                      <h3 className="font-sans font-semibold text-base mt-0 mb-3">
-                        {phase.title}
-                      </h3>
-                      {phase.intro && (
-                        <p className="text-gray text-md mb-3">{phase.intro}</p>
-                      )}
-                      <ul className="ul text-gray mb-0">
-                        {phase.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    <h3 className="font-sans font-semibold text-base mt-0 mb-3">
+                      {phase.title}
+                    </h3>
+                    {phase.intro && <p>{phase.intro}</p>}
+                    {phase.listIntro && <p className="!mb-4">{phase.listIntro}</p>}
+                    <BulletList items={phase.items} />
                   </div>
                 </Reveal>
               ))}
@@ -353,19 +340,11 @@ export default function DesignDiagnosticPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
                 <h3 className="header-md mt-0 mb-5">What you won’t get</h3>
-                <ul className="ul text-gray">
-                  {wontGet.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                <BulletList items={wontGet} />
               </div>
               <div>
                 <h3 className="header-md mt-0 mb-5">Call us when…</h3>
-                <ul className="ul text-gray mb-4">
-                  {callUsWhen.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+                <BulletList items={callUsWhen} className="mb-4" />
               </div>
             </div>
               <p className="mb-0 text-gray">
@@ -394,19 +373,19 @@ export default function DesignDiagnosticPage() {
               <h3 className="font-sans font-semibold text-base mb-3">
                 AI Clinical Workflow
               </h3>
-              <ul className="list-none p-0 m-0 text-gray space-y-2 mb-4">
-                <li>
+              <ul className={cn(bulletListClassName, 'mb-4')}>
+                <BulletListItem>
                   <strong className="text-black">Problem:</strong> Clinicians
                   couldn’t understand AI recommendations.
-                </li>
-                <li>
+                </BulletListItem>
+                <BulletListItem>
                   <strong className="text-black">Design Diagnostic:</strong>{' '}
                   Redesigned evidence presentation and recommendation workflow.
-                </li>
-                <li>
+                </BulletListItem>
+                <BulletListItem>
                   <strong className="text-black">Result:</strong> Shared product
                   direction across clinical, engineering, and executive teams.
-                </li>
+                </BulletListItem>
               </ul>
               <Divider />
               <p className="mt-8">Software is cheap.</p>
