@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 import { HomeConceptCalendlyCta } from '@/components/home/HomeConceptCalendlyCta'
 import { HomeConceptCtaLink } from '@/components/home/HomeConceptCtaLink'
-import { HomeConceptChatCta } from '@/components/home/HomeConceptChatCta'
 import { HomeConceptInteractions } from '@/components/home/HomeConceptInteractions'
 import { HomeConceptTrackedArrowLink } from '@/components/home/HomeConceptTrackedArrowLink'
 import { ConceptReferenceArrow } from '@/components/home/ConceptReferenceArrow'
@@ -178,10 +177,6 @@ const conceptButtonDark =
   `${conceptButtonBase} !bg-[#1d1b1a] !text-[#fbfaf7] !border-[#1d1b1a] hover:!bg-black hover:!border-black hover:shadow-[0_10px_28px_-10px_rgba(29,27,26,.55)]`
 const conceptButtonGhost =
   `${conceptButtonBase} !bg-transparent !text-[#1d1b1a] !border-[#1d1b1a] hover:!bg-[#1d1b1a] hover:!text-[#fbfaf7] hover:!border-[#1d1b1a]`
-// Secondary CTA for use ON the dark hero (white outline, readable on dark).
-const conceptButtonOutlineLight =
-  `${conceptButtonBase} !bg-transparent !text-white !border-white/45 hover:!bg-white/10 hover:!border-white/80`
-
 function revealStyle(index = 0) {
   return { '--home-concept-reveal-index': index } as React.CSSProperties
 }
@@ -263,13 +258,6 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               <span>Book a discovery call</span>
               <ConceptReferenceArrow className="shrink-0 group-hover:translate-x-[5px]" />
             </HomeConceptCtaLink>
-            <HomeConceptChatCta
-              label="Talk to a designer"
-              location="concept hero"
-              className={conceptButtonOutlineLight}
-            >
-              <span>Talk to a designer</span>
-            </HomeConceptChatCta>
             <HomeConceptTrackedArrowLink
               href="/work"
               label="Or see the work"
