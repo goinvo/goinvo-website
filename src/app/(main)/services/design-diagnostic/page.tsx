@@ -54,7 +54,7 @@ const riskAreas = [
   },
 ]
 
-// The engagement, phase by phase. `intro` + `highlight` mark the final deliverable.
+// The engagement, phase by phase. `intro` marks the final deliverable (highlighted).
 const phases = [
   {
     title: 'Phase 1: Reality Check',
@@ -316,7 +316,7 @@ export default function DesignDiagnosticPage() {
                 >
                   <div
                     className={
-                      phase.highlight
+                      phase.intro
                         ? 'bg-primary-lightest rounded-md p-6'
                         : undefined
                     }
