@@ -311,6 +311,25 @@ export function trackCtaClick(params: {
   })
 }
 
+// Blanket click coverage for EVERY shared <Button> on the public site (nav CTAs,
+// links, form buttons). This is the "which buttons get clicked, and where" signal
+// — a general-analytics event, NOT an experiment metric — so purpose-built CTAs
+// keep firing their own specific events (cta_click / qualified_discovery_call_click)
+// for conversion measurement, and this rides alongside for coverage. Reaches GA4 +
+// Vercel via trackEvent; it is never registered as an A/B metric.
+export function trackButtonClick(params: {
+  button_text?: string
+  button_href?: string
+  button_variant?: string
+}) {
+  trackEvent('button_click', {
+    button_text: params.button_text,
+    button_href: params.button_href,
+    button_variant: params.button_variant,
+    page_path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+  })
+}
+
 // Qualified discovery-call CTA clicks (homepage A/B primary metric).
 // Emits a specific event name so experiment readouts compare control vs concept
 // without depending on the broad experiment_conversion event.
