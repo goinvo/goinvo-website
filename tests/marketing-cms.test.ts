@@ -114,7 +114,6 @@ describe('Marketing CMS schemas', () => {
     expect(marketingTool.title).toBe('Marketing')
     expect(MARKETING_TOOL_VIEWS.map((view) => view.id)).toEqual([
       'dashboard',
-      'attention',
       'research',
       'seo',
       'strategy',
@@ -863,7 +862,10 @@ describe('Marketing CMS schemas', () => {
         'create-quick-link',
       ]),
     )
-    expect(actions.filter((action) => action.recommended).length).toBeGreaterThan(4)
+    // Recommendation is now a scarce, top-N-by-score signal (not every action self-flagging).
+    const recommended = actions.filter((action) => action.recommended)
+    expect(recommended.length).toBeGreaterThan(0)
+    expect(recommended.length).toBeLessThanOrEqual(3)
     expect(actions[0].recommended).toBe(true)
   })
 
