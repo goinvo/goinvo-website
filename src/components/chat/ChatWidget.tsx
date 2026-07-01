@@ -13,7 +13,6 @@ import {
 import { teamHeadshots } from '@/data/team-headshots'
 import { cloudfrontImage } from '@/lib/utils'
 import { trackChatMessageSent } from '@/lib/analytics'
-import { OPEN_CHAT_EVENT } from '@/lib/chatOpen'
 
 const THREAD_STORAGE_KEY = 'goinvo-chat-thread-v1'
 const THREADS_STORAGE_KEY = 'goinvo-chat-threads-v1'
@@ -178,13 +177,6 @@ export function ChatWidget() {
     if (!isOpen) return
     messagesEndRef.current?.scrollIntoView({ block: 'end' })
   }, [isOpen, messages.length])
-
-  // Let a page CTA (e.g. the homepage "Talk to a designer") open the widget.
-  useEffect(() => {
-    const open = () => setIsOpen(true)
-    window.addEventListener(OPEN_CHAT_EVENT, open)
-    return () => window.removeEventListener(OPEN_CHAT_EVENT, open)
-  }, [])
 
   const handleStartThread = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
