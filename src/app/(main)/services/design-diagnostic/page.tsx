@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     'A focused design diagnostic from GoInvo — we assess your product, surface the highest-impact opportunities, and hand you a clear, prioritized plan to move forward.',
 }
 
-const heroImageUrl = cloudfrontImage('/images/services/hgraph-gold.jpg')
+const heroImageUrl = '/images/services/hero-design-diagnostic.jpg'
 
 // The six ways healthcare products quietly fail.
 const failureModes = [
@@ -29,32 +29,27 @@ const failureModes = [
   'Products reflect org charts instead of care delivery',
 ]
 
-// The five risk areas a diagnostic surfaces. Colors reuse the /services category palette.
+// The five risk areas a diagnostic surfaces.
 const riskAreas = [
   {
     title: 'Clinical',
-    color: '#EEE0CA',
     description: 'Does it fit how clinicians actually think, decide, and act?',
   },
   {
     title: 'Operational',
-    color: '#CBE7F4',
     description: 'Can your organization run it without drowning in complexity?',
   },
   {
     title: 'Workflow',
-    color: '#C0EEEC',
     description: 'Does it survive the messy reality of day-to-day care?',
   },
   {
     title: 'Trust',
-    color: '#CFD6FF',
     description: 'Will clinicians and patients believe what it tells them?',
   },
   {
     title: 'Product Strategy',
-    color: '#F4D9CB',
-    description: 'Are you building the right product — not just building it right?',
+    description: 'Are you building the right product and not just building it right?',
   },
 ]
 
@@ -160,24 +155,7 @@ export default function DesignDiagnosticPage() {
 
       <Reveal style="slide-up" duration={0.5}>
         <div className="max-width max-width-md content-padding mx-auto">
-          <h1
-            className="header-xl mt-8 mb-2"
-            style={{ viewTransitionName: 'page-title' }}
-          >
-            <span className="sr-only">GoInvo Design Diagnostic</span>
-            <picture>
-              <source
-                srcSet={cloudfrontImage('/images/services/text-we-use-design-as-a-diagnostic-tool.png')}
-                type="image/png"
-              />
-              <img
-                src={cloudfrontImage('/images/services/text-we-use-design-as-a-diagnostic-tool.png')}
-                alt="Design Diagnostic"
-                className="mx-auto max-w-full"
-                loading="lazy"
-              />
-            </picture>
-          </h1>
+          <h1 className="header-xl mt-8 mb-2">GoInvo Design Diagnostic</h1>
    
           <p className="text-gray mt-0 mb-8">
             Helping healthcare teams build the right product before they scale the
@@ -186,27 +164,26 @@ export default function DesignDiagnosticPage() {
         </div>
       </Reveal>
 
-      <article className="case-study-content">
+      <article className="case-study-content design-diagnostic-content">
         {/* Why products flounder */}
         <section className="max-width max-width-md content-padding mx-auto py-12">
           <Reveal style="slide-up">
             <h2 className="header-lg mt-0 mb-0">Why products flounder</h2>
             <p>Healthcare software rarely fails because of technology.</p>
-            <p className="mb-0">It falters because:</p>
+            <p>It falters because:</p>
 
-
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <ul className="list-none p-0 m-0 text-gray mb-4 space-y-2">
               {failureModes.map((mode) => (
-                <div
-                  key={mode}
-                  className="border border-gray-medium rounded-md bg-white p-4 text-gray"
-                >
+                <li key={mode} className="relative mb-0">
+                  <span
+                    className="absolute -left-5 top-[0.55em] w-2 h-2 -translate-y-1/2 bg-[url('/images/bullet.svg')] bg-contain bg-center bg-no-repeat"
+                    aria-hidden
+                  />
                   {mode}
-                </div>
+                </li>
               ))}
-            </div>
-            <p className="mt-8 mb-0">
+            </ul>
+            <p>
               Most organizations discover these problems after launch.
               <br />
               We find them before your customers do.
@@ -215,12 +192,27 @@ export default function DesignDiagnosticPage() {
         </section>
 
         {/* We use design as a diagnostic tool / What we do */}
-        <section className="w-screen relative left-1/2 -ml-[50vw] bg-gray-light py-12">
+        <section className="w-screen relative left-1/2 -ml-[50vw] py-12">
           <div className="max-width max-width-md content-padding mx-auto case-study-content">
             <Reveal style="slide-up">
-              <h2 className="header-lg mt-0 mb-5">
-                We use design as a diagnostic tool.
-              </h2>
+              <h2
+            className="header-lg mt-0 mb-5"
+            style={{ viewTransitionName: 'page-title' }}
+          >
+            <span className="sr-only">We use design as a diagnostic tool.</span>
+            <picture>
+              <source
+                srcSet="/images/services/text-we-use-design-as-a-diagnostic-tool.png"
+                type="image/png"
+              />
+              <img
+                src="/images/services/text-we-use-design-as-a-diagnostic-tool.png"
+                alt="We use design as a diagnostic tool."
+                className="mx-auto max-w-full"
+                loading="lazy"
+              />
+            </picture>
+          </h2>
               <h3 className="header-md mb-3">What we do</h3>
               <p>
                 A fast clinical product intervention team for high-risk healthcare
@@ -242,10 +234,7 @@ export default function DesignDiagnosticPage() {
                     <h4 className="font-sans font-semibold text-base mb-0">
                       {area.title}
                     </h4>
-                    <hr
-                      className="border-0 h-[2px] w-full my-3"
-                      style={{ backgroundColor: area.color }}
-                    />
+                    <hr className="border-0 h-px w-full my-3 bg-gray-medium" />
                     <p className="text-gray text-md mb-0">{area.description}</p>
                   </div>
                 ))}
@@ -265,7 +254,7 @@ export default function DesignDiagnosticPage() {
             <p>We’ve spent two decades designing healthcare software.</p>
             <p>We see how products succeed. And why they fail.</p>
             <p>We use design to make those patterns visible.</p>
-            <p className="mb-2">
+            <p>
               Because every sketch, workflow, and prototype reveals something about
               clinical trust, patient behavior, operational complexity, evidence,
               and product strategy.
@@ -295,7 +284,7 @@ export default function DesignDiagnosticPage() {
               </div>
             </div>
 
-            <p className="mt-8">Few teams have seen that breadth of healthcare.</p>
+            <p className="!mt-4">Few teams have seen that breadth of healthcare.</p>
 
             <div className="mt-6">
               <Button
@@ -303,7 +292,7 @@ export default function DesignDiagnosticPage() {
                 external
                 variant="outline"
               >
-                White paper on GoInvo Red Team
+                GoInvo Design Diagnostic White Paper
               </Button>
             </div>
           </Reveal>
@@ -472,23 +461,6 @@ export default function DesignDiagnosticPage() {
           </section>
         )}
       </article>
-
-      {/* Calendly */}
-      <div className="max-width content-padding py-8 mb-8">
-        <div className="max-width content-padding py-8">
-          <h2
-            className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center"
-            id="calendly-open-office-hours"
-            style={{ marginBottom: '-50px' }}
-          >
-            Choose a time to talk about your project.
-          </h2>
-          <CalendlyEmbed
-            formLocation="design-diagnostic-page"
-            formName="design_diagnostic_call"
-          />
-        </div>
-      </div>
 
       {/* Contact Form */}
       <div className="bg-gray-light">
