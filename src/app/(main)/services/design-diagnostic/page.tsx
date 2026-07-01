@@ -54,7 +54,7 @@ const riskAreas = [
   },
 ]
 
-// The engagement, phase by phase. `intro` marks the final deliverable (highlighted).
+// The engagement, phase by phase. `intro` + `listIntro` on the final deliverable only.
 const phases = [
   {
     title: 'Phase 1: Reality Check',
@@ -66,7 +66,7 @@ const phases = [
     ],
   },
   {
-    title: 'Phase 2:Design to Learn',
+    title: 'Phase 2: Design to Learn',
     items: [
       'Rapid concept',
       'Alternative workflows',
@@ -314,20 +314,12 @@ export default function DesignDiagnosticPage() {
                   style="slide-up"
                   delay={Math.min(i * 0.05, 0.2)}
                 >
-                  <div
-                    className={
-                      phase.intro
-                        ? 'bg-primary-lightest rounded-md p-6'
-                        : undefined
-                    }
-                  >
-                    <h3 className="font-sans font-semibold text-base mt-0 mb-3">
-                      {phase.title}
-                    </h3>
-                    {phase.intro && <p>{phase.intro}</p>}
-                    {phase.listIntro && <p className="!mb-4">{phase.listIntro}</p>}
-                    <BulletList items={phase.items} />
-                  </div>
+                  <h3 className="font-sans font-semibold text-base mt-0 mb-3">
+                    {phase.title}
+                  </h3>
+                  {phase.intro && <p>{phase.intro}</p>}
+                  {phase.listIntro && <p className="!mb-4">{phase.listIntro}</p>}
+                  <BulletList items={phase.items} />
                 </Reveal>
               ))}
             </div>
