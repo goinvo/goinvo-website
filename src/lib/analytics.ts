@@ -337,6 +337,18 @@ export function trackDiscoveryFormStart(params: {
   trackEvent('discovery_form_start', params)
 }
 
+// Visitor completes a discovery-call booking via Calendly — the real OUTCOME,
+// distinct from the CTA click that only opens the scheduler. Its own named event
+// so GA4 and the marketing CMS can compare who CLICKED the button
+// (qualified_discovery_call_click) vs who actually BOOKED (discovery_call_booked)
+// per variant, instead of inferring the booking from the generic form_submit.
+export function trackDiscoveryCallBooked(params: {
+  form_name: string
+  form_location: string
+}) {
+  trackEvent('discovery_call_booked', params)
+}
+
 // Visitor sends their first message via the site chat widget — a low-friction
 // qualified-lead action (the conversational alternative to booking a call). Its
 // OWN tracked metric; deliberately NOT folded into experiment_conversion so the
