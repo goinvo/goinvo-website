@@ -176,7 +176,7 @@ export default function DesignDiagnosticPage() {
               {failureModes.map((mode) => (
                 <li key={mode} className="relative mb-0">
                   <span
-                    className="absolute -left-5 top-[0.55em] w-2 h-2 -translate-y-1/2 bg-[url('/images/bullet.svg')] bg-contain bg-center bg-no-repeat"
+                    className="absolute -left-5 top-[0.78em] w-2 h-2 -translate-y-1/2 bg-[url('/images/bullet.svg')] bg-contain bg-center bg-no-repeat"
                     aria-hidden
                   />
                   {mode}
@@ -347,12 +347,6 @@ export default function DesignDiagnosticPage() {
           </div>
         </section>
 
-        {/* Pull quote */}
-        <Quote
-          text="Software is cheap. Building the wrong software is expensive."
-          background="gray"
-        />
-
         {/* What you won't get / Call us when */}
         <section className="max-width max-width-md content-padding mx-auto py-12">
           <Reveal style="slide-up">
@@ -367,24 +361,22 @@ export default function DesignDiagnosticPage() {
               </div>
               <div>
                 <h3 className="header-md mt-0 mb-5">Call us when…</h3>
-                <ul className="ul text-gray">
+                <ul className="ul text-gray mb-4">
                   {callUsWhen.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
               </div>
             </div>
-            <div className="bg-primary-lightest border-l-4 border-primary p-5 mt-8">
               <p className="mb-0 text-gray">
                 You’ll get a clear product direction, a working prototype, and the
                 confidence to make your next product decisions.
               </p>
-            </div>
           </Reveal>
         </section>
 
         {/* Proof */}
-        <section className="w-screen relative left-1/2 -ml-[50vw] bg-cream py-12">
+        <section className="w-screen relative left-1/2 -ml-[50vw] py-12">
           <div className="max-width max-width-md content-padding mx-auto">
             <Reveal style="slide-up">
               <h2 className="header-lg mt-0 mb-5">Proof</h2>
@@ -402,7 +394,7 @@ export default function DesignDiagnosticPage() {
               <h3 className="font-sans font-semibold text-base mb-3">
                 AI Clinical Workflow
               </h3>
-              <ul className="list-none p-0 m-0 text-gray space-y-2">
+              <ul className="list-none p-0 m-0 text-gray space-y-2 mb-4">
                 <li>
                   <strong className="text-black">Problem:</strong> Clinicians
                   couldn’t understand AI recommendations.
@@ -416,8 +408,11 @@ export default function DesignDiagnosticPage() {
                   direction across clinical, engineering, and executive teams.
                 </li>
               </ul>
-              <p className="mt-8 mb-0">
-                Let’s find the right product before you build the rest of it.
+              <Divider />
+              <p className="mt-8">Software is cheap.</p>
+              <p className="mt-8">Building the wrong software is expensive.</p>
+              <p className="mt-8">
+                Let's find the right product before you build the rest of it.
               </p>
             </Reveal>
           </div>
