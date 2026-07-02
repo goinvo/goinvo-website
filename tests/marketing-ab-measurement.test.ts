@@ -386,3 +386,80 @@ function emptyData() {
     templates: [],
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Measurement wiring: template <-> drain <-> events stay in sync     */
+/* ------------------------------------------------------------------ */
+
+import { conversionEventsFromExperiment } from '@/lib/marketing/drainSink'
+import { readFileSync, readdirSync } from 'fs'
+import { join } from 'path'
+import { fileURLToPath } from 'url'
+
+const AB_WORKSPACE_SOURCE = readFileSync(
+  new URL('../src/sanity/components/marketing/AbTestingWorkspace.tsx', import.meta.url),
+  'utf8',
+)
+
+// Everything that can fire a client analytics event: the analytics lib plus the
+// components that call trackEvent(...) inline (home CTAs, chat widget, forms).
+function readTreeSource(relDir: string): string {
+  const dir = fileURLToPath(new URL(relDir, import.meta.url))
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.(ts|tsx)$/.test(entry.name))
+    .map((entry) => readFileSync(join(entry.parentPath, entry.name), 'utf8'))
+    .join('\n')
+}
+
+const EVENT_FIRING_SOURCE = [
+  readFileSync(new URL('../src/lib/analytics.ts', import.meta.url), 'utf8'),
+  readTreeSource('../src/components'),
+].join('\n')
+
+describe('experiment measurement wiring', () => {
+  // Metric rows shaped exactly like the "Create homepage test" template seeds.
+  const templateShapedMetrics = [
+    { key: 'qualified-discovery-call-clicks', label: 'Qualified discovery-call clicks', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'qualified_discovery_call_click', unit: 'events' },
+    { key: 'discovery-calls-booked', label: 'Discovery calls booked', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'discovery_call_booked', unit: 'events' },
+    { key: 'work-exploration-clicks', label: 'Work exploration clicks', role: 'guardrail', comparison: 'comparative', source: 'vercelEvent', eventName: 'view_work_click', unit: 'events' },
+    { key: 'top-navbar-clicks', label: 'Top navbar clicks', role: 'diagnostic', comparison: 'comparative', source: 'vercelEvent', eventName: 'nav_click', unit: 'events' },
+    { key: 'discovery-form-starts', label: 'Discovery form starts', role: 'diagnostic', comparison: 'conceptual', source: 'vercelEvent', eventName: 'discovery_form_start', unit: 'events' },
+    { key: 'chat-messages-sent', label: 'Chat messages sent', role: 'diagnostic', comparison: 'conceptual', source: 'vercelEvent', eventName: 'chat_message_sent', unit: 'events' },
+  ]
+
+  it('the drain derives every template metric as a conversion event (incl. bookings + chat)', () => {
+    const events = conversionEventsFromExperiment({ _id: 'x', trackedMetrics: templateShapedMetrics })
+    const byName = Object.fromEntries(events.map((event) => [event.eventName, event]))
+
+    expect(byName['discovery_call_booked']).toMatchObject({ comparison: 'comparative' })
+    expect(byName['qualified_discovery_call_click']).toMatchObject({ comparison: 'comparative' })
+    // Conceptual metrics are still captured per variant but never block or pick winners.
+    expect(byName['chat_message_sent']).toMatchObject({ comparison: 'conceptual' })
+    expect(byName['discovery_form_start']).toMatchObject({ comparison: 'conceptual' })
+    // Deduped, and the exposure event is never a conversion.
+    expect(events.map((event) => event.eventName)).not.toContain('experiment_exposure')
+    expect(new Set(events.map((event) => event.eventName)).size).toBe(events.length)
+  })
+
+  it('every event the homepage template tracks is actually fired somewhere on the client', () => {
+    for (const metric of templateShapedMetrics) {
+      expect(
+        EVENT_FIRING_SOURCE.includes(`'${metric.eventName}'`),
+        `Template tracks "${metric.eventName}" but nothing in analytics.ts or src/components fires it`,
+      ).toBe(true)
+    }
+  })
+
+  it('the blanket button_click event is never registered as an experiment metric', () => {
+    // button_click is deliberately general-analytics-only: registering it as an A/B
+    // metric would pollute conversion comparisons with every incidental click.
+    expect(AB_WORKSPACE_SOURCE.includes("eventName: 'button_click'")).toBe(false)
+  })
+
+  it('new homepage tests start their measurement window at creation', () => {
+    expect(
+      AB_WORKSPACE_SOURCE.includes('measurementStart: new Date().toISOString()'),
+      'The create-test template must stamp measurementStart so all metrics share one window',
+    ).toBe(true)
+  })
+})

@@ -421,6 +421,7 @@ const MARKETING_QUERY = `{
     targetPath,
     "targetFeature": targetFeature->{_id, title, slug},
     flagKey,
+    measurementStart,
     variants[]{_key, key, label, notes, previewUrl},
     primaryMetric,
     trackedMetrics[]{_key, key, label, role, comparison, source, eventName, unit, notes},
@@ -1242,6 +1243,7 @@ export interface MarketingExperiment {
   targetPath?: string
   targetFeature?: RefSummary & { slug?: { current?: string } }
   flagKey?: string
+  measurementStart?: string
   variants?: Array<{ _key?: string; key?: string; label?: string; notes?: string; previewUrl?: string }>
   primaryMetric?: string
   trackedMetrics?: Array<{ _key?: string; key?: string; label?: string; role?: string; comparison?: string; source?: string; eventName?: string; unit?: string; notes?: string }>
