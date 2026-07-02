@@ -134,6 +134,34 @@ const whatWeDo = [
   },
 ]
 
+const engagementTypes = [
+  {
+    title: 'Design Diagnostic',
+    lines: [
+      '4-8 weeks.',
+      'Two senior healthcare designers.',
+      'Fixed scope. Fixed outputs.',
+      'Typical investment: $50K-$90K.',
+    ],
+    link: {
+      href: '/services/design-diagnostic',
+      title: 'Explore the Design Diagnostic →',
+    },
+  },
+  {
+    title: 'Product Launch',
+    lines: ['Design and launch software.', '2-4 months.', 'Typical investment: $75K-250K.'],
+  },
+  {
+    title: 'Embedded Design Partnerships',
+    lines: [
+      'Become your long-term healthcare product team.',
+      '6-24 months.',
+      'Custom engagements.',
+    ],
+  },
+]
+
 export default function ServicesPage() {
   return (
     <div>
@@ -194,6 +222,43 @@ export default function ServicesPage() {
                     </Link>
                   ))}
                 </div>
+              </div>
+            ))}
+          </div>
+          <Divider />
+        </div>
+
+        {/* Engagement Types */}
+        <div>
+          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-0">
+            Engagement Types
+          </h3>
+          <p className="text-gray">
+            Ways to work with us: from a focused diagnostic to a long-term product
+            partnership.
+          </p>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-4">
+            {engagementTypes.map((engagement) => (
+              <div
+                key={engagement.title}
+                className="bg-white shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out rounded-md p-6 flex flex-col"
+              >
+                <h4 className="font-sans font-semibold text-base mt-0 mb-0">
+                  {engagement.title}
+                </h4>
+                <hr className="border-0 h-px w-full my-3 bg-gray-medium" />
+                <div className="text-gray text-md space-y-1">
+                  {engagement.lines.map((line) => (
+                    <p key={line} className="mb-0">
+                      {line}
+                    </p>
+                  ))}
+                </div>
+                {engagement.link && (
+                  <p className="mt-auto pt-4 mb-0">
+                    <Link href={engagement.link.href}>{engagement.link.title}</Link>
+                  </p>
+                )}
               </div>
             ))}
           </div>
