@@ -15,10 +15,10 @@ export const metadata: Metadata = {
   alternates: { canonical: '/services/design-diagnostic' },
   title: 'Design Diagnostic',
   description:
-    'A focused design diagnostic from GoInvo — we assess your product, surface the highest-impact opportunities, and hand you a clear, prioritized plan to move forward.',
+    'A focused design diagnostic from GoInvo. We assess your product, surface the highest-impact opportunities, and hand you a clear, prioritized plan to move forward.',
 }
 
-const heroImageUrl = '/images/services/hero-design-diagnostic.jpg'
+const heroImageUrl = '/images/services/hero-design-diagnostic-collaboration.jpg'
 
 // The six ways healthcare products quietly fail.
 const failureModes = [
@@ -224,6 +224,17 @@ export default function DesignDiagnosticPage() {
               />
             </picture>
           </h2>
+              <Video
+                sources={[
+                  {
+                    src: 'https://cdn.sanity.io/files/a1wsimxr/production/2d7b424ab7ac15374b7d82046e47d5651a74618b.mp4',
+                    format: 'mp4',
+                  },
+                ]}
+                autoPlay={false}
+                controls
+                className="mb-8"
+              />
               <h3 className="header-md mb-3">What we do</h3>
               <p>
                 A fast clinical product intervention team for high-risk healthcare
@@ -343,50 +354,13 @@ export default function DesignDiagnosticPage() {
                 You’ll get a clear product direction, a working prototype, and the
                 confidence to make your next product decisions.
               </p>
-          </Reveal>
-        </section>
-
-        {/* Proof */}
-        <section className="w-screen relative left-1/2 -ml-[50vw] py-12">
-          <div className="max-width max-width-md content-padding mx-auto">
-            <Reveal style="slide-up">
-              <h2 className="header-lg mt-0 mb-5">Proof</h2>
-              <Video
-                sources={[
-                  {
-                    src: 'https://cdn.sanity.io/files/a1wsimxr/production/2d7b424ab7ac15374b7d82046e47d5651a74618b.mp4',
-                    format: 'mp4',
-                  },
-                ]}
-                autoPlay={false}
-                controls
-                className="mb-8"
-              />
-              <h3 className="font-sans font-semibold text-base mb-3">
-                AI Clinical Workflow
-              </h3>
-              <ul className={cn(bulletListClassName, 'mb-4')}>
-                <BulletListItem>
-                  <strong className="text-black">Problem:</strong> Clinicians
-                  couldn’t understand AI recommendations.
-                </BulletListItem>
-                <BulletListItem>
-                  <strong className="text-black">Design Diagnostic:</strong>{' '}
-                  Redesigned evidence presentation and recommendation workflow.
-                </BulletListItem>
-                <BulletListItem>
-                  <strong className="text-black">Result:</strong> Shared product
-                  direction across clinical, engineering, and executive teams.
-                </BulletListItem>
-              </ul>
               <Divider />
               <p className="mt-8">Software is cheap.</p>
               <p className="mt-8">Building the wrong software is expensive.</p>
               <p className="mt-8">
                 Let's find the right product before you build the rest of it.
               </p>
-            </Reveal>
-          </div>
+          </Reveal>
         </section>
 
         {/* What it looks like — example gallery (populate the `examples` array above) */}
