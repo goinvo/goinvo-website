@@ -118,17 +118,19 @@ export const publishStatusBadge: DocumentBadgeComponent = (
     return null
   }
 
-  return props.published
-    ? {
-        label: 'Unpublished edits — not live yet',
-        color: 'warning',
-        title:
-          'You have changes that are NOT on the live website yet. Click the green Publish button (bottom of the editor) to push them live.',
-      }
-    : {
-        label: 'Draft — never published',
-        color: 'warning',
-        title:
-          'This page has never been published, so it is not on the live website. Click the green Publish button to make it public.',
-      }
+  // A never-published draft already carries Sanity's built-in "Draft" status pill
+  // at the top of the editor, so a second "Draft — never published" badge is pure
+  // redundancy. The non-obvious, worth-flagging case is a PUBLISHED page that also
+  // has a draft: the preview can look live while the edits are not — so flag only
+  // that one.
+  if (!props.published) {
+    return null
+  }
+
+  return {
+    label: 'Unpublished edits — not live yet',
+    color: 'warning',
+    title:
+      'You have changes that are NOT on the live website yet. Click the green Publish button (bottom of the editor) to push them live.',
+  }
 }
