@@ -7,6 +7,7 @@ import { gettingStartedPlugin } from './tools/gettingStarted'
 import { feedbackPlugin } from './tools/feedbackTool'
 import { featureArticleTemplates, resolveFeatureNewDocumentOptions } from './featureTemplates'
 import { featureAuthoringBadge, publishStatusBadge } from './featureBadges'
+import { previewShareAction } from './actions/previewShareAction'
 import { locations, mainDocuments } from './presentation/resolve'
 import { structure } from './structure'
 import { marketingPlugin } from './tools/marketingTool'
@@ -38,6 +39,7 @@ export default defineConfig({
   ],
   document: {
     badges: (prev) => [...prev, publishStatusBadge, featureAuthoringBadge],
+    actions: (prev) => [...prev, previewShareAction],
     newDocumentOptions: resolveFeatureNewDocumentOptions,
   },
   schema: {

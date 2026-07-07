@@ -61,6 +61,57 @@ never silently "passes").
   Channels / Quick Links), `--expect "<text>"`, `--out <file>`, `--scroll <0..1|bottom>`,
   `--base <url>`.
 
+## Sharing draft previews (built 2026-07)
+
+Unpublished drafts 404 on the public site (verified: unauth GROQ returns `[]` for `drafts.*`,
+even though PUBLISHED prod data is world-readable). Three ways to show one to a reviewer:
+
+- **"Share preview" document action** — the primary, self-serve path. On any `feature` or
+  `caseStudy` (the two types with a public page: `/vision/<slug>`, `/work/<slug>`), the editor's
+  action menu (⋯ next to Publish, in Content OR the Presentation side panel) has **Share
+  preview** → dialog to mint a **no-login, expiring (7/14/30-day), revocable** link
+  `https://www.goinvo.com/preview/<token>`. Copy-once: only the token's SHA-256 hash is stored,
+  so the link can't be re-shown (create a fresh one) — but active links are listed with Revoke.
+- **Sanity project members** (Juhan, Eric, Jon, Shirley all have accounts): send the Presentation
+  deep link `.../studio/presentation?preview=/vision/<slug>` — draft rendered next to its editor,
+  supports in-Studio comments.
+- **Sanity's built-in shared-preview toggle** (Presentation URL-bar share menu) also works but is
+  short-lived (`SECRET_TTL` = 1h) and project-global — prefer the document action for review links.
+
+How the token links work (`/preview/<token>`):
+- **Storage** = a `previewShareLink` doc (managed purely via the data API — NOT a Studio schema)
+  holding `{ tokenHash (sha256), docId (bare), createdAt, expiresAt, revokedAt }`. Safe in the
+  world-readable prod dataset: hash reveals nothing, `docId` is an opaque uuid (no title/path
+  leak — the consume route resolves the slug server-side at open time). Raw 256-bit token lives
+  only in the URL.
+- **Core:** `src/lib/previewShare.ts` (pure, isomorphic, unit-tested: paths, expiry clamp,
+  `isShareLinkActive`, `shareLinkUrl`) + `src/lib/previewShare.server.ts` (node:crypto token
+  gen/hash, server-only). **Routes:** `/api/preview-share` POST create / GET list / DELETE revoke
+  (all `assertStudioOrApiKey` — Studio session via `x-sanity-session` OR `MARKETING_API_KEY`;
+  fail-closed 503 without `SANITY_API_WRITE_TOKEN`), and the public `app/preview/[token]/route.ts`
+  (validates → `draftMode().enable()` → redirects to the real page `#sanity-preview`; anything
+  invalid/expired/revoked → `/preview/invalid`). **Action UI:**
+  `src/sanity/actions/previewShareAction.tsx`, wired in `sanity.config.ts` `document.actions`.
+- **Clean page = the actual site page in draft mode** (site header/footer, NOT the Studio shell).
+  Reuses the `#sanity-preview` DraftModeGuard marker (below) so no login is needed and draft mode
+  survives in-tab navigation. Env: needs `SANITY_API_WRITE_TOKEN` (create/revoke) — already on
+  Vercel; the clean URL host prefers `MARKETING_PUBLIC_BASE_URL` else the request origin.
+
+Underlying draft-mode plumbing (shared by all three paths): `src/app/api/draft-mode/enable/route.ts`
+is a hand-rolled `defineEnableDraftMode` that tags **top-level** redirects with `#sanity-preview`
+(skipped when `Sec-Fetch-Dest: iframe`). `DraftModeGuard` promotes that fragment to a **per-tab**
+sessionStorage marker (constants in `src/lib/draftPreview.ts` — import, don't re-hardcode) and
+keeps draft mode only in marked tabs; any unmarked tab still auto-disables the draft cookie (the
+stale-cookie-leak protection). Consequence: browsing the site in a normal tab clears the cookie
+globally, so an open preview tab loses drafts on its next reload — re-open the share link to
+re-enable. Requires `SANITY_API_READ_TOKEN` or the write token (`previewToken` in
+`src/sanity/env.ts`).
+
+Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (token links:
+401-unauth, mint, no-login render of the real page, list, revoke→invalid, expired→invalid) and
+`node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
+leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.
