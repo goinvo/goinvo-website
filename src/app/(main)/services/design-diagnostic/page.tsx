@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Reveal } from '@/components/ui/Reveal'
 import { Video } from '@/components/ui/Video'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
+import { RadarRisks } from '@/components/services/risk-diagram/RadarRisks'
 import { cn } from '@/lib/utils'
 
 export const metadata: Metadata = {
@@ -11,36 +12,6 @@ export const metadata: Metadata = {
   description:
     'A focused design diagnostic from GoInvo. We assess your product, surface the highest-impact opportunities, and hand you a clear, prioritized plan to move forward.',
 }
-
-// The five risks a Design Diagnostic surfaces. Each maps to an illustrated card.
-// Swap the placeholder for `/images/services/design-diagnostic/<image>` when uploaded.
-const riskCards = [
-  {
-    title: 'Clinical risk',
-    description: 'Does it fit how clinicians actually think, decide, and act?',
-    image: 'risk-clinical.jpg',
-  },
-  {
-    title: 'Operational complexity',
-    description: 'Can your organization run it without drowning in complexity?',
-    image: 'risk-operational.jpg',
-  },
-  {
-    title: 'Workflow failures',
-    description: 'Does it survive the messy reality of day-to-day care?',
-    image: 'risk-workflow.jpg',
-  },
-  {
-    title: 'Adoption problems',
-    description: 'Will clinicians and patients believe what it tells them?',
-    image: 'risk-adoption.jpg',
-  },
-  {
-    title: 'Product strategy',
-    description: 'Are you building the right product and not just building it right?',
-    image: 'risk-strategy.jpg',
-  },
-]
 
 // Placeholder box for images the user will upload later. The `label` names the
 // expected file so the placeholder → real-image swap is a one-line edit.
@@ -105,26 +76,10 @@ export default function DesignDiagnosticPage() {
           </Reveal>
         </section>
 
-        {/* Five risk cards — full-bleed horizontal scroll */}
-        <section className="w-screen relative left-1/2 -ml-[50vw] py-10">
+        {/* Five risks — interactive radar */}
+        <section className="max-width content-padding mx-auto py-10">
           <Reveal style="slide-up">
-            <div className="max-width content-padding mx-auto">
-              <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4">
-                {riskCards.map((card) => (
-                  <div key={card.title} className="flex-none w-[220px]">
-                    <PlaceholderImage
-                      label={`Image: ${card.image}`}
-                      ratio="aspect-[4/5]"
-                      className="mb-3"
-                    />
-                    <h3 className="font-sans font-semibold text-base mt-0 mb-1">
-                      {card.title}
-                    </h3>
-                    <p className="text-gray text-md mb-0">{card.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RadarRisks />
           </Reveal>
         </section>
 
