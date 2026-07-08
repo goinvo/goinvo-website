@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import Image from 'next/image'
 import { Reveal } from '@/components/ui/Reveal'
 import { Video } from '@/components/ui/Video'
 import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
@@ -13,33 +14,83 @@ export const metadata: Metadata = {
     'A focused design diagnostic from GoInvo. We assess your product, surface the highest-impact opportunities, and hand you a clear, prioritized plan to move forward.',
 }
 
-// Placeholder box for images the user will upload later. The `label` names the
-// expected file so the placeholder → real-image swap is a one-line edit.
-function PlaceholderImage({
-  label,
-  ratio = 'aspect-[4/5]',
-  className,
-}: {
-  label: string
-  ratio?: string
-  className?: string
-}) {
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-center rounded-md border-2 border-dashed border-gray-medium bg-gray-light text-gray text-sm text-center p-4',
-        ratio,
-        className,
-      )}
-    >
-      {label}
-    </div>
-  )
-}
-
 function SerifBody({ children, className }: { children: ReactNode; className?: string }) {
   return <p className={cn('font-serif text-lg leading-relaxed', className)}>{children}</p>
 }
+
+const bulletListClassName = 'list-none p-0 m-0 text-gray space-y-2'
+
+function BulletListItem({ children }: { children: ReactNode }) {
+  return (
+    <li className="relative mb-0">
+      <span
+        className="absolute -left-5 top-[0.78em] w-2 h-2 -translate-y-1/2 bg-[url('/images/bullet.svg')] bg-contain bg-center bg-no-repeat"
+        aria-hidden
+      />
+      {children}
+    </li>
+  )
+}
+
+function BulletList({ items, className }: { items: string[]; className?: string }) {
+  return (
+    <ul className={cn(bulletListClassName, className)}>
+      {items.map((item) => (
+        <BulletListItem key={item}>{item}</BulletListItem>
+      ))}
+    </ul>
+  )
+}
+
+// The engagement, phase by phase. `intro` + `listIntro` on the final deliverable only.
+const phases = [
+  {
+    title: 'Phase 1: Reality Check',
+    items: [
+      'Stakeholder interviews',
+      'Workflow review',
+      'Product teardown',
+      'Operational + clinical review',
+    ],
+  },
+  {
+    title: 'Phase 2: Design to Learn',
+    items: [
+      'Rapid concept',
+      'Alternative workflows',
+      'Trust models',
+      'AI interaction concepts',
+      'Evidence visualization',
+      'Prototypes',
+    ],
+  },
+  {
+    title: 'Phase 3: Design the Future',
+    items: [
+      'Future-state product',
+      'Product Blueprint',
+      'Roadmap',
+      'Prototype',
+      'Leadership decisions',
+    ],
+  },
+  {
+    title: 'Final Phase: Product Blueprint',
+    intro:
+      'The Product Blueprint captures everything we’ve learned through six weeks of designing, testing, and challenging your product. ',
+    listIntro: 'A practical guide for building the right product, which includes:',
+    items: [
+      'Product thesis and vision',
+      'Design principles',
+      'Future-state prototype: the future product, expressed through its most important workflows',
+      'Reality map: where clinical, operational, regulatory, and adoption risks exist',
+      'Product priorities: what to build, what to defer, and what to stop',
+      'Opportunity map: the highest-leverage improvements for users and the business',
+      'Scale assessment: what works today, what breaks as adoption grows',
+      'Leadership decisions: key decisions leadership should make next',
+    ],
+  },
+]
 
 export default function DesignDiagnosticPage() {
   return (
@@ -47,7 +98,7 @@ export default function DesignDiagnosticPage() {
       {/* Hero — oversized orange wordmark on white */}
       <Reveal style="slide-up" duration={0.5}>
         <section className="max-width max-width-md content-padding mx-auto pt-[calc(var(--spacing-header-height)+3rem)] pb-8">
-          <p className="font-sans text-lg mb-1">GoInvo</p>
+          <p className="font-serif text-lg leading-relaxed text-gray mb-1">GoInvo</p>
           <h1 className="display-hero m-0">
             Design
             <br />
@@ -97,10 +148,12 @@ export default function DesignDiagnosticPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
-                <PlaceholderImage
-                  label="Image: two-senior-experts.jpg"
-                  ratio="aspect-[4/3]"
-                  className="mb-3"
+                <Image
+                  src="/images/services/design-diagnostic-collaboration.png"
+                  alt="Two senior GoInvo experts collaborating on a product diagnostic"
+                  width={1182}
+                  height={1389}
+                  className="w-full h-auto rounded-md mb-3"
                 />
                 <h3 className="font-sans font-semibold text-base mt-0 mb-1">
                   2 Senior Experts
@@ -111,10 +164,12 @@ export default function DesignDiagnosticPage() {
                 </p>
               </div>
               <div>
-                <PlaceholderImage
-                  label="Image: tangible-tactical-design.jpg"
-                  ratio="aspect-[4/3]"
-                  className="mb-3"
+                <Image
+                  src="/images/services/design-diagnostic-prototype.png"
+                  alt="Tangible prototype and tactical design deliverables from a GoInvo diagnostic"
+                  width={1182}
+                  height={1383}
+                  className="w-full h-auto rounded-md mb-3"
                 />
                 <h3 className="font-sans font-semibold text-base mt-0 mb-1">
                   Tangible &amp; Tactical Design
@@ -151,16 +206,38 @@ export default function DesignDiagnosticPage() {
             />
           </Reveal>
         </section>
+
+        {/* The Engagement — phase by phase */}
+        <section className="w-screen relative left-1/2 -ml-[50vw] py-12">
+          <div className="max-width max-width-md content-padding mx-auto">
+            <Reveal style="slide-up">
+              <h2 className="display-md mt-0 mb-8">The Engagement</h2>
+            </Reveal>
+            <div className="flex flex-col gap-8">
+              {phases.map((phase, i) => (
+                <Reveal
+                  key={phase.title}
+                  style="slide-up"
+                  delay={Math.min(i * 0.05, 0.2)}
+                >
+                  <h3 className="font-sans font-semibold text-base mt-0 mb-3">
+                    {phase.title}
+                  </h3>
+                  {phase.intro && <p>{phase.intro}</p>}
+                  {phase.listIntro && <p className="!mb-4">{phase.listIntro}</p>}
+                  <BulletList items={phase.items} />
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
       </article>
 
       {/* Closing statement — large orange (outside the article so the
           `.case-study-content p` gray override doesn't apply) */}
       <section className="max-width max-width-md content-padding mx-auto py-16">
         <Reveal style="slide-up">
-          <p className="display-closing m-0">Building the wrong software is expensive.</p>
-          <p className="display-closing mt-10 mb-0">
-            Let&rsquo;s find the right product before you build it.
-          </p>
+          <p className="display-closing m-0">Let's find the rough edges before your customers do.</p>
         </Reveal>
       </section>
 
