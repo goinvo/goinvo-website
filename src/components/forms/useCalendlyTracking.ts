@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { trackDiscoveryFormStart, trackFormSubmit } from '@/lib/analytics'
+import { trackDiscoveryFormStart, trackFormSubmit, trackDiscoveryCallBooked } from '@/lib/analytics'
 import { siteConfig } from '@/lib/config'
 
 // Fire the Google Ads "booked call" conversion on a completed Calendly booking so
@@ -41,6 +41,9 @@ export function useCalendlyTracking({ formName, formLocation }: UseCalendlyTrack
       if (calendlyEvent === 'calendly.date_and_time_selected') {
         trackDiscoveryFormStart({ form_name: formName, form_location: formLocation })
       } else if (calendlyEvent === 'calendly.event_scheduled') {
+        // The actual booking OUTCOME — a distinctly-named event so it is separable
+        // from the CTA click (qualified_discovery_call_click) in GA4 and the CMS.
+        trackDiscoveryCallBooked({ form_name: formName, form_location: formLocation })
         trackFormSubmit({ form_name: formName, form_location: formLocation })
         fireBookedCallAdsConversion()
       }

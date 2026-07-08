@@ -41,3 +41,7 @@ npm run dev                      # http://localhost:3000
 
 Useful scripts: `npm test` (Vitest), `npm run lint`, `npm run build`,
 `npm run check:charts` (chart-label-alignment guard). The Sanity Studio is embedded at `/studio`.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE) — GoInvo's standard for its open-source work.
