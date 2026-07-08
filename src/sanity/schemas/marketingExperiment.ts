@@ -217,6 +217,14 @@ export default defineType({
       initialValue: 'idea',
     }),
     defineField({
+      name: 'measurementStart',
+      title: 'Measuring Since',
+      type: 'datetime',
+      group: 'pageTest',
+      description:
+        'The moment the current measurement window began. Set (or reset) this when tracking changes — e.g. a new conversion event ships — and reset the first-party counters at the same time, so every metric compares variants over the same window instead of mixing lifetime clicks with day-old events.',
+    }),
+    defineField({
       name: 'hypothesis',
       title: 'Hypothesis',
       type: 'text',

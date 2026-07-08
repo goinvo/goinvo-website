@@ -132,6 +132,9 @@ export function AbTestingWorkspace({
       targetType: 'homepage',
       targetPath: '/',
       flagKey: 'home-2026-variant',
+      // The measurement window starts when the test is created, so every metric
+      // compares variants over the same period from day one.
+      measurementStart: new Date().toISOString(),
       variants: [
         { _key: randomKey(), _type: 'experimentVariant', key: 'control', label: 'Current homepage' },
         { _key: randomKey(), _type: 'experimentVariant', key: 'concept', label: '2026 concept homepage' },
@@ -139,9 +142,11 @@ export function AbTestingWorkspace({
       primaryMetric: 'Qualified discovery-call clicks',
       trackedMetrics: [
         { _key: randomKey(), _type: 'experimentMetric', key: 'qualified-discovery-call-clicks', label: 'Qualified discovery-call clicks', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'qualified_discovery_call_click', unit: 'events' },
+        { _key: randomKey(), _type: 'experimentMetric', key: 'discovery-calls-booked', label: 'Discovery calls booked', role: 'primary', comparison: 'comparative', source: 'vercelEvent', eventName: 'discovery_call_booked', unit: 'events' },
         { _key: randomKey(), _type: 'experimentMetric', key: 'work-exploration-clicks', label: 'Work exploration clicks', role: 'guardrail', comparison: 'comparative', source: 'vercelEvent', eventName: 'view_work_click', unit: 'events' },
         { _key: randomKey(), _type: 'experimentMetric', key: 'top-navbar-clicks', label: 'Top navbar clicks', role: 'diagnostic', comparison: 'comparative', source: 'vercelEvent', eventName: 'nav_click', unit: 'events' },
         { _key: randomKey(), _type: 'experimentMetric', key: 'discovery-form-starts', label: 'Discovery form starts', role: 'diagnostic', comparison: 'conceptual', source: 'vercelEvent', eventName: 'discovery_form_start', unit: 'events' },
+        { _key: randomKey(), _type: 'experimentMetric', key: 'chat-messages-sent', label: 'Chat messages sent', role: 'diagnostic', comparison: 'conceptual', source: 'vercelEvent', eventName: 'chat_message_sent', unit: 'events', notes: 'Organic chat-widget engagement (the bubble exists on both variants). Conceptual: visible in the readout, never blocks measurement or picks a winner.' },
       ],
       successTrackers: [
         {
@@ -156,6 +161,15 @@ export function AbTestingWorkspace({
         {
           _key: randomKey(),
           _type: 'experimentSuccessTracker',
+          title: 'Booked calls lift',
+          trackerType: 'metricRule',
+          metricKeys: ['discovery-calls-booked'],
+          condition: 'increase',
+          successWhen: 'Concept beats control on discovery calls actually booked, not just CTA clicks.',
+        },
+        {
+          _key: randomKey(),
+          _type: 'experimentSuccessTracker',
           title: 'Work exploration guardrail',
           trackerType: 'metricRule',
           metricKeys: ['work-exploration-clicks'],
@@ -163,7 +177,7 @@ export function AbTestingWorkspace({
           successWhen: 'Work exploration clicks do not drop materially while CTA clicks improve.',
         },
       ],
-      qaNotes: 'Verify control and concept render at desktop and mobile, then confirm experiment_exposure, qualified_discovery_call_click, view_work_click, and discovery_form_start events include experiment_id, flag_key, variant, and page_path. Do not send raw visitor IDs.',
+      qaNotes: 'Verify control and concept render at desktop and mobile, then confirm experiment_exposure, qualified_discovery_call_click, discovery_call_booked, view_work_click, discovery_form_start, and chat_message_sent events include experiment_id, flag_key, variant, and page_path. Do not send raw visitor IDs.',
     })
     setSelectedId(createdId)
     setActiveEditorTab('setup')
@@ -627,6 +641,9 @@ export function AbTestingWorkspace({
                 <h2 style={{ margin: 0, fontSize: 21 }}>How this test is going</h2>
                 <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
                   {marketingExperimentTitle(selectedExperiment)} on {normalizeMarketingExperimentPath(selectedExperiment.targetPath) || 'an unassigned page'}.
+                  {draft.measurementStart
+                    ? ` Data measured since ${formatDateOnly(draft.measurementStart)} — earlier counts were reset when tracking changed.`
+                    : ''}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
