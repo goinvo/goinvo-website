@@ -38,6 +38,7 @@ const containerVariants = {
 
 const localHeroImagePrefixes = [
   '/images/features/ebola-care-guideline/',
+  '/images/services/',
 ]
 
 function heroImageSrc(src: string) {
