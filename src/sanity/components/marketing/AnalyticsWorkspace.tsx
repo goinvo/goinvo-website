@@ -184,7 +184,7 @@ export function AnalyticsWorkspace({
       </section>
 
       <aside style={sidePanelStyle}>
-        <PanelHeading title="Sources" description="Small setup area for reporting surfaces. Most work happens in the connection dashboard." />
+        <PanelHeading title="Sources" description="Where the numbers come from — add a source here, then connect it below." />
         <button
           type="button"
           style={{ ...styles.primaryButton, width: '100%', marginBottom: 16 }}
@@ -240,6 +240,8 @@ function AnalyticsInterpretationPanel({
 }) {
   const stats = getAnalyticsReadinessStats(data)
   const priorityCount = interpretations.filter((insight) => insight.severity === 'urgent' || insight.severity === 'warning').length
+  // Same tone mapping the Home "Measurement" tile uses (risk at 0, warn under 50).
+  const readinessColor = stats.readinessScore === 0 ? '#E36216' : stats.readinessScore < 50 ? '#b8860b' : '#007385'
 
   return (
     <section style={styles.panel}>
@@ -257,15 +259,16 @@ function AnalyticsInterpretationPanel({
             borderRadius: 8,
             padding: '10px 12px',
             minWidth: 160,
+            maxWidth: 260,
           }}
         >
           <div style={{ ...styles.small, ...styles.muted, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-            Readiness
+            Work linked to analytics
           </div>
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#007385', marginTop: 2 }}>{stats.readinessScore}%</div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: readinessColor, marginTop: 2 }}>{stats.readinessScore}%</div>
           <div style={{ ...styles.small, ...styles.muted }}>
             {stats.measurementTargets > 0
-              ? `${stats.connectedMeasurementTargets}/${stats.measurementTargets} work items connected`
+              ? `${stats.connectedMeasurementTargets} of ${stats.measurementTargets} campaigns, funnels, channels, posts & links point at a source`
               : 'No active work yet'}
           </div>
         </div>
@@ -624,7 +627,7 @@ function AnalyticsEditor({
 
   return (
     <section style={styles.panel}>
-      <PanelTitle title="Analytics setup" type="marketingAnalyticsSource" id={source._id} />
+      <PanelTitle title={`Analytics setup — ${source.title || 'Untitled source'}`} type="marketingAnalyticsSource" id={source._id} />
       <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
         <Stack gap={12}>
           <MarketingAiAssistPanel
