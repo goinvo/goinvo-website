@@ -581,7 +581,7 @@ export function AbTestingWorkspace({
         <section style={{ ...styles.panel, display: 'grid', gap: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <PanelHeading
-              title="A/B Tests"
+              title="A/B tests"
               description="Compact readouts for live page tests. Click one to review the result, then open setup only when something needs editing."
             />
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -597,13 +597,15 @@ export function AbTestingWorkspace({
             </div>
           </div>
 
-          <div data-mobile-scroll="true" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
-            <AbTestingSummaryChip label="Tests" value={`${stats.pageTests}`} detail={`${stats.active} active`} />
-            <AbTestingSummaryChip label="Running" value={`${stats.running}`} detail="measured + split" />
-            <AbTestingSummaryChip label="Blocked" value={`${stats.blocked}`} detail="measurement gaps" />
-            <AbTestingSummaryChip label="Setup" value={`${stats.ready}/${stats.pageTests}`} detail="fields complete" />
-            <AbTestingSummaryChip label="Results" value={`${stats.withSignals}/${stats.pageTests}`} detail="evidence linked" />
-          </div>
+          {listedExperiments.length > 1 && (
+            <div data-mobile-scroll="true" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+              <AbTestingSummaryChip label="Tests" value={`${stats.pageTests}`} detail={`${stats.active} active`} />
+              <AbTestingSummaryChip label="Running" value={`${stats.running}`} detail="collecting data" />
+              <AbTestingSummaryChip label="Blocked" value={`${stats.blocked}`} detail="measurement gaps" />
+              <AbTestingSummaryChip label="Setup" value={`${stats.ready}/${stats.pageTests}`} detail="fields complete" />
+              <AbTestingSummaryChip label="Results" value={`${stats.withSignals}/${stats.pageTests}`} detail="results connected" />
+            </div>
+          )}
 
           {hasAnyTests ? (
             <div data-mobile-stack="true" style={abTestCardGridStyle}>
@@ -1182,6 +1184,9 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
         </p>
         <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
           Every metric here is first-party measured from the same on-page pipeline. Bounce rate and avg time on page come from each session&apos;s visible time on the page (a session counts as engaged at 10s visible or once it converts); Sessions is the number of measured page-sessions behind those figures.
+        </p>
+        <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
+          Primary = picks the winner · Guardrail = must not get worse · Diagnostic = context only.
         </p>
       </div>
       <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>

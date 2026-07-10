@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd'
-import { CalendarIcon, CloseIcon } from '@sanity/icons'
+import { AddIcon, CalendarIcon, CloseIcon } from '@sanity/icons'
+import { useToast } from '@sanity/ui'
+import { useConfirmDialog } from './ConfirmDialog'
 
 import { addMonths, dateInputToIso, monthLabel, randomKey, refsFromIds, startOfMonth, stringListFromText, toDateInputValue } from '@/lib/marketing'
 // SDK-free module on purpose: keeps the Anthropic SDK (pulled in by
@@ -96,6 +98,41 @@ function computeRescheduledPublishAt(item: MarketingCalendarItem, destDateKey: s
   return next.toISOString()
 }
 
+// Shallow dirty check: compares a local edit draft against the loaded document
+// snapshot key-by-key. Blank-ish values (undefined/null/''/[]) count as equal so
+// untouched optional fields never read as edits; object values (arrays, refs)
+// fall back to a JSON comparison. Kept local (a twin lives in ChannelWorkspace.tsx)
+// rather than added to a shared module to keep this change self-contained.
+function hasDraftEdits<T extends object>(draft: T, saved: T): boolean {
+  const a = draft as Record<string, unknown>
+  const b = saved as Record<string, unknown>
+  const isBlank = (value: unknown) =>
+    value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const left = a[key]
+    const right = b[key]
+    if (left === right) continue
+    if (isBlank(left) && isBlank(right)) continue
+    if (
+      typeof left === 'object' && left !== null &&
+      typeof right === 'object' && right !== null &&
+      JSON.stringify(left) === JSON.stringify(right)
+    ) continue
+    return true
+  }
+  return false
+}
+
+// Human-readable publish date for the editor header (parses at local noon so a
+// date-only value never shifts a day across timezones).
+function formatPublishDateLabel(publishAt?: string): string {
+  const dateInput = toDateInputValue(publishAt)
+  if (!dateInput) return ''
+  const date = new Date(`${dateInput}T12:00:00`)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 interface CalendarWorkspaceProps {
   client: StudioClient
   data: MarketingData
@@ -108,6 +145,7 @@ interface CalendarWorkspaceProps {
 }
 
 export function CalendarWorkspace({
+  client,
   data,
   savingId,
   createDocument,
@@ -117,7 +155,9 @@ export function CalendarWorkspace({
   onAutopilotComplete,
 }: CalendarWorkspaceProps) {
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
-  const [selectedId, setSelectedId] = useState<string | null>(data.calendarItems[0]?._id || null)
+  // Starts empty; the auto-select effect below picks the first item that
+  // survives the hidePast filter (never an invisible past item).
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   // Per-day "+N more" expansion (keyed by YYYY-MM-DD date key).
   const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
   // Optimistic publishAt overrides applied while a drag-reschedule save is in
@@ -127,10 +167,15 @@ export function CalendarWorkspace({
   // Hide past-dated calendar items by default so the grid + saved lists show a
   // today-forward view (an expired demo month or old items don't read as actionable).
   const [hidePast, setHidePast] = useState(true)
-
-  useEffect(() => {
-    if (!selectedId && data.calendarItems.length > 0) setSelectedId(data.calendarItems[0]._id)
-  }, [data.calendarItems, selectedId])
+  // Optimistically hide items deleted here until the next data reload catches up
+  // (this workspace has no loadData prop; mirrors the pendingMoves pattern above).
+  const [deletedIds, setDeletedIds] = useState<string[]>([])
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Reported up by the editor: the draft differs from the saved item, so
+  // switching selection would silently discard edits.
+  const [editorDirty, setEditorDirty] = useState(false)
+  const toast = useToast()
+  const { confirm, confirmDialog } = useConfirmDialog()
 
   useEffect(() => {
     if (autopilotTarget?.view !== 'calendar') return
@@ -147,11 +192,15 @@ export function CalendarWorkspace({
   // Apply any in-flight drag reschedules optimistically before grouping, so a
   // dropped chip renders on its new day without waiting for the save round-trip.
   const optimisticCalendarItems = useMemo(() => {
-    if (Object.keys(pendingMoves).length === 0) return data.calendarItems
-    return data.calendarItems.map((item) =>
+    const base =
+      deletedIds.length === 0
+        ? data.calendarItems
+        : data.calendarItems.filter((item) => !deletedIds.includes(item._id))
+    if (Object.keys(pendingMoves).length === 0) return base
+    return base.map((item) =>
       pendingMoves[item._id] ? { ...item, publishAt: pendingMoves[item._id] } : item,
     )
-  }, [data.calendarItems, pendingMoves])
+  }, [data.calendarItems, deletedIds, pendingMoves])
   const startOfToday = useMemo(() => {
     const d = new Date()
     d.setHours(0, 0, 0, 0)
@@ -168,6 +217,30 @@ export function CalendarWorkspace({
   const itemsByDay = useMemo(() => groupCalendarItemsByDay(dateFilteredItems), [dateFilteredItems])
   const unscheduled = optimisticCalendarItems.filter((item) => !item.publishAt)
   const savedCalendarGroups = useMemo(() => getSavedCalendarGroups(dateFilteredItems), [dateFilteredItems])
+  // Items on the visible month's grid + how many the hidePast filter is hiding,
+  // so an empty month can explain itself instead of just looking broken.
+  const monthItemCount = useMemo(
+    () => calendarCells.reduce((count, cell) => count + (itemsByDay.get(toDateInputValue(cell.date))?.length || 0), 0),
+    [calendarCells, itemsByDay],
+  )
+  const hiddenCount = optimisticCalendarItems.length - dateFilteredItems.length
+
+  // Default selection: the first item that is actually visible under the current
+  // hidePast filter. If nothing is visible, leave the editor panel empty rather
+  // than silently loading a hidden past item.
+  useEffect(() => {
+    if (selectedId) return
+    if (dateFilteredItems.length > 0) setSelectedId(dateFilteredItems[0]._id)
+  }, [dateFilteredItems, selectedId])
+
+  // Forget locally-deleted ids once a reload confirms they are gone.
+  useEffect(() => {
+    setDeletedIds((current) => {
+      if (current.length === 0) return current
+      const next = current.filter((id) => data.calendarItems.some((item) => item._id === id))
+      return next.length === current.length ? current : next
+    })
+  }, [data.calendarItems])
 
   // Drop optimistic overrides once the reloaded data already matches them, so the
   // grid follows the source of truth and stale overrides never linger.
@@ -185,7 +258,24 @@ export function CalendarWorkspace({
     })
   }, [data.calendarItems])
 
+  // One confirm for every action that would replace the editor's unsaved draft.
+  const confirmDiscardEdits = () =>
+    confirm({
+      title: 'Discard unsaved changes?',
+      message: `Discard unsaved changes to "${selectedItem?.title || 'Untitled item'}"? Your edits will be lost.`,
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      tone: 'caution',
+    })
+
+  const selectItem = async (id: string) => {
+    if (id === selectedId) return
+    if (editorDirty && !(await confirmDiscardEdits())) return
+    setSelectedId(id)
+  }
+
   const createCalendarItem = async (publishDate?: Date) => {
+    if (editorDirty && !(await confirmDiscardEdits())) return
     const createdId = await createDocument({
       _type: 'marketingCalendarItem',
       title: '',
@@ -194,6 +284,47 @@ export function CalendarWorkspace({
     })
     setSelectedId(createdId)
     onAutopilotComplete?.({ action: 'calendar:createDraft', recordId: createdId })
+  }
+
+  // Confirm → unlink quick links → client.delete → toast (the TemplateWorkspace
+  // delete pattern, plus unlinking because link items hold hard references that
+  // would otherwise block the delete).
+  const deleteCalendarItem = async (target: MarketingCalendarItem) => {
+    const message = `Delete "${target.title || 'Untitled item'}"? This removes it from the calendar for good. Quick links stay, but they are disconnected from this post.`
+    if (!(await confirm({ title: 'Delete calendar item?', message, confirmLabel: 'Delete' }))) return
+
+    setDeletingId(target._id)
+    try {
+      const linkedLinks = data.linkItems.filter(
+        (link) => link.calendarItem?._id === target._id || (link.calendarItems || []).some((post) => post._id === target._id),
+      )
+      await Promise.all(
+        linkedLinks.map((link) => {
+          const remainingPostIds = (link.calendarItems || []).map((post) => post._id).filter((id) => id !== target._id)
+          const unsetPaths: string[] = []
+          if (link.calendarItem?._id === target._id) unsetPaths.push('calendarItem')
+          if (remainingPostIds.length === 0) unsetPaths.push('calendarItems')
+          let patch = client.patch(link._id)
+          if (remainingPostIds.length > 0) patch = patch.set({ calendarItems: refsFromIds(remainingPostIds) })
+          if (unsetPaths.length > 0) patch = patch.unset(unsetPaths)
+          return patch.commit()
+        }),
+      )
+      await client.delete(target._id)
+      setDeletedIds((current) => [...current, target._id])
+      if (selectedId === target._id) {
+        setSelectedId(dateFilteredItems.find((candidate) => candidate._id !== target._id)?._id || null)
+      }
+      toast.push({ status: 'success', title: `Deleted "${target.title || 'calendar item'}"` })
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Could not delete calendar item',
+        description: error instanceof Error ? error.message : undefined,
+      })
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const toggleDayExpanded = useCallback((dayKey: string) => {
@@ -232,6 +363,7 @@ export function CalendarWorkspace({
 
   return (
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16 }}>
+      {confirmDialog}
       <section style={styles.panel}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
           <div>
@@ -313,27 +445,44 @@ export function CalendarWorkspace({
                         color: 'var(--card-fg-color)',
                       }}
                     >
-                      <button
-                        type="button"
+                      <div
                         style={{
                           display: 'flex',
                           width: '100%',
                           justifyContent: 'space-between',
                           alignItems: 'flex-start',
-                          background: 'transparent',
-                          border: 'none',
-                          padding: 0,
-                          cursor: 'pointer',
                           color: cell.inMonth ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)',
                           fontWeight: cell.isToday ? 800 : 700,
                           marginBottom: 6,
                         }}
-                        title="Add calendar item on this day"
-                        onClick={() => void createCalendarItem(cell.date)}
                       >
                         <span>{cell.date.getDate()}</span>
-                        {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
-                      </button>
+                        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                          {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
+                          <button
+                            type="button"
+                            aria-label={`Add item on ${cell.date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`}
+                            title="Add calendar item on this day"
+                            disabled={savingId === 'new'}
+                            onClick={() => void createCalendarItem(cell.date)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 22,
+                              height: 22,
+                              padding: 0,
+                              border: '1px solid var(--card-border-color)',
+                              borderRadius: 6,
+                              background: 'var(--card-bg-color)',
+                              color: 'var(--card-muted-fg-color)',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <AddIcon style={{ width: 16, height: 16 }} />
+                          </button>
+                        </span>
+                      </div>
                       <div style={{ display: 'grid', gap: 5 }}>
                         {visibleItems.map(({ item, group }, index) => (
                           <Draggable draggableId={item._id} index={index} key={item._id}>
@@ -342,7 +491,7 @@ export function CalendarWorkspace({
                                 ref={dragProvided.innerRef}
                                 {...dragProvided.draggableProps}
                                 {...dragProvided.dragHandleProps}
-                                onClick={() => setSelectedId(item._id)}
+                                onClick={() => void selectItem(item._id)}
                                 style={{
                                   ...dragProvided.draggableProps.style,
                                   cursor: 'grab',
@@ -388,6 +537,27 @@ export function CalendarWorkspace({
           </div>
         </DragDropContext>
 
+        {monthItemCount === 0 && (
+          <p style={{ ...styles.small, ...styles.muted, margin: '10px 0 0', lineHeight: 1.5 }}>
+            Nothing scheduled in {monthLabel(visibleMonth)}
+            {hiddenCount > 0 ? (
+              <>
+                {' '}&mdash; {hiddenCount} past item{hiddenCount === 1 ? '' : 's'} hidden (
+                <button
+                  type="button"
+                  onClick={() => setHidePast(false)}
+                  style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  show all
+                </button>
+                ), or click + on a day to add an item.
+              </>
+            ) : (
+              <> &mdash; click + on a day to add an item.</>
+            )}
+          </p>
+        )}
+
         <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginTop: 16 }}>
           <CalendarGroupSummary
             group="draft"
@@ -409,7 +579,7 @@ export function CalendarWorkspace({
                 <button
                   type="button"
                   key={item._id}
-                  onClick={() => setSelectedId(item._id)}
+                  onClick={() => void selectItem(item._id)}
                   style={{
                     ...styles.button,
                     borderColor: item._id === selectedId ? '#007385' : 'var(--card-border-color)',
@@ -431,9 +601,11 @@ export function CalendarWorkspace({
         analyticsSources={data.analyticsSources}
         linkItems={data.linkItems}
         analyticsTakeaways={buildAnalyticsInterpretations(data)}
-        saving={savingId === selectedItem?._id}
+        saving={savingId === selectedItem?._id || deletingId === selectedItem?._id}
         createDocument={createDocument}
         onSave={commitPatch}
+        onDelete={deleteCalendarItem}
+        onDirtyChange={setEditorDirty}
         onOpenChannels={onOpenChannels}
         onAutopilotComplete={onAutopilotComplete}
       />
@@ -531,6 +703,8 @@ function CalendarItemEditor({
   saving,
   createDocument,
   onSave,
+  onDelete,
+  onDirtyChange,
   onOpenChannels,
   onAutopilotComplete,
 }: {
@@ -544,6 +718,8 @@ function CalendarItemEditor({
   saving: boolean
   createDocument: (document: MarketingDocumentInput) => Promise<string>
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+  onDelete: (item: MarketingCalendarItem) => Promise<void>
+  onDirtyChange: (dirty: boolean) => void
   onOpenChannels: () => void
   onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
 }) {
@@ -562,6 +738,25 @@ function CalendarItemEditor({
     setLinkedLinkIds(item ? getPostLinkedLinks(item, linkItems).map((link) => link._id) : [])
     setLinkToAddId('')
   }, [item, linkItems])
+
+  // Unsaved edits = the draft (or a pending reference pick) differs from the
+  // loaded item. Linked links are excluded — they save immediately on change.
+  // publishAt is compared as a date-input value because the draft holds
+  // YYYY-MM-DD after an edit while the saved item holds a full ISO string.
+  const dirty = useMemo(() => {
+    if (!draft || !item) return false
+    if (campaignId !== (item.campaign?._id || '')) return true
+    if (funnelId !== (item.funnel?._id || '')) return true
+    if (analyticsSourceId !== (item.analyticsSource?._id || '')) return true
+    return hasDraftEdits(
+      { ...draft, publishAt: toDateInputValue(draft.publishAt) },
+      { ...item, publishAt: toDateInputValue(item.publishAt) },
+    )
+  }, [draft, item, campaignId, funnelId, analyticsSourceId])
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   const channelKey = draft?.channel || draft?.channelRef?.key || ''
   const channelOptions = getChannelOptions(channels)
@@ -749,9 +944,15 @@ function CalendarItemEditor({
     await onSave(link._id, set, unset)
   }
 
+  const publishDateLabel = formatPublishDateLabel(draft.publishAt)
+
   return (
     <aside data-tour-id="autopilot-calendar-editor" style={styles.panel}>
-      <PanelTitle title="Calendar item" type="marketingCalendarItem" id={item._id} />
+      <PanelTitle
+        title={`${draft.title?.trim() || 'Untitled item'}${publishDateLabel ? ` · ${publishDateLabel}` : ''}`}
+        type="marketingCalendarItem"
+        id={item._id}
+      />
       <Stack gap={12}>
         <GuidanceChecklist
           title="Designer checklist"
@@ -1166,9 +1367,49 @@ function CalendarItemEditor({
           )}
         </div>
         <AdvancedFieldsDropdown type="marketingCalendarItem" id={item._id} />
-        <button type="button" data-tour-id="autopilot-calendar-save" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-          {saving ? 'Saving...' : 'Save calendar item'}
+        <button
+          type="button"
+          style={{ ...styles.button, borderColor: 'rgba(227, 98, 22, 0.45)', color: '#E36216' }}
+          disabled={saving}
+          onClick={() => void onDelete(item)}
+        >
+          Delete item
         </button>
+        <div
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            zIndex: 2,
+            display: 'flex',
+            gap: 10,
+            alignItems: 'center',
+            background: 'var(--card-bg-color)',
+            borderTop: '1px solid var(--card-border-color)',
+            margin: '0 -18px -18px',
+            padding: '10px 18px 14px',
+            borderRadius: '0 0 8px 8px',
+          }}
+        >
+          {dirty && (
+            <span
+              style={{
+                ...styles.small,
+                fontWeight: 800,
+                color: '#d6a93f',
+                background: 'rgba(124, 101, 39, 0.16)',
+                border: '1px solid rgba(214, 169, 63, 0.35)',
+                borderRadius: 999,
+                padding: '4px 10px',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Unsaved changes
+            </span>
+          )}
+          <button type="button" data-tour-id="autopilot-calendar-save" style={{ ...styles.primaryButton, flex: 1 }} disabled={saving} onClick={() => void save()}>
+            {saving ? 'Saving...' : 'Save calendar item'}
+          </button>
+        </div>
       </Stack>
     </aside>
   )

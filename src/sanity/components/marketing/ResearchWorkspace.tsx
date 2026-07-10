@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SearchIcon } from '@sanity/icons'
 
 import { refsFromIds } from '@/lib/marketing'
@@ -275,6 +275,7 @@ function ResearchProjectEditor({
   const [inspirationDraft, setInspirationDraft] = useState<ResearchInspirationDraft>(emptyResearchInspirationDraft)
   const [capturingInspiration, setCapturingInspiration] = useState(false)
   const [creatingProofResultIds, setCreatingProofResultIds] = useState<string[]>([])
+  const runPanelRef = useRef<HTMLElement | null>(null)
   const analyticsTakeaways = useMemo(() => buildAnalyticsInterpretations(data), [data])
   const autopilotResearchPage = getResearchPageForAutopilotTarget(autopilotTarget)
 
@@ -359,10 +360,10 @@ function ResearchProjectEditor({
   const regenerateResearchSetup = async () => {
     if (!draft._id) return
     if (!hasGeneratedResearch) {
-      setMessage('Get evidence once before regenerating this setup.')
+      setMessage('Get evidence once before reworking this setup.')
       return
     }
-    if (!confirmDiscardUnsavedChanges('Regenerating will replace the current research setup draft. Continue?')) return
+    if (!confirmDiscardUnsavedChanges('Reworking the setup will replace the current research setup draft. Continue?')) return
     setRegenerating(true)
     setError('')
     setMessage('')
@@ -384,14 +385,14 @@ function ResearchProjectEditor({
         }),
       })
       const payload = (await response.json()) as MarketingAiAssistResponse
-      if (!response.ok || !payload.suggestion?.researchProject) throw new Error(payload.error || 'Research setup could not be regenerated.')
+      if (!response.ok || !payload.suggestion?.researchProject) throw new Error(payload.error || 'Research setup could not be reworked.')
       const nextDraft = mergeResearchProjectSuggestion(draft, payload.suggestion.researchProject)
       setDraft(nextDraft)
       await onSave(draft._id, buildResearchProjectSavePayload(nextDraft))
       await loadData()
       setMessage(`Research setup refreshed${payload.usedAi ? ' with AI' : ' from rule-based drafting'}. Check the updated questions, then get evidence again when ready.`)
     } catch (regenerateError) {
-      setError(regenerateError instanceof Error ? regenerateError.message : 'Research setup could not be regenerated.')
+      setError(regenerateError instanceof Error ? regenerateError.message : 'Research setup could not be reworked.')
     } finally {
       setRegenerating(false)
     }
@@ -628,9 +629,6 @@ function ResearchProjectEditor({
                 Reopen project
               </button>
             )}
-            <button type="button" data-tour-id="autopilot-research-save-project" style={styles.button} onClick={() => void saveDraft()} disabled={saving}>
-              {saving ? 'Saving...' : 'Save project'}
-            </button>
             <button
               type="button"
               style={{
@@ -638,51 +636,51 @@ function ResearchProjectEditor({
                 opacity: hasGeneratedResearch ? 1 : 0.45,
                 cursor: hasGeneratedResearch ? 'pointer' : 'not-allowed',
               }}
-              title={hasGeneratedResearch ? 'Refresh this project setup from the latest research state.' : 'Get evidence once before regenerating it.'}
+              title={hasGeneratedResearch ? 'Rewrites this setup form from the latest findings — does not fetch new evidence.' : 'Get evidence first. There are no findings to rework from yet.'}
               onClick={() => void regenerateResearchSetup()}
               disabled={!hasGeneratedResearch || regenerating || running || saving}
             >
-              {regenerating ? 'Regenerating...' : 'Regenerate research'}
+              {regenerating ? 'Reworking setup...' : 'Rework setup with AI'}
             </button>
           </div>
         </div>
 
         <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
           {[
-            ['1', 'What should we learn?', draft.brief ? 'Ready' : 'Needs question'],
-            ['2', 'Get evidence', `${projectRuns.length} run${projectRuns.length === 1 ? '' : 's'}`],
-            ['3', 'What can we trust?', `${selectedApprovedIds.length}/${projectResults.length} chosen`],
-            ['4', 'Make editable drafts', selectedApprovedIds.length > 0 ? 'Ready' : 'Waiting'],
-          ].map(([step, title, detail]) => (
-            <div key={step} style={{ ...styles.card, boxShadow: 'none', padding: 10 }}>
-              <div style={styles.kicker}>Step {step}</div>
-              <strong>{title}</strong>
-              <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>{detail}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
-          {[
-            { id: 'setup', label: 'Start with a question', enabled: true },
-            { id: 'review', label: 'Choose useful evidence', enabled: hasGeneratedResearch },
-            { id: 'synthesize', label: 'Make drafts', enabled: hasGeneratedResearch },
-          ].map((page) => {
-            const active = researchPage === page.id
+            { step: '1', title: 'What should we learn?', detail: draft.brief ? 'Ready' : 'Needs question', page: 'setup' as const, enabled: true, scrollToRunPanel: false },
+            { step: '2', title: 'Get evidence', detail: `${projectRuns.length} run${projectRuns.length === 1 ? '' : 's'}`, page: 'setup' as const, enabled: true, scrollToRunPanel: true },
+            { step: '3', title: 'What can we trust?', detail: `${selectedApprovedIds.length}/${projectResults.length} chosen`, page: 'review' as const, enabled: hasGeneratedResearch, scrollToRunPanel: false },
+            { step: '4', title: 'Make editable drafts', detail: selectedApprovedIds.length > 0 ? 'Ready' : 'Waiting', page: 'synthesize' as const, enabled: hasGeneratedResearch, scrollToRunPanel: false },
+          ].map((card) => {
+            const active = researchPage === card.page
             return (
               <button
-                key={page.id}
+                key={card.step}
                 type="button"
                 style={{
-                  ...(active ? styles.primaryButton : styles.button),
-                  opacity: page.enabled ? 1 : 0.45,
-                  cursor: page.enabled ? 'pointer' : 'not-allowed',
+                  ...styles.card,
+                  boxShadow: 'none',
+                  padding: 10,
+                  textAlign: 'left',
+                  color: 'var(--card-fg-color)',
+                  opacity: card.enabled ? 1 : 0.45,
+                  cursor: card.enabled ? 'pointer' : 'not-allowed',
+                  borderColor: active ? '#007385' : 'var(--card-border-color)',
+                  background: active ? 'rgba(0, 115, 133, 0.1)' : 'var(--card-bg-color)',
                 }}
-                onClick={() => page.enabled && setResearchPage(page.id as 'setup' | 'review' | 'synthesize')}
-                disabled={!page.enabled}
-                title={page.enabled ? undefined : 'Get evidence before opening this page.'}
+                title={card.enabled ? undefined : 'Get evidence before opening this page.'}
+                disabled={!card.enabled}
+                onClick={() => {
+                  if (!card.enabled) return
+                  setResearchPage(card.page)
+                  if (card.scrollToRunPanel) {
+                    window.setTimeout(() => runPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+                  }
+                }}
               >
-                {page.label}
+                <div style={styles.kicker}>Step {card.step}</div>
+                <strong>{card.title}</strong>
+                <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>{card.detail}</div>
               </button>
             )
           })}
@@ -755,7 +753,7 @@ function ResearchProjectEditor({
         </div>
       </section>
 
-      <section data-tour-id="autopilot-research-run-panel" style={styles.panel}>
+      <section ref={runPanelRef} data-tour-id="autopilot-research-run-panel" style={styles.panel}>
         <PanelHeading title="Get evidence" description="This creates reviewable findings: keyword scores, source checks, site context, gaps, analytics signals, and competitor examples." />
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
           <InputField label="What phrases should we score?" help="One phrase per line. These become keyword-score findings when Semrush is available.">

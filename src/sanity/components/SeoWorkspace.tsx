@@ -621,7 +621,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           Fetch and parse a page for concrete, fixable issues. Audit one URL (incl. indexation), or run a sweep of the
           top key pages from the sitemap.
         </p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
           <input
             style={s.input}
             value={auditUrl}
@@ -634,6 +634,9 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           <button type="button" style={s.btn} onClick={() => void runAudit('')} disabled={auditLoading}>
             {auditLoading ? 'Running...' : 'Run sweep'}
           </button>
+        </div>
+        <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11, marginBottom: 12 }}>
+          Run sweep audits the top 10 key pages (~30–60s); single-URL audits add indexation + render checks.
         </div>
 
         {auditLoading && (
@@ -887,10 +890,13 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           see: broken internal links, redirect chains, orphan and under-linked pages, pages buried too deep, and generic
           link text.
         </p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <button type="button" style={s.btn} onClick={() => void runCrawl()} disabled={crawlLoading}>
             {crawlLoading ? 'Crawling...' : 'Run crawl'}
           </button>
+          <span style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
+            Walks every internal link — takes ~2 min, free.
+          </span>
         </div>
 
         {crawlLoading && (
@@ -1143,7 +1149,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 animation: 'seo-audit-spin 0.7s linear infinite',
               }}
             />
-            <span>Running 12 live AI searches… ~1–2 min, uses OpenAI credits.</span>
+            <span>Running 12 live AI searches… ~1–2 min, uses Claude credits.</span>
           </div>
         )}
 

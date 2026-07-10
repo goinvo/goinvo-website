@@ -1,6 +1,8 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { SearchIcon, UsersIcon } from '@sanity/icons'
 
+import { useConfirmDialog } from './ConfirmDialog'
+
 import {
   LOG_STATUS_VALUES,
   OUTREACH_DATASET,
@@ -38,6 +40,8 @@ import {
 // tool's shared MarketingData.
 interface OutreachWorkspaceProps {
   client: StudioClient
+  /** Optional: switch to the Evidence tab (the tool shell owns view state; the banner button renders only when this is wired). */
+  onOpenEvidence?: () => void
 }
 
 const STATUS_SHORT_OPTIONS = OUTREACH_STATUS_OPTIONS.map((o) => ({
@@ -168,12 +172,33 @@ function presentedOffer(
   return { source: 'none' }
 }
 
-export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
+/** Static orientation panel — shown while loading and on first run (no contacts yet). */
+function HowThisWorksPanel() {
+  return (
+    <section style={{ ...styles.panel, borderStyle: 'dashed' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <UsersIcon style={{ width: 20, height: 20, color: '#007385', flexShrink: 0, marginTop: 2 }} />
+        <p style={{ ...styles.small, margin: 0, lineHeight: 1.6 }}>
+          <strong>How this works:</strong> paste your contacts below (any format — a name and a company is
+          enough). Research runs live web search on each person: what their org is doing now, which of our
+          real shipped work to show them, tailored offer drafts with price bands, and a call brief. The top
+          of this page becomes your week: call the warmest, highest-fit people first, then hit “Log call” —
+          even a no teaches us where the budgets are. One prerequisite: run Extract on the Evidence tab once
+          (~15–20 min) so research can point at real case studies.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceProps) {
   const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
 
   const [contacts, setContacts] = useState<MarketingContact[]>([])
   const [offers, setOffers] = useState<MarketingOffer[]>([])
+  const [evidenceCount, setEvidenceCount] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const { confirm, confirmDialog } = useConfirmDialog()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -212,16 +237,18 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
 
   const loadOutreach = useCallback(async () => {
     try {
-      const result = await outreachClient.fetch<{ contacts: MarketingContact[]; offers: MarketingOffer[] }>(
+      const result = await outreachClient.fetch<{ contacts: MarketingContact[]; offers: MarketingOffer[]; evidenceCount: number }>(
         `{
           "contacts": *[_type == "marketingContact"]|order(coalesce(feasibilityScore, -1) desc, _updatedAt desc){${CONTACT_FIELDS}},
           "offers": *[_type == "marketingOffer"]|order(coalesce(order, 100) asc, title asc){
             _id, _updatedAt, title, key, status, oneLiner, description, priceBand, idealBuyer, proofPoints, order
-          }
+          },
+          "evidenceCount": count(*[_type == "marketingWorkEvidence" && status == "active"])
         }`,
       )
       setContacts(result.contacts || [])
       setOffers(result.offers || [])
+      setEvidenceCount(typeof result.evidenceCount === 'number' ? result.evidenceCount : 0)
     } catch (err) {
       fail(err, 'Could not load outreach data.')
     } finally {
@@ -303,7 +330,7 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
   const researchOne = async (contact: MarketingContact) => {
     setResearchingId(contact._id)
     try {
-      const result = await outreachApi<{ feasibilityScore: number | null; personVerified: boolean }>(
+      const result = await outreachApi<{ feasibilityScore: number | null; personVerified: boolean; evidenceIndexSize?: number }>(
         '/api/marketing/outreach/research',
         { id: contact._id },
       )
@@ -311,7 +338,10 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
       say(
         `Researched ${contact.name || 'contact'} — ${fitBucket(result.feasibilityScore).label.toLowerCase()}` +
           (result.personVerified === false ? ' (person unverified — org-level research only)' : '') +
-          '.',
+          '.' +
+          (result.evidenceIndexSize === 0
+            ? ' Researched without case-study evidence — extract evidence on the Evidence tab and re-research to get the show-them list.'
+            : ''),
       )
     } catch (err) {
       fail(err, 'Research failed.')
@@ -325,11 +355,13 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
     if (targets.length === 0) return
     setBatch({ done: 0, total: targets.length, current: targets[0]?.name || '' })
     const failures: string[] = []
+    let missingEvidence = false
     for (let i = 0; i < targets.length; i += 1) {
       const target = targets[i]
       setBatch({ done: i, total: targets.length, current: target.name || 'contact' })
       try {
-        await outreachApi('/api/marketing/outreach/research', { id: target._id })
+        const result = await outreachApi<{ evidenceIndexSize?: number }>('/api/marketing/outreach/research', { id: target._id })
+        if (result.evidenceIndexSize === 0) missingEvidence = true
       } catch (err) {
         failures.push(`${target.name || target._id}: ${err instanceof Error ? err.message : 'failed'}`)
       }
@@ -341,7 +373,12 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
     if (failures.length) {
       fail(new Error(`${failures.length} of ${targets.length} failed — ${failures[0]}`), 'Research batch failed.')
     } else {
-      say(`Researched ${targets.length} contact${targets.length === 1 ? '' : 's'}. The call plan is ready.`)
+      say(
+        `Researched ${targets.length} contact${targets.length === 1 ? '' : 's'}. The call plan is ready.` +
+          (missingEvidence
+            ? ' Researched without case-study evidence — extract evidence on the Evidence tab and re-research to get the show-them list.'
+            : ''),
+      )
     }
   }
 
@@ -496,7 +533,8 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
   }
 
   const deleteContact = async (contact: MarketingContact) => {
-    if (!window.confirm(`Delete "${contact.name || 'this contact'}"? This removes the record, its research, and its call history.`)) return
+    const message = `Delete "${contact.name || 'this contact'}"? This removes the record, its research, and its call history.`
+    if (!(await confirm({ title: 'Delete contact?', message, confirmLabel: 'Delete' }))) return
     try {
       await outreachClient.delete(contact._id)
       await loadOutreach()
@@ -533,7 +571,18 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
   }
 
   if (loading) {
-    return <div style={styles.panel}>Loading outreach…</div>
+    // Lightweight scaffold instead of a bare spinner line — the intro reads
+    // while the private-dataset fetch runs, and the section names stay put.
+    return (
+      <div style={{ display: 'grid', gap: 16 }}>
+        <HowThisWorksPanel />
+        {["This week's calls", 'Add contacts', 'Contacts', 'Offers'].map((title) => (
+          <section key={title} style={styles.panel}>
+            <PanelHeading title={title} description="Loading…" />
+          </section>
+        ))}
+      </div>
+    )
   }
 
   const renderPlanCard = (contact: MarketingContact, index: number, context: 'plan' | 'followUp') => {
@@ -790,6 +839,7 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
+      {confirmDialog}
       {(notice || error) && (
         <div
           style={{
@@ -803,17 +853,20 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
         </div>
       )}
 
-      {contacts.length === 0 && (
-        <section style={{ ...styles.panel, borderStyle: 'dashed' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <UsersIcon style={{ width: 20, height: 20, color: '#007385', flexShrink: 0, marginTop: 2 }} />
-            <p style={{ ...styles.small, margin: 0, lineHeight: 1.6 }}>
-              <strong>How this works:</strong> paste your contacts below (any format — a name and a company is
-              enough). Research runs live web search on each person: what their org is doing now, which of our
-              real shipped work to show them, tailored offer drafts with price bands, and a call brief. The top
-              of this page becomes your week: call the warmest, highest-fit people first, then hit “Log call” —
-              even a no teaches us where the budgets are.
-            </p>
+      {contacts.length === 0 && <HowThisWorksPanel />}
+
+      {evidenceCount === 0 && (
+        <section style={{ ...styles.panel, padding: '10px 14px', borderColor: 'rgba(214, 169, 63, 0.5)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+            <span style={{ ...styles.small, color: '#d6a93f', lineHeight: 1.5 }}>
+              <strong>No work evidence yet</strong> — research can’t point at real case studies. Run Extract on
+              the Evidence tab first (one-time, ~15–20 min).
+            </span>
+            {onOpenEvidence && (
+              <button type="button" style={styles.button} onClick={onOpenEvidence}>
+                Open the Evidence tab
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -828,17 +881,19 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
         </section>
       )}
 
-      <section style={styles.panel}>
-        <PanelHeading
-          title="This week's calls"
-          description="Researched contacts ranked warmth-first (relationship beats model score), fit as tiebreak. Each card is the brief for one call: the work to show, the offer to present, how to open, and the intelligence question to ask no matter what."
-        />
-        {plan.length === 0 ? (
-          <EmptyInline title="No researched contacts yet. Paste names below, run research, and the ranked plan appears here." />
-        ) : (
-          <div style={{ display: 'grid', gap: 12 }}>{plan.map((c, i) => renderPlanCard(c as MarketingContact, i, 'plan'))}</div>
-        )}
-      </section>
+      {contacts.length > 0 && (
+        <section style={styles.panel}>
+          <PanelHeading
+            title="This week's calls"
+            description="Researched contacts ranked warmth-first (relationship beats model score), fit as tiebreak. Each card is the brief for one call: the work to show, the offer to present, how to open, and the intelligence question to ask no matter what."
+          />
+          {plan.length === 0 ? (
+            <EmptyInline title="No researched contacts yet. Paste names below, run research, and the ranked plan appears here." />
+          ) : (
+            <div style={{ display: 'grid', gap: 12 }}>{plan.map((c, i) => renderPlanCard(c as MarketingContact, i, 'plan'))}</div>
+          )}
+        </section>
+      )}
 
       <section data-tour-id="autopilot-outreach-intake" style={styles.panel}>
         <PanelHeading
@@ -899,29 +954,31 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
           title={`Contacts (${contacts.length})`}
           description="Everyone in the outreach pipeline. Research fills in the work to show, the offers to present, and the call brief for each contact."
         />
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-          <button
-            type="button"
-            style={styles.primaryButton}
-            disabled={unresearched.length === 0 || batch !== null || researchingId !== null}
-            onClick={() => void researchAllNew()}
-          >
-            <SearchIcon style={{ width: 15, height: 15 }} />
-            {batch ? `Researching ${batch.done + 1}/${batch.total}: ${batch.current}…` : `Research all new (${unresearched.length})`}
-          </button>
-          <span style={{ ...styles.small, ...styles.muted }}>
-            ~1–2 min per contact. Progress saves after each person — safe to close and come back.
-          </span>
-          <span style={{ flex: 1 }} />
-          <select style={{ ...styles.input, width: 'auto' }} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">All statuses</option>
-            {STATUS_SHORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.title}
-              </option>
-            ))}
-          </select>
-        </div>
+        {contacts.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12, alignItems: 'center' }}>
+            <button
+              type="button"
+              style={styles.primaryButton}
+              disabled={unresearched.length === 0 || batch !== null || researchingId !== null}
+              onClick={() => void researchAllNew()}
+            >
+              <SearchIcon style={{ width: 15, height: 15 }} />
+              {batch ? `Researching ${batch.done + 1}/${batch.total}: ${batch.current}…` : `Research all new (${unresearched.length})`}
+            </button>
+            <span style={{ ...styles.small, ...styles.muted }}>
+              ~1–2 min per contact. Progress saves after each person — safe to close and come back.
+            </span>
+            <span style={{ flex: 1 }} />
+            <select style={{ ...styles.input, width: 'auto' }} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+              <option value="all">All statuses</option>
+              {STATUS_SHORT_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {visibleContacts.length === 0 ? (
           <EmptyInline title={contacts.length === 0 ? 'No contacts yet — paste some names above.' : 'No contacts match this filter.'} />
@@ -1161,7 +1218,9 @@ export function OutreachEvidenceWorkspace({ client }: OutreachEvidenceWorkspaceP
     setError(null)
     setNotice(null)
     const total = caseStudyCount || 0
-    setExtracting({ done: evidence.length, total })
+    // A forced sweep re-does every case study, so the counter starts at 0 —
+    // starting at evidence.length would show done=N/N for the whole run.
+    setExtracting({ done: force ? 0 : evidence.length, total })
     try {
       // Loop until the sweep reports nothing remaining — each call processes a
       // small batch inside the serverless window.
@@ -1216,7 +1275,18 @@ export function OutreachEvidenceWorkspace({ client }: OutreachEvidenceWorkspaceP
     }
   }
 
-  if (loading) return <div style={styles.panel}>Loading evidence…</div>
+  if (loading)
+    return (
+      <div style={{ display: 'grid', gap: 16 }}>
+        <section style={styles.panel}>
+          <PanelHeading
+            title="Work evidence"
+            description="Techniques, outcomes, and quantified highlights extracted from our real case studies — the corpus research uses to pick 'show them THIS work' for each contact and to ground tailored offers."
+          />
+          <EmptyInline title="Loading evidence…" />
+        </section>
+      </div>
+    )
 
   const listPreview = (items?: string[]) => (items && items.length ? items.slice(0, 4).join(', ') + (items.length > 4 ? '…' : '') : '—')
 
@@ -1251,7 +1321,9 @@ export function OutreachEvidenceWorkspace({ client }: OutreachEvidenceWorkspaceP
             </button>
           )}
           <span style={{ ...styles.small, ...styles.muted, alignSelf: 'center' }}>
-            ~20–30s per case study. Progress saves as it goes — safe to leave and come back.
+            ~20–30s per case study
+            {caseStudyCount ? ` — all ${caseStudyCount} takes roughly ${Math.ceil((caseStudyCount * 25) / 60)} min` : ''}.
+            Progress saves as it goes — safe to leave and come back.
           </span>
         </div>
 

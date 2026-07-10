@@ -91,3 +91,14 @@ next-start*.log
 
 # Oversized local-only video (host on CDN; exceeds GitHub 100MB limit)
 /public/videos/design-diagnostic/goinvo-design-diagnostic.mp4
+
+# Personal working notes + candid strategy docs (untracked by design — public repo)
+/portfolio-writeup.md
+/resume-bullets.md
+/fable-strategy-prompt.md
+/marketing-strategy-report-2026-07.md
+/ab-campaign-plan.md
+
+# Generated review artifact (scripts/generate-verification.mjs output)
+/VERIFICATION.md
+/err.log
