@@ -13,12 +13,15 @@ import marketingAudienceProfile from './marketingAudienceProfile'
 import marketingCalendarItem from './marketingCalendarItem'
 import marketingCampaign from './marketingCampaign'
 import marketingChannel from './marketingChannel'
+import marketingContact from './marketingContact'
 import marketingCta from './marketingCta'
 import marketingExperiment from './marketingExperiment'
 import marketingFunnel from './marketingFunnel'
 import marketingLinkItem from './marketingLinkItem'
 import marketingIdea from './marketingIdea'
 import marketingMessagePillar from './marketingMessagePillar'
+import marketingOffer from './marketingOffer'
+import marketingWorkEvidence from './marketingWorkEvidence'
 import marketingPerformanceSignal from './marketingPerformanceSignal'
 import marketingProofPoint from './marketingProofPoint'
 import marketingQualityGate from './marketingQualityGate'
@@ -65,6 +68,9 @@ export const schemaTypes = [
   marketingResearchRun,
   marketingResearchPlan,
   marketingTemplate,
+  marketingContact,
+  marketingOffer,
+  marketingWorkEvidence,
   marketingSettings,
   orderPreset,
   // Objects

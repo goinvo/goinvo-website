@@ -10,6 +10,15 @@ import {
   type MarketingCreatePayload,
   type MarketingFields,
 } from '@/lib/marketing'
+import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
+
+// Outreach types (contacts, offers, work evidence) live in the PRIVATE
+// outreach dataset — contact PII must never land in the world-readable
+// production dataset. Everything else stays on the default dataset.
+function clientForType(type: ManagedMarketingType) {
+  const base = getMarketingWriteClient()
+  return OUTREACH_DATASET_TYPES.includes(type) ? base.withConfig({ dataset: OUTREACH_DATASET }) : base
+}
 
 // REST surface for the portable marketing CMS. This file handles the
 // collection-level routes for one managed document type:
@@ -141,7 +150,7 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   try {
-    const created = await getMarketingWriteClient().create(doc)
+    const created = await clientForType(type).create(doc)
     return NextResponse.json({ id: created._id, type, document: created }, { status: 201 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to create document.'
@@ -167,7 +176,7 @@ export async function GET(req: Request, context: RouteContext) {
   const order = sanitizeOrder(url.searchParams.get('order'))
 
   try {
-    const items = await getMarketingWriteClient().fetch<unknown[]>(
+    const items = await clientForType(type).fetch<unknown[]>(
       `*[_type == $type] | order(${order}) [0...$limit]`,
       { type, limit },
     )
