@@ -31,8 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Case Study Not Found' }
   }
 
-  const ogImage = caseStudy.image
-    ? urlForImage(caseStudy.image).width(1200).height(630).url()
+  const ogSource = caseStudy.metaImage || caseStudy.image
+  const ogImage = ogSource
+    ? urlForImage(ogSource).width(1200).height(630).url()
     : undefined
 
   return {

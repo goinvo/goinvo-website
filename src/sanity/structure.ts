@@ -1,4 +1,5 @@
 import type { StructureBuilder, StructureResolver } from 'sanity/structure'
+import { StarIcon } from '@sanity/icons'
 import { goinvoOrderableDocumentListDeskItem } from './orderable/deskItem'
 
 /**
@@ -8,30 +9,19 @@ import { goinvoOrderableDocumentListDeskItem } from './orderable/deskItem'
  * `orderRank` string field on each document; queries sort by
  * orderRank, and the numeric `order` field has been retired.
  */
-const ORDERABLE_TYPES = ['caseStudy', 'feature', 'teamMember'] as const
-const MARKETING_TYPES = [
-  'marketingAnalyticsSource',
-  'marketingAudienceProfile',
-  'marketingCalendarItem',
-  'marketingCampaign',
-  'marketingChannel',
-  'marketingCta',
-  'marketingExperiment',
-  'marketingFunnel',
-  'marketingLinkItem',
-  'marketingMessagePillar',
-  'marketingPerformanceSignal',
-  'marketingProofPoint',
-  'marketingQualityGate',
-  'marketingResearchPlan',
-  'marketingResearchProject',
-  'marketingResearchResult',
-  'marketingResearchRun',
-  'marketingTrackingRule',
-] as const
-const HIDDEN_TYPES = ['orderPreset', ...MARKETING_TYPES] as const
 const FEEDBACK_TYPE = 'cmsFeedback'
 const CHAT_THREAD_TYPE = 'chatThread'
+
+// Editorial document types that belong in the Content desk's auto-generated
+// section (caseStudy/feature/teamMember are added above as orderable lists;
+// cmsFeedback/chatThread get their own inbox views). This is an ALLOWLIST on
+// purpose: every OTHER schema type — all marketing*/AI/internal types, and
+// anything added later — is reached through the Marketing tool and stays OUT of
+// Content by default. Previously this was a denylist of known marketing types,
+// so each new marketing/AI schema silently leaked in as an empty "category"
+// until someone remembered to exclude it. Add a type here only when it is
+// genuine editorial content that an author should manage from Content.
+const CONTENT_LIST_TYPES = ['category', 'job', 'healthVisualization'] as const
 
 export const structure: StructureResolver = (S, context) => {
   return S.list()
@@ -39,20 +29,22 @@ export const structure: StructureResolver = (S, context) => {
     .items([
       orderableList(S, context, { type: 'caseStudy', title: 'Case Study' }),
       orderableList(S, context, { type: 'feature', title: 'Vision Piece' }),
+      // Curated /vision hero list — a singleton editor, not a document list.
+      S.listItem()
+        .id('visionSpotlight')
+        .title('Spotlight')
+        .icon(StarIcon)
+        .child(S.document().schemaType('visionSpotlight').documentId('visionSpotlight')),
       orderableList(S, context, { type: 'teamMember', title: 'Team Member' }),
       feedbackInboxList(S),
       chatThreadInboxList(S),
       S.divider(),
-      // Non-orderable document types: defer to auto-generated list items
+      // Auto-generated list items, but ONLY for the allowlisted editorial types
+      // above — marketing/AI/internal types are managed in the Marketing tool,
+      // not Content, so they never leak in here as empty categories.
       ...S.documentTypeListItems().filter((listItem) => {
         const id = listItem.getId()
-        return (
-          id !== undefined &&
-          !(ORDERABLE_TYPES as readonly string[]).includes(id) &&
-          !(HIDDEN_TYPES as readonly string[]).includes(id) &&
-          id !== FEEDBACK_TYPE &&
-          id !== CHAT_THREAD_TYPE
-        )
+        return id !== undefined && (CONTENT_LIST_TYPES as readonly string[]).includes(id)
       }),
     ])
 }

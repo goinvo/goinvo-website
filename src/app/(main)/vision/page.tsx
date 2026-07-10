@@ -11,9 +11,24 @@ import { cloudfrontImage } from '@/lib/utils'
 import { client } from '@/sanity/lib/client'
 import { previewToken } from '@/sanity/env'
 import { sanityFetch } from '@/sanity/lib/live'
-import { allFeaturesQuery, draftFeaturesQuery } from '@/sanity/lib/queries'
+import { allFeaturesQuery, draftFeaturesQuery, visionSpotlightQuery } from '@/sanity/lib/queries'
 import { featureToDisplay } from '@/lib/featureDisplay'
 import type { Feature, StaticFeature } from '@/types'
+
+// A raw spotlight item from the visionSpotlight singleton: either a resolved
+// Vision Piece reference (slug) or a custom card.
+type SpotlightConfigItem =
+  | { kind: 'reference'; slug?: string | null }
+  | { kind: 'spotlightCard'; title?: string; description?: string; imageUrl?: string; link?: string }
+
+// A normalized, renderable spotlight item.
+type SpotlightItem =
+  | { type: 'feature'; key: string; feature: StaticFeature }
+  | {
+      type: 'card'
+      key: string
+      card: { title: string; link: string; description?: string; imageUrl?: string }
+    }
 
 export const metadata: Metadata = {
   alternates: { canonical: '/vision' },
@@ -21,13 +36,6 @@ export const metadata: Metadata = {
   description:
     'Our thoughts on the intersection of design, technology, and healthcare.',
 }
-
-/**
- * Spotlight fallback. Editors should pick the Spotlight piece in Sanity
- * (Vision Piece → "Spotlight on /vision" toggle). If no Vision Piece has
- * the toggle on, we fall back to this slug, then to displayFeatures[0].
- */
-const SPOTLIGHT_FALLBACK_SLUG = 'doodle-to-demo'
 
 function isExternalHref(href: string) {
   return /^(https?:)?\/\//.test(href) || href.startsWith('mailto:') || href.startsWith('tel:')
@@ -128,24 +136,36 @@ export default async function VisionPage() {
   const { data: sanityFeatures } = (await sanityFetch({
     query: allFeaturesQuery,
   })) as { data: Feature[] }
+  const { data: spotlightConfig } = (await sanityFetch({
+    query: visionSpotlightQuery,
+  })) as { data: { items?: SpotlightConfigItem[] } | null }
 
   const displayFeatures = (sanityFeatures ?? []).map(featureToDisplay)
 
-  // Look up the Sanity feature flagged as Spotlight first, then fall
-  // through to the legacy hardcoded slug, then to the first feature in
-  // the list. The spotlight flag was added to the schema 2026-05-04.
-  const spotlightFromSanity = (sanityFeatures ?? []).find(
-    (f) => (f as { spotlight?: boolean }).spotlight === true,
-  )
-  const spotlightFeature =
-    (spotlightFromSanity &&
-      displayFeatures.find((f) => f.id === spotlightFromSanity.slug?.current)) ??
-    displayFeatures.find((f) => f.id === SPOTLIGHT_FALLBACK_SLUG) ??
-    displayFeatures[0]
+  // Spotlight is an explicit, curated list (Content → Spotlight), decoupled from
+  // the feature ordering scheme. Each item is either a Vision Piece or a custom
+  // card. Missing/empty → no Spotlight section at all.
+  const spotlightItems = (spotlightConfig?.items ?? [])
+    .map((item, index): SpotlightItem | null => {
+      if (item.kind === 'reference' && item.slug) {
+        const feature = displayFeatures.find((f) => f.id === item.slug)
+        return feature ? { type: 'feature', key: item.slug, feature } : null
+      }
+      if (item.kind === 'spotlightCard' && item.title && item.link) {
+        return {
+          type: 'card',
+          key: `card-${index}`,
+          card: { title: item.title, link: item.link, description: item.description, imageUrl: item.imageUrl },
+        }
+      }
+      return null
+    })
+    .filter((item): item is SpotlightItem => Boolean(item))
 
-  const gridFeatures = displayFeatures.filter(
-    (f) => f.id !== spotlightFeature?.id
+  const spotlightFeatureSlugs = new Set(
+    spotlightItems.flatMap((item) => (item.type === 'feature' ? [item.feature.id] : [])),
   )
+  const gridFeatures = displayFeatures.filter((f) => !spotlightFeatureSlugs.has(f.id))
 
   // Fetch draft-only features when in preview mode (features that have no
   // published counterpart yet)
@@ -178,59 +198,25 @@ export default async function VisionPage() {
         <DraftFeaturesSection features={draftFeatures} />
       )}
 
-      {/* Spotlight */}
-      {spotlightFeature && (
-      <div className="max-width content-padding py-8 lg:py-16">
-        <h2 className="header-md py-8">Spotlight</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
-          {/* Spotlight feature (2/3) */}
-          {spotlightFeature.externalLink && isExternalHref(spotlightFeature.link) ? (
-            <a
-              href={spotlightFeature.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
-            >
-              <SpotlightCardContent feature={spotlightFeature} />
-            </a>
+      {/* Spotlight — curated in the CMS (Content → Spotlight). Each item is a
+          Vision Piece or a custom card. First is the large hero; any others sit
+          beside it. Hidden when the list is empty. */}
+      {spotlightItems.length > 0 && (
+        <div className="max-width content-padding py-8 lg:py-16">
+          <h2 className="header-md py-8">Spotlight</h2>
+          {spotlightItems.length === 1 ? (
+            <SpotlightItemCard item={spotlightItems[0]} variant="hero" />
           ) : (
-            <Link
-              href={spotlightFeature.link}
-              className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
-            >
-              <SpotlightCardContent feature={spotlightFeature} />
-            </Link>
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
+              <SpotlightItemCard item={spotlightItems[0]} variant="hero" />
+              <div className="grid gap-8 content-start">
+                {spotlightItems.slice(1).map((item) => (
+                  <SpotlightItemCard key={item.key} item={item} variant="compact" />
+                ))}
+              </div>
+            </div>
           )}
-
-          {/* Health Visualizations (1/3) */}
-          <Link
-            href="/vision/health-visualizations"
-            className="group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline"
-          >
-            <div className="h-[260px] overflow-hidden">
-              <Image
-                src={cloudfrontImage(
-                  '/images/features/posters/health-viz-vision-preview-2.jpg'
-                )}
-                alt="Health Visualizations"
-                width={400}
-                height={260}
-                quality={95}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="p-4">
-              <p className="font-bold text-black mb-1">
-                Health Visualizations
-              </p>
-              <p className="text-gray text-sm">
-                Open source visualizations on health and the healthcare
-                industry.
-              </p>
-            </div>
-          </Link>
         </div>
-      </div>
       )}
 
       {/* Features Grid */}
@@ -378,6 +364,119 @@ export default async function VisionPage() {
         </Button>
       </div>
     </div>
+  )
+}
+
+// Renders one spotlight item — dispatching on whether it's a Vision Piece or a
+// custom card — at the requested size.
+function SpotlightItemCard({ item, variant }: { item: SpotlightItem; variant: 'hero' | 'compact' }) {
+  if (item.type === 'feature') {
+    return <SpotlightCard feature={item.feature} variant={variant} />
+  }
+  return <SpotlightCustomCard card={item.card} variant={variant} />
+}
+
+function SpotlightCustomCard({
+  card,
+  variant,
+}: {
+  card: { title: string; link: string; description?: string; imageUrl?: string }
+  variant: 'hero' | 'compact'
+}) {
+  const external = isExternalHref(card.link)
+  const className =
+    'group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline'
+  const content = (
+    <>
+      {card.imageUrl && (
+        <div className="h-[260px] overflow-hidden bg-gray-medium">
+          <Image
+            src={card.imageUrl}
+            alt={card.title}
+            width={variant === 'hero' ? 680 : 400}
+            height={260}
+            quality={95}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      <div className="p-4">
+        <p className="font-bold text-black mb-1">{card.title}</p>
+        {card.description && <p className="text-gray text-sm">{card.description}</p>}
+      </div>
+    </>
+  )
+
+  return external ? (
+    <a href={card.link} target="_blank" rel="noopener noreferrer" className={className}>
+      {content}
+    </a>
+  ) : (
+    <Link href={card.link} className={className}>
+      {content}
+    </Link>
+  )
+}
+
+function SpotlightCard({
+  feature,
+  variant,
+}: {
+  feature: StaticFeature
+  variant: 'hero' | 'compact'
+}) {
+  const opensOutsideSite = feature.externalLink && isExternalHref(feature.link)
+  const className =
+    'group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline'
+  const content =
+    variant === 'hero' ? (
+      <SpotlightCardContent feature={feature} />
+    ) : (
+      <SpotlightSecondaryContent feature={feature} />
+    )
+
+  return opensOutsideSite ? (
+    <a href={feature.link} target="_blank" rel="noopener noreferrer" className={className}>
+      {content}
+    </a>
+  ) : (
+    <Link href={feature.link} className={className}>
+      {content}
+    </Link>
+  )
+}
+
+function SpotlightSecondaryContent({ feature }: { feature: StaticFeature }) {
+  const hasVideo = Boolean(feature.video)
+  return (
+    <>
+      <div className="h-[260px] overflow-hidden bg-gray-medium">
+        {hasVideo ? (
+          <video
+            src={cloudfrontImage(feature.video as string)}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Image
+            src={cloudfrontImage(feature.image)}
+            alt={feature.title}
+            width={400}
+            height={260}
+            quality={95}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+      <div className="p-4">
+        <p className="font-bold text-black mb-1">{feature.title}</p>
+        <p className="text-gray text-sm mb-1">Feature | {feature.date}</p>
+        {feature.caption && <p className="text-gray text-sm">{feature.caption}</p>}
+      </div>
+    </>
   )
 }
 

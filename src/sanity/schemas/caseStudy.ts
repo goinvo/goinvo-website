@@ -136,6 +136,14 @@ export default defineType({
       group: 'properties',
       description: 'SEO description for search engines (max ~160 characters)',
     }),
+    defineField({
+      name: 'metaImage',
+      title: 'Social Share Image',
+      type: 'image',
+      group: 'properties',
+      description:
+        'Optional image for social/link previews (Open Graph). Recommended 1200×630. Leave blank to use the case study image.',
+    }),
 
     // --- Main Content ------------------------------------------------
     defineField({
