@@ -8240,10 +8240,28 @@ function AutopilotCoachOverlay({
     if (nextStep) onStepPreview(nextStep)
   }
 
+  // Scripted (principal) plans have no completion signal to advance them — their
+  // steps are hand-authored and guarded from refresh — so the primary "proceed"
+  // choice must page the coach forward itself. Otherwise the big obvious button
+  // looks dead (its action event has no listener on the strategyBrief/outreach
+  // views) and the user has to hunt for the smaller "Next step" control. Never
+  // advance past the last step (there is nowhere to go — it just opens the target).
+  const handleCoachChoice = (
+    choiceStep: MarketingAutopilotStep,
+    choice: AutopilotCoachChoice,
+    choiceIndex: number,
+  ) => {
+    onChoice(choiceStep, choice, choiceIndex)
+    const isPrimaryChoice = choiceIndex === 0 || choice.tone === 'primary'
+    if (isPrimaryChoice && isScriptedAutopilotPlan(plan) && safeVisibleStepIndex < plan.steps.length - 1) {
+      handleStepChange(safeVisibleStepIndex + 1)
+    }
+  }
+
   return (
     <GuidedTutorialOverlay
       active
-      tutorial={buildAutopilotCoachTutorial(plan, onOpenChat, onChoice)}
+      tutorial={buildAutopilotCoachTutorial(plan, onOpenChat, handleCoachChoice)}
       stepIndex={safeVisibleStepIndex}
       onStepChange={handleStepChange}
       onClose={onClose}
