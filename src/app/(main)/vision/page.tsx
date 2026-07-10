@@ -206,7 +206,14 @@ export default async function VisionPage() {
           <h2 className="header-md py-8">Spotlight</h2>
           {spotlightItems.length === 1 ? (
             <SpotlightItemCard item={spotlightItems[0]} variant="hero" />
+          ) : spotlightItems.length === 2 ? (
+            // Hero + one card: direct grid items so both stretch to equal height.
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8 items-stretch">
+              <SpotlightItemCard item={spotlightItems[0]} variant="hero" />
+              <SpotlightItemCard item={spotlightItems[1]} variant="compact" />
+            </div>
           ) : (
+            // Hero + several cards: the extras stack in the side column.
             <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-8">
               <SpotlightItemCard item={spotlightItems[0]} variant="hero" />
               <div className="grid gap-8 content-start">
@@ -385,7 +392,7 @@ function SpotlightCustomCard({
 }) {
   const external = isExternalHref(card.link)
   const className =
-    'group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline'
+    'group flex flex-col h-full bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline'
   const content = (
     <>
       {card.imageUrl && (
@@ -427,7 +434,7 @@ function SpotlightCard({
 }) {
   const opensOutsideSite = feature.externalLink && isExternalHref(feature.link)
   const className =
-    'group block bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline'
+    'group flex flex-col h-full bg-white overflow-hidden shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out no-underline'
   const content =
     variant === 'hero' ? (
       <SpotlightCardContent feature={feature} />
