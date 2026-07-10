@@ -316,15 +316,6 @@ export default defineType({
       initialValue: false,
     }),
     defineField({
-      name: 'spotlight',
-      title: 'Spotlight on /vision',
-      type: 'boolean',
-      group: 'properties',
-      description:
-        'Pin this piece to the Spotlight slot at the top of /vision. At most one Vision Piece should have this checked at a time — the public page picks the first match it finds.',
-      initialValue: false,
-    }),
-    defineField({
       name: 'hiddenWorkPage',
       title: 'Hidden on Work Page',
       type: 'boolean',
@@ -630,6 +621,14 @@ export default defineType({
       rows: 2,
       group: 'properties',
       description: 'SEO description for search engines (max ~160 characters)',
+    }),
+    defineField({
+      name: 'metaImage',
+      title: 'Social Share Image',
+      type: 'image',
+      group: 'properties',
+      description:
+        'Optional image for social/link previews (Open Graph). Recommended 1200×630. Leave blank to use the article hero image.',
     }),
   ],
   preview: {

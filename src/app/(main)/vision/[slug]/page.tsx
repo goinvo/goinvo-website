@@ -1715,7 +1715,7 @@ export async function generateVisionFeatureMetadata(slug: string, experimentVari
 
   const renderedFeature = applyFeatureExperimentVariant(feature, experimentVariant)
 
-  const ogSourceImage = renderedFeature.articleHeroImage || renderedFeature.image
+  const ogSourceImage = renderedFeature.metaImage || renderedFeature.articleHeroImage || renderedFeature.image
   const ogImage = ogSourceImage
     ? urlForImage(ogSourceImage).width(1200).height(630).url()
     : undefined

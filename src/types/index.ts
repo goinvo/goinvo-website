@@ -51,6 +51,7 @@ export interface CaseStudy {
   upNext?: (CaseStudy | ExternalUpNextItem)[]
   hidden?: boolean
   metaDescription?: string
+  metaImage?: SanityImage
 }
 
 export interface ExternalUpNextItem {
@@ -146,6 +147,7 @@ export interface Feature {
   content?: PortableTextBlock[]
   metaTitle?: string
   metaDescription?: string
+  metaImage?: SanityImage
 }
 
 export interface Job {

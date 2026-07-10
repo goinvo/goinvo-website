@@ -6,6 +6,7 @@ import job from './job'
 import healthVisualization from './healthVisualization'
 import cmsFeedback from './cmsFeedback'
 import chatThread from './chatThread'
+import visionSpotlight from './visionSpotlight'
 import aiCitationSnapshot from './aiCitationSnapshot'
 import marketingAnalyticsSource from './marketingAnalyticsSource'
 import marketingAudienceProfile from './marketingAudienceProfile'
@@ -42,6 +43,7 @@ export const schemaTypes = [
   healthVisualization,
   cmsFeedback,
   chatThread,
+  visionSpotlight,
   marketingCampaign,
   marketingChannel,
   marketingCalendarItem,

@@ -76,7 +76,8 @@ export const caseStudyBySlugQuery = groq`
         }
       )
     }[].item,
-    metaDescription
+    metaDescription,
+    metaImage
   }
 `
 
@@ -226,8 +227,26 @@ export const allFeaturesQuery = groq`
     client,
     externalLink,
     "featured": coalesce(featured, coalesce(hiddenWorkPage, false) != true),
-    spotlight,
     hiddenWorkPage
+  }
+`
+
+// Curated /vision Spotlight: an ordered list of items — each a Vision Piece
+// reference (resolved to its slug) or a custom card (title/description/image/
+// link). Driven by the `visionSpotlight` singleton (Content → Spotlight),
+// independent of the feature ordering scheme.
+export const visionSpotlightQuery = groq`
+  *[_id == "visionSpotlight"][0]{
+    "items": items[]{
+      "kind": _type,
+      _type == "reference" => { "slug": @->slug.current },
+      _type == "spotlightCard" => {
+        title,
+        description,
+        "imageUrl": image.asset->url,
+        link
+      }
+    }
   }
 `
 
@@ -316,7 +335,8 @@ export const featureBySlugQuery = groq`
     },
     content,
     metaTitle,
-    metaDescription
+    metaDescription,
+    metaImage
   }
 `
 
