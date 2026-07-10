@@ -118,6 +118,8 @@ describe('Marketing CMS schemas', () => {
       'seo',
       'strategy',
       'strategyBrief',
+      'outreach',
+      'workEvidence',
       'abTesting',
       'calendar',
       'campaigns',
@@ -221,7 +223,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('Build campaign plans')
     expect(source).toContain('Map funnel paths')
     expect(source).toContain('Turn the saved answers into campaign briefs and launch plans.')
-    expect(source).toContain('Browse all actions')
+    expect(source).toContain('I want to do something specific')
     expect(source).toContain('Saved sessions')
     expect(source).toContain('Open tutorial guide')
     expect(source).toContain('Fill current draft')
@@ -846,7 +848,7 @@ describe('Marketing CMS schemas', () => {
     expect(recommendationTutorial?.steps.map((step) => step.targetId)).not.toContain('designer-workflow-manual-setup')
   })
 
-  it('builds a searchable assistant action catalog with multiple recommendations', () => {
+  it('builds a searchable assistant action catalog with a few ranked recommendations', () => {
     const actions = buildMarketingAssistantActions(emptyMarketingData())
 
     expect(actions.length).toBeGreaterThan(8)

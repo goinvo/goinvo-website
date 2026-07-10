@@ -51,6 +51,7 @@ import { MarketingAiModelSetting } from '../components/marketing/MarketingAiMode
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
+import { OutreachWorkspace, OutreachEvidenceWorkspace } from '../components/marketing/OutreachWorkspace'
 import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
 import { LinkTreeWorkspace } from '../components/marketing/LinkTreeWorkspace'
 import { ResearchWorkspace } from '../components/marketing/ResearchWorkspace'
@@ -99,7 +100,9 @@ const MARKETING_CONTROL_CSS = `
   [data-marketing-tool] {
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    /* clip (not hidden): hidden creates a scroll container that breaks position:sticky
+       Save bars in the workspace editors; clip gives the same horizontal clipping without one. */
+    overflow-x: clip;
   }
 
   [data-marketing-tool] div,
@@ -196,6 +199,16 @@ const MARKETING_OPAQUE_PANEL_BG = '#151a26'
 const DESIGNER_WORKFLOW_SESSIONS_STORAGE_KEY = 'goinvo.marketing.designerWorkflow.sessions.v2'
 const DESIGNER_WORKFLOW_ACTIVE_SESSION_STORAGE_KEY = 'goinvo.marketing.designerWorkflow.activeSession.v2'
 const MARKETING_ACTIVE_VIEW_STORAGE_KEY = 'goinvo.marketing.activeView.v1'
+// Deep-link query param: /studio/marketing?view=<viewId|surfaceId> opens that
+// tab regardless of the recipient's last-stored view — so a link one teammate
+// sends another lands where intended (e.g. ?view=outreach).
+const MARKETING_VIEW_QUERY_PARAM = 'view'
+const MARKETING_ACTIVE_ROLE_STORAGE_KEY = 'goinvo.marketing.activeRole.v1'
+// Deep-link query param: /studio/marketing?role=<principal|coworker> tailors the
+// Autopilot guided flow to the reader — so a principal can be handed a link that
+// opens the warm-network outreach path. A suggestion, not identity: nothing
+// sensitive gates on it.
+const MARKETING_ROLE_QUERY_PARAM = 'role'
 const MARKETING_AUTOPILOT_TARGET_STORAGE_KEY = 'goinvo.marketing.autopilotTarget.v1'
 const STRATEGY_WORKING_DRAFTS_STORAGE_KEY = 'goinvo.marketing.strategyWorkingDrafts.v1'
 
@@ -715,6 +728,8 @@ export type MarketingViewId =
   | 'strategyBrief'
   | 'abTesting'
   | 'research'
+  | 'outreach'
+  | 'workEvidence'
   | 'calendar'
   | 'campaigns'
   | 'funnels'
@@ -796,9 +811,21 @@ export const MARKETING_TOOL_VIEWS: Array<{
     icon: RocketIcon,
   },
   {
+    id: 'outreach',
+    title: 'Outreach',
+    description: 'Dump warm contacts, research each for opportunity fit, and work a ranked call plan.',
+    icon: UsersIcon,
+  },
+  {
+    id: 'workEvidence',
+    title: 'Evidence',
+    description: 'Capability evidence extracted from real case studies — what research matches contacts against.',
+    icon: SearchIcon,
+  },
+  {
     id: 'abTesting',
     title: 'Measure',
-    description: 'Experiments (A/B) plus analytics sources and measurement readiness.',
+    description: 'A/B tests plus analytics sources and measurement readiness.',
     icon: TrendUpwardIcon,
   },
   {
@@ -891,7 +918,18 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
       { view: 'research', label: 'Research' },
       { view: 'seo', label: 'SEO' },
       { view: 'strategy', label: 'Strategy Q&A' },
-      { view: 'strategyBrief', label: 'Brief' },
+      { view: 'strategyBrief', label: 'Positioning' },
+    ],
+  },
+  {
+    id: 'outreach',
+    title: 'Outreach',
+    description: 'Warm-network activation: contacts in, researched call plan out.',
+    icon: UsersIcon,
+    landingView: 'outreach',
+    tabs: [
+      { view: 'outreach', label: 'Contacts & call plan' },
+      { view: 'workEvidence', label: 'Evidence' },
     ],
   },
   {
@@ -911,18 +949,18 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'measure',
     title: 'Measure',
-    description: 'Experiments (A/B) plus analytics sources and measurement readiness.',
+    description: 'A/B tests plus analytics sources and measurement readiness.',
     icon: TrendUpwardIcon,
     landingView: 'abTesting',
     tabs: [
-      { view: 'abTesting', label: 'Experiments (A/B)' },
+      { view: 'abTesting', label: 'A/B tests' },
       { view: 'analytics', label: 'Analytics sources' },
     ],
   },
   {
     id: 'settings',
     title: 'Settings',
-    description: 'Channels and their content types and publishing defaults.',
+    description: 'Channels, publishing defaults, and the AI model.',
     icon: TagIcon,
     landingView: 'channels',
     tabs: [{ view: 'channels', label: 'Channels' }],
@@ -946,9 +984,78 @@ function loadStoredMarketingView(fallback: MarketingViewId = 'dashboard'): Marke
   return isMarketingViewId(storedView) ? storedView : fallback
 }
 
+// Resolve a `?view=` param value to a MarketingViewId. Accepts a view id
+// directly (e.g. "outreach", "workEvidence") OR a surface id (e.g. "plan" →
+// its landing view), so both a precise tab link and a friendlier section link
+// work. Returns null when absent/unrecognized. Pure (no DOM) so it's unit-tested.
+export function resolveMarketingViewParam(param: string | null | undefined): MarketingViewId | null {
+  if (!param) return null
+  if (isMarketingViewId(param)) return param
+  const surface = MARKETING_SURFACES.find((candidate) => candidate.id === param)
+  return surface ? surface.landingView : null
+}
+
+// The view requested by the current URL's ?view= param, if any. This is what
+// makes a shared link land on the right tab; it takes precedence over the
+// recipient's last-stored view.
+function viewFromLocation(): MarketingViewId | null {
+  if (typeof window === 'undefined') return null
+  return resolveMarketingViewParam(new URLSearchParams(window.location.search).get(MARKETING_VIEW_QUERY_PARAM))
+}
+
+// Reflect the active view in the URL (?view=…) WITHOUT a history entry, so a
+// user can copy the address bar mid-session and share the exact tab. Preserves
+// other query params; no-ops silently if the embedding router disallows it
+// (localStorage still remembers the view, so navigation is unaffected).
+function syncViewToUrl(view: MarketingViewId) {
+  if (typeof window === 'undefined' || !window.history?.replaceState) return
+  try {
+    const url = new URL(window.location.href)
+    if (url.searchParams.get(MARKETING_VIEW_QUERY_PARAM) === view) return
+    url.searchParams.set(MARKETING_VIEW_QUERY_PARAM, view)
+    window.history.replaceState(window.history.state, '', url.toString())
+  } catch {
+    // Router owns the URL — fall back to localStorage-only persistence.
+  }
+}
+
 function saveStoredMarketingView(view: MarketingViewId) {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(MARKETING_ACTIVE_VIEW_STORAGE_KEY, view)
+}
+
+// Reader role. `principal` (boss/founder) gets a warm-network outreach-first
+// guided flow; `coworker` (default — designer/teammate) gets today's content
+// pipeline. Kept deliberately tiny; extend only when a real third role appears.
+export const MARKETING_ROLES = ['coworker', 'principal'] as const
+export type MarketingRole = (typeof MARKETING_ROLES)[number]
+
+export function isMarketingRole(value: unknown): value is MarketingRole {
+  return typeof value === 'string' && (MARKETING_ROLES as readonly string[]).includes(value)
+}
+
+// Resolve a `?role=` param to a MarketingRole. Pure (no DOM) so it's unit-tested,
+// mirroring resolveMarketingViewParam.
+export function resolveMarketingRoleParam(param: string | null | undefined): MarketingRole | null {
+  return isMarketingRole(param) ? param : null
+}
+
+// The role requested by the current URL's ?role= param, if any (wins over the
+// recipient's stored role, so a sent link tailors their experience).
+function roleFromLocation(): MarketingRole | null {
+  if (typeof window === 'undefined') return null
+  return resolveMarketingRoleParam(new URLSearchParams(window.location.search).get(MARKETING_ROLE_QUERY_PARAM))
+}
+
+function loadStoredMarketingRole(): MarketingRole {
+  if (typeof window === 'undefined') return 'coworker'
+  const stored = window.localStorage.getItem(MARKETING_ACTIVE_ROLE_STORAGE_KEY)
+  return isMarketingRole(stored) ? stored : 'coworker'
+}
+
+function saveStoredMarketingRole(role: MarketingRole) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(MARKETING_ACTIVE_ROLE_STORAGE_KEY, role)
 }
 
 // Reads the logged-in Studio user's auth token so WRITE routes can authenticate
@@ -1630,6 +1737,73 @@ interface MarketingResearchRun {
   warnings?: string[]
   errors?: string[]
   createdResults?: MarketingResearchResult[]
+}
+
+export interface MarketingContact {
+  _id: string
+  _updatedAt?: string
+  name?: string
+  organization?: string
+  role?: string
+  segment?: string
+  owner?: string
+  warmth?: string
+  status?: string
+  email?: string
+  phone?: string
+  linkedinUrl?: string
+  howWeKnow?: string
+  sourceNotes?: string
+  researchedAt?: string
+  researchSummary?: string
+  personVerified?: boolean
+  identityConfidence?: string
+  opportunities?: Array<{ _key?: string; offerKey?: string; headline?: string; rationale?: string }>
+  relevantEvidence?: Array<{ _key?: string; evidenceId?: string; title?: string; why?: string }>
+  proposedOffers?: Array<{
+    _key?: string
+    title?: string
+    oneLiner?: string
+    priceBand?: string
+    rationale?: string
+    evidenceIds?: string[]
+    chosen?: boolean
+  }>
+  feasibilityScore?: number | null
+  feasibilityReasoning?: string
+  suggestedOfferKey?: string
+  suggestedOpener?: string
+  callBrief?: string
+  researchModel?: string
+  researchSources?: Array<{ _key?: string; title?: string; url?: string }>
+  lastContactedAt?: string
+  followUpAt?: string
+  nextStep?: string
+  outcomeNotes?: string
+  intelGathered?: string
+  interactions?: Array<{
+    _key?: string
+    at?: string
+    by?: string
+    outcome?: string
+    intel?: string
+    nextStep?: string
+    statusAfter?: string
+  }>
+}
+
+export interface MarketingOffer {
+  _id: string
+  _updatedAt?: string
+  title?: string
+  key?: string
+  status?: string
+  oneLiner?: string
+  description?: string
+  priceBand?: string
+  idealBuyer?: string
+  proofPoints?: string
+  order?: number
 }
 
 export interface MarketingData {
@@ -3079,7 +3253,17 @@ function marketingActionError(prefix: string, err: unknown) {
 function MarketingComponent() {
   const client = useClient({ apiVersion: API_VERSION })
   const compactLayout = useMarketingCompactLayout()
-  const [view, setView] = useState<MarketingViewId>(() => loadStoredMarketingView(loadStoredAutopilotTarget()?.view || 'dashboard'))
+  // Precedence: a ?view= deep link wins over the autopilot target and the
+  // last-stored view, so a shared link always lands where it points.
+  const [view, setView] = useState<MarketingViewId>(
+    () => viewFromLocation() || loadStoredMarketingView(loadStoredAutopilotTarget()?.view || 'dashboard'),
+  )
+  // Role tailors the Autopilot guided flow. Precedence mirrors view: a ?role=
+  // deep link wins over the last-stored role, else the 'coworker' default.
+  const [role, setRole] = useState<MarketingRole>(() => roleFromLocation() || loadStoredMarketingRole())
+  useEffect(() => {
+    saveStoredMarketingRole(role)
+  }, [role])
   const [data, setData] = useState<MarketingData>(EMPTY_DATA)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -3173,6 +3357,7 @@ function MarketingComponent() {
 
   useEffect(() => {
     saveStoredMarketingView(view)
+    syncViewToUrl(view)
   }, [view])
 
   useEffect(() => {
@@ -3350,7 +3535,8 @@ function MarketingComponent() {
   const activeView = MARKETING_TOOL_VIEWS.find((candidate) => candidate.id === view) || MARKETING_TOOL_VIEWS[0]
   const attentionItems = useMemo(() => (loading ? [] : getMarketingAttentionItems(data)), [data, loading])
   const attentionCount = attentionItems.length
-  const shellStyle: CSSProperties = compactLayout ? { ...styles.shell, padding: 12, paddingBottom: 92 } : styles.shell
+  // Both layouts reserve bottom space so the fixed Autopilot button never covers content (e.g. Save rows).
+  const shellStyle: CSSProperties = compactLayout ? { ...styles.shell, padding: 12, paddingBottom: 92 } : { ...styles.shell, paddingBottom: 92 }
   const headerStyle: CSSProperties = compactLayout
     ? { ...styles.header, flexDirection: 'column', gap: 12, marginBottom: 16 }
     : styles.header
@@ -3387,6 +3573,7 @@ function MarketingComponent() {
           <div style={headerActionsStyle}>
             {hasUnsavedChanges && <span style={{ ...styles.small, color: '#E36216', fontWeight: 800 }}>Unsaved edits</span>}
             {lastLoaded && <span style={{ ...styles.muted, ...styles.small }}>Updated {lastLoaded}</span>}
+            <CopyViewLinkButton view={view} role={role} />
             <a href="/studio/getting-started?article=marketing.overview" style={styles.button}>
               Marketing guide
               <LaunchIcon style={{ width: 15, height: 15 }} />
@@ -3568,6 +3755,7 @@ function MarketingComponent() {
 
         {!loading && (
           <MarketingGuidanceWidget
+            activeView={view}
             data={data}
             savingId={savingId}
             tutorialRequest={workflowTutorialRequest}
@@ -3576,6 +3764,8 @@ function MarketingComponent() {
             tutorialDemoRecommendation={workflowTutorialDemoRecommendation}
             openRequest={workflowOpenRequest}
             completionSignal={autopilotCompletionSignal}
+            role={role}
+            onRoleChange={setRole}
             onOpenView={requestMarketingView}
             onOpenAutopilotTarget={openAutopilotTarget}
             onGenerateInstagramCarousel={generateCarouselSetup}
@@ -3668,6 +3858,14 @@ function MarketingComponent() {
                 onOpenView={requestMarketingView}
               />
             )}
+            {view === 'analytics' && (
+              <AnalyticsWorkspace
+                data={data}
+                savingId={savingId}
+                createDocument={createDocument}
+                commitPatch={commitPatch}
+              />
+            )}
             {view === 'calendar' && (
               <CalendarWorkspace
                 client={client}
@@ -3709,23 +3907,22 @@ function MarketingComponent() {
               />
             )}
             {view === 'channels' && (
-              <ChannelWorkspace
-                client={client}
-                data={data}
-                savingId={savingId}
-                createDocument={createDocument}
-                loadData={reloadWorkspaceData}
-                commitPatch={commitPatch}
-              />
+              <>
+                <div style={{ marginBottom: 16 }}>
+                  <MarketingAiModelSetting />
+                </div>
+                <ChannelWorkspace
+                  client={client}
+                  data={data}
+                  savingId={savingId}
+                  createDocument={createDocument}
+                  loadData={reloadWorkspaceData}
+                  commitPatch={commitPatch}
+                />
+              </>
             )}
-            {view === 'analytics' && (
-              <AnalyticsWorkspace
-                data={data}
-                savingId={savingId}
-                createDocument={createDocument}
-                commitPatch={commitPatch}
-              />
-            )}
+            {view === 'outreach' && <OutreachWorkspace client={client} />}
+            {view === 'workEvidence' && <OutreachEvidenceWorkspace client={client} />}
             {view === 'linkTree' && (
               <LinkTreeWorkspace
                 client={client}
@@ -3742,6 +3939,45 @@ function MarketingComponent() {
       </div>
     </div>
     </MarketingUnsavedChangesContext.Provider>
+  )
+}
+
+// Copies a deep link to the currently-open tab (…/studio/marketing?view=<view>)
+// so a teammate who opens it lands on this exact section. Rebuilds the URL on
+// each click, so it works even if the embedding router dropped the synced param.
+function CopyViewLinkButton({ view, role }: { view: MarketingViewId; role: MarketingRole }) {
+  const [copied, setCopied] = useState(false)
+  const copy = async () => {
+    if (typeof window === 'undefined') return
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.set(MARKETING_VIEW_QUERY_PARAM, view)
+      // Carry a non-default role so a principal link opens the boss guided flow;
+      // keep the 'coworker' default out of the URL to avoid noise.
+      if (role === 'coworker') url.searchParams.delete(MARKETING_ROLE_QUERY_PARAM)
+      else url.searchParams.set(MARKETING_ROLE_QUERY_PARAM, role)
+      await navigator.clipboard.writeText(url.toString())
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch {
+      // Clipboard blocked (no gesture / insecure context) — silently no-op.
+    }
+  }
+  const principalLink = role !== 'coworker'
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      title={
+        principalLink
+          ? `Copy a link that opens this tab in the ${role} guided flow — send it to them`
+          : 'Copy a link that opens this exact tab — share it with a teammate'
+      }
+      style={{ ...styles.button, minHeight: 38 }}
+    >
+      <LinkIcon style={{ width: 15, height: 15 }} />
+      {copied ? 'Link copied' : principalLink ? `Copy ${role} link` : 'Copy link'}
+    </button>
   )
 }
 
@@ -3897,7 +4133,6 @@ function MarketingDashboard({
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <MarketingAiModelSetting />
       <section style={styles.panel}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, maxWidth: 760 }}>
@@ -3909,7 +4144,7 @@ function MarketingDashboard({
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <button type="button" style={styles.primaryButton} onClick={onOpenWorkflow}>
-              Guide me with Autopilot
+              Open Autopilot
             </button>
           </div>
         </div>
@@ -3917,7 +4152,7 @@ function MarketingDashboard({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 16 }}>
           <AnalyticsMetricCard
             label="Content runway"
-            value={`${stats.contentRunwayDays}`}
+            value={`${stats.contentRunwayDays} day${stats.contentRunwayDays === 1 ? '' : 's'}`}
             tone={stats.contentRunwayDays === 0 ? 'risk' : stats.contentRunwayDays < 7 ? 'warn' : 'ok'}
             detail={
               stats.lastUpcomingDate
@@ -3926,10 +4161,10 @@ function MarketingDashboard({
             }
           />
           <AnalyticsMetricCard
-            label="Scheduled items"
+            label="Planned items"
             value={`${stats.upcoming30Items.length}`}
             tone={stats.coveredDaysNext30 < 10 ? 'warn' : 'ok'}
-            detail={`${stats.coveredDaysNext30}/30 days have content`}
+            detail={`next 30 days · content on ${stats.coveredDaysNext30}/30 days`}
           />
           <AnalyticsMetricCard
             label="Active campaigns"
@@ -3941,7 +4176,7 @@ function MarketingDashboard({
             label="Measurement"
             value={`${analyticsStats.readinessScore}%`}
             tone={analyticsStats.readinessScore === 0 ? 'risk' : analyticsStats.readinessScore < 50 ? 'warn' : 'ok'}
-            detail={`${analyticsStats.connectedMeasurementTargets}/${analyticsStats.measurementTargets} work items connected`}
+            detail={`${analyticsStats.connectedMeasurementTargets}/${analyticsStats.measurementTargets} campaigns, funnels, channels, posts & links connected`}
           />
         </div>
       </section>
@@ -4947,6 +5182,7 @@ function splitLines(value: string) {
 }
 
 function MarketingGuidanceWidget({
+  activeView,
   data,
   savingId,
   tutorialRequest,
@@ -4955,11 +5191,14 @@ function MarketingGuidanceWidget({
   tutorialDemoRecommendation,
   openRequest,
   completionSignal,
+  role,
+  onRoleChange,
   onOpenView,
   onOpenAutopilotTarget,
   onGenerateInstagramCarousel,
   onGenerateMarketingPlan,
 }: {
+  activeView: MarketingViewId
   data: MarketingData
   savingId: string | null
   tutorialRequest: number
@@ -4968,6 +5207,8 @@ function MarketingGuidanceWidget({
   tutorialDemoRecommendation: boolean
   openRequest: number
   completionSignal: AutopilotCompletionSignal | null
+  role: MarketingRole
+  onRoleChange: (role: MarketingRole) => void
   onOpenView: MarketingViewOpener
   onOpenAutopilotTarget: (target: AutopilotWorkspaceTarget) => void
   onGenerateInstagramCarousel: (questionnaire: MarketingPlanQuestionnaire) => Promise<CarouselWizardResult>
@@ -5184,6 +5425,8 @@ function MarketingGuidanceWidget({
             backSignal={backSignal}
             actionListSignal={actionListSignal}
             completionSignal={completionSignal}
+            role={role}
+            onRoleChange={onRoleChange}
             onBackAvailableChange={setHasWorkflowBack}
             onOpenView={openViewFromGuide}
             onOpenAutopilotTarget={onOpenAutopilotTarget}
@@ -5203,7 +5446,9 @@ function MarketingGuidanceWidget({
           )}
         </section>
       )}
-      {!autopilotCoachActive && (
+      {/* Home's hero "Open Autopilot" button owns this job on the dashboard, so hide the floating
+          button there — unless a guided tutorial is running and needs it as a highlight target. */}
+      {!autopilotCoachActive && (activeView !== 'dashboard' || tutorialOpen) && (
         <button
           type="button"
           style={guideToggleStyle}
@@ -5219,7 +5464,7 @@ function MarketingGuidanceWidget({
           }}
         >
           <DashboardIcon style={{ width: 18, height: 18 }} />
-          Marketing autopilot
+          Autopilot
         </button>
       )}
       <GuidedTutorialOverlay
@@ -5340,6 +5585,8 @@ function AutopilotHomeChoice({
 // is in progress, plus the three-choice main menu. The exhaustive action
 // directory lives one click away behind "I want to do something specific".
 function AutopilotHomeMenu({
+  role,
+  onRoleChange,
   continueTitle,
   continueStepTitle,
   onResume,
@@ -5347,6 +5594,8 @@ function AutopilotHomeMenu({
   onBrowse,
   onTalk,
 }: {
+  role: MarketingRole
+  onRoleChange: (role: MarketingRole) => void
   continueTitle: string | null
   continueStepTitle: string | null
   onResume: () => void
@@ -5355,6 +5604,7 @@ function AutopilotHomeMenu({
   onTalk: () => void
 }) {
   const resuming = Boolean(continueTitle)
+  const principal = role === 'principal'
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       {resuming && (
@@ -5376,16 +5626,50 @@ function AutopilotHomeMenu({
         </section>
       )}
       <div>
-        <div style={styles.kicker}>{resuming ? 'Or start something else' : 'Marketing autopilot'}</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+          <div style={styles.kicker}>{resuming ? 'Or start something else' : 'Marketing autopilot'}</div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Tailors the guided flow. A ?role= link sets this for whoever you send it to.">
+            <span style={{ ...styles.small, ...styles.muted }}>Viewing as</span>
+            <div style={{ display: 'inline-flex', border: '1px solid var(--card-border-color)', borderRadius: 6, overflow: 'hidden' }}>
+              {MARKETING_ROLES.map((r) => {
+                const active = r === role
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => onRoleChange(r)}
+                    style={{
+                      border: 'none',
+                      padding: '5px 11px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      background: active ? '#007385' : 'transparent',
+                      color: active ? '#fff' : 'var(--card-fg-color)',
+                    }}
+                  >
+                    {r === 'principal' ? 'Principal' : 'Coworker'}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
         <h2 style={{ margin: '0 0 4px', fontSize: 19 }}>What would you like to do?</h2>
         <p style={{ ...styles.small, ...styles.muted, margin: '0 0 14px', lineHeight: 1.5 }}>
-          Pick a direction — you can always dig into a specific tool.
+          {principal
+            ? 'Start with a plan to activate your network, then add the people worth a call.'
+            : 'Pick a direction — you can always dig into a specific tool.'}
         </p>
         <div style={{ display: 'grid', gap: 10 }}>
           <AutopilotHomeChoice
             icon={RocketIcon}
             title="Guide me along"
-            description="Autopilot inspects the suite and walks you through one reviewable step at a time."
+            description={
+              principal
+                ? 'Build your plan around activating your network, then add the people worth a call.'
+                : 'Autopilot inspects the suite and walks you through one reviewable step at a time.'
+            }
             onClick={onGuide}
             tone="primary"
             tourId="designer-workflow-path-plan"
@@ -5399,7 +5683,11 @@ function AutopilotHomeMenu({
           <AutopilotHomeChoice
             icon={UsersIcon}
             title="Talk it through"
-            description="Chat with the strategist before changing anything."
+            description={
+              principal
+                ? 'Talk to the strategist about who to reach and what to offer.'
+                : 'Chat with the strategist before changing anything.'
+            }
             onClick={onTalk}
           />
         </div>
@@ -5594,6 +5882,8 @@ function CarouselWorkflowWizard({
   actionListSignal,
   completionSignal,
   tutorialPrepareSignal,
+  role,
+  onRoleChange,
   onBackAvailableChange,
   onOpenView,
   onOpenAutopilotTarget,
@@ -5613,6 +5903,8 @@ function CarouselWorkflowWizard({
   actionListSignal: number
   completionSignal: AutopilotCompletionSignal | null
   tutorialPrepareSignal: DesignerWorkflowTutorialPrepareSignal
+  role: MarketingRole
+  onRoleChange: (role: MarketingRole) => void
   onBackAvailableChange: (available: boolean) => void
   onOpenView: (view: MarketingViewId) => void
   onOpenAutopilotTarget: (target: AutopilotWorkspaceTarget) => void
@@ -5720,6 +6012,9 @@ function CarouselWorkflowWizard({
 
   useEffect(() => {
     if (!activeSession?.autopilotPlan) return
+    // Scripted plans (e.g. the principal warm-network flow) are hand-authored —
+    // never rebuild them from the content-pipeline data.
+    if (isScriptedAutopilotPlan(activeSession.autopilotPlan)) return
     const refreshedPlan = refreshMarketingAutopilotPlan(
       activeSession.autopilotPlan,
       data,
@@ -6175,16 +6470,36 @@ function CarouselWorkflowWizard({
           </>
         ) : (
           <AutopilotHomeMenu
+            role={role}
+            onRoleChange={onRoleChange}
             continueTitle={latestSetupSession ? latestSetupSession.title || 'Guided setup in progress' : null}
             continueStepTitle={getCurrentAutopilotStep(latestSetupSession?.autopilotPlan)?.title ?? null}
             onResume={continueLatestSetup}
             onGuide={() => {
-              startSession('plan')
               onTutorialAction('choose-plan')
+              if (role === 'principal') {
+                // Boss path: seed the hand-authored warm-network plan and open
+                // its first step (the marketing plan), coach up.
+                const plan = buildPrincipalOutreachPlan()
+                startSession('plan', { autopilotPlan: plan })
+                const step = getCurrentAutopilotStep(plan)
+                if (step) {
+                  onInteractionModeChange('highlight')
+                  onOpenAutopilotTarget(autopilotTargetForStep(step))
+                  onAutopilotCoachActiveChange(true)
+                }
+                return
+              }
+              startSession('plan')
             }}
             onBrowse={() => setBrowseOpen(true)}
             onTalk={() => {
-              startSession('strategist')
+              startSession(
+                'strategist',
+                role === 'principal'
+                  ? { strategistDirection: 'Activate my warm network — who to reach, with what offer, and collect contacts to call.' }
+                  : {},
+              )
               onTutorialAction('choose-strategist')
             }}
           />
@@ -7549,7 +7864,83 @@ export function dispatchMarketingAutopilotStatus(detail: Omit<MarketingAutopilot
   )
 }
 
+// Hand-authored (scripted) plans use this id prefix so the content-pipeline
+// refresh effect leaves them alone instead of rebuilding them from data.
+const SCRIPTED_AUTOPILOT_PLAN_ID_PREFIX = 'principal-outreach-'
+function isScriptedAutopilotPlan(plan: MarketingAutopilotPlan | null | undefined): boolean {
+  return Boolean(plan?.id?.startsWith(SCRIPTED_AUTOPILOT_PLAN_ID_PREFIX))
+}
+
+// A principal/founder gets a hand-authored 2-step guided plan: the marketing plan
+// framed around warm-network activation, then Outreach to add contacts. It's a
+// normal MarketingAutopilotPlan, so the coach overlay, resume card, and target-
+// opening all work unchanged. Steps advance via the coach's Next button (which
+// opens each step's target); kept separate from the content-pipeline builder.
+function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
+  const steps: MarketingAutopilotStep[] = [
+    {
+      id: 'principal-plan-warm-network',
+      view: 'strategyBrief',
+      targetId: 'autopilot-plan-warm-network',
+      title: 'Your plan: activate your network',
+      instruction: 'Your warmest pipeline is the people you already know.',
+      why: 'Inbound stalled with the federal retrenchment; a targeted, specific ask to your own connections is the fastest way to rebuild pipeline — and outreach has been manual and sporadic without a system.',
+      requiredAction: 'Read the plan and decide who is worth a call.',
+      nextAfter: 'Add the people worth a call.',
+      expectedAction: 'link:save',
+      status: 'upcoming',
+    },
+    {
+      id: 'principal-outreach-intake',
+      view: 'outreach',
+      targetId: 'autopilot-outreach-intake',
+      title: 'Add your contacts',
+      instruction: 'Paste anyone worth a call — one per line, name + company is enough.',
+      why: 'We research each person against your work and rank who to call first, warmth-first, with a tailored offer.',
+      requiredAction: 'Paste names, then Check names and Add.',
+      nextAfter: 'Run research to build your ranked call plan.',
+      expectedAction: 'link:save',
+      status: 'upcoming',
+    },
+  ]
+  return normalizeAutopilotStepStatuses({
+    id: `${SCRIPTED_AUTOPILOT_PLAN_ID_PREFIX}${randomKey()}`,
+    title: 'Activate your warm network',
+    currentStepId: steps[0].id,
+    coachOpen: true,
+    steps,
+  })
+}
+
+// Tailored coach copy for the principal steps. Overrides the content-pipeline
+// prompts (which key off expectedAction), so a warm-network step never shows
+// link/research copy.
+function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPrompt | null {
+  if (step.id === 'principal-plan-warm-network') {
+    return {
+      question: 'Ready to activate your network?',
+      shortReason: 'Your own connections, reached with a specific offer, are the fastest pipeline to rebuild — that is the plan.',
+      choices: [
+        { label: 'Show me the plan', detail: 'See how a warm-network push works, then move on to adding contacts.', tone: 'primary' },
+        { label: 'Not yet', detail: 'Stay and read first — use Next step when you are ready.' },
+      ],
+    }
+  }
+  if (step.id === 'principal-outreach-intake') {
+    return {
+      question: "Who's worth a call?",
+      shortReason: 'Paste names — one per line, name + company is enough. We research each and rank who to call first.',
+      choices: [
+        { label: 'Add my contacts', detail: 'Paste into the panel, then Check names and Add.', tone: 'primary' },
+      ],
+    }
+  }
+  return null
+}
+
 function getAutopilotCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPrompt {
+  const principalPrompt = getPrincipalCoachPrompt(step)
+  if (principalPrompt) return principalPrompt
   const prompt = getAutopilotCoachPromptBase(step)
   if (step.status !== 'done') return prompt
   return {
@@ -9943,7 +10334,7 @@ export function getAbTestingComparisonSummary(experiment: MarketingExperiment, r
 
   if (pendingCount > 0) {
     return {
-      label: 'Partial readout',
+      label: 'No winner yet',
       detail: `${results.length - pendingCount} compared, ${pendingCount} still need control-vs-variant data.`,
       status: 'needsComparison',
     }
@@ -10461,6 +10852,16 @@ export function getAbTestingDesignerNextStep(experiment: MarketingExperiment | n
 
 export function getAbTestingInsightActionTarget(insight: AbTestingInsight): { label: string; tab: AbTestingEditorTab; sectionId: string } {
   const text = `${insight.id || ''} ${insight.title} ${insight.action}`
+  // Wait-state readouts (too few events / neutral so far): nothing is broken, the advice is
+  // "keep it running" — so link to the readout instead of offering an evidence-repair CTA.
+  if ((insight.id || '').startsWith('abtest-data-neutral')) {
+    return {
+      label: 'Open result readout',
+      tab: 'results',
+      sectionId: 'ab-test-results-evidence',
+    }
+  }
+
   if (/missing-flag-setup|setup-before/i.test(text)) {
     return {
       label: 'Open setup fields',
@@ -10993,7 +11394,7 @@ export function buildMarketingAssistantActions(
 
   addAction({
     id: 'ask-strategist',
-    title: 'Ask strategist',
+    title: 'Autopilot: ask the strategist',
     description: 'Talk through choices before changing saved marketing content.',
     reason:
       missingStrategy.length > 0
@@ -11009,7 +11410,7 @@ export function buildMarketingAssistantActions(
 
   addAction({
     id: 'suggest-next-step',
-    title: 'Get a guided checklist',
+    title: 'Autopilot: guided checklist',
     description: 'Let Autopilot inspect the suite and suggest one reviewable step at a time.',
     reason:
       dashboardGaps.length > 0
@@ -11050,6 +11451,30 @@ export function buildMarketingAssistantActions(
     recommended: data.researchProjects.length === 0 || data.researchResults.length === 0 || gapViews.has('research'),
     score: data.researchProjects.length === 0 ? 90 : data.researchResults.length === 0 ? 84 : 62,
     view: 'research',
+  })
+
+  // Outreach data lives in the private dataset (not in MarketingData), so these two use a
+  // static baseline score instead of a data-driven one.
+  addAction({
+    id: 'work-call-plan',
+    title: 'Work the call plan',
+    description: 'Paste warm contacts, research each one, and call in ranked order.',
+    reason: 'Open Outreach to see follow-ups due, log calls, and pick tailored offers.',
+    tags: ['outreach', 'calls', 'call plan', 'contacts', 'follow up', 'warm network', 'leads'],
+    recommended: false,
+    score: 72,
+    view: 'outreach',
+  })
+
+  addAction({
+    id: 'review-work-evidence',
+    title: 'Review work evidence',
+    description: 'See the shipped work outreach research points contacts at.',
+    reason: 'Open Evidence to extract capabilities from case studies or tune the records.',
+    tags: ['evidence', 'case studies', 'capabilities', 'outreach', 'work'],
+    recommended: false,
+    score: 60,
+    view: 'workEvidence',
   })
 
   addAction({
@@ -13088,7 +13513,7 @@ export function getMarketingViewTitle(viewId: MarketingViewId) {
 
 // The label a user actually sees on the surface they land on. After the IA rework a view's
 // flat title can differ from its sub-tab label (e.g. research → "Research" tab, abTesting →
-// "Experiments (A/B)" tab, analytics → "Analytics sources"). "Open X" CTAs must use THIS so
+// "A/B tests" tab, analytics → "Analytics sources"). "Open X" CTAs must use THIS so
 // the destination word matches the tab, not the old flat title (which also collides with
 // surface names like "Measure").
 export function getMarketingViewTabLabel(viewId: MarketingViewId): string {
@@ -13641,7 +14066,7 @@ export function buildMarketingAutopilotPlan(
       title: 'Choose trusted findings',
       instruction: 'Trust useful findings.',
       why: 'Only trusted and selected findings should justify campaigns, funnels, calendar items, Quick Links, and content drafts.',
-      requiredAction: 'Open Choose useful evidence and trust at least one credible finding.',
+      requiredAction: 'Open the "What can we trust?" step and trust at least one credible finding.',
       nextAfter: 'Autopilot will use the selected findings to create setup drafts.',
       view: 'research',
       targetId: 'autopilot-research-review',
@@ -15165,7 +15590,7 @@ function getResearchProjectNextStepRecommendation(
       view: 'research',
       strategicContext,
       steps: [
-        'Open Choose useful evidence for the latest project.',
+        'Open the "What can we trust?" step for the latest project.',
         'Trust credible SEO, source, analytics, or collaborator findings.',
         'Select the trusted findings that should guide the drafts.',
       ],
