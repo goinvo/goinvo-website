@@ -506,7 +506,7 @@ export function StrategyWorkspace({
       <div style={{ ...styles.panel, display: 'grid', gap: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
           <div>
-            <div style={styles.kicker}>Guided setup questions</div>
+            <div style={styles.kicker}>Strategy Q&amp;A · guided setup questions</div>
             <h2 style={{ margin: 0, fontSize: 24 }}>Answer the few things every piece of content needs</h2>
             <p style={{ ...styles.muted, margin: '8px 0 0', maxWidth: 780 }}>
               Pick the closest answer when it already exists. Let research draft a new answer only when the current one does not fit.
