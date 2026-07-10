@@ -1,4 +1,4 @@
-import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState, type ComponentType, type CSSProperties, type ReactNode } from 'react'
 import { definePlugin, type Tool, useClient } from 'sanity'
 import {
   BellIcon,
@@ -16,6 +16,7 @@ import {
   TagIcon,
   TargetIcon,
   TrendUpwardIcon,
+  UsersIcon,
 } from '@sanity/icons'
 import { analyticsProviderOptions, analyticsStatusOptions } from '../schemas/marketingAnalyticsSource'
 import { calendarStatusOptions, contentTypeOptions } from '../schemas/marketingCalendarItem'
@@ -5144,7 +5145,7 @@ function MarketingGuidanceWidget({
                     style={{ ...styles.inlineLink, padding: 0, border: 'none', background: 'transparent', fontSize: 12 }}
                   onClick={() => setActionListSignal((current) => current + 1)}
                   >
-                    Browse all actions
+                    Main menu
                   </button>
                 </div>
               )}
@@ -5273,6 +5274,137 @@ function DesignerWorkflowTutorialLibrary({
         </a>
       </div>
     </section>
+  )
+}
+
+// One big choice on the Autopilot home menu. Icon tile + title + one line of help.
+function AutopilotHomeChoice({
+  icon: Icon,
+  title,
+  description,
+  onClick,
+  tone = 'default',
+  tourId,
+}: {
+  icon: ComponentType<{ style?: CSSProperties }>
+  title: string
+  description: string
+  onClick: () => void
+  tone?: 'default' | 'primary'
+  tourId?: string
+}) {
+  const primary = tone === 'primary'
+  return (
+    <button
+      type="button"
+      data-tour-id={tourId}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        textAlign: 'left',
+        width: '100%',
+        padding: 14,
+        borderRadius: 8,
+        cursor: 'pointer',
+        border: primary ? '1px solid #007385' : '1px solid var(--card-border-color)',
+        background: primary ? 'rgba(0, 115, 133, 0.10)' : 'var(--card-bg-color)',
+        color: 'var(--card-fg-color)',
+      }}
+    >
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 34,
+          height: 34,
+          borderRadius: 8,
+          flex: '0 0 auto',
+          background: primary ? '#007385' : 'rgba(0, 115, 133, 0.12)',
+          color: primary ? '#fff' : '#007385',
+        }}
+      >
+        <Icon style={{ width: 18, height: 18 }} />
+      </span>
+      <span style={{ display: 'grid', gap: 2 }}>
+        <span style={{ fontWeight: 800, fontSize: 15 }}>{title}</span>
+        <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>{description}</span>
+      </span>
+    </button>
+  )
+}
+
+// The Autopilot home: a "continuing where we left off" card when a guided setup
+// is in progress, plus the three-choice main menu. The exhaustive action
+// directory lives one click away behind "I want to do something specific".
+function AutopilotHomeMenu({
+  continueTitle,
+  continueStepTitle,
+  onResume,
+  onGuide,
+  onBrowse,
+  onTalk,
+}: {
+  continueTitle: string | null
+  continueStepTitle: string | null
+  onResume: () => void
+  onGuide: () => void
+  onBrowse: () => void
+  onTalk: () => void
+}) {
+  const resuming = Boolean(continueTitle)
+  return (
+    <div style={{ display: 'grid', gap: 16 }}>
+      {resuming && (
+        <section style={{ ...styles.panel, padding: 16, borderColor: 'rgba(0, 115, 133, 0.5)' }}>
+          <div style={styles.kicker}>Continuing where we left off…</div>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{continueTitle}</div>
+          {continueStepTitle && (
+            <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>Next decision: {continueStepTitle}</div>
+          )}
+          <button
+            type="button"
+            data-tour-id="designer-workflow-path-single"
+            style={{ ...styles.primaryButton, marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            onClick={onResume}
+          >
+            <RefreshIcon style={{ width: 16, height: 16 }} />
+            Resume
+          </button>
+        </section>
+      )}
+      <div>
+        <div style={styles.kicker}>{resuming ? 'Or start something else' : 'Marketing autopilot'}</div>
+        <h2 style={{ margin: '0 0 4px', fontSize: 19 }}>What would you like to do?</h2>
+        <p style={{ ...styles.small, ...styles.muted, margin: '0 0 14px', lineHeight: 1.5 }}>
+          Pick a direction — you can always dig into a specific tool.
+        </p>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <AutopilotHomeChoice
+            icon={RocketIcon}
+            title="Guide me along"
+            description="Autopilot inspects the suite and walks you through one reviewable step at a time."
+            onClick={onGuide}
+            tone="primary"
+            tourId="designer-workflow-path-plan"
+          />
+          <AutopilotHomeChoice
+            icon={SearchIcon}
+            title="I want to do something specific"
+            description="Search and jump straight to any tool or action."
+            onClick={onBrowse}
+          />
+          <AutopilotHomeChoice
+            icon={UsersIcon}
+            title="Talk it through"
+            description="Chat with the strategist before changing anything."
+            onClick={onTalk}
+          />
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -5498,6 +5630,9 @@ function CarouselWorkflowWizard({
   const [suggestedPlanCreating, setSuggestedPlanCreating] = useState(false)
   const [strategyError, setStrategyError] = useState('')
   const [actionSearch, setActionSearch] = useState('')
+  // Home has two faces: the minimal 3-choice menu (default) and the full
+  // searchable action directory, revealed only via "I want to do something specific".
+  const [browseOpen, setBrowseOpen] = useState(false)
   const activeSession = sessions.find((session) => session.id === activeSessionId) || null
   const mode = activeSession?.mode || null
   const stepIndex = activeSession?.stepIndex || 0
@@ -5553,6 +5688,7 @@ function CarouselWorkflowWizard({
 
   useEffect(() => {
     if (actionListSignal <= 0) return
+    setBrowseOpen(false)
     returnToPathSelection()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionListSignal])
@@ -6018,14 +6154,41 @@ function CarouselWorkflowWizard({
             onDelete={deleteSession}
           />
         )}
-        <MarketingAssistantActionList
-          actions={assistantActions}
-          query={actionSearch}
-          onQueryChange={setActionSearch}
-          onSelect={selectAssistantAction}
-          title="What are you trying to make easier?"
-          description="Search in plain language: test a page, plan posts, prove a claim, choose a next step, or review what needs attention."
-        />
+        {browseOpen ? (
+          <>
+            <button
+              type="button"
+              style={{ ...styles.inlineLink, padding: 0, border: 'none', background: 'transparent', fontSize: 13, cursor: 'pointer' }}
+              onClick={() => setBrowseOpen(false)}
+            >
+              <ChevronLeftIcon style={{ width: 16, height: 16 }} />
+              Back to menu
+            </button>
+            <MarketingAssistantActionList
+              actions={assistantActions}
+              query={actionSearch}
+              onQueryChange={setActionSearch}
+              onSelect={selectAssistantAction}
+              title="Find a tool or action"
+              description="Search in plain language: test a page, plan posts, prove a claim, choose a next step, or review what needs attention."
+            />
+          </>
+        ) : (
+          <AutopilotHomeMenu
+            continueTitle={latestSetupSession ? latestSetupSession.title || 'Guided setup in progress' : null}
+            continueStepTitle={getCurrentAutopilotStep(latestSetupSession?.autopilotPlan)?.title ?? null}
+            onResume={continueLatestSetup}
+            onGuide={() => {
+              startSession('plan')
+              onTutorialAction('choose-plan')
+            }}
+            onBrowse={() => setBrowseOpen(true)}
+            onTalk={() => {
+              startSession('strategist')
+              onTutorialAction('choose-strategist')
+            }}
+          />
+        )}
       </div>
     )
   }
