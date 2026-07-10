@@ -123,6 +123,42 @@ export type {
   PublishOutcome,
 } from './publishers'
 
+// Outreach: contact intake, per-contact research, work-evidence extraction,
+// offer catalog + on-the-fly offer drafts, call plan + follow-ups.
+export {
+  DEFAULT_OFFERS,
+  offerDocId,
+  evidenceDocId,
+  buildIntakePrompts,
+  normalizeParsedContacts,
+  contactDedupeKey,
+  buildContactCreateDoc,
+  buildResearchPrompts,
+  normalizeResearch,
+  buildResearchPatch,
+  buildInteractionEntry,
+  buildEvidenceExtractionPrompts,
+  normalizeEvidence,
+  buildEvidenceDoc,
+  compactEvidenceIndex,
+  rankCallPlan,
+  dueFollowUps,
+} from './outreach'
+export type {
+  OutreachOfferDef,
+  ParsedIntakeContact,
+  OutreachOpportunity,
+  OutreachSource,
+  ContactResearch,
+  OutreachContact,
+  ResearchPatchOptions,
+  RelevantEvidence,
+  ProposedOffer,
+  WorkEvidence,
+  EvidenceSource,
+  EvidenceIndexItem,
+} from './outreach'
+
 // Linked-draft cascade (create-linked-drafts from a research project).
 export { createResearchProjectRecords } from './cascades'
 export type {
