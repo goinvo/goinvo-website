@@ -11,7 +11,7 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
       {
         id: 'open-widget',
         targetId: 'designer-workflow-toggle',
-        instruction: 'Start with Marketing autopilot',
+        instruction: 'Start with Autopilot',
         description: 'This bottom-right tool is the fastest path from a loose content idea to the research plan designers need before scheduling content.',
         nextLabel: 'Open it',
       },
@@ -64,7 +64,7 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
       {
         id: 'open-widget',
         targetId: 'designer-workflow-toggle',
-        instruction: 'Open Marketing autopilot',
+        instruction: 'Open Autopilot',
         description: 'Sessions live inside the workflow panel so setup history stays close to the task.',
       },
       {

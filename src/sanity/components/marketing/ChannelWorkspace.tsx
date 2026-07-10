@@ -48,6 +48,31 @@ interface ChannelWorkspaceProps {
   commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
 }
 
+// Shallow dirty check: compares a local edit draft against the snapshot it was
+// reset from, key-by-key. Blank-ish values (undefined/null/''/[]) count as equal
+// so untouched optional fields never read as edits; object values (arrays)
+// fall back to a JSON comparison. Kept local (a twin lives in CalendarWorkspace.tsx)
+// rather than added to a shared module to keep this change self-contained.
+function hasDraftEdits<T extends object>(draft: T, saved: T): boolean {
+  const a = draft as Record<string, unknown>
+  const b = saved as Record<string, unknown>
+  const isBlank = (value: unknown) =>
+    value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const left = a[key]
+    const right = b[key]
+    if (left === right) continue
+    if (isBlank(left) && isBlank(right)) continue
+    if (
+      typeof left === 'object' && left !== null &&
+      typeof right === 'object' && right !== null &&
+      JSON.stringify(left) === JSON.stringify(right)
+    ) continue
+    return true
+  }
+  return false
+}
+
 export function ChannelWorkspace({
   client,
   data,
@@ -58,6 +83,9 @@ export function ChannelWorkspace({
 }: ChannelWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(data.channels[0]?._id || null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  // Reported up by the editor: the draft differs from the saved channel, so
+  // switching selection would silently discard edits.
+  const [editorDirty, setEditorDirty] = useState(false)
   const toast = useToast()
   const { confirm, confirmDialog } = useConfirmDialog()
   const selected = data.channels.find((channel) => channel._id === selectedId) || null
@@ -66,7 +94,24 @@ export function ChannelWorkspace({
     if (!selectedId && data.channels.length > 0) setSelectedId(data.channels[0]._id)
   }, [data.channels, selectedId])
 
+  // One confirm for every action that would replace the editor's unsaved draft.
+  const confirmDiscardEdits = () =>
+    confirm({
+      title: 'Discard unsaved changes?',
+      message: `Discard unsaved changes to "${selected?.title || selected?.key || 'this channel'}"? Your edits will be lost.`,
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      tone: 'caution',
+    })
+
+  const selectChannel = async (id: string) => {
+    if (id === selectedId) return
+    if (editorDirty && !(await confirmDiscardEdits())) return
+    setSelectedId(id)
+  }
+
   const createChannel = async () => {
+    if (editorDirty && !(await confirmDiscardEdits())) return
     try {
       const createdId = await createDocument({
         _type: 'marketingChannel',
@@ -149,7 +194,7 @@ export function ChannelWorkspace({
             <button
               key={channel._id}
               type="button"
-              onClick={() => setSelectedId(channel._id)}
+              onClick={() => void selectChannel(channel._id)}
               style={{
                 ...styles.card,
                 padding: 12,
@@ -192,6 +237,7 @@ export function ChannelWorkspace({
           saving={savingId === selected?._id || deletingId === selected?._id}
           onSave={commitPatch}
           onDelete={deleteChannel}
+          onDirtyChange={setEditorDirty}
         />
       </section>
     </div>
@@ -205,6 +251,7 @@ function ChannelEditor({
   saving,
   onSave,
   onDelete,
+  onDirtyChange,
 }: {
   client: StudioClient
   channel: MarketingChannel | null
@@ -212,8 +259,12 @@ function ChannelEditor({
   saving: boolean
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
   onDelete: (channel: MarketingChannel) => Promise<void>
+  onDirtyChange: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<MarketingChannel | null>(channel)
+  // The exact snapshot the draft was last reset from (content types already
+  // normalized), so the dirty check never trips on normalization alone.
+  const [baseline, setBaseline] = useState<MarketingChannel | null>(channel)
   const [newTypeLabel, setNewTypeLabel] = useState('')
   const [newTypeValue, setNewTypeValue] = useState('')
   const [newTypeDescription, setNewTypeDescription] = useState('')
@@ -221,11 +272,19 @@ function ChannelEditor({
   const { confirm, confirmDialog } = useConfirmDialog()
 
   useEffect(() => {
-    setDraft(channel ? { ...channel, contentTypes: normalizeContentTypes(channel.contentTypes || []) } : null)
+    const next = channel ? { ...channel, contentTypes: normalizeContentTypes(channel.contentTypes || []) } : null
+    setDraft(next)
+    setBaseline(next)
     setNewTypeLabel('')
     setNewTypeValue('')
     setNewTypeDescription('')
   }, [channel])
+
+  const dirty = !!draft && !!baseline && hasDraftEdits(draft, baseline)
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   if (!draft || !channel) {
     return <EmptyPanel icon={TagIcon} title="Select a channel" description="Add a channel, then choose it to edit." />
@@ -357,12 +416,17 @@ function ChannelEditor({
             onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
           />
         </InputField>
-        <InputField label="Key">
+        <InputField label="Key" help="Links calendar items to this channel — changing it disconnects items using it.">
           <input
             style={styles.input}
             value={draft.key || ''}
             onChange={(event) => setDraft({ ...draft, key: event.currentTarget.value })}
           />
+          {usage.total > 0 && !!channel.key && slugify(draft.key || draft.title || 'channel') !== channel.key && (
+            <div style={{ ...styles.small, color: '#d6a93f', fontWeight: 700, marginTop: 4 }}>
+              {usage.total} item{usage.total === 1 ? '' : 's'} still use the saved key &ldquo;{channel.key}&rdquo;. Saving a different key disconnects them.
+            </div>
+          )}
         </InputField>
       </div>
       <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
@@ -393,6 +457,10 @@ function ChannelEditor({
         <Stack gap={10}>
           {normalizeContentTypes(draft.contentTypes || []).map((contentType) => {
             const usageCount = getContentTypeUsage(data, channel, contentType)
+            // Compare against the SAVED value for this row: usageCount follows the
+            // draft value, so it drops to 0 as soon as the value is retyped.
+            const savedType = (channel.contentTypes || []).find((candidate) => candidate._key === contentType._key)
+            const savedUsage = savedType ? getContentTypeUsage(data, channel, savedType) : 0
             return (
               <div
                 data-mobile-stack="true"
@@ -414,7 +482,7 @@ function ChannelEditor({
                     onChange={(event) => updateContentType(contentType._key || '', { label: event.currentTarget.value })}
                   />
                 </InputField>
-                <InputField label="Value">
+                <InputField label="Value" help="Links calendar items to this format — changing it disconnects items using it.">
                   <input
                     style={styles.input}
                     value={contentType.value || ''}
@@ -423,6 +491,11 @@ function ChannelEditor({
                   {usageCount > 0 && (
                     <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
                       Used by {usageCount} item{usageCount === 1 ? '' : 's'}
+                    </div>
+                  )}
+                  {savedType && savedUsage > 0 && (savedType.value || '') !== (contentType.value || '') && (
+                    <div style={{ ...styles.small, color: '#d6a93f', fontWeight: 700, marginTop: 4 }}>
+                      {savedUsage} item{savedUsage === 1 ? '' : 's'} still use the saved value &ldquo;{savedType.value}&rdquo;. Saving a different value disconnects them.
                     </div>
                   )}
                 </InputField>
@@ -514,9 +587,41 @@ function ChannelEditor({
           </a>
         </div>
       </details>
-      <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
-        {saving ? 'Saving...' : 'Save channel'}
-      </button>
+      <div
+        style={{
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 2,
+          display: 'flex',
+          gap: 10,
+          alignItems: 'center',
+          background: 'var(--card-bg-color)',
+          borderTop: '1px solid var(--card-border-color)',
+          margin: '0 -18px -18px',
+          padding: '10px 18px 14px',
+          borderRadius: '0 0 8px 8px',
+        }}
+      >
+        {dirty && (
+          <span
+            style={{
+              ...styles.small,
+              fontWeight: 800,
+              color: '#d6a93f',
+              background: 'rgba(124, 101, 39, 0.16)',
+              border: '1px solid rgba(214, 169, 63, 0.35)',
+              borderRadius: 999,
+              padding: '4px 10px',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Unsaved changes
+          </span>
+        )}
+        <button type="button" style={{ ...styles.primaryButton, flex: 1 }} disabled={saving} onClick={() => void save()}>
+          {saving ? 'Saving...' : 'Save channel'}
+        </button>
+      </div>
     </Stack>
   )
 }

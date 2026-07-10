@@ -3649,61 +3649,8 @@ function MarketingComponent() {
                     gap: 4,
                   }}
                 >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    onClick={() => {
-                      if (requestMarketingView('abTesting')) setActionsOpen(false)
-                    }}
-                  >
-                    A/B Tests
-                    <TrendUpwardIcon style={{ width: 15, height: 15 }} />
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    onClick={() => {
-                      if (requestMarketingView('campaigns')) setActionsOpen(false)
-                    }}
-                  >
-                    Campaign plans
-                    <TargetIcon style={{ width: 15, height: 15 }} />
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    onClick={() => {
-                      if (requestMarketingView('funnels')) setActionsOpen(false)
-                    }}
-                  >
-                    Funnel paths
-                    <MasterDetailIcon style={{ width: 15, height: 15 }} />
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    onClick={() => {
-                      if (requestMarketingView('analytics')) setActionsOpen(false)
-                    }}
-                  >
-                    Performance analytics
-                    <TrendUpwardIcon style={{ width: 15, height: 15 }} />
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                    onClick={() => {
-                      if (requestMarketingView('templates')) setActionsOpen(false)
-                    }}
-                  >
-                    Reusable templates
-                    <DashboardIcon style={{ width: 15, height: 15 }} />
-                  </button>
+                  {/* Only actions that have no home in the top nav live here — the sub-tabs
+                      already cover every section, so no duplicate view shortcuts. */}
                   <button
                     type="button"
                     role="menuitem"
@@ -3921,7 +3868,9 @@ function MarketingComponent() {
                 />
               </>
             )}
-            {view === 'outreach' && <OutreachWorkspace client={client} />}
+            {view === 'outreach' && (
+              <OutreachWorkspace client={client} onOpenEvidence={() => requestMarketingView('workEvidence')} />
+            )}
             {view === 'workEvidence' && <OutreachEvidenceWorkspace client={client} />}
             {view === 'linkTree' && (
               <LinkTreeWorkspace
