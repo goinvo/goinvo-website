@@ -825,9 +825,10 @@ const categories: Category[] = [
               <>
                 Toggle <strong>Selected Feature</strong> to include the piece
                 in selected/featured surfaces such as the /work feature cards.
-                Toggle <strong>Spotlight on /vision</strong> to pin it to the
-                top Spotlight slot. Keep only one Spotlight checked; the public
-                page uses the first match it finds.
+                To feature it at the top of /vision, open{' '}
+                <strong>Content → Spotlight</strong> and add it to the
+                Spotlight list — the first item is shown large, the rest appear
+                beside it, and you can drag to reorder.
               </>
             ),
           },
