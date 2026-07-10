@@ -924,7 +924,7 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'outreach',
     title: 'Outreach',
-    description: 'Warm-network activation: contacts in, researched call plan out.',
+    description: 'Reach out to people you already know — paste contacts, get a researched call plan.',
     icon: UsersIcon,
     landingView: 'outreach',
     tabs: [
@@ -5177,6 +5177,17 @@ function MarketingGuidanceWidget({
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0)
   const [tutorialPrepareSignal, setTutorialPrepareSignal] = useState<DesignerWorkflowTutorialPrepareSignal>(null)
   const activeTutorial = getDesignerWorkflowTutorial(activeTutorialId)
+
+  // A shared "?role=principal" link is a hand-off: the recipient (a principal /
+  // boss) should arrive looking at the guided Autopilot, not a bare workspace
+  // tab with the panel closed. Open it to the home on arrival so "Guide me
+  // along" is right there. Mount-only + URL-gated, so it never re-opens after
+  // they close it and never fires for the normal (coworker) tool users.
+  useEffect(() => {
+    if (roleFromLocation() === 'principal') setOpen(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const openViewFromGuide = (view: MarketingViewId) => {
     const opened = onOpenView(view)
     if (opened !== false) setOpen(false)
@@ -5607,7 +5618,7 @@ function AutopilotHomeMenu({
         <h2 style={{ margin: '0 0 4px', fontSize: 19 }}>What would you like to do?</h2>
         <p style={{ ...styles.small, ...styles.muted, margin: '0 0 14px', lineHeight: 1.5 }}>
           {principal
-            ? 'Start with a plan to activate your network, then add the people worth a call.'
+            ? 'Start with a plan for reaching out to people you already know, then add the ones worth a call.'
             : 'Pick a direction — you can always dig into a specific tool.'}
         </p>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -5616,7 +5627,7 @@ function AutopilotHomeMenu({
             title="Guide me along"
             description={
               principal
-                ? 'Build your plan around activating your network, then add the people worth a call.'
+                ? 'Make a plan for finding work through people you already know, then add who to call.'
                 : 'Autopilot inspects the suite and walks you through one reviewable step at a time.'
             }
             onClick={onGuide}
@@ -6446,7 +6457,7 @@ function CarouselWorkflowWizard({
               startSession(
                 'strategist',
                 role === 'principal'
-                  ? { strategistDirection: 'Activate my warm network — who to reach, with what offer, and collect contacts to call.' }
+                  ? { strategistDirection: 'Help me find work through people I already know — who to reach out to, what to offer, and who to call.' }
                   : {},
               )
               onTutorialAction('choose-strategist')
@@ -7831,9 +7842,9 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
       id: 'principal-plan-warm-network',
       view: 'strategyBrief',
       targetId: 'autopilot-plan-warm-network',
-      title: 'Your plan: activate your network',
-      instruction: 'Your warmest pipeline is the people you already know.',
-      why: 'Inbound stalled with the federal retrenchment; a targeted, specific ask to your own connections is the fastest way to rebuild pipeline — and outreach has been manual and sporadic without a system.',
+      title: 'Your plan: who to reach out to',
+      instruction: 'The fastest work comes from people you already know.',
+      why: 'Inbound stalled with the federal retrenchment; a direct, specific ask to people you already know is the fastest way to rebuild pipeline — and this kind of outreach has been manual and sporadic without a system.',
       requiredAction: 'Read the plan and decide who is worth a call.',
       nextAfter: 'Add the people worth a call.',
       expectedAction: 'link:save',
@@ -7854,7 +7865,7 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
   ]
   return normalizeAutopilotStepStatuses({
     id: `${SCRIPTED_AUTOPILOT_PLAN_ID_PREFIX}${randomKey()}`,
-    title: 'Activate your warm network',
+    title: 'Reach out to people you know',
     currentStepId: steps[0].id,
     coachOpen: true,
     steps,
@@ -7867,10 +7878,10 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
 function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPrompt | null {
   if (step.id === 'principal-plan-warm-network') {
     return {
-      question: 'Ready to activate your network?',
-      shortReason: 'Your own connections, reached with a specific offer, are the fastest pipeline to rebuild — that is the plan.',
+      question: 'Ready to line up some calls?',
+      shortReason: 'The people you already know — past clients, colleagues, contacts — are the fastest way to win new work. This plan turns that into a short list of who to call.',
       choices: [
-        { label: 'Show me the plan', detail: 'See how a warm-network push works, then move on to adding contacts.', tone: 'primary' },
+        { label: 'Show me the plan', detail: 'See the plan, then move on to adding the people worth a call.', tone: 'primary' },
         { label: 'Not yet', detail: 'Stay and read first — use Next step when you are ready.' },
       ],
     }
