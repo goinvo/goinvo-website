@@ -840,7 +840,7 @@ export function OutreachWorkspace({ client }: OutreachWorkspaceProps) {
         )}
       </section>
 
-      <section style={styles.panel}>
+      <section data-tour-id="autopilot-outreach-intake" style={styles.panel}>
         <PanelHeading
           title="Add contacts"
           description="Paste names — one per line, as messy as you like: “Name — company — how we know them”. AI parses them into contact records; duplicates are skipped automatically."
