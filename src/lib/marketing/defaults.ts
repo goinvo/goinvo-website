@@ -48,6 +48,9 @@ export const DEFAULTS: Record<ManagedMarketingType, Record<string, unknown>> = {
   marketingResearchRun: { provider: 'semrush', status: 'queued', database: 'us' },
   marketingResearchPlan: { status: 'draft', releaseCadence: 'weekly' },
   marketingTemplate: { kind: 'campaign', status: 'active', order: 100 },
+  marketingContact: { status: 'new', warmth: 'warm' },
+  marketingOffer: { status: 'active', order: 100 },
+  marketingWorkEvidence: { status: 'active', sourceType: 'caseStudy', manuallyEdited: false },
 }
 
 /**
@@ -120,6 +123,17 @@ export const ARRAY_ITEM_TYPES: Record<ManagedMarketingType, Record<string, strin
     successMetrics: 'successMetric',
     stages: 'templateFunnelStage',
   },
+  marketingContact: {
+    opportunities: 'outreachOpportunity',
+    researchSources: 'outreachSource',
+    relevantEvidence: 'outreachEvidenceRef',
+    proposedOffers: 'outreachProposedOffer',
+    interactions: 'outreachInteraction',
+  },
+  marketingOffer: {},
+  marketingWorkEvidence: {
+    highlights: 'evidenceHighlight',
+  },
 }
 
 /** Document types that have a `slug` field (so a slug can be derived from title). */
@@ -149,6 +163,9 @@ export const REQUIRED_FIELDS: Record<ManagedMarketingType, string[]> = {
   marketingResearchRun: ['title', 'project', 'status'],
   marketingResearchPlan: ['title', 'status'],
   marketingTemplate: ['title', 'kind', 'status'],
+  marketingContact: ['name', 'status'],
+  marketingOffer: ['title', 'key', 'status'],
+  marketingWorkEvidence: ['title', 'status'],
 }
 
 // Compile-time guard: every managed type must have an entry in each record above.
