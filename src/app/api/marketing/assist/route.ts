@@ -375,6 +375,11 @@ export async function POST(request: Request) {
     const fallback = buildFallbackSuggestion(kind, draft, siteContext, body.prompt || '')
     let suggestion = fallback
     let usedAi = false
+    // Why the answer is a fallback, surfaced to the caller. A silent fallback
+    // reads as real AI advice — that hid a weeks-long outage (the missing
+    // maxDuration) because nothing in the UI or the response said "this is the
+    // canned path". Sanitized to the error message only, no stack.
+    let aiError: string | null = null
 
     if (isAnthropicConfigured()) {
       try {
@@ -387,7 +392,10 @@ export async function POST(request: Request) {
         usedAi = true
       } catch (error) {
         console.error('Marketing assistant Claude generation failed:', error)
+        aiError = error instanceof Error && error.message ? error.message.slice(0, 200) : 'Claude generation failed.'
       }
+    } else {
+      aiError = 'ANTHROPIC_API_KEY is not configured — AI assistance is off.'
     }
 
     const normalized = normalizeSuggestion(suggestion, fallback, kind, siteContext)
@@ -395,6 +403,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       suggestion: normalized,
       usedAi,
+      aiError,
       context: {
         features: siteContext.features.length,
         caseStudies: siteContext.caseStudies.length,
