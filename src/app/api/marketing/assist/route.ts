@@ -6,6 +6,13 @@ import { getMarketingWriteClient } from '@/lib/marketing/client'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { client } from '@/sanity/lib/client'
 
+// The strategist/suggestion generations run 10–45s (large system + site
+// context, up to 2600 output tokens). Without this, Vercel's default function
+// window expires mid-stream, the SDK throws, and the route silently returns
+// the non-AI fallback (usedAi:false) — every other Claude route here declares
+// a maxDuration for the same reason.
+export const maxDuration = 120
+
 type FinancialPostureContext = ReturnType<typeof financialPostureAiContext>
 
 /**
