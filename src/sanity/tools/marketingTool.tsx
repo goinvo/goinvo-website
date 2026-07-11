@@ -1890,6 +1890,13 @@ type MarketingStrategistMessage = {
   role: 'user' | 'assistant'
   content: string
   createdAt: string
+  /**
+   * Whether this assistant reply came from the AI (true) or the rule-based
+   * fallback (false). Undefined = not an API answer (local notices) or a
+   * message saved before this field existed. Fallback replies MUST be flagged
+   * in the transcript — an unmarked fallback reads as tailored advice.
+   */
+  usedAi?: boolean
 }
 
 export type MarketingStrategyAssetSuggestion = Partial<MarketingAudienceProfile> &
@@ -1953,6 +1960,8 @@ export type MarketingAiAssistResponse = {
   suggestion?: MarketingAiSuggestion
   error?: string
   usedAi?: boolean
+  /** Why `usedAi` is false (Claude error / key unset) — shown with the fallback flag so silent outages can't hide. */
+  aiError?: string | null
   context?: {
     features?: number
     caseStudies?: number
@@ -6191,6 +6200,7 @@ function CarouselWorkflowWizard({
         role: 'assistant',
         content: assistantText,
         createdAt: new Date().toISOString(),
+        usedAi: !!payload.usedAi,
       }
       updateActiveSession({
         strategistMessages: [...nextMessages, assistantMessage].slice(-30),
@@ -6978,6 +6988,11 @@ function StrategistChatStep({
 }) {
   const recommendation = suggestion?.strategistChat?.primaryRecommendation || null
   const assistantMessage = suggestion?.strategistChat?.assistantMessage || messages.filter((message) => message.role === 'assistant').at(-1)?.content
+  // A fallback reply must never masquerade as AI advice: the latest assistant
+  // message carries usedAi from the API, and false triggers the amber notice
+  // below (this is how a silent AI outage becomes visible to the user).
+  const latestAssistant = [...messages].reverse().find((message) => message.role === 'assistant')
+  const fallbackReply = latestAssistant?.usedAi === false
   const alternatives = suggestion?.strategistChat?.alternatives || []
   const actions = recommendation?.proposedActions?.length ? recommendation.proposedActions : defaultStrategistUiActions()
   const recentHistory = [...messages].reverse()
@@ -7025,6 +7040,15 @@ function StrategistChatStep({
       </section>
 
       {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800 }}>{error}</div>}
+
+      {fallbackReply && (
+        <div style={{ ...styles.panel, boxShadow: 'none', padding: '8px 10px', borderColor: 'rgba(214, 169, 63, 0.55)', display: 'grid', gap: 2 }}>
+          <strong style={{ ...styles.small, color: '#d6a93f' }}>Fallback answer — AI unavailable</strong>
+          <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
+            The AI could not be reached, so this reply came from generic rules — it is not tailored advice. Ask again to retry.
+          </span>
+        </div>
+      )}
 
       {recommendation && (
         <section style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG, display: 'grid', gap: 12 }}>
@@ -7130,7 +7154,13 @@ function StrategistChatStep({
                   lineHeight: 1.45,
                 }}
               >
-                <strong style={{ color: 'var(--card-fg-color)' }}>{message.role === 'assistant' ? 'Autopilot' : 'You'}: </strong>
+                <strong style={{ color: 'var(--card-fg-color)' }}>
+                  {message.role === 'assistant' ? 'Autopilot' : 'You'}
+                  {message.role === 'assistant' && message.usedAi === false && (
+                    <span style={{ color: '#d6a93f' }}> (fallback — AI unavailable)</span>
+                  )}
+                  {': '}
+                </strong>
                 {message.content}
               </div>
             ))}
@@ -7299,8 +7329,8 @@ function StrategyAgentStep({
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ ...styles.small, color: '#4dc4d6', fontWeight: 800 }}>
-                {demoRecommendation ? 'Tutorial sample' : usedAi ? 'AI recommendation' : 'Rule-based next step'}
+              <div style={{ ...styles.small, color: !demoRecommendation && usedAi === false ? '#d6a93f' : '#4dc4d6', fontWeight: 800 }}>
+                {demoRecommendation ? 'Tutorial sample' : usedAi ? 'AI recommendation' : 'Fallback — rule-based next step (AI unavailable)'}
               </div>
               <h3 style={{ margin: '4px 0', fontSize: 18 }}>{recommendation.title}</h3>
               <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>{recommendation.detail}</p>
@@ -8416,6 +8446,7 @@ export function MarketingAiAssistPanel({
   const [error, setError] = useState('')
   const [suggestion, setSuggestion] = useState<MarketingAiSuggestion | null>(null)
   const [usedAi, setUsedAi] = useState<boolean | null>(null)
+  const [aiError, setAiError] = useState<string | null>(null)
   const [context, setContext] = useState<MarketingAiAssistResponse['context'] | null>(null)
   const [applied, setApplied] = useState(false)
   const copy = marketingAiAssistCopy[kind]
@@ -8426,6 +8457,7 @@ export function MarketingAiAssistPanel({
   const requestSuggestion = async () => {
     setLoading(true)
     setError('')
+    setAiError(null)
     setApplied(false)
     try {
       const response = await fetch('/api/marketing/assist', {
@@ -8450,6 +8482,7 @@ export function MarketingAiAssistPanel({
       if (!response.ok || !payload.suggestion) throw new Error(payload.error || 'The assistant could not create a suggestion.')
       setSuggestion(payload.suggestion)
       setUsedAi(!!payload.usedAi)
+      setAiError(payload.usedAi ? null : payload.aiError || null)
       setContext(payload.context || null)
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'The assistant could not create a suggestion.')
@@ -8555,8 +8588,13 @@ export function MarketingAiAssistPanel({
             </div>
           )}
           {usedAi === false && (
-            <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-              This is not researched evidence. It is a deterministic draft from the current CMS state and should be reviewed before saving.
+            <div style={{ ...styles.small, lineHeight: 1.45 }}>
+              <strong style={{ color: '#d6a93f' }}>Fallback — AI unavailable.</strong>{' '}
+              <span style={styles.muted}>
+                This is not researched evidence. It is a deterministic draft from the current CMS state and should be
+                reviewed before saving. Try again for an AI draft.
+                {aiError ? ` (Reason: ${aiError})` : ''}
+              </span>
             </div>
           )}
           {section && (
@@ -14960,6 +14998,7 @@ function normalizeStoredStrategistMessages(value: unknown): MarketingStrategistM
         role: record.role === 'assistant' ? 'assistant' : 'user',
         content: content.slice(0, 1800),
         createdAt: typeof record.createdAt === 'string' ? record.createdAt : new Date().toISOString(),
+        ...(typeof record.usedAi === 'boolean' ? { usedAi: record.usedAi } : {}),
       }
     })
     .filter((item): item is MarketingStrategistMessage => !!item)
