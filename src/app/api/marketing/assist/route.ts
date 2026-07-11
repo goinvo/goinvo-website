@@ -1,7 +1,36 @@
 import { NextResponse } from 'next/server'
 import { generateClaudeText, isAnthropicConfigured, parseJsonObject, resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { financialPostureAiContext, FINANCIAL_POSTURE_DOC_ID } from '@/lib/marketing/financialPosture'
+import { getMarketingWriteClient } from '@/lib/marketing/client'
+import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { client } from '@/sanity/lib/client'
+
+type FinancialPostureContext = ReturnType<typeof financialPostureAiContext>
+
+/**
+ * The studio's financial posture (rough runway bin, set by the principals in
+ * Settings) — the input that picks which marketing horizons are viable. Sent
+ * to the model as data alongside the system line below. Lives in the PRIVATE
+ * outreach dataset (candid feasibility data — never the world-readable
+ * production dataset), so it needs the server write client; unreadable/unset
+ * falls back to the unconfirmed default.
+ */
+async function fetchFinancialPostureContext(): Promise<FinancialPostureContext> {
+  try {
+    const postureClient = getMarketingWriteClient().withConfig({ dataset: OUTREACH_DATASET })
+    const doc = await postureClient.fetch<{ posture?: string | null; setAt?: string | null } | null>(
+      `*[_id == $id][0]{posture, setAt}`,
+      { id: FINANCIAL_POSTURE_DOC_ID },
+    )
+    return financialPostureAiContext(doc?.posture, doc?.setAt)
+  } catch {
+    return financialPostureAiContext(null, null)
+  }
+}
+
+const FINANCIAL_POSTURE_SYSTEM_LINE =
+  'Weigh studioFinancialPosture heavily — it sets which marketing horizons are viable. In survival or rebuild posture, prioritize work that turns into cash inside the runway (direct outreach to people who already know GoInvo, close-now offers, the Outreach tab) and advise deferring slow-payoff plays (SEO content, brand, big content assets) unless they directly feed a live sales conversation. In stable or growth posture, longer-horizon marketing is appropriate. If confirmed is false (posture unset or stale), gently ask the user to re-confirm the posture in Settings before leaning on it.'
 
 type MarketingAssistKind =
   | 'campaign'
@@ -343,10 +372,11 @@ export async function POST(request: Request) {
     if (isAnthropicConfigured()) {
       try {
         const model = await resolveMarketingModel(client)
+        const financialPosture = await fetchFinancialPostureContext()
         suggestion =
           kind === 'strategistChat'
-            ? await generateStrategistClaudeSuggestion(draft, siteContext, body.prompt || '', analyticsTakeaways, model)
-            : await generateClaudeSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways, model)
+            ? await generateStrategistClaudeSuggestion(draft, siteContext, body.prompt || '', analyticsTakeaways, model, financialPosture)
+            : await generateClaudeSuggestion(kind, draft, siteContext, body.prompt || '', analyticsTakeaways, model, financialPosture)
         usedAi = true
       } catch (error) {
         console.error('Marketing assistant Claude generation failed:', error)
@@ -462,6 +492,7 @@ async function generateStrategistClaudeSuggestion(
   prompt: string,
   analyticsTakeaways: AnalyticsTakeaway[],
   model?: string,
+  financialPosture?: FinancialPostureContext,
 ): Promise<AssistSuggestion> {
   const promptContext = buildPromptContext('strategistChat', draft, prompt, siteContext, analyticsTakeaways)
   const safeDraft = sanitizePromptRecord(draft)
@@ -484,11 +515,13 @@ async function generateStrategistClaudeSuggestion(
         'You can work with the SEO suite in the SEO tab (see seoSuiteCapabilities): recommend running the page audit on a specific page, and advise concrete on-page, structured-data, GEO / AI-readiness, and E-E-A-T fixes. Stay designer-friendly and compact.',
         'Advise SEO tasks proactively WHEN RELEVANT (see seoAdviceTriggers): a designer creating or editing a content/service/landing page, a page ranking on page 2 (CTR-gap quick-win), content with uncited statistics (GEO citability), an essay lacking author byline/bio/citations (E-E-A-T, and GoInvo is YMYL healthcare), or GoInvo open data without Dataset schema. Name the CONCRETE task, point to the SEO tab and its promote-to-backlog button - do not merely say SEO exists.',
         'For SEO/GEO/E-E-A-T opportunities use opportunityType seoOptimization: tie the fix to the page or essay, say which audit findings to chase (e.g. add inline sources + a direct-answer-first opening for AI citability, add an author bio + Person schema for E-E-A-T, add Dataset schema, or rewrite a page-2 title/meta to close a CTR gap), and route it through the page audit and promote-to-backlog rather than a brand-new content asset.',
+        FINANCIAL_POSTURE_SYSTEM_LINE,
         `Best-practice reminders: ${BEST_PRACTICE_NOTES.join(' ')}`,
       ].join('\n'),
       user: JSON.stringify({
         task: 'Advise on the next strategic marketing move, then provide action cards the UI can render.',
         kind: 'strategistChat',
+        studioFinancialPosture: financialPosture,
         draft: safeDraft,
         prompt: safePrompt,
         outputContract: outputContractForKind('strategistChat'),
@@ -517,6 +550,7 @@ async function generateClaudeSuggestion(
   prompt: string,
   analyticsTakeaways: AnalyticsTakeaway[],
   model?: string,
+  financialPosture?: FinancialPostureContext,
 ): Promise<AssistSuggestion> {
   const promptContext = buildPromptContext(kind, draft, prompt, siteContext, analyticsTakeaways)
   const safeDraft = sanitizePromptRecord(draft)
@@ -540,11 +574,13 @@ async function generateClaudeSuggestion(
               'For strategy or prioritization questions, weigh the commercial-search gap heavily and raise it proactively: GoInvo ranks only page 2 to 3 for client-acquisition terms (see knownCommercialSearchGaps) such as "healthcare UX design agency", "UX design agency", and "UX audit", capturing little revenue-driving demand. Lead with winning those via a focused services or "healthcare UX design agency" landing page plus case-study proof and a discovery-call CTA, before recommending more informational content like webinars or essays.',
               'You can work with the SEO suite in the SEO tab (see seoSuiteCapabilities): recommend running the page audit on a specific page and advise concrete on-page, structured-data, GEO / AI-readiness, and E-E-A-T fixes, in compact designer-friendly language.',
               'Advise SEO tasks proactively WHEN RELEVANT (see seoAdviceTriggers): a designer creating/editing a content, service, or landing page, a page ranking on page 2 (CTR-gap title/meta rewrite), content with uncited statistics (GEO citability for ChatGPT, Perplexity, and Google AI Overviews), an essay lacking author byline/bio/citations (E-E-A-T, since GoInvo is YMYL healthcare), or GoInvo open data lacking Dataset schema. Name the CONCRETE task and point to the SEO tab and its promote-to-backlog button rather than just saying SEO exists. For these recommendations use opportunityType seoOptimization and route the fix through the page audit and backlog instead of a brand-new content asset.',
+              FINANCIAL_POSTURE_SYSTEM_LINE,
               `Best-practice reminders: ${BEST_PRACTICE_NOTES.join(' ')}`,
     ].join('\n'),
     user: JSON.stringify({
               task: `Suggest setup fields for a marketing ${kind}.`,
               kind,
+              studioFinancialPosture: financialPosture,
               draft: safeDraft,
               prompt: safePrompt,
               outputContract: outputContractForKind(kind),

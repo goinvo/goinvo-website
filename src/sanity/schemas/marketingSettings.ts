@@ -2,6 +2,10 @@ import { CogIcon } from '@sanity/icons'
 import { defineField, defineType } from 'sanity'
 
 // The marketing suite reads ONE singleton (`_id == "marketingSettings"`).
+// NOTE: the financial posture is deliberately NOT a field here — this singleton
+// lives in the world-readable production dataset, and the runway bin is candid
+// feasibility data. It is stored in the PRIVATE outreach dataset instead (see
+// src/lib/marketing/financialPosture.ts).
 export const MARKETING_SETTINGS_ID = 'marketingSettings'
 
 export const MARKETING_AI_MODEL_OPTIONS = [
