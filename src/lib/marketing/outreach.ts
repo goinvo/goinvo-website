@@ -367,6 +367,101 @@ export function buildContactCreateDoc(contact: ParsedIntakeContact): Record<stri
   return doc
 }
 
+// ---- 1b. Warm-start suggestions from the site's own CMS data ----------------
+
+export interface WarmStartSuggestion {
+  /** For a client org this doubles as the name (the ACCOUNT is the contact until a person is named). */
+  name: string
+  organization?: string
+  howWeKnow: string
+  kind: 'thanked-person' | 'client-org'
+}
+
+/** Self-references and non-org labels that should never become outreach suggestions. */
+const WARM_START_ORG_BLACKLIST = /^(goinvo|feature$)/i
+
+/**
+ * Turn the site's own CMS data into pre-filled contact suggestions — the
+ * company + how-we-know fields the user would otherwise type by hand:
+ *  - `caseStudyClients`: past client orgs (`caseStudy.client`) → org-level
+ *    entries (name = organization). Research is org-level until a person is
+ *    named (the existing person-unverified guard already communicates this),
+ *    and the same client across several case studies merges into one entry.
+ *  - `thankedPeople`: real people from `feature.specialThanks` (plain text,
+ *    one name per line).
+ *
+ * Dedupe against `existingContacts` is deliberately LOOSE — a suggestion is
+ * dropped when its name matches any existing contact's name (people get orgs
+ * added by intake/research, so name+org keys would miss them), and an org is
+ * also dropped when any existing contact already belongs to it (the org-level
+ * entry has served its purpose once a person at that org is in the list).
+ * Pure + unit-tested; callers fetch the GROQ data and feed it in.
+ */
+export function buildWarmStartSuggestions(input: {
+  caseStudyClients?: Array<{ client?: string | null; title?: string | null }>
+  thankedPeople?: Array<{ text?: string | null; featureTitle?: string | null }>
+  existingContacts?: Array<{ name?: string | null; organization?: string | null }>
+}): WarmStartSuggestion[] {
+  const norm = (value?: string | null) => (value || '').toLowerCase().replace(/\s+/g, ' ').trim()
+  const existingNames = new Set<string>()
+  const existingOrgs = new Set<string>()
+  for (const contact of input.existingContacts ?? []) {
+    const name = norm(contact?.name)
+    const organization = norm(contact?.organization)
+    if (name) existingNames.add(name)
+    if (organization) existingOrgs.add(organization)
+  }
+
+  const out: WarmStartSuggestion[] = []
+  const seen = new Set<string>()
+
+  // Named people first — they are directly callable.
+  for (const entry of input.thankedPeople ?? []) {
+    const featureTitle = cleanString(entry?.featureTitle, 200)
+    for (const rawLine of (entry?.text || '').split(/\n+/)) {
+      const name = cleanString(rawLine, 120)
+      // Skip empties and lines that read as prose rather than a name.
+      if (!name || name.length > 60 || /[.:;@]/.test(name)) continue
+      const key = norm(name)
+      if (seen.has(key) || existingNames.has(key)) continue
+      seen.add(key)
+      out.push({
+        name,
+        howWeKnow: featureTitle ? `Thanked on “${featureTitle}”` : 'Thanked on a published feature',
+        kind: 'thanked-person',
+      })
+    }
+  }
+
+  // Then past-client orgs, merged across case studies, alphabetical.
+  const orgTitles = new Map<string, { client: string; titles: string[] }>()
+  for (const entry of input.caseStudyClients ?? []) {
+    const client = cleanString(entry?.client, 160)
+    if (!client || WARM_START_ORG_BLACKLIST.test(client)) continue
+    const key = norm(client)
+    const record = orgTitles.get(key) ?? { client, titles: [] }
+    const title = cleanString(entry?.title, 200)
+    // An open draft + its published doc yield the same title twice — dedupe.
+    if (title && !record.titles.includes(title)) record.titles.push(title)
+    orgTitles.set(key, record)
+  }
+  for (const [key, { client, titles }] of [...orgTitles.entries()].sort((a, b) => a[1].client.localeCompare(b[1].client))) {
+    if (existingOrgs.has(key) || existingNames.has(key)) continue
+    out.push({
+      name: client,
+      organization: client,
+      howWeKnow: titles.length
+        ? `Past client — ${titles
+            .slice(0, 3)
+            .map((t) => `“${t}”`)
+            .join(', ')}`
+        : 'Past client',
+      kind: 'client-org',
+    })
+  }
+  return out
+}
+
 // ---- 2. Research ------------------------------------------------------------
 
 export function buildResearchPrompts(

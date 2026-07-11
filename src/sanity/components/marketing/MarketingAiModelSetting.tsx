@@ -32,7 +32,13 @@ export function MarketingAiModelSetting() {
       setModel(value)
       setSaving(true)
       try {
-        await client.createOrReplace({ _id: MARKETING_SETTINGS_ID, _type: 'marketingSettings', aiModel: value })
+        // Patch, don't createOrReplace — the singleton now carries sibling
+        // settings (financialPosture) that a whole-document write would wipe.
+        await client
+          .transaction()
+          .createIfNotExists({ _id: MARKETING_SETTINGS_ID, _type: 'marketingSettings' })
+          .patch(MARKETING_SETTINGS_ID, (p) => p.set({ aiModel: value }))
+          .commit()
       } catch {
         /* keep the optimistic value; the next load reconciles */
       } finally {
