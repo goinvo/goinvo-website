@@ -1815,3 +1815,35 @@ describe('Marketing A/B testing insights', () => {
     )
   })
 })
+
+describe('AI fallback answers are always flagged', () => {
+  // Born from a real incident: /api/marketing/assist silently served rule-based
+  // fallback answers for weeks (usedAi:false swallowed a dead Claude call) and
+  // nothing in the UI said so. Every surface that renders an assist answer must
+  // visibly flag the fallback, and the route must say WHY it fell back.
+  const toolSource = readFileSync(new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url), 'utf8')
+  const routeSource = readFileSync(new URL('../src/app/api/marketing/assist/route.ts', import.meta.url), 'utf8')
+
+  it('the assist route reports the fallback reason (aiError) alongside usedAi', () => {
+    expect(routeSource).toContain('aiError')
+    expect(routeSource).toContain('ANTHROPIC_API_KEY is not configured')
+    // The catch must capture the reason, not just log it.
+    expect(routeSource).toMatch(/catch \(error\) \{[\s\S]{0,300}aiError =/)
+  })
+
+  it('strategist chat flags fallback replies (notice + per-message transcript marker)', () => {
+    expect(toolSource).toContain('Fallback answer — AI unavailable')
+    expect(toolSource).toContain('(fallback — AI unavailable)')
+    // The flag rides on each stored message so it survives reloads.
+    expect(toolSource).toMatch(/usedAi: !!payload\.usedAi,\s*\n\s*\}/)
+  })
+
+  it('the field-autofill assist panel names the fallback and shows the reason', () => {
+    expect(toolSource).toContain('Fallback — AI unavailable.')
+    expect(toolSource).toContain('aiError ? ` (Reason: ${aiError})` : ')
+  })
+
+  it('the plan-mode recommendation labels the fallback loudly, not as a quiet variant', () => {
+    expect(toolSource).toContain('Fallback — rule-based next step (AI unavailable)')
+  })
+})
