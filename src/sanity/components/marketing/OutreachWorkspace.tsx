@@ -12,11 +12,19 @@ import {
 } from '@/lib/marketing/outreachEnums'
 import {
   buildInteractionEntry,
+  buildWarmStartSuggestions,
+  contactDedupeKey,
+  DEFAULT_FINANCIAL_POSTURE_ID,
   DEFAULT_OFFERS,
   dueFollowUps,
+  FINANCIAL_POSTURE_DOC_ID,
+  getFinancialPosture,
+  isFinancialPostureId,
   rankCallPlan,
   slugify,
+  type FinancialPosture,
   type ParsedIntakeContact,
+  type WarmStartSuggestion,
   type WorkEvidence,
 } from '@/lib/marketing'
 // Deliberate circular import, same as every other workspace: the tool imports
@@ -179,19 +187,23 @@ function presentedOffer(
  * principal Autopilot's step 1 spotlights (data-tour-id below), so it must
  * exist whether or not contacts do yet.
  *
- * The runway framing is the studio's call (confirmed 2026-07: ~2–3 months of
- * confident runway). When the financial-posture setting lands, this copy
- * should read the current bin instead of hardcoding the survival-mode case.
+ * The "why" reads the studio's financial posture (the runway bin set in
+ * Settings) — strategy is a step function of runway, so the framing changes
+ * with the bin. Unset/unreadable falls back to survival, the confirmed 2026-07
+ * reality this surface was built for.
  */
 function OutreachPlanPanel({
+  posture,
   evidenceCount,
   offerCount,
   contactCount,
 }: {
+  posture: FinancialPosture
   evidenceCount: number | null
   offerCount: number
   contactCount: number
 }) {
+  const shortRunway = posture.id === 'survival' || posture.id === 'rebuild'
   return (
     <section data-tour-id="autopilot-plan-warm-network" style={{ ...styles.panel, borderColor: 'rgba(0, 115, 133, 0.45)' }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -200,10 +212,7 @@ function OutreachPlanPanel({
           <div>
             <strong style={{ fontSize: 14 }}>The plan: line up work through people we already know</strong>
             <p style={{ ...styles.small, margin: '5px 0 0', lineHeight: 1.6 }}>
-              <strong>Why this, why now:</strong> the studio has roughly 2–3 months of confident runway.
-              New leads take longer than that to turn into paid work, so anything slow — content, SEO,
-              cold outreach — can’t pay off in time. The people who already know our work say yes
-              fastest, so the highest-value move is a direct, specific ask to past clients and contacts.
+              <strong>Why this, why now:</strong> {posture.outreachWhy}
             </p>
           </div>
           <div>
@@ -228,8 +237,9 @@ function OutreachPlanPanel({
             </ol>
           </div>
           <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-            This is the strategy for a short runway. Once finances stabilize, the plan shifts back toward
-            longer-horizon marketing.
+            {shortRunway
+              ? 'This is the strategy for a short runway. Once finances stabilize, the plan shifts back toward longer-horizon marketing.'
+              : 'Finances have breathing room, so outreach runs alongside longer-horizon marketing rather than replacing it. If the posture changes, update it in Settings and this plan follows.'}
           </p>
         </div>
       </div>
@@ -251,6 +261,11 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
   const [intakeText, setIntakeText] = useState('')
   const [intakePreview, setIntakePreview] = useState<ParsedIntakeContact[] | null>(null)
   const [intakeBusy, setIntakeBusy] = useState<'preview' | 'create' | null>(null)
+
+  const [postureId, setPostureId] = useState<string | null>(null)
+  const [warmStart, setWarmStart] = useState<WarmStartSuggestion[] | null>(null)
+  const [warmStartSelected, setWarmStartSelected] = useState<ReadonlySet<string>>(new Set())
+  const [warmStartBusy, setWarmStartBusy] = useState<'load' | 'add' | null>(null)
 
   const [researchingId, setResearchingId] = useState<string | null>(null)
   const [batch, setBatch] = useState<{ done: number; total: number; current: string } | null>(null)
@@ -283,18 +298,28 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
 
   const loadOutreach = useCallback(async () => {
     try {
-      const result = await outreachClient.fetch<{ contacts: MarketingContact[]; offers: MarketingOffer[]; evidenceCount: number }>(
+      const result = await outreachClient.fetch<{
+        contacts: MarketingContact[]
+        offers: MarketingOffer[]
+        evidenceCount: number
+        financialPosture: string | null
+      }>(
         `{
           "contacts": *[_type == "marketingContact"]|order(coalesce(feasibilityScore, -1) desc, _updatedAt desc){${CONTACT_FIELDS}},
           "offers": *[_type == "marketingOffer"]|order(coalesce(order, 100) asc, title asc){
             _id, _updatedAt, title, key, status, oneLiner, description, priceBand, idealBuyer, proofPoints, order
           },
-          "evidenceCount": count(*[_type == "marketingWorkEvidence" && status == "active"])
+          "evidenceCount": count(*[_type == "marketingWorkEvidence" && status == "active"]),
+          "financialPosture": *[_id == "${FINANCIAL_POSTURE_DOC_ID}"][0].posture
         }`,
       )
       setContacts(result.contacts || [])
       setOffers(result.offers || [])
       setEvidenceCount(typeof result.evidenceCount === 'number' ? result.evidenceCount : 0)
+      // The posture doc shares the PRIVATE outreach dataset (candid feasibility
+      // data — never the world-readable production dataset). Unset/unknown
+      // falls back to the survival copy in the plan panel.
+      setPostureId(isFinancialPostureId(result.financialPosture) ? result.financialPosture : null)
     } catch (err) {
       fail(err, 'Could not load outreach data.')
     } finally {
@@ -368,6 +393,77 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
       fail(err, 'Could not add contacts.')
     } finally {
       setIntakeBusy(null)
+    }
+  }
+
+  // ---- Warm-start suggestions (from the site's own CMS data) ----
+
+  const loadWarmStart = async () => {
+    setWarmStartBusy('load')
+    try {
+      // Public site data lives in the PRODUCTION dataset — the base client.
+      // Exclude drafts: the Studio client reads the raw perspective, and an
+      // open draft would otherwise double every case study (duplicate titles,
+      // unpublished client names) — suggestions must come from PUBLISHED work.
+      const raw = await client.fetch<{
+        caseStudyClients: Array<{ client?: string | null; title?: string | null }>
+        thankedPeople: Array<{ text?: string | null; featureTitle?: string | null }>
+      }>(
+        `{
+          "caseStudyClients": *[_type == "caseStudy" && defined(client) && !(_id in path("drafts.**"))]{client, title},
+          "thankedPeople": *[_type == "feature" && defined(specialThanks) && !(_id in path("drafts.**"))]{"text": pt::text(specialThanks), "featureTitle": title}
+        }`,
+      )
+      const suggestions = buildWarmStartSuggestions({
+        caseStudyClients: raw.caseStudyClients || [],
+        thankedPeople: raw.thankedPeople || [],
+        existingContacts: contacts,
+      })
+      setWarmStart(suggestions)
+      setWarmStartSelected(new Set(suggestions.map((s) => contactDedupeKey(s.name, s.organization))))
+      say(
+        suggestions.length
+          ? `Found ${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'} from our published work — untick any that don't fit, then add.`
+          : 'No new suggestions — everyone from our published work is already in the contacts list.',
+      )
+    } catch (err) {
+      fail(err, 'Could not load suggestions from the site data.')
+    } finally {
+      setWarmStartBusy(null)
+    }
+  }
+
+  const addWarmStart = async () => {
+    if (!warmStart) return
+    const chosen = warmStart.filter((s) => warmStartSelected.has(contactDedupeKey(s.name, s.organization)))
+    if (!chosen.length) return
+    setWarmStartBusy('add')
+    try {
+      // Same commit path as pasted contacts: the route re-validates, dedupes
+      // against existing docs, and applies the standard contact defaults.
+      const result = await outreachApi<{ created: Array<{ id: string }>; skipped: unknown[] }>(
+        '/api/marketing/outreach/intake',
+        {
+          contacts: chosen.map((s) => ({
+            name: s.name,
+            organization: s.organization,
+            howWeKnow: s.howWeKnow,
+            warmth: 'warm',
+          })),
+        },
+      )
+      setWarmStart(null)
+      setWarmStartSelected(new Set())
+      await loadOutreach()
+      say(
+        `Added ${result.created.length} from our past work` +
+          (result.skipped.length ? ` (${result.skipped.length} already existed)` : '') +
+          '. Org-level entries research the organization — put a person’s name on them when you know who to call.',
+      )
+    } catch (err) {
+      fail(err, 'Could not add the selected suggestions.')
+    } finally {
+      setWarmStartBusy(null)
     }
   }
 
@@ -616,12 +712,16 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
     }
   }
 
+  // Unset/unreadable posture falls back to survival — the confirmed reality
+  // this surface was built for (see the module comment).
+  const activePosture = getFinancialPosture(postureId) ?? getFinancialPosture(DEFAULT_FINANCIAL_POSTURE_ID)!
+
   if (loading) {
     // Lightweight scaffold instead of a bare spinner line — the intro reads
     // while the private-dataset fetch runs, and the section names stay put.
     return (
       <div style={{ display: 'grid', gap: 16 }}>
-        <OutreachPlanPanel evidenceCount={null} offerCount={0} contactCount={0} />
+        <OutreachPlanPanel posture={activePosture} evidenceCount={null} offerCount={0} contactCount={0} />
         {["This week's calls", 'Add contacts', 'Contacts', 'Offers'].map((title) => (
           <section key={title} style={styles.panel}>
             <PanelHeading title={title} description="Loading…" />
@@ -899,7 +999,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
         </div>
       )}
 
-      <OutreachPlanPanel evidenceCount={evidenceCount} offerCount={offers.length} contactCount={contacts.length} />
+      <OutreachPlanPanel posture={activePosture} evidenceCount={evidenceCount} offerCount={offers.length} contactCount={contacts.length} />
 
       {evidenceCount === 0 && (
         <section style={{ ...styles.panel, padding: '10px 14px', borderColor: 'rgba(214, 169, 63, 0.5)' }}>
@@ -976,7 +1076,64 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
                   : `Add ${intakePreview.filter((c) => !c.duplicate).length} contact${intakePreview.filter((c) => !c.duplicate).length === 1 ? '' : 's'}`}
               </button>
             )}
+            <button
+              type="button"
+              style={styles.button}
+              disabled={warmStartBusy !== null}
+              onClick={() => (warmStart ? setWarmStart(null) : void loadWarmStart())}
+            >
+              {warmStartBusy === 'load' ? 'Scanning our site…' : warmStart ? 'Hide suggestions' : 'Suggest from our past work'}
+            </button>
           </div>
+          {warmStart && (
+            <div style={{ ...styles.panel, boxShadow: 'none', borderStyle: 'dashed', padding: 12, display: 'grid', gap: 8 }}>
+              <div style={{ ...styles.small, lineHeight: 1.5 }}>
+                <strong>From our published work:</strong> people we thanked and past-client organizations, with
+                “how we know them” pre-filled. Org entries research the organization — add the person’s name
+                once you know who to call there.
+              </div>
+              {warmStart.length === 0 ? (
+                <EmptyInline title="Nothing new — everyone from our published work is already in the list." />
+              ) : (
+                <div style={{ display: 'grid', gap: 4 }}>
+                  {warmStart.map((s) => {
+                    const key = contactDedupeKey(s.name, s.organization)
+                    const checked = warmStartSelected.has(key)
+                    return (
+                      <label key={key} style={{ ...styles.small, display: 'flex', gap: 8, alignItems: 'baseline', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => {
+                            const next = new Set(warmStartSelected)
+                            if (checked) next.delete(key)
+                            else next.add(key)
+                            setWarmStartSelected(next)
+                          }}
+                        />
+                        <strong>{s.name}</strong>
+                        <span style={styles.muted}>
+                          {s.kind === 'client-org' ? 'past client org' : 'person'} · {s.howWeKnow}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              {warmStart.length > 0 && (
+                <div>
+                  <button
+                    type="button"
+                    style={styles.primaryButton}
+                    disabled={warmStartBusy !== null || warmStartSelected.size === 0}
+                    onClick={() => void addWarmStart()}
+                  >
+                    {warmStartBusy === 'add' ? 'Adding…' : `Add ${warmStartSelected.size} selected`}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
           {intakePreview && (
             <div style={{ display: 'grid', gap: 6 }}>
               {intakePreview.map((contact) => (

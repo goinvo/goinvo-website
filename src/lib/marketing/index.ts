@@ -143,10 +143,12 @@ export {
   compactEvidenceIndex,
   rankCallPlan,
   dueFollowUps,
+  buildWarmStartSuggestions,
 } from './outreach'
 export type {
   OutreachOfferDef,
   ParsedIntakeContact,
+  WarmStartSuggestion,
   OutreachOpportunity,
   OutreachSource,
   ContactResearch,
@@ -158,6 +160,22 @@ export type {
   EvidenceSource,
   EvidenceIndexItem,
 } from './outreach'
+
+// Financial posture — runway bins that pick the marketing strategy (set by
+// humans in Settings, read by the plan panel + the assist/strategist AI).
+export {
+  FINANCIAL_POSTURES,
+  DEFAULT_FINANCIAL_POSTURE_ID,
+  FINANCIAL_POSTURE_DOC_ID,
+  FINANCIAL_POSTURE_DOC_TYPE,
+  FINANCIAL_POSTURE_STALE_DAYS,
+  isFinancialPostureId,
+  getFinancialPosture,
+  financialPostureAgeDays,
+  isFinancialPostureStale,
+  financialPostureAiContext,
+} from './financialPosture'
+export type { FinancialPosture, FinancialPostureId } from './financialPosture'
 
 // Linked-draft cascade (create-linked-drafts from a research project).
 export { createResearchProjectRecords } from './cascades'
