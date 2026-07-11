@@ -48,6 +48,7 @@ import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
 import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
 import { MarketingAiModelSetting } from '../components/marketing/MarketingAiModelSetting'
+import { MarketingFinancialPostureSetting } from '../components/marketing/MarketingFinancialPostureSetting'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
@@ -3762,11 +3763,17 @@ function MarketingComponent() {
               onSelect={requestMarketingView}
             />
             {view === 'dashboard' && (
-              <MarketingDashboard
-                data={data}
-                onOpenView={requestMarketingView}
-                onOpenWorkflow={() => setWorkflowOpenRequest((current) => current + 1)}
-              />
+              <>
+                {/* Finances check-in: renders only when the posture is unset or
+                    stale — the assistant asking "still right?" per the check-in
+                    cadence, not a permanent banner. */}
+                <MarketingFinancialPostureSetting compact onOpenSettings={() => requestMarketingView('channels')} />
+                <MarketingDashboard
+                  data={data}
+                  onOpenView={requestMarketingView}
+                  onOpenWorkflow={() => setWorkflowOpenRequest((current) => current + 1)}
+                />
+              </>
             )}
             {view === 'strategy' && (
               <StrategyWorkspace
@@ -3855,7 +3862,8 @@ function MarketingComponent() {
             )}
             {view === 'channels' && (
               <>
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 16, display: 'grid', gap: 12 }}>
+                  <MarketingFinancialPostureSetting />
                   <MarketingAiModelSetting />
                 </div>
                 <ChannelWorkspace
@@ -7844,7 +7852,10 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
       targetId: 'autopilot-plan-warm-network',
       title: 'Your plan: who to reach out to',
       instruction: 'The highlighted panel is the plan — why outreach-first, what is already loaded, and the steps.',
-      why: 'With roughly 2–3 months of confident runway, new leads take longer to close than we have — so the highest-value move is a direct, specific ask to people who already know our work. This kind of outreach has been manual and sporadic without a system.',
+      // No hardcoded runway numbers here: the spotlighted plan panel reads the
+      // financial-posture setting and carries the runway math, so this copy
+      // must stay true across bins or the two contradict in the same viewport.
+      why: 'A direct, specific ask to people who already know our work is the fastest path to new work — and this kind of outreach has been manual and sporadic without a system. The highlighted panel explains how the plan fits where finances stand right now.',
       requiredAction: 'Read the plan panel, then add the people worth a call.',
       nextAfter: 'Add the people worth a call.',
       expectedAction: 'link:save',
@@ -7879,7 +7890,7 @@ function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPr
   if (step.id === 'principal-plan-warm-network') {
     return {
       question: 'Start with the plan',
-      shortReason: 'The highlighted panel is the plan: why reaching out to people we already know is the move right now (about 2–3 months of runway — only fast-closing work pays in time), what is already loaded to power each call, and the four steps.',
+      shortReason: 'The highlighted panel is the plan: why reaching out to people we already know fits where finances stand right now, what is already loaded to power each call, and the four steps.',
       choices: [
         { label: 'Got it — add my contacts', detail: 'Move on to pasting the names worth a call.', tone: 'primary' },
         { label: 'Not yet', detail: 'Keep reading the plan — use Next step when you are ready.' },
