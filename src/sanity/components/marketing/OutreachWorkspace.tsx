@@ -172,20 +172,66 @@ function presentedOffer(
   return { source: 'none' }
 }
 
-/** Static orientation panel — shown while loading and on first run (no contacts yet). */
-function HowThisWorksPanel() {
+/**
+ * The plan, as contextual setup: why outreach-first is the current strategy,
+ * what is already loaded to power it (live counts), and the four steps. Always
+ * rendered — it is the orientation header for the surface AND the anchor the
+ * principal Autopilot's step 1 spotlights (data-tour-id below), so it must
+ * exist whether or not contacts do yet.
+ *
+ * The runway framing is the studio's call (confirmed 2026-07: ~2–3 months of
+ * confident runway). When the financial-posture setting lands, this copy
+ * should read the current bin instead of hardcoding the survival-mode case.
+ */
+function OutreachPlanPanel({
+  evidenceCount,
+  offerCount,
+  contactCount,
+}: {
+  evidenceCount: number | null
+  offerCount: number
+  contactCount: number
+}) {
   return (
-    <section style={{ ...styles.panel, borderStyle: 'dashed' }}>
+    <section data-tour-id="autopilot-plan-warm-network" style={{ ...styles.panel, borderColor: 'rgba(0, 115, 133, 0.45)' }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <UsersIcon style={{ width: 20, height: 20, color: '#007385', flexShrink: 0, marginTop: 2 }} />
-        <p style={{ ...styles.small, margin: 0, lineHeight: 1.6 }}>
-          <strong>How this works:</strong> paste your contacts below (any format — a name and a company is
-          enough). Research runs live web search on each person: what their org is doing now, which of our
-          real shipped work to show them, tailored offer drafts with price bands, and a call brief. The top
-          of this page becomes your week: call the warmest, highest-fit people first, then hit “Log call” —
-          even a no teaches us where the budgets are. One prerequisite: run Extract on the Evidence tab once
-          (~15–20 min) so research can point at real case studies.
-        </p>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div>
+            <strong style={{ fontSize: 14 }}>The plan: line up work through people we already know</strong>
+            <p style={{ ...styles.small, margin: '5px 0 0', lineHeight: 1.6 }}>
+              <strong>Why this, why now:</strong> the studio has roughly 2–3 months of confident runway.
+              New leads take longer than that to turn into paid work, so anything slow — content, SEO,
+              cold outreach — can’t pay off in time. The people who already know our work say yes
+              fastest, so the highest-value move is a direct, specific ask to past clients and contacts.
+            </p>
+          </div>
+          <div>
+            <strong style={{ ...styles.small, fontWeight: 850 }}>What’s already loaded to power each call</strong>
+            <ul style={{ ...styles.small, margin: '5px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+              <li>
+                {evidenceCount === null
+                  ? 'Real shipped work to show — loading the evidence library…'
+                  : `${evidenceCount} case studies distilled into “show them this work” evidence, so every call points at real projects.`}
+              </li>
+              <li>{offerCount > 0 ? `${offerCount} ready-to-present offers` : 'A starter offer catalog (seeded on first use)'} — research drafts a tailored pitch from these per person.</li>
+              <li>Live web research on each person: what their org is doing right now, which of our work fits, and a call brief with an opener.</li>
+            </ul>
+          </div>
+          <div>
+            <strong style={{ ...styles.small, fontWeight: 850 }}>What to do</strong>
+            <ol style={{ ...styles.small, margin: '5px 0 0', paddingLeft: 18, lineHeight: 1.7 }}>
+              <li>Add the people worth a call below — any format, a name and a company is enough.{contactCount > 0 ? ` (${contactCount} added so far.)` : ''}</li>
+              <li>Run research — about 1–2 minutes per person, progress saves as it goes.</li>
+              <li>Call from the top of the ranked list — warmest relationships first.</li>
+              <li>Log every call — even a no teaches us where the budgets are.</li>
+            </ol>
+          </div>
+          <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
+            This is the strategy for a short runway. Once finances stabilize, the plan shifts back toward
+            longer-horizon marketing.
+          </p>
+        </div>
       </div>
     </section>
   )
@@ -575,7 +621,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
     // while the private-dataset fetch runs, and the section names stay put.
     return (
       <div style={{ display: 'grid', gap: 16 }}>
-        <HowThisWorksPanel />
+        <OutreachPlanPanel evidenceCount={null} offerCount={0} contactCount={0} />
         {["This week's calls", 'Add contacts', 'Contacts', 'Offers'].map((title) => (
           <section key={title} style={styles.panel}>
             <PanelHeading title={title} description="Loading…" />
@@ -853,7 +899,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
         </div>
       )}
 
-      {contacts.length === 0 && <HowThisWorksPanel />}
+      <OutreachPlanPanel evidenceCount={evidenceCount} offerCount={offers.length} contactCount={contacts.length} />
 
       {evidenceCount === 0 && (
         <section style={{ ...styles.panel, padding: '10px 14px', borderColor: 'rgba(214, 169, 63, 0.5)' }}>

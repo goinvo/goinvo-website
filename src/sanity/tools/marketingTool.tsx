@@ -7840,12 +7840,12 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
   const steps: MarketingAutopilotStep[] = [
     {
       id: 'principal-plan-warm-network',
-      view: 'strategyBrief',
+      view: 'outreach',
       targetId: 'autopilot-plan-warm-network',
       title: 'Your plan: who to reach out to',
-      instruction: 'The fastest work comes from people you already know.',
-      why: 'Inbound stalled with the federal retrenchment; a direct, specific ask to people you already know is the fastest way to rebuild pipeline — and this kind of outreach has been manual and sporadic without a system.',
-      requiredAction: 'Read the plan and decide who is worth a call.',
+      instruction: 'The highlighted panel is the plan — why outreach-first, what is already loaded, and the steps.',
+      why: 'With roughly 2–3 months of confident runway, new leads take longer to close than we have — so the highest-value move is a direct, specific ask to people who already know our work. This kind of outreach has been manual and sporadic without a system.',
+      requiredAction: 'Read the plan panel, then add the people worth a call.',
       nextAfter: 'Add the people worth a call.',
       expectedAction: 'link:save',
       status: 'upcoming',
@@ -7878,11 +7878,11 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
 function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPrompt | null {
   if (step.id === 'principal-plan-warm-network') {
     return {
-      question: 'Ready to line up some calls?',
-      shortReason: 'The people you already know — past clients, colleagues, contacts — are the fastest way to win new work. This plan turns that into a short list of who to call.',
+      question: 'Start with the plan',
+      shortReason: 'The highlighted panel is the plan: why reaching out to people we already know is the move right now (about 2–3 months of runway — only fast-closing work pays in time), what is already loaded to power each call, and the four steps.',
       choices: [
-        { label: 'Show me the plan', detail: 'See the plan, then move on to adding the people worth a call.', tone: 'primary' },
-        { label: 'Not yet', detail: 'Stay and read first — use Next step when you are ready.' },
+        { label: 'Got it — add my contacts', detail: 'Move on to pasting the names worth a call.', tone: 'primary' },
+        { label: 'Not yet', detail: 'Keep reading the plan — use Next step when you are ready.' },
       ],
     }
   }
