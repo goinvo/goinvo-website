@@ -25,7 +25,7 @@ const HOME_CONVERSIONS: DrainConversionEvent[] = [
   { eventName: 'discovery_form_start', label: 'Discovery form starts', unit: 'events' },
 ]
 
-function exposureEvent(variant: string, count = 1) {
+function exposureEvent(variant: string) {
   return {
     type: 'event',
     eventName: 'experiment_exposure',
@@ -339,9 +339,8 @@ describe('Vercel drain authorization', () => {
     expect(verifyDrainAuthorization({ secret, authorizationHeader: 'Bearer nope' })).toBe(false)
   })
 
-  it('accepts a matching query token', () => {
-    expect(verifyDrainAuthorization({ secret, queryToken: secret })).toBe(true)
-    expect(verifyDrainAuthorization({ secret, queryToken: 'nope' })).toBe(false)
+  it('requires a header or body signature instead of a URL query secret', () => {
+    expect(verifyDrainAuthorization({ secret })).toBe(false)
   })
 
   it('verifies an HMAC signature of the raw body', () => {

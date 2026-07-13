@@ -1,5 +1,10 @@
 import { parse } from 'node-html-parser'
 import { DEFAULT_PRIORITY_WEIGHTS, type SeoFinding } from './seoAudit'
+import {
+  readResponseTextLimited,
+  SeoTargetError,
+  validateSeoTargetUrl,
+} from './seoTarget'
 
 // Lightweight site-crawl module — Phase 2 of the SEO-suite revamp (see
 // docs/seo-suite-revamp-plan.md §12 "Site-graph crawl" + "Sitemap↔indexed↔
@@ -52,7 +57,13 @@ const HOMEPAGE_URL =
 // be reached in one pass. Still env-overridable for tuning. Even at 120 the
 // crawl stays bounded (page cap + depth bound + per-fetch timeout) and finishes
 // in a handful of seconds on a healthy origin.
-const DEFAULT_MAX_PAGES = Number(process.env.MARKETING_SEO_CRAWL_MAX_PAGES || 120)
+export const SEO_CRAWL_HARD_MAX_PAGES = 120
+const configuredDefaultMaxPages = Number(process.env.MARKETING_SEO_CRAWL_MAX_PAGES || 120)
+const DEFAULT_MAX_PAGES = Math.min(
+  SEO_CRAWL_HARD_MAX_PAGES,
+  Math.max(1, Number.isFinite(configuredDefaultMaxPages) ? Math.floor(configuredDefaultMaxPages) : 120),
+)
+const SEO_CRAWL_HARD_MAX_LINK_CHECKS = 200
 
 // Bound the BFS depth too, so a deeply-nested site can't blow the page cap on
 // one long chain. 4 = homepage (0) + three clicks, which is exactly the
@@ -66,6 +77,11 @@ const CLICK_DEPTH_LIMIT = 3
 // one AbortController per request, cleared in a finally.
 const FETCH_TIMEOUT_MS = Number(
   process.env.MARKETING_SEO_CRAWL_FETCH_TIMEOUT_MS || 10000,
+)
+const configuredCrawlDuration = Number(process.env.MARKETING_SEO_CRAWL_MAX_DURATION_MS || 60000)
+const MAX_CRAWL_DURATION_MS = Math.min(
+  120000,
+  Math.max(5000, Number.isFinite(configuredCrawlDuration) ? configuredCrawlDuration : 60000),
 )
 
 // How many redirect hops before a 200 we tolerate before calling it a "chain".
@@ -226,13 +242,15 @@ async function fetchSitemapUrls(siteOrigin: string): Promise<{
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(SITEMAP_URL, {
+    const safeSitemapUrl = validateSeoTargetUrl(SITEMAP_URL)
+    const res = await fetch(safeSitemapUrl, {
       cache: 'no-store',
+      redirect: 'manual',
       signal: controller.signal,
       headers: { 'User-Agent': USER_AGENT },
     })
     if (!res.ok) return { urls: [], available: false }
-    const xml = await res.text()
+    const xml = await readResponseTextLimited(res)
     // Sitemaps are flat XML; a regex over <loc> is enough (the existing
     // seo-audit route does the same) and avoids a full XML parser dependency.
     const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) =>
@@ -291,6 +309,7 @@ async function fetchWithRedirects(
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
     try {
+      current = validateSeoTargetUrl(current)
       const res = await fetch(current, {
         cache: 'no-store',
         redirect: 'manual',
@@ -324,7 +343,7 @@ async function fetchWithRedirects(
       if (wantHtml && res.ok) {
         const contentType = res.headers.get('content-type') || ''
         if (/html/i.test(contentType) || contentType === '') {
-          html = await res.text().catch(() => undefined)
+          html = await readResponseTextLimited(res).catch(() => undefined)
         }
       }
       return { finalStatus: res.status, finalUrl: current, redirectHops: hops, html }
@@ -432,9 +451,24 @@ export type CrawlOptions = {
 }
 
 export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
-  const seedUrl = normalizeUrl(opts.seedUrl || HOMEPAGE_URL) || HOMEPAGE_URL
-  const maxPages = Math.max(1, opts.maxPages ?? DEFAULT_MAX_PAGES)
+  let seedUrl: string
+  try {
+    seedUrl = validateSeoTargetUrl(normalizeUrl(opts.seedUrl || HOMEPAGE_URL) || HOMEPAGE_URL)
+  } catch (error) {
+    const reason = error instanceof SeoTargetError ? error.message : 'invalid seed URL'
+    const fallback = opts.seedUrl || HOMEPAGE_URL
+    return {
+      findings: [crawlUnavailableFinding(fallback, reason)],
+      stats: emptyStats(fallback, 1, 0, false),
+    }
+  }
+  const requestedMaxPages = opts.maxPages ?? DEFAULT_MAX_PAGES
+  const maxPages = Math.min(
+    SEO_CRAWL_HARD_MAX_PAGES,
+    Math.max(1, Number.isFinite(requestedMaxPages) ? Math.floor(requestedMaxPages) : DEFAULT_MAX_PAGES),
+  )
   const siteOrigin = originOf(seedUrl) || originOf(HOMEPAGE_URL) || ''
+  const deadline = Date.now() + MAX_CRAWL_DURATION_MS
 
   // --- Seed from the sitemap + the homepage --------------------------------
   const { urls: sitemapUrls, available: sitemapAvailable } =
@@ -520,7 +554,7 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
   // --- The BFS loop --------------------------------------------------------
   // Bounded by `maxPages` distinct fetched pages and an exhausted frontier.
   while (pending.size > 0) {
-    if (crawled.size >= maxPages) {
+    if (attempted.size >= maxPages || Date.now() >= deadline) {
       capped = pending.size > 0
       break
     }
@@ -588,7 +622,10 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
         // Respect the overall budget: don't fire off unbounded validation
         // fetches once we're at the page cap. Links beyond the cap are simply
         // not validated (reported via the `capped` stat).
-        if (linkOutcome.size < maxPages * 4) {
+        if (
+          linkOutcome.size < Math.min(maxPages * 4, SEO_CRAWL_HARD_MAX_LINK_CHECKS) &&
+          Date.now() < deadline
+        ) {
           const targetOutcome = await fetchWithRedirects(target, siteOrigin, false)
           linkOutcome.set(target, targetOutcome)
         }
@@ -615,7 +652,7 @@ export async function crawlSite(opts: CrawlOptions = {}): Promise<CrawlResult> {
 
   // capped is also true if we stopped because we hit the cap with a non-empty
   // frontier OR there were more enqueued URLs than we could fetch.
-  if (crawled.size >= maxPages && pending.size > 0) capped = true
+  if ((attempted.size >= maxPages || Date.now() >= deadline) && pending.size > 0) capped = true
 
   // --- (a) Broken internal links -------------------------------------------
   if (brokenLinkUrls.length > 0) {

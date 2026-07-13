@@ -7,6 +7,11 @@ import {
   type SeoFindingCategory,
   type SeoFindingSeverity,
 } from './seoAudit'
+import {
+  assertPublicNetworkUrl,
+  SEO_RESPONSE_MAX_BYTES,
+  validateSeoTargetUrl,
+} from './seoTarget'
 
 // Render-diff pack for the SEO audit engine — the Technical / GEO persona's top
 // pick (see docs/seo-suite-revamp-plan.md §12, "raw-HTML-vs-hydrated-DOM render
@@ -130,20 +135,56 @@ const RENDER_TIMEOUT_MS = Number(
 // rendered outer HTML. Blocks nothing — we want to see the page exactly as a
 // real browser (and a JS-running crawler) would. Always closes the browser.
 export async function fetchRenderedHtml(url: string): Promise<string> {
+  const safeUrl = validateSeoTargetUrl(url)
+  const allowNoSandbox = process.env.MARKETING_SEO_PUPPETEER_NO_SANDBOX === 'true'
   const browser = await puppeteer.launch({
     // 'new' headless mode. Recent Puppeteer narrowed the option's type to
     // boolean | 'shell' (where `true` IS the new headless), so cast the literal
     // to keep the intent explicit while satisfying the type.
     headless: 'new' as unknown as boolean,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    ...(allowNoSandbox ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] } : {}),
   })
   try {
     const page = await browser.newPage()
     await page.setUserAgent('GoInvo marketing SEO audit (+https://www.goinvo.com)')
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: RENDER_TIMEOUT_MS })
+    await page.setRequestInterception(true)
+    const approvedHosts = new Map<string, Promise<void>>()
+    page.on('request', (request) => {
+      // Every network request stays inside the approved SEO origins. Third-party
+      // analytics/fonts/images are irrelevant to the DOM-content comparison;
+      // blocking them also prevents a page from turning Chrome into an SSRF
+      // relay. Media, images and fonts are blocked outright to bound bandwidth.
+      if (['image', 'media', 'font'].includes(request.resourceType())) {
+        void request.abort('blockedbyclient')
+        return
+      }
+      void (async () => {
+        try {
+          const requestUrl = new URL(request.url())
+          if (requestUrl.protocol === 'data:' || requestUrl.protocol === 'blob:') {
+            await request.continue()
+            return
+          }
+          validateSeoTargetUrl(request.url())
+          let hostCheck = approvedHosts.get(requestUrl.hostname)
+          if (!hostCheck) {
+            hostCheck = assertPublicNetworkUrl(request.url())
+            approvedHosts.set(requestUrl.hostname, hostCheck)
+          }
+          await hostCheck
+          await request.continue()
+        } catch {
+          await request.abort('blockedbyclient').catch(() => {})
+        }
+      })()
+    })
+    await page.goto(safeUrl, { waitUntil: 'networkidle2', timeout: RENDER_TIMEOUT_MS })
     // Short settle so client-side hydration / late content injection lands.
     await new Promise((resolve) => setTimeout(resolve, 750))
-    return await page.evaluate(() => document.documentElement.outerHTML)
+    return await page.evaluate(
+      (maxChars) => document.documentElement.outerHTML.slice(0, maxChars),
+      SEO_RESPONSE_MAX_BYTES,
+    )
   } finally {
     await browser.close().catch(() => {})
   }

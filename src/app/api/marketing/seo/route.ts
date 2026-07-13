@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
 import { createSign } from 'node:crypto'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { tfKeyword, withTextFocus } from '@/lib/marketing/textfocus'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // The SEO opportunities engine. Authenticates as the marketing service account
 // (the same one wired for the GA/GSC MCPs), pulls Search Console + GA4, and
@@ -910,10 +911,19 @@ function ymd(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return privateMarketingJson({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   const sa = getServiceAccount()
   if (!sa) {
-    return NextResponse.json({
+    return privateMarketingJson({
       configured: false,
       message:
         'GOOGLE_SERVICE_ACCOUNT_JSON is not set. Add the marketing service-account JSON to enable live Search Console + GA4 opportunities.',
@@ -1124,7 +1134,7 @@ export async function GET() {
     const intentProfile = buildIntentProfile(queryRows).slice(0, 50)
     const intentMismatches = buildIntentMismatches(pageQueryRows).slice(0, 20)
 
-    return NextResponse.json({
+    return privateMarketingJson({
       configured: true,
       generatedAt: new Date().toISOString(),
       range: { startDate, endDate },
@@ -1143,7 +1153,7 @@ export async function GET() {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'SEO opportunities request failed.'
     console.error('Marketing SEO opportunities failed:', error)
-    return NextResponse.json(
+    return privateMarketingJson(
       {
         configured: true,
         error: message,

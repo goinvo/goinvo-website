@@ -174,7 +174,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('MARKETING_UNSAVED_CHANGES_MESSAGE')
     expect(source).toContain("window.addEventListener('beforeunload'")
     expect(source).toContain('window.confirm')
-    expect(source).toContain('onClickCapture={handleMarketingLinkCapture}')
+    expect(source).toContain("document.addEventListener('click', handleMarketingLinkCapture, true)")
     expect(source).toContain('Unsaved edits')
     expect(source).toContain('Reworking the setup will replace the current research setup draft. Continue?')
     expect(source).toContain('Filling from research can replace fields in the current unsaved answer. Continue?')
@@ -229,7 +229,6 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('Open tutorial guide')
     expect(source).toContain('Fill current draft')
     expect(source).toContain('Reopen project')
-    expect(source).toContain('Reopen plan')
     expect(source).toContain('Previous month')
     expect(source).toContain('Next month')
     expect(source).toContain('Add calendar item')
@@ -239,7 +238,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('Switch to chat mode')
     expect(source).toContain('Chat with Autopilot')
     expect(source).toContain('Highlight current step')
-    expect(source).toContain('Ask Marketing Autopilot')
+    expect(source).toContain('Ask Autopilot')
     expect(source).toContain('Start chat')
     expect(source).toContain("autopilotPlan: activeSession?.autopilotPlan || null")
     expect(source).toContain('data-tour-id={`autopilot-coach-choice-${step.id}-${choiceIndex}`}')
@@ -816,7 +815,7 @@ describe('Marketing CMS schemas', () => {
     )
   })
 
-  it('defines non-mutating Designer Workflow guided tutorials with stable anchors', () => {
+  it('defines non-mutating Autopilot guided tutorials with stable anchors', () => {
     expect(defaultDesignerWorkflowTutorial.id).toBe('marketing-view-tour')
     expect(defaultDesignerWorkflowTutorial.title).toBe('Marketing view tour')
     expect(designerWorkflowTutorials.map((tutorial) => tutorial.id)).toEqual(

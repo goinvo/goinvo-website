@@ -574,10 +574,10 @@ function FunnelStageListEditor({
         </button>
       </div>
       <div style={{ display: 'grid', gap: 10 }}>
-        {normalized.map((stage) => (
+        {normalized.map((stage, index) => (
           <div key={stage._key} style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 10 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr auto', gap: 8, marginBottom: 8 }}>
-              <Select value={stage.stage || 'awareness'} options={funnelStageOptions} onChange={(value) => updateStage(stage._key, { stage: value })} />
+              <Select ariaLabel={`Funnel stage ${index + 1}`} value={stage.stage || 'awareness'} options={funnelStageOptions} onChange={(value) => updateStage(stage._key, { stage: value })} />
               <input style={styles.input} value={stage.callToAction || ''} placeholder="CTA" onChange={(event) => updateStage(stage._key, { callToAction: event.currentTarget.value })} />
               <button type="button" style={styles.button} onClick={() => onChange(normalized.filter((candidate) => candidate._key !== stage._key))}>
                 Remove

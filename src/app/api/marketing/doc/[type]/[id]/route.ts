@@ -10,6 +10,7 @@ import {
   type ManagedMarketingType,
   type MarketingFields,
 } from '@/lib/marketing'
+import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
 
 // REST surface for one specific managed marketing document, addressed by type +
 // _id:
@@ -27,6 +28,15 @@ export const dynamic = 'force-dynamic'
 
 type RouteContext = {
   params: Promise<{ type: string; id: string }>
+}
+
+function clientForType(type: ManagedMarketingType) {
+  const base = getMarketingWriteClient()
+  return OUTREACH_DATASET_TYPES.includes(type) ? base.withConfig({ dataset: OUTREACH_DATASET }) : base
+}
+
+function isValidDocumentId(id: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id)
 }
 
 // Authenticate + resolve the awaited params, returning either the managed type
@@ -55,6 +65,12 @@ async function guard(
     }
   }
 
+  if (!isValidDocumentId(id)) {
+    return {
+      response: NextResponse.json({ error: 'Invalid marketing document id.' }, { status: 400 }),
+    }
+  }
+
   return { type, id }
 }
 
@@ -69,7 +85,7 @@ export async function GET(req: Request, context: RouteContext) {
   const { type, id } = guarded
 
   try {
-    const document = await getMarketingWriteClient().fetch<unknown | null>(
+    const document = await clientForType(type).fetch<unknown | null>(
       '*[_type == $type && _id == $id][0]',
       { type, id },
     )
@@ -143,7 +159,14 @@ export async function PATCH(req: Request, context: RouteContext) {
   }
 
   try {
-    const client = getMarketingWriteClient()
+    const client = clientForType(type)
+    const exists = await client.fetch<{ _id: string } | null>(
+      '*[_type == $type && _id == $id][0]{_id}',
+      { type, id },
+    )
+    if (!exists) {
+      return NextResponse.json({ error: `No ${type} found with _id ${id}.` }, { status: 404 })
+    }
     let patch = client.patch(id)
     if (Object.keys(payload).length > 0) patch = patch.set(payload)
     if (unsetFields.length > 0) patch = patch.unset(unsetFields)
@@ -172,7 +195,14 @@ export async function DELETE(req: Request, context: RouteContext) {
   const cascade = url.searchParams.get('cascade') !== 'false'
 
   try {
-    const client = getMarketingWriteClient()
+    const client = clientForType(type)
+    const exists = await client.fetch<{ _id: string } | null>(
+      '*[_type == $type && _id == $id][0]{_id}',
+      { type, id },
+    )
+    if (!exists) {
+      return NextResponse.json({ error: `No ${type} found with _id ${id}.` }, { status: 404 })
+    }
 
     let cascadedUnset = 0
     if (type === 'marketingChannel' && cascade) {
@@ -187,7 +217,7 @@ export async function DELETE(req: Request, context: RouteContext) {
     // listing the referencing docs, instead of an opaque 500. (Delete them
     // together in one transaction, or unset the references first.)
     try {
-      const referencedBy = await getMarketingWriteClient().fetch<Array<{ _id: string; _type: string }>>(
+      const referencedBy = await clientForType(type).fetch<Array<{ _id: string; _type: string }>>(
         '*[references($id)]{_id, _type}[0...50]',
         { id },
       )

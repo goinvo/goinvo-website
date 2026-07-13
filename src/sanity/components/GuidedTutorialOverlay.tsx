@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from '@sanity/icons'
 
 export type GuidedTutorialStep = {
@@ -63,9 +63,64 @@ export function GuidedTutorialOverlay({
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
   const [bubbleSize, setBubbleSize] = useState<BubbleSize>({ width: BUBBLE_WIDTH, height: 310 })
   const bubbleRef = useRef<HTMLElement | null>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
   const scrolledTargetRef = useRef<string | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
   const completed = stepIndex >= tutorial.steps.length
   const currentStep = tutorial.steps[Math.min(stepIndex, Math.max(0, tutorial.steps.length - 1))]
+  const currentTargetIdRef = useRef(currentStep?.targetId)
+
+  onCloseRef.current = onClose
+  currentTargetIdRef.current = currentStep?.targetId
+
+  useEffect(() => {
+    if (!active) return undefined
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (event.key !== 'Tab' || !bubbleRef.current) return
+
+      const focusable = focusableElements(bubbleRef.current)
+      const targetId = currentTargetIdRef.current
+      const highlightedTarget = targetId
+        ? document.querySelector<HTMLElement>(`[data-tour-id="${targetId}"]`)
+        : null
+      if (highlightedTarget && isKeyboardFocusable(highlightedTarget) && !focusable.includes(highlightedTarget)) {
+        focusable.push(highlightedTarget)
+      }
+      if (focusable.length === 0) {
+        event.preventDefault()
+        bubbleRef.current.focus({ preventScroll: true })
+        return
+      }
+
+      const activeIndex = focusable.indexOf(document.activeElement as HTMLElement)
+      const nextIndex = nextGuidedTutorialFocusIndex(activeIndex, focusable.length, event.shiftKey)
+      event.preventDefault()
+      focusable[nextIndex].focus()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      const previouslyFocused = previouslyFocusedRef.current
+      previouslyFocusedRef.current = null
+      if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true })
+    }
+  }, [active, tutorial.id])
+
+  useEffect(() => {
+    if (!active) return undefined
+    const frame = window.requestAnimationFrame(() => bubbleRef.current?.focus({ preventScroll: true }))
+    return () => window.cancelAnimationFrame(frame)
+  }, [active, completed, currentStep?.id])
 
   useEffect(() => {
     scrolledTargetRef.current = null
@@ -155,17 +210,25 @@ export function GuidedTutorialOverlay({
     return (
       <div style={styles.root}>
         <div style={styles.scrim} />
-        <section data-tour-id="guided-tutorial-bubble" style={{ ...styles.bubble, ...styles.completeBubble }}>
+        <section
+          ref={bubbleRef}
+          role="dialog"
+          tabIndex={-1}
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
+          data-tour-id="guided-tutorial-bubble"
+          style={{ ...styles.bubble, ...styles.completeBubble }}
+        >
           <button type="button" aria-label="Close tutorial" style={styles.closeButton} onClick={onClose}>
             <CloseIcon style={{ width: 16, height: 16 }} />
           </button>
           <div style={styles.kicker}>Tutorial complete</div>
-          <h2 style={styles.title}>{tutorial.title}</h2>
-          <p style={styles.description}>You can run this again, keep working where you are, or open the tutorial library.</p>
+          <h2 id={titleId} style={styles.title}>{tutorial.title}</h2>
+          <p id={descriptionId} style={styles.description}>You can run this again, keep working where you are, or open the tutorial library.</p>
           <div style={styles.completionActions}>
             <button type="button" style={styles.primaryButton} onClick={onClose}>Continue from current position</button>
             <button type="button" style={styles.button} onClick={onRestart}>Run again</button>
-            <button type="button" style={styles.button} onClick={onShowLibrary}>See all Designer Workflow tutorials</button>
+            <button type="button" style={styles.button} onClick={onShowLibrary}>See all Autopilot tutorials</button>
           </div>
         </section>
       </div>
@@ -200,13 +263,16 @@ export function GuidedTutorialOverlay({
       )}
       <section
         ref={bubbleRef}
+        role="dialog"
+        tabIndex={-1}
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         data-tour-id="guided-tutorial-bubble"
         style={{
           ...styles.bubble,
           top: bubblePlacement.top,
           left: bubblePlacement.left,
         }}
-        aria-live="polite"
       >
         <div
           aria-hidden="true"
@@ -216,13 +282,13 @@ export function GuidedTutorialOverlay({
           <CloseIcon style={{ width: 16, height: 16 }} />
         </button>
         <div style={styles.kicker}>{tutorial.title}</div>
-        <h2 style={styles.title}>{currentStep.instruction}</h2>
-        <div style={styles.description}>{currentStep.description}</div>
+        <h2 id={titleId} style={styles.title}>{currentStep.instruction}</h2>
+        <div id={descriptionId} style={styles.description}>{currentStep.description}</div>
         <div style={styles.progressMeta}>
           <span>{completedSteps} / {tutorial.steps.length}</span>
           <span>{Math.round(progress)}%</span>
         </div>
-        <div style={styles.progressTrack} role="progressbar" aria-valuemin={0} aria-valuemax={tutorial.steps.length} aria-valuenow={completedSteps}>
+        <div style={styles.progressTrack} role="progressbar" aria-label="Tutorial progress" aria-valuemin={0} aria-valuemax={tutorial.steps.length} aria-valuenow={completedSteps}>
           <div style={{ ...styles.progressFill, width: `${progress}%` }} />
         </div>
         <div style={styles.navigation}>
@@ -237,6 +303,26 @@ export function GuidedTutorialOverlay({
       </section>
     </div>
   )
+}
+
+export function nextGuidedTutorialFocusIndex(activeIndex: number, focusableCount: number, reverse = false) {
+  if (focusableCount <= 0) return -1
+  if (activeIndex < 0 || activeIndex >= focusableCount) return reverse ? focusableCount - 1 : 0
+  return (activeIndex + (reverse ? -1 : 1) + focusableCount) % focusableCount
+}
+
+function focusableElements(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter(isKeyboardFocusable)
+}
+
+function isKeyboardFocusable(element: HTMLElement) {
+  if (element.hidden || element.getAttribute('aria-hidden') === 'true') return false
+  const style = window.getComputedStyle(element)
+  return style.display !== 'none' && style.visibility !== 'hidden'
 }
 
 function centeredBubblePlacement(size: BubbleSize): BubblePlacement {
@@ -408,9 +494,10 @@ const styles: Record<string, CSSProperties> = {
   bubble: {
     position: 'fixed',
     width: BUBBLE_WIDTH,
-    maxWidth: 'calc(100vw - 32px)',
-    maxHeight: 'calc(100vh - 32px)',
+    maxWidth: 'calc(100vw - 24px)',
+    maxHeight: 'calc(100dvh - 24px)',
     overflowY: 'auto',
+    boxSizing: 'border-box',
     border: '1px solid rgba(0, 115, 133, 0.42)',
     borderRadius: 8,
     background: '#151a26',
@@ -442,8 +529,8 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 6,
     background: 'rgba(255, 255, 255, 0.06)',
     color: '#fff',
-    width: 30,
-    height: 30,
+    width: 44,
+    height: 44,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -459,7 +546,7 @@ const styles: Record<string, CSSProperties> = {
     paddingRight: 34,
   },
   title: {
-    margin: '0 32px 8px 0',
+    margin: '0 44px 8px 0',
     fontSize: 18,
     lineHeight: 1.25,
   },
@@ -499,8 +586,8 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 6,
     background: 'rgba(255, 255, 255, 0.06)',
     color: '#fff',
-    width: 38,
-    height: 36,
+    width: 44,
+    height: 44,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -511,7 +598,7 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: 6,
     background: '#007385',
     color: '#fff',
-    minHeight: 36,
+    minHeight: 44,
     padding: '0 12px',
     fontWeight: 800,
     display: 'inline-flex',

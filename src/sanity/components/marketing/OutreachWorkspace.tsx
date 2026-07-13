@@ -1048,6 +1048,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
         />
         <div style={{ display: 'grid', gap: 10 }}>
           <textarea
+            aria-label="Contacts to add"
             style={{ ...styles.input, minHeight: 120, fontFamily: 'inherit' }}
             value={intakeText}
             onChange={(event) => {
@@ -1172,7 +1173,12 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
               ~1–2 min per contact. Progress saves after each person — safe to close and come back.
             </span>
             <span style={{ flex: 1 }} />
-            <select style={{ ...styles.input, width: 'auto' }} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <select
+              aria-label="Filter contacts by status"
+              style={{ ...styles.input, width: 'auto' }}
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+            >
               <option value="all">All statuses</option>
               {STATUS_SHORT_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -1190,7 +1196,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Name', 'Organization', 'Segment', 'Warmth', 'Owner', 'Status', 'Fit', 'Next', ''].map((heading) => (
+                  {['Name', 'Organization', 'Segment', 'Warmth', 'Owner', 'Status', 'Fit', 'Next', 'Actions'].map((heading) => (
                     <th
                       key={heading}
                       style={{
@@ -1349,6 +1355,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
                 </div>
                 <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
                   <input
+                    aria-label={`One-liner for ${offer.title || offer.key} (${offer.key || offer._id})`}
                     style={styles.input}
                     defaultValue={offer.oneLiner || ''}
                     placeholder="One-liner, as said on a call"
@@ -1357,6 +1364,7 @@ export function OutreachWorkspace({ client, onOpenEvidence }: OutreachWorkspaceP
                     }}
                   />
                   <input
+                    aria-label={`Price band for ${offer.title || offer.key} (${offer.key || offer._id})`}
                     style={styles.input}
                     defaultValue={offer.priceBand || ''}
                     placeholder='Price band, e.g. "Fixed fee, $40–80K"'
@@ -1537,7 +1545,7 @@ export function OutreachEvidenceWorkspace({ client }: OutreachEvidenceWorkspaceP
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>
-                  {['Project', 'Client', 'Techniques', 'Highlights', 'Status', ''].map((heading) => (
+                  {['Project', 'Client', 'Techniques', 'Highlights', 'Status', 'Actions'].map((heading) => (
                     <th
                       key={heading}
                       style={{
@@ -1562,7 +1570,21 @@ export function OutreachEvidenceWorkspace({ client }: OutreachEvidenceWorkspaceP
                       <td style={{ padding: '8px 10px 8px 0', fontWeight: 700 }}>
                         <button
                           type="button"
-                          style={{ background: 'none', border: 0, color: 'inherit', font: 'inherit', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                          aria-expanded={expandedId === doc._id}
+                          style={{
+                            background: 'none',
+                            border: 0,
+                            color: 'inherit',
+                            font: 'inherit',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            padding: 0,
+                            minWidth: 24,
+                            minHeight: 24,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            textAlign: 'left',
+                          }}
                           onClick={() => setExpandedId(expandedId === doc._id ? null : (doc._id as string))}
                         >
                           {expandedId === doc._id ? '▾ ' : '▸ '}

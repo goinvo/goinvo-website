@@ -119,6 +119,16 @@ const kbd: CSSProperties = {
   margin: '0 1px',
 }
 
+const KNOWLEDGE_BASE_RESPONSIVE_CSS = `
+  @media (max-width: 640px) {
+    [data-knowledge-base="true"] { padding: 16px 12px 72px !important; }
+    [data-knowledge-hero="true"] { flex-wrap: wrap !important; padding: 16px !important; }
+    [data-knowledge-progress="true"] { width: 100% !important; min-width: 0 !important; align-items: flex-start !important; }
+    [data-knowledge-article-header="true"] { align-items: flex-start !important; flex-wrap: wrap !important; padding: 12px !important; }
+    [data-knowledge-article-meta="true"] { width: 100% !important; padding-left: 34px !important; flex-wrap: wrap !important; }
+  }
+`
+
 /* -----------------------------------------------------------------
  * Categories + articles
  * ----------------------------------------------------------------- */
@@ -278,7 +288,7 @@ const categories: Category[] = [
   {
     id: 'marketing',
     title: 'Marketing suite',
-    blurb: 'Research, calendar, campaigns, funnels, channels, analytics, and Quick Links.',
+    blurb: 'Plan from evidence, make connected outreach, and measure what works across all 15 workspaces.',
     icon: ChartUpwardIcon,
     articles: [
       {
@@ -287,7 +297,7 @@ const categories: Category[] = [
         blurb: 'The designer-friendly operating layer for planned outreach.',
         minutes: 5,
         keywords: ['marketing', 'overview', 'calendar', 'campaign', 'funnel', 'channels', 'analytics', 'instagram'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=dashboard', label: 'Open Marketing dashboard' }],
         steps: [
           {
             id: 'marketing.overview.framework',
@@ -304,7 +314,7 @@ const categories: Category[] = [
             ),
             tip: (
               <>
-                Treat the Designer workflow and Needs attention flags like an
+                Treat Autopilot and Needs attention flags like an
                 internal setup queue: resolve the research first, then create
                 the connected shells only when the opportunities are ready.
               </>
@@ -339,12 +349,45 @@ const categories: Category[] = [
         ],
       },
       {
+        id: 'marketing.dashboard',
+        title: 'Start from the Dashboard',
+        blurb: 'Use ranked next actions and runway signals to decide what deserves attention first.',
+        minutes: 3,
+        keywords: ['dashboard', 'home', 'next actions', 'runway', 'needs attention', 'autopilot'],
+        links: [{ path: '/marketing?view=dashboard', label: 'Open Dashboard' }],
+        steps: [
+          {
+            id: 'marketing.dashboard.scan',
+            title: 'Scan the runway before opening editors',
+            body: (
+              <>
+                Start on <strong>Home</strong> to see publishing runway,
+                unresolved strategy gaps, and records that need attention.
+                These signals summarize the suite; they do not create or edit
+                records by themselves.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.dashboard.next-action',
+            title: 'Open one ranked next action',
+            body: (
+              <>
+                Choose the highest useful action, review the destination, and
+                save there. Use Autopilot when you want the same work broken
+                into one reviewable step at a time.
+              </>
+            ),
+          },
+        ],
+      },
+      {
         id: 'marketing.research',
         title: 'Use Research for release planning',
         blurb: 'Turn fast strategy inputs, SEO, collaborators, and contributors into an editable content plan.',
         minutes: 7,
         keywords: ['research', 'seo', 'collaborations', 'interns', 'release windows', 'content opportunities', 'strategy'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=research', label: 'Open Research' }],
         steps: [
           {
             id: 'marketing.research.inputs',
@@ -404,15 +447,240 @@ const categories: Category[] = [
         ],
       },
       {
-        id: 'marketing.designer-workflow-tutorials',
-        title: 'Designer Workflow tutorials',
-        blurb: 'Practice the Marketing view tour and learn how sessions, AI suggestions, and next-step routing fit together.',
+        id: 'marketing.seo',
+        title: 'Find and verify SEO opportunities',
+        blurb: 'Use search performance, page audits, crawl findings, and AI citations to prioritize page work.',
+        minutes: 5,
+        keywords: ['seo', 'search console', 'ga4', 'page audit', 'crawl', 'citation', 'search opportunity'],
+        links: [{ path: '/marketing?view=seo', label: 'Open SEO' }],
+        steps: [
+          {
+            id: 'marketing.seo.opportunities',
+            title: 'Start with ranked opportunities',
+            body: (
+              <>
+                Review Search Console and GA4 opportunities before changing a
+                page. Look for meaningful impressions, page-two rankings, and
+                conversion context rather than optimizing a keyword in isolation.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.seo.audit',
+            title: 'Audit the intended GoInvo page',
+            body: (
+              <>
+                Run a page audit or site sweep, then resolve the highest-impact
+                findings first. Use the crawl for site-wide link problems and
+                the citation checker when a claim needs factual verification.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.seo.ai-citations',
+            title: 'Treat AI citation checks as periodic snapshots',
+            body: (
+              <>
+                AI citation checks are slower and use paid model capacity. Run
+                them intentionally, then compare stored snapshots instead of
+                repeating a live check during routine page editing.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.strategy',
+        title: 'Answer reusable Strategy questions',
+        blurb: 'Save the audiences, messages, proof, CTAs, tracking rules, and quality checks content can reuse.',
+        minutes: 5,
+        keywords: ['strategy', 'audience', 'message', 'proof', 'cta', 'tracking', 'quality gate', 'experiment'],
+        links: [{ path: '/marketing?view=strategy', label: 'Open Strategy Q&A' }],
+        steps: [
+          {
+            id: 'marketing.strategy.foundation',
+            title: 'Build the reusable foundation',
+            body: (
+              <>
+                Work through audience, message, proof, CTA, tracking, quality,
+                and experiment answers. Keep each answer specific enough that a
+                designer can use it without reopening the entire marketing plan.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.strategy.drafts',
+            title: 'Review local or AI-assisted drafts before saving',
+            body: (
+              <>
+                A restored or suggested draft is still working material. Check
+                its source evidence and wording, then save it to Sanity only
+                when it is suitable for reuse across future content.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.strategy-brief',
+        title: 'Read the Positioning brief',
+        blurb: 'Use the read-only strategy brief to align positioning, commercial search terms, AI visibility, and the Red Team play.',
         minutes: 4,
-        keywords: ['designer workflow', 'tutorial', 'tour', 'sessions', 'ai assistant', 'guided setup'],
+        keywords: ['strategy brief', 'positioning', 'money terms', 'ai visibility', 'red team', 'go to market'],
+        links: [{ path: '/marketing?view=strategyBrief', label: 'Open Positioning' }],
+        steps: [
+          {
+            id: 'marketing.strategy-brief.read',
+            title: 'Use the brief for orientation, not editing',
+            body: (
+              <>
+                This view summarizes the current positioning recommendation,
+                commercial search opportunities, AI visibility, and failure-
+                teardown strategy. It is intentionally read-only.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.strategy-brief.apply',
+            title: 'Move actionable decisions to their owning workspace',
+            body: (
+              <>
+                Use Strategy Q&amp;A for reusable language, SEO for page and
+                citation work, and Campaigns or Calendar for execution. The
+                brief should align those decisions, not become a second editor.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.outreach',
+        title: 'Build a researched Outreach call plan',
+        blurb: 'Turn warm contacts into verified opportunities, relevant evidence, offers, and follow-ups.',
+        minutes: 6,
+        keywords: ['outreach', 'contacts', 'warm network', 'call plan', 'offers', 'follow up', 'research'],
+        links: [{ path: '/marketing?view=outreach', label: 'Open Outreach' }],
+        steps: [
+          {
+            id: 'marketing.outreach.intake',
+            title: 'Preview contact intake before saving',
+            body: (
+              <>
+                Paste the contact list, review the parsed names and companies,
+                and remove duplicates before creating records. Contact details
+                and research belong in this private workspace.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.research',
+            title: 'Research before ranking calls',
+            body: (
+              <>
+                Research each contact against active case-study evidence, then
+                review identity confidence, fit, proposed offers, and what to
+                show them. The ranked plan is useful only after that review.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.log',
+            title: 'Log the real outcome and next step',
+            body: (
+              <>
+                After contact, record the current status, note, and follow-up
+                date. This keeps the plan from repeatedly recommending a call
+                that already happened.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.evidence',
+        title: 'Maintain case-study Evidence',
+        blurb: 'Review the capability evidence Outreach uses to match contacts with credible work.',
+        minutes: 4,
+        keywords: ['evidence', 'case studies', 'capabilities', 'outreach', 'extract', 'proof'],
+        links: [{ path: '/marketing?view=workEvidence', label: 'Open Evidence' }],
+        steps: [
+          {
+            id: 'marketing.evidence.extract',
+            title: 'Extract evidence from real case studies',
+            body: (
+              <>
+                Build the evidence index from published GoInvo work so
+                Outreach can match a contact to specific capabilities and
+                shipped examples rather than generic claims.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.evidence.review',
+            title: 'Review evidence before using it in outreach',
+            body: (
+              <>
+                Keep titles, summaries, capability tags, and source links
+                accurate. Re-run contact research after meaningful evidence
+                changes so the call plan uses the current index.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.measure',
+        title: 'Set up and read A/B tests',
+        blurb: 'Define a controlled bet, verify launch readiness, and keep the result and decision together.',
+        minutes: 6,
+        keywords: ['measure', 'a/b test', 'experiment', 'variant', 'flag', 'metric', 'vercel', 'decision'],
+        links: [{ path: '/marketing?view=abTesting', label: 'Open A/B tests' }],
+        steps: [
+          {
+            id: 'marketing.measure.setup',
+            title: 'Define the bet and control',
+            body: (
+              <>
+                Name the hypothesis, page, flag key, control, variants, primary
+                metric, and guardrails. A test is not launch-ready without a
+                control version and a measurable success rule.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.measure.launch',
+            title: 'Verify previews, tracking, and rollout',
+            body: (
+              <>
+                Check desktop and mobile previews, connect the analytics
+                source, and verify every required event includes the experiment,
+                flag, variant, and page context without visitor PII.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.measure.decide',
+            title: 'Record evidence before the decision',
+            body: (
+              <>
+                Add the readout and evidence in Results, then choose the
+                decision. Preserve the result even when a variant loses so the
+                same design bet is not repeated without new evidence.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.designer-workflow-tutorials',
+        title: 'Autopilot tutorials',
+        blurb: 'Practice the Marketing view tour and learn how Autopilot sessions, suggestions, and next-step routing fit together.',
+        minutes: 4,
+        keywords: ['autopilot', 'tutorial', 'tour', 'sessions', 'ai assistant', 'guided setup'],
         links: [
-          { path: '/marketing?designerWorkflowTutorial=marketing-view-tour', label: 'Run Marketing view tour' },
-          { path: '/marketing?designerWorkflowTutorial=designer-workflow-recommendation', label: 'Run demo recommendation tour' },
-          { path: '/marketing?designerWorkflowTutorial=designer-workflow-sessions', label: 'Run sessions tour' },
+          { path: '/marketing?view=dashboard&designerWorkflowTutorial=marketing-view-tour', label: 'Run Marketing view tour' },
+          { path: '/marketing?view=dashboard&designerWorkflowTutorial=designer-workflow-recommendation', label: 'Run demo recommendation tour' },
+          { path: '/marketing?view=dashboard&designerWorkflowTutorial=designer-workflow-sessions', label: 'Run sessions tour' },
         ],
         steps: [
           {
@@ -421,8 +689,8 @@ const categories: Category[] = [
             body: (
               <>
                 Use <strong>Run Marketing view tour</strong> to open Marketing
-                and start the same guided overlay that appears the first time
-                someone visits the Marketing tab. It highlights the active UI,
+                and start the guided overlay. A first visit also offers this
+                tour once; closing it early will not mark it complete. It highlights the active UI,
                 explains the decision in plain language, and advances with
                 either the bubble arrows or the real action.
               </>
@@ -433,7 +701,7 @@ const categories: Category[] = [
             title: 'Use sessions instead of restarting',
             body: (
               <>
-                The sessions tutorial shows how to reopen saved setup runs.
+                The Autopilot sessions tutorial shows how to reopen saved setup runs.
                 This keeps designers from wasting prompts when they are still
                 working through the same planning question.
               </>
@@ -460,7 +728,7 @@ const categories: Category[] = [
         blurb: 'Define where GoInvo publishes and what formats belong there.',
         minutes: 4,
         keywords: ['channels', 'instagram', 'linkedin', 'email', 'content types', 'carousel', 'reel'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=channels', label: 'Open Channels' }],
         steps: [
           {
             id: 'marketing.channels.first',
@@ -507,7 +775,7 @@ const categories: Category[] = [
         blurb: 'Use campaigns as strategy containers, not tiny content tasks.',
         minutes: 7,
         keywords: ['campaigns', 'goals', 'audience', 'keywords', 'intent', 'utm', 'measurement'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=campaigns', label: 'Open Campaigns' }],
         steps: [
           {
             id: 'marketing.campaigns.goal',
@@ -566,7 +834,7 @@ const categories: Category[] = [
         blurb: 'Map what someone should do after seeing a page, post, or link.',
         minutes: 5,
         keywords: ['funnels', 'stage map', 'cta', 'conversion', 'awareness', 'consideration'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=funnels', label: 'Open Funnels' }],
         steps: [
           {
             id: 'marketing.funnels.stage-map',
@@ -605,12 +873,44 @@ const categories: Category[] = [
         ],
       },
       {
+        id: 'marketing.templates',
+        title: 'Maintain setup Templates',
+        blurb: 'Keep reusable campaign and funnel starting points useful without turning them into rigid rules.',
+        minutes: 4,
+        keywords: ['templates', 'campaign template', 'funnel template', 'defaults', 'scaffolding'],
+        links: [{ path: '/marketing?view=templates', label: 'Open Templates' }],
+        steps: [
+          {
+            id: 'marketing.templates.scope',
+            title: 'Template the repeated structure',
+            body: (
+              <>
+                Save recurring campaign goals, funnel stages, CTAs, and setup
+                prompts that genuinely reduce repeated work. Keep the template
+                broad enough to fit more than one project.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.templates.review',
+            title: 'Rewrite defaults for the actual work',
+            body: (
+              <>
+                Preview the template before creating a record, then replace its
+                prompts with the real audience, objective, evidence, destination,
+                and success signal. Archive patterns that are no longer used.
+              </>
+            ),
+          },
+        ],
+      },
+      {
         id: 'marketing.calendar',
         title: 'Schedule content on the calendar',
         blurb: 'Turn strategy into dated design work and publishing tasks.',
         minutes: 6,
         keywords: ['calendar', 'content calendar', 'publish date', 'post', 'templates', 'brief'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=calendar', label: 'Open Calendar' }],
         steps: [
           {
             id: 'marketing.calendar.add',
@@ -655,7 +955,7 @@ const categories: Category[] = [
         blurb: 'Attach measurement sources to campaigns, funnels, and channels.',
         minutes: 5,
         keywords: ['analytics', 'ga4', 'gtm', 'vercel', 'metrics', 'utm', 'dashboard'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=analytics', label: 'Open Analytics' }],
         steps: [
           {
             id: 'marketing.analytics.sources',
@@ -701,7 +1001,7 @@ const categories: Category[] = [
         minutes: 4,
         keywords: ['quick links', 'link in bio', 'instagram', 'links', '/links', 'housing truths'],
         links: [
-          { path: '/marketing', label: 'Open Marketing workspace' },
+          { path: '/marketing?view=linkTree', label: 'Open Quick Links' },
         ],
         steps: [
           {
@@ -1692,11 +1992,13 @@ function IntentLink({ spec }: { spec: IntentSpec }) {
 
 function Step({
   step,
+  articleTitle,
   index,
   done,
   onToggle,
 }: {
   step: StepDef
+  articleTitle: string
   index: number
   done: boolean
   onToggle: () => void
@@ -1706,7 +2008,7 @@ function Step({
       <button
         onClick={onToggle}
         aria-pressed={done}
-        aria-label={done ? `Mark step ${index + 1} as not done` : `Mark step ${index + 1} as done`}
+        aria-label={done ? `Mark “${step.title}” in “${articleTitle}” as not done` : `Mark “${step.title}” in “${articleTitle}” as done`}
         style={styles.stepCheck}
         type="button"
       >
@@ -1749,10 +2051,20 @@ function ArticleCard({
   const total = article.steps.length
   const done = article.steps.filter((s) => progress[s.id]).length
   const pct = total === 0 ? 0 : (done / total) * 100
+  const headerId = `article-${article.id}-header`
+  const panelId = `article-${article.id}-panel`
 
   return (
-    <div id={`article-${article.id}`} style={{ ...styles.articleCard, ...(open ? styles.articleCardOpen : null) }}>
-      <button onClick={onToggleOpen} style={styles.articleHeader} type="button">
+    <div id={`article-${article.id}`} tabIndex={-1} style={{ ...styles.articleCard, ...(open ? styles.articleCardOpen : null) }}>
+      <button
+        id={headerId}
+        aria-expanded={open}
+        aria-controls={panelId}
+        data-knowledge-article-header="true"
+        onClick={onToggleOpen}
+        style={styles.articleHeader}
+        type="button"
+      >
         <span style={styles.articleChevron}>
           {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
         </span>
@@ -1760,7 +2072,7 @@ function ArticleCard({
           <span style={styles.articleTitle}>{article.title}</span>
           <span style={styles.articleBlurb}>{article.blurb}</span>
         </span>
-        <span style={styles.articleMeta}>
+        <span data-knowledge-article-meta="true" style={styles.articleMeta}>
           {article.minutes ? <span>{article.minutes} min</span> : null}
           <span style={styles.articleCount}>
             {done}/{total}
@@ -1770,8 +2082,7 @@ function ArticleCard({
           </span>
         </span>
       </button>
-      {open ? (
-        <div style={styles.articleBody}>
+      <div id={panelId} role="region" aria-labelledby={headerId} hidden={!open} style={styles.articleBody}>
           {article.links && article.links.length > 0 ? (
             <div style={styles.linkRow}>
               {article.links.map((link, i) => (
@@ -1784,14 +2095,14 @@ function ArticleCard({
               <Step
                 key={step.id}
                 step={step}
+                articleTitle={article.title}
                 index={i}
                 done={!!progress[step.id]}
                 onToggle={() => onToggleStep(step.id)}
               />
             ))}
           </div>
-        </div>
-      ) : null}
+      </div>
     </div>
   )
 }
@@ -1877,10 +2188,12 @@ function GettingStartedComponent() {
     setQuery('')
     setOpenArticles((current) => new Set([...current, articleId]))
     window.setTimeout(() => {
-      document.getElementById(`article-${articleId}`)?.scrollIntoView({
+      const articleElement = document.getElementById(`article-${articleId}`)
+      articleElement?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       })
+      articleElement?.focus({ preventScroll: true })
     }, 100)
   }, [])
 
@@ -1921,9 +2234,10 @@ function GettingStartedComponent() {
   }, [query])
 
   return (
-    <div style={styles.root}>
+    <div data-knowledge-base="true" style={styles.root}>
+      <style>{KNOWLEDGE_BASE_RESPONSIVE_CSS}</style>
       {/* Hero */}
-      <header style={styles.hero}>
+      <header data-knowledge-hero="true" style={styles.hero}>
         <div style={styles.heroIcon}>
           <RocketIcon style={{ fontSize: 28 }} />
         </div>
@@ -1935,7 +2249,7 @@ function GettingStartedComponent() {
             locally to this browser.
           </p>
         </div>
-        <div style={styles.heroProgress}>
+        <div data-knowledge-progress="true" style={styles.heroProgress}>
           <div style={styles.heroProgressLabel}>
             {totals.done}<span style={{ opacity: 0.5 }}> / {totals.total}</span>
           </div>
@@ -1964,6 +2278,7 @@ function GettingStartedComponent() {
         <SearchIcon style={styles.searchIcon} />
         <input
           type="search"
+          aria-label="Search the CMS knowledge base"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search articles, e.g. “hero image”, “categories”, “reorder”…"
@@ -2289,6 +2604,11 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     cursor: 'pointer',
     padding: 0,
+    width: 24,
+    height: 24,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
     marginTop: 2,
   },

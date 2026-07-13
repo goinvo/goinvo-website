@@ -6,8 +6,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
  * simple shared-secret setup:
  *
  * 1. `Authorization: Bearer <secret>` header
- * 2. `?secret=<secret>` query token
- * 3. `x-vercel-signature` HMAC of the raw body (sha1 or sha256 hex)
+ * 2. `x-vercel-signature` HMAC of the raw body (sha1 or sha256 hex)
  *
  * All comparisons are constant-time. Returns false when the secret is missing
  * so the route can decide how to respond.
@@ -16,7 +15,6 @@ export interface DrainAuthorizationInput {
   secret: string
   authorizationHeader?: string | null
   signatureHeader?: string | null
-  queryToken?: string | null
   rawBody?: string
 }
 
@@ -40,9 +38,6 @@ export function verifyDrainAuthorization(input: DrainAuthorizationInput): boolea
     const token = bearer.replace(/^Bearer\s+/i, '').trim()
     if (token && safeEqual(token, secret)) return true
   }
-
-  const queryToken = input.queryToken?.trim()
-  if (queryToken && safeEqual(queryToken, secret)) return true
 
   const signature = input.signatureHeader?.trim()
   if (signature && typeof input.rawBody === 'string') {

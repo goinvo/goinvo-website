@@ -103,7 +103,7 @@ export function AnalyticsWorkspace({
   }
 
   return (
-    <div style={workspaceGridStyle}>
+    <div data-mobile-stack="true" style={workspaceGridStyle}>
       <section style={{ display: 'grid', gap: 16 }}>
         <section style={styles.panel}>
           <PanelHeading
@@ -220,7 +220,7 @@ export function AnalyticsWorkspace({
                 <StatusPill status={source.status} options={analyticsStatusOptions} />
               </div>
               {source.dashboardUrl && (
-                <div style={{ ...styles.small, color: '#007385', marginTop: 8 }}>Dashboard URL set</div>
+                <div style={{ ...styles.small, color: 'var(--card-fg-color)', marginTop: 8 }}>Dashboard URL set</div>
               )}
             </button>
           ))}
@@ -448,6 +448,7 @@ function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?
 
   return (
     <div
+      data-mobile-stack="true"
       style={{
         display: 'grid',
         gridTemplateColumns: 'minmax(220px, 1fr) minmax(260px, 1.3fr) 220px',
@@ -496,6 +497,7 @@ function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?
         ))}
       </div>
       <Select
+        ariaLabel="Connect analytics source"
         value=""
         options={[
           { title: sources.length === 0 ? 'Add analytics source first' : 'Connect source...', value: '' },
@@ -646,6 +648,7 @@ function AnalyticsEditor({
           <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <InputField label="Provider">
               <Select
+                ariaLabel="Analytics provider"
                 value={draft.provider || 'ga4'}
                 options={analyticsProviderOptions}
                 onChange={(provider) => setDraft({ ...draft, provider })}
@@ -653,6 +656,7 @@ function AnalyticsEditor({
             </InputField>
             <InputField label="Status">
               <Select
+                ariaLabel="Analytics source status"
                 value={draft.status || 'planned'}
                 options={analyticsStatusOptions}
                 onChange={(status) => setDraft({ ...draft, status })}
@@ -733,6 +737,7 @@ function AnalyticsEditor({
         <Stack gap={12}>
           <InputField label="Reporting cadence">
             <Select
+              ariaLabel="Reporting cadence"
               value={draft.reportingCadence || 'monthly'}
               options={[
                 { title: 'Daily', value: 'daily' },

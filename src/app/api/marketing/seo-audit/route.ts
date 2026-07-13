@@ -1,10 +1,17 @@
-import { NextResponse } from 'next/server'
 import {
   auditPage,
   computeHealthScore,
   type PageAuditResult,
   type SeoFinding,
 } from '@/lib/marketing/seoAudit'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import {
+  fetchSeoResource,
+  readResponseTextLimited,
+  SeoTargetError,
+  validateSeoTargetUrl,
+} from '@/lib/marketing/seoTarget'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // Phase-1 SEO audit route (see docs/seo-suite-revamp-plan.md). Unlike the
 // existing /api/marketing/seo route — which only ranks GSC demand and never
@@ -43,13 +50,13 @@ async function fetchSitemapUrls(): Promise<string[]> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), SITEMAP_TIMEOUT_MS)
   try {
-    const res = await fetch(SITEMAP_URL, {
+    const res = await fetchSeoResource(SITEMAP_URL, {
       cache: 'no-store',
       signal: controller.signal,
       headers: { 'User-Agent': 'GoInvo marketing SEO audit (+https://www.goinvo.com)' },
     })
     if (!res.ok) throw new Error(`Sitemap returned ${res.status}`)
-    const xml = await res.text()
+    const xml = await readResponseTextLimited(res)
     // Extract <loc> values without a full XML parser (sitemaps are flat).
     const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1].trim())
     // De-dupe, keep only http(s), and rank by value.
@@ -101,8 +108,28 @@ function summarize(results: PageAuditResult[]) {
 }
 
 export async function GET(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return privateMarketingJson({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   const { searchParams } = new URL(request.url)
-  const single = (searchParams.get('url') || '').trim()
+  const requestedUrl = (searchParams.get('url') || '').trim()
+  let single = ''
+  if (requestedUrl) {
+    try {
+      single = validateSeoTargetUrl(requestedUrl)
+    } catch (error) {
+      if (error instanceof SeoTargetError) {
+        return privateMarketingJson({ error: error.message }, { status: 400 })
+      }
+      throw error
+    }
+  }
   // Optional overrides for the semantic-gap (topical-coverage) check: the target
   // search query and market. When omitted, the keyword is inferred from the
   // page's title / H1 / URL.
@@ -178,7 +205,7 @@ export async function GET(request: Request) {
     } catch (error) {
       const reason = error instanceof Error ? error.message : 'unknown error'
       console.error('Marketing SEO audit: sitemap fetch failed:', error)
-      return NextResponse.json({
+      return privateMarketingJson({
         generatedAt: new Date().toISOString(),
         sitemap: SITEMAP_URL,
         error: `Could not load the sitemap (${reason}). Pass ?url=<page> to audit a single page.`,
@@ -190,7 +217,7 @@ export async function GET(request: Request) {
   }
 
   if (targets.length === 0) {
-    return NextResponse.json({
+    return privateMarketingJson({
       generatedAt: new Date().toISOString(),
       sitemap: single ? undefined : SITEMAP_URL,
       results: [],
@@ -230,7 +257,7 @@ export async function GET(request: Request) {
 
   const summary = summarize(results)
 
-  return NextResponse.json({
+  return privateMarketingJson({
     generatedAt: new Date().toISOString(),
     sitemap: single ? undefined : SITEMAP_URL,
     results,

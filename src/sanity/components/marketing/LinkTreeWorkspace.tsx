@@ -180,7 +180,7 @@ export function LinkTreeWorkspace({
                 border: 'none',
                 background: 'transparent',
                 boxShadow: 'none',
-                color: '#007385',
+                color: 'var(--card-fg-color)',
               }}
             >
               <LaunchIcon style={{ width: 26, height: 26 }} />
@@ -283,11 +283,12 @@ function LinkItemList({
                 background: 'rgba(0, 115, 133, 0.08)',
                 display: 'grid',
                 placeItems: 'center',
-                color: '#007385',
+                color: 'var(--card-fg-color)',
                 fontWeight: 800,
               }}
             >
               {imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- Studio thumbnails may use arbitrary Sanity asset hosts that Next Image cannot safely preconfigure.
                 <img src={imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 item.title?.slice(0, 2).toUpperCase() || 'LI'
@@ -303,7 +304,7 @@ function LinkItemList({
               <span
                 style={{
                   ...styles.small,
-                  color: '#007385',
+                  color: 'var(--card-fg-color)',
                   display: 'block',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -482,6 +483,7 @@ function LinkItemEditor({
           <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <InputField label="What kind of destination is it?">
               <Select
+                ariaLabel="Link destination type"
                 value={draft.type || 'other'}
                 options={linkItemTypeOptions}
                 onChange={(type) => setDraft({ ...draft, type })}
@@ -504,6 +506,7 @@ function LinkItemEditor({
           <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
             <h3 style={{ margin: '0 0 10px', fontSize: 16 }}>Cover image</h3>
             {draft.image?.asset?.url ? (
+              // eslint-disable-next-line @next/next/no-img-element -- This editor preview renders a user-selected Sanity asset URL before its host is known to Next Image.
               <img
                 src={draft.image.asset.url}
                 alt=""
@@ -531,7 +534,11 @@ function LinkItemEditor({
                 No image
               </div>
             )}
+            <label htmlFor={`link-cover-${item._id}`} style={{ ...styles.label, display: 'block', marginBottom: 6 }}>
+              Upload cover image
+            </label>
             <input
+              id={`link-cover-${item._id}`}
               type="file"
               accept="image/*"
               disabled={uploading || saving}
@@ -563,14 +570,16 @@ function LinkItemEditor({
           </div>
           <InputField label="Should this show on the public page?">
             <Select
+              ariaLabel="Public link visibility status"
               value={draft.status || 'active'}
               options={linkItemStatusOptions}
               onChange={(status) => setDraft({ ...draft, status })}
             />
           </InputField>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 24, fontSize: 13, cursor: 'pointer' }}>
             <input
               type="checkbox"
+              style={{ width: 24, height: 24, margin: 0, flexShrink: 0 }}
               checked={!!draft.featured}
               onChange={(event) => setDraft({ ...draft, featured: event.currentTarget.checked })}
             />
@@ -602,6 +611,7 @@ function LinkItemEditor({
           </InputField>
           <InputField label="Which campaign is this connected to?">
             <Select
+              ariaLabel="Connected campaign"
               value={campaignId}
               options={[{ title: 'No campaign', value: '' }, ...campaigns.map((campaign) => ({ title: campaign.title || 'Untitled campaign', value: campaign._id }))]}
               onChange={setCampaignId}
@@ -609,6 +619,7 @@ function LinkItemEditor({
           </InputField>
           <InputField label="Which post or content item uses this link?">
             <Select
+              ariaLabel="Connected calendar item"
               value={calendarItemId}
               options={[{ title: 'No calendar item', value: '' }, ...calendarItems.map((calendarItem) => ({ title: calendarItem.title || 'Untitled item', value: calendarItem._id }))]}
               onChange={setCalendarItemId}

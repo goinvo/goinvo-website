@@ -1,9 +1,9 @@
 import { createClient, type SanityClient } from '@sanity/client'
-import { NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { runAiCitationPanel, type PanelSnapshot } from '@/lib/marketing/aiCitation'
 import { resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // AI-citation share-of-voice tracker route (marketingIdea seo-ai-citation-tracking).
 //
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     await assertStudioOrApiKey(req)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return privateMarketingJson({ error: error.message }, { status: 401 })
     }
     throw error
   }
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     // runAiCitationPanel is graceful, but never let an unexpected throw 500 the
     // route without a clear message.
     console.error('AI citation panel run failed:', error)
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: error instanceof Error ? error.message : 'AI citation panel run failed.' },
       { status: 500 },
     )
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
     }
   }
 
-  return NextResponse.json({
+  return privateMarketingJson({
     stored: Boolean(storedId),
     storedId,
     snapshot: stamped,
@@ -124,9 +124,18 @@ export async function POST(req: Request) {
 }
 
 export async function GET(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return privateMarketingJson({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   const sanity = getSanityClient()
   if (!sanity) {
-    return NextResponse.json({ error: 'Sanity write token is not configured.', snapshots: [] }, { status: 500 })
+    return privateMarketingJson({ error: 'Sanity write token is not configured.', snapshots: [] }, { status: 500 })
   }
 
   const url = new URL(request.url)
@@ -135,10 +144,10 @@ export async function GET(request: Request) {
 
   try {
     const snapshots = await sanity.fetch(SNAPSHOT_LIST_QUERY, { limit })
-    return NextResponse.json({ snapshots: snapshots || [] })
+    return privateMarketingJson({ snapshots: snapshots || [] })
   } catch (error) {
     console.error('AI citation snapshot fetch failed:', error)
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: error instanceof Error ? error.message : 'AI citation snapshot fetch failed.', snapshots: [] },
       { status: 500 },
     )

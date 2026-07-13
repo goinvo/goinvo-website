@@ -81,7 +81,6 @@ import {
   type AbTestingComparisonSummary,
   type AbTestingInsight,
   type AbTestingVariantEngagement,
-  type AbTestingVariantEventCell,
   type MarketingAiSuggestion,
   type MarketingData,
   type MarketingDocumentInput,
@@ -105,7 +104,6 @@ export function AbTestingWorkspace({
   savingId,
   createDocument,
   commitPatch,
-  onOpenView,
 }: AbTestingWorkspaceProps) {
   const compactLayout = useMarketingCompactLayout()
   const [selectedId, setSelectedId] = useState<string | null>(data.experiments[0]?._id || null)
@@ -710,7 +708,6 @@ export function AbTestingWorkspace({
     </div>
   )
 }
-
 function AbTestingSummaryCell({
   label,
   value,
@@ -851,7 +848,6 @@ function AbTestingDashboardCard({
     </button>
   )
 }
-
 function AbTestingInsightRow({ insight, last = false }: { insight: AbTestingInsight; last?: boolean }) {
   const tone = getAnalyticsInterpretationTone(insight.severity)
 
@@ -1273,42 +1269,6 @@ function AbTestingVariantSummary({ experiment }: { experiment: MarketingExperime
   )
 }
 
-function AbTestingForcedLinkSummary({ experiment }: { experiment: MarketingExperiment }) {
-  const variants = experiment.variants || []
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.goinvo.com'
-  const linkableVariants = variants.filter((variant) => variant.key?.trim())
-
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
-      <div style={{ ...styles.kicker, marginBottom: 6 }}>QA links</div>
-      {linkableVariants.length === 0 ? (
-        <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>Add version keys before forced preview links are available.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: 8 }}>
-          {linkableVariants.map((variant) => {
-            const baseHref = variant.previewUrl?.trim() || experiment.targetPath || '/'
-            const forcedUrl = buildMarketingForcedExperimentUrl(baseHref, variant.key || '', origin)
-            return (
-              <div key={variant._key || variant.key} style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                <span style={{ ...styles.small, ...styles.muted }}>{variant.label || variant.key}</span>
-                <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button type="button" style={styles.button} onClick={() => void copyTextToClipboard(forcedUrl)}>
-                    Copy
-                  </button>
-                  <a href={forcedUrl} target="_blank" rel="noreferrer" style={styles.button}>
-                    <LaunchIcon style={{ width: 15, height: 15 }} />
-                    Open
-                  </a>
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function AbTestingVercelReadout({
   experiment,
   onOpenSignals,
@@ -1513,57 +1473,5 @@ function AbTestingEditorTabButton({
       <strong style={{ display: 'block', fontSize: 13 }}>{title}</strong>
       <span style={{ ...styles.small, ...styles.muted, display: 'block', marginTop: 2 }}>{detail}</span>
     </button>
-  )
-}
-
-function AbTestingStepList({ steps }: { steps: Array<[string, string, string]> }) {
-  return (
-    <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
-      {steps.map(([step, title, detail], index) => (
-        <div
-          key={step}
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '52px minmax(0, 1fr)',
-            gap: 10,
-            padding: '11px 0',
-            borderBottom: index === steps.length - 1 ? 'none' : '1px solid var(--card-border-color)',
-          }}
-        >
-          <span style={{ ...styles.small, color: '#4dc4d6', fontWeight: 900, textTransform: 'uppercase' }}>Step {step}</span>
-          <span>
-            <strong style={{ display: 'block', fontSize: 13 }}>{title}</strong>
-            <span style={{ ...styles.small, ...styles.muted, display: 'block', lineHeight: 1.45, marginTop: 2 }}>{detail}</span>
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function AbTestingIntentCard({
-  eyebrow,
-  title,
-  detail,
-  actionLabel,
-  primary = false,
-  onAction,
-}: {
-  eyebrow: string
-  title: string
-  detail: string
-  actionLabel: string
-  primary?: boolean
-  onAction: () => void
-}) {
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 14, display: 'grid', gap: 9 }}>
-      <div style={{ ...styles.kicker, marginBottom: 0 }}>{eyebrow}</div>
-      <strong style={{ fontSize: 15 }}>{title}</strong>
-      <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>{detail}</p>
-      <button type="button" style={primary ? styles.primaryButton : styles.button} onClick={onAction}>
-        {actionLabel}
-      </button>
-    </div>
   )
 }

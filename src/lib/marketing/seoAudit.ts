@@ -10,6 +10,7 @@ import { auditCwv } from './seoAuditCwv'
 import { auditConversion } from './seoAuditConversion'
 import { auditLlmsTxt } from './seoAuditLlms'
 import { auditSemanticGap } from './seoAuditSemantic'
+import { fetchSeoResource, readResponseTextLimited } from './seoTarget'
 
 // Re-export the indexation layer so callers can import everything from the
 // engine entry point. (seoAuditIndexation imports the finding model + weights
@@ -178,7 +179,7 @@ export async function fetchPageHtml(url: string): Promise<string> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(url, {
+    const res = await fetchSeoResource(url, {
       cache: 'no-store',
       signal: controller.signal,
       headers: {
@@ -186,9 +187,8 @@ export async function fetchPageHtml(url: string): Promise<string> {
         Accept: 'text/html,application/xhtml+xml,*/*;q=0.8',
       },
     })
-    const html = await res.text()
     if (!res.ok) throw new Error(`Page returned ${res.status}`)
-    return html
+    return await readResponseTextLimited(res)
   } finally {
     clearTimeout(timeout)
   }
@@ -612,14 +612,11 @@ export function auditStructuredData(url: string, html: string): SeoFinding[] {
   const blocks = root.querySelectorAll('script[type="application/ld+json"]')
   const types = new Set<string>()
   const objectsByType = new Map<string, Record<string, unknown>>()
-  let parsedOk = 0
-
   blocks.forEach((block, i) => {
     const raw = block.text.trim()
     if (!raw) return
     try {
       const data = JSON.parse(raw)
-      parsedOk++
       collectTypes(data, types)
       collectObjectsByType(data, objectsByType)
     } catch (e) {

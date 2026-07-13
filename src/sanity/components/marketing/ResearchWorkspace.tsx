@@ -2,25 +2,16 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { SearchIcon } from '@sanity/icons'
 
 import { refsFromIds } from '@/lib/marketing'
-import { analyticsProviderOptions } from '../../schemas/marketingAnalyticsSource'
-import { campaignObjectiveOptions, searchIntentOptions } from '../../schemas/marketingCampaign'
+import { campaignObjectiveOptions } from '../../schemas/marketingCampaign'
 import {
-  collaborationRelationshipOptions,
-  collaborationStatusOptions,
-  contentFormatOptions,
-  contributionTypeOptions,
-  opportunityReadinessOptions,
   researchConfidenceOptions,
-  researchEvidenceTypeOptions,
   researchMethodOptions,
-  researchPlanCadenceOptions,
-  researchPlanStatusOptions,
   researchPriorityOptions,
 } from '../../schemas/marketingResearchPlan'
 import { researchProjectStatusOptions, researchProjectTypeOptions } from '../../schemas/marketingResearchProject'
 import { researchResultStatusOptions } from '../../schemas/marketingResearchResult'
 import { researchRunStatusOptions } from '../../schemas/marketingResearchRun'
-import type { WorkflowHelpItem, WorkflowSetupStep, WorkflowTerm } from './types'
+import { requestMarketingAssist } from './marketingAssistRequest'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports ResearchWorkspace only for JSX
@@ -30,21 +21,11 @@ import {
   buildAnalyticsInterpretations,
   buildInspirationResearchResultDocument,
   buildProofPointFromResearchResult,
-  buildResearchPlanSavePayload,
   buildResearchProjectSavePayload,
-  createResearchAssumption,
-  createResearchCollaboration,
-  createResearchContentOpportunity,
-  createResearchEvidenceNote,
-  createResearchPlanGeneratedRecords,
   createResearchProjectCollaborator,
   createResearchProjectDocument,
   createResearchProjectGeneratedRecords,
   createResearchProjectQuestion,
-  createResearchQuestion,
-  createResearchReleaseWindow,
-  createResearchSeoTarget,
-  createResearchStrategyAdjustment,
   defaultResearchMethodsForType,
   defaultResearchQuestionsForType,
   describeResearchResult,
@@ -53,22 +34,18 @@ import {
   EmptyPanel,
   formatOptionalMoney,
   formatOptionalNumber,
-  getRecordId,
-  getResearchChannelOptions,
   getResearchResultsForProject,
   getResearchRunsForProject,
-  getStatusColor,
   hasInspirationDraftContent,
   inspirationActionOptions,
   inspirationKindOptions,
   InputField,
   isResearchResultApproved,
   labelFor,
-  MARKETING_TOOL_VIEWS,
+  MARKETING_UNSAVED_FORM_ID,
   MarketingAiAssistPanel,
   mergeIds,
   mergeInspirationIntoResearchProject,
-  mergeResearchPlanSuggestion,
   mergeResearchProjectSuggestion,
   migrateLegacyResearchPlanToProject,
   PanelHeading,
@@ -76,7 +53,6 @@ import {
   removeResearchArrayItem,
   researchResultKindLabel,
   researchResultReviewerInstruction,
-  ResearchOpportunityPreviewList,
   Select,
   serializeAnalyticsTakeawaysForAi,
   StatusPill,
@@ -87,8 +63,6 @@ import {
   textToStringList,
   updateResearchArrayItem,
   useMarketingUnsavedGuard,
-  workflowTerms,
-  type AnalyticsInterpretation,
   type AutopilotCompletionPayload,
   type AutopilotWorkspaceTarget,
   type MarketingAiAssistResponse,
@@ -99,7 +73,6 @@ import {
   type MarketingResearchProject,
   type MarketingResearchResult,
   type MarketingViewId,
-  type ResearchContentOpportunity,
   type ResearchInspirationDraft,
   type StudioClient,
 } from '../../tools/marketingTool'
@@ -157,7 +130,7 @@ export function ResearchWorkspace({
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+    <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 320px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
       <section style={styles.panel}>
         <PanelHeading
           title="Research projects"
@@ -259,7 +232,7 @@ function ResearchProjectEditor({
   autopilotTarget?: AutopilotWorkspaceTarget | null
   onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
 }) {
-  const { confirmDiscardUnsavedChanges } = useMarketingUnsavedGuard()
+  const { clearUnsavedChanges, confirmDiscardUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
   const [draft, setDraft] = useState<MarketingResearchProject | null>(project)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -289,11 +262,12 @@ function ResearchProjectEditor({
 
   useEffect(() => {
     if (autopilotTarget?.view !== 'research') return
-    setResearchPage(getResearchPageForAutopilotTarget(autopilotTarget))
-  }, [autopilotTarget?.targetId, autopilotTarget?.view])
+    setResearchPage(autopilotResearchPage)
+  }, [autopilotResearchPage, autopilotTarget?.view])
 
-  const projectResults = useMemo(() => (draft ? getResearchResultsForProject(data, draft._id) : []), [data, draft?._id])
-  const projectRuns = useMemo(() => (draft ? getResearchRunsForProject(data, draft._id) : []), [data, draft?._id])
+  const draftId = draft?._id
+  const projectResults = useMemo(() => (draftId ? getResearchResultsForProject(data, draftId) : []), [data, draftId])
+  const projectRuns = useMemo(() => (draftId ? getResearchRunsForProject(data, draftId) : []), [data, draftId])
   const projectResultIds = useMemo(() => new Set(projectResults.map((result) => result._id)), [projectResults])
   const storedSelectedResultIds = useMemo(
     () =>
@@ -339,6 +313,7 @@ function ResearchProjectEditor({
 
   const updateDraft = <K extends keyof MarketingResearchProject>(key: K, value: MarketingResearchProject[K]) => {
     setDraft((current) => (current ? { ...current, [key]: value } : current))
+    markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'research project draft')
     setMessage('')
     setError('')
   }
@@ -346,6 +321,7 @@ function ResearchProjectEditor({
   const saveDraft = async () => {
     if (!draft._id) return
     await onSave(draft._id, buildResearchProjectSavePayload(draft))
+    clearUnsavedChanges()
     setMessage('Research project saved.')
     onAutopilotComplete?.({ action: 'research:createProject', recordId: draft._id })
   }
@@ -353,6 +329,7 @@ function ResearchProjectEditor({
   const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
     const projectSuggestion = suggestion.researchProject || {}
     setDraft((current) => (current ? mergeResearchProjectSuggestion(current, projectSuggestion) : current))
+    markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'AI-assisted research project draft')
     setMessage('Suggested research setup applied. Review it, then get evidence.')
     setError('')
   }
@@ -374,21 +351,17 @@ function ResearchProjectEditor({
         'Refresh the methods, seed keywords, seed URLs, and research questions so the project matches the selected research type.',
         'Preserve reviewed results and linked drafts; only update the project setup.',
       ].join(' ')
-      const response = await fetch('/api/marketing/assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'researchProject',
-          draft,
-          prompt,
-          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(analyticsTakeaways),
-        }),
+      const payload = await requestMarketingAssist<MarketingAiAssistResponse>({
+        kind: 'researchProject',
+        draft,
+        prompt,
+        analyticsTakeaways: serializeAnalyticsTakeawaysForAi(analyticsTakeaways),
       })
-      const payload = (await response.json()) as MarketingAiAssistResponse
-      if (!response.ok || !payload.suggestion?.researchProject) throw new Error(payload.error || 'Research setup could not be reworked.')
+      if (!payload.suggestion?.researchProject) throw new Error('Research setup could not be reworked.')
       const nextDraft = mergeResearchProjectSuggestion(draft, payload.suggestion.researchProject)
       setDraft(nextDraft)
       await onSave(draft._id, buildResearchProjectSavePayload(nextDraft))
+      clearUnsavedChanges()
       await loadData()
       setMessage(`Research setup refreshed${payload.usedAi ? ' with AI' : ' from rule-based drafting'}. Check the updated questions, then get evidence again when ready.`)
     } catch (regenerateError) {
@@ -405,6 +378,7 @@ function ResearchProjectEditor({
     setMessage('')
     try {
       await onSave(draft._id, buildResearchProjectSavePayload(draft))
+      clearUnsavedChanges()
       const token = studioSessionToken()
       const response = await fetch('/api/marketing/research/run', {
         method: 'POST',
@@ -448,6 +422,7 @@ function ResearchProjectEditor({
       const nextDraft = mergeInspirationIntoResearchProject(draft, inspirationDraft)
       const created = await client.create(buildInspirationResearchResultDocument(draft, inspirationDraft))
       await onSave(draft._id, buildResearchProjectSavePayload(nextDraft))
+      clearUnsavedChanges()
       setDraft(nextDraft)
       await loadData()
       setInspirationDraft(emptyResearchInspirationDraft())
@@ -598,6 +573,7 @@ function ResearchProjectEditor({
     try {
       if (selectedApprovedIds.length === 0) throw new Error('Trust and select at least one finding before creating setup drafts.')
       await onSave(draft._id, buildResearchProjectSavePayload(draft))
+      clearUnsavedChanges()
       const result = await createResearchProjectGeneratedRecords(client, data, draft, selectedApprovedIds)
       await loadData()
       setMessage(`Created ${result.calendarItemIds.length} draft calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, plus campaign, funnel, and Quick Link drafts from trusted findings.`)
@@ -694,7 +670,7 @@ function ResearchProjectEditor({
         />
 
         {message && <div style={{ ...styles.small, color: '#007385', fontWeight: 800, marginTop: 12 }}>{message}</div>}
-        {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
+        {error && <div role="alert" style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
       </section>
 
       {researchPage === 'setup' && (
@@ -713,10 +689,11 @@ function ResearchProjectEditor({
             <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
           </InputField>
           <InputField label="Where is this research in the workflow?">
-            <Select value={draft.status || 'draft'} options={researchProjectStatusOptions} onChange={(value) => updateDraft('status', value)} />
+            <Select ariaLabel="Research project status" value={draft.status || 'draft'} options={researchProjectStatusOptions} onChange={(value) => updateDraft('status', value)} />
           </InputField>
           <InputField label="What kind of research is this?" help="Pick the closest shape. The choice changes the starter questions and scan methods.">
             <Select
+              ariaLabel="Research type"
               value={draft.researchType || 'topic'}
               options={researchProjectTypeOptions}
               onChange={(value) => {
@@ -728,7 +705,7 @@ function ResearchProjectEditor({
             />
           </InputField>
           <InputField label="Why are we doing it?" help="This keeps the research tied to the marketing goal instead of becoming trivia collection.">
-            <Select value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
+            <Select ariaLabel="Research objective" value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
           </InputField>
           <InputField label="Where should keyword scores come from?" help="Use us for United States search data unless this work targets another market.">
             <input style={styles.input} value={draft.targetGeography || 'us'} onChange={(event) => updateDraft('targetGeography', event.currentTarget.value)} />
@@ -775,6 +752,7 @@ function ResearchProjectEditor({
             <label key={method.value} style={{ display: 'inline-flex', gap: 7, alignItems: 'center', ...styles.small }}>
               <input
                 type="checkbox"
+                data-mobile-tap-target="true"
                 checked={(draft.methods || defaultResearchMethodsForType(draft.researchType)).includes(method.value)}
                 onChange={(event) => {
                   const current = draft.methods || defaultResearchMethodsForType(draft.researchType)
@@ -989,7 +967,7 @@ function ResearchProjectEditor({
         ) : (
           (draft.researchQuestions || []).map((question, index) => (
             <div key={question._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(150px, 0.4fr) auto', gap: 10, alignItems: 'end' }}>
+              <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(150px, 0.4fr) auto', gap: 10, alignItems: 'end' }}>
                 <InputField label="Question">
                   <input
                     style={styles.input}
@@ -999,6 +977,7 @@ function ResearchProjectEditor({
                 </InputField>
                 <InputField label="Method">
                   <Select
+                    ariaLabel={`Research question ${index + 1} method`}
                     value={question.method || 'deskResearch'}
                     options={researchMethodOptions}
                     onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { method: value, _type: 'researchQuestion' }))}
@@ -1096,10 +1075,10 @@ function ResearchInspirationIntake({
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
         <InputField label="What kind of thing is it?">
-          <Select value={value.sourceKind || 'idea'} options={inspirationKindOptions} onChange={(nextValue) => setField('sourceKind', nextValue)} disabled={disabled} />
+          <Select ariaLabel="Inspiration type" value={value.sourceKind || 'idea'} options={inspirationKindOptions} onChange={(nextValue) => setField('sourceKind', nextValue)} disabled={disabled} />
         </InputField>
         <InputField label="What might we do with it?">
-          <Select value={value.action || 'respond'} options={inspirationActionOptions} onChange={(nextValue) => setField('action', nextValue)} disabled={disabled} />
+          <Select ariaLabel="Inspiration next action" value={value.action || 'respond'} options={inspirationActionOptions} onChange={(nextValue) => setField('action', nextValue)} disabled={disabled} />
         </InputField>
         <InputField label="What should we call it?">
           <input
@@ -1137,727 +1116,6 @@ function ResearchInspirationIntake({
   )
 }
 
-function ResearchPlanEditor({
-  client,
-  plan,
-  data,
-  saving,
-  onSave,
-  loadData,
-  onOpenView,
-}: {
-  client: StudioClient
-  plan: MarketingResearchPlan | null
-  data: MarketingData
-  saving: boolean
-  onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  loadData: () => Promise<void>
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  const [draft, setDraft] = useState<MarketingResearchPlan | null>(plan)
-  const [selectedOpportunities, setSelectedOpportunities] = useState<string[]>([])
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-  const [converting, setConverting] = useState(false)
-  const analyticsTakeaways = useMemo(() => buildAnalyticsInterpretations(data), [data])
-
-  useEffect(() => {
-    setDraft(plan)
-    setSelectedOpportunities((plan?.contentOpportunities || []).map((opportunity) => opportunity._key || '').filter(Boolean))
-    setMessage('')
-    setError('')
-  }, [plan])
-
-  if (!draft) {
-    return <EmptyPanel icon={SearchIcon} title="Select a research plan" description="Create or reopen a plan to turn research inputs into release timing." />
-  }
-
-  const updateDraft = <K extends keyof MarketingResearchPlan>(key: K, value: MarketingResearchPlan[K]) => {
-    setDraft((current) => (current ? { ...current, [key]: value } : current))
-    setMessage('')
-    setError('')
-  }
-
-  const saveDraft = async () => {
-    if (!draft._id) return
-    await onSave(draft._id, buildResearchPlanSavePayload(draft))
-    setMessage('Research plan saved.')
-  }
-
-  const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
-    const researchSuggestion = suggestion.researchPlan || {}
-    setDraft((current) => (current ? mergeResearchPlanSuggestion(current, researchSuggestion) : current))
-    setMessage('Suggested plan applied. Review the editable fields, then save.')
-    setError('')
-  }
-
-  const generateLinkedRecords = async () => {
-    if (!draft._id) return
-    setConverting(true)
-    setError('')
-    setMessage('')
-    try {
-      const opportunityKeys = selectedOpportunities.length > 0 ? selectedOpportunities : (draft.contentOpportunities || []).map((item) => item._key || '').filter(Boolean)
-      if (opportunityKeys.length === 0) throw new Error('Select or add at least one content opportunity first.')
-      await onSave(draft._id, buildResearchPlanSavePayload(draft))
-      const result = await createResearchPlanGeneratedRecords(client, data, draft, opportunityKeys)
-      await loadData()
-      setMessage(`Created ${result.calendarItemIds.length} calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, plus campaign, funnel, and Quick Link drafts.`)
-    } catch (conversionError) {
-      setError(conversionError instanceof Error ? conversionError.message : 'Could not create linked drafts.')
-    } finally {
-      setConverting(false)
-    }
-  }
-
-  const addSeoTarget = () => updateDraft('seoTargets', [...(draft.seoTargets || []), createResearchSeoTarget(draft)])
-  const addResearchQuestion = () => updateDraft('researchQuestions', [...(draft.researchQuestions || []), createResearchQuestion(draft)])
-  const addEvidenceNote = () => updateDraft('evidenceNotes', [...(draft.evidenceNotes || []), createResearchEvidenceNote(draft)])
-  const addAssumption = () => updateDraft('assumptions', [...(draft.assumptions || []), createResearchAssumption(draft)])
-  const addCollaboration = () => updateDraft('collaborations', [...(draft.collaborations || []), createResearchCollaboration()])
-  const addWindow = () => updateDraft('releaseWindows', [...(draft.releaseWindows || []), createResearchReleaseWindow(draft)])
-  const addOpportunity = () => {
-    const opportunity = createResearchContentOpportunity(draft, data)
-    updateDraft('contentOpportunities', [...(draft.contentOpportunities || []), opportunity])
-    setSelectedOpportunities((current) => [...current, opportunity._key || ''].filter(Boolean))
-  }
-  const addAdjustment = () => updateDraft('strategyAdjustments', [...(draft.strategyAdjustments || []), createResearchStrategyAdjustment()])
-
-  return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <section style={styles.panel}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 16 }}>
-          <div>
-            <div style={styles.kicker}>Adaptive research</div>
-            <h2 style={{ margin: 0, fontSize: 24 }}>{draft.title || 'Untitled research plan'}</h2>
-            <p style={{ ...styles.muted, margin: '5px 0 0', lineHeight: 1.55 }}>
-              Gather only the strategy inputs that affect release timing: audience, SEO, collaborators, source material, and what designers can make next.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {['complete', 'archived'].includes(draft.status || '') && (
-              <button type="button" style={styles.button} onClick={() => updateDraft('status', 'active')}>
-                Reopen plan
-              </button>
-            )}
-            <button type="button" style={styles.button} onClick={() => void saveDraft()} disabled={saving}>
-              {saving ? 'Saving...' : 'Save plan'}
-            </button>
-            <button type="button" style={styles.primaryButton} onClick={() => void generateLinkedRecords()} disabled={converting}>
-              {converting ? 'Creating...' : 'Create linked drafts'}
-            </button>
-          </div>
-        </div>
-
-        <MarketingAiAssistPanel
-          kind="researchPlan"
-          draft={draft as unknown as Record<string, unknown>}
-          analyticsTakeaways={analyticsTakeaways}
-          onApply={applyAiSuggestion}
-        />
-
-        {message && <div style={{ ...styles.small, color: '#007385', fontWeight: 800, marginTop: 12 }}>{message}</div>}
-        {error && <div style={{ ...styles.small, color: '#E36216', fontWeight: 800, marginTop: 12 }}>{error}</div>}
-      </section>
-
-      <section style={styles.panel}>
-        <PanelHeading title="Strategy brief" description="The smallest useful strategy frame before content gets made." />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-          <InputField label="Plan title">
-            <input style={styles.input} value={draft.title || ''} onChange={(event) => updateDraft('title', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Status">
-            <Select value={draft.status || 'draft'} options={researchPlanStatusOptions} onChange={(value) => updateDraft('status', value)} />
-          </InputField>
-          <InputField label="Release cadence">
-            <Select value={draft.releaseCadence || 'weekly'} options={researchPlanCadenceOptions} onChange={(value) => updateDraft('releaseCadence', value)} />
-          </InputField>
-          <InputField label="Primary objective">
-            <Select value={draft.campaignObjective || 'awareness'} options={campaignObjectiveOptions} onChange={(value) => updateDraft('campaignObjective', value)} />
-          </InputField>
-        </div>
-        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
-          <InputField label="Research summary">
-            <textarea rows={4} style={styles.input} value={draft.summary || ''} onChange={(event) => updateDraft('summary', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Audience">
-            <textarea rows={3} style={styles.input} value={draft.audience || ''} onChange={(event) => updateDraft('audience', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Positioning">
-            <textarea rows={3} style={styles.input} value={draft.positioning || ''} onChange={(event) => updateDraft('positioning', event.currentTarget.value)} />
-          </InputField>
-          <InputField label="Canonical destination URL">
-            <input style={styles.input} value={draft.canonicalUrl || ''} onChange={(event) => updateDraft('canonicalUrl', event.currentTarget.value)} />
-          </InputField>
-        </div>
-      </section>
-
-      <ResearchArrayModule
-        title="Research questions"
-        description="Frame the decisions the plan needs to answer before content production starts."
-        actionLabel="Add question"
-        onAdd={addResearchQuestion}
-      >
-        {(draft.researchQuestions || []).length === 0 ? (
-          <EmptyInline title="No research questions yet. Add the question that would change what designers make." />
-        ) : (
-          (draft.researchQuestions || []).map((question, index) => (
-            <div key={question._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.4fr) repeat(2, minmax(140px, 0.8fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Question">
-                  <input
-                    style={styles.input}
-                    value={question.question || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { question: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Method">
-                  <Select
-                    value={question.method || 'deskResearch'}
-                    options={researchMethodOptions}
-                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { method: value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Status">
-                  <Select
-                    value={question.status || 'idea'}
-                    options={opportunityReadinessOptions}
-                    onChange={(value) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { status: value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('researchQuestions', removeResearchArrayItem(draft.researchQuestions, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Why it matters">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={question.whyItMatters || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { whyItMatters: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-                <InputField label="Decision it supports">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={question.decisionNeeded || ''}
-                    onChange={(event) => updateDraft('researchQuestions', updateResearchArrayItem(draft.researchQuestions, index, { decisionNeeded: event.currentTarget.value, _type: 'researchQuestion' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Evidence log"
-        description="Track claims, sources, confidence, and implications so AI output stays reviewable."
-        actionLabel="Add evidence"
-        onAdd={addEvidenceNote}
-      >
-        {(draft.evidenceNotes || []).length === 0 ? (
-          <EmptyInline title="No evidence yet. Add the source, signal, or observation the plan relies on." />
-        ) : (
-          (draft.evidenceNotes || []).map((note, index) => (
-            <div key={note._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.3fr) repeat(2, minmax(140px, 0.75fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Claim / signal">
-                  <input
-                    style={styles.input}
-                    value={note.claim || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { claim: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Evidence type">
-                  <Select
-                    value={note.evidenceType || 'siteContent'}
-                    options={researchEvidenceTypeOptions}
-                    onChange={(value) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { evidenceType: value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Confidence">
-                  <Select
-                    value={note.confidence || 'early'}
-                    options={researchConfidenceOptions}
-                    onChange={(value) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { confidence: value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('evidenceNotes', removeResearchArrayItem(draft.evidenceNotes, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Source title">
-                  <input
-                    style={styles.input}
-                    value={note.sourceTitle || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { sourceTitle: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Source URL">
-                  <input
-                    style={styles.input}
-                    value={note.sourceUrl || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { sourceUrl: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Implication for content">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={note.implication || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { implication: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-                <InputField label="Still unknown">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={note.gap || ''}
-                    onChange={(event) => updateDraft('evidenceNotes', updateResearchArrayItem(draft.evidenceNotes, index, { gap: event.currentTarget.value, _type: 'evidenceNote' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Assumptions to validate"
-        description="Name the parts of the plan that might be wrong before they become expensive production work."
-        actionLabel="Add assumption"
-        onAdd={addAssumption}
-      >
-        {(draft.assumptions || []).length === 0 ? (
-          <EmptyInline title="No assumptions yet. Add what needs to be true for this plan to work." />
-        ) : (
-          (draft.assumptions || []).map((assumption, index) => (
-            <div key={assumption._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1fr) minmax(140px, 0.35fr) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Assumption">
-                  <input
-                    style={styles.input}
-                    value={assumption.assumption || ''}
-                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { assumption: event.currentTarget.value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-                <InputField label="Confidence">
-                  <Select
-                    value={assumption.confidence || 'needsValidation'}
-                    options={researchConfidenceOptions}
-                    onChange={(value) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { confidence: value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('assumptions', removeResearchArrayItem(draft.assumptions, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Risk if wrong">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={assumption.risk || ''}
-                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { risk: event.currentTarget.value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-                <InputField label="Validation signal">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={assumption.validationSignal || ''}
-                    onChange={(event) => updateDraft('assumptions', updateResearchArrayItem(draft.assumptions, index, { validationSignal: event.currentTarget.value, _type: 'researchAssumption' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="SEO targeting"
-        description="Target queries, intent, canonical destinations, gaps, and priority."
-        actionLabel="Add SEO target"
-        onAdd={addSeoTarget}
-      >
-        {(draft.seoTargets || []).length === 0 ? (
-          <EmptyInline title="No SEO targets yet. Add queries people might search or ask." />
-        ) : (
-          (draft.seoTargets || []).map((target, index) => (
-            <div key={target._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1.4fr) repeat(2, minmax(140px, 0.8fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Keyword / query">
-                  <input
-                    style={styles.input}
-                    value={target.query || ''}
-                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { query: event.currentTarget.value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <InputField label="Intent">
-                  <Select
-                    value={target.intent || 'learn'}
-                    options={searchIntentOptions}
-                    onChange={(value) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { intent: value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <InputField label="Priority">
-                  <Select
-                    value={target.priority || 'medium'}
-                    options={researchPriorityOptions}
-                    onChange={(value) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { priority: value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('seoTargets', removeResearchArrayItem(draft.seoTargets, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
-                <InputField label="Canonical destination">
-                  <input
-                    style={styles.input}
-                    value={target.canonicalUrl || ''}
-                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { canonicalUrl: event.currentTarget.value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-                <InputField label="Content gap">
-                  <input
-                    style={styles.input}
-                    value={target.contentGap || ''}
-                    onChange={(event) => updateDraft('seoTargets', updateResearchArrayItem(draft.seoTargets, index, { contentGap: event.currentTarget.value, _type: 'seoTarget' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Collaborations"
-        description="University interns, advisors, partner orgs, guests, and communities that can change the release plan."
-        actionLabel="Add collaboration"
-        onAdd={addCollaboration}
-      >
-        {(draft.collaborations || []).length === 0 ? (
-          <EmptyInline title="No collaborators yet. Add interns, universities, advisors, or partners when they change capacity or topics." />
-        ) : (
-          (draft.collaborations || []).map((collaboration, index) => (
-            <div key={collaboration._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
-                <InputField label="Name">
-                  <input
-                    style={styles.input}
-                    value={collaboration.name || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { name: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Organization">
-                  <input
-                    style={styles.input}
-                    value={collaboration.organization || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { organization: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Relationship">
-                  <Select
-                    value={collaboration.relationshipType || 'universityIntern'}
-                    options={collaborationRelationshipOptions}
-                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { relationshipType: value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Contribution">
-                  <Select
-                    value={collaboration.contributionType || 'research'}
-                    options={contributionTypeOptions}
-                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { contributionType: value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Status">
-                  <Select
-                    value={collaboration.status || 'idea'}
-                    options={collaborationStatusOptions}
-                    onChange={(value) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { status: value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginTop: 10 }}>
-                <InputField label="Topic area">
-                  <input
-                    style={styles.input}
-                    value={collaboration.topicArea || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { topicArea: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Available starting">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={collaboration.availabilityStart || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { availabilityStart: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-                <InputField label="Available until">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={collaboration.availabilityEnd || ''}
-                    onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { availabilityEnd: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                  />
-                </InputField>
-              </div>
-              <InputField label="Expected contribution">
-                <textarea
-                  rows={2}
-                  style={styles.input}
-                  value={collaboration.expectedContribution || ''}
-                  onChange={(event) => updateDraft('collaborations', updateResearchArrayItem(draft.collaborations, index, { expectedContribution: event.currentTarget.value, _type: 'collaborationOpportunity' }))}
-                />
-              </InputField>
-              <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('collaborations', removeResearchArrayItem(draft.collaborations, index))}>
-                Remove collaboration
-              </button>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Release windows"
-        description="Flexible date ranges centered on when content should go live, not fixed research phases."
-        actionLabel="Add release window"
-        onAdd={addWindow}
-      >
-        {(draft.releaseWindows || []).length === 0 ? (
-          <EmptyInline title="No release windows yet. Add the next useful publishing windows." />
-        ) : (
-          (draft.releaseWindows || []).map((window, index) => (
-            <div key={window._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) repeat(3, minmax(130px, 0.7fr)) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Label">
-                  <input
-                    style={styles.input}
-                    value={window.label || ''}
-                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { label: event.currentTarget.value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <InputField label="Start">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={window.startDate || ''}
-                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { startDate: event.currentTarget.value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <InputField label="End">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={window.endDate || ''}
-                    onChange={(event) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { endDate: event.currentTarget.value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <InputField label="Priority">
-                  <Select
-                    value={window.priority || 'medium'}
-                    options={researchPriorityOptions}
-                    onChange={(value) => updateDraft('releaseWindows', updateResearchArrayItem(draft.releaseWindows, index, { priority: value, _type: 'releaseWindow' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('releaseWindows', removeResearchArrayItem(draft.releaseWindows, index))}>
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Content opportunities"
-        description="The editable backlog designers can convert into campaigns, funnels, calendar items, and Quick Links."
-        actionLabel="Add opportunity"
-        onAdd={addOpportunity}
-      >
-        {(draft.contentOpportunities || []).length === 0 ? (
-          <EmptyInline title="No content opportunities yet. Use AI setup or add one manually." />
-        ) : (
-          (draft.contentOpportunities || []).map((opportunity, index) => {
-            const key = opportunity._key || `${index}`
-            const checked = selectedOpportunities.includes(key)
-            return (
-              <div key={key} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(event) => {
-                      setSelectedOpportunities((current) =>
-                        event.currentTarget.checked ? Array.from(new Set([...current, key])) : current.filter((item) => item !== key),
-                      )
-                    }}
-                  />
-                  <strong>Generate from this opportunity</strong>
-                  {getRecordId(opportunity.generatedCalendarItem) && <StatusPill status="scheduled" options={[{ title: 'Generated', value: 'scheduled' }]} />}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 1.5fr) repeat(3, minmax(140px, 0.8fr))', gap: 10 }}>
-                  <InputField label="Proposed item">
-                    <input
-                      style={styles.input}
-                      value={opportunity.title || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { title: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Channel">
-                    <Select
-                      value={opportunity.channel || 'instagram'}
-                      options={getResearchChannelOptions(data)}
-                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { channel: value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Format">
-                    <Select
-                      value={opportunity.format || 'carousel'}
-                      options={contentFormatOptions}
-                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { format: value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Readiness">
-                    <Select
-                      value={opportunity.readiness || 'idea'}
-                      options={opportunityReadinessOptions}
-                      onChange={(value) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { readiness: value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 10 }}>
-                  <InputField label="Owner / contributor">
-                    <input
-                      style={styles.input}
-                      value={opportunity.owner || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { owner: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Release window">
-                    <input
-                      style={styles.input}
-                      value={opportunity.releaseWindow || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { releaseWindow: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="CTA">
-                    <input
-                      style={styles.input}
-                      value={opportunity.callToAction || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { callToAction: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="SEO query">
-                    <input
-                      style={styles.input}
-                      value={opportunity.seoQuery || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { seoQuery: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
-                  <InputField label="Destination URL">
-                    <input
-                      style={styles.input}
-                      value={opportunity.destinationUrl || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { destinationUrl: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                  <InputField label="Source material">
-                    <input
-                      style={styles.input}
-                      value={opportunity.sourceMaterial || ''}
-                      onChange={(event) => updateDraft('contentOpportunities', updateResearchArrayItem(draft.contentOpportunities, index, { sourceMaterial: event.currentTarget.value, _type: 'contentOpportunity' }))}
-                    />
-                  </InputField>
-                </div>
-                <button type="button" style={{ ...styles.button, marginTop: 10 }} onClick={() => updateDraft('contentOpportunities', removeResearchArrayItem(draft.contentOpportunities, index))}>
-                  Remove opportunity
-                </button>
-              </div>
-            )
-          })
-        )}
-      </ResearchArrayModule>
-
-      <ResearchArrayModule
-        title="Strategy adjustments"
-        description="When new collaborators, SEO opportunities, or analytics notes change the plan, document the why and the decision."
-        actionLabel="Add adjustment"
-        onAdd={addAdjustment}
-      >
-        {(draft.strategyAdjustments || []).length === 0 ? (
-          <EmptyInline title="No plan changes recorded yet." />
-        ) : (
-          (draft.strategyAdjustments || []).map((adjustment, index) => (
-            <div key={adjustment._key || index} style={{ ...styles.card, boxShadow: 'none', padding: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '160px minmax(0, 1fr) auto', gap: 10, alignItems: 'end' }}>
-                <InputField label="Decision date">
-                  <input
-                    type="date"
-                    style={styles.input}
-                    value={adjustment.decisionDate || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { decisionDate: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-                <InputField label="Trigger">
-                  <input
-                    style={styles.input}
-                    value={adjustment.trigger || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { trigger: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-                <button type="button" style={styles.button} onClick={() => updateDraft('strategyAdjustments', removeResearchArrayItem(draft.strategyAdjustments, index))}>
-                  Remove
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginTop: 10 }}>
-                <InputField label="Why it changed">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={adjustment.reason || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { reason: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-                <InputField label="Recommendation">
-                  <textarea
-                    rows={2}
-                    style={styles.input}
-                    value={adjustment.recommendation || ''}
-                    onChange={(event) => updateDraft('strategyAdjustments', updateResearchArrayItem(draft.strategyAdjustments, index, { recommendation: event.currentTarget.value, _type: 'strategyAdjustment' }))}
-                  />
-                </InputField>
-              </div>
-            </div>
-          ))
-        )}
-      </ResearchArrayModule>
-
-      <section style={styles.panel}>
-        <PanelHeading title="Created drafts" description="Drafts created from this research plan stay linked back here for reopening and iteration." />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-          <GeneratedRecordCard label="Campaigns" records={draft.generatedCampaigns || []} onOpen={() => onOpenView('campaigns')} />
-          <GeneratedRecordCard label="Funnels" records={draft.generatedFunnels || []} onOpen={() => onOpenView('funnels')} />
-          <GeneratedRecordCard label="Calendar items" records={draft.generatedCalendarItems || []} onOpen={() => onOpenView('calendar')} />
-          <GeneratedRecordCard label="Quick Links" records={draft.generatedLinkItems || []} onOpen={() => onOpenView('linkTree')} />
-        </div>
-      </section>
-    </div>
-  )
-}
-
 function ResearchArrayModule({
   title,
   description,
@@ -1883,236 +1141,6 @@ function ResearchArrayModule({
     </section>
   )
 }
-
-function GeneratedRecordCard({
-  label,
-  records,
-  onOpen,
-}: {
-  label: string
-  records: Array<{ _id?: string; title?: string; status?: string }>
-  onOpen: () => void
-}) {
-  return (
-    <button type="button" style={{ ...styles.templateButton, minHeight: 108 }} onClick={onOpen}>
-      <strong>{label}</strong>
-      <span style={{ fontSize: 28, lineHeight: 1, fontWeight: 900 }}>{records.length}</span>
-      <span style={{ ...styles.small, ...styles.muted }}>
-        {records.length > 0 ? records.slice(0, 2).map((record) => record.title || 'Untitled').join(', ') : 'None generated yet'}
-      </span>
-    </button>
-  )
-}
-
-function DesignerSetupPath({
-  steps,
-  onOpenView,
-}: {
-  steps: WorkflowSetupStep[]
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12, marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 16 }}>Designer-friendly setup checklist</h3>
-          <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.5 }}>
-            Complete these in order before making the artifact.
-          </p>
-        </div>
-        <span
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            border: '1px solid rgba(0, 115, 133, 0.24)',
-            borderRadius: 999,
-            background: 'rgba(0, 115, 133, 0.12)',
-            color: '#007385',
-            padding: '3px 8px',
-            fontSize: 12,
-            fontWeight: 800,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          5 steps
-        </span>
-      </div>
-      <div style={{ display: 'grid', gap: 8 }}>
-        {steps.map((step) => {
-          const viewTitle = MARKETING_TOOL_VIEWS.find((view) => view.id === step.view)?.title || 'Section'
-
-          return (
-            <div
-              key={step.label}
-              style={{
-                border: '1px solid var(--card-border-color)',
-                borderRadius: 6,
-                background: 'var(--card-bg-color)',
-                padding: 10,
-              }}
-            >
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    width: 24,
-                    height: 24,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '0 0 auto',
-                    borderRadius: 999,
-                    background: '#007385',
-                    color: '#fff',
-                    fontSize: 12,
-                    fontWeight: 900,
-                  }}
-                >
-                  {step.label}
-                </span>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <strong style={{ display: 'block', fontSize: 13 }}>{step.title}</strong>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 4, lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--card-fg-color)' }}>Creates: </strong>
-                    {step.outcome}
-                  </div>
-                  <div style={{ ...styles.small, ...styles.muted, marginTop: 3, lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--card-fg-color)' }}>Designer does: </strong>
-                    {step.designerAction}
-                  </div>
-                  {step.terms && step.terms.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-                      {step.terms.map((term) => (
-                        <MarketingTerm key={`${step.label}-${term.label}`} term={term} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <button
-                type="button"
-                style={{ ...styles.button, marginTop: 9, padding: '6px 9px', fontSize: 12 }}
-                onClick={() => onOpenView(step.view)}
-              >
-                Open {viewTitle}
-              </button>
-            </div>
-          )
-        })}
-      </div>
-      <div
-        style={{
-          marginTop: 10,
-          borderTop: '1px solid var(--card-border-color)',
-          paddingTop: 10,
-          ...styles.small,
-          ...styles.muted,
-          lineHeight: 1.5,
-        }}
-      >
-        Done means the framework is connected. The designer's remaining work is the thing people will actually see.
-      </div>
-    </div>
-  )
-}
-
-function WorkflowHelpSection({
-  items,
-  onOpenView,
-}: {
-  items: WorkflowHelpItem[]
-  onOpenView: (view: MarketingViewId) => void
-}) {
-  return (
-    <div style={{ ...styles.card, boxShadow: 'none', padding: 12, marginBottom: 12 }}>
-      <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>Marketing questions</h3>
-      <div style={{ display: 'grid', gap: 7 }}>
-        {items.map((item, index) => (
-          <details
-            key={item.question}
-            open={index === 0}
-            style={{
-              border: '1px solid var(--card-border-color)',
-              borderRadius: 6,
-              background: 'var(--card-bg-color)',
-              padding: 0,
-            }}
-          >
-            <summary
-              style={{
-                cursor: 'pointer',
-                padding: '9px 10px',
-                fontSize: 13,
-                fontWeight: 800,
-                listStylePosition: 'inside',
-              }}
-            >
-              {item.question}
-            </summary>
-            <div style={{ padding: '0 10px 10px', display: 'grid', gap: 9 }}>
-              <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.55 }}>
-                <WorkflowAnswer parts={item.answer} />
-              </div>
-              {item.action && (
-                <button
-                  type="button"
-                  style={{ ...styles.button, justifySelf: 'start', padding: '6px 9px', fontSize: 12 }}
-                  onClick={() => onOpenView(item.action!.view)}
-                >
-                  {item.action.label}
-                </button>
-              )}
-            </div>
-          </details>
-        ))}
-      </div>
-      <div style={{ marginTop: 10 }}>
-        <div style={{ ...styles.label, marginBottom: 6 }}>Hover glossary</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {workflowTerms.map((term) => (
-            <MarketingTerm key={term.label} term={term} />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function WorkflowAnswer({ parts }: { parts: Array<string | WorkflowTerm> }) {
-  return (
-    <>
-      {parts.map((part, index) =>
-        typeof part === 'string' ? part : <MarketingTerm key={`${part.label}-${index}`} term={part} inline />,
-      )}
-    </>
-  )
-}
-
-function MarketingTerm({ term, inline = false }: { term: WorkflowTerm; inline?: boolean }) {
-  return (
-    <span
-      tabIndex={0}
-      title={term.definition}
-      aria-label={`${term.label}: ${term.definition}`}
-      style={{
-        display: inline ? 'inline' : 'inline-flex',
-        alignItems: 'center',
-        border: inline ? 'none' : '1px solid rgba(0, 115, 133, 0.24)',
-        borderRadius: inline ? 0 : 999,
-        background: inline ? 'transparent' : 'rgba(0, 115, 133, 0.08)',
-        color: '#007385',
-        padding: inline ? 0 : '3px 8px',
-        fontSize: inline ? 'inherit' : 12,
-        fontWeight: 800,
-        cursor: 'help',
-        textDecoration: inline ? 'underline dotted' : 'none',
-        textUnderlineOffset: 3,
-      }}
-    >
-      {term.label}
-    </span>
-  )
-}
-
 
 function MetricBadge({ label, value }: { label: string; value: string }) {
   return (

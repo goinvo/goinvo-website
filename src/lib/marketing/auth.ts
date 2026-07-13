@@ -78,7 +78,7 @@ async function validateSanitySession(token: string): Promise<boolean> {
 }
 
 /**
- * Fail-closed guard for WRITE routes that are called either server-to-server
+ * Fail-closed guard for protected marketing routes that are called either server-to-server
  * (with MARKETING_API_KEY) OR client-side from the Sanity Studio by a logged-in
  * user. Passes when EITHER a valid marketing API key is present OR an
  * `x-sanity-session` header carries a token that validates against Sanity.

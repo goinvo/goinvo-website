@@ -383,7 +383,7 @@ export function CalendarWorkspace({
           }}
         >
           <h3 style={{ margin: 0, fontSize: 18 }}>{monthLabel(visibleMonth)}</h3>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div data-mobile-scroll="true" style={{ display: 'flex', gap: 8 }}>
           <button type="button" style={styles.button} onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}>
             Previous month
           </button>
@@ -458,9 +458,10 @@ export function CalendarWorkspace({
                       >
                         <span>{cell.date.getDate()}</span>
                         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                          {cell.isToday && <span style={{ color: '#007385' }}>Today</span>}
+                          {cell.isToday && <span style={{ color: 'var(--card-fg-color)' }}>Today</span>}
                           <button
                             type="button"
+                            data-mobile-tap-target="true"
                             aria-label={`Add item on ${cell.date.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`}
                             title="Add calendar item on this day"
                             disabled={savingId === 'new'}
@@ -545,6 +546,7 @@ export function CalendarWorkspace({
                 {' '}&mdash; {hiddenCount} past item{hiddenCount === 1 ? '' : 's'} hidden (
                 <button
                   type="button"
+                  data-mobile-tap-target="true"
                   onClick={() => setHidePast(false)}
                   style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', color: 'inherit', textDecoration: 'underline', cursor: 'pointer' }}
                 >
@@ -987,6 +989,7 @@ function CalendarItemEditor({
         <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <InputField label="Where is it in the workflow?">
             <Select
+              ariaLabel="Calendar item status"
               value={draft.status || 'idea'}
               options={calendarStatusOptions}
               onChange={(status) => setDraft({ ...draft, status })}
@@ -1024,6 +1027,7 @@ function CalendarItemEditor({
         <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <InputField label="Where will this be published?">
             <Select
+              ariaLabel="Publishing channel"
               value={channelKey}
               options={[
                 { title: 'None', value: '' },
@@ -1047,6 +1051,7 @@ function CalendarItemEditor({
           </InputField>
           <InputField label="What format is it?">
             <Select
+              ariaLabel="Content format"
               value={draft.contentType || ''}
               options={[{ title: 'None', value: '' }, ...typeOptions]}
               onChange={(contentType) => setDraft({ ...draft, contentType })}
@@ -1058,6 +1063,7 @@ function CalendarItemEditor({
         )}
         <InputField label="Which campaign is it part of?" help="Leave blank if this is a one-off item or not connected yet.">
           <Select
+            ariaLabel="Connected campaign"
             value={campaignId}
             options={[{ title: 'No campaign', value: '' }, ...campaigns.map((campaign) => ({ title: campaign.title || 'Untitled campaign', value: campaign._id }))]}
             onChange={setCampaignId}
@@ -1065,6 +1071,7 @@ function CalendarItemEditor({
         </InputField>
         <InputField label="Which funnel path should it support?" help="Use this when the item should lead people through a known path.">
           <Select
+            ariaLabel="Connected funnel"
             value={funnelId}
             options={[{ title: 'No funnel', value: '' }, ...funnels.map((funnel) => ({ title: funnel.title || 'Untitled funnel', value: funnel._id }))]}
             onChange={setFunnelId}
@@ -1072,6 +1079,7 @@ function CalendarItemEditor({
         </InputField>
         <InputField label="What stage is this for?">
           <Select
+            ariaLabel="Funnel stage"
             value={draft.funnelStage || ''}
             options={[{ title: 'None', value: '' }, ...funnelStageOptions]}
             onChange={(funnelStage) => setDraft({ ...draft, funnelStage })}
@@ -1089,6 +1097,7 @@ function CalendarItemEditor({
             </InputField>
             <InputField label="Search / visitor intent">
               <Select
+                ariaLabel="Search or visitor intent"
                 value={draft.searchIntent || ''}
                 options={[{ title: 'None', value: '' }, ...searchIntentOptions]}
                 onChange={(searchIntent) => setDraft({ ...draft, searchIntent })}
@@ -1107,6 +1116,7 @@ function CalendarItemEditor({
         </details>
         <InputField label="Analytics source">
           <Select
+            ariaLabel="Analytics source"
             value={analyticsSourceId}
             options={[
               { title: 'No analytics source', value: '' },
@@ -1338,6 +1348,7 @@ function CalendarItemEditor({
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
             <Select
+              ariaLabel="Existing link to add"
               value={linkToAddId}
               options={[
                 { title: availableLinks.length > 0 ? 'Choose existing link...' : 'No other links available', value: '' },

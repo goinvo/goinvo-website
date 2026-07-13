@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     secret,
     authorizationHeader: request.headers.get('authorization'),
     signatureHeader: request.headers.get('x-vercel-signature'),
-    queryToken: request.nextUrl.searchParams.get('secret'),
     rawBody,
   })
   if (!authorized) {

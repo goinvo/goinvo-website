@@ -5,6 +5,7 @@ import {
   type SeoFindingCategory,
   type SeoFindingSeverity,
 } from './seoAudit'
+import { fetchSeoResource, readResponseTextLimited } from './seoTarget'
 
 // GEO / AI-readiness pack for the SEO audit engine — the persona panel's #1
 // priority, pulled forward from Phase 4 to Phase 1 (see
@@ -647,7 +648,7 @@ export async function auditAiCrawlerAccess(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), ROBOTS_TIMEOUT_MS)
   try {
-    const res = await fetch(robotsUrl, {
+    const res = await fetchSeoResource(robotsUrl, {
       cache: 'no-store',
       signal: controller.signal,
       headers: {
@@ -658,7 +659,7 @@ export async function auditAiCrawlerAccess(
     if (!res.ok) {
       return [robotsUnavailableFinding(siteUrl, `robots.txt returned ${res.status}`)]
     }
-    const text = await res.text()
+    const text = await readResponseTextLimited(res, 256 * 1024)
     return mapRobotsAccess(siteUrl, parseRobots(text))
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown error'

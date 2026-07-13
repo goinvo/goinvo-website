@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { SanityClient } from '@sanity/client'
+import { studioSessionHeader } from '@/sanity/lib/studioSession'
 
 // Surfaces the SEO opportunities engine (/api/marketing/seo) and the cached
 // citation checker (/api/marketing/citation-check) inside the marketing tool,
@@ -256,7 +257,7 @@ type SeoWorkspaceProps = { client?: SanityClient }
 // `__studio_auth_token_<projectId>`; the value is sometimes a raw string and
 // sometimes a JSON envelope like {"token":"..."}. Returns null when there's no
 // token (so callers can simply omit the header).
-function studioSessionToken(): string | null {
+export function studioSessionToken(): string | null {
   if (typeof window === 'undefined') return null
   const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
   if (!projectId) return null
@@ -276,42 +277,52 @@ function studioSessionToken(): string | null {
   }
 }
 
-const FIX_COLORS: Record<string, string> = { ranking: '#2276fc', ctr: '#d98a00', maintain: '#7d8694' }
+const UI_COLOR = {
+  link: 'var(--card-link-fg-color)',
+  // Sanity guarantees card foreground/background contrast in every theme.
+  // Meaning is also carried by labels/icons, never by color alone.
+  positive: 'var(--card-fg-color)',
+  caution: 'var(--card-fg-color)',
+  critical: 'var(--card-fg-color)',
+  muted: 'var(--card-muted-fg-color)',
+} as const
+
+const FIX_COLORS: Record<string, string> = { ranking: UI_COLOR.link, ctr: UI_COLOR.caution, maintain: UI_COLOR.muted }
 const VERDICT_COLORS: Record<string, string> = {
-  supported: '#1f9d55',
-  needsCitation: '#d98a00',
-  questionable: '#e0463c',
-  unverifiable: '#7d8694',
+  supported: UI_COLOR.positive,
+  needsCitation: UI_COLOR.caution,
+  questionable: UI_COLOR.critical,
+  unverifiable: UI_COLOR.muted,
 }
-const STATUS_COLORS: Record<string, string> = { idea: '#7d8694', exploring: '#2276fc', planned: '#2276fc', inProgress: '#d98a00', shipped: '#1f9d55', dropped: '#9aa0a6' }
-const PRIORITY_COLORS: Record<string, string> = { high: '#e0463c', medium: '#d98a00', low: '#7d8694' }
+const STATUS_COLORS: Record<string, string> = { idea: UI_COLOR.muted, exploring: UI_COLOR.link, planned: UI_COLOR.link, inProgress: UI_COLOR.caution, shipped: UI_COLOR.positive, dropped: UI_COLOR.muted }
+const PRIORITY_COLORS: Record<string, string> = { high: UI_COLOR.critical, medium: UI_COLOR.caution, low: UI_COLOR.muted }
 const STATUS_ORDER = ['idea', 'exploring', 'planned', 'inProgress', 'shipped', 'dropped']
 
 // Decay watch-list action → color (refresh = act, consolidate = redirect,
 // leave = monitor) and the matching [page, query]-style intent palette.
 const DECAY_ACTION_COLORS: Record<DecayWatch['action'], string> = {
-  refresh: '#d98a00',
-  consolidate: '#2276fc',
-  leave: '#7d8694',
+  refresh: UI_COLOR.caution,
+  consolidate: UI_COLOR.link,
+  leave: UI_COLOR.muted,
 }
 const INTENT_COLORS: Record<IntentProfileEntry['intent'], string> = {
-  informational: '#2276fc',
-  commercial: '#d98a00',
-  transactional: '#1f9d55',
-  navigational: '#7d8694',
+  informational: UI_COLOR.link,
+  commercial: UI_COLOR.caution,
+  transactional: UI_COLOR.positive,
+  navigational: UI_COLOR.muted,
 }
 
 // §7 severity colors: red error / yellow warning / blue notice.
-const SEVERITY_COLORS: Record<FindingSeverity, string> = { error: '#e0463c', warning: '#d98a00', notice: '#2276fc' }
+const SEVERITY_COLORS: Record<FindingSeverity, string> = { error: UI_COLOR.critical, warning: UI_COLOR.caution, notice: UI_COLOR.link }
 const SEVERITY_LABELS: Record<FindingSeverity, string> = { error: 'Errors', warning: 'Warnings', notice: 'Notices' }
 const SEVERITY_ORDER: FindingSeverity[] = ['error', 'warning', 'notice']
 const SEVERITY_RANK: Record<FindingSeverity, number> = { error: 0, warning: 1, notice: 2 }
 // Band → color (Weak/Fair red, Fair orange, Good/Excellent green per the brief).
 const BAND_COLORS: Record<HealthScore['band'], string> = {
-  Weak: '#e0463c',
-  Fair: '#d98a00',
-  Good: '#1f9d55',
-  Excellent: '#1f9d55',
+  Weak: UI_COLOR.critical,
+  Fair: UI_COLOR.caution,
+  Good: UI_COLOR.positive,
+  Excellent: UI_COLOR.positive,
 }
 // Map a finding.category → a marketingIdea category option value.
 const FINDING_CATEGORY_TO_IDEA: Record<string, string> = {
@@ -364,7 +375,7 @@ const s: Record<string, CSSProperties> = {
   td: { padding: '6px 8px', borderBottom: '1px solid var(--card-border-color)', verticalAlign: 'top' },
   num: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
   btn: { border: '1px solid var(--card-border-color)', background: 'var(--card-bg-color)', color: 'var(--card-fg-color)', borderRadius: 6, padding: '6px 12px', cursor: 'pointer', fontSize: 12.5 },
-  link: { color: '#2276fc', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' },
+  link: { color: UI_COLOR.link, cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' },
   input: { flex: 1, minWidth: 0, padding: '7px 10px', borderRadius: 6, border: '1px solid var(--card-border-color)', background: 'var(--card-bg-color)', color: 'var(--card-fg-color)', fontSize: 12.5 },
 }
 
@@ -372,7 +383,7 @@ const pct = (n: number) => `${(n * 100).toFixed(1)}%`
 // TextFocus keyword difficulty (0–100, higher = harder) → a color so designers
 // can spot the winnable keywords at a glance: low = green (easy), mid = orange,
 // high = red (hard). Used by the keyword-enrichment columns.
-const difficultyColor = (d: number): string => (d <= 30 ? '#1f9d55' : d <= 60 ? '#d98a00' : '#e0463c')
+const difficultyColor = (d: number): string => (d <= 30 ? UI_COLOR.positive : d <= 60 ? UI_COLOR.caution : UI_COLOR.critical)
 const isQuestion = (q: string) => /^(what|how|why|which|when|who|where|is|are|do|does|can|should)\b/i.test(q) || q.includes('?')
 const badge = (c: string): CSSProperties => ({
   display: 'inline-block',
@@ -380,7 +391,7 @@ const badge = (c: string): CSSProperties => ({
   borderRadius: 999,
   fontSize: 11,
   fontWeight: 600,
-  color: '#fff',
+  color: 'var(--card-bg-color)',
   background: c,
 })
 
@@ -436,7 +447,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/marketing/seo')
+      const res = await fetch('/api/marketing/seo', { headers: studioSessionHeader() })
       setData((await res.json()) as SeoData)
     } catch {
       setData({ error: 'Could not load SEO opportunities.' })
@@ -468,12 +479,11 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setCiteLoading(true)
     setCite(null)
     try {
-      const token = studioSessionToken()
       const res = await fetch('/api/marketing/citation-check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'x-sanity-session': token } : {}),
+          ...studioSessionHeader(),
         },
         body: JSON.stringify({ pageUrl: target }),
       })
@@ -496,7 +506,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setPromoted({})
     try {
       const qs = target ? `?url=${encodeURIComponent(target)}` : ''
-      const res = await fetch(`/api/marketing/seo-audit${qs}`)
+      const res = await fetch(`/api/marketing/seo-audit${qs}`, { headers: studioSessionHeader() })
       setAudit((await res.json()) as AuditData)
     } catch {
       setAudit({ error: 'Could not run the page audit.' })
@@ -515,7 +525,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setOpenCrawlFinding(null)
     setPromoted({})
     try {
-      const res = await fetch('/api/marketing/seo-crawl')
+      const res = await fetch('/api/marketing/seo-crawl', { headers: studioSessionHeader() })
       setCrawl((await res.json()) as CrawlData)
     } catch {
       setCrawl({ error: 'Could not run the site crawl.' })
@@ -530,7 +540,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const loadAiCitation = useCallback(async () => {
     setAiCiteLoading(true)
     try {
-      const res = await fetch('/api/marketing/ai-citation')
+      const res = await fetch('/api/marketing/ai-citation', { headers: studioSessionHeader() })
       setAiCite((await res.json()) as AiCitationData)
     } catch {
       setAiCite({ error: 'Could not load AI-citation snapshots.' })
@@ -550,10 +560,9 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setAiCiteRunning(true)
     setAiCiteRunNote(null)
     try {
-      const token = studioSessionToken()
       const res = await fetch('/api/marketing/ai-citation', {
         method: 'POST',
-        ...(token ? { headers: { 'x-sanity-session': token } } : {}),
+        headers: studioSessionHeader(),
       })
       const payload = (await res.json()) as AiCitationRunResult
       if (payload.error) {
@@ -623,6 +632,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
         </p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
           <input
+            aria-label="Page audit URL"
             style={s.input}
             value={auditUrl}
             onChange={(e) => setAuditUrl(e.target.value)}
@@ -649,7 +659,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 height: 13,
                 borderRadius: '50%',
                 border: '2px solid var(--card-border-color)',
-                borderTopColor: '#2276fc',
+                borderTopColor: UI_COLOR.link,
                 display: 'inline-block',
                 animation: 'seo-audit-spin 0.7s linear infinite',
               }}
@@ -700,7 +710,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                       <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
                         <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
                         {quickWinIds.has(finding.id) && (
-                          <span style={badge('#7b2ff7')} title="One of the top quick wins — do these first">
+                          <span style={badge(UI_COLOR.link)} title="One of the top quick wins — do these first">
                             ⚡ Quick win
                           </span>
                         )}
@@ -709,7 +719,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     <td style={s.td}>
                       <span
                         style={{
-                          ...badge('#7d8694'),
+                          ...badge(UI_COLOR.muted),
                           background: 'transparent',
                           color: 'var(--card-muted-fg-color)',
                           border: '1px solid var(--card-border-color)',
@@ -743,7 +753,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                           </div>
                           <div style={{ marginBottom: 10, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
                             Affected:{' '}
-                            <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                            <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                               {url}
                             </a>
                             {' · '}source: {finding.source}
@@ -909,7 +919,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 height: 13,
                 borderRadius: '50%',
                 border: '2px solid var(--card-border-color)',
-                borderTopColor: '#2276fc',
+                borderTopColor: UI_COLOR.link,
                 display: 'inline-block',
                 animation: 'seo-audit-spin 0.7s linear infinite',
               }}
@@ -956,7 +966,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                       <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
                         <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
                         {quickWinIds.has(finding.id) && (
-                          <span style={badge('#7b2ff7')} title="One of the top quick wins — do these first">
+                          <span style={badge(UI_COLOR.link)} title="One of the top quick wins — do these first">
                             ⚡ Quick win
                           </span>
                         )}
@@ -965,7 +975,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     <td style={s.td}>
                       <span
                         style={{
-                          ...badge('#7d8694'),
+                          ...badge(UI_COLOR.muted),
                           background: 'transparent',
                           color: 'var(--card-muted-fg-color)',
                           border: '1px solid var(--card-border-color)',
@@ -1000,7 +1010,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                           <div style={{ marginBottom: 10, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
                             Affected:{' '}
                             {url ? (
-                              <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                              <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                 {url}
                               </a>
                             ) : (
@@ -1144,7 +1154,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 height: 13,
                 borderRadius: '50%',
                 border: '2px solid var(--card-border-color)',
-                borderTopColor: '#2276fc',
+                borderTopColor: UI_COLOR.link,
                 display: 'inline-block',
                 animation: 'seo-audit-spin 0.7s linear infinite',
               }}
@@ -1210,7 +1220,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                       }}
                     >
                       <div style={{ minWidth: 150 }}>
-                        <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: '#2276fc' }}>
+                        <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: UI_COLOR.link }}>
                           {fmtPct(headline.mentionRate)}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--card-muted-fg-color)', marginTop: 4 }}>
@@ -1218,7 +1228,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                         </div>
                       </div>
                       <div style={{ minWidth: 150 }}>
-                        <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: '#1f9d55' }}>
+                        <div style={{ fontSize: 34, fontWeight: 700, lineHeight: 1, color: UI_COLOR.positive }}>
                           {fmtPct(headline.citationRate)}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--card-muted-fg-color)', marginTop: 4 }}>
@@ -1248,7 +1258,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                             <span
                               key={c.name}
                               style={{
-                                ...badge('#7d8694'),
+                                ...badge(UI_COLOR.muted),
                                 background: 'transparent',
                                 color: 'var(--card-fg-color)',
                                 border: '1px solid var(--card-border-color)',
@@ -1291,12 +1301,12 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                               <tr key={`${r.prompt}|${i}`}>
                                 <td style={s.td}>{r.prompt}</td>
                                 <td style={s.td}>
-                                  <span style={badge(r.goinvoMentioned ? '#1f9d55' : '#7d8694')}>
+                                  <span style={badge(r.goinvoMentioned ? UI_COLOR.positive : UI_COLOR.muted)}>
                                     {r.goinvoMentioned ? '✓' : '✗'}
                                   </span>
                                 </td>
                                 <td style={s.td}>
-                                  <span style={badge(r.goinvoCited ? '#1f9d55' : '#7d8694')}>
+                                  <span style={badge(r.goinvoCited ? UI_COLOR.positive : UI_COLOR.muted)}>
                                     {r.goinvoCited ? '✓' : '✗'}
                                   </span>
                                 </td>
@@ -1304,7 +1314,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                                   {r.citedGoinvoUrls?.length ? (
                                     r.citedGoinvoUrls.map((u) => (
                                       <div key={u}>
-                                        <a href={u} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                        <a href={u} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                           {u}
                                         </a>
                                       </div>
@@ -1353,8 +1363,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                               </span>
                             ) : null}
                           </td>
-                          <td style={{ ...s.td, ...s.num, color: '#2276fc', fontWeight: 600 }}>{fmtPct(snap.mentionRate)}</td>
-                          <td style={{ ...s.td, ...s.num, color: '#1f9d55', fontWeight: 600 }}>{fmtPct(snap.citationRate)}</td>
+                          <td style={{ ...s.td, ...s.num, color: UI_COLOR.link, fontWeight: 600 }}>{fmtPct(snap.mentionRate)}</td>
+                          <td style={{ ...s.td, ...s.num, color: UI_COLOR.positive, fontWeight: 600 }}>{fmtPct(snap.citationRate)}</td>
                           <td style={{ ...s.td, ...s.num }}>
                             {snap.answeredCount ?? 0}/{snap.promptCount ?? 0}
                           </td>
@@ -1373,7 +1383,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
         <div style={s.card}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Ideas &amp; findings ({ideas.length})</div>
           <div style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>Click a column to sort, click a row for the details.</div>
-          <table style={s.table}>
+          <div data-mobile-scroll="true" style={{ maxWidth: '100%', overflowX: 'auto' }}>
+            <table style={s.table}>
             <thead>
               <tr>
                 <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('priority')}>
@@ -1422,7 +1433,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                           {idea.relatedUrl ? (
                             <Fragment>
                               {idea.source ? ' · ' : ''}
-                              <a href={idea.relatedUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                              <a href={idea.relatedUrl} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                 {idea.relatedUrl}
                               </a>
                             </Fragment>
@@ -1434,7 +1445,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 </Fragment>
               ))}
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       )}
 
@@ -1460,7 +1472,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))',
               }}
             >
-              <strong style={{ color: '#d98a00' }}>Leads column is off.</strong> GA4 key-events aren&apos;t configured, so the
+              <strong style={{ color: UI_COLOR.caution }}>Leads column is off.</strong> GA4 key-events aren&apos;t configured, so the
               score uses search demand only. Mark the contact-form / RFP-CTA actions as GA4 key events to rank converting
               pages higher and light up this column.
             </div>
@@ -1532,7 +1544,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                         style={{
                           ...s.td,
                           ...s.num,
-                          color: p.keyEvents ? '#1f9d55' : 'var(--card-muted-fg-color)',
+                          color: p.keyEvents ? UI_COLOR.positive : UI_COLOR.muted,
                           fontWeight: p.keyEvents ? 600 : 400,
                         }}
                         title={
@@ -1606,7 +1618,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       {!!data?.ctrGaps?.length && (
         <div style={s.card}>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            <span style={{ ...badge('#7b2ff7'), marginRight: 6 }}>⚡ Quick wins</span>
+            <span style={{ ...badge(UI_COLOR.link), marginRight: 6 }}>⚡ Quick wins</span>
             Title/meta rewrite — quick wins
           </div>
           <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
@@ -1642,7 +1654,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                       <td style={s.td}>{g.page}</td>
                       <td style={{ ...s.td, ...s.num }}>{g.position}</td>
                       <td style={{ ...s.td, ...s.num }}>
-                        <span style={{ color: '#e0463c', fontWeight: 600 }}>{pct(g.ctr)}</span>
+                        <span style={{ color: UI_COLOR.critical, fontWeight: 600 }}>{pct(g.ctr)}</span>
                         <span style={{ color: 'var(--card-muted-fg-color)' }}> / {pct(g.expectedCtr)}</span>
                       </td>
                       <td style={{ ...s.td, ...s.num, fontWeight: 600 }}>+{g.missedClicks.toLocaleString()}</td>
@@ -1656,7 +1668,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                             </div>
                             <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
                               {g.impressions.toLocaleString()} impressions/qtr ·{' '}
-                              <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                              <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                 {g.url}
                               </a>
                             </div>
@@ -1703,7 +1715,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                         {c.query}
                       </td>
                       <td style={{ ...s.td, ...s.num }}>
-                        <span style={badge('#d98a00')}>{c.pages.length}</span>
+                        <span style={badge(UI_COLOR.caution)}>{c.pages.length}</span>
                       </td>
                       <td style={{ ...s.td, ...s.num }}>{c.impressions.toLocaleString()}</td>
                       <td style={{ ...s.td, ...s.num }}>{c.bestPosition}</td>
@@ -1729,7 +1741,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                                 {c.pages.map((pg) => (
                                   <tr key={pg.path}>
                                     <td style={s.td}>
-                                      <a href={pg.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                      <a href={pg.url} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                         {pg.path}
                                       </a>
                                     </td>
@@ -1792,14 +1804,14 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                         {open ? '▾ ' : '▸ '}
                         {d.path}
                       </td>
-                      <td style={{ ...s.td, ...s.num, color: '#e0463c', fontWeight: 600 }}>
+                      <td style={{ ...s.td, ...s.num, color: UI_COLOR.critical, fontWeight: 600 }}>
                         {(d.impressionsPctChange * 100).toFixed(0)}%
                       </td>
                       <td
                         style={{
                           ...s.td,
                           ...s.num,
-                          color: d.positionDelta > 0 ? '#e0463c' : 'var(--card-muted-fg-color)',
+                          color: d.positionDelta > 0 ? UI_COLOR.critical : UI_COLOR.muted,
                           fontWeight: d.positionDelta > 0 ? 600 : 400,
                         }}
                       >
@@ -1822,7 +1834,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                               Impressions {d.priorImpressions.toLocaleString()} → {d.recentImpressions.toLocaleString()} ·
                               clicks {d.priorClicks.toLocaleString()} → {d.recentClicks.toLocaleString()} · position{' '}
                               {d.priorPosition} → {d.recentPosition} ·{' '}
-                              <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                              <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                 {d.url}
                               </a>
                             </div>
@@ -1851,7 +1863,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           {!!data?.intentMismatches?.length && (
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 12.5 }}>
-                <span style={{ ...badge('#e0463c'), marginRight: 6 }}>{data.intentMismatches.length}</span>
+                <span style={{ ...badge(UI_COLOR.critical), marginRight: 6 }}>{data.intentMismatches.length}</span>
                 Intent mismatches (query vs ranking page)
               </div>
               <table style={s.table}>
@@ -1894,7 +1906,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                                 </div>
                                 <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11 }}>
                                   {m.impressions.toLocaleString()} impressions/qtr · ranks #{m.position} ·{' '}
-                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: '#2276fc' }}>
+                                  <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: UI_COLOR.link }}>
                                     {m.url}
                                   </a>
                                 </div>
@@ -2050,6 +2062,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
         </p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <input
+            aria-label="Citation check URL"
             style={s.input}
             value={citeUrl}
             onChange={(e) => setCiteUrl(e.target.value)}
