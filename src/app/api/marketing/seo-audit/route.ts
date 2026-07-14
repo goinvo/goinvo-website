@@ -135,6 +135,7 @@ export async function GET(request: Request) {
   // page's title / H1 / URL.
   const semanticKeyword = (searchParams.get('keyword') || '').trim() || undefined
   const semanticLang = (searchParams.get('lang') || '').trim() || undefined
+  const includePaidChecks = searchParams.get('paid') === '1'
   const warnings: string[] = []
 
   // Indexation (GSC URL Inspection) is a slower per-page call to Google, so it
@@ -160,14 +161,16 @@ export async function GET(request: Request) {
   // Semantic-gap (topical-coverage) calls TextFocus's paid tf_semantic endpoint
   // per page, so only enable it for the single ?url= mode — never the
   // multi-page sweep, which would spend credits on every page.
-  const includeSemanticGap = Boolean(single)
+  const includeSemanticGap = Boolean(single && includePaidChecks)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
     warnings.push('AI-crawler access (robots.txt) and llms.txt are included for single-page audits.')
     warnings.push('Render check (raw HTML vs rendered page) is included for single-page audits.')
     warnings.push('Core Web Vitals (PageSpeed Insights — real-user field data) is included for single-page audits.')
     warnings.push('Conversion-rate checks (GA4 conversion rate + form/CTA design) are included for single-page audits on money pages.')
-    warnings.push('Semantic-gap / topical-coverage (TextFocus — compares the page against the pages ranking for a target keyword) is included for single-page audits; pass &keyword= to set the target query.')
+    warnings.push(includeSemanticGap
+      ? 'Semantic-gap / topical-coverage is included and uses one paid TextFocus credit; pass &keyword= to set the target query.'
+      : 'Semantic-gap / topical-coverage is off by default because it uses one paid TextFocus credit; pass &paid=1 to opt in.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
@@ -185,7 +188,7 @@ export async function GET(request: Request) {
       'Core Web Vitals (PageSpeed Insights) is a per-page API call with a low keyless quota; pass ?url=<page> to include it.',
     )
     warnings.push(
-      'Semantic-gap / topical-coverage (TextFocus) is a paid per-page call; pass ?url=<page> (optionally &keyword=) to include it.',
+      'Semantic-gap / topical-coverage (TextFocus) is a paid per-page call and stays off during sweeps.',
     )
   }
 

@@ -22,6 +22,11 @@ import { GET as getSeoAudit } from '@/app/api/marketing/seo-audit/route'
 import { GET as getSeoCrawl } from '@/app/api/marketing/seo-crawl/route'
 import { GET as getSeo } from '@/app/api/marketing/seo/route'
 import { GET as getAiCitation } from '@/app/api/marketing/ai-citation/route'
+import {
+  assertMarketingApiKey,
+  assertStudioWriterOrApiKey,
+  MarketingPermissionError,
+} from '@/lib/marketing/auth'
 import { validateExperimentBeacon } from '@/lib/marketing/beaconValidation'
 import {
   MARKETING_PLAN_SESSION_MAX_AGE,
@@ -52,6 +57,7 @@ describe('marketing API authentication boundaries', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
 
@@ -75,28 +81,108 @@ describe('marketing API authentication boundaries', () => {
     })
   })
 
-  it('accepts a validated Studio session before applying target validation', async () => {
+  it.each([
+    ['administrator', { id: 'studio-user', role: 'administrator' }],
+    ['viewer', { id: 'studio-viewer', role: 'viewer' }],
+    ['custom role', { id: 'studio-custom', role: 'campaign-manager' }],
+    ['role-less member response', { id: 'studio-member' }],
+  ])(
+    'accepts a validated Studio member with a %s session on ordinary marketing routes',
+    async (_label, user) => {
+      vi.stubEnv('MARKETING_API_KEY', '')
+      const sanityFetch = vi.fn(async () =>
+        new Response(JSON.stringify(user), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      vi.stubGlobal('fetch', sanityFetch)
+
+      const response = await getSeoAudit(
+        new Request('https://www.goinvo.com/api/marketing/seo-audit?url=http://169.254.169.254/latest', {
+          headers: { 'x-sanity-session': 'valid-studio-token' },
+        }),
+      )
+
+      expect(response.status).toBe(400)
+      expect(response.headers.get('cache-control')).toBe('private, no-store')
+      expect(sanityFetch).toHaveBeenCalledWith(
+        'https://security-test-project.api.sanity.io/v2021-06-07/users/me',
+        expect.objectContaining({ headers: { Authorization: 'Bearer valid-studio-token' } }),
+      )
+    },
+  )
+
+  it.each(['administrator', 'developer', 'editor'])(
+    'allows a Studio member with the %s role to use private Outreach operations',
+    async (role) => {
+      vi.stubEnv('MARKETING_API_KEY', '')
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          new Response(JSON.stringify({ id: 'studio-writer', roles: [{ name: role }] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
+      )
+
+      await expect(
+        assertStudioWriterOrApiKey(
+          new Request('https://www.goinvo.com/api/marketing/outreach/plan', {
+            headers: { 'x-sanity-session': 'valid-writer-token' },
+          }),
+        ),
+      ).resolves.toBeUndefined()
+    },
+  )
+
+  it.each([
+    ['Viewer', { id: 'studio-viewer', role: 'viewer' }],
+    ['Contributor', { id: 'studio-contributor', role: 'contributor' }],
+    ['unknown custom role', { id: 'studio-custom', role: 'campaign-manager' }],
+    ['missing role', { id: 'studio-user' }],
+  ])('returns a permission error for a valid Studio session with %s membership', async (_label, user) => {
     vi.stubEnv('MARKETING_API_KEY', '')
     const sanityFetch = vi.fn(async () =>
-      new Response(JSON.stringify({ id: 'studio-user' }), {
+      new Response(JSON.stringify(user), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
     )
     vi.stubGlobal('fetch', sanityFetch)
 
-    const response = await getSeoAudit(
-      new Request('https://www.goinvo.com/api/marketing/seo-audit?url=http://169.254.169.254/latest', {
-        headers: { 'x-sanity-session': 'valid-studio-token' },
-      }),
-    )
+    await expect(
+      assertStudioWriterOrApiKey(
+        new Request('https://www.goinvo.com/api/marketing/outreach/plan', {
+          headers: { 'x-sanity-session': 'valid-but-read-only-studio-token' },
+        }),
+      ),
+    ).rejects.toMatchObject({ name: 'MarketingPermissionError', status: 403 })
 
-    expect(response.status).toBe(400)
-    expect(response.headers.get('cache-control')).toBe('private, no-store')
-    expect(sanityFetch).toHaveBeenCalledWith(
-      'https://security-test-project.api.sanity.io/v2021-06-07/users/me',
-      expect.objectContaining({ headers: { Authorization: 'Bearer valid-studio-token' } }),
-    )
+    expect(sanityFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts a valid API key even when an unrelated Authorization header is also present', () => {
+    expect(() =>
+      assertMarketingApiKey(
+        new Request('https://www.goinvo.com/api/marketing/outreach/plan', {
+          headers: { 'x-sanity-session': 'valid-but-unauthorized-studio-token' },
+        }),
+      ),
+    ).toThrow()
+
+    expect(() =>
+      assertMarketingApiKey(
+        new Request('https://www.goinvo.com/api/marketing/outreach/plan', {
+          headers: {
+            Authorization: 'Bearer unrelated-studio-token',
+            'x-marketing-api-key': API_KEY,
+          },
+        }),
+      ),
+    ).not.toThrow()
+    expect(new MarketingPermissionError().status).toBe(403)
   })
 
   it('hard-clamps a crawl request before invoking the crawler', async () => {

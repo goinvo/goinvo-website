@@ -25,6 +25,9 @@ import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
 import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
 import { MarketingAiModelSetting } from '../components/marketing/MarketingAiModelSetting'
+import { MarketingBrandVoiceSetting } from '../components/marketing/MarketingBrandVoiceSetting'
+import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLearningReview'
+import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
 import { MarketingFinancialPostureSetting } from '../components/marketing/MarketingFinancialPostureSetting'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
@@ -44,9 +47,27 @@ import {
   getDesignerWorkflowTutorial,
 } from '../tutorials/designerWorkflowTutorials'
 import {
+  hasPricedOffer,
   slugify,
   randomKey,
 } from '@/lib/marketing'
+import {
+  normalizeMarketingBrandVoices,
+  type MarketingBrandVoice,
+} from '@/lib/marketing/brandVoice'
+import {
+  hasMaterialVoiceEdit,
+  type BrandVoiceLearningProposal,
+  type BrandVoiceLearningSelection,
+} from '@/lib/marketing/brandVoiceLearning'
+import {
+  OUTREACH_DATASET,
+  type OutreachChannelOverride,
+} from '@/lib/marketing/outreachEnums'
+import {
+  DEFAULT_FINANCIAL_POSTURE_ID,
+  type FinancialPostureId,
+} from '@/lib/marketing/financialPosture'
 
 import {
   MARKETING_SURFACES,
@@ -81,7 +102,6 @@ import {
   getCurrentAutopilotStep,
   getDashboardGapTone,
   getLatestActiveResearchProject,
-  getMarketingAttentionItems,
   getMarketingDashboardGaps,
   getMarketingDashboardStats,
   getMarketingSurfaceForView,
@@ -249,7 +269,7 @@ const STRATEGY_WORKING_DRAFTS_STORAGE_KEY = 'goinvo.marketing.strategyWorkingDra
 // lastSyncedAt off this — the experiments query used to omit them, silently hiding
 // the "Open Vercel dashboard" link and the "synced …" line. Keep in sync with the
 // fields consumers read (getAbTestingDashboardUrl / getAbTestingVercelSource).
-const ANALYTICS_SOURCE_PROJECTION = `analyticsSource->{_id, title, provider, status, vercelProject, vercelProjectId, vercelTeamSlug, productionUrl, lastSyncedAt, dashboardUrl, reportingCadence, keyMetrics[]{_key, label, definition}}`
+const ANALYTICS_SOURCE_PROJECTION = `analyticsSource->{_id, title, provider, status, propertyId, measurementId, containerId, vercelProject, vercelProjectId, vercelTeamSlug, productionUrl, lastSyncedAt, dashboardUrl, reportingCadence, targetSites[]{_key, label, url}, keyMetrics[]{_key, label, definition}}`
 
 const MARKETING_QUERY = `{
   "calendarItems": *[_type == "marketingCalendarItem"]|order(publishAt asc, _updatedAt desc) {
@@ -262,7 +282,7 @@ const MARKETING_QUERY = `{
     channel,
     brief,
     contentDraft,
-    draftFrames[]{_key, title, body, visualDirection, altText},
+    draftFrames[]{_key, title, body, visualDirection, altText, image},
     draftAltText,
     draftHashtags,
     contentProductionNotes,
@@ -292,6 +312,10 @@ const MARKETING_QUERY = `{
     topicCluster,
     searchIntent,
     targetQueries,
+    autoPublish,
+    publishState,
+    publishError,
+    "owner": owner->{_id, "title": name},
     "campaign": campaign->{_id, title, status},
     "funnel": funnel->{_id, title, status},
     "analyticsSource": ${ANALYTICS_SOURCE_PROJECTION},
@@ -349,7 +373,7 @@ const MARKETING_QUERY = `{
     audience,
     conversionGoal,
     notes,
-    stages[]{_key, _type, stage, goal, offer, callToAction, destinationUrl, metrics},
+    stages[]{_key, _type, stage, goal, offer, callToAction, destinationUrl, content, metrics},
     "analyticsSources": analyticsSources[]->{_id, title, provider, status},
     "researchProject": researchProject->{_id, title, status},
     "researchResults": researchResults[]->{_id, title, resultType, status, keyword, volume, difficulty, provider},
@@ -479,7 +503,7 @@ const MARKETING_QUERY = `{
     vercelDashboardUrl,
     "campaign": campaign->{_id, title, status},
     "calendarItem": calendarItem->{_id, title, status, publishAt},
-    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, interpretation, recommendation},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, "experiment": experiment->{_id, title, status}, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, interpretation, recommendation},
     result,
     decision,
     decisionDate,
@@ -495,6 +519,7 @@ const MARKETING_QUERY = `{
     sourceLabel,
     query,
     pageUrl,
+    "experiment": experiment->{_id, title, status},
     "campaign": campaign->{_id, title, status},
     "channel": channel->{_id, title, key, status},
     "linkItem": linkItem->{_id, title, url, status},
@@ -748,6 +773,10 @@ const MARKETING_QUERY = `{
     notes,
     conversionGoal,
     stages[]{_key, _type, stage, goal, offer, callToAction, destinationUrl, metrics}
+  },
+  "teamMembers": *[_type == "teamMember" && coalesce(isAlumni, false) != true]|order(name asc) {
+    _id,
+    "title": name
   }
 }`
 
@@ -771,6 +800,24 @@ export type MarketingViewId =
   | 'linkTree'
   | 'seo'
 export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
+
+export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = {
+  dashboard: 'marketing.dashboard',
+  strategy: 'marketing.strategy',
+  strategyBrief: 'marketing.strategy-brief',
+  abTesting: 'marketing.measure',
+  research: 'marketing.research',
+  outreach: 'marketing.outreach',
+  workEvidence: 'marketing.evidence',
+  calendar: 'marketing.calendar',
+  campaigns: 'marketing.campaigns',
+  funnels: 'marketing.funnels',
+  templates: 'marketing.templates',
+  channels: 'marketing.channels',
+  analytics: 'marketing.analytics',
+  linkTree: 'marketing.quick-links',
+  seo: 'marketing.seo',
+}
 export type MarketingAssistKind =
   | 'campaign'
   | 'funnel'
@@ -790,15 +837,19 @@ export const MARKETING_UNSAVED_FORM_ID = 'marketing-form-fields'
 
 type MarketingUnsavedChangesContextValue = {
   hasUnsavedChanges: boolean
+  hasUnsavedChange: (id: string) => boolean
   markUnsavedChange: (id?: string, label?: string) => void
-  clearUnsavedChanges: () => void
+  clearUnsavedChanges: (id?: string) => void
+  confirmDiscardUnsavedChange: (id: string, message?: string) => boolean
   confirmDiscardUnsavedChanges: (message?: string) => boolean
 }
 
 const MarketingUnsavedChangesContext = createContext<MarketingUnsavedChangesContextValue>({
   hasUnsavedChanges: false,
+  hasUnsavedChange: () => false,
   markUnsavedChange: () => undefined,
   clearUnsavedChanges: () => undefined,
+  confirmDiscardUnsavedChange: () => true,
   confirmDiscardUnsavedChanges: () => true,
 })
 
@@ -1133,6 +1184,10 @@ export interface MarketingCalendarItem {
   topicCluster?: string
   searchIntent?: string
   targetQueries?: string[]
+  autoPublish?: boolean
+  publishState?: string
+  publishError?: string
+  owner?: RefSummary
   campaign?: RefSummary
   funnel?: RefSummary
   channelRef?: MarketingChannel
@@ -1155,6 +1210,7 @@ export type DraftContentFrame = {
   body?: string
   visualDirection?: string
   altText?: string
+  image?: Record<string, unknown>
 }
 
 export interface MarketingCampaign {
@@ -1200,6 +1256,7 @@ export interface FunnelStage {
   offer?: string
   callToAction?: string
   destinationUrl?: string
+  content?: Array<{ _key?: string; _type?: 'reference'; _ref?: string }>
   metrics?: string[]
 }
 
@@ -1240,7 +1297,7 @@ export interface MarketingAnalyticsSource {
   dashboardUrl?: string
   reportingCadence?: string
   implementationNotes?: string
-  targetSites?: Array<{ _key?: string; label?: string; url?: string }>
+  targetSites?: Array<{ _key?: string; _type?: 'targetSite'; label?: string; url?: string }>
   keyMetrics?: Array<{ _key?: string; _type?: 'keyMetric'; label?: string; definition?: string }>
 }
 
@@ -1366,6 +1423,7 @@ export interface MarketingPerformanceSignal {
   sourceLabel?: string
   query?: string
   pageUrl?: string
+  experiment?: RefSummary
   campaign?: RefSummary
   channel?: MarketingChannel
   linkItem?: MarketingLinkItem
@@ -1398,6 +1456,7 @@ export interface MarketingLinkItem {
     _type?: 'image'
     asset?: {
       _id?: string
+      _ref?: string
       url?: string
     }
   }
@@ -1727,12 +1786,14 @@ interface MarketingResearchRun {
 
 export interface MarketingContact {
   _id: string
+  _rev?: string
   _updatedAt?: string
   name?: string
   organization?: string
   role?: string
   segment?: string
   owner?: string
+  brandVoiceKey?: string
   warmth?: string
   status?: string
   email?: string
@@ -1741,14 +1802,15 @@ export interface MarketingContact {
   howWeKnow?: string
   sourceNotes?: string
   researchedAt?: string
+  researchReviewedAt?: string
   researchSummary?: string
   personVerified?: boolean
   identityConfidence?: string
   opportunities?: Array<{ _key?: string; offerKey?: string; headline?: string; rationale?: string }>
-  relevantEvidence?: Array<{ _key?: string; evidenceId?: string; title?: string; why?: string }>
+  relevantEvidence?: Array<{ _key?: string; evidenceId: string; title?: string; why?: string }>
   proposedOffers?: Array<{
     _key?: string
-    title?: string
+    title: string
     oneLiner?: string
     priceBand?: string
     rationale?: string
@@ -1761,12 +1823,25 @@ export interface MarketingContact {
   suggestedOpener?: string
   callBrief?: string
   researchModel?: string
+  researchBrandVoiceKey?: string
+  researchBrandVoiceName?: string
   researchSources?: Array<{ _key?: string; title?: string; url?: string }>
+  /** Human exceptions to auto channel advice; missing entries remain automatic. */
+  channelOverrides?: OutreachChannelOverride[]
   lastContactedAt?: string
   followUpAt?: string
   nextStep?: string
   outcomeNotes?: string
   intelGathered?: string
+  estimatedValue?: number
+  closedValue?: number
+  currency?: string
+  attributionChannel?: string
+  attributedOfferKey?: string
+  attributedOfferTitle?: string
+  attributedEvidenceIds?: string[]
+  closedAt?: string
+  closeReason?: string
   interactions?: Array<{
     _key?: string
     at?: string
@@ -1775,11 +1850,17 @@ export interface MarketingContact {
     intel?: string
     nextStep?: string
     statusAfter?: string
+    channel?: string
+    offerKey?: string
+    offerTitle?: string
+    evidenceIds?: string[]
+    value?: number
   }>
 }
 
 export interface MarketingOffer {
   _id: string
+  _rev?: string
   _updatedAt?: string
   title?: string
   key?: string
@@ -1812,6 +1893,7 @@ export interface MarketingData {
   researchRuns: MarketingResearchRun[]
   researchPlans: MarketingResearchPlan[]
   templates: MarketingTemplate[]
+  teamMembers?: RefSummary[]
 }
 
 export type MarketingAiSuggestion = {
@@ -1946,6 +2028,7 @@ export type MarketingAiAssistResponse = {
     caseStudies?: number
     campaigns?: number
     analyticsTakeaways?: number
+    brandVoice?: { key: string; name: string; selection: 'requested' | 'default' | 'firstActive' } | null
   }
 }
 
@@ -2001,7 +2084,7 @@ export type MarketingAttentionItem = {
   title: string
   detail: string
   view: MarketingViewId
-  severity: 'setup' | 'content' | 'measurement'
+  severity: 'urgent' | 'setup' | 'content' | 'measurement'
 }
 
 type AnalyticsInterpretationSeverity = 'urgent' | 'warning' | 'opportunity' | 'healthy'
@@ -2125,6 +2208,12 @@ export type AutopilotCompletionAction =
   | 'calendar:createDraft'
   | 'calendar:saveDraft'
   | 'link:save'
+  | 'outreach:preflight'
+  | 'outreach:addContacts'
+  | 'outreach:research'
+  | 'outreach:review'
+  | 'outreach:call'
+  | 'outreach:log'
 
 export type AutopilotWorkspaceTarget = {
   view: MarketingViewId
@@ -2355,6 +2444,7 @@ const EMPTY_DATA: MarketingData = {
   researchRuns: [],
   researchPlans: [],
   templates: [],
+  teamMembers: [],
 }
 
 export const workflowTerms: WorkflowTerm[] = [
@@ -2762,6 +2852,7 @@ function MarketingComponent() {
   // Role tailors the Autopilot guided flow. Precedence mirrors view: a ?role=
   // deep link wins over the last-stored role, else the 'coworker' default.
   const [role, setRole] = useState<MarketingRole>(() => roleFromLocation() || loadStoredMarketingRole())
+  const [financialPostureId, setFinancialPostureId] = useState<FinancialPostureId>(DEFAULT_FINANCIAL_POSTURE_ID)
   useEffect(() => {
     saveStoredMarketingRole(role)
   }, [role])
@@ -2783,13 +2874,20 @@ function MarketingComponent() {
   const [autopilotCompletionSignal, setAutopilotCompletionSignal] = useState<AutopilotCompletionSignal | null>(null)
   const [unsavedChanges, setUnsavedChanges] = useState<Record<string, string>>({})
   const hasUnsavedChanges = Object.keys(unsavedChanges).length > 0
+  const hasUnsavedChange = useCallback((id: string) => Boolean(unsavedChanges[id]), [unsavedChanges])
 
   const markUnsavedChange = useCallback((id = MARKETING_UNSAVED_FORM_ID, label = 'form fields you edited') => {
     setUnsavedChanges((current) => (current[id] === label ? current : { ...current, [id]: label }))
   }, [])
 
-  const clearUnsavedChanges = useCallback(() => {
-    setUnsavedChanges({})
+  const clearUnsavedChanges = useCallback((id?: string) => {
+    setUnsavedChanges((current) => {
+      if (!id) return {}
+      if (!(id in current)) return current
+      const next = { ...current }
+      delete next[id]
+      return next
+    })
   }, [])
 
   const confirmDiscardUnsavedChanges = useCallback(
@@ -2800,6 +2898,14 @@ function MarketingComponent() {
       return window.confirm(`${message}${detail}`)
     },
     [hasUnsavedChanges, unsavedChanges],
+  )
+
+  const confirmDiscardUnsavedChange = useCallback(
+    (id: string, message = 'Opening another record will discard this unsaved draft. Continue?') => {
+      if (!unsavedChanges[id] || typeof window === 'undefined') return true
+      return window.confirm(`${message}\n\nUnsaved: ${unsavedChanges[id]}`)
+    },
+    [unsavedChanges],
   )
 
   useEffect(() => {
@@ -2836,6 +2942,7 @@ function MarketingComponent() {
         researchRuns: nextData.researchRuns || [],
         researchPlans: nextData.researchPlans || [],
         templates: nextData.templates || [],
+        teamMembers: nextData.teamMembers || [],
       })
       setLastLoaded(new Date().toLocaleTimeString())
       return true
@@ -2954,11 +3061,20 @@ function MarketingComponent() {
   const unsavedGuardValue = useMemo<MarketingUnsavedChangesContextValue>(
     () => ({
       hasUnsavedChanges,
+      hasUnsavedChange,
       markUnsavedChange,
       clearUnsavedChanges,
+      confirmDiscardUnsavedChange,
       confirmDiscardUnsavedChanges,
     }),
-    [clearUnsavedChanges, confirmDiscardUnsavedChanges, hasUnsavedChanges, markUnsavedChange],
+    [
+      clearUnsavedChanges,
+      confirmDiscardUnsavedChange,
+      confirmDiscardUnsavedChanges,
+      hasUnsavedChange,
+      hasUnsavedChanges,
+      markUnsavedChange,
+    ],
   )
 
   const commitPatch = useCallback(
@@ -3081,8 +3197,11 @@ function MarketingComponent() {
   }, [loadData])
 
   const activeView = MARKETING_TOOL_VIEWS.find((candidate) => candidate.id === view) || MARKETING_TOOL_VIEWS[0]
-  const attentionItems = useMemo(() => (loading ? [] : getMarketingAttentionItems(data)), [data, loading])
-  const attentionCount = attentionItems.length
+  const guideArticle = MARKETING_GUIDE_ARTICLE_BY_VIEW[view]
+  const attentionCount = useMemo(
+    () => (loading ? 0 : getMarketingDashboardGaps(data, financialPostureId).length),
+    [data, financialPostureId, loading],
+  )
   // Both layouts reserve bottom space so the fixed Autopilot button never covers content (e.g. Save rows).
   const shellStyle: CSSProperties = compactLayout ? { ...styles.shell, padding: 12, paddingBottom: 92 } : { ...styles.shell, paddingBottom: 92 }
   const headerStyle: CSSProperties = compactLayout
@@ -3122,7 +3241,7 @@ function MarketingComponent() {
             {hasUnsavedChanges && <span style={{ ...styles.small, color: '#E36216', fontWeight: 800 }}>Unsaved edits</span>}
             {lastLoaded && <span style={{ ...styles.muted, ...styles.small }}>Updated {lastLoaded}</span>}
             <CopyViewLinkButton view={view} role={role} />
-            <a href="/studio/getting-started?article=marketing.overview" style={styles.button}>
+            <a href={`/studio/getting-started?article=${guideArticle}`} style={styles.button}>
               Marketing guide
               <LaunchIcon style={{ width: 15, height: 15 }} />
             </a>
@@ -3252,6 +3371,7 @@ function MarketingComponent() {
           <MarketingGuidanceWidget
             activeView={view}
             data={data}
+            financialPostureId={financialPostureId}
             savingId={savingId}
             tutorialRequest={workflowTutorialRequest}
             tutorialLibraryRequest={workflowTutorialLibraryRequest}
@@ -3312,9 +3432,14 @@ function MarketingComponent() {
             />
             {view === 'dashboard' && (
               <>
-                <MarketingFinancialPostureSetting compact onOpenSettings={() => requestMarketingView('channels')} />
+                <MarketingFinancialPostureSetting
+                  compact
+                  onOpenSettings={() => requestMarketingView('channels')}
+                  onPostureChange={setFinancialPostureId}
+                />
                 <MarketingDashboard
                   data={data}
+                  financialPostureId={financialPostureId}
                   onOpenView={requestMarketingView}
                   onOpenWorkflow={() => setWorkflowOpenRequest((current) => current + 1)}
                 />
@@ -3322,11 +3447,9 @@ function MarketingComponent() {
             )}
             {view === 'strategy' && (
               <StrategyWorkspace
-                client={client}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
-                loadData={reloadWorkspaceData}
                 commitPatch={commitPatch}
                 onOpenView={requestMarketingView}
                 autopilotTarget={autopilotTarget}
@@ -3387,11 +3510,9 @@ function MarketingComponent() {
             )}
             {view === 'funnels' && (
               <FunnelWorkspace
-                client={client}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
-                loadData={reloadWorkspaceData}
                 commitPatch={commitPatch}
               />
             )}
@@ -3407,22 +3528,43 @@ function MarketingComponent() {
             )}
             {view === 'channels' && (
               <>
+                <nav aria-label="Settings sections" style={{ ...styles.panel, display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16, boxShadow: 'none' }}>
+                  <a href="#marketing-settings-business" style={styles.button}>Business context</a>
+                  <a href="#marketing-settings-voice" style={styles.button}>Brand voices</a>
+                  <a href="#marketing-settings-ai" style={styles.button}>AI model</a>
+                  <a href="#marketing-settings-channels" style={styles.button}>Channels & formats</a>
+                </nav>
                 <div style={{ marginBottom: 16, display: 'grid', gap: 12 }}>
-                  <MarketingFinancialPostureSetting />
-                  <MarketingAiModelSetting />
+                  <div id="marketing-settings-business" style={{ scrollMarginTop: 16 }}>
+                    <MarketingFinancialPostureSetting onPostureChange={setFinancialPostureId} />
+                  </div>
+                  <div id="marketing-settings-voice" style={{ scrollMarginTop: 16 }}>
+                    <MarketingBrandVoiceSetting />
+                  </div>
+                  <div id="marketing-settings-ai" style={{ scrollMarginTop: 16 }}>
+                    <MarketingAiModelSetting />
+                  </div>
                 </div>
-                <ChannelWorkspace
-                  client={client}
-                  data={data}
-                  savingId={savingId}
-                  createDocument={createDocument}
-                  loadData={reloadWorkspaceData}
-                  commitPatch={commitPatch}
-                />
+                <div id="marketing-settings-channels" style={{ scrollMarginTop: 16 }}>
+                  <ChannelWorkspace
+                    client={client}
+                    data={data}
+                    savingId={savingId}
+                    createDocument={createDocument}
+                    loadData={reloadWorkspaceData}
+                    commitPatch={commitPatch}
+                  />
+                </div>
               </>
             )}
             {view === 'outreach' && (
-              <OutreachWorkspace client={client} onOpenEvidence={() => requestMarketingView('workEvidence')} />
+              <div data-tour-id="autopilot-outreach-workflow">
+                <OutreachWorkspace
+                  client={client}
+                  onOpenEvidence={() => requestMarketingView('workEvidence')}
+                  onOpenSettings={() => requestMarketingView('channels')}
+                />
+              </div>
             )}
             {view === 'workEvidence' && <OutreachEvidenceWorkspace client={client} />}
             {view === 'linkTree' && (
@@ -3605,18 +3747,24 @@ function MarketingSurfaceHeader({ surface }: { surface: MarketingSurface }) {
 
 function MarketingDashboard({
   data,
+  financialPostureId,
   onOpenView,
   onOpenWorkflow,
 }: {
   data: MarketingData
+  financialPostureId: FinancialPostureId
   onOpenView: MarketingViewOpener
   onOpenWorkflow: () => void
 }) {
   const stats = useMemo(() => getMarketingDashboardStats(data), [data])
-  const gaps = useMemo(() => getMarketingDashboardGaps(data), [data])
+  const fastRevenuePosture = financialPostureId === 'survival' || financialPostureId === 'rebuild'
+  const gaps = useMemo(() => getMarketingDashboardGaps(data, financialPostureId), [data, financialPostureId])
   const analyticsStats = useMemo(() => getAnalyticsReadinessStats(data), [data])
-  const upcomingItems = stats.upcomingItems.slice(0, 6)
-  const assistantActions = useMemo(() => buildMarketingAssistantActions(data), [data])
+  const upcomingItems = stats.executionReadyItems.slice(0, 6)
+  const assistantActions = useMemo(
+    () => buildMarketingAssistantActions(data, null, financialPostureId),
+    [data, financialPostureId],
+  )
   const [actionQuery, setActionQuery] = useState('')
   const handleAssistantSelect = (action: MarketingAssistantAction) => {
     if (action.view) onOpenView(action.view)
@@ -3643,20 +3791,22 @@ function MarketingDashboard({
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 16 }}>
           <AnalyticsMetricCard
-            label="Content runway"
-            value={`${stats.contentRunwayDays} day${stats.contentRunwayDays === 1 ? '' : 's'}`}
-            tone={stats.contentRunwayDays === 0 ? 'risk' : stats.contentRunwayDays < 7 ? 'warn' : 'ok'}
+            label="Ready content runway"
+            value={fastRevenuePosture ? 'Deprioritized' : `${stats.contentRunwayDays} day${stats.contentRunwayDays === 1 ? '' : 's'}`}
+            tone={fastRevenuePosture ? 'ok' : stats.contentRunwayDays === 0 ? 'risk' : stats.contentRunwayDays < 7 ? 'warn' : 'ok'}
             detail={
-              stats.lastUpcomingDate
-                ? `planned through ${formatDashboardDate(stats.lastUpcomingDate)}`
-                : 'no future items scheduled'
+              fastRevenuePosture
+                ? `${financialPostureId === 'survival' ? 'survival' : 'rebuild'} posture puts warm outreach first`
+                : stats.lastUpcomingDate
+                ? `continuous weekly coverage through ${formatDashboardDate(stats.lastUpcomingDate)}`
+                : 'no review-ready or scheduled items'
             }
           />
           <AnalyticsMetricCard
-            label="Planned items"
+            label="Ready items"
             value={`${stats.upcoming30Items.length}`}
-            tone={stats.coveredDaysNext30 < 10 ? 'warn' : 'ok'}
-            detail={`next 30 days · content on ${stats.coveredDaysNext30}/30 days`}
+            tone={fastRevenuePosture ? 'ok' : stats.coveredDaysNext30 < 4 ? 'warn' : 'ok'}
+            detail={`next 30 dates · ${stats.coveredDaysNext30} publishing date${stats.coveredDaysNext30 === 1 ? '' : 's'}`}
           />
           <AnalyticsMetricCard
             label="Active campaigns"
@@ -3752,10 +3902,10 @@ function MarketingDashboard({
         <section style={styles.panel}>
           <PanelHeading
             title="Upcoming content"
-            description="The next planned items that make up the current content runway."
+            description="The next review-ready or scheduled items that make up the continuous runway."
           />
           {upcomingItems.length === 0 ? (
-            <EmptyInline title="No upcoming calendar items yet." />
+            <EmptyInline title="No execution-ready calendar items yet." />
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>
               {upcomingItems.map((item) => (
@@ -3804,7 +3954,7 @@ function MarketingDashboard({
       <section style={styles.panel}>
         <PanelHeading
           title="Channel coverage"
-          description="A quick read on whether active channels have visible work coming up in the next 30 days."
+          description="A quick read on whether active channels have review-ready or scheduled work in the next 30 dates."
         />
         {stats.channelCoverage.length === 0 ? (
           <EmptyInline title="Add channels to see channel coverage." />
@@ -3824,7 +3974,7 @@ function MarketingDashboard({
               >
                 <strong>{channel.title}</strong>
                 <div style={{ ...styles.small, ...styles.muted }}>
-                  {channel.upcoming30Count} item{channel.upcoming30Count === 1 ? '' : 's'} in the next 30 days
+                  {channel.upcoming30Count} ready item{channel.upcoming30Count === 1 ? '' : 's'} in the next 30 dates
                 </div>
                 <div style={{ ...styles.small, color: channel.upcoming30Count === 0 ? '#E36216' : '#007385', fontWeight: 800 }}>
                   {channel.upcoming30Count === 0 ? 'Coverage gap' : 'Covered'}
@@ -4428,6 +4578,7 @@ function splitLines(value: string) {
 function MarketingGuidanceWidget({
   activeView,
   data,
+  financialPostureId,
   savingId,
   tutorialRequest,
   tutorialLibraryRequest,
@@ -4445,6 +4596,7 @@ function MarketingGuidanceWidget({
 }: {
   activeView: MarketingViewId
   data: MarketingData
+  financialPostureId: FinancialPostureId
   savingId: string | null
   tutorialRequest: number
   tutorialLibraryRequest: number
@@ -4673,6 +4825,7 @@ function MarketingGuidanceWidget({
             coachOnly={coachOnly}
             interactionMode={autopilotInteractionMode}
             data={data}
+            financialPostureId={financialPostureId}
             saving={savingId?.startsWith('carousel-') || savingId?.startsWith('marketing-plan-') || false}
             sessionsOpen={sessionsOpen}
             backSignal={backSignal}
@@ -5130,6 +5283,7 @@ function CarouselWorkflowWizard({
   coachOnly,
   interactionMode,
   data,
+  financialPostureId,
   saving,
   sessionsOpen,
   backSignal,
@@ -5151,6 +5305,7 @@ function CarouselWorkflowWizard({
   coachOnly: boolean
   interactionMode: AutopilotInteractionMode
   data: MarketingData
+  financialPostureId: FinancialPostureId
   saving: boolean
   sessionsOpen: boolean
   backSignal: number
@@ -5200,8 +5355,8 @@ function CarouselWorkflowWizard({
   const currentStep = steps[Math.min(stepIndex, steps.length - 1)]
   const preparedQuestionnaire = normalizeMarketingPlanQuestionnaire(questionnaire)
   const assistantActions = useMemo(
-    () => buildMarketingAssistantActions(data, latestSetupSession),
-    [data, latestSetupSession],
+    () => buildMarketingAssistantActions(data, latestSetupSession, financialPostureId),
+    [data, financialPostureId, latestSetupSession],
   )
 
   useEffect(() => {
@@ -5265,15 +5420,16 @@ function CarouselWorkflowWizard({
 
   useEffect(() => {
     if (!activeSession?.autopilotPlan) return
-    // Scripted plans (e.g. the principal warm-network flow) are hand-authored —
-    // never rebuild them from the content-pipeline data.
-    if (isScriptedAutopilotPlan(activeSession.autopilotPlan)) return
-    const refreshedPlan = refreshMarketingAutopilotPlan(
-      activeSession.autopilotPlan,
-      data,
-      activeSession.strategySuggestion,
-      activeSession.questionnaire,
-    )
+    // Scripted plans are hand-authored, but refresh against the latest scripted
+    // definition so an in-progress hand-off gains new steps without losing work.
+    const refreshedPlan = isScriptedAutopilotPlan(activeSession.autopilotPlan)
+      ? refreshPrincipalOutreachPlan(activeSession.autopilotPlan)
+      : refreshMarketingAutopilotPlan(
+          activeSession.autopilotPlan,
+          data,
+          activeSession.strategySuggestion,
+          activeSession.questionnaire,
+        )
     if (autopilotPlanFingerprint(refreshedPlan) === autopilotPlanFingerprint(activeSession.autopilotPlan)) return
     updateActiveSession({
       autopilotPlan: refreshedPlan,
@@ -5458,7 +5614,7 @@ function CarouselWorkflowWizard({
         headers: { 'Content-Type': 'application/json', ...studioSessionHeader() },
         body: JSON.stringify({
           kind: 'strategistChat',
-          draft: buildStrategistChatDraft(data, activeSession, questionnaire),
+          draft: buildStrategistChatDraft(data, activeSession, questionnaire, financialPostureId),
           prompt: userText,
           messages: nextMessages.map((message) => ({ role: message.role, content: message.content })),
           analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
@@ -5547,8 +5703,8 @@ function CarouselWorkflowWizard({
         headers: { 'Content-Type': 'application/json', ...studioSessionHeader() },
         body: JSON.stringify({
           kind: 'researchProject',
-          draft: buildWizardStrategyDraft(data, questionnaire),
-          prompt: buildWizardStrategyPrompt(data, questionnaire, strategyPrompt),
+          draft: buildWizardStrategyDraft(data, questionnaire, financialPostureId),
+          prompt: buildWizardStrategyPrompt(data, questionnaire, strategyPrompt, financialPostureId),
           analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
         }),
       })
@@ -5571,6 +5727,25 @@ function CarouselWorkflowWizard({
       }
     } catch (requestError) {
       console.error('Strategy assistant used rule-based fallback:', requestError)
+      if (financialPostureId === 'survival' || financialPostureId === 'rebuild') {
+        const outreachPlan = buildPrincipalOutreachPlan()
+        const nextStep = getCurrentAutopilotStep(outreachPlan)
+        const guidedPlan = nextStep ? setAutopilotCoachOpen(outreachPlan, true) : outreachPlan
+        updateActiveSession({
+          strategySuggestion: null,
+          strategyUsedAi: false,
+          strategyStepIndex: 0,
+          autopilotPlan: guidedPlan,
+          result: null,
+        })
+        if (nextStep) {
+          onInteractionModeChange('highlight')
+          onOpenAutopilotTarget(autopilotTargetForStep(nextStep))
+          onAutopilotCoachActiveChange(true)
+        }
+        setStrategyError('')
+        return
+      }
       const fallbackSuggestion = buildFallbackWizardStrategySuggestion(data, questionnaire, strategyPrompt)
       const fallbackAutopilotPlan = buildMarketingAutopilotPlan(data, fallbackSuggestion, questionnaire)
       const nextStep = getCurrentAutopilotStep(fallbackAutopilotPlan)
@@ -5670,6 +5845,12 @@ function CarouselWorkflowWizard({
         plan={autopilotPlan}
         onClose={closeCurrentAutopilotCoach}
         onOpenChat={openAutopilotChatMode}
+        onPlanChange={(nextPlan) => {
+          updateActiveSession({
+            autopilotPlan: nextPlan,
+            strategyStepIndex: getAutopilotCurrentIndex(nextPlan),
+          })
+        }}
         onChoice={(step, choice, choiceIndex) => {
           onOpenAutopilotTarget(autopilotTargetForStep(step))
           window.setTimeout(() => {
@@ -5894,6 +6075,12 @@ function CarouselWorkflowWizard({
             onOpenView(targetView)
           }}
           onContinueAutopilot={() => openCurrentAutopilotStep()}
+          onAutopilotPlanChange={(nextPlan) => {
+            updateActiveSession({
+              autopilotPlan: nextPlan,
+              strategyStepIndex: getAutopilotCurrentIndex(nextPlan),
+            })
+          }}
           onCloseAutopilotCoach={closeCurrentAutopilotCoach}
           onOpenChatMode={openAutopilotChatMode}
           onPreviewAutopilotStep={(step) => onOpenAutopilotTarget(autopilotTargetForStep(step))}
@@ -6514,6 +6701,7 @@ function StrategyAgentStep({
   onResetSuggestion,
   onOpenRecommendationView,
   onContinueAutopilot,
+  onAutopilotPlanChange,
   onCloseAutopilotCoach,
   onOpenChatMode,
   onPreviewAutopilotStep,
@@ -6539,6 +6727,7 @@ function StrategyAgentStep({
   onResetSuggestion: () => void
   onOpenRecommendationView: (view: MarketingViewId, nextStepIndex: number) => void
   onContinueAutopilot: () => void
+  onAutopilotPlanChange: (plan: MarketingAutopilotPlan) => void
   onCloseAutopilotCoach: () => void
   onOpenChatMode: () => void
   onPreviewAutopilotStep: (step: MarketingAutopilotStep) => void
@@ -6761,6 +6950,7 @@ function StrategyAgentStep({
         plan={autopilotPlan}
         onClose={onCloseAutopilotCoach}
         onOpenChat={onOpenChatMode}
+        onPlanChange={onAutopilotPlanChange}
         onChoice={(step, choice, choiceIndex) => {
           onPreviewAutopilotStep(step)
           window.setTimeout(() => {
@@ -7042,30 +7232,69 @@ export function dispatchMarketingAutopilotStatus(detail: Omit<MarketingAutopilot
   )
 }
 
-// Hand-authored (scripted) plans use this id prefix so the content-pipeline
-// refresh effect leaves them alone instead of rebuilding them from data.
+// Hand-authored (scripted) plans use this id prefix so the refresh effect uses
+// their stable definition instead of rebuilding them from content-pipeline data.
 const SCRIPTED_AUTOPILOT_PLAN_ID_PREFIX = 'principal-outreach-'
 function isScriptedAutopilotPlan(plan: MarketingAutopilotPlan | null | undefined): boolean {
   return Boolean(plan?.id?.startsWith(SCRIPTED_AUTOPILOT_PLAN_ID_PREFIX))
 }
 
-// A principal/founder gets a hand-authored 2-step guided plan: the marketing plan
-// framed around warm-network activation, then Outreach to add contacts. It's a
+export type PrincipalOutreachPrerequisites = {
+  /** `null` means the private outreach dataset has not been checked yet. */
+  contactCount: number | null
+  /** Active offers whose price band contains a real currency amount. */
+  callReadyOfferCount: number | null
+}
+
+export function getPrincipalOutreachPrerequisiteBlocker(
+  stepId: string,
+  prerequisites?: PrincipalOutreachPrerequisites | null,
+): string | null {
+  if (!prerequisites || !stepId.startsWith('principal-')) return null
+  const missing: string[] = []
+  if (stepId !== 'principal-plan-warm-network' && prerequisites.contactCount === 0) {
+    missing.push('Add at least one contact before confirming this step.')
+  }
+  if (prerequisites.callReadyOfferCount === 0) {
+    missing.push('Set a real currency amount on at least one active offer before continuing.')
+  }
+  return missing.length > 0 ? `Stay on this step: ${missing.join(' ')}` : null
+}
+
+async function loadPrincipalOutreachPrerequisites(
+  outreachClient: StudioClient,
+): Promise<PrincipalOutreachPrerequisites> {
+  const result = await outreachClient.fetch<{
+    contactCount?: number
+    offers?: Array<{ priceBand?: string }>
+  }>(`{
+    "contactCount": count(*[_type == "marketingContact" && !(_id in path("drafts.**"))]),
+    "offers": *[_type == "marketingOffer" && status == "active" && !(_id in path("drafts.**"))]{priceBand}
+  }`)
+  const contactCount = typeof result.contactCount === 'number' && Number.isFinite(result.contactCount)
+    ? Math.max(0, result.contactCount)
+    : 0
+  const callReadyOfferCount = (result.offers || []).filter((offer) => hasPricedOffer(offer.priceBand)).length
+  return { contactCount, callReadyOfferCount }
+}
+
+// A principal/founder gets a hand-authored end-to-end guided plan: preflight the
+// offer/evidence setup, add contacts, research, review, call, and log. It's a
 // normal MarketingAutopilotPlan, so the coach overlay, resume card, and target-
-// opening all work unchanged. Steps advance via the coach's Next button (which
-// opens each step's target); kept separate from the content-pipeline builder.
-function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
+// opening all work unchanged. Confirming a coach choice advances the persisted
+// plan; the smaller Next control remains a non-destructive preview.
+export function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
   const steps: MarketingAutopilotStep[] = [
     {
       id: 'principal-plan-warm-network',
       view: 'outreach',
       targetId: 'autopilot-plan-warm-network',
-      title: 'Your plan: who to reach out to',
-      instruction: 'The highlighted panel is the plan — why outreach-first, what is already loaded, and the steps.',
-      why: 'A direct, specific ask to people who already know our work is the fastest path to new work — and this kind of outreach has been manual and sporadic without a system. The highlighted panel explains how the plan fits where finances stand right now.',
-      requiredAction: 'Read the plan panel, then add the people worth a call.',
+      title: 'Preflight the call plan',
+      instruction: 'Read the highlighted plan and check the evidence and priced-offer counts before spending time on research.',
+      why: 'A direct, specific ask to people who already know our work is the fastest path to new work, but research cannot produce an approvable call brief without active evidence and a real price to present.',
+      requiredAction: 'Confirm the plan has work evidence and at least one offer with a real dollar band; fix either blocker before continuing.',
       nextAfter: 'Add the people worth a call.',
-      expectedAction: 'link:save',
+      expectedAction: 'outreach:preflight',
       status: 'upcoming',
     },
     {
@@ -7077,7 +7306,55 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
       why: 'We research each person against your work and rank who to call first, warmth-first, with a tailored offer.',
       requiredAction: 'Paste names, then Check names and Add.',
       nextAfter: 'Run research to build your ranked call plan.',
-      expectedAction: 'link:save',
+      expectedAction: 'outreach:addContacts',
+      status: 'upcoming',
+    },
+    {
+      id: 'principal-outreach-research',
+      view: 'outreach',
+      targetId: 'autopilot-outreach-workflow',
+      title: 'Research the new contacts',
+      instruction: 'In Contacts, run Research all new and let each completed person save before reviewing.',
+      why: 'Research verifies identity, checks the organization now, matches shipped work, and drafts a priced offer plus call brief. It takes about 1–2 minutes per person and saves after each one.',
+      requiredAction: 'Run Research all new, or research a single priority contact, and wait for the result to enter Research awaiting review.',
+      nextAfter: 'Review every generated brief before it can enter the call plan.',
+      expectedAction: 'outreach:research',
+      status: 'upcoming',
+    },
+    {
+      id: 'principal-outreach-review',
+      view: 'outreach',
+      targetId: 'autopilot-outreach-workflow',
+      title: 'Review and tweak the briefs',
+      instruction: 'Review identity, relationship, linked work, wording, and price; choose or edit the offer, then approve each ready brief.',
+      why: 'AI research never enters the Outreach progress tracker as ready by itself. This is where you keep the facts honest and make the pitch sound like something you would actually say.',
+      requiredAction: 'Resolve every readiness warning and select Approve for call plan on the contacts you are willing to call.',
+      nextAfter: 'Use the Outreach progress tracker to make the calls.',
+      expectedAction: 'outreach:review',
+      status: 'upcoming',
+    },
+    {
+      id: 'principal-outreach-call',
+      view: 'outreach',
+      targetId: 'outreach-progress-tracker',
+      title: 'Call from the Outreach progress tracker',
+      instruction: 'Start with Recommended next in the Outreach progress tracker; use the linked proof, priced offer, opener, and intelligence question.',
+      why: 'The list ranks relationship warmth before model fit, so the fastest credible conversations stay at the top.',
+      requiredAction: 'Call or message the approved contacts, adapting the suggested opener in your own voice.',
+      nextAfter: 'Log what happened and set the next touch.',
+      expectedAction: 'outreach:call',
+      status: 'upcoming',
+    },
+    {
+      id: 'principal-outreach-log',
+      view: 'outreach',
+      targetId: 'autopilot-outreach-workflow',
+      title: 'Log outcomes before you leave',
+      instruction: 'Open Log interaction for every touch, record what happened, and save the follow-up date.',
+      why: 'A short outcome note keeps the team from repeating work while the default seven-day follow-up makes the next action resurface automatically.',
+      requiredAction: 'Save an outcome for each call; add intelligence, opportunity value, offer, evidence, or next step when known.',
+      nextAfter: 'The outreach loop is complete; follow-ups will resurface when due.',
+      expectedAction: 'outreach:log',
       status: 'upcoming',
     },
   ]
@@ -7090,17 +7367,58 @@ function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
   })
 }
 
+export function refreshPrincipalOutreachPlan(plan: MarketingAutopilotPlan): MarketingAutopilotPlan {
+  if (!isScriptedAutopilotPlan(plan)) return plan
+  const latest = buildPrincipalOutreachPlan()
+  const priorSteps = new Map(plan.steps.map((step) => [step.id, step]))
+  return normalizeAutopilotStepStatuses({
+    ...latest,
+    id: plan.id,
+    coachOpen: plan.coachOpen,
+    createdRefs: plan.createdRefs,
+    steps: latest.steps.map((step) => {
+      const prior = priorSteps.get(step.id)
+      if (!prior || prior.status !== 'done') return step
+      return {
+        ...step,
+        status: 'done',
+        completedRefId: prior.completedRefId,
+      }
+    }),
+  })
+}
+
+export function advanceScriptedAutopilotPlan(
+  plan: MarketingAutopilotPlan,
+  stepId: string,
+  prerequisites?: PrincipalOutreachPrerequisites | null,
+): MarketingAutopilotPlan {
+  if (!isScriptedAutopilotPlan(plan)) return plan
+  const currentStep = getCurrentAutopilotStep(plan)
+  if (!currentStep || currentStep.id !== stepId) return plan
+  if (getPrincipalOutreachPrerequisiteBlocker(stepId, prerequisites)) return plan
+  return normalizeAutopilotStepStatuses({
+    ...plan,
+    coachOpen: true,
+    steps: plan.steps.map((step) =>
+      step.id === stepId
+        ? { ...step, status: 'done' as const }
+        : step,
+    ),
+  })
+}
+
 // Tailored coach copy for the principal steps. Overrides the content-pipeline
 // prompts (which key off expectedAction), so a warm-network step never shows
 // link/research copy.
 function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPrompt | null {
   if (step.id === 'principal-plan-warm-network') {
     return {
-      question: 'Start with the plan',
-      shortReason: 'The highlighted panel is the plan: why reaching out to people we already know fits where finances stand right now, what is already loaded to power each call, and the four steps.',
+      question: 'Clear the blockers first',
+      shortReason: 'The highlighted plan shows the live evidence and priced-offer counts. Evidence must be present and at least one offer needs a real dollar band before a researched brief can become call-ready.',
       choices: [
-        { label: 'Got it — add my contacts', detail: 'Move on to pasting the names worth a call.', tone: 'primary' },
-        { label: 'Not yet', detail: 'Keep reading the plan — use Next step when you are ready.' },
+        { label: 'Preflight checked — add contacts', detail: 'The evidence and offer setup are ready enough to continue.', tone: 'primary' },
+        { label: 'Keep setup open', detail: 'Fix evidence or price bands before spending time on research.' },
       ],
     }
   }
@@ -7109,7 +7427,48 @@ function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPr
       question: "Who's worth a call?",
       shortReason: 'Paste names — one per line, name + company is enough. We research each and rank who to call first.',
       choices: [
-        { label: 'Add my contacts', detail: 'Paste into the panel, then Check names and Add.', tone: 'primary' },
+        { label: 'Contacts added — research them', detail: 'I checked the preview and added the contacts I want researched.', tone: 'primary' },
+        { label: 'Keep adding', detail: 'Leave this step current while I finish the contact list.' },
+      ],
+    }
+  }
+  if (step.id === 'principal-outreach-research') {
+    return {
+      question: 'Build the briefs',
+      shortReason: 'Use Research all new in Contacts, or research one priority person. Results save one contact at a time and move into Research awaiting review.',
+      choices: [
+        { label: 'Research finished — review briefs', detail: 'The contacts I need now have research results waiting for review.', tone: 'primary' },
+        { label: 'Research is still running', detail: 'Keep this step current until the batch finishes.' },
+      ],
+    }
+  }
+  if (step.id === 'principal-outreach-review') {
+    return {
+      question: 'Make each brief call-worthy',
+      shortReason: 'Verify the person and relationship, check the linked work, choose or edit a real priced offer, and adjust the wording before approval.',
+      choices: [
+        { label: 'Briefs approved — show progress tracker', detail: 'The contacts I will call are approved and appear in the Outreach progress tracker.', tone: 'primary' },
+        { label: 'Keep reviewing', detail: 'Leave this step current while I resolve readiness warnings.' },
+      ],
+    }
+  }
+  if (step.id === 'principal-outreach-call') {
+    return {
+      question: 'Work down the Outreach progress tracker',
+      shortReason: 'The Outreach progress tracker ranks relationship warmth first. Start with Recommended next and use the proof, price, opener, and intelligence question on each approved contact.',
+      choices: [
+        { label: 'Calls made — log outcomes', detail: 'Move on to recording what happened and what comes next.', tone: 'primary' },
+        { label: 'Keep the progress tracker open', detail: 'Leave this step current while I finish the calls.' },
+      ],
+    }
+  }
+  if (step.id === 'principal-outreach-log') {
+    return {
+      question: 'Leave the team a clean handoff',
+      shortReason: 'Log each touch with at least the outcome. The default follow-up is seven days; add the offer, proof, value, intelligence, or next step when known.',
+      choices: [
+        { label: 'Outcomes saved — finish', detail: 'The calls are logged and follow-ups can resurface without me.', tone: 'primary' },
+        { label: 'Keep logging', detail: 'Leave the final step current until every touch is recorded.' },
       ],
     }
   }
@@ -7390,22 +7749,71 @@ function AutopilotCoachOverlay({
   plan,
   onClose,
   onOpenChat,
+  onPlanChange,
   onChoice,
   onStepPreview,
 }: {
   plan: MarketingAutopilotPlan | null
   onClose: () => void
   onOpenChat: () => void
+  onPlanChange: (plan: MarketingAutopilotPlan) => void
   onChoice: (step: MarketingAutopilotStep, choice: AutopilotCoachChoice, choiceIndex: number) => void
   onStepPreview: (step: MarketingAutopilotStep) => void
 }) {
   const step = getCurrentAutopilotStep(plan)
   const currentIndex = getAutopilotCurrentIndex(plan)
+  const settingsClient = useClient({ apiVersion: API_VERSION })
+  const principalOutreachClient = useMemo(
+    () => settingsClient.withConfig({ dataset: OUTREACH_DATASET }),
+    [settingsClient],
+  )
   const [visibleStepIndex, setVisibleStepIndex] = useState(currentIndex)
+  const [principalPrerequisites, setPrincipalPrerequisites] = useState<PrincipalOutreachPrerequisites | null>(null)
+  const [prerequisiteNotice, setPrerequisiteNotice] = useState<string | null>(null)
+  const [checkingPrerequisites, setCheckingPrerequisites] = useState(false)
+  const scriptedPlan = isScriptedAutopilotPlan(plan)
+
+  const refreshPrincipalPrerequisites = useCallback(
+    () => loadPrincipalOutreachPrerequisites(principalOutreachClient),
+    [principalOutreachClient],
+  )
 
   useEffect(() => {
     setVisibleStepIndex(currentIndex)
   }, [plan?.id, currentIndex])
+
+  useEffect(() => {
+    let disposed = false
+    if (!plan?.coachOpen || !step || !scriptedPlan) {
+      setPrincipalPrerequisites(null)
+      setPrerequisiteNotice(null)
+      setCheckingPrerequisites(false)
+      return () => {
+        disposed = true
+      }
+    }
+
+    setCheckingPrerequisites(true)
+    setPrerequisiteNotice(null)
+    void refreshPrincipalPrerequisites()
+      .then((snapshot) => {
+        if (disposed) return
+        setPrincipalPrerequisites(snapshot)
+        setPrerequisiteNotice(getPrincipalOutreachPrerequisiteBlocker(step.id, snapshot))
+      })
+      .catch((error) => {
+        if (disposed) return
+        console.error('Principal outreach prerequisites could not load:', error)
+        setPrerequisiteNotice('Stay on this step: Outreach readiness could not be verified. Try again.')
+      })
+      .finally(() => {
+        if (!disposed) setCheckingPrerequisites(false)
+      })
+
+    return () => {
+      disposed = true
+    }
+  }, [plan?.coachOpen, plan?.id, refreshPrincipalPrerequisites, scriptedPlan, step])
 
   if (!plan?.coachOpen || !step) return null
   const safeVisibleStepIndex = Math.min(Math.max(0, visibleStepIndex), Math.max(0, plan.steps.length - 1))
@@ -7418,28 +7826,53 @@ function AutopilotCoachOverlay({
     if (nextStep) onStepPreview(nextStep)
   }
 
-  // Scripted (principal) plans have no completion signal to advance them — their
-  // steps are hand-authored and guarded from refresh — so the primary "proceed"
-  // choice must page the coach forward itself. Otherwise the big obvious button
-  // looks dead (its action event has no listener on the strategyBrief/outreach
-  // views) and the user has to hunt for the smaller "Next step" control. Never
-  // advance past the last step (there is nowhere to go — it just opens the target).
-  const handleCoachChoice = (
+  // Scripted (principal) steps use explicit human confirmations instead of
+  // workspace completion events. Persist each primary confirmation so closing
+  // and resuming returns to the next unfinished step; Next remains preview-only.
+  const handleCoachChoice = async (
     choiceStep: MarketingAutopilotStep,
     choice: AutopilotCoachChoice,
     choiceIndex: number,
   ) => {
-    onChoice(choiceStep, choice, choiceIndex)
     const isPrimaryChoice = choiceIndex === 0 || choice.tone === 'primary'
-    if (isPrimaryChoice && isScriptedAutopilotPlan(plan) && safeVisibleStepIndex < plan.steps.length - 1) {
-      handleStepChange(safeVisibleStepIndex + 1)
+    let verifiedPrerequisites = principalPrerequisites
+    if (isPrimaryChoice && scriptedPlan) {
+      setCheckingPrerequisites(true)
+      setPrerequisiteNotice(null)
+      try {
+        verifiedPrerequisites = await refreshPrincipalPrerequisites()
+        setPrincipalPrerequisites(verifiedPrerequisites)
+        const blocker = getPrincipalOutreachPrerequisiteBlocker(choiceStep.id, verifiedPrerequisites)
+        setPrerequisiteNotice(blocker)
+        if (blocker) return
+      } catch (error) {
+        console.error('Principal outreach prerequisites could not be verified:', error)
+        setPrerequisiteNotice('Stay on this step: Outreach readiness could not be verified. Try again.')
+        return
+      } finally {
+        setCheckingPrerequisites(false)
+      }
     }
+
+    onChoice(choiceStep, choice, choiceIndex)
+    if (!isPrimaryChoice || !scriptedPlan) return
+    const nextPlan = advanceScriptedAutopilotPlan(plan, choiceStep.id, verifiedPrerequisites)
+    if (nextPlan === plan) return
+    onPlanChange(nextPlan)
+    const nextStep = getCurrentAutopilotStep(nextPlan)
+    if (!nextStep) return
+    const nextIndex = plan.steps.findIndex((candidate) => candidate.id === nextStep.id)
+    if (nextIndex >= 0) handleStepChange(nextIndex)
   }
 
   return (
     <GuidedTutorialOverlay
       active
-      tutorial={buildAutopilotCoachTutorial(plan, onOpenChat, handleCoachChoice)}
+      compact
+      tutorial={buildAutopilotCoachTutorial(plan, onOpenChat, handleCoachChoice, {
+        checkingPrerequisites,
+        prerequisiteNotice,
+      })}
       stepIndex={safeVisibleStepIndex}
       onStepChange={handleStepChange}
       onClose={onClose}
@@ -7453,7 +7886,11 @@ function AutopilotCoachOverlay({
 function buildAutopilotCoachTutorial(
   plan: MarketingAutopilotPlan,
   onOpenChat: () => void,
-  onChoice: (step: MarketingAutopilotStep, choice: AutopilotCoachChoice, choiceIndex: number) => void,
+  onChoice: (step: MarketingAutopilotStep, choice: AutopilotCoachChoice, choiceIndex: number) => void | Promise<void>,
+  prerequisiteState: { checkingPrerequisites: boolean; prerequisiteNotice: string | null } = {
+    checkingPrerequisites: false,
+    prerequisiteNotice: null,
+  },
 ) {
   return {
     id: `marketing-autopilot-${plan.id}`,
@@ -7478,30 +7915,70 @@ function buildAutopilotCoachTutorial(
               Switch to chat mode
             </button>
             <div style={{ color: 'rgba(255, 255, 255, 0.82)' }}>{prompt.shortReason}</div>
+            {step.id === plan.currentStepId && (prerequisiteState.checkingPrerequisites || prerequisiteState.prerequisiteNotice) && (
+              <div
+                role="status"
+                style={{
+                  border: '1px solid rgba(255, 209, 102, 0.5)',
+                  background: 'rgba(255, 209, 102, 0.1)',
+                  borderRadius: 7,
+                  color: '#fff1bd',
+                  padding: '8px 10px',
+                }}
+              >
+                {prerequisiteState.checkingPrerequisites
+                  ? 'Checking live Outreach readiness…'
+                  : prerequisiteState.prerequisiteNotice}
+              </div>
+            )}
             <div style={{ display: 'grid', gap: 7 }}>
-              {prompt.choices.map((choice, choiceIndex) => (
-                <button
-                  key={`${step.id}-${choice.label}`}
-                  type="button"
-                  data-tour-id={`autopilot-coach-choice-${step.id}-${choiceIndex}`}
-                  style={{
-                    border: `1px solid ${choice.tone === 'primary' ? 'rgba(0, 166, 184, 0.58)' : 'rgba(160, 171, 197, 0.24)'}`,
-                    background: choice.tone === 'primary' ? 'rgba(0, 115, 133, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                    color: '#fff',
-                    borderRadius: 7,
-                    padding: '8px 10px',
-                    display: 'grid',
-                    gap: 3,
-                    cursor: 'pointer',
-                    font: 'inherit',
-                    textAlign: 'left',
-                  }}
-                  onClick={() => onChoice(step, choice, choiceIndex)}
-                >
-                  <strong style={{ color: '#fff', fontSize: 13 }}>{choice.label}</strong>
-                  <span style={{ color: 'rgba(255, 255, 255, 0.72)' }}>{choice.detail}</span>
-                </button>
-              ))}
+              {prompt.choices.map((choice, choiceIndex) => {
+                const isPrimaryChoice = choiceIndex === 0 || choice.tone === 'primary'
+                const checkingThisChoice = step.id === plan.currentStepId && isPrimaryChoice && prerequisiteState.checkingPrerequisites
+                const blockedPrimaryChoice =
+                  step.id === plan.currentStepId
+                  && isPrimaryChoice
+                  && Boolean(prerequisiteState.prerequisiteNotice)
+                const presentedChoice = checkingThisChoice
+                  ? {
+                      ...choice,
+                      label: 'Checking live readiness…',
+                      detail: 'Autopilot is verifying the saved Outreach data before it advances.',
+                    }
+                  : blockedPrimaryChoice
+                    ? {
+                        ...choice,
+                        label: 'Recheck after fixing this step',
+                        detail: 'Resolve the blocker above, then recheck. Autopilot advances only when the live readiness check passes.',
+                      }
+                    : choice
+                return (
+                  <button
+                    key={`${step.id}-${choice.label}`}
+                    type="button"
+                    data-tour-id={`autopilot-coach-choice-${step.id}-${choiceIndex}`}
+                    disabled={checkingThisChoice}
+                    aria-busy={checkingThisChoice || undefined}
+                    style={{
+                      border: `1px solid ${choice.tone === 'primary' ? 'rgba(0, 166, 184, 0.58)' : 'rgba(160, 171, 197, 0.24)'}`,
+                      background: choice.tone === 'primary' ? 'rgba(0, 115, 133, 0.18)' : 'rgba(255, 255, 255, 0.04)',
+                      color: '#fff',
+                      borderRadius: 7,
+                      padding: '8px 10px',
+                      display: 'grid',
+                      gap: 3,
+                      cursor: checkingThisChoice ? 'wait' : 'pointer',
+                      opacity: checkingThisChoice ? 0.68 : 1,
+                      font: 'inherit',
+                      textAlign: 'left',
+                    }}
+                    onClick={() => void onChoice(step, choice, choiceIndex)}
+                  >
+                    <strong style={{ color: '#fff', fontSize: 13 }}>{presentedChoice.label}</strong>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.72)' }}>{presentedChoice.detail}</span>
+                  </button>
+                )
+              })}
             </div>
             <details>
               <summary style={{ cursor: 'pointer', color: '#fff', fontWeight: 800 }}>Why this question?</summary>
@@ -7606,6 +8083,94 @@ function WorkflowProgressMeter({
   )
 }
 
+type BrandVoiceLearningContentSnapshot = {
+  headline?: string
+  caption?: string
+  callToAction?: string
+  frames?: Array<{ title?: string; body?: string }>
+}
+
+type BrandVoiceLearningBaseline = {
+  voiceKey: string
+  voiceName: string
+  before: BrandVoiceLearningContentSnapshot
+}
+
+function voiceLearningText(value: unknown) {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function voiceLearningTextList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(voiceLearningText).filter((item): item is string => Boolean(item))
+    : []
+}
+
+function voiceLearningFrames(value: unknown) {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+    .map((item) => ({
+      title: voiceLearningText(item.offer),
+      body: voiceLearningText(item.callToAction),
+    }))
+    .filter((item) => item.title || item.body)
+}
+
+function hasVoiceLearningCopy(value: unknown): boolean {
+  if (typeof value === 'string') return value.trim().length > 0
+  if (Array.isArray(value)) return value.some(hasVoiceLearningCopy)
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      Object.values(value as Record<string, unknown>).some(hasVoiceLearningCopy),
+  )
+}
+
+/**
+ * Convert only the assistant fields that are already approved for brand-voice
+ * generation into the learning route's narrow, copy-only contract. This keeps
+ * goals, research, evidence, URLs, metrics, prices, and notes out of edit review.
+ */
+export function buildBrandVoiceLearningSnapshot(
+  kind: MarketingAssistKind,
+  value: unknown,
+): BrandVoiceLearningContentSnapshot {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const record = value as Record<string, unknown>
+
+  if (kind === 'campaign') return { caption: voiceLearningText(record.positioning) }
+  if (kind === 'funnel') return { frames: voiceLearningFrames(record.stages) }
+  if (kind === 'calendarItem') {
+    return {
+      headline: voiceLearningText(record.title),
+      callToAction: voiceLearningText(record.callToAction),
+    }
+  }
+  if (kind === 'linkItem') {
+    return {
+      headline: voiceLearningText(record.title),
+      caption: voiceLearningText(record.description),
+    }
+  }
+  if (kind === 'template') {
+    return {
+      caption: voiceLearningText(record.positioning),
+      frames: voiceLearningFrames(record.stages),
+    }
+  }
+  if (kind !== 'strategyAsset') return {}
+
+  if (record.assetType === 'cta') return { callToAction: voiceLearningText(record.ctaLabel) }
+  if (record.assetType !== 'message') return {}
+
+  const approvedPhrases = voiceLearningTextList(record.approvedPhrases)
+  return {
+    // coreClaim/supportingClaims are evidence-bearing claims, not style data.
+    frames: approvedPhrases.map((title) => ({ title })),
+  }
+}
+
 export function MarketingAiAssistPanel({
   kind,
   draft,
@@ -7617,6 +8182,11 @@ export function MarketingAiAssistPanel({
   analyticsTakeaways?: AnalyticsInterpretation[]
   onApply: (suggestion: MarketingAiSuggestion) => void
 }) {
+  const settingsClient = useClient({ apiVersion: API_VERSION })
+  const voiceLearningProofClient = useMemo(
+    () => settingsClient.withConfig({ dataset: OUTREACH_DATASET }),
+    [settingsClient],
+  )
   const [prompt, setPrompt] = useState('')
   const [guidedAnswers, setGuidedAnswers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
@@ -7625,17 +8195,86 @@ export function MarketingAiAssistPanel({
   const [usedAi, setUsedAi] = useState<boolean | null>(null)
   const [aiError, setAiError] = useState<string | null>(null)
   const [context, setContext] = useState<MarketingAiAssistResponse['context'] | null>(null)
+  const [brandVoices, setBrandVoices] = useState<MarketingBrandVoice[]>([])
+  const [brandVoiceKey, setBrandVoiceKey] = useState('')
   const [applied, setApplied] = useState(false)
+  const [voiceLearningBaseline, setVoiceLearningBaseline] = useState<BrandVoiceLearningBaseline | null>(null)
+  const [voiceLearningProposal, setVoiceLearningProposal] = useState<BrandVoiceLearningProposal | null>(null)
+  const [voiceLearningProposalFingerprint, setVoiceLearningProposalFingerprint] = useState<string | null>(null)
+  const [voiceLearningLoading, setVoiceLearningLoading] = useState(false)
+  const [voiceLearningApplying, setVoiceLearningApplying] = useState(false)
+  const [voiceLearningError, setVoiceLearningError] = useState<string | null>(null)
+  const [voiceLearningNotice, setVoiceLearningNotice] = useState<string | null>(null)
   const copy = marketingAiAssistCopy[kind]
   const section = suggestion ? getAiSuggestionSection(suggestion, kind) : null
   const suggestedFields = section ? getAiSuggestedFieldLabels(section).slice(0, 8) : []
   const guidedQuestions = getMarketingAutofillQuestions(kind)
+  const usesBrandVoice =
+    ['campaign', 'funnel', 'calendarItem', 'linkItem', 'template'].includes(kind) ||
+    (kind === 'strategyAsset' && ['message', 'cta'].includes(String(draft.assetType || '')))
+  const activeBrandVoices = brandVoices.filter((voice) => voice.status === 'active')
+  const defaultBrandVoice = activeBrandVoices.find((voice) => voice.isDefault) || activeBrandVoices[0] || null
+  const voiceLearningAfter = voiceLearningBaseline
+    ? buildBrandVoiceLearningSnapshot(kind, draft)
+    : null
+  const hasVoiceLearningEdits = Boolean(
+    voiceLearningBaseline &&
+      voiceLearningAfter &&
+      hasMaterialVoiceEdit('contentDraft', voiceLearningBaseline.before, voiceLearningAfter),
+  )
+  const voiceLearningAfterFingerprint = voiceLearningAfter ? JSON.stringify(voiceLearningAfter) : null
+
+  useEffect(() => {
+    if (
+      !voiceLearningProposal ||
+      !voiceLearningProposalFingerprint ||
+      voiceLearningAfterFingerprint === voiceLearningProposalFingerprint
+    ) {
+      return
+    }
+    setVoiceLearningProposal(null)
+    setVoiceLearningProposalFingerprint(null)
+    setVoiceLearningError(null)
+    setVoiceLearningNotice('The draft changed after comparison. Compare it again for a fresh proposal.')
+  }, [voiceLearningAfterFingerprint, voiceLearningProposal, voiceLearningProposalFingerprint])
+
+  useEffect(() => {
+    if (!usesBrandVoice) {
+      setBrandVoices([])
+      setBrandVoiceKey('')
+      return
+    }
+    let active = true
+    void settingsClient
+      .fetch<unknown[]>(
+        `*[_id == "marketingSettings"][0].brandVoices[]{_key, name, purpose, guidance, do, avoid, examples, status, isDefault}`,
+      )
+      .then((value) => {
+        if (!active) return
+        const found = normalizeMarketingBrandVoices(value)
+        setBrandVoices(found)
+        setBrandVoiceKey((current) =>
+          current && !found.some((voice) => voice.status === 'active' && voice._key === current) ? '' : current,
+        )
+      })
+      .catch(() => {
+        if (active) setBrandVoices([])
+      })
+    return () => {
+      active = false
+    }
+  }, [settingsClient, usesBrandVoice])
 
   const requestSuggestion = async () => {
     setLoading(true)
     setError('')
     setAiError(null)
     setApplied(false)
+    setVoiceLearningBaseline(null)
+    setVoiceLearningProposal(null)
+    setVoiceLearningProposalFingerprint(null)
+    setVoiceLearningError(null)
+    setVoiceLearningNotice(null)
     try {
       const response = await fetch('/api/marketing/assist', {
         method: 'POST',
@@ -7653,6 +8292,7 @@ export function MarketingAiAssistPanel({
             questions: guidedQuestions,
           }),
           analyticsTakeaways: serializeAnalyticsTakeawaysForAi(analyticsTakeaways),
+          ...(usesBrandVoice && brandVoiceKey ? { brandVoiceKey } : {}),
         }),
       })
       const payload = (await response.json()) as MarketingAiAssistResponse
@@ -7672,6 +8312,106 @@ export function MarketingAiAssistPanel({
     if (!suggestion || !section) return
     onApply(suggestion)
     setApplied(true)
+    setVoiceLearningProposal(null)
+    setVoiceLearningProposalFingerprint(null)
+    setVoiceLearningError(null)
+    setVoiceLearningNotice(null)
+    const before = buildBrandVoiceLearningSnapshot(kind, section)
+    setVoiceLearningBaseline(
+      context?.brandVoice && hasVoiceLearningCopy(before)
+        ? {
+            voiceKey: context.brandVoice.key,
+            voiceName: context.brandVoice.name,
+            before,
+          }
+        : null,
+    )
+  }
+
+  const requestVoiceLearningProposal = async () => {
+    if (!voiceLearningBaseline || !voiceLearningAfter || !hasVoiceLearningEdits) return
+    setVoiceLearningLoading(true)
+    setVoiceLearningError(null)
+    setVoiceLearningNotice(null)
+    setVoiceLearningProposalFingerprint(null)
+    try {
+      const payload = await authenticatedMarketingRequest<{
+        proposal?: BrandVoiceLearningProposal
+        error?: string
+      }>(
+        '/api/marketing/brand-voice/learn',
+        {
+          action: 'propose',
+          voiceKey: voiceLearningBaseline.voiceKey,
+          surface: 'contentDraft',
+          before: voiceLearningBaseline.before,
+          after: voiceLearningAfter,
+        },
+        'POST',
+        voiceLearningProofClient,
+      )
+      if (!payload.proposal) {
+        throw new Error(payload.error || 'The voice-learning proposal could not be prepared.')
+      }
+      if (payload.proposal.voice.key !== voiceLearningBaseline.voiceKey) {
+        throw new Error('The learning service returned a proposal for the wrong voice.')
+      }
+      setVoiceLearningProposal(payload.proposal)
+      setVoiceLearningProposalFingerprint(voiceLearningAfterFingerprint)
+    } catch (requestError) {
+      setVoiceLearningError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'The voice-learning proposal could not be prepared.',
+      )
+    } finally {
+      setVoiceLearningLoading(false)
+    }
+  }
+
+  const applyVoiceLearning = async (selection: BrandVoiceLearningSelection) => {
+    if (!voiceLearningProposal || voiceLearningApplying) return
+    setVoiceLearningApplying(true)
+    setVoiceLearningError(null)
+    try {
+      const payload = await authenticatedMarketingRequest<{
+        applied?: boolean
+        voice?: { key: string; name: string }
+        error?: string
+      }>(
+        '/api/marketing/brand-voice/learn',
+        { action: 'apply', proposal: voiceLearningProposal, selection },
+        'POST',
+        voiceLearningProofClient,
+      )
+      if (!payload.applied || payload.voice?.key !== voiceLearningProposal.voice.key) {
+        throw new Error(payload.error || 'The selected voice learning could not be applied.')
+      }
+      setVoiceLearningNotice(
+        `${payload.voice.name} was updated. This draft did not change; the approved learning will guide future drafts.`,
+      )
+      setVoiceLearningProposal(null)
+      setVoiceLearningProposalFingerprint(null)
+      setVoiceLearningBaseline(null)
+    } catch (requestError) {
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : 'The selected voice learning could not be applied.'
+      const proposalIsStale =
+        /revision|settings changed|conflict|stale|expired|was modified/i.test(message)
+      if (proposalIsStale) {
+        setVoiceLearningProposal(null)
+        setVoiceLearningProposalFingerprint(null)
+      }
+      setVoiceLearningError(
+        proposalIsStale
+          ? 'The brand voice changed after this proposal was prepared. Compare the edited draft again for a fresh proposal.'
+          : message,
+      )
+    } finally {
+      setVoiceLearningApplying(false)
+    }
   }
 
   return (
@@ -7693,6 +8433,31 @@ export function MarketingAiAssistPanel({
           {loading ? 'Thinking...' : 'Auto-fill draft'}
         </button>
       </div>
+      {usesBrandVoice && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 10 }}>
+          <label style={{ ...styles.small, fontWeight: 800 }}>
+            Writing voice{' '}
+            <select
+              aria-label={`Writing voice for ${copy.target} autofill`}
+              style={{ ...styles.input, width: 'auto', minWidth: 190, marginLeft: 6 }}
+              value={brandVoiceKey}
+              onChange={(event) => setBrandVoiceKey(event.currentTarget.value)}
+            >
+              <option value="">
+                Suite default{defaultBrandVoice ? ` — ${defaultBrandVoice.name}` : ' — neutral fallback'}
+              </option>
+              {activeBrandVoices.map((voice) => (
+                <option key={voice._key} value={voice._key}>
+                  {voice.name}{voice.purpose ? ` — ${voice.purpose}` : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span style={{ ...styles.small, ...styles.muted }}>
+            Style only; evidence, claims, URLs, metrics, and rationale stay neutral.
+          </span>
+        </div>
+      )}
       <details style={{ marginTop: 10 }}>
         <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 800 }}>
           Guide the autofill
@@ -7742,6 +8507,11 @@ export function MarketingAiAssistPanel({
             >
               {usedAi ? 'AI generated' : 'Rule-based draft'}
             </span>
+            {context?.brandVoice && (
+              <span style={{ ...styles.small, ...styles.muted }}>
+                Voice: {context.brandVoice.name}{context.brandVoice.selection === 'requested' ? ' (selected)' : ' (suite default)'}
+              </span>
+            )}
             {context && (
               <span style={{ ...styles.small, ...styles.muted }}>
                 Checked {context.features || 0} articles, {context.caseStudies || 0} case studies, {context.campaigns || 0} campaigns, and {context.analyticsTakeaways || 0} analytics notes.
@@ -7794,6 +8564,56 @@ export function MarketingAiAssistPanel({
           {applied && (
             <div style={{ ...styles.small, color: '#4dc4d6', fontWeight: 800 }}>
               Applied. Review the filled fields, then save this item.
+            </div>
+          )}
+          {applied && voiceLearningBaseline && !voiceLearningProposal && (
+            <div
+              data-brand-voice-learning-entry="true"
+              style={{ ...styles.guidePanel, boxShadow: 'none', padding: 10 }}
+            >
+              <strong style={{ fontSize: 13 }}>Teach {voiceLearningBaseline.voiceName} from your edits</strong>
+              <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45, marginTop: 4 }}>
+                Edit the outward-facing fields first, then compare them with the generated version. You will review
+                any reusable principles before the voice changes; factual fields are excluded.
+              </div>
+              <button
+                type="button"
+                data-testid={`marketing-voice-learning-compare-${kind}`}
+                style={{ ...styles.button, marginTop: 8 }}
+                disabled={!hasVoiceLearningEdits || voiceLearningLoading}
+                onClick={() => void requestVoiceLearningProposal()}
+              >
+                {voiceLearningLoading
+                  ? 'Comparing edits…'
+                  : hasVoiceLearningEdits
+                    ? 'Compare edits with generated copy'
+                    : 'Make a wording edit to compare'}
+              </button>
+            </div>
+          )}
+          {voiceLearningProposal && (
+            <BrandVoiceLearningReview
+              proposal={voiceLearningProposal}
+              applying={voiceLearningApplying}
+              error={voiceLearningError}
+              onApply={applyVoiceLearning}
+              onDismiss={() => {
+                setVoiceLearningProposal(null)
+                setVoiceLearningProposalFingerprint(null)
+                setVoiceLearningBaseline(null)
+                setVoiceLearningError(null)
+                setVoiceLearningNotice('Voice-learning proposal dismissed. The current draft was not changed.')
+              }}
+            />
+          )}
+          {voiceLearningError && !voiceLearningProposal && (
+            <div role="alert" style={{ ...styles.small, color: '#d98a8a', lineHeight: 1.45 }}>
+              {voiceLearningError}
+            </div>
+          )}
+          {voiceLearningNotice && (
+            <div role="status" style={{ ...styles.small, color: '#4dc4d6', fontWeight: 800, lineHeight: 1.45 }}>
+              {voiceLearningNotice}
             </div>
           )}
         </div>
@@ -8146,14 +8966,19 @@ export function GuidanceChecklist({
   const done = items.filter((item) => item.done).length
 
   return (
-    <div id={id} style={{ ...styles.panel, boxShadow: 'none', padding: 12, borderColor: done === items.length ? 'rgba(54, 139, 87, 0.35)' : 'var(--card-border-color)', scrollMarginTop: 18 }}>
+    <div
+      id={id}
+      aria-label={`${title}: ${done} of ${items.length} complete`}
+      role="group"
+      style={{ ...styles.panel, boxShadow: 'none', padding: 12, borderColor: done === items.length ? 'rgba(54, 139, 87, 0.35)' : 'var(--card-border-color)', scrollMarginTop: 18 }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
         <h3 style={{ margin: 0, fontSize: 16 }}>{title}</h3>
         <span style={{ ...styles.small, ...styles.muted }}>{done}/{items.length}</span>
       </div>
-      <div style={{ display: 'grid', gap: 7 }}>
+      <div role="list" style={{ display: 'grid', gap: 7 }}>
         {items.map((item) => (
-          <div key={item.label} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13 }}>
+          <div key={item.label} role="listitem" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13 }}>
             <span
               aria-hidden="true"
               style={{
@@ -8167,14 +8992,19 @@ export function GuidanceChecklist({
                 marginTop: 1,
                 border: `1px solid ${item.done ? '#368b57' : 'var(--card-border-color)'}`,
                 background: item.done ? '#368b57' : 'transparent',
-                color: item.done ? '#368b57' : 'var(--card-muted-fg-color)',
+                color: item.done ? '#fff' : 'var(--card-muted-fg-color)',
                 fontSize: 10,
                 fontWeight: 800,
               }}
             >
-              {item.done ? '' : ''}
+              {item.done ? '✓' : '–'}
             </span>
-            <span style={item.done ? styles.muted : undefined}>{item.label}</span>
+            <span style={item.done ? styles.muted : undefined}>
+              <strong style={{ color: item.done ? '#368b57' : 'var(--card-muted-fg-color)', fontSize: 11 }}>
+                {item.done ? 'Done' : 'To do'}:
+              </strong>{' '}
+              {item.label}
+            </span>
           </div>
         ))}
       </div>
@@ -8345,10 +9175,16 @@ export function EmptyInline({ title }: { title: string }) {
 export function InputField({
   label,
   help,
+  unsavedId = MARKETING_UNSAVED_FORM_ID,
+  unsavedLabel = 'form fields you edited',
+  trackUnsaved = true,
   children,
 }: {
   label: string
   help?: string
+  unsavedId?: string
+  unsavedLabel?: string
+  trackUnsaved?: boolean
   children: React.ReactNode
 }) {
   const { markUnsavedChange } = useMarketingUnsavedGuard()
@@ -8356,7 +9192,9 @@ export function InputField({
   return (
     <label
       style={{ display: 'block', minWidth: 0 }}
-      onChangeCapture={() => markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'form fields you edited')}
+      onChangeCapture={() => {
+        if (trackUnsaved) markUnsavedChange(unsavedId, unsavedLabel)
+      }}
     >
       <span style={styles.label}>{label}</span>
       {help && <span style={{ ...styles.small, ...styles.muted, display: 'block', margin: '3px 0 6px', lineHeight: 1.4 }}>{help}</span>}

@@ -112,6 +112,13 @@ function isPresent(value: unknown): boolean {
   return true
 }
 
+function collectConditionalMissing(type: ManagedMarketingType, fields: MarketingFields): string[] {
+  if (type === 'marketingCalendarItem' && fields.status === 'scheduled' && !isPresent(fields.publishAt)) {
+    return ['publishAt']
+  }
+  return []
+}
+
 /**
  * Stamps a unique `_key` (and `_type` for arrays of objects / references) onto
  * every item of a single array field. Existing `_key`/`_type` values are kept.
@@ -181,10 +188,14 @@ export function buildCreatePayload(
   const deriveSlug = opts.deriveSlug ?? DEFAULT_BUILD_OPTIONS.deriveSlug
 
   // Separate any caller-supplied _id so it does not get treated as a content field.
-  const { _id: suppliedId, _type: _ignoredType, ...rest } = fields as MarketingFields & {
+  const sourceFields = fields as MarketingFields & {
     _id?: unknown
     _type?: unknown
   }
+  const suppliedId = sourceFields._id
+  const rest: MarketingFields = { ...sourceFields }
+  delete rest._id
+  delete rest._type
 
   // Defaults go UNDER the caller's fields.
   let merged: MarketingFields = applyDefaults ? { ...DEFAULTS[type], ...rest } : { ...rest }
@@ -209,7 +220,10 @@ export function buildCreatePayload(
   merged = injectArrayKeys(type, merged)
 
   // Validate required fields + closed-set (enum) field membership.
-  const missing = REQUIRED_FIELDS[type].filter((field) => !isPresent(merged[field]))
+  const missing = Array.from(new Set([
+    ...REQUIRED_FIELDS[type].filter((field) => !isPresent(merged[field])),
+    ...collectConditionalMissing(type, merged),
+  ]))
   const invalid = collectInvalidEnums(type, merged)
   if (missing.length > 0 || invalid.length > 0) {
     throw new MarketingValidationError(missing, invalid)
@@ -243,10 +257,9 @@ export function buildPatchPayload(
   const deriveSlug = opts.deriveSlug ?? DEFAULT_BUILD_OPTIONS.deriveSlug
 
   // Never let _id / _type leak into the set.
-  const { _id: _ignoredId, _type: _ignoredType, ...rest } = set as MarketingFields & {
-    _id?: unknown
-    _type?: unknown
-  }
+  const rest: MarketingFields = { ...set }
+  delete rest._id
+  delete rest._type
   let next: MarketingFields = { ...rest }
 
   const title = asString(next.title)

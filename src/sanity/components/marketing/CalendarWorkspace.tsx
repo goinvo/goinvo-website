@@ -4,7 +4,7 @@ import { AddIcon, CalendarIcon, CloseIcon } from '@sanity/icons'
 import { useToast } from '@sanity/ui'
 import { useConfirmDialog } from './ConfirmDialog'
 
-import { addMonths, dateInputToIso, monthLabel, randomKey, refsFromIds, startOfMonth, stringListFromText, toDateInputValue } from '@/lib/marketing'
+import { addMonths, dateTimeInputToIso, monthLabel, randomKey, refsFromIds, startOfMonth, stringListFromText, toDateInputValue, toDateTimeInputValue } from '@/lib/marketing'
 // SDK-free module on purpose: keeps the Anthropic SDK (pulled in by
 // postingTimeResearch) out of the Studio client bundle.
 import { nextRecommendedPublishAt } from '@/lib/marketing/postingTimeSchedule'
@@ -54,6 +54,7 @@ import {
   styles,
   TemplateRail,
   trimDescription,
+  useMarketingUnsavedGuard,
   type AnalyticsInterpretation,
   type AutopilotCompletionPayload,
   type AutopilotWorkspaceTarget,
@@ -176,15 +177,22 @@ export function CalendarWorkspace({
   const [editorDirty, setEditorDirty] = useState(false)
   const toast = useToast()
   const { confirm, confirmDialog } = useConfirmDialog()
+  const { clearUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
+
+  useEffect(() => {
+    if (editorDirty) markUnsavedChange('marketing-calendar-editor', 'calendar item draft')
+    else clearUnsavedChanges('marketing-calendar-editor')
+  }, [clearUnsavedChanges, editorDirty, markUnsavedChange])
 
   useEffect(() => {
     if (autopilotTarget?.view !== 'calendar') return
+    if (editorDirty) return
     const targetItem = autopilotTarget.recordId
       ? data.calendarItems.find((item) => item._id === autopilotTarget.recordId)
       : null
     const draftItem = targetItem || data.calendarItems.find((item) => getCalendarItemDisplayGroup(item) === 'draft')
     if (draftItem) setSelectedId(draftItem._id)
-  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.calendarItems])
+  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.calendarItems, editorDirty])
 
   const channels = data.channels
   const selectedItem = data.calendarItems.find((item) => item._id === selectedId) || null
@@ -271,46 +279,49 @@ export function CalendarWorkspace({
   const selectItem = async (id: string) => {
     if (id === selectedId) return
     if (editorDirty && !(await confirmDiscardEdits())) return
+    if (editorDirty) clearUnsavedChanges('marketing-calendar-editor')
     setSelectedId(id)
   }
 
   const createCalendarItem = async (publishDate?: Date) => {
     if (editorDirty && !(await confirmDiscardEdits())) return
+    if (editorDirty) clearUnsavedChanges('marketing-calendar-editor')
+    const scheduledAt = publishDate ? new Date(publishDate) : null
+    if (scheduledAt) scheduledAt.setHours(9, 0, 0, 0)
     const createdId = await createDocument({
       _type: 'marketingCalendarItem',
       title: '',
       status: 'idea',
-      ...(publishDate ? { publishAt: dateInputToIso(toDateInputValue(publishDate)) } : {}),
+      ...(scheduledAt ? { publishAt: scheduledAt.toISOString() } : {}),
     })
     setSelectedId(createdId)
     onAutopilotComplete?.({ action: 'calendar:createDraft', recordId: createdId })
   }
 
-  // Confirm → unlink quick links → client.delete → toast (the TemplateWorkspace
-  // delete pattern, plus unlinking because link items hold hard references that
-  // would otherwise block the delete).
+  // Never mutate related records as a side effect of delete. A complete Sanity
+  // reference check must pass before we offer the destructive action.
   const deleteCalendarItem = async (target: MarketingCalendarItem) => {
-    const message = `Delete "${target.title || 'Untitled item'}"? This removes it from the calendar for good. Quick links stay, but they are disconnected from this post.`
-    if (!(await confirm({ title: 'Delete calendar item?', message, confirmLabel: 'Delete' }))) return
-
-    setDeletingId(target._id)
     try {
-      const linkedLinks = data.linkItems.filter(
-        (link) => link.calendarItem?._id === target._id || (link.calendarItems || []).some((post) => post._id === target._id),
+      const blockers = await client.fetch<Array<{ _id: string; _type: string; title?: string }>>(
+        '*[references($id)]{_id, _type, title}',
+        { id: target._id },
       )
-      await Promise.all(
-        linkedLinks.map((link) => {
-          const remainingPostIds = (link.calendarItems || []).map((post) => post._id).filter((id) => id !== target._id)
-          const unsetPaths: string[] = []
-          if (link.calendarItem?._id === target._id) unsetPaths.push('calendarItem')
-          if (remainingPostIds.length === 0) unsetPaths.push('calendarItems')
-          let patch = client.patch(link._id)
-          if (remainingPostIds.length > 0) patch = patch.set({ calendarItems: refsFromIds(remainingPostIds) })
-          if (unsetPaths.length > 0) patch = patch.unset(unsetPaths)
-          return patch.commit()
-        }),
-      )
+      if (blockers.length > 0) {
+        const preview = blockers.slice(0, 3).map((blocker) => blocker.title || blocker._type).join(', ')
+        toast.push({
+          status: 'warning',
+          title: 'Calendar item is still in use',
+          description: `Disconnect it from ${blockers.length} referring record${blockers.length === 1 ? '' : 's'} first${preview ? ` (${preview}${blockers.length > 3 ? ', ...' : ''})` : ''}. No records were changed.`,
+        })
+        return
+      }
+
+      const message = `Delete "${target.title || 'Untitled item'}"? This permanently removes the saved calendar item.`
+      if (!(await confirm({ title: 'Delete calendar item?', message, confirmLabel: 'Delete' }))) return
+
+      setDeletingId(target._id)
       await client.delete(target._id)
+      clearUnsavedChanges('marketing-calendar-editor')
       setDeletedIds((current) => [...current, target._id])
       if (selectedId === target._id) {
         setSelectedId(dateFilteredItems.find((candidate) => candidate._id !== target._id)?._id || null)
@@ -331,8 +342,7 @@ export function CalendarWorkspace({
     setExpandedDays((current) => ({ ...current, [dayKey]: !current[dayKey] }))
   }, [])
 
-  const handleDragEnd = useCallback(
-    async (result: DropResult) => {
+  const handleDragEnd = async (result: DropResult) => {
       const { draggableId, source, destination } = result
       // No destination (dropped outside) or dropped back on the same day: no-op.
       if (!destination) return
@@ -341,6 +351,8 @@ export function CalendarWorkspace({
 
       const item = data.calendarItems.find((candidate) => candidate._id === draggableId)
       if (!item) return
+      if (editorDirty && !(await confirmDiscardEdits())) return
+      if (editorDirty) clearUnsavedChanges('marketing-calendar-editor')
 
       const nextPublishAt = computeRescheduledPublishAt(item, destDayKey)
       if (!nextPublishAt) return
@@ -357,9 +369,7 @@ export function CalendarWorkspace({
           return next
         })
       }
-    },
-    [commitPatch, data.calendarItems],
-  )
+  }
 
   return (
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 16 }}>
@@ -407,7 +417,7 @@ export function CalendarWorkspace({
           </button>
           </div>
         </div>
-        <PublishConnectionStatus variant="banner" />
+        <PublishConnectionStatus client={client} variant="banner" />
         <DragDropContext onDragEnd={(result) => void handleDragEnd(result)}>
           <div data-mobile-scroll="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(96px, 1fr))', gap: 1, overflowX: 'auto', paddingBottom: 4 }}>
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
@@ -601,6 +611,7 @@ export function CalendarWorkspace({
         campaigns={data.campaigns}
         funnels={data.funnels}
         analyticsSources={data.analyticsSources}
+        owners={data.teamMembers || []}
         linkItems={data.linkItems}
         analyticsTakeaways={buildAnalyticsInterpretations(data)}
         saving={savingId === selectedItem?._id || deletingId === selectedItem?._id}
@@ -700,6 +711,7 @@ function CalendarItemEditor({
   campaigns,
   funnels,
   analyticsSources,
+  owners,
   linkItems,
   analyticsTakeaways,
   saving,
@@ -715,6 +727,7 @@ function CalendarItemEditor({
   campaigns: MarketingCampaign[]
   funnels: MarketingFunnel[]
   analyticsSources: MarketingAnalyticsSource[]
+  owners: Array<{ _id: string; title?: string }>
   linkItems: MarketingLinkItem[]
   analyticsTakeaways: AnalyticsInterpretation[]
   saving: boolean
@@ -729,16 +742,20 @@ function CalendarItemEditor({
   const [campaignId, setCampaignId] = useState('')
   const [funnelId, setFunnelId] = useState('')
   const [analyticsSourceId, setAnalyticsSourceId] = useState('')
+  const [ownerId, setOwnerId] = useState('')
   const [linkedLinkIds, setLinkedLinkIds] = useState<string[]>([])
   const [linkToAddId, setLinkToAddId] = useState('')
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     setDraft(item)
     setCampaignId(item?.campaign?._id || '')
     setFunnelId(item?.funnel?._id || '')
     setAnalyticsSourceId(item?.analyticsSource?._id || '')
+    setOwnerId(item?.owner?._id || '')
     setLinkedLinkIds(item ? getPostLinkedLinks(item, linkItems).map((link) => link._id) : [])
     setLinkToAddId('')
+    setSaveError('')
   }, [item, linkItems])
 
   // Unsaved edits = the draft (or a pending reference pick) differs from the
@@ -750,11 +767,12 @@ function CalendarItemEditor({
     if (campaignId !== (item.campaign?._id || '')) return true
     if (funnelId !== (item.funnel?._id || '')) return true
     if (analyticsSourceId !== (item.analyticsSource?._id || '')) return true
+    if (ownerId !== (item.owner?._id || '')) return true
     return hasDraftEdits(
-      { ...draft, publishAt: toDateInputValue(draft.publishAt) },
-      { ...item, publishAt: toDateInputValue(item.publishAt) },
+      { ...draft, publishAt: toDateTimeInputValue(draft.publishAt) },
+      { ...item, publishAt: toDateTimeInputValue(item.publishAt) },
     )
-  }, [draft, item, campaignId, funnelId, analyticsSourceId])
+  }, [draft, item, campaignId, funnelId, analyticsSourceId, ownerId])
 
   useEffect(() => {
     onDirtyChange(dirty)
@@ -775,7 +793,7 @@ function CalendarItemEditor({
     .map((id) => linkItems.find((link) => link._id === id) || draft?.linkItems?.find((link) => link._id === id))
     .filter(Boolean) as MarketingLinkItem[]
   const availableLinks = linkItems.filter((link) => !linkedLinkIds.includes(link._id))
-  const postUrl = draft?.publishedUrl || draft?.workingUrl || ''
+  const postUrl = draft?.publishedUrl?.trim() || ''
 
   if (!draft || !item) {
     return (
@@ -788,11 +806,24 @@ function CalendarItemEditor({
   }
 
   const save = async () => {
+    setSaveError('')
+    if (draft.status === 'scheduled' && !draft.publishAt) {
+      setSaveError('Scheduled items need a publish date and time. Choose one before saving.')
+      return
+    }
+    if (draft.autoPublish && !['linkedin', 'instagram'].includes(channelKey)) {
+      setSaveError('Auto-publish is available only for LinkedIn or Instagram items.')
+      return
+    }
+    if (draft.autoPublish && draft.status !== 'scheduled') {
+      setSaveError('Auto-publish requires the item status to be Scheduled.')
+      return
+    }
     const unset: string[] = []
     const set: Record<string, unknown> = {
       title: draft.title || 'Untitled item',
       status: draft.status || 'idea',
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
+      publishAt: draft.publishAt ? dateTimeInputToIso(toDateTimeInputValue(draft.publishAt)) : undefined,
       contentType: draft.contentType,
       channel: channelKey,
       brief: draft.brief,
@@ -809,6 +840,7 @@ function CalendarItemEditor({
       topicCluster: draft.topicCluster,
       searchIntent: draft.searchIntent,
       targetQueries: draft.targetQueries || [],
+      autoPublish: !!draft.autoPublish,
     }
 
     if (linkedLinkIds.length > 0) {
@@ -833,6 +865,12 @@ function CalendarItemEditor({
       set.analyticsSource = { _type: 'reference', _ref: analyticsSourceId }
     } else {
       unset.push('analyticsSource')
+    }
+
+    if (ownerId) {
+      set.owner = { _type: 'reference', _ref: ownerId }
+    } else {
+      unset.push('owner')
     }
 
     if (selectedChannel?._id && !selectedChannel._id.startsWith('default-')) {
@@ -896,6 +934,10 @@ function CalendarItemEditor({
   }
 
   const createLinkFromPost = async () => {
+    if (dirty) {
+      setSaveError('Save the calendar item before creating or changing its Quick Links.')
+      return
+    }
     if (!postUrl) return
     const linkIsPublishReady = isCalendarItemPublishReady(draft)
     const createdId = await createDocument({
@@ -905,7 +947,7 @@ function CalendarItemEditor({
       description: trimDescription(draft.brief),
       type: calendarContentTypeToLinkType(draft.contentType),
       status: linkIsPublishReady ? 'active' : 'draft',
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
+      publishAt: draft.publishAt ? dateTimeInputToIso(toDateTimeInputValue(draft.publishAt)) : undefined,
       sourceChannel: draft.channelRef?.key || draft.channel || 'instagram',
       order: nextLinkOrder(linkItems),
       calendarItem: { _type: 'reference', _ref: item._id },
@@ -916,6 +958,10 @@ function CalendarItemEditor({
   }
 
   const addExistingLinkToPost = async () => {
+    if (dirty) {
+      setSaveError('Save the calendar item before creating or changing its Quick Links.')
+      return
+    }
     if (!linkToAddId) return
     const link = linkItems.find((candidate) => candidate._id === linkToAddId)
     const nextIds = Array.from(new Set([...linkedLinkIds, linkToAddId]))
@@ -930,6 +976,10 @@ function CalendarItemEditor({
   }
 
   const removeLinkFromPost = async (linkId: string) => {
+    if (dirty) {
+      setSaveError('Save the calendar item before creating or changing its Quick Links.')
+      return
+    }
     const link = linkItems.find((candidate) => candidate._id === linkId) || linkedLinks.find((candidate) => candidate._id === linkId)
     await syncPostLinks(linkedLinkIds.filter((id) => id !== linkId))
     if (!link) return
@@ -997,15 +1047,17 @@ function CalendarItemEditor({
           </InputField>
           <InputField label="Publish date">
             <input
-              type="date"
+              type="datetime-local"
               style={styles.input}
-              value={toDateInputValue(draft.publishAt)}
+              value={toDateTimeInputValue(draft.publishAt)}
               onChange={(event) => setDraft({ ...draft, publishAt: event.currentTarget.value })}
             />
-            {recommendedNext && toDateInputValue(recommendedNext) !== toDateInputValue(draft.publishAt) && (
+            {recommendedNext &&
+              !['published', 'canceled'].includes(draft.status || '') &&
+              toDateTimeInputValue(recommendedNext) !== toDateTimeInputValue(draft.publishAt) && (
               <button
                 type="button"
-                onClick={() => setDraft({ ...draft, publishAt: toDateInputValue(recommendedNext) })}
+                onClick={() => setDraft({ ...draft, publishAt: toDateTimeInputValue(recommendedNext) })}
                 title="From this channel's researched posting times"
                 style={{
                   ...styles.small,
@@ -1018,8 +1070,8 @@ function CalendarItemEditor({
                   textDecoration: 'underline',
                 }}
               >
-                Use recommended day:{' '}
-                {recommendedNext.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                Use recommended time:{' '}
+                {recommendedNext.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </button>
             )}
           </InputField>
@@ -1059,7 +1111,35 @@ function CalendarItemEditor({
           </InputField>
         </div>
         {item && (channelKey === 'linkedin' || channelKey === 'instagram') && (
-          <PublishPreview itemId={item._id} />
+          <PublishPreview key={item._id} itemId={item._id} hasUnsavedChanges={dirty} />
+        )}
+        <InputField label="Who owns this item?" help="Assign the teammate responsible for getting the artifact ready.">
+          <Select
+            ariaLabel="Calendar item owner"
+            value={ownerId}
+            options={[{ title: 'Unassigned', value: '' }, ...owners.map((owner) => ({ title: owner.title || 'Unnamed teammate', value: owner._id }))]}
+            onChange={setOwnerId}
+          />
+        </InputField>
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={!!draft.autoPublish}
+            onChange={(event) => setDraft({ ...draft, autoPublish: event.currentTarget.checked })}
+            style={{ width: 24, height: 24, margin: 0, flexShrink: 0 }}
+          />
+          <span>
+            <strong style={{ display: 'block' }}>Auto-publish this social post</strong>
+            <span style={{ ...styles.small, ...styles.muted, display: 'block', marginTop: 2 }}>
+              Requires LinkedIn or Instagram, a Scheduled status, a publish date and time, connected credentials, and a working scheduling trigger.
+            </span>
+          </span>
+        </label>
+        {(draft.publishState || draft.publishError) && (
+          <div role={draft.publishError ? 'alert' : 'status'} style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
+            <strong style={{ fontSize: 13 }}>Publishing state: {draft.publishState || 'Needs attention'}</strong>
+            {draft.publishError && <div style={{ ...styles.small, color: '#E36216', marginTop: 4 }}>{draft.publishError}</div>}
+          </div>
         )}
         <InputField label="Which campaign is it part of?" help="Leave blank if this is a one-off item or not connected yet.">
           <Select
@@ -1300,7 +1380,7 @@ function CalendarItemEditor({
             <div>
               <h3 style={{ margin: '0 0 4px', fontSize: 16 }}>Quick Links</h3>
               <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
-                These links show on the public /links page automatically once this post is published (or its publish date arrives).
+                Only Quick Links saved as Active appear publicly. A link created before this post is published or due stays Draft; review and activate it in Quick Links when ready.
               </div>
             </div>
             <StatusPill status={isCalendarItemPublishReady(draft) ? 'active' : 'draft'} options={linkItemStatusOptions} />
@@ -1339,7 +1419,7 @@ function CalendarItemEditor({
                       {link.url || 'No URL yet'}
                     </div>
                   </div>
-                  <button type="button" style={styles.button} onClick={() => void removeLinkFromPost(link._id)}>
+                  <button type="button" style={styles.button} disabled={dirty} onClick={() => void removeLinkFromPost(link._id)}>
                     Remove from post
                   </button>
                 </div>
@@ -1359,25 +1439,31 @@ function CalendarItemEditor({
               ]}
               onChange={setLinkToAddId}
             />
-            <button type="button" style={styles.button} disabled={!linkToAddId} onClick={() => void addExistingLinkToPost()}>
+            <button type="button" style={styles.button} disabled={!linkToAddId || dirty} onClick={() => void addExistingLinkToPost()}>
               Attach link
             </button>
           </div>
           <button
             type="button"
             style={{ ...styles.primaryButton, width: '100%', marginTop: 8 }}
-            disabled={!postUrl}
+            disabled={!postUrl || dirty}
             onClick={() => void createLinkFromPost()}
           >
             Create link from this post
           </button>
           {!postUrl && (
             <div style={{ ...styles.small, ...styles.muted, marginTop: 8 }}>
-              Add a Published URL or Working URL before creating a link from this post.
+              Add a Published URL before creating a public link from this post.
+            </div>
+          )}
+          {dirty && (
+            <div style={{ ...styles.small, ...styles.muted, marginTop: 8 }}>
+              Save the calendar item before attaching, removing, or creating Quick Links.
             </div>
           )}
         </div>
         <AdvancedFieldsDropdown type="marketingCalendarItem" id={item._id} />
+        {saveError && <div role="alert" style={{ ...styles.small, color: '#E36216', fontWeight: 700 }}>{saveError}</div>}
         <button
           type="button"
           style={{ ...styles.button, borderColor: 'rgba(227, 98, 22, 0.45)', color: '#E36216' }}

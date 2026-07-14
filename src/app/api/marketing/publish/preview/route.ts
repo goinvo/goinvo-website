@@ -64,6 +64,9 @@ export async function GET(req: Request) {
   if (!content.text.trim() && content.media.length === 0) {
     warnings.push('No caption and no media — there is nothing to post.')
   }
+  if (!item.publishedUrl && item.workingUrl) {
+    warnings.push('This saved post will use its Working URL because no Published URL is set. Confirm that the destination is public before publishing.')
+  }
   content.media.forEach((media, index) => {
     if (media.type === 'image' && !media.altText) {
       warnings.push(`Image ${index + 1} has no alt text (add draftAltText / per-frame alt for accessibility).`)

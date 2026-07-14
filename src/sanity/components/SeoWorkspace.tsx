@@ -1,6 +1,7 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import type { SanityClient } from '@sanity/client'
-import { studioSessionHeader } from '@/sanity/lib/studioSession'
+import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { authenticatedMarketingRequest } from '@/sanity/components/marketing/authenticatedMarketingRequest'
 
 // Surfaces the SEO opportunities engine (/api/marketing/seo) and the cached
 // citation checker (/api/marketing/citation-check) inside the marketing tool,
@@ -252,31 +253,6 @@ type AiCitationRunResult = { error?: string; stored?: boolean; storeWarning?: st
 
 type SeoWorkspaceProps = { client?: SanityClient }
 
-// The marketing WRITE routes require either a server API key or a logged-in
-// Studio session. Studio stores the user's auth token in localStorage under
-// `__studio_auth_token_<projectId>`; the value is sometimes a raw string and
-// sometimes a JSON envelope like {"token":"..."}. Returns null when there's no
-// token (so callers can simply omit the header).
-export function studioSessionToken(): string | null {
-  if (typeof window === 'undefined') return null
-  const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
-  if (!projectId) return null
-  try {
-    const raw = window.localStorage.getItem(`__studio_auth_token_${projectId}`)
-    if (!raw) return null
-    try {
-      const parsed = JSON.parse(raw) as { token?: unknown } | string
-      if (typeof parsed === 'string') return parsed.trim() || null
-      if (parsed && typeof parsed.token === 'string') return parsed.token.trim() || null
-    } catch {
-      // Not JSON — treat the stored value as the raw token.
-    }
-    return raw.trim() || null
-  } catch {
-    return null
-  }
-}
-
 const UI_COLOR = {
   link: 'var(--card-link-fg-color)',
   // Sanity guarantees card foreground/background contrast in every theme.
@@ -356,6 +332,22 @@ function conciseTitle(what: string): string {
   const firstSentence = what.split(/(?<=[.?!])\s/)[0] || what
   return firstSentence.length > 90 ? `${firstSentence.slice(0, 87).trimEnd()}...` : firstSentence
 }
+
+function handleExpandableRowKey(event: KeyboardEvent<HTMLTableRowElement>, toggle: () => void) {
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  toggle()
+}
+
+export function seoBacklogIdeaId(key: string): string {
+  let hash = 0x811c9dc5
+  for (let index = 0; index < key.length; index += 1) {
+    hash ^= key.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return `marketing-seo-backlog-${(hash >>> 0).toString(36)}`
+}
+
 function sortIdeas(list: Idea[], by: 'priority' | 'category' | 'status'): Idea[] {
   const rankP = (p?: string) => (p === 'high' ? 0 : p === 'medium' ? 1 : 2)
   const copy = list.slice()
@@ -396,6 +388,7 @@ const badge = (c: string): CSSProperties => ({
 })
 
 export function SeoWorkspace({ client }: SeoWorkspaceProps) {
+  const proofClient = useMemo(() => client?.withConfig({ dataset: OUTREACH_DATASET }), [client])
   const [data, setData] = useState<SeoData | null>(null)
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [ideaSort, setIdeaSort] = useState<'priority' | 'category' | 'status'>('priority')
@@ -409,10 +402,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [openDecay, setOpenDecay] = useState<string | null>(null)
   const [openMismatch, setOpenMismatch] = useState<string | null>(null)
   const [intentFilter, setIntentFilter] = useState<IntentProfileEntry['intent'] | null>(null)
-  // Per-row hovered key for the page-opportunity table — drives the hover-only
-  // "Audit" button (inline styles, so no :hover available).
-  const [hoveredOpp, setHoveredOpp] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingKeywordMetrics, setLoadingKeywordMetrics] = useState(false)
   const [citeUrl, setCiteUrl] = useState('https://www.goinvo.com/')
   const [cite, setCite] = useState<CiteData | null>(null)
   const [citeLoading, setCiteLoading] = useState(false)
@@ -421,6 +412,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [auditUrl, setAuditUrl] = useState('https://www.goinvo.com/')
   const [audit, setAudit] = useState<AuditData | null>(null)
   const [auditLoading, setAuditLoading] = useState(false)
+  const [includePaidTopicalGap, setIncludePaidTopicalGap] = useState(false)
   const [openFinding, setOpenFinding] = useState<string | null>(null)
   // Track promote-to-backlog state per finding (keyed by url + finding id) so a
   // successful create disables that one button without affecting the others.
@@ -444,17 +436,24 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const [aiCiteRunning, setAiCiteRunning] = useState(false)
   const [aiCiteRunNote, setAiCiteRunNote] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (includeKeywordMetrics = false) => {
     setLoading(true)
+    setLoadingKeywordMetrics(includeKeywordMetrics)
     try {
-      const res = await fetch('/api/marketing/seo', { headers: studioSessionHeader() })
-      setData((await res.json()) as SeoData)
-    } catch {
-      setData({ error: 'Could not load SEO opportunities.' })
+      const payload = await authenticatedMarketingRequest<SeoData>(
+        `/api/marketing/seo${includeKeywordMetrics ? '?enrich=1' : ''}`,
+        undefined,
+        'GET',
+        proofClient,
+      )
+      setData(payload)
+    } catch (error) {
+      setData({ error: error instanceof Error ? error.message : 'Could not load SEO opportunities.' })
     } finally {
       setLoading(false)
+      setLoadingKeywordMetrics(false)
     }
-  }, [])
+  }, [proofClient])
   useEffect(() => {
     void load()
   }, [load])
@@ -479,21 +478,19 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setCiteLoading(true)
     setCite(null)
     try {
-      const res = await fetch('/api/marketing/citation-check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...studioSessionHeader(),
-        },
-        body: JSON.stringify({ pageUrl: target }),
-      })
-      setCite((await res.json()) as CiteData)
-    } catch {
-      setCite({ error: 'Citation check failed.' })
+      const payload = await authenticatedMarketingRequest<CiteData>(
+        '/api/marketing/citation-check',
+        { pageUrl: target },
+        'POST',
+        proofClient,
+      )
+      setCite(payload)
+    } catch (error) {
+      setCite({ error: error instanceof Error ? error.message : 'Citation check failed.' })
     } finally {
       setCiteLoading(false)
     }
-  }, [])
+  }, [proofClient])
 
   // Run the Phase-1 audit. With a URL → single-page mode (?url=, incl.
   // indexation); without → the multi-page sitemap sweep. Never crashes on a
@@ -505,15 +502,22 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setOpenFinding(null)
     setPromoted({})
     try {
-      const qs = target ? `?url=${encodeURIComponent(target)}` : ''
-      const res = await fetch(`/api/marketing/seo-audit${qs}`, { headers: studioSessionHeader() })
-      setAudit((await res.json()) as AuditData)
-    } catch {
-      setAudit({ error: 'Could not run the page audit.' })
+      const qs = target
+        ? `?url=${encodeURIComponent(target)}${includePaidTopicalGap ? '&paid=1' : ''}`
+        : ''
+      const payload = await authenticatedMarketingRequest<AuditData>(
+        `/api/marketing/seo-audit${qs}`,
+        undefined,
+        'GET',
+        proofClient,
+      )
+      setAudit(payload)
+    } catch (error) {
+      setAudit({ error: error instanceof Error ? error.message : 'Could not run the page audit.' })
     } finally {
       setAuditLoading(false)
     }
-  }, [])
+  }, [includePaidTopicalGap, proofClient])
 
   // Run the Phase-2 site crawl. Walks the internal link graph in one bounded
   // breadth-first pass (broken links, redirect chains, orphans, click-depth,
@@ -525,14 +529,19 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setOpenCrawlFinding(null)
     setPromoted({})
     try {
-      const res = await fetch('/api/marketing/seo-crawl', { headers: studioSessionHeader() })
-      setCrawl((await res.json()) as CrawlData)
-    } catch {
-      setCrawl({ error: 'Could not run the site crawl.' })
+      const payload = await authenticatedMarketingRequest<CrawlData>(
+        '/api/marketing/seo-crawl',
+        undefined,
+        'GET',
+        proofClient,
+      )
+      setCrawl(payload)
+    } catch (error) {
+      setCrawl({ error: error instanceof Error ? error.message : 'Could not run the site crawl.' })
     } finally {
       setCrawlLoading(false)
     }
-  }, [])
+  }, [proofClient])
 
   // Load the recent AI-citation snapshots. CHEAP: GET reads stored data and runs
   // NO live searches. Called on mount and from the section's Refresh button.
@@ -540,14 +549,19 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   const loadAiCitation = useCallback(async () => {
     setAiCiteLoading(true)
     try {
-      const res = await fetch('/api/marketing/ai-citation', { headers: studioSessionHeader() })
-      setAiCite((await res.json()) as AiCitationData)
-    } catch {
-      setAiCite({ error: 'Could not load AI-citation snapshots.' })
+      const payload = await authenticatedMarketingRequest<AiCitationData>(
+        '/api/marketing/ai-citation',
+        undefined,
+        'GET',
+        proofClient,
+      )
+      setAiCite(payload)
+    } catch (error) {
+      setAiCite({ error: error instanceof Error ? error.message : 'Could not load AI-citation snapshots.' })
     } finally {
       setAiCiteLoading(false)
     }
-  }, [])
+  }, [proofClient])
   useEffect(() => {
     void loadAiCitation()
   }, [loadAiCitation])
@@ -560,11 +574,12 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
     setAiCiteRunning(true)
     setAiCiteRunNote(null)
     try {
-      const res = await fetch('/api/marketing/ai-citation', {
-        method: 'POST',
-        headers: studioSessionHeader(),
-      })
-      const payload = (await res.json()) as AiCitationRunResult
+      const payload = await authenticatedMarketingRequest<AiCitationRunResult>(
+        '/api/marketing/ai-citation',
+        undefined,
+        'POST',
+        proofClient,
+      )
       if (payload.error) {
         setAiCiteRunNote(payload.error)
       } else if (payload.storeWarning) {
@@ -574,12 +589,12 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       }
       // Refresh the stored list either way so a successful run shows up.
       await loadAiCitation()
-    } catch {
-      setAiCiteRunNote('The AI-citation check failed to run.')
+    } catch (error) {
+      setAiCiteRunNote(error instanceof Error ? error.message : 'The AI-citation check failed to run.')
     } finally {
       setAiCiteRunning(false)
     }
-  }, [aiCiteRunning, loadAiCitation])
+  }, [aiCiteRunning, loadAiCitation, proofClient])
 
   // Promote-to-backlog: write a finding straight into marketingIdea (closes the
   // engine ↔ backlog gap from the plan). Disables itself after a success.
@@ -588,7 +603,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
       if (!client || promoted[key] === 'saving' || promoted[key] === 'done') return
       setPromoted((prev) => ({ ...prev, [key]: 'saving' }))
       try {
-        await client.create({
+        await client.createIfNotExists({
+          _id: seoBacklogIdeaId(key),
           _type: 'marketingIdea',
           title: conciseTitle(finding.what),
           summary: finding.why,
@@ -609,7 +625,11 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
   )
 
   return (
-    <div style={s.wrap}>
+    <div data-seo-workspace="true" style={s.wrap}>
+      <style>{`@media (max-width: 760px) { [data-seo-workspace="true"] table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; } }`}</style>
+      <div role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+        {loading ? (loadingKeywordMetrics ? 'Adding paid keyword metrics' : 'Refreshing SEO opportunities') : ''}
+      </div>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <h2 style={s.h2}>SEO Opportunities</h2>
@@ -618,9 +638,14 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
             opportunity (impressions x page-2 position).
           </p>
         </div>
-        <button type="button" style={s.btn} onClick={() => void load()} disabled={loading}>
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button type="button" style={s.btn} onClick={() => void load(false)} disabled={loading}>
+            {loading && !loadingKeywordMetrics ? 'Loading...' : 'Refresh (no paid credits)'}
+          </button>
+          <button type="button" style={s.btn} onClick={() => void load(true)} disabled={loading}>
+            {loadingKeywordMetrics ? 'Adding keyword metrics...' : 'Add keyword metrics (1 TextFocus credit)'}
+          </button>
+        </div>
       </div>
 
       {/* --- Page Audit (Phase 1: fetch + parse → Health Score + findings) --- */}
@@ -630,7 +655,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
           Fetch and parse a page for concrete, fixable issues. Audit one URL (incl. indexation), or run a sweep of the
           top key pages from the sitemap.
         </p>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
           <input
             aria-label="Page audit URL"
             style={s.input}
@@ -645,8 +670,16 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
             {auditLoading ? 'Running...' : 'Run sweep'}
           </button>
         </div>
+        <label style={{ display: 'flex', gap: 7, alignItems: 'flex-start', marginBottom: 6, fontSize: 12 }}>
+          <input
+            type="checkbox"
+            checked={includePaidTopicalGap}
+            onChange={(event) => setIncludePaidTopicalGap(event.currentTarget.checked)}
+          />
+          <span>Include topical-gap comparison for single-page audits (uses 1 paid TextFocus credit).</span>
+        </label>
         <div style={{ color: 'var(--card-muted-fg-color)', fontSize: 11, marginBottom: 12 }}>
-          Run sweep audits the top 10 key pages (~30–60s); single-URL audits add indexation + render checks.
+          Sweep: top 10 pages, no paid TextFocus. Single page: also uses GSC URL Inspection, PageSpeed Insights, GA4, and a render check; topical gap stays off unless selected above.
         </div>
 
         {auditLoading && (
@@ -705,7 +738,14 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
               const state = promoted[key]
               return (
                 <Fragment key={key}>
-                  <tr style={{ cursor: 'pointer' }} onClick={() => setOpenFinding(open ? null : key)}>
+                  <tr
+                    tabIndex={0}
+                    aria-expanded={open}
+                    aria-label={`${open ? 'Collapse' : 'Expand'} finding: ${finding.what}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setOpenFinding(open ? null : key)}
+                    onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenFinding(open ? null : key))}
+                  >
                     <td style={s.td}>
                       <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
                         <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
@@ -961,7 +1001,14 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
               const url = finding.affectedUrls[0] || stats?.seedUrl || ''
               return (
                 <Fragment key={key}>
-                  <tr style={{ cursor: 'pointer' }} onClick={() => setOpenCrawlFinding(open ? null : key)}>
+                  <tr
+                    tabIndex={0}
+                    aria-expanded={open}
+                    aria-label={`${open ? 'Collapse' : 'Expand'} crawl finding: ${finding.what}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setOpenCrawlFinding(open ? null : key)}
+                    onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenCrawlFinding(open ? null : key))}
+                  >
                     <td style={s.td}>
                       <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>
                         <span style={badge(SEVERITY_COLORS[finding.severity])}>{finding.severity}</span>
@@ -1387,22 +1434,35 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
             <table style={s.table}>
             <thead>
               <tr>
-                <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('priority')}>
-                  Priority{ideaSort === 'priority' ? ' ▾' : ''}
+                <th style={s.th}>
+                  <button type="button" style={s.link} onClick={() => setIdeaSort('priority')}>
+                    Priority{ideaSort === 'priority' ? ' ▾' : ''}
+                  </button>
                 </th>
                 <th style={s.th}>Idea</th>
-                <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('category')}>
-                  Category{ideaSort === 'category' ? ' ▾' : ''}
+                <th style={s.th}>
+                  <button type="button" style={s.link} onClick={() => setIdeaSort('category')}>
+                    Category{ideaSort === 'category' ? ' ▾' : ''}
+                  </button>
                 </th>
-                <th style={{ ...s.th, cursor: 'pointer' }} onClick={() => setIdeaSort('status')}>
-                  Status{ideaSort === 'status' ? ' ▾' : ''}
+                <th style={s.th}>
+                  <button type="button" style={s.link} onClick={() => setIdeaSort('status')}>
+                    Status{ideaSort === 'status' ? ' ▾' : ''}
+                  </button>
                 </th>
               </tr>
             </thead>
             <tbody>
               {sortIdeas(ideas, ideaSort).map((idea) => (
                 <Fragment key={idea._id}>
-                  <tr style={{ cursor: 'pointer' }} onClick={() => setOpenIdea(openIdea === idea._id ? null : idea._id)}>
+                  <tr
+                    tabIndex={0}
+                    aria-expanded={openIdea === idea._id}
+                    aria-label={`${openIdea === idea._id ? 'Collapse' : 'Expand'} idea: ${idea.title || 'Untitled'}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setOpenIdea(openIdea === idea._id ? null : idea._id)}
+                    onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenIdea(openIdea === idea._id ? null : idea._id))}
+                  >
                     <td style={s.td}>
                       <span style={badge(PRIORITY_COLORS[idea.priority || 'low'] || PRIORITY_COLORS.low)}>
                         {idea.priority || 'low'}
@@ -1472,9 +1532,8 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 background: 'var(--card-muted-bg-color, rgba(127,134,148,0.08))',
               }}
             >
-              <strong style={{ color: UI_COLOR.caution }}>Leads column is off.</strong> GA4 key-events aren&apos;t configured, so the
-              score uses search demand only. Mark the contact-form / RFP-CTA actions as GA4 key events to rank converting
-              pages higher and light up this column.
+              <strong style={{ color: UI_COLOR.caution }}>Leads report is unavailable.</strong> Verify GA4 access and key-event setup.
+              A successful report with zero events is shown as 0; it is not treated as a connection failure.
             </div>
           )}
           <table style={s.table}>
@@ -1498,44 +1557,29 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 const questions = queries.filter(isQuestion)
                 const briefQs = (questions.length ? questions : queries).slice(0, 6)
                 const heading = questions[0] || p.topQuery || queries[0] || ''
-                const hovered = hoveredOpp === p.path
                 return (
                   <Fragment key={p.path}>
-                    <tr
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setOpenPage(open ? null : p.path)}
-                      onMouseEnter={() => setHoveredOpp(p.path)}
-                      onMouseLeave={() => setHoveredOpp((prev) => (prev === p.path ? null : prev))}
-                    >
-                      <td style={{ ...s.td, position: 'relative' }}>
-                        {open ? '▾ ' : '▸ '}
-                        {p.path}
+                    <tr>
+                      <td style={s.td}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between', minWidth: 230 }}>
+                          <button type="button" style={s.link} aria-expanded={open} onClick={() => setOpenPage(open ? null : p.path)}>
+                            {open ? '▾ ' : '▸ '}{p.path}
+                          </button>
+                          <button
+                            type="button"
+                            style={{ ...s.btn, padding: '2px 8px', fontSize: 11 }}
+                            onClick={() => {
+                              setAuditUrl(p.url)
+                              void runAudit(p.url)
+                              auditRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            }}
+                          >
+                            Audit
+                          </button>
+                        </div>
                         {p.legacy ? (
                           <span style={{ marginLeft: 6, color: 'var(--card-muted-fg-color)', fontSize: 11 }}>(legacy → redirect)</span>
                         ) : null}
-                        {/* Hover-only: audit this exact page straight from the row. */}
-                        <button
-                          type="button"
-                          style={{
-                            ...s.btn,
-                            position: 'absolute',
-                            top: '50%',
-                            right: 8,
-                            transform: 'translateY(-50%)',
-                            padding: '2px 8px',
-                            fontSize: 11,
-                            opacity: hovered ? 1 : 0,
-                            pointerEvents: hovered ? 'auto' : 'none',
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setAuditUrl(p.url)
-                            void runAudit(p.url)
-                            auditRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                          }}
-                        >
-                          Audit
-                        </button>
                       </td>
                       <td style={{ ...s.td, ...s.num }}>{p.impressions.toLocaleString()}</td>
                       <td style={{ ...s.td, ...s.num }}>{pct(p.ctr)}</td>
@@ -1646,7 +1690,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 const open = openGap === key
                 return (
                   <Fragment key={key}>
-                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenGap(open ? null : key)}>
+                    <tr tabIndex={0} aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} CTR gap: ${g.query}`} style={{ cursor: 'pointer' }} onClick={() => setOpenGap(open ? null : key)} onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenGap(open ? null : key))}>
                       <td style={s.td}>
                         {open ? '▾ ' : '▸ '}
                         {g.query}
@@ -1709,7 +1753,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 const open = openCannibal === c.query
                 return (
                   <Fragment key={c.query}>
-                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenCannibal(open ? null : c.query)}>
+                    <tr tabIndex={0} aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} cannibalization: ${c.query}`} style={{ cursor: 'pointer' }} onClick={() => setOpenCannibal(open ? null : c.query)} onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenCannibal(open ? null : c.query))}>
                       <td style={s.td}>
                         {open ? '▾ ' : '▸ '}
                         {c.query}
@@ -1799,7 +1843,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                 const open = openDecay === d.path
                 return (
                   <Fragment key={d.path}>
-                    <tr style={{ cursor: 'pointer' }} onClick={() => setOpenDecay(open ? null : d.path)}>
+                    <tr tabIndex={0} aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} decay watch: ${d.path}`} style={{ cursor: 'pointer' }} onClick={() => setOpenDecay(open ? null : d.path)} onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenDecay(open ? null : d.path))}>
                       <td style={s.td}>
                         {open ? '▾ ' : '▸ '}
                         {d.path}
@@ -1881,7 +1925,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
                     const open = openMismatch === key
                     return (
                       <Fragment key={key}>
-                        <tr style={{ cursor: 'pointer' }} onClick={() => setOpenMismatch(open ? null : key)}>
+                        <tr tabIndex={0} aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} intent mismatch: ${m.query}`} style={{ cursor: 'pointer' }} onClick={() => setOpenMismatch(open ? null : key)} onKeyDown={(event) => handleExpandableRowKey(event, () => setOpenMismatch(open ? null : key))}>
                           <td style={s.td}>
                             {open ? '▾ ' : '▸ '}
                             {m.query}
@@ -2004,7 +2048,7 @@ export function SeoWorkspace({ client }: SeoWorkspaceProps) {
             </p>
           ) : (
             <p style={{ ...s.sub, marginBottom: 8, fontSize: 11 }}>
-              Ranked by Search Console demand. Search volume + keyword difficulty appear here when TextFocus is reachable.
+              Ranked by Search Console demand. Use “Add keyword metrics” above when monthly volume and difficulty are worth one TextFocus credit.
             </p>
           )}
           <table style={s.table}>

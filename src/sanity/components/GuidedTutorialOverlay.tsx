@@ -50,6 +50,7 @@ export function GuidedTutorialOverlay({
   onRestart,
   onShowLibrary,
   onComplete,
+  compact = false,
 }: {
   active: boolean
   tutorial: GuidedTutorialDefinition
@@ -59,6 +60,8 @@ export function GuidedTutorialOverlay({
   onRestart: () => void
   onShowLibrary: () => void
   onComplete?: () => void
+  /** Keep coaching prompts short enough that the highlighted workspace action remains visible. */
+  compact?: boolean
 }) {
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
   const [bubbleSize, setBubbleSize] = useState<BubbleSize>({ width: BUBBLE_WIDTH, height: 310 })
@@ -92,8 +95,14 @@ export function GuidedTutorialOverlay({
       const highlightedTarget = targetId
         ? document.querySelector<HTMLElement>(`[data-tour-id="${targetId}"]`)
         : null
-      if (highlightedTarget && isKeyboardFocusable(highlightedTarget) && !focusable.includes(highlightedTarget)) {
-        focusable.push(highlightedTarget)
+      if (highlightedTarget) {
+        const targetFocusables = focusableElements(highlightedTarget)
+        if (highlightedTarget.matches(FOCUSABLE_SELECTOR) && isKeyboardFocusable(highlightedTarget)) {
+          targetFocusables.unshift(highlightedTarget)
+        }
+        for (const targetFocusable of targetFocusables) {
+          if (!focusable.includes(targetFocusable)) focusable.push(targetFocusable)
+        }
       }
       if (focusable.length === 0) {
         event.preventDefault()
@@ -217,7 +226,7 @@ export function GuidedTutorialOverlay({
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
           data-tour-id="guided-tutorial-bubble"
-          style={{ ...styles.bubble, ...styles.completeBubble }}
+          style={{ ...styles.bubble, ...(compact ? styles.compactBubble : {}), ...styles.completeBubble }}
         >
           <button type="button" aria-label="Close tutorial" style={styles.closeButton} onClick={onClose}>
             <CloseIcon style={{ width: 16, height: 16 }} />
@@ -247,7 +256,16 @@ export function GuidedTutorialOverlay({
 
   return (
     <div style={styles.root}>
-      <div style={highlightRect ? styles.clearScrim : styles.scrim} />
+      {highlightRect ? (
+        <>
+          <div aria-hidden="true" style={{ ...styles.blocker, inset: `0 0 auto 0`, height: Math.max(0, highlightRect.top) }} />
+          <div aria-hidden="true" style={{ ...styles.blocker, inset: `${highlightRect.top + highlightRect.height}px 0 0 0` }} />
+          <div aria-hidden="true" style={{ ...styles.blocker, top: highlightRect.top, left: 0, width: Math.max(0, highlightRect.left), height: highlightRect.height }} />
+          <div aria-hidden="true" style={{ ...styles.blocker, top: highlightRect.top, left: highlightRect.left + highlightRect.width, right: 0, height: highlightRect.height }} />
+        </>
+      ) : (
+        <div aria-hidden="true" style={styles.scrim} />
+      )}
       {highlightRect && (
         <div
           aria-hidden="true"
@@ -270,6 +288,7 @@ export function GuidedTutorialOverlay({
         data-tour-id="guided-tutorial-bubble"
         style={{
           ...styles.bubble,
+          ...(compact ? styles.compactBubble : {}),
           top: bubblePlacement.top,
           left: bubblePlacement.left,
         }}
@@ -311,11 +330,12 @@ export function nextGuidedTutorialFocusIndex(activeIndex: number, focusableCount
   return (activeIndex + (reverse ? -1 : 1) + focusableCount) % focusableCount
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 function focusableElements(container: HTMLElement) {
   return Array.from(
-    container.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    ),
+    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
   ).filter(isKeyboardFocusable)
 }
 
@@ -477,11 +497,12 @@ const styles: Record<string, CSSProperties> = {
     position: 'absolute',
     inset: 0,
     background: 'rgba(2, 6, 23, 0.42)',
+    pointerEvents: 'auto',
   },
-  clearScrim: {
-    position: 'absolute',
-    inset: 0,
+  blocker: {
+    position: 'fixed',
     background: 'transparent',
+    pointerEvents: 'auto',
   },
   highlight: {
     position: 'fixed',
@@ -511,6 +532,9 @@ const styles: Record<string, CSSProperties> = {
     left: '50%',
     transform: 'translate(-50%, -50%)',
   },
+  compactBubble: {
+    maxHeight: 'min(360px, calc(100dvh - 24px))',
+  },
   arrow: {
     position: 'absolute',
     width: 0,
@@ -522,9 +546,12 @@ const styles: Record<string, CSSProperties> = {
     transform: 'translateX(-50%)',
   },
   closeButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    position: 'sticky',
+    top: 0,
+    zIndex: 2,
+    float: 'right',
+    marginTop: -8,
+    marginRight: -8,
     border: '1px solid rgba(255, 255, 255, 0.16)',
     borderRadius: 6,
     background: 'rgba(255, 255, 255, 0.06)',
@@ -576,10 +603,16 @@ const styles: Record<string, CSSProperties> = {
     transition: 'width 180ms ease',
   },
   navigation: {
+    position: 'sticky',
+    bottom: -16,
+    zIndex: 2,
     display: 'flex',
     justifyContent: 'space-between',
     gap: 8,
-    marginTop: 14,
+    margin: '14px -16px -16px',
+    padding: '10px 16px 16px',
+    background: '#151a26',
+    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
   },
   iconButton: {
     border: '1px solid rgba(255, 255, 255, 0.16)',

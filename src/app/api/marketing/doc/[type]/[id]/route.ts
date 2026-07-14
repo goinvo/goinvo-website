@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse as NextResponseType } from 'next/server'
 import {
   assertMarketingApiKey,
   buildPatchPayload,
-  channelDeleteCascade,
   getMarketingWriteClient,
   isManagedMarketingType,
   MarketingAuthError,
@@ -11,6 +10,11 @@ import {
   type MarketingFields,
 } from '@/lib/marketing'
 import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+
+// Marketing documents can contain internal planning material, and Outreach
+// types contain PII. Keep every result explicitly private and non-cacheable.
+const NextResponse = { json: privateMarketingJson }
 
 // REST surface for one specific managed marketing document, addressed by type +
 // _id:
@@ -45,7 +49,7 @@ function isValidDocumentId(id: string): boolean {
 async function guard(
   req: Request,
   context: RouteContext,
-): Promise<{ type: ManagedMarketingType; id: string } | { response: NextResponse }> {
+): Promise<{ type: ManagedMarketingType; id: string } | { response: NextResponseType }> {
   try {
     assertMarketingApiKey(req)
   } catch (error) {
@@ -160,12 +164,22 @@ export async function PATCH(req: Request, context: RouteContext) {
 
   try {
     const client = clientForType(type)
-    const exists = await client.fetch<{ _id: string } | null>(
-      '*[_type == $type && _id == $id][0]{_id}',
+    const exists = await client.fetch<{ _id: string; status?: string; publishAt?: string } | null>(
+      '*[_type == $type && _id == $id][0]{_id, status, publishAt}',
       { type, id },
     )
     if (!exists) {
       return NextResponse.json({ error: `No ${type} found with _id ${id}.` }, { status: 404 })
+    }
+    if (type === 'marketingCalendarItem') {
+      const effectiveStatus = typeof payload.status === 'string' ? payload.status : exists.status
+      const effectivePublishAt = unsetFields.includes('publishAt') ? undefined : payload.publishAt ?? exists.publishAt
+      if (effectiveStatus === 'scheduled' && (typeof effectivePublishAt !== 'string' || !effectivePublishAt.trim())) {
+        return NextResponse.json(
+          { error: 'Missing required field: publishAt', missing: ['publishAt'], invalid: [] },
+          { status: 422 },
+        )
+      }
     }
     let patch = client.patch(id)
     if (Object.keys(payload).length > 0) patch = patch.set(payload)
@@ -182,35 +196,50 @@ export async function PATCH(req: Request, context: RouteContext) {
 /**
  * DELETE /api/marketing/doc/:type/:id — delete one managed marketing document.
  *
- * For marketingChannel, references from calendar items are unset first (cascade)
- * unless ?cascade=false. Returns { id, deleted: true, cascadedUnset } where
- * cascadedUnset is the number of calendar items detached.
+ * Refuses to delete any record that still has direct references. Channels also
+ * check legacy key-based usage. Related records are never mutated as a hidden
+ * side effect of deletion.
  */
 export async function DELETE(req: Request, context: RouteContext) {
   const guarded = await guard(req, context)
   if ('response' in guarded) return guarded.response
   const { type, id } = guarded
 
-  const url = new URL(req.url)
-  const cascade = url.searchParams.get('cascade') !== 'false'
-
   try {
     const client = clientForType(type)
-    const exists = await client.fetch<{ _id: string } | null>(
-      '*[_type == $type && _id == $id][0]{_id}',
+    const exists = await client.fetch<{ _id: string; key?: string } | null>(
+      '*[_type == $type && _id == $id][0]{_id, key}',
       { type, id },
     )
     if (!exists) {
       return NextResponse.json({ error: `No ${type} found with _id ${id}.` }, { status: 404 })
     }
 
-    let cascadedUnset = 0
-    if (type === 'marketingChannel' && cascade) {
-      cascadedUnset = await channelDeleteCascade(client, id)
+    const directReferences = await client.fetch<Array<{ _id: string; _type: string; title?: string }>>(
+      '*[references($id)]{_id, _type, title}',
+      { id },
+    )
+    const legacyChannelUsage = type === 'marketingChannel' && exists.key
+      ? await client.fetch<Array<{ _id: string; _type: string; title?: string }>>(
+          '*[((_type == "marketingCalendarItem" && channel == $key) || (_type == "marketingCampaign" && $key in channels))]{_id, _type, title}',
+          { key: exists.key },
+        )
+      : []
+    const referencedBy = Array.from(
+      new Map([...directReferences, ...legacyChannelUsage].map((record) => [record._id, record])).values(),
+    )
+    if (referencedBy.length > 0) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete ${type}/${id}: still used by ${referencedBy.length} document(s). Disconnect or archive it first. No related records were changed.`,
+          referencedBy,
+        },
+        { status: 409 },
+      )
     }
 
     await client.delete(id)
-    return NextResponse.json({ id, deleted: true, cascadedUnset })
+    return NextResponse.json({ id, deleted: true, cascadedUnset: 0 })
   } catch (error) {
     // Reference integrity is the common cause: Sanity refuses to delete a
     // document that is still referenced by others. Surface that as a clean 409

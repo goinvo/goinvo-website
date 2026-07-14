@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { CloseIcon, LaunchIcon, TrendUpwardIcon } from '@sanity/icons'
 
-import { refsFromIds, toDateInputValue } from '@/lib/marketing'
+import { randomKey, refsFromIds, toDateInputValue } from '@/lib/marketing'
 import { analyticsProviderOptions, analyticsStatusOptions } from '../../schemas/marketingAnalyticsSource'
 import { campaignStatusOptions } from '../../schemas/marketingCampaign'
 import { channelPlatformOptions, channelStatusOptions } from '../../schemas/marketingChannel'
@@ -18,6 +18,7 @@ import {
   aiOption,
   aiString,
   AnalyticsMetricCard,
+  analyticsSourceConnectionError,
   buildAnalyticsInterpretations,
   dateRange,
   emptyKeys,
@@ -28,6 +29,7 @@ import {
   getAnalyticsReadinessStats,
   getCampaignCalendarCount,
   getFunnelCampaignCount,
+  hasUsableAnalyticsRefs,
   InputField,
   labelFor,
   MarketingAiAssistPanel,
@@ -39,6 +41,7 @@ import {
   Stack,
   StatusPill,
   styles,
+  isUsableConnectedAnalyticsSource,
   useMarketingCompactLayout,
   type AnalyticsInterpretation,
   type MarketingAiSuggestion,
@@ -64,14 +67,16 @@ export function AnalyticsWorkspace({
 }: AnalyticsWorkspaceProps) {
   const compactLayout = useMarketingCompactLayout()
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(data.analyticsSources[0]?._id || null)
-  const vercelSources = data.analyticsSources.filter((source) =>
+  const [sourceDraftDirty, setSourceDraftDirty] = useState(false)
+  const usableSources = data.analyticsSources.filter(isUsableConnectedAnalyticsSource)
+  const vercelSources = usableSources.filter((source) =>
     source.provider === 'vercelAnalytics' || source.provider === 'vercelSpeedInsights',
   )
   const selectedSource = data.analyticsSources.find((source) => source._id === selectedSourceId) || null
-  const campaignLinkedCount = data.campaigns.filter((campaign) => (campaign.analyticsSources || []).length > 0).length
-  const funnelLinkedCount = data.funnels.filter((funnel) => (funnel.analyticsSources || []).length > 0).length
-  const channelLinkedCount = data.channels.filter((channel) => (channel.analyticsSources || []).length > 0).length
-  const connectedSourceCount = data.analyticsSources.filter((source) => source.status === 'connected').length
+  const campaignLinkedCount = data.campaigns.filter((campaign) => hasUsableAnalyticsRefs(campaign.analyticsSources, data.analyticsSources)).length
+  const funnelLinkedCount = data.funnels.filter((funnel) => hasUsableAnalyticsRefs(funnel.analyticsSources, data.analyticsSources)).length
+  const channelLinkedCount = data.channels.filter((channel) => hasUsableAnalyticsRefs(channel.analyticsSources, data.analyticsSources)).length
+  const connectedSourceCount = usableSources.length
   const analyticsInterpretations = useMemo(() => buildAnalyticsInterpretations(data), [data])
   const workspaceGridStyle: CSSProperties = compactLayout
     ? { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12, alignItems: 'start' }
@@ -88,6 +93,7 @@ export function AnalyticsWorkspace({
   }, [data.analyticsSources, selectedSourceId])
 
   const createSource = async () => {
+    if (sourceDraftDirty && typeof window !== 'undefined' && !window.confirm('Discard the unsaved source edits and create a new source?')) return
     const createdId = await createDocument({
       _type: 'marketingAnalyticsSource',
       title: '',
@@ -95,10 +101,12 @@ export function AnalyticsWorkspace({
       status: 'planned',
       reportingCadence: 'monthly',
     })
+    setSourceDraftDirty(false)
     setSelectedSourceId(createdId)
   }
 
   const setAnalyticsSourcesForDocument = async (id: string, sourceIds: string[]) => {
+    if (sourceDraftDirty) return
     await commitPatch(id, { analyticsSources: refsFromIds(sourceIds) }, sourceIds.length > 0 ? [] : ['analyticsSources'])
   }
 
@@ -127,14 +135,22 @@ export function AnalyticsWorkspace({
           data={data}
           saving={savingId === selectedSource?._id}
           onSave={commitPatch}
+          onDirtyChange={setSourceDraftDirty}
         />
+
+        {sourceDraftDirty && (
+          <div role="status" style={{ ...styles.panel, boxShadow: 'none', borderColor: 'rgba(214, 169, 63, 0.55)', padding: 12 }}>
+            Save or discard the source edits before changing campaign, funnel, or channel connections.
+          </div>
+        )}
 
         <AnalyticsConnectionSection
           title="Campaign measurement"
           description="Attach sources to campaigns so success metrics, content, and reporting all point to the same measurement surface."
           emptyTitle="No campaigns yet"
           items={data.campaigns}
-          sources={data.analyticsSources}
+          sources={usableSources}
+          disabled={sourceDraftDirty}
           savingId={savingId}
           getStatusOptions={() => campaignStatusOptions}
           getMeta={(campaign) =>
@@ -152,7 +168,8 @@ export function AnalyticsWorkspace({
           description="Attach sources to reusable funnel maps so every connected campaign inherits the same measurement logic."
           emptyTitle="No funnels yet"
           items={data.funnels}
-          sources={data.analyticsSources}
+          sources={usableSources}
+          disabled={sourceDraftDirty}
           savingId={savingId}
           getStatusOptions={() => funnelStatusOptions}
           getMeta={(funnel) =>
@@ -169,7 +186,8 @@ export function AnalyticsWorkspace({
           description="Attach default analytics sources to channels so new campaigns and content know how each channel is measured."
           emptyTitle="No channels yet"
           items={data.channels}
-          sources={data.analyticsSources}
+          sources={usableSources}
+          disabled={sourceDraftDirty}
           savingId={savingId}
           getStatusOptions={() => channelStatusOptions}
           getMeta={(channel) =>
@@ -198,7 +216,12 @@ export function AnalyticsWorkspace({
             <button
               key={source._id}
               type="button"
-              onClick={() => setSelectedSourceId(source._id)}
+              onClick={() => {
+                if (source._id === selectedSourceId) return
+                if (sourceDraftDirty && typeof window !== 'undefined' && !window.confirm('Discard the unsaved source edits and switch sources?')) return
+                setSourceDraftDirty(false)
+                setSelectedSourceId(source._id)
+              }}
               style={{
                 ...styles.card,
                 padding: 10,
@@ -378,6 +401,7 @@ function AnalyticsConnectionSection<T extends { _id: string; title?: string; sta
   emptyTitle,
   items,
   sources,
+  disabled,
   savingId,
   getStatusOptions,
   getMeta,
@@ -388,12 +412,14 @@ function AnalyticsConnectionSection<T extends { _id: string; title?: string; sta
   emptyTitle: string
   items: T[]
   sources: MarketingAnalyticsSource[]
+  disabled: boolean
   savingId: string | null
   getStatusOptions: (item: T) => SelectOption[]
   getMeta: (item: T) => string
   onChange: (id: string, sourceIds: string[]) => Promise<void>
 }) {
-  const connected = items.filter((item) => (item.analyticsSources || []).length > 0).length
+  const sourceIds = new Set(sources.map((source) => source._id))
+  const connected = items.filter((item) => (item.analyticsSources || []).some((source) => sourceIds.has(source._id))).length
 
   return (
     <section style={styles.panel}>
@@ -416,6 +442,7 @@ function AnalyticsConnectionSection<T extends { _id: string; title?: string; sta
               key={item._id}
               item={item}
               sources={sources}
+              disabled={disabled}
               saving={savingId === item._id}
               statusOptions={getStatusOptions(item)}
               meta={getMeta(item)}
@@ -431,6 +458,7 @@ function AnalyticsConnectionSection<T extends { _id: string; title?: string; sta
 function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?: string; analyticsSources?: RefSummary[] }>({
   item,
   sources,
+  disabled,
   saving,
   statusOptions,
   meta,
@@ -438,6 +466,7 @@ function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?
 }: {
   item: T
   sources: MarketingAnalyticsSource[]
+  disabled: boolean
   saving: boolean
   statusOptions: SelectOption[]
   meta: string
@@ -475,7 +504,7 @@ function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?
             key={source._id}
             type="button"
             title={`Remove ${source.title || 'analytics source'}`}
-            disabled={saving}
+            disabled={saving || disabled}
             onClick={() => void onChange(item._id, selectedIds.filter((id) => id !== source._id))}
             style={{
               border: '1px solid rgba(0, 115, 133, 0.35)',
@@ -483,7 +512,7 @@ function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?
               color: 'var(--card-fg-color)',
               borderRadius: 999,
               padding: '5px 8px',
-              cursor: saving ? 'default' : 'pointer',
+              cursor: saving || disabled ? 'default' : 'pointer',
               display: 'inline-flex',
               gap: 6,
               alignItems: 'center',
@@ -506,7 +535,7 @@ function AnalyticsConnectionRow<T extends { _id: string; title?: string; status?
             value: source._id,
           })),
         ]}
-        disabled={saving || availableSources.length === 0}
+        disabled={saving || disabled || availableSources.length === 0}
         onChange={(sourceId) => {
           if (!sourceId) return
           void onChange(item._id, [...selectedIds, sourceId])
@@ -569,15 +598,28 @@ function AnalyticsEditor({
   data,
   saving,
   onSave,
+  onDirtyChange,
 }: {
   source: MarketingAnalyticsSource | null
   data: MarketingData
   saving: boolean
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+  onDirtyChange: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<MarketingAnalyticsSource | null>(source)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const sourceSnapshotRef = useRef(source)
+  sourceSnapshotRef.current = source
 
-  useEffect(() => setDraft(source), [source])
+  useEffect(() => {
+    setDraft(sourceSnapshotRef.current)
+    setSaveError(null)
+    onDirtyChange(false)
+  }, [source?._id, onDirtyChange])
+
+  useEffect(() => {
+    onDirtyChange(Boolean(draft && source && analyticsSourceDraftFingerprint(draft) !== analyticsSourceDraftFingerprint(source)))
+  }, [draft, source, onDirtyChange])
 
   if (!draft || !source) {
     return (
@@ -590,6 +632,12 @@ function AnalyticsEditor({
   }
 
   const save = async () => {
+    const connectionError = draft.status === 'connected' ? analyticsSourceConnectionError(draft) : null
+    if (connectionError) {
+      setSaveError(connectionError)
+      return
+    }
+    setSaveError(null)
     const set: Record<string, unknown> = {
       title: draft.title || 'Untitled analytics source',
       provider: draft.provider || 'ga4',
@@ -601,11 +649,17 @@ function AnalyticsEditor({
       dashboardUrl: draft.dashboardUrl,
       reportingCadence: draft.reportingCadence,
       implementationNotes: draft.implementationNotes,
+      targetSites: draft.targetSites,
       keyMetrics: aiKeyMetrics(draft.keyMetrics),
     }
     const unset = emptyKeys(set)
     unset.forEach((key) => delete set[key])
-    await onSave(source._id, set, unset)
+    try {
+      await onSave(source._id, set, unset)
+      onDirtyChange(false)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this analytics source.')
+    }
   }
 
   const applyAiSuggestion = (suggestion: MarketingAiSuggestion) => {
@@ -724,6 +778,22 @@ function AnalyticsEditor({
               onChange={(event) => setDraft({ ...draft, dashboardUrl: event.currentTarget.value })}
             />
           </InputField>
+          <InputField label="Covered sites" help="One per line: label | URL. This tells the team which property or reporting surface to choose.">
+            <textarea
+              rows={3}
+              style={styles.input}
+              value={analyticsTargetSitesText(draft.targetSites)}
+              onChange={(event) => setDraft({ ...draft, targetSites: parseAnalyticsTargetSites(event.currentTarget.value) })}
+            />
+          </InputField>
+          <InputField label="Key metrics" help="One per line: metric | plain-language definition. Keep this to the 2–4 numbers used for decisions.">
+            <textarea
+              rows={4}
+              style={styles.input}
+              value={analyticsKeyMetricsText(draft.keyMetrics)}
+              onChange={(event) => setDraft({ ...draft, keyMetrics: parseAnalyticsKeyMetrics(event.currentTarget.value) })}
+            />
+          </InputField>
           <InputField label="Implementation notes">
             <textarea
               rows={5}
@@ -789,6 +859,7 @@ function AnalyticsEditor({
             }
           />
           <AdvancedFieldsDropdown type="marketingAnalyticsSource" id={source._id} />
+          {saveError && <div role="alert" style={{ ...styles.small, color: '#d98a8a' }}>{saveError}</div>}
           <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
             {saving ? 'Saving...' : 'Save analytics source'}
           </button>
@@ -796,4 +867,43 @@ function AnalyticsEditor({
       </div>
     </section>
   )
+}
+
+function analyticsSourceDraftFingerprint(source: MarketingAnalyticsSource) {
+  return JSON.stringify({
+    title: source.title || '',
+    provider: source.provider || '',
+    status: source.status || '',
+    propertyId: source.propertyId || '',
+    measurementId: source.measurementId || '',
+    containerId: source.containerId || '',
+    vercelProject: source.vercelProject || '',
+    dashboardUrl: source.dashboardUrl || '',
+    reportingCadence: source.reportingCadence || '',
+    implementationNotes: source.implementationNotes || '',
+    targetSites: (source.targetSites || []).map(({ label, url }) => ({ label: label || '', url: url || '' })),
+    keyMetrics: (source.keyMetrics || []).map(({ label, definition }) => ({ label: label || '', definition: definition || '' })),
+  })
+}
+
+function analyticsTargetSitesText(items: MarketingAnalyticsSource['targetSites']) {
+  return (items || []).map((item) => [item.label, item.url].filter(Boolean).join(' | ')).join('\n')
+}
+
+function parseAnalyticsTargetSites(value: string): NonNullable<MarketingAnalyticsSource['targetSites']> {
+  return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const [label = '', url = ''] = line.split('|').map((part) => part.trim())
+    return { _key: randomKey(), _type: 'targetSite' as const, label, url }
+  })
+}
+
+function analyticsKeyMetricsText(items: MarketingAnalyticsSource['keyMetrics']) {
+  return (items || []).map((item) => [item.label, item.definition].filter(Boolean).join(' | ')).join('\n')
+}
+
+function parseAnalyticsKeyMetrics(value: string): NonNullable<MarketingAnalyticsSource['keyMetrics']> {
+  return value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const [label = '', definition = ''] = line.split('|').map((part) => part.trim())
+    return { _key: randomKey(), _type: 'keyMetric' as const, label, definition }
+  })
 }

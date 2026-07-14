@@ -1,5 +1,7 @@
 import { defineField, defineType } from 'sanity'
 import {
+  OUTREACH_CHANNEL_OVERRIDE_STATE_OPTIONS,
+  OUTREACH_CHANNEL_OPTIONS,
   OUTREACH_SEGMENT_OPTIONS,
   OUTREACH_STATUS_OPTIONS,
   OUTREACH_WARMTH_OPTIONS,
@@ -55,12 +57,20 @@ export default defineType({
       description: 'Who at GoInvo holds this relationship (e.g. Juhan, Jon).',
     }),
     defineField({
+      name: 'brandVoiceKey',
+      title: 'Brand Voice Override',
+      type: 'string',
+      group: 'identity',
+      description:
+        'Stable key of the shared Marketing Settings voice profile. Leave empty to inherit the active suite default.',
+    }),
+    defineField({
       name: 'warmth',
       title: 'Warmth',
       type: 'string',
       group: 'identity',
       options: { list: OUTREACH_WARMTH_OPTIONS },
-      initialValue: 'warm',
+      initialValue: 'unknown',
     }),
     defineField({
       name: 'status',
@@ -105,6 +115,30 @@ export default defineType({
       group: 'identity',
       description: 'The raw line from the pasted contact dump this record came from.',
     }),
+    defineField({
+      name: 'identityHistory',
+      title: 'Identity correction history',
+      type: 'array',
+      group: 'identity',
+      readOnly: true,
+      description:
+        'Previous identity values retained when a contact with interaction or attribution history is corrected.',
+      of: [
+        {
+          name: 'outreachIdentitySnapshot',
+          title: 'Previous identity',
+          type: 'object',
+          fields: [
+            defineField({ name: 'name', title: 'Name', type: 'string' }),
+            defineField({ name: 'organization', title: 'Organization', type: 'string' }),
+            defineField({ name: 'role', title: 'Role / Title', type: 'string' }),
+            defineField({ name: 'changedAt', title: 'Corrected At', type: 'datetime' }),
+            defineField({ name: 'changedBy', title: 'Corrected By', type: 'string' }),
+          ],
+          preview: { select: { title: 'name', subtitle: 'organization' } },
+        },
+      ],
+    }),
 
     // ---- Research group (worker-owned; filled by the outreach research run) ----
     defineField({
@@ -113,6 +147,14 @@ export default defineType({
       type: 'datetime',
       group: 'research',
       readOnly: true,
+    }),
+    defineField({
+      name: 'researchReviewedAt',
+      title: 'Research Reviewed At',
+      type: 'datetime',
+      group: 'research',
+      readOnly: true,
+      description: 'Human approval timestamp for the current AI brief. Re-research clears it.',
     }),
     defineField({
       name: 'personVerified',
@@ -137,6 +179,15 @@ export default defineType({
       group: 'research',
       readOnly: true,
       description: 'What the contact and their org are doing now (cited web research).',
+    }),
+    defineField({
+      name: 'researchSuggestedSegment',
+      title: 'AI-Suggested Segment',
+      type: 'string',
+      group: 'research',
+      readOnly: true,
+      options: { list: OUTREACH_SEGMENT_OPTIONS },
+      description: 'Research suggestion only. It never overwrites the human-owned Segment field.',
     }),
     defineField({
       name: 'opportunities',
@@ -209,7 +260,7 @@ export default defineType({
       type: 'array',
       group: 'research',
       description:
-        'Offer drafts generated for THIS contact — review, edit, and choose one; the chosen offer drives the call brief.',
+        'Offer drafts generated for THIS contact — review, edit, and choose one. Re-research preserves these human-curated drafts unless replacement is explicitly requested.',
       of: [
         {
           name: 'outreachProposedOffer',
@@ -245,7 +296,7 @@ export default defineType({
       rows: 3,
       group: 'research',
       readOnly: true,
-      description: 'A first message/voicemail the relationship owner can adapt.',
+      description: 'AI draft. Edit it safely in the Outreach workspace; saving new wording clears prior approval.',
     }),
     defineField({
       name: 'callBrief',
@@ -254,7 +305,7 @@ export default defineType({
       rows: 6,
       group: 'research',
       readOnly: true,
-      description: 'The one-pager for the call: context, what to present, the ask.',
+      description: 'AI draft for the call: context, what to present, and the ask. Edit it safely in the Outreach workspace.',
     }),
     defineField({
       name: 'researchModel',
@@ -262,6 +313,21 @@ export default defineType({
       type: 'string',
       group: 'research',
       readOnly: true,
+    }),
+    defineField({
+      name: 'researchBrandVoiceKey',
+      title: 'Applied Brand Voice Key',
+      type: 'string',
+      group: 'research',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'researchBrandVoiceName',
+      title: 'Applied Brand Voice',
+      type: 'string',
+      group: 'research',
+      readOnly: true,
+      description: 'Voice used for the generated opener, offer wording, and call ask. Facts remain voice-neutral.',
     }),
     defineField({
       name: 'researchSources',
@@ -285,6 +351,69 @@ export default defineType({
 
     // ---- Outreach group (filled by whoever makes the call) ----
     defineField({
+      name: 'channelOverrides',
+      title: 'Channel Overrides',
+      type: 'array',
+      group: 'outreach',
+      description:
+        'Optional exceptions to automatic channel advice. With no entry, a channel stays automatic. Email, Phone, and LinkedIn URL in the Who group remain the canonical contact details.',
+      of: [
+        {
+          name: 'outreachChannelOverride',
+          title: 'Channel Override',
+          type: 'object',
+          fields: [
+            defineField({
+              name: 'channel',
+              title: 'Channel',
+              type: 'string',
+              options: { list: OUTREACH_CHANNEL_OPTIONS },
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'state',
+              title: 'Override',
+              type: 'string',
+              options: { list: OUTREACH_CHANNEL_OVERRIDE_STATE_OPTIONS },
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'note',
+              title: 'Reason (optional)',
+              type: 'string',
+              description:
+                'Explain the exception briefly. Do not copy an email address, phone number, or profile URL here; edit the canonical fields in Who instead.',
+              validation: (Rule) => Rule.max(240),
+            }),
+          ],
+          preview: {
+            select: { channel: 'channel', state: 'state', subtitle: 'note' },
+            prepare: ({ channel, state, subtitle }) => ({
+              title: [channel, state].filter(Boolean).join(' — ') || 'Channel override',
+              subtitle,
+            }),
+          },
+        },
+      ],
+      validation: (Rule) => [
+        Rule.max(OUTREACH_CHANNEL_OPTIONS.length),
+        Rule.custom((value) => {
+          if (!Array.isArray(value)) return true
+          const overrides = value as Array<{ channel?: string; state?: string }>
+          const channels = overrides
+            .map((override) => override.channel)
+            .filter((channel): channel is string => Boolean(channel))
+          if (new Set(channels).size !== channels.length) {
+            return 'Keep only one override per channel. Remove an override to return that channel to automatic mode.'
+          }
+          if (overrides.filter((override) => override.state === 'preferred').length > 1) {
+            return 'Only one channel can be preferred. Leave all channels without a Preferred override to use automatic mode.'
+          }
+          return true
+        }),
+      ],
+    }),
+    defineField({
       name: 'lastContactedAt',
       title: 'Last Contacted At',
       type: 'datetime',
@@ -296,6 +425,73 @@ export default defineType({
       type: 'datetime',
       group: 'outreach',
       description: 'When this contact should resurface in the "Follow-ups due" strip.',
+    }),
+    defineField({
+      name: 'estimatedValue',
+      title: 'Estimated Opportunity Value',
+      type: 'number',
+      group: 'outreach',
+      validation: (Rule) => Rule.min(0),
+    }),
+    defineField({
+      name: 'closedValue',
+      title: 'Closed Value',
+      type: 'number',
+      group: 'outreach',
+      description: 'Actual value when the contact reaches Won or Lost.',
+      validation: (Rule) => Rule.min(0),
+    }),
+    defineField({
+      name: 'currency',
+      title: 'Value Currency',
+      type: 'string',
+      group: 'outreach',
+      initialValue: 'USD',
+      description: 'ISO 4217 currency code used by estimated and closed values.',
+      validation: (Rule) => Rule.regex(/^[A-Z]{3}$/).warning('Use a three-letter ISO currency code, e.g. USD.'),
+    }),
+    defineField({
+      name: 'attributionChannel',
+      title: 'Attributed Channel',
+      type: 'string',
+      group: 'outreach',
+      options: { list: OUTREACH_CHANNEL_OPTIONS },
+      description: 'The channel that sourced or materially advanced this opportunity.',
+    }),
+    defineField({
+      name: 'attributedOfferKey',
+      title: 'Attributed Offer Key',
+      type: 'string',
+      group: 'outreach',
+      description: 'Catalog or tailored offer key presented in the successful/terminal outcome.',
+    }),
+    defineField({
+      name: 'attributedOfferTitle',
+      title: 'Attributed Offer Title',
+      type: 'string',
+      group: 'outreach',
+      description: 'Human-readable snapshot of the offer presented at the time of the interaction.',
+    }),
+    defineField({
+      name: 'attributedEvidenceIds',
+      title: 'Attributed Evidence IDs',
+      type: 'array',
+      group: 'outreach',
+      description: 'Work-evidence records that materially supported the conversation or close.',
+      of: [{ type: 'string' }],
+    }),
+    defineField({
+      name: 'closedAt',
+      title: 'Closed At',
+      type: 'datetime',
+      group: 'outreach',
+    }),
+    defineField({
+      name: 'closeReason',
+      title: 'Win / Loss Reason',
+      type: 'text',
+      rows: 2,
+      group: 'outreach',
     }),
     defineField({
       name: 'interactions',
@@ -315,6 +511,26 @@ export default defineType({
             defineField({ name: 'intel', title: 'Intelligence', type: 'text', rows: 2 }),
             defineField({ name: 'nextStep', title: 'Next Step', type: 'string' }),
             defineField({ name: 'statusAfter', title: 'Status After', type: 'string' }),
+            defineField({
+              name: 'channel',
+              title: 'Channel',
+              type: 'string',
+              options: { list: OUTREACH_CHANNEL_OPTIONS },
+            }),
+            defineField({ name: 'offerKey', title: 'Offer Key Presented', type: 'string' }),
+            defineField({ name: 'offerTitle', title: 'Offer Title Presented', type: 'string' }),
+            defineField({
+              name: 'evidenceIds',
+              title: 'Evidence IDs Presented',
+              type: 'array',
+              of: [{ type: 'string' }],
+            }),
+            defineField({
+              name: 'value',
+              title: 'Value at This Interaction',
+              type: 'number',
+              validation: (Rule) => Rule.min(0),
+            }),
           ],
           preview: {
             select: { at: 'at', outcome: 'outcome', statusAfter: 'statusAfter' },

@@ -3,6 +3,7 @@ import { LaunchIcon, LinkIcon } from '@sanity/icons'
 
 import { dateInputToIso, optionalSlug, refsFromIds, toDateInputValue } from '@/lib/marketing'
 import { linkItemStatusOptions, linkItemTypeOptions } from '../../schemas/marketingLinkItem'
+import { useConfirmDialog } from './ConfirmDialog'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports LinkTreeWorkspace only for JSX
@@ -19,6 +20,7 @@ import {
   emptyKeys,
   GuidanceChecklist,
   InputField,
+  isCalendarItemPublishReady,
   labelFor,
   MarketingAiAssistPanel,
   nextLinkOrder,
@@ -29,6 +31,7 @@ import {
   StatusPill,
   styles,
   trimDescription,
+  useMarketingUnsavedGuard,
   type AnalyticsInterpretation,
   type AutopilotCompletionPayload,
   type AutopilotWorkspaceTarget,
@@ -72,9 +75,12 @@ export function LinkTreeWorkspace({
   onAutopilotComplete,
 }: LinkTreeWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(data.linkItems[0]?._id || null)
+  const [editorDirty, setEditorDirty] = useState(false)
+  const { confirm, confirmDialog } = useConfirmDialog()
+  const { clearUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
   const selected = data.linkItems.find((item) => item._id === selectedId) || null
   const calendarCandidates = data.calendarItems.filter((item) => {
-    const url = item.publishedUrl || item.workingUrl
+    const url = item.publishedUrl
     if (!url) return false
     return !data.linkItems.some((link) => link.calendarItem?._id === item._id || normalizeUrl(link.url) === normalizeUrl(url))
   })
@@ -85,13 +91,37 @@ export function LinkTreeWorkspace({
 
   useEffect(() => {
     if (autopilotTarget?.view !== 'linkTree') return
+    if (editorDirty) return
     const targetItem = autopilotTarget.recordId
       ? data.linkItems.find((item) => item._id === autopilotTarget.recordId)
       : null
     if (targetItem || data.linkItems[0]) setSelectedId(targetItem?._id || data.linkItems[0]._id)
-  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.linkItems])
+  }, [autopilotTarget?.targetId, autopilotTarget?.recordId, autopilotTarget?.view, data.linkItems, editorDirty])
+
+  useEffect(() => {
+    if (editorDirty) markUnsavedChange('marketing-quick-link-editor', 'Quick Link draft')
+    else clearUnsavedChanges('marketing-quick-link-editor')
+  }, [clearUnsavedChanges, editorDirty, markUnsavedChange])
+
+  const confirmDiscardEdits = () =>
+    confirm({
+      title: 'Discard unsaved changes?',
+      message: `Discard unsaved changes to "${selected?.title || 'Untitled link'}"? Your edits will be lost.`,
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      tone: 'caution',
+    })
+
+  const selectLink = async (id: string) => {
+    if (id === selectedId) return
+    if (editorDirty && !(await confirmDiscardEdits())) return
+    if (editorDirty) clearUnsavedChanges('marketing-quick-link-editor')
+    setSelectedId(id)
+  }
 
   const createLink = async () => {
+    if (editorDirty && !(await confirmDiscardEdits())) return
+    if (editorDirty) clearUnsavedChanges('marketing-quick-link-editor')
     const createdId = await createDocument({
       _type: 'marketingLinkItem',
       title: '',
@@ -103,7 +133,9 @@ export function LinkTreeWorkspace({
   }
 
   const addFromCalendarItem = async (item: MarketingCalendarItem) => {
-    const url = item.publishedUrl || item.workingUrl
+    if (editorDirty && !(await confirmDiscardEdits())) return
+    if (editorDirty) clearUnsavedChanges('marketing-quick-link-editor')
+    const url = item.publishedUrl
     if (!url) return
 
     const createdId = await createDocument({
@@ -112,7 +144,7 @@ export function LinkTreeWorkspace({
       url,
       description: trimDescription(item.brief),
       type: calendarContentTypeToLinkType(item.contentType),
-      status: ['published', 'scheduled'].includes(item.status || '') ? 'active' : 'draft',
+      status: isCalendarItemPublishReady(item) ? 'active' : 'draft',
       sourceChannel: item.channelRef?.key || item.channel || 'instagram',
       order: nextLinkOrder(data.linkItems),
       publishAt: item.publishAt ? dateInputToIso(toDateInputValue(item.publishAt)) : undefined,
@@ -127,23 +159,16 @@ export function LinkTreeWorkspace({
   }
 
   const uploadCoverImage = async (file: File) => {
-    if (!selected) return
     const asset = await client.assets.upload('image', file, { filename: file.name })
-    await commitPatch(selected._id, {
-      image: {
-        _type: 'image',
-        asset: { _type: 'reference', _ref: asset._id },
-      },
-    })
-  }
-
-  const removeCoverImage = async () => {
-    if (!selected) return
-    await commitPatch(selected._id, {}, ['image'])
+    return {
+      _type: 'image' as const,
+      asset: { _id: asset._id, _ref: asset._id, url: asset.url },
+    }
   }
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
+      {confirmDialog}
       <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '430px minmax(0, 1fr)', gap: 16 }}>
         <section style={styles.panel}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
@@ -190,14 +215,14 @@ export function LinkTreeWorkspace({
         <LinkItemList
           items={data.linkItems}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          onSelect={(id) => void selectLink(id)}
         />
         <details style={{ ...styles.panel, boxShadow: 'none', padding: 12, marginTop: 14 }}>
           <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Create from calendar</summary>
           <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
             {calendarCandidates.length === 0 ? (
               <div style={{ ...styles.small, ...styles.muted }}>
-                Calendar items with working or published URLs will appear here when they are not already on /links.
+                Calendar items with public Published URLs will appear here when they are not already on /links.
               </div>
             ) : (
               calendarCandidates.slice(0, 5).map((item) => (
@@ -209,7 +234,7 @@ export function LinkTreeWorkspace({
                 >
                   <strong style={{ fontSize: 13 }}>{item.title || 'Untitled calendar item'}</strong>
                   <span style={{ ...styles.small, ...styles.muted }}>
-                    Create Quick Link from {[item.channelRef?.title || item.channel, item.publishedUrl ? 'published URL' : 'working URL'].filter(Boolean).join(' / ')}
+                    Create Quick Link from {[item.channelRef?.title || item.channel, 'published URL'].filter(Boolean).join(' / ')}
                   </span>
                 </button>
               ))
@@ -226,7 +251,7 @@ export function LinkTreeWorkspace({
           saving={savingId === selected?._id}
           onSave={commitPatch}
           onUploadCover={uploadCoverImage}
-          onRemoveCover={removeCoverImage}
+          onDirtyChange={setEditorDirty}
           onAutopilotComplete={onAutopilotComplete}
         />
       </div>
@@ -351,7 +376,7 @@ function LinkItemEditor({
   saving,
   onSave,
   onUploadCover,
-  onRemoveCover,
+  onDirtyChange,
   onAutopilotComplete,
 }: {
   item: MarketingLinkItem | null
@@ -360,20 +385,34 @@ function LinkItemEditor({
   analyticsTakeaways: AnalyticsInterpretation[]
   saving: boolean
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onUploadCover: (file: File) => Promise<void>
-  onRemoveCover: () => Promise<void>
+  onUploadCover: (file: File) => Promise<NonNullable<MarketingLinkItem['image']>>
+  onDirtyChange: (dirty: boolean) => void
   onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
 }) {
   const [draft, setDraft] = useState<MarketingLinkItem | null>(item)
   const [campaignId, setCampaignId] = useState('')
   const [calendarItemId, setCalendarItemId] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
     setDraft(item)
     setCampaignId(item?.campaign?._id || '')
     setCalendarItemId(item?.calendarItem?._id || '')
+    setSaveError('')
   }, [item])
+
+  const dirty = Boolean(
+    draft &&
+      item &&
+      (JSON.stringify(draft) !== JSON.stringify(item) ||
+        campaignId !== (item.campaign?._id || '') ||
+        calendarItemId !== (item.calendarItem?._id || '')),
+  )
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   if (!draft || !item) {
     return (
@@ -399,6 +438,24 @@ function LinkItemEditor({
   }
 
   const save = async () => {
+    setSaveError('')
+    let parsedUrl: URL
+    try {
+      parsedUrl = new URL(draft.url || '')
+    } catch {
+      setSaveError('Enter a complete public URL beginning with https:// or http://.')
+      return
+    }
+    if (!['https:', 'http:'].includes(parsedUrl.protocol)) {
+      setSaveError('Quick Links must use an https:// or http:// public URL.')
+      return
+    }
+    const publishDate = toDateInputValue(draft.publishAt)
+    const expiryDate = toDateInputValue(draft.expiresAt)
+    if (publishDate && expiryDate && expiryDate <= publishDate) {
+      setSaveError('The stop-showing date must be after the start-showing date.')
+      return
+    }
     const set: Record<string, unknown> = {
       title: draft.title || 'Untitled link',
       url: draft.url,
@@ -407,11 +464,18 @@ function LinkItemEditor({
       status: draft.status || 'active',
       featured: !!draft.featured,
       order: Number.isFinite(draft.order) ? draft.order : 100,
-      publishAt: draft.publishAt ? dateInputToIso(toDateInputValue(draft.publishAt)) : undefined,
-      expiresAt: draft.expiresAt ? dateInputToIso(toDateInputValue(draft.expiresAt)) : undefined,
+      publishAt: publishDate ? dateInputToIso(publishDate) : undefined,
+      expiresAt: expiryDate ? dateInputToIso(expiryDate) : undefined,
       sourceChannel: draft.sourceChannel,
     }
     const unset: string[] = []
+
+    const imageAssetId = draft.image?.asset?._ref || draft.image?.asset?._id
+    if (imageAssetId) {
+      set.image = { _type: 'image', asset: { _type: 'reference', _ref: imageAssetId } }
+    } else {
+      unset.push('image')
+    }
 
     if (campaignId) {
       set.campaign = { _type: 'reference', _ref: campaignId }
@@ -548,10 +612,14 @@ function LinkItemEditor({
                 const file = input.files?.[0]
                 if (!file) return
                 setUploading(true)
-                void onUploadCover(file).finally(() => {
-                  setUploading(false)
-                  input.value = ''
-                })
+                setSaveError('')
+                void onUploadCover(file)
+                  .then((image) => setDraft((current) => (current ? { ...current, image } : current)))
+                  .catch((error) => setSaveError(error instanceof Error ? error.message : 'Could not upload the cover image.'))
+                  .finally(() => {
+                    setUploading(false)
+                    input.value = ''
+                  })
               }}
             />
             {draft.image?.asset?.url && (
@@ -559,7 +627,7 @@ function LinkItemEditor({
                 type="button"
                 style={{ ...styles.button, width: '100%', marginTop: 8 }}
                 disabled={uploading || saving}
-                onClick={() => void onRemoveCover()}
+                onClick={() => setDraft({ ...draft, image: undefined })}
               >
                 Remove image
               </button>
@@ -626,6 +694,8 @@ function LinkItemEditor({
             />
           </InputField>
           <AdvancedFieldsDropdown type="marketingLinkItem" id={item._id} />
+          {dirty && <div style={{ ...styles.small, color: '#d6a93f', fontWeight: 700 }}>Unsaved changes</div>}
+          {saveError && <div role="alert" style={{ ...styles.small, color: '#E36216', fontWeight: 700 }}>{saveError}</div>}
           <button type="button" data-tour-id="autopilot-link-save" style={styles.primaryButton} disabled={saving || !draft.url?.trim()} onClick={() => void save()}>
             {saving ? 'Saving...' : 'Save link'}
           </button>

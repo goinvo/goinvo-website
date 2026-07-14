@@ -9,31 +9,59 @@
  */
 
 import { projectId } from '@/sanity/env'
+import { isOutreachWriterRole } from '@/lib/marketing/outreachEnums'
+import { readValidOutreachSessionCookie } from '@/lib/marketing/outreachSession'
+
+// Marketing routes operate with the server's Sanity write token after this
+// check. A valid Studio login alone is therefore not sufficient: passing a
+// Viewer or Contributor session through would silently elevate that member to
+// the service token's privileges. Keep this list deliberately narrower than
+// "every project member" and aligned with Sanity's write-capable built-in
+// project roles.
+type SanitySessionUser = {
+  id?: unknown
+  /** Current Sanity /users/me responses expose the project role here. */
+  role?: unknown
+  /** Also accept the richer current-user shape used by some Sanity clients. */
+  roles?: unknown
+}
 
 /** Thrown when a request does not present a valid marketing API key. */
 export class MarketingAuthError extends Error {
-  constructor(message = 'Unauthorized: invalid or missing marketing API key.') {
+  readonly status: number
+
+  constructor(message = 'Unauthorized: invalid or missing marketing credentials.', status = 401) {
     super(message)
     this.name = 'MarketingAuthError'
+    this.status = status
   }
 }
 
-/** Extracts the candidate key from the Authorization bearer or x-marketing-api-key header. */
-function readProvidedKey(req: Request): string | undefined {
+/** A real Studio member who is authenticated but cannot use write-token-backed operations. */
+export class MarketingPermissionError extends MarketingAuthError {
+  constructor(message = 'Forbidden: your Studio role cannot perform this marketing operation.') {
+    super(message, 403)
+    this.name = 'MarketingPermissionError'
+  }
+}
+
+/** Extract candidate keys without allowing one malformed header to hide another valid one. */
+function readProvidedKeys(req: Request): string[] {
+  const keys: string[] = []
   const authorization = req.headers.get('authorization')
   if (authorization) {
     const match = authorization.match(/^Bearer\s+(.+)$/i)
     const token = (match ? match[1] : authorization).trim()
-    if (token) return token
+    if (token) keys.push(token)
   }
 
   const headerKey = req.headers.get('x-marketing-api-key')
   if (headerKey) {
     const trimmed = headerKey.trim()
-    if (trimmed) return trimmed
+    if (trimmed) keys.push(trimmed)
   }
 
-  return undefined
+  return keys
 }
 
 /**
@@ -42,9 +70,9 @@ function readProvidedKey(req: Request): string | undefined {
  */
 export function assertMarketingApiKey(req: Request): void {
   const expected = process.env.MARKETING_API_KEY
-  const provided = readProvidedKey(req)
+  const provided = readProvidedKeys(req)
 
-  if (!expected || provided !== expected) {
+  if (!expected || !provided.includes(expected)) {
     throw new MarketingAuthError()
   }
 }
@@ -53,27 +81,52 @@ export function assertMarketingApiKey(req: Request): void {
 function hasValidApiKey(req: Request): boolean {
   const expected = process.env.MARKETING_API_KEY
   if (!expected) return false
-  return readProvidedKey(req) === expected
+  return readProvidedKeys(req).includes(expected)
 }
 
 /**
- * Validates a Sanity user session token against the project's users/me endpoint.
- * Returns true only when Sanity replies 200 with a user object (a real, logged-in
- * Studio user). Any network error, non-200, or empty token fails closed.
+ * Extract role names from both Sanity current-user response shapes. This is
+ * intentionally strict: malformed entries never become an authorization grant.
  */
-async function validateSanitySession(token: string): Promise<boolean> {
+function readSanityRoleNames(user: SanitySessionUser): string[] {
+  const names: string[] = []
+  if (typeof user.role === 'string') names.push(user.role)
+
+  if (Array.isArray(user.roles)) {
+    for (const entry of user.roles) {
+      if (typeof entry === 'string') names.push(entry)
+      else if (entry && typeof entry === 'object' && 'name' in entry) {
+        const name = (entry as { name?: unknown }).name
+        if (typeof name === 'string') names.push(name)
+      }
+    }
+  }
+
+  return names.map((name) => name.trim().toLowerCase()).filter(Boolean)
+}
+
+/**
+ * Validates a Sanity user session against the project's users/me endpoint.
+ * Authorization is intentionally handled by the calling guard: ordinary
+ * marketing reads accept any project member, while private write-token-backed
+ * Outreach operations additionally check the member's role.
+ */
+async function readSanitySessionUser(token: string): Promise<SanitySessionUser | null> {
   const trimmed = token.trim()
-  if (!trimmed || !projectId) return false
+  if (!trimmed || !projectId) return null
   try {
     const res = await fetch(`https://${projectId}.api.sanity.io/v2021-06-07/users/me`, {
       headers: { Authorization: `Bearer ${trimmed}` },
       cache: 'no-store',
     })
-    if (!res.ok) return false
-    const user = (await res.json()) as { id?: string } | null
-    return Boolean(user && typeof user === 'object' && user.id)
+    if (!res.ok) return null
+    const user = (await res.json()) as SanitySessionUser | null
+    if (!user || typeof user !== 'object' || typeof user.id !== 'string' || !user.id.trim()) {
+      return null
+    }
+    return user
   } catch {
-    return false
+    return null
   }
 }
 
@@ -88,7 +141,30 @@ export async function assertStudioOrApiKey(req: Request): Promise<void> {
   if (hasValidApiKey(req)) return
 
   const session = req.headers.get('x-sanity-session')
-  if (session && (await validateSanitySession(session))) return
+  if (session && (await readSanitySessionUser(session))) return
 
   throw new MarketingAuthError()
+}
+
+/**
+ * Guard for routes that continue with the server write token against private
+ * Outreach data. A valid Studio identity is required first, then a built-in
+ * write-capable role; insufficient roles receive a truthful 403.
+ */
+export async function assertStudioWriterOrApiKey(req: Request): Promise<void> {
+  if (hasValidApiKey(req)) return
+
+  // Cookie-mode Studio auth does not expose a bearer token to JavaScript. The
+  // short-lived cookie is issued only after the server consumes a one-time
+  // private-dataset proof and verifies its Sanity transaction author.
+  const cookieSession = readValidOutreachSessionCookie(req)
+  if (cookieSession && isOutreachWriterRole(cookieSession.role)) return
+
+  const session = req.headers.get('x-sanity-session')
+  if (!session) throw new MarketingAuthError()
+  const user = await readSanitySessionUser(session)
+  if (!user) throw new MarketingAuthError()
+  if (readSanityRoleNames(user).some(isOutreachWriterRole)) return
+
+  throw new MarketingPermissionError()
 }

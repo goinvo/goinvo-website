@@ -324,10 +324,8 @@ async function ga4PageViews(token: string, startDate: string, endDate: string): 
 
 // GA4 key-events (the configured "leads" — contact-form submits, RFP-CTA
 // clicks, etc.) by landing page, host-filtered to production. Returns BOTH the
-// per-page map and whether any key events came back at all: if the team hasn't
-// marked their CTAs as GA4 key events yet, every page reports 0 and the engine
-// must keep the demand-only score + flag keyEventsConfigured:false rather than
-// silently zeroing everyone's business value. Tries the `keyEvents` metric
+// per-page map and whether the report request succeeded. A successful report
+// with no events is valid zero activity, not a broken connection. Tries the `keyEvents` metric
 // (current GA4 name) and falls back to the legacy `conversions` metric, and the
 // `landingPagePlusQueryString` dimension with a `pagePath` fallback.
 async function ga4KeyEventsByPage(
@@ -363,17 +361,15 @@ async function ga4KeyEventsByPage(
           rows?: Array<{ dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }>
         }
         const map = new Map<string, number>()
-        let total = 0
         for (const row of data.rows || []) {
           const path = normalizePath(row.dimensionValues?.[0]?.value || '')
           const count = Number(row.metricValues?.[0]?.value || 0)
           if (!Number.isFinite(count) || count <= 0) continue
           map.set(path, (map.get(path) || 0) + count)
-          total += count
         }
-        // A successful call with zero key-events across the whole site means the
-        // metric exists but nothing is configured/firing — report not-configured.
-        return { map, configured: total > 0 }
+        // A successful report is usable even when the period contains zero
+        // events. Zero activity must not be presented as a broken connection.
+        return { map, configured: true }
       } catch {
         // network/parse error on this combo — try the next one
       }
@@ -921,6 +917,10 @@ export async function GET(request: Request) {
     throw error
   }
 
+  // The opportunities list is free to refresh. Keyword volume/difficulty uses
+  // one paid TextFocus batch credit and must be explicitly requested by the UI.
+  const includeKeywordMetrics = new URL(request.url).searchParams.get('enrich') === '1'
+
   const sa = getServiceAccount()
   if (!sa) {
     return privateMarketingJson({
@@ -1000,7 +1000,7 @@ export async function GET(request: Request) {
     }
     if (!keyEventsConfigured) {
       warnings.push(
-        'GA4 key-events not configured: mark the contact-form / RFP-CTA actions as GA4 key events to rank converting pages higher (business-value boost is off until then).',
+        'GA4 key-event reporting is unavailable: verify Analytics access and that the contact-form / RFP-CTA actions are marked as key events.',
       )
     }
 
@@ -1105,7 +1105,7 @@ export async function GET(request: Request) {
     // opportunities UNCHANGED (no volume/difficulty, original order). When it's
     // healthy, each covered opportunity gains { volume, difficulty, cpc } and a
     // modest difficulty re-rank (raw GSC demand stays the primary signal).
-    if (queries.length > 0) {
+    if (includeKeywordMetrics && queries.length > 0) {
       const batchTerms = queries.slice(0, KEYWORD_ENRICH_MAX).map((q) => q.query)
       if (queries.length > KEYWORD_ENRICH_MAX) {
         console.warn(

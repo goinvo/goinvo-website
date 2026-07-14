@@ -68,4 +68,17 @@ describe('compact marketing workspace layout containment', () => {
     expect(marketingTool).toContain('min-width: 24px !important;')
     expect(marketingTool).toContain('min-height: 24px !important;')
   })
+
+  it('uses responsive tracker, contact, and evidence cards instead of mobile spreadsheets', () => {
+    const source = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+
+    expect(source.match(/<div data-outreach-desktop-table="true"/g)).toHaveLength(3)
+    expect(source.match(/<div data-outreach-mobile-list="true"/g)).toHaveLength(3)
+    expect(source).toContain('[data-outreach-desktop-table="true"] { display: none !important; }')
+    expect(source).toContain('[data-outreach-mobile-list="true"] { display: grid !important; }')
+    expect(source).toContain('Outreach progress tracker')
+    expect(source).toContain('Recommended next')
+    expect(source).toContain('Search name, organization, owner, or email')
+    expect(source).toContain('Search project, client, technique, or outcome')
+  })
 })

@@ -1,7 +1,8 @@
 import { createClient, type SanityClient } from '@sanity/client'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { apiVersion, projectId, writeToken } from '@/sanity/env'
-import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
   generateClaudeText,
   isAnthropicConfigured,
@@ -11,7 +12,7 @@ import {
 import {
   buildContactCreateDoc,
   buildIntakePrompts,
-  contactDedupeKey,
+  contactIdentityKeys,
   DEFAULT_OFFERS,
   normalizeParsedContacts,
   offerDocId,
@@ -59,10 +60,10 @@ type RequestBody = {
  */
 export async function POST(request: NextRequest) {
   try {
-    await assertStudioOrApiKey(request)
+    await assertStudioWriterOrApiKey(request)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     throw error
   }
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
   const hasPreParsed = Array.isArray(body.contacts) && body.contacts.length > 0
 
   if (!text && !hasPreParsed) {
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: 'Provide `text` (the pasted contact list) or `contacts` (a previewed parse).' },
       { status: 400 },
     )
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
   // guard is cheap and deterministic. (The commit path re-validates a preview
   // and needs no model.)
   if (!hasPreParsed && !isAnthropicConfigured()) {
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: 'ANTHROPIC_API_KEY is not configured — outreach intake is disabled.' },
       { status: 503 },
     )
@@ -92,13 +93,21 @@ export async function POST(request: NextRequest) {
 
   const client = getOutreachClient()
   if (!client) {
-    return NextResponse.json({ error: 'Sanity write token is not configured.' }, { status: 500 })
+    return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
   }
 
-  const existing = await client.fetch<Array<{ name?: string; organization?: string }>>(
-    `*[_type == "marketingContact"]{ name, organization }`,
+  const existing = await client.fetch<
+    Array<{
+      name?: string
+      organization?: string
+      email?: string
+      phone?: string
+      linkedinUrl?: string
+    }>
+  >(
+    `*[_type == "marketingContact"]{ name, organization, email, phone, linkedinUrl }`,
   )
-  const existingKeys = new Set(existing.map((c) => contactDedupeKey(c.name, c.organization)))
+  const existingKeys = new Set(existing.flatMap((contact) => contactIdentityKeys(contact)))
 
   let contacts
   let modelUsed: string | undefined
@@ -120,14 +129,14 @@ export async function POST(request: NextRequest) {
   }
 
   if (contacts.length === 0) {
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: 'No contacts could be parsed from the text.', parsed: 0 },
       { status: 422 },
     )
   }
 
   if (dryRun) {
-    return NextResponse.json({
+    return privateMarketingJson({
       dryRun: true,
       parsed: contacts.length,
       duplicates: contacts.filter((c) => c.duplicate).length,
@@ -140,7 +149,7 @@ export async function POST(request: NextRequest) {
   const skipped: Array<{ name: string; reason: string }> = []
   for (const contact of contacts) {
     if (contact.duplicate) {
-      skipped.push({ name: contact.name, reason: 'duplicate (name + organization already exists)' })
+      skipped.push({ name: contact.name, reason: 'duplicate (matching identity already exists)' })
       continue
     }
     const doc = await client.create(buildContactCreateDoc(contact) as { _type: string })
@@ -173,7 +182,7 @@ export async function POST(request: NextRequest) {
     seededOffers = DEFAULT_OFFERS.length
   }
 
-  return NextResponse.json(
+  return privateMarketingJson(
     { parsed: contacts.length, created, skipped, seededOffers, model: modelUsed },
     { status: 201 },
   )

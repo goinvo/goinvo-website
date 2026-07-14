@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse as NextResponseType } from 'next/server'
 import {
   assertMarketingApiKey,
   buildCreatePayload,
@@ -11,6 +11,12 @@ import {
   type MarketingFields,
 } from '@/lib/marketing'
 import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+
+// Marketing documents can contain internal planning material, and Outreach
+// types contain PII. Preserve the familiar response call sites while making
+// every result explicitly private and non-cacheable.
+const NextResponse = { json: privateMarketingJson }
 
 // Outreach types (contacts, offers, work evidence) live in the PRIVATE
 // outreach dataset — contact PII must never land in the world-readable
@@ -44,7 +50,7 @@ type RouteContext = {
 async function guard(
   req: Request,
   context: RouteContext,
-): Promise<{ type: ManagedMarketingType } | { response: NextResponse }> {
+): Promise<{ type: ManagedMarketingType } | { response: NextResponseType }> {
   try {
     assertMarketingApiKey(req)
   } catch (error) {

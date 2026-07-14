@@ -286,11 +286,16 @@ export default defineType({
       ],
       validation: (Rule) =>
         Rule.custom((variants) => {
-          if (!Array.isArray(variants) || variants.length === 0) return true
-          return (variants as Array<{ key?: string }>).some((variant) => variant.key === 'control')
-            ? true
-            : 'Include a control variant so reports have a stable baseline.'
-        }).warning(),
+          if (!Array.isArray(variants) || variants.length !== 2) {
+            return 'A/B reports compare exactly two variants. Add one control and one treatment.'
+          }
+          const keys = (variants as Array<{ key?: string }>).map((variant) => variant.key?.trim()).filter(Boolean)
+          if (keys.length !== 2 || new Set(keys).size !== 2) return 'Give both variants a unique key.'
+          if (keys.filter((key) => key === 'control').length !== 1) {
+            return 'Use the key “control” for exactly one variant so reports have a stable baseline.'
+          }
+          return true
+        }),
     }),
     defineField({
       name: 'primaryMetric',

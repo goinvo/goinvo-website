@@ -24,11 +24,15 @@ import {
   CALL_PLAN_STATUSES,
   FOLLOW_UP_STATUSES,
   IDENTITY_CONFIDENCE_LEVELS,
+  isOutreachChannel,
   isOutreachSegment,
+  isOutreachStatus,
   isOutreachWarmth,
   OUTREACH_SEGMENT_OPTIONS,
+  type OutreachChannelOverride,
   WARMTH_RANK,
 } from './outreachEnums'
+import { BRAND_VOICE_SYSTEM_POLICY } from './brandVoice'
 
 // ---- Types -------------------------------------------------------------
 
@@ -51,11 +55,13 @@ export interface ParsedIntakeContact {
   owner?: string
   warmth?: string
   email?: string
+  phone?: string
   linkedinUrl?: string
   howWeKnow?: string
   sourceLine?: string
-  /** True when a contact with the same name+organization already exists. */
+  /** True when a strong identity or an unambiguous name+organization match repeats. */
   duplicate?: boolean
+  duplicateReason?: string
 }
 
 export interface OutreachOpportunity {
@@ -78,11 +84,13 @@ export interface RelevantEvidence {
 
 /** An offer DRAFT generated on-the-fly for one contact (human reviews/edits). */
 export interface ProposedOffer {
+  _key?: string
   title: string
   oneLiner?: string
   priceBand?: string
   rationale?: string
   evidenceIds?: string[]
+  chosen?: boolean
 }
 
 export interface ContactResearch {
@@ -106,6 +114,7 @@ export interface ContactResearch {
 /** The contact fields the research prompt + call plan need (GROQ projection). */
 export interface OutreachContact {
   _id: string
+  _rev?: string
   name?: string
   organization?: string
   role?: string
@@ -115,14 +124,37 @@ export interface OutreachContact {
   status?: string
   howWeKnow?: string
   sourceNotes?: string
+  linkedinUrl?: string
+  /** Optional reusable voice override; absent means the suite default. */
+  brandVoiceKey?: string
   feasibilityScore?: number | null
   suggestedOfferKey?: string
   callBrief?: string
   suggestedOpener?: string
   researchSummary?: string
   researchedAt?: string
+  researchReviewedAt?: string | null
+  /** Voice provenance for the generated opener/offer wording/call ask. */
+  researchBrandVoiceKey?: string
+  researchBrandVoiceName?: string
+  personVerified?: boolean
+  identityConfidence?: string
+  /** Human exceptions to auto channel advice; missing entries remain automatic. */
+  channelOverrides?: OutreachChannelOverride[]
+  relevantEvidence?: RelevantEvidence[]
+  proposedOffers?: ProposedOffer[]
   lastContactedAt?: string
   followUpAt?: string
+  /** Estimated opportunity value in `currency`, captured by a human. */
+  estimatedValue?: number
+  /** Actual closed value in `currency`; meaningful for won/lost outcomes. */
+  closedValue?: number
+  currency?: string
+  attributionChannel?: string
+  attributedOfferKey?: string
+  attributedEvidenceIds?: string[]
+  closedAt?: string
+  closeReason?: string
 }
 
 // ---- Work evidence (extracted from real case studies / shipped work) -----
@@ -135,6 +167,7 @@ export interface OutreachContact {
  */
 export interface WorkEvidence {
   _id?: string
+  _rev?: string
   sourceId?: string
   sourceType?: string
   title?: string
@@ -152,6 +185,8 @@ export interface WorkEvidence {
   highlights?: Array<{ _key?: string; metric?: string; detail?: string }>
   status?: string
   manuallyEdited?: boolean
+  editedAt?: string
+  editedBy?: string
   extractedAt?: string
   extractionModel?: string
 }
@@ -278,6 +313,7 @@ export function buildIntakePrompts(rawText: string): IntakePrompts {
           owner: 'the GoInvo person who knows them, if the text says so',
           warmth: 'hot|warm|cool|cold if implied',
           email: 'only if literally present',
+          phone: 'only if literally present',
           linkedinUrl: 'only if literally present',
           howWeKnow: 'shared history mentioned on the line',
           sourceLine: 'the raw line this came from, verbatim',
@@ -305,10 +341,66 @@ export function contactDedupeKey(name?: string, organization?: string): string {
   return `${norm(name)}::${norm(organization)}`
 }
 
+/** True only when a price band contains an actual currency amount, not a duration or vague rate-card copy. */
+export function hasPricedOffer(priceBand?: string): boolean {
+  const value = priceBand?.trim()
+  if (!value) return false
+  return /(?:[$€£]\s*\d|(?:USD|EUR|GBP|CAD|AUD)\s*\d|\d[\d,.]*\s*(?:USD|EUR|GBP|CAD|AUD))/i.test(value)
+}
+
+/** Normalize a user/model supplied web URL and reject executable or credential-bearing schemes. */
+export function normalizeOutreachUrl(
+  value?: string,
+  opts: { linkedinOnly?: boolean } = {},
+): string | undefined {
+  const trimmed = value?.trim()
+  if (!trimmed) return undefined
+  try {
+    const url = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`)
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return undefined
+    const host = url.hostname.toLowerCase()
+    if (opts.linkedinOnly && host !== 'linkedin.com' && !host.endsWith('.linkedin.com')) return undefined
+    return url.toString()
+  } catch {
+    return undefined
+  }
+}
+
+/** Stable identifiers used to recognize the same person across imports. */
+export function contactIdentityKeys(contact: {
+  name?: string
+  organization?: string
+  email?: string
+  phone?: string
+  linkedinUrl?: string
+}): string[] {
+  // Keep the long-standing name/organization key unprefixed for callers that
+  // already persist or construct it with contactDedupeKey().
+  const keys = [contactDedupeKey(contact.name, contact.organization)]
+  const email = contact.email?.trim().toLowerCase()
+  if (email) keys.push(`email:${email}`)
+
+  const phoneDigits = contact.phone?.replace(/\D/g, '')
+  if (phoneDigits && phoneDigits.length >= 7) keys.push(`phone:${phoneDigits}`)
+
+  const linkedIn = contact.linkedinUrl?.trim()
+  if (linkedIn) {
+    try {
+      const parsed = new URL(linkedIn.startsWith('http') ? linkedIn : `https://${linkedIn}`)
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '')
+      const path = parsed.pathname.toLowerCase().replace(/\/+$/, '')
+      keys.push(`linkedin:${host}${path}`)
+    } catch {
+      keys.push(`linkedin:${linkedIn.toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '')}`)
+    }
+  }
+  return keys
+}
+
 /**
  * Validate + clean the model's parsed contacts. Drops entries without a name,
  * rejects enum values outside the shared constants, and marks entries whose
- * name+organization already exists (`existingKeys` from contactDedupeKey).
+ * any stable identity already exists (`existingKeys` from contactIdentityKeys).
  */
 export function normalizeParsedContacts(
   parsed: unknown,
@@ -318,17 +410,30 @@ export function normalizeParsedContacts(
     ? ((parsed as { contacts: unknown[] }).contacts as Array<Record<string, unknown>>)
     : []
   const out: ParsedIntakeContact[] = []
-  const seenInBatch = new Set<string>()
+  const seenStrongInBatch = new Set<string>()
+  const seenWeakInBatch = new Set<string>()
   for (const raw of rawList) {
     if (!raw || typeof raw !== 'object') continue
     const name = cleanString(raw.name, 160)
     if (!name) continue
     const organization = cleanString(raw.organization, 200)
-    const key = contactDedupeKey(name, organization)
-    // A repeat within the same paste is silently collapsed; a match against an
-    // existing document is kept but flagged so the UI can skip or override.
-    if (seenInBatch.has(key)) continue
-    seenInBatch.add(key)
+    const email = cleanString(raw.email, 200)
+    const phone = cleanString(raw.phone, 80)
+    const linkedinUrl = normalizeOutreachUrl(cleanString(raw.linkedinUrl, 300), { linkedinOnly: true })
+    const identityKeys = contactIdentityKeys({ name, organization, email, phone, linkedinUrl })
+    const weakKey = identityKeys[0]
+    const strongKeys = identityKeys.slice(1)
+    // Strong identity wins over an ambiguous shared name. Keep every row in
+    // the preview so a person can recover mistakes; flag later matches rather
+    // than silently dropping them.
+    const existingDuplicate = strongKeys.length
+      ? strongKeys.some((key) => existingKeys.has(key))
+      : existingKeys.has(weakKey)
+    const batchDuplicate = strongKeys.length
+      ? strongKeys.some((key) => seenStrongInBatch.has(key))
+      : seenWeakInBatch.has(weakKey)
+    strongKeys.forEach((key) => seenStrongInBatch.add(key))
+    seenWeakInBatch.add(weakKey)
     const segment = cleanString(raw.segment, 40)
     const warmth = cleanString(raw.warmth, 20)
     out.push({
@@ -338,11 +443,17 @@ export function normalizeParsedContacts(
       segment: segment && isOutreachSegment(segment) ? segment : undefined,
       owner: cleanString(raw.owner, 100),
       warmth: warmth && isOutreachWarmth(warmth) ? warmth : undefined,
-      email: cleanString(raw.email, 200),
-      linkedinUrl: cleanString(raw.linkedinUrl, 300),
+      email,
+      phone,
+      linkedinUrl,
       howWeKnow: cleanString(raw.howWeKnow),
       sourceLine: cleanString(raw.sourceLine),
-      duplicate: existingKeys.has(key) || undefined,
+      duplicate: existingDuplicate || batchDuplicate || undefined,
+      duplicateReason: existingDuplicate
+        ? 'matches an existing contact identity'
+        : batchDuplicate
+          ? 'repeats an identity in this preview'
+          : undefined,
     })
   }
   return out
@@ -354,13 +465,17 @@ export function buildContactCreateDoc(contact: ParsedIntakeContact): Record<stri
     _type: 'marketingContact',
     name: contact.name,
     status: 'new',
-    warmth: contact.warmth || 'warm',
+    // Missing relationship evidence is materially different from a warm lead.
+    // A human can promote it after confirming how GoInvo knows the person.
+    warmth: contact.warmth || 'unknown',
+    currency: 'USD',
   }
   if (contact.organization) doc.organization = contact.organization
   if (contact.role) doc.role = contact.role
   if (contact.segment) doc.segment = contact.segment
   if (contact.owner) doc.owner = contact.owner
   if (contact.email) doc.email = contact.email
+  if (contact.phone) doc.phone = contact.phone
   if (contact.linkedinUrl) doc.linkedinUrl = contact.linkedinUrl
   if (contact.howWeKnow) doc.howWeKnow = contact.howWeKnow
   if (contact.sourceLine) doc.sourceNotes = contact.sourceLine
@@ -379,6 +494,25 @@ export interface WarmStartSuggestion {
 
 /** Self-references and non-org labels that should never become outreach suggestions. */
 const WARM_START_ORG_BLACKLIST = /^(goinvo|feature$)/i
+const WARM_START_GENERIC_ORG = /^(?:(?:federal|state|local)(?:\s*,\s*(?:state|local))*(?:\s*(?:,?\s*and|&)\s*(?:state|local))?\s+government|government|government agencies|healthcare|health systems?|hospitals?|providers?|payers?|pharma|life sciences?|clients?|customers?|partners?|confidential(?:\s+client)?|undisclosed(?:\s+client)?|(?:various|multiple|several|many)\s+(?:clients?|customers?|organizations?|agencies|health systems?))$/i
+const WARM_START_NON_PERSON_LABEL = /\b(?:goinvo|team|staff|everyone|contributors?|authors?|reviewers?|community|friends?|family|volunteers?)\b/i
+
+function isNonCallableOrganizationLabel(value: string): boolean {
+  // Clear multi-account labels are useful as source data, but cannot become a
+  // single callable account. Avoid guessing where ambiguous "and" belongs
+  // (for example, Johnson & Johnson remains a valid organization).
+  const looksCompound = /[;|]|\s\/\s|\s\+\s/.test(value) || (value.match(/,/g)?.length || 0) > 1
+  return WARM_START_GENERIC_ORG.test(value) || looksCompound
+}
+
+function isPlausibleWarmStartPerson(value: string): boolean {
+  if (WARM_START_NON_PERSON_LABEL.test(value) || /[,&/]|\b(?:and|or)\b/i.test(value)) return false
+  const tokens = value.split(/\s+/).filter(Boolean)
+  if (tokens.length < 2 || tokens.length > 6) return false
+  // Allow common lowercase surname particles while rejecting prose fragments.
+  const particles = new Set(['al', 'bin', 'da', 'de', 'del', 'der', 'di', 'dos', 'la', 'le', 'van', 'von'])
+  return tokens.every((token) => particles.has(token.toLowerCase()) || /^[\p{Lu}][\p{L}'’-]*$/u.test(token))
+}
 
 /**
  * Turn the site's own CMS data into pre-filled contact suggestions — the
@@ -401,10 +535,17 @@ export function buildWarmStartSuggestions(input: {
   caseStudyClients?: Array<{ client?: string | null; title?: string | null }>
   thankedPeople?: Array<{ text?: string | null; featureTitle?: string | null }>
   existingContacts?: Array<{ name?: string | null; organization?: string | null }>
+  /** Current GoInvo people to exclude from a lead list built from acknowledgements. */
+  teamMembers?: Array<{ name?: string | null }>
 }): WarmStartSuggestion[] {
   const norm = (value?: string | null) => (value || '').toLowerCase().replace(/\s+/g, ' ').trim()
   const existingNames = new Set<string>()
   const existingOrgs = new Set<string>()
+  const teamNames = new Set(
+    (input.teamMembers ?? [])
+      .map((member) => norm(member?.name))
+      .filter(Boolean),
+  )
   for (const contact of input.existingContacts ?? []) {
     const name = norm(contact?.name)
     const organization = norm(contact?.organization)
@@ -421,9 +562,9 @@ export function buildWarmStartSuggestions(input: {
     for (const rawLine of (entry?.text || '').split(/\n+/)) {
       const name = cleanString(rawLine, 120)
       // Skip empties and lines that read as prose rather than a name.
-      if (!name || name.length > 60 || /[.:;@]/.test(name)) continue
+      if (!name || name.length > 60 || /[.:;@]/.test(name) || !isPlausibleWarmStartPerson(name)) continue
       const key = norm(name)
-      if (seen.has(key) || existingNames.has(key)) continue
+      if (seen.has(key) || existingNames.has(key) || teamNames.has(key)) continue
       seen.add(key)
       out.push({
         name,
@@ -437,7 +578,7 @@ export function buildWarmStartSuggestions(input: {
   const orgTitles = new Map<string, { client: string; titles: string[] }>()
   for (const entry of input.caseStudyClients ?? []) {
     const client = cleanString(entry?.client, 160)
-    if (!client || WARM_START_ORG_BLACKLIST.test(client)) continue
+    if (!client || WARM_START_ORG_BLACKLIST.test(client) || isNonCallableOrganizationLabel(client)) continue
     const key = norm(client)
     const record = orgTitles.get(key) ?? { client, titles: [] }
     const title = cleanString(entry?.title, 200)
@@ -468,6 +609,15 @@ export function buildResearchPrompts(
   contact: OutreachContact,
   offers: OutreachOfferDef[],
   evidenceIndex: EvidenceIndexItem[] = [],
+  approvedBrandVoice: {
+    key: string
+    name: string
+    purpose: string | null
+    guidance: string | null
+    do: string[]
+    avoid: string[]
+    examples: string[]
+  } | null = null,
 ): IntakePrompts {
   const system = [
     'You are a business-development researcher for GoInvo, a 20-year healthcare-only design + engineering studio in Boston that ships production software in regulated environments (not slide decks).',
@@ -481,9 +631,14 @@ export function buildResearchPrompts(
     'Be honest: if the fit is weak or the org is frozen (e.g. lost federal funding), say so and score low. A low-confidence honest score is more valuable than optimistic filler.',
     'The feasibilityScore (0–100) means: how likely a well-aimed, specific approach from a named principal converts into a real conversation about paid work within a quarter. Consider budget existence, offer fit, relationship warmth, and timing.',
     'The callBrief is the one-pager the caller reads before dialing: 2–3 sentences of context on the person/org now, what to present (offer + price band + the evidence to show), the specific ask, and one intelligence question to ask regardless of outcome (e.g. "what actually got funded in your org this year?").',
-    'The suggestedOpener is a short, natural first message/voicemail in a quiet, confident register — no hype, no fear-selling, no "just checking in".',
+    approvedBrandVoice
+      ? BRAND_VOICE_SYSTEM_POLICY
+      : 'The suggestedOpener is a short, natural first message/voicemail in a quiet, confident register — no hype, no fear-selling, no "just checking in".',
+    approvedBrandVoice
+      ? 'OUTREACH VOICE SCOPE: apply approvedBrandVoice only to proposedOffers[].title, proposedOffers[].oneLiner, suggestedOpener, and the wording of the ask/intelligence question in callBrief. Keep the factual context in callBrief neutral. Never let voice change identity verification, researchSummary, opportunities, evidence matching, feasibility, sources, price bands, or offer rationale.'
+      : '',
     'Your FINAL message must be ONLY a JSON object matching the schema in the user message — no prose, no markdown fences.',
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 
   const user = JSON.stringify({
     task: 'Research this contact and produce an opportunity assessment + call brief.',
@@ -495,6 +650,7 @@ export function buildResearchPrompts(
       warmth: contact.warmth,
       howWeKnow: contact.howWeKnow,
       relationshipOwner: contact.owner,
+      publicLinkedInUrl: normalizeOutreachUrl(contact.linkedinUrl, { linkedinOnly: true }),
       notes: contact.sourceNotes,
     },
     offers: offers.map((o) => ({
@@ -506,6 +662,7 @@ export function buildResearchPrompts(
       proofPoints: o.proofPoints,
     })),
     workEvidence: evidenceIndex,
+    approvedBrandVoice,
     outputSchema: {
       personVerified: 'boolean — did you confidently identify THIS person?',
       identityConfidence: 'high | medium | low | none',
@@ -593,7 +750,7 @@ export function normalizeResearch(
   const sources: OutreachSource[] = (Array.isArray(raw.sources) ? raw.sources : [])
     .map((s) => {
       const item = (s && typeof s === 'object' ? s : {}) as Record<string, unknown>
-      const url = cleanString(item.url, 500)
+      const url = normalizeOutreachUrl(cleanString(item.url, 500))
       return url ? { title: cleanString(item.title, 300) || url, url } : null
     })
     .filter((s): s is OutreachSource => Boolean(s))
@@ -633,6 +790,10 @@ export function normalizeResearch(
     .slice(0, 3)
 
   const identityConfidence = cleanString(raw.identityConfidence, 20)
+  const normalizedIdentityConfidence =
+    identityConfidence && IDENTITY_CONFIDENCE_LEVELS.includes(identityConfidence)
+      ? identityConfidence
+      : undefined
 
   return {
     researchSummary: cleanString(raw.researchSummary, 4000) || '',
@@ -644,11 +805,9 @@ export function normalizeResearch(
     callBrief: cleanString(raw.callBrief, 4000),
     segment: segment && isOutreachSegment(segment) ? segment : undefined,
     sources,
-    personVerified: raw.personVerified === true,
-    identityConfidence:
-      identityConfidence && IDENTITY_CONFIDENCE_LEVELS.includes(identityConfidence)
-        ? identityConfidence
-        : undefined,
+    personVerified:
+      raw.personVerified === true && ['medium', 'high'].includes(normalizedIdentityConfidence || ''),
+    identityConfidence: normalizedIdentityConfidence,
     relevantEvidence,
     proposedOffers,
   }
@@ -657,15 +816,26 @@ export function normalizeResearch(
 export interface ResearchPatchOptions {
   model: string
   researchedAt: string
-  /** The contact's CURRENT status — only `new`/`researched` advance to `researched`. */
+  /** The contact's CURRENT status, used to preserve later pipeline outcomes. */
   currentStatus?: string
   /** Extra web_search citations to fall back to when the model returned none. */
   fallbackSources?: OutreachSource[]
+  /**
+   * Explicit destructive opt-in for replacing human-editable offer drafts.
+   * Initial research seeds drafts automatically; re-research preserves them.
+   */
+  replaceCuratedFields?: boolean
+  /** Applied voice provenance; profile contents remain in shared settings. */
+  brandVoice?: { key: string; name: string } | null
 }
 
 /**
- * Build the Sanity patch `set` for a completed research run. Never regresses a
- * contact that has already moved past `researched` in the pipeline.
+ * Build the Sanity patch `set` for a completed research run.
+ *
+ * AI output is review-gated: new and previously callable briefs become
+ * `needsReview`, while contacts already in an active/terminal relationship
+ * stage keep their current status. Re-research is non-destructive by default:
+ * human-edited/chosen `proposedOffers` and the identity `segment` are preserved.
  */
 export function buildResearchPatch(
   research: ContactResearch,
@@ -674,6 +844,8 @@ export function buildResearchPatch(
   const sources = research.sources.length ? research.sources : (opts.fallbackSources || []).slice(0, 10)
   const set: Record<string, unknown> = {
     researchedAt: opts.researchedAt,
+    // Any new AI output invalidates the approval timestamp for the prior brief.
+    researchReviewedAt: null,
     researchSummary: research.researchSummary,
     opportunities: research.opportunities.map((o, i) => ({
       _key: `opp-${i}`,
@@ -687,6 +859,8 @@ export function buildResearchPatch(
     suggestedOpener: research.suggestedOpener,
     callBrief: research.callBrief,
     researchModel: opts.model,
+    researchBrandVoiceKey: opts.brandVoice?.key || null,
+    researchBrandVoiceName: opts.brandVoice?.name || null,
     personVerified: research.personVerified,
     identityConfidence: research.identityConfidence,
     relevantEvidence: research.relevantEvidence.map((e, i) => ({
@@ -695,16 +869,6 @@ export function buildResearchPatch(
       evidenceId: e.evidenceId,
       title: e.title,
       why: e.why,
-    })),
-    proposedOffers: research.proposedOffers.map((o, i) => ({
-      _key: `po-${i}`,
-      _type: 'outreachProposedOffer',
-      title: o.title,
-      oneLiner: o.oneLiner,
-      priceBand: o.priceBand,
-      rationale: o.rationale,
-      evidenceIds: o.evidenceIds,
-      chosen: false,
     })),
     researchSources: sources.map((s, i) => ({
       _key: `src-${i}`,
@@ -716,33 +880,73 @@ export function buildResearchPatch(
   // A null score means "model failed to score" — keep any prior real score
   // rather than overwriting it with a fake zero.
   if (research.feasibilityScore !== null) set.feasibilityScore = research.feasibilityScore
-  if (research.segment) set.segment = research.segment
-  if (!opts.currentStatus || opts.currentStatus === 'new' || opts.currentStatus === 'researched') {
-    set.status = 'researched'
+  // Segment is an identity field a person may have corrected. Keep the AI's
+  // suggestion alongside the research instead of silently overwriting it.
+  if (research.segment) set.researchSuggestedSegment = research.segment
+
+  const initialResearch = !opts.currentStatus || opts.currentStatus === 'new'
+  if (initialResearch || opts.replaceCuratedFields) {
+    set.proposedOffers = research.proposedOffers.map((o, i) => ({
+      _key: `po-${i}`,
+      _type: 'outreachProposedOffer',
+      title: o.title,
+      oneLiner: o.oneLiner,
+      priceBand: o.priceBand,
+      rationale: o.rationale,
+      evidenceIds: o.evidenceIds,
+      chosen: false,
+    }))
+  }
+
+  // A changed AI brief must be approved again before appearing in the plan.
+  // Once outreach has actually started, research must not regress the pipeline.
+  if (
+    !opts.currentStatus ||
+    ['new', 'needsReview', 'researched', 'briefed'].includes(opts.currentStatus)
+  ) {
+    set.status = 'needsReview'
   }
   return set
 }
 
 /** One append-only interaction entry for the contact's call history. */
 export function buildInteractionEntry(entry: {
+  key?: string
   at: string
   by?: string
   outcome?: string
   intel?: string
   nextStep?: string
   statusAfter?: string
+  channel?: string
+  offerKey?: string
+  offerTitle?: string
+  evidenceIds?: string[]
+  value?: number
 }): Record<string, unknown> {
+  const evidenceIds = (entry.evidenceIds || [])
+    .map((id) => cleanString(id, 120))
+    .filter((id): id is string => Boolean(id))
+    .slice(0, 10)
   return {
-    _key: `int-${entry.at.replace(/[^0-9]/g, '').slice(0, 14)}-${Math.abs(
-      (entry.outcome || entry.statusAfter || '').length,
-    )}`,
+    _key:
+      cleanString(entry.key, 120) ||
+      `int-${entry.at.replace(/[^0-9]/g, '').slice(0, 17)}-${Math.random().toString(36).slice(2, 10)}`,
     _type: 'outreachInteraction',
     at: entry.at,
     by: entry.by,
     outcome: entry.outcome,
     intel: entry.intel,
     nextStep: entry.nextStep,
-    statusAfter: entry.statusAfter,
+    statusAfter:
+      entry.statusAfter && isOutreachStatus(entry.statusAfter) ? entry.statusAfter : undefined,
+    channel: entry.channel && isOutreachChannel(entry.channel) ? entry.channel : undefined,
+    offerKey: cleanString(entry.offerKey, 120),
+    offerTitle: cleanString(entry.offerTitle, 240),
+    evidenceIds,
+    value: typeof entry.value === 'number' && Number.isFinite(entry.value) && entry.value >= 0
+      ? entry.value
+      : undefined,
   }
 }
 
@@ -855,13 +1059,170 @@ export function buildEvidenceDoc(
 
 /**
  * The compact evidence index embedded in each research prompt — bounded so 40
- * projects cost ~2-3k tokens, not the full corpus.
+ * projects cost ~2-3k tokens, not the full corpus. Canonicalization and
+ * relevance ranking happen before the bound is applied.
  */
-export function compactEvidenceIndex(evidence: WorkEvidence[], opts: { max?: number } = {}): EvidenceIndexItem[] {
-  return evidence
-    .filter((e) => e._id && e.status !== 'excluded')
-    .slice(0, opts.max ?? 40)
-    .map((e) => ({
+function normalizedEvidenceSourceId(value?: string): string | undefined {
+  const normalized = value?.trim().toLowerCase().replace(/^drafts\./, '')
+  return normalized || undefined
+}
+
+function normalizedEvidenceSlug(value?: string): string | undefined {
+  if (!value) return undefined
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/\\/g, '/')
+    .split(/[?#]/, 1)[0]
+    .replace(/^\/+|\/+$/g, '')
+  return normalized || undefined
+}
+
+/** Normalize only HTTP(S) source URLs, treating protocol/trailing-slash variants as one page. */
+function normalizedEvidenceUrl(value?: string): string | undefined {
+  if (!value) return undefined
+  try {
+    const parsed = new URL(value.trim())
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined
+    if (
+      (parsed.protocol === 'http:' && parsed.port === '80') ||
+      (parsed.protocol === 'https:' && parsed.port === '443')
+    ) {
+      parsed.port = ''
+    }
+    parsed.protocol = 'https:'
+    parsed.username = ''
+    parsed.password = ''
+    parsed.hash = ''
+    parsed.search = ''
+    parsed.pathname = parsed.pathname.replace(/\/+$/g, '') || '/'
+    return parsed.toString()
+  } catch {
+    return undefined
+  }
+}
+
+function evidenceCanonicalKeys(item: WorkEvidence): string[] {
+  const keys: string[] = []
+  const sourceId = normalizedEvidenceSourceId(item.sourceId)
+  if (sourceId) keys.push(`source:${sourceId}`)
+  const slug = normalizedEvidenceSlug(item.slug)
+  if (slug) keys.push(`slug:${slug}`)
+  const url = normalizedEvidenceUrl(item.url)
+  if (url) keys.push(`url:${url}`)
+  return keys.length > 0 ? keys : [`id:${item._id as string}`]
+}
+
+function extractedAtMillis(value?: string): number {
+  if (!value) return Number.NEGATIVE_INFINITY
+  const millis = Date.parse(value)
+  return Number.isNaN(millis) ? Number.NEGATIVE_INFINITY : millis
+}
+
+function evidenceCanonicality(item: WorkEvidence): number {
+  const sourceId = item.sourceId?.trim()
+  if (!sourceId) return 1
+  return sourceId.startsWith('drafts.') ? 0 : 2
+}
+
+/** True when candidate should replace current as the canonical evidence record. */
+function preferEvidence(candidate: WorkEvidence, current: WorkEvidence): boolean {
+  if (Boolean(candidate.manuallyEdited) !== Boolean(current.manuallyEdited)) {
+    return Boolean(candidate.manuallyEdited)
+  }
+  const candidateCanonicality = evidenceCanonicality(candidate)
+  const currentCanonicality = evidenceCanonicality(current)
+  if (candidateCanonicality !== currentCanonicality) return candidateCanonicality > currentCanonicality
+  const candidateTime = extractedAtMillis(candidate.extractedAt)
+  const currentTime = extractedAtMillis(current.extractedAt)
+  if (candidateTime !== currentTime) return candidateTime > currentTime
+  return (candidate._id as string).localeCompare(current._id as string) < 0
+}
+
+function normalizedSearchText(value: string): string {
+  return value
+    .normalize('NFKD')
+    .toLowerCase()
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+function evidenceRelevanceScore(item: WorkEvidence, terms: string[]): number {
+  if (terms.length === 0) return 0
+  const fields = [
+    item.title,
+    item.client,
+    ...(item.segments || []),
+    ...(item.techniques || []),
+    ...(item.businessOutcomes || []),
+    ...(item.domainExpertise || []),
+    item.summary,
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map(normalizedSearchText)
+    .filter(Boolean)
+  const tokens = [...new Set(terms.flatMap((term) => term.split(' ')).filter(Boolean))]
+
+  return fields.reduce((score, field) => {
+    const paddedField = ` ${field} `
+    const fieldTokens = new Set(field.split(' '))
+    const phraseScore = terms.reduce(
+      (subtotal, term) => subtotal + (paddedField.includes(` ${term} `) ? 2 * term.split(' ').length : 0),
+      0,
+    )
+    const tokenScore = tokens.reduce((subtotal, token) => subtotal + (fieldTokens.has(token) ? 1 : 0), 0)
+    return score + phraseScore + tokenScore
+  }, 0)
+}
+
+export function compactEvidenceIndex(
+  evidence: WorkEvidence[],
+  opts: { max?: number; terms?: string[] } = {},
+): EvidenceIndexItem[] {
+  type EvidenceGroup = { item: WorkEvidence; keys: Set<string> }
+  const groups = new Set<EvidenceGroup>()
+  const groupByKey = new Map<string, EvidenceGroup>()
+  for (const item of evidence) {
+    if (!item._id || item.status === 'excluded') continue
+    const keys = evidenceCanonicalKeys(item)
+    const matchingGroups = [
+      ...new Set(keys.map((key) => groupByKey.get(key)).filter(Boolean)),
+    ] as EvidenceGroup[]
+    if (matchingGroups.length === 0) {
+      const group = { item, keys: new Set(keys) }
+      groups.add(group)
+      for (const key of keys) groupByKey.set(key, group)
+      continue
+    }
+
+    const target = matchingGroups[0]
+    for (const group of matchingGroups.slice(1)) {
+      if (preferEvidence(group.item, target.item)) target.item = group.item
+      for (const key of group.keys) target.keys.add(key)
+      groups.delete(group)
+    }
+    if (preferEvidence(item, target.item)) target.item = item
+    for (const key of keys) target.keys.add(key)
+    for (const key of target.keys) groupByKey.set(key, target)
+  }
+
+  const terms = [...new Set((opts.terms || []).map(normalizedSearchText).filter(Boolean))]
+  const requestedMax = opts.max ?? 40
+  const max = Number.isFinite(requestedMax) ? Math.max(0, Math.floor(requestedMax)) : 40
+
+  return [...groups]
+    .map((group) => group.item)
+    .map((item) => ({ item, score: evidenceRelevanceScore(item, terms) }))
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        normalizedSearchText(a.item.title || '').localeCompare(normalizedSearchText(b.item.title || '')) ||
+        normalizedSearchText(a.item.client || '').localeCompare(normalizedSearchText(b.item.client || '')) ||
+        (a.item._id as string).localeCompare(b.item._id as string),
+    )
+    .slice(0, max)
+    .map(({ item: e }) => ({
       id: e._id as string,
       title: e.title,
       client: e.client,
@@ -877,6 +1238,8 @@ export function compactEvidenceIndex(evidence: WorkEvidence[], opts: { max?: num
 
 export interface CallPlanOptions {
   limit?: number
+  /** Optional surface-specific readiness check, such as confirming a priced offer. */
+  isReady?: (contact: OutreachContact) => boolean
 }
 
 /**
@@ -888,17 +1251,29 @@ export interface CallPlanOptions {
  */
 export function rankCallPlan(contacts: OutreachContact[], opts: CallPlanOptions = {}): OutreachContact[] {
   const limit = opts.limit ?? 10
-  const warmthRank = (c: OutreachContact) => WARMTH_RANK[c.warmth || ''] ?? 4
+  const warmthRank = (c: OutreachContact) => WARMTH_RANK[c.warmth || ''] ?? 5
   return contacts
-    .filter((c) => CALL_PLAN_STATUSES.includes(c.status || ''))
+    .filter(
+      (c) =>
+        CALL_PLAN_STATUSES.includes(c.status || '') &&
+        Boolean(c.researchReviewedAt) &&
+        c.personVerified === true &&
+        ['medium', 'high'].includes(c.identityConfidence || '') &&
+        Boolean(c.warmth && c.warmth !== 'unknown') &&
+        Boolean(c.owner || c.howWeKnow) &&
+        Boolean(c.callBrief && c.callBrief.trim().length >= 40) &&
+        (c.relevantEvidence || []).length > 0 &&
+        (opts.isReady ? opts.isReady(c) : true),
+    )
     .sort((a, b) => warmthRank(a) - warmthRank(b) || (b.feasibilityScore ?? -1) - (a.feasibilityScore ?? -1))
     .slice(0, limit)
 }
 
 /**
  * Contacts whose follow-up is due within `withinDays` (or overdue) — the strip
- * that keeps contacted/responded/meeting/dormant people from vanishing forever
- * once they leave the first-call plan. `now` injected for testability.
+ * that keeps contacted/responded/meeting/opportunity/dormant people from
+ * vanishing forever once they leave the first-call plan. `now` is injected for
+ * testability; terminal won/lost/closed contacts never resurface here.
  */
 export function dueFollowUps(
   contacts: OutreachContact[],

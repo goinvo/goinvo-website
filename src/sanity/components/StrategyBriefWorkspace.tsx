@@ -163,7 +163,9 @@ export function StrategyBriefWorkspace() {
 
       <div style={{ ...s.callout, marginBottom: 18 }}>
         Captured {BRIEF_DATE} from a 6-agent research + synthesis workflow. This is a <strong>recommendation, not yet
-        adopted</strong> — read it as the argued-for direction, not settled house style.
+        adopted</strong> — read it as the argued-for direction, not settled house style. The static claims below do
+        not retain per-claim source links or verification status in this brief; treat the figures as historical
+        research notes and verify them in Research, Evidence, or SEO before external use.
       </div>
 
       {/* --- A. Positioning --- */}
@@ -410,13 +412,21 @@ function AiCitationLatest({ data, loading }: { data: AiCitationData | null; load
 
   const snapshots = data.snapshots || []
   // Prefer the most recent snapshot that actually ran.
-  const latest = snapshots.find((snap) => !snap.unavailable && (snap.answeredCount ?? 0) > 0) || snapshots[0]
-  if (!latest) return fallback('No AI-citation run yet — run the check in the SEO view to capture the first snapshot.')
-  if (latest.unavailable || (latest.answeredCount ?? 0) === 0)
-    return fallback(`The latest run (${fmtDate(latest.runDate)}) didn’t complete — check back after the next run.`)
+  const newest = snapshots[0]
+  const latest = snapshots.find((snap) => !snap.unavailable && (snap.answeredCount ?? 0) > 0)
+  if (!newest) return fallback('No AI-citation run yet — run the check in the SEO view to capture the first snapshot.')
+  if (!latest)
+    return fallback(`The latest run (${fmtDate(newest.runDate)}) didn’t complete — check back after the next run.`)
+  const showingOlderSuccessfulRun = latest !== newest
 
   return (
     <Fragment>
+      {showingOlderSuccessfulRun && (
+        <div style={s.warn}>
+          The newest run ({fmtDate(newest.runDate)}) did not complete. These figures are from the most recent
+          successful run ({fmtDate(latest.runDate)}), not the latest attempt.
+        </div>
+      )}
       <div
         style={{
           display: 'flex',
@@ -446,7 +456,7 @@ function AiCitationLatest({ data, loading }: { data: AiCitationData | null; load
             Answered <strong style={{ color: 'var(--card-fg-color)' }}>{latest.answeredCount ?? 0}</strong> of{' '}
             {latest.promptCount ?? 0} prompts
           </div>
-          <div style={{ marginTop: 2 }}>Latest run {fmtDate(latest.runDate)}</div>
+          <div style={{ marginTop: 2 }}>Most recent successful run {fmtDate(latest.runDate)}</div>
         </div>
       </div>
 

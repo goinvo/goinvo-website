@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 import {
-  assertStudioOrApiKey,
+  assertStudioWriterOrApiKey,
   connectionStatus,
   getMarketingWriteClient,
+  isQStashConfigured,
   MarketingAuthError,
 } from '@/lib/marketing'
 
 // GET /api/marketing/publish/status — connection + queue visibility for the
 // social auto-publishing pipeline. Readable by a server caller with
-// MARKETING_API_KEY OR a logged-in Studio user (x-sanity-session), so the
-// Studio connection indicator can show "connected / not connected / N due".
+// MARKETING_API_KEY OR a write-capable Studio session (token or the short-lived
+// cookie fallback), so the connection indicator works in either Studio mode.
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,10 +27,10 @@ const DUE_COUNT_QUERY = `count(*[
 
 export async function GET(req: Request) {
   try {
-    await assertStudioOrApiKey(req)
+    await assertStudioWriterOrApiKey(req)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return NextResponse.json({ error: error.message }, { status: error.status })
     }
     throw error
   }
@@ -47,5 +48,13 @@ export async function GET(req: Request) {
     dueCount = null
   }
 
-  return NextResponse.json({ platforms, dueCount })
+  return NextResponse.json({
+    platforms,
+    dueCount,
+    queueConfigured: isQStashConfigured(),
+    callbackAuthConfigured: Boolean((process.env.MARKETING_API_KEY || '').trim()),
+    // A Sanity webhook is configured outside this application, so this endpoint
+    // deliberately does not claim the save-to-schedule trigger is operational.
+    triggerVerificationRequired: true,
+  })
 }

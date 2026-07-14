@@ -21,6 +21,16 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { SanityClient } from '@sanity/client'
 
+export const MARKETING_ALLOWED_CLAUDE_MODELS = [
+  'claude-opus-4-8',
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5',
+] as const
+
+export function isAllowedMarketingModel(value: unknown): value is (typeof MARKETING_ALLOWED_CLAUDE_MODELS)[number] {
+  return typeof value === 'string' && (MARKETING_ALLOWED_CLAUDE_MODELS as readonly string[]).includes(value)
+}
+
 export function isAnthropicConfigured(): boolean {
   return Boolean(process.env.ANTHROPIC_API_KEY)
 }
@@ -33,10 +43,10 @@ export async function resolveMarketingModel(
   client: Pick<SanityClient, 'fetch'>,
   override?: string,
 ): Promise<string> {
-  if (override) return override
+  if (isAllowedMarketingModel(override)) return override
   try {
     const chosen = await client.fetch<string | null>(`*[_id == "marketingSettings"][0].aiModel`)
-    if (chosen) return chosen
+    if (isAllowedMarketingModel(chosen)) return chosen
   } catch {
     // Settings unreadable → fall back to env/default.
   }
@@ -47,7 +57,9 @@ export async function resolveMarketingModel(
 // quality); set MARKETING_CLAUDE_MODEL (e.g. claude-sonnet-4-6 for ~3x cheaper)
 // to change it everywhere.
 export function marketingClaudeModel(override?: string): string {
-  return override || process.env.MARKETING_CLAUDE_MODEL || 'claude-opus-4-8'
+  if (isAllowedMarketingModel(override)) return override
+  if (isAllowedMarketingModel(process.env.MARKETING_CLAUDE_MODEL)) return process.env.MARKETING_CLAUDE_MODEL
+  return 'claude-opus-4-8'
 }
 
 export interface GenerateClaudeOptions {

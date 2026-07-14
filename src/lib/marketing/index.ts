@@ -28,6 +28,8 @@ export {
   monthLabel,
   toDateInputValue,
   dateInputToIso,
+  toDateTimeInputValue,
+  dateTimeInputToIso,
 } from './dates'
 
 // Pure free-text inference helpers (ported verbatim).
@@ -58,7 +60,7 @@ export type {
 export { getMarketingWriteClient } from './client'
 
 // API authentication.
-export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey } from './auth'
+export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey, assertStudioWriterOrApiKey } from './auth'
 
 // Channel seeding (DEFAULT_CHANNELS + ensureMarketingChannel).
 export { DEFAULT_CHANNELS, ensureMarketingChannel } from './seed'
@@ -132,6 +134,9 @@ export {
   buildIntakePrompts,
   normalizeParsedContacts,
   contactDedupeKey,
+  contactIdentityKeys,
+  hasPricedOffer,
+  normalizeOutreachUrl,
   buildContactCreateDoc,
   buildResearchPrompts,
   normalizeResearch,
@@ -160,6 +165,42 @@ export type {
   EvidenceSource,
   EvidenceIndexItem,
 } from './outreach'
+
+// Deterministic outreach queue, workflow progress, and channel advice.
+export {
+  OUTREACH_PROGRESS_CHANNELS,
+  buildOutreachProgress,
+  isUsableOutreachEmail,
+  isUsableOutreachPhone,
+} from './outreachProgress'
+export type {
+  OutreachProgressChannel,
+  OutreachProgressInteraction,
+  OutreachProgressContact,
+  OutreachProgressUrgency,
+  OutreachDueState,
+  OutreachProgressAction,
+  OutreachProgressRepairTarget,
+  OutreachChannelAvailability,
+  OutreachChannelRecommendation,
+  OutreachProgressRow,
+  OutreachProgressSummary,
+  BuildOutreachProgressOptions,
+} from './outreachProgress'
+
+// Reusable, publish-safe voice profiles for outward-facing marketing copy.
+export {
+  BRAND_VOICE_SYSTEM_POLICY,
+  brandVoicePromptContext,
+  brandVoiceResponseContext,
+  normalizeMarketingBrandVoice,
+  normalizeMarketingBrandVoices,
+  prepareMarketingBrandVoices,
+  resolveBrandVoiceFromProfiles,
+  resolveMarketingBrandVoice,
+  validateMarketingBrandVoices,
+} from './brandVoice'
+export type { MarketingBrandVoice, ResolvedMarketingBrandVoice } from './brandVoice'
 
 // Financial posture — runway bins that pick the marketing strategy (set by
 // humans in Settings, read by the plan panel + the assist/strategist AI).

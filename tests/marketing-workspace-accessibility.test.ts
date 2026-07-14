@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { saveMarketingAiModelChange } from '@/sanity/components/marketing/MarketingAiModelSetting'
 import { requestMarketingAssist } from '@/sanity/components/marketing/marketingAssistRequest'
-import { Select } from '@/sanity/tools/marketingTool'
+import { GuidanceChecklist, Select } from '@/sanity/tools/marketingTool'
 
 const originalProjectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID
 const originalWindow = globalThis.window
@@ -190,6 +190,66 @@ describe('workspace accessible names', () => {
     expect(seo).toContain('aria-label="Page audit URL"')
     expect(seo).toContain('aria-label="Citation check URL"')
     expect(outreach).toContain('aria-label="Contacts to add"')
+    expect(outreach).toContain("aria-label={`Suggested opener for ${contact.name || 'contact'}`}")
+    expect(outreach).toContain("aria-label={`Call brief for ${contact.name || 'contact'}`}")
+  })
+
+  it('makes the outreach progress tracker understandable and operable without color', () => {
+    const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+
+    expect(outreach).toContain('<caption style=')
+    expect(outreach).toContain('scope="col"')
+    expect(outreach).toContain('scope="row"')
+    expect(outreach).toContain('Recommended next')
+    expect(outreach).toContain('aria-label="Recommended next outreach"')
+    expect(outreach).toContain('aria-label={`Channel options for ${row.name}`}')
+    expect(outreach).toContain('aria-label={`Edit contact info for ${row.name}`}')
+    expect(outreach).toContain('aria-label={`Change modality for ${row.name}`}')
+    expect(outreach).toContain('aria-label={`Copy opener for ${row.name}`}')
+    expect(outreach).toContain('<strong>Do this:</strong> {row.nextStep}')
+    expect(outreach).toContain('aria-label={`${option?.title || draft.channel} recommendation rule')
+    expect(outreach).toContain('Nothing is sent automatically')
+  })
+
+  it('supports direct follow-up scheduling and prefilled email review', () => {
+    const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+
+    expect(outreach).toContain("row.repairTarget === 'followUpSchedule'")
+    expect(outreach).toContain('data-outreach-contact-field="followUpAt"')
+    expect(outreach).toContain('data-outreach-contact-field="nextStep"')
+    expect(outreach).toContain('subject=${encodeURIComponent(subject)}')
+    expect(outreach).toContain('body=${encodeURIComponent(body)}')
+    expect(outreach).toContain("if (reopenedTerminal) unset.push('closedAt', 'closedValue', 'closeReason')")
+    expect(outreach).toContain('Show completed contacts')
+  })
+
+  it('routes channel-rule blockers to a labelled, focused channel editor', () => {
+    const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+
+    expect(outreach).toContain("else if (row.editFields.includes('channelOverrides')) startChannelOptions(contact)")
+    expect(outreach).toContain('ref={channelOptionsEditorRef}')
+    expect(outreach).toContain('aria-labelledby="outreach-channel-options-heading"')
+    expect(outreach).toContain('Only one channel can be Preferred; choosing another returns the previous one to Auto.')
+    expect(outreach).toContain('panel.focus({ preventScroll: true })')
+  })
+
+  it('labels and focuses revealed tracker brief and interaction-log regions', () => {
+    const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+
+    expect(outreach).toContain('ref={trackerDetailRef}')
+    expect(outreach).toContain('aria-labelledby="outreach-tracker-detail-heading"')
+    expect(outreach).toContain('ref={logPanelRef}')
+    expect(outreach).toContain('aria-labelledby="outreach-log-panel-heading"')
+    expect(outreach.match(/tabIndex=\{-1\}/g)).toHaveLength(3)
+  })
+
+  it('discloses saved channel rules in the modality badge and explanation', () => {
+    const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+
+    expect(outreach).toContain("function trackerChannelRuleSummary(row: OutreachProgressRow): string")
+    expect(outreach).toContain("'Channel rules applied'")
+    expect(outreach).toContain("'Channel rules block outreach'")
+    expect(outreach).toContain('<strong>Saved channel rules:</strong> {channelRuleSummary}')
   })
 
   it('keeps the SEO ideas table horizontally reachable on compact screens', () => {
@@ -220,5 +280,45 @@ describe('workspace accessible names', () => {
 
     expect(source).toContain('<h2 style=')
     expect(source).not.toContain('<h3 style=')
+  })
+
+  it('keeps the financial-posture Settings section at heading level two', () => {
+    const source = readFileSync('src/sanity/components/marketing/MarketingFinancialPostureSetting.tsx', 'utf8')
+
+    expect(source).toContain('<h2 style=')
+    expect(source).not.toContain('<h3 style=')
+  })
+
+  it('gives the brand voice library explicit names and save feedback', () => {
+    const source = readFileSync('src/sanity/components/marketing/MarketingBrandVoiceSetting.tsx', 'utf8')
+
+    expect(source).toContain('<h2 style=')
+    expect(source).toContain('aria-label={`Voice name ${index + 1}`}')
+    expect(source).toContain('aria-label={`Best used for ${voice.name || `voice ${index + 1}`}`}')
+    expect(source).toContain('aria-label={`Status for ${voice.name || `voice ${index + 1}`}`}')
+    expect(source).toContain('aria-label={`Voice guidance for ${voice.name || `voice ${index + 1}`}`}')
+    expect(source).toContain('aria-label={`Do rules for ${voice.name || `voice ${index + 1}`}`}')
+    expect(source).toContain('aria-label={`Avoid rules for ${voice.name || `voice ${index + 1}`}`}')
+    expect(source).toContain('aria-label={`Representative snippets for ${voice.name || `voice ${index + 1}`}`}')
+    expect(source).toContain('name="marketing-default-brand-voice"')
+    expect(source).toContain('{notice && <div role="status"')
+    expect(source).toContain('{error && <div role="alert"')
+  })
+
+  it('communicates checklist completion with text as well as color', () => {
+    const html = renderToStaticMarkup(
+      createElement(GuidanceChecklist, {
+        title: 'Publish checks',
+        items: [
+          { label: 'Public URL added', done: true },
+          { label: 'Analytics connected', done: false },
+        ],
+      }),
+    )
+
+    expect(html).toContain('aria-label="Publish checks: 1 of 2 complete"')
+    expect(html).toContain('role="list"')
+    expect(html).toContain('Done:')
+    expect(html).toContain('To do:')
   })
 })

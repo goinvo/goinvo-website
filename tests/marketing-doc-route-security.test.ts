@@ -106,6 +106,28 @@ describe('managed marketing document item boundary', () => {
       context('marketingContact', 'contact-1'),
     )
     expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(mocks.withConfig).toHaveBeenCalledWith({ dataset: OUTREACH_DATASET })
+  })
+
+  it('keeps channel-override patches with contact PII in the private dataset', async () => {
+    mocks.fetch.mockResolvedValueOnce({ _id: 'contact-1' })
+    const response = await PATCH(
+      new Request('https://www.goinvo.com/api/marketing/doc/marketingContact/contact-1', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          set: {
+            channelOverrides: [
+              { channel: 'email', state: 'unresponsive', note: 'No reply after two attempts.' },
+            ],
+          },
+        }),
+      }),
+      context('marketingContact', 'contact-1'),
+    )
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
     expect(mocks.withConfig).toHaveBeenCalledWith({ dataset: OUTREACH_DATASET })
   })
 })

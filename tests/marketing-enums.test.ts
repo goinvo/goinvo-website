@@ -3,7 +3,11 @@ import { buildCreatePayload, buildPatchPayload, MarketingValidationError } from 
 
 describe('marketing calendar enum enforcement (crud)', () => {
   it('accepts an in-set status on create', () => {
-    const doc = buildCreatePayload('marketingCalendarItem', { title: 'Test', status: 'scheduled' })
+    const doc = buildCreatePayload('marketingCalendarItem', {
+      title: 'Test',
+      status: 'scheduled',
+      publishAt: '2026-07-14T16:00:00.000Z',
+    })
     expect(doc.status).toBe('scheduled')
   })
 

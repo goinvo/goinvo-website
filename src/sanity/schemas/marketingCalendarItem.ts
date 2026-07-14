@@ -35,7 +35,13 @@ export default defineType({
   // worker would otherwise just skip it with no signal to the editor. Only a
   // directly-set channel string is judged; a managed channelRef can't be
   // dereferenced during validation.
-  validation: (Rule) =>
+  validation: (Rule) => [
+    Rule.custom((doc) => {
+      const d = doc as { status?: string; publishAt?: string } | undefined
+      return d?.status !== 'scheduled' || Boolean(d.publishAt)
+        ? true
+        : 'Scheduled items require a publish date and time.'
+    }).error(),
     Rule.custom((doc) => {
       const d = doc as { autoPublish?: boolean; channel?: unknown; channelRef?: unknown } | undefined
       if (!d?.autoPublish || d.channelRef) return true
@@ -43,6 +49,7 @@ export default defineType({
       if (!channel || isSocialChannelKey(channel)) return true
       return 'Auto-publish only posts to LinkedIn or Instagram — this channel will be skipped. Change the channel or turn off Auto-publish.'
     }).warning(),
+  ],
   fields: [
     defineField({
       name: 'title',
@@ -69,7 +76,7 @@ export default defineType({
     }),
     defineField({
       name: 'publishAt',
-      title: 'Publish date',
+      title: 'Publish date and time',
       type: 'datetime',
       group: 'planning',
       description: 'When this post should go live.',
@@ -249,7 +256,7 @@ export default defineType({
       type: 'array',
       group: 'content',
       description:
-        'Links to show on the public /links page. They appear there automatically once this post is published.',
+        'Quick Links related to this item. Each link must have its own Active status and public URL before it appears on /links.',
       of: [{ type: 'reference', to: [{ type: 'marketingLinkItem' }] }],
     }),
     defineField({
@@ -405,7 +412,7 @@ export default defineType({
       group: 'publishing',
       initialValue: false,
       description:
-        'When on, this post is published to its social channel at the scheduled time (needs status "Scheduled" and a past Publish date). Off by default — scheduling alone never posts.',
+        'When on, a Scheduled LinkedIn or Instagram item can publish at its date and time. This also requires publishing credentials, the queue and callback key, and the external Sanity scheduling webhook. Off by default — scheduling alone never posts.',
     }),
     defineField({
       name: 'publishState',

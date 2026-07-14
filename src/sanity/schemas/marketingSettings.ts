@@ -28,7 +28,100 @@ export default defineType({
       type: 'string',
       options: { list: MARKETING_AI_MODEL_OPTIONS, layout: 'radio' },
       initialValue: 'claude-opus-4-8',
+      validation: (rule) => rule.custom((value) =>
+        !value || MARKETING_AI_MODEL_OPTIONS.some((option) => option.value === value)
+          ? true
+          : 'Choose one of the approved marketing-suite models.',
+      ),
+    }),
+    defineField({
+      name: 'brandVoices',
+      title: 'Brand voices',
+      description:
+        'Reusable writing styles for outward-facing marketing copy. Keep client names, private facts, and unapproved claims out of voice profiles because this settings document lives in the public production dataset.',
+      type: 'array',
+      validation: (rule) => rule.max(20),
+      of: [
+        {
+          type: 'object',
+          name: 'marketingBrandVoice',
+          title: 'Brand voice',
+          fields: [
+            defineField({
+              name: 'name',
+              title: 'Name',
+              type: 'string',
+              validation: (rule) => rule.required().max(80),
+            }),
+            defineField({
+              name: 'purpose',
+              title: 'Best used for',
+              description: 'For example: principal outreach, public essays, or product announcements.',
+              type: 'string',
+              validation: (rule) => rule.max(280),
+            }),
+            defineField({
+              name: 'guidance',
+              title: 'Voice guidance',
+              description: 'Describe the cadence, point of view, level of formality, and personality in plain language.',
+              type: 'text',
+              rows: 5,
+              validation: (rule) => rule.max(2400),
+            }),
+            defineField({
+              name: 'do',
+              title: 'Do',
+              type: 'array',
+              of: [{ type: 'string' }],
+              validation: (rule) => rule.max(12),
+            }),
+            defineField({
+              name: 'avoid',
+              title: 'Avoid',
+              type: 'array',
+              of: [{ type: 'string' }],
+              validation: (rule) => rule.max(12),
+            }),
+            defineField({
+              name: 'examples',
+              title: 'Representative snippets',
+              description:
+                'Up to 6 short, diverse snippets that demonstrate different voice principles. Prefer range over near-duplicates; examples never override factual evidence.',
+              type: 'array',
+              of: [{ type: 'string' }],
+              validation: (rule) => rule.max(6),
+            }),
+            defineField({
+              name: 'status',
+              title: 'Status',
+              type: 'string',
+              options: {
+                list: [
+                  { title: 'Active', value: 'active' },
+                  { title: 'Archived', value: 'archived' },
+                ],
+                layout: 'radio',
+              },
+              initialValue: 'active',
+            }),
+            defineField({
+              name: 'isDefault',
+              title: 'Default voice',
+              description: 'The Marketing Suite uses one active default unless a workflow selects another voice.',
+              type: 'boolean',
+              initialValue: false,
+            }),
+          ],
+          preview: {
+            select: { title: 'name', purpose: 'purpose', status: 'status', isDefault: 'isDefault' },
+            prepare: ({ title, purpose, status, isDefault }) => ({
+              title: title || 'Untitled voice',
+              subtitle: `${isDefault ? 'Default · ' : ''}${status === 'archived' ? 'Archived' : purpose || 'Active'}`,
+            }),
+          },
+        },
+      ],
     }),
   ],
-  preview: { prepare: () => ({ title: 'Marketing Settings', subtitle: 'AI model + suite preferences' }) },
+  preview: { prepare: () => ({ title: 'Marketing Settings', subtitle: 'Brand voices + AI model + suite preferences' }) },
 })

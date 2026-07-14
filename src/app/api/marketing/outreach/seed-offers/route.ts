@@ -1,9 +1,10 @@
 import { createClient, type SanityClient } from '@sanity/client'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { apiVersion, projectId, writeToken } from '@/sanity/env'
-import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { DEFAULT_OFFERS, offerDocId } from '@/lib/marketing/outreach'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,17 +30,17 @@ function getOutreachClient() {
  */
 export async function POST(request: NextRequest) {
   try {
-    await assertStudioOrApiKey(request)
+    await assertStudioWriterOrApiKey(request)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     throw error
   }
 
   const client = getOutreachClient()
   if (!client) {
-    return NextResponse.json({ error: 'Sanity write token is not configured.' }, { status: 500 })
+    return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
   }
 
   const results = await Promise.all(
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     }),
   )
 
-  return NextResponse.json({
+  return privateMarketingJson({
     created: results.filter((r) => r.created).map((r) => r.key),
     existing: results.filter((r) => !r.created).map((r) => r.key),
   })

@@ -129,6 +129,7 @@ export async function upsertDrainSignalForFlag(
     : undefined
   const doc = buildDrainPerformanceSignalDoc({
     signalId,
+    experimentId: experiment._id,
     experimentTitle: experiment.title,
     flagKey,
     pageUrl,

@@ -41,6 +41,7 @@ import {
   toDateInputValue,
   uniqueById,
 } from '@/lib/marketing'
+import type { FinancialPostureId } from '@/lib/marketing/financialPosture'
 import type {
   AbTestingComparisonResult,
   AbTestingComparisonScoreboard,
@@ -318,10 +319,10 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
   {
     id: 'settings',
     title: 'Settings',
-    description: 'Channels, publishing defaults, and the AI model.',
+    description: 'Brand voices, channels, publishing defaults, and the AI model.',
     icon: TagIcon,
     landingView: 'channels',
-    tabs: [{ view: 'channels', label: 'Channels' }],
+    tabs: [{ view: 'channels', label: 'Preferences & channels' }],
   },
 ]
 
@@ -926,17 +927,9 @@ export const inspirationActionOptions: SelectOption[] = [
 ]
 
 export function getStrategyResearchResults(data: MarketingData) {
-  const preferred = data.researchResults.filter((result) => isResearchResultApproved(result) || result.selectedForSynthesis)
-  const pool = preferred.length > 0 ? preferred : data.researchResults
-  const rank = (result: MarketingResearchResult) => {
-    if (isResearchResultApproved(result)) return 0
-    if (result.selectedForSynthesis) return 1
-    if (result.status === 'reviewed') return 2
-    return 3
-  }
   const seen = new Set<string>()
-  return [...pool]
-    .sort((a, b) => rank(a) - rank(b))
+  return data.researchResults
+    .filter(isResearchResultApproved)
     .filter((result) => {
       if (!result._id || seen.has(result._id)) return false
       seen.add(result._id)
@@ -1193,9 +1186,10 @@ export function getPostLinkedLinks(item: MarketingCalendarItem, linkItems: Marke
 }
 
 export function isCalendarItemPublishReady(item: MarketingCalendarItem) {
-  if (!['scheduled', 'published'].includes(item.status || '')) return false
-  if (!item.publishAt) return true
-  return new Date(item.publishAt).getTime() <= Date.now()
+  if (item.status === 'published') return true
+  if (item.status !== 'scheduled' || !item.publishAt) return false
+  const publishAt = new Date(item.publishAt).getTime()
+  return Number.isFinite(publishAt) && publishAt <= Date.now()
 }
 
 export function getAbTestingStats(data: MarketingData) {
@@ -1238,7 +1232,7 @@ export function buildAbTestingInsights(data: MarketingData): AbTestingInsight[] 
   )
   const pageTests = activeTests.filter(isPageExperiment)
   const runningTests = pageTests.filter((experiment) => getAbTestingDisplayStatus(experiment) === 'running')
-  const connectedSources = data.analyticsSources.filter((source) => source.status !== 'disabled' && isConnectedAnalyticsSource(source))
+  const connectedSources = data.analyticsSources.filter(isUsableConnectedAnalyticsSource)
 
   if (data.experiments.length === 0) {
     insights.push({
@@ -1272,7 +1266,8 @@ export function buildAbTestingInsights(data: MarketingData): AbTestingInsight[] 
     })
   }
 
-  const missingAnalyticsSource = pageTests.filter((experiment) => !experiment.analyticsSource?._id)
+  const usableSourceIds = new Set(connectedSources.map((source) => source._id))
+  const missingAnalyticsSource = pageTests.filter((experiment) => !usableSourceIds.has(experiment.analyticsSource?._id || ''))
   if (missingAnalyticsSource.length > 0) {
     insights.push({
       id: 'abtest-missing-analytics-source',
@@ -1489,10 +1484,12 @@ function buildAbTestingDataInsights(data: MarketingData, pageTests: MarketingExp
 
 function getExperimentPerformanceSignals(experiment: MarketingExperiment, data: MarketingData) {
   const fullSignalsById = new Map(data.performanceSignals.map((signal) => [signal._id, signal]))
-  return uniqueById((experiment.performanceSignals || []).filter(Boolean)).map((signal) => ({
-    ...signal,
-    ...(fullSignalsById.get(signal._id) || {}),
-  }))
+  return uniqueById((experiment.performanceSignals || []).filter(Boolean))
+    .map((signal) => ({
+      ...signal,
+      ...(fullSignalsById.get(signal._id) || {}),
+    }))
+    .filter((signal) => isAbTestingSignalInMeasurementWindow(experiment, signal))
 }
 
 function collectAbTestingMetricEvidence(experiment: MarketingExperiment, signals: MarketingPerformanceSignal[]): AbTestingMetricEvidence[] {
@@ -1716,7 +1713,7 @@ function getAbTestingUnderpoweredMetrics(experiment: MarketingExperiment): strin
 }
 
 export function getAbTestingComparativeResults(experiment: MarketingExperiment, limit = 4): AbTestingComparisonResult[] {
-  const signals = uniqueById((experiment.performanceSignals || []).filter(Boolean))
+  const signals = getExperimentScopedSignals(experiment)
   const trackedMetrics = getAbTestingComparableMetrics(experiment)
   const controlLabel = getAbTestingControlVariantLabel(experiment)
   const variantLabel = getAbTestingTreatmentVariantLabel(experiment)
@@ -1745,6 +1742,19 @@ export function getAbTestingComparativeResults(experiment: MarketingExperiment, 
     const counts = getAbTestingMetricVariantCounts(experiment, trackedMetric)
     // Control has no events for this metric → no baseline to compare against, so
     // there is no winner to call (a "+∞%" lift off a zero baseline is not meaningful).
+    if (counts.control === 0 && counts.variant === 0) {
+      return {
+        key,
+        metricLabel,
+        metricRole,
+        winnerLabel: 'No events yet',
+        detail: `${controlLabel} and ${variantLabel} both have zero events in this measurement window.`,
+        status: 'needsComparison',
+        changeValue: null,
+        score: 0,
+      }
+    }
+
     if (counts.control === 0) {
       return {
         key,
@@ -1803,7 +1813,7 @@ export function getAbTestingComparativeResults(experiment: MarketingExperiment, 
     const lowerIsBetter = isAbTestingDecreaseCondition(condition) || isAbTestingNotIncreaseCondition(condition)
     const variantWins = lowerIsBetter ? changeValue < 0 : changeValue > 0
     const status: AbTestingComparisonStatus = variantWins ? 'variant' : 'control'
-    const winnerLabel = variantWins ? `${variantLabel} leading` : `${controlLabel} leading`
+    const winnerLabel = variantWins ? `Early direction: ${variantLabel}` : `Early direction: ${controlLabel}`
     const movement = formatAbTestingComparisonChange(match.metric.change, changeValue)
     const position = changeValue > 0 ? 'above' : 'below'
 
@@ -1812,9 +1822,9 @@ export function getAbTestingComparativeResults(experiment: MarketingExperiment, 
       metricLabel,
       metricRole,
       winnerLabel,
-      detail: variantWins
+      detail: `${variantWins
         ? `${variantLabel} is ${movement} ${position} ${controlLabel}.`
-        : `${variantLabel} is ${movement} ${position} ${controlLabel}, which favors ${controlLabel} for this rule.`,
+        : `${variantLabel} is ${movement} ${position} ${controlLabel}, which favors ${controlLabel} for this rule.`} Directional only; this is not a statistical-significance calculation.`,
       status,
       changeValue,
       score: Math.min(100, Math.max(14, Math.abs(changeValue))),
@@ -2065,7 +2075,7 @@ function getAbTestingTreatmentVariantLabel(experiment: MarketingExperiment) {
 
 export function getAbTestingVariantPairLabel(experiment: MarketingExperiment) {
   const labels = getAbTestingVariantOptions(experiment).map((variant) => variant.label)
-  if (labels.length >= 2) return labels.slice(0, 3).join(' vs ')
+  if (labels.length >= 2) return labels.slice(0, 2).join(' vs ')
   return `${getAbTestingControlVariantLabel(experiment)} vs ${getAbTestingTreatmentVariantLabel(experiment)}`
 }
 
@@ -2086,7 +2096,7 @@ export function getAbTestingVariantOptions(experiment: MarketingExperiment): AbT
 }
 
 function getAbTestingSignalMetricRecords(experiment: MarketingExperiment): AbTestingSignalMetricRecord[] {
-  return uniqueById((experiment.performanceSignals || []).filter(Boolean)).flatMap((signal) =>
+  return getExperimentScopedSignals(experiment).flatMap((signal) =>
     (signal.metrics || []).map((metric) => ({ signal, metric })),
   )
 }
@@ -2520,7 +2530,17 @@ function isPageExperiment(experiment: MarketingExperiment) {
 }
 
 export function experimentHasControlVariant(experiment: MarketingExperiment) {
-  return (experiment.variants || []).some((variant) => variant.key === 'control')
+  return getAbTestingVariantValidationError(experiment) === null
+}
+
+/** The current readout is intentionally a two-arm A/B comparison. */
+export function getAbTestingVariantValidationError(experiment: MarketingExperiment): string | null {
+  const variants = experiment.variants || []
+  if (variants.length !== 2) return 'Use exactly two variants: one control and one treatment.'
+  const keys = variants.map((variant) => variant.key?.trim()).filter((key): key is string => Boolean(key))
+  if (keys.length !== 2 || new Set(keys).size !== 2) return 'Give both variants a unique key.'
+  if (keys.filter((key) => key === 'control').length !== 1) return 'Use the key “control” for exactly one variant.'
+  return null
 }
 
 export function experimentHasTrackedMetric(experiment: MarketingExperiment) {
@@ -2534,7 +2554,32 @@ export function experimentHasSuccessTracker(experiment: MarketingExperiment) {
 }
 
 export function experimentSignalIds(experiment: MarketingExperiment) {
-  return (experiment.performanceSignals || []).filter(Boolean).map((signal) => signal._id).filter(Boolean)
+  return getExperimentScopedSignals(experiment).map((signal) => signal._id).filter(Boolean)
+}
+
+function signalMeasurementTimestamp(signal: MarketingPerformanceSignal) {
+  const value = signal.periodEnd || signal.metricDate || signal._updatedAt || signal.periodStart
+  if (!value) return null
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T23:59:59.999Z` : value
+  const timestamp = new Date(normalized).getTime()
+  return Number.isFinite(timestamp) ? timestamp : null
+}
+
+export function isAbTestingSignalInMeasurementWindow(
+  experiment: MarketingExperiment,
+  signal: MarketingPerformanceSignal,
+) {
+  if (signal.experiment?._id !== experiment._id) return false
+  if (!experiment.measurementStart) return true
+  const windowStart = new Date(experiment.measurementStart).getTime()
+  const signalTimestamp = signalMeasurementTimestamp(signal)
+  return Number.isFinite(windowStart) && signalTimestamp !== null && signalTimestamp >= windowStart
+}
+
+export function getExperimentScopedSignals(experiment: MarketingExperiment) {
+  return uniqueById((experiment.performanceSignals || []).filter(Boolean)).filter((signal) =>
+    isAbTestingSignalInMeasurementWindow(experiment, signal),
+  )
 }
 
 export function marketingExperimentTitle(experiment: MarketingExperiment) {
@@ -2559,7 +2604,7 @@ export function normalizeMarketingExperimentPath(path?: string) {
 export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInterpretation[] {
   const insights: AnalyticsInterpretation[] = []
   const activeSources = data.analyticsSources.filter((source) => source.status !== 'disabled')
-  const connectedSources = activeSources.filter(isConnectedAnalyticsSource)
+  const connectedSources = activeSources.filter(isUsableConnectedAnalyticsSource)
   const activeCampaigns = data.campaigns.filter(isCampaignMeasurable)
   const activeFunnels = data.funnels.filter(isFunnelMeasurable)
   const activeChannels = data.channels.filter((channel) => channel.status !== 'archived')
@@ -2586,7 +2631,7 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
     })
   }
 
-  const campaignsMissingMeasurement = activeCampaigns.filter((campaign) => !campaignHasAnalytics(campaign))
+  const campaignsMissingMeasurement = activeCampaigns.filter((campaign) => !campaignHasUsableAnalytics(campaign, data.analyticsSources))
   if (campaignsMissingMeasurement.length > 0) {
     insights.push({
       id: 'campaign-measurement-gap',
@@ -2612,7 +2657,9 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
     })
   }
 
-  const calendarMissingMeasurement = measurableCalendarItems.filter((item) => !item.analyticsSource?._id)
+  const calendarMissingMeasurement = measurableCalendarItems.filter((item) =>
+    !hasUsableAnalyticsRefs(item.analyticsSource ? [item.analyticsSource] : [], data.analyticsSources),
+  )
   if (calendarMissingMeasurement.length > 0) {
     insights.push({
       id: 'calendar-measurement-gap',
@@ -2624,7 +2671,7 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
     })
   }
 
-  const funnelsMissingMeasurement = activeFunnels.filter((funnel) => !hasAnalyticsRefs(funnel.analyticsSources))
+  const funnelsMissingMeasurement = activeFunnels.filter((funnel) => !hasUsableAnalyticsRefs(funnel.analyticsSources, data.analyticsSources))
   if (funnelsMissingMeasurement.length > 0) {
     insights.push({
       id: 'funnel-measurement-gap',
@@ -2650,7 +2697,7 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
     })
   }
 
-  const channelsMissingMeasurement = activeChannels.filter((channel) => !hasAnalyticsRefs(channel.analyticsSources))
+  const channelsMissingMeasurement = activeChannels.filter((channel) => !hasUsableAnalyticsRefs(channel.analyticsSources, data.analyticsSources))
   if (channelsMissingMeasurement.length > 0) {
     insights.push({
       id: 'channel-measurement-gap',
@@ -2714,7 +2761,7 @@ export function buildAnalyticsInterpretations(data: MarketingData): AnalyticsInt
 
 export function getAnalyticsReadinessStats(data: MarketingData) {
   const activeSources = data.analyticsSources.filter((source) => source.status !== 'disabled')
-  const connectedSources = activeSources.filter(isConnectedAnalyticsSource)
+  const connectedSources = activeSources.filter(isUsableConnectedAnalyticsSource)
   const activeCampaigns = data.campaigns.filter(isCampaignMeasurable)
   const activeFunnels = data.funnels.filter(isFunnelMeasurable)
   const activeChannels = data.channels.filter((channel) => channel.status !== 'archived')
@@ -2723,10 +2770,10 @@ export function getAnalyticsReadinessStats(data: MarketingData) {
   const totalMeasurementTargets =
     activeCampaigns.length + activeFunnels.length + activeChannels.length + measurableCalendarItems.length + activeLinks.length
   const connectedMeasurementTargets =
-    activeCampaigns.filter(campaignHasAnalytics).length +
-    activeFunnels.filter((funnel) => hasAnalyticsRefs(funnel.analyticsSources)).length +
-    activeChannels.filter((channel) => hasAnalyticsRefs(channel.analyticsSources)).length +
-    measurableCalendarItems.filter((item) => !!item.analyticsSource?._id).length +
+    activeCampaigns.filter((campaign) => campaignHasUsableAnalytics(campaign, data.analyticsSources)).length +
+    activeFunnels.filter((funnel) => hasUsableAnalyticsRefs(funnel.analyticsSources, data.analyticsSources)).length +
+    activeChannels.filter((channel) => hasUsableAnalyticsRefs(channel.analyticsSources, data.analyticsSources)).length +
+    measurableCalendarItems.filter((item) => hasUsableAnalyticsRefs(item.analyticsSource ? [item.analyticsSource] : [], data.analyticsSources)).length +
     activeLinks.filter((link) => !!link.campaign?._id || !!link.calendarItem?._id || (link.calendarItems || []).length > 0).length
   const readinessScore = totalMeasurementTargets > 0 ? Math.round((connectedMeasurementTargets / totalMeasurementTargets) * 100) : connectedSources.length > 0 ? 100 : 0
 
@@ -2743,7 +2790,8 @@ export function getAnalyticsReadinessStats(data: MarketingData) {
 function getMarketingDashboardStats(data: MarketingData) {
   const now = new Date()
   const today = startOfDayValue(now)
-  const next30 = addDays(today, 30)
+  // Inclusive date windows need 0..29, not 0..30 (which silently reports 31 dates).
+  const next30 = addDays(today, 29)
   const upcomingItems = data.calendarItems
     .filter((item) => {
       if (!item.publishAt || ['published', 'canceled'].includes(item.status || '')) return false
@@ -2752,19 +2800,34 @@ function getMarketingDashboardStats(data: MarketingData) {
       return startOfDayValue(publishDate).getTime() >= today.getTime()
     })
     .sort((first, second) => new Date(first.publishAt || '').getTime() - new Date(second.publishAt || '').getTime())
-  const upcoming30Items = upcomingItems.filter((item) => {
+  // Ideas and drafting placeholders are useful in the list, but they are not a
+  // publishable runway. Only review/scheduled work can support readiness claims.
+  const executionReadyItems = upcomingItems.filter((item) => ['review', 'scheduled'].includes(item.status || ''))
+  const upcoming30Items = executionReadyItems.filter((item) => {
     const publishDate = new Date(item.publishAt || '')
     return startOfDayValue(publishDate).getTime() <= next30.getTime()
   })
   const scheduledDays = Array.from(new Set(upcoming30Items.map((item) => toDateInputValue(item.publishAt)).filter(Boolean)))
-  const lastUpcomingDate = upcomingItems[upcomingItems.length - 1]?.publishAt
+  const continuousReadyItems: MarketingCalendarItem[] = []
+  for (const item of executionReadyItems) {
+    const itemDate = startOfDayValue(new Date(item.publishAt || ''))
+    const previousDate = continuousReadyItems.length > 0
+      ? startOfDayValue(new Date(continuousReadyItems[continuousReadyItems.length - 1].publishAt || ''))
+      : today
+    const gapDays = Math.round((itemDate.getTime() - previousDate.getTime()) / (24 * 60 * 60 * 1000))
+    // One execution-ready item per week counts as continuous coverage; a later
+    // orphan item must not make Home claim the intervening empty weeks are covered.
+    if (gapDays > 7) break
+    continuousReadyItems.push(item)
+  }
+  const lastUpcomingDate = continuousReadyItems[continuousReadyItems.length - 1]?.publishAt
   const lastDate = lastUpcomingDate ? startOfDayValue(new Date(lastUpcomingDate)) : null
   const contentRunwayDays = lastDate
-    ? Math.max(1, Math.ceil((lastDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)) + 1)
+    ? Math.max(1, Math.round((lastDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)) + 1)
     : 0
   const activeCampaigns = data.campaigns.filter((campaign) => ['planned', 'active'].includes(campaign.status || ''))
   const campaignsWithUpcomingContent = activeCampaigns.filter((campaign) =>
-    upcomingItems.some((item) => item.campaign?._id === campaign._id),
+    executionReadyItems.some((item) => item.campaign?._id === campaign._id),
   ).length
   const channelCoverage = data.channels
     .filter((channel) => channel.status !== 'archived')
@@ -2784,6 +2847,7 @@ function getMarketingDashboardStats(data: MarketingData) {
 
   return {
     upcomingItems,
+    executionReadyItems,
     upcoming30Items,
     coveredDaysNext30: scheduledDays.length,
     contentRunwayDays,
@@ -2794,27 +2858,42 @@ function getMarketingDashboardStats(data: MarketingData) {
   }
 }
 
-function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[] {
+function getMarketingDashboardGaps(
+  data: MarketingData,
+  financialPostureId: FinancialPostureId = 'stable',
+): MarketingDashboardGap[] {
   const stats = getMarketingDashboardStats(data)
   const gaps: MarketingDashboardGap[] = []
   const missingStrategy = getMissingFoundationalStrategyInputs(data)
+  const fastRevenuePosture = financialPostureId === 'survival' || financialPostureId === 'rebuild'
+
+  if (fastRevenuePosture) {
+    gaps.push({
+      id: 'dashboard-direct-outreach-priority',
+      title: 'Work the next warm outreach follow-up first',
+      why: `${financialPostureId === 'survival' ? 'Survival' : 'Rebuild'} posture means near-term revenue outranks content production. Outreach progress is stored privately, so Home does not guess which contact is due.`,
+      action: 'Open Outreach. Its private progress tracker will rank the next contact and recommend email, call, or another available channel.',
+      view: 'outreach',
+      severity: 'urgent',
+    })
+  }
 
   if (missingStrategy.length > 0) {
-    const hasResearchItems = data.researchResults.length > 0
+    const hasTrustedResearch = data.researchResults.some(isResearchResultApproved)
     gaps.push({
       id: 'dashboard-strategy-foundation-gap',
       title: 'Some setup questions are unanswered',
       why: `The assistant still needs reusable answers for ${missingStrategy.join(', ')}, so designers may have to guess while making content.`,
-      action: hasResearchItems
+      action: hasTrustedResearch
         ? 'Open Strategy and answer the missing questions from trusted research.'
         : 'Open Research first, gather useful evidence, then answer the missing Strategy questions from that evidence.',
-      view: hasResearchItems ? 'strategy' : 'research',
+      view: hasTrustedResearch ? 'strategy' : 'research',
       severity: 'setup',
       affected: missingStrategy,
     })
   }
 
-  if (stats.upcomingItems.length === 0) {
+  if (!fastRevenuePosture && stats.executionReadyItems.length === 0) {
     gaps.push({
       id: 'dashboard-no-upcoming-content',
       title: 'No upcoming content is planned',
@@ -2823,7 +2902,7 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
       view: 'calendar',
       severity: 'urgent',
     })
-  } else if (stats.contentRunwayDays < 14) {
+  } else if (!fastRevenuePosture && stats.contentRunwayDays < 14) {
     gaps.push({
       id: 'dashboard-short-runway',
       title: 'There are fewer than two weeks of content ahead',
@@ -2834,7 +2913,7 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
     })
   }
 
-  if (stats.upcoming30Items.length > 0 && stats.coveredDaysNext30 < 4) {
+  if (!fastRevenuePosture && stats.contentRunwayDays >= 14 && stats.upcoming30Items.length > 0 && stats.coveredDaysNext30 < 4) {
     gaps.push({
       id: 'dashboard-thin-cadence',
       title: 'The next 30 days look too quiet',
@@ -2845,7 +2924,12 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
     })
   }
 
-  if (stats.activeCampaigns > 0 && stats.campaignsWithUpcomingContent < stats.activeCampaigns) {
+  if (
+    !fastRevenuePosture &&
+    stats.executionReadyItems.length > 0 &&
+    stats.activeCampaigns > 0 &&
+    stats.campaignsWithUpcomingContent < stats.activeCampaigns
+  ) {
     gaps.push({
       id: 'dashboard-campaign-runway-gap',
       title: `${stats.activeCampaigns - stats.campaignsWithUpcomingContent} active campaign${stats.activeCampaigns - stats.campaignsWithUpcomingContent === 1 ? '' : 's'} have no upcoming content`,
@@ -2857,7 +2941,7 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
   }
 
   const channelsWithoutUpcoming = stats.channelCoverage.filter((channel) => channel.upcoming30Count === 0)
-  if (channelsWithoutUpcoming.length > 0 && stats.upcoming30Items.length > 0) {
+  if (!fastRevenuePosture && channelsWithoutUpcoming.length > 0 && stats.upcoming30Items.length > 0) {
     gaps.push({
       id: 'dashboard-channel-coverage-gap',
       title: `${channelsWithoutUpcoming.length} active channel${channelsWithoutUpcoming.length === 1 ? '' : 's'} have no upcoming content`,
@@ -2873,7 +2957,7 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
   const hasConversionStage = upcomingWithStages.some((item) =>
     ['consideration', 'conversion', 'retention', 'advocacy'].includes(item.funnelStage || ''),
   )
-  if (stats.upcoming30Items.length > 0 && !hasConversionStage) {
+  if (!fastRevenuePosture && stats.upcoming30Items.length > 0 && !hasConversionStage) {
     gaps.push({
       id: 'dashboard-funnel-stage-gap',
       title: 'Upcoming content does not show what comes after awareness',
@@ -2884,7 +2968,7 @@ function getMarketingDashboardGaps(data: MarketingData): MarketingDashboardGap[]
     })
   }
 
-  const attentionGaps = getMarketingAttentionItems(data).map(
+  const attentionGaps = getMarketingAttentionItems(data, financialPostureId).map(
     (item): MarketingDashboardGap => ({
       id: `attention-${item.id}`,
       title: item.title,
@@ -2936,13 +3020,32 @@ function getAnalyticsInsightView(insight: AnalyticsInterpretation): MarketingVie
 }
 
 function uniqueDashboardGaps(gaps: MarketingDashboardGap[]) {
-  const seen = new Set<string>()
-  return gaps.filter((gap) => {
-    const key = gap.id
-    if (seen.has(key)) return false
-    seen.add(key)
-    return true
+  const unique = new Map<string, MarketingDashboardGap>()
+  gaps.forEach((gap) => {
+    const key = dashboardGapSemanticKey(gap)
+    const existing = unique.get(key)
+    if (!existing || dashboardGapPriority(gap.severity) < dashboardGapPriority(existing.severity)) {
+      unique.set(key, gap)
+    }
   })
+  return Array.from(unique.values())
+}
+
+function dashboardGapSemanticKey(gap: MarketingDashboardGap) {
+  const id = gap.id.toLowerCase()
+  if (id.includes('strategy-foundation')) return 'strategy-foundation'
+  if (id.includes('direct-outreach-priority') || id.includes('outreach-priority')) return 'direct-outreach-priority'
+  if (id.includes('setup-analytics') || id.includes('no-analytics-source') || id.includes('missing-analytics-source')) return 'analytics-source'
+  if (id.includes('no-connected-analytics-source')) return 'connected-analytics-source'
+  if (id.includes('dashboard-no-upcoming-content')) return 'calendar-runway-empty'
+  if (id.includes('dashboard-campaign-runway-gap') || id.includes('campaign-content-')) return 'campaign-content-runway'
+
+  const normalizedTitle = gap.title
+    .toLowerCase()
+    .replace(/\d+/g, '#')
+    .replace(/[^a-z#]+/g, ' ')
+    .trim()
+  return `${gap.view}:${normalizedTitle}`
 }
 
 function dashboardGapPriority(severity: MarketingDashboardGap['severity']) {
@@ -2986,9 +3089,11 @@ export function getDashboardGapTone(severity: MarketingDashboardGap['severity'])
 export function buildMarketingAssistantActions(
   data: MarketingData,
   latestSetupSession?: MarketingAssistantSessionSummary | null,
+  financialPostureId: FinancialPostureId = 'stable',
 ): MarketingAssistantAction[] {
   const dashboardStats = getMarketingDashboardStats(data)
-  const dashboardGaps = getMarketingDashboardGaps(data)
+  const dashboardGaps = getMarketingDashboardGaps(data, financialPostureId)
+  const fastRevenuePosture = financialPostureId === 'survival' || financialPostureId === 'rebuild'
   const missingStrategy = getMissingFoundationalStrategyInputs(data)
   const analyticsStats = getAnalyticsReadinessStats(data)
   const abTestingStats = getAbTestingStats(data)
@@ -3026,7 +3131,7 @@ export function buildMarketingAssistantActions(
           : 'Use this when the next move needs judgment before setup.',
     tags: ['strategy', 'strategist', 'chat', 'decision', 'recommendation', 'assistant'],
     recommended: missingStrategy.length > 0 || dashboardGaps.length > 0 || !latestSetupSession,
-    score: missingStrategy.length > 0 ? 96 : dashboardGaps.length > 0 ? 88 : 64,
+    score: fastRevenuePosture ? 88 : missingStrategy.length > 0 ? 96 : dashboardGaps.length > 0 ? 88 : 64,
     mode: 'strategist',
   })
 
@@ -3055,7 +3160,7 @@ export function buildMarketingAssistantActions(
         : `${abTestingStats.ready}/${Math.max(1, abTestingStats.pageTests)} page tests are ready for launch.`),
     tags: ['ab', 'a/b', 'test', 'experiment', 'flags', 'vercel', 'homepage', 'vision', 'metrics'],
     recommended: abTestingStats.pageTests === 0 || abTestingInsights.length > 0 || gapViews.has('abTesting'),
-    score: abTestingStats.pageTests === 0 ? 94 : abTestingInsights.length > 0 ? 86 : 66,
+    score: fastRevenuePosture ? 46 : abTestingStats.pageTests === 0 ? 94 : abTestingInsights.length > 0 ? 86 : 66,
     view: 'abTesting',
   })
 
@@ -3071,20 +3176,23 @@ export function buildMarketingAssistantActions(
           : 'Open Research when a claim, topic, or campaign needs stronger support.',
     tags: ['research', 'evidence', 'sources', 'seo', 'keywords', 'inspiration', 'findings'],
     recommended: data.researchProjects.length === 0 || data.researchResults.length === 0 || gapViews.has('research'),
-    score: data.researchProjects.length === 0 ? 90 : data.researchResults.length === 0 ? 84 : 62,
+    score: fastRevenuePosture ? 54 : data.researchProjects.length === 0 ? 90 : data.researchResults.length === 0 ? 84 : 62,
     view: 'research',
   })
 
-  // Outreach data lives in the private dataset (not in MarketingData), so these two use a
-  // static baseline score instead of a data-driven one.
+  // Outreach progress lives in the private dataset (not in MarketingData).
+  // Rank the surface from the confirmed posture, then let its tracker choose
+  // the actual contact and channel instead of fabricating that detail on Home.
   addAction({
     id: 'work-call-plan',
     title: 'Work the call plan',
     description: 'Paste warm contacts, research each one, and call in ranked order.',
-    reason: 'Open Outreach to see follow-ups due, log calls, and pick tailored offers.',
+    reason: fastRevenuePosture
+      ? `${financialPostureId === 'survival' ? 'Survival' : 'Rebuild'} posture makes warm, fast-closing follow-up the first move. Open Outreach for the actual due contact and channel.`
+      : 'Open Outreach to see follow-ups due, log calls, and pick tailored offers.',
     tags: ['outreach', 'calls', 'call plan', 'contacts', 'follow up', 'warm network', 'leads'],
-    recommended: false,
-    score: 72,
+    recommended: fastRevenuePosture,
+    score: fastRevenuePosture ? 125 : 72,
     view: 'outreach',
   })
 
@@ -3109,7 +3217,7 @@ export function buildMarketingAssistantActions(
         : 'Strategy has the basics; open it when the positioning needs refinement.',
     tags: ['strategy', 'audience', 'message', 'proof', 'cta', 'tracking', 'quality'],
     recommended: missingStrategy.length > 0 || gapViews.has('strategy'),
-    score: missingStrategy.length > 0 ? 88 : 58,
+    score: fastRevenuePosture ? 58 : missingStrategy.length > 0 ? 88 : 58,
     view: 'strategy',
   })
 
@@ -3118,14 +3226,14 @@ export function buildMarketingAssistantActions(
     title: 'Plan the calendar',
     description: 'Create draft posts, emails, pages, or social updates across the next runway.',
     reason:
-      dashboardStats.upcomingItems.length === 0
-        ? 'No upcoming content is planned.'
+      dashboardStats.executionReadyItems.length === 0
+        ? 'No execution-ready content is planned.'
         : dashboardStats.contentRunwayDays < 14
           ? `The content runway is only ${dashboardStats.contentRunwayDays} day${dashboardStats.contentRunwayDays === 1 ? '' : 's'}.`
           : 'Open Calendar when a campaign needs publish dates and owners.',
     tags: ['calendar', 'content', 'schedule', 'runway', 'publishing', 'posts'],
-    recommended: dashboardStats.upcomingItems.length === 0 || dashboardStats.contentRunwayDays < 14 || gapViews.has('calendar'),
-    score: dashboardStats.upcomingItems.length === 0 ? 87 : dashboardStats.contentRunwayDays < 14 ? 80 : 56,
+    recommended: !fastRevenuePosture && (dashboardStats.executionReadyItems.length === 0 || dashboardStats.contentRunwayDays < 14 || gapViews.has('calendar')),
+    score: fastRevenuePosture ? 40 : dashboardStats.executionReadyItems.length === 0 ? 87 : dashboardStats.contentRunwayDays < 14 ? 80 : 56,
     view: 'calendar',
   })
 
@@ -4402,8 +4510,9 @@ export function normalizeDraftContentFrames(values: DraftContentFrame[] | undefi
       body: item.body || '',
       visualDirection: item.visualDirection || '',
       altText: item.altText || '',
+      ...(item.image && typeof item.image === 'object' ? { image: item.image } : {}),
     }))
-    .filter((item) => item.title.trim() || item.body.trim() || item.visualDirection.trim() || item.altText.trim())
+    .filter((item) => item.title.trim() || item.body.trim() || item.visualDirection.trim() || item.altText.trim() || item.image)
 }
 
 export async function createResearchProjectGeneratedRecords(
@@ -4412,6 +4521,46 @@ export async function createResearchProjectGeneratedRecords(
   project: MarketingResearchProject,
   selectedResultIds: string[],
 ) {
+  // A converted project is a durable one-to-one setup, not a button that can
+  // mint another campaign each time it is clicked. Return the first completed
+  // conversion for legacy projects as well as conversions created below. Read
+  // the current project first so a retry from a stale browser tab reuses the
+  // transaction that another tab just completed.
+  const latestProject = await client.fetch<Pick<MarketingResearchProject, 'generatedCampaigns' | 'generatedFunnels' | 'generatedCalendarItems' | 'generatedLinkItems'> | null>(
+    `*[_id == $projectId][0]{
+      "generatedCampaigns": generatedCampaigns[]->{_id, title},
+      "generatedFunnels": generatedFunnels[]->{_id, title},
+      "generatedCalendarItems": generatedCalendarItems[]->{_id, title},
+      "generatedLinkItems": generatedLinkItems[]->{_id, title}
+    }`,
+    { projectId: project._id },
+  )
+  const existingCampaignIds = mergeIds(
+    refIdsFromRecords(latestProject?.generatedCampaigns || project.generatedCampaigns),
+    data.campaigns.filter((item) => item.researchProject?._id === project._id).map((item) => item._id),
+  )
+  const existingFunnelIds = mergeIds(
+    refIdsFromRecords(latestProject?.generatedFunnels || project.generatedFunnels),
+    data.funnels.filter((item) => item.researchProject?._id === project._id).map((item) => item._id),
+  )
+  const existingCalendarItemIds = mergeIds(
+    refIdsFromRecords(latestProject?.generatedCalendarItems || project.generatedCalendarItems),
+    data.calendarItems.filter((item) => item.researchProject?._id === project._id).map((item) => item._id),
+  )
+  const existingLinkItemIds = mergeIds(
+    refIdsFromRecords(latestProject?.generatedLinkItems || project.generatedLinkItems),
+    data.linkItems.filter((item) => item.researchProject?._id === project._id).map((item) => item._id),
+  )
+  if (existingCampaignIds[0] && existingFunnelIds[0] && existingCalendarItemIds.length > 0) {
+    return {
+      campaignId: existingCampaignIds[0],
+      funnelId: existingFunnelIds[0],
+      calendarItemIds: existingCalendarItemIds,
+      linkItemIds: existingLinkItemIds,
+      reused: true,
+    }
+  }
+
   const selected = getResearchResultsForProject(data, project._id).filter((result) =>
     selectedResultIds.includes(result._id) && isResearchResultApproved(result),
   )
@@ -4432,7 +4581,11 @@ export async function createResearchProjectGeneratedRecords(
   }
 
   const resultRefs = refsFromIds(selected.map((result) => result._id))
-  const funnel = await client.create({
+  const conversionId = researchConversionDocumentId(project._id, 'root')
+  const funnelId = researchConversionDocumentId(project._id, 'funnel')
+  const campaignId = researchConversionDocumentId(project._id, 'campaign')
+  const funnelDocument = {
+    _id: funnelId,
     _type: 'marketingFunnel',
     title: `${title} research path`,
     status: 'draft',
@@ -4468,9 +4621,10 @@ export async function createResearchProjectGeneratedRecords(
     researchProject: referenceFromId(project._id),
     researchResults: resultRefs,
     notes: buildResearchResultEvidenceSummary(project, selected),
-  })
+  }
 
-  const campaign = await client.create({
+  const campaignDocument = {
+    _id: campaignId,
     _type: 'marketingCampaign',
     title,
     slug: { _type: 'slug', current: slug },
@@ -4488,7 +4642,7 @@ export async function createResearchProjectGeneratedRecords(
     targetSites: [{ _key: randomKey(), _type: 'targetSite', label: title, url: destinationUrl }],
     channels,
     channelRefs: refsFromIds(Object.values(channelIds)),
-    funnels: refsFromIds([funnel._id]),
+    funnels: refsFromIds([funnelId]),
     primaryKpi: 'Useful visits from reviewed research-backed content',
     utmCampaign: slug,
     successMetrics: normalizeSuccessMetrics([
@@ -4497,16 +4651,23 @@ export async function createResearchProjectGeneratedRecords(
     ]),
     researchProject: referenceFromId(project._id),
     researchResults: resultRefs,
-    notes: 'Generated from trusted Research findings. Edit before publishing if strategy changes.',
-  })
+    notes: `Generated once from trusted Research findings (${conversionId}). Edit these drafts instead of converting the project again if strategy changes.`,
+  }
 
   const opportunities = buildResearchResultOpportunities(project, selected, destinationUrl)
-  const createdCalendarItems: string[] = []
-  const createdLinkItems: string[] = []
+  const createdCalendarItems = opportunities.map((_, index) => researchConversionDocumentId(project._id, `calendar-${index + 1}`))
+  const createdLinkItems = opportunities.map((_, index) => researchConversionDocumentId(project._id, `link-${index + 1}`))
+  let transaction = client
+    .transaction()
+    .createIfNotExists(funnelDocument)
+    .createIfNotExists(campaignDocument)
 
   for (const [index, opportunity] of opportunities.entries()) {
     const publishDate = dateInputToIso(toDateInputValue(addDays(today, 7 + index * 4)))
-    const createdCalendar = await client.create({
+    const calendarId = createdCalendarItems[index]
+    const linkId = createdLinkItems[index]
+    transaction = transaction.createIfNotExists({
+      _id: calendarId,
       _type: 'marketingCalendarItem',
       title: opportunity.title,
       status: 'drafting',
@@ -4514,8 +4675,8 @@ export async function createResearchProjectGeneratedRecords(
       contentType: opportunity.format,
       channel: opportunity.channel,
       channelRef: { _type: 'reference', _ref: channelIds[opportunity.channel] || channelIds.instagram },
-      campaign: { _type: 'reference', _ref: campaign._id },
-      funnel: { _type: 'reference', _ref: funnel._id },
+      campaign: { _type: 'reference', _ref: campaignId },
+      funnel: { _type: 'reference', _ref: funnelId },
       funnelStage: index === 0 ? 'awareness' : 'interest',
       workingUrl: opportunity.destinationUrl,
       brief: opportunity.notes,
@@ -4526,10 +4687,11 @@ export async function createResearchProjectGeneratedRecords(
       targetQueries: Array.from(new Set([opportunity.seoQuery, ...targetQueries].filter(Boolean))),
       researchProject: referenceFromId(project._id),
       researchResults: refsFromIds(opportunity.resultIds),
+      linkItems: refsFromIds([linkId]),
     })
-    createdCalendarItems.push(createdCalendar._id)
 
-    const createdLink = await client.create({
+    transaction = transaction.createIfNotExists({
+      _id: linkId,
       _type: 'marketingLinkItem',
       title: opportunity.title,
       url: opportunity.destinationUrl,
@@ -4540,35 +4702,40 @@ export async function createResearchProjectGeneratedRecords(
       order: nextLinkOrder(data.linkItems) + index,
       publishAt: publishDate,
       sourceChannel: opportunity.channel,
-      campaign: { _type: 'reference', _ref: campaign._id },
-      calendarItem: { _type: 'reference', _ref: createdCalendar._id },
-      calendarItems: refsFromIds([createdCalendar._id]),
+      campaign: { _type: 'reference', _ref: campaignId },
+      calendarItem: { _type: 'reference', _ref: calendarId },
+      calendarItems: refsFromIds([calendarId]),
       researchProject: referenceFromId(project._id),
       researchResults: refsFromIds(opportunity.resultIds),
     })
-    createdLinkItems.push(createdLink._id)
-    await client.patch(createdCalendar._id).set({ linkItems: refsFromIds([createdLink._id]) }).commit()
   }
 
-  await client
-    .patch(project._id)
-    .set({
+  transaction = transaction.patch(project._id, (patch) =>
+    patch.set({
       status: 'converted',
       selectedResults: refsFromIds(selected.map((result) => result._id)),
       approvedResults: refsFromIds(selected.map((result) => result._id)),
-      generatedCampaigns: refsFromIds(mergeIds(refIdsFromRecords(project.generatedCampaigns), [campaign._id])),
-      generatedFunnels: refsFromIds(mergeIds(refIdsFromRecords(project.generatedFunnels), [funnel._id])),
+      generatedCampaigns: refsFromIds(mergeIds(refIdsFromRecords(project.generatedCampaigns), [campaignId])),
+      generatedFunnels: refsFromIds(mergeIds(refIdsFromRecords(project.generatedFunnels), [funnelId])),
       generatedCalendarItems: refsFromIds(mergeIds(refIdsFromRecords(project.generatedCalendarItems), createdCalendarItems)),
       generatedLinkItems: refsFromIds(mergeIds(refIdsFromRecords(project.generatedLinkItems), createdLinkItems)),
-    })
-    .commit()
+    }),
+  )
+  await transaction.commit()
 
   return {
-    campaignId: campaign._id,
-    funnelId: funnel._id,
+    campaignId,
+    funnelId,
     calendarItemIds: createdCalendarItems,
     linkItemIds: createdLinkItems,
+    reused: false,
   }
+}
+
+function researchConversionDocumentId(projectId: string, suffix: string) {
+  const safeProjectId = projectId.replace(/[^A-Za-z0-9_.-]/g, '-').slice(-80) || 'project'
+  const safeSuffix = suffix.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 28) || 'record'
+  return `research-conversion.${safeProjectId}.${safeSuffix}`.slice(0, 128)
 }
 
 function buildResearchResultOpportunities(
@@ -4917,7 +5084,7 @@ function getSelectedResearchResultIds(project: MarketingResearchProject) {
 }
 
 export function isResearchResultApproved(result: MarketingResearchResult) {
-  return result.status === 'approved' || result.status === 'selected'
+  return result.status === 'approved'
 }
 
 function isResearchResultSelectedForSynthesis(result: MarketingResearchResult, selectedIds: Set<string>) {
@@ -5066,8 +5233,27 @@ function startOfDayValue(value: Date) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate())
 }
 
-function isConnectedAnalyticsSource(source: MarketingAnalyticsSource) {
-  return source.status === 'connected'
+export function analyticsSourceConnectionError(source: MarketingAnalyticsSource): string | null {
+  if (source.status !== 'connected') return 'Mark the source Connected only after its provider details are available.'
+  if (!source.title?.trim()) return 'Add a source name before marking it Connected.'
+  if (source.provider === 'ga4' && !source.propertyId?.trim()) return 'Add the GA4 Property ID before marking this source Connected.'
+  if (source.provider === 'gtm' && !source.containerId?.trim()) return 'Add the GTM Container ID before marking this source Connected.'
+  if (
+    (source.provider === 'vercelAnalytics' || source.provider === 'vercelSpeedInsights') &&
+    !source.vercelProjectId?.trim() &&
+    !source.vercelProject?.trim()
+  ) {
+    return 'Add the Vercel project name or project ID before marking this source Connected.'
+  }
+  if ((source.provider === 'lookerStudio' || source.provider === 'other') && !source.dashboardUrl?.trim()) {
+    return 'Add the reporting dashboard URL before marking this source Connected.'
+  }
+  if (!source.provider?.trim()) return 'Choose a provider before marking this source Connected.'
+  return null
+}
+
+export function isUsableConnectedAnalyticsSource(source: MarketingAnalyticsSource) {
+  return analyticsSourceConnectionError(source) === null
 }
 
 function isCampaignMeasurable(campaign: MarketingCampaign) {
@@ -5092,18 +5278,17 @@ function isMarketingLinkActive(link: MarketingLinkItem) {
   return (link.status || 'active') === 'active'
 }
 
-function hasAnalyticsRefs(refs?: RefSummary[]) {
-  return (refs || []).some((ref) => !!ref._id)
+export function hasUsableAnalyticsRefs(refs: RefSummary[] | undefined, sources: MarketingAnalyticsSource[]) {
+  const usableIds = new Set(sources.filter(isUsableConnectedAnalyticsSource).map((source) => source._id))
+  return (refs || []).some((ref) => usableIds.has(ref._id))
 }
 
-function campaignHasAnalytics(campaign: MarketingCampaign) {
-  return hasAnalyticsRefs(campaign.analyticsSources) || (campaign.successMetrics || []).some((metric) => !!getRefId(metric.source))
-}
-
-function getRefId(ref?: RefSummary | ReferenceValue) {
-  if (!ref) return ''
-  if ('_id' in ref) return ref._id
-  return ref._ref
+function campaignHasUsableAnalytics(campaign: MarketingCampaign, sources: MarketingAnalyticsSource[]) {
+  const refs = [
+    ...(campaign.analyticsSources || []),
+    ...(campaign.successMetrics || []).map((metric) => metric.source).filter((source): source is RefSummary => Boolean(source && '_id' in source)),
+  ]
+  return hasUsableAnalyticsRefs(refs, sources)
 }
 
 function titleList<T>(items: T[], getTitle: (item: T) => string, limit: number) {
@@ -5132,21 +5317,35 @@ function getRecommendedAnalyticsCadence(sources: MarketingAnalyticsSource[]) {
   )
 }
 
-function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem[] {
+function getMarketingAttentionItems(
+  data: MarketingData,
+  financialPostureId: FinancialPostureId = 'stable',
+): MarketingAttentionItem[] {
   const now = new Date()
   const upcomingLimit = addDays(now, 30)
   const items: MarketingAttentionItem[] = []
   const missingStrategy = getMissingFoundationalStrategyInputs(data)
+  const fastRevenuePosture = financialPostureId === 'survival' || financialPostureId === 'rebuild'
+
+  if (fastRevenuePosture) {
+    items.push({
+      id: 'outreach-priority',
+      title: 'Warm outreach is the next revenue action',
+      detail: 'Open the private Outreach tracker for the actual due contact and recommended channel; Home intentionally does not infer private progress from public marketing data.',
+      view: 'outreach',
+      severity: 'urgent',
+    })
+  }
 
   if (missingStrategy.length > 0) {
-    const hasResearchItems = data.researchResults.length > 0
+    const hasTrustedResearch = data.researchResults.some(isResearchResultApproved)
     items.push({
       id: 'strategy-foundation',
       title: 'Some setup questions need answers',
-      detail: hasResearchItems
+      detail: hasTrustedResearch
         ? `Answer ${missingStrategy.join(', ')} from trusted findings before creating more drafts.`
         : `Get evidence first, then use trusted findings to answer ${missingStrategy.join(', ')}.`,
-      view: hasResearchItems ? 'strategy' : 'research',
+      view: hasTrustedResearch ? 'strategy' : 'research',
       severity: 'setup',
     })
   }
@@ -5185,7 +5384,7 @@ function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem
     .filter((campaign) => ['planned', 'active'].includes(campaign.status || ''))
     .forEach((campaign) => {
       const calendarCount = data.calendarItems.filter((item) => item.campaign?._id === campaign._id).length
-      if (calendarCount === 0) {
+      if (!fastRevenuePosture && calendarCount === 0) {
         items.push({
           id: `campaign-content-${campaign._id}`,
           title: `${campaign.title || 'Campaign'} has no content yet`,
@@ -5230,7 +5429,7 @@ function getMarketingAttentionItems(data: MarketingData): MarketingAttentionItem
       }
     })
 
-  data.calendarItems
+  if (!fastRevenuePosture) data.calendarItems
     .filter((item) => {
       if (!item.publishAt || ['published', 'canceled'].includes(item.status || '')) return false
       const publishDate = new Date(item.publishAt)
@@ -6604,9 +6803,14 @@ function normalizeMarketingPlanQuestionnaire(questionnaire: MarketingPlanQuestio
   }
 }
 
-function buildWizardStrategyDraft(data: MarketingData, questionnaire: MarketingPlanQuestionnaire): Record<string, unknown> {
+function buildWizardStrategyDraft(
+  data: MarketingData,
+  questionnaire: MarketingPlanQuestionnaire,
+  financialPostureId: FinancialPostureId = 'stable',
+): Record<string, unknown> {
   const stats = getMarketingDashboardStats(data)
-  const gaps = getMarketingDashboardGaps(data).slice(0, 6)
+  const gaps = getMarketingDashboardGaps(data, financialPostureId).slice(0, 6)
+  const fastRevenuePosture = financialPostureId === 'survival' || financialPostureId === 'rebuild'
   const latestProject = getLatestActiveResearchProject(data)
   const starterTitle = latestProject?.title || questionnaire.topic || ''
   const researchType = latestProject?.researchType || inferResearchProjectType(`${questionnaire.topic} ${questionnaire.notes || ''}`)
@@ -6617,7 +6821,7 @@ function buildWizardStrategyDraft(data: MarketingData, questionnaire: MarketingP
     researchType,
     brief: latestProject?.brief || [
       `Content runway: ${stats.contentRunwayDays} days.`,
-      `${stats.upcomingItems.length} upcoming calendar items; ${stats.coveredDaysNext30}/30 days covered.`,
+      `${stats.executionReadyItems.length} execution-ready calendar items; ${stats.coveredDaysNext30} publishing dates in the next 30 dates.`,
       `${stats.activeCampaigns} active campaigns; ${stats.campaignsWithUpcomingContent} have upcoming content.`,
       `${data.channels.filter((channel) => channel.status !== 'archived').length} active channels.`,
       `${data.linkItems.filter((link) => link.status !== 'archived').length} Quick Links.`,
@@ -6626,7 +6830,12 @@ function buildWizardStrategyDraft(data: MarketingData, questionnaire: MarketingP
     audience: questionnaire.audience,
     campaignObjective: questionnaire.objective || 'awareness',
     canonicalUrl: questionnaire.destinationUrl || '',
-    planningNeed: stats.upcomingItems.length === 0 ? 'No upcoming content is scheduled.' : 'Find the next research-backed content opportunity.',
+    financialPosture: financialPostureId,
+    planningNeed: fastRevenuePosture
+      ? 'Prioritize the next private warm-outreach follow-up; do not turn a missing content runway into the urgent task.'
+      : stats.executionReadyItems.length === 0
+        ? 'No execution-ready content is scheduled.'
+        : 'Find the next research-backed content opportunity.',
     currentResearchProject: latestProject
       ? {
           title: latestProject.title,
@@ -6653,9 +6862,14 @@ function buildWizardStrategyDraft(data: MarketingData, questionnaire: MarketingP
   }
 }
 
-function buildWizardStrategyPrompt(data: MarketingData, questionnaire: MarketingPlanQuestionnaire, userPrompt: string) {
+function buildWizardStrategyPrompt(
+  data: MarketingData,
+  questionnaire: MarketingPlanQuestionnaire,
+  userPrompt: string,
+  financialPostureId: FinancialPostureId = 'stable',
+) {
   const stats = getMarketingDashboardStats(data)
-  const gaps = getMarketingDashboardGaps(data).slice(0, 5)
+  const gaps = getMarketingDashboardGaps(data, financialPostureId).slice(0, 5)
   const direction = userPrompt.trim()
   const latestProject = getLatestActiveResearchProject(data)
   const latestProjectLine = latestProject
@@ -6667,9 +6881,10 @@ function buildWizardStrategyPrompt(data: MarketingData, questionnaire: Marketing
     'Return a researchProject setup only when no usable current project exists. If a current project exists, explain the next action inside it instead of creating another project.',
     'Treat the research project as the planning wrapper. Campaigns, funnels, calendar items, and Quick Links are created as linked drafts after selected trusted findings justify them.',
     'Do not ask the designer to invent marketing strategy from scratch. Pick the best next move and make the fields or action reviewable.',
+    `Financial posture: ${financialPostureId}. In survival/rebuild, private warm outreach outranks content, SEO, brand, and experiments; do not manufacture a contact or channel outside Outreach.`,
     'Make the long-term thinking obvious: why this work matters, how it builds a durable topic thread, and what signal should be checked next.',
     direction ? `User direction: ${direction}` : 'User direction: none. Choose the most useful next planning move from the current state.',
-    `Current state: ${stats.contentRunwayDays} runway days, ${stats.upcomingItems.length} upcoming items, ${stats.activeCampaigns} active campaigns, ${data.channels.length} channels, ${data.linkItems.length} Quick Links.`,
+    `Current state: ${stats.contentRunwayDays} continuous runway days, ${stats.executionReadyItems.length} execution-ready upcoming items, ${stats.activeCampaigns} active campaigns, ${data.channels.length} channels, ${data.linkItems.length} Quick Links.`,
     latestProjectLine,
     gaps.length > 0 ? `Known gaps: ${gaps.map((gap) => `${gap.title}: ${gap.action}`).join(' | ')}` : 'Known gaps: no critical gaps detected.',
   ].join('\n')
@@ -6679,13 +6894,15 @@ function buildStrategistChatDraft(
   data: MarketingData,
   session: DesignerWorkflowSession | null,
   questionnaire: MarketingPlanQuestionnaire,
+  financialPostureId: FinancialPostureId = 'stable',
 ): Record<string, unknown> {
   const stats = getMarketingDashboardStats(data)
   const latestProject = getLatestActiveResearchProject(data)
-  const dashboardGaps = getMarketingDashboardGaps(data).slice(0, 6)
+  const dashboardGaps = getMarketingDashboardGaps(data, financialPostureId).slice(0, 6)
   return {
     title: questionnaire.topic,
     userDirection: session?.strategistDirection || session?.strategyPrompt || '',
+    financialPosture: financialPostureId,
     currentSession: session
       ? {
           mode: session.mode,
@@ -7470,14 +7687,62 @@ function cleanStrategyTopic(value: string) {
   return next
 }
 
+function hasTextStrategyValue(record: Record<string, unknown>, key: string) {
+  return typeof record[key] === 'string' && record[key].trim().length > 0
+}
+
+function hasStrategyListValue(record: Record<string, unknown>, key: string, itemFields: string[] = []) {
+  const value = record[key]
+  if (!Array.isArray(value)) return false
+  return value.some((item) => {
+    if (typeof item === 'string') return item.trim().length > 0
+    if (!item || typeof item !== 'object' || itemFields.length === 0) return false
+    const itemRecord = item as Record<string, unknown>
+    return itemFields.some((field) => hasTextStrategyValue(itemRecord, field))
+  })
+}
+
+/**
+ * A saved record is not necessarily a usable strategy answer. New records are
+ * created with defaults such as `status: active`; those defaults must not make
+ * Home or the Strategy readiness meter claim that a question has been answered.
+ */
+export function hasUsableStrategyRecord(sectionId: StrategyAssetKind, value: unknown) {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  const hasText = (...keys: string[]) => keys.some((key) => hasTextStrategyValue(record, key))
+
+  if (sectionId === 'audiences') {
+    return hasText('audience') || ['needs', 'pains', 'trustTriggers', 'desiredActions', 'objections'].some((key) => hasStrategyListValue(record, key))
+  }
+  if (sectionId === 'messages') {
+    return hasText('coreClaim', 'topicCluster') || ['supportingClaims', 'approvedPhrases'].some((key) => hasStrategyListValue(record, key))
+  }
+  if (sectionId === 'proof') return hasText('claim', 'sourceTitle', 'sourceUrl', 'usageNotes')
+  if (sectionId === 'ctas') return hasText('label', 'destination', 'successSignal')
+  if (sectionId === 'tracking') {
+    return hasText('utmSourceRule', 'utmMediumRule', 'utmCampaignPattern', 'utmContentPattern') ||
+      ['allowedSources', 'allowedMediums'].some((key) => hasStrategyListValue(record, key, ['label', 'value', 'whenToUse']))
+  }
+  if (sectionId === 'quality') {
+    return hasText('whenToUse', 'notes') || hasStrategyListValue(record, 'checks', ['label', 'guidance'])
+  }
+  if (sectionId === 'experiments') {
+    return hasText('hypothesis', 'expectedSignal', 'targetPath', 'flagKey', 'result') ||
+      hasStrategyListValue(record, 'variants', ['label', 'notes', 'previewUrl'])
+  }
+  return hasText('signalType', 'sourceLabel', 'interpretation', 'recommendation') ||
+    hasStrategyListValue(record, 'metrics', ['label', 'unit', 'change', 'eventName'])
+}
+
 function getMissingFoundationalStrategyInputs(data: MarketingData) {
   const missing: string[] = []
-  if (data.audienceProfiles.length === 0) missing.push('audience')
-  if (data.messagePillars.length === 0) missing.push('message')
-  if (data.proofPoints.length === 0) missing.push('proof')
-  if (data.ctas.length === 0) missing.push('CTA')
-  if (data.trackingRules.length === 0) missing.push('tracking rule')
-  if (data.qualityGates.length === 0) missing.push('quality gate')
+  if (!data.audienceProfiles.some((item) => hasUsableStrategyRecord('audiences', item))) missing.push('audience')
+  if (!data.messagePillars.some((item) => hasUsableStrategyRecord('messages', item))) missing.push('message')
+  if (!data.proofPoints.some((item) => hasUsableStrategyRecord('proof', item))) missing.push('proof')
+  if (!data.ctas.some((item) => hasUsableStrategyRecord('ctas', item))) missing.push('CTA')
+  if (!data.trackingRules.some((item) => hasUsableStrategyRecord('tracking', item))) missing.push('tracking rule')
+  if (!data.qualityGates.some((item) => hasUsableStrategyRecord('quality', item))) missing.push('quality gate')
   return missing
 }
 
@@ -7631,6 +7896,15 @@ async function ensureMarketingChannel(client: StudioClient, data: MarketingData,
   const existing = data.channels.find((channel) => channel.key === key && channel.status !== 'archived')
   if (existing) return existing._id
 
+  // `data` is a render-time snapshot. Re-check Sanity so a retry after a
+  // partially completed setup does not create a second copy of each channel.
+  const currentChannels = await client.fetch<Array<{ _id: string; status?: string }>>(
+    '*[_type == "marketingChannel" && key == $key]{_id, status}',
+    { key },
+  )
+  const current = currentChannels.find((channel) => channel.status !== 'archived')
+  if (current) return current._id
+
   const defaults: Record<string, Omit<MarketingChannel, '_id'>> = {
     instagram: {
       title: 'Instagram',
@@ -7696,7 +7970,18 @@ async function ensureMarketingChannel(client: StudioClient, data: MarketingData,
     contentTypes: [{ label: 'Post', value: 'post' }],
   }
 
-  const created = await client.create({
+  const deterministicBase = `marketing-channel.${key.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 70) || 'channel'}`
+  const existingIds = new Set(currentChannels.map((channel) => channel._id))
+  let deterministicId = deterministicBase
+  let replacementIndex = 1
+  // Respect an intentionally archived channel instead of silently reactivating
+  // it or linking new work to it. A stable replacement id keeps retries safe.
+  while (existingIds.has(deterministicId)) {
+    deterministicId = `${deterministicBase}.research-${replacementIndex}`
+    replacementIndex += 1
+  }
+  const created = await client.createIfNotExists({
+    _id: deterministicId,
     _type: 'marketingChannel',
     ...fallback,
     contentTypes: normalizeContentTypes(fallback.contentTypes || []),

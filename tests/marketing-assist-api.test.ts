@@ -34,6 +34,7 @@ vi.mock('@/lib/marketing/auth', () => ({
 import { POST } from '@/app/api/marketing/assist/route'
 import { generateClaudeText } from '@/lib/marketing/anthropicJson'
 import { MarketingAuthError } from '@/lib/marketing/auth'
+import { BRAND_VOICE_SYSTEM_POLICY } from '@/lib/marketing/brandVoice'
 
 const originalOpenAiKey = process.env.OPENAI_API_KEY
 const originalAnthropicKey = process.env.ANTHROPIC_API_KEY
@@ -69,7 +70,13 @@ const siteContext = {
     researchProjects: [],
     researchResults: [],
     audienceProfiles: [{ title: 'Design leaders', priority: 'primary', audience: 'Design leaders' }],
-    messagePillars: [{ title: 'Clear systems', coreClaim: 'Clear systems help people act.', topicCluster: 'civic design' }],
+    messagePillars: [{
+      title: 'Clear systems',
+      coreClaim: 'Clear systems help people act.',
+      topicCluster: 'civic design',
+      approvedPhrases: ['Make the complex clear.'],
+      phrasesToAvoid: ['Revolutionary transformation'],
+    }],
     proofPoints: [{ title: 'Housing proof', claim: 'Housing Truths visualizes housing forces.', confidence: 'medium' }],
     ctas: [{ title: 'Read source', label: 'Read the source', funnelStage: 'interest' }],
     trackingRules: [{ title: 'Default tracking', status: 'active', utmCampaignPattern: 'lowercase-topic' }],
@@ -78,6 +85,30 @@ const siteContext = {
     performanceSignals: [],
   },
 }
+
+const brandVoices = [
+  {
+    _key: 'direct-principal',
+    name: 'Direct principal',
+    purpose: 'Fast, plainspoken customer-facing copy.',
+    guidance: 'Use short sentences and concrete verbs.',
+    do: ['Lead with the useful point.'],
+    avoid: ['Marketing theater.'],
+    examples: ['See the system. Decide what to change.'],
+    status: 'active',
+    isDefault: true,
+  },
+  {
+    _key: 'warm-guide',
+    name: 'Warm guide',
+    guidance: 'Be conversational, calm, and specific.',
+    do: ['Invite the next step.'],
+    avoid: ['Hard-sell language.'],
+    examples: [],
+    status: 'active',
+    isDefault: false,
+  },
+]
 
 function assistRequest(
   kind: string,
@@ -93,7 +124,11 @@ function assistRequest(
 }
 
 beforeEach(() => {
-  clientFetch.mockResolvedValue(siteContext)
+  clientFetch.mockImplementation(async (query: string) => {
+    if (query.includes('.brandVoices[]')) return brandVoices
+    if (query.includes('.aiModel')) return null
+    return siteContext
+  })
   vi.mocked(generateClaudeText).mockReset()
   delete process.env.ANTHROPIC_API_KEY
   delete process.env.OPENAI_API_KEY
@@ -153,8 +188,186 @@ describe('marketing assistant API', () => {
       expect(payload.suggestion.summary).toBeTruthy()
       expect(payload.suggestion.rationale.length).toBeGreaterThan(0)
       expect(payload.suggestion[section], `${kind} should include its editable field section`).toBeTruthy()
-      expect(payload.context).toEqual({ features: 1, caseStudies: 1, campaigns: 1, references: 1, analyticsTakeaways: 0 })
+      expect(payload.context).toEqual({
+        features: 1,
+        caseStudies: 1,
+        campaigns: 1,
+        references: 1,
+        analyticsTakeaways: 0,
+        brandVoice: null,
+      })
     }
+  })
+
+  it('applies the active default voice only to scoped outward-facing campaign copy', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ system, user }: { system: string; user: string }) => {
+      const userPayload = JSON.parse(user)
+
+      expect(system).toContain(BRAND_VOICE_SYSTEM_POLICY)
+      expect(userPayload.approvedBrandVoice).toEqual({
+        key: 'direct-principal',
+        name: 'Direct principal',
+        purpose: 'Fast, plainspoken customer-facing copy.',
+        guidance: 'Use short sentences and concrete verbs.',
+        do: ['Lead with the useful point.'],
+        avoid: ['Marketing theater.'],
+        examples: ['See the system. Decide what to change.'],
+      })
+      expect(userPayload.brandVoiceFieldScope).toEqual(['campaign.positioning'])
+      expect(userPayload.siteContext.existingMarketing.messagePillars).toEqual([
+        expect.objectContaining({
+          approvedPhrases: ['Make the complex clear.'],
+          phrasesToAvoid: ['Revolutionary transformation'],
+        }),
+      ])
+
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
+          summary: 'Campaign copy is ready to review.',
+          rationale: ['The positioning uses the selected style.'],
+          siteReferences: [],
+          campaign: { positioning: 'See the system. Decide what to change.' },
+        }),
+      }
+    })
+
+    const response = await POST(assistRequest('campaign', { title: 'Systems campaign' }))
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(true)
+    expect(payload.context.brandVoice).toEqual({
+      key: 'direct-principal',
+      name: 'Direct principal',
+      selection: 'default',
+    })
+  })
+
+  it('honors a requested voice profile for outward-facing link copy', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ user }: { user: string }) => {
+      const userPayload = JSON.parse(user)
+      expect(userPayload.approvedBrandVoice).toMatchObject({
+        key: 'warm-guide',
+        name: 'Warm guide',
+        guidance: 'Be conversational, calm, and specific.',
+      })
+      expect(userPayload.brandVoiceFieldScope).toEqual(['linkItem.title', 'linkItem.description'])
+
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
+          summary: 'Quick Link copy is ready to review.',
+          rationale: ['The title and description use the requested style.'],
+          siteReferences: [],
+          linkItem: {
+            title: 'Take a closer look at Housing Truths',
+            description: 'See the forces shaping housing, one clear visual at a time.',
+          },
+        }),
+      }
+    })
+
+    const response = await POST(
+      assistRequest('linkItem', { title: 'Housing Truths' }, [], { brandVoiceKey: 'warm-guide' }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(true)
+    expect(payload.context.brandVoice).toEqual({
+      key: 'warm-guide',
+      name: 'Warm guide',
+      selection: 'requested',
+    })
+  })
+
+  it('does not expose or apply brand voice to non-copy strategy assets', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ system, user }: { system: string; user: string }) => {
+      const userPayload = JSON.parse(user)
+      expect(system).not.toContain(BRAND_VOICE_SYSTEM_POLICY)
+      expect(userPayload).not.toHaveProperty('approvedBrandVoice')
+      expect(userPayload).not.toHaveProperty('brandVoiceFieldScope')
+
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
+          summary: 'Audience strategy is ready to review.',
+          rationale: ['Audience evidence stays neutral.'],
+          siteReferences: [],
+          strategyAsset: {
+            assetType: 'audience',
+            title: 'Design leaders',
+            audience: 'Design leaders working on complex systems',
+          },
+        }),
+      }
+    })
+
+    const response = await POST(
+      assistRequest('strategyAsset', { assetType: 'audience', title: 'Design leaders' }, [], {
+        brandVoiceKey: 'warm-guide',
+      }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(true)
+    expect(payload.context.brandVoice).toBeNull()
+    expect(clientFetch.mock.calls.some(([query]) => String(query).includes('.brandVoices[]'))).toBe(false)
+  })
+
+  it('applies brand voice to message strategy copy but not the asset rationale', async () => {
+    process.env.ANTHROPIC_API_KEY = 'sk-ant-test'
+    vi.mocked(generateClaudeText).mockImplementation(async ({ system, user }: { system: string; user: string }) => {
+      const userPayload = JSON.parse(user)
+      expect(system).toContain(BRAND_VOICE_SYSTEM_POLICY)
+      expect(userPayload.brandVoiceFieldScope).toEqual([
+        'strategyAsset.coreClaim',
+        'strategyAsset.supportingClaims[]',
+        'strategyAsset.approvedPhrases[]',
+        'strategyAsset.phrasesToAvoid[]',
+      ])
+      expect(userPayload.brandVoiceFieldScope).not.toContain('rationale')
+      expect(userPayload.brandVoiceFieldScope).not.toContain('strategyAsset.summary')
+
+      return {
+        citedUrls: [],
+        sources: [],
+        model: 'claude-opus-4-8',
+        text: JSON.stringify({
+          summary: 'Message strategy is ready to review.',
+          rationale: ['The claim remains grounded in existing evidence.'],
+          siteReferences: [],
+          strategyAsset: {
+            assetType: 'message',
+            title: 'Clear systems',
+            coreClaim: 'See the system. Decide what to change.',
+            supportingClaims: ['Clear visuals help teams act.'],
+            approvedPhrases: ['Make the complex clear.'],
+            phrasesToAvoid: ['Revolutionary transformation'],
+          },
+        }),
+      }
+    })
+
+    const response = await POST(
+      assistRequest('strategyAsset', { assetType: 'message', title: 'Clear systems' }),
+    )
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(payload.usedAi).toBe(true)
+    expect(payload.context.brandVoice).toMatchObject({ key: 'direct-principal', selection: 'default' })
   })
 
   it('returns a first-class A/B test setup suggestion', async () => {

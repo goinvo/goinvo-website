@@ -51,6 +51,22 @@ describe('buildWarmStartSuggestions', () => {
     expect(out.map((s) => s.name)).toEqual(['3M'])
   })
 
+  it('drops current team members and obvious non-callable account labels', () => {
+    const out = buildWarmStartSuggestions({
+      caseStudyClients: [
+        { client: 'Federal, State and Local Government', title: 'Public-sector collection' },
+        { client: 'Various clients', title: 'Portfolio' },
+        { client: 'Acme Health / Beta Health', title: 'Combined write-up' },
+        { client: 'Johnson & Johnson', title: 'Real account' },
+      ],
+      thankedPeople: [
+        { text: 'Juhan Sonin\nGoInvo team\nJane Buyer\nPeter Jones and Danny van Leeuwen', featureTitle: 'A' },
+      ],
+      teamMembers: [{ name: 'Juhan Sonin' }],
+    })
+    expect(out.map((suggestion) => suggestion.name)).toEqual(['Jane Buyer', 'Johnson & Johnson'])
+  })
+
   it('splits thanked people one per line, skipping prose-looking lines, and lists people before orgs', () => {
     const out = buildWarmStartSuggestions({
       caseStudyClients: [{ client: '3M', title: 'Real' }],

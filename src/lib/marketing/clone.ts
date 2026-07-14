@@ -14,7 +14,6 @@
  * applies defaults, keys array items, and validates required fields.
  */
 import { refsFromIds, type SanityReference } from './derive'
-import { dateInputToIso, toDateInputValue } from './dates'
 
 /** A loose field bag for a document being built (no `_id`, no `_type`). */
 export type MarketingFieldBag = Record<string, unknown>
@@ -88,16 +87,17 @@ function calendarContentTypeToLinkType(contentType?: string): string {
 
 /** True when a calendar item is published-ready (scheduled/published, due) (ported). */
 function isCalendarItemPublishReady(item: CalendarItemForLink): boolean {
-  if (!['scheduled', 'published'].includes(item.status || '')) return false
-  if (!item.publishAt) return true
-  return new Date(item.publishAt).getTime() <= Date.now()
+  if (item.status === 'published') return true
+  if (item.status !== 'scheduled' || !item.publishAt) return false
+  const publishAt = new Date(item.publishAt).getTime()
+  return Number.isFinite(publishAt) && publishAt <= Date.now()
 }
 
 /**
  * Builds the `marketingLinkItem` fields derived from a calendar item.
  *
  * Mirrors the Studio tool's `createLinkFromPost`: the URL is the item's
- * published URL (preferred) or working URL; status is 'active' when the post is
+ * published URL; status is 'active' when the post is
  * publish-ready else 'draft'; sourceChannel comes from the channel ref key (or
  * the legacy `channel` string, defaulting to 'instagram'); publishAt is
  * round-tripped through the date helpers; and the link is linked back to the
@@ -108,9 +108,9 @@ function isCalendarItemPublishReady(item: CalendarItemForLink): boolean {
  * Throws when the calendar item has no usable URL.
  */
 export function buildLinkFromPost(calendarItem: CalendarItemForLink): MarketingFieldBag {
-  const postUrl = calendarItem.publishedUrl || calendarItem.workingUrl || ''
+  const postUrl = calendarItem.publishedUrl?.trim() || ''
   if (!postUrl) {
-    throw new Error('Calendar item has no publishedUrl or workingUrl to turn into a link.')
+    throw new Error('Calendar item needs a publishedUrl before it can become a public Quick Link.')
   }
 
   const publishReady = isCalendarItemPublishReady(calendarItem)
@@ -122,9 +122,7 @@ export function buildLinkFromPost(calendarItem: CalendarItemForLink): MarketingF
     description: trimDescription(calendarItem.brief),
     type: calendarContentTypeToLinkType(calendarItem.contentType),
     status: publishReady ? 'active' : 'draft',
-    publishAt: calendarItem.publishAt
-      ? dateInputToIso(toDateInputValue(calendarItem.publishAt))
-      : undefined,
+    publishAt: calendarItem.publishAt,
     sourceChannel: calendarItem.channelRef?.key || calendarItem.channel || 'instagram',
     calendarItem: { _type: 'reference', _ref: calendarItem._id },
     calendarItems: refsFromIds([calendarItem._id]),

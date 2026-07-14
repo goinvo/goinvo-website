@@ -36,6 +36,7 @@ import {
   Stack,
   StatusPill,
   styles,
+  useMarketingUnsavedGuard,
   type FunnelStage,
   type MarketingAiSuggestion,
   type MarketingData,
@@ -93,8 +94,10 @@ export function TemplateWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(data.templates[0]?._id || null)
   const [kindFilter, setKindFilter] = useState('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editorDirty, setEditorDirty] = useState(false)
   const toast = useToast()
   const { confirm, confirmDialog } = useConfirmDialog()
+  const { clearUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
   const filteredTemplates = useMemo(
     () => data.templates.filter((template) => kindFilter === 'all' || template.kind === kindFilter),
     [data.templates, kindFilter],
@@ -106,18 +109,62 @@ export function TemplateWorkspace({
     setSelectedId(filteredTemplates[0]?._id || data.templates[0]?._id || null)
   }, [data.templates, filteredTemplates, selectedId])
 
+  useEffect(() => {
+    if (editorDirty) markUnsavedChange('marketing-template-editor', 'template draft')
+    else clearUnsavedChanges('marketing-template-editor')
+  }, [clearUnsavedChanges, editorDirty, markUnsavedChange])
+
+  const prepareToSwitch = async () => {
+    if (!editorDirty) return true
+    const shouldDiscard = await confirm({
+      title: 'Discard unsaved changes?',
+      message: `Discard unsaved changes to "${selected?.title || 'Untitled template'}"? Your edits will be lost.`,
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      tone: 'caution',
+    })
+    if (!shouldDiscard) return false
+    clearUnsavedChanges('marketing-template-editor')
+    setEditorDirty(false)
+    return true
+  }
+
   const createTemplate = async (kind: 'campaign' | 'funnel') => {
+    if (!(await prepareToSwitch())) return
     const createdId = await createDocument(defaultMarketingTemplateDocument(kind))
     setKindFilter(kind)
     setSelectedId(createdId)
   }
 
-  const deleteTemplate = async (template: MarketingTemplate) => {
-    const message = `Delete "${template.title || 'Untitled template'}"? Existing campaigns and funnels created from it will not change, but this template will disappear from future pickers.`
-    if (!(await confirm({ title: 'Delete template?', message, confirmLabel: 'Delete' }))) return
+  const selectTemplate = async (id: string) => {
+    if (id === selectedId || !(await prepareToSwitch())) return
+    setSelectedId(id)
+  }
 
-    setDeletingId(template._id)
+  const selectKindFilter = async (kind: string) => {
+    if (kind === kindFilter || !(await prepareToSwitch())) return
+    setKindFilter(kind)
+  }
+
+  const deleteTemplate = async (template: MarketingTemplate) => {
     try {
+      const blockers = await client.fetch<Array<{ _id: string; _type: string; title?: string }>>(
+        '*[references($id)]{_id, _type, title}',
+        { id: template._id },
+      )
+      if (blockers.length > 0) {
+        toast.push({
+          status: 'warning',
+          title: 'Template is still in use',
+          description: `Disconnect it from ${blockers.length} referring record${blockers.length === 1 ? '' : 's'} first. No records were changed.`,
+        })
+        return
+      }
+
+      const message = `Delete "${template.title || 'Untitled template'}"? Existing campaigns and funnels created from it will not change, but this template will disappear from future pickers.`
+      if (!(await confirm({ title: 'Delete template?', message, confirmLabel: 'Delete' }))) return
+
+      setDeletingId(template._id)
       await client.delete(template._id)
       setSelectedId(data.templates.find((candidate) => candidate._id !== template._id)?._id || null)
       await loadData()
@@ -164,7 +211,7 @@ export function TemplateWorkspace({
                 borderColor: kindFilter === option.value ? '#007385' : 'var(--card-border-color)',
                 background: kindFilter === option.value ? 'rgba(0, 115, 133, 0.10)' : 'var(--card-bg-color)',
               }}
-              onClick={() => setKindFilter(option.value)}
+              onClick={() => void selectKindFilter(option.value)}
             >
               {option.title}
             </button>
@@ -180,7 +227,7 @@ export function TemplateWorkspace({
                 borderColor: selectedId === template._id ? '#007385' : 'var(--card-border-color)',
                 background: selectedId === template._id ? 'rgba(0, 115, 133, 0.08)' : 'var(--card-bg-color)',
               }}
-              onClick={() => setSelectedId(template._id)}
+              onClick={() => void selectTemplate(template._id)}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
                 <strong style={{ fontSize: 13 }}>{template.title || 'Untitled template'}</strong>
@@ -203,6 +250,7 @@ export function TemplateWorkspace({
         saving={savingId === selected?._id || deletingId === selected?._id}
         onSave={commitPatch}
         onDelete={deleteTemplate}
+        onDirtyChange={setEditorDirty}
       />
     </div>
   )
@@ -214,16 +262,25 @@ function TemplateEditor({
   saving,
   onSave,
   onDelete,
+  onDirtyChange,
 }: {
   template: MarketingTemplate | null
   data: MarketingData
   saving: boolean
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
   onDelete: (template: MarketingTemplate) => Promise<void>
+  onDirtyChange: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<MarketingTemplate | null>(template)
+  const { confirm, confirmDialog } = useConfirmDialog()
 
   useEffect(() => setDraft(template), [template])
+
+  const dirty = Boolean(draft && template && JSON.stringify(draft) !== JSON.stringify(template))
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   if (!draft || !template) {
     return <EmptyPanel icon={DashboardIcon} title="Select a template" description="Create or choose a template to manage its reusable setup fields." />
@@ -265,6 +322,20 @@ function TemplateEditor({
   }
 
   const save = async () => {
+    if ((draft.kind || 'campaign') !== (template.kind || 'campaign')) {
+      const convertingTo = draft.kind === 'funnel' ? 'funnel' : 'campaign'
+      const fieldsRemoved = convertingTo === 'funnel'
+        ? 'campaign goals, search targeting, channels, metrics, guidance, and notes'
+        : 'the funnel conversion goal and stage map'
+      const shouldConvert = await confirm({
+        title: `Convert to a ${convertingTo} template?`,
+        message: `Saving this type change permanently removes ${fieldsRemoved} from this template. This cannot be undone from this screen.`,
+        confirmLabel: 'Convert and save',
+        cancelLabel: 'Keep editing',
+        tone: 'caution',
+      })
+      if (!shouldConvert) return
+    }
     const set: Record<string, unknown> = {
       title: draft.title || 'Untitled template',
       kind: isCampaign ? 'campaign' : 'funnel',
@@ -306,7 +377,9 @@ function TemplateEditor({
 
   return (
     <section style={styles.panel}>
+      {confirmDialog}
       <PanelTitle title="Template editor" type="marketingTemplate" id={template._id} />
+      {dirty && <div role="status" style={{ ...styles.small, color: '#9a5a00', marginBottom: 12 }}>Unsaved template changes</div>}
       <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: 18 }}>
         <Stack gap={12}>
           <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '1fr 150px 150px', gap: 10 }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SearchIcon } from '@sanity/icons'
 
 import { refsFromIds } from '@/lib/marketing'
@@ -98,8 +98,26 @@ export function ResearchWorkspace({
   autopilotTarget?: AutopilotWorkspaceTarget | null
   onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
 }) {
+  const { clearUnsavedChanges, confirmDiscardUnsavedChange } = useMarketingUnsavedGuard()
   const [selectedId, setSelectedId] = useState(data.researchProjects[0]?._id || '')
   const [migrationMessage, setMigrationMessage] = useState('')
+
+  const confirmProjectSwitch = useCallback(
+    (message = 'Opening another research project will discard the unsaved edits in this project. Continue?') =>
+      confirmDiscardUnsavedChange(MARKETING_UNSAVED_FORM_ID, message),
+    [confirmDiscardUnsavedChange],
+  )
+
+  const selectProject = useCallback(
+    (projectId: string) => {
+      if (projectId === selectedId) return true
+      if (!confirmProjectSwitch()) return false
+      clearUnsavedChanges(MARKETING_UNSAVED_FORM_ID)
+      setSelectedId(projectId)
+      return true
+    },
+    [clearUnsavedChanges, confirmProjectSwitch, selectedId],
+  )
 
   useEffect(() => {
     if (selectedId && data.researchProjects.some((project) => project._id === selectedId)) return
@@ -109,22 +127,26 @@ export function ResearchWorkspace({
   useEffect(() => {
     if (autopilotTarget?.view !== 'research' || !autopilotTarget.recordId) return
     if (data.researchProjects.some((project) => project._id === autopilotTarget.recordId)) {
-      setSelectedId(autopilotTarget.recordId)
+      selectProject(autopilotTarget.recordId)
     }
-  }, [autopilotTarget?.recordId, autopilotTarget?.view, data.researchProjects])
+  }, [autopilotTarget?.recordId, autopilotTarget?.view, data.researchProjects, selectProject])
 
   const selectedProject = data.researchProjects.find((project) => project._id === selectedId) || null
 
   const createProject = async () => {
+    if (!confirmProjectSwitch('Creating a new research project will discard the unsaved edits in this project. Continue?')) return
     const id = await createDocument(createResearchProjectDocument(data))
+    clearUnsavedChanges(MARKETING_UNSAVED_FORM_ID)
     setSelectedId(id)
     onAutopilotComplete?.({ action: 'research:createProject', recordId: id })
   }
 
   const importLegacyPlan = async (plan: MarketingResearchPlan) => {
+    if (!confirmProjectSwitch('Importing this plan will leave the current project and discard its unsaved edits. Continue?')) return
     setMigrationMessage('')
     const project = await migrateLegacyResearchPlanToProject(client, plan)
     await loadData()
+    clearUnsavedChanges(MARKETING_UNSAVED_FORM_ID)
     setSelectedId(project._id)
     setMigrationMessage(`Imported "${plan.title || 'legacy plan'}" as a research project. The original plan was left intact.`)
   }
@@ -155,7 +177,7 @@ export function ResearchWorkspace({
                   borderColor: project._id === selectedId ? '#007385' : 'var(--card-border-color)',
                   background: project._id === selectedId ? 'rgba(0, 115, 133, 0.1)' : 'var(--card-bg-color)',
                 }}
-                onClick={() => setSelectedId(project._id)}
+                onClick={() => selectProject(project._id)}
               >
                 <span style={{ fontWeight: 800 }}>{project.title || 'Untitled research project'}</span>
                 <span style={{ ...styles.small, ...styles.muted }}>
@@ -284,6 +306,18 @@ function ResearchProjectEditor({
   const approvedResultIds = Array.from(new Set([...projectResults.filter(isResearchResultApproved).map((result) => result._id), ...optimisticApprovedIds]))
   const selectedApprovedIds = selectedResultIds.filter((id) => approvedResultIds.includes(id))
   const hasGeneratedResearch = projectRuns.length > 0 || projectResults.length > 0
+  const generatedRecordKeys = new Set([
+    ...refIdsFromRecords(draft?.generatedCampaigns).map((id) => `campaign:${id}`),
+    ...refIdsFromRecords(draft?.generatedFunnels).map((id) => `funnel:${id}`),
+    ...refIdsFromRecords(draft?.generatedCalendarItems).map((id) => `calendar:${id}`),
+    ...refIdsFromRecords(draft?.generatedLinkItems).map((id) => `link:${id}`),
+    ...data.campaigns.filter((item) => item.researchProject?._id === draftId).map((item) => `campaign:${item._id}`),
+    ...data.funnels.filter((item) => item.researchProject?._id === draftId).map((item) => `funnel:${item._id}`),
+    ...data.calendarItems.filter((item) => item.researchProject?._id === draftId).map((item) => `calendar:${item._id}`),
+    ...data.linkItems.filter((item) => item.researchProject?._id === draftId).map((item) => `link:${item._id}`),
+  ])
+  const generatedRecordCount = generatedRecordKeys.size
+  const alreadyConverted = draft?.status === 'converted' || generatedRecordCount > 0
 
   useEffect(() => {
     setPendingResultIds((current) => current.filter((id) => projectResultIds.has(id)))
@@ -453,7 +487,10 @@ function ResearchProjectEditor({
         .patch(result._id)
         .set({
           selectedForSynthesis: selected,
-          status: selected ? (result.status === 'approved' ? 'approved' : 'selected') : result.status === 'selected' ? 'needsReview' : result.status || 'needsReview',
+          // Selection answers "should this influence synthesis?". It is not a
+          // trust decision: only the explicit Trust + use action may promote a
+          // finding to approved.
+          status: result.status === 'selected' ? 'needsReview' : result.status || 'needsReview',
         })
         .commit()
       await onSave(draft._id, { selectedResults: refsFromIds(nextSelected) }, nextSelected.length > 0 ? [] : ['selectedResults'])
@@ -567,6 +604,10 @@ function ResearchProjectEditor({
 
   const generateLinkedRecords = async () => {
     if (!draft._id) return
+    if (alreadyConverted) {
+      setMessage('Setup drafts already exist for this project. Open and edit those records instead of creating duplicates.')
+      return
+    }
     setConverting(true)
     setError('')
     setMessage('')
@@ -576,7 +617,7 @@ function ResearchProjectEditor({
       clearUnsavedChanges()
       const result = await createResearchProjectGeneratedRecords(client, data, draft, selectedApprovedIds)
       await loadData()
-      setMessage(`Created ${result.calendarItemIds.length} draft calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, plus campaign, funnel, and Quick Link drafts from trusted findings.`)
+      setMessage(`Created ${result.calendarItemIds.length} draft calendar item${result.calendarItemIds.length === 1 ? '' : 's'}, plus campaign, funnel, and Quick Link drafts from trusted findings. This project cannot be converted again; edit the created drafts if the plan changes.`)
       onAutopilotComplete?.({ action: 'research:generateRecords', recordId: draft._id })
     } catch (conversionError) {
       setError(conversionError instanceof Error ? conversionError.message : 'Could not create linked drafts.')
@@ -936,10 +977,15 @@ function ResearchProjectEditor({
           type="button"
           style={{ ...styles.primaryButton, width: '100%', marginTop: 12 }}
           onClick={() => void generateLinkedRecords()}
-          disabled={converting || selectedApprovedIds.length === 0}
+          disabled={converting || selectedApprovedIds.length === 0 || alreadyConverted}
         >
-          {converting ? 'Creating...' : 'Create setup drafts'}
+          {converting ? 'Creating...' : alreadyConverted ? 'Setup drafts already created' : 'Create setup drafts'}
         </button>
+        {alreadyConverted && (
+          <p style={{ ...styles.small, ...styles.muted, margin: '8px 0 0' }}>
+            This project already created {generatedRecordCount || 'its'} linked setup record{generatedRecordCount === 1 ? '' : 's'}. Review and edit those drafts below; reopening research does not create a second campaign.
+          </p>
+        )}
         {selectedApprovedIds.length === 0 && (
           <p style={{ ...styles.small, ...styles.muted, margin: '8px 0 0' }}>
             Trust and select at least one finding before creating setup drafts.

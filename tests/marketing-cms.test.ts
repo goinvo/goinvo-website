@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { schemaTypes } from '@/sanity/schemas'
 import analyticsSchema from '@/sanity/schemas/marketingAnalyticsSource'
 import audienceProfileSchema from '@/sanity/schemas/marketingAudienceProfile'
@@ -31,11 +31,19 @@ import {
   buildProofPointFromResearchResult,
   buildMarketingAssistantActions,
   buildMarketingAutopilotPlan,
+  buildWizardStrategyDraft,
+  buildWizardStrategyPrompt,
+  createResearchProjectGeneratedRecords,
   filterMarketingAssistantActions,
   getAbTestingStats,
   getCurrentAutopilotStep,
+  getMarketingDashboardGaps,
+  getMarketingDashboardStats,
   getMarketingAutofillQuestions,
+  getStrategyResearchResults,
   getStrategyFillQuestions,
+  hasUsableStrategyRecord,
+  isResearchResultApproved,
   marketingTool,
 } from '@/sanity/tools/marketingTool'
 
@@ -109,6 +117,15 @@ const defaultAutopilotQuestionnaire = {
 } satisfies MarketingQuestionnaireInput
 
 describe('Marketing CMS schemas', () => {
+  it('labels positioning provenance limits and stale AI-citation fallbacks honestly', () => {
+    const source = readFileSync(new URL('../src/sanity/components/StrategyBriefWorkspace.tsx', import.meta.url), 'utf8')
+
+    expect(source).toContain('per-claim source links or verification status')
+    expect(source).toContain('verify them in Research, Evidence, or SEO before external use')
+    expect(source).toContain('not the latest attempt')
+    expect(source).toContain('Most recent successful run')
+  })
+
   it('exposes marketing as a custom Studio tool, not another content structure list', () => {
     expect(marketingTool.name).toBe('marketing')
     expect(marketingTool.title).toBe('Marketing')
@@ -185,7 +202,8 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('AbTestingComparisonRows')
     expect(source).toContain('Vercel Analytics readout')
     expect(source).toContain('Open Vercel dashboard')
-    expect(source).toContain('New homepage and Vision article test creation flows are coming soon.')
+    expect(source).toContain('Create first A/B test')
+    expect(source).toContain('onClick={() => void createHomepageExperiment()}')
     expect(source).toContain('How this test is going')
     expect(source).toContain('Suggested improvements')
     expect(source).toContain('Visits and events')
@@ -198,7 +216,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('Result comparison')
     expect(source).toContain('AbTestingLeaderSummary')
     expect(source).toContain('Which page is performing better?')
-    expect(source).toContain('Better page')
+    expect(source).toContain('Current direction')
     expect(source).toContain('Metric wins')
     expect(source).not.toContain('Setup is tucked away')
     expect(source).toContain('Finish setup before launch')
@@ -220,9 +238,9 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('Create reusable message')
     expect(source).not.toContain('Add message answer')
     expect(source).toContain('Answer setup questions')
-    expect(source).toContain('Build campaign plans')
-    expect(source).toContain('Map funnel paths')
-    expect(source).toContain('Turn the saved answers into campaign briefs and launch plans.')
+    expect(source).toContain('Campaign plans live in Make')
+    expect(source).toContain('Funnel paths live in Make')
+    expect(source).toContain('Use one campaign editor, with the saved Strategy answers available as inputs')
     expect(source).toContain('I want to do something specific')
     expect(source).toContain('Main menu')
     expect(source).toContain('Saved sessions')
@@ -242,7 +260,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('Start chat')
     expect(source).toContain("autopilotPlan: activeSession?.autopilotPlan || null")
     expect(source).toContain('data-tour-id={`autopilot-coach-choice-${step.id}-${choiceIndex}`}')
-    expect(source).toContain('onClick={() => onChoice(step, choice, choiceIndex)}')
+    expect(source).toContain('onClick={() => void onChoice(step, choice, choiceIndex)}')
     expect(source).toContain('aria-label="Strategy workspace sections"')
     expect(source).not.toContain('Apply to draft')
     expect(source).not.toContain('Change request')
@@ -871,6 +889,177 @@ describe('Marketing CMS schemas', () => {
     expect(actions[0].recommended).toBe(true)
   })
 
+  it('puts private warm-outreach work first in short-runway postures without inventing a contact', () => {
+    const actions = buildMarketingAssistantActions(emptyMarketingData(), null, 'survival')
+    const gaps = getMarketingDashboardGaps(emptyMarketingData(), 'survival')
+
+    expect(actions[0]).toMatchObject({ id: 'work-call-plan', recommended: true })
+    expect(actions[0].reason).toContain('actual due contact and channel')
+    expect(actions.find((action) => action.id === 'plan-calendar')).toMatchObject({ recommended: false, score: 40 })
+    expect(gaps[0]).toMatchObject({ id: 'dashboard-direct-outreach-priority', view: 'outreach', severity: 'urgent' })
+    expect(gaps.map((gap) => gap.id)).not.toContain('dashboard-no-upcoming-content')
+    expect(buildWizardStrategyDraft(emptyMarketingData(), defaultAutopilotQuestionnaire, 'survival')).toMatchObject({
+      financialPosture: 'survival',
+      planningNeed: expect.stringContaining('private warm-outreach'),
+    })
+    expect(buildWizardStrategyPrompt(emptyMarketingData(), defaultAutopilotQuestionnaire, '', 'rebuild')).toContain(
+      'private warm outreach outranks content',
+    )
+    const toolSource = readFileSync(new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url), 'utf8')
+    expect(toolSource).toContain("if (financialPostureId === 'survival' || financialPostureId === 'rebuild')")
+    expect(toolSource).toContain('const outreachPlan = buildPrincipalOutreachPlan()')
+  })
+
+  it('does not count empty saved strategy placeholders as answered setup questions', () => {
+    const data = emptyMarketingData({
+      audienceProfiles: [{ _id: 'audience-placeholder', title: '', priority: 'secondary' }],
+      messagePillars: [{ _id: 'message-placeholder', title: '', coreClaim: '' }],
+      proofPoints: [{ _id: 'proof-placeholder', title: '', proofType: 'researchFinding', confidence: 'medium' }],
+      ctas: [{ _id: 'cta-placeholder', title: '', priority: 'contextual' }],
+      trackingRules: [{ _id: 'tracking-placeholder', title: '', status: 'active' }],
+      qualityGates: [{ _id: 'quality-placeholder', title: '', status: 'active', checks: [] }],
+    })
+
+    expect(hasUsableStrategyRecord('audiences', data.audienceProfiles[0])).toBe(false)
+    expect(hasUsableStrategyRecord('messages', { _id: 'message-real', coreClaim: 'Make health systems legible.' })).toBe(true)
+    const strategyGap = getMarketingDashboardGaps(data).find((gap) => gap.id === 'dashboard-strategy-foundation-gap')
+    expect(strategyGap?.affected).toEqual(expect.arrayContaining(['audience', 'message', 'proof', 'CTA', 'tracking rule', 'quality gate']))
+  })
+
+  it('keeps synthesis selection separate from explicit research approval', () => {
+    expect(isResearchResultApproved({ _id: 'selected-only', status: 'needsReview', selectedForSynthesis: true })).toBe(false)
+    expect(isResearchResultApproved({ _id: 'legacy-selected', status: 'selected', selectedForSynthesis: true })).toBe(false)
+    expect(isResearchResultApproved({ _id: 'approved', status: 'approved', selectedForSynthesis: false })).toBe(true)
+
+    const untrustedGap = getMarketingDashboardGaps(emptyMarketingData({
+      researchResults: [{ _id: 'selected-only', status: 'needsReview', selectedForSynthesis: true }],
+    })).find((gap) => gap.id === 'dashboard-strategy-foundation-gap')
+    expect(untrustedGap?.view).toBe('research')
+    expect(getStrategyResearchResults(emptyMarketingData({
+      researchResults: [
+        { _id: 'selected-only', status: 'needsReview', selectedForSynthesis: true },
+        { _id: 'approved', status: 'approved', selectedForSynthesis: false },
+      ],
+    })).map((result) => result._id)).toEqual(['approved'])
+  })
+
+  it('makes research-to-draft conversion atomic and retry-safe', () => {
+    const domainSource = readFileSync(new URL('../src/sanity/components/marketing/domain.ts', import.meta.url), 'utf8')
+    const workspaceSource = readFileSync(new URL('../src/sanity/components/marketing/ResearchWorkspace.tsx', import.meta.url), 'utf8')
+    const conversion = domainSource.slice(
+      domainSource.indexOf('export async function createResearchProjectGeneratedRecords'),
+      domainSource.indexOf('function researchConversionDocumentId'),
+    )
+
+    expect(conversion).toContain('researchConversionDocumentId')
+    expect(conversion.match(/\.createIfNotExists\(/g)?.length).toBeGreaterThanOrEqual(4)
+    expect(conversion).toContain('.patch(project._id')
+    expect(conversion).toContain('await transaction.commit()')
+    expect(workspaceSource).toContain('disabled={converting || selectedApprovedIds.length === 0 || alreadyConverted}')
+    expect(workspaceSource).toContain('Setup drafts already created')
+  })
+
+  it('commits a new research conversion once with deterministic document ids', async () => {
+    const createdDocuments: Array<Record<string, unknown>> = []
+    const transaction = {
+      createIfNotExists: vi.fn((document: Record<string, unknown>) => {
+        createdDocuments.push(document)
+        return transaction
+      }),
+      patch: vi.fn(() => transaction),
+      commit: vi.fn(async () => ({})),
+    }
+    const client = {
+      fetch: vi.fn(async (query: string) => (query.includes('$projectId') ? null : [])),
+      createIfNotExists: vi.fn(async (document: Record<string, unknown>) => document),
+      transaction: vi.fn(() => transaction),
+    } as unknown as Parameters<typeof createResearchProjectGeneratedRecords>[0]
+    const project = { _id: 'project/with unsafe id', title: 'Trusted topic', status: 'reviewing' }
+    const data = emptyMarketingData({
+      researchProjects: [project],
+      researchResults: [{
+        _id: 'result-1',
+        title: 'Trusted source',
+        status: 'approved',
+        selectedForSynthesis: true,
+        project: { _id: project._id },
+        sourceUrl: 'https://example.org/source',
+      }],
+    })
+
+    const result = await createResearchProjectGeneratedRecords(client, data, project, ['result-1'])
+
+    expect(client.transaction).toHaveBeenCalledTimes(1)
+    expect(transaction.commit).toHaveBeenCalledTimes(1)
+    expect(transaction.patch).toHaveBeenCalledTimes(1)
+    expect(createdDocuments.length).toBeGreaterThanOrEqual(4)
+    expect(createdDocuments.every((document) => String(document._id).startsWith('research-conversion.'))).toBe(true)
+    expect(result).toMatchObject({ reused: false })
+    expect(result.campaignId).toMatch(/^research-conversion\./)
+  })
+
+  it('reuses a completed research conversion before validating stale selections', async () => {
+    const client = {
+      fetch: vi.fn(async () => ({
+        generatedCampaigns: [{ _id: 'campaign-1' }],
+        generatedFunnels: [{ _id: 'funnel-1' }],
+        generatedCalendarItems: [{ _id: 'calendar-1' }],
+        generatedLinkItems: [{ _id: 'link-1' }],
+      })),
+      transaction: vi.fn(),
+    } as unknown as Parameters<typeof createResearchProjectGeneratedRecords>[0]
+
+    const result = await createResearchProjectGeneratedRecords(
+      client,
+      emptyMarketingData(),
+      { _id: 'project-1', status: 'converted' },
+      [],
+    )
+
+    expect(result).toEqual({
+      campaignId: 'campaign-1',
+      funnelId: 'funnel-1',
+      calendarItemIds: ['calendar-1'],
+      linkItemIds: ['link-1'],
+      reused: true,
+    })
+    expect(client.transaction).not.toHaveBeenCalled()
+  })
+
+  it('uses exactly 30 dates and stops runway at the first weekly coverage break', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T12:00:00.000Z'))
+    try {
+      const stats = getMarketingDashboardStats(emptyMarketingData({
+        calendarItems: [
+          { _id: 'ready-1', status: 'scheduled', publishAt: '2026-01-02T12:00:00.000Z' },
+          { _id: 'ready-2', status: 'review', publishAt: '2026-01-06T12:00:00.000Z' },
+          { _id: 'orphan', status: 'scheduled', publishAt: '2026-01-21T12:00:00.000Z' },
+          { _id: 'day-30', status: 'scheduled', publishAt: '2026-01-30T12:00:00.000Z' },
+          { _id: 'day-31', status: 'scheduled', publishAt: '2026-01-31T12:00:00.000Z' },
+          { _id: 'draft-only', status: 'drafting', publishAt: '2026-01-03T12:00:00.000Z' },
+        ],
+      }))
+
+      expect(stats.upcoming30Items.map((item) => item._id)).toEqual(['ready-1', 'ready-2', 'orphan', 'day-30'])
+      expect(stats.contentRunwayDays).toBe(6)
+      expect(stats.lastUpcomingDate).toBe('2026-01-06T12:00:00.000Z')
+      expect(stats.executionReadyItems.map((item) => item._id)).not.toContain('draft-only')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('semantically deduplicates overlapping Home setup gaps', () => {
+    const gaps = getMarketingDashboardGaps(emptyMarketingData())
+    expect(gaps.filter((gap) => gap.id.includes('strategy-foundation'))).toHaveLength(1)
+    expect(gaps.filter((gap) => gap.view === 'analytics' && /analytics source/i.test(gap.title))).toHaveLength(1)
+
+    const toolSource = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
+    expect(toolSource).toContain('getMarketingDashboardGaps(data, financialPostureId).length')
+    expect(toolSource).not.toContain('const attentionCount = attentionItems.length')
+  })
+
   it('filters assistant actions by title, tags, section, and recommendation reason', () => {
     const actions = buildMarketingAssistantActions(emptyMarketingData())
 
@@ -1025,18 +1214,26 @@ describe('Marketing CMS schemas', () => {
     }
     const selectedResult = {
       ...unreviewedResult,
-      status: 'selected',
+      status: 'approved',
       selectedForSynthesis: false,
     }
     const campaign = { _id: 'campaign-1', title: 'Housing Truths Instagram', researchProject: project, topicCluster: 'housing truths' }
     const funnel = { _id: 'funnel-1', title: 'Housing Truths funnel', researchProject: project, audience: 'housing advocates' }
+    const convertedProject = {
+      ...project,
+      status: 'converted',
+      selectedResults: [{ _id: 'result-1', title: 'Boston housing source' }],
+      approvedResults: [{ _id: 'result-1', title: 'Boston housing source' }],
+      generatedCampaigns: [{ _id: 'campaign-1', title: 'Housing Truths Instagram' }],
+      generatedFunnels: [{ _id: 'funnel-1', title: 'Housing Truths funnel' }],
+    }
     const completeStrategy = {
       audienceProfiles: [{ _id: 'audience-1', title: 'Housing policy advocates', audience: 'Renters, civic designers, and housing policy advocates', priority: 'primary' }],
       messagePillars: [{ _id: 'message-1', title: 'Housing Truths message', coreClaim: 'Housing statistics need clear visual context.', topicCluster: 'housing truths' }],
       proofPoints: [{ _id: 'proof-1', title: 'Housing data proof', claim: 'Housing statistics reveal local affordability pressure.', topicCluster: 'housing truths' }],
       ctas: [{ _id: 'cta-1', title: 'Visit Housing Truths', label: 'See Housing Truths', destination: 'https://housingtruths.org', priority: 'primary' }],
-      trackingRules: [{ _id: 'tracking-1', title: 'Standard UTM rule', status: 'active' }],
-      qualityGates: [{ _id: 'quality-1', title: 'Social content quality gate', status: 'active' }],
+      trackingRules: [{ _id: 'tracking-1', title: 'Standard UTM rule', status: 'active', utmCampaignPattern: '{campaign}-{date}' }],
+      qualityGates: [{ _id: 'quality-1', title: 'Social content quality gate', status: 'active', checks: [{ label: 'Verify every claim' }] }],
     }
     const calendarDraft = {
       _id: 'calendar-1',
@@ -1086,7 +1283,7 @@ describe('Marketing CMS schemas', () => {
       {
         name: 'paired records generated',
         data: emptyMarketingData({
-          researchProjects: [project],
+          researchProjects: [convertedProject],
           researchResults: [selectedResult],
           campaigns: [campaign],
           funnels: [funnel],
@@ -1097,7 +1294,7 @@ describe('Marketing CMS schemas', () => {
       {
         name: 'strategy ready',
         data: emptyMarketingData({
-          researchProjects: [project],
+          researchProjects: [convertedProject],
           researchResults: [selectedResult],
           campaigns: [campaign],
           funnels: [funnel],
@@ -1109,7 +1306,7 @@ describe('Marketing CMS schemas', () => {
       {
         name: 'calendar ready, missing public destination link',
         data: emptyMarketingData({
-          researchProjects: [project],
+          researchProjects: [convertedProject],
           researchResults: [selectedResult],
           campaigns: [campaign],
           funnels: [funnel],
@@ -1122,7 +1319,7 @@ describe('Marketing CMS schemas', () => {
       {
         name: 'setup complete',
         data: emptyMarketingData({
-          researchProjects: [project],
+          researchProjects: [convertedProject],
           researchResults: [selectedResult],
           campaigns: [campaign],
           funnels: [funnel],
@@ -1147,7 +1344,7 @@ describe('Marketing CMS schemas', () => {
       _id: 'result-1',
       title: 'Boston housing source',
       resultType: 'sourceEvidence',
-      status: 'selected',
+      status: 'approved',
       selectedForSynthesis: true,
       project,
     }
@@ -1468,7 +1665,7 @@ describe('Marketing analytics interpretation', () => {
   })
 
   it('reports a healthy interpretation when active marketing work is measurable', () => {
-    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected' }
+    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected', vercelProject: 'goinvo-website' }
     const insights = buildAnalyticsInterpretations({
       analyticsSources: [
         {
@@ -1602,13 +1799,15 @@ describe('Marketing A/B testing insights', () => {
   })
 
   it('reports healthy A/B testing setup when flags, sources, and signals are linked', () => {
-    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected' }
+    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected', vercelProject: 'goinvo-website' }
     const signalRef = {
       _id: 'signal-1',
       title: 'Homepage concept readout',
       provider: 'vercelAnalytics',
       status: 'reviewed',
-      signalType: 'conversion',
+      signalType: 'abTestVariantReadout',
+      experiment: { _id: 'experiment-1', title: 'Homepage concept' },
+      metricDate: '2026-06-01',
       metrics: [
         { _key: 'metric-concept-conversions', label: 'experiment_conversion', value: 24, unit: 'events', change: '+18%', variantKey: 'concept', eventName: 'experiment_conversion' },
         { _key: 'metric-control-conversions', label: 'experiment_conversion', value: 20, unit: 'events', variantKey: 'control', eventName: 'experiment_conversion' },
@@ -1632,6 +1831,7 @@ describe('Marketing A/B testing insights', () => {
           targetType: 'homepage',
           targetPath: '/',
           flagKey: 'home-2026-variant',
+          measurementStart: '2026-01-01T00:00:00.000Z',
           variants: [
             { _key: 'variant-1', key: 'control', label: 'Current homepage' },
             { _key: 'variant-2', key: 'concept', label: 'Concept homepage' },
@@ -1680,13 +1880,15 @@ describe('Marketing A/B testing insights', () => {
   })
 
   it('warns when linked result data violates an A/B test guardrail', () => {
-    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected' }
+    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected', vercelProject: 'goinvo-website' }
     const signalRef = {
       _id: 'signal-1',
       title: 'Homepage concept readout',
       provider: 'vercelAnalytics',
       status: 'reviewed',
-      signalType: 'conversion',
+      signalType: 'abTestVariantReadout',
+      experiment: { _id: 'experiment-1', title: 'Homepage concept' },
+      metricDate: '2026-06-01',
       metrics: [
         { _key: 'metric-concept-work', label: 'view_work_click', value: 80, unit: 'events', change: '-12%', variantKey: 'concept', eventName: 'view_work_click' },
         { _key: 'metric-control-work', label: 'view_work_click', value: 91, unit: 'events', variantKey: 'control', eventName: 'view_work_click' },
@@ -1704,6 +1906,7 @@ describe('Marketing A/B testing insights', () => {
           targetType: 'homepage',
           targetPath: '/',
           flagKey: 'home-2026-variant',
+          measurementStart: '2026-01-01T00:00:00.000Z',
           variants: [
             { _key: 'variant-1', key: 'control', label: 'Current homepage' },
             { _key: 'variant-2', key: 'concept', label: 'Concept homepage' },
@@ -1747,13 +1950,15 @@ describe('Marketing A/B testing insights', () => {
   })
 
   it('asks designers to map result data when signal labels do not match tracked metrics', () => {
-    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected' }
+    const sourceRef = { _id: 'source-1', title: 'Vercel Web Analytics', provider: 'vercelAnalytics', status: 'connected', vercelProject: 'goinvo-website' }
     const signalRef = {
       _id: 'signal-1',
       title: 'Homepage concept readout',
       provider: 'vercelAnalytics',
       status: 'reviewed',
-      signalType: 'conversion',
+      signalType: 'abTestVariantReadout',
+      experiment: { _id: 'experiment-1', title: 'Homepage concept' },
+      metricDate: '2026-06-01',
       metrics: [{ _key: 'metric-1', label: 'cta_clicks_unmapped', value: 24, unit: 'events', change: '+18%' }],
     }
     const data = emptyMarketingData({
@@ -1766,6 +1971,7 @@ describe('Marketing A/B testing insights', () => {
           targetType: 'homepage',
           targetPath: '/',
           flagKey: 'home-2026-variant',
+          measurementStart: '2026-01-01T00:00:00.000Z',
           variants: [
             { _key: 'variant-1', key: 'control', label: 'Current homepage' },
             { _key: 'variant-2', key: 'concept', label: 'Concept homepage' },

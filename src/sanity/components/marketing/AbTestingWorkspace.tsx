@@ -55,6 +55,7 @@ import {
   getAbTestingLaunchChecklistItems,
   getAbTestingStats,
   getAbTestingTrackedVercelEvents,
+  getAbTestingVariantValidationError,
   getAbTestingVariantEngagement,
   getAbTestingVariantEventRows,
   getAbTestingVariantOptions,
@@ -73,6 +74,8 @@ import {
   PanelHeading,
   PanelTitle,
   referenceFromId,
+  isAbTestingSignalInMeasurementWindow,
+  isUsableConnectedAnalyticsSource,
   Select,
   Stack,
   styles,
@@ -111,6 +114,7 @@ export function AbTestingWorkspace({
   const [draft, setDraft] = useState<MarketingExperiment | null>(selectedExperiment)
   const [activeEditorTab, setActiveEditorTab] = useState<AbTestingEditorTab>('setup')
   const [pageMode, setPageMode] = useState<AbTestingPageMode>('dashboard')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const stats = useMemo(() => getAbTestingStats(data), [data])
   const insights = useMemo(() => buildAbTestingInsights(data), [data])
 
@@ -182,6 +186,33 @@ export function AbTestingWorkspace({
     setPageMode('configuration')
   }
 
+  const createResultSignal = async () => {
+    if (!draft || !selectedExperiment) return
+    if (abTestingTrackingFingerprint(draft) !== abTestingTrackingFingerprint(selectedExperiment)) {
+      setSaveError('Save the tracking changes first so the result signal starts in the new measurement window.')
+      return
+    }
+    const createdId = await createDocument({
+      _type: 'marketingPerformanceSignal',
+      title: `${marketingExperimentTitle(draft)} result readout`,
+      provider: 'manual',
+      status: 'new',
+      signalType: 'abTestVariantReadout',
+      experiment: referenceFromId(selectedExperiment._id),
+      metricDate: new Date().toISOString().slice(0, 10),
+    })
+    const placeholder: MarketingPerformanceSignal = {
+      _id: createdId,
+      title: `${marketingExperimentTitle(draft)} result readout`,
+      provider: 'manual',
+      status: 'new',
+      signalType: 'abTestVariantReadout',
+      experiment: { _id: selectedExperiment._id, title: selectedExperiment.title },
+      metricDate: new Date().toISOString().slice(0, 10),
+    }
+    setDraft({ ...draft, performanceSignals: uniqueById([...(draft.performanceSignals || []), placeholder]) })
+  }
+
   const updateDraft = (field: keyof MarketingExperiment, value: unknown) => {
     if (!draft) return
     setDraft({ ...draft, [field]: value })
@@ -242,7 +273,18 @@ export function AbTestingWorkspace({
 
   const save = async () => {
     if (!draft || !selectedExperiment) return
-    const signalIds = experimentSignalIds(draft)
+    const variantError = getAbTestingVariantValidationError(draft)
+    if (variantError) {
+      setSaveError(variantError)
+      setActiveEditorTab('setup')
+      return
+    }
+    setSaveError(null)
+    const trackingChanged = abTestingTrackingFingerprint(draft) !== abTestingTrackingFingerprint(selectedExperiment)
+    const signalIds = trackingChanged ? [] : experimentSignalIds(draft)
+    const measurementStart = trackingChanged
+      ? new Date().toISOString()
+      : draft.measurementStart || new Date().toISOString()
     const set: Record<string, unknown> = {
       title: draft.title || 'Untitled experiment',
       status: draft.status || 'idea',
@@ -251,6 +293,7 @@ export function AbTestingWorkspace({
       targetType: draft.targetType,
       targetPath: draft.targetPath,
       flagKey: draft.flagKey,
+      measurementStart,
       variants: experimentVariantsFromDraft(draft as unknown as Record<string, unknown>),
       primaryMetric: draft.primaryMetric,
       trackedMetrics: experimentTrackedMetricsFromDraft(draft as unknown as Record<string, unknown>),
@@ -268,7 +311,12 @@ export function AbTestingWorkspace({
     }
     const unset = emptyKeys(set)
     unset.forEach((key) => delete set[key])
-    await commitPatch(selectedExperiment._id, set, unset)
+    try {
+      await commitPatch(selectedExperiment._id, set, unset)
+      setDraft({ ...draft, measurementStart, performanceSignals: trackingChanged ? [] : draft.performanceSignals })
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save this experiment.')
+    }
   }
 
   const scrollToAbTestingSection = (id: string) => {
@@ -296,6 +344,13 @@ export function AbTestingWorkspace({
     .map((id) => data.performanceSignals.find((signal) => signal._id === id) || draft?.performanceSignals?.find((signal) => signal._id === id))
     .filter(Boolean) as MarketingPerformanceSignal[]
   const selectedNextStep = getAbTestingDesignerNextStep(draft)
+  const hasPendingTrackingChange = Boolean(
+    draft && selectedExperiment && abTestingTrackingFingerprint(draft) !== abTestingTrackingFingerprint(selectedExperiment),
+  )
+  const usableAnalyticsSources = data.analyticsSources.filter(isUsableConnectedAnalyticsSource)
+  const matchingSignals = draft
+    ? data.performanceSignals.filter((signal) => isAbTestingSignalInMeasurementWindow(draft, signal))
+    : []
   const selectedExperimentTitle = selectedExperiment ? marketingExperimentTitle(selectedExperiment) : ''
   const selectedInsights = selectedExperiment
     ? insights.filter((insight) => insight.experimentId === selectedExperiment._id || insight.affected.includes(selectedExperimentTitle))
@@ -411,7 +466,7 @@ export function AbTestingWorkspace({
                     <input style={styles.input} value={draft.flagKey || ''} onChange={(event) => updateDraft('flagKey', event.currentTarget.value)} />
                   </InputField>
                 </div>
-                <InputField label="Page versions" help="One version per line. Include control/current and each new version. Format: key | label | notes | custom preview link.">
+                <InputField label="Page versions" help="Exactly two lines: one control and one treatment. Format: key | label | notes | custom preview link.">
                   <textarea
                     rows={4}
                     style={styles.input}
@@ -452,11 +507,11 @@ export function AbTestingWorkspace({
                 items={[
                   { label: 'Public page chosen', done: Boolean(draft.targetPath?.trim()) },
                   { label: 'Traffic split key set', done: Boolean(draft.flagKey?.trim()) },
-                  { label: 'Control version included', done: experimentHasControlVariant(draft) },
+                  { label: 'Exactly two versions (control + treatment)', done: experimentHasControlVariant(draft) },
                   { label: 'Primary success metric named', done: Boolean(draft.primaryMetric?.trim()) },
                   { label: 'Tracked metrics listed', done: experimentHasTrackedMetric(draft) },
                   { label: 'Success rule set', done: experimentHasSuccessTracker(draft) },
-                  { label: 'Results source linked', done: Boolean(draft.analyticsSource?._id) },
+                  { label: 'Connected results source linked', done: Boolean(draft.analyticsSource && isUsableConnectedAnalyticsSource(draft.analyticsSource)) },
                   { label: 'Decision evidence linked', done: selectedSignalIds.length > 0 },
                 ]}
               />
@@ -467,7 +522,7 @@ export function AbTestingWorkspace({
                     value={draft.analyticsSource?._id || ''}
                     options={[
                       { title: 'No analytics source', value: '' },
-                      ...data.analyticsSources.map((source) => ({
+                      ...usableAnalyticsSources.map((source) => ({
                         title: `${source.title || labelFor(analyticsProviderOptions, source.provider)} (${labelFor(analyticsProviderOptions, source.provider)})`,
                         value: source._id,
                       })),
@@ -521,11 +576,17 @@ export function AbTestingWorkspace({
               <div id="ab-test-results-evidence" style={{ scrollMarginTop: 18 }}>
               <Stack gap={12}>
                 <h3 style={{ margin: 0, fontSize: 18 }}>Results evidence</h3>
-                {data.performanceSignals.length === 0 ? (
-                  <EmptyInline title="No result signals yet. Create or import one in Analytics, then link it here." />
+                <button type="button" style={{ ...styles.button, justifySelf: 'start' }} disabled={savingId === 'new' || hasPendingTrackingChange} onClick={() => void createResultSignal()}>
+                  Add result signal for this test
+                </button>
+                {hasPendingTrackingChange && (
+                  <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>Save the tracking changes before adding evidence; saving starts a new measurement window.</p>
+                )}
+                {matchingSignals.length === 0 ? (
+                  <EmptyInline title="No in-window result signals reference this experiment yet. Add one here or assign this experiment on an existing A/B readout." />
                 ) : (
                   <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)', maxHeight: 280, overflow: 'auto' }}>
-                    {data.performanceSignals.map((signal, index) => {
+                    {matchingSignals.map((signal, index) => {
                       const checked = selectedSignalIds.includes(signal._id)
                       return (
                         <label
@@ -537,7 +598,7 @@ export function AbTestingWorkspace({
                             alignItems: 'start',
                             cursor: 'pointer',
                             padding: '10px 0',
-                            borderBottom: index === data.performanceSignals.length - 1 ? 'none' : '1px solid var(--card-border-color)',
+                            borderBottom: index === matchingSignals.length - 1 ? 'none' : '1px solid var(--card-border-color)',
                           }}
                         >
                           <input
@@ -564,6 +625,7 @@ export function AbTestingWorkspace({
 
           <div style={{ display: 'grid', gap: 12 }}>
             <AdvancedFieldsDropdown type="marketingExperiment" id={selectedExperiment._id} />
+            {saveError && <div role="alert" style={{ ...styles.small, color: '#d98a8a' }}>{saveError}</div>}
             <button type="button" style={styles.primaryButton} disabled={savingId === selectedExperiment._id} onClick={() => void save()}>
               {savingId === selectedExperiment._id ? 'Saving...' : 'Save experiment'}
             </button>
@@ -585,12 +647,11 @@ export function AbTestingWorkspace({
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
               <button
                 type="button"
-                title="New homepage and Vision article test creation flows are coming soon."
-                style={{ ...styles.button, minHeight: 34, padding: '8px 10px', cursor: 'not-allowed', opacity: 0.78 }}
-                disabled
+                style={{ ...styles.primaryButton, minHeight: 34, padding: '8px 10px' }}
+                disabled={savingId === 'new'}
+                onClick={() => void createHomepageExperiment()}
               >
-                Add A/B test
-                <span style={{ ...styles.small, fontWeight: 900, color: '#4dc4d6' }}>Coming Soon</span>
+                {savingId === 'new' ? 'Creating…' : 'Add A/B test'}
               </button>
             </div>
           </div>
@@ -621,13 +682,12 @@ export function AbTestingWorkspace({
             </div>
           ) : (
             <div style={{ borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)', padding: '18px 0', display: 'grid', gap: 8 }}>
-              <strong>A/B test creation is coming soon</strong>
+              <strong>No A/B tests yet</strong>
               <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
-                Existing test records will show here as dashboard cards. The Add A/B test flow will include homepage and Vision article options when the next creation path is ready.
+                Start from the two-version homepage template, then change the page, hypothesis, treatment, and success metric in Setup.
               </p>
-              <button type="button" style={{ ...styles.button, justifySelf: 'start', cursor: 'not-allowed', opacity: 0.78 }} disabled>
-                Add A/B test
-                <span style={{ ...styles.small, fontWeight: 900, color: '#4dc4d6' }}>Coming Soon</span>
+              <button type="button" style={{ ...styles.primaryButton, justifySelf: 'start' }} disabled={savingId === 'new'} onClick={() => void createHomepageExperiment()}>
+                {savingId === 'new' ? 'Creating…' : 'Create first A/B test'}
               </button>
             </div>
           )}
@@ -642,7 +702,7 @@ export function AbTestingWorkspace({
                 <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
                   {marketingExperimentTitle(selectedExperiment)} on {normalizeMarketingExperimentPath(selectedExperiment.targetPath) || 'an unassigned page'}.
                   {draft.measurementStart
-                    ? ` Data measured since ${formatDateOnly(draft.measurementStart)} — earlier counts were reset when tracking changed.`
+                    ? ` Measurement window starts ${formatDateOnly(draft.measurementStart)}. Changing the page, flag, versions, or tracked events starts a new window and unlinks older evidence.`
                     : ''}
                 </p>
               </div>
@@ -672,7 +732,7 @@ export function AbTestingWorkspace({
             <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0, borderTop: '1px solid var(--card-border-color)', borderBottom: '1px solid var(--card-border-color)' }}>
               <AbTestingSummaryCell label="State" value={getAbTestingDisplayStatusLabel(draft)} detail={getAbTestingDashboardStatusDetail(draft)} />
               <AbTestingSummaryCell label="Launch readiness" value={`${selectedLaunchReady}/${selectedLaunchItems.length}`} detail={`${selectedLaunchPercent}% complete`} />
-              <AbTestingSummaryCell label="Better page" value={selectedResultSummary?.label || 'No winner yet'} detail={draft.decision ? `Decision: ${labelFor(experimentDecisionOptions, draft.decision)}` : 'No decision yet'} last />
+              <AbTestingSummaryCell label="Current direction" value={selectedResultSummary?.label || 'No direction yet'} detail={draft.decision ? `Decision: ${labelFor(experimentDecisionOptions, draft.decision)}` : 'Directional read only; no statistical-significance calculation'} last />
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
@@ -832,7 +892,7 @@ function AbTestingDashboardCard({
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 10, alignItems: 'end', borderTop: '1px solid var(--card-border-color)', paddingTop: 8 }}>
         <span style={{ minWidth: 0 }}>
-          <span style={{ ...styles.small, ...styles.muted, display: 'block' }}>Better page</span>
+          <span style={{ ...styles.small, ...styles.muted, display: 'block' }}>Current direction</span>
           <strong style={{ display: 'block', fontSize: 15, lineHeight: 1.2 }}>{resultSummary.label}</strong>
         </span>
         <span style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -1437,6 +1497,20 @@ function buildMarketingForcedExperimentUrl(href: string, variant: string, origin
 async function copyTextToClipboard(value: string) {
   if (!value || typeof navigator === 'undefined' || !navigator.clipboard) return
   await navigator.clipboard.writeText(value)
+}
+
+function abTestingTrackingFingerprint(experiment: MarketingExperiment) {
+  return JSON.stringify({
+    targetPath: normalizeMarketingExperimentPath(experiment.targetPath),
+    flagKey: experiment.flagKey?.trim() || '',
+    variants: (experiment.variants || []).map((variant) => variant.key?.trim() || ''),
+    metrics: (experiment.trackedMetrics || []).map((metric) => ({
+      key: metric.key?.trim() || '',
+      eventName: metric.eventName?.trim() || '',
+      source: metric.source || '',
+      comparison: metric.comparison || '',
+    })),
+  })
 }
 
 function AbTestingEditorTabButton({

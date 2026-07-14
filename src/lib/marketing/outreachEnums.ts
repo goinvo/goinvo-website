@@ -26,6 +26,7 @@ export const OUTREACH_SEGMENT_OPTIONS: OutreachOption[] = [
 
 /** Relationship warmth — how strong the personal connection is today. */
 export const OUTREACH_WARMTH_OPTIONS: OutreachOption[] = [
+  { title: 'Unknown — relationship not confirmed', value: 'unknown' },
   { title: 'Hot — would take a call this week', value: 'hot' },
   { title: 'Warm — knows us, would respond', value: 'warm' },
   { title: 'Cool — past contact, needs a re-intro', value: 'cool' },
@@ -33,21 +34,67 @@ export const OUTREACH_WARMTH_OPTIONS: OutreachOption[] = [
 ]
 
 /**
- * Contact lifecycle. `new` → research fills fields → `researched` → a principal
- * calls → `contacted` → outcomes. `researched`/`briefed` contacts appear in the
- * call plan; `contacted`+ do not (until moved back).
+ * Contact lifecycle. `new` → research fills fields → `needsReview` → a human
+ * approves the brief as `researched`/`briefed` → a principal calls → outcomes.
+ * AI output never enters the call plan until a person approves it.
  */
 export const OUTREACH_STATUS_OPTIONS: OutreachOption[] = [
   { title: 'New — not researched yet', value: 'new' },
-  { title: 'Researched — brief ready', value: 'researched' },
+  { title: 'Needs review — approve research before calling', value: 'needsReview' },
+  { title: 'Researched — human-reviewed brief ready', value: 'researched' },
   { title: 'Briefed — assigned for a call', value: 'briefed' },
   { title: 'Contacted — call/message made', value: 'contacted' },
   { title: 'Responded', value: 'responded' },
   { title: 'Meeting booked', value: 'meeting' },
   { title: 'Opportunity — real scope discussed', value: 'opportunity' },
+  { title: 'Won — paid work closed', value: 'won' },
+  { title: 'Lost — opportunity did not close', value: 'lost' },
   { title: 'Dormant — revisit later', value: 'dormant' },
-  { title: 'Closed — no fit', value: 'closed' },
+  { title: 'Closed — legacy no-fit status', value: 'closed' },
 ]
+
+/** How an outreach interaction happened, for channel attribution. */
+export const OUTREACH_CHANNEL_OPTIONS: OutreachOption[] = [
+  { title: 'Phone call', value: 'phone' },
+  { title: 'Email', value: 'email' },
+  { title: 'LinkedIn', value: 'linkedin' },
+  { title: 'Referral / introduction', value: 'referral' },
+  { title: 'Video meeting', value: 'video' },
+  { title: 'In person', value: 'inPerson' },
+  { title: 'Other', value: 'other' },
+]
+
+/**
+ * Human overrides for the automatic channel recommendation. A channel with no
+ * saved override remains in automatic mode; we intentionally do not persist
+ * redundant `auto` rows.
+ */
+export type OutreachChannelOverrideState =
+  | 'preferred'
+  | 'unavailable'
+  | 'unresponsive'
+  | 'doNotUse'
+
+export const OUTREACH_CHANNEL_OVERRIDE_STATE_OPTIONS: Array<
+  OutreachOption & { value: OutreachChannelOverrideState }
+> = [
+  { title: 'Preferred', value: 'preferred' },
+  { title: 'Unavailable', value: 'unavailable' },
+  { title: 'Unresponsive', value: 'unresponsive' },
+  { title: 'Do not use', value: 'doNotUse' },
+]
+
+export const OUTREACH_CHANNEL_OVERRIDE_STATES = OUTREACH_CHANNEL_OVERRIDE_STATE_OPTIONS.map(
+  (option) => option.value,
+)
+
+export interface OutreachChannelOverride {
+  _key?: string
+  _type?: 'outreachChannelOverride'
+  channel: OutreachChannel
+  state: OutreachChannelOverrideState
+  note?: string
+}
 
 /** Offer catalog status. */
 export const OFFER_STATUS_OPTIONS: OutreachOption[] = [
@@ -55,26 +102,45 @@ export const OFFER_STATUS_OPTIONS: OutreachOption[] = [
   { title: 'Paused', value: 'paused' },
 ]
 
+/** Built-in Sanity roles allowed to operate write-token-backed private Outreach tools. */
+export const OUTREACH_WRITER_ROLES = ['administrator', 'developer', 'editor'] as const
+const OUTREACH_WRITER_ROLE_SET = new Set<string>(OUTREACH_WRITER_ROLES)
+
+export function isOutreachWriterRole(value?: string): boolean {
+  return Boolean(value && OUTREACH_WRITER_ROLE_SET.has(value.trim().toLowerCase()))
+}
+
 export const OUTREACH_SEGMENTS = OUTREACH_SEGMENT_OPTIONS.map((o) => o.value)
 export const OUTREACH_WARMTH_LEVELS = OUTREACH_WARMTH_OPTIONS.map((o) => o.value)
 export const OUTREACH_STATUSES = OUTREACH_STATUS_OPTIONS.map((o) => o.value)
+export const OUTREACH_CHANNELS = OUTREACH_CHANNEL_OPTIONS.map((o) => o.value)
 export const OFFER_STATUSES = OFFER_STATUS_OPTIONS.map((o) => o.value)
 
 export type OutreachSegment = (typeof OUTREACH_SEGMENT_OPTIONS)[number]['value']
 export type OutreachWarmth = (typeof OUTREACH_WARMTH_OPTIONS)[number]['value']
 export type OutreachStatus = (typeof OUTREACH_STATUS_OPTIONS)[number]['value']
+export type OutreachChannel = (typeof OUTREACH_CHANNEL_OPTIONS)[number]['value']
 
 /** Statuses that qualify a researched contact for the ranked call plan. */
 export const CALL_PLAN_STATUSES = ['researched', 'briefed']
 
 /** Statuses a "Log call" form may move a contact into. */
-export const LOG_STATUS_VALUES = ['contacted', 'responded', 'meeting', 'opportunity', 'dormant', 'closed']
+export const LOG_STATUS_VALUES = [
+  'contacted',
+  'responded',
+  'meeting',
+  'opportunity',
+  'won',
+  'lost',
+  'dormant',
+  'closed',
+]
 
 /** Statuses whose contacts can carry a due follow-up (the follow-ups strip). */
-export const FOLLOW_UP_STATUSES = ['contacted', 'responded', 'meeting', 'dormant']
+export const FOLLOW_UP_STATUSES = ['contacted', 'responded', 'meeting', 'opportunity', 'dormant']
 
 /** Warmth sort rank for the call plan — relationship beats model score. */
-export const WARMTH_RANK: Record<string, number> = { hot: 0, warm: 1, cool: 2, cold: 3 }
+export const WARMTH_RANK: Record<string, number> = { hot: 0, warm: 1, cool: 2, cold: 3, unknown: 4 }
 
 /**
  * The PRIVATE Sanity dataset outreach documents live in (contacts, offers,
@@ -108,4 +174,14 @@ export function isOutreachWarmth(value: string): boolean {
 
 export function isOutreachStatus(value: string): boolean {
   return OUTREACH_STATUSES.includes(value)
+}
+
+export function isOutreachChannel(value: string): boolean {
+  return OUTREACH_CHANNELS.includes(value)
+}
+
+export function isOutreachChannelOverrideState(
+  value: string,
+): value is OutreachChannelOverrideState {
+  return OUTREACH_CHANNEL_OVERRIDE_STATES.includes(value as OutreachChannelOverrideState)
 }

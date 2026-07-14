@@ -22,6 +22,9 @@ export async function saveMarketingAiModelChange({
   previousModel: string
   setModel: (model: string) => void
 }): Promise<string | null> {
+  if (!MARKETING_AI_MODEL_OPTIONS.some((option) => option.value === nextModel)) {
+    return 'That model is not approved for the marketing suite. Your previous selection was preserved.'
+  }
   setModel(nextModel)
   try {
     // Patch instead of replacing the singleton so sibling settings are preserved.
@@ -52,7 +55,9 @@ export function MarketingAiModelSetting() {
     void client
       .fetch<string | null>(`*[_id == $id][0].aiModel`, { id: MARKETING_SETTINGS_ID })
       .then((value) => {
-        if (active && value) setModel(value)
+        if (!active || !value) return
+        if (MARKETING_AI_MODEL_OPTIONS.some((option) => option.value === value)) setModel(value)
+        else setError('The saved model is no longer approved; the default is shown. Choose an approved model to replace it.')
       })
       .catch((loadError) => {
         if (active) {
