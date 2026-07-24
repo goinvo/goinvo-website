@@ -23,6 +23,7 @@
 
 import type { PublishContent, PublishOutcome, SocialPublisher } from './types'
 import { withRetry } from './retry'
+import { boundedFetch, boundedJson } from './boundedNetwork'
 
 const DEFAULT_GRAPH_VERSION = 'v21.0'
 const DEFAULT_GRAPH_HOST = 'https://graph.facebook.com'
@@ -33,28 +34,48 @@ function token(): string {
 function igUserId(): string {
   return (process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || '').trim()
 }
+function validGraphId(value: string): boolean {
+  return /^[A-Za-z0-9._-]{1,512}$/.test(value)
+}
 function graphVersion(): string {
   return (process.env.INSTAGRAM_GRAPH_VERSION || DEFAULT_GRAPH_VERSION).trim()
 }
 function graphHost(): string {
-  return (process.env.INSTAGRAM_GRAPH_HOST || DEFAULT_GRAPH_HOST).trim().replace(/\/$/, '')
+  const raw = (process.env.INSTAGRAM_GRAPH_HOST || DEFAULT_GRAPH_HOST).trim()
+  const url = new URL(raw)
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    !['graph.facebook.com', 'graph.instagram.com'].includes(url.hostname.toLowerCase())
+  ) {
+    throw new Error('INSTAGRAM_GRAPH_HOST must be graph.facebook.com or graph.instagram.com over HTTPS.')
+  }
+  return url.origin
 }
 function graphUrl(path: string): string {
-  return `${graphHost()}/${graphVersion()}/${path}`
+  const version = graphVersion()
+  if (!/^v\d{1,3}\.\d{1,3}$/.test(version)) throw new Error('INSTAGRAM_GRAPH_VERSION is invalid.')
+  return `${graphHost()}/${version}/${path}`
 }
 
 /** POSTs form params to a Graph endpoint and returns the parsed JSON, throwing on a Graph error. */
 async function graphPost(path: string, params: Record<string, string>): Promise<{ id?: string }> {
   const body = new URLSearchParams({ ...params, access_token: token() })
-  const res = await fetch(graphUrl(path), {
+  const result = await boundedFetch(graphUrl(path), {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
     cache: 'no-store',
+    redirect: 'error',
   })
-  const json = (await res.json().catch(() => ({}))) as {
+  const res = result.response
+  const json = boundedJson<{
     id?: string
     error?: { message?: string }
+  }>(result, 'Instagram Graph API')
+  if (json.id !== undefined && (typeof json.id !== 'string' || !validGraphId(json.id))) {
+    throw new Error('Instagram Graph API returned an invalid object ID.')
   }
   if (!res.ok || json.error) {
     throw new Error(json.error?.message || `Graph request to ${path} failed (${res.status})`)
@@ -68,10 +89,11 @@ async function fetchPermalink(mediaId: string): Promise<string | undefined> {
     // Idempotent GET — retry transient blips before giving up (still best-effort).
     return await withRetry(async () => {
       const url = `${graphUrl(mediaId)}?fields=permalink&access_token=${encodeURIComponent(token())}`
-      const res = await fetch(url, { cache: 'no-store' })
+      const result = await boundedFetch(url, { cache: 'no-store', redirect: 'error' })
+      const res = result.response
       if (!res.ok) throw new Error(`permalink fetch failed (${res.status})`)
-      const json = (await res.json()) as { permalink?: string }
-      return json.permalink
+      const json = boundedJson<{ permalink?: unknown }>(result, 'Instagram permalink')
+      return typeof json.permalink === 'string' && json.permalink.length <= 2_048 ? json.permalink : undefined
     })
   } catch {
     return undefined
@@ -84,8 +106,9 @@ async function getContainerStatus(containerId: string): Promise<string> {
   // transient network hiccup instead of failing the whole publish.
   return withRetry(async () => {
     const url = `${graphUrl(containerId)}?fields=status_code&access_token=${encodeURIComponent(token())}`
-    const res = await fetch(url, { cache: 'no-store' })
-    const json = (await res.json().catch(() => ({}))) as { status_code?: string; error?: { message?: string } }
+    const result = await boundedFetch(url, { cache: 'no-store', redirect: 'error' })
+    const res = result.response
+    const json = boundedJson<{ status_code?: string; error?: { message?: string } }>(result, 'Instagram container status')
     if (!res.ok || json.error) {
       throw new Error(json.error?.message || `container status check failed (${res.status})`)
     }
@@ -100,6 +123,9 @@ async function getContainerStatus(containerId: string): Promise<string> {
  * (ERROR/EXPIRED).
  */
 async function checkAndPublishContainer(user: string, containerId: string): Promise<PublishOutcome> {
+  if (!validGraphId(user) || !validGraphId(containerId)) {
+    return { ok: false, error: 'Instagram account or container ID is invalid.' }
+  }
   const status = await getContainerStatus(containerId)
   if (status === 'FINISHED') {
     const published = await graphPost(`${user}/media_publish`, { creation_id: containerId })
@@ -140,6 +166,7 @@ export const instagramPublisher: SocialPublisher = {
 
     const type = (content.contentType || '').toLowerCase()
     const user = igUserId()
+    if (!validGraphId(user)) return { ok: false, error: 'INSTAGRAM_BUSINESS_ACCOUNT_ID is invalid.' }
 
     // Reel / video: create a REELS container, then check (and publish if ready).
     // Video processing is async, so this may return `pending` — the worker then

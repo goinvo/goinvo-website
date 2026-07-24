@@ -49,7 +49,29 @@ export default defineType({
       group: 'connection',
       options: { list: analyticsStatusOptions, layout: 'radio' },
       initialValue: 'planned',
-      validation: (Rule) => Rule.required(),
+      validation: (Rule) =>
+        Rule.required().custom((status, context) => {
+          if (status !== 'connected') return true
+          const document = context.document as {
+            provider?: string
+            propertyId?: string
+            containerId?: string
+            vercelProject?: string
+            vercelProjectId?: string
+            dashboardUrl?: string
+          } | undefined
+          if (document?.provider === 'ga4' && !document.propertyId?.trim()) return 'Add the GA4 Property ID before marking this source Connected.'
+          if (document?.provider === 'gtm' && !document.containerId?.trim()) return 'Add the GTM Container ID before marking this source Connected.'
+          if (
+            (document?.provider === 'vercelAnalytics' || document?.provider === 'vercelSpeedInsights') &&
+            !document.vercelProjectId?.trim() &&
+            !document.vercelProject?.trim()
+          ) return 'Add the Vercel project name or project ID before marking this source Connected.'
+          if ((document?.provider === 'lookerStudio' || document?.provider === 'other') && !document.dashboardUrl?.trim()) {
+            return 'Add the reporting dashboard URL before marking this source Connected.'
+          }
+          return true
+        }),
     }),
     defineField({
       name: 'propertyId',

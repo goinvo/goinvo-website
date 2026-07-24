@@ -102,7 +102,7 @@ export default defineType({
       type: 'boolean',
       group: 'overview',
       initialValue: false,
-      description: 'Only selected and approved results should be used to generate opportunities or release records.',
+      description: 'Selection alone does not establish trust. Only results that are both selected here and explicitly Approved should generate opportunities or release records.',
     }),
     defineField({
       name: 'proofPoints',

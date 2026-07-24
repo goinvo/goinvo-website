@@ -36,6 +36,7 @@ function baseExperiment() {
     targetType: 'homepage',
     targetPath: '/',
     flagKey: 'home-2026-variant',
+    measurementStart: '2026-01-01T00:00:00.000Z',
     variants: [
       { _key: 'v-control', key: 'control', label: 'Current homepage' },
       { _key: 'v-concept', key: 'concept', label: '2026 concept homepage' },
@@ -52,10 +53,6 @@ function baseExperiment() {
     ],
     analyticsSource: { _id: 'source-vercel', title: 'Vercel Web Analytics', provider: 'vercel', status: 'connected' },
   }
-}
-
-function repeat<T>(value: T, times: number): T[] {
-  return Array.from({ length: times }, () => value)
 }
 
 function drainSignalMetrics(counts: {
@@ -108,6 +105,8 @@ describe('A/B measurement gating', () => {
       performanceSignals: [
         {
           _id: 'signal-bad',
+          experiment: { _id: 'experiment-home-2026' },
+          metricDate: '2026-06-01',
           title: 'Homepage placeholder',
           provider: 'vercel',
           status: 'new',
@@ -130,7 +129,7 @@ describe('A/B measurement gating', () => {
     const experiment = {
       ...baseExperiment(),
       performanceSignals: [
-        { _id: 'signal-drain', title: 'Homepage 2026 concept test – Vercel variant readout', provider: 'vercel', status: 'reviewed', signalType: 'abTestVariantReadout', metrics },
+        { _id: 'signal-drain', experiment: { _id: 'experiment-home-2026' }, metricDate: '2026-06-01', title: 'Homepage 2026 concept test – Vercel variant readout', provider: 'vercel', status: 'reviewed', signalType: 'abTestVariantReadout', metrics },
       ],
     }
 
@@ -158,7 +157,7 @@ describe('A/B measurement gating', () => {
     })
     const experiment = {
       ...baseExperiment(),
-      performanceSignals: [{ _id: 'signal-drain', title: 'readout', provider: 'vercel', status: 'reviewed', metrics }],
+      performanceSignals: [{ _id: 'signal-drain', experiment: { _id: 'experiment-home-2026' }, metricDate: '2026-06-01', title: 'readout', provider: 'vercel', status: 'reviewed', metrics }],
     }
 
     const results = getAbTestingComparativeResults(experiment)
@@ -185,6 +184,8 @@ describe('Conceptual vs comparative metrics', () => {
       performanceSignals: [
         {
           _id: 'signal-mixed',
+          experiment: { _id: 'experiment-home-2026' },
+          metricDate: '2026-06-01',
           title: 'readout',
           provider: 'vercel',
           status: 'reviewed',
@@ -265,6 +266,8 @@ describe('Multiple linked signals', () => {
         // Stale placeholder linked FIRST: matches by label, no variantKey, non-numeric change.
         {
           _id: 'signal-placeholder',
+          experiment: { _id: 'experiment-home-2026' },
+          metricDate: '2026-02-01',
           title: 'QA baseline',
           provider: 'vercel',
           status: 'new',
@@ -273,6 +276,8 @@ describe('Multiple linked signals', () => {
         // Real drain readout SECOND.
         {
           _id: 'signal-drain',
+          experiment: { _id: 'experiment-home-2026' },
+          metricDate: '2026-06-01',
           title: 'readout',
           provider: 'vercel',
           status: 'reviewed',
@@ -302,6 +307,8 @@ describe('sample-size gating (the dashboard scenario)', () => {
       performanceSignals: [
         {
           _id: 'signal-drain',
+          experiment: { _id: 'experiment-home-2026' },
+          metricDate: '2026-06-01',
           title: 'readout',
           provider: 'vercel',
           status: 'reviewed',
@@ -344,6 +351,8 @@ describe('sample-size gating (the dashboard scenario)', () => {
       performanceSignals: [
         {
           _id: 'signal-drain',
+          experiment: { _id: 'experiment-home-2026' },
+          metricDate: '2026-06-01',
           title: 'readout',
           provider: 'vercel',
           status: 'reviewed',

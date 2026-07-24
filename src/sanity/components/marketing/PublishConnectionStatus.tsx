@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { SanityClient } from '@sanity/client'
+
+import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { authenticatedMarketingRequest } from './authenticatedMarketingRequest'
 
 // Shared `styles`, the status-color palette, and the Studio session-token helper
 // remain owned by the marketing tool; imported back here at runtime only (inside
 // the component body), matching the other extracted workspaces' circular-import
 // convention.
-import { getStatusColor, studioSessionToken, styles } from '../../tools/marketingTool'
+import { getStatusColor, styles } from '../../tools/marketingTool'
 
 // Surfaces whether the social auto-publishing channels are actually connected,
 // so it is obvious when scheduled posts will NOT publish (credentials missing).
@@ -21,6 +25,9 @@ interface PlatformConnection {
 interface PublishStatusResponse {
   platforms: PlatformConnection[]
   dueCount: number | null
+  queueConfigured: boolean
+  callbackAuthConfigured: boolean
+  triggerVerificationRequired: boolean
 }
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -32,23 +39,27 @@ function platformLabel(platform: string): string {
   return PLATFORM_LABELS[platform] || platform
 }
 
-export function PublishConnectionStatus({ variant = 'banner' }: { variant?: 'banner' | 'compact' }) {
+export function PublishConnectionStatus({
+  client,
+  variant = 'banner',
+}: {
+  client: SanityClient
+  variant?: 'banner' | 'compact'
+}) {
   const [status, setStatus] = useState<PublishStatusResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const proofClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const token = studioSessionToken()
-      // Cache-buster: client fetches can be served from the browser cache even
-      // with cache:'no-store', so each check (esp. Recheck) hits the server fresh.
-      const res = await fetch(`/api/marketing/publish/status?t=${Date.now()}`, {
-        headers: { ...(token ? { 'x-sanity-session': token } : {}) },
-        cache: 'no-store',
-      })
-      if (!res.ok) throw new Error(`Status check failed (${res.status}).`)
-      const json = (await res.json()) as PublishStatusResponse
+      const json = await authenticatedMarketingRequest<PublishStatusResponse>(
+        `/api/marketing/publish/status?t=${Date.now()}`,
+        undefined,
+        'GET',
+        proofClient,
+      )
       setStatus(json)
       setError(null)
     } catch (caught) {
@@ -56,7 +67,7 @@ export function PublishConnectionStatus({ variant = 'banner' }: { variant?: 'ban
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [proofClient])
 
   useEffect(() => {
     void load()
@@ -67,21 +78,28 @@ export function PublishConnectionStatus({ variant = 'banner' }: { variant?: 'ban
   const connectedCount = platforms.filter((platform) => platform.connected).length
   const allConnected = total > 0 && connectedCount === total
   const noneConnected = total > 0 && connectedCount === 0
+  const queueConfigured = status?.queueConfigured === true
+  const callbackAuthConfigured = status?.callbackAuthConfigured === true
+  const triggerVerificationRequired = status?.triggerVerificationRequired !== false
+  const pipelineConfigured = allConnected && queueConfigured && callbackAuthConfigured
 
   // The compact (dashboard) variant is an attention item: render nothing while
-  // loading, on error, or once everything is connected.
-  if (variant === 'compact' && (loading || error || allConnected || total === 0)) {
+  // loading or unavailable. Connected social accounts alone are not sufficient:
+  // the external scheduling trigger still needs an operator check.
+  if (variant === 'compact' && (loading || error || total === 0)) {
     return null
   }
 
   const okTone = getStatusColor('connected') // green
   const warnTone = getStatusColor('idea') // amber — a setup step, not a failure
-  const containerTone = allConnected ? okTone : warnTone
+  const containerTone = pipelineConfigured && !triggerVerificationRequired ? okTone : warnTone
 
   let headline: string
   if (loading) headline = 'Checking social publishing connections…'
   else if (error) headline = "Couldn't check publishing connections."
-  else if (allConnected) headline = 'Ready to auto-publish'
+  else if (allConnected && !queueConfigured) headline = 'Accounts connected - future-post queue is not configured'
+  else if (allConnected && !callbackAuthConfigured) headline = 'Accounts connected - publishing callback authentication is missing'
+  else if (pipelineConfigured) headline = 'Accounts connected - verify the scheduling trigger'
   else if (noneConnected) headline = "Not connected yet — scheduled posts won't publish"
   else headline = "Partially connected — some channels won't publish"
 
@@ -142,10 +160,13 @@ export function PublishConnectionStatus({ variant = 'banner' }: { variant?: 'ban
             </span>
           ) : null}
         </div>
-        {!loading && !error && !allConnected ? (
+        {!loading && !error ? (
           <span style={{ ...styles.small, ...styles.muted }}>
-            Posts set to auto-publish are saved on the calendar but won&rsquo;t post until this
-            channel&rsquo;s LinkedIn or Instagram credentials are added. Ask an admin to set them up.
+            {!allConnected ? 'Add the missing LinkedIn or Instagram credentials. ' : ''}
+            {!queueConfigured ? 'Future posts also require QStash. ' : ''}
+            {!callbackAuthConfigured ? 'The scheduling callback also requires its API key. ' : ''}
+            Auto-publishing only runs for a Scheduled item with a date and time and Auto-publish enabled.
+            This check cannot verify the external Sanity webhook that must call the scheduling endpoint after a save.
           </span>
         ) : null}
       </div>

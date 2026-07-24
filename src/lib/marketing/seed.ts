@@ -9,7 +9,8 @@
  * (src/sanity/tools/marketingTool.tsx, ~line 24350): it looks up an existing
  * channel by `key`, returning it untouched when found, and otherwise creates a
  * new `marketingChannel` document with normalized content types. The Studio
- * helper does NOT pin a stable `_id`, so neither does this — Sanity assigns one.
+ * helper historically did not pin a stable `_id`. The portable writer does so
+ * now because retries and concurrent conversions must converge on one channel.
  */
 import type { SanityClient } from '@sanity/client'
 import { slugify, withArrayKeys } from './derive'
@@ -153,22 +154,34 @@ function normalizeContentTypes(
  * (status 'active', the definition's platform, and normalized content types) and
  * returned with `created: true`.
  *
- * Mirrors `ensureMarketingChannel` in src/sanity/tools/marketingTool.tsx: the
- * Studio helper does not assign a stable `_id`, so neither does this.
+ * Uses the Studio channel content but assigns a deterministic `_id` so
+ * concurrent API conversions cannot create duplicate channels.
  */
 export async function ensureMarketingChannel(
   client: SanityClient,
   channelDef: MarketingChannelDef,
 ): Promise<{ channel: MarketingChannelDocument; created: boolean }> {
-  const existing = await client.fetch<MarketingChannelDocument | null>(
-    '*[_type == "marketingChannel" && key == $key && status != "archived"][0]',
+  const existingChannels = (await client.fetch<MarketingChannelDocument[]>(
+    '*[_type == "marketingChannel" && key == $key]',
     { key: channelDef.key },
-  )
+  )) || []
+  const existing = existingChannels.find((channel) => channel.status !== 'archived')
   if (existing) {
     return { channel: existing, created: false }
   }
 
-  const created = (await client.create({
+  const safeKey = channelDef.key.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 70) || 'channel'
+  const baseId = `marketing-channel.${safeKey}`
+  const occupiedIds = new Set(existingChannels.map((channel) => channel._id))
+  let deterministicId = baseId
+  let replacementIndex = 1
+  while (occupiedIds.has(deterministicId)) {
+    deterministicId = `${baseId}.replacement-${replacementIndex}`
+    replacementIndex += 1
+  }
+
+  const created = (await client.createIfNotExists({
+    _id: deterministicId,
     _type: 'marketingChannel',
     title: channelDef.title,
     key: channelDef.key,

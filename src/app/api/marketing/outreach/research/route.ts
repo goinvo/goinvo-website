@@ -1,13 +1,26 @@
 import { createClient, type SanityClient } from '@sanity/client'
-import { NextRequest, NextResponse } from 'next/server'
-import { apiVersion, projectId, writeToken } from '@/sanity/env'
-import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { NextRequest } from 'next/server'
+import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import {
+  assertBoundedJson,
+  isPlainRecord,
+  isValidMarketingDocumentId,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
 import {
   generateClaudeText,
   isAnthropicConfigured,
   parseJsonObject,
   resolveMarketingModel,
 } from '@/lib/marketing/anthropicJson'
+import {
+  brandVoicePromptContext,
+  brandVoiceResponseContext,
+  resolveMarketingBrandVoice,
+} from '@/lib/marketing/brandVoice'
 import {
   buildResearchPatch,
   buildResearchPrompts,
@@ -26,6 +39,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 let sanityClient: SanityClient | null = null
+let marketingSettingsClient: SanityClient | null = null
 function getOutreachClient() {
   if (!writeToken) return null
   if (!sanityClient) {
@@ -40,14 +54,61 @@ function getOutreachClient() {
   return sanityClient
 }
 
+function getMarketingSettingsClient() {
+  if (!projectId) return null
+  if (!marketingSettingsClient) {
+    marketingSettingsClient = createClient({
+      projectId,
+      dataset,
+      token: writeToken || undefined,
+      apiVersion,
+      useCdn: false,
+    })
+  }
+  return marketingSettingsClient
+}
+
 const CONTACT_PROJECTION = `{
-  _id, name, organization, role, segment, owner, warmth, status, howWeKnow, sourceNotes
+  _id, _rev, name, organization, role, segment, owner, warmth, status, howWeKnow,
+  sourceNotes, linkedinUrl, brandVoiceKey
 }`
 
 type RequestBody = {
   id?: string
   dryRun?: boolean
   model?: string
+}
+
+const RESEARCH_REQUEST_BODY_LIMIT = 16 * 1024
+const RESEARCH_MODEL_NAME_LIMIT = 100
+
+async function readResearchRequestBody(request: Request): Promise<RequestBody> {
+  if (!request.body) return {}
+  const parsed = await readBoundedJson(request, RESEARCH_REQUEST_BODY_LIMIT)
+  assertBoundedJson(parsed, {
+    maxArrayItems: 0,
+    maxObjectKeys: 3,
+    maxDepth: 1,
+    maxStringLength: 256,
+    maxNodes: 4,
+  })
+  if (!isPlainRecord(parsed)) throw new MarketingRequestError('Request body must be a JSON object.', 400)
+  if (Object.keys(parsed).some((key) => key !== 'id' && key !== 'dryRun' && key !== 'model')) {
+    throw new MarketingRequestError('Only id, dryRun, and model are accepted.', 400)
+  }
+  if (parsed.id !== undefined && typeof parsed.id !== 'string') {
+    throw new MarketingRequestError('id must be a string.', 400)
+  }
+  if (parsed.dryRun !== undefined && typeof parsed.dryRun !== 'boolean') {
+    throw new MarketingRequestError('dryRun must be a boolean.', 400)
+  }
+  if (
+    parsed.model !== undefined
+    && (typeof parsed.model !== 'string' || parsed.model.length > RESEARCH_MODEL_NAME_LIMIT)
+  ) {
+    throw new MarketingRequestError(`model must be at most ${RESEARCH_MODEL_NAME_LIMIT} characters.`, 400)
+  }
+  return parsed as RequestBody
 }
 
 /**
@@ -58,33 +119,47 @@ type RequestBody = {
  */
 export async function POST(request: NextRequest) {
   try {
-    await assertStudioOrApiKey(request)
+    await assertStudioWriterOrApiKey(request)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     throw error
   }
 
+  let body: RequestBody
+  try {
+    body = await readResearchRequestBody(request)
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return privateMarketingJson({ error: error.message }, { status: error.status })
+    }
+    return privateMarketingJson({ error: 'Request body must be valid JSON.' }, { status: 400 })
+  }
+
   if (!isAnthropicConfigured()) {
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: 'ANTHROPIC_API_KEY is not configured — outreach research is disabled.' },
       { status: 503 },
     )
   }
 
-  const client = getOutreachClient()
-  if (!client) {
-    return NextResponse.json({ error: 'Sanity write token is not configured.' }, { status: 500 })
+  const url = new URL(request.url)
+  const queryId = url.searchParams.get('id') || ''
+  if (body.id && queryId && body.id !== queryId) {
+    return privateMarketingJson({ error: 'Conflicting contact ids were provided.' }, { status: 400 })
+  }
+  const id = body.id || queryId
+  const dryRun = body.dryRun === true || url.searchParams.get('dryRun') === '1'
+
+  if (!id || !isValidMarketingDocumentId(id)) {
+    return privateMarketingJson({ error: 'Provide `id` — the marketingContact _id.' }, { status: 400 })
   }
 
-  const url = new URL(request.url)
-  const body = (await request.json().catch(() => ({}))) as RequestBody
-  const id = body.id || url.searchParams.get('id') || ''
-  const dryRun = body.dryRun || url.searchParams.get('dryRun') === '1'
-
-  if (!id) {
-    return NextResponse.json({ error: 'Provide `id` — the marketingContact _id.' }, { status: 400 })
+  const client = getOutreachClient()
+  const settingsClient = getMarketingSettingsClient()
+  if (!client || !settingsClient) {
+    return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
   }
 
   const contact = await client.fetch<OutreachContact | null>(
@@ -92,7 +167,7 @@ export async function POST(request: NextRequest) {
     { id },
   )
   if (!contact) {
-    return NextResponse.json({ error: 'Contact not found.' }, { status: 404 })
+    return privateMarketingJson({ error: 'Contact not found.' }, { status: 404 })
   }
 
   // ACTIVE CMS offers drive the match; fall back to the built-in catalog so
@@ -109,13 +184,25 @@ export async function POST(request: NextRequest) {
   // tab's extraction sweep has run; research degrades gracefully without it.
   const evidence = await client.fetch<WorkEvidence[]>(
     `*[_type == "marketingWorkEvidence" && status == "active"]|order(title asc){
-      _id, title, client, segments, techniques, businessOutcomes, highlights[]{metric, detail}, status
+      _id, sourceId, slug, url, manuallyEdited, extractedAt,
+      title, client, summary, segments, techniques, domainExpertise,
+      businessOutcomes, highlights[]{metric, detail}, status
     }`,
   )
-  const evidenceIndex = compactEvidenceIndex(evidence)
+  const evidenceIndex = compactEvidenceIndex(evidence, {
+    max: 60,
+    terms: [contact.segment, contact.organization, contact.role].filter(
+      (value): value is string => Boolean(value),
+    ),
+  })
 
-  const model = await resolveMarketingModel(client, body.model)
-  const prompts = buildResearchPrompts(contact, offers, evidenceIndex)
+  // Contact PII stays in the private outreach dataset; suite configuration
+  // (model + publish-safe brand voices) is resolved from production settings.
+  const [model, brandVoice] = await Promise.all([
+    resolveMarketingModel(settingsClient, body.model),
+    resolveMarketingBrandVoice(settingsClient, contact.brandVoiceKey),
+  ])
+  const prompts = buildResearchPrompts(contact, offers, evidenceIndex, brandVoicePromptContext(brandVoice))
   const result = await generateClaudeText({
     system: prompts.system,
     user: prompts.user,
@@ -127,7 +214,7 @@ export async function POST(request: NextRequest) {
   const research = normalizeResearch(parseJsonObject(result.text), offers, evidenceIndex)
 
   if (!research.researchSummary && research.opportunities.length === 0) {
-    return NextResponse.json(
+    return privateMarketingJson(
       { error: 'Research returned no usable result — try again.', model: result.model },
       { status: 502 },
     )
@@ -138,13 +225,44 @@ export async function POST(request: NextRequest) {
     researchedAt: new Date().toISOString(),
     currentStatus: contact.status,
     fallbackSources: result.sources,
+    brandVoice: brandVoice ? { key: brandVoice._key, name: brandVoice.name } : null,
   })
 
   if (!dryRun) {
-    await client.patch(contact._id).set(patch).commit()
+    const latest = await client.fetch<{ _rev?: string } | null>(
+      `*[_type == "marketingContact" && _id == $id][0]{_rev}`,
+      { id: contact._id },
+    )
+    if (!latest) {
+      return privateMarketingJson({ error: 'Contact was deleted while research was running.' }, { status: 409 })
+    }
+    if (!contact._rev || latest._rev !== contact._rev) {
+      return privateMarketingJson(
+        {
+          error:
+            'This contact changed while research was running. No AI fields were saved; review the latest contact and run research again.',
+        },
+        { status: 409 },
+      )
+    }
+    try {
+      await client.patch(contact._id).ifRevisionId(contact._rev).set(patch).commit()
+    } catch (error) {
+      const statusCode =
+        error && typeof error === 'object' && 'statusCode' in error
+          ? Number((error as { statusCode?: unknown }).statusCode)
+          : 0
+      if (statusCode === 409) {
+        return privateMarketingJson(
+          { error: 'This contact changed just before research saved. No stale AI fields were written; run it again.' },
+          { status: 409 },
+        )
+      }
+      throw error
+    }
   }
 
-  return NextResponse.json({
+  return privateMarketingJson({
     dryRun,
     contactId: contact._id,
     name: contact.name,
@@ -157,8 +275,10 @@ export async function POST(request: NextRequest) {
     researchSummary: research.researchSummary,
     callBrief: research.callBrief,
     opportunities: research.opportunities,
+    evidenceCandidates: evidence.length,
     evidenceIndexSize: evidenceIndex.length,
     sourceCount: (research.sources.length ? research.sources : result.sources).length,
     model: result.model,
+    brandVoice: brandVoiceResponseContext(brandVoice),
   })
 }

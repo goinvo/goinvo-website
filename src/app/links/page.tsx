@@ -10,31 +10,12 @@ type LinkInBioItem = {
   _id: string
   title?: string
   description?: string
-  url?: string
+  url: string
   type?: string
   featured?: boolean
   image?: SanityImageSource
   sourceChannel?: string
 }
-
-const fallbackLinks: LinkInBioItem[] = [
-  {
-    _id: 'fallback-goinvo',
-    title: 'GoInvo',
-    description: 'Healthcare design, strategy, software, and open-source tools.',
-    url: 'https://www.goinvo.com',
-    type: 'site',
-    featured: true,
-  },
-  {
-    _id: 'fallback-housing-truths',
-    title: 'Housing Truths',
-    description: 'Visualizing the forces shaping housing in America.',
-    url: 'https://housingtruths.org',
-    type: 'project',
-    featured: false,
-  },
-]
 
 export const revalidate = 60
 
@@ -53,7 +34,7 @@ export const metadata: Metadata = {
 
 export default async function LinksPage() {
   const { data } = (await sanityFetch({ query: linkInBioItemsQuery })) as { data: LinkInBioItem[] }
-  const links = data.length > 0 ? data : fallbackLinks
+  const links = data
 
   return (
     <main className="min-h-screen bg-[#f7faf9] text-black">
@@ -81,6 +62,9 @@ export default async function LinksPage() {
           {links.map((link) => (
             <LinkCard key={link._id} link={link} />
           ))}
+          {links.length === 0 ? (
+            <p className="m-0 text-sm leading-6 text-gray">No links are currently published.</p>
+          ) : null}
         </div>
 
         <div className="mt-auto pt-8 text-center text-xs text-gray">
@@ -100,7 +84,7 @@ function LinkCard({ link }: { link: LinkInBioItem }) {
 
   return (
     <a
-      href={link.url || siteConfig.url}
+      href={link.url}
       target="_blank"
       rel="noreferrer"
       className={[

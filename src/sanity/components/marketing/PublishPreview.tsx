@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge, Box, Button, Card, Flex, Inline, Stack, Text } from '@sanity/ui'
 import { EyeOpenIcon } from '@sanity/icons'
 import { studioSessionHeader } from '../../tools/marketingTool'
@@ -23,12 +23,29 @@ interface PreviewData {
  * Read-only: hits GET /api/marketing/publish/preview, which uses the same
  * buildPublishContent the worker uses, so the preview can't drift from the post.
  */
-export function PublishPreview({ itemId }: { itemId: string }) {
+export function PublishPreview({
+  itemId,
+  hasUnsavedChanges = false,
+}: {
+  itemId: string
+  hasUnsavedChanges?: boolean
+}) {
   const [data, setData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const requestVersion = useRef(0)
+
+  useEffect(() => {
+    requestVersion.current += 1
+    setData(null)
+    setError(null)
+    setLoading(false)
+  }, [itemId, hasUnsavedChanges])
 
   const load = async () => {
+    if (hasUnsavedChanges) return
+    const version = requestVersion.current + 1
+    requestVersion.current = version
     setLoading(true)
     setError(null)
     try {
@@ -39,12 +56,15 @@ export function PublishPreview({ itemId }: { itemId: string }) {
         const body = (await res.json().catch(() => ({}))) as { error?: string }
         throw new Error(body.error || `Preview failed (${res.status})`)
       }
-      setData((await res.json()) as PreviewData)
+      const nextData = (await res.json()) as PreviewData
+      if (requestVersion.current === version) setData(nextData)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Preview failed.')
-      setData(null)
+      if (requestVersion.current === version) {
+        setError(caught instanceof Error ? caught.message : 'Preview failed.')
+        setData(null)
+      }
     } finally {
-      setLoading(false)
+      if (requestVersion.current === version) setLoading(false)
     }
   }
 
@@ -57,9 +77,9 @@ export function PublishPreview({ itemId }: { itemId: string }) {
           icon={EyeOpenIcon}
           mode="ghost"
           tone="primary"
-          text={loading ? 'Loading preview…' : data ? 'Refresh preview' : 'Preview post'}
+          text={loading ? 'Loading preview…' : data ? 'Refresh preview' : 'Preview saved post'}
           onClick={load}
-          disabled={loading}
+          disabled={loading || hasUnsavedChanges}
           fontSize={1}
         />
         {data && (
@@ -68,6 +88,13 @@ export function PublishPreview({ itemId }: { itemId: string }) {
           </Badge>
         )}
       </Flex>
+
+
+      <Text size={1} muted>
+        {hasUnsavedChanges
+          ? 'Save this calendar item before previewing so the preview cannot show an older version.'
+          : 'Preview uses the saved calendar item and never publishes or schedules it.'}
+      </Text>
 
       {error && (
         <Card tone="critical" padding={3} radius={2} border>

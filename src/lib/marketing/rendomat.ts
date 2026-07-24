@@ -54,6 +54,60 @@ export interface RendomatExport {
   exported_at: string
 }
 
+/** Stable calendar-item id shared by every ingest attempt for one video. */
+export function rendomatCalendarItemId(videoId: number | string): string {
+  const safeId = String(videoId).replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 80) || 'video'
+  return `rendomat.calendar.${safeId}`.slice(0, 128)
+}
+
+export const DEFAULT_RENDOMAT_ASSET_LIMIT_BYTES = 250 * 1024 * 1024
+
+function configuredAssetLimitBytes(): number {
+  const configured = Number.parseInt(process.env.RENDOMAT_MAX_ASSET_BYTES || '', 10)
+  return Number.isFinite(configured) && configured > 0
+    ? Math.min(configured, 1024 * 1024 * 1024)
+    : DEFAULT_RENDOMAT_ASSET_LIMIT_BYTES
+}
+
+/** Read a response stream without ever buffering more than the configured cap. */
+export async function readBoundedRendomatBody(
+  response: Response,
+  maxBytes = configuredAssetLimitBytes(),
+): Promise<ArrayBuffer> {
+  const declaredLength = Number.parseInt(response.headers.get('content-length') || '', 10)
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    throw new Error(`Rendomat asset is ${declaredLength} bytes; limit is ${maxBytes} bytes.`)
+  }
+  if (!response.body) throw new Error('Rendomat asset response had no body.')
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    if (!value?.byteLength) continue
+    total += value.byteLength
+    if (total > maxBytes) {
+      try {
+        await reader.cancel(`Rendomat asset exceeded ${maxBytes} bytes.`)
+      } catch (cause) {
+        throw new Error(`Rendomat asset exceeded ${maxBytes} bytes and stream cancellation failed.`, { cause })
+      }
+      throw new Error(`Rendomat asset exceeded the ${maxBytes} byte limit while streaming.`)
+    }
+    chunks.push(value)
+  }
+
+  const combined = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    combined.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return combined.buffer
+}
+
 /**
  * Resolves a possibly-relative Rendomat asset URL (e.g. `/api/files/renders/…`)
  * to an absolute URL against RENDOMAT_API_BASE. Absolute http(s) URLs (e.g. an R2
@@ -114,7 +168,10 @@ export async function downloadRendomatAsset(url: string): Promise<{ buffer: Arra
     signal: AbortSignal.timeout(25000),
   })
   if (!res.ok) throw new Error(`Rendomat asset download failed (${res.status}) for ${absolute}`)
-  return { buffer: await res.arrayBuffer(), contentType: res.headers.get('content-type') || 'video/mp4' }
+  return {
+    buffer: await readBoundedRendomatBody(res),
+    contentType: res.headers.get('content-type') || 'video/mp4',
+  }
 }
 
 /**

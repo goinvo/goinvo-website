@@ -146,6 +146,17 @@ describe('tf — low-level request helper', () => {
     await expect(tf('tf_account')).rejects.toThrow(/invalid key/)
   })
 
+  it('rejects an oversized response before parsing it', async () => {
+    stubFetch(() => new Response('{}', {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': String(2 * 1024 * 1024 + 1),
+      },
+    }))
+    await expect(tf('tf_account')).rejects.toThrow(/exceeded|byte limit/i)
+  })
+
   it('throws when TEXTFOCUS_API_KEY is missing', async () => {
     delete process.env.TEXTFOCUS_API_KEY
     stubFetch(() => jsonResponse(accountEnvelope()))

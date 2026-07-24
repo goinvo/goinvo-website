@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { randomKey, slugify } from '@/lib/marketing'
 import { funnelStageOptions } from '../../schemas/marketingFunnel'
 import { researchConfidenceOptions } from '../../schemas/marketingResearchPlan'
-import { CampaignWorkspace } from './CampaignWorkspace'
-import { FunnelWorkspace } from './FunnelWorkspace'
+import { requestMarketingAssist } from './marketingAssistRequest'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces, the dashboard, and the autopilot
 // planner) are imported back from it. This is a deliberate circular import: the
@@ -28,6 +27,7 @@ import {
   getStrategyResearchResults,
   getStrategySectionItems,
   getStrategySectionQuestion,
+  hasUsableStrategyRecord,
   GuidedAutofillControls,
   isResearchResultApproved,
   loadStrategyWorkingDraft,
@@ -75,15 +75,12 @@ import {
   type StrategyAssistAssetType,
   type StrategyDocument,
   type StrategyWorkspaceMode,
-  type StudioClient,
 } from '../../tools/marketingTool'
 
 interface StrategyWorkspaceProps {
-  client: StudioClient
   data: MarketingData
   savingId: string | null
   createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
   commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
   onOpenView: (view: MarketingViewId) => void
   autopilotTarget?: AutopilotWorkspaceTarget | null
@@ -132,17 +129,20 @@ const performanceStatusOptions: SelectOption[] = [
 ]
 const confidenceOptions = researchConfidenceOptions
 export function StrategyWorkspace({
-  client,
   data,
   savingId,
   createDocument,
-  loadData,
   commitPatch,
   onOpenView,
   autopilotTarget,
   onAutopilotComplete,
 }: StrategyWorkspaceProps) {
-  const { confirmDiscardUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
+  const {
+    clearUnsavedChanges,
+    confirmDiscardUnsavedChange,
+    confirmDiscardUnsavedChanges,
+    markUnsavedChange,
+  } = useMarketingUnsavedGuard()
   const [workspaceMode, setWorkspaceMode] = useState<StrategyWorkspaceMode>('foundation')
   const [sectionId, setSectionId] = useState<StrategyAssetKind>('audiences')
   const section = STRATEGY_SECTIONS.find((candidate) => candidate.id === sectionId) || STRATEGY_SECTIONS[0]
@@ -162,6 +162,65 @@ export function StrategyWorkspace({
   const [prefetchingStrategyKey, setPrefetchingStrategyKey] = useState<string | null>(null)
   const [localDraftActiveKey, setLocalDraftActiveKey] = useState<string | null>(null)
 
+  const discardCurrentStrategyDraft = useCallback(() => {
+    if (selected) clearStrategyWorkingDraft(section.id, selected._id)
+    clearUnsavedChanges(MARKETING_UNSAVED_FORM_ID)
+    setDraft(selected ? { ...selected } : {})
+    setLocalDraftActiveKey(null)
+  }, [clearUnsavedChanges, section.id, selected])
+
+  const confirmStrategySwitch = useCallback(
+    (message = 'Opening another strategy answer will discard the unsaved edits in this answer. Continue?') => {
+      if (!confirmDiscardUnsavedChange(MARKETING_UNSAVED_FORM_ID, message)) return false
+      discardCurrentStrategyDraft()
+      return true
+    },
+    [confirmDiscardUnsavedChange, discardCurrentStrategyDraft],
+  )
+
+  const selectStrategyAnswer = useCallback(
+    (recordId: string | null) => {
+      if (recordId === selected?._id) return true
+      if (!confirmStrategySwitch()) return false
+      setSelectedId(recordId)
+      return true
+    },
+    [confirmStrategySwitch, selected?._id],
+  )
+
+  const selectStrategySection = useCallback(
+    (nextSectionId: StrategyAssetKind, recordId?: string | null) => {
+      const nextRecordId = recordId === undefined
+        ? getStrategySectionItems(data, nextSectionId)[0]?._id || null
+        : recordId
+      if (nextSectionId === section.id && nextRecordId === selected?._id) return true
+      if (!confirmStrategySwitch('Opening another strategy question will discard the unsaved edits in this answer. Continue?')) return false
+      setSectionId(nextSectionId)
+      setSelectedId(nextRecordId)
+      return true
+    },
+    [confirmStrategySwitch, data, section.id, selected?._id],
+  )
+
+  const selectWorkspaceMode = useCallback(
+    (nextMode: StrategyWorkspaceMode) => {
+      if (nextMode === workspaceMode) return true
+      if (!confirmStrategySwitch('Leaving this strategy answer will discard its unsaved edits. Continue?')) return false
+      setWorkspaceMode(nextMode)
+      return true
+    },
+    [confirmStrategySwitch, workspaceMode],
+  )
+
+  const handleStrategyDraftChange = useCallback((nextDraft: Record<string, unknown>) => {
+    setDraft(nextDraft)
+    markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'strategy answer draft')
+    if (selected) {
+      saveStrategyWorkingDraft(section.id, selected._id, nextDraft, selected._updatedAt)
+      setLocalDraftActiveKey(strategyWorkingDraftStorageKey(section.id, selected._id))
+    }
+  }, [markUnsavedChange, section.id, selected])
+
   useEffect(() => {
     const nextItems = getStrategySectionItems(data, sectionId)
     const nextSelected = nextItems.find((item) => item._id === selectedId) || nextItems[0] || null
@@ -170,6 +229,7 @@ export function StrategyWorkspace({
     setDraft(nextSelected ? { ...nextSelected, ...(restoredDraft || {}) } : {})
     setLocalDraftActiveKey(restoredDraft && nextSelected ? strategyWorkingDraftStorageKey(sectionId, nextSelected._id) : null)
     if (restoredDraft && nextSelected) {
+      markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'restored local strategy draft')
       dispatchMarketingAutopilotStatus({
         activity: 'restored-local-draft',
         busy: false,
@@ -178,7 +238,7 @@ export function StrategyWorkspace({
         recordId: nextSelected._id,
       })
     }
-  }, [data, sectionId, selectedId])
+  }, [data, markUnsavedChange, sectionId, selectedId])
 
   useEffect(() => {
     setFillMessage('')
@@ -187,16 +247,18 @@ export function StrategyWorkspace({
 
   useEffect(() => {
     if (autopilotTarget?.view !== 'strategy') return
-    setWorkspaceMode('foundation')
     if (autopilotTarget.strategySection) {
       const nextItems = getStrategySectionItems(data, autopilotTarget.strategySection)
-      setSectionId(autopilotTarget.strategySection)
       const targetItem = autopilotTarget.recordId
         ? nextItems.find((item) => item._id === autopilotTarget.recordId)
         : null
-      setSelectedId(targetItem?._id || nextItems[0]?._id || null)
+      const nextRecordId = targetItem?._id || nextItems[0]?._id || null
+      if (!selectStrategySection(autopilotTarget.strategySection, nextRecordId)) return
+      setWorkspaceMode('foundation')
+      return
     }
-  }, [autopilotTarget?.targetId, autopilotTarget?.strategySection, autopilotTarget?.recordId, autopilotTarget?.view, data])
+    selectWorkspaceMode('foundation')
+  }, [autopilotTarget?.targetId, autopilotTarget?.strategySection, autopilotTarget?.recordId, autopilotTarget?.view, data, selectStrategySection, selectWorkspaceMode])
 
   const readiness = getStrategyReadiness(data)
   const readyFoundations = readiness.filter((item) => item.ready).length
@@ -205,15 +267,18 @@ export function StrategyWorkspace({
   const approvedResearchCount = useMemo(() => data.researchResults.filter(isResearchResultApproved).length, [data.researchResults])
   const sectionQuestion = getStrategySectionQuestion(section.id)
 
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
+    if (!confirmStrategySwitch('Adding a new strategy answer will discard the unsaved edits in this answer. Continue?')) return
     const createdId = await createDocument(buildEmptyStrategyDocument(section))
     if (createdId) {
+      clearUnsavedChanges(MARKETING_UNSAVED_FORM_ID)
       setSelectedId(createdId)
       const cachedDraft =
         prefetchedStrategyDrafts[strategyPrefetchCacheKey(section.id, 'new')] ||
         loadStrategyWorkingDraft(section.id, 'new')?.draft
       if (cachedDraft) {
         setDraft((current) => ({ ...current, ...cachedDraft, _id: createdId }))
+        markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'pre-drafted strategy answer')
         setFillMessage('Pre-drafted from research while you reviewed the previous answer. Review, then save.')
         saveStrategyWorkingDraft(section.id, createdId, cachedDraft)
         clearStrategyWorkingDraft(section.id, 'new')
@@ -235,61 +300,57 @@ export function StrategyWorkspace({
         setAutoFillAfterCreateId(createdId)
       }
     }
-  }
+  }, [clearUnsavedChanges, confirmStrategySwitch, createDocument, markUnsavedChange, prefetchedStrategyDrafts, researchResultsForFill.length, section])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!selected) return
     if (savingId === selected._id) return
     await commitPatch(selected._id, buildStrategyPatch(section.id, draft))
+    clearUnsavedChanges(MARKETING_UNSAVED_FORM_ID)
     clearStrategyWorkingDraft(section.id, selected._id)
     setLocalDraftActiveKey(null)
     onAutopilotComplete?.({ action: `strategy:save:${section.id}`, recordId: selected._id })
-  }
+  }, [clearUnsavedChanges, commitPatch, draft, onAutopilotComplete, savingId, section.id, selected])
 
-  const requestStrategyDraftFromResearch = async (
-    targetSectionId: StrategyAssetKind,
-    targetDraft: Record<string, unknown>,
-    options: { guidance?: Record<string, string>; notes?: string } = {},
-  ) => {
-    const targetQuestion = getStrategySectionQuestion(targetSectionId)
-    const guidance = options.guidance ?? fillGuidance
-    const notes = options.notes ?? fillNotes
-    const fallbackDraft = buildStrategyDraftFromResearch(targetSectionId, data, targetDraft)
+  const requestStrategyDraftFromResearch = useCallback(
+    async (
+      targetSectionId: StrategyAssetKind,
+      targetDraft: Record<string, unknown>,
+      options: { guidance?: Record<string, string>; notes?: string } = {},
+    ) => {
+      const targetQuestion = getStrategySectionQuestion(targetSectionId)
+      const guidance = options.guidance ?? fillGuidance
+      const notes = options.notes ?? fillNotes
+      const fallbackDraft = buildStrategyDraftFromResearch(targetSectionId, data, targetDraft)
 
-    try {
-      const response = await fetch('/api/marketing/assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          kind: 'strategyAsset',
-          draft: {
-            ...buildStrategyResearchAssistDraft(targetSectionId, targetDraft, data),
-            autofillGuidance: guidance,
-          },
-          prompt: buildAutofillGuidedPrompt({
-            basePrompt: `Draft an answer for "${targetQuestion.question}" from trusted Research findings. Use the supplied findings as evidence and keep fields concise enough for designers to review before saving.`,
-            guidance,
-            notes,
-            questions: getStrategyFillQuestions(targetSectionId),
-          }),
-          analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
+      const payload = await requestMarketingAssist<MarketingAiAssistResponse>({
+        kind: 'strategyAsset',
+        draft: {
+          ...buildStrategyResearchAssistDraft(targetSectionId, targetDraft, data),
+          autofillGuidance: guidance,
+        },
+        prompt: buildAutofillGuidedPrompt({
+          basePrompt: `Draft an answer for "${targetQuestion.question}" from trusted Research findings. Use the supplied findings as evidence and keep fields concise enough for designers to review before saving.`,
+          guidance,
+          notes,
+          questions: getStrategyFillQuestions(targetSectionId),
         }),
+        analyticsTakeaways: serializeAnalyticsTakeawaysForAi(buildAnalyticsInterpretations(data)),
       })
-      const payload = (await response.json()) as MarketingAiAssistResponse
-      return {
-        draft:
-          response.ok && payload.usedAi && payload.suggestion?.strategyAsset
-            ? strategyAssetSuggestionToDraft(targetSectionId, payload.suggestion.strategyAsset, fallbackDraft)
-            : fallbackDraft,
-        usedAi: response.ok && !!payload.usedAi,
-      }
-    } catch (requestError) {
-      console.error('Strategy research fill used fallback:', requestError)
-      return { draft: fallbackDraft, usedAi: false }
-    }
-  }
 
-  const handleFillFromResearch = async (options: { auto?: boolean } = {}) => {
+      if (!payload.suggestion?.strategyAsset) {
+        throw new Error('Marketing assistant did not return a strategy draft.')
+      }
+
+      return {
+        draft: strategyAssetSuggestionToDraft(targetSectionId, payload.suggestion.strategyAsset, fallbackDraft),
+        usedAi: !!payload.usedAi,
+      }
+    },
+    [data, fillGuidance, fillNotes],
+  )
+
+  const handleFillFromResearch = useCallback(async (options: { auto?: boolean } = {}) => {
     if (!selected) {
       setFillError('Add or select a saved answer before drafting from research.')
       return
@@ -316,16 +377,24 @@ export function StrategyWorkspace({
           ? `Drafted this from ${researchResultsForFill.length} finding${researchResultsForFill.length === 1 ? '' : 's'} with AI. Review, then save.`
           : `Drafted this from ${researchResultsForFill.length} stored finding${researchResultsForFill.length === 1 ? '' : 's'} with the rule-based fallback. Review, then save.`,
       )
+    } catch (requestError) {
+      setSaveAfterFill(false)
+      setFillMessage('')
+      setFillError(
+        requestError instanceof Error
+          ? requestError.message
+          : 'Could not draft this answer from research. Please try again.',
+      )
     } finally {
       setFillLoading(false)
     }
-  }
+  }, [confirmDiscardUnsavedChanges, draft, markUnsavedChange, requestStrategyDraftFromResearch, researchResultsForFill.length, section.id, selected])
 
   useEffect(() => {
     if (!autoFillAfterCreateId || !selected || selected._id !== autoFillAfterCreateId || fillLoading) return
     setAutoFillAfterCreateId(null)
     void handleFillFromResearch({ auto: true })
-  }, [autoFillAfterCreateId, selected?._id, fillLoading])
+  }, [autoFillAfterCreateId, fillLoading, handleFillFromResearch, selected])
 
   useEffect(() => {
     if (!selected || !localDraftActiveKey) return
@@ -339,7 +408,7 @@ export function StrategyWorkspace({
       sectionId: section.id,
       recordId: selected._id,
     })
-  }, [draft, localDraftActiveKey, section.id, selected?._id, selected?._updatedAt])
+  }, [draft, localDraftActiveKey, section.id, selected])
 
   useEffect(() => {
     if (fillLoading) {
@@ -379,10 +448,11 @@ export function StrategyWorkspace({
     autopilotTarget?.view,
     draft,
     fillLoading,
+    handleFillFromResearch,
     researchResultsForFill.length,
     savingId,
     section.id,
-    selected?._id,
+    selected,
   ])
 
   useEffect(() => {
@@ -392,6 +462,7 @@ export function StrategyWorkspace({
     if (!cachedDraft || !strategyDraftNeedsResearchFill(section.id, draft)) return
 
     setDraft((current) => ({ ...current, ...cachedDraft }))
+    markUnsavedChange(MARKETING_UNSAVED_FORM_ID, 'pre-drafted strategy answer')
     setFillMessage('Pre-drafted from research while you reviewed the previous answer. Review, then save.')
     saveStrategyWorkingDraft(section.id, selected._id, { ...draft, ...cachedDraft }, selected._updatedAt)
     setLocalDraftActiveKey(strategyWorkingDraftStorageKey(section.id, selected._id))
@@ -400,7 +471,7 @@ export function StrategyWorkspace({
       delete next[cacheKey]
       return next
     })
-  }, [draft, fillLoading, prefetchedStrategyDrafts, section.id, selected?._id, selected?._updatedAt])
+  }, [draft, fillLoading, markUnsavedChange, prefetchedStrategyDrafts, section.id, selected])
 
   useEffect(() => {
     if (autopilotTarget?.view !== 'strategy' || autopilotTarget.strategySection !== section.id) return
@@ -422,19 +493,30 @@ export function StrategyWorkspace({
 
     let cancelled = false
     setPrefetchingStrategyKey(cacheKey)
-    void requestStrategyDraftFromResearch(nextSectionId, nextDraft, { guidance: {}, notes: '' }).then((result) => {
-      if (cancelled) return
-      setPrefetchedStrategyDrafts((current) => ({ ...current, [cacheKey]: result.draft }))
-      saveStrategyWorkingDraft(nextSectionId, nextRecord?._id || 'new', result.draft, nextRecord?._updatedAt)
-      setPrefetchingStrategyKey((current) => (current === cacheKey ? null : current))
-      dispatchMarketingAutopilotStatus({
-        activity: 'autosaved-local-draft',
-        busy: false,
-        message: 'Pre-drafted and saved the next answer locally.',
-        sectionId: nextSectionId,
-        recordId: nextRecord?._id,
+    void requestStrategyDraftFromResearch(nextSectionId, nextDraft, { guidance: {}, notes: '' })
+      .then((result) => {
+        if (cancelled) return
+        setPrefetchedStrategyDrafts((current) => ({ ...current, [cacheKey]: result.draft }))
+        saveStrategyWorkingDraft(nextSectionId, nextRecord?._id || 'new', result.draft, nextRecord?._updatedAt)
+        dispatchMarketingAutopilotStatus({
+          activity: 'autosaved-local-draft',
+          busy: false,
+          message: 'Pre-drafted and saved the next answer locally.',
+          sectionId: nextSectionId,
+          recordId: nextRecord?._id,
+        })
       })
-    })
+      .catch((requestError) => {
+        if (cancelled) return
+        setFillError(
+          requestError instanceof Error
+            ? `Could not pre-draft the next answer: ${requestError.message}`
+            : 'Could not pre-draft the next answer.',
+        )
+      })
+      .finally(() => {
+        if (!cancelled) setPrefetchingStrategyKey((current) => (current === cacheKey ? null : current))
+      })
 
     return () => {
       cancelled = true
@@ -446,17 +528,19 @@ export function StrategyWorkspace({
     autopilotTarget?.view,
     data,
     fillLoading,
+    prefetchingStrategyKey,
     prefetchedStrategyDrafts,
+    requestStrategyDraftFromResearch,
     researchResultsForFill.length,
     section.id,
-    selected?._id,
+    selected,
   ])
 
   useEffect(() => {
     if (!saveAfterFill || fillLoading) return
     setSaveAfterFill(false)
     if (selected) void handleSave()
-  }, [draft, fillLoading, saveAfterFill, selected?._id])
+  }, [draft, fillLoading, handleSave, saveAfterFill, selected])
 
   useEffect(() => {
     const handleAutopilotAction = (event: Event) => {
@@ -468,9 +552,9 @@ export function StrategyWorkspace({
         const dependencyTarget = getStrategyDependencyTarget(section.id, data)
         if (dependencyTarget.view === 'strategy' && dependencyTarget.strategySection) {
           const dependencyItems = getStrategySectionItems(data, dependencyTarget.strategySection)
-          setWorkspaceMode('foundation')
-          setSectionId(dependencyTarget.strategySection)
-          setSelectedId(dependencyTarget.recordId || dependencyItems[0]?._id || null)
+          if (selectStrategySection(dependencyTarget.strategySection, dependencyTarget.recordId || dependencyItems[0]?._id || null)) {
+            setWorkspaceMode('foundation')
+          }
           return
         }
         onOpenView(dependencyTarget.view)
@@ -499,7 +583,7 @@ export function StrategyWorkspace({
 
     window.addEventListener(MARKETING_AUTOPILOT_ACTION_EVENT, handleAutopilotAction)
     return () => window.removeEventListener(MARKETING_AUTOPILOT_ACTION_EVENT, handleAutopilotAction)
-  }, [data, draft, fillLoading, onOpenView, researchResultsForFill.length, section.id, selected?._id])
+  }, [data, draft, fillLoading, handleAdd, handleFillFromResearch, handleSave, onOpenView, researchResultsForFill.length, section.id, selectStrategySection, selected])
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -512,7 +596,7 @@ export function StrategyWorkspace({
               Pick the closest answer when it already exists. Let research draft a new answer only when the current one does not fit.
             </p>
           </div>
-          <div style={{ display: 'grid', justifyItems: 'end', gap: 6, maxWidth: 260 }}>
+          {workspaceMode === 'foundation' && <div style={{ display: 'grid', justifyItems: 'end', gap: 6, maxWidth: 260 }}>
             <button
               type="button"
               data-tour-id="autopilot-strategy-add"
@@ -526,9 +610,10 @@ export function StrategyWorkspace({
             <div style={{ ...styles.small, ...styles.muted, textAlign: 'right' }}>
               Adds a saved option for the current question.
             </div>
-          </div>
+          </div>}
         </div>
         <div
+          data-mobile-stack="true"
           style={{
             borderTop: '1px solid var(--card-border-color)',
             paddingTop: 12,
@@ -575,45 +660,60 @@ export function StrategyWorkspace({
         >
           <StrategyModeButton
             active={workspaceMode === 'foundation'}
-            onClick={() => setWorkspaceMode('foundation')}
+            onClick={() => selectWorkspaceMode('foundation')}
             description="Save reusable answers for audience, message, proof, CTA, tracking, and review."
           >
             Answer setup questions
           </StrategyModeButton>
           <StrategyModeButton
             active={workspaceMode === 'campaigns'}
-            onClick={() => setWorkspaceMode('campaigns')}
-            description="Turn the saved answers into campaign briefs and launch plans."
+            onClick={() => selectWorkspaceMode('campaigns')}
+            description="Hand these saved answers to the single campaign editor in Make."
           >
-            Build campaign plans
+            Campaign plans → Make
           </StrategyModeButton>
           <StrategyModeButton
             active={workspaceMode === 'funnels'}
-            onClick={() => setWorkspaceMode('funnels')}
-            description="Map the audience journey from first touch to CTA and measurement."
+            onClick={() => selectWorkspaceMode('funnels')}
+            description="Open the single funnel editor in Make for journey mapping."
           >
-            Map funnel paths
+            Funnel paths → Make
           </StrategyModeButton>
         </div>
       </div>
 
       {workspaceMode === 'campaigns' && (
-        <CampaignWorkspace data={data} savingId={savingId} createDocument={createDocument} commitPatch={commitPatch} />
+        <section style={{ ...styles.panel, display: 'grid', gap: 12, justifyItems: 'start' }}>
+          <div>
+            <div style={styles.kicker}>Campaign plans live in Make</div>
+            <h3 style={{ margin: '4px 0 6px' }}>Use one campaign editor, with the saved Strategy answers available as inputs</h3>
+            <p style={{ ...styles.muted, margin: 0, maxWidth: 760, lineHeight: 1.55 }}>
+              Campaign records are created and edited in Make → Campaigns. Opening that workspace avoids two editors for the same saved record.
+            </p>
+          </div>
+          <button type="button" style={styles.primaryButton} onClick={() => onOpenView('campaigns')}>
+            Open Campaigns in Make
+          </button>
+        </section>
       )}
 
       {workspaceMode === 'funnels' && (
-        <FunnelWorkspace
-          client={client}
-          data={data}
-          savingId={savingId}
-          createDocument={createDocument}
-          loadData={loadData}
-          commitPatch={commitPatch}
-        />
+        <section style={{ ...styles.panel, display: 'grid', gap: 12, justifyItems: 'start' }}>
+          <div>
+            <div style={styles.kicker}>Funnel paths live in Make</div>
+            <h3 style={{ margin: '4px 0 6px' }}>Use one funnel editor for the audience journey and its next steps</h3>
+            <p style={{ ...styles.muted, margin: 0, maxWidth: 760, lineHeight: 1.55 }}>
+              Funnel records are created and edited in Make → Funnels. Opening that workspace keeps the source of truth clear.
+            </p>
+          </div>
+          <button type="button" style={styles.primaryButton} onClick={() => onOpenView('funnels')}>
+            Open Funnels in Make
+          </button>
+        </section>
       )}
 
       {workspaceMode === 'foundation' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.7fr) minmax(0, 1.5fr)', gap: 16, alignItems: 'start' }}>
+        <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.7fr) minmax(0, 1.5fr)', gap: 16, alignItems: 'start' }}>
         <div style={{ ...styles.panel, display: 'grid', gap: 10 }}>
           {STRATEGY_SECTIONS.map((candidate) => {
             const count = getStrategySectionItems(data, candidate.id).length
@@ -630,10 +730,7 @@ export function StrategyWorkspace({
                   borderColor: active ? '#007385' : 'var(--card-border-color)',
                   background: active ? 'rgba(0, 115, 133, 0.12)' : 'var(--card-bg-color)',
                 }}
-                onClick={() => {
-                  setSectionId(candidate.id)
-                  setSelectedId(getStrategySectionItems(data, candidate.id)[0]?._id || null)
-                }}
+                onClick={() => selectStrategySection(candidate.id)}
               >
                 <span style={{ display: 'grid', gap: 3, minWidth: 0 }}>
                   <strong>{candidate.title}</strong>
@@ -646,7 +743,7 @@ export function StrategyWorkspace({
         </div>
 
         <div style={{ ...styles.panel, display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.8fr) minmax(0, 1.2fr)', gap: 16 }}>
+          <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 0.8fr) minmax(0, 1.2fr)', gap: 16 }}>
             <div style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
               <div>
                 <div style={styles.kicker}>{section.title}</div>
@@ -662,11 +759,11 @@ export function StrategyWorkspace({
                 }}
               >
                 <div>
-                  <div style={{ ...styles.small, color: '#007385', fontWeight: 850 }}>Choose this when</div>
+                  <div style={{ ...styles.small, color: 'var(--card-fg-color)', fontWeight: 850 }}>Choose this when</div>
                   <p style={{ ...styles.small, ...styles.muted, margin: '3px 0 0', lineHeight: 1.45 }}>{sectionQuestion.when}</p>
                 </div>
                 <div>
-                  <div style={{ ...styles.small, color: '#007385', fontWeight: 850 }}>This helps with</div>
+                  <div style={{ ...styles.small, color: 'var(--card-fg-color)', fontWeight: 850 }}>This helps with</div>
                   <p style={{ ...styles.small, ...styles.muted, margin: '3px 0 0', lineHeight: 1.45 }}>{sectionQuestion.helps}</p>
                 </div>
               </div>
@@ -691,7 +788,7 @@ export function StrategyWorkspace({
                           borderColor: active ? '#007385' : 'var(--card-border-color)',
                           background: active ? 'rgba(0, 115, 133, 0.12)' : 'var(--card-bg-color)',
                         }}
-                        onClick={() => setSelectedId(item._id)}
+                        onClick={() => selectStrategyAnswer(item._id)}
                       >
                         <strong>{item.title || `Untitled ${section.singular}`}</strong>
                         <span style={{ ...styles.small, ...styles.muted }}>{strategyDocumentSubtitle(section.id, item)}</span>
@@ -769,12 +866,12 @@ export function StrategyWorkspace({
                       </div>
                     </details>
                     {fillMessage && <div style={{ ...styles.small, color: '#7dd69e', marginTop: 8 }}>{fillMessage}</div>}
-                    {fillError && <div style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>{fillError}</div>}
+                    {fillError && <div role="alert" style={{ ...styles.small, color: '#E36216', marginTop: 8 }}>{fillError}</div>}
                   </div>
                   {fillLoading ? (
                     <StrategyEditorSkeleton sectionId={section.id} />
                   ) : (
-                    <StrategyEditorFields sectionId={section.id} draft={draft} onChange={setDraft} />
+                    <StrategyEditorFields sectionId={section.id} draft={draft} onChange={handleStrategyDraftChange} />
                   )}
                   <details style={{ ...styles.card, padding: 12 }}>
                     <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced document details</summary>
@@ -1445,14 +1542,14 @@ function StrategySelectField({
 }
 function getStrategyReadiness(data: MarketingData) {
   return [
-    { label: getStrategySectionQuestion('audiences').shortLabel, value: data.audienceProfiles.length, ready: data.audienceProfiles.length > 0 },
-    { label: getStrategySectionQuestion('messages').shortLabel, value: data.messagePillars.length, ready: data.messagePillars.length > 0 },
-    { label: getStrategySectionQuestion('proof').shortLabel, value: data.proofPoints.length, ready: data.proofPoints.length > 0 },
-    { label: getStrategySectionQuestion('ctas').shortLabel, value: data.ctas.length, ready: data.ctas.length > 0 },
-    { label: getStrategySectionQuestion('tracking').shortLabel, value: data.trackingRules.length, ready: data.trackingRules.length > 0 },
-    { label: getStrategySectionQuestion('quality').shortLabel, value: data.qualityGates.length, ready: data.qualityGates.length > 0 },
-    { label: getStrategySectionQuestion('experiments').shortLabel, value: data.experiments.length, ready: data.experiments.length > 0 },
-    { label: getStrategySectionQuestion('performance').shortLabel, value: data.performanceSignals.length, ready: data.performanceSignals.length > 0 },
+    { label: getStrategySectionQuestion('audiences').shortLabel, value: data.audienceProfiles.length, ready: data.audienceProfiles.some((item) => hasUsableStrategyRecord('audiences', item)) },
+    { label: getStrategySectionQuestion('messages').shortLabel, value: data.messagePillars.length, ready: data.messagePillars.some((item) => hasUsableStrategyRecord('messages', item)) },
+    { label: getStrategySectionQuestion('proof').shortLabel, value: data.proofPoints.length, ready: data.proofPoints.some((item) => hasUsableStrategyRecord('proof', item)) },
+    { label: getStrategySectionQuestion('ctas').shortLabel, value: data.ctas.length, ready: data.ctas.some((item) => hasUsableStrategyRecord('ctas', item)) },
+    { label: getStrategySectionQuestion('tracking').shortLabel, value: data.trackingRules.length, ready: data.trackingRules.some((item) => hasUsableStrategyRecord('tracking', item)) },
+    { label: getStrategySectionQuestion('quality').shortLabel, value: data.qualityGates.length, ready: data.qualityGates.some((item) => hasUsableStrategyRecord('quality', item)) },
+    { label: getStrategySectionQuestion('experiments').shortLabel, value: data.experiments.length, ready: data.experiments.some((item) => hasUsableStrategyRecord('experiments', item)) },
+    { label: getStrategySectionQuestion('performance').shortLabel, value: data.performanceSignals.length, ready: data.performanceSignals.some((item) => hasUsableStrategyRecord('performance', item)) },
   ]
 }
 function strategyDocumentSubtitle(sectionId: StrategyAssetKind, item: StrategyDocument) {

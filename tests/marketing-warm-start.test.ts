@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
-import { buildWarmStartSuggestions } from '@/lib/marketing'
+import {
+  appendIntakeDraftEntries,
+  buildWarmStartSuggestions,
+  mergeWarmStartSuggestionsIntoIntake,
+} from '@/lib/marketing'
 
 describe('buildWarmStartSuggestions', () => {
   it('turns case-study clients into org-level entries with the case study as how-we-know', () => {
@@ -49,6 +54,54 @@ describe('buildWarmStartSuggestions', () => {
       ],
     })
     expect(out.map((s) => s.name)).toEqual(['3M'])
+  })
+
+  it('drops current, hidden, and alumni team members plus obvious non-callable account labels', () => {
+    const out = buildWarmStartSuggestions({
+      caseStudyClients: [
+        { client: 'Federal, State and Local Government', title: 'Public-sector collection' },
+        { client: 'Various clients', title: 'Portfolio' },
+        { client: 'Acme Health / Beta Health', title: 'Combined write-up' },
+        { client: 'Johnson & Johnson', title: 'Real account' },
+      ],
+      thankedPeople: [
+        {
+          text: [
+            'Jen Patel',
+            'Eric Benoit',
+            'Sharon Lee',
+            'Juhan Sonin',
+            'Huahua Zhu',
+            'GoInvo team',
+            'Jane Buyer',
+            'Peter Jones and Danny van Leeuwen',
+          ].join('\n'),
+          featureTitle: 'A',
+        },
+      ],
+      teamMembers: [
+        { name: 'Jen Patel' },
+        { name: 'Eric Benoit' },
+        { name: 'Sharon Lee' },
+        { name: 'Juhan Sonin' },
+        { name: 'Huahua Zhu' },
+      ],
+    })
+    expect(out.map((suggestion) => suggestion.name)).toEqual(['Jane Buyer', 'Johnson & Johnson'])
+  })
+
+  it('loads every team-directory record for exclusion instead of applying roster filters', () => {
+    const source = readFileSync(
+      'src/sanity/components/marketing/OutreachWorkspace.tsx',
+      'utf8',
+    )
+    const teamQuery = '"teamMembers": *[_type == "teamMember" && defined(name)]{name}'
+
+    expect(source).toContain(teamQuery)
+    expect(source).toContain("client.withConfig({ perspective: 'raw', useCdn: false })")
+    expect(source).toContain('Could not verify the team directory, so no outreach suggestions were shown.')
+    expect(source).not.toContain('isAlumni != true')
+    expect(source).not.toContain('showOnAboutPage != false')
   })
 
   it('splits thanked people one per line, skipping prose-looking lines, and lists people before orgs', () => {
@@ -118,5 +171,79 @@ describe('buildWarmStartSuggestions', () => {
         existingContacts: [{ name: null, organization: null }],
       }),
     ).toEqual([])
+  })
+})
+
+describe('mergeWarmStartSuggestionsIntoIntake', () => {
+  it('appends selected people and accounts to the editable intake draft', () => {
+    const result = mergeWarmStartSuggestionsIntoIntake(['Existing Person — Acme'], [
+      {
+        name: 'Peter Jones',
+        howWeKnow: 'Thanked on “Test. Treat. Trace.”',
+        kind: 'thanked-person',
+      },
+      {
+        name: '3M',
+        organization: '3M',
+        howWeKnow: 'Past client — “Natural Language Processing (NLP) Software for 3M”',
+        kind: 'client-org',
+      },
+    ])
+
+    expect(result).toEqual({
+      entries: [
+        'Existing Person — Acme',
+        'Peter Jones — how we know: Thanked on “Test. Treat. Trace.”',
+        '3M — account placeholder — organization: 3M — how we know: Past client — “Natural Language Processing (NLP) Software for 3M”',
+      ],
+      addedCount: 2,
+    })
+  })
+
+  it('preserves the draft and skips selected lines already present', () => {
+    const current = ['Intro note', 'PETER JONES — HOW WE KNOW: THANKED ON “TEST. TREAT. TRACE.”']
+    const result = mergeWarmStartSuggestionsIntoIntake(current, [
+      {
+        name: 'Peter Jones',
+        howWeKnow: 'Thanked on “Test. Treat. Trace.”',
+        kind: 'thanked-person',
+      },
+    ])
+
+    expect(result).toEqual({ entries: current, addedCount: 0 })
+  })
+})
+
+describe('appendIntakeDraftEntries', () => {
+  it('turns every pasted line into an ordered, trimmed entry', () => {
+    expect(
+      appendIntakeDraftEntries(['Existing Person — Acme'], ' Peter Jones — Health Hats \r\n\r\n3M — account placeholder '),
+    ).toEqual({
+      entries: [
+        'Existing Person — Acme',
+        'Peter Jones — Health Hats',
+        '3M — account placeholder',
+      ],
+      addedCount: 2,
+    })
+  })
+
+  it('does not add a duplicate entry with different casing or whitespace', () => {
+    expect(
+      appendIntakeDraftEntries(
+        ['Peter Jones — Health Hats'],
+        ' peter   jones — health hats \nDafna Gold Melchior',
+      ),
+    ).toEqual({
+      entries: ['Peter Jones — Health Hats', 'Dafna Gold Melchior'],
+      addedCount: 1,
+    })
+  })
+
+  it('treats a blank draft as a no-op', () => {
+    expect(appendIntakeDraftEntries(['Peter Jones'], ' \r\n  ')).toEqual({
+      entries: ['Peter Jones'],
+      addedCount: 0,
+    })
   })
 })

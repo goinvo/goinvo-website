@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server'
 import { createSign } from 'node:crypto'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { tfKeyword, withTextFocus } from '@/lib/marketing/textfocus'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import { readResponseTextLimited } from '@/lib/marketing/seoTarget'
 
 // The SEO opportunities engine. Authenticates as the marketing service account
 // (the same one wired for the GA/GSC MCPs), pulls Search Console + GA4, and
@@ -18,6 +20,54 @@ const GA4_PROPERTY_ID = process.env.GOINVO_GA4_PROPERTY_ID || '321528631'
 // Only attribute GA4 key-events from the production host — never localhost /
 // *.vercel.app preview sessions.
 const GA4_HOST = process.env.GOINVO_GA4_HOST || 'www.goinvo.com'
+const configuredGoogleTimeout = Number(process.env.MARKETING_SEO_GOOGLE_TIMEOUT_MS || 15_000)
+const GOOGLE_TIMEOUT_MS = Math.min(
+  30_000,
+  Math.max(1_000, Number.isFinite(configuredGoogleTimeout) ? configuredGoogleTimeout : 15_000),
+)
+const GOOGLE_RESPONSE_MAX_BYTES = 8 * 1024 * 1024
+const GOOGLE_ERROR_MAX_CHARS = 500
+const GOOGLE_ROWS_MAX = 10_000
+const googleRequestInFlight = new Map<string, Promise<unknown>>()
+
+async function fetchGoogleJson<T>(
+  url: string,
+  init: RequestInit,
+  label: string,
+  maxBytes = GOOGLE_RESPONSE_MAX_BYTES,
+): Promise<T> {
+  const key = JSON.stringify([url, init.method || 'GET', typeof init.body === 'string' ? init.body : String(init.body || '')])
+  const existing = googleRequestInFlight.get(key)
+  if (existing) return existing as Promise<T>
+
+  const pending = (async (): Promise<T> => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), GOOGLE_TIMEOUT_MS)
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal, cache: 'no-store' })
+      const text = await readResponseTextLimited(res, maxBytes)
+      if (!res.ok) {
+        throw new Error(`${label} failed (${res.status}): ${text.slice(0, GOOGLE_ERROR_MAX_CHARS)}`)
+      }
+      try {
+        return JSON.parse(text) as T
+      } catch {
+        throw new Error(`${label} returned invalid JSON.`)
+      }
+    } catch (error) {
+      if (error instanceof Error && (error.name === 'AbortError' || /abort/i.test(error.message))) {
+        throw new Error(`${label} timed out after ${GOOGLE_TIMEOUT_MS}ms.`)
+      }
+      throw error
+    } finally {
+      clearTimeout(timeout)
+    }
+  })().finally(() => {
+    if (googleRequestInFlight.get(key) === pending) googleRequestInFlight.delete(key)
+  })
+  googleRequestInFlight.set(key, pending)
+  return pending
+}
 
 // Brand queries to exclude from the non-brand opportunity list.
 const BRAND_RE = /goinvo|go invo|involution/i
@@ -266,52 +316,60 @@ async function getAccessToken(sa: ServiceAccount, scopes: string[]): Promise<str
   const signature = createSign('RSA-SHA256').update(unsigned).end().sign(sa.private_key).toString('base64url')
   const jwt = `${unsigned}.${signature}`
 
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
-    }),
-    cache: 'no-store',
-  })
-  if (!res.ok) throw new Error(`Google token exchange failed (${res.status}): ${await res.text()}`)
-  const data = (await res.json()) as { access_token?: string }
-  if (!data.access_token) throw new Error('Google token exchange returned no access_token.')
+  const data = await fetchGoogleJson<{ access_token?: unknown }>(
+    'https://oauth2.googleapis.com/token',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        assertion: jwt,
+      }),
+    },
+    'Google token exchange',
+    256 * 1024,
+  )
+  if (typeof data.access_token !== 'string' || !data.access_token || data.access_token.length > 16_384) {
+    throw new Error('Google token exchange returned no valid access_token.')
+  }
   return data.access_token
 }
 
 async function gscQuery(token: string, body: Record<string, unknown>): Promise<GscRow[]> {
-  const res = await fetch(
+  const data = await fetchGoogleJson<{ rows?: unknown }>(
     `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(GSC_SITE_URL)}/searchAnalytics/query`,
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      cache: 'no-store',
     },
+    'Search Console query',
   )
-  if (!res.ok) throw new Error(`Search Console query failed (${res.status}): ${await res.text()}`)
-  const data = (await res.json()) as { rows?: GscRow[] }
-  return data.rows || []
+  if (data.rows === undefined) return []
+  if (!Array.isArray(data.rows)) throw new Error('Search Console query returned an invalid rows value.')
+  if (data.rows.length > GOOGLE_ROWS_MAX) throw new Error(`Search Console query exceeded ${GOOGLE_ROWS_MAX} rows.`)
+  return data.rows.filter((row): row is GscRow => Boolean(row && typeof row === 'object'))
 }
 
 async function ga4PageViews(token: string, startDate: string, endDate: string): Promise<Map<string, number>> {
-  const res = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      dateRanges: [{ startDate, endDate }],
-      dimensions: [{ name: 'pagePath' }],
-      metrics: [{ name: 'screenPageViews' }],
-      limit: 1000,
-    }),
-    cache: 'no-store',
-  })
-  if (!res.ok) throw new Error(`GA4 report failed (${res.status}): ${await res.text()}`)
-  const data = (await res.json()) as {
+  const data = await fetchGoogleJson<{
     rows?: Array<{ dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }>
-  }
+  }>(
+    `https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dateRanges: [{ startDate, endDate }],
+        dimensions: [{ name: 'pagePath' }],
+        metrics: [{ name: 'screenPageViews' }],
+        limit: 1000,
+      }),
+    },
+    'GA4 report',
+  )
+  if (data.rows !== undefined && !Array.isArray(data.rows)) throw new Error('GA4 report returned invalid rows.')
+  if ((data.rows?.length || 0) > 1_000) throw new Error('GA4 report exceeded 1000 rows.')
   const map = new Map<string, number>()
   for (const row of data.rows || []) {
     const path = normalizePath(row.dimensionValues?.[0]?.value || '')
@@ -323,10 +381,8 @@ async function ga4PageViews(token: string, startDate: string, endDate: string): 
 
 // GA4 key-events (the configured "leads" — contact-form submits, RFP-CTA
 // clicks, etc.) by landing page, host-filtered to production. Returns BOTH the
-// per-page map and whether any key events came back at all: if the team hasn't
-// marked their CTAs as GA4 key events yet, every page reports 0 and the engine
-// must keep the demand-only score + flag keyEventsConfigured:false rather than
-// silently zeroing everyone's business value. Tries the `keyEvents` metric
+// per-page map and whether the report request succeeded. A successful report
+// with no events is valid zero activity, not a broken connection. Tries the `keyEvents` metric
 // (current GA4 name) and falls back to the legacy `conversions` metric, and the
 // `landingPagePlusQueryString` dimension with a `pagePath` fallback.
 async function ga4KeyEventsByPage(
@@ -339,7 +395,9 @@ async function ga4KeyEventsByPage(
   for (const metric of metricNames) {
     for (const dimension of dimensionNames) {
       try {
-        const res = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport`, {
+        const data = await fetchGoogleJson<{
+          rows?: Array<{ dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }>
+        }>(`https://analyticsdata.googleapis.com/v1beta/properties/${GA4_PROPERTY_ID}:runReport`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -351,28 +409,26 @@ async function ga4KeyEventsByPage(
             },
             limit: 1000,
           }),
-          cache: 'no-store',
-        })
-        if (!res.ok) {
+        }, 'GA4 key-events report')
+        if (data.rows !== undefined && !Array.isArray(data.rows)) {
           // An unknown-metric/dimension is a 400 — try the next combination
           // rather than failing the whole engine.
           continue
         }
-        const data = (await res.json()) as {
+        if ((data.rows?.length || 0) > 1_000) continue
+        const validatedData = data as {
           rows?: Array<{ dimensionValues?: Array<{ value?: string }>; metricValues?: Array<{ value?: string }> }>
         }
         const map = new Map<string, number>()
-        let total = 0
-        for (const row of data.rows || []) {
+        for (const row of validatedData.rows || []) {
           const path = normalizePath(row.dimensionValues?.[0]?.value || '')
           const count = Number(row.metricValues?.[0]?.value || 0)
           if (!Number.isFinite(count) || count <= 0) continue
           map.set(path, (map.get(path) || 0) + count)
-          total += count
         }
-        // A successful call with zero key-events across the whole site means the
-        // metric exists but nothing is configured/firing — report not-configured.
-        return { map, configured: total > 0 }
+        // A successful report is usable even when the period contains zero
+        // events. Zero activity must not be presented as a broken connection.
+        return { map, configured: true }
       } catch {
         // network/parse error on this combo — try the next one
       }
@@ -408,6 +464,10 @@ export function keyEventBoost(keyEvents: number): number {
 // one refresh to ~1 credit and well under the daily cap; if the list is longer
 // we enrich the top slice and log that we capped (we never split into N calls).
 const KEYWORD_ENRICH_MAX = 25
+const KEYWORD_ENRICH_REPLAY_TTL_MS = 60_000
+const KEYWORD_ENRICH_CACHE_MAX = 20
+const keywordEnrichmentInFlight = new Map<string, Promise<Map<string, KeywordMetrics>>>()
+const keywordEnrichmentCache = new Map<string, { expiresAt: number; value: Map<string, KeywordMetrics> }>()
 
 // tf_keyword returns a map keyed by the keyword string, each value carrying
 // loosely-typed (string OR number) `volume`, `difficulty` and `cost` (CPC).
@@ -910,10 +970,62 @@ function ymd(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function GET() {
+async function enrichQueriesOnce(queries: QueryOpportunity[]): Promise<QueryOpportunity[]> {
+  const batchTerms = queries.slice(0, KEYWORD_ENRICH_MAX).map((query) => query.query)
+  const key = JSON.stringify(batchTerms)
+  const cached = keywordEnrichmentCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) {
+    return enrichQueriesWithKeywordMetrics(queries, cached.value)
+  }
+  if (cached) keywordEnrichmentCache.delete(key)
+  const existing = keywordEnrichmentInFlight.get(key)
+  if (existing) return enrichQueriesWithKeywordMetrics(queries, await existing)
+
+  const pending = withTextFocus(async () => {
+    const raw = await tfKeyword(JSON.stringify(batchTerms), { lang: 'en-US' })
+    return parseKeywordMetrics(raw)
+  }, new Map<string, KeywordMetrics>())
+    .then((value) => {
+      keywordEnrichmentCache.set(key, { expiresAt: Date.now() + KEYWORD_ENRICH_REPLAY_TTL_MS, value })
+      while (keywordEnrichmentCache.size > KEYWORD_ENRICH_CACHE_MAX) {
+        const oldest = keywordEnrichmentCache.keys().next().value as string | undefined
+        if (!oldest) break
+        keywordEnrichmentCache.delete(oldest)
+      }
+      return value
+    })
+    .finally(() => {
+      if (keywordEnrichmentInFlight.get(key) === pending) keywordEnrichmentInFlight.delete(key)
+    })
+  keywordEnrichmentInFlight.set(key, pending)
+  return enrichQueriesWithKeywordMetrics(queries, await pending)
+}
+
+export async function GET(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return privateMarketingJson({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
+  // The opportunities list is free to refresh. Keyword volume/difficulty uses
+  // one paid TextFocus batch credit and must be explicitly requested by the UI.
+  const searchParams = new URL(request.url).searchParams
+  if ([...searchParams.keys()].some((key) => key !== 'enrich') || searchParams.getAll('enrich').length > 1) {
+    return privateMarketingJson({ error: 'Only one `enrich` query parameter is allowed.' }, { status: 400 })
+  }
+  const enrichRaw = searchParams.get('enrich')
+  if (enrichRaw !== null && enrichRaw !== '0' && enrichRaw !== '1') {
+    return privateMarketingJson({ error: '`enrich` must be 0 or 1.' }, { status: 400 })
+  }
+  const includeKeywordMetrics = enrichRaw === '1'
+
   const sa = getServiceAccount()
   if (!sa) {
-    return NextResponse.json({
+    return privateMarketingJson({
       configured: false,
       message:
         'GOOGLE_SERVICE_ACCOUNT_JSON is not set. Add the marketing service-account JSON to enable live Search Console + GA4 opportunities.',
@@ -990,7 +1102,7 @@ export async function GET() {
     }
     if (!keyEventsConfigured) {
       warnings.push(
-        'GA4 key-events not configured: mark the contact-form / RFP-CTA actions as GA4 key events to rank converting pages higher (business-value boost is off until then).',
+        'GA4 key-event reporting is unavailable: verify Analytics access and that the contact-form / RFP-CTA actions are marked as key events.',
       )
     }
 
@@ -1095,20 +1207,15 @@ export async function GET() {
     // opportunities UNCHANGED (no volume/difficulty, original order). When it's
     // healthy, each covered opportunity gains { volume, difficulty, cpc } and a
     // modest difficulty re-rank (raw GSC demand stays the primary signal).
-    if (queries.length > 0) {
-      const batchTerms = queries.slice(0, KEYWORD_ENRICH_MAX).map((q) => q.query)
+    if (includeKeywordMetrics && queries.length > 0) {
       if (queries.length > KEYWORD_ENRICH_MAX) {
         console.warn(
           `SEO keyword enrichment: ${queries.length} query opportunities exceed the ${KEYWORD_ENRICH_MAX}-term batch cap; ` +
             `enriching only the top ${KEYWORD_ENRICH_MAX} in the single tf_keyword call.`,
         )
       }
-      queries = await withTextFocus(async () => {
+      queries = await enrichQueriesOnce(queries)
         // Array form → one tf_keyword call returning a keyword→metrics map.
-        const raw = await tfKeyword(JSON.stringify(batchTerms), { lang: 'en-US' })
-        const metricsByQuery = parseKeywordMetrics(raw)
-        return enrichQueriesWithKeywordMetrics(queries, metricsByQuery)
-      }, queries)
     }
 
     // Title/meta-rewrite quick wins + keyword cannibalization, both derived
@@ -1124,7 +1231,7 @@ export async function GET() {
     const intentProfile = buildIntentProfile(queryRows).slice(0, 50)
     const intentMismatches = buildIntentMismatches(pageQueryRows).slice(0, 20)
 
-    return NextResponse.json({
+    return privateMarketingJson({
       configured: true,
       generatedAt: new Date().toISOString(),
       range: { startDate, endDate },
@@ -1143,7 +1250,7 @@ export async function GET() {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'SEO opportunities request failed.'
     console.error('Marketing SEO opportunities failed:', error)
-    return NextResponse.json(
+    return privateMarketingJson(
       {
         configured: true,
         error: message,

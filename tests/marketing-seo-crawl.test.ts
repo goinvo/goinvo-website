@@ -298,6 +298,13 @@ describe('crawlSite — bounds and graceful degradation', () => {
     expect(stats.capped).toBe(true)
   })
 
+  it('hard-clamps caller and environment page limits', async () => {
+    vi.stubGlobal('fetch', stubSiteFetch())
+    const { stats } = await crawlSite({ maxPages: 999999 })
+    expect(stats.maxPages).toBe(120)
+    expect(stats.pagesAttempted).toBeLessThanOrEqual(120)
+  })
+
   it('never throws and returns a single graceful notice when every fetch fails', async () => {
     vi.stubGlobal(
       'fetch',

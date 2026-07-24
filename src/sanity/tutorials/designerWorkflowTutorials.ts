@@ -6,7 +6,7 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
   {
     id: 'marketing-view-tour',
     title: 'Marketing view tour',
-    description: 'Learn how the Marketing view and Marketing autopilot help you start connected planning work without creating records during the tour.',
+    description: 'Learn how the Marketing view and Autopilot help you start connected planning work without creating records during the tour.',
     steps: [
       {
         id: 'open-widget',
@@ -30,8 +30,8 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
       {
         id: 'choose-path',
         targetId: 'designer-workflow-path-plan',
-        instruction: 'Choose an action',
-        description: 'Search the assistant actions, then choose a recommended setup path or jump straight into the section that needs work. After you choose a setup path, the next tutorial starts only when you actually ask for a suggestion.',
+        instruction: 'Choose guided setup',
+        description: 'Choose Guide me along to let Autopilot inspect the suite and lead you through one reviewable setup step at a time. You can still use the other choices whenever you want to search the suite or talk through the work.',
         nextLabel: 'Finish tour',
       },
     ],
@@ -58,8 +58,8 @@ export const designerWorkflowTutorials: GuidedTutorialDefinition[] = [
   },
   {
     id: 'designer-workflow-sessions',
-    title: 'Marketing autopilot sessions',
-    description: 'Learn how to resume, switch, and clear local Marketing autopilot setup sessions.',
+    title: 'Autopilot sessions',
+    description: 'Learn how to resume, switch, and clear local Autopilot setup sessions.',
     steps: [
       {
         id: 'open-widget',

@@ -1,8 +1,8 @@
 /**
  * Social publishing adapters + scheduling for the portable marketing core.
  *
- * Import from `@/lib/marketing/publishers` (or via the `@/lib/marketing` barrel)
- * rather than the individual modules.
+ * Server-only entry point. Import from `@/lib/marketing/publishers`; never
+ * re-export this module from a barrel consumed by the browser-rendered Studio.
  */
 
 // Registry + connection status.
@@ -31,7 +31,7 @@ export {
 export type { PublishableItem, ItemPatch } from './content'
 
 // The publish worker (shared by /run, the QStash publish callback, and finalize).
-export { runPublish } from './worker'
+export { runPublish, validatePublishContent, validatePublishableItem } from './worker'
 export type { RunPublishOptions, PublishResultEntry, PublishRunSummary, FinalizeSignal } from './worker'
 
 // QStash exact-time scheduling + async finalize re-checks.

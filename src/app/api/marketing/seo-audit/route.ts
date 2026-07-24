@@ -1,10 +1,17 @@
-import { NextResponse } from 'next/server'
 import {
   auditPage,
   computeHealthScore,
   type PageAuditResult,
   type SeoFinding,
 } from '@/lib/marketing/seoAudit'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import {
+  fetchSeoResource,
+  readResponseTextLimited,
+  SeoTargetError,
+  validateSeoTargetUrl,
+} from '@/lib/marketing/seoTarget'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // Phase-1 SEO audit route (see docs/seo-suite-revamp-plan.md). Unlike the
 // existing /api/marketing/seo route — which only ranks GSC demand and never
@@ -22,7 +29,50 @@ export const dynamic = 'force-dynamic'
 
 const SITEMAP_URL = process.env.GOINVO_SITEMAP_URL || 'https://www.goinvo.com/sitemap.xml'
 const MAX_PAGES = 10
-const SITEMAP_TIMEOUT_MS = Number(process.env.MARKETING_SEO_FETCH_TIMEOUT_MS || 10000)
+const configuredSitemapTimeout = Number(process.env.MARKETING_SEO_FETCH_TIMEOUT_MS || 10000)
+const SITEMAP_TIMEOUT_MS = Math.min(
+  30_000,
+  Math.max(1_000, Number.isFinite(configuredSitemapTimeout) ? configuredSitemapTimeout : 10_000),
+)
+const SEO_QUERY_URL_MAX_CHARS = 2_048
+const SEO_KEYWORD_MAX_CHARS = 200
+const SEO_LANG_MAX_CHARS = 16
+const AUDIT_REPLAY_TTL_MS = 60_000
+const AUDIT_CACHE_MAX_ENTRIES = 100
+
+type AuditOptions = NonNullable<Parameters<typeof auditPage>[1]>
+const auditInFlight = new Map<string, Promise<PageAuditResult>>()
+const paidAuditCache = new Map<string, { expiresAt: number; result: PageAuditResult }>()
+
+function rememberPaidAudit(key: string, result: PageAuditResult): void {
+  paidAuditCache.set(key, { expiresAt: Date.now() + AUDIT_REPLAY_TTL_MS, result })
+  while (paidAuditCache.size > AUDIT_CACHE_MAX_ENTRIES) {
+    const oldest = paidAuditCache.keys().next().value as string | undefined
+    if (!oldest) break
+    paidAuditCache.delete(oldest)
+  }
+}
+
+function auditPageOnce(url: string, options: AuditOptions): Promise<PageAuditResult> {
+  const key = JSON.stringify([url, options])
+  if (options.includeSemanticGap) {
+    const cached = paidAuditCache.get(key)
+    if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.result)
+    if (cached) paidAuditCache.delete(key)
+  }
+  const existing = auditInFlight.get(key)
+  if (existing) return existing
+  const pending = auditPage(url, options)
+    .then((result) => {
+      if (options.includeSemanticGap) rememberPaidAudit(key, result)
+      return result
+    })
+    .finally(() => {
+      if (auditInFlight.get(key) === pending) auditInFlight.delete(key)
+    })
+  auditInFlight.set(key, pending)
+  return pending
+}
 
 // Prefer high-value pages when capping the sitemap to MAX_PAGES: the homepage,
 // then shallow top-level routes (fewer path segments), so a designer sees the
@@ -43,13 +93,13 @@ async function fetchSitemapUrls(): Promise<string[]> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), SITEMAP_TIMEOUT_MS)
   try {
-    const res = await fetch(SITEMAP_URL, {
+    const res = await fetchSeoResource(SITEMAP_URL, {
       cache: 'no-store',
       signal: controller.signal,
       headers: { 'User-Agent': 'GoInvo marketing SEO audit (+https://www.goinvo.com)' },
     })
     if (!res.ok) throw new Error(`Sitemap returned ${res.status}`)
-    const xml = await res.text()
+    const xml = await readResponseTextLimited(res)
     // Extract <loc> values without a full XML parser (sitemaps are flat).
     const locs = [...xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1].trim())
     // De-dupe, keep only http(s), and rank by value.
@@ -101,13 +151,64 @@ function summarize(results: PageAuditResult[]) {
 }
 
 export async function GET(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return privateMarketingJson({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   const { searchParams } = new URL(request.url)
-  const single = (searchParams.get('url') || '').trim()
+  const allowedParams = new Set(['url', 'keyword', 'lang', 'paid'])
+  for (const key of searchParams.keys()) {
+    if (!allowedParams.has(key)) {
+      return privateMarketingJson({ error: `Unknown query parameter \`${key}\`.` }, { status: 400 })
+    }
+    if (searchParams.getAll(key).length > 1) {
+      return privateMarketingJson({ error: `Query parameter \`${key}\` may only be provided once.` }, { status: 400 })
+    }
+  }
+  const requestedUrl = (searchParams.get('url') || '').trim()
+  if (requestedUrl.length > SEO_QUERY_URL_MAX_CHARS) {
+    return privateMarketingJson({ error: `\`url\` exceeds ${SEO_QUERY_URL_MAX_CHARS} characters.` }, { status: 400 })
+  }
+  let single = ''
+  if (requestedUrl) {
+    try {
+      single = validateSeoTargetUrl(requestedUrl)
+    } catch (error) {
+      if (error instanceof SeoTargetError) {
+        return privateMarketingJson({ error: error.message }, { status: 400 })
+      }
+      throw error
+    }
+  }
   // Optional overrides for the semantic-gap (topical-coverage) check: the target
   // search query and market. When omitted, the keyword is inferred from the
   // page's title / H1 / URL.
-  const semanticKeyword = (searchParams.get('keyword') || '').trim() || undefined
-  const semanticLang = (searchParams.get('lang') || '').trim() || undefined
+  const semanticKeywordRaw = (searchParams.get('keyword') || '').trim()
+  const semanticLangRaw = (searchParams.get('lang') || '').trim()
+  if (semanticKeywordRaw.length > SEO_KEYWORD_MAX_CHARS || /[\u0000-\u001f\u007f]/.test(semanticKeywordRaw)) {
+    return privateMarketingJson({ error: `\`keyword\` must be ${SEO_KEYWORD_MAX_CHARS} printable characters or fewer.` }, { status: 400 })
+  }
+  if (semanticLangRaw.length > SEO_LANG_MAX_CHARS || (semanticLangRaw && !/^[a-z]{2}(?:-[A-Z]{2})?$/.test(semanticLangRaw))) {
+    return privateMarketingJson({ error: '`lang` must be a market code such as en-US.' }, { status: 400 })
+  }
+  const paidRaw = searchParams.get('paid')
+  if (paidRaw !== null && paidRaw !== '0' && paidRaw !== '1') {
+    return privateMarketingJson({ error: '`paid` must be 0 or 1.' }, { status: 400 })
+  }
+  const includePaidChecks = paidRaw === '1'
+  if (includePaidChecks && !single) {
+    return privateMarketingJson({ error: '`paid=1` requires a single approved `url`.' }, { status: 400 })
+  }
+  if ((semanticKeywordRaw || semanticLangRaw) && !includePaidChecks) {
+    return privateMarketingJson({ error: '`keyword` and `lang` require `paid=1`.' }, { status: 400 })
+  }
+  const semanticKeyword = semanticKeywordRaw || undefined
+  const semanticLang = semanticLangRaw || undefined
   const warnings: string[] = []
 
   // Indexation (GSC URL Inspection) is a slower per-page call to Google, so it
@@ -133,14 +234,16 @@ export async function GET(request: Request) {
   // Semantic-gap (topical-coverage) calls TextFocus's paid tf_semantic endpoint
   // per page, so only enable it for the single ?url= mode — never the
   // multi-page sweep, which would spend credits on every page.
-  const includeSemanticGap = Boolean(single)
+  const includeSemanticGap = Boolean(single && includePaidChecks)
   if (single) {
     warnings.push('Indexation (GSC URL Inspection) is included for single-page audits.')
     warnings.push('AI-crawler access (robots.txt) and llms.txt are included for single-page audits.')
     warnings.push('Render check (raw HTML vs rendered page) is included for single-page audits.')
     warnings.push('Core Web Vitals (PageSpeed Insights — real-user field data) is included for single-page audits.')
     warnings.push('Conversion-rate checks (GA4 conversion rate + form/CTA design) are included for single-page audits on money pages.')
-    warnings.push('Semantic-gap / topical-coverage (TextFocus — compares the page against the pages ranking for a target keyword) is included for single-page audits; pass &keyword= to set the target query.')
+    warnings.push(includeSemanticGap
+      ? 'Semantic-gap / topical-coverage is included and uses one paid TextFocus credit; pass &keyword= to set the target query.'
+      : 'Semantic-gap / topical-coverage is off by default because it uses one paid TextFocus credit; pass &paid=1 to opt in.')
   } else {
     warnings.push(
       'Indexation (GSC URL Inspection) is disabled for the multi-page sweep to respect Search Console rate limits; pass ?url=<page> to include it.',
@@ -158,7 +261,7 @@ export async function GET(request: Request) {
       'Core Web Vitals (PageSpeed Insights) is a per-page API call with a low keyless quota; pass ?url=<page> to include it.',
     )
     warnings.push(
-      'Semantic-gap / topical-coverage (TextFocus) is a paid per-page call; pass ?url=<page> (optionally &keyword=) to include it.',
+      'Semantic-gap / topical-coverage (TextFocus) is a paid per-page call and stays off during sweeps.',
     )
   }
 
@@ -178,7 +281,7 @@ export async function GET(request: Request) {
     } catch (error) {
       const reason = error instanceof Error ? error.message : 'unknown error'
       console.error('Marketing SEO audit: sitemap fetch failed:', error)
-      return NextResponse.json({
+      return privateMarketingJson({
         generatedAt: new Date().toISOString(),
         sitemap: SITEMAP_URL,
         error: `Could not load the sitemap (${reason}). Pass ?url=<page> to audit a single page.`,
@@ -190,7 +293,7 @@ export async function GET(request: Request) {
   }
 
   if (targets.length === 0) {
-    return NextResponse.json({
+    return privateMarketingJson({
       generatedAt: new Date().toISOString(),
       sitemap: single ? undefined : SITEMAP_URL,
       results: [],
@@ -204,7 +307,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion, includeSemanticGap, semanticKeyword, semanticLang })
+        return await auditPageOnce(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion, includeSemanticGap, semanticKeyword, semanticLang })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {
@@ -230,7 +333,7 @@ export async function GET(request: Request) {
 
   const summary = summarize(results)
 
-  return NextResponse.json({
+  return privateMarketingJson({
     generatedAt: new Date().toISOString(),
     sitemap: single ? undefined : SITEMAP_URL,
     results,

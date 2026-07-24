@@ -462,6 +462,7 @@ export function buildVariantEngagementEntries(
 
 export interface DrainSignalDocInput {
   signalId: string
+  experimentId: string
   experimentTitle?: string
   flagKey: string
   pageUrl?: string
@@ -481,6 +482,7 @@ export interface DrainSignalDoc {
   status: string
   signalType: string
   sourceLabel: string
+  experiment: { _type: 'reference'; _ref: string }
   pageUrl?: string
   metricDate?: string
   periodStart?: string
@@ -510,6 +512,7 @@ export function buildDrainPerformanceSignalDoc(input: DrainSignalDocInput): Drai
     status: 'reviewed',
     signalType: 'abTestVariantReadout',
     sourceLabel: 'Vercel Web Analytics drain',
+    experiment: { _type: 'reference', _ref: input.experimentId },
     metrics: input.metrics,
     interpretation: input.interpretation,
     recommendation: 'Review the leading variant before changing rollout percentages, then record the decision on the experiment.',

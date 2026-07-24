@@ -25,7 +25,7 @@ const HOME_CONVERSIONS: DrainConversionEvent[] = [
   { eventName: 'discovery_form_start', label: 'Discovery form starts', unit: 'events' },
 ]
 
-function exposureEvent(variant: string, count = 1) {
+function exposureEvent(variant: string) {
   return {
     type: 'event',
     eventName: 'experiment_exposure',
@@ -239,6 +239,7 @@ describe('Vercel drain Sanity upsert shape', () => {
 
     const doc = buildDrainPerformanceSignalDoc({
       signalId,
+      experimentId: 'experiment-home-2026',
       experimentTitle: 'Homepage 2026 concept test',
       flagKey: 'home-2026-variant',
       pageUrl: 'https://www.goinvo.com/',
@@ -255,6 +256,7 @@ describe('Vercel drain Sanity upsert shape', () => {
       status: 'reviewed',
       signalType: 'abTestVariantReadout',
       sourceLabel: 'Vercel Web Analytics drain',
+      experiment: { _type: 'reference', _ref: 'experiment-home-2026' },
       pageUrl: 'https://www.goinvo.com/',
       metricDate: '2026-06-01',
     })
@@ -270,6 +272,7 @@ describe('Vercel drain Sanity upsert shape', () => {
   it('omits a non-absolute page url', () => {
     const doc = buildDrainPerformanceSignalDoc({
       signalId: drainSignalId('home-2026-variant'),
+      experimentId: 'experiment-home-2026',
       flagKey: 'home-2026-variant',
       pageUrl: '/',
       metrics: [],
@@ -339,9 +342,8 @@ describe('Vercel drain authorization', () => {
     expect(verifyDrainAuthorization({ secret, authorizationHeader: 'Bearer nope' })).toBe(false)
   })
 
-  it('accepts a matching query token', () => {
-    expect(verifyDrainAuthorization({ secret, queryToken: secret })).toBe(true)
-    expect(verifyDrainAuthorization({ secret, queryToken: 'nope' })).toBe(false)
+  it('requires a header or body signature instead of a URL query secret', () => {
+    expect(verifyDrainAuthorization({ secret })).toBe(false)
   })
 
   it('verifies an HMAC signature of the raw body', () => {

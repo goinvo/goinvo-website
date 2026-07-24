@@ -3,6 +3,7 @@ import {
   type SeoFinding,
   type SeoFindingSeverity,
 } from './seoAudit'
+import { fetchSeoResource, readResponseTextLimited } from './seoTarget'
 
 // llms.txt layer for the SEO audit engine — the lowest-priority item on the
 // §12 GEO backlog, and the brief is explicit that this module must be HONEST
@@ -109,7 +110,7 @@ export async function auditLlmsTxt(
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), LLMS_TIMEOUT_MS)
   try {
-    const res = await fetch(llmsUrl, {
+    const res = await fetchSeoResource(llmsUrl, {
       cache: 'no-store',
       signal: controller.signal,
       headers: {
@@ -120,7 +121,7 @@ export async function auditLlmsTxt(
     if (!res.ok) {
       return [missingFinding(siteUrl, `requesting it returned ${res.status}`)]
     }
-    const text = await res.text()
+    const text = await readResponseTextLimited(res, 512 * 1024)
     if (!looksLikeLlmsTxt(text)) {
       return [
         missingFinding(
