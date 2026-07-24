@@ -382,7 +382,7 @@ export function GuidedTutorialOverlay({
   const goNext = async () => {
     if (nextButtonDisabled) return
     if (useMirroredTargetAction && currentStep.targetId) {
-      // The mirrored action can change in place (for example, Check Names becomes
+      // The mirrored action can change in place (for example, Review Contacts becomes
       // Add Contacts). Lock before dispatching the underlying click so the second
       // half of a double-click cannot activate the newly rendered destructive step.
       if (mirroredActionLockRef.current) return

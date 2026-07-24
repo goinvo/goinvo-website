@@ -98,7 +98,7 @@ describe('contact intake grid', () => {
     })
   })
 
-  it('keeps every source row visible when the name check omits one', () => {
+  it('keeps every source row visible when contact review omits one', () => {
     const rows = buildContactIntakeRows(
       ['Ada Alpha — Acme', 'Grace Gamma — Globex'],
       [{ name: 'Ada Alpha', organization: 'Acme', sourceLine: 'Ada Alpha — Acme' }],
