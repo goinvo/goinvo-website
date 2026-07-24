@@ -179,7 +179,7 @@ export function buildContactIntakeRows(
         rawText,
         ...draft,
         state: 'draft',
-        stateLabel: 'Needs name check',
+        stateLabel: 'Needs review',
       }
     })
   }
@@ -197,7 +197,7 @@ export function buildContactIntakeRows(
       entryIndex,
       previewIndex,
       rawText,
-      // Once Check Names has returned, show exactly the fields in the payload
+      // Once contact review has returned, show exactly the fields in the payload
       // that will be committed. Falling back to the source-text heuristic here
       // can make a role or email look approved even though it will not be saved.
       name: compact(contact.name),
@@ -362,7 +362,7 @@ export function ContactIntakeGrid({
           style={controlStyle}
         >
           <option value="all">All review states</option>
-          <option value="draft">Needs name check</option>
+          <option value="draft">Needs review</option>
           <option value="ready">Ready to add</option>
           <option value="duplicate">Already exists</option>
         </select>
