@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
-import type { SanityClient } from '@sanity/client'
+import { studioSessionHeader } from '@/sanity/lib/studioSession'
 
 // Strategy Brief — a clean, scannable, READ-ONLY briefing of GoInvo's
 // go-to-market strategy findings (positioning, money-terms, AI visibility, the
@@ -28,8 +28,6 @@ type AiCitationSnapshot = {
   results?: unknown[]
 }
 type AiCitationData = { error?: string; snapshots?: AiCitationSnapshot[] }
-
-type StrategyBriefWorkspaceProps = { client?: SanityClient }
 
 const s: Record<string, CSSProperties> = {
   wrap: { padding: 16, color: 'var(--card-fg-color)', fontSize: 13 },
@@ -60,8 +58,9 @@ const tierBadge = (c: string): CSSProperties => ({
   borderRadius: 999,
   fontSize: 11,
   fontWeight: 700,
-  color: '#fff',
-  background: c,
+  color: 'var(--card-fg-color)',
+  background: 'var(--card-bg-color)',
+  border: `1px solid ${c}`,
   marginRight: 8,
 })
 
@@ -119,7 +118,7 @@ const FAILURE_TAXONOMY: FailureMode[] = [
   { id: 'F8', mode: 'Illegible data / standard layer', tell: 'Is the data interoperable and legible (FHIR/SHR/Flux), or locked in a format only one vendor can read? (what GoInvo OSS fixes)' },
 ]
 
-export function StrategyBriefWorkspace({ client: _client }: StrategyBriefWorkspaceProps) {
+export function StrategyBriefWorkspace() {
   // §E only: read the latest stored AI-citation snapshot (cheap GET — runs
   // nothing). Everything else on this view is static.
   const [aiCite, setAiCite] = useState<AiCitationData | null>(null)
@@ -128,7 +127,7 @@ export function StrategyBriefWorkspace({ client: _client }: StrategyBriefWorkspa
   const loadAiCitation = useCallback(async () => {
     setAiCiteLoading(true)
     try {
-      const res = await fetch('/api/marketing/ai-citation')
+      const res = await fetch('/api/marketing/ai-citation', { headers: studioSessionHeader() })
       setAiCite((await res.json()) as AiCitationData)
     } catch {
       setAiCite({ error: 'Could not load AI-citation snapshots.' })
@@ -164,7 +163,9 @@ export function StrategyBriefWorkspace({ client: _client }: StrategyBriefWorkspa
 
       <div style={{ ...s.callout, marginBottom: 18 }}>
         Captured {BRIEF_DATE} from a 6-agent research + synthesis workflow. This is a <strong>recommendation, not yet
-        adopted</strong> — read it as the argued-for direction, not settled house style.
+        adopted</strong> — read it as the argued-for direction, not settled house style. The static claims below do
+        not retain per-claim source links or verification status in this brief; treat the figures as historical
+        research notes and verify them in Research, Evidence, or SEO before external use.
       </div>
 
       {/* --- A. Positioning --- */}
@@ -411,13 +412,21 @@ function AiCitationLatest({ data, loading }: { data: AiCitationData | null; load
 
   const snapshots = data.snapshots || []
   // Prefer the most recent snapshot that actually ran.
-  const latest = snapshots.find((snap) => !snap.unavailable && (snap.answeredCount ?? 0) > 0) || snapshots[0]
-  if (!latest) return fallback('No AI-citation run yet — run the check in the SEO view to capture the first snapshot.')
-  if (latest.unavailable || (latest.answeredCount ?? 0) === 0)
-    return fallback(`The latest run (${fmtDate(latest.runDate)}) didn’t complete — check back after the next run.`)
+  const newest = snapshots[0]
+  const latest = snapshots.find((snap) => !snap.unavailable && (snap.answeredCount ?? 0) > 0)
+  if (!newest) return fallback('No AI-citation run yet — run the check in the SEO view to capture the first snapshot.')
+  if (!latest)
+    return fallback(`The latest run (${fmtDate(newest.runDate)}) didn’t complete — check back after the next run.`)
+  const showingOlderSuccessfulRun = latest !== newest
 
   return (
     <Fragment>
+      {showingOlderSuccessfulRun && (
+        <div style={s.warn}>
+          The newest run ({fmtDate(newest.runDate)}) did not complete. These figures are from the most recent
+          successful run ({fmtDate(latest.runDate)}), not the latest attempt.
+        </div>
+      )}
       <div
         style={{
           display: 'flex',
@@ -447,7 +456,7 @@ function AiCitationLatest({ data, loading }: { data: AiCitationData | null; load
             Answered <strong style={{ color: 'var(--card-fg-color)' }}>{latest.answeredCount ?? 0}</strong> of{' '}
             {latest.promptCount ?? 0} prompts
           </div>
-          <div style={{ marginTop: 2 }}>Latest run {fmtDate(latest.runDate)}</div>
+          <div style={{ marginTop: 2 }}>Most recent successful run {fmtDate(latest.runDate)}</div>
         </div>
       </div>
 

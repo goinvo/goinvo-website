@@ -48,7 +48,7 @@ export const DEFAULTS: Record<ManagedMarketingType, Record<string, unknown>> = {
   marketingResearchRun: { provider: 'semrush', status: 'queued', database: 'us' },
   marketingResearchPlan: { status: 'draft', releaseCadence: 'weekly' },
   marketingTemplate: { kind: 'campaign', status: 'active', order: 100 },
-  marketingContact: { status: 'new', warmth: 'warm' },
+  marketingContact: { status: 'new', warmth: 'unknown', currency: 'USD' },
   marketingOffer: { status: 'active', order: 100 },
   marketingWorkEvidence: { status: 'active', sourceType: 'caseStudy', manuallyEdited: false },
 }
@@ -129,6 +129,7 @@ export const ARRAY_ITEM_TYPES: Record<ManagedMarketingType, Record<string, strin
     relevantEvidence: 'outreachEvidenceRef',
     proposedOffers: 'outreachProposedOffer',
     interactions: 'outreachInteraction',
+    channelOverrides: 'outreachChannelOverride',
   },
   marketingOffer: {},
   marketingWorkEvidence: {

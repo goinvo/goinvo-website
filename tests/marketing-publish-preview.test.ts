@@ -27,6 +27,12 @@ describe('publish preview endpoint', () => {
     expect((await GET(req())).status).toBe(400)
   })
 
+  it('rejects invalid or repeated IDs before querying Sanity', async () => {
+    expect((await GET(req('../calendar'))).status).toBe(400)
+    expect((await GET(new Request('http://localhost/api/marketing/publish/preview?id=one&id=two'))).status).toBe(400)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('404 when the item is not found', async () => {
     fetchMock.mockResolvedValue(null)
     expect((await GET(req('missing'))).status).toBe(404)
@@ -43,6 +49,7 @@ describe('publish preview endpoint', () => {
     const res = await GET(req('cal1'))
     const json = await res.json()
     expect(res.status).toBe(200)
+    expect(res.headers.get('cache-control')).toBe('private, no-store')
     expect(json.platform).toBe('instagram')
     expect(json.content.text).toContain('Hello world')
     expect(json.content.text).toContain('#design')
@@ -77,5 +84,19 @@ describe('publish preview endpoint', () => {
   it('flags missing image alt text', async () => {
     fetchMock.mockResolvedValue({ _id: 'c', channelKey: 'instagram', contentType: 'post', contentDraft: 'hi', socialImageUrl: 'https://cdn/x.jpg' })
     expect(warns(await (await GET(req('c'))).json(), /no alt text/i)).toBe(true)
+  })
+
+  it('does not echo an oversized saved caption into the preview response', async () => {
+    fetchMock.mockResolvedValue({
+      _id: 'c',
+      channelKey: 'instagram',
+      contentType: 'post',
+      contentDraft: 'x'.repeat(2_201),
+      socialImageUrl: 'https://cdn.sanity.io/image.jpg',
+    })
+    const json = await (await GET(req('c'))).json()
+    expect(json.contentSuppressed).toBe(true)
+    expect(json.content.text).toBe('')
+    expect(warns(json, /2200-character limit/i)).toBe(true)
   })
 })

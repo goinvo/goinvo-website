@@ -41,6 +41,8 @@
 // Constants
 // ---------------------------------------------------------------------------
 
+import { readResponseTextLimited } from './seoTarget'
+
 const TEXTFOCUS_BASE = 'https://www.textfocus.net/apis'
 
 // A real Chrome UA string. REQUIRED — the WAF 403s the default fetch UA.
@@ -50,6 +52,7 @@ const BROWSER_USER_AGENT =
 
 // Per-request timeout. One AbortController per call, cleared in a finally.
 const REQUEST_TIMEOUT_MS = 10_000
+const TEXTFOCUS_RESPONSE_MAX_BYTES = 2 * 1024 * 1024
 
 // Default market code. The full list comes from the free `tf_langs` endpoint.
 const DEFAULT_LANG = 'en-US'
@@ -168,6 +171,7 @@ export async function tf<T = unknown>(
       body,
     })
   } catch (error) {
+    clearTimeout(timeout)
     const reason = error instanceof Error ? error.message : String(error)
     const aborted =
       error instanceof Error &&
@@ -175,11 +179,10 @@ export async function tf<T = unknown>(
     throw new Error(
       `TextFocus ${op}: request failed (${aborted ? `timed out after ${REQUEST_TIMEOUT_MS}ms` : reason}).`,
     )
-  } finally {
-    clearTimeout(timeout)
   }
 
   if (!res.ok) {
+    clearTimeout(timeout)
     // 403 is almost always the WAF rejecting a non-browser UA or a bad/blocked
     // key — call that out so the next person doesn't chase the wrong thing.
     if (res.status === 403) {
@@ -192,9 +195,12 @@ export async function tf<T = unknown>(
 
   let envelope: TextFocusEnvelope<T>
   try {
-    envelope = (await res.json()) as TextFocusEnvelope<T>
+    const text = await readResponseTextLimited(res, TEXTFOCUS_RESPONSE_MAX_BYTES)
+    envelope = JSON.parse(text) as TextFocusEnvelope<T>
   } catch {
-    throw new Error(`TextFocus ${op}: response was not valid JSON.`)
+    throw new Error(`TextFocus ${op}: response was invalid or exceeded the ${TEXTFOCUS_RESPONSE_MAX_BYTES}-byte limit.`)
+  } finally {
+    clearTimeout(timeout)
   }
 
   // `message` is "ok" on success; anything else (and present) is an API error.

@@ -4,6 +4,8 @@ import redirectsJson from './redirects.json'
 const nextConfig: NextConfig = {
   experimental: {
     viewTransition: true,
+    // Keep static generation reliable on high-core developer machines with limited free RAM.
+    cpus: 4,
   },
   images: {
     qualities: [75, 95],

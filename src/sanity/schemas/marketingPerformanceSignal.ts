@@ -142,6 +142,21 @@ export default defineType({
       group: 'relationships',
     }),
     defineField({
+      name: 'experiment',
+      title: 'Experiment',
+      type: 'reference',
+      group: 'relationships',
+      to: [{ type: 'marketingExperiment' }],
+      description: 'Required for A/B readouts. Results only appear in the experiment they explicitly reference.',
+      validation: (Rule) =>
+        Rule.custom((experiment, context) => {
+          const signalType = (context.document as { signalType?: string } | undefined)?.signalType
+          return signalType === 'abTestVariantReadout' && !experiment
+            ? 'Choose the experiment this A/B readout belongs to.'
+            : true
+        }),
+    }),
+    defineField({
       name: 'campaign',
       title: 'Campaign',
       type: 'reference',

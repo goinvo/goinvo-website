@@ -97,6 +97,8 @@ export default defineType({
       initialValue: false,
       description: 'When true, re-extraction sweeps skip this record (unless forced).',
     }),
+    defineField({ name: 'editedAt', title: 'Last Manual Edit', type: 'datetime', readOnly: true }),
+    defineField({ name: 'editedBy', title: 'Last Edited By', type: 'string', readOnly: true }),
     defineField({ name: 'extractedAt', title: 'Extracted At', type: 'datetime', readOnly: true }),
     defineField({ name: 'extractionModel', title: 'Extraction Model', type: 'string', readOnly: true }),
   ],

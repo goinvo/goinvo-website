@@ -108,6 +108,15 @@ export default defineType({
       group: 'inputs',
     }),
     defineField({
+      name: 'requestFingerprint',
+      title: 'Request Fingerprint',
+      type: 'string',
+      group: 'inputs',
+      readOnly: true,
+      hidden: true,
+      description: 'Internal replay guard for idempotent API requests.',
+    }),
+    defineField({
       name: 'createdResults',
       title: 'Created Results',
       type: 'array',

@@ -5,6 +5,7 @@ import { refsFromIds, slugify, optionalSlug, stringListFromText, toDateInputValu
 import { analyticsProviderOptions } from '../../schemas/marketingAnalyticsSource'
 import { campaignObjectiveOptions, campaignStatusOptions, searchIntentOptions } from '../../schemas/marketingCampaign'
 import { funnelStatusOptions } from '../../schemas/marketingFunnel'
+import { useConfirmDialog } from './ConfirmDialog'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports CampaignWorkspace only for JSX
@@ -40,6 +41,7 @@ import {
   styles,
   TemplateRail,
   trimDescription,
+  useMarketingUnsavedGuard,
   type AnalyticsInterpretation,
   type CampaignTemplate,
   type MarketingAiSuggestion,
@@ -69,6 +71,9 @@ export function CampaignWorkspace({
   const [selectedId, setSelectedId] = useState<string | null>(data.campaigns[0]?._id || null)
   const [openCampaignIds, setOpenCampaignIds] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<string>('browser')
+  const [editorDirty, setEditorDirty] = useState(false)
+  const { confirm, confirmDialog } = useConfirmDialog()
+  const { clearUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
   const activeCampaign = activeTab === 'browser' ? null : data.campaigns.find((campaign) => campaign._id === activeTab) || null
   const campaignTemplates = useMemo(() => getCampaignTemplates(data), [data])
 
@@ -83,30 +88,56 @@ export function CampaignWorkspace({
     }
   }, [activeTab, data.campaigns])
 
-  const openCampaign = (id: string) => {
+  useEffect(() => {
+    if (editorDirty) markUnsavedChange('marketing-campaign-editor', 'campaign draft')
+    else clearUnsavedChanges('marketing-campaign-editor')
+  }, [clearUnsavedChanges, editorDirty, markUnsavedChange])
+
+  const confirmDiscardEdits = () =>
+    confirm({
+      title: 'Discard unsaved changes?',
+      message: `Discard unsaved changes to "${activeCampaign?.title || 'Untitled campaign'}"? Your edits will be lost.`,
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      tone: 'caution',
+    })
+
+  const prepareToSwitch = async () => {
+    if (!editorDirty) return true
+    if (!(await confirmDiscardEdits())) return false
+    clearUnsavedChanges('marketing-campaign-editor')
+    setEditorDirty(false)
+    return true
+  }
+
+  const openCampaign = async (id: string) => {
+    if (id !== activeTab && !(await prepareToSwitch())) return
     setOpenCampaignIds((current) => (current.includes(id) ? current : [...current, id]))
     setSelectedId(id)
     setActiveTab(id)
   }
 
-  const closeCampaign = (id: string) => {
+  const closeCampaign = async (id: string) => {
+    if (activeTab === id && !(await prepareToSwitch())) return
     setOpenCampaignIds((current) => current.filter((openId) => openId !== id))
     if (activeTab === id) setActiveTab('browser')
   }
 
   const createCampaign = async () => {
+    if (!(await prepareToSwitch())) return
     const createdId = await createDocument({
       _type: 'marketingCampaign',
       title: '',
       slug: { _type: 'slug', current: `new-campaign-${Date.now()}` },
       status: 'idea',
     })
-    openCampaign(createdId)
+    await openCampaign(createdId)
   }
   const showCampaignTabs = activeTab !== 'browser'
 
   return (
     <section style={styles.panel}>
+      {confirmDialog}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
         <PanelHeading title="Campaigns" description="Organize campaign strategy, timing, content, funnels, and measurement." />
         <button type="button" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createCampaign()}>
@@ -125,14 +156,14 @@ export function CampaignWorkspace({
             paddingBottom: 1,
           }}
         >
-          <FunnelTabButton active={activeTab === 'browser'} onClick={() => setActiveTab('browser')}>
+          <FunnelTabButton active={activeTab === 'browser'} onClick={() => void prepareToSwitch().then((ok) => ok && setActiveTab('browser'))}>
             All campaigns
           </FunnelTabButton>
           {openCampaignIds.map((id) => {
             const campaign = data.campaigns.find((candidate) => candidate._id === id)
             if (!campaign) return null
             return (
-              <FunnelTabButton key={id} active={activeTab === id} onClick={() => setActiveTab(id)}>
+              <FunnelTabButton key={id} active={activeTab === id} onClick={() => void openCampaign(id)}>
                 <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {campaign.title || 'Untitled campaign'}
                 </span>
@@ -141,7 +172,7 @@ export function CampaignWorkspace({
                   aria-label={`Close ${campaign.title || 'campaign'}`}
                   onClick={(event) => {
                     event.stopPropagation()
-                    closeCampaign(id)
+                    void closeCampaign(id)
                   }}
                   style={{
                     border: 'none',
@@ -200,7 +231,7 @@ export function CampaignWorkspace({
                     ))}
                   </div>
                 )}
-                <button type="button" style={styles.primaryButton} onClick={() => openCampaign(campaign._id)}>
+                <button type="button" style={styles.primaryButton} onClick={() => void openCampaign(campaign._id)}>
                   Open campaign
                 </button>
               </div>
@@ -225,6 +256,7 @@ export function CampaignWorkspace({
           analyticsTakeaways={buildAnalyticsInterpretations(data)}
           saving={savingId === activeCampaign?._id}
           onSave={commitPatch}
+          onDirtyChange={setEditorDirty}
         />
       )}
     </section>
@@ -241,6 +273,7 @@ function CampaignEditor({
   analyticsTakeaways,
   saving,
   onSave,
+  onDirtyChange,
 }: {
   campaign: MarketingCampaign | null
   channels: MarketingChannel[]
@@ -251,10 +284,17 @@ function CampaignEditor({
   analyticsTakeaways: AnalyticsInterpretation[]
   saving: boolean
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
+  onDirtyChange: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<MarketingCampaign | null>(campaign)
 
   useEffect(() => setDraft(campaign), [campaign])
+
+  const dirty = Boolean(draft && campaign && JSON.stringify(draft) !== JSON.stringify(campaign))
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   if (!draft || !campaign) {
     return (
@@ -576,6 +616,7 @@ function CampaignEditor({
           <button type="button" style={styles.primaryButton} disabled={saving} onClick={() => void save()}>
             {saving ? 'Saving...' : 'Save campaign'}
           </button>
+          {dirty && <div style={{ ...styles.small, color: '#d6a93f', fontWeight: 700 }}>Unsaved changes</div>}
         </Stack>
       </div>
     </section>

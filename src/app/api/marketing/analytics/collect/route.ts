@@ -14,6 +14,7 @@ import {
 } from '@/lib/marketing/drainSink'
 import { sendGa4MpEvents } from '@/lib/marketing/ga4MeasurementProtocol'
 import { isLikelyBot } from '@/lib/marketing/botFilter'
+import { validateExperimentBeacon } from '@/lib/marketing/beaconValidation'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,8 @@ const noContent = () => new NextResponse(null, { status: 204 })
 // counters. Both are fail-OPEN — a limiter hiccup never blocks a real beacon.
 const RL_PREFIX = 'marketing:abdrain:rl:'
 const RATE_LIMIT_PER_MINUTE = 120
+const MAX_BEACON_BODY_BYTES = 16 * 1024
+const MAX_VISIBLE_MS = 24 * 60 * 60 * 1000
 
 function clientIp(request: NextRequest): string {
   const xff = request.headers.get('x-forwarded-for')
@@ -61,24 +64,44 @@ export async function POST(request: NextRequest) {
   // Drop obvious bots before any work (UA-based, conservative — see botFilter).
   if (isLikelyBot(request.headers.get('user-agent'))) return noContent()
 
+  const kv = getKvClient()
+  if (await isRateLimited(kv, clientIp(request))) return noContent()
+
   let body: Record<string, unknown> | null = null
   try {
-    body = (await request.json()) as Record<string, unknown>
+    const contentLength = Number(request.headers.get('content-length'))
+    if (Number.isFinite(contentLength) && contentLength > MAX_BEACON_BODY_BYTES) return noContent()
+    if (!request.body) return noContent()
+    const reader = request.body.getReader()
+    const decoder = new TextDecoder()
+    let bytes = 0
+    let raw = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytes += value.byteLength
+      if (bytes > MAX_BEACON_BODY_BYTES) {
+        await reader.cancel().catch(() => {})
+        return noContent()
+      }
+      raw += decoder.decode(value, { stream: true })
+    }
+    raw += decoder.decode()
+    body = JSON.parse(raw) as Record<string, unknown>
   } catch {
     return noContent()
   }
   if (!body || typeof body !== 'object') return noContent()
 
-  const flagKey = String(body.flag_key ?? body.flagKey ?? '').trim()
-  const variant = String(body.variant ?? '').trim()
-  const pagePath = normalizeDrainPagePath(String(body.page_path ?? body.pagePath ?? ''))
-  const beaconType = String(body.type ?? '').trim()
-  const experimentId = String(body.experiment_id ?? body.experimentId ?? '').trim()
+  const validated = validateExperimentBeacon(body)
+  if (!validated) return noContent()
+  const { flagKey, variant, experimentId } = validated
+  const pagePath = normalizeDrainPagePath(validated.pagePath)
   // The visitor's GA client_id (from their own _ga cookie, or the marketing
   // visitor cookie when _ga is blocked) and, when present, their GA session_id.
   // Only used to forward EVENT beacons to GA4 via the Measurement Protocol.
-  const gaClientId = String(body.ga_client_id ?? body.gaClientId ?? '').trim()
-  const gaSessionId = String(body.ga_session_id ?? body.gaSessionId ?? '').trim()
+  const gaClientId = String(body.ga_client_id ?? body.gaClientId ?? '').trim().slice(0, 128)
+  const gaSessionId = String(body.ga_session_id ?? body.gaSessionId ?? '').trim().slice(0, 128)
   // Campaign attribution (utm_*/gclid) so a conversion can be tied to the ad that
   // drove it. Written to a PARALLEL source counter below; the per-variant counters
   // are unaffected.
@@ -87,18 +110,16 @@ export async function POST(request: NextRequest) {
   const utmContent = String(body.utm_content ?? '').trim()
   const gclid = String(body.gclid ?? '').trim()
 
-  // One KV client for the whole request + a per-IP rate limit (fail-open).
-  const kv = getKvClient()
-  if (await isRateLimited(kv, clientIp(request))) return noContent()
-
   // First-party ENGAGEMENT beacon (time-on-page + bounce). Increments the
   // RESERVED `__eng_*` fields on the SAME per-flag hash so they can never collide
   // with event-count fields. Counts/durations only — never visitor identifiers.
-  if (beaconType === 'engagement') {
-    if (!flagKey || !variant || !kv) return noContent()
+  if (validated.kind === 'engagement') {
+    if (!kv) return noContent()
     const rawVisibleMs = Number(body.visibleMs)
     // Clamp/validate: ignore non-finite or negative durations.
-    const visibleMs = Number.isFinite(rawVisibleMs) && rawVisibleMs > 0 ? Math.round(rawVisibleMs) : 0
+    const visibleMs = Number.isFinite(rawVisibleMs) && rawVisibleMs > 0
+      ? Math.min(MAX_VISIBLE_MS, Math.round(rawVisibleMs))
+      : 0
     const engaged = body.engaged === true
 
     try {
@@ -115,8 +136,7 @@ export async function POST(request: NextRequest) {
     return noContent()
   }
 
-  const eventName = String(body.eventName ?? body.event ?? body.name ?? '').trim()
-  if (!flagKey || !variant || !eventName) return noContent()
+  const eventName = validated.eventName as string
 
   if (kv) {
     try {

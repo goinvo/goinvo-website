@@ -8,12 +8,12 @@ import type { Metadata } from 'next'
 // app/layout.tsx, so it keeps <html>/<body>, the global fonts, and globals.css.
 //
 // The page is unlisted: noindex/nofollow here, and it is intentionally absent
-// from sitemap.ts and every nav. The optional MARKETING_PLAN_KEY gate is
-// enforced in page.tsx.
+// from sitemap.ts and every nav. MARKETING_PLAN_KEY is required; page.tsx
+// accepts only the HttpOnly session established by the POST access form.
 export const metadata: Metadata = {
   title: 'GoInvo — Marketing Strategy & Content Plan',
   description:
-    'Internal recommendation: GoInvo marketing positioning, messaging, commercial money-terms, AI-citation share-of-voice, the Red Team play, and a prioritized content roadmap.',
+    'Restricted GoInvo internal document.',
   robots: {
     index: false,
     follow: false,

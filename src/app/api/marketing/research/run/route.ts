@@ -1,7 +1,45 @@
+import { createHash } from 'node:crypto'
+import { isIP } from 'node:net'
 import { createClient, type SanityClient } from '@sanity/client'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+export const RESEARCH_RUN_LIMITS = Object.freeze({
+  bodyBytes: 64 * 1024,
+  methods: 13,
+  seedKeywords: 100,
+  seedUrls: 30,
+  keywordCharacters: 160,
+  urlCharacters: 2_048,
+  databaseCharacters: 20,
+  idempotencyKeyCharacters: 100,
+  sourceResponseBytes: 1024 * 1024,
+  semrushResponseBytes: 512 * 1024,
+  fetchTimeoutMs: 8_000,
+})
+
+const RESEARCH_METHODS = [
+  'seoKeyword',
+  'seoReview',
+  'sourceReview',
+  'sourceEvidence',
+  'cmsScan',
+  'analyticsReview',
+  'competitiveScan',
+  'deskResearch',
+  'socialListening',
+  'audienceInterview',
+  'stakeholderInterview',
+  'survey',
+  'other',
+] as const
+
+const RESEARCH_METHOD_SET = new Set<string>(RESEARCH_METHODS)
 
 type ResearchRunRequest = {
   projectId?: string
@@ -9,6 +47,8 @@ type ResearchRunRequest = {
   seedKeywords?: string[]
   seedUrls?: string[]
   database?: string
+  /** Retries reuse the prior run; a deliberate new run uses a new key. */
+  idempotencyKey?: string
 }
 
 type SemrushKeywordOverview = {
@@ -29,6 +69,7 @@ type SemrushKeywordDifficulty = {
 
 type ResearchProjectForRun = {
   _id: string
+  _rev?: string
   title?: string
   researchType?: string
   brief?: string
@@ -49,6 +90,132 @@ type ResearchProjectForRun = {
     notes?: string
   }>
   performanceSignals?: PerformanceSignalForResearch[]
+}
+
+type ResearchRunRecord = {
+  _id: string
+  _rev?: string
+  status?: string
+  requestFingerprint?: string
+  warnings?: string[]
+  errors?: string[]
+  createdResults?: Array<{ _ref?: string }>
+  rawOutputSummary?: string
+}
+
+class ResearchRequestError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message)
+  }
+}
+
+function researchRequestError(message: string, status = 400): never {
+  throw new ResearchRequestError(message, status)
+}
+
+async function readResearchRunBody(request: Request): Promise<ResearchRunRequest> {
+  const contentType = request.headers.get('content-type') || ''
+  if (!contentType.toLowerCase().includes('application/json')) {
+    researchRequestError('Content-Type must be application/json.', 415)
+  }
+  const declaredLength = Number(request.headers.get('content-length') || '0')
+  if (Number.isFinite(declaredLength) && declaredLength > RESEARCH_RUN_LIMITS.bodyBytes) {
+    researchRequestError('Research request is too large.', 413)
+  }
+  const rawBody = await request.text()
+  if (new TextEncoder().encode(rawBody).byteLength > RESEARCH_RUN_LIMITS.bodyBytes) {
+    researchRequestError('Research request is too large.', 413)
+  }
+
+  let value: unknown
+  try {
+    value = JSON.parse(rawBody || '{}')
+  } catch {
+    researchRequestError('Request body must be valid JSON.')
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    researchRequestError('Request body must be a JSON object.')
+  }
+  const body = value as Record<string, unknown>
+  const project = sanitizeId(body.projectId)
+  if (!project || (typeof body.projectId === 'string' && body.projectId.length > 128)) {
+    researchRequestError('A valid projectId is required.')
+  }
+
+  const methods = validateStringArray(body.methods, 'methods', RESEARCH_RUN_LIMITS.methods, 40)
+  if (methods?.some((method) => !RESEARCH_METHOD_SET.has(method))) {
+    researchRequestError('`methods` contains an unsupported research method.')
+  }
+  const seedKeywords = validateStringArray(
+    body.seedKeywords,
+    'seedKeywords',
+    RESEARCH_RUN_LIMITS.seedKeywords,
+    RESEARCH_RUN_LIMITS.keywordCharacters,
+  )
+  const rawUrls = validateStringArray(
+    body.seedUrls,
+    'seedUrls',
+    RESEARCH_RUN_LIMITS.seedUrls,
+    RESEARCH_RUN_LIMITS.urlCharacters,
+  )
+  const seedUrls = rawUrls?.map((url, index) => {
+    const normalized = normalizeResearchUrl(url)
+    if (!normalized) researchRequestError(`seedUrls item ${index + 1} must be a safe public http(s) URL.`)
+    return normalized
+  })
+
+  if (body.database !== undefined && typeof body.database !== 'string') {
+    researchRequestError('`database` must be a string.')
+  }
+  if (typeof body.database === 'string' && body.database.length > RESEARCH_RUN_LIMITS.databaseCharacters) {
+    researchRequestError('`database` is too long.', 413)
+  }
+  if (typeof body.database === 'string' && body.database && !/^[a-zA-Z0-9_-]+$/.test(body.database)) {
+    researchRequestError('`database` may contain only letters, numbers, underscores, and hyphens.')
+  }
+  const bodyKey = body.idempotencyKey
+  if (bodyKey !== undefined && typeof bodyKey !== 'string') {
+    researchRequestError('`idempotencyKey` must be a string.')
+  }
+  const headerKey = request.headers.get('idempotency-key')?.trim() || ''
+  if (bodyKey && headerKey && bodyKey !== headerKey) {
+    researchRequestError('Body and header idempotency keys must match.')
+  }
+  const idempotencyKey = (typeof bodyKey === 'string' ? bodyKey.trim() : '') || headerKey
+  if (idempotencyKey && (
+    idempotencyKey.length < 8
+    || idempotencyKey.length > RESEARCH_RUN_LIMITS.idempotencyKeyCharacters
+    || !/^[a-zA-Z0-9._:-]+$/.test(idempotencyKey)
+  )) {
+    researchRequestError('`idempotencyKey` must be 8-100 letters, numbers, dots, colons, underscores, or hyphens.')
+  }
+
+  return {
+    projectId: project,
+    methods,
+    seedKeywords,
+    seedUrls,
+    database: typeof body.database === 'string' ? body.database : undefined,
+    idempotencyKey: idempotencyKey || undefined,
+  }
+}
+
+function validateStringArray(
+  value: unknown,
+  field: string,
+  maxItems: number,
+  maxCharacters: number,
+): string[] | undefined {
+  if (value === undefined) return undefined
+  if (!Array.isArray(value)) researchRequestError(`\`${field}\` must be an array.`)
+  if (value.length > maxItems) researchRequestError(`\`${field}\` cannot contain more than ${maxItems} items.`, 413)
+  return value.map((item, index) => {
+    if (typeof item !== 'string') researchRequestError(`\`${field}\` item ${index + 1} must be a string.`)
+    if (item.length > maxCharacters) {
+      researchRequestError(`\`${field}\` item ${index + 1} cannot exceed ${maxCharacters} characters.`, 413)
+    }
+    return item.trim()
+  }).filter(Boolean)
 }
 
 type PerformanceSignalForResearch = {
@@ -139,25 +306,32 @@ export async function POST(request: NextRequest) {
     await assertStudioOrApiKey(request)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return privateMarketingJson({ error: error.message }, { status: error.status })
+    }
+    throw error
+  }
+
+  let input: ResearchRunRequest
+  try {
+    input = await readResearchRunBody(request)
+  } catch (error) {
+    if (error instanceof ResearchRequestError) {
+      return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     throw error
   }
 
   const sanityClient = getSanityClient()
   if (!sanityClient) {
-    return NextResponse.json({ error: 'Sanity write token is not configured.' }, { status: 500 })
+    return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
   }
 
-  const input = (await request.json()) as ResearchRunRequest
   const projectId = sanitizeId(input.projectId)
-  if (!projectId) {
-    return NextResponse.json({ error: 'projectId is required.' }, { status: 400 })
-  }
 
   const project = await sanityClient.fetch<ResearchProjectForRun | null>(
     `*[_id == $projectId && _type == "marketingResearchProject"][0]{
       _id,
+      _rev,
       title,
       researchType,
       brief,
@@ -191,20 +365,42 @@ export async function POST(request: NextRequest) {
   )
 
   if (!project) {
-    return NextResponse.json({ error: 'Research project not found.' }, { status: 404 })
+    return privateMarketingJson({ error: 'Research project not found.' }, { status: 404 })
   }
 
   const methods = normalizeMethods(input.methods)
-  const seedKeywords = uniqueStrings([...(input.seedKeywords || []), ...(project.seedKeywords || [])]).slice(0, 100)
-  const seedUrls = uniqueStrings([...(input.seedUrls || []), ...(project.seedUrls || []), project.canonicalUrl || '']).slice(0, 30)
+  const seedKeywords = uniqueStrings([
+    ...(input.seedKeywords || []),
+    ...boundedProjectStrings(project.seedKeywords, RESEARCH_RUN_LIMITS.seedKeywords, RESEARCH_RUN_LIMITS.keywordCharacters),
+  ]).slice(0, RESEARCH_RUN_LIMITS.seedKeywords)
+  const unsafeProjectUrls: string[] = []
+  const projectUrls = boundedProjectStrings(
+    [...(project.seedUrls || []), project.canonicalUrl || ''],
+    RESEARCH_RUN_LIMITS.seedUrls,
+    RESEARCH_RUN_LIMITS.urlCharacters,
+  ).flatMap((url) => {
+    const normalized = normalizeResearchUrl(url)
+    if (!normalized) {
+      unsafeProjectUrls.push(url)
+      return []
+    }
+    return [normalized]
+  })
+  const seedUrls = uniqueStrings([...(input.seedUrls || []), ...projectUrls]).slice(0, RESEARCH_RUN_LIMITS.seedUrls)
   const database = sanitizeDatabase(input.database || project.targetGeography || 'us')
-  const warnings: string[] = []
+  const warnings: string[] = unsafeProjectUrls.length > 0
+    ? [`Ignored ${unsafeProjectUrls.length} unsafe URL${unsafeProjectUrls.length === 1 ? '' : 's'} stored on the project.`]
+    : []
   const errors: string[] = []
   const resultIds: string[] = []
   const counts: Record<string, number> = {}
   const startedAt = new Date().toISOString()
-
-  const run = await sanityClient.create({
+  const requestFingerprint = researchRequestFingerprint({ projectId, methods, seedKeywords, seedUrls, database })
+  const requestedRunId = input.idempotencyKey
+    ? researchRunId(projectId, input.idempotencyKey)
+    : undefined
+  const runDocument = {
+    ...(requestedRunId ? { _id: requestedRunId } : {}),
     _type: 'marketingResearchRun',
     title: `${project.title || 'Research'} run ${startedAt.slice(0, 10)}`,
     project: referenceFromId(projectId),
@@ -215,8 +411,26 @@ export async function POST(request: NextRequest) {
     seedKeywords,
     seedUrls,
     database,
+    requestFingerprint,
     rawInput: JSON.stringify({ projectId, researchType: project.researchType || 'topic', methods, seedKeywords, seedUrls, database }, null, 2),
-  })
+  }
+
+  let run: ResearchRunRecord
+  if (requestedRunId) {
+    const existingRun = await findResearchRun(sanityClient, requestedRunId)
+    if (existingRun) return replayResearchRun(existingRun, requestFingerprint)
+    try {
+      run = await sanityClient.create(runDocument) as ResearchRunRecord
+    } catch (error) {
+      // Exactly one concurrent caller can create the deterministic claim. The
+      // loser reads and returns that run instead of repeating provider work.
+      const claimedRun = await findResearchRun(sanityClient, requestedRunId)
+      if (claimedRun) return replayResearchRun(claimedRun, requestFingerprint)
+      throw error
+    }
+  } else {
+    run = await sanityClient.create(runDocument) as ResearchRunRecord
+  }
 
   try {
     if (methods.some(isSeoMethod)) {
@@ -425,29 +639,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    await updateProjectStatusIfUnchanged(
+      sanityClient,
+      project,
+      resultIds.length > 0 ? 'reviewing' : 'researching',
+      warnings,
+    )
     const completedAt = new Date().toISOString()
     const status = errors.length > 0 ? 'failed' : warnings.length > 0 ? 'partial' : 'complete'
-    await sanityClient
-      .patch(run._id)
-      .set({
-        status,
-        completedAt,
-        createdResults: refsFromIds(resultIds),
-        warnings,
-        errors,
-        rawOutputSummary: JSON.stringify({ counts, warnings, errors }, null, 2),
-      })
-      .commit()
+    await patchRunAtRevision(sanityClient, run, {
+      status,
+      completedAt,
+      createdResults: refsFromIds(resultIds),
+      warnings,
+      errors,
+      rawOutputSummary: JSON.stringify({ counts, warnings, errors }, null, 2),
+    })
 
-    await sanityClient
-      .patch(projectId)
-      .set({
-        status: resultIds.length > 0 ? 'reviewing' : 'researching',
-      })
-      .commit()
-
-    return NextResponse.json({
+    return privateMarketingJson({
       runId: run._id,
+      status,
+      idempotent: false,
       counts,
       createdResults: resultIds.length,
       warnings,
@@ -456,20 +668,113 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Research run failed.'
     errors.push(message)
-    await sanityClient
-      .patch(run._id)
-      .set({
-        status: 'failed',
+    if (resultIds.length > 0) {
+      await updateProjectStatusIfUnchanged(sanityClient, project, 'reviewing', warnings)
+    }
+    const status = resultIds.length > 0 ? 'partial' : 'failed'
+    try {
+      await patchRunAtRevision(sanityClient, run, {
+        status,
         completedAt: new Date().toISOString(),
         createdResults: refsFromIds(resultIds),
         warnings,
         errors,
         rawOutputSummary: JSON.stringify({ counts, warnings, errors }, null, 2),
       })
-      .commit()
+    } catch (finalizeError) {
+      console.error('Marketing research run could not record its failure safely:', finalizeError)
+    }
 
     console.error('Marketing research run failed:', error)
-    return NextResponse.json({ runId: run._id, counts, warnings, errors }, { status: 500 })
+    return privateMarketingJson(
+      { runId: run._id, status, idempotent: false, counts, createdResults: resultIds.length, warnings, errors },
+      { status: 500 },
+    )
+  }
+}
+
+export function researchRunId(project: string, idempotencyKey: string) {
+  const digest = createHash('sha256')
+    .update(`${project}\0${idempotencyKey}`)
+    .digest('hex')
+    .slice(0, 40)
+  return `marketingResearchRun.${digest}`
+}
+
+function researchRequestFingerprint(input: {
+  projectId: string
+  methods: string[]
+  seedKeywords: string[]
+  seedUrls: string[]
+  database: string
+}) {
+  return createHash('sha256')
+    .update(JSON.stringify(input))
+    .digest('hex')
+}
+
+async function findResearchRun(client: SanityClient, id: string) {
+  return client.fetch<ResearchRunRecord | null>(
+    `*[_id == $id && _type == "marketingResearchRun"][0]{
+      _id, _rev, status, requestFingerprint, warnings, errors, createdResults, rawOutputSummary
+    }`,
+    { id },
+  )
+}
+
+function replayResearchRun(run: ResearchRunRecord, fingerprint: string) {
+  if (!run.requestFingerprint || run.requestFingerprint !== fingerprint) {
+    return privateMarketingJson(
+      { error: 'This idempotency key was already used for different research inputs.' },
+      { status: 409 },
+    )
+  }
+  let counts: Record<string, number> = {}
+  try {
+    const summary = JSON.parse(run.rawOutputSummary || '{}') as { counts?: unknown }
+    if (summary.counts && typeof summary.counts === 'object' && !Array.isArray(summary.counts)) {
+      counts = summary.counts as Record<string, number>
+    }
+  } catch {
+    // A malformed legacy summary must not cause provider work to replay.
+  }
+  return privateMarketingJson(
+    {
+      runId: run._id,
+      status: run.status || 'running',
+      idempotent: true,
+      counts,
+      createdResults: run.createdResults?.length || 0,
+      warnings: run.warnings || [],
+      errors: run.errors || [],
+    },
+    { status: run.status === 'running' ? 202 : 200 },
+  )
+}
+
+async function patchRunAtRevision(
+  client: SanityClient,
+  run: ResearchRunRecord,
+  values: Record<string, unknown>,
+) {
+  if (!run._rev) throw new Error('Research run revision was unavailable; refusing an unsafe update.')
+  return client.patch(run._id).ifRevisionId(run._rev).set(values).commit()
+}
+
+async function updateProjectStatusIfUnchanged(
+  client: SanityClient,
+  project: ResearchProjectForRun,
+  status: string,
+  warnings: string[],
+) {
+  if (!project._rev) {
+    warnings.push('The project revision was unavailable, so its status was not changed.')
+    return
+  }
+  try {
+    await client.patch(project._id).ifRevisionId(project._rev).set({ status }).commit()
+  } catch {
+    warnings.push('The project changed during this run, so its newer status was preserved.')
   }
 }
 
@@ -479,14 +784,18 @@ async function fetchSemrushKeywordResults(
   apiKey: string,
 ): Promise<Array<SemrushKeywordOverview & { difficulty?: number }>> {
   const overviewUrl = buildSemrushKeywordOverviewUrl({ apiKey, keywords, database })
-  const overviewResponse = await fetch(overviewUrl, { cache: 'no-store' })
-  const overviewText = await overviewResponse.text()
-  if (!overviewResponse.ok) throw new Error(`Semrush keyword overview returned ${overviewResponse.status}.`)
+  const overviewText = await fetchBoundedText(overviewUrl, {
+    label: 'Semrush keyword overview',
+    maxBytes: RESEARCH_RUN_LIMITS.semrushResponseBytes,
+    acceptedContentTypes: ['text/'],
+  })
 
   const difficultyUrl = buildSemrushKeywordDifficultyUrl({ apiKey, keywords, database })
-  const difficultyResponse = await fetch(difficultyUrl, { cache: 'no-store' })
-  const difficultyText = await difficultyResponse.text()
-  if (!difficultyResponse.ok) throw new Error(`Semrush keyword difficulty returned ${difficultyResponse.status}.`)
+  const difficultyText = await fetchBoundedText(difficultyUrl, {
+    label: 'Semrush keyword difficulty',
+    maxBytes: RESEARCH_RUN_LIMITS.semrushResponseBytes,
+    acceptedContentTypes: ['text/'],
+  })
 
   const overviews = parseSemrushKeywordOverview(overviewText)
   const difficulties = new Map(parseSemrushKeywordDifficulty(difficultyText).map((item) => [item.keyword.toLowerCase(), item.difficulty]))
@@ -574,20 +883,81 @@ export async function scanSourceUrl(
   project: ResearchProjectForRun,
   seedKeywords: string[],
 ): Promise<SourceScanFinding> {
+  const normalizedUrl = normalizeResearchUrl(url)
+  if (!normalizedUrl) throw new Error('source URL is not a safe public http(s) URL')
+  const body = await fetchBoundedText(normalizedUrl, {
+    label: 'Source',
+    maxBytes: RESEARCH_RUN_LIMITS.sourceResponseBytes,
+    acceptedContentTypes: ['text/html', 'text/plain', 'application/xhtml+xml'],
+    headers: {
+      'User-Agent': 'GoInvo marketing research scanner (+https://www.goinvo.com)',
+      Accept: 'text/html,text/plain;q=0.9,application/xhtml+xml;q=0.8',
+    },
+  })
+  return buildSourceFindingFromSummary(
+    summarizeHtmlSource(body, normalizedUrl),
+    project,
+    seedKeywords,
+    'sourceArticle',
+    'sourceScan',
+  )
+}
+
+async function fetchBoundedText(
+  url: string,
+  options: {
+    label: string
+    maxBytes: number
+    acceptedContentTypes: string[]
+    headers?: Record<string, string>
+  },
+) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 8000)
+  const timeout = setTimeout(() => controller.abort(), RESEARCH_RUN_LIMITS.fetchTimeoutMs)
   try {
     const response = await fetch(url, {
       cache: 'no-store',
+      redirect: 'error',
       signal: controller.signal,
-      headers: {
-        'User-Agent': 'GoInvo marketing research scanner (+https://www.goinvo.com)',
-        Accept: 'text/html,text/plain;q=0.9,*/*;q=0.5',
-      },
+      headers: options.headers,
     })
-    const body = await response.text()
-    if (!response.ok) throw new Error(`source returned ${response.status}`)
-    return buildSourceFindingFromSummary(summarizeHtmlSource(body, url), project, seedKeywords, 'sourceArticle', 'sourceScan')
+    if (!response.ok) throw new Error(`${options.label} returned ${response.status}.`)
+
+    const contentType = (response.headers.get('content-type') || '').toLowerCase()
+    if (contentType && !options.acceptedContentTypes.some((type) => contentType.startsWith(type))) {
+      throw new Error(`${options.label} returned an unsupported content type.`)
+    }
+    const contentLength = Number(response.headers.get('content-length') || '0')
+    if (Number.isFinite(contentLength) && contentLength > options.maxBytes) {
+      throw new Error(`${options.label} response exceeded the ${options.maxBytes}-byte limit.`)
+    }
+    if (!response.body) return ''
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let bytes = 0
+    let text = ''
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        bytes += value.byteLength
+        if (bytes > options.maxBytes) {
+          controller.abort()
+          throw new Error(`${options.label} response exceeded the ${options.maxBytes}-byte limit.`)
+        }
+        text += decoder.decode(value, { stream: true })
+      }
+      text += decoder.decode()
+      return text
+    } finally {
+      await reader.cancel().catch(() => {})
+    }
+  } catch (error) {
+    if (controller.signal.aborted && !/exceeded/.test(error instanceof Error ? error.message : '')) {
+      throw new Error(`${options.label} request timed out.`)
+    }
+    throw error
   } finally {
     clearTimeout(timeout)
   }
@@ -1075,23 +1445,7 @@ const RESEARCH_STOP_WORDS = new Set([
 ])
 
 function normalizeMethods(methods: string[] | undefined) {
-  const normalized = uniqueStrings(methods || []).filter((method) =>
-    [
-      'seoKeyword',
-      'seoReview',
-      'sourceReview',
-      'sourceEvidence',
-      'cmsScan',
-      'analyticsReview',
-      'competitiveScan',
-      'deskResearch',
-      'socialListening',
-      'audienceInterview',
-      'stakeholderInterview',
-      'survey',
-      'other',
-    ].includes(method),
-  )
+  const normalized = uniqueStrings(methods || []).filter((method) => RESEARCH_METHOD_SET.has(method))
   return normalized.length > 0 ? normalized : ['seoReview', 'sourceReview']
 }
 
@@ -1101,6 +1455,81 @@ function isSeoMethod(method: string) {
 
 function uniqueStrings(values: Array<string | undefined>) {
   return Array.from(new Set(values.map((value) => (typeof value === 'string' ? value.trim() : '')).filter(Boolean)))
+}
+
+function boundedProjectStrings(
+  values: string[] | undefined,
+  maxItems: number,
+  maxCharacters: number,
+) {
+  if (!Array.isArray(values)) return []
+  return values
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim().slice(0, maxCharacters))
+    .filter(Boolean)
+    .slice(0, maxItems)
+}
+
+/** Reject schemes, credentials, local names, private/reserved IPs, and odd ports. */
+export function normalizeResearchUrl(value: string): string | undefined {
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.length > RESEARCH_RUN_LIMITS.urlCharacters) return undefined
+  try {
+    const url = new URL(trimmed)
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return undefined
+    if (url.port && !(
+      (url.protocol === 'http:' && url.port === '80')
+      || (url.protocol === 'https:' && url.port === '443')
+    )) return undefined
+
+    const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '')
+    if (
+      !hostname
+      || hostname === 'localhost'
+      || hostname.endsWith('.localhost')
+      || hostname.endsWith('.local')
+      || hostname.endsWith('.internal')
+      || hostname.endsWith('.home')
+      || isPrivateOrReservedIp(hostname)
+    ) return undefined
+
+    url.hostname = hostname
+    url.hash = ''
+    return url.toString()
+  } catch {
+    return undefined
+  }
+}
+
+function isPrivateOrReservedIp(hostname: string) {
+  const version = isIP(hostname)
+  if (version === 4) {
+    const [a, b, c] = hostname.split('.').map(Number)
+    return a === 0
+      || a === 10
+      || a === 127
+      || (a === 100 && b >= 64 && b <= 127)
+      || (a === 169 && b === 254)
+      || (a === 172 && b >= 16 && b <= 31)
+      || (a === 192 && b === 168)
+      || (a === 192 && b === 0 && (c === 0 || c === 2))
+      || (a === 198 && (b === 18 || b === 19 || b === 51))
+      || (a === 203 && b === 0 && c === 113)
+      || a >= 224
+  }
+  if (version === 6) {
+    const normalized = hostname.toLowerCase()
+    if (normalized.startsWith('::ffff:')) {
+      return isPrivateOrReservedIp(normalized.slice('::ffff:'.length))
+    }
+    return normalized === '::'
+      || normalized === '::1'
+      || normalized.startsWith('fc')
+      || normalized.startsWith('fd')
+      || /^fe[89ab]/.test(normalized)
+      || normalized.startsWith('2001:db8:')
+  }
+  return false
 }
 
 function sanitizeDatabase(value: string) {

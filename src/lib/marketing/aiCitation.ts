@@ -51,6 +51,42 @@ export const AI_CITATION_PROMPTS: string[] = [
 export const DEFAULT_AI_CITATION_MODEL = 'claude-opus-4-8'
 const DEFAULT_TIMEOUT_MS = 60000
 const DEFAULT_CONCURRENCY = 3
+export const AI_CITATION_LIMITS = {
+  prompts: 50,
+  promptCharacters: 500,
+  answerCharacters: 20_000,
+  citedUrls: 40,
+  citationUrlCharacters: 2_048,
+  concurrency: 6,
+  timeoutMs: 90_000,
+  maxTokens: 3_000,
+} as const
+
+function cleanPanelText(value: unknown, maxLength: number): string {
+  if (typeof value !== 'string') return ''
+  return value
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, ' ')
+    .trim()
+    .slice(0, maxLength)
+}
+
+function cleanCitationUrls(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const result: string[] = []
+  for (const item of value) {
+    if (typeof item !== 'string' || item.length > AI_CITATION_LIMITS.citationUrlCharacters) continue
+    try {
+      const url = new URL(item.trim())
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue
+      const normalized = url.toString()
+      if (!result.includes(normalized)) result.push(normalized)
+    } catch {
+      continue
+    }
+    if (result.length >= AI_CITATION_LIMITS.citedUrls) break
+  }
+  return result
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,12 +180,15 @@ type ResponsesPayload = {
 export function extractAnswerText(payload: unknown): string {
   if (typeof payload !== 'object' || payload === null) return ''
   const p = payload as ResponsesPayload
-  if (typeof p.output_text === 'string' && p.output_text.trim()) return p.output_text
-  return (p.output || [])
+  if (typeof p.output_text === 'string' && p.output_text.trim()) {
+    return cleanPanelText(p.output_text, AI_CITATION_LIMITS.answerCharacters)
+  }
+  return cleanPanelText((p.output || [])
+    .slice(0, 100)
     .flatMap((item) => item.content || [])
     .filter((c) => c.type === 'output_text' && typeof c.text === 'string')
     .map((c) => c.text as string)
-    .join('\n')
+    .join('\n'), AI_CITATION_LIMITS.answerCharacters)
 }
 
 // Every url_citation URL across all annotations, de-duplicated in order.
@@ -157,16 +196,16 @@ export function extractCitedUrls(payload: unknown): string[] {
   if (typeof payload !== 'object' || payload === null) return []
   const p = payload as ResponsesPayload
   const urls: string[] = []
-  for (const item of p.output || []) {
-    for (const c of item.content || []) {
-      for (const a of c.annotations || []) {
+  for (const item of (p.output || []).slice(0, 100)) {
+    for (const c of (item.content || []).slice(0, 100)) {
+      for (const a of (c.annotations || []).slice(0, 100)) {
         if (a.type === 'url_citation' && typeof a.url === 'string' && a.url.trim()) {
           urls.push(a.url.trim())
         }
       }
     }
   }
-  return [...new Set(urls)]
+  return cleanCitationUrls(urls)
 }
 
 // Case-insensitive "goinvo" or "go invo" anywhere in the answer text.
@@ -178,13 +217,12 @@ export function detectGoinvoMention(answerText: string): boolean {
 // won't parse) contains goinvo.com.
 export function detectGoinvoCitation(citedUrls: string[]): string[] {
   return citedUrls.filter((u) => {
-    let host = u
     try {
-      host = new URL(u).hostname
+      const url = new URL(u)
+      return /(^|\.)goinvo\.com$/i.test(url.hostname)
     } catch {
-      // keep raw url for the substring test
+      return false
     }
-    return /(^|\.)goinvo\.com$/i.test(host) || /goinvo\.com/i.test(u)
   })
 }
 
@@ -437,8 +475,15 @@ export async function checkAiCitation(
   prompt: string,
   opts: CheckAiCitationOptions = {},
 ): Promise<PromptResult> {
+  const safePrompt = cleanPanelText(prompt, AI_CITATION_LIMITS.promptCharacters)
+  const requestedTokens = typeof opts.maxTokens === 'number' && Number.isFinite(opts.maxTokens)
+    ? opts.maxTokens
+    : 1500
+  const requestedTimeout = typeof opts.timeoutMs === 'number' && Number.isFinite(opts.timeoutMs)
+    ? opts.timeoutMs
+    : DEFAULT_TIMEOUT_MS
   const empty: PromptResult = {
-    prompt,
+    prompt: safePrompt,
     answerText: '',
     goinvoMentioned: false,
     goinvoCited: false,
@@ -448,22 +493,24 @@ export async function checkAiCitation(
   }
 
   if (!isAnthropicConfigured()) {
-    return { ...empty, error: 'ANTHROPIC_API_KEY is not configured.' }
+    return { ...empty, error: 'AI citation service is not configured.' }
   }
 
   try {
     const { text, citedUrls } = await generateClaudeText({
       system: AI_CITATION_SYSTEM,
-      user: prompt,
+      user: safePrompt,
       webSearch: true,
-      maxTokens: opts.maxTokens ?? 1500,
+      maxTokens: Math.max(256, Math.min(AI_CITATION_LIMITS.maxTokens, requestedTokens)),
       model: opts.model,
-      timeoutMs: opts.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      timeoutMs: Math.max(
+        5_000,
+        Math.min(AI_CITATION_LIMITS.timeoutMs, requestedTimeout),
+      ),
     })
-    return buildPromptResultFromParts(prompt, text, citedUrls)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown error'
-    return { ...empty, error: `AI citation call failed: ${message}` }
+    return buildPromptResultFromParts(safePrompt, text, citedUrls)
+  } catch {
+    return { ...empty, error: 'AI citation call failed.' }
   }
 }
 
@@ -481,15 +528,18 @@ export function buildPromptResultFromParts(
   answerText: string,
   allCitedUrls: string[],
 ): PromptResult {
-  const citedGoinvoUrls = detectGoinvoCitation(allCitedUrls)
+  const safePrompt = cleanPanelText(prompt, AI_CITATION_LIMITS.promptCharacters)
+  const safeAnswer = cleanPanelText(answerText, AI_CITATION_LIMITS.answerCharacters)
+  const safeUrls = cleanCitationUrls(allCitedUrls)
+  const citedGoinvoUrls = detectGoinvoCitation(safeUrls)
   return {
-    prompt,
-    answerText,
-    goinvoMentioned: detectGoinvoMention(answerText),
+    prompt: safePrompt,
+    answerText: safeAnswer,
+    goinvoMentioned: detectGoinvoMention(safeAnswer),
     goinvoCited: citedGoinvoUrls.length > 0,
     citedGoinvoUrls,
-    allCitedUrls,
-    competitorsMentioned: extractCompetitors(answerText),
+    allCitedUrls: safeUrls,
+    competitorsMentioned: extractCompetitors(safeAnswer),
   }
 }
 
@@ -550,7 +600,11 @@ export async function runAiCitationPanel(
   opts: RunPanelOptions = {},
 ): Promise<PanelSnapshot> {
   const model = marketingClaudeModel(opts.model)
-  const panelPrompts = prompts.length ? prompts : AI_CITATION_PROMPTS
+  const requestedPrompts = Array.isArray(prompts) && prompts.length ? prompts : AI_CITATION_PROMPTS
+  const panelPrompts = requestedPrompts
+    .slice(0, AI_CITATION_LIMITS.prompts)
+    .map((prompt) => cleanPanelText(prompt, AI_CITATION_LIMITS.promptCharacters))
+    .filter(Boolean)
 
   if (!isAnthropicConfigured()) {
     return {
@@ -566,11 +620,17 @@ export async function runAiCitationPanel(
         topCompetitors: [],
       },
       unavailable: true,
-      unavailableReason: 'ANTHROPIC_API_KEY is not configured, so the AI citation panel could not run.',
+      unavailableReason: 'AI citation service is not configured, so the panel could not run.',
     }
   }
 
-  const concurrency = Math.max(1, opts.concurrency ?? DEFAULT_CONCURRENCY)
+  const requestedConcurrency = typeof opts.concurrency === 'number' && Number.isFinite(opts.concurrency)
+    ? opts.concurrency
+    : DEFAULT_CONCURRENCY
+  const concurrency = Math.max(
+    1,
+    Math.min(AI_CITATION_LIMITS.concurrency, Math.floor(requestedConcurrency)),
+  )
   const results = await runWithConcurrency(panelPrompts, concurrency, (prompt) =>
     checkAiCitation(prompt, { ...opts, model }),
   )
