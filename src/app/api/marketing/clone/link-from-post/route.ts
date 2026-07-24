@@ -4,6 +4,7 @@ import {
   buildCreatePayload,
   buildLinkFromPost,
   getMarketingWriteClient,
+  marketingCloneDocumentId,
   MarketingAuthError,
   MarketingValidationError,
   type CalendarItemForLink,
@@ -64,7 +65,10 @@ export async function POST(req: Request) {
 
     let doc
     try {
-      doc = buildCreatePayload('marketingLinkItem', buildLinkFromPost(item))
+      doc = buildCreatePayload('marketingLinkItem', {
+        _id: marketingCloneDocumentId('link-from-post', item._id),
+        ...buildLinkFromPost(item),
+      })
     } catch (error) {
       if (error instanceof MarketingValidationError) {
         return NextResponse.json({ error: error.message, missing: error.missing }, { status: 422 })
@@ -75,7 +79,10 @@ export async function POST(req: Request) {
       )
     }
 
-    const document = await client.create(doc)
+    // The source-derived id makes retries and concurrent calls converge on the
+    // same link. Existing editorial changes win because createIfNotExists never
+    // replaces the document.
+    const document = await client.createIfNotExists(doc as typeof doc & { _id: string })
     return NextResponse.json({ id: document._id, document }, { status: 201 })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to create link from post.'

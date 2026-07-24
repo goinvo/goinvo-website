@@ -141,18 +141,30 @@ export function ChannelWorkspace({
       .filter(Boolean)
       .join(' and ')
 
-    const message = usage.total > 0
-      ? `Delete "${channel.title || channel.key}"? It is currently used by ${usageText}. Calendar items will keep their saved channel key, but the managed channel and its content type options will be removed.`
-      : `Delete "${channel.title || channel.key}"?`
-
-    if (!(await confirm({ title: 'Delete channel?', message, confirmLabel: 'Delete' }))) return
-
-    setDeletingId(channel._id)
     try {
-      const calendarItemsWithChannelRef = data.calendarItems.filter((item) => item.channelRef?._id === channel._id)
-      await Promise.all(
-        calendarItemsWithChannelRef.map((item) => client.patch(item._id).unset(['channelRef']).commit()),
+      const referringRecords = await client.fetch<Array<{ _id: string; _type: string; title?: string }>>(
+        '*[references($id)]{_id, _type, title}',
+        { id: channel._id },
       )
+      if (usage.total > 0 || referringRecords.length > 0) {
+        const reasons = [
+          usageText,
+          referringRecords.length > 0
+            ? `${referringRecords.length} direct reference${referringRecords.length === 1 ? '' : 's'}`
+            : '',
+        ].filter(Boolean).join(' and ')
+        toast.push({
+          status: 'warning',
+          title: 'Channel is still in use',
+          description: `Disconnect or archive it before deleting. Found ${reasons}. No records were changed.`,
+        })
+        return
+      }
+
+      const message = `Delete "${channel.title || channel.key}"? This permanently removes the unused managed channel.`
+      if (!(await confirm({ title: 'Delete channel?', message, confirmLabel: 'Delete' }))) return
+
+      setDeletingId(channel._id)
       await client.delete(channel._id)
       setSelectedId(data.channels.find((candidate) => candidate._id !== channel._id)?._id || null)
       await loadData()
@@ -173,7 +185,7 @@ export function ChannelWorkspace({
     <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: '390px minmax(0, 1fr)', gap: 16 }}>
       {confirmDialog}
       <div style={{ gridColumn: '1 / -1' }}>
-        <PublishConnectionStatus variant="banner" />
+        <PublishConnectionStatus client={client} variant="banner" />
       </div>
       <section style={styles.panel}>
         <PanelHeading
@@ -387,7 +399,8 @@ function ChannelEditor({
             color: '#e36216',
             alignSelf: 'flex-start',
           }}
-          disabled={saving}
+          disabled={saving || usage.total > 0}
+          title={usage.total > 0 ? 'Disconnect or reassign every referenced item before deleting this channel.' : 'Delete this unused channel.'}
           onClick={() => void onDelete(channel)}
         >
           Delete channel
@@ -398,7 +411,7 @@ function ChannelEditor({
           <strong style={{ fontSize: 13 }}>Currently in use</strong>
           <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
             {usage.calendarCount} calendar item{usage.calendarCount === 1 ? '' : 's'} and {usage.campaignCount} campaign
-            {usage.campaignCount === 1 ? '' : 's'} reference this channel key.
+            {usage.campaignCount === 1 ? '' : 's'} reference this channel key. Its key and Delete action are locked until those records are reassigned or disconnected.
           </div>
         </div>
       )}
@@ -416,10 +429,14 @@ function ChannelEditor({
             onChange={(event) => setDraft({ ...draft, title: event.currentTarget.value })}
           />
         </InputField>
-        <InputField label="Key" help="Links calendar items to this channel — changing it disconnects items using it.">
+        <InputField
+          label="Key"
+          help={usage.total > 0 ? 'Locked while saved records use this channel.' : 'Links calendar items to this channel.'}
+        >
           <input
             style={styles.input}
             value={draft.key || ''}
+            disabled={usage.total > 0}
             onChange={(event) => setDraft({ ...draft, key: event.currentTarget.value })}
           />
           {usage.total > 0 && !!channel.key && slugify(draft.key || draft.title || 'channel') !== channel.key && (
@@ -482,15 +499,19 @@ function ChannelEditor({
                     onChange={(event) => updateContentType(contentType._key || '', { label: event.currentTarget.value })}
                   />
                 </InputField>
-                <InputField label="Value" help="Links calendar items to this format — changing it disconnects items using it.">
+                <InputField
+                  label="Value"
+                  help={usageCount > 0 ? 'Locked while calendar items use this format.' : 'Links calendar items to this format.'}
+                >
                   <input
                     style={styles.input}
                     value={contentType.value || ''}
+                    disabled={usageCount > 0}
                     onChange={(event) => updateContentType(contentType._key || '', { value: slugify(event.currentTarget.value) })}
                   />
                   {usageCount > 0 && (
                     <div style={{ ...styles.small, ...styles.muted, marginTop: 4 }}>
-                      Used by {usageCount} item{usageCount === 1 ? '' : 's'}
+                      Used by {usageCount} item{usageCount === 1 ? '' : 's'} · reassign those items before deleting or changing this value
                     </div>
                   )}
                   {savedType && savedUsage > 0 && (savedType.value || '') !== (contentType.value || '') && (
@@ -516,6 +537,8 @@ function ChannelEditor({
                     color: usageCount > 0 ? '#e36216' : 'var(--card-fg-color)',
                     marginTop: 20,
                   }}
+                  disabled={usageCount > 0}
+                  title={usageCount > 0 ? 'Reassign every calendar item using this format before deleting it.' : 'Delete this unused content type.'}
                   onClick={() => void removeContentType(contentType)}
                 >
                   Delete

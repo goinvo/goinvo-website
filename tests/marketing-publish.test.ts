@@ -200,6 +200,8 @@ describe('instagram refuses unsupported / empty content', () => {
   afterEach(() => {
     delete process.env.INSTAGRAM_ACCESS_TOKEN
     delete process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('rejects a reel with no video asset, and text-only posts, before any network call', async () => {
@@ -210,6 +212,32 @@ describe('instagram refuses unsupported / empty content', () => {
 
     const textOnly = await instagramPublisher.publish({ text: 'hi', media: [] })
     expect(textOnly.ok).toBe(false)
+  })
+
+  it('rejects an oversized Graph response instead of buffering it', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', {
+      status: 200,
+      headers: { 'Content-Length': String(512 * 1024 + 1) },
+    })))
+    const result = await instagramPublisher.publish({
+      text: 'hi',
+      media: [{ url: 'https://cdn.sanity.io/image.jpg', type: 'image' }],
+    })
+    expect(result.ok).toBe(false)
+    expect((result as { error?: string }).error).toMatch(/exceeds .*byte limit/i)
+  })
+
+  it('does not send credentials to a forged Graph API host', async () => {
+    vi.stubEnv('INSTAGRAM_GRAPH_HOST', 'https://attacker.example')
+    const network = vi.fn()
+    vi.stubGlobal('fetch', network)
+    const result = await instagramPublisher.publish({
+      text: 'hi',
+      media: [{ url: 'https://cdn.sanity.io/image.jpg', type: 'image' }],
+    })
+    expect(result.ok).toBe(false)
+    expect((result as { error?: string }).error).toMatch(/graph\.facebook\.com|graph\.instagram\.com/i)
+    expect(network).not.toHaveBeenCalled()
   })
 })
 
@@ -258,6 +286,8 @@ describe('QStash scheduling', () => {
       if (saved[key] === undefined) delete process.env[key]
       else process.env[key] = saved[key]
     }
+    vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
   })
 
   it('floors publishAt to unix seconds', () => {
@@ -301,6 +331,39 @@ describe('QStash scheduling', () => {
     })
     expect(noKey.ok).toBe(false)
     expect(noKey.error).toMatch(/MARKETING_API_KEY/)
+  })
+
+  it('rejects a forged production callback host before giving QStash the forwarded API key', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    process.env.QSTASH_TOKEN = 'tok'
+    const network = vi.fn()
+    vi.stubGlobal('fetch', network)
+    const result = await schedulePublish({
+      itemId: 'calendar-1',
+      publishAtIso: '2030-01-01T00:00:00.000Z',
+      baseUrl: 'https://attacker.example',
+      forwardApiKey: 'secret-forwarded-key',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/approved production deployment/i)
+    expect(network).not.toHaveBeenCalled()
+    vi.unstubAllEnvs()
+  })
+
+  it('bounds QStash response bodies', async () => {
+    process.env.QSTASH_TOKEN = 'tok'
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', {
+      status: 200,
+      headers: { 'Content-Length': String(256 * 1024 + 1) },
+    })))
+    const result = await schedulePublish({
+      itemId: 'calendar-1',
+      publishAtIso: '2030-01-01T00:00:00.000Z',
+      baseUrl: 'https://preview.example.com',
+      forwardApiKey: 'secret-forwarded-key',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.error).toMatch(/exceeds .* bytes/i)
   })
 })
 

@@ -18,6 +18,8 @@
  */
 
 const QSTASH_PUBLISH_BASE = 'https://qstash.upstash.io/v2/publish'
+const QSTASH_TIMEOUT_MS = 10_000
+const QSTASH_RESPONSE_MAX_BYTES = 256 * 1024
 
 /** True when QStash can be used to enqueue (fail-closed otherwise). */
 export function isQStashConfigured(): boolean {
@@ -29,9 +31,67 @@ export function notBeforeSeconds(publishAtIso: string): number {
   return Math.floor(new Date(publishAtIso).getTime() / 1000)
 }
 
+function allowedProductionCallbackHost(hostname: string): boolean {
+  const configured = [
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+    ...(process.env.MARKETING_PUBLISH_ALLOWED_CALLBACK_HOSTS || '').split(','),
+  ]
+    .map((value) => (value || '').trim())
+    .filter(Boolean)
+    .map((value) => {
+      try {
+        return new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`).hostname.toLowerCase()
+      } catch {
+        return ''
+      }
+    })
+  return ['goinvo.com', 'www.goinvo.com', ...configured].includes(hostname.toLowerCase())
+}
+
 function resolveBaseUrl(baseUrl: string): string {
   const override = (process.env.MARKETING_PUBLIC_BASE_URL || '').trim()
-  return (override || baseUrl).replace(/\/$/, '')
+  const raw = override || baseUrl
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    throw new Error('Publish callback base URL must be absolute.')
+  }
+  if (url.username || url.password || (url.protocol !== 'https:' && url.hostname !== 'localhost')) {
+    throw new Error('Publish callback base URL must use HTTPS and must not contain credentials.')
+  }
+  if (process.env.NODE_ENV === 'production' && !override && !allowedProductionCallbackHost(url.hostname)) {
+    throw new Error('Publish callback host is not an approved production deployment.')
+  }
+  return url.origin
+}
+
+async function readQStashResponse(response: Response): Promise<string> {
+  const declared = Number(response.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > QSTASH_RESPONSE_MAX_BYTES) {
+    throw new Error(`QStash response exceeds ${QSTASH_RESPONSE_MAX_BYTES} bytes.`)
+  }
+  if (!response.body) return ''
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let text = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytes += value.byteLength
+      if (bytes > QSTASH_RESPONSE_MAX_BYTES) {
+        await reader.cancel().catch(() => {})
+        throw new Error(`QStash response exceeds ${QSTASH_RESPONSE_MAX_BYTES} bytes.`)
+      }
+      text += decoder.decode(value, { stream: true })
+    }
+    return text + decoder.decode()
+  } finally {
+    reader.releaseLock()
+  }
 }
 
 /** Builds the absolute callback URL QStash POSTs at publish time. */
@@ -85,6 +145,8 @@ async function enqueueQStash(
   if (!forwardApiKey) {
     return { ok: false, error: 'Cannot enqueue: MARKETING_API_KEY is unset (callback would be unauthenticated).' }
   }
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), QSTASH_TIMEOUT_MS)
   try {
     const res = await fetch(`${QSTASH_PUBLISH_BASE}/${callbackUrl}`, {
       method: 'POST',
@@ -99,18 +161,42 @@ async function enqueueQStash(
       },
       body: JSON.stringify({}),
       cache: 'no-store',
+      redirect: 'error',
+      signal: controller.signal,
     })
-    if (!res.ok) return { ok: false, error: `QStash enqueue failed (${res.status}): ${await res.text()}` }
-    const json = (await res.json().catch(() => ({}))) as { messageId?: string }
+    const text = await readQStashResponse(res)
+    if (!res.ok) return { ok: false, error: `QStash enqueue failed (${res.status}): ${text.slice(0, 500)}` }
+    const json = (() => {
+      try {
+        return JSON.parse(text) as { messageId?: unknown }
+      } catch {
+        return {}
+      }
+    })()
+    if (json.messageId !== undefined && (typeof json.messageId !== 'string' || json.messageId.length > 512)) {
+      return { ok: false, error: 'QStash enqueue returned an invalid message ID.' }
+    }
     return { ok: true, messageId: json.messageId }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : 'QStash error' }
+  } finally {
+    clearTimeout(timeout)
   }
 }
 
 /** Enqueues the exact-time QStash publish callback. Never throws. */
 export async function schedulePublish(params: SchedulePublishParams): Promise<ScheduleResult> {
-  const callbackUrl = buildCallbackUrl(params.baseUrl, params.itemId)
+  let callbackUrl: string
+  try {
+    callbackUrl = buildCallbackUrl(params.baseUrl, params.itemId)
+  } catch (error) {
+    return {
+      ok: false,
+      callbackUrl: '',
+      notBefore: 0,
+      error: error instanceof Error ? error.message : 'Invalid callback URL.',
+    }
+  }
   const notBefore = notBeforeSeconds(params.publishAtIso)
   const result = await enqueueQStash(
     callbackUrl,
@@ -147,7 +233,17 @@ export function buildFinalizeCallbackUrl(baseUrl: string, itemId: string): strin
  * container id. Never throws.
  */
 export async function scheduleFinalize(params: ScheduleFinalizeParams): Promise<ScheduleResult> {
-  const callbackUrl = buildFinalizeCallbackUrl(params.baseUrl, params.itemId)
+  let callbackUrl: string
+  try {
+    callbackUrl = buildFinalizeCallbackUrl(params.baseUrl, params.itemId)
+  } catch (error) {
+    return {
+      ok: false,
+      callbackUrl: '',
+      notBefore: 0,
+      error: error instanceof Error ? error.message : 'Invalid callback URL.',
+    }
+  }
   const delay = Math.max(1, Math.round(params.delaySeconds))
   const result = await enqueueQStash(
     callbackUrl,

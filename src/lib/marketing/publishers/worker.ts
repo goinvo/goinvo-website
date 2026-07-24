@@ -17,6 +17,7 @@
  */
 
 import type { SanityClient } from '@sanity/client'
+import { isRevisionConflict } from '../apiBoundary'
 import {
   buildClaimPatch,
   buildFailedPatch,
@@ -35,6 +36,12 @@ import { getPublisher } from './registry'
 import type { PublishOutcome, SocialPlatform } from './types'
 
 const MAX_ITEMS_PER_RUN = 25
+const MAX_PUBLISH_URL_CHARS = 2_048
+const MAX_PUBLISH_MEDIA = 10
+const MAX_CAPTION_CHARS: Record<SocialPlatform, number> = {
+  instagram: 2_200,
+  linkedin: 3_000,
+}
 
 /** Max async (video) re-checks before giving up. Override per deployment. */
 function maxFinalizeAttempts(): number {
@@ -76,6 +83,9 @@ export interface PublishResultEntry {
   permalink?: string
   /** Present when the route should schedule a QStash finalize re-check. */
   finalize?: FinalizeSignal
+  /** Route-level enqueue result for the finalize re-check, when one was required. */
+  finalizeScheduled?: boolean
+  finalizeScheduleError?: string
 }
 
 export interface PublishRunSummary {
@@ -120,6 +130,13 @@ function resolveOutcome(
   }
 
   if ('pending' in outcome) {
+    if (!/^[A-Za-z0-9._-]{1,512}$/.test(outcome.containerId)) {
+      const error = 'Platform returned an invalid media-container ID; reconcile the platform before retrying.'
+      return {
+        patch: buildFailedPatch(error, now),
+        entry: { id: item._id, title: item.title, platform, outcome: 'failed', reason: error },
+      }
+    }
     const attempt = (item.publishAttempts || 0) + 1
     if (attempt > maxFinalizeAttempts()) {
       const error = `Video processing did not finish after ${maxFinalizeAttempts()} checks.`
@@ -141,16 +158,26 @@ function resolveOutcome(
     }
   }
 
+  const error = outcome.error.slice(0, 2_000)
   return {
-    patch: buildFailedPatch(outcome.error, now),
-    entry: { id: item._id, title: item.title, platform, outcome: 'failed', reason: outcome.error },
+    patch: buildFailedPatch(error, now),
+    entry: { id: item._id, title: item.title, platform, outcome: 'failed', reason: error },
   }
 }
 
-/** Commits the write-back patch. Returns false if it fails (after one retry). */
-async function applyPatch(client: SanityClient, id: string, patch: ItemPatch): Promise<boolean> {
+/**
+ * Commits a write-back only against the revision created by our claim. An
+ * editor changing the item while the network publish is in flight must never
+ * have their newer status/schedule overwritten by the late platform result.
+ */
+async function applyPatch(
+  client: SanityClient,
+  id: string,
+  expectedRevision: string,
+  patch: ItemPatch,
+): Promise<boolean> {
   const commit = async () => {
-    const tx = client.patch(id)
+    const tx = client.patch(id).ifRevisionId(expectedRevision)
     if (patch.set) tx.set(patch.set)
     if (patch.unset) tx.unset(patch.unset)
     await tx.commit()
@@ -158,9 +185,14 @@ async function applyPatch(client: SanityClient, id: string, patch: ItemPatch): P
   try {
     await commit()
     return true
-  } catch {
+  } catch (firstError) {
+    if (isRevisionConflict(firstError)) {
+      console.warn(`Publish write-back skipped for ${id}: the calendar item changed after it was claimed.`)
+      return false
+    }
     // The external post (if any) already happened and the write-back is
-    // idempotent (it sets the same fields), so a single retry can't double-post.
+    // idempotent and revision-conditional, so one retry cannot overwrite a
+    // newer edit or trigger another external publish.
     try {
       await commit()
       return true
@@ -186,11 +218,17 @@ async function applyAndReport(
   platform: SocialPlatform,
   outcome: PublishOutcome,
   now: string,
+  claimedRevision: string,
 ): Promise<PublishResultEntry> {
   const { patch, entry } = resolveOutcome(item, platform, outcome, now)
-  const written = await applyPatch(client, item._id, patch)
+  const written = await applyPatch(client, item._id, claimedRevision, patch)
   if (written) return entry
-  if (entry.outcome !== 'published' && entry.outcome !== 'processing') return entry
+  if (entry.outcome !== 'published' && entry.outcome !== 'processing') {
+    return {
+      ...entry,
+      reason: `${entry.reason || 'The publish attempt failed.'} The calendar item changed while publishing, so this result was not written back.`,
+    }
+  }
 
   const externalRef =
     entry.outcome === 'published'
@@ -210,15 +248,88 @@ async function applyAndReport(
   }
 }
 
-/** Optimistic claim: returns false if another run already holds the item (revision mismatch). */
-async function claim(client: SanityClient, item: PublishableItem, now: string): Promise<boolean> {
+/** Optimistic claim: returns its new revision, or null when another run won. */
+async function claim(client: SanityClient, item: PublishableItem, now: string): Promise<string | null> {
   try {
-    await client.patch(item._id).ifRevisionId(item._rev).set(buildClaimPatch(now).set!).commit({
+    const claimed = await client.patch(item._id).ifRevisionId(item._rev).set(buildClaimPatch(now).set!).commit({
       autoGenerateArrayKeys: false,
+      returnDocuments: true,
     })
-    return true
+    // Sanity returns the updated document by default. Keeping the old revision
+    // as a fail-closed fallback makes non-Sanity test doubles conflict rather
+    // than allowing an unguarded write.
+    return typeof claimed?._rev === 'string' && claimed._rev ? claimed._rev : item._rev
   } catch {
-    return false
+    return null
+  }
+}
+
+function validatePublicHttpsUrl(raw: string, label: string): string | null {
+  if (raw.length > MAX_PUBLISH_URL_CHARS) return `${label} exceeds ${MAX_PUBLISH_URL_CHARS} characters.`
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) {
+      return `${label} must be a public HTTPS URL without credentials.`
+    }
+  } catch {
+    return `${label} is not a valid absolute URL.`
+  }
+  return null
+}
+
+export function validatePublishContent(platform: SocialPlatform, content: ReturnType<typeof buildPublishContent>): string | null {
+  const captionLimit = MAX_CAPTION_CHARS[platform]
+  if (content.text.length > captionLimit) {
+    return `${platform} caption exceeds the ${captionLimit}-character limit.`
+  }
+  if (content.media.length > MAX_PUBLISH_MEDIA) {
+    return `Post has ${content.media.length} media items; the supported maximum is ${MAX_PUBLISH_MEDIA}.`
+  }
+  if (content.link) {
+    const error = validatePublicHttpsUrl(content.link, 'Post link')
+    if (error) return error
+  }
+  for (const [index, media] of content.media.entries()) {
+    const error = validatePublicHttpsUrl(media.url, `Media ${index + 1} URL`)
+    if (error) return error
+  }
+  return null
+}
+
+export function validatePublishableItem(platform: SocialPlatform, item: PublishableItem): string | null {
+  if (item.contentDraft !== undefined && item.contentDraft !== null && typeof item.contentDraft !== 'string') {
+    return 'Post caption must be text.'
+  }
+  if (item.draftHashtags !== undefined && item.draftHashtags !== null && !Array.isArray(item.draftHashtags)) {
+    return 'Post hashtags must be an array.'
+  }
+  if (item.frames !== undefined && item.frames !== null && !Array.isArray(item.frames)) {
+    return 'Carousel frames must be an array.'
+  }
+  if ((item.contentDraft || '').length > MAX_CAPTION_CHARS[platform]) {
+    return `${platform} caption exceeds the ${MAX_CAPTION_CHARS[platform]}-character limit.`
+  }
+  if ((item.draftHashtags || []).length > 50) return 'Post has more than 50 hashtags.'
+  if ((item.draftHashtags || []).some((tag) => typeof tag !== 'string' || tag.length > 100)) {
+    return 'Every hashtag must be a string of 100 characters or fewer.'
+  }
+  if ((item.frames || []).length > MAX_PUBLISH_MEDIA) {
+    return `Post has more than ${MAX_PUBLISH_MEDIA} carousel frames.`
+  }
+  return null
+}
+
+async function safelyPublish(
+  action: () => Promise<PublishOutcome>,
+  platform: SocialPlatform,
+): Promise<PublishOutcome> {
+  try {
+    return await action()
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : `${platform} publisher threw an unknown error.`,
+    }
   }
 }
 
@@ -249,16 +360,31 @@ async function processOne(
       return { id: item._id, title: item.title, platform, outcome: 'would-publish', reason: 'would re-check video processing' }
     }
     // Claim so an at-least-once duplicate delivery can't double-finalize.
-    if (!(await claim(client, item, now))) {
+    const claimedRevision = await claim(client, item, now)
+    if (!claimedRevision) {
       return skip(item, platform, 'Already claimed by a concurrent run.')
     }
-    const outcome = await publisher.finalize(item.externalContainerId)
-    return applyAndReport(client, item, platform, outcome, now)
+    const outcome = await safelyPublish(() => publisher.finalize!(item.externalContainerId!), platform)
+    return applyAndReport(client, item, platform, outcome, now, claimedRevision)
   }
 
   // publish
-  const content = buildPublishContent(item)
+  if (item.publishState === 'published' || item.status === 'published') {
+    return skip(item, platform, 'Already published.')
+  }
+  if (item.publishState === 'publishing') {
+    return skip(item, platform, 'Already claimed by another publish run.')
+  }
+  if (item.publishState === 'processing') {
+    return skip(item, platform, 'Video is already processing; finalize it instead of publishing again.')
+  }
+  const invalidItem = validatePublishableItem(platform, item)
+  const content: ReturnType<typeof buildPublishContent> = invalidItem
+    ? { text: '', media: [] }
+    : buildPublishContent(item)
+  const invalidContent = invalidItem || validatePublishContent(platform, content)
   if (dryRun) {
+    if (invalidContent) return skip(item, platform, invalidContent)
     return {
       id: item._id,
       title: item.title,
@@ -267,11 +393,22 @@ async function processOne(
       reason: `caption ${content.text.length} chars, ${content.media.length} media${content.link ? ', link' : ''}`,
     }
   }
-  if (!(await claim(client, item, now))) {
+  const claimedRevision = await claim(client, item, now)
+  if (!claimedRevision) {
     return skip(item, platform, 'Already claimed by a concurrent run.')
   }
-  const outcome = await publisher.publish(content)
-  return applyAndReport(client, item, platform, outcome, now)
+  if (invalidContent) {
+    return applyAndReport(
+      client,
+      item,
+      platform,
+      { ok: false, error: invalidContent },
+      now,
+      claimedRevision,
+    )
+  }
+  const outcome = await safelyPublish(() => publisher.publish(content), platform)
+  return applyAndReport(client, item, platform, outcome, now, claimedRevision)
 }
 
 function summarize(now: string, dryRun: boolean, considered: number, results: PublishResultEntry[]): PublishRunSummary {
@@ -292,7 +429,12 @@ export async function runPublish(
   client: SanityClient,
   opts: RunPublishOptions,
 ): Promise<PublishRunSummary> {
-  const { now, id, dryRun = false, onlyIfDue = false, finalizeOnly = false, maxItems = MAX_ITEMS_PER_RUN } = opts
+  const { now, id, dryRun = false, onlyIfDue = false, finalizeOnly = false } = opts
+  const requestedMaxItems = opts.maxItems ?? MAX_ITEMS_PER_RUN
+  const maxItems = Math.min(
+    MAX_ITEMS_PER_RUN,
+    Math.max(1, Number.isFinite(requestedMaxItems) ? Math.floor(requestedMaxItems) : MAX_ITEMS_PER_RUN),
+  )
   const results: PublishResultEntry[] = []
 
   // ── Single item by id (manual or a QStash publish/finalize callback) ────────

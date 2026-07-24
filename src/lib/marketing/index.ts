@@ -28,6 +28,8 @@ export {
   monthLabel,
   toDateInputValue,
   dateInputToIso,
+  toDateTimeInputValue,
+  dateTimeInputToIso,
 } from './dates'
 
 // Pure free-text inference helpers (ported verbatim).
@@ -58,7 +60,7 @@ export type {
 export { getMarketingWriteClient } from './client'
 
 // API authentication.
-export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey } from './auth'
+export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey, assertStudioWriterOrApiKey } from './auth'
 
 // Channel seeding (DEFAULT_CHANNELS + ensureMarketingChannel).
 export { DEFAULT_CHANNELS, ensureMarketingChannel } from './seed'
@@ -69,7 +71,7 @@ export type {
 } from './seed'
 
 // Clone / derive builders (link-from-post, proof-from-result).
-export { buildLinkFromPost, buildProofPointFromResult } from './clone'
+export { buildLinkFromPost, buildProofPointFromResult, marketingCloneDocumentId } from './clone'
 export type {
   CalendarItemForLink,
   ResearchResultForProof,
@@ -77,51 +79,11 @@ export type {
   MarketingFieldBag,
 } from './clone'
 
-// Social auto-publishing: adapters, registry, content mapping, worker, scheduling.
-export {
-  getPublisher,
-  getPublishers,
-  connectionStatus,
-  instagramPublisher,
-  linkedInPublisher,
-  DUE_ITEMS_QUERY,
-  DUE_SINGLE_ITEM_QUERY,
-  SINGLE_ITEM_QUERY,
-  resolveSocialPlatform,
-  buildCaption,
-  buildMedia,
-  buildPublishContent,
-  buildClaimPatch,
-  buildProcessingPatch,
-  buildPublishedPatch,
-  buildFailedPatch,
-  runPublish,
-  isQStashConfigured,
-  notBeforeSeconds,
-  buildCallbackUrl,
-  buildFinalizeCallbackUrl,
-  schedulePublish,
-  scheduleFinalize,
-  SOCIAL_PLATFORMS,
-} from './publishers'
-export type {
-  PlatformConnection,
-  PublishableItem,
-  ItemPatch,
-  RunPublishOptions,
-  PublishResultEntry,
-  PublishRunSummary,
-  FinalizeSignal,
-  SchedulePublishParams,
-  ScheduleFinalizeParams,
-  ScheduleResult,
-  SocialPlatform,
-  SocialPublisher,
-  PublishContent,
-  PublishMedia,
-  PublishSuccess,
-  PublishOutcome,
-} from './publishers'
+// Social auto-publishing is intentionally not re-exported here. This barrel is
+// consumed by the browser-rendered Sanity Studio, while the publisher registry
+// performs server-only DNS/network validation. Server routes import
+// `@/lib/marketing/publishers` directly so Node modules never enter the client
+// dependency graph.
 
 // Outreach: contact intake, per-contact research, work-evidence extraction,
 // offer catalog + on-the-fly offer drafts, call plan + follow-ups.
@@ -132,6 +94,9 @@ export {
   buildIntakePrompts,
   normalizeParsedContacts,
   contactDedupeKey,
+  contactIdentityKeys,
+  hasPricedOffer,
+  normalizeOutreachUrl,
   buildContactCreateDoc,
   buildResearchPrompts,
   normalizeResearch,
@@ -144,6 +109,8 @@ export {
   rankCallPlan,
   dueFollowUps,
   buildWarmStartSuggestions,
+  appendIntakeDraftEntries,
+  mergeWarmStartSuggestionsIntoIntake,
 } from './outreach'
 export type {
   OutreachOfferDef,
@@ -160,6 +127,42 @@ export type {
   EvidenceSource,
   EvidenceIndexItem,
 } from './outreach'
+
+// Deterministic outreach queue, workflow progress, and channel advice.
+export {
+  OUTREACH_PROGRESS_CHANNELS,
+  buildOutreachProgress,
+  isUsableOutreachEmail,
+  isUsableOutreachPhone,
+} from './outreachProgress'
+export type {
+  OutreachProgressChannel,
+  OutreachProgressInteraction,
+  OutreachProgressContact,
+  OutreachProgressUrgency,
+  OutreachDueState,
+  OutreachProgressAction,
+  OutreachProgressRepairTarget,
+  OutreachChannelAvailability,
+  OutreachChannelRecommendation,
+  OutreachProgressRow,
+  OutreachProgressSummary,
+  BuildOutreachProgressOptions,
+} from './outreachProgress'
+
+// Reusable, publish-safe voice profiles for outward-facing marketing copy.
+export {
+  BRAND_VOICE_SYSTEM_POLICY,
+  brandVoicePromptContext,
+  brandVoiceResponseContext,
+  normalizeMarketingBrandVoice,
+  normalizeMarketingBrandVoices,
+  prepareMarketingBrandVoices,
+  resolveBrandVoiceFromProfiles,
+  resolveMarketingBrandVoice,
+  validateMarketingBrandVoices,
+} from './brandVoice'
+export type { MarketingBrandVoice, ResolvedMarketingBrandVoice } from './brandVoice'
 
 // Financial posture — runway bins that pick the marketing strategy (set by
 // humans in Settings, read by the plan panel + the assist/strategist AI).

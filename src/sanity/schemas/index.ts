@@ -21,6 +21,7 @@ import marketingLinkItem from './marketingLinkItem'
 import marketingIdea from './marketingIdea'
 import marketingMessagePillar from './marketingMessagePillar'
 import marketingOffer from './marketingOffer'
+import marketingOperation from './marketingOperation'
 import marketingWorkEvidence from './marketingWorkEvidence'
 import marketingPerformanceSignal from './marketingPerformanceSignal'
 import marketingProofPoint from './marketingProofPoint'
@@ -70,6 +71,7 @@ export const schemaTypes = [
   marketingTemplate,
   marketingContact,
   marketingOffer,
+  marketingOperation,
   marketingWorkEvidence,
   marketingSettings,
   orderPreset,

@@ -1,5 +1,7 @@
-import { NextResponse } from 'next/server'
-import { crawlSite } from '@/lib/marketing/seoCrawl'
+import { assertStudioOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
+import { crawlSite, SEO_CRAWL_HARD_MAX_PAGES } from '@/lib/marketing/seoCrawl'
+import { SeoTargetError, validateSeoTargetUrl } from '@/lib/marketing/seoTarget'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // Phase-2 site-crawl route (see docs/seo-suite-revamp-plan.md §12 "Site-graph
 // crawl" + "Sitemap↔indexed↔crawled coverage reconciliation"). This is the
@@ -20,19 +22,73 @@ import { crawlSite } from '@/lib/marketing/seoCrawl'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const SEO_QUERY_URL_MAX_CHARS = 2_048
+const crawlInFlight = new Map<string, ReturnType<typeof crawlSite>>()
+
+function crawlOnce(options: Parameters<typeof crawlSite>[0]): ReturnType<typeof crawlSite> {
+  const key = JSON.stringify(options)
+  const existing = crawlInFlight.get(key)
+  if (existing) return existing
+  const pending = crawlSite(options).finally(() => {
+    if (crawlInFlight.get(key) === pending) crawlInFlight.delete(key)
+  })
+  crawlInFlight.set(key, pending)
+  return pending
+}
+
 export async function GET(request: Request) {
+  try {
+    await assertStudioOrApiKey(request)
+  } catch (error) {
+    if (error instanceof MarketingAuthError) {
+      return privateMarketingJson({ error: error.message }, { status: 401 })
+    }
+    throw error
+  }
+
   const { searchParams } = new URL(request.url)
-  const seedUrl = (searchParams.get('seed') || '').trim() || undefined
+  for (const key of searchParams.keys()) {
+    if (key !== 'seed' && key !== 'maxPages') {
+      return privateMarketingJson({ error: `Unknown query parameter \`${key}\`.` }, { status: 400 })
+    }
+  }
+  if (searchParams.getAll('seed').length > 1 || searchParams.getAll('maxPages').length > 1) {
+    return privateMarketingJson({ error: 'Each query parameter may only be provided once.' }, { status: 400 })
+  }
+  const requestedSeed = (searchParams.get('seed') || '').trim()
+  if (requestedSeed.length > SEO_QUERY_URL_MAX_CHARS) {
+    return privateMarketingJson({ error: `\`seed\` exceeds ${SEO_QUERY_URL_MAX_CHARS} characters.` }, { status: 400 })
+  }
+  let seedUrl: string | undefined
+  if (requestedSeed) {
+    try {
+      seedUrl = validateSeoTargetUrl(requestedSeed)
+    } catch (error) {
+      if (error instanceof SeoTargetError) {
+        return privateMarketingJson({ error: error.message }, { status: 400 })
+      }
+      throw error
+    }
+  }
   const maxPagesParam = (searchParams.get('maxPages') || '').trim()
+  if (maxPagesParam && !/^\d{1,9}$/.test(maxPagesParam)) {
+    return privateMarketingJson({ error: '`maxPages` must be a positive integer.' }, { status: 400 })
+  }
   const maxPages = maxPagesParam ? Number(maxPagesParam) : undefined
+  if (maxPages === 0) {
+    return privateMarketingJson({ error: '`maxPages` must be at least 1.' }, { status: 400 })
+  }
+  const boundedMaxPages = maxPages === undefined
+    ? undefined
+    : Math.min(SEO_CRAWL_HARD_MAX_PAGES, maxPages)
 
   try {
-    const { findings, stats } = await crawlSite({
+    const { findings, stats } = await crawlOnce({
       seedUrl,
-      maxPages: Number.isFinite(maxPages) ? maxPages : undefined,
+      maxPages: boundedMaxPages,
     })
 
-    return NextResponse.json({
+    return privateMarketingJson({
       generatedAt: new Date().toISOString(),
       findings,
       stats,
@@ -42,7 +98,7 @@ export async function GET(request: Request) {
     // never return a 500 — the SEO suite must always get a readable response.
     const reason = error instanceof Error ? error.message : 'unknown error'
     console.error('Marketing SEO crawl: unexpected failure:', error)
-    return NextResponse.json({
+    return privateMarketingJson({
       generatedAt: new Date().toISOString(),
       error: `The site crawl could not complete (${reason}).`,
       findings: [],

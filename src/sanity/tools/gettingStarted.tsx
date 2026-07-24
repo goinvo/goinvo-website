@@ -34,21 +34,52 @@ import type { ComponentType, CSSProperties, ReactNode } from 'react'
  * ----------------------------------------------------------------- */
 
 const STORAGE_KEY = 'goinvo-knowledge-base-v1'
+const MAX_PROGRESS_STORAGE_BYTES = 100_000
 
 type ProgressState = Record<string, boolean>
+
+export function normalizeKnowledgeBaseProgress(
+  value: unknown,
+  allowedStepIds: ReadonlySet<string>,
+): ProgressState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const record = value as Record<string, unknown>
+  const normalized: ProgressState = {}
+  for (const id of allowedStepIds) {
+    if (Object.prototype.hasOwnProperty.call(record, id) && record[id] === true) normalized[id] = true
+  }
+  return normalized
+}
+
+function knowledgeBaseStepIds() {
+  return new Set(categories.flatMap((category) => category.articles).flatMap((article) => article.steps).map((step) => step.id))
+}
 
 function loadProgress(): ProgressState {
   if (typeof window === 'undefined') return {}
   try {
-    return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
-  } catch {
+    const raw = window.localStorage.getItem(STORAGE_KEY) || '{}'
+    if (raw.length > MAX_PROGRESS_STORAGE_BYTES) {
+      window.localStorage.removeItem(STORAGE_KEY)
+      return {}
+    }
+    return normalizeKnowledgeBaseProgress(JSON.parse(raw), knowledgeBaseStepIds())
+  } catch (error) {
+    console.error('Knowledge-base progress could not load:', error)
     return {}
   }
 }
 
 function saveProgress(state: ProgressState) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  if (typeof window === 'undefined') return true
+  try {
+    const normalized = normalizeKnowledgeBaseProgress(state, knowledgeBaseStepIds())
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
+    return true
+  } catch (error) {
+    console.error('Knowledge-base progress could not save:', error)
+    return false
+  }
 }
 
 /* -----------------------------------------------------------------
@@ -85,6 +116,8 @@ type Article = {
   links?: IntentSpec[]
   /** Free-text keywords for the search filter */
   keywords?: string[]
+  /** Plain-language body concepts that should remain discoverable even when the rendered body is JSX. */
+  searchText?: string
 }
 
 type Category = {
@@ -118,6 +151,16 @@ const kbd: CSSProperties = {
   background: 'var(--card-bg-color)',
   margin: '0 1px',
 }
+
+const KNOWLEDGE_BASE_RESPONSIVE_CSS = `
+  @media (max-width: 640px) {
+    [data-knowledge-base="true"] { padding: 16px 12px 72px !important; }
+    [data-knowledge-hero="true"] { flex-wrap: wrap !important; padding: 16px !important; }
+    [data-knowledge-progress="true"] { width: 100% !important; min-width: 0 !important; align-items: flex-start !important; }
+    [data-knowledge-article-header="true"] { align-items: flex-start !important; flex-wrap: wrap !important; padding: 12px !important; }
+    [data-knowledge-article-meta="true"] { width: 100% !important; padding-left: 34px !important; flex-wrap: wrap !important; }
+  }
+`
 
 /* -----------------------------------------------------------------
  * Categories + articles
@@ -278,7 +321,7 @@ const categories: Category[] = [
   {
     id: 'marketing',
     title: 'Marketing suite',
-    blurb: 'Research, calendar, campaigns, funnels, channels, analytics, and Quick Links.',
+    blurb: 'Plan from evidence, make connected outreach, and measure what works across all 15 workspaces.',
     icon: ChartUpwardIcon,
     articles: [
       {
@@ -286,43 +329,47 @@ const categories: Category[] = [
         title: 'Use the Marketing workspace',
         blurb: 'The designer-friendly operating layer for planned outreach.',
         minutes: 5,
-        keywords: ['marketing', 'overview', 'calendar', 'campaign', 'funnel', 'channels', 'analytics', 'instagram'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        keywords: ['marketing', 'overview', 'calendar', 'campaign', 'funnel', 'channels', 'analytics', 'instagram', 'posture', 'principal', 'coworker', 'runway'],
+        searchText: 'Confirm financial posture and role before choosing the workflow. Survival and rebuild prioritize direct warm outreach; stable and growth support research, content, SEO, experiments, and brand.',
+        links: [{ path: '/marketing?view=dashboard', label: 'Open Marketing dashboard' }],
         steps: [
           {
             id: 'marketing.overview.framework',
-            title: 'Use it as the notification layer',
+            title: 'Confirm financial posture and role first',
             body: (
               <>
-                The Marketing workspace is designed for GoInvo designers, not
-                full-time marketers. Its job is to start with research, then
-                convert reviewed opportunities into campaign, funnel, channel,
-                calendar, analytics, and Quick Link records so the remaining
-                work is the actual post, page, image, email, or artifact
-                people will see.
+                The Dashboard and Settings show the studio&apos;s current financial
+                posture. In Survival or Rebuild, a principal should lead with
+                direct warm-network Outreach because it can close inside the
+                runway. In Stable or Growth, research, content, SEO, experiments,
+                and brand can run alongside relationship maintenance. A coworker
+                should use the same posture but follow the assigned operational step.
               </>
             ),
             tip: (
               <>
-                Treat the Designer workflow and Needs attention flags like an
-                internal setup queue: resolve the research first, then create
-                the connected shells only when the opportunities are ready.
+                Re-confirm posture at least monthly. Autopilot and Needs attention
+                should follow that decision instead of forcing every user through
+                the same research-first workflow.
               </>
             ),
           },
           {
             id: 'marketing.overview.order',
-            title: 'Work from strategy to artifact',
+            title: 'Tell Marketing what changed',
             body: (
               <>
-                Start with the broad intent, then move toward the thing you
-                need to make: research plans collect SEO, collaboration, and
-                release timing inputs; campaigns set the goal and audience;
-                funnels define the next step; channels constrain the format;
-                calendar items become the actual posts or pages; and analytics
-                explains whether the work helped.
+                Coworkers do not need to translate their work into campaigns,
+                funnels, audiences, or calendar fields. On <strong>Home</strong>,
+                use <strong>Tell Marketing what changed</strong> like a quick
+                Slack update. Marketing infers the smallest operational
+                handoff, finds strong matches in existing work, and shows the
+                normalized brief before anything is saved. The accepted work
+                goes to the private shared Marketing desk; structured editors
+                are optional when someone needs to tweak the source details.
               </>
             ),
+            tip: 'The rough note is not saved. Review the proposed shared brief, then hand it off once; Marketing stores it privately and runs a free internal CMS check without publishing or using paid SEO credits.',
           },
           {
             id: 'marketing.overview.templates',
@@ -339,28 +386,117 @@ const categories: Category[] = [
         ],
       },
       {
+        id: 'marketing.dashboard',
+        title: 'Start from the Dashboard',
+        blurb: 'Hand work to the shared Marketing desk, answer real blockers, and use health signals to decide what deserves attention next.',
+        minutes: 3,
+        keywords: ['dashboard', 'home', 'marketing desk', 'shared queue', 'owner', 'due date', 'next actions', 'runway', 'needs attention', 'autopilot'],
+        links: [{ path: '/marketing?view=dashboard', label: 'Open Dashboard' }],
+        steps: [
+          {
+            id: 'marketing.dashboard.tell-marketing',
+            title: 'Give Marketing the rough update',
+            body: (
+              <>
+                Paste the update in your own words: a new project, deadline,
+                event, result, collaborator, idea, or change of plan. Missing
+                nice-to-have fields stay assumptions or questions; you are not
+                sent through a form. Review the normalized private handoff and
+                any strong existing source match, then choose <strong>Hand this
+                to Marketing</strong>. Nothing is saved before that review, no
+                public Research record is silently changed, and nothing is published.
+              </>
+            ),
+            tip: 'Do not paste confidential client, contact, health, credential, or private lead data. Credentials and likely personal identifiers are blocked before AI; the note is sent to the approved Marketing AI model, but only the normalized brief you review is stored in the private operations dataset.',
+          },
+          {
+            id: 'marketing.dashboard.operating-loop',
+            title: 'Work from Marketing’s desk',
+            body: (
+              <>
+                On <strong>Home</strong>, open <strong>Marketing’s desk</strong>
+                and answer the first item under <strong>Needs a person</strong>.
+                Then leave Marketing to organize the next move. Assignment and
+                date controls are corrections, not intake requirements: change
+                them only when the suggestion or team agreement is wrong. The
+                owner, due date, blocker, CMS matches, and recent outcomes are
+                shared privately, so a coworker can resume without reconstructing
+                a campaign or funnel from memory.
+              </>
+            ),
+            tip: 'System checks are live recommendations, not fake assignments. Choose Add to desk only when the team wants Marketing to own the follow-through.',
+          },
+          {
+            id: 'marketing.dashboard.safety',
+            title: 'Know where Marketing stops',
+            body: (
+              <>
+                Marketing can read shared records, deduplicate and rank work,
+                inspect the public GoInvo CMS, prepare private drafts, and log
+                an internal check. Creating or updating shared private work has
+                one reviewed handoff. Publishing, scheduling, outreach, paid
+                providers, claim approval, deletion, public-record changes, and
+                brand-voice learning require a person every time. The desk is
+                truthful about runtime: it advances safe work during a reviewed
+                handoff or while the Studio is open; it does not pretend a
+                background employee is running when no worker is configured.
+              </>
+            ),
+            tip: 'A blocked item is an escalation, not permission to widen automation. Resolve the fact or decision, then return it to the queue.',
+          },
+          {
+            id: 'marketing.dashboard.scan',
+            title: 'Scan the runway before opening editors',
+            body: (
+              <>
+                Start on <strong>Home</strong> to see posture-aware priorities,
+                publishing runway, unresolved strategy gaps, and records that
+                need attention. Runway counts execution-ready scheduled work in
+                the next 30 dates; an Idea far in the future does not make the
+                intervening calendar healthy. These signals summarize the suite;
+                they do not create or edit records by themselves.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.dashboard.next-action',
+            title: 'Open one ranked next action',
+            body: (
+              <>
+                Choose the highest useful action, review the destination, and
+                save there. Similar gaps are merged so the list describes one
+                problem once. In Survival or Rebuild, due relationship and
+                revenue work ranks ahead of long-horizon content planning. Use
+                Autopilot when you want the same work broken into one reviewable
+                step at a time.
+              </>
+            ),
+          },
+        ],
+      },
+      {
         id: 'marketing.research',
-        title: 'Use Research for release planning',
-        blurb: 'Turn fast strategy inputs, SEO, collaborators, and contributors into an editable content plan.',
+        title: 'Run evidence-first Research',
+        blurb: 'Ask a decision question, review the evidence, and create connected drafts only from findings you explicitly trust.',
         minutes: 7,
         keywords: ['research', 'seo', 'collaborations', 'interns', 'release windows', 'content opportunities', 'strategy'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=research', label: 'Open Research' }],
         steps: [
           {
             id: 'marketing.research.inputs',
-            title: 'Gather only the inputs that change release timing',
+            title: 'Start with the decision you need to make',
             body: (
               <>
-                Use <strong>Research</strong> when you need a larger plan, not
-                just one calendar item. Capture the audience, positioning, SEO
-                targets, content pillars, collaborators, and release windows
-                quickly so the plan can turn into content opportunities.
+                Use <strong>Research</strong> when evidence should change a
+                marketing decision, not simply to generate more copy. Write the
+                question, audience, decision, and constraints, then choose the
+                smallest evidence method that can answer it.
               </>
             ),
             tip: (
               <>
                 Research here is not a 30-day phase. It is the minimum useful
-                synthesis needed to decide what should ship, when, and why.
+                evidence needed to decide what should ship, when, and why.
               </>
             ),
           },
@@ -390,14 +526,390 @@ const categories: Category[] = [
             ),
           },
           {
-            id: 'marketing.research.convert',
-            title: 'Convert opportunities when the plan is good enough',
+            id: 'marketing.research.review',
+            title: 'Trust evidence before letting it guide drafts',
             body: (
               <>
-                Content opportunities are the bridge from strategy to making.
-                Select the opportunities that are ready, then generate the
-                linked campaign, funnel, calendar items, and Quick Links. Keep
-                editing after generation if the plan changes.
+                A finding can be selected for synthesis without being trusted.
+                Open its evidence, verify the source and claim, then use{' '}
+                <strong>Trust + use</strong>. Only explicitly trusted findings
+                can guide setup drafts; rejected or merely selected findings
+                remain out of generation.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.research.convert',
+            title: 'Create the connected drafts once',
+            body: (
+              <>
+                Select the trusted findings that should guide execution, then
+                create the linked campaign, funnel, calendar items, and Quick
+                Links. Conversion is one reviewable operation: after it
+                succeeds, open and edit the existing drafts instead of creating
+                a second copy.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.seo',
+        title: 'Find and verify SEO opportunities',
+        blurb: 'Use search performance, page audits, crawl findings, and AI citations to prioritize page work.',
+        minutes: 5,
+        keywords: ['seo', 'search console', 'ga4', 'page audit', 'crawl', 'citation', 'search opportunity'],
+        links: [{ path: '/marketing?view=seo', label: 'Open SEO' }],
+        steps: [
+          {
+            id: 'marketing.seo.opportunities',
+            title: 'Start with ranked opportunities',
+            body: (
+              <>
+                Run the opportunities check intentionally, then review Search
+                Console and GA4 context before changing a page. The action can
+                use limited provider credits, so read its cost and availability
+                note before starting it. Look for meaningful impressions,
+                page-two rankings, and conversion context rather than optimizing
+                a keyword in isolation.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.seo.audit',
+            title: 'Audit the intended GoInvo page',
+            body: (
+              <>
+                Run a page audit or site sweep only after reviewing the listed
+                providers and quota cost, then resolve the highest-impact
+                findings first. Use the crawl for site-wide link problems and
+                the citation checker when a claim needs factual verification.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.seo.ai-citations',
+            title: 'Treat AI citation checks as periodic snapshots',
+            body: (
+              <>
+                AI citation checks are slower and use paid model capacity. Run
+                them intentionally, then compare stored snapshots instead of
+                repeating a live check during routine page editing.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.strategy',
+        title: 'Answer reusable Strategy questions',
+        blurb: 'Save the audiences, messages, proof, CTAs, tracking rules, and quality checks content can reuse.',
+        minutes: 5,
+        keywords: ['strategy', 'audience', 'message', 'proof', 'cta', 'tracking', 'quality gate', 'experiment'],
+        links: [{ path: '/marketing?view=strategy', label: 'Open Strategy Q&A' }],
+        steps: [
+          {
+            id: 'marketing.strategy.foundation',
+            title: 'Build the reusable foundation',
+            body: (
+              <>
+                Work through audience, message, proof, CTA, tracking, quality,
+                and experiment answers. Keep each answer specific enough that a
+                designer can use it without reopening the entire marketing plan.
+                An empty placeholder is not a completed strategy answer and does
+                not improve the Home readiness score.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.strategy.drafts',
+            title: 'Review local or AI-assisted drafts before saving',
+            body: (
+              <>
+                A restored or suggested draft is still working material. Check
+                its source evidence and wording, then save it to Sanity only
+                when it is suitable for reuse across future content.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.strategy-brief',
+        title: 'Read the Positioning brief',
+        blurb: 'Use the read-only strategy brief to align positioning, commercial search terms, AI visibility, and the Red Team play.',
+        minutes: 4,
+        keywords: ['strategy brief', 'positioning', 'money terms', 'ai visibility', 'red team', 'go to market'],
+        links: [{ path: '/marketing?view=strategyBrief', label: 'Open Positioning' }],
+        steps: [
+          {
+            id: 'marketing.strategy-brief.read',
+            title: 'Use the brief for orientation, not editing',
+            body: (
+              <>
+                This view summarizes the current positioning recommendation,
+                commercial search opportunities, AI visibility, and failure-
+                teardown strategy. It is intentionally read-only and dated.
+                Static claims in the brief do not carry per-claim verification,
+                so confirm figures in Research, Evidence, or SEO before using
+                them externally.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.strategy-brief.apply',
+            title: 'Move actionable decisions to their owning workspace',
+            body: (
+              <>
+                Use Strategy Q&amp;A for reusable language, SEO for page and
+                citation work, and Campaigns or Calendar for execution. The
+                brief should align those decisions, not become a second editor.
+                If the newest AI-citation attempt failed, the live block labels
+                the older successful snapshot instead of calling it the latest run.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.outreach',
+        title: 'Build a researched Outreach call plan',
+        blurb: 'Turn warm contacts into a ranked progress tracker with verified opportunities, channel advice, offers, and follow-ups.',
+        minutes: 8,
+        keywords: ['outreach', 'contacts', 'warm network', 'call plan', 'progress tracker', 'next contact', 'modality', 'channel override', 'cold call', 'phone', 'email', 'linkedin', 'offers', 'follow up', 'research', 'lead', 'leads', 'prospect', 'buyer', 'past client', 'price', 'posture', 'privacy'],
+        searchText: 'Warm-network outreach, not external prospect discovery. Suggest from past work, qualify a named buyer, verify identity, review AI research, approve the brief, use the progress tracker to choose the next contact and phone, email, or LinkedIn modality, override unavailable or unresponsive channels, edit contact data, choose a priced offer, recover failed research, log follow-ups, and measure won or lost revenue.',
+        links: [{ path: '/marketing?view=outreach', label: 'Open Outreach' }],
+        steps: [
+          {
+            id: 'marketing.outreach.scope',
+            title: 'Use the 60-second principal path',
+            body: (
+              <>
+                In a hurry, use one loop: <strong>Add → Research → Review and tune the
+                voice → Contact → Log</strong>. Start each return visit at the progress
+                tracker&apos;s <strong>Recommended next</strong> card. Outreach activates
+                GoInvo&apos;s existing relationships; it can suggest people and client
+                accounts found in published work, parse a pasted list, research a saved
+                contact, rank approved briefs, and track follow-ups. It does not discover external prospects,
+                identify a decision-maker automatically, or send
+                calls, emails, or messages.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.qualify',
+            title: 'Start from past work, then qualify a named buyer',
+            body: (
+              <>
+                Choose <strong>Suggest from our past work</strong> for a reviewed warm
+                start, paste contacts you already know, or import a values-only Excel/CSV file. Nothing is selected by
+                default. After selecting suggestions, <strong>Add selected</strong> copies
+                them into the searchable Add contacts table; it does not create records.
+                Current and former team-directory people are excluded automatically.
+                A contact is worth researching when it names a real person,
+                the relationship owner can explain how GoInvo knows them, and there is
+                a plausible buyer, budget, or referral path. An organization placeholder
+                remains an account lead until someone names the person to call.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.intake',
+            title: 'Preview contact intake before saving',
+            body: (
+              <>
+                Type a name and context, then press <strong>Enter</strong> to add a draft row. A multi-line paste creates
+                one row per line; pasting from Excel or importing .xlsx/.csv detects the header row and maps Name,
+                Company, Title, Email, Phone, LinkedIn, How We Know, Owner, Segment, and Warmth locally. The importer
+                chooses the strongest contact worksheet, never runs formulas, rejects macros and external-workbook links,
+                and shows skipped or invalid rows before saving. Reviewed suggestions use the same filterable, sortable
+                table. Edit or remove anything
+                that does not belong, then choose <strong>Check names</strong>. Review the parsed names and companies,
+                remove rows that should not become records, and leave detected
+                duplicates skipped. Contacts are stored in the private Outreach
+                dataset only after Add Contacts; unsaved table rows resume after a reload in the same tab.{' '}
+                For an unchanged spreadsheet import, <strong>Check names sends only the mapped fields to the private
+                intake service to compare saved contacts and the team directory; Claude is not used.</strong> In a mixed
+                batch, only typed or edited rows are sent to Claude for structuring; mapped spreadsheet fields stay
+                intact. Later, Research sends the contact&apos;s name,
+                organization, role, public LinkedIn URL, relationship notes, owner,
+                and source notes to Claude with web search enabled. Do not enter
+                secrets or sensitive personal, medical, financial, or client data.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.research',
+            title: 'Research before ranking calls',
+            body: (
+              <>
+                Research each contact against active case-study evidence, then
+                review identity confidence, relationship warmth, linked evidence,
+                relationship owner/history, the full call brief, and the proposed
+                offer. AI research enters <strong>Needs review</strong>,
+                never the call plan. Choose <strong>Make this sound like me</strong> to
+                edit the opener and call brief in your own words before approval.
+                Approve only when the person is verified and
+                current evidence is linked and the chosen offer has a real currency
+                amount, not just a timeframe or “rate card” label.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.tracker',
+            title: 'Work from the progress tracker',
+            body: (
+              <>
+                Start with the first actionable row. The tracker puts due and overdue
+                follow-ups ahead of new first touches, then uses workflow readiness and
+                relationship warmth to order the remaining work. Read <strong>Why next</strong>{' '}
+                before acting: it explains the stored evidence behind the position instead
+                of presenting a mystery score. A preparation row can tell you to research,
+                review, or complete contact details before outreach is appropriate.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.modality',
+            title: 'Correct the recommended modality',
+            body: (
+              <>
+                Phone, email, and LinkedIn advice comes only from saved contact details,
+                interaction history, and your channel options. Use <strong>Channel options</strong>{' '}
+                to mark a modality Preferred, Unavailable, Unresponsive, or Do not use;
+                return it to Auto to remove the override. These options change the advice
+                without deleting an address, number, or URL. Choose <strong>Edit contact info</strong>{' '}
+                when the underlying contact information is missing or wrong. Contact links
+                only open your phone, mail, or LinkedIn app. When reviewed wording exists,
+                email opens with that opener prefilled for you to edit. Outreach never sends anything
+                automatically.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.recover',
+            title: 'Recover without losing reviewed work',
+            body: (
+              <>
+                A failed batch leaves unfinished contacts as New, so rerun only those.
+                If identity is uncertain, edit the person or organization before trying
+                again. Re-research replaces the generated summary, sources, opener, and
+                brief (including voice edits), clears prior approval, and preserves
+                human-edited offer drafts. If work
+                evidence is missing or stale, correct Evidence first and then re-research.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.outreach.log',
+            title: 'Log the real outcome and next step',
+            body: (
+              <>
+                After contact, record the channel, outcome, intelligence, next step,
+                status, the offer and evidence actually used, follow-up date, and any
+                opportunity value. Use Won or Lost
+                when the commercial outcome is known; Won requires the actual closed
+                value. This keeps active opportunities
+                in the follow-up queue and makes conversion and revenue attributable
+                to the relationship, offer, evidence, and channel used.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.evidence',
+        title: 'Maintain case-study Evidence',
+        blurb: 'Review the capability evidence Outreach uses to match contacts with credible work.',
+        minutes: 4,
+        keywords: ['evidence', 'case studies', 'capabilities', 'outreach', 'extract', 'proof', 'manual edit', 'duplicate', 're-extract', 'source'],
+        searchText: 'Extract published case studies, filter and edit evidence, preserve manual corrections, confirm destructive replacement, verify source links, and re-run contact research after material changes.',
+        links: [{ path: '/marketing?view=workEvidence', label: 'Open Evidence' }],
+        steps: [
+          {
+            id: 'marketing.evidence.extract',
+            title: 'Extract evidence from real case studies',
+            body: (
+              <>
+                Build the evidence index from published GoInvo work so
+                Outreach can match a contact to specific capabilities and
+                shipped examples rather than generic claims.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.evidence.review',
+            title: 'Review evidence before using it in outreach',
+            body: (
+              <>
+                Keep titles, summaries, capability tags, and source links
+                accurate with the row&apos;s Edit action. Saving marks the record as
+                manually reviewed so bulk re-extraction preserves it. Re-run contact
+                research after meaningful evidence changes so the call plan uses the
+                current index. An <strong>Ignored duplicate</strong> does not enter
+                research matching; exclude the obsolete sibling only after checking
+                whether an existing contact still references it.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.evidence.reextract',
+            title: 'Re-extract without erasing manual corrections',
+            body: (
+              <>
+                Bulk re-extraction advances through every published case study and
+                reports failures instead of claiming success early. It preserves
+                manually edited records. Replacing one of those records requires an
+                explicit destructive confirmation because its summary, tags, outcomes,
+                highlights, and source fields will be regenerated.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.measure',
+        title: 'Set up and read A/B tests',
+        blurb: 'Define a controlled bet, verify launch readiness, and keep the result and decision together.',
+        minutes: 6,
+        keywords: ['measure', 'a/b test', 'experiment', 'variant', 'flag', 'metric', 'vercel', 'decision'],
+        links: [{ path: '/marketing?view=abTesting', label: 'Open A/B tests' }],
+        steps: [
+          {
+            id: 'marketing.measure.setup',
+            title: 'Define the bet and control',
+            body: (
+              <>
+                Use <strong>Add A/B test</strong> to name the hypothesis, page,
+                flag key, one control, one treatment, the primary metric, and
+                guardrails. A test is not launch-ready without exactly those two
+                unique variants and a measurable success rule.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.measure.launch',
+            title: 'Verify previews, tracking, and rollout',
+            body: (
+              <>
+                Check desktop and mobile previews, connect the analytics
+                source, and verify every required event includes the experiment,
+                flag, variant, and page context without visitor PII. Signals
+                from another experiment never belong in this result. Changing
+                the tracking definition starts a new measurement window, so
+                earlier counts are not mixed with the repaired setup.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.measure.decide',
+            title: 'Record evidence before the decision',
+            body: (
+              <>
+                Treat early comparisons as directional, not statistically
+                proven winners. Add the readout and evidence in Results, then
+                choose the decision. Preserve the result even when a variant
+                loses so the same design bet is not repeated without new evidence.
               </>
             ),
           },
@@ -405,14 +917,14 @@ const categories: Category[] = [
       },
       {
         id: 'marketing.designer-workflow-tutorials',
-        title: 'Designer Workflow tutorials',
-        blurb: 'Practice the Marketing view tour and learn how sessions, AI suggestions, and next-step routing fit together.',
+        title: 'Autopilot tutorials',
+        blurb: 'Practice the Marketing view tour and learn how Autopilot sessions, suggestions, and next-step routing fit together.',
         minutes: 4,
-        keywords: ['designer workflow', 'tutorial', 'tour', 'sessions', 'ai assistant', 'guided setup'],
+        keywords: ['autopilot', 'tutorial', 'tour', 'sessions', 'ai assistant', 'guided setup'],
         links: [
-          { path: '/marketing?designerWorkflowTutorial=marketing-view-tour', label: 'Run Marketing view tour' },
-          { path: '/marketing?designerWorkflowTutorial=designer-workflow-recommendation', label: 'Run demo recommendation tour' },
-          { path: '/marketing?designerWorkflowTutorial=designer-workflow-sessions', label: 'Run sessions tour' },
+          { path: '/marketing?view=dashboard&designerWorkflowTutorial=marketing-view-tour', label: 'Run Marketing view tour' },
+          { path: '/marketing?view=dashboard&designerWorkflowTutorial=designer-workflow-recommendation', label: 'Run demo recommendation tour' },
+          { path: '/marketing?view=dashboard&designerWorkflowTutorial=designer-workflow-sessions', label: 'Run sessions tour' },
         ],
         steps: [
           {
@@ -421,8 +933,8 @@ const categories: Category[] = [
             body: (
               <>
                 Use <strong>Run Marketing view tour</strong> to open Marketing
-                and start the same guided overlay that appears the first time
-                someone visits the Marketing tab. It highlights the active UI,
+                and start the guided overlay. A first visit also offers this
+                tour once; closing it early will not mark it complete. It highlights the active UI,
                 explains the decision in plain language, and advances with
                 either the bubble arrows or the real action.
               </>
@@ -433,9 +945,14 @@ const categories: Category[] = [
             title: 'Use sessions instead of restarting',
             body: (
               <>
-                The sessions tutorial shows how to reopen saved setup runs.
+                The Autopilot sessions tutorial shows how to reopen saved setup runs.
                 This keeps designers from wasting prompts when they are still
-                working through the same planning question.
+                working through the same planning question. Those sessions stay
+                local to this browser until you confirm a create step. By contrast,
+                a reviewed <strong>Tell Marketing what changed</strong> handoff is
+                saved privately on the shared Marketing desk, where coworkers
+                can see its owner, date, blocker, and recent outcome. Autopilot
+                remains optional browser-local coaching; it is not the team queue.
               </>
             ),
           },
@@ -456,12 +973,133 @@ const categories: Category[] = [
       },
       {
         id: 'marketing.channels',
-        title: 'Manage channels and content types',
-        blurb: 'Define where GoInvo publishes and what formats belong there.',
-        minutes: 4,
-        keywords: ['channels', 'instagram', 'linkedin', 'email', 'content types', 'carousel', 'reel'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        title: 'Configure Marketing settings',
+        blurb: 'Set financial posture, brand voices, the approved AI model, and the channels where GoInvo publishes.',
+        minutes: 7,
+        keywords: ['settings', 'financial posture', 'survival', 'growth', 'ai model', 'brand voice', 'tone', 'default voice', 'learn voice', 'review edits', 'examples', 'overfit', 'archive', 'channels', 'instagram', 'linkedin', 'email', 'content types', 'carousel', 'reel'],
+        links: [
+          { path: '/marketing?view=channels', label: 'Open Settings' },
+          { path: '/marketing?view=outreach', label: 'Open Outreach' },
+        ],
         steps: [
+          {
+            id: 'marketing.channels.posture',
+            title: 'Set financial posture before choosing priorities',
+            body: (
+              <>
+                Financial posture changes what Home and Autopilot recommend.
+                Survival and Rebuild favor work that can create revenue inside
+                the runway; Stable and Growth can support longer-horizon
+                research, content, SEO, experiments, and brand work. If the
+                saved posture cannot be loaded, stop and retry instead of
+                replacing an unknown value.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.ai-model',
+            title: 'Choose an approved AI model deliberately',
+            body: (
+              <>
+                The selected model is shared by Marketing AI assistance. Use
+                one of the supported choices shown in Settings; changing it can
+                affect response speed, cost, and writing quality across the suite.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.voice-library',
+            title: 'Create publish-safe voice profiles',
+            body: (
+              <>
+                In Settings, add a profile for the studio voice and for any
+                principal whose writing should sound distinct. Use plain-language
+                guidance, one <strong>Do</strong> or <strong>Avoid</strong> rule per
+                line, and up to six short representative snippets that demonstrate
+                different principles rather than repeating the same pattern. These
+                profiles live with public site configuration, so enter publish-safe guidance only.
+                Never paste private client details, private emails, credentials,
+                or claims GoInvo cannot substantiate.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.voice-default',
+            title: 'Keep one active default',
+            body: (
+              <>
+                Mark the voices people can still use as <strong>Active</strong> and
+                choose one active default. That default is used for outward-facing
+                generation across the Marketing Suite unless a workflow selects a
+                different active voice. <strong>Archive</strong> a retired voice so
+                it remains recognizable in older work but cannot guide new drafts.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.voice-boundary',
+            title: 'Voice changes style, never the evidence',
+            body: (
+              <>
+                A voice profile can change cadence, word choice, and formality. It
+                never changes verified facts, evidence, identity checks,
+                feasibility scores, citations, URLs, prices, metrics, statuses, or
+                internal analysis. If style guidance conflicts with accuracy,
+                privacy, or a source, the factual constraint wins.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.voice-learning',
+            title: 'Review what your edits should teach the voice',
+            body: (
+              <>
+                After you revise generated copy, the Marketing Suite can compare
+                the generated and edited versions and propose a small set of
+                reusable voice principles. It ignores factual corrections,
+                prices, URLs, citations, evidence, and scores instead of treating
+                them as style. Nothing changes the voice automatically: a human
+                chooses which general <strong>Do</strong> and <strong>Avoid</strong>{' '}
+                rules to add and, for publish-safe content drafts, whether to
+                replace the small representative example set. One edit never
+                replaces the voice&apos;s overall guidance.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.voice-examples',
+            title: 'Keep examples small, diverse, and forward-looking',
+            body: (
+              <>
+                An approved learning proposal can curate at most six
+                representative snippets. Keep examples that demonstrate different
+                principles and situations; near-duplicates encourage overfitting
+                without teaching anything new. Approved learning affects future
+                drafts only. It does not rewrite the document you just edited or
+                preserve a history of the before-and-after copy.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.channels.voice-outreach',
+            title: 'Override the default for one Outreach contact',
+            body: (
+              <>
+                Use a contact&apos;s voice selector before research or re-research
+                when that relationship should sound like a particular principal.
+                The per-contact selection overrides the suite default for the
+                outward-facing opener and call wording only. After research,{' '}
+                <strong>Make this sound like me</strong> remains the final human
+                override. Saving that manual wording clears approval so the edited
+                brief receives one more review before returning to the call plan.
+                When the opener materially changes, Outreach also prepares a
+                separate voice-learning proposal for review; saving never applies
+                that proposal automatically. The mixed factual context in the call
+                brief is deliberately excluded until its ask and question are stored
+                as separate fields.
+              </>
+            ),
+          },
           {
             id: 'marketing.channels.first',
             title: 'Start with channels before planning content',
@@ -507,7 +1145,7 @@ const categories: Category[] = [
         blurb: 'Use campaigns as strategy containers, not tiny content tasks.',
         minutes: 7,
         keywords: ['campaigns', 'goals', 'audience', 'keywords', 'intent', 'utm', 'measurement'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=campaigns', label: 'Open Campaigns' }],
         steps: [
           {
             id: 'marketing.campaigns.goal',
@@ -566,7 +1204,7 @@ const categories: Category[] = [
         blurb: 'Map what someone should do after seeing a page, post, or link.',
         minutes: 5,
         keywords: ['funnels', 'stage map', 'cta', 'conversion', 'awareness', 'consideration'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=funnels', label: 'Open Funnels' }],
         steps: [
           {
             id: 'marketing.funnels.stage-map',
@@ -593,12 +1231,44 @@ const categories: Category[] = [
           },
           {
             id: 'marketing.funnels.templates',
-            title: 'Preview templates before creating',
+            title: 'Create, then tune the working stage map',
             body: (
               <>
-                Use the New funnel screen to preview audience, conversion goal,
-                and stage map before creating anything. After creation, tune
-                the stages and CTAs to the actual campaign.
+                <strong>Add funnel</strong> creates a working draft. Give it an
+                audience and conversion goal, then add, edit, reorder, or remove
+                stages and tune every CTA and destination to the actual campaign.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.templates',
+        title: 'Maintain setup Templates',
+        blurb: 'Keep reusable campaign and funnel starting points useful without turning them into rigid rules.',
+        minutes: 4,
+        keywords: ['templates', 'campaign template', 'funnel template', 'defaults', 'scaffolding'],
+        links: [{ path: '/marketing?view=templates', label: 'Open Templates' }],
+        steps: [
+          {
+            id: 'marketing.templates.scope',
+            title: 'Template the repeated structure',
+            body: (
+              <>
+                Save recurring campaign goals, funnel stages, CTAs, and setup
+                prompts that genuinely reduce repeated work. Keep the template
+                broad enough to fit more than one project.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.templates.review',
+            title: 'Rewrite defaults for the actual work',
+            body: (
+              <>
+                Preview the template before creating a record, then replace its
+                prompts with the real audience, objective, evidence, destination,
+                and success signal. Archive patterns that are no longer used.
               </>
             ),
           },
@@ -610,17 +1280,18 @@ const categories: Category[] = [
         blurb: 'Turn strategy into dated design work and publishing tasks.',
         minutes: 6,
         keywords: ['calendar', 'content calendar', 'publish date', 'post', 'templates', 'brief'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=calendar', label: 'Open Calendar' }],
         steps: [
           {
             id: 'marketing.calendar.add',
-            title: 'Add dated work from the modal',
+            title: 'Add work from the right calendar entry point',
             body: (
               <>
-                Use the calendar <strong>Add</strong> button to create a
-                dated item with a channel, content type, campaign, and optional
-                template. This keeps planning close to the month view instead
-                of hiding new work below the calendar.
+                Use a day cell&apos;s add control when the date is already known.
+                The toolbar <strong>Add</strong> creates an undated working item
+                that you can schedule after filling the brief. Set the owner,
+                publish date and time, channel, content type, campaign, and
+                optional template before handoff.
               </>
             ),
           },
@@ -629,8 +1300,10 @@ const categories: Category[] = [
             title: 'Fill the practical brief',
             body: (
               <>
-                Each item should have a brief, CTA, working URL, funnel stage,
-                and analytics source when possible. Templates like insight
+                Each item should have an owner, brief, CTA, funnel stage, and
+                connected analytics source when possible. A Working URL is for
+                internal production; only a reviewed Published URL is safe for
+                public links. Templates like insight
                 carousel, case study promo, newsletter roundup, or service page
                 nudge can prefill the first draft.
               </>
@@ -641,9 +1314,23 @@ const categories: Category[] = [
             title: 'Connect posts to Quick Links',
             body: (
               <>
-                When a post points people to <em>link in bio</em>, attach or
-                create a Quick Link from the calendar item. Published or
-                scheduled posts can then help keep <code>/links</code> current.
+                When a post points people to <em>link in bio</em>, add its
+                reviewed Published URL, then attach or create a Quick Link from
+                the calendar item. Scheduled status alone never exposes a
+                Working URL on <code>/links</code>.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.calendar.preview-publish',
+            title: 'Preview the saved version, then publish explicitly',
+            body: (
+              <>
+                Preview identifies whether it shows saved content or unsaved
+                editor changes. Save and refresh the preview before approving
+                what will publish. Scheduled means planned; automatic publishing
+                also requires the item&apos;s opt-in, valid platform credentials,
+                required media and alt text, and a working scheduler connection.
               </>
             ),
           },
@@ -655,7 +1342,7 @@ const categories: Category[] = [
         blurb: 'Attach measurement sources to campaigns, funnels, and channels.',
         minutes: 5,
         keywords: ['analytics', 'ga4', 'gtm', 'vercel', 'metrics', 'utm', 'dashboard'],
-        links: [{ path: '/marketing', label: 'Open Marketing workspace' }],
+        links: [{ path: '/marketing?view=analytics', label: 'Open Analytics' }],
         steps: [
           {
             id: 'marketing.analytics.sources',
@@ -665,7 +1352,9 @@ const categories: Category[] = [
                 Use <strong>Analytics</strong> for GA4, GTM, Vercel Analytics,
                 dashboard links, reporting cadence, and key metric definitions.
                 Sources should be reusable so campaigns and funnels do not need
-                analytics setup from scratch.
+                analytics setup from scratch. Mark a source Connected only after
+                its provider-specific property, container, or project evidence
+                has been supplied and verified.
               </>
             ),
           },
@@ -674,7 +1363,9 @@ const categories: Category[] = [
             title: 'Attach sources to marketing elements',
             body: (
               <>
-                Connect sources to campaigns, funnels, and channels. The
+                Connect only verified Connected sources to campaigns, funnels,
+                and channels. Save any open source edits before changing a
+                relationship. The
                 dashboard view should make it easy to see which marketing
                 elements are measured and which still need a source.
               </>
@@ -701,7 +1392,7 @@ const categories: Category[] = [
         minutes: 4,
         keywords: ['quick links', 'link in bio', 'instagram', 'links', '/links', 'housing truths'],
         links: [
-          { path: '/marketing', label: 'Open Marketing workspace' },
+          { path: '/marketing?view=linkTree', label: 'Open Quick Links' },
         ],
         steps: [
           {
@@ -721,9 +1412,10 @@ const categories: Category[] = [
             title: 'Create temporary links from calendar items',
             body: (
               <>
-                Calendar items with a working or published URL appear as
+                Calendar items with a reviewed Published URL appear as
                 candidates, so the link page can be updated from the content
-                plan instead of maintained by memory.
+                plan instead of maintained by memory. Internal Working URLs are
+                never public candidates.
               </>
             ),
           },
@@ -733,8 +1425,10 @@ const categories: Category[] = [
             body: (
               <>
                 Each Quick Link can have a title, description, URL, cover
-                image, status, ordering, campaign, and associated posts. Use
-                the editor to decide what appears publicly and when.
+                image, status, ordering, campaign, and associated posts. A link
+                appears only when the Quick Link itself is active and inside its
+                visibility window. If every link is archived, the public page is
+                intentionally empty rather than filled with hidden fallbacks.
               </>
             ),
           },
@@ -1673,6 +2367,7 @@ function articleMatches(article: Article, query: string): boolean {
   if (article.title.toLowerCase().includes(q)) return true
   if (article.blurb.toLowerCase().includes(q)) return true
   if (article.keywords?.some((k) => k.toLowerCase().includes(q))) return true
+  if (article.searchText?.toLowerCase().includes(q)) return true
   if (article.steps.some((s) => s.title.toLowerCase().includes(q))) return true
   return false
 }
@@ -1692,11 +2387,13 @@ function IntentLink({ spec }: { spec: IntentSpec }) {
 
 function Step({
   step,
+  articleTitle,
   index,
   done,
   onToggle,
 }: {
   step: StepDef
+  articleTitle: string
   index: number
   done: boolean
   onToggle: () => void
@@ -1706,7 +2403,7 @@ function Step({
       <button
         onClick={onToggle}
         aria-pressed={done}
-        aria-label={done ? `Mark step ${index + 1} as not done` : `Mark step ${index + 1} as done`}
+        aria-label={done ? `Mark “${step.title}” in “${articleTitle}” as not done` : `Mark “${step.title}” in “${articleTitle}” as done`}
         style={styles.stepCheck}
         type="button"
       >
@@ -1749,10 +2446,20 @@ function ArticleCard({
   const total = article.steps.length
   const done = article.steps.filter((s) => progress[s.id]).length
   const pct = total === 0 ? 0 : (done / total) * 100
+  const headerId = `article-${article.id}-header`
+  const panelId = `article-${article.id}-panel`
 
   return (
-    <div id={`article-${article.id}`} style={{ ...styles.articleCard, ...(open ? styles.articleCardOpen : null) }}>
-      <button onClick={onToggleOpen} style={styles.articleHeader} type="button">
+    <div id={`article-${article.id}`} tabIndex={-1} style={{ ...styles.articleCard, ...(open ? styles.articleCardOpen : null) }}>
+      <button
+        id={headerId}
+        aria-expanded={open}
+        aria-controls={panelId}
+        data-knowledge-article-header="true"
+        onClick={onToggleOpen}
+        style={styles.articleHeader}
+        type="button"
+      >
         <span style={styles.articleChevron}>
           {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
         </span>
@@ -1760,7 +2467,7 @@ function ArticleCard({
           <span style={styles.articleTitle}>{article.title}</span>
           <span style={styles.articleBlurb}>{article.blurb}</span>
         </span>
-        <span style={styles.articleMeta}>
+        <span data-knowledge-article-meta="true" style={styles.articleMeta}>
           {article.minutes ? <span>{article.minutes} min</span> : null}
           <span style={styles.articleCount}>
             {done}/{total}
@@ -1770,8 +2477,9 @@ function ArticleCard({
           </span>
         </span>
       </button>
-      {open ? (
-        <div style={styles.articleBody}>
+      <div id={panelId} role="region" aria-labelledby={headerId} hidden={!open} style={styles.articleBody}>
+        {open ? (
+          <>
           {article.links && article.links.length > 0 ? (
             <div style={styles.linkRow}>
               {article.links.map((link, i) => (
@@ -1784,14 +2492,16 @@ function ArticleCard({
               <Step
                 key={step.id}
                 step={step}
+                articleTitle={article.title}
                 index={i}
                 done={!!progress[step.id]}
                 onToggle={() => onToggleStep(step.id)}
               />
             ))}
           </div>
-        </div>
-      ) : null}
+          </>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -1856,12 +2566,20 @@ function CategorySection({
 
 function GettingStartedComponent() {
   const [progress, setProgress] = useState<ProgressState>({})
+  const [progressHydrated, setProgressHydrated] = useState(false)
+  const [storageError, setStorageError] = useState('')
   const [openArticles, setOpenArticles] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
 
   useEffect(() => {
     setProgress(loadProgress())
+    setProgressHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (!progressHydrated) return
+    setStorageError(saveProgress(progress) ? '' : 'Your checkmarks changed on this page, but this browser could not save them for the next visit.')
+  }, [progress, progressHydrated])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1877,10 +2595,12 @@ function GettingStartedComponent() {
     setQuery('')
     setOpenArticles((current) => new Set([...current, articleId]))
     window.setTimeout(() => {
-      document.getElementById(`article-${articleId}`)?.scrollIntoView({
+      const articleElement = document.getElementById(`article-${articleId}`)
+      articleElement?.scrollIntoView({
         behavior: 'smooth',
         block: 'start',
       })
+      articleElement?.focus({ preventScroll: true })
     }, 100)
   }, [])
 
@@ -1896,13 +2616,11 @@ function GettingStartedComponent() {
     setProgress((prev) => {
       const next = { ...prev, [id]: !prev[id] }
       if (!next[id]) delete next[id]
-      saveProgress(next)
       return next
     })
 
   const resetProgress = () => {
     if (!window.confirm('Clear all checkmarks across the knowledge base?')) return
-    saveProgress({})
     setProgress({})
   }
 
@@ -1921,9 +2639,10 @@ function GettingStartedComponent() {
   }, [query])
 
   return (
-    <div style={styles.root}>
+    <div data-knowledge-base="true" style={styles.root}>
+      <style>{KNOWLEDGE_BASE_RESPONSIVE_CSS}</style>
       {/* Hero */}
-      <header style={styles.hero}>
+      <header data-knowledge-hero="true" style={styles.hero}>
         <div style={styles.heroIcon}>
           <RocketIcon style={{ fontSize: 28 }} />
         </div>
@@ -1935,7 +2654,7 @@ function GettingStartedComponent() {
             locally to this browser.
           </p>
         </div>
-        <div style={styles.heroProgress}>
+        <div data-knowledge-progress="true" style={styles.heroProgress}>
           <div style={styles.heroProgressLabel}>
             {totals.done}<span style={{ opacity: 0.5 }}> / {totals.total}</span>
           </div>
@@ -1964,7 +2683,9 @@ function GettingStartedComponent() {
         <SearchIcon style={styles.searchIcon} />
         <input
           type="search"
+          aria-label="Search the CMS knowledge base"
           value={query}
+          maxLength={120}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search articles, e.g. “hero image”, “categories”, “reorder”…"
           style={styles.searchInput}
@@ -1980,11 +2701,17 @@ function GettingStartedComponent() {
           </button>
         ) : null}
         {query ? (
-          <span style={styles.searchCount}>
+          <span style={styles.searchCount} role="status" aria-live="polite">
             {matchingArticles} {matchingArticles === 1 ? 'match' : 'matches'}
           </span>
         ) : null}
       </div>
+
+      {storageError ? (
+        <div role="alert" style={{ ...styles.stepTip, marginBottom: 18 }}>
+          {storageError}
+        </div>
+      ) : null}
 
       {/* Categories */}
       {categories.map((category) => (
@@ -2025,12 +2752,12 @@ function GettingStartedComponent() {
 
 function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
-    <div style={styles.tableWrap}>
+    <div style={styles.tableWrap} role="region" aria-label="Scrollable guide reference table" tabIndex={0}>
       <table style={styles.table}>
         <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} style={styles.th}>
+              <th key={h} scope="col" style={styles.th}>
                 {h}
               </th>
             ))}
@@ -2117,7 +2844,9 @@ const styles: Record<string, CSSProperties> = {
     color: 'var(--card-muted-fg-color)',
     fontSize: 12,
     cursor: 'pointer',
-    padding: 0,
+    minWidth: 44,
+    minHeight: 44,
+    padding: '0 8px',
   },
 
   searchWrap: {
@@ -2153,7 +2882,9 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     color: 'var(--card-muted-fg-color)',
     cursor: 'pointer',
-    padding: 4,
+    width: 44,
+    height: 44,
+    padding: 0,
     fontSize: 16,
   },
   searchCount: {
@@ -2289,8 +3020,13 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     cursor: 'pointer',
     padding: 0,
+    width: 44,
+    height: 44,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
-    marginTop: 2,
+    marginTop: 0,
   },
   stepTitle: {
     display: 'flex',

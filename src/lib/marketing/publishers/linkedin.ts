@@ -21,6 +21,13 @@
  */
 
 import type { PublishContent, PublishOutcome, SocialPublisher } from './types'
+import { assertPublicNetworkUrl } from '../seoTarget'
+import {
+  boundedFetch,
+  boundedJson,
+  boundedText,
+  PUBLISH_MEDIA_MAX_BYTES,
+} from './boundedNetwork'
 
 const DEFAULT_API_VERSION = '202401'
 const API_BASE = 'https://api.linkedin.com/rest'
@@ -32,7 +39,9 @@ function authorUrn(): string {
   return (process.env.LINKEDIN_AUTHOR_URN || '').trim()
 }
 function apiVersion(): string {
-  return (process.env.LINKEDIN_API_VERSION || DEFAULT_API_VERSION).trim()
+  const version = (process.env.LINKEDIN_API_VERSION || DEFAULT_API_VERSION).trim()
+  if (!/^\d{6}$/.test(version)) throw new Error('LINKEDIN_API_VERSION must use YYYYMM format.')
+  return version
 }
 
 function baseHeaders(): Record<string, string> {
@@ -45,12 +54,25 @@ function baseHeaders(): Record<string, string> {
 
 /** Fetches an image from a public URL and returns its bytes + content type. */
 async function fetchImageBytes(url: string): Promise<{ bytes: ArrayBuffer; contentType: string }> {
-  const res = await fetch(url, { cache: 'no-store' })
+  const parsed = new URL(url)
+  if (parsed.username || parsed.password || parsed.protocol !== 'https:') {
+    throw new Error('LinkedIn image source must be a public HTTPS URL without credentials.')
+  }
+  await assertPublicNetworkUrl(url)
+  const result = await boundedFetch(url, { cache: 'no-store', redirect: 'error' }, PUBLISH_MEDIA_MAX_BYTES)
+  const res = result.response
   if (!res.ok) {
     throw new Error(`could not fetch image (${res.status}) from ${url}`)
   }
-  const contentType = res.headers.get('content-type') || 'image/jpeg'
-  return { bytes: await res.arrayBuffer(), contentType }
+  const contentType = res.headers.get('content-type') || ''
+  if (!/^image\//i.test(contentType)) throw new Error('LinkedIn image source did not return an image content type.')
+  return {
+    bytes: result.bytes.buffer.slice(
+      result.bytes.byteOffset,
+      result.bytes.byteOffset + result.bytes.byteLength,
+    ) as ArrayBuffer,
+    contentType,
+  }
 }
 
 /**
@@ -59,29 +81,40 @@ async function fetchImageBytes(url: string): Promise<{ bytes: ArrayBuffer; conte
  * the bytes to that URL.
  */
 async function uploadImage(publicUrl: string): Promise<string> {
-  const initRes = await fetch(`${API_BASE}/images?action=initializeUpload`, {
+  const initResult = await boundedFetch(`${API_BASE}/images?action=initializeUpload`, {
     method: 'POST',
     headers: { ...baseHeaders(), 'Content-Type': 'application/json' },
     body: JSON.stringify({ initializeUploadRequest: { owner: authorUrn() } }),
+    cache: 'no-store',
+    redirect: 'error',
   })
+  const initRes = initResult.response
   if (!initRes.ok) {
-    throw new Error(`image initializeUpload failed (${initRes.status}): ${await initRes.text()}`)
+    throw new Error(`image initializeUpload failed (${initRes.status}): ${boundedText(initResult).slice(0, 500)}`)
   }
-  const init = (await initRes.json()) as { value?: { uploadUrl?: string; image?: string } }
+  const init = boundedJson<{ value?: { uploadUrl?: string; image?: string } }>(initResult, 'LinkedIn image initialization')
   const uploadUrl = init.value?.uploadUrl
   const imageUrn = init.value?.image
   if (!uploadUrl || !imageUrn) {
     throw new Error('image initializeUpload response missing uploadUrl/image')
   }
+  const parsedUpload = new URL(uploadUrl)
+  if (parsedUpload.protocol !== 'https:' || parsedUpload.username || parsedUpload.password) {
+    throw new Error('LinkedIn returned an unsafe image upload URL.')
+  }
+  await assertPublicNetworkUrl(uploadUrl)
 
   const { bytes, contentType } = await fetchImageBytes(publicUrl)
-  const putRes = await fetch(uploadUrl, {
+  const putResult = await boundedFetch(uploadUrl, {
     method: 'PUT',
     headers: { Authorization: `Bearer ${token()}`, 'Content-Type': contentType },
     body: bytes,
+    cache: 'no-store',
+    redirect: 'error',
   })
+  const putRes = putResult.response
   if (!putRes.ok) {
-    throw new Error(`image upload PUT failed (${putRes.status}): ${await putRes.text()}`)
+    throw new Error(`image upload PUT failed (${putRes.status}): ${boundedText(putResult).slice(0, 500)}`)
   }
   return imageUrn
 }
@@ -107,6 +140,9 @@ export const linkedInPublisher: SocialPublisher = {
     }
     if (!content.text.trim() && content.media.length === 0 && !content.link) {
       return { ok: false, error: 'Nothing to post: empty caption, no media, no link.' }
+    }
+    if (!/^urn:li:(?:organization|person):[A-Za-z0-9._-]{1,256}$/.test(authorUrn())) {
+      return { ok: false, error: 'LINKEDIN_AUTHOR_URN is invalid.' }
     }
 
     try {
@@ -140,14 +176,17 @@ export const linkedInPublisher: SocialPublisher = {
         }
       }
 
-      const res = await fetch(`${API_BASE}/posts`, {
+      const result = await boundedFetch(`${API_BASE}/posts`, {
         method: 'POST',
         headers: { ...baseHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        cache: 'no-store',
+        redirect: 'error',
       })
+      const res = result.response
 
       if (!res.ok) {
-        return { ok: false, error: `LinkedIn post failed (${res.status}): ${await res.text()}` }
+        return { ok: false, error: `LinkedIn post failed (${res.status}): ${boundedText(result).slice(0, 500)}` }
       }
 
       // The created post URN is returned in a response header, not the body.

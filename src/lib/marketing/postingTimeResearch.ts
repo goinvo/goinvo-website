@@ -31,6 +31,7 @@ export { nextRecommendedPublishAt, type PostingTimeSlot }
 
 export interface PostingTimeChannel {
   _id: string
+  _rev?: string
   title?: string
   key?: string
   platform?: string
@@ -246,9 +247,11 @@ export async function applyPostingTimeResearch(
   client: SanityClient,
   channelId: string,
   rec: PostingTimeRecommendation,
+  expectedRevision?: string,
 ): Promise<void> {
-  await client
-    .patch(channelId)
+  let patch = client.patch(channelId)
+  if (expectedRevision) patch = patch.ifRevisionId(expectedRevision)
+  await patch
     .set({
       recommendedPostingTimes: rec.slots.map((slot, i) => ({
         _key: `pts-${i}-${slot.dayOfWeek}-${slot.time.replace(':', '')}`,

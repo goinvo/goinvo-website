@@ -1,6 +1,12 @@
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient, type SanityClient } from '@sanity/client'
 import { apiVersion, dataset, projectId, previewToken } from '@/sanity/env'
+import {
+  isMarketingPlanConfigured,
+  MARKETING_PLAN_SESSION_COOKIE,
+  verifyMarketingPlanSession,
+} from '@/lib/marketing/marketingPlanAuth'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GoInvo — Marketing Strategy & Content Plan
@@ -12,8 +18,8 @@ import { apiVersion, dataset, projectId, previewToken } from '@/sanity/env'
 // Route: /marketing-plan  (server component; clean chrome via the sibling
 // layout.tsx; noindex; absent from sitemap/nav).
 //
-// Access gate: if MARKETING_PLAN_KEY is set, the page requires ?k=<key> to match,
-// otherwise notFound(). If the env var is unset, the page is simply unlisted.
+// Access gate: MARKETING_PLAN_KEY must be configured, and access is granted by
+// a short-lived HttpOnly cookie created by POST /api/marketing/plan-session.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = 'nodejs'
@@ -300,14 +306,40 @@ export default async function MarketingPlanPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  // Optional access gate.
-  const requiredKey = process.env.MARKETING_PLAN_KEY
-  if (requiredKey) {
+  if (!isMarketingPlanConfigured()) notFound()
+
+  const cookieStore = await cookies()
+  const session = cookieStore.get(MARKETING_PLAN_SESSION_COOKIE)?.value
+  if (!verifyMarketingPlanSession(session)) {
     const params = await searchParams
-    const provided = Array.isArray(params.k) ? params.k[0] : params.k
-    if (provided !== requiredKey) {
-      notFound()
-    }
+    const denied = params.denied === '1' || (Array.isArray(params.denied) && params.denied[0] === '1')
+    return (
+      <main className="mp-access-shell">
+        <section className="mp-access-card" aria-labelledby="marketing-plan-access-title">
+          <p className="mp-eyebrow">Internal GoInvo document</p>
+          <h1 id="marketing-plan-access-title">Marketing plan access</h1>
+          <p>Enter the team access key. It is submitted securely and is never placed in the URL.</p>
+          <form method="post" action="/api/marketing/plan-session">
+            <label htmlFor="marketing-plan-key">Access key</label>
+            <input id="marketing-plan-key" name="key" type="password" autoComplete="current-password" required />
+            <button type="submit">Open marketing plan</button>
+          </form>
+          {denied && <p role="alert" className="mp-access-error">That access key was not accepted.</p>}
+        </section>
+        <style>{`
+          .mp-access-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f5f4f0; color: #24434d; }
+          .mp-access-card { width: min(100%, 440px); border: 1px solid #d8d6d0; border-radius: 8px; background: white; padding: 32px; box-shadow: 0 12px 40px rgba(36,67,77,.12); }
+          .mp-access-card h1 { margin: 4px 0 12px; font-family: var(--font-serif); font-size: 2rem; font-weight: 400; }
+          .mp-access-card p { line-height: 1.5; }
+          .mp-eyebrow { margin: 0; color: #007385; font-size: .75rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+          .mp-access-card form { display: grid; gap: 8px; margin-top: 24px; }
+          .mp-access-card label { font-weight: 700; font-size: .875rem; }
+          .mp-access-card input { min-height: 44px; border: 1px solid #8a969a; border-radius: 4px; padding: 8px 10px; font: inherit; }
+          .mp-access-card button { min-height: 44px; margin-top: 8px; border: 0; border-radius: 4px; background: #007385; color: white; padding: 10px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+          .mp-access-error { color: #a12820; font-weight: 700; }
+        `}</style>
+      </main>
+    )
   }
 
   const [pillars, proof, audiences, ctas, gates, experiments, ideas, snapshot] = await Promise.all([

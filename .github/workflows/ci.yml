@@ -30,7 +30,8 @@ jobs:
       - name: Unit & integration tests
         # page-render, media-integrity, and link-parity hit a running/served app
         # (they hard-fail rather than silently skip), so they're excluded from this
-        # fast gate — a served-suite job is a follow-up.
+        # fast gate. The principal Marketing browser journey has its own served
+        # acceptance job below; broader served-page coverage remains separate.
         run: npx vitest run --exclude "**/page-render.test.ts" --exclude "**/media-integrity.test.ts" --exclude "**/link-parity.test.ts"
 
   build:
@@ -48,3 +49,27 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+
+  marketing-principal-e2e:
+    name: Marketing principal browser journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run deterministic Marketing browser journey
+        run: npm run test:marketing:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketing-principal-e2e-failure
+          path: test-results/marketing-principal/
+          if-no-files-found: error

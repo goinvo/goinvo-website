@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import type { NextResponse as NextResponseType } from 'next/server'
 import {
   assertMarketingApiKey,
   buildCreatePayload,
@@ -11,6 +11,20 @@ import {
   type MarketingFields,
 } from '@/lib/marketing'
 import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import {
+  assertBoundedJson,
+  isPlainRecord,
+  isValidMarketingDocumentId,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
+import { assertAllowedMarketingFields } from '@/lib/marketing/fieldPolicy'
+
+// Marketing documents can contain internal planning material, and Outreach
+// types contain PII. Preserve the familiar response call sites while making
+// every result explicitly private and non-cacheable.
+const NextResponse = { json: privateMarketingJson }
 
 // Outreach types (contacts, offers, work evidence) live in the PRIVATE
 // outreach dataset — contact PII must never land in the world-readable
@@ -44,7 +58,7 @@ type RouteContext = {
 async function guard(
   req: Request,
   context: RouteContext,
-): Promise<{ type: ManagedMarketingType } | { response: NextResponse }> {
+): Promise<{ type: ManagedMarketingType } | { response: NextResponseType }> {
   try {
     assertMarketingApiKey(req)
   } catch (error) {
@@ -107,9 +121,26 @@ export async function POST(req: Request, context: RouteContext) {
 
   let body: unknown
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 })
+    body = await readBoundedJson(req)
+    assertBoundedJson(body)
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    throw error
+  }
+
+  if (!isPlainRecord(body)) {
+    return NextResponse.json({ error: 'Request body must be a JSON object.' }, { status: 400 })
+  }
+  const unknownBodyKeys = Object.keys(body).filter(
+    (key) => !['fields', 'applyDefaults', 'deriveSlug'].includes(key),
+  )
+  if (unknownBodyKeys.length) {
+    return NextResponse.json(
+      { error: `Unknown request field${unknownBodyKeys.length === 1 ? '' : 's'}: ${unknownBodyKeys.join(', ')}` },
+      { status: 400 },
+    )
   }
 
   const {
@@ -122,9 +153,24 @@ export async function POST(req: Request, context: RouteContext) {
     deriveSlug?: unknown
   }
 
-  if (typeof fields !== 'object' || fields === null || Array.isArray(fields)) {
+  if (!isPlainRecord(fields)) {
     return NextResponse.json(
       { error: 'Body must include a `fields` object.' },
+      { status: 400 },
+    )
+  }
+
+  const suppliedId = typeof fields._id === 'string' ? fields._id : undefined
+  if (fields._id !== undefined && (!suppliedId || !isValidMarketingDocumentId(suppliedId))) {
+    return NextResponse.json({ error: 'Invalid caller-supplied marketing document id.' }, { status: 400 })
+  }
+  const schemaFields = { ...fields }
+  delete schemaFields._id
+  try {
+    assertAllowedMarketingFields(type, schemaFields)
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Request contains unsupported fields.' },
       { status: 400 },
     )
   }

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CloseIcon, MasterDetailIcon } from '@sanity/icons'
 
-import { randomKey, refsFromIds, toDateInputValue } from '@/lib/marketing'
+import { randomKey, refsFromIds, stringListFromText, toDateInputValue } from '@/lib/marketing'
 import { analyticsProviderOptions } from '../../schemas/marketingAnalyticsSource'
 import { campaignStatusOptions } from '../../schemas/marketingCampaign'
 import { funnelStageOptions, funnelStatusOptions } from '../../schemas/marketingFunnel'
+import { useConfirmDialog } from './ConfirmDialog'
 // Shared data-model types, UI primitives, and helpers that remain owned by the
 // marketing tool (used across all workspaces) are imported back from it. This is
 // a deliberate circular import: the tool imports FunnelWorkspace only for JSX
@@ -34,6 +35,7 @@ import {
   StatusPill,
   styles,
   TemplateRail,
+  useMarketingUnsavedGuard,
   type FunnelStage,
   type FunnelTemplate,
   type MarketingAiSuggestion,
@@ -41,29 +43,27 @@ import {
   type MarketingDocumentInput,
   type MarketingFunnel,
   type RefSummary,
-  type StudioClient,
 } from '../../tools/marketingTool'
 
 interface FunnelWorkspaceProps {
-  client: StudioClient
   data: MarketingData
   savingId: string | null
   createDocument: (document: MarketingDocumentInput) => Promise<string>
-  loadData: () => Promise<void>
   commitPatch: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
 }
 
 export function FunnelWorkspace({
-  client,
   data,
   savingId,
   createDocument,
-  loadData,
   commitPatch,
 }: FunnelWorkspaceProps) {
   const [selectedId, setSelectedId] = useState<string | null>(data.funnels[0]?._id || null)
   const [openFunnelIds, setOpenFunnelIds] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<string>('browser')
+  const [editorDirty, setEditorDirty] = useState(false)
+  const { confirm, confirmDialog } = useConfirmDialog()
+  const { clearUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
   const activeFunnel = activeTab === 'browser' ? null : data.funnels.find((funnel) => funnel._id === activeTab) || null
   const funnelTemplates = useMemo(() => getFunnelTemplates(data), [data])
 
@@ -78,39 +78,54 @@ export function FunnelWorkspace({
     }
   }, [activeTab, data.funnels])
 
-  const openFunnel = (id: string) => {
+  useEffect(() => {
+    if (editorDirty) markUnsavedChange('marketing-funnel-editor', 'funnel draft')
+    else clearUnsavedChanges('marketing-funnel-editor')
+  }, [clearUnsavedChanges, editorDirty, markUnsavedChange])
+
+  const prepareToSwitch = async () => {
+    if (!editorDirty) return true
+    const shouldDiscard = await confirm({
+      title: 'Discard unsaved changes?',
+      message: `Discard unsaved changes to "${activeFunnel?.title || 'Untitled funnel'}"? Your edits will be lost.`,
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+      tone: 'caution',
+    })
+    if (!shouldDiscard) return false
+    clearUnsavedChanges('marketing-funnel-editor')
+    setEditorDirty(false)
+    return true
+  }
+
+  const openFunnel = async (id: string) => {
+    if (id !== activeTab && !(await prepareToSwitch())) return
     setOpenFunnelIds((current) => (current.includes(id) ? current : [...current, id]))
     setSelectedId(id)
     setActiveTab(id)
   }
 
-  const closeFunnel = (id: string) => {
+  const closeFunnel = async (id: string) => {
+    if (activeTab === id && !(await prepareToSwitch())) return
     setOpenFunnelIds((current) => current.filter((openId) => openId !== id))
     if (activeTab === id) setActiveTab('browser')
   }
 
   const createFunnel = async () => {
+    if (!(await prepareToSwitch())) return
     const createdId = await createDocument({
       _type: 'marketingFunnel',
       title: '',
       status: 'draft',
       stages: [],
     })
-    openFunnel(createdId)
-  }
-
-  const addStage = async (funnelId: string, stage: FunnelStage) => {
-    await client
-      .patch(funnelId)
-      .setIfMissing({ stages: [] })
-      .append('stages', [{ ...stage, _key: randomKey(), _type: 'funnelStage' }])
-      .commit()
-    await loadData()
+    await openFunnel(createdId)
   }
   const showFunnelTabs = activeTab !== 'browser'
 
   return (
     <section style={styles.panel}>
+      {confirmDialog}
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 16 }}>
         <PanelHeading title="Funnels" description="Build reusable stage maps for campaigns, pages, and CTAs." />
         <button type="button" style={styles.primaryButton} disabled={savingId === 'new'} onClick={() => void createFunnel()}>
@@ -129,14 +144,14 @@ export function FunnelWorkspace({
             paddingBottom: 1,
           }}
         >
-          <FunnelTabButton active={activeTab === 'browser'} onClick={() => setActiveTab('browser')}>
+          <FunnelTabButton active={activeTab === 'browser'} onClick={() => void prepareToSwitch().then((ok) => ok && setActiveTab('browser'))}>
             All funnels
           </FunnelTabButton>
           {openFunnelIds.map((id) => {
             const funnel = data.funnels.find((candidate) => candidate._id === id)
             if (!funnel) return null
             return (
-              <FunnelTabButton key={id} active={activeTab === id} onClick={() => setActiveTab(id)}>
+              <FunnelTabButton key={id} active={activeTab === id} onClick={() => void openFunnel(id)}>
                 <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {funnel.title || 'Untitled funnel'}
                 </span>
@@ -145,7 +160,7 @@ export function FunnelWorkspace({
                   aria-label={`Close ${funnel.title || 'funnel'}`}
                   onClick={(event) => {
                     event.stopPropagation()
-                    closeFunnel(id)
+                    void closeFunnel(id)
                   }}
                   style={{
                     border: 'none',
@@ -188,7 +203,7 @@ export function FunnelWorkspace({
                   `${data.calendarItems.filter((item) => item.funnel?._id === funnel._id).length} calendar items`,
                 ].join(' / ')}
               </div>
-              <button type="button" style={styles.primaryButton} onClick={() => openFunnel(funnel._id)}>
+              <button type="button" style={styles.primaryButton} onClick={() => void openFunnel(funnel._id)}>
                 Open funnel
               </button>
             </div>
@@ -208,7 +223,7 @@ export function FunnelWorkspace({
           funnelTemplates={funnelTemplates}
           saving={savingId === activeFunnel?._id}
           onSave={commitPatch}
-          onAddStage={addStage}
+          onDirtyChange={setEditorDirty}
         />
       )}
     </section>
@@ -221,19 +236,25 @@ function FunnelManager({
   funnelTemplates,
   saving,
   onSave,
-  onAddStage,
+  onDirtyChange,
 }: {
   funnel: MarketingFunnel | null
   data: MarketingData
   funnelTemplates: FunnelTemplate[]
   saving: boolean
   onSave: (id: string, set: Record<string, unknown>, unset?: string[]) => Promise<void>
-  onAddStage: (funnelId: string, stage: FunnelStage) => Promise<void>
+  onDirtyChange: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<MarketingFunnel | null>(funnel)
   const [newStage, setNewStage] = useState<FunnelStage>({ _key: '', stage: 'awareness', goal: '', callToAction: '' })
 
   useEffect(() => setDraft(funnel), [funnel])
+
+  const dirty = Boolean(draft && funnel && JSON.stringify(draft) !== JSON.stringify(funnel))
+
+  useEffect(() => {
+    onDirtyChange(dirty)
+  }, [dirty, onDirtyChange])
 
   if (!draft || !funnel) {
     return (
@@ -287,9 +308,44 @@ function FunnelManager({
     })
   }
 
+  const addStage = () => {
+    setDraft({
+      ...draft,
+      stages: normalizeFunnelStages([
+        ...(draft.stages || []),
+        { ...newStage, _key: randomKey(), _type: 'funnelStage' },
+      ]),
+    })
+    setNewStage({ _key: '', stage: 'awareness', goal: '', callToAction: '' })
+  }
+
+  const updateStage = (stageKey: string, nextStage: FunnelStage) => {
+    setDraft({
+      ...draft,
+      stages: (draft.stages || []).map((stage) => (stage._key === stageKey ? nextStage : stage)),
+    })
+  }
+
+  const removeStage = (stageKey: string) => {
+    setDraft({
+      ...draft,
+      stages: (draft.stages || []).filter((stage) => stage._key !== stageKey),
+    })
+  }
+
+  const moveStage = (stageKey: string, direction: -1 | 1) => {
+    const stages = [...(draft.stages || [])]
+    const currentIndex = stages.findIndex((stage) => stage._key === stageKey)
+    const nextIndex = currentIndex + direction
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= stages.length) return
+    ;[stages[currentIndex], stages[nextIndex]] = [stages[nextIndex], stages[currentIndex]]
+    setDraft({ ...draft, stages })
+  }
+
   return (
     <section style={styles.panel}>
       <PanelTitle title="Funnels manager" type="marketingFunnel" id={funnel._id} />
+      {dirty && <div role="status" style={{ ...styles.small, color: '#9a5a00', marginBottom: 12 }}>Unsaved funnel changes</div>}
       <GuidanceChecklist
         title="Funnel checklist"
         items={[
@@ -340,7 +396,14 @@ function FunnelManager({
                 </div>
                 <div style={{ padding: 10, display: 'grid', gap: 10 }}>
                   {(stagesByType.get(option.value) || []).map((stage) => (
-                    <StageCard key={stage._key} stage={stage} />
+                    <StageCard
+                      key={stage._key}
+                      stage={stage}
+                      onChange={(nextStage) => updateStage(stage._key, nextStage)}
+                      onRemove={() => removeStage(stage._key)}
+                      onMoveUp={() => moveStage(stage._key, -1)}
+                      onMoveDown={() => moveStage(stage._key, 1)}
+                    />
                   ))}
                   {(stagesByType.get(option.value) || []).length === 0 && (
                     <div style={{ ...styles.muted, ...styles.small }}>No step yet.</div>
@@ -451,13 +514,11 @@ function FunnelManager({
               <button
                 type="button"
                 style={styles.primaryButton}
-                onClick={() => {
-                  void onAddStage(funnel._id, newStage)
-                  setNewStage({ _key: '', stage: 'awareness', goal: '', callToAction: '' })
-                }}
+                onClick={addStage}
               >
-                Add funnel stage
+                Add stage to draft
               </button>
+              <div style={{ ...styles.small, ...styles.muted }}>Save the funnel to publish stage additions, edits, removals, and ordering.</div>
             </Stack>
           </div>
           <AdvancedFieldsDropdown type="marketingFunnel" id={funnel._id} />
@@ -467,17 +528,59 @@ function FunnelManager({
   )
 }
 
-function StageCard({ stage }: { stage: FunnelStage }) {
+function StageCard({
+  stage,
+  onChange,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+}: {
+  stage: FunnelStage
+  onChange: (stage: FunnelStage) => void
+  onRemove: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+}) {
   return (
-    <div style={{ border: '1px solid var(--card-border-color)', borderRadius: 6, padding: 10, background: 'var(--card-bg-color)' }}>
-      {stage.goal && <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>{stage.goal}</div>}
-      {stage.offer && <div style={{ ...styles.small, ...styles.muted }}>Offer: {stage.offer}</div>}
-      {stage.callToAction && <div style={{ ...styles.small, color: '#007385', fontWeight: 800 }}>CTA: {stage.callToAction}</div>}
-      {stage.destinationUrl && (
-        <a href={stage.destinationUrl} target="_blank" rel="noreferrer" style={{ ...styles.small, color: '#007385' }}>
-          Destination
-        </a>
-      )}
-    </div>
+    <details style={{ border: '1px solid var(--card-border-color)', borderRadius: 6, padding: 10, background: 'var(--card-bg-color)' }}>
+      <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>
+        {stage.goal?.trim() || 'Untitled stage step'}
+      </summary>
+      <Stack gap={8}>
+        <InputField label="Stage">
+          <Select value={stage.stage || 'awareness'} options={funnelStageOptions} onChange={(value) => onChange({ ...stage, stage: value })} />
+        </InputField>
+        <InputField label="Goal">
+          <textarea rows={2} style={styles.input} value={stage.goal || ''} onChange={(event) => onChange({ ...stage, goal: event.currentTarget.value })} />
+        </InputField>
+        <InputField label="Offer">
+          <textarea rows={2} style={styles.input} value={stage.offer || ''} onChange={(event) => onChange({ ...stage, offer: event.currentTarget.value })} />
+        </InputField>
+        <InputField label="Call to action">
+          <input style={styles.input} value={stage.callToAction || ''} onChange={(event) => onChange({ ...stage, callToAction: event.currentTarget.value })} />
+        </InputField>
+        <InputField label="Destination URL">
+          <input type="url" style={styles.input} value={stage.destinationUrl || ''} onChange={(event) => onChange({ ...stage, destinationUrl: event.currentTarget.value })} />
+        </InputField>
+        <InputField label="Metrics (one per line)">
+          <textarea
+            rows={3}
+            style={styles.input}
+            value={(stage.metrics || []).join('\n')}
+            onChange={(event) => onChange({ ...stage, metrics: stringListFromText(event.currentTarget.value) })}
+          />
+        </InputField>
+        {(stage.content || []).length > 0 && (
+          <div style={{ ...styles.small, ...styles.muted }}>
+            {(stage.content || []).length} linked content record{(stage.content || []).length === 1 ? '' : 's'} will be preserved when you save.
+          </div>
+        )}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <button type="button" style={styles.button} onClick={onMoveUp}>Move earlier</button>
+          <button type="button" style={styles.button} onClick={onMoveDown}>Move later</button>
+          <button type="button" style={{ ...styles.button, color: '#b42318' }} onClick={onRemove}>Remove</button>
+        </div>
+      </Stack>
+    </details>
   )
 }
