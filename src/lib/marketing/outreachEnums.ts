@@ -153,7 +153,12 @@ export const OUTREACH_DATASET =
   (typeof process !== 'undefined' && process.env?.SANITY_OUTREACH_DATASET) || 'outreach'
 
 /** Managed marketing types that are stored in the private outreach dataset. */
-export const OUTREACH_DATASET_TYPES = ['marketingContact', 'marketingOffer', 'marketingWorkEvidence']
+export const OUTREACH_DATASET_TYPES = [
+  'marketingContact',
+  'marketingOffer',
+  'marketingWorkEvidence',
+  'marketingOperation',
+]
 
 /** Identity-verification confidence for person research (wrong-person guard). */
 export const IDENTITY_CONFIDENCE_OPTIONS: OutreachOption[] = [

@@ -294,6 +294,8 @@ describe('intake parsing', () => {
     expect(prompts.user).toContain('Jane Doe — Acme Health')
     expect(prompts.user).toContain('medDevice')
     expect(prompts.system).toContain('Do NOT invent facts')
+    expect(prompts.system).toContain('account placeholder')
+    expect(prompts.user).toContain('without inventing a person')
     expect(prompts.user).toContain('phone')
   })
 
@@ -565,6 +567,57 @@ describe('research normalization + patch', () => {
     })
     expect(contacts).toHaveLength(2)
     expect(contacts.every((contact) => !contact.duplicate)).toBe(true)
+  })
+
+  it('flags an ambiguous name-and-organization repeat regardless of row order', () => {
+    const weakThenStrong = normalizeParsedContacts({
+      contacts: [
+        { name: 'Alex Kim', organization: 'Acme Health' },
+        { name: 'Alex Kim', organization: 'Acme Health', email: 'alex@example.com' },
+      ],
+    })
+    const strongThenWeak = normalizeParsedContacts({
+      contacts: [
+        { name: 'Jordan Lee', organization: 'Signal Health', email: 'jordan@example.com' },
+        { name: 'Jordan Lee', organization: 'Signal Health' },
+      ],
+    })
+
+    expect(weakThenStrong[1]).toMatchObject({
+      duplicate: true,
+      duplicateReason: 'repeats an identity in this preview',
+    })
+    expect(strongThenWeak[1]).toMatchObject({
+      duplicate: true,
+      duplicateReason: 'repeats an identity in this preview',
+    })
+  })
+
+  it('ignores placeholder contact methods before identity matching', () => {
+    const contacts = normalizeParsedContacts({
+      contacts: [
+        { name: 'Alice', organization: 'A', email: 'N/A', phone: 'unknown' },
+        { name: 'Bob', organization: 'B', email: 'N/A', phone: '-' },
+      ],
+    })
+
+    expect(contacts).toHaveLength(2)
+    expect(contacts).toEqual([
+      expect.objectContaining({ name: 'Alice', email: undefined, phone: undefined, duplicate: undefined }),
+      expect.objectContaining({ name: 'Bob', email: undefined, phone: undefined, duplicate: undefined }),
+    ])
+  })
+
+  it('holds an incoming richer identity when its name and organization already exist', () => {
+    const existing = new Set(contactIdentityKeys({ name: 'Ada Lovelace', organization: 'Analytical Engines' }))
+    const [contact] = normalizeParsedContacts({
+      contacts: [{ name: 'Ada Lovelace', organization: 'Analytical Engines', email: 'ada@example.com' }],
+    }, existing)
+
+    expect(contact).toMatchObject({
+      duplicate: true,
+      duplicateReason: 'matches an existing name and organization',
+    })
   })
 
   it('preserves a literally supplied phone number in the create document', () => {
@@ -889,9 +942,11 @@ describe('outreach route auth (fail-closed)', () => {
     delete process.env.ANTHROPIC_API_KEY
     const { POST } = await import('@/app/api/marketing/outreach/intake/route')
     const response = await POST(
-      request('http://localhost/api/marketing/outreach/intake', {
-        Authorization: 'Bearer test-key',
-      }),
+      new Request('http://localhost/api/marketing/outreach/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-key' },
+        body: JSON.stringify({ text: 'Jane Doe — Acme', dryRun: true }),
+      }) as unknown as NextRequest,
     )
     expect(response.status).toBe(503)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
@@ -901,9 +956,14 @@ describe('outreach route auth (fail-closed)', () => {
     delete process.env.ANTHROPIC_API_KEY
     const { POST } = await import('@/app/api/marketing/outreach/research/route')
     const response = await POST(
-      request('http://localhost/api/marketing/outreach/research', {
-        Authorization: 'Bearer test-key',
-      }),
+      new Request('http://localhost/api/marketing/outreach/research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer test-key',
+        },
+        body: JSON.stringify({ id: 'contact-1' }),
+      }) as unknown as NextRequest,
     )
     expect(response.status).toBe(503)
     expect(response.headers.get('cache-control')).toBe('private, no-store')

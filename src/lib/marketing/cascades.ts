@@ -20,7 +20,7 @@ import type { SanityClient } from '@sanity/client'
 import { randomKey, referenceFromId, refsFromIds, slugify } from './derive'
 import { addDays, dateInputToIso, toDateInputValue } from './dates'
 import { inferTopicCluster } from './infer'
-import { buildCreatePayload, type MarketingFields } from './crud'
+import { buildCreatePayload, type MarketingCreatePayload, type MarketingFields } from './crud'
 import { DEFAULT_CHANNELS, ensureMarketingChannel } from './seed'
 
 // --- Inbound document shapes ------------------------------------------------
@@ -61,6 +61,8 @@ export interface CascadeResearchResult {
 /** Minimal shape of the research project the cascade reads. */
 export interface CascadeResearchProject {
   _id: string
+  /** Revision used to make the conversion transaction an atomic claim. */
+  _rev?: string
   title?: string
   status?: string
   brief?: string
@@ -102,6 +104,8 @@ export interface CreatedResearchProjectRecords {
   /** The `key` of every channel ensured (instagram / linkedin / website). */
   channelKeys: string[]
   projectId: string
+  /** True when another request already committed this project's conversion. */
+  reused: boolean
 }
 
 // --- Ported helpers (faithful to the tool) ----------------------------------
@@ -123,6 +127,37 @@ function refIdsFromRecords(records: CascadeRefSummary[] | undefined): string[] {
 
 function mergeIds(existing: string[], next: string[]): string[] {
   return Array.from(new Set([...existing, ...next].filter(Boolean)))
+}
+
+/** Stable Sanity id for every document owned by one research conversion. */
+export function researchConversionDocumentId(projectId: string, suffix: string): string {
+  const publishedProjectId = projectId.replace(/^drafts\./, '')
+  const safeProjectId = publishedProjectId.replace(/[^A-Za-z0-9_.-]/g, '-').slice(-80) || 'project'
+  const safeSuffix = suffix.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 28) || 'record'
+  return `research-conversion.${safeProjectId}.${safeSuffix}`.slice(0, 128)
+}
+
+function completedConversion(project: CascadeResearchProject): CreatedResearchProjectRecords | null {
+  const campaignIds = refIdsFromRecords(project.generatedCampaigns)
+  const funnelIds = refIdsFromRecords(project.generatedFunnels)
+  const calendarItemIds = refIdsFromRecords(project.generatedCalendarItems)
+  const linkItemIds = refIdsFromRecords(project.generatedLinkItems)
+  if (!campaignIds[0] || !funnelIds[0] || calendarItemIds.length === 0) return null
+  return {
+    campaignId: campaignIds[0],
+    funnelId: funnelIds[0],
+    calendarItemIds,
+    linkItemIds,
+    channelKeys: ['instagram', 'linkedin', 'website'],
+    projectId: project._id,
+    reused: true,
+  }
+}
+
+function isRevisionConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false
+  const candidate = error as { statusCode?: unknown; status?: unknown; response?: { statusCode?: unknown } }
+  return candidate.statusCode === 409 || candidate.status === 409 || candidate.response?.statusCode === 409
 }
 
 function formatOptionalNumber(value?: number): string {
@@ -266,14 +301,22 @@ async function resolveNextLinkOrder(
  * link pairs, and channels, then patches the project to status 'converted' with
  * the generated refs appended, and returns the created ids.
  *
- * Creates are sequential (matching the tool, which awaits each create so a later
- * create can reference an earlier id) rather than a single transaction.
+ * Every generated id is deterministic and all generated documents plus the
+ * project reference update commit atomically. The project revision is the
+ * conversion claim: concurrent callers either win that revision or reuse the
+ * complete conversion committed by the winner.
  */
 export async function createResearchProjectRecords(
   client: SanityClient,
   project: CascadeResearchProject,
   opts: CreateResearchProjectRecordsOptions = {},
 ): Promise<CreatedResearchProjectRecords> {
+  const alreadyConverted = completedConversion(project)
+  if (alreadyConverted) return alreadyConverted
+  if (!project._rev) {
+    throw new Error('Research project revision is required for an atomic conversion.')
+  }
+
   // Resolve the approved/selected results carried by the project. The tool pulls
   // these from `getResearchResultsForProject` + an explicit selectedResultIds
   // list; here the project already carries its selected/approved results inline.
@@ -316,8 +359,12 @@ export async function createResearchProjectRecords(
 
   const resultRefs = refsFromIds(selected.map((result) => result._id))
 
+  const funnelId = researchConversionDocumentId(project._id, 'funnel')
+  const campaignId = researchConversionDocumentId(project._id, 'campaign')
+
   // 1 marketingFunnel.
   const funnelPayload = buildCreatePayload('marketingFunnel', {
+    _id: funnelId,
     title: `${title} research path`,
     status: 'draft',
     audience:
@@ -353,17 +400,10 @@ export async function createResearchProjectRecords(
     researchProject: referenceFromId(project._id),
     researchResults: resultRefs,
     notes: buildResearchResultEvidenceSummary(project, selected),
-  })
-  // Best-effort transactional safety: track every doc we create so a mid-cascade
-  // failure rolls them back (in one transaction, to resolve the calendar↔link
-  // mutual references) instead of orphaning funnel/campaign/calendar/link docs.
-  const rollbackIds: string[] = []
-  try {
-  const funnel = await client.create(funnelPayload)
-  rollbackIds.push(funnel._id)
-
+  }) as MarketingCreatePayload & { _id: string }
   // 1 marketingCampaign.
   const campaignPayload = buildCreatePayload('marketingCampaign', {
+    _id: campaignId,
     title,
     slug: { _type: 'slug', current: slug },
     status: 'planned',
@@ -380,7 +420,7 @@ export async function createResearchProjectRecords(
     targetSites: [{ _key: randomKey(), _type: 'targetSite', label: title, url: destinationUrl }],
     channels,
     channelRefs: refsFromIds(Object.values(channelIds)),
-    funnels: refsFromIds([funnel._id]),
+    funnels: refsFromIds([funnelId]),
     primaryKpi: 'Useful visits from reviewed research-backed content',
     utmCampaign: slug,
     successMetrics: normalizeSuccessMetrics([
@@ -398,19 +438,27 @@ export async function createResearchProjectRecords(
     researchResults: resultRefs,
     notes:
       'Generated from trusted Research findings. Edit before publishing if strategy changes.',
-  })
-  const campaign = await client.create(campaignPayload)
-  rollbackIds.push(campaign._id)
-
+  }) as MarketingCreatePayload & { _id: string }
   // 1–2 (marketingCalendarItem + marketingLinkItem) pairs.
   const opportunities = buildResearchResultOpportunities(project, selected, destinationUrl)
-  const createdCalendarItems: string[] = []
-  const createdLinkItems: string[] = []
+  const createdCalendarItems = opportunities.map((_, index) =>
+    researchConversionDocumentId(project._id, `calendar-${index + 1}`),
+  )
+  const createdLinkItems = opportunities.map((_, index) =>
+    researchConversionDocumentId(project._id, `link-${index + 1}`),
+  )
   const baseLinkOrder = await resolveNextLinkOrder(client, opts.highestLinkOrder)
+  let transaction = client
+    .transaction()
+    .createIfNotExists(funnelPayload)
+    .createIfNotExists(campaignPayload)
 
   for (const [index, opportunity] of opportunities.entries()) {
     const publishDate = dateInputToIso(toDateInputValue(addDays(today, 7 + index * 4)))
+    const calendarId = createdCalendarItems[index]
+    const linkId = createdLinkItems[index]
     const calendarPayload = buildCreatePayload('marketingCalendarItem', {
+      _id: calendarId,
       title: opportunity.title,
       status: 'drafting',
       publishAt: publishDate,
@@ -420,8 +468,8 @@ export async function createResearchProjectRecords(
         _type: 'reference',
         _ref: channelIds[opportunity.channel] || channelIds.instagram,
       },
-      campaign: { _type: 'reference', _ref: campaign._id },
-      funnel: { _type: 'reference', _ref: funnel._id },
+      campaign: { _type: 'reference', _ref: campaignId },
+      funnel: { _type: 'reference', _ref: funnelId },
       funnelStage: index === 0 ? 'awareness' : 'interest',
       workingUrl: opportunity.destinationUrl,
       brief: opportunity.notes,
@@ -432,12 +480,11 @@ export async function createResearchProjectRecords(
       targetQueries: Array.from(new Set([opportunity.seoQuery, ...targetQueries].filter(Boolean))),
       researchProject: referenceFromId(project._id),
       researchResults: refsFromIds(opportunity.resultIds),
-    })
-    const createdCalendar = await client.create(calendarPayload)
-    rollbackIds.push(createdCalendar._id)
-    createdCalendarItems.push(createdCalendar._id)
+      linkItems: refsFromIds([linkId]),
+    }) as MarketingCreatePayload & { _id: string }
 
     const linkPayload = buildCreatePayload('marketingLinkItem', {
+      _id: linkId,
       title: opportunity.title,
       url: opportunity.destinationUrl,
       description: opportunity.sourceMaterial || `Research-backed link for ${title}.`,
@@ -447,32 +494,30 @@ export async function createResearchProjectRecords(
       order: baseLinkOrder + index,
       publishAt: publishDate,
       sourceChannel: opportunity.channel,
-      campaign: { _type: 'reference', _ref: campaign._id },
-      calendarItem: { _type: 'reference', _ref: createdCalendar._id },
-      calendarItems: refsFromIds([createdCalendar._id]),
+      campaign: { _type: 'reference', _ref: campaignId },
+      calendarItem: { _type: 'reference', _ref: calendarId },
+      calendarItems: refsFromIds([calendarId]),
       researchProject: referenceFromId(project._id),
       researchResults: refsFromIds(opportunity.resultIds),
-    })
-    const createdLink = await client.create(linkPayload)
-    rollbackIds.push(createdLink._id)
-    createdLinkItems.push(createdLink._id)
-
-    // Patch the calendar item to reference its link (matches the tool).
-    await client.patch(createdCalendar._id).set({ linkItems: refsFromIds([createdLink._id]) }).commit()
+    }) as MarketingCreatePayload & { _id: string }
+    transaction = transaction
+      .createIfNotExists(calendarPayload)
+      .createIfNotExists(linkPayload)
   }
 
-  // Final patch: convert the project and append the generated refs.
-  await client
-    .patch(project._id)
-    .set({
+  // The revision guard is the atomic claim. It protects unrelated references
+  // added after the route fetched the project from being overwritten by a stale
+  // full-array set.
+  transaction = transaction.patch(project._id, (patch) =>
+    patch.ifRevisionId(project._rev as string).set({
       status: 'converted',
       selectedResults: refsFromIds(selected.map((result) => result._id)),
       approvedResults: refsFromIds(selected.map((result) => result._id)),
       generatedCampaigns: refsFromIds(
-        mergeIds(refIdsFromRecords(project.generatedCampaigns), [campaign._id]),
+        mergeIds(refIdsFromRecords(project.generatedCampaigns), [campaignId]),
       ),
       generatedFunnels: refsFromIds(
-        mergeIds(refIdsFromRecords(project.generatedFunnels), [funnel._id]),
+        mergeIds(refIdsFromRecords(project.generatedFunnels), [funnelId]),
       ),
       generatedCalendarItems: refsFromIds(
         mergeIds(refIdsFromRecords(project.generatedCalendarItems), createdCalendarItems),
@@ -480,37 +525,52 @@ export async function createResearchProjectRecords(
       generatedLinkItems: refsFromIds(
         mergeIds(refIdsFromRecords(project.generatedLinkItems), createdLinkItems),
       ),
-    })
-    .commit()
+    }),
+  )
+
+  try {
+    await transaction.commit()
+  } catch (error) {
+    if (!isRevisionConflict(error)) throw error
+    const winner = await client.fetch<CascadeResearchProject | null>(
+      `*[_type == "marketingResearchProject" && _id == $id][0]{
+        _id,
+        _rev,
+        generatedCampaigns[]{_ref},
+        generatedFunnels[]{_ref},
+        generatedCalendarItems[]{_ref},
+        generatedLinkItems[]{_ref}
+      }`,
+      { id: project._id },
+    )
+    const completed = winner ? completedConversion(winner) : null
+    if (completed) return completed
+    throw error
+  }
 
   return {
-    funnelId: funnel._id,
-    campaignId: campaign._id,
+    funnelId,
+    campaignId,
     calendarItemIds: createdCalendarItems,
     linkItemIds: createdLinkItems,
     channelKeys: channels,
     projectId: project._id,
-  }
-  } catch (error) {
-    await rollbackCreatedRecords(client, rollbackIds)
-    throw error
+    reused: false,
   }
 }
 
 /**
- * Best-effort rollback for a partially-created cascade. Deletes every created
- * document in ONE transaction so the calendar↔link mutual references (each side
- * strong-references the other) can be removed together — Sanity rejects deleting
- * a doc that is still referenced unless its referrer is deleted in the same
- * transaction. Swallows cleanup errors; surfacing the original failure matters more.
+ * Compatibility cleanup helper for callers that created records with the old
+ * sequential implementation. New conversions do not need it because their
+ * create/reference mutation is a single atomic transaction.
  */
 export async function rollbackCreatedRecords(client: SanityClient, ids: string[]): Promise<void> {
-  if (!ids.length) return
+  if (ids.length === 0) return
   try {
-    const tx = ids.reduce((transaction, id) => transaction.delete(id), client.transaction())
-    await tx.commit({ visibility: 'async' })
+    const transaction = ids.reduce((next, id) => next.delete(id), client.transaction())
+    await transaction.commit({ visibility: 'async' })
   } catch {
-    // Ignore cleanup errors.
+    // Compatibility behavior: never mask the writer failure that triggered cleanup.
   }
 }
 

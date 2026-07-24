@@ -1,4 +1,4 @@
-import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ComponentType, type CSSProperties } from 'react'
+import { Fragment, createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ComponentType, type CSSProperties } from 'react'
 import { definePlugin, type Tool, useClient } from 'sanity'
 import {
   BellIcon,
@@ -19,7 +19,7 @@ import { calendarStatusOptions, contentTypeOptions } from '../schemas/marketingC
 import { campaignObjectiveOptions, campaignStatusOptions } from '../schemas/marketingCampaign'
 import { channelStatusOptions } from '../schemas/marketingChannel'
 import { funnelStatusOptions } from '../schemas/marketingFunnel'
-import { GuidedTutorialOverlay } from '../components/GuidedTutorialOverlay'
+import { GuidedTutorialOverlay, isolateDomForModal } from '../components/GuidedTutorialOverlay'
 import { SeoWorkspace } from '../components/SeoWorkspace'
 import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
@@ -28,7 +28,9 @@ import { MarketingAiModelSetting } from '../components/marketing/MarketingAiMode
 import { MarketingBrandVoiceSetting } from '../components/marketing/MarketingBrandVoiceSetting'
 import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLearningReview'
 import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
+import { LatestExclusiveRequestGate, type AsyncRequestTicket } from '../components/marketing/asyncRequestGate'
 import { MarketingFinancialPostureSetting } from '../components/marketing/MarketingFinancialPostureSetting'
+import { MarketingOperationsBoard } from '../components/marketing/MarketingOperationsBoard'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
@@ -38,6 +40,15 @@ import { LinkTreeWorkspace } from '../components/marketing/LinkTreeWorkspace'
 import { ResearchWorkspace } from '../components/marketing/ResearchWorkspace'
 import { StrategyWorkspace } from '../components/marketing/StrategyWorkspace'
 import { TemplateWorkspace } from '../components/marketing/TemplateWorkspace'
+import { WorkUpdateIntake } from '../components/marketing/WorkUpdateIntake'
+import {
+  MARKETER_BRIEF_UNSAVED_ID,
+  buildMarketerBriefOperationInput,
+  normalizeMarketerBriefProject,
+  type MarketerBriefHandoffResult,
+  type MarketerBriefProposal,
+  type MarketerBriefReuseMatch,
+} from '../components/marketing/marketerBrief'
 import type {
   ChannelContentType,
   WorkflowTerm,
@@ -68,6 +79,7 @@ import {
   DEFAULT_FINANCIAL_POSTURE_ID,
   type FinancialPostureId,
 } from '@/lib/marketing/financialPosture'
+import type { MarketingOperation } from '@/lib/marketing/operations'
 
 import {
   MARKETING_SURFACES,
@@ -240,6 +252,21 @@ const MARKETING_CONTROL_CSS = `
     [data-marketing-tool] button,
     [data-marketing-tool] a {
       touch-action: manipulation;
+    }
+
+    [data-marketing-tool] [data-work-update-secondary="true"],
+    [data-marketing-tool] [data-work-update-review-note="true"] {
+      display: none !important;
+    }
+
+    [data-marketing-tool] [data-work-update-intake="true"] {
+      gap: 4px !important;
+      padding: 8px !important;
+    }
+
+    [data-marketing-tool] [data-work-update-intake="true"] textarea {
+      height: 84px !important;
+      min-height: 84px !important;
     }
   }
 `
@@ -580,6 +607,7 @@ const MARKETING_QUERY = `{
   },
   "researchProjects": *[_type == "marketingResearchProject"]|order(_updatedAt desc) {
     _id,
+    _rev,
     _updatedAt,
     title,
     status,
@@ -1662,6 +1690,7 @@ export interface MarketingResearchPlan {
 
 export interface MarketingResearchProject {
   _id: string
+  _rev?: string
   _updatedAt?: string
   title?: string
   status?: string
@@ -2836,6 +2865,31 @@ export function useMarketingCompactLayout(breakpoint = 760) {
   return compact
 }
 
+export function nextMarketingMenuItemIndex(
+  currentIndex: number,
+  itemCount: number,
+  key: 'ArrowDown' | 'ArrowUp' | 'Home' | 'End',
+) {
+  if (itemCount <= 0) return -1
+  if (key === 'Home') return 0
+  if (key === 'End') return itemCount - 1
+  if (currentIndex < 0 || currentIndex >= itemCount) return key === 'ArrowUp' ? itemCount - 1 : 0
+  return (currentIndex + (key === 'ArrowUp' ? -1 : 1) + itemCount) % itemCount
+}
+
+const MARKETING_FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+function marketingFocusableElements(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(MARKETING_FOCUSABLE_SELECTOR)).filter((element) => {
+    if (element.hidden || element.getAttribute('aria-hidden') === 'true' || element.closest('[inert]')) return false
+    const style = window.getComputedStyle(element)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    const rect = element.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+  })
+}
+
 function marketingActionError(prefix: string, err: unknown) {
   const detail = err instanceof Error && err.message ? err.message : 'Please try again or refresh the marketing workspace.'
   return `${prefix} ${detail}`
@@ -2858,11 +2912,17 @@ function MarketingComponent() {
   }, [role])
   const [data, setData] = useState<MarketingData>(EMPTY_DATA)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [lastLoaded, setLastLoaded] = useState<string | null>(null)
   const [actionsOpen, setActionsOpen] = useState(false)
+  const actionsTriggerRef = useRef<HTMLButtonElement | null>(null)
+  const actionsMenuRef = useRef<HTMLDivElement | null>(null)
+  const [operationsAttentionCount, setOperationsAttentionCount] = useState(0)
+  const [operationsRefreshToken, setOperationsRefreshToken] = useState(0)
+  const [lastOperationId, setLastOperationId] = useState<string | null>(null)
   const [workflowTutorialRequest, setWorkflowTutorialRequest] = useState(0)
   const [workflowTutorialLibraryRequest, setWorkflowTutorialLibraryRequest] = useState(0)
   const [workflowTutorialId, setWorkflowTutorialId] = useState(defaultDesignerWorkflowTutorial.id)
@@ -2873,8 +2933,11 @@ function MarketingComponent() {
   const [autopilotTarget, setAutopilotTarget] = useState<AutopilotWorkspaceTarget | null>(() => loadStoredAutopilotTarget())
   const [autopilotCompletionSignal, setAutopilotCompletionSignal] = useState<AutopilotCompletionSignal | null>(null)
   const [unsavedChanges, setUnsavedChanges] = useState<Record<string, string>>({})
+  const loadDataGenerationRef = useRef(0)
+  const manualRefreshPendingRef = useRef(false)
   const hasUnsavedChanges = Object.keys(unsavedChanges).length > 0
   const hasUnsavedChange = useCallback((id: string) => Boolean(unsavedChanges[id]), [unsavedChanges])
+  const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
 
   const markUnsavedChange = useCallback((id = MARKETING_UNSAVED_FORM_ID, label = 'form fields you edited') => {
     setUnsavedChanges((current) => (current[id] === label ? current : { ...current, [id]: label }))
@@ -2918,10 +2981,13 @@ function MarketingComponent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [hasUnsavedChanges])
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options: { showRefreshProgress?: boolean } = {}) => {
+    const generation = ++loadDataGenerationRef.current
+    if (options.showRefreshProgress) setRefreshing(true)
     setError(null)
     try {
       const nextData = await client.fetch<MarketingData>(MARKETING_QUERY)
+      if (generation !== loadDataGenerationRef.current) return false
       setData({
         calendarItems: nextData.calendarItems || [],
         campaigns: nextData.campaigns || [],
@@ -2947,11 +3013,15 @@ function MarketingComponent() {
       setLastLoaded(new Date().toLocaleTimeString())
       return true
     } catch (err) {
+      if (generation !== loadDataGenerationRef.current) return false
       console.error('Failed to load marketing data:', err)
       setError(err instanceof Error ? err.message : 'Failed to load marketing data.')
       return false
     } finally {
-      setLoading(false)
+      if (generation === loadDataGenerationRef.current) {
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
   }, [client])
 
@@ -3175,6 +3245,58 @@ function MarketingComponent() {
     [clearUnsavedChanges, client, data, loadData],
   )
 
+  const adoptCoworkerWorkUpdate = useCallback(
+    async (
+      proposal: MarketerBriefProposal,
+      reuseMatch: MarketerBriefReuseMatch | null,
+    ): Promise<MarketerBriefHandoffResult> => {
+      const normalized = normalizeMarketerBriefProject(proposal)
+      const operation = buildMarketerBriefOperationInput(proposal, reuseMatch)
+      setSavingId(operation._id || operation.sourceKey)
+      setError(null)
+      setNotice(null)
+
+      try {
+        const response = await authenticatedMarketingRequest<{ item?: MarketingOperation }>(
+          '/api/marketing/operations',
+          { action: 'handoff', operation },
+          'POST',
+          outreachClient,
+        )
+        if (!response.item) throw new Error('Marketing’s private handoff record was not returned.')
+        const item = response.item
+        const createdResults = item.evidence?.length || 0
+        const scanWarning = item.status === 'blocked' ? item.blocker || 'The internal CMS check needs attention.' : ''
+        const title = item.title || normalized.title
+        setLastOperationId(item._id)
+        setOperationsRefreshToken((current) => current + 1)
+        clearUnsavedChanges(MARKETER_BRIEF_UNSAVED_ID)
+        setNotice(
+          `Added ${title} to Marketing’s private shared desk. ${createdResults} internal CMS match${createdResults === 1 ? '' : 'es'} ready to review; nothing was published.`,
+        )
+        return {
+          operationId: item._id,
+          ...(reuseMatch?.project._id ? { projectId: reuseMatch.project._id } : {}),
+          title,
+          reused: Boolean(reuseMatch),
+          createdResults,
+          ...(scanWarning ? { scanWarning } : {}),
+        }
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : 'Please re-analyze the update and try again.'
+        const message = /revision|conflict/i.test(detail)
+          ? 'That research project changed after the proposal was prepared. No work-update patch was applied; analyze the latest update again.'
+          : marketingActionError('Could not hand this update to Marketing.', err)
+        console.error(message, err)
+        setError(message)
+        throw new Error(message)
+      } finally {
+        setSavingId(null)
+      }
+    },
+    [clearUnsavedChanges, outreachClient],
+  )
+
   const reportAutopilotCompletion = useCallback((signal: AutopilotCompletionPayload) => {
     setAutopilotCompletionSignal({ ...signal, token: Date.now() })
   }, [])
@@ -3187,21 +3309,72 @@ function MarketingComponent() {
   }, [requestMarketingView])
 
   const refreshMarketingData = useCallback(async () => {
+    if (manualRefreshPendingRef.current) return
+    manualRefreshPendingRef.current = true
     setError(null)
-    setNotice(null)
-    if (await loadData()) setNotice('Marketing data refreshed.')
+    setNotice('Refreshing marketing data…')
+    try {
+      if (await loadData({ showRefreshProgress: true })) setNotice('Marketing data refreshed.')
+    } finally {
+      manualRefreshPendingRef.current = false
+    }
   }, [loadData])
 
   const reloadWorkspaceData = useCallback(async () => {
     await loadData()
   }, [loadData])
 
+  const focusActionsMenuItem = useCallback((edge: 'first' | 'last' = 'first') => {
+    window.requestAnimationFrame(() => {
+      const items = actionsMenuRef.current
+        ? Array.from(actionsMenuRef.current.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+          .filter((item) => item.getAttribute('disabled') === null && item.getAttribute('aria-disabled') !== 'true')
+        : []
+      items[edge === 'last' ? items.length - 1 : 0]?.focus({ preventScroll: true })
+    })
+  }, [])
+
+  const closeActionsMenu = useCallback((restoreTrigger = false) => {
+    setActionsOpen(false)
+    if (restoreTrigger) {
+      window.requestAnimationFrame(() => actionsTriggerRef.current?.focus({ preventScroll: true }))
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!actionsOpen) return undefined
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (actionsMenuRef.current?.contains(target) || actionsTriggerRef.current?.contains(target)) return
+      const focusedBeforeDismiss = document.activeElement
+      setActionsOpen(false)
+      window.requestAnimationFrame(() => {
+        // Preserve focus when the outside click deliberately moved it to another
+        // control; otherwise return keyboard position to the menu disclosure.
+        if (document.activeElement === focusedBeforeDismiss || document.activeElement === document.body) {
+          actionsTriggerRef.current?.focus({ preventScroll: true })
+        }
+      })
+    }
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      closeActionsMenu(true)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [actionsOpen, closeActionsMenu])
+
   const activeView = MARKETING_TOOL_VIEWS.find((candidate) => candidate.id === view) || MARKETING_TOOL_VIEWS[0]
   const guideArticle = MARKETING_GUIDE_ARTICLE_BY_VIEW[view]
-  const attentionCount = useMemo(
-    () => (loading ? 0 : getMarketingDashboardGaps(data, financialPostureId).length),
-    [data, financialPostureId, loading],
-  )
+  const attentionCount = loading ? 0 : operationsAttentionCount
   // Both layouts reserve bottom space so the fixed Autopilot button never covers content (e.g. Save rows).
   const shellStyle: CSSProperties = compactLayout ? { ...styles.shell, padding: 12, paddingBottom: 92 } : { ...styles.shell, paddingBottom: 92 }
   const headerStyle: CSSProperties = compactLayout
@@ -3240,7 +3413,6 @@ function MarketingComponent() {
           <div style={headerActionsStyle}>
             {hasUnsavedChanges && <span style={{ ...styles.small, color: '#E36216', fontWeight: 800 }}>Unsaved edits</span>}
             {lastLoaded && <span style={{ ...styles.muted, ...styles.small }}>Updated {lastLoaded}</span>}
-            <CopyViewLinkButton view={view} role={role} />
             <a href={`/studio/getting-started?article=${guideArticle}`} style={styles.button}>
               Marketing guide
               <LaunchIcon style={{ width: 15, height: 15 }} />
@@ -3257,7 +3429,10 @@ function MarketingComponent() {
                 padding: 0,
               }}
               onClick={() => {
-                if (requestMarketingView('dashboard')) setActionsOpen(false)
+                if (requestMarketingView('dashboard')) {
+                  setActionsOpen(false)
+                  window.setTimeout(() => document.getElementById('marketing-operations-inbox')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+                }
               }}
             >
               <BellIcon style={{ width: 18, height: 18 }} />
@@ -3289,19 +3464,57 @@ function MarketingComponent() {
             </button>
             <div style={{ position: 'relative' }}>
               <button
+                ref={actionsTriggerRef}
+                id="marketing-more-actions-trigger"
                 type="button"
                 aria-label="Open more marketing sections and actions"
                 aria-expanded={actionsOpen}
+                aria-haspopup="menu"
+                aria-controls="marketing-more-actions-menu"
                 title="Open more marketing sections and actions"
                 style={{ ...styles.button, minHeight: 38, padding: '8px 11px', fontSize: 14, lineHeight: 1 }}
-                onClick={() => setActionsOpen((current) => !current)}
+                onClick={() => {
+                  if (actionsOpen) {
+                    closeActionsMenu()
+                    return
+                  }
+                  setActionsOpen(true)
+                  focusActionsMenuItem('first')
+                }}
+                onKeyDown={(event) => {
+                  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+                  event.preventDefault()
+                  setActionsOpen(true)
+                  focusActionsMenuItem(event.key === 'ArrowUp' ? 'last' : 'first')
+                }}
               >
                 <EllipsisHorizontalIcon style={{ width: 18, height: 18 }} />
                 More
               </button>
               {actionsOpen && (
                 <div
+                  ref={actionsMenuRef}
+                  id="marketing-more-actions-menu"
                   role="menu"
+                  aria-labelledby="marketing-more-actions-trigger"
+                  onKeyDown={(event) => {
+                    if (event.key === 'Tab') {
+                      setActionsOpen(false)
+                      return
+                    }
+                    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+                    const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+                      .filter((item) => item.getAttribute('disabled') === null && item.getAttribute('aria-disabled') !== 'true')
+                    const currentIndex = items.indexOf(document.activeElement as HTMLElement)
+                    const nextIndex = nextMarketingMenuItemIndex(
+                      currentIndex,
+                      items.length,
+                      event.key as 'ArrowDown' | 'ArrowUp' | 'Home' | 'End',
+                    )
+                    if (nextIndex < 0) return
+                    event.preventDefault()
+                    items[nextIndex]?.focus({ preventScroll: true })
+                  }}
                   style={{
                     position: 'absolute',
                     top: 'calc(100% + 8px)',
@@ -3318,9 +3531,11 @@ function MarketingComponent() {
                 >
                   {/* Only actions that have no home in the top nav live here — the sub-tabs
                       already cover every section, so no duplicate view shortcuts. */}
+                  <CopyViewLinkButton view={view} role={role} menuItem />
                   <button
                     type="button"
                     role="menuitem"
+                    tabIndex={-1}
                     style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                     onClick={() => {
                       setActionsOpen(false)
@@ -3333,6 +3548,8 @@ function MarketingComponent() {
                   <button
                     type="button"
                     role="menuitem"
+                    tabIndex={-1}
+                    disabled={loading || refreshing}
                     style={{ ...styles.templateButton, border: 'none', boxShadow: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                     onClick={() => {
                       if (!confirmDiscardUnsavedChanges('Refreshing marketing data will reload this workspace and discard unsaved fields. Continue?')) return
@@ -3341,7 +3558,7 @@ function MarketingComponent() {
                       void refreshMarketingData()
                     }}
                   >
-                    Refresh marketing data
+                    {refreshing ? 'Refreshing marketing data…' : 'Refresh marketing data'}
                     <RefreshIcon style={{ width: 15, height: 15 }} />
                   </button>
                 </div>
@@ -3442,6 +3659,21 @@ function MarketingComponent() {
                   financialPostureId={financialPostureId}
                   onOpenView={requestMarketingView}
                   onOpenWorkflow={() => setWorkflowOpenRequest((current) => current + 1)}
+                  onAdoptWorkUpdate={adoptCoworkerWorkUpdate}
+                  operationsRefreshToken={operationsRefreshToken}
+                  focusOperationId={lastOperationId}
+                  onOperationsAttentionChange={setOperationsAttentionCount}
+                  onOpenOperations={(result) => {
+                    setLastOperationId(result.operationId)
+                    window.setTimeout(() => document.getElementById('marketing-operations-inbox')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
+                  }}
+                  onOpenWorkUpdateResearch={(result) =>
+                    openAutopilotTarget({
+                      view: 'research',
+                      targetId: 'autopilot-research-review',
+                      recordId: result.projectId,
+                    })
+                  }
                 />
               </>
             )}
@@ -3563,6 +3795,7 @@ function MarketingComponent() {
                   client={client}
                   onOpenEvidence={() => requestMarketingView('workEvidence')}
                   onOpenSettings={() => requestMarketingView('channels')}
+                  onAutopilotComplete={reportAutopilotCompletion}
                 />
               </div>
             )}
@@ -3589,7 +3822,15 @@ function MarketingComponent() {
 // Copies a deep link to the currently-open tab (…/studio/marketing?view=<view>)
 // so a teammate who opens it lands on this exact section. Rebuilds the URL on
 // each click, so it works even if the embedding router dropped the synced param.
-function CopyViewLinkButton({ view, role }: { view: MarketingViewId; role: MarketingRole }) {
+function CopyViewLinkButton({
+  view,
+  role,
+  menuItem = false,
+}: {
+  view: MarketingViewId
+  role: MarketingRole
+  menuItem?: boolean
+}) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {
     if (typeof window === 'undefined') return
@@ -3605,13 +3846,27 @@ function CopyViewLinkButton({ view, role }: { view: MarketingViewId; role: Marke
   return (
     <button
       type="button"
+      role={menuItem ? 'menuitem' : undefined}
+      tabIndex={menuItem ? -1 : undefined}
       onClick={() => void copy()}
       title={
         principalLink
           ? `Copy a link that opens this tab in the ${role} guided flow — send it to them`
           : 'Copy a link that opens this exact tab — share it with a teammate'
       }
-      style={{ ...styles.button, minHeight: 38 }}
+      style={
+        menuItem
+          ? {
+              ...styles.templateButton,
+              border: 'none',
+              boxShadow: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexDirection: 'row-reverse',
+            }
+          : { ...styles.button, minHeight: 38 }
+      }
     >
       <LinkIcon style={{ width: 15, height: 15 }} />
       {copied ? 'Link copied' : principalLink ? `Copy ${role} link` : 'Copy link'}
@@ -3745,16 +4000,44 @@ function MarketingSurfaceHeader({ surface }: { surface: MarketingSurface }) {
   )
 }
 
+const NEXT_ACTIONS_INITIAL_COUNT = 2
+const NEXT_ACTIONS_PREVIEW_COUNT = 2
+
+export function getNextActionsDisplay<T>(actions: T[], expanded: boolean) {
+  return {
+    hasMore: actions.length > NEXT_ACTIONS_INITIAL_COUNT,
+    visible: expanded ? actions : actions.slice(0, NEXT_ACTIONS_INITIAL_COUNT),
+    preview: expanded
+      ? []
+      : actions.slice(NEXT_ACTIONS_INITIAL_COUNT, NEXT_ACTIONS_INITIAL_COUNT + NEXT_ACTIONS_PREVIEW_COUNT),
+  }
+}
+
 function MarketingDashboard({
   data,
   financialPostureId,
   onOpenView,
   onOpenWorkflow,
+  onAdoptWorkUpdate,
+  operationsRefreshToken,
+  focusOperationId,
+  onOperationsAttentionChange,
+  onOpenOperations,
+  onOpenWorkUpdateResearch,
 }: {
   data: MarketingData
   financialPostureId: FinancialPostureId
   onOpenView: MarketingViewOpener
   onOpenWorkflow: () => void
+  onAdoptWorkUpdate: (
+    proposal: MarketerBriefProposal,
+    reuseMatch: MarketerBriefReuseMatch | null,
+  ) => Promise<MarketerBriefHandoffResult>
+  operationsRefreshToken: number
+  focusOperationId: string | null
+  onOperationsAttentionChange: (count: number) => void
+  onOpenOperations: (result: MarketerBriefHandoffResult) => void
+  onOpenWorkUpdateResearch: (result: MarketerBriefHandoffResult) => void
 }) {
   const stats = useMemo(() => getMarketingDashboardStats(data), [data])
   const fastRevenuePosture = financialPostureId === 'survival' || financialPostureId === 'rebuild'
@@ -3766,6 +4049,20 @@ function MarketingDashboard({
     [data, financialPostureId],
   )
   const [actionQuery, setActionQuery] = useState('')
+  const [nextActionsExpanded, setNextActionsExpanded] = useState(false)
+  const { markUnsavedChange, clearUnsavedChanges } = useMarketingUnsavedGuard()
+  const handleWorkUpdateDirtyState = useCallback(
+    (dirty: boolean) => {
+      if (dirty) markUnsavedChange(MARKETER_BRIEF_UNSAVED_ID, 'rough work update waiting for Marketing')
+      else clearUnsavedChanges(MARKETER_BRIEF_UNSAVED_ID)
+    },
+    [clearUnsavedChanges, markUnsavedChange],
+  )
+  const {
+    hasMore: hasMoreNextActions,
+    visible: visibleNextActions,
+    preview: previewNextActions,
+  } = getNextActionsDisplay(gaps, nextActionsExpanded)
   const handleAssistantSelect = (action: MarketingAssistantAction) => {
     if (action.view) onOpenView(action.view)
     else onOpenWorkflow()
@@ -3777,19 +4074,43 @@ function MarketingDashboard({
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, maxWidth: 760 }}>
             <div style={{ ...styles.kicker, marginBottom: 6 }}>Start here</div>
-            <h2 style={{ margin: 0, fontSize: 26 }}>What should we work on next?</h2>
+            <h2 style={{ margin: 0, fontSize: 26 }}>Tell Marketing what changed</h2>
             <p style={{ ...styles.muted, margin: '6px 0 0', lineHeight: 1.55 }}>
-              Two ways in: let Autopilot guide you through one confirmed step at a time, or pick from the ranked list yourself.
+              Paste a rough update—project, deadline, result, or change of plan. Marketing connects it to the suite and shows one review before saving.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button type="button" style={styles.primaryButton} onClick={onOpenWorkflow}>
-              Open Autopilot
+            <button type="button" data-work-update-secondary="true" style={styles.button} onClick={onOpenWorkflow}>
+              Plan step by step
             </button>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginTop: 16 }}>
+        <WorkUpdateIntake
+          existingProjects={data.researchProjects}
+          onAdopt={onAdoptWorkUpdate}
+          onOpenOperations={onOpenOperations}
+          onOpenResearch={onOpenWorkUpdateResearch}
+          onDraftStateChange={handleWorkUpdateDirtyState}
+        />
+
+      </section>
+
+      <MarketingOperationsBoard
+        gaps={gaps}
+        owners={data.teamMembers || []}
+        refreshToken={operationsRefreshToken}
+        focusOperationId={focusOperationId}
+        onAttentionCountChange={onOperationsAttentionChange}
+        onOpenView={(targetView) => onOpenView(targetView)}
+      />
+
+      <section style={styles.panel}>
+        <PanelHeading
+          title="Health at a glance"
+          description="Context for planning after the shared owner, blocker, and next move are clear."
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
           <AnalyticsMetricCard
             label="Ready content runway"
             value={fastRevenuePosture ? 'Deprioritized' : `${stats.contentRunwayDays} day${stats.contentRunwayDays === 1 ? '' : 's'}`}
@@ -3824,22 +4145,23 @@ function MarketingDashboard({
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
-        <section style={styles.panel}>
+        <section style={styles.panel} data-next-actions-panel="true">
           <PanelHeading
             title="Next actions"
-            description="The highest-priority fixes, ranked. Work top-down, or jump straight to any section."
+            description="The highest-priority fixes, ranked. Start with the top items, then expand only when you need the full list."
           />
           {gaps.length === 0 ? (
             <EmptyInline title="No strategic gaps are flagged right now." />
           ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {gaps.slice(0, 8).map((gap) => {
+            <div id="marketing-next-actions-list" data-next-actions-state={nextActionsExpanded ? 'expanded' : 'collapsed'} style={{ display: 'grid', gap: 10 }}>
+              {visibleNextActions.map((gap) => {
                 const tone = getDashboardGapTone(gap.severity)
                 const viewTitle = getMarketingViewTabLabel(gap.view)
 
                 return (
                   <article
                     key={gap.id}
+                    data-next-action-card="true"
                     style={{
                       border: `1px solid ${tone.border}`,
                       borderRadius: 8,
@@ -3895,6 +4217,58 @@ function MarketingDashboard({
                   </article>
                 )
               })}
+              {hasMoreNextActions && !nextActionsExpanded && (
+                <div
+                  aria-hidden="true"
+                  data-next-actions-preview="true"
+                  style={{
+                    display: 'grid',
+                    gap: 8,
+                    maxHeight: 112,
+                    overflow: 'hidden',
+                    pointerEvents: 'none',
+                    WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%)',
+                    maskImage: 'linear-gradient(to bottom, #000 0%, #000 28%, transparent 100%)',
+                  }}
+                >
+                  {previewNextActions.map((gap, index) => {
+                    const tone = getDashboardGapTone(gap.severity)
+                    return (
+                      <div
+                        key={`preview-${gap.id}`}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: 12,
+                          minHeight: 42,
+                          border: `1px solid ${tone.border}`,
+                          borderRadius: 8,
+                          background: tone.bg,
+                          padding: '9px 12px',
+                          opacity: Math.max(0.35, 0.82 - index * 0.2),
+                        }}
+                      >
+                        <strong style={{ minWidth: 0, fontSize: 13 }}>{gap.title}</strong>
+                        <span style={{ ...styles.small, color: tone.fg, fontWeight: 800, textTransform: 'capitalize' }}>
+                          {gap.severity}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {hasMoreNextActions && (
+                <button
+                  type="button"
+                  aria-expanded={nextActionsExpanded}
+                  aria-controls="marketing-next-actions-list"
+                  style={{ ...styles.button, width: '100%', justifyContent: 'center', padding: '8px 12px' }}
+                  onClick={() => setNextActionsExpanded((expanded) => !expanded)}
+                >
+                  {nextActionsExpanded ? `Collapse to top ${NEXT_ACTIONS_INITIAL_COUNT}` : `Show all ${gaps.length} actions`}
+                </button>
+              )}
             </div>
           )}
         </section>
@@ -4625,6 +4999,10 @@ function MarketingGuidanceWidget({
   const [activeTutorialId, setActiveTutorialId] = useState(tutorialId || defaultDesignerWorkflowTutorial.id)
   const [tutorialStepIndex, setTutorialStepIndex] = useState(0)
   const [tutorialPrepareSignal, setTutorialPrepareSignal] = useState<DesignerWorkflowTutorialPrepareSignal>(null)
+  const guidePanelRef = useRef<HTMLElement | null>(null)
+  const guideToggleRef = useRef<HTMLButtonElement | null>(null)
+  const guideOpenerRef = useRef<HTMLElement | null>(null)
+  const guidePanelTitleId = useId()
   const activeTutorial = getDesignerWorkflowTutorial(activeTutorialId)
 
   useEffect(() => {
@@ -4751,14 +5129,73 @@ function MarketingGuidanceWidget({
     setOpen(true)
   }, [openRequest])
 
+  useEffect(() => {
+    if (!tutorialLibraryOpen) return
+    let focusFrame = 0
+    const frame = window.requestAnimationFrame(() => {
+      focusFrame = window.requestAnimationFrame(() => {
+        document.getElementById('marketing-autopilot-tutorial-library-title')?.focus({ preventScroll: true })
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.cancelAnimationFrame(focusFrame)
+    }
+  }, [tutorialLibraryOpen])
+
+  const closeTutorialLibrary = () => {
+    setTutorialLibraryOpen(false)
+    window.requestAnimationFrame(() => guidePanelRef.current?.focus({ preventScroll: true }))
+  }
+
+  useEffect(() => {
+    if (!open) return undefined
+
+    const focusedBeforeOpen = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    if (!guidePanelRef.current?.contains(focusedBeforeOpen)) guideOpenerRef.current = focusedBeforeOpen
+    const fallbackToggle = guideToggleRef.current
+    const frame = window.requestAnimationFrame(() => guidePanelRef.current?.focus({ preventScroll: true }))
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      const opener = guideOpenerRef.current
+      guideOpenerRef.current = null
+      window.requestAnimationFrame(() => {
+        if (opener?.isConnected && opener !== document.body) opener.focus({ preventScroll: true })
+        else fallbackToggle?.focus({ preventScroll: true })
+      })
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open || !compactLayout || !guidePanelRef.current) return undefined
+
+    const previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const restoreModalIsolation = isolateDomForModal([guidePanelRef.current])
+    return () => {
+      restoreModalIsolation()
+      document.body.style.overflow = previousBodyOverflow
+    }
+  }, [compactLayout, open])
+
   const renderWorkflowHost = open || autopilotCoachActive
   const coachOnly = autopilotCoachActive && !open
   const guideWidgetStyle: CSSProperties = compactLayout
     ? { ...styles.guideWidget, left: 12, right: 12, bottom: 12, maxWidth: 'none', justifyItems: 'stretch' }
     : styles.guideWidget
   const guidePopoverStyle: CSSProperties = compactLayout
-    ? { ...styles.guidePanel, ...styles.guidePopover, width: '100%', maxWidth: 'none', maxHeight: 'calc(100vh - 92px)', padding: 12 }
-    : { ...styles.guidePanel, ...styles.guidePopover }
+    ? {
+        ...styles.guidePanel,
+        ...styles.guidePopover,
+        width: '100%',
+        maxWidth: 'none',
+        maxHeight: 'calc(100dvh - 92px)',
+        padding: 12,
+        overscrollBehavior: 'contain',
+        WebkitOverflowScrolling: 'touch',
+      }
+    : { ...styles.guidePanel, ...styles.guidePopover, overscrollBehavior: 'contain' }
   const guideToggleStyle: CSSProperties = compactLayout
     ? { ...styles.guideToggle, width: '100%', minHeight: 44 }
     : styles.guideToggle
@@ -4768,10 +5205,47 @@ function MarketingGuidanceWidget({
 
   return (
     <div style={guideWidgetStyle}>
+      {open && compactLayout && (
+        <div
+          aria-hidden="true"
+          data-autopilot-backdrop="true"
+          style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'rgba(2, 6, 23, 0.42)' }}
+          onPointerDown={() => setOpen(false)}
+        />
+      )}
       {renderWorkflowHost && (
         <section
-          style={coachOnly ? styles.guideCoachHost : guidePopoverStyle}
+          ref={guidePanelRef}
+          id="marketing-autopilot-dialog"
+          role={coachOnly ? undefined : 'dialog'}
+          aria-modal={!coachOnly && compactLayout ? 'true' : undefined}
+          aria-labelledby={coachOnly ? undefined : guidePanelTitleId}
+          tabIndex={coachOnly ? undefined : -1}
+          style={coachOnly ? styles.guideCoachHost : { ...guidePopoverStyle, position: 'relative', zIndex: 1 }}
           data-tour-id={coachOnly ? undefined : 'designer-workflow-panel'}
+          onKeyDown={(event) => {
+            if (coachOnly) return
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              event.stopPropagation()
+              if (tutorialLibraryOpen) closeTutorialLibrary()
+              else setOpen(false)
+              return
+            }
+            if (event.key !== 'Tab' || !compactLayout || !guidePanelRef.current) return
+            const focusable = marketingFocusableElements(guidePanelRef.current)
+            if (focusable.length === 0) {
+              event.preventDefault()
+              guidePanelRef.current.focus({ preventScroll: true })
+              return
+            }
+            const activeIndex = focusable.indexOf(document.activeElement as HTMLElement)
+            const shouldWrapBackward = event.shiftKey && activeIndex <= 0
+            const shouldWrapForward = !event.shiftKey && (activeIndex < 0 || activeIndex >= focusable.length - 1)
+            if (!shouldWrapBackward && !shouldWrapForward) return
+            event.preventDefault()
+            focusable[event.shiftKey ? focusable.length - 1 : 0]?.focus({ preventScroll: true })
+          }}
         >
           {!coachOnly && (
             <div style={guideHeaderStyle}>
@@ -4795,13 +5269,14 @@ function MarketingGuidanceWidget({
                   </button>
                 </div>
               )}
-              <h2 style={{ margin: 0, fontSize: 20 }}>Choose a marketing action</h2>
+              <h2 id={guidePanelTitleId} style={{ margin: 0, fontSize: 20 }}>Choose a marketing action</h2>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button
+              {!tutorialLibraryOpen && <button
                 type="button"
                 style={{ ...styles.button, height: 34, padding: '0 10px', fontSize: 12 }}
                 aria-expanded={sessionsOpen}
+                aria-controls="marketing-autopilot-sessions"
                 data-tour-id="designer-workflow-sessions-button"
                 onClick={() => {
                   setSessionsOpen((current) => !current)
@@ -4809,7 +5284,7 @@ function MarketingGuidanceWidget({
                 }}
               >
                 Saved sessions
-              </button>
+              </button>}
               <button
                 type="button"
                 aria-label="Close Autopilot"
@@ -4821,33 +5296,35 @@ function MarketingGuidanceWidget({
             </div>
           </div>
           )}
-          <CarouselWorkflowWizard
-            coachOnly={coachOnly}
-            interactionMode={autopilotInteractionMode}
-            data={data}
-            financialPostureId={financialPostureId}
-            saving={savingId?.startsWith('carousel-') || savingId?.startsWith('marketing-plan-') || false}
-            sessionsOpen={sessionsOpen}
-            backSignal={backSignal}
-            actionListSignal={actionListSignal}
-            completionSignal={completionSignal}
-            role={role}
-            onRoleChange={onRoleChange}
-            onBackAvailableChange={setHasWorkflowBack}
-            onOpenView={openViewFromGuide}
-            onOpenAutopilotTarget={onOpenAutopilotTarget}
-            onAutopilotCoachActiveChange={setAutopilotCoachMode}
-            onInteractionModeChange={setAutopilotInteractionMode}
-            onOpenInteractionMode={openAutopilotInteractionMode}
-            onGenerateSingleItem={onGenerateInstagramCarousel}
-            onGenerateMarketingPlan={onGenerateMarketingPlan}
-            tutorialPrepareSignal={tutorialPrepareSignal}
-            onTutorialAction={advanceTutorialForAction}
-          />
+          <div hidden={tutorialLibraryOpen} inert={tutorialLibraryOpen ? true : undefined}>
+            <CarouselWorkflowWizard
+              coachOnly={coachOnly}
+              interactionMode={autopilotInteractionMode}
+              data={data}
+              financialPostureId={financialPostureId}
+              saving={savingId?.startsWith('carousel-') || savingId?.startsWith('marketing-plan-') || false}
+              sessionsOpen={sessionsOpen}
+              backSignal={backSignal}
+              actionListSignal={actionListSignal}
+              completionSignal={completionSignal}
+              role={role}
+              onRoleChange={onRoleChange}
+              onBackAvailableChange={setHasWorkflowBack}
+              onOpenView={openViewFromGuide}
+              onOpenAutopilotTarget={onOpenAutopilotTarget}
+              onAutopilotCoachActiveChange={setAutopilotCoachMode}
+              onInteractionModeChange={setAutopilotInteractionMode}
+              onOpenInteractionMode={openAutopilotInteractionMode}
+              onGenerateSingleItem={onGenerateInstagramCarousel}
+              onGenerateMarketingPlan={onGenerateMarketingPlan}
+              tutorialPrepareSignal={tutorialPrepareSignal}
+              onTutorialAction={advanceTutorialForAction}
+            />
+          </div>
           {!coachOnly && tutorialLibraryOpen && (
           <DesignerWorkflowTutorialLibrary
               onStart={(nextTutorialId) => startTutorial(nextTutorialId, { demoRecommendation: nextTutorialId === 'designer-workflow-recommendation' })}
-              onClose={() => setTutorialLibraryOpen(false)}
+              onClose={closeTutorialLibrary}
             />
           )}
         </section>
@@ -4856,9 +5333,12 @@ function MarketingGuidanceWidget({
           button there — unless a guided tutorial is running and needs it as a highlight target. */}
       {!autopilotCoachActive && (activeView !== 'dashboard' || tutorialOpen) && (
         <button
+          ref={guideToggleRef}
           type="button"
-          style={guideToggleStyle}
+          style={{ ...guideToggleStyle, position: 'relative', zIndex: 1 }}
           aria-expanded={open}
+          aria-haspopup="dialog"
+          aria-controls="marketing-autopilot-dialog"
           data-tour-id="designer-workflow-toggle"
           onClick={() => {
             const nextOpen = !open
@@ -4900,11 +5380,14 @@ function DesignerWorkflowTutorialLibrary({
   onClose: () => void
 }) {
   return (
-    <section style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG, marginTop: 12 }}>
+    <section
+      aria-labelledby="marketing-autopilot-tutorial-library-title"
+      style={{ ...styles.panel, boxShadow: 'none', padding: 12, background: MARKETING_OPAQUE_PANEL_BG, marginTop: 12 }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
         <div>
           <div style={{ ...styles.kicker, marginBottom: 6 }}>Tutorials</div>
-          <h3 style={{ margin: 0, fontSize: 17 }}>Autopilot tutorials</h3>
+          <h3 id="marketing-autopilot-tutorial-library-title" tabIndex={-1} style={{ margin: 0, fontSize: 17 }}>Autopilot tutorials</h3>
         </div>
         <button type="button" aria-label="Close tutorial library" style={{ ...styles.button, width: 32, height: 32, padding: 0 }} onClick={onClose}>
           <CloseIcon style={{ width: 16, height: 16 }} />
@@ -5036,14 +5519,19 @@ function AutopilotHomeMenu({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
           <div style={styles.kicker}>{resuming ? 'Or start something else' : 'Autopilot'}</div>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} title="Tailors the guided flow. A ?role= link sets this for whoever you send it to.">
-            <span style={{ ...styles.small, ...styles.muted }}>Viewing as</span>
-            <div style={{ display: 'inline-flex', border: '1px solid var(--card-border-color)', borderRadius: 6, overflow: 'hidden' }}>
+            <span id="marketing-autopilot-role-label" style={{ ...styles.small, ...styles.muted }}>Viewing as</span>
+            <div
+              role="group"
+              aria-labelledby="marketing-autopilot-role-label"
+              style={{ display: 'inline-flex', border: '1px solid var(--card-border-color)', borderRadius: 6, overflow: 'hidden' }}
+            >
               {MARKETING_ROLES.map((r) => {
                 const active = r === role
                 return (
                   <button
                     key={r}
                     type="button"
+                    aria-pressed={active}
                     onClick={() => onRoleChange(r)}
                     style={{
                       border: 'none',
@@ -5215,7 +5703,16 @@ function MarketingAssistantActionList({
           No matching actions. Try "test homepage", "prove a claim", "plan posts", or "results".
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: compact ? 7 : 9 }}>
+        <div
+          data-marketing-launcher-grid={launcherMode ? 'true' : undefined}
+          data-mobile-stack={launcherMode ? 'true' : undefined}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: launcherMode ? 'repeat(auto-fit, minmax(250px, 1fr))' : 'minmax(0, 1fr)',
+            gap: compact ? 7 : 9,
+            alignItems: 'stretch',
+          }}
+        >
           {limitedActions.map((action) => {
             const actionLabel =
               action.id === 'continue-current-setup'
@@ -5237,11 +5734,16 @@ function MarketingAssistantActionList({
                 key={action.id}
                 type="button"
                 data-tour-id={tourId}
+                data-marketing-launcher-card={launcherMode ? 'true' : undefined}
                 style={{
                   ...styles.templateButton,
                   background: !launcherMode && action.recommended ? '#102932' : MARKETING_OPAQUE_CARD_BG,
                   borderColor: !launcherMode && action.recommended ? '#007385' : 'var(--card-border-color)',
                   padding: compact ? 9 : 11,
+                  minWidth: 0,
+                  height: launcherMode ? '100%' : undefined,
+                  minHeight: launcherMode ? 124 : undefined,
+                  gridTemplateRows: launcherMode ? 'auto minmax(0, 1fr) auto' : undefined,
                 }}
                 onClick={() => onSelect(action)}
               >
@@ -5334,6 +5836,9 @@ function CarouselWorkflowWizard({
   // Home has two faces: the minimal 3-choice menu (default) and the full
   // searchable action directory, revealed only via "I want to do something specific".
   const [browseOpen, setBrowseOpen] = useState(false)
+  const aiRequestGateRef = useRef(new LatestExclusiveRequestGate<'chat' | 'suggestion'>())
+  const creationPendingRef = useRef(false)
+  const acceptedStrategistActionsRef = useRef(new Set<string>())
   const activeSession = sessions.find((session) => session.id === activeSessionId) || null
   const mode = activeSession?.mode || null
   const stepIndex = activeSession?.stepIndex || 0
@@ -5358,6 +5863,29 @@ function CarouselWorkflowWizard({
     () => buildMarketingAssistantActions(data, latestSetupSession, financialPostureId),
     [data, financialPostureId, latestSetupSession],
   )
+
+  const beginAiRequest = (kind: 'chat' | 'suggestion') => {
+    const request = aiRequestGateRef.current.begin(kind, activeSessionId)
+    if (!request) return null
+    setStrategyLoading(true)
+    return request
+  }
+
+  const isCurrentAiRequest = (request: AsyncRequestTicket<'chat' | 'suggestion'>) =>
+    aiRequestGateRef.current.isCurrent(request)
+
+  const finishAiRequest = (request: AsyncRequestTicket<'chat' | 'suggestion'>) => {
+    if (aiRequestGateRef.current.finish(request)) setStrategyLoading(false)
+  }
+
+  const cancelPendingAiRequest = () => {
+    aiRequestGateRef.current.cancel()
+    setStrategyLoading(false)
+  }
+
+  useEffect(() => {
+    acceptedStrategistActionsRef.current.clear()
+  }, [activeSessionId, strategistSuggestion])
 
   useEffect(() => {
     saveDesignerWorkflowSessions(sessions)
@@ -5391,6 +5919,7 @@ function CarouselWorkflowWizard({
     if (actionListSignal <= 0) return
     setBrowseOpen(false)
     returnToPathSelection()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionListSignal])
 
   const updateActiveSession = (patch: Partial<DesignerWorkflowSession>) => {
@@ -5498,6 +6027,7 @@ function CarouselWorkflowWizard({
   }, [completionSignal?.token])
 
   const startSession = (nextMode: DesignerWizardMode, patch: Partial<DesignerWorkflowSession> = {}) => {
+    cancelPendingAiRequest()
     const session = prepareDesignerWorkflowSession({ ...createDesignerWorkflowSession(nextMode), ...patch, mode: nextMode })
     setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)].slice(0, 24))
     setActiveSessionId(session.id)
@@ -5506,6 +6036,7 @@ function CarouselWorkflowWizard({
   }
 
   const startDemoRecommendationSession = () => {
+    cancelPendingAiRequest()
     const demoSuggestion = buildDesignerWorkflowDemoRecommendation()
     const demoQuestionnaire = questionnaireFromStrategySuggestion(demoSuggestion, defaultMarketingPlanQuestionnaire(), data)
     const session = prepareDesignerWorkflowSession({
@@ -5527,11 +6058,13 @@ function CarouselWorkflowWizard({
   }
 
   const deleteSession = (sessionId: string) => {
+    if (sessionId === activeSessionId) cancelPendingAiRequest()
     setSessions((current) => current.filter((session) => session.id !== sessionId))
     if (sessionId === activeSessionId) setActiveSessionId(null)
   }
 
   const updateQuestionnaire = (next: Partial<MarketingPlanQuestionnaire>) => {
+    cancelPendingAiRequest()
     updateActiveSession({
       questionnaire: { ...questionnaire, ...next },
       result: null,
@@ -5544,12 +6077,14 @@ function CarouselWorkflowWizard({
   }
 
   const returnToPathSelection = () => {
+    cancelPendingAiRequest()
     setActiveSessionId(null)
     setError('')
   }
 
   const continueLatestSetup = () => {
     if (!latestSetupSession?.autopilotPlan) return
+    cancelPendingAiRequest()
     setActiveSessionId(latestSetupSession.id)
     const plan = setAutopilotCoachOpen(latestSetupSession.autopilotPlan, true)
     setSessions((current) =>
@@ -5565,6 +6100,12 @@ function CarouselWorkflowWizard({
       onOpenAutopilotTarget(autopilotTargetForStep(step))
       onAutopilotCoachActiveChange(true)
     }
+  }
+
+  const selectWorkflowSession = (sessionId: string | null) => {
+    if (sessionId === activeSessionId) return
+    cancelPendingAiRequest()
+    setActiveSessionId(sessionId)
   }
 
   const selectAssistantAction = (action: MarketingAssistantAction) => {
@@ -5589,7 +6130,8 @@ function CarouselWorkflowWizard({
   }
 
   const requestStrategistChat = async () => {
-    setStrategyLoading(true)
+    const request = beginAiRequest('chat')
+    if (!request) return
     setStrategyError('')
     const userText = strategistDirection.trim() || 'What should we grow or clarify next?'
     const now = new Date().toISOString()
@@ -5621,6 +6163,7 @@ function CarouselWorkflowWizard({
         }),
       })
       const payload = (await response.json()) as MarketingAiAssistResponse
+      if (!isCurrentAiRequest(request)) return
       if (!response.ok || !payload.suggestion?.strategistChat) throw new Error(payload.error || 'The strategist could not create a recommendation.')
       const assistantText =
         payload.suggestion.strategistChat.assistantMessage ||
@@ -5641,15 +6184,19 @@ function CarouselWorkflowWizard({
       })
       onTutorialAction('strategist-recommendation-ready')
     } catch (requestError) {
+      if (!isCurrentAiRequest(request)) return
       console.error('Autopilot chat failed:', requestError)
       setStrategyError(requestError instanceof Error ? requestError.message : 'Autopilot could not create a recommendation.')
     } finally {
-      setStrategyLoading(false)
+      finishAiRequest(request)
     }
   }
 
   const acceptStrategistAction = (actionKind: MarketingStrategistActionKind | string) => {
     if (!strategistSuggestion?.strategistChat?.primaryRecommendation) return
+    const actionGuardKey = `${activeSessionId || 'no-session'}:${actionKind}`
+    if (acceptedStrategistActionsRef.current.has(actionGuardKey)) return
+    acceptedStrategistActionsRef.current.add(actionGuardKey)
     const actionId = `${actionKind}-${Date.now()}-${randomKey()}`
     if (actionKind === 'saveForLater') {
       updateActiveSession({
@@ -5694,7 +6241,8 @@ function CarouselWorkflowWizard({
   }
 
   const requestStrategySuggestion = async () => {
-    setStrategyLoading(true)
+    const request = beginAiRequest('suggestion')
+    if (!request) return
     setStrategyError('')
     updateActiveSession({ result: null })
     try {
@@ -5709,6 +6257,7 @@ function CarouselWorkflowWizard({
         }),
       })
       const payload = (await response.json()) as MarketingAiAssistResponse
+      if (!isCurrentAiRequest(request)) return
       if (!response.ok || !payload.suggestion) throw new Error(payload.error || 'The strategy assistant could not create a suggestion.')
       const nextAutopilotPlan = buildMarketingAutopilotPlan(data, payload.suggestion, questionnaire)
       const nextStep = getCurrentAutopilotStep(nextAutopilotPlan)
@@ -5726,6 +6275,7 @@ function CarouselWorkflowWizard({
         onAutopilotCoachActiveChange(true)
       }
     } catch (requestError) {
+      if (!isCurrentAiRequest(request)) return
       console.error('Strategy assistant used rule-based fallback:', requestError)
       if (financialPostureId === 'survival' || financialPostureId === 'rebuild') {
         const outreachPlan = buildPrincipalOutreachPlan()
@@ -5764,13 +6314,15 @@ function CarouselWorkflowWizard({
       }
       setStrategyError('')
     } finally {
-      setStrategyLoading(false)
-      onTutorialAction('strategy-suggestion-ready')
+      const requestStillCurrent = isCurrentAiRequest(request)
+      finishAiRequest(request)
+      if (requestStillCurrent) onTutorialAction('strategy-suggestion-ready')
     }
   }
 
   const generate = async () => {
-    if (!mode) return
+    if (!mode || saving || creationPendingRef.current) return
+    creationPendingRef.current = true
     setError('')
     updateActiveSession({ result: null })
     try {
@@ -5780,11 +6332,14 @@ function CarouselWorkflowWizard({
     } catch (err) {
       console.error('Carousel workflow generation failed:', err)
       setError(err instanceof Error ? err.message : 'Research project could not be created.')
+    } finally {
+      creationPendingRef.current = false
     }
   }
 
   const generateSuggestedPlan = async () => {
-    if (saving || suggestedPlanCreating || result) return
+    if (saving || suggestedPlanCreating || result || creationPendingRef.current) return
+    creationPendingRef.current = true
     const nextQuestionnaire = strategySuggestion
       ? questionnaireFromStrategySuggestion(strategySuggestion, questionnaire, data)
       : normalizeMarketingPlanQuestionnaire(questionnaire)
@@ -5811,6 +6366,7 @@ function CarouselWorkflowWizard({
       console.error('Marketing plan generation failed:', err)
       setError(err instanceof Error ? err.message : 'Research project could not be created.')
     } finally {
+      creationPendingRef.current = false
       setSuggestedPlanCreating(false)
     }
   }
@@ -5879,8 +6435,8 @@ function CarouselWorkflowWizard({
           <WorkflowSessionManager
             sessions={sessions}
             activeSessionId={activeSessionId}
-            onSelect={setActiveSessionId}
-            onNew={() => setActiveSessionId(null)}
+            onSelect={(sessionId) => selectWorkflowSession(sessionId)}
+            onNew={() => selectWorkflowSession(null)}
             onDelete={deleteSession}
           />
         )}
@@ -5950,8 +6506,8 @@ function CarouselWorkflowWizard({
           <WorkflowSessionManager
             sessions={sessions}
             activeSessionId={activeSessionId}
-            onSelect={setActiveSessionId}
-            onNew={() => setActiveSessionId(null)}
+            onSelect={(sessionId) => selectWorkflowSession(sessionId)}
+            onNew={() => selectWorkflowSession(null)}
             onDelete={deleteSession}
           />
         )}
@@ -5983,8 +6539,8 @@ function CarouselWorkflowWizard({
           <WorkflowSessionManager
             sessions={sessions}
             activeSessionId={activeSessionId}
-            onSelect={setActiveSessionId}
-            onNew={() => setActiveSessionId(null)}
+            onSelect={(sessionId) => selectWorkflowSession(sessionId)}
+            onNew={() => selectWorkflowSession(null)}
             onDelete={deleteSession}
           />
         )}
@@ -6016,8 +6572,8 @@ function CarouselWorkflowWizard({
           <WorkflowSessionManager
             sessions={sessions}
             activeSessionId={activeSessionId}
-            onSelect={setActiveSessionId}
-            onNew={() => setActiveSessionId(null)}
+            onSelect={(sessionId) => selectWorkflowSession(sessionId)}
+            onNew={() => selectWorkflowSession(null)}
             onDelete={deleteSession}
           />
         )}
@@ -6044,6 +6600,7 @@ function CarouselWorkflowWizard({
           strategyStepIndex={strategyStepIndex}
           assistantActions={assistantActions}
           onPromptChange={(nextPrompt) => {
+            cancelPendingAiRequest()
             onTutorialAction('fill-optional-direction')
             updateActiveSession({
               strategyPrompt: nextPrompt,
@@ -6096,8 +6653,8 @@ function CarouselWorkflowWizard({
         <WorkflowSessionManager
           sessions={sessions}
           activeSessionId={activeSessionId}
-          onSelect={setActiveSessionId}
-          onNew={() => setActiveSessionId(null)}
+          onSelect={(sessionId) => selectWorkflowSession(sessionId)}
+          onNew={() => selectWorkflowSession(null)}
           onDelete={deleteSession}
         />
       )}
@@ -6310,7 +6867,7 @@ function WorkflowSessionManager({
   const visibleSessions = sessions.filter((session) => !session.ephemeral)
 
   return (
-    <section style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 10, background: MARKETING_OPAQUE_PANEL_BG }}>
+    <section id="marketing-autopilot-sessions" style={{ border: '1px solid var(--card-border-color)', borderRadius: 8, padding: 10, background: MARKETING_OPAQUE_PANEL_BG }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: 15 }}>Sessions {visibleSessions.length > 0 ? `(${visibleSessions.length})` : ''}</h3>
         <button type="button" style={{ ...styles.button, padding: '6px 9px', fontSize: 12 }} onClick={onNew}>
@@ -6353,7 +6910,11 @@ function WorkflowSessionManager({
                     type="button"
                     aria-label={`Delete ${session.title}`}
                     style={{ ...styles.button, width: 34, padding: 0 }}
-                    onClick={() => onDelete(session.id)}
+                    onClick={() => {
+                      if (window.confirm(`Delete the local Autopilot session “${session.title}”? This cannot be undone.`)) {
+                        onDelete(session.id)
+                      }
+                    }}
                   >
                     <CloseIcon style={{ width: 15, height: 15 }} />
                   </button>
@@ -7281,8 +7842,8 @@ async function loadPrincipalOutreachPrerequisites(
 // A principal/founder gets a hand-authored end-to-end guided plan: preflight the
 // offer/evidence setup, add contacts, research, review, call, and log. It's a
 // normal MarketingAutopilotPlan, so the coach overlay, resume card, and target-
-// opening all work unchanged. Confirming a coach choice advances the persisted
-// plan; the smaller Next control remains a non-destructive preview.
+// opening all work unchanged. The coach footer advances the persisted plan;
+// closing the coach leaves the current step untouched.
 export function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
   const steps: MarketingAutopilotStep[] = [
     {
@@ -7406,6 +7967,19 @@ export function advanceScriptedAutopilotPlan(
         : step,
     ),
   })
+}
+
+const PRINCIPAL_AUTOPILOT_NEXT_LABELS: Record<string, string> = {
+  'principal-plan-warm-network': 'Add Contacts',
+  'principal-outreach-intake': 'Check Names',
+  'principal-outreach-research': 'Review Briefs',
+  'principal-outreach-review': 'Open Progress Tracker',
+  'principal-outreach-call': 'Log Outcomes',
+  'principal-outreach-log': 'Finish',
+}
+
+export function getPrincipalAutopilotNextLabel(stepId: string): string {
+  return PRINCIPAL_AUTOPILOT_NEXT_LABELS[stepId] || 'Next step'
 }
 
 // Tailored coach copy for the principal steps. Overrides the content-pipeline
@@ -7826,9 +8400,9 @@ function AutopilotCoachOverlay({
     if (nextStep) onStepPreview(nextStep)
   }
 
-  // Scripted (principal) steps use explicit human confirmations instead of
-  // workspace completion events. Persist each primary confirmation so closing
-  // and resuming returns to the next unfinished step; Next remains preview-only.
+  // Scripted (principal) steps use the single footer action instead of duplicate
+  // choice cards. Persist that confirmation so closing and resuming returns to
+  // the next unfinished step.
   const handleCoachChoice = async (
     choiceStep: MarketingAutopilotStep,
     choice: AutopilotCoachChoice,
@@ -7872,6 +8446,7 @@ function AutopilotCoachOverlay({
       tutorial={buildAutopilotCoachTutorial(plan, onOpenChat, handleCoachChoice, {
         checkingPrerequisites,
         prerequisiteNotice,
+        contactCount: principalPrerequisites?.contactCount ?? null,
       })}
       stepIndex={safeVisibleStepIndex}
       onStepChange={handleStepChange}
@@ -7883,15 +8458,21 @@ function AutopilotCoachOverlay({
   )
 }
 
-function buildAutopilotCoachTutorial(
+export function buildAutopilotCoachTutorial(
   plan: MarketingAutopilotPlan,
   onOpenChat: () => void,
   onChoice: (step: MarketingAutopilotStep, choice: AutopilotCoachChoice, choiceIndex: number) => void | Promise<void>,
-  prerequisiteState: { checkingPrerequisites: boolean; prerequisiteNotice: string | null } = {
+  prerequisiteState: {
+    checkingPrerequisites: boolean
+    prerequisiteNotice: string | null
+    contactCount: number | null
+  } = {
     checkingPrerequisites: false,
     prerequisiteNotice: null,
+    contactCount: null,
   },
 ) {
+  const scriptedPlan = isScriptedAutopilotPlan(plan)
   return {
     id: `marketing-autopilot-${plan.id}`,
     title: 'Autopilot',
@@ -7899,12 +8480,29 @@ function buildAutopilotCoachTutorial(
     steps: plan.steps.map((step, index) => {
       const decision = getAutopilotStepDecision(step)
       const prompt = getAutopilotCoachPrompt(step)
+      const currentScriptedStep = scriptedPlan && step.id === plan.currentStepId
+      const primaryChoice = prompt.choices[0]
+      const existingContactsSatisfyIntake =
+        step.id === 'principal-outreach-intake'
+        && (prerequisiteState.contactCount || 0) > 0
       return {
         id: step.id,
         targetId: step.targetId,
         instruction: prompt.question,
-        nextLabel: index === plan.steps.length - 1 ? 'Close coach' : 'Next step',
+        nextLabel: scriptedPlan
+          ? existingContactsSatisfyIntake
+            ? 'Research Contacts'
+            : getPrincipalAutopilotNextLabel(step.id)
+          : index === plan.steps.length - 1
+            ? 'Close coach'
+            : 'Next step',
         previousLabel: 'Previous step',
+        onNext: currentScriptedStep && primaryChoice
+          ? () => onChoice(step, primaryChoice, 0)
+          : undefined,
+        nextBusy: currentScriptedStep && prerequisiteState.checkingPrerequisites,
+        mirrorTargetAction: currentScriptedStep && step.id === 'principal-outreach-intake',
+        allowTargetActionFallback: currentScriptedStep && existingContactsSatisfyIntake,
         description: (
           <div style={{ display: 'grid', gap: 10 }}>
             <button
@@ -7931,7 +8529,7 @@ function buildAutopilotCoachTutorial(
                   : prerequisiteState.prerequisiteNotice}
               </div>
             )}
-            <div style={{ display: 'grid', gap: 7 }}>
+            {!scriptedPlan && <div style={{ display: 'grid', gap: 7 }}>
               {prompt.choices.map((choice, choiceIndex) => {
                 const isPrimaryChoice = choiceIndex === 0 || choice.tone === 'primary'
                 const checkingThisChoice = step.id === plan.currentStepId && isPrimaryChoice && prerequisiteState.checkingPrerequisites
@@ -7979,7 +8577,7 @@ function buildAutopilotCoachTutorial(
                   </button>
                 )
               })}
-            </div>
+            </div>}
             <details>
               <summary style={{ cursor: 'pointer', color: '#fff', fontWeight: 800 }}>Why this question?</summary>
               <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>

@@ -18,6 +18,20 @@ import { refsFromIds, type SanityReference } from './derive'
 /** A loose field bag for a document being built (no `_id`, no `_type`). */
 export type MarketingFieldBag = Record<string, unknown>
 
+/**
+ * Stable id for a document derived one-to-one from a Sanity source document.
+ * Draft and published ids intentionally converge so publishing the source does
+ * not mint a second clone.
+ */
+export function marketingCloneDocumentId(
+  kind: 'link-from-post' | 'proof-from-result',
+  sourceId: string,
+): string {
+  const publishedSourceId = sourceId.replace(/^drafts\./, '')
+  const safeSourceId = publishedSourceId.replace(/[^A-Za-z0-9_.-]/g, '-').slice(-88) || 'source'
+  return `marketing-clone.${kind}.${safeSourceId}`.slice(0, 128)
+}
+
 /** Minimal shape of a calendar item needed to derive a link. */
 export interface CalendarItemForLink {
   _id: string

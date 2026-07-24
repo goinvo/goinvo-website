@@ -219,7 +219,7 @@ describe('checkAiCitation — graceful by design', () => {
   it('returns an error-flagged result (no throw) when Anthropic is not configured', async () => {
     vi.mocked(isAnthropicConfigured).mockReturnValue(false)
     const result = await checkAiCitation('test prompt')
-    expect(result.error).toMatch(/ANTHROPIC_API_KEY/)
+    expect(result.error).toBe('AI citation service is not configured.')
     expect(result.goinvoMentioned).toBe(false)
     expect(result.goinvoCited).toBe(false)
   })
@@ -228,7 +228,8 @@ describe('checkAiCitation — graceful by design', () => {
     vi.mocked(isAnthropicConfigured).mockReturnValue(true)
     vi.mocked(generateClaudeText).mockRejectedValueOnce(new Error('network down'))
     const result = await checkAiCitation('test prompt')
-    expect(result.error).toMatch(/network down/)
+    expect(result.error).toBe('AI citation call failed.')
+    expect(result.error).not.toContain('network down')
   })
 
   it('parses a successful web-search response into mention/citation flags', async () => {
@@ -251,7 +252,9 @@ describe('runAiCitationPanel — graceful panel', () => {
     vi.mocked(isAnthropicConfigured).mockReturnValue(false)
     const snapshot = await runAiCitationPanel(['q1', 'q2'])
     expect(snapshot.unavailable).toBe(true)
-    expect(snapshot.unavailableReason).toMatch(/ANTHROPIC_API_KEY/)
+    expect(snapshot.unavailableReason).toBe(
+      'AI citation service is not configured, so the panel could not run.',
+    )
     expect(snapshot.results).toEqual([])
     expect(snapshot.promptCount).toBe(2)
     expect(snapshot.aggregate.mentionRate).toBe(0)
@@ -285,7 +288,7 @@ describe('runAiCitationPanel — graceful panel', () => {
     // The errored prompt is flagged but the panel carried on.
     const errored = snapshot.results.filter((rr) => rr.error)
     expect(errored).toHaveLength(1)
-    expect(errored[0].error).toMatch(/500/)
+    expect(errored[0].error).toBe('AI citation call failed.')
     // Rates are over the 2 answered prompts (both mentioned + cited GoInvo).
     expect(snapshot.aggregate.mentionRate).toBe(1)
     expect(snapshot.aggregate.citationRate).toBe(1)

@@ -4,6 +4,13 @@ import { useCurrentUser } from 'sanity'
 
 import { useConfirmDialog } from './ConfirmDialog'
 import { BrandVoiceLearningReview } from './BrandVoiceLearningReview'
+import {
+  buildContactIntakeRows,
+  ContactIntakeGrid,
+  contactIntakeDraftLimitError,
+  parseContactIntakeDraftLine,
+  type ContactIntakeRow,
+} from './ContactIntakeGrid'
 import { authenticatedMarketingRequest as outreachApi } from './authenticatedMarketingRequest'
 
 import {
@@ -28,6 +35,24 @@ import type {
   BrandVoiceLearningSelection,
 } from '@/lib/marketing/brandVoiceLearning'
 import {
+  CONTACT_SPREADSHEET_IMPORT_LIMITS,
+  ContactSpreadsheetImportError,
+  isContactSpreadsheetHeader,
+  parseContactSpreadsheet,
+  type ContactSpreadsheetImportResult,
+  type ImportedSpreadsheetContact,
+} from '@/lib/marketing/contactSpreadsheetImport'
+import {
+  OUTREACH_INTAKE_FIELD_LIMITS,
+  OUTREACH_INTAKE_LIMITS,
+} from '@/lib/marketing/outreachIntake'
+import {
+  buildMarketingContactIdentityClaims,
+  fetchMarketingContactIdentityClaims,
+  haveSameContactStrongIdentities,
+  planMarketingContactIdentityClaimUpdate,
+} from '@/lib/marketing/outreachIdentityClaims'
+import {
   buildOutreachProgress,
   isUsableOutreachEmail,
   isUsableOutreachPhone,
@@ -37,15 +62,32 @@ import {
   type OutreachProgressUrgency,
 } from '@/lib/marketing/outreachProgress'
 import {
+  buildOutreachContactEditPatch,
+  beginRequestGeneration,
+  catalogContainsOfferTitle,
+  catalogPromotionIdentity,
+  createOutreachContactEditDraft,
+  createPendingKeyRegistry,
+  haveSameTrimmedFields,
+  isCurrentRequestGeneration,
+  isOutreachRevisionConflict,
+  validateOutreachContactMethods,
+  type OutreachContactEditDraft,
+} from '@/lib/marketing/outreachIntegrity'
+import {
+  appendIntakeDraftEntries,
   buildInteractionEntry,
   buildWarmStartSuggestions,
   compactEvidenceIndex,
   contactDedupeKey,
+  contactIdentityKeys,
   DEFAULT_FINANCIAL_POSTURE_ID,
   FINANCIAL_POSTURE_DOC_ID,
   getFinancialPosture,
   hasPricedOffer,
   isFinancialPostureId,
+  mergeWarmStartSuggestionsIntoIntake,
+  normalizeParsedContacts,
   normalizeOutreachUrl,
   slugify,
   type FinancialPosture,
@@ -62,6 +104,7 @@ import {
   PanelHeading,
   StatusPill,
   styles,
+  type AutopilotCompletionPayload,
   type MarketingContact,
   type MarketingOffer,
   type StudioClient,
@@ -78,6 +121,88 @@ interface OutreachWorkspaceProps {
   onOpenEvidence?: () => void
   /** Optional: open shared Marketing Settings to add or edit reusable voice profiles. */
   onOpenSettings?: () => void
+  /** Report successful workspace actions so an open Autopilot plan can advance. */
+  onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
+}
+
+interface OutreachWorkspaceContentProps extends OutreachWorkspaceProps {
+  currentUser: {
+    id?: string
+    name?: string
+    roles?: Array<{ name?: string }>
+  } | null
+  request?: typeof outreachApi
+}
+
+interface IntakeSpreadsheetReport {
+  result: ContactSpreadsheetImportResult
+  addedCount: number
+}
+
+const SPREADSHEET_DRAFT_LINE_CHARACTERS = 500
+
+function normalizeIntakeSourceLine(value?: string | null) {
+  return (value || '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+export function prepareContactIntakePaste(pastedText: string) {
+  const firstNonEmptyLine = pastedText.split(/\r?\n/).find((line) => line.trim()) || ''
+  const hasTabs = pastedText.includes('\t')
+  const hasDelimitedHeader = hasTabs || /[,;]/.test(firstNonEmptyLine)
+  const headerCells = hasDelimitedHeader
+    ? firstNonEmptyLine.split(hasTabs ? '\t' : /[,;]/).map((cell) => cell.trim().replace(/^['"]|['"]$/g, ''))
+    : []
+
+  if (hasDelimitedHeader && isContactSpreadsheetHeader(headerCells)) {
+    return {
+      kind: 'spreadsheet' as const,
+      text: pastedText,
+      fileName: hasTabs ? 'pasted-from-excel.tsv' : 'pasted-contacts.csv',
+    }
+  }
+
+  // Excel also emits tabs when users copy raw rows without the header. Preserve
+  // those contacts as ordinary one-row-per-line drafts instead of handing them
+  // to a header-based parser that must reject them.
+  const rowText = hasTabs
+    ? pastedText
+        .split(/\r?\n/)
+        .map((line) => line.split('\t').map((part) => part.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' — '))
+        .join('\n')
+    : pastedText
+  return { kind: 'rows' as const, text: rowText }
+}
+
+export function spreadsheetContactDraftLine(contact: ImportedSpreadsheetContact) {
+  const parts = [
+    contact.organization ? `organization: ${contact.organization}` : null,
+    contact.role ? `role: ${contact.role}` : null,
+    contact.email ? `email: ${contact.email}` : null,
+    contact.phone ? `phone: ${contact.phone}` : null,
+    contact.linkedinUrl ? `linkedin: ${contact.linkedinUrl}` : null,
+    contact.howWeKnow ? `relationship: ${contact.howWeKnow}` : null,
+    contact.owner ? `owner: ${contact.owner}` : null,
+    contact.segment ? `segment: ${contact.segment}` : null,
+    contact.warmth ? `warmth: ${contact.warmth}` : null,
+  ].filter((part): part is string => Boolean(part))
+  // Keep the parser's deterministic row id inside the otherwise human-readable
+  // source line. The id prevents two long rows whose distinguishing fields fall
+  // beyond the 500-character display budget from collapsing into one draft.
+  const source = `source: spreadsheet (${contact.sourceId})`
+  let line = contact.name.trim()
+  for (const part of parts) {
+    const candidate = `${line} — ${part} — ${source}`
+    if (candidate.length > SPREADSHEET_DRAFT_LINE_CHARACTERS) continue
+    line = `${line} — ${part}`
+  }
+  return `${line} — ${source}`
+}
+
+function prepareSpreadsheetContacts(contacts: readonly ImportedSpreadsheetContact[]): ParsedIntakeContact[] {
+  return contacts.map((contact) => {
+    const sourceLine = spreadsheetContactDraftLine(contact)
+    return { ...contact, sourceLine }
+  })
 }
 
 const STATUS_SHORT_OPTIONS = OUTREACH_STATUS_OPTIONS.map((o) => ({
@@ -88,6 +213,9 @@ const WARMTH_SHORT_OPTIONS = OUTREACH_WARMTH_OPTIONS.map((o) => ({
   value: o.value,
   title: o.title.split(' — ')[0],
 }))
+
+const warmStartSuggestionKey = (suggestion: WarmStartSuggestion) =>
+  contactDedupeKey(suggestion.name, suggestion.organization)
 
 const CONTACT_FIELDS = `
   _id, _rev, _updatedAt, name, organization, role, segment, owner, warmth, status,
@@ -121,11 +249,53 @@ const OUTREACH_CONTACT_UNSAVED_ID = 'outreach-contact-draft'
 const OUTREACH_CHANNEL_OPTIONS_UNSAVED_ID = 'outreach-channel-options-draft'
 const OUTREACH_CATALOG_UNSAVED_ID = 'outreach-offer-catalog-draft'
 const OUTREACH_EVIDENCE_UNSAVED_ID = 'outreach-evidence-draft'
-const REVIEW_MANAGED_STATUSES = new Set(['needsReview', 'researched', 'briefed'])
-const CONTACT_EDITOR_STATUS_OPTIONS = STATUS_SHORT_OPTIONS.filter(
-  (option) => !REVIEW_MANAGED_STATUSES.has(option.value),
-)
+const OUTREACH_INTAKE_SESSION_KEY = 'goinvo.marketing.outreach.intake.v1'
+const CONTACT_RECORD_PAGE_SIZE = 50
 
+function clearStoredOutreachIntake() {
+  try {
+    window.sessionStorage.removeItem(OUTREACH_INTAKE_SESSION_KEY)
+  } catch {
+    // Session storage is an optional reload convenience; saving/clearing the
+    // private Outreach record must still succeed when a browser blocks it.
+  }
+}
+
+/**
+ * Session storage is only a reload convenience, never an authority. Validate
+ * every preview field before restoring it so corrupt/older payloads cannot
+ * crash the table or remain eligible for a one-click create.
+ */
+export function normalizeStoredOutreachIntakePreview(value: unknown): ParsedIntakeContact[] | null {
+  if (!Array.isArray(value) || value.length > OUTREACH_INTAKE_LIMITS.contacts) return null
+  const rawContacts: Array<Record<string, unknown>> = []
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return null
+    const contact = candidate as Record<string, unknown>
+    for (const [field, limit] of Object.entries(OUTREACH_INTAKE_FIELD_LIMITS)) {
+      const fieldValue = contact[field]
+      if (fieldValue === undefined || fieldValue === null) continue
+      if (typeof fieldValue !== 'string' || fieldValue.length > limit) return null
+    }
+    if (contact.duplicate !== undefined && typeof contact.duplicate !== 'boolean') return null
+    rawContacts.push(contact)
+  }
+
+  const normalized = normalizeParsedContacts({ contacts: rawContacts })
+  if (normalized.length !== rawContacts.length) return null
+  return normalized.map((contact, index) => {
+    const raw = rawContacts[index]
+    const duplicate = raw.duplicate === true || contact.duplicate === true
+    const duplicateReason = typeof raw.duplicateReason === 'string'
+      ? raw.duplicateReason.trim()
+      : contact.duplicateReason
+    return {
+      ...contact,
+      duplicate: duplicate || undefined,
+      duplicateReason: duplicate ? duplicateReason || undefined : undefined,
+    }
+  })
+}
 type ChannelOptionDraft = {
   _key?: string
   channel: string
@@ -143,16 +313,9 @@ const TRACKER_CONTACT_FIELD_IDS = new Set([
   'email',
   'phone',
   'linkedinUrl',
-  'status',
   'followUpAt',
   'nextStep',
 ])
-
-function followUpDateInput(value?: string): string {
-  if (!value) return ''
-  const parsed = new Date(value)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
-}
 
 function followUpDateIso(value: string): string | null {
   const normalized = value.trim()
@@ -506,9 +669,20 @@ function OutreachPlanPanel({
   )
 }
 
-export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: OutreachWorkspaceProps) {
-  const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
+export function OutreachWorkspace(props: OutreachWorkspaceProps) {
   const currentUser = useCurrentUser()
+  return <OutreachWorkspaceContent {...props} currentUser={currentUser} />
+}
+
+export function OutreachWorkspaceContent({
+  client,
+  onOpenEvidence,
+  onOpenSettings,
+  onAutopilotComplete,
+  currentUser,
+  request = outreachApi,
+}: OutreachWorkspaceContentProps) {
+  const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
   const canManageOutreach = canManagePrivateOutreach(currentUser)
   const {
     clearUnsavedChanges,
@@ -527,16 +701,164 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const [intakeText, setIntakeText] = useState('')
+  const [intakeEntries, setIntakeEntries] = useState<string[]>([])
+  const [intakeDraft, setIntakeDraft] = useState('')
+  const [intakeAnnouncement, setIntakeAnnouncement] = useState('')
+  const [intakeLimitError, setIntakeLimitError] = useState<string | null>(null)
+  const [intakeImportError, setIntakeImportError] = useState<string | null>(null)
+  const [intakeSpreadsheetReport, setIntakeSpreadsheetReport] = useState<IntakeSpreadsheetReport | null>(null)
+  const [intakeStructuredContacts, setIntakeStructuredContacts] = useState<ParsedIntakeContact[] | null>(null)
   const [intakePreview, setIntakePreview] = useState<ParsedIntakeContact[] | null>(null)
-  const [intakeBusy, setIntakeBusy] = useState<'preview' | 'create' | null>(null)
+  const [intakeBusy, setIntakeBusy] = useState<'import' | 'preview' | 'create' | null>(null)
+  const intakeRequestRef = useRef<'preview' | 'create' | null>(null)
+  const intakeImportGenerationRef = useRef(0)
+  const intakeFileInputRef = useRef<HTMLInputElement>(null)
+  const intakeImportButtonRef = useRef<HTMLButtonElement>(null)
+  const intakeHydrationAttemptedRef = useRef(false)
+  const [intakeStorageHydrated, setIntakeStorageHydrated] = useState(false)
+  const [intakeStorageAvailable, setIntakeStorageAvailable] = useState(true)
+  const preparedIntake = useMemo(
+    () => appendIntakeDraftEntries(intakeEntries, intakeDraft),
+    [intakeDraft, intakeEntries],
+  )
+  const intakeText = preparedIntake.entries.join('\n')
+  const intakeReviewRows = useMemo(
+    () => buildContactIntakeRows(preparedIntake.entries, intakePreview),
+    [intakePreview, preparedIntake.entries],
+  )
+  const intakeReviewIssueCount = intakePreview
+    ? intakeReviewRows.filter((row) => row.state === 'draft').length
+    : 0
+  const alignedStructuredContacts = useMemo(() => {
+    const bySourceLine = new Map<string, ParsedIntakeContact>()
+    for (const contact of intakeStructuredContacts || []) {
+      const key = normalizeIntakeSourceLine(contact.sourceLine)
+      if (key && !bySourceLine.has(key)) bySourceLine.set(key, contact)
+    }
+    return preparedIntake.entries
+      .map((entry) => bySourceLine.get(normalizeIntakeSourceLine(entry)))
+      .filter((contact): contact is ParsedIntakeContact => Boolean(contact))
+  }, [intakeStructuredContacts, preparedIntake.entries])
+  const alignedStructuredSourceLines = useMemo(
+    () => new Set(alignedStructuredContacts.map((contact) => normalizeIntakeSourceLine(contact.sourceLine))),
+    [alignedStructuredContacts],
+  )
+  const unstructuredIntakeEntries = useMemo(
+    () => preparedIntake.entries.filter(
+      (entry) => !alignedStructuredSourceLines.has(normalizeIntakeSourceLine(entry)),
+    ),
+    [alignedStructuredSourceLines, preparedIntake.entries],
+  )
+  const structuredCoversAllEntries = preparedIntake.entries.length > 0 && unstructuredIntakeEntries.length === 0
+
+  useEffect(() => {
+    if (intakeHydrationAttemptedRef.current) return
+    intakeHydrationAttemptedRef.current = true
+    try {
+      const raw = window.sessionStorage.getItem(OUTREACH_INTAKE_SESSION_KEY)
+      if (!raw) {
+        setIntakeStorageHydrated(true)
+        return
+      }
+      if (raw.length > OUTREACH_INTAKE_LIMITS.bodyBytes) {
+        clearStoredOutreachIntake()
+        setIntakeStorageHydrated(true)
+        return
+      }
+      const parsed = JSON.parse(raw) as {
+        entries?: unknown
+        draft?: unknown
+        preview?: unknown
+        structuredContacts?: unknown
+      }
+      const restoredEntries = Array.isArray(parsed.entries)
+        ? parsed.entries.filter((entry): entry is string => typeof entry === 'string')
+        : []
+      const restoredDraft = typeof parsed.draft === 'string' ? parsed.draft : ''
+      const restoredPreview = normalizeStoredOutreachIntakePreview(parsed.preview)
+      const restoredStructuredContacts = normalizeStoredOutreachIntakePreview(parsed.structuredContacts)
+      const limitError = contactIntakeDraftLimitError(restoredEntries, restoredDraft)
+      if (limitError) {
+        clearStoredOutreachIntake()
+      } else if (restoredEntries.length > 0 || restoredDraft.trim()) {
+        setIntakeEntries(restoredEntries)
+        setIntakeDraft(restoredDraft)
+        setIntakePreview(restoredPreview)
+        const restoredEntryKeys = new Set(restoredEntries.map(normalizeIntakeSourceLine))
+        if (
+          restoredStructuredContacts?.length
+          && restoredStructuredContacts.every((contact) => {
+            const key = normalizeIntakeSourceLine(contact.sourceLine)
+            return Boolean(key && restoredEntryKeys.has(key))
+          })
+        ) {
+          setIntakeStructuredContacts(restoredStructuredContacts)
+        }
+        setIntakeAnnouncement(
+          `Restored ${restoredEntries.length} unsaved contact row${restoredEntries.length === 1 ? '' : 's'} from this tab.`,
+        )
+        markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
+      }
+    } catch {
+      setIntakeStorageAvailable(false)
+      clearStoredOutreachIntake()
+    } finally {
+      setIntakeStorageHydrated(true)
+    }
+  }, [markUnsavedChange])
+
+  useEffect(() => {
+    if (!intakeStorageHydrated) return
+    try {
+      if (intakeEntries.length === 0 && !intakeDraft.trim()) {
+        clearStoredOutreachIntake()
+        return
+      }
+      window.sessionStorage.setItem(
+        OUTREACH_INTAKE_SESSION_KEY,
+        JSON.stringify({
+          entries: intakeEntries,
+          draft: intakeDraft,
+          preview: intakePreview,
+          structuredContacts: intakeStructuredContacts,
+        }),
+      )
+      setIntakeStorageAvailable(true)
+    } catch {
+      // The server-side limits keep this small; if storage is unavailable, the
+      // unsaved-change guard still protects navigation in the current page.
+      setIntakeStorageAvailable(false)
+    }
+  }, [intakeDraft, intakeEntries, intakePreview, intakeStorageHydrated, intakeStructuredContacts])
 
   const [postureId, setPostureId] = useState<string | null>(null)
   const [warmStart, setWarmStart] = useState<WarmStartSuggestion[] | null>(null)
   const [warmStartSelected, setWarmStartSelected] = useState<ReadonlySet<string>>(new Set())
-  const [warmStartBusy, setWarmStartBusy] = useState<'load' | 'add' | null>(null)
+  const [warmStartBusy, setWarmStartBusy] = useState<'load' | null>(null)
+  const warmStartPeople = useMemo(
+    () => (warmStart || []).filter((suggestion) => suggestion.kind === 'thanked-person'),
+    [warmStart],
+  )
+  const warmStartOrganizations = useMemo(
+    () => (warmStart || []).filter((suggestion) => suggestion.kind === 'client-org'),
+    [warmStart],
+  )
+  const warmStartSelectedCount = (warmStart || []).filter((suggestion) =>
+    warmStartSelected.has(warmStartSuggestionKey(suggestion)),
+  ).length
+  const warmStartPeopleSelectedCount = warmStartPeople.filter((suggestion) =>
+    warmStartSelected.has(warmStartSuggestionKey(suggestion)),
+  ).length
+  const warmStartOrganizationsSelectedCount = warmStartOrganizations.filter((suggestion) =>
+    warmStartSelected.has(warmStartSuggestionKey(suggestion)),
+  ).length
+  const allWarmStartSelected = Boolean(
+    warmStart?.length && warmStartSelectedCount === warmStart.length,
+  )
+  const warmStartSelectionUnavailable = warmStartBusy !== null || intakeBusy !== null
 
-  const [researchingId, setResearchingId] = useState<string | null>(null)
+  const [researchPendingIds, setResearchPendingIds] = useState<ReadonlySet<string>>(new Set())
+  const [researchPendingRegistry] = useState(() => createPendingKeyRegistry())
   const [batch, setBatch] = useState<{ done: number; total: number; current: string } | null>(null)
 
   const [loggingId, setLoggingId] = useState<string | null>(null)
@@ -563,23 +885,42 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   const [voiceLearningRequests] = useState(() => createOutreachVoiceLearningRequestTracker())
 
   const [editingContactId, setEditingContactId] = useState<string | null>(null)
-  const [contactDraft, setContactDraft] = useState<Record<string, string>>({})
+  const [contactDraft, setContactDraft] = useState<OutreachContactEditDraft>(() =>
+    createOutreachContactEditDraft({}),
+  )
+  const [contactEditSession, setContactEditSession] = useState<{
+    contact: MarketingContact
+    openedRevision: string
+  } | null>(null)
   const [savingContact, setSavingContact] = useState(false)
   const [channelOptionsContactId, setChannelOptionsContactId] = useState<string | null>(null)
   const [channelOptionDrafts, setChannelOptionDrafts] = useState<ChannelOptionDraft[]>([])
   const [savingChannelOptions, setSavingChannelOptions] = useState(false)
   const [trackerDetailContactId, setTrackerDetailContactId] = useState<string | null>(null)
   const [showCompletedTrackerRows, setShowCompletedTrackerRows] = useState(false)
+  const [trackerPage, setTrackerPage] = useState(0)
   const channelOptionsEditorRef = useRef<HTMLDivElement>(null)
   const trackerDetailRef = useRef<HTMLDivElement>(null)
   const logPanelRef = useRef<HTMLDivElement>(null)
+  const revealedPanelOpenersRef = useRef<Record<'channelOptions' | 'trackerDetail' | 'log', HTMLElement | null>>({
+    channelOptions: null,
+    trackerDetail: null,
+    log: null,
+  })
+  const intakeComposerRef = useRef<HTMLInputElement>(null)
 
   const [statusFilter, setStatusFilter] = useState('all')
   const [segmentFilter, setSegmentFilter] = useState('all')
   const [warmthFilter, setWarmthFilter] = useState('all')
   const [contactSearch, setContactSearch] = useState('')
+  const [contactPage, setContactPage] = useState(0)
   const [seedingOffers, setSeedingOffers] = useState(false)
   const [catalogSaveState, setCatalogSaveState] = useState<Record<string, 'saving' | 'saved' | 'error'>>({})
+  const [catalogPromotionPendingIds, setCatalogPromotionPendingIds] = useState<ReadonlySet<string>>(new Set())
+  const [catalogPromotionRegistry] = useState(() => createPendingKeyRegistry())
+  const [approvalPendingIds, setApprovalPendingIds] = useState<ReadonlySet<string>>(new Set())
+  const [approvalPendingRegistry] = useState(() => createPendingKeyRegistry())
+  const loadRequestGenerationRef = useRef(0)
 
   const say = (message: string) => {
     setError(null)
@@ -591,8 +932,9 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   }
 
   const loadOutreach = useCallback(async () => {
+    const generation = beginRequestGeneration(loadRequestGenerationRef)
     if (!canManageOutreach) {
-      setLoading(false)
+      if (isCurrentRequestGeneration(loadRequestGenerationRef, generation)) setLoading(false)
       return
     }
     setLoadFailure(null)
@@ -621,6 +963,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
           )
           .catch(() => []),
       ])
+      if (!isCurrentRequestGeneration(loadRequestGenerationRef, generation)) return
       const nextEvidenceLinks = result.evidenceLinks || []
       setContacts(result.contacts || [])
       setOffers(result.offers || [])
@@ -634,11 +977,12 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       // falls back to the survival copy in the plan panel.
       setPostureId(isFinancialPostureId(result.financialPosture) ? result.financialPosture : null)
     } catch (err) {
+      if (!isCurrentRequestGeneration(loadRequestGenerationRef, generation)) return
       const message = err instanceof Error ? err.message : 'Could not load outreach data.'
       setLoadFailure(message)
       fail(err, 'Could not load outreach data.')
     } finally {
-      setLoading(false)
+      if (isCurrentRequestGeneration(loadRequestGenerationRef, generation)) setLoading(false)
     }
   }, [canManageOutreach, client, outreachClient])
 
@@ -710,6 +1054,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       }),
     [contacts, nowIso, trackerReadinessIssues],
   )
+  useEffect(() => setTrackerPage(0), [outreachProgress.rows.length, showCompletedTrackerRows])
   const unresearched = useMemo(() => contacts.filter((c) => (c.status || 'new') === 'new'), [contacts])
   const trackerDetailContact = useMemo(
     () => contacts.find((contact) => contact._id === trackerDetailContactId) || null,
@@ -736,47 +1081,262 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     },
     [contactSearch, contacts, segmentFilter, statusFilter, warmthFilter],
   )
+  const contactPageCount = Math.max(1, Math.ceil(visibleContacts.length / CONTACT_RECORD_PAGE_SIZE))
+  const currentContactPage = Math.min(contactPage, contactPageCount - 1)
+  const pagedVisibleContacts = visibleContacts.slice(
+    currentContactPage * CONTACT_RECORD_PAGE_SIZE,
+    (currentContactPage + 1) * CONTACT_RECORD_PAGE_SIZE,
+  )
+  useEffect(() => setContactPage(0), [contactSearch, contacts.length, segmentFilter, statusFilter, warmthFilter])
 
   // ---- Intake ----
 
+  const stageContactSpreadsheet = async (input: {
+    fileName: string
+    mimeType?: string
+    size?: number
+    readBytes: () => Promise<ArrayBuffer | Uint8Array>
+  }) => {
+    if (intakeBusy !== null) return
+    const generation = intakeImportGenerationRef.current + 1
+    intakeImportGenerationRef.current = generation
+    const startingEntries = preparedIntake.entries
+    const remainingContacts = OUTREACH_INTAKE_LIMITS.contacts - startingEntries.length
+    if (remainingContacts <= 0) {
+      const message = `This draft already has ${OUTREACH_INTAKE_LIMITS.contacts} contacts. Save or clear it before importing another file.`
+      setIntakeImportError(message)
+      setIntakeAnnouncement(message)
+      return
+    }
+    if (typeof input.size === 'number' && input.size > CONTACT_SPREADSHEET_IMPORT_LIMITS.fileBytes) {
+      const message = `Keep contact spreadsheets under ${(CONTACT_SPREADSHEET_IMPORT_LIMITS.fileBytes / 1024 / 1024).toLocaleString()} MB.`
+      setIntakeImportError(message)
+      setIntakeAnnouncement(`Import failed. ${message}`)
+      window.requestAnimationFrame(() => intakeImportButtonRef.current?.focus())
+      return
+    }
+
+    setIntakeBusy('import')
+    setIntakeImportError(null)
+    try {
+      const bytes = await input.readBytes()
+      if (generation !== intakeImportGenerationRef.current) return
+      const existingIdentityKeys = new Set<string>()
+      for (const contact of contacts) {
+        for (const key of contactIdentityKeys(contact)) existingIdentityKeys.add(key)
+      }
+      for (const contact of alignedStructuredContacts) {
+        for (const key of contactIdentityKeys(contact)) existingIdentityKeys.add(key)
+      }
+      for (const entry of startingEntries) {
+        const draft = parseContactIntakeDraftLine(entry)
+        for (const key of contactIdentityKeys({ name: draft.name, organization: draft.organization })) {
+          existingIdentityKeys.add(key)
+        }
+      }
+
+      const result = parseContactSpreadsheet(
+        { fileName: input.fileName, mimeType: input.mimeType, bytes },
+        { existingIdentityKeys, maxContacts: remainingContacts },
+      )
+      if (result.contacts.length === 0) {
+        throw new Error('No named contacts were found in that spreadsheet.')
+      }
+      const structuredContacts = prepareSpreadsheetContacts(result.contacts)
+      const importedText = structuredContacts.map((contact) => contact.sourceLine || '').join('\n')
+      const limitError = contactIntakeDraftLimitError(startingEntries, importedText)
+      if (limitError) throw new Error(limitError)
+      const merged = appendIntakeDraftEntries(startingEntries, importedText)
+      if (generation !== intakeImportGenerationRef.current) return
+      const mergedSourceLines = new Set(merged.entries.map(normalizeIntakeSourceLine))
+      const nextStructuredBySourceLine = new Map<string, ParsedIntakeContact>()
+      for (const contact of [...alignedStructuredContacts, ...structuredContacts]) {
+        const key = normalizeIntakeSourceLine(contact.sourceLine)
+        if (key && mergedSourceLines.has(key) && !nextStructuredBySourceLine.has(key)) {
+          nextStructuredBySourceLine.set(key, contact)
+        }
+      }
+      const nextStructuredContacts = [...nextStructuredBySourceLine.values()]
+      setIntakeEntries(merged.entries)
+      setIntakeDraft('')
+      setIntakePreview(null)
+      setIntakeLimitError(null)
+      setIntakeImportError(null)
+      setIntakeStructuredContacts(nextStructuredContacts.length ? nextStructuredContacts : null)
+      setIntakeSpreadsheetReport({ result, addedCount: merged.addedCount })
+      markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
+      const skipped = result.stats.skippedRows + (result.contacts.length - merged.addedCount)
+      const message =
+        `Imported ${merged.addedCount} contact${merged.addedCount === 1 ? '' : 's'} from ${result.sheetName ? `${result.sheetName} in ` : ''}${result.fileName}.` +
+        (skipped > 0 ? ` ${skipped} row${skipped === 1 ? ' was' : 's were'} skipped or already staged.` : '') +
+        ` Review the table, then choose Check Names.`
+      setIntakeAnnouncement(message)
+      say(message)
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLButtonElement>('#outreach-add-contacts button[data-autopilot-next-action="true"]')?.focus()
+      })
+    } catch (error) {
+      if (generation !== intakeImportGenerationRef.current) return
+      const message = error instanceof ContactSpreadsheetImportError || error instanceof Error
+        ? error.message
+        : 'That contact spreadsheet could not be read.'
+      setIntakeImportError(message)
+      setIntakeAnnouncement(`Import failed. ${message}`)
+      window.requestAnimationFrame(() => intakeImportButtonRef.current?.focus())
+    } finally {
+      if (generation === intakeImportGenerationRef.current) setIntakeBusy(null)
+    }
+  }
+
+  const commitIntakeDraft = (additionalText = '') => {
+    const rawText = [intakeDraft, additionalText]
+      .filter((value) => value.trim())
+      .join('\n')
+    if (!rawText) return
+
+    const limitError = contactIntakeDraftLimitError(intakeEntries, rawText)
+    if (limitError) {
+      setIntakeLimitError(limitError)
+      setIntakeAnnouncement(limitError)
+      return
+    }
+
+    const merged = appendIntakeDraftEntries(intakeEntries, rawText)
+    setIntakeLimitError(null)
+    setIntakeEntries(merged.entries)
+    setIntakeDraft('')
+    setIntakePreview(null)
+    setIntakeAnnouncement(
+      merged.addedCount > 0
+        ? `Added ${merged.addedCount} contact draft${merged.addedCount === 1 ? '' : 's'}.`
+        : 'That contact draft is already in the list.',
+    )
+    if (merged.entries.length > 0) {
+      markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
+    }
+  }
+
+  const removeIntakeRow = (row: ContactIntakeRow) => {
+    const removedEntry = row.entryIndex === null ? row.rawText : intakeEntries[row.entryIndex]
+    const nextEntries = row.entryIndex === null
+      ? intakeEntries
+      : intakeEntries.filter((_, entryIndex) => entryIndex !== row.entryIndex)
+    setIntakeEntries(nextEntries)
+    setIntakeStructuredContacts((current) => {
+      if (!current || !removedEntry) return current
+      const removedKey = normalizeIntakeSourceLine(removedEntry)
+      const next = current.filter((contact) => normalizeIntakeSourceLine(contact.sourceLine) !== removedKey)
+      return next.length ? next : null
+    })
+    setIntakeLimitError(null)
+    if (row.previewIndex === null) {
+      setIntakePreview(null)
+    } else {
+      setIntakePreview((current) => {
+        if (!current) return null
+        const next = current.filter((_, previewIndex) => previewIndex !== row.previewIndex)
+        return next.length > 0 ? next : null
+      })
+    }
+    setIntakeAnnouncement(removedEntry ? `Removed ${row.name} from Add Contacts.` : '')
+    if (nextEntries.length > 0 || intakeDraft.trim()) {
+      markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
+    } else {
+      clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
+    }
+    window.requestAnimationFrame(() => intakeComposerRef.current?.focus())
+  }
+
+  const editIntakeRow = (row: ContactIntakeRow) => {
+    if (row.entryIndex === null || intakeBusy !== null) return
+    const entry = intakeEntries[row.entryIndex]
+    const nextEntries = intakeEntries.filter((_, entryIndex) => entryIndex !== row.entryIndex)
+    setIntakeEntries(nextEntries)
+    setIntakeDraft(entry)
+    setIntakeLimitError(null)
+    // Editing any source row invalidates the approved parse for the whole set.
+    setIntakePreview(null)
+    setIntakeStructuredContacts((current) => {
+      if (!current) return null
+      const editedKey = normalizeIntakeSourceLine(entry)
+      const next = current.filter((contact) => normalizeIntakeSourceLine(contact.sourceLine) !== editedKey)
+      return next.length ? next : null
+    })
+    setIntakeAnnouncement(`Editing ${row.name}. Press Enter to return it to the table.`)
+    markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
+    window.requestAnimationFrame(() => {
+      const input = intakeComposerRef.current
+      input?.focus()
+      input?.setSelectionRange(entry.length, entry.length)
+    })
+  }
+
   const previewIntake = async () => {
-    if (!intakeText.trim()) return
+    if (!intakeText.trim() || intakeRequestRef.current) return
+    intakeRequestRef.current = 'preview'
+    if (intakeDraft.trim()) {
+      setIntakeEntries(preparedIntake.entries)
+      setIntakeDraft('')
+    }
     setIntakeBusy('preview')
     setIntakePreview(null)
     try {
-      const result = await outreachApi<{ contacts: ParsedIntakeContact[]; duplicates: number }>(
+      const requestBody = alignedStructuredContacts.length > 0
+        ? {
+            contacts: alignedStructuredContacts,
+            ...(unstructuredIntakeEntries.length > 0 ? { text: unstructuredIntakeEntries.join('\n') } : {}),
+            dryRun: true,
+          }
+        : { text: intakeText, dryRun: true }
+      const result = await request<{ contacts: ParsedIntakeContact[]; duplicates: number }>(
         '/api/marketing/outreach/intake',
-        { text: intakeText, dryRun: true },
+        requestBody,
         'POST',
         outreachClient,
       )
       setIntakePreview(result.contacts)
+      const unmatchedCount = buildContactIntakeRows(preparedIntake.entries, result.contacts)
+        .filter((row) => row.state === 'draft').length
       say(
         `Parsed ${result.contacts.length} contact${result.contacts.length === 1 ? '' : 's'}` +
           (result.duplicates ? ` (${result.duplicates} already exist and will be skipped)` : '') +
-          '. Check the names below, then add.',
+          (unmatchedCount
+            ? `. ${unmatchedCount} review row${unmatchedCount === 1 ? ' could' : 's could'} not be matched safely and must be fixed or removed before adding.`
+            : '. Check the names below, then add.'),
       )
     } catch (err) {
       fail(err, 'Could not parse the pasted text.')
     } finally {
+      if (intakeRequestRef.current === 'preview') intakeRequestRef.current = null
       setIntakeBusy(null)
     }
   }
 
   const createFromIntake = async () => {
-    if (!intakePreview) return
+    if (!intakePreview || intakeReviewIssueCount > 0 || intakeRequestRef.current) return
+    intakeRequestRef.current = 'create'
     setIntakeBusy('create')
     try {
       // Commit EXACTLY the previewed parse — the route skips the model when
       // given pre-parsed contacts, so what was approved is what gets saved.
-      const result = await outreachApi<{ created: Array<{ id: string }>; skipped: unknown[]; seededOffers: number }>(
+      const result = await request<{ created: Array<{ id: string }>; skipped: unknown[]; seededOffers: number }>(
         '/api/marketing/outreach/intake',
         { contacts: intakePreview },
         'POST',
         outreachClient,
       )
-      setIntakeText('')
+      if (result.created.length > 0) {
+        onAutopilotComplete?.({ action: 'outreach:addContacts', recordId: result.created[0]?.id })
+      }
+      setIntakeEntries([])
+      setIntakeDraft('')
+      setIntakeAnnouncement('')
+      setIntakeLimitError(null)
       setIntakePreview(null)
+      setIntakeStructuredContacts(null)
+      setIntakeSpreadsheetReport(null)
+      setIntakeImportError(null)
+      clearStoredOutreachIntake()
       clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
       await loadOutreach()
       say(
@@ -788,6 +1348,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     } catch (err) {
       fail(err, 'Could not add contacts.')
     } finally {
+      if (intakeRequestRef.current === 'create') intakeRequestRef.current = null
       setIntakeBusy(null)
     }
   }
@@ -801,7 +1362,11 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       // Exclude drafts: the Studio client reads the raw perspective, and an
       // open draft would otherwise double every case study (duplicate titles,
       // unpublished client names) — suggestions must come from PUBLISHED work.
-      const raw = await client.fetch<{
+      // Team exclusion is deliberately broader: About-page visibility,
+      // alumni status, and draft state must never turn an internal person into
+      // an outreach lead.
+      const warmStartClient = client.withConfig({ perspective: 'raw', useCdn: false })
+      const raw = await warmStartClient.fetch<{
         caseStudyClients: Array<{ client?: string | null; title?: string | null }>
         thankedPeople: Array<{ text?: string | null; featureTitle?: string | null }>
         teamMembers: Array<{ name?: string | null }>
@@ -809,24 +1374,32 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
         `{
           "caseStudyClients": *[_type == "caseStudy" && defined(client) && !(_id in path("drafts.**"))]{client, title},
           "thankedPeople": *[_type == "feature" && defined(specialThanks) && !(_id in path("drafts.**"))]{"text": pt::text(specialThanks), "featureTitle": title},
-          "teamMembers": *[_type == "teamMember" && defined(name) && isAlumni != true &&
-            showOnAboutPage != false && !(_id in path("drafts.**"))]{name}
+          "teamMembers": *[_type == "teamMember" && defined(name)]{name}
         }`,
       )
+      if (!(raw.teamMembers || []).some((member) => member.name?.trim())) {
+        setWarmStart(null)
+        setWarmStartSelected(new Set())
+        throw new Error('Could not verify the team directory, so no outreach suggestions were shown.')
+      }
       const suggestions = buildWarmStartSuggestions({
         caseStudyClients: raw.caseStudyClients || [],
         thankedPeople: raw.thankedPeople || [],
         teamMembers: raw.teamMembers || [],
         existingContacts: contacts,
       })
-      setWarmStart(suggestions)
+      const currentDraft = appendIntakeDraftEntries(intakeEntries, intakeDraft).entries
+      const availableSuggestions = suggestions.filter(
+        (suggestion) => mergeWarmStartSuggestionsIntoIntake(currentDraft, [suggestion]).addedCount > 0,
+      )
+      setWarmStart(availableSuggestions)
       // Suggestions are leads for human review, not approved contacts. Never
       // bulk-select org placeholders or thanked names by default.
       setWarmStartSelected(new Set())
       say(
-        suggestions.length
-          ? `Found ${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'} from our published work — select only named people or accounts with a clear owner.`
-          : 'No new suggestions — everyone from our published work is already in the contacts list.',
+        availableSuggestions.length
+          ? `Found ${availableSuggestions.length} suggestion${availableSuggestions.length === 1 ? '' : 's'} from our published work — select only named people or accounts with a clear owner.`
+          : 'No new suggestions — each published-work lead is already saved or staged in this table.',
       )
     } catch (err) {
       fail(err, 'Could not load suggestions from the site data.')
@@ -835,43 +1408,85 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     }
   }
 
-  const addWarmStart = async () => {
+  const stageWarmStartSuggestions = () => {
     if (!warmStart) return
-    const chosen = warmStart.filter((s) => warmStartSelected.has(contactDedupeKey(s.name, s.organization)))
+    const chosen = warmStart.filter((suggestion) =>
+      warmStartSelected.has(warmStartSuggestionKey(suggestion)),
+    )
     if (!chosen.length) return
-    setWarmStartBusy('add')
-    try {
-      // Same commit path as pasted contacts: the route re-validates, dedupes
-      // against existing docs, and applies the standard contact defaults.
-      const result = await outreachApi<{ created: Array<{ id: string }>; skipped: unknown[] }>(
-        '/api/marketing/outreach/intake',
-        {
-          contacts: chosen.map((s) => ({
-            name: s.name,
-            organization: s.organization,
-            howWeKnow: s.howWeKnow,
-            warmth: 'warm',
-          })),
-        },
-        'POST',
-        outreachClient,
+    const drafted = appendIntakeDraftEntries(intakeEntries, intakeDraft)
+    const merged = mergeWarmStartSuggestionsIntoIntake(drafted.entries, chosen)
+    const addedDraftCount = drafted.addedCount + merged.addedCount
+    const limitError = contactIntakeDraftLimitError(merged.entries)
+    if (limitError) {
+      setIntakeLimitError(limitError)
+      setIntakeAnnouncement(limitError)
+      return
+    }
+    setIntakeLimitError(null)
+    if (addedDraftCount > 0) {
+      setIntakeEntries(merged.entries)
+      setIntakeDraft('')
+      setIntakeAnnouncement(
+        `Added ${addedDraftCount} contact draft${addedDraftCount === 1 ? '' : 's'}.`,
       )
+      // The user must review a fresh parse whenever the underlying draft changes.
+      setIntakePreview(null)
+      markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
       setWarmStart(null)
       setWarmStartSelected(new Set())
-      await loadOutreach()
-      say(
-        `Added ${result.created.length} from our past work` +
-          (result.skipped.length ? ` (${result.skipped.length} already existed)` : '') +
-          '. Org-level entries research the organization — put a person’s name on them when you know who to call.',
-      )
-    } catch (err) {
-      fail(err, 'Could not add the selected suggestions.')
-    } finally {
-      setWarmStartBusy(null)
+    } else {
+      // The draft may have changed after the picker opened. Close a now-stale
+      // picker instead of leaving an enabled primary action that can only no-op.
+      setWarmStart(null)
+      setWarmStartSelected(new Set())
     }
+
+    const alreadyInDraft = chosen.length - merged.addedCount
+    say(
+      merged.addedCount > 0
+        ? `Placed ${merged.addedCount} selected suggestion${merged.addedCount === 1 ? '' : 's'} in Add Contacts` +
+            (alreadyInDraft > 0 ? ` (${alreadyInDraft} already in the draft)` : '') +
+            '. Nothing has been saved yet; review the draft, then choose Check Names.'
+        : 'Those selected suggestions are already in the Add Contacts draft. Nothing has been saved.',
+    )
+
+    window.requestAnimationFrame(() => {
+      const textarea = intakeComposerRef.current
+      if (!textarea) return
+      textarea.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      textarea.focus({ preventScroll: true })
+      textarea.setSelectionRange(0, 0)
+    })
+  }
+
+  const setWarmStartGroupChecked = (
+    suggestions: readonly WarmStartSuggestion[],
+    checked: boolean,
+  ) => {
+    setWarmStartSelected((current) => {
+      const next = new Set(current)
+      for (const suggestion of suggestions) {
+        const key = warmStartSuggestionKey(suggestion)
+        if (checked) next.add(key)
+        else next.delete(key)
+      }
+      return next
+    })
   }
 
   // ---- Research ----
+
+  const beginResearchRequest = (contactId: string) => {
+    if (!researchPendingRegistry.begin(contactId)) return false
+    setResearchPendingIds(researchPendingRegistry.values())
+    return true
+  }
+
+  const finishResearchRequest = (contactId: string) => {
+    researchPendingRegistry.finish(contactId)
+    setResearchPendingIds(researchPendingRegistry.values())
+  }
 
   const researchOne = async (contact: MarketingContact) => {
     if (
@@ -884,9 +1499,9 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     ) {
       return
     }
-    setResearchingId(contact._id)
+    if (!beginResearchRequest(contact._id)) return
     try {
-      const result = await outreachApi<{ feasibilityScore: number | null; personVerified: boolean; evidenceIndexSize?: number }>(
+      const result = await request<{ feasibilityScore: number | null; personVerified: boolean; evidenceIndexSize?: number }>(
         '/api/marketing/outreach/research',
         { id: contact._id },
         'POST',
@@ -904,7 +1519,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     } catch (err) {
       fail(err, 'Research failed.')
     } finally {
-      setResearchingId(null)
+      finishResearchRequest(contact._id)
     }
   }
 
@@ -917,8 +1532,12 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     for (let i = 0; i < targets.length; i += 1) {
       const target = targets[i]
       setBatch({ done: i, total: targets.length, current: target.name || 'contact' })
+      if (!beginResearchRequest(target._id)) {
+        failures.push(`${target.name || target._id}: research is already running`)
+        continue
+      }
       try {
-        const result = await outreachApi<{ evidenceIndexSize?: number }>(
+        const result = await request<{ evidenceIndexSize?: number }>(
           '/api/marketing/outreach/research',
           { id: target._id },
           'POST',
@@ -927,6 +1546,8 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
         if (result.evidenceIndexSize === 0) missingEvidence = true
       } catch (err) {
         failures.push(`${target.name || target._id}: ${err instanceof Error ? err.message : 'failed'}`)
+      } finally {
+        finishResearchRequest(target._id)
       }
       // Progress persists per contact — safe to close and come back; anyone
       // still marked New just needs Research again.
@@ -978,9 +1599,25 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
 
   const saveOfferEdit = async (contact: MarketingContact) => {
     if (!editingOffer) return
+    const savedOffer = (contact.proposedOffers || []).find((offer) => offer._key === editingOffer.key)
+    if (!savedOffer) {
+      fail(new Error('This tailored offer is no longer available. Reload and try again.'), 'Could not save the offer edit.')
+      return
+    }
+    const normalizedDraft = {
+      title: offerDraft.title.trim(),
+      oneLiner: offerDraft.oneLiner.trim(),
+      priceBand: offerDraft.priceBand.trim(),
+    }
+    if (haveSameTrimmedFields(savedOffer, normalizedDraft, ['title', 'oneLiner', 'priceBand'])) {
+      setEditingOffer(null)
+      clearUnsavedChanges(OUTREACH_OFFER_UNSAVED_ID)
+      say('No offer wording changed; the existing approval is still valid.')
+      return
+    }
     const updated = (contact.proposedOffers || []).map((o) =>
       o._key === editingOffer.key
-        ? { ...o, title: offerDraft.title, oneLiner: offerDraft.oneLiner, priceBand: offerDraft.priceBand }
+        ? { ...o, ...normalizedDraft }
         : o,
     )
     try {
@@ -997,22 +1634,41 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   }
 
   const promoteToCatalog = async (offer: { title?: string; oneLiner?: string; priceBand?: string; rationale?: string }) => {
-    if (!offer.title) return
+    const promotionId = catalogPromotionIdentity(offer.title)
+    if (!offer.title || !promotionId) return
+    if (catalogContainsOfferTitle(offers, offer.title)) {
+      say(`"${offer.title}" is already in the offer catalog.`)
+      return
+    }
+    if (!catalogPromotionRegistry.begin(promotionId)) return
+    setCatalogPromotionPendingIds(catalogPromotionRegistry.values())
     try {
-      await outreachClient.create({
+      const currentCatalog = await outreachClient.fetch<Array<{ title?: string }>>(
+        `*[_type == "marketingOffer"]{title}`,
+      )
+      if (catalogContainsOfferTitle(currentCatalog, offer.title)) {
+        await loadOutreach()
+        say(`"${offer.title}" is already in the offer catalog.`)
+        return
+      }
+      await outreachClient.createIfNotExists({
+        _id: `marketingOffer.promoted.${promotionId}`,
         _type: 'marketingOffer',
-        title: offer.title,
-        key: `${slugify(offer.title).slice(0, 48)}-${Math.random().toString(36).slice(2, 6)}`,
+        title: offer.title.trim(),
+        key: `${slugify(offer.title).slice(0, 42)}-${promotionId.slice(0, 8)}`,
         status: 'active',
-        oneLiner: offer.oneLiner,
-        priceBand: offer.priceBand,
-        description: offer.rationale,
+        oneLiner: offer.oneLiner?.trim() || undefined,
+        priceBand: offer.priceBand?.trim() || undefined,
+        description: offer.rationale?.trim() || undefined,
         order: 60,
       })
       await loadOutreach()
       say(`"${offer.title}" saved to the offer catalog.`)
     } catch (err) {
       fail(err, 'Could not save to the catalog.')
+    } finally {
+      catalogPromotionRegistry.finish(promotionId)
+      setCatalogPromotionPendingIds(catalogPromotionRegistry.values())
     }
   }
 
@@ -1024,6 +1680,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       return true
     }
     if (loggingId && loggingId !== contact._id && !confirmDiscardUnsavedChange(OUTREACH_LOG_UNSAVED_ID)) return false
+    rememberRevealedPanelOpener('log', logPanelRef)
     clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)
     setLoggingId(contact._id)
     // Default to the contact's CURRENT status when it's a loggable one — a
@@ -1055,6 +1712,28 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     }, 0)
   }
 
+  const rememberRevealedPanelOpener = (
+    panel: 'channelOptions' | 'trackerDetail' | 'log',
+    panelRef: { current: HTMLDivElement | null },
+  ) => {
+    const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    if (activeElement && !panelRef.current?.contains(activeElement)) {
+      revealedPanelOpenersRef.current[panel] = activeElement
+    }
+  }
+
+  const restoreRevealedPanelOpener = (panel: 'channelOptions' | 'trackerDetail' | 'log') => {
+    const opener = revealedPanelOpenersRef.current[panel]
+    revealedPanelOpenersRef.current[panel] = null
+    window.setTimeout(() => {
+      if (opener?.isConnected) opener.focus({ preventScroll: true })
+    }, 0)
+  }
+
+  const forgetRevealedPanelOpener = (panel: 'channelOptions' | 'trackerDetail' | 'log') => {
+    revealedPanelOpenersRef.current[panel] = null
+  }
+
   const requestVoiceLearningProposal = async (
     contactId: string,
     voiceKey: string,
@@ -1067,7 +1746,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       [contactId]: { status: 'proposing' },
     }))
     try {
-      const result = await outreachApi<{ proposal: BrandVoiceLearningProposal }>(
+      const result = await request<{ proposal: BrandVoiceLearningProposal }>(
         '/api/marketing/brand-voice/learn',
         {
           action: 'propose',
@@ -1126,7 +1805,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       [contactId]: { ...current[contactId], status: 'applying', error: undefined },
     }))
     try {
-      const result = await outreachApi<{
+      const result = await request<{
         applied: true
         voice: { key: string; name: string }
         settingsRevision: string
@@ -1189,6 +1868,18 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     if (editingBriefId !== contact._id) return
     const suggestedOpener = briefDraft.suggestedOpener.trim()
     const callBrief = briefDraft.callBrief.trim()
+    if (
+      haveSameTrimmedFields(
+        contact,
+        { suggestedOpener, callBrief },
+        ['suggestedOpener', 'callBrief'],
+      )
+    ) {
+      setEditingBriefId(null)
+      clearUnsavedChanges(OUTREACH_BRIEF_UNSAVED_ID)
+      say('No call wording changed; the existing approval is still valid.')
+      return
+    }
     const before: OutreachVoiceCopy = {
       suggestedOpener: contact.suggestedOpener || '',
     }
@@ -1305,6 +1996,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
         .commit()
       setLoggingId(null)
       await loadOutreach()
+      restoreRevealedPanelOpener('log')
       clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)
       say(
         `Logged ${labelForValue(STATUS_SHORT_OPTIONS, logStatus).toLowerCase()} for ${contact.name || 'contact'}` +
@@ -1342,9 +2034,11 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       return
     }
     if (editingContactId && !confirmDiscardUnsavedChange(OUTREACH_CONTACT_UNSAVED_ID)) return
+    rememberRevealedPanelOpener('channelOptions', channelOptionsEditorRef)
     clearUnsavedChanges(OUTREACH_CHANNEL_OPTIONS_UNSAVED_ID)
     clearUnsavedChanges(OUTREACH_CONTACT_UNSAVED_ID)
     setEditingContactId(null)
+    setContactEditSession(null)
     setChannelOptionsContactId(contact._id)
     setChannelOptionDrafts(buildChannelOptionDrafts(contact.channelOverrides))
     focusRevealedPanel(channelOptionsEditorRef)
@@ -1400,6 +2094,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       setChannelOptionDrafts([])
       clearUnsavedChanges(OUTREACH_CHANNEL_OPTIONS_UNSAVED_ID)
       await loadOutreach()
+      restoreRevealedPanelOpener('channelOptions')
       say(
         overrides.length > 0
           ? `Channel options saved for ${contact.name || 'this contact'}. The tracker has recalculated its advice.`
@@ -1420,6 +2115,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       return
     }
     if (channelOptionsContactId) {
+      forgetRevealedPanelOpener('channelOptions')
       setChannelOptionsContactId(null)
       setChannelOptionDrafts([])
       clearUnsavedChanges(OUTREACH_CHANNEL_OPTIONS_UNSAVED_ID)
@@ -1435,44 +2131,81 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     ) {
       return
     }
+    if (!contact._rev) {
+      fail(
+        new Error('This contact did not load with a revision. Reload before editing it.'),
+        'Could not open the contact editor.',
+      )
+      return
+    }
     clearUnsavedChanges(OUTREACH_CONTACT_UNSAVED_ID)
     setEditingContactId(contact._id)
-    setContactDraft({
-      name: contact.name || '',
-      organization: contact.organization || '',
-      role: contact.role || '',
-      segment: contact.segment || '',
-      warmth: contact.warmth || '',
-      owner: contact.owner || '',
-      brandVoiceKey: contact.brandVoiceKey || '',
-      email: contact.email || '',
-      phone: contact.phone || '',
-      linkedinUrl: contact.linkedinUrl || '',
-      howWeKnow: contact.howWeKnow || '',
-      status: contact.status || 'new',
-      followUpAt: followUpDateInput(contact.followUpAt),
-      nextStep: contact.nextStep || '',
+    setContactEditSession({
+      contact: {
+        ...contact,
+        interactions: contact.interactions ? [...contact.interactions] : undefined,
+        attributedEvidenceIds: contact.attributedEvidenceIds
+          ? [...contact.attributedEvidenceIds]
+          : undefined,
+      },
+      openedRevision: contact._rev,
     })
+    setContactDraft(createOutreachContactEditDraft(contact))
     focusContactEditor(focusField)
   }
 
   const saveContactEdit = async () => {
-    if (!editingContactId) return
-    const original = contacts.find((contact) => contact._id === editingContactId)
-    if (!original) {
-      fail(new Error('This contact is no longer available. Reload and try again.'), 'Could not save the contact.')
-      return
-    }
-    const requestedStatus = contactDraft.status || 'new'
-    if (REVIEW_MANAGED_STATUSES.has(requestedStatus) && requestedStatus !== original.status) {
-      fail(
-        new Error('Needs review, Researched, and Briefed can only be set through the research approval workflow.'),
-        'Could not save the contact.',
-      )
-      return
-    }
+    if (!editingContactId || !contactEditSession || contactEditSession.contact._id !== editingContactId) return
+    const original = contactEditSession.contact
     const requestedBrandVoiceKey = (contactDraft.brandVoiceKey || '').trim()
+    const openedDraft = createOutreachContactEditDraft(original)
+    const contactMethodError = validateOutreachContactMethods(original, contactDraft)
+    if (contactMethodError) {
+      fail(new Error(contactMethodError), 'Could not save the contact.')
+      return
+    }
+    const linkedinChanged = contactDraft.linkedinUrl.trim() !== openedDraft.linkedinUrl.trim()
+    const normalizedLinkedIn = normalizeOutreachUrl(contactDraft.linkedinUrl, { linkedinOnly: true })
+    if (linkedinChanged && contactDraft.linkedinUrl.trim() && !normalizedLinkedIn) {
+      fail(new Error('LinkedIn URL must be an http(s) linkedin.com address.'), 'Could not save the contact.')
+      return
+    }
+    const requestedFollowUpDate = (contactDraft.followUpAt || '').trim()
+    const followUpChanged = requestedFollowUpDate !== openedDraft.followUpAt.trim()
+    const normalizedFollowUpAt = requestedFollowUpDate
+      ? followUpDateIso(requestedFollowUpDate)
+      : null
+    if (followUpChanged && requestedFollowUpDate && !normalizedFollowUpAt) {
+      fail(new Error('Follow-up date must be a valid calendar date.'), 'Could not save the contact.')
+      return
+    }
+    const contactEditPatch = buildOutreachContactEditPatch(
+      original,
+      contactDraft,
+      { linkedinUrl: normalizedLinkedIn || null, followUpAt: normalizedFollowUpAt },
+    )
+    const { identityChanged, brandVoiceChanged } = contactEditPatch
+    const nextContactIdentity = {
+      name: contactDraft.name.trim() || 'Unnamed',
+      organization: contactDraft.organization.trim() || undefined,
+      email: contactDraft.email.trim() || undefined,
+      phone: contactDraft.phone.trim() || undefined,
+      linkedinUrl: normalizedLinkedIn || undefined,
+    }
+    const strongIdentityChanged = !haveSameContactStrongIdentities(original, nextContactIdentity)
+    // Identity corrections also backfill reservations for pre-claim contacts;
+    // contact-method changes replace stale claims even when research identity
+    // fields (name/organization/role) did not change.
+    const shouldReconcileIdentityClaims = identityChanged || strongIdentityChanged
+    if (contactEditPatch.dirtyFields.length === 0) {
+      setEditingContactId(null)
+      setContactEditSession(null)
+      clearUnsavedChanges(OUTREACH_CONTACT_UNSAVED_ID)
+      say('No contact data changed.')
+      return
+    }
     if (
+      brandVoiceChanged &&
       requestedBrandVoiceKey &&
       !activeBrandVoices.some((voice) => voice._key === requestedBrandVoiceKey)
     ) {
@@ -1482,24 +2215,16 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       )
       return
     }
-    const normalizedLinkedIn = normalizeOutreachUrl(contactDraft.linkedinUrl, { linkedinOnly: true })
-    if (contactDraft.linkedinUrl?.trim() && !normalizedLinkedIn) {
-      fail(new Error('LinkedIn URL must be an http(s) linkedin.com address.'), 'Could not save the contact.')
+    if (
+      ['won', 'lost', 'closed'].includes(original.status || '') &&
+      contactEditPatch.dirtyFields.some((field) => field === 'followUpAt' || field === 'nextStep')
+    ) {
+      fail(
+        new Error('Log an interaction to reopen a completed contact before scheduling another step.'),
+        'Could not save the contact.',
+      )
       return
     }
-    const requestedFollowUpDate = (contactDraft.followUpAt || '').trim()
-    const normalizedFollowUpAt = requestedFollowUpDate
-      ? followUpDateIso(requestedFollowUpDate)
-      : null
-    if (requestedFollowUpDate && !normalizedFollowUpAt) {
-      fail(new Error('Follow-up date must be a valid calendar date.'), 'Could not save the contact.')
-      return
-    }
-    const identityChanged = (['name', 'organization', 'role'] as const).some(
-      (field) => (contactDraft[field] || '').trim() !== (original[field] || '').trim(),
-    )
-    const brandVoiceChanged =
-      (contactDraft.brandVoiceKey || '').trim() !== (original.brandVoiceKey || '').trim()
     const hasHistoricalAttribution = contactHasHistoricalAttribution(original)
     if (
       identityChanged &&
@@ -1515,42 +2240,27 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       return
     }
     setSavingContact(true)
-    const set: Record<string, unknown> = {}
-    const unset: string[] = []
-    for (const [key, value] of Object.entries(contactDraft)) {
-      if (key === 'followUpAt') continue
-      if (value.trim()) set[key] = value.trim()
-      else unset.push(key)
-    }
-    if (normalizedLinkedIn) set.linkedinUrl = normalizedLinkedIn
-    set.name = contactDraft.name.trim() || 'Unnamed'
-    set.status = requestedStatus
-    const terminalStatuses = ['won', 'lost', 'closed']
-    const requestedTerminal = terminalStatuses.includes(requestedStatus)
-    const reopenedTerminal = terminalStatuses.includes(original.status || '') && !requestedTerminal
-    if (requestedTerminal) {
-      delete set.nextStep
-      unset.push('followUpAt', 'nextStep')
-    } else if (normalizedFollowUpAt) {
-      set.followUpAt = normalizedFollowUpAt
-    } else {
-      unset.push('followUpAt')
-    }
-    if (reopenedTerminal) unset.push('closedAt', 'closedValue', 'closeReason')
+    const set: Record<string, unknown> = { ...contactEditPatch.set }
+    const unset = [...contactEditPatch.unset]
     if (identityChanged && original.researchedAt && ['new', 'needsReview', 'researched', 'briefed'].includes(original.status || '')) {
       set.status = 'new'
     }
-    if (brandVoiceChanged && original.researchedAt) {
+    if (brandVoiceChanged && !identityChanged && original.researchedAt) {
       unset.push('researchReviewedAt')
       if (['new', 'needsReview', 'researched', 'briefed'].includes(original.status || '')) {
         set.status = 'needsReview'
       }
     }
     try {
-      let patch = outreachClient
-        .patch(editingContactId)
-        .set(set)
-        .unset([...new Set(unset.filter((k) => !['name', 'status'].includes(k)))])
+      const identityClaimUpdate = shouldReconcileIdentityClaims
+        ? planMarketingContactIdentityClaimUpdate(
+            await fetchMarketingContactIdentityClaims(outreachClient, editingContactId),
+            await buildMarketingContactIdentityClaims(nextContactIdentity, editingContactId),
+          )
+        : null
+      let patch = outreachClient.patch(editingContactId)
+      if (Object.keys(set).length > 0) patch = patch.set(set)
+      if (unset.length > 0) patch = patch.unset([...new Set(unset)])
       if (identityChanged && hasHistoricalAttribution) {
         patch = patch
           .setIfMissing({ identityHistory: [] })
@@ -1587,9 +2297,17 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
           'researchSources',
         ])
       }
-      if (original._rev) patch = patch.ifRevisionId(original._rev)
-      await patch.commit()
+      patch = patch.ifRevisionId(contactEditSession.openedRevision)
+      if (identityClaimUpdate) {
+        let transaction = outreachClient.transaction().patch(patch)
+        for (const claimId of identityClaimUpdate.deleteIds) transaction = transaction.delete(claimId)
+        for (const claim of identityClaimUpdate.createClaims) transaction = transaction.create(claim)
+        await transaction.commit()
+      } else {
+        await patch.commit()
+      }
       setEditingContactId(null)
+      setContactEditSession(null)
       await loadOutreach()
       clearUnsavedChanges(OUTREACH_CONTACT_UNSAVED_ID)
       say(
@@ -1598,7 +2316,19 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
           : 'Contact updated.',
       )
     } catch (err) {
-      fail(err, 'Could not save the contact.')
+      if (isOutreachRevisionConflict(err)) {
+        await loadOutreach()
+        fail(
+          new Error(
+            strongIdentityChanged
+              ? 'This contact changed after you opened the editor, or that email, phone, or LinkedIn identity now belongs to another saved contact. Your draft was not applied; review the refreshed records and try again.'
+              : 'This contact changed after you opened the editor. Your draft was not applied; review the refreshed record and try again.',
+          ),
+          'Could not save the contact.',
+        )
+      } else {
+        fail(err, 'Could not save the contact.')
+      }
     } finally {
       setSavingContact(false)
     }
@@ -1616,7 +2346,41 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     }))) return
     try {
       if (hardDelete) {
-        await outreachClient.delete(contact._id)
+        // Claims are read before any mutation. If verification fails, the
+        // contact is left untouched instead of risking a stale reservation.
+        const [current, identityClaims] = await Promise.all([
+          outreachClient.fetch<MarketingContact | null>(
+            `*[_id == $id][0]{${CONTACT_FIELDS}}`,
+            { id: contact._id },
+          ),
+          fetchMarketingContactIdentityClaims(outreachClient, contact._id),
+        ])
+        if (!current) {
+          await loadOutreach()
+          say(`${contact.name || 'Contact'} was already removed.`)
+          return
+        }
+        if (!contact._rev || current._rev !== contact._rev) {
+          await loadOutreach()
+          throw new Error('This contact changed after the list loaded, so it was not deleted. Review the refreshed record and try again.')
+        }
+        if (!canHardDeleteContact(current)) {
+          await loadOutreach()
+          throw new Error('This contact now has research or interaction history, so it was not deleted. Review it and use Archive if appropriate.')
+        }
+        if (!current._rev) {
+          throw new Error('The current contact revision could not be verified, so it was not deleted.')
+        }
+        let transaction = outreachClient
+          .transaction()
+          .patch(current._id, (patch) =>
+            patch
+              .ifRevisionId(current._rev as string)
+              .set({ _outreachDeleteGuard: new Date().toISOString() }),
+          )
+        for (const claim of identityClaims) transaction = transaction.delete(claim._id)
+        transaction = transaction.delete(current._id)
+        await transaction.commit()
       } else {
         let patch = outreachClient.patch(contact._id).set({
           status: 'closed',
@@ -1629,14 +2393,20 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       await loadOutreach()
       say(`${hardDelete ? 'Deleted' : 'Archived'} ${contact.name || 'contact'}.`)
     } catch (err) {
-      fail(err, 'Could not delete the contact.')
+      if (isOutreachRevisionConflict(err)) await loadOutreach()
+      fail(
+        isOutreachRevisionConflict(err)
+          ? new Error('This contact changed before the deletion completed, so it was not deleted. Review the refreshed record and try again.')
+          : err,
+        'Could not delete the contact.',
+      )
     }
   }
 
   const seedOffers = async () => {
     setSeedingOffers(true)
     try {
-      const result = await outreachApi<{ created: string[] }>(
+      const result = await request<{ created: string[] }>(
         '/api/marketing/outreach/seed-offers',
         undefined,
         'POST',
@@ -1723,6 +2493,8 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   }
 
   const approveContactBrief = async (contact: MarketingContact) => {
+    if (!approvalPendingRegistry.begin(contact._id)) return
+    setApprovalPendingIds(approvalPendingRegistry.values())
     try {
       const returnsToCallPlan =
         !contact.status || ['new', 'needsReview', 'researched', 'briefed'].includes(contact.status)
@@ -1740,6 +2512,9 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       )
     } catch (err) {
       fail(err, 'Could not approve this research brief.')
+    } finally {
+      approvalPendingRegistry.finish(contact._id)
+      setApprovalPendingIds(approvalPendingRegistry.values())
     }
   }
 
@@ -1895,6 +2670,11 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
               {(contact.proposedOffers || []).map((po) => {
                 const isEditing = editingOffer?.contactId === contact._id && editingOffer.key === po._key
+                const promotionId = catalogPromotionIdentity(po.title)
+                const promotionPending = Boolean(
+                  promotionId && catalogPromotionPendingIds.has(promotionId),
+                )
+                const alreadyInCatalog = catalogContainsOfferTitle(offers, po.title)
                 return (
                   <div
                     key={po._key}
@@ -1953,8 +2733,13 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                           <button type="button" style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => startEditOffer(contact, po._key || '')}>
                             Edit
                           </button>
-                          <button type="button" style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => void promoteToCatalog(po)}>
-                            Save to catalog
+                          <button
+                            type="button"
+                            style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }}
+                            disabled={promotionPending || alreadyInCatalog}
+                            onClick={() => void promoteToCatalog(po)}
+                          >
+                            {promotionPending ? 'Saving…' : alreadyInCatalog ? 'In catalog' : 'Save to catalog'}
                           </button>
                         </div>
                       </>
@@ -2174,10 +2959,14 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             <button
               type="button"
               style={styles.primaryButton}
-              disabled={isEditingBrief || readinessIssues.length > 0}
+              disabled={isEditingBrief || readinessIssues.length > 0 || approvalPendingIds.has(contact._id)}
               onClick={() => void approveContactBrief(contact)}
             >
-              {contact.status === 'needsReview' ? 'Approve for call plan' : 'Approve updated brief'}
+              {approvalPendingIds.has(contact._id)
+                ? 'Approving…'
+                : contact.status === 'needsReview'
+                  ? 'Approve for call plan'
+                  : 'Approve updated brief'}
             </button>
           </div>
         )}
@@ -2204,8 +2993,8 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
 
         {context === 'review' ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button type="button" style={styles.button} disabled={isEditingBrief || researchingId === contact._id} onClick={() => void researchOne(contact)}>
-              {researchingId === contact._id ? 'Re-researching…' : 'Re-research'}
+            <button type="button" style={styles.button} disabled={isEditingBrief || researchPendingIds.has(contact._id)} onClick={() => void researchOne(contact)}>
+              {researchPendingIds.has(contact._id) ? 'Re-researching…' : 'Re-research'}
             </button>
             <button type="button" style={styles.button} disabled={isEditingBrief} onClick={() => startEditContact(contact)}>
               Edit details
@@ -2327,6 +3116,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                 onClick={() => {
                   setLoggingId(null)
                   clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)
+                  restoreRevealedPanelOpener('log')
                 }}
               >
                 Cancel
@@ -2338,8 +3128,8 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             <button type="button" style={styles.primaryButton} disabled={isEditingBrief} onClick={() => openLog(contact)}>
               Log interaction
             </button>
-            <button type="button" style={styles.button} disabled={isEditingBrief || researchingId === contact._id} onClick={() => void researchOne(contact)}>
-              {researchingId === contact._id ? 'Re-researching…' : 'Re-research'}
+            <button type="button" style={styles.button} disabled={isEditingBrief || researchPendingIds.has(contact._id)} onClick={() => void researchOne(contact)}>
+              {researchPendingIds.has(contact._id) ? 'Re-researching…' : 'Re-research'}
             </button>
             <button type="button" style={styles.button} disabled={isEditingBrief} onClick={() => startEditContact(contact)}>
               Edit details
@@ -2365,6 +3155,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
     ) {
       return false
     }
+    if (trackerDetailContactId !== contact._id) rememberRevealedPanelOpener('trackerDetail', trackerDetailRef)
     setTrackerDetailContactId(contact._id)
     focusRevealedPanel(trackerDetailRef, 'start')
     return true
@@ -2373,6 +3164,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   const openTrackerLog = (contact: MarketingContact, row: OutreachProgressRow) => {
     const channel = row.recommendation.channel as OutreachChannel | null
     if (!openLog(contact, channel || undefined)) return
+    if (trackerDetailContactId !== contact._id) rememberRevealedPanelOpener('trackerDetail', trackerDetailRef)
     setTrackerDetailContactId(contact._id)
   }
 
@@ -2442,6 +3234,10 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       return
     }
     if (row.action === 'editContact') {
+      if (row.editFields.includes('status')) {
+        openTrackerLog(contact, row)
+        return
+      }
       const field = trackerEditField(row)
       if (field) startEditContact(contact, field)
       else if (row.editFields.includes('channelOverrides')) startChannelOptions(contact)
@@ -2482,11 +3278,11 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       <button
         type="button"
         aria-label={`${label} for ${contact.name || 'contact'}`}
-        disabled={row.action === 'research' && (researchingId === contact._id || batch !== null)}
+        disabled={row.action === 'research' && (researchPendingIds.has(contact._id) || batch !== null)}
         onClick={() => runTrackerAction(contact, row)}
         style={actionStyle}
       >
-        {row.action === 'research' && researchingId === contact._id ? 'Researching…' : label}
+        {row.action === 'research' && researchPendingIds.has(contact._id) ? 'Researching…' : label}
       </button>
     )
   }
@@ -2503,6 +3299,12 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
   const trackerVisibleRows = showCompletedTrackerRows
     ? outreachProgress.rows
     : outreachProgress.rows.filter((row) => row.action !== 'complete')
+  const trackerPageCount = Math.max(1, Math.ceil(trackerVisibleRows.length / CONTACT_RECORD_PAGE_SIZE))
+  const currentTrackerPage = Math.min(trackerPage, trackerPageCount - 1)
+  const pagedTrackerRows = trackerVisibleRows.slice(
+    currentTrackerPage * CONTACT_RECORD_PAGE_SIZE,
+    (currentTrackerPage + 1) * CONTACT_RECORD_PAGE_SIZE,
+  )
   const channelOptionsContact = channelOptionsContactId
     ? contacts.find((contact) => contact._id === channelOptionsContactId) || null
     : null
@@ -2685,6 +3487,22 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
               </div>
             )}
 
+            {trackerVisibleRows.length > CONTACT_RECORD_PAGE_SIZE && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ ...styles.small, ...styles.muted }}>
+                  Tracker rows {currentTrackerPage * CONTACT_RECORD_PAGE_SIZE + 1}–{Math.min((currentTrackerPage + 1) * CONTACT_RECORD_PAGE_SIZE, trackerVisibleRows.length)} of {trackerVisibleRows.length}
+                </span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button type="button" style={styles.button} disabled={currentTrackerPage === 0} onClick={() => setTrackerPage((page) => Math.max(0, page - 1))}>
+                    Previous tracker rows
+                  </button>
+                  <button type="button" style={styles.button} disabled={currentTrackerPage >= trackerPageCount - 1} onClick={() => setTrackerPage((page) => Math.min(trackerPageCount - 1, page + 1))}>
+                    Next tracker rows
+                  </button>
+                </div>
+              </div>
+            )}
+
             <details style={{ ...styles.guidePanel, boxShadow: 'none', padding: 12 }}>
               <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 850 }}>
                 Guide: how ranking and channel overrides work
@@ -2724,7 +3542,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                   </tr>
                 </thead>
                 <tbody>
-                  {trackerVisibleRows.map((row) => {
+                  {pagedTrackerRows.map((row) => {
                     const contact = contacts.find((candidate) => candidate._id === row.contactId)
                     if (!contact) return null
                     const selectedAvailability = row.recommendation.availability.find(
@@ -2822,7 +3640,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             </div>
 
             <div data-outreach-mobile-list="true" style={{ display: 'none', gap: 10 }}>
-              {trackerVisibleRows.map((row) => {
+              {pagedTrackerRows.map((row) => {
                 const contact = contacts.find((candidate) => candidate._id === row.contactId)
                 if (!contact) return null
                 const directHref = trackerContactHref(contact, row)
@@ -2979,6 +3797,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                       setChannelOptionsContactId(null)
                       setChannelOptionDrafts([])
                       clearUnsavedChanges(OUTREACH_CHANNEL_OPTIONS_UNSAVED_ID)
+                      restoreRevealedPanelOpener('channelOptions')
                     }}
                   >
                     Cancel
@@ -3018,8 +3837,10 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                       if (loggingId === trackerDetailContact._id) {
                         setLoggingId(null)
                         clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)
+                        forgetRevealedPanelOpener('log')
                       }
                       setTrackerDetailContactId(null)
+                      restoreRevealedPanelOpener('trackerDetail')
                     }}
                   >
                     Close brief
@@ -3045,43 +3866,222 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
       <section id="outreach-add-contacts" data-tour-id="autopilot-outreach-intake" style={styles.panel}>
         <PanelHeading
           title="Add contacts"
-          description="Paste names — one per line, as messy as you like: “Name — company — how we know them”. AI parses them into contact records; duplicates are skipped automatically."
+          description="Type one prospect, paste a list, or import an Excel/CSV file. Every contact becomes a review row before anything is saved."
         />
         <p style={{ ...styles.small, ...styles.muted, margin: '0 0 10px', lineHeight: 1.55 }}>
-          Private workflow: <strong>Check names sends this raw paste to Claude</strong> for structuring. Later,
-          Research sends the selected person&apos;s public identity and relationship context for web research. Do
-          not paste sensitive personal, medical, financial, or confidential client information.
+          Private workflow: Excel/CSV files are read locally and formulas are never run. <strong>Check Names compares mapped
+          spreadsheet fields with saved contacts and the team directory without Claude</strong> when the import is unchanged.
+          Only typed or edited rows use Claude for structuring; mapped spreadsheet fields stay intact. Later, Research sends the selected person&apos;s public
+          identity and relationship context for web research. Do not include sensitive personal, medical, financial, or
+          confidential client information.
         </p>
         <div style={{ display: 'grid', gap: 10 }}>
-          <textarea
+          <div
+            role="group"
             aria-label="Contacts to add"
-            style={{ ...styles.input, minHeight: 120, fontFamily: 'inherit' }}
-            value={intakeText}
-            onChange={(event) => {
-              setIntakeText(event.target.value)
-              markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
-              // Edited text invalidates the old preview — never commit a parse
-              // the user hasn't seen.
-              setIntakePreview(null)
+            style={{
+              display: 'grid',
+              gap: 8,
+              padding: 10,
+              border: '1px solid var(--card-border-color)',
+              borderRadius: 6,
+              background: 'var(--card-bg-color)',
             }}
-            placeholder={
-              'Sarah Chen — VP Product at Medtronic — met at HIMSS 2023, Juhan knows her well\nTom Rivera, ex-client from the All of Us project, now at Verily\n…'
-            }
-          />
+          >
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+              <button
+                ref={intakeImportButtonRef}
+                type="button"
+                style={styles.button}
+                aria-describedby="outreach-spreadsheet-import-help"
+                disabled={intakeBusy !== null}
+                onClick={() => intakeFileInputRef.current?.click()}
+              >
+                {intakeBusy === 'import' ? 'Reading spreadsheet…' : 'Import Excel or CSV'}
+              </button>
+              <input
+                ref={intakeFileInputRef}
+                type="file"
+                hidden
+                tabIndex={-1}
+                accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0]
+                  event.currentTarget.value = ''
+                  if (!file) return
+                  void stageContactSpreadsheet({
+                    fileName: file.name,
+                    mimeType: file.type,
+                    size: file.size,
+                    readBytes: () => file.arrayBuffer(),
+                  })
+                }}
+              />
+              <a href="/downloads/goinvo-outreach-contact-template.xlsx" download style={{ color: '#00A0B6', fontSize: 12, fontWeight: 800 }}>
+                Download a clean Excel template
+              </a>
+            </div>
+            <div id="outreach-spreadsheet-import-help" style={{ ...styles.small, ...styles.muted, lineHeight: 1.5 }}>
+              Up to 200 contacts and 5 MB. The importer finds the best sheet and recognizes Name (or First/Last), Company,
+              Title, Email, Phone, LinkedIn, How We Know, Owner, Segment, and Warmth. Old .xls or macro files must be saved
+              as a values-only .xlsx or CSV first.
+            </div>
+            {intakeImportError && (
+              <div role="alert" style={{ color: '#e59a9a', fontSize: 13, lineHeight: 1.45 }}>
+                <strong>Spreadsheet not imported.</strong> {intakeImportError} Your existing draft was not changed.
+              </div>
+            )}
+            {intakeSpreadsheetReport && (
+              <div role="status" aria-live="polite" style={{ ...styles.card, padding: 10, display: 'grid', gap: 6, boxShadow: 'none' }}>
+                <div style={{ fontSize: 13, lineHeight: 1.45 }}>
+                  <strong>{intakeSpreadsheetReport.addedCount} contact{intakeSpreadsheetReport.addedCount === 1 ? '' : 's'} staged</strong>
+                  {' '}from {intakeSpreadsheetReport.result.sheetName ? `“${intakeSpreadsheetReport.result.sheetName}” in ` : ''}
+                  {intakeSpreadsheetReport.result.fileName}.
+                  {intakeSpreadsheetReport.result.stats.skippedRows > 0
+                    ? ` ${intakeSpreadsheetReport.result.stats.skippedRows} source row${intakeSpreadsheetReport.result.stats.skippedRows === 1 ? ' was' : 's were'} skipped.`
+                    : ''}
+                </div>
+                <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45 }}>
+                  Mapped locally: {intakeSpreadsheetReport.result.columns
+                    .filter((column) => column.field)
+                    .map((column) => `${column.header} → ${column.field}`)
+                    .join(', ')}.
+                  {' '}{structuredCoversAllEntries
+                    ? 'Check Names will use the structured fields directly; Claude is not needed.'
+                    : 'Only typed or edited rows will be structured with Claude; spreadsheet fields stay intact.'}
+                </div>
+                {intakeSpreadsheetReport.result.warnings.length > 0 && (
+                  <details>
+                    <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 800 }}>
+                      Review {intakeSpreadsheetReport.result.warnings.length} import note{intakeSpreadsheetReport.result.warnings.length === 1 ? '' : 's'}
+                    </summary>
+                    <ul style={{ margin: '7px 0 0', paddingLeft: 20, fontSize: 12, lineHeight: 1.5 }}>
+                      {intakeSpreadsheetReport.result.warnings.map((warning, index) => (
+                        <li key={`${warning.code}-${warning.row || 0}-${warning.column || 0}-${index}`}>
+                          {warning.row ? `Row ${warning.row}: ` : ''}{warning.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </div>
+            )}
+            <input
+              ref={intakeComposerRef}
+              aria-label="Type one contact and press Enter, or paste a list"
+              aria-describedby={`outreach-contact-entry-help${intakeLimitError ? ' outreach-contact-entry-error' : ''}`}
+              aria-invalid={intakeLimitError ? 'true' : undefined}
+              maxLength={OUTREACH_INTAKE_LIMITS.lineCharacters}
+              style={{
+                ...styles.input,
+                minHeight: 44,
+                padding: '9px 11px',
+                fontFamily: 'inherit',
+              }}
+              value={intakeDraft}
+              disabled={intakeBusy !== null}
+              onChange={(event) => {
+                const value = event.target.value
+                setIntakeDraft(value)
+                setIntakeLimitError(null)
+                setIntakeImportError(null)
+                if (value.trim() || intakeEntries.length > 0) {
+                  markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
+                } else {
+                  clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
+                }
+                // Edited text invalidates the old preview — never commit a parse
+                // the user hasn't seen.
+                setIntakePreview(null)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+                  event.preventDefault()
+                  commitIntakeDraft()
+                }
+              }}
+              onPaste={(event) => {
+                const pastedText = event.clipboardData.getData('text')
+                if (!/\r?\n/.test(pastedText) && !pastedText.includes('\t')) return
+                event.preventDefault()
+                const paste = prepareContactIntakePaste(pastedText)
+                if (paste.kind === 'spreadsheet') {
+                  const encoded = new TextEncoder().encode(paste.text)
+                  void stageContactSpreadsheet({
+                    fileName: paste.fileName,
+                    mimeType: 'text/plain',
+                    size: encoded.byteLength,
+                    readBytes: async () => encoded,
+                  })
+                } else {
+                  commitIntakeDraft(paste.text)
+                }
+              }}
+              placeholder="Sarah Chen — VP Product at Medtronic — met at HIMSS 2023"
+            />
+            <div id="outreach-contact-entry-help" style={{ ...styles.small, ...styles.muted, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8 }}>
+              <span>
+                Enter adds one row. Paste one contact per line to add a batch.{' '}
+                {intakeStorageAvailable
+                  ? 'Unsaved rows resume after a reload in this tab; '
+                  : 'Reload recovery is unavailable in this browser — keep this tab open; '}
+                nothing is saved to Outreach until you review names and choose Add Contacts.
+              </span>
+              <span>{intakeDraft.length.toLocaleString()} / {OUTREACH_INTAKE_LIMITS.lineCharacters.toLocaleString()}</span>
+            </div>
+            {intakeLimitError && (
+              <div id="outreach-contact-entry-error" role="alert" style={{ color: '#e59a9a', fontSize: 13, lineHeight: 1.45 }}>
+                {intakeLimitError}
+              </div>
+            )}
+            <ContactIntakeGrid
+              entries={intakeEntries}
+              preview={intakePreview}
+              busy={intakeBusy !== null}
+              onEdit={editIntakeRow}
+              onRemove={removeIntakeRow}
+            />
+            {intakeReviewIssueCount > 0 && (
+              <div role="alert" style={{ color: '#e5bd5c', fontSize: 13, lineHeight: 1.45 }}>
+                {intakeReviewIssueCount} review row{intakeReviewIssueCount === 1 ? ' could' : 's could'} not be matched safely
+                during the name check. Edit or delete {intakeReviewIssueCount === 1 ? 'it' : 'them'}, then choose Check Names
+                again. No contact can be added while the review and source rows disagree.
+              </div>
+            )}
+            <div
+              role="status"
+              aria-live="polite"
+              style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}
+            >
+              {intakeAnnouncement}
+            </div>
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button
               type="button"
+              data-autopilot-next-action={intakePreview?.some((contact) => !contact.duplicate) ? undefined : 'true'}
+              data-autopilot-next-label={intakeBusy === 'preview' ? 'Checking Names…' : 'Check Names'}
+              aria-busy={intakeBusy === 'preview' || undefined}
               style={styles.primaryButton}
               disabled={!intakeText.trim() || intakeBusy !== null}
               onClick={() => void previewIntake()}
             >
-              {intakeBusy === 'preview' ? 'Checking names…' : 'Check names'}
+              {intakeBusy === 'preview' ? 'Checking Names…' : 'Check Names'}
             </button>
             {intakePreview && intakePreview.some((c) => !c.duplicate) && (
-              <button type="button" style={styles.primaryButton} disabled={intakeBusy !== null} onClick={() => void createFromIntake()}>
+              <button
+                type="button"
+                data-autopilot-next-action="true"
+                aria-busy={intakeBusy === 'create' || undefined}
+                style={styles.primaryButton}
+                disabled={intakeBusy !== null || intakeReviewIssueCount > 0}
+                onClick={() => void createFromIntake()}
+              >
                 {intakeBusy === 'create'
                   ? 'Adding…'
-                  : `Add ${intakePreview.filter((c) => !c.duplicate).length} contact${intakePreview.filter((c) => !c.duplicate).length === 1 ? '' : 's'}`}
+                  : intakeReviewIssueCount > 0
+                    ? `Resolve ${intakeReviewIssueCount} Row${intakeReviewIssueCount === 1 ? '' : 's'} First`
+                  : `Add ${intakePreview.filter((c) => !c.duplicate).length} Contact${intakePreview.filter((c) => !c.duplicate).length === 1 ? '' : 's'}`}
               </button>
             )}
             <button
@@ -3098,9 +4098,22 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                 style={styles.button}
                 disabled={intakeBusy !== null}
                 onClick={() => {
-                  setIntakeText('')
+                  if (!confirmDiscardUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID)) return
+                  intakeImportGenerationRef.current += 1
+                  setIntakeEntries([])
+                  setIntakeDraft('')
+                  setIntakeAnnouncement('')
+                  setIntakeLimitError(null)
+                  setIntakeImportError(null)
                   setIntakePreview(null)
+                  setIntakeStructuredContacts(null)
+                  setIntakeSpreadsheetReport(null)
+                  clearStoredOutreachIntake()
                   clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
+                  window.requestAnimationFrame(() => {
+                    intakeComposerRef.current?.scrollIntoView({ block: 'nearest' })
+                    intakeComposerRef.current?.focus({ preventScroll: true })
+                  })
                 }}
               >
                 Clear draft
@@ -3112,63 +4125,165 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
               <div style={{ ...styles.small, lineHeight: 1.5 }}>
                 <strong>From our published work:</strong> people we thanked and past-client organizations, with
                 “how we know them” pre-filled. Org entries research the organization — add the person’s name
-                once you know who to call there. Nothing is selected automatically, and this does not discover
-                external prospects or send a message.
+                once you know who to call there. Current and former team-directory people are excluded.
+                Nothing is selected automatically, and this does not discover external prospects or send a
+                message. Add selected puts them in the same review table; it does not save contact records.
               </div>
               {warmStart.length === 0 ? (
                 <EmptyInline title="Nothing new — everyone from our published work is already in the list." />
               ) : (
-                <div style={{ display: 'grid', gap: 8 }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <div
+                    role="group"
+                    aria-label="Suggestion selection"
+                    style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
+                  >
                     <button
                       type="button"
                       style={{ ...styles.button, padding: '6px 10px', fontSize: 12 }}
-                      onClick={() =>
+                      disabled={warmStartSelectionUnavailable}
+                      onClick={() => {
                         setWarmStartSelected(
-                          new Set(
-                            warmStart
-                              .filter((suggestion) => suggestion.kind === 'thanked-person')
-                              .map((suggestion) => contactDedupeKey(suggestion.name, suggestion.organization)),
-                          ),
+                          allWarmStartSelected
+                            ? new Set()
+                            : new Set(warmStart.map(warmStartSuggestionKey)),
                         )
-                      }
+                      }}
                     >
-                      Select named people
+                      {allWarmStartSelected ? 'Uncheck all suggestions' : 'Check all suggestions'}
                     </button>
-                    <button
-                      type="button"
-                      style={{ ...styles.button, padding: '6px 10px', fontSize: 12 }}
-                      disabled={warmStartSelected.size === 0}
-                      onClick={() => setWarmStartSelected(new Set())}
+                    <span
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      style={{ ...styles.muted, fontSize: 13 }}
                     >
-                      Clear selection
-                    </button>
+                      {warmStartSelectedCount} of {warmStart.length} suggestions selected
+                    </span>
                   </div>
-                  <div style={{ display: 'grid', gap: 6, maxHeight: 360, overflowY: 'auto', paddingRight: 4 }}>
-                  {warmStart.map((s) => {
-                    const key = contactDedupeKey(s.name, s.organization)
-                    const checked = warmStartSelected.has(key)
-                    return (
-                      <label key={key} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', fontSize: 14, lineHeight: 1.45 }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => {
-                            const next = new Set(warmStartSelected)
-                            if (checked) next.delete(key)
-                            else next.add(key)
-                            setWarmStartSelected(next)
-                          }}
-                        />
-                        <span style={{ display: 'grid', gap: 2 }}>
-                          <strong>{s.name}</strong>
-                          <span style={{ ...styles.muted, fontSize: 13 }}>
-                            {s.kind === 'client-org' ? 'Account lead — needs a named buyer' : 'Named person — verify relationship'} · {s.howWeKnow}
-                          </span>
-                        </span>
-                      </label>
-                    )
-                  })}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gap: 12,
+                      maxHeight: 420,
+                      overflowY: 'auto',
+                      paddingRight: 4,
+                    }}
+                  >
+                    {[
+                      {
+                        id: 'people',
+                        title: 'People',
+                        noun: 'people',
+                        suggestions: warmStartPeople,
+                        selectedCount: warmStartPeopleSelectedCount,
+                      },
+                      {
+                        id: 'organizations',
+                        title: 'Organizations',
+                        noun: 'organizations',
+                        suggestions: warmStartOrganizations,
+                        selectedCount: warmStartOrganizationsSelectedCount,
+                      },
+                    ]
+                      .filter((group) => group.suggestions.length > 0)
+                      .map((group) => {
+                        const groupAllSelected = group.selectedCount === group.suggestions.length
+                        const headingId = `outreach-warm-start-${group.id}-title`
+                        return (
+                          <section
+                            key={group.id}
+                            aria-labelledby={headingId}
+                            style={{
+                              border: '1px solid var(--card-border-color)',
+                              borderRadius: 6,
+                              padding: 10,
+                              display: 'grid',
+                              gap: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 8,
+                              }}
+                            >
+                              <h3 id={headingId} style={{ margin: 0, fontSize: 15 }}>
+                                {group.title} ({group.suggestions.length})
+                              </h3>
+                              <button
+                                type="button"
+                                style={{ ...styles.button, padding: '6px 10px', fontSize: 12 }}
+                                disabled={warmStartSelectionUnavailable}
+                                onClick={() =>
+                                  setWarmStartGroupChecked(group.suggestions, !groupAllSelected)
+                                }
+                              >
+                                {groupAllSelected
+                                  ? `Uncheck all ${group.noun}`
+                                  : `Check all ${group.noun}`}
+                              </button>
+                            </div>
+                            <div style={{ ...styles.muted, fontSize: 12 }}>
+                              {group.selectedCount} of {group.suggestions.length} selected
+                            </div>
+                            <ul
+                              style={{
+                                listStyle: 'none',
+                                margin: 0,
+                                padding: 0,
+                                display: 'grid',
+                                gap: 6,
+                              }}
+                            >
+                              {group.suggestions.map((suggestion) => {
+                                const key = warmStartSuggestionKey(suggestion)
+                                const checked = warmStartSelected.has(key)
+                                return (
+                                  <li key={key}>
+                                    <label
+                                      style={{
+                                        display: 'flex',
+                                        gap: 10,
+                                        alignItems: 'flex-start',
+                                        cursor: warmStartSelectionUnavailable ? 'not-allowed' : 'pointer',
+                                        fontSize: 14,
+                                        lineHeight: 1.45,
+                                      }}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        disabled={warmStartSelectionUnavailable}
+                                        onChange={() => {
+                                          setWarmStartSelected((current) => {
+                                            const next = new Set(current)
+                                            if (next.has(key)) next.delete(key)
+                                            else next.add(key)
+                                            return next
+                                          })
+                                        }}
+                                      />
+                                      <span style={{ display: 'grid', gap: 2 }}>
+                                        <strong>{suggestion.name}</strong>
+                                        <span style={{ ...styles.muted, fontSize: 13 }}>
+                                          {suggestion.kind === 'client-org'
+                                            ? 'Account lead — needs a named buyer'
+                                            : 'Named person — verify relationship'}{' '}
+                                          · {suggestion.howWeKnow}
+                                        </span>
+                                      </span>
+                                    </label>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </section>
+                        )
+                      })}
                   </div>
                 </div>
               )}
@@ -3177,40 +4292,13 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                   <button
                     type="button"
                     style={styles.primaryButton}
-                    disabled={warmStartBusy !== null || warmStartSelected.size === 0}
-                    onClick={() => void addWarmStart()}
+                    disabled={warmStartSelectionUnavailable || warmStartSelectedCount === 0}
+                    onClick={stageWarmStartSuggestions}
                   >
-                    {warmStartBusy === 'add' ? 'Adding…' : `Add ${warmStartSelected.size} selected`}
+                    {`Add ${warmStartSelectedCount} selected`}
                   </button>
                 </div>
               )}
-            </div>
-          )}
-          {intakePreview && (
-            <div style={{ display: 'grid', gap: 6 }}>
-              {intakePreview.map((contact) => (
-                <div
-                  key={`${contact.name}-${contact.organization || ''}`}
-                  style={{ ...styles.small, display: 'flex', flexWrap: 'wrap', gap: 8, opacity: contact.duplicate ? 0.55 : 1 }}
-                >
-                  <strong>{contact.name}</strong>
-                  <span style={styles.muted}>{[contact.organization, contact.role, contact.howWeKnow].filter(Boolean).join(' · ')}</span>
-                  {contact.segment && <span style={styles.muted}>[{labelForValue(OUTREACH_SEGMENT_OPTIONS, contact.segment)}]</span>}
-                  {contact.duplicate && (
-                    <span style={{ color: '#d6a93f', fontWeight: 700 }}>
-                      {contact.duplicateReason || 'duplicate identity'} — will skip
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${contact.name} from this intake preview`}
-                    style={{ ...styles.button, padding: '4px 8px', fontSize: 12 }}
-                    onClick={() => setIntakePreview((current) => current?.filter((item) => item !== contact) || null)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
             </div>
           )}
         </div>
@@ -3252,7 +4340,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             <button
               type="button"
               style={styles.primaryButton}
-              disabled={unresearched.length === 0 || batch !== null || researchingId !== null}
+              disabled={unresearched.length === 0 || batch !== null || researchPendingIds.size > 0}
               onClick={() => void researchAllNew()}
             >
               <SearchIcon style={{ width: 15, height: 15 }} />
@@ -3277,6 +4365,21 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             <span style={{ ...styles.small, ...styles.muted, gridColumn: '1 / -1' }}>
               Showing {visibleContacts.length} of {contacts.length} contacts.
             </span>
+            {visibleContacts.length > CONTACT_RECORD_PAGE_SIZE && (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <span style={{ ...styles.small, ...styles.muted }}>
+                  Rows {currentContactPage * CONTACT_RECORD_PAGE_SIZE + 1}–{Math.min((currentContactPage + 1) * CONTACT_RECORD_PAGE_SIZE, visibleContacts.length)}
+                </span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button type="button" style={styles.button} disabled={currentContactPage === 0} onClick={() => setContactPage((page) => Math.max(0, page - 1))}>
+                    Previous contacts
+                  </button>
+                  <button type="button" style={styles.button} disabled={currentContactPage >= contactPageCount - 1} onClick={() => setContactPage((page) => Math.min(contactPageCount - 1, page + 1))}>
+                    Next contacts
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -3307,7 +4410,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                 </tr>
               </thead>
               <tbody>
-                {visibleContacts.map((contact) => {
+                {pagedVisibleContacts.map((contact) => {
                   const bucket = fitBucket(contact.feasibilityScore)
                   return (
                     <tr key={contact._id}>
@@ -3346,10 +4449,10 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                             type="button"
                             aria-label={`${contact.researchedAt ? 'Re-research' : 'Research'} ${contact.name || 'contact'}`}
                             style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }}
-                            disabled={researchingId === contact._id || batch !== null}
+                            disabled={researchPendingIds.has(contact._id) || batch !== null}
                             onClick={() => void researchOne(contact)}
                           >
-                            {researchingId === contact._id ? 'Researching…' : contact.researchedAt ? 'Re-research' : 'Research'}
+                            {researchPendingIds.has(contact._id) ? 'Researching…' : contact.researchedAt ? 'Re-research' : 'Research'}
                           </button>
                           <button type="button" aria-label={`Edit ${contact.name || 'contact'}`} style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => startEditContact(contact)}>
                             Edit
@@ -3366,7 +4469,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
             </table>
           </div>
           <div data-outreach-mobile-list="true" style={{ display: 'none', gap: 10 }}>
-            {visibleContacts.map((contact) => {
+            {pagedVisibleContacts.map((contact) => {
               const bucket = fitBucket(contact.feasibilityScore)
               return (
                 <article key={contact._id} style={{ ...styles.card, padding: 12, display: 'grid', gap: 9 }}>
@@ -3406,8 +4509,8 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                     >
                       Log interaction
                     </button>
-                    <button type="button" style={styles.button} disabled={researchingId === contact._id || batch !== null} onClick={() => void researchOne(contact)}>
-                      {researchingId === contact._id ? 'Researching…' : contact.researchedAt ? 'Re-research' : 'Research'}
+                    <button type="button" style={styles.button} disabled={researchPendingIds.has(contact._id) || batch !== null} onClick={() => void researchOne(contact)}>
+                      {researchPendingIds.has(contact._id) ? 'Researching…' : contact.researchedAt ? 'Re-research' : 'Research'}
                     </button>
                     <button type="button" aria-label={`Edit ${contact.name || 'contact'}`} style={styles.button} onClick={() => startEditContact(contact)}>Edit</button>
                     <button type="button" aria-label={`${canHardDeleteContact(contact) ? 'Delete' : 'Archive'} ${contact.name || 'contact'}`} style={styles.button} onClick={() => void deleteContact(contact)}>{canHardDeleteContact(contact) ? 'Delete' : 'Archive'}</button>
@@ -3496,29 +4599,18 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
               <InputField label="LinkedIn URL" unsavedId={OUTREACH_CONTACT_UNSAVED_ID} unsavedLabel="contact edit draft">
                 <input data-outreach-contact-field="linkedinUrl" type="url" style={styles.input} value={contactDraft.linkedinUrl || ''} onChange={(e) => setContactDraft((d) => ({ ...d, linkedinUrl: e.target.value }))} />
               </InputField>
-              <InputField
-                label="Status"
-                help={REVIEW_MANAGED_STATUSES.has(contactDraft.status || '') ? 'This status is managed by research review or call logging.' : undefined}
-                unsavedId={OUTREACH_CONTACT_UNSAVED_ID}
-                unsavedLabel="contact edit draft"
-              >
-                <select
-                  data-outreach-contact-field="status"
-                  style={styles.input}
-                  value={contactDraft.status || 'new'}
-                  disabled={REVIEW_MANAGED_STATUSES.has(contactDraft.status || '')}
-                  onChange={(e) => setContactDraft((d) => ({ ...d, status: e.target.value }))}
-                >
-                  {REVIEW_MANAGED_STATUSES.has(contactDraft.status || '') && (
-                    <option value={contactDraft.status}>{labelForValue(STATUS_SHORT_OPTIONS, contactDraft.status)} — managed</option>
-                  )}
-                  {CONTACT_EDITOR_STATUS_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.title}
-                    </option>
-                  ))}
-                </select>
-              </InputField>
+              <div style={{ display: 'grid', alignContent: 'start', gap: 6 }}>
+                <strong style={{ ...styles.small, fontWeight: 700 }}>Pipeline status</strong>
+                <div style={{ display: 'flex', alignItems: 'center', minHeight: 38 }}>
+                  <StatusPill
+                    status={contactEditSession?.contact.status || 'new'}
+                    options={STATUS_SHORT_OPTIONS}
+                  />
+                </div>
+                <span style={{ ...styles.small, ...styles.muted, lineHeight: 1.4 }}>
+                  Approve research or log an interaction to change pipeline status.
+                </span>
+              </div>
               <InputField
                 label="Follow-up date"
                 help="Schedules when this contact should resurface in the progress tracker."
@@ -3529,7 +4621,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                   data-outreach-contact-field="followUpAt"
                   type="date"
                   style={styles.input}
-                  disabled={['won', 'lost', 'closed'].includes(contactDraft.status || '')}
+                  disabled={['won', 'lost', 'closed'].includes(contactEditSession?.contact.status || '')}
                   value={contactDraft.followUpAt || ''}
                   onChange={(event) => setContactDraft((draft) => ({ ...draft, followUpAt: event.currentTarget.value }))}
                 />
@@ -3543,7 +4635,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                 <input
                   data-outreach-contact-field="nextStep"
                   style={styles.input}
-                  disabled={['won', 'lost', 'closed'].includes(contactDraft.status || '')}
+                  disabled={['won', 'lost', 'closed'].includes(contactEditSession?.contact.status || '')}
                   value={contactDraft.nextStep || ''}
                   onChange={(event) => setContactDraft((draft) => ({ ...draft, nextStep: event.currentTarget.value }))}
                 />
@@ -3561,6 +4653,7 @@ export function OutreachWorkspace({ client, onOpenEvidence, onOpenSettings }: Ou
                 style={styles.button}
                 onClick={() => {
                   setEditingContactId(null)
+                  setContactEditSession(null)
                   clearUnsavedChanges(OUTREACH_CONTACT_UNSAVED_ID)
                 }}
               >

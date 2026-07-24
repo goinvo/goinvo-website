@@ -58,6 +58,14 @@ function request(body: Record<string, unknown>) {
   })
 }
 
+function rawRequest(body: BodyInit, url = 'https://www.goinvo.com/api/marketing/outreach/research') {
+  return new NextRequest(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  })
+}
+
 const contact = {
   _id: 'contact-1',
   _rev: 'revision-before',
@@ -82,6 +90,28 @@ describe('outreach research write safety', () => {
       model: 'claude-test',
       sources: [{ title: 'Company site', url: 'https://example.com/company' }],
     })
+  })
+
+  it('rejects oversized and malformed request shapes before reading private data', async () => {
+    expect((await POST(rawRequest('x'.repeat(16 * 1024 + 1)))).status).toBe(413)
+    expect((await POST(request({ id: contact._id, extra: true }))).status).toBe(400)
+    expect((await POST(request({ id: 7 }))).status).toBe(400)
+    expect((await POST(request({ id: contact._id, dryRun: 'yes' }))).status).toBe(400)
+    expect((await POST(request({ id: contact._id, model: 'x'.repeat(101) }))).status).toBe(400)
+    expect((await POST(request({ id: 'bad/id' }))).status).toBe(400)
+    expect(mocks.fetch).not.toHaveBeenCalled()
+    expect(mocks.generateClaudeText).not.toHaveBeenCalled()
+  })
+
+  it('rejects conflicting body and query contact ids', async () => {
+    const response = await POST(
+      rawRequest(
+        JSON.stringify({ id: contact._id }),
+        'https://www.goinvo.com/api/marketing/outreach/research?id=contact-2',
+      ),
+    )
+    expect(response.status).toBe(400)
+    expect(mocks.fetch).not.toHaveBeenCalled()
   })
 
   it('returns 409 and writes nothing when the contact changes during research', async () => {

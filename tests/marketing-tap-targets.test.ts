@@ -7,8 +7,10 @@ describe('marketing minimum tap targets', () => {
     const stepCheck = source.match(/stepCheck:\s*\{([\s\S]*?)\n\s*\},/)
 
     expect(stepCheck, 'Expected the guide stepCheck style').not.toBeNull()
-    expect(stepCheck?.[1]).toContain('width: 24')
-    expect(stepCheck?.[1]).toContain('height: 24')
+    const width = Number(stepCheck?.[1].match(/\bwidth:\s*(\d+)/)?.[1])
+    const height = Number(stepCheck?.[1].match(/\bheight:\s*(\d+)/)?.[1])
+    expect(width, 'Expected a numeric guide stepCheck width').toBeGreaterThanOrEqual(24)
+    expect(height, 'Expected a numeric guide stepCheck height').toBeGreaterThanOrEqual(24)
   })
 
   it('keeps each Work Evidence project disclosure at least 24 pixels high', () => {
@@ -38,5 +40,14 @@ describe('marketing minimum tap targets', () => {
     const source = readFileSync('src/sanity/components/marketing/ResearchWorkspace.tsx', 'utf8').replace(/\r\n/g, '\n')
 
     expect(source).toContain('type="checkbox"\n                data-mobile-tap-target="true"')
+  })
+
+  it('keeps the Add Contacts row actions easy to hit', () => {
+    const source = readFileSync('src/sanity/components/marketing/ContactIntakeGrid.tsx', 'utf8')
+    const removeButton = source.match(
+      /aria-label=\{`Remove \$\{row\.name\} from Add Contacts`\}([\s\S]*?)style=\{\{ \.\.\.controlStyle, minHeight: 40/,
+    )
+
+    expect(removeButton, 'Expected the Add Contacts row remove button').not.toBeNull()
   })
 })

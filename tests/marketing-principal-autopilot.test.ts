@@ -1,8 +1,13 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { GuidedTutorialOverlay } from '@/sanity/components/GuidedTutorialOverlay'
 import {
   advanceScriptedAutopilotPlan,
+  buildAutopilotCoachTutorial,
   buildPrincipalOutreachPlan,
+  getPrincipalAutopilotNextLabel,
   getPrincipalOutreachPrerequisiteBlocker,
   refreshPrincipalOutreachPlan,
   type MarketingAutopilotPlan,
@@ -12,7 +17,6 @@ const MARKETING_TOOL_SOURCE = readFileSync(
   new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url),
   'utf8',
 )
-
 const PRINCIPAL_STEP_IDS = [
   'principal-plan-warm-network',
   'principal-outreach-intake',
@@ -49,7 +53,7 @@ describe('principal outreach Autopilot', () => {
     expect(plan.steps.find((step) => step.id === 'principal-outreach-call')?.targetId).toBe('outreach-progress-tracker')
   })
 
-  it('uses the progress tracker name consistently and retains explicit stay/fix choices', () => {
+  it('uses the progress tracker name consistently and puts scripted advancement in the footer', () => {
     const plan = buildPrincipalOutreachPlan()
     const planCopy = plan.steps
       .flatMap((step) => [step.title, step.instruction, step.why, step.requiredAction, step.nextAfter])
@@ -57,12 +61,84 @@ describe('principal outreach Autopilot', () => {
 
     expect(planCopy).toContain('Outreach progress tracker')
     expect(MARKETING_TOOL_SOURCE).not.toMatch(/This week's calls|\bcall list\b|follow-ups strip/i)
-    expect(MARKETING_TOOL_SOURCE).toContain('Keep setup open')
-    expect(MARKETING_TOOL_SOURCE).toContain('Keep adding')
-    expect(MARKETING_TOOL_SOURCE).toContain('Keep the progress tracker open')
+    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[0])).toBe('Add Contacts')
+    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[1])).toBe('Check Names')
+    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[5])).toBe('Finish')
+    expect(MARKETING_TOOL_SOURCE).toContain('!scriptedPlan && <div')
+    expect(MARKETING_TOOL_SOURCE).toContain('? () => onChoice(step, primaryChoice, 0)')
     expect(MARKETING_TOOL_SOURCE).toContain('Checking live readiness…')
     expect(MARKETING_TOOL_SOURCE).toContain('Recheck after fixing this step')
     expect(MARKETING_TOOL_SOURCE).toContain('Autopilot advances only when the live readiness check passes.')
+  })
+
+  it('renders one purposeful footer action instead of redundant scripted choices', () => {
+    const plan = buildPrincipalOutreachPlan()
+    const tutorial = buildAutopilotCoachTutorial(plan, () => undefined, () => undefined)
+    const html = renderToStaticMarkup(
+      createElement(GuidedTutorialOverlay, {
+        active: true,
+        tutorial,
+        stepIndex: 0,
+        onStepChange: () => undefined,
+        onClose: () => undefined,
+        onRestart: () => undefined,
+        onShowLibrary: () => undefined,
+      }),
+    )
+
+    expect(html).toContain('Add Contacts')
+    expect(html).not.toContain('Preflight checked — add contacts')
+    expect(html).not.toContain('Keep setup open')
+    expect(html).not.toContain('autopilot-coach-choice-principal-plan-warm-network')
+  })
+
+  it('uses Check Names as the empty-intake action before a preview exists', () => {
+    const intakePlan = advanceScriptedAutopilotPlan(
+      buildPrincipalOutreachPlan(),
+      PRINCIPAL_STEP_IDS[0],
+    )
+    const tutorial = buildAutopilotCoachTutorial(intakePlan, () => undefined, () => undefined)
+    const html = renderToStaticMarkup(
+      createElement(GuidedTutorialOverlay, {
+        active: true,
+        tutorial,
+        stepIndex: 1,
+        onStepChange: () => undefined,
+        onClose: () => undefined,
+        onRestart: () => undefined,
+        onShowLibrary: () => undefined,
+      }),
+    )
+
+    expect(html).toContain('Check Names')
+    expect(html).toContain('disabled=""')
+  })
+
+  it('lets a returning principal continue when contacts already satisfy intake', () => {
+    const intakePlan = advanceScriptedAutopilotPlan(
+      buildPrincipalOutreachPlan(),
+      PRINCIPAL_STEP_IDS[0],
+    )
+    const tutorial = buildAutopilotCoachTutorial(
+      intakePlan,
+      () => undefined,
+      () => undefined,
+      { checkingPrerequisites: false, prerequisiteNotice: null, contactCount: 2 },
+    )
+    const html = renderToStaticMarkup(
+      createElement(GuidedTutorialOverlay, {
+        active: true,
+        tutorial,
+        stepIndex: 1,
+        onStepChange: () => undefined,
+        onClose: () => undefined,
+        onRestart: () => undefined,
+        onShowLibrary: () => undefined,
+      }),
+    )
+
+    expect(html).toContain('Research Contacts')
+    expect(html).not.toContain('disabled=""')
   })
 
   it('does not confirm scripted work when known live prerequisites are missing', () => {

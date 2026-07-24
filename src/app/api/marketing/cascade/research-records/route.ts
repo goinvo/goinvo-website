@@ -57,6 +57,7 @@ const RESULT_PROJECTION = `{
 
 const PROJECT_QUERY = `*[_type == "marketingResearchProject" && _id == $id][0]{
   _id,
+  _rev,
   title,
   status,
   brief,
@@ -115,13 +116,19 @@ export async function POST(req: Request) {
       )
     }
 
-    // The cascade requires at least one approved/selected (trusted) result; fail
-    // with a clear 422 before doing any writes when none are present.
+    // A completed deterministic conversion is replayable even if its source
+    // findings were reviewed again later. Only a new conversion needs to pass
+    // the current trust gate.
+    const hasCompletedConversion = Boolean(
+      project.generatedCampaigns?.some((ref) => ref._ref) &&
+      project.generatedFunnels?.some((ref) => ref._ref) &&
+      project.generatedCalendarItems?.some((ref) => ref._ref),
+    )
     const trusted = [
       ...(project.selectedResults || []),
       ...(project.approvedResults || []),
     ].filter((result) => result && isApproved(result.status))
-    if (trusted.length === 0) {
+    if (!hasCompletedConversion && trusted.length === 0) {
       return NextResponse.json(
         {
           error:

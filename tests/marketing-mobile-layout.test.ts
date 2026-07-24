@@ -69,6 +69,30 @@ describe('compact marketing workspace layout containment', () => {
     expect(marketingTool).toContain('min-height: 24px !important;')
   })
 
+  it('uses a responsive card grid for the Home tool launcher without changing button semantics', () => {
+    const source = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
+
+    expect(source).toContain("data-marketing-launcher-grid={launcherMode ? 'true' : undefined}")
+    expect(source).toContain("data-mobile-stack={launcherMode ? 'true' : undefined}")
+    expect(source).toContain("gridTemplateColumns: launcherMode ? 'repeat(auto-fit, minmax(250px, 1fr))' : 'minmax(0, 1fr)'")
+    expect(source).toContain("gridTemplateRows: launcherMode ? 'auto minmax(0, 1fr) auto' : undefined")
+    expect(source).toContain("data-marketing-launcher-card={launcherMode ? 'true' : undefined}")
+    expect(source).not.toContain('role="grid"')
+  })
+
+  it('keeps the conversational Home entry compact at the mobile breakpoint', () => {
+    const tool = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
+    const intake = readFileSync('src/sanity/components/marketing/WorkUpdateIntake.tsx', 'utf8')
+
+    expect(tool).toContain('[data-work-update-secondary="true"]')
+    expect(tool).toContain('[data-work-update-review-note="true"]')
+    expect(tool).toContain('[data-work-update-intake="true"] textarea')
+    expect(tool).toContain('height: 84px !important;')
+    expect(tool).toContain('min-height: 84px !important;')
+    expect(intake).toContain('data-work-update-intake="true"')
+    expect(intake).toContain('data-work-update-review-note="true"')
+  })
+
   it('uses responsive tracker, contact, and evidence cards instead of mobile spreadsheets', () => {
     const source = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
 
@@ -80,5 +104,18 @@ describe('compact marketing workspace layout containment', () => {
     expect(source).toContain('Recommended next')
     expect(source).toContain('Search name, organization, owner, or email')
     expect(source).toContain('Search project, client, technique, or outcome')
+  })
+
+  it('renders Marketing’s shared desk as a semantic table on desktop and equivalent cards on mobile', () => {
+    const source = readFileSync('src/sanity/components/marketing/MarketingOperationsBoard.tsx', 'utf8')
+
+    expect(source).toContain('data-marketing-ops-desktop="true"')
+    expect(source).toContain('data-marketing-ops-mobile="true"')
+    expect(source).toContain('[data-marketing-ops-desktop="true"] { display: none !important; }')
+    expect(source).toContain('[data-marketing-ops-mobile="true"] { display: grid !important; }')
+    expect(source).toContain('<table')
+    expect(source).toContain('data-marketing-operation-card="true"')
+    expect(source).toContain('font-size: 16px !important;')
+    expect(source).toContain('minHeight: 44')
   })
 })

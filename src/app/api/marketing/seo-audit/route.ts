@@ -29,7 +29,50 @@ export const dynamic = 'force-dynamic'
 
 const SITEMAP_URL = process.env.GOINVO_SITEMAP_URL || 'https://www.goinvo.com/sitemap.xml'
 const MAX_PAGES = 10
-const SITEMAP_TIMEOUT_MS = Number(process.env.MARKETING_SEO_FETCH_TIMEOUT_MS || 10000)
+const configuredSitemapTimeout = Number(process.env.MARKETING_SEO_FETCH_TIMEOUT_MS || 10000)
+const SITEMAP_TIMEOUT_MS = Math.min(
+  30_000,
+  Math.max(1_000, Number.isFinite(configuredSitemapTimeout) ? configuredSitemapTimeout : 10_000),
+)
+const SEO_QUERY_URL_MAX_CHARS = 2_048
+const SEO_KEYWORD_MAX_CHARS = 200
+const SEO_LANG_MAX_CHARS = 16
+const AUDIT_REPLAY_TTL_MS = 60_000
+const AUDIT_CACHE_MAX_ENTRIES = 100
+
+type AuditOptions = NonNullable<Parameters<typeof auditPage>[1]>
+const auditInFlight = new Map<string, Promise<PageAuditResult>>()
+const paidAuditCache = new Map<string, { expiresAt: number; result: PageAuditResult }>()
+
+function rememberPaidAudit(key: string, result: PageAuditResult): void {
+  paidAuditCache.set(key, { expiresAt: Date.now() + AUDIT_REPLAY_TTL_MS, result })
+  while (paidAuditCache.size > AUDIT_CACHE_MAX_ENTRIES) {
+    const oldest = paidAuditCache.keys().next().value as string | undefined
+    if (!oldest) break
+    paidAuditCache.delete(oldest)
+  }
+}
+
+function auditPageOnce(url: string, options: AuditOptions): Promise<PageAuditResult> {
+  const key = JSON.stringify([url, options])
+  if (options.includeSemanticGap) {
+    const cached = paidAuditCache.get(key)
+    if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.result)
+    if (cached) paidAuditCache.delete(key)
+  }
+  const existing = auditInFlight.get(key)
+  if (existing) return existing
+  const pending = auditPage(url, options)
+    .then((result) => {
+      if (options.includeSemanticGap) rememberPaidAudit(key, result)
+      return result
+    })
+    .finally(() => {
+      if (auditInFlight.get(key) === pending) auditInFlight.delete(key)
+    })
+  auditInFlight.set(key, pending)
+  return pending
+}
 
 // Prefer high-value pages when capping the sitemap to MAX_PAGES: the homepage,
 // then shallow top-level routes (fewer path segments), so a designer sees the
@@ -118,7 +161,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
+  const allowedParams = new Set(['url', 'keyword', 'lang', 'paid'])
+  for (const key of searchParams.keys()) {
+    if (!allowedParams.has(key)) {
+      return privateMarketingJson({ error: `Unknown query parameter \`${key}\`.` }, { status: 400 })
+    }
+    if (searchParams.getAll(key).length > 1) {
+      return privateMarketingJson({ error: `Query parameter \`${key}\` may only be provided once.` }, { status: 400 })
+    }
+  }
   const requestedUrl = (searchParams.get('url') || '').trim()
+  if (requestedUrl.length > SEO_QUERY_URL_MAX_CHARS) {
+    return privateMarketingJson({ error: `\`url\` exceeds ${SEO_QUERY_URL_MAX_CHARS} characters.` }, { status: 400 })
+  }
   let single = ''
   if (requestedUrl) {
     try {
@@ -133,9 +188,27 @@ export async function GET(request: Request) {
   // Optional overrides for the semantic-gap (topical-coverage) check: the target
   // search query and market. When omitted, the keyword is inferred from the
   // page's title / H1 / URL.
-  const semanticKeyword = (searchParams.get('keyword') || '').trim() || undefined
-  const semanticLang = (searchParams.get('lang') || '').trim() || undefined
-  const includePaidChecks = searchParams.get('paid') === '1'
+  const semanticKeywordRaw = (searchParams.get('keyword') || '').trim()
+  const semanticLangRaw = (searchParams.get('lang') || '').trim()
+  if (semanticKeywordRaw.length > SEO_KEYWORD_MAX_CHARS || /[\u0000-\u001f\u007f]/.test(semanticKeywordRaw)) {
+    return privateMarketingJson({ error: `\`keyword\` must be ${SEO_KEYWORD_MAX_CHARS} printable characters or fewer.` }, { status: 400 })
+  }
+  if (semanticLangRaw.length > SEO_LANG_MAX_CHARS || (semanticLangRaw && !/^[a-z]{2}(?:-[A-Z]{2})?$/.test(semanticLangRaw))) {
+    return privateMarketingJson({ error: '`lang` must be a market code such as en-US.' }, { status: 400 })
+  }
+  const paidRaw = searchParams.get('paid')
+  if (paidRaw !== null && paidRaw !== '0' && paidRaw !== '1') {
+    return privateMarketingJson({ error: '`paid` must be 0 or 1.' }, { status: 400 })
+  }
+  const includePaidChecks = paidRaw === '1'
+  if (includePaidChecks && !single) {
+    return privateMarketingJson({ error: '`paid=1` requires a single approved `url`.' }, { status: 400 })
+  }
+  if ((semanticKeywordRaw || semanticLangRaw) && !includePaidChecks) {
+    return privateMarketingJson({ error: '`keyword` and `lang` require `paid=1`.' }, { status: 400 })
+  }
+  const semanticKeyword = semanticKeywordRaw || undefined
+  const semanticLang = semanticLangRaw || undefined
   const warnings: string[] = []
 
   // Indexation (GSC URL Inspection) is a slower per-page call to Google, so it
@@ -234,7 +307,7 @@ export async function GET(request: Request) {
   const results = await Promise.all(
     targets.map(async (url): Promise<PageAuditResult> => {
       try {
-        return await auditPage(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion, includeSemanticGap, semanticKeyword, semanticLang })
+        return await auditPageOnce(url, { includeIndexation, includeAiCrawlerAccess, includeRenderDiff, includeCwv, includeConversion, includeSemanticGap, semanticKeyword, semanticLang })
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'unknown error'
         const finding: SeoFinding = {

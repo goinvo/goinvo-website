@@ -37,6 +37,7 @@ import {
   filterMarketingAssistantActions,
   getAbTestingStats,
   getCurrentAutopilotStep,
+  getNextActionsDisplay,
   getMarketingDashboardGaps,
   getMarketingDashboardStats,
   getMarketingAutofillQuestions,
@@ -184,6 +185,14 @@ describe('Marketing CMS schemas', () => {
 
     expect(source).toContain('aria-label="Open more marketing sections and actions"')
     expect(source).toContain('More')
+    const marketingToolSource = readFileSync(new URL('../src/sanity/tools/marketingTool.tsx', import.meta.url), 'utf8')
+    const moreMenuStart = marketingToolSource.indexOf('{actionsOpen && (')
+    const navigationStart = marketingToolSource.indexOf('<nav data-mobile-scroll="true"')
+    const copyViewLinkUsage = marketingToolSource.indexOf('<CopyViewLinkButton')
+    expect(moreMenuStart).toBeGreaterThan(-1)
+    expect(copyViewLinkUsage).toBeGreaterThan(moreMenuStart)
+    expect(copyViewLinkUsage).toBeLessThan(navigationStart)
+    expect(marketingToolSource.slice(copyViewLinkUsage, copyViewLinkUsage + 100)).toContain('menuItem')
     // The More menu holds only actions with no home in the top nav — the view shortcuts
     // (campaigns/funnels/analytics/templates) were pruned; sub-tabs cover every section.
     expect(source).not.toContain("requestMarketingView('campaigns')")
@@ -299,6 +308,7 @@ describe('Marketing CMS schemas', () => {
     expect(typeNames).toContain('marketingResearchResult')
     expect(typeNames).toContain('marketingResearchRun')
     expect(typeNames).toContain('marketingTemplate')
+    expect(typeNames).toContain('marketingOperation')
   })
 
   it('models research-first projects, stored results, and provider runs', () => {
@@ -1056,8 +1066,31 @@ describe('Marketing CMS schemas', () => {
     expect(gaps.filter((gap) => gap.view === 'analytics' && /analytics source/i.test(gap.title))).toHaveLength(1)
 
     const toolSource = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
-    expect(toolSource).toContain('getMarketingDashboardGaps(data, financialPostureId).length')
+    expect(toolSource).toContain('const attentionCount = loading ? 0 : operationsAttentionCount')
+    expect(toolSource).toContain('onOperationsAttentionChange={setOperationsAttentionCount}')
     expect(toolSource).not.toContain('const attentionCount = attentionItems.length')
+  })
+
+  it('keeps Next actions compact until the full ranked list is requested', () => {
+    const actions = Array.from({ length: 6 }, (_, index) => ({ id: `action-${index + 1}` }))
+
+    const shortList = getNextActionsDisplay(actions.slice(0, 2), false)
+    expect(shortList).toMatchObject({ hasMore: false })
+    expect(shortList.visible.map((action) => action.id)).toEqual(['action-1', 'action-2'])
+    expect(shortList.preview).toEqual([])
+
+    const collapsed = getNextActionsDisplay(actions, false)
+    expect(collapsed).toMatchObject({ hasMore: true })
+    expect(collapsed.visible.map((action) => action.id)).toEqual(['action-1', 'action-2'])
+    expect(collapsed.preview.map((action) => action.id)).toEqual(['action-3', 'action-4'])
+
+    const expanded = getNextActionsDisplay(actions, true)
+    expect(expanded.visible).toEqual(actions)
+    expect(expanded.preview).toEqual([])
+
+    const toolSource = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
+    expect(toolSource).not.toContain('gaps.slice(0, 8)')
+    expect(toolSource).toContain('`Show all ${gaps.length} actions`')
   })
 
   it('filters assistant actions by title, tags, section, and recommendation reason', () => {
@@ -2031,7 +2064,8 @@ describe('AI fallback answers are always flagged', () => {
 
   it('the assist route reports the fallback reason (aiError) alongside usedAi', () => {
     expect(routeSource).toContain('aiError')
-    expect(routeSource).toContain('ANTHROPIC_API_KEY is not configured')
+    expect(routeSource).toContain('AI assistance is not configured; showing the safe fallback.')
+    expect(routeSource).not.toContain('ANTHROPIC_API_KEY is not configured')
     // The catch must capture the reason, not just log it.
     expect(routeSource).toMatch(/catch \(error\) \{[\s\S]{0,300}aiError =/)
   })

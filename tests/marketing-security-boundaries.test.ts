@@ -191,6 +191,42 @@ describe('marketing API authentication boundaries', () => {
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     expect(crawlSiteMock).toHaveBeenCalledWith({ seedUrl: undefined, maxPages: 120 })
   })
+
+  it.each([
+    '/api/marketing/seo-crawl?maxPages=abc',
+    '/api/marketing/seo-crawl?maxPages=0',
+    '/api/marketing/seo-crawl?maxPages=2&maxPages=3',
+    '/api/marketing/seo-crawl?unknown=1',
+  ])('rejects malformed crawl controls before invoking the crawler: %s', async (path) => {
+    const response = await getSeoCrawl(apiRequest(path))
+    expect(response.status).toBe(400)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+    expect(crawlSiteMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    '/api/marketing/seo?enrich=yes',
+    '/api/marketing/seo?enrich=1&enrich=0',
+    '/api/marketing/seo?unknown=1',
+  ])('rejects malformed opportunity controls without external work: %s', async (path) => {
+    const network = vi.fn()
+    vi.stubGlobal('fetch', network)
+    const response = await getSeo(apiRequest(path))
+    expect(response.status).toBe(400)
+    expect(network).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    '/api/marketing/seo-audit?paid=1',
+    '/api/marketing/seo-audit?paid=yes',
+    '/api/marketing/seo-audit?keyword=healthcare',
+    '/api/marketing/seo-audit?url=https%3A%2F%2Fwww.goinvo.com%2F&lang=english&paid=1',
+    '/api/marketing/seo-audit?unknown=1',
+  ])('rejects malformed or ambiguous audit controls: %s', async (path) => {
+    const response = await getSeoAudit(apiRequest(path))
+    expect(response.status).toBe(400)
+    expect(response.headers.get('cache-control')).toBe('private, no-store')
+  })
 })
 
 describe('SEO outbound target policy', () => {

@@ -22,6 +22,20 @@ import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const SEO_QUERY_URL_MAX_CHARS = 2_048
+const crawlInFlight = new Map<string, ReturnType<typeof crawlSite>>()
+
+function crawlOnce(options: Parameters<typeof crawlSite>[0]): ReturnType<typeof crawlSite> {
+  const key = JSON.stringify(options)
+  const existing = crawlInFlight.get(key)
+  if (existing) return existing
+  const pending = crawlSite(options).finally(() => {
+    if (crawlInFlight.get(key) === pending) crawlInFlight.delete(key)
+  })
+  crawlInFlight.set(key, pending)
+  return pending
+}
+
 export async function GET(request: Request) {
   try {
     await assertStudioOrApiKey(request)
@@ -33,7 +47,18 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
+  for (const key of searchParams.keys()) {
+    if (key !== 'seed' && key !== 'maxPages') {
+      return privateMarketingJson({ error: `Unknown query parameter \`${key}\`.` }, { status: 400 })
+    }
+  }
+  if (searchParams.getAll('seed').length > 1 || searchParams.getAll('maxPages').length > 1) {
+    return privateMarketingJson({ error: 'Each query parameter may only be provided once.' }, { status: 400 })
+  }
   const requestedSeed = (searchParams.get('seed') || '').trim()
+  if (requestedSeed.length > SEO_QUERY_URL_MAX_CHARS) {
+    return privateMarketingJson({ error: `\`seed\` exceeds ${SEO_QUERY_URL_MAX_CHARS} characters.` }, { status: 400 })
+  }
   let seedUrl: string | undefined
   if (requestedSeed) {
     try {
@@ -46,13 +71,19 @@ export async function GET(request: Request) {
     }
   }
   const maxPagesParam = (searchParams.get('maxPages') || '').trim()
+  if (maxPagesParam && !/^\d{1,9}$/.test(maxPagesParam)) {
+    return privateMarketingJson({ error: '`maxPages` must be a positive integer.' }, { status: 400 })
+  }
   const maxPages = maxPagesParam ? Number(maxPagesParam) : undefined
-  const boundedMaxPages = Number.isFinite(maxPages)
-    ? Math.min(SEO_CRAWL_HARD_MAX_PAGES, Math.max(1, Math.floor(maxPages as number)))
-    : undefined
+  if (maxPages === 0) {
+    return privateMarketingJson({ error: '`maxPages` must be at least 1.' }, { status: 400 })
+  }
+  const boundedMaxPages = maxPages === undefined
+    ? undefined
+    : Math.min(SEO_CRAWL_HARD_MAX_PAGES, maxPages)
 
   try {
-    const { findings, stats } = await crawlSite({
+    const { findings, stats } = await crawlOnce({
       seedUrl,
       maxPages: boundedMaxPages,
     })

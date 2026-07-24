@@ -71,7 +71,7 @@ export type {
 } from './seed'
 
 // Clone / derive builders (link-from-post, proof-from-result).
-export { buildLinkFromPost, buildProofPointFromResult } from './clone'
+export { buildLinkFromPost, buildProofPointFromResult, marketingCloneDocumentId } from './clone'
 export type {
   CalendarItemForLink,
   ResearchResultForProof,
@@ -79,51 +79,11 @@ export type {
   MarketingFieldBag,
 } from './clone'
 
-// Social auto-publishing: adapters, registry, content mapping, worker, scheduling.
-export {
-  getPublisher,
-  getPublishers,
-  connectionStatus,
-  instagramPublisher,
-  linkedInPublisher,
-  DUE_ITEMS_QUERY,
-  DUE_SINGLE_ITEM_QUERY,
-  SINGLE_ITEM_QUERY,
-  resolveSocialPlatform,
-  buildCaption,
-  buildMedia,
-  buildPublishContent,
-  buildClaimPatch,
-  buildProcessingPatch,
-  buildPublishedPatch,
-  buildFailedPatch,
-  runPublish,
-  isQStashConfigured,
-  notBeforeSeconds,
-  buildCallbackUrl,
-  buildFinalizeCallbackUrl,
-  schedulePublish,
-  scheduleFinalize,
-  SOCIAL_PLATFORMS,
-} from './publishers'
-export type {
-  PlatformConnection,
-  PublishableItem,
-  ItemPatch,
-  RunPublishOptions,
-  PublishResultEntry,
-  PublishRunSummary,
-  FinalizeSignal,
-  SchedulePublishParams,
-  ScheduleFinalizeParams,
-  ScheduleResult,
-  SocialPlatform,
-  SocialPublisher,
-  PublishContent,
-  PublishMedia,
-  PublishSuccess,
-  PublishOutcome,
-} from './publishers'
+// Social auto-publishing is intentionally not re-exported here. This barrel is
+// consumed by the browser-rendered Sanity Studio, while the publisher registry
+// performs server-only DNS/network validation. Server routes import
+// `@/lib/marketing/publishers` directly so Node modules never enter the client
+// dependency graph.
 
 // Outreach: contact intake, per-contact research, work-evidence extraction,
 // offer catalog + on-the-fly offer drafts, call plan + follow-ups.
@@ -149,6 +109,8 @@ export {
   rankCallPlan,
   dueFollowUps,
   buildWarmStartSuggestions,
+  appendIntakeDraftEntries,
+  mergeWarmStartSuggestionsIntoIntake,
 } from './outreach'
 export type {
   OutreachOfferDef,

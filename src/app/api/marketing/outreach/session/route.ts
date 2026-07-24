@@ -4,6 +4,11 @@ import { NextRequest } from 'next/server'
 import { isOutreachWriterRole, OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
+  isPlainRecord,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
+import {
   assertOutreachSessionSigningConfigured,
   issueOutreachSessionToken,
   isSameOriginOutreachRequest,
@@ -23,6 +28,10 @@ import { apiVersion, projectId, writeToken } from '@/sanity/env'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 30
+
+const SESSION_REQUEST_BODY_LIMIT = 4 * 1024
+const SESSION_UPSTREAM_BODY_LIMIT = 64 * 1024
+const SESSION_UPSTREAM_TIMEOUT_MS = 10_000
 
 type ProofDocument = {
   _id: string
@@ -104,6 +113,38 @@ function parseHistoryTransactions(body: string): HistoryTransaction[] {
   return transactions
 }
 
+async function readBoundedUpstreamText(response: Response): Promise<string> {
+  const declared = response.headers.get('content-length')
+  if (declared !== null) {
+    const bytes = Number(declared)
+    if (!Number.isSafeInteger(bytes) || bytes < 0 || bytes > SESSION_UPSTREAM_BODY_LIMIT) {
+      throw new Error('Sanity verification response exceeded its size limit.')
+    }
+  }
+  if (!response.body) return ''
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder('utf-8', { fatal: true })
+  let total = 0
+  let text = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > SESSION_UPSTREAM_BODY_LIMIT) {
+        await reader.cancel('verification response too large')
+        throw new Error('Sanity verification response exceeded its size limit.')
+      }
+      text += decoder.decode(value, { stream: true })
+    }
+    text += decoder.decode()
+    return text
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 function transactionCreatedOnlyThisProof(transaction: HistoryTransaction, proofId: string): boolean {
   const documentIds = Array.isArray(transaction.documentIDs)
     ? transaction.documentIDs.filter((id): id is string => typeof id === 'string')
@@ -140,10 +181,11 @@ async function readProofAuthor(
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${writeToken}` },
     cache: 'no-store',
+    signal: AbortSignal.timeout(SESSION_UPSTREAM_TIMEOUT_MS),
   })
   if (!response.ok) throw new Error('Sanity proof history was unavailable.')
 
-  const transaction = parseHistoryTransactions(await response.text()).find(
+  const transaction = parseHistoryTransactions(await readBoundedUpstreamText(response)).find(
     (candidate) => candidate.id === proofRevision,
   )
   if (
@@ -181,10 +223,11 @@ async function readProofAuthorRole(author: string): Promise<string | null> {
     {
       headers: { Authorization: `Bearer ${writeToken}` },
       cache: 'no-store',
+      signal: AbortSignal.timeout(SESSION_UPSTREAM_TIMEOUT_MS),
     },
   )
   if (!response.ok) throw new Error('Sanity project membership was unavailable.')
-  const acl = (await response.json().catch(() => null)) as ProjectAcl | null
+  const acl = JSON.parse(await readBoundedUpstreamText(response)) as ProjectAcl | null
   return roleNames(acl || {}).find(isOutreachWriterRole) || null
 }
 
@@ -221,9 +264,22 @@ export async function POST(request: NextRequest) {
     return privateMarketingJson({ error: 'Outreach session verification is unavailable.' }, { status: 503 })
   }
 
-  const body = (await request.json().catch(() => null)) as
-    | { proofId?: unknown; transactionId?: unknown }
-    | null
+  let body: { proofId?: unknown; transactionId?: unknown } | null = null
+  try {
+    const parsed = await readBoundedJson(request, SESSION_REQUEST_BODY_LIMIT)
+    if (
+      !isPlainRecord(parsed)
+      || Object.keys(parsed).some((key) => key !== 'proofId' && key !== 'transactionId')
+    ) {
+      throw new MarketingRequestError('Only proofId and transactionId are accepted.', 400)
+    }
+    body = parsed
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return privateMarketingJson({ error: error.message }, { status: error.status })
+    }
+    return privateMarketingJson({ error: 'Request body must be valid JSON.' }, { status: 400 })
+  }
   if (!body || !isProofId(body.proofId) || !isTransactionId(body.transactionId)) {
     return privateMarketingJson({ error: 'A valid proofId and transactionId are required.' }, { status: 400 })
   }

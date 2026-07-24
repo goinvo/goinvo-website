@@ -33,6 +33,7 @@ import {
   WARMTH_RANK,
 } from './outreachEnums'
 import { BRAND_VOICE_SYSTEM_POLICY } from './brandVoice'
+import { OUTREACH_INTAKE_FIELD_LIMITS } from './outreachIntake'
 
 // ---- Types -------------------------------------------------------------
 
@@ -294,19 +295,19 @@ export interface IntakePrompts {
 export function buildIntakePrompts(rawText: string): IntakePrompts {
   const segments = OUTREACH_SEGMENT_OPTIONS.map((o) => `${o.value} (${o.title})`).join(', ')
   const system = [
-    'You parse a messy pasted list of professional contacts into structured JSON. The list comes from a design-studio principal brain-dumping their network; lines may be inconsistent, partial, or contain several facts at once.',
-    'Do NOT invent facts. Only extract what a line actually says; leave unknown fields out entirely. Never fabricate emails, URLs, roles, or organizations.',
+    'You parse a messy pasted list of professional contacts into structured JSON. The list comes from a design-studio principal brain-dumping their network; lines may be inconsistent, partial, or contain several facts at once. It may also contain organization-only leads explicitly marked "account placeholder".',
+    'Do NOT invent facts. Only extract what a line actually says; leave unknown fields out entirely. Never fabricate emails, URLs, roles, organizations, or people.',
     'Your FINAL message must be ONLY a JSON object matching the schema in the user message — no prose, no markdown fences.',
   ].join('\n')
 
   const user = JSON.stringify({
-    task: 'Parse every distinct person in this pasted text into a contact object. One object per person; skip lines that clearly are not people.',
+    task: 'Parse every distinct person into a contact object. Also preserve lines explicitly marked "account placeholder" as organization-level leads; for those, use the stated organization as both name and organization without inventing a person. Skip other lines that clearly are neither people nor explicit account placeholders.',
     segmentValues: segments,
     warmthValues: 'hot | warm | cool | cold (only when the line implies it)',
     outputSchema: {
       contacts: [
         {
-          name: 'REQUIRED full name as written',
+          name: 'REQUIRED full person name as written, or the organization name for an explicit account placeholder',
           organization: 'company/org if stated',
           role: 'job title if stated',
           segment: 'one of the segment values, ONLY if clearly inferable from the org/role',
@@ -366,6 +367,39 @@ export function normalizeOutreachUrl(
   }
 }
 
+/** Normalize only contact methods that are safe and useful for identity matching. */
+export function normalizeOutreachEmail(value?: string): string | undefined {
+  const email = cleanString(value, 200)?.toLowerCase()
+  if (!email || email.length > 200 || /\s|[\u0000-\u001f\u007f]/.test(email)) return undefined
+  const parts = email.split('@')
+  if (parts.length !== 2) return undefined
+  const [local, domain] = parts
+  if (!local || local.length > 64 || local.startsWith('.') || local.endsWith('.') || local.includes('..')) {
+    return undefined
+  }
+  if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/i.test(local)) return undefined
+  const labels = domain.split('.')
+  if (
+    labels.length < 2
+    || labels.some((label) => !label || label.length > 63 || !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label))
+  ) return undefined
+  return email
+}
+
+export function normalizeOutreachPhone(value?: string): string | undefined {
+  const phone = cleanString(value, 80)
+  if (!phone || /[\u0000-\u001f\u007f]/.test(phone)) return undefined
+  if (/^(?:n\/?a|none|unknown|unavailable|missing|tbd|no\s+number|-+|[—–]+|\?+)$/i.test(phone)) {
+    return undefined
+  }
+  if (!/^(?:\+?[\d\s().-]+?)(?:\s*(?:x|ext\.?|extension)\s*\d{1,6})?$/i.test(phone)) {
+    return undefined
+  }
+  const base = phone.replace(/(?:\s*(?:x|ext\.?|extension)\s*\d{1,6})$/i, '')
+  const digits = base.replace(/\D/g, '')
+  return digits.length >= 7 && digits.length <= 15 ? phone : undefined
+}
+
 /** Stable identifiers used to recognize the same person across imports. */
 export function contactIdentityKeys(contact: {
   name?: string
@@ -377,10 +411,10 @@ export function contactIdentityKeys(contact: {
   // Keep the long-standing name/organization key unprefixed for callers that
   // already persist or construct it with contactDedupeKey().
   const keys = [contactDedupeKey(contact.name, contact.organization)]
-  const email = contact.email?.trim().toLowerCase()
+  const email = normalizeOutreachEmail(contact.email)
   if (email) keys.push(`email:${email}`)
 
-  const phoneDigits = contact.phone?.replace(/\D/g, '')
+  const phoneDigits = normalizeOutreachPhone(contact.phone)?.replace(/\D/g, '')
   if (phoneDigits && phoneDigits.length >= 7) keys.push(`phone:${phoneDigits}`)
 
   const linkedIn = contact.linkedinUrl?.trim()
@@ -412,13 +446,14 @@ export function normalizeParsedContacts(
   const out: ParsedIntakeContact[] = []
   const seenStrongInBatch = new Set<string>()
   const seenWeakInBatch = new Set<string>()
+  const seenWeakOnlyInBatch = new Set<string>()
   for (const raw of rawList) {
     if (!raw || typeof raw !== 'object') continue
     const name = cleanString(raw.name, 160)
     if (!name) continue
     const organization = cleanString(raw.organization, 200)
-    const email = cleanString(raw.email, 200)
-    const phone = cleanString(raw.phone, 80)
+    const email = normalizeOutreachEmail(cleanString(raw.email, 200))
+    const phone = normalizeOutreachPhone(cleanString(raw.phone, 80))
     const linkedinUrl = normalizeOutreachUrl(cleanString(raw.linkedinUrl, 300), { linkedinOnly: true })
     const identityKeys = contactIdentityKeys({ name, organization, email, phone, linkedinUrl })
     const weakKey = identityKeys[0]
@@ -426,14 +461,18 @@ export function normalizeParsedContacts(
     // Strong identity wins over an ambiguous shared name. Keep every row in
     // the preview so a person can recover mistakes; flag later matches rather
     // than silently dropping them.
-    const existingDuplicate = strongKeys.length
-      ? strongKeys.some((key) => existingKeys.has(key))
-      : existingKeys.has(weakKey)
+    const existingStrongDuplicate = strongKeys.some((key) => existingKeys.has(key))
+    // For already-saved contacts, the exact normalized name + organization is
+    // still a meaningful collision even when the incoming sheet adds a new
+    // email or phone. Skipping is safer than silently creating a second record.
+    const existingWeakDuplicate = existingKeys.has(weakKey)
+    const existingDuplicate = existingStrongDuplicate || existingWeakDuplicate
     const batchDuplicate = strongKeys.length
-      ? strongKeys.some((key) => seenStrongInBatch.has(key))
+      ? strongKeys.some((key) => seenStrongInBatch.has(key)) || seenWeakOnlyInBatch.has(weakKey)
       : seenWeakInBatch.has(weakKey)
     strongKeys.forEach((key) => seenStrongInBatch.add(key))
     seenWeakInBatch.add(weakKey)
+    if (strongKeys.length === 0) seenWeakOnlyInBatch.add(weakKey)
     const segment = cleanString(raw.segment, 40)
     const warmth = cleanString(raw.warmth, 20)
     out.push({
@@ -447,16 +486,71 @@ export function normalizeParsedContacts(
       phone,
       linkedinUrl,
       howWeKnow: cleanString(raw.howWeKnow),
-      sourceLine: cleanString(raw.sourceLine),
+      sourceLine: cleanString(raw.sourceLine, OUTREACH_INTAKE_FIELD_LIMITS.sourceLine),
       duplicate: existingDuplicate || batchDuplicate || undefined,
       duplicateReason: existingDuplicate
-        ? 'matches an existing contact identity'
+        ? existingStrongDuplicate
+          ? 'matches an existing contact identity'
+          : 'matches an existing name and organization'
         : batchDuplicate
           ? 'repeats an identity in this preview'
           : undefined,
     })
   }
   return out
+}
+
+/**
+ * Mark exact team-directory identities as excluded before an intake preview is
+ * shown or committed. The API applies this after every parse, including the
+ * commit of a previously approved preview, so a client cannot opt an employee
+ * back into outreach by clearing the duplicate flag.
+ */
+export function excludeTeamMembersFromIntake(
+  contacts: readonly ParsedIntakeContact[],
+  teamMembers: ReadonlyArray<{
+    name?: string | null
+    email?: string | null
+    linkedinUrl?: string | null
+  }>,
+): ParsedIntakeContact[] {
+  const normalizeName = (value?: string | null) =>
+    (value || '').normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim()
+  const teamRecords = teamMembers.map((member) => ({
+    normalizedName: normalizeName(member.name),
+    strongKeys: contactIdentityKeys({
+      email: member.email || undefined,
+      linkedinUrl: normalizeOutreachUrl(member.linkedinUrl || undefined, { linkedinOnly: true }),
+    }).slice(1),
+  })).filter((member) => member.normalizedName)
+  const teamStrongKeys = new Set(teamRecords.flatMap((member) => member.strongKeys))
+
+  return contacts.map((contact) => {
+    const matchingTeamRecords = teamRecords.filter(
+      (member) => member.normalizedName === normalizeName(contact.name),
+    )
+    const sameName = matchingTeamRecords.length > 0
+    const contactStrongKeys = contactIdentityKeys(contact).slice(1)
+    const strongMatch = contactStrongKeys.some((key) => teamStrongKeys.has(key))
+    const organization = normalizeName(contact.organization)
+    const explicitlyExternalOrganization = Boolean(organization && !/\bgo\s*invo\b/.test(organization))
+    // An external organization alone is editable prose and cannot prove that
+    // an exact current/former team name is a different person. A strong
+    // identity can distinguish a homonym only when every matching directory
+    // record also has a strong identity to compare against; a name-only team
+    // record therefore stays excluded. Known team identities always win.
+    const provenExternalHomonym = sameName
+      && explicitlyExternalOrganization
+      && contactStrongKeys.length > 0
+      && matchingTeamRecords.every((member) => member.strongKeys.length > 0)
+      && !strongMatch
+    if (!strongMatch && (!sameName || provenExternalHomonym)) return contact
+    return {
+      ...contact,
+      duplicate: true,
+      duplicateReason: 'GoInvo team member — excluded from outreach',
+    }
+  })
 }
 
 /** Shape a parsed intake contact into a marketingContact create document. */
@@ -490,6 +584,59 @@ export interface WarmStartSuggestion {
   organization?: string
   howWeKnow: string
   kind: 'thanked-person' | 'client-org'
+}
+
+const normalizeIntakeEntry = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim()
+
+/** Split manual or pasted text into unique, display-ready intake entries. */
+export function appendIntakeDraftEntries(
+  currentEntries: readonly string[],
+  rawText: string,
+): { entries: string[]; addedCount: number } {
+  const entries = currentEntries.filter((entry) => entry.trim())
+  const seen = new Set(entries.map(normalizeIntakeEntry))
+  let addedCount = 0
+
+  for (const rawLine of rawText.split(/\r?\n/)) {
+    const entry = rawLine.trim()
+    const key = normalizeIntakeEntry(entry)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    entries.push(entry)
+    addedCount += 1
+  }
+
+  return { entries, addedCount }
+}
+
+/**
+ * Put reviewed warm-start suggestions into the same removable-entry list as a
+ * manual paste. Existing entries stay intact and exact duplicate lines are
+ * not appended a second time.
+ */
+export function mergeWarmStartSuggestionsIntoIntake(
+  currentEntries: readonly string[],
+  suggestions: readonly WarmStartSuggestion[],
+): { entries: string[]; addedCount: number } {
+  const suggestionText = suggestions
+    .map((suggestion) => {
+      const name = suggestion.name.trim()
+      if (!name) return ''
+      const organization = suggestion.organization?.trim()
+      const howWeKnow = suggestion.howWeKnow.trim()
+      return [
+        name,
+        suggestion.kind === 'client-org' ? 'account placeholder' : null,
+        organization ? `organization: ${organization}` : null,
+        howWeKnow ? `how we know: ${howWeKnow}` : null,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(' — ')
+    })
+    .filter(Boolean)
+    .join('\n')
+
+  return appendIntakeDraftEntries(currentEntries, suggestionText)
 }
 
 /** Self-references and non-org labels that should never become outreach suggestions. */
@@ -535,7 +682,7 @@ export function buildWarmStartSuggestions(input: {
   caseStudyClients?: Array<{ client?: string | null; title?: string | null }>
   thankedPeople?: Array<{ text?: string | null; featureTitle?: string | null }>
   existingContacts?: Array<{ name?: string | null; organization?: string | null }>
-  /** Current GoInvo people to exclude from a lead list built from acknowledgements. */
+  /** Every GoInvo team-directory person to exclude, including hidden and alumni records. */
   teamMembers?: Array<{ name?: string | null }>
 }): WarmStartSuggestion[] {
   const norm = (value?: string | null) => (value || '').toLowerCase().replace(/\s+/g, ' ').trim()

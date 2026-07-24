@@ -148,6 +148,28 @@ describe('marketing guide and tutorial behavior', () => {
     expect(new Set(Object.values(MARKETING_GUIDE_ARTICLE_BY_VIEW)).size).toBe(15)
   })
 
+  it('documents the conversational coworker handoff and its privacy and publishing boundaries', () => {
+    const source = readFileSync(new URL('../src/sanity/tools/gettingStarted.tsx', import.meta.url), 'utf8')
+    const normalizedSource = source.replace(/\s+/g, ' ')
+    const dashboardGuide = source.slice(
+      source.indexOf("id: 'marketing.dashboard'"),
+      source.indexOf("id: 'marketing.research'"),
+    ).replace(/\s+/g, ' ')
+
+    expect(source).toContain("id: 'marketing.overview.order'")
+    expect(source).toContain('Tell Marketing what changed')
+    expect(dashboardGuide).toContain("id: 'marketing.dashboard.tell-marketing'")
+    expect(dashboardGuide).toContain('not sent through a form')
+    expect(dashboardGuide).toContain('Nothing is saved before that')
+    expect(dashboardGuide).toContain('nothing is published')
+    expect(dashboardGuide).toContain('confidential client, contact, health, credential, or private lead data')
+    expect(dashboardGuide).toContain('only the normalized brief you review is stored in the private operations dataset')
+    expect(dashboardGuide).toContain("id: 'marketing.dashboard.operating-loop'")
+    expect(dashboardGuide).toContain("id: 'marketing.dashboard.safety'")
+    expect(normalizedSource).toContain('saved privately on the shared Marketing desk')
+    expect(normalizedSource).toContain('Autopilot remains optional browser-local coaching')
+  })
+
   it('documents the reviewed Outreach workflow, limits, recovery, and AI privacy boundary', () => {
     const source = readFileSync(new URL('../src/sanity/tools/gettingStarted.tsx', import.meta.url), 'utf8').replace(/\r\n/g, '\n')
 

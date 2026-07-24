@@ -18,9 +18,9 @@ const AUDIT_ROUTE_SOURCE = readFileSync(
 
 describe('SEO quota and authentication safety', () => {
   it('keeps paid TextFocus work behind explicit query flags and labels the cost', () => {
-    expect(OPPORTUNITY_ROUTE_SOURCE).toContain("searchParams.get('enrich') === '1'")
+    expect(OPPORTUNITY_ROUTE_SOURCE).toContain("const includeKeywordMetrics = enrichRaw === '1'")
     expect(OPPORTUNITY_ROUTE_SOURCE).toContain('if (includeKeywordMetrics && queries.length > 0)')
-    expect(AUDIT_ROUTE_SOURCE).toContain("searchParams.get('paid') === '1'")
+    expect(AUDIT_ROUTE_SOURCE).toContain("const includePaidChecks = paidRaw === '1'")
     expect(AUDIT_ROUTE_SOURCE).toContain('Boolean(single && includePaidChecks)')
     expect(WORKSPACE_SOURCE).toContain('Add keyword metrics (1 TextFocus credit)')
     expect(WORKSPACE_SOURCE).toContain('uses 1 paid TextFocus credit')

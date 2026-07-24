@@ -11,6 +11,16 @@ import {
 
 const source = (path: string) => readFileSync(path, 'utf8')
 
+function captureValidationError(action: () => unknown): MarketingValidationError {
+  try {
+    action()
+  } catch (error) {
+    expect(error).toBeInstanceOf(MarketingValidationError)
+    return error as MarketingValidationError
+  }
+  throw new Error('Expected MarketingValidationError, but the action completed successfully.')
+}
+
 describe('marketing Make workflow safety', () => {
   it('preserves image-only calendar frames and nested funnel content references', () => {
     const image = { _type: 'image', asset: { _type: 'reference', _ref: 'image-slide' } }
@@ -23,18 +33,14 @@ describe('marketing Make workflow safety', () => {
   })
 
   it('requires scheduled calendar items to have a publish date and time', () => {
-    expect(() =>
+    const error = captureValidationError(() =>
       buildCreatePayload('marketingCalendarItem', {
         title: 'Scheduled without a date',
         status: 'scheduled',
       }),
-    ).toThrow(MarketingValidationError)
+    )
 
-    try {
-      buildCreatePayload('marketingCalendarItem', { title: 'Scheduled without a date', status: 'scheduled' })
-    } catch (error) {
-      expect((error as MarketingValidationError).missing).toContain('publishAt')
-    }
+    expect(error.missing).toContain('publishAt')
   })
 
   it('treats only published or due scheduled calendar items as link-ready', () => {

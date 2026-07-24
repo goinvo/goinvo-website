@@ -1,6 +1,7 @@
 import type { NextResponse as NextResponseType } from 'next/server'
 import {
   assertMarketingApiKey,
+  buildCreatePayload,
   buildPatchPayload,
   getMarketingWriteClient,
   isManagedMarketingType,
@@ -11,6 +12,19 @@ import {
 } from '@/lib/marketing'
 import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import {
+  assertBoundedJson,
+  isPlainRecord,
+  isRevisionConflict,
+  isValidMarketingDocumentId,
+  isValidSanityRevision,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
+import {
+  assertAllowedMarketingFields,
+  assertAllowedMarketingUnsetPaths,
+} from '@/lib/marketing/fieldPolicy'
 
 // Marketing documents can contain internal planning material, and Outreach
 // types contain PII. Keep every result explicitly private and non-cacheable.
@@ -39,10 +53,6 @@ function clientForType(type: ManagedMarketingType) {
   return OUTREACH_DATASET_TYPES.includes(type) ? base.withConfig({ dataset: OUTREACH_DATASET }) : base
 }
 
-function isValidDocumentId(id: string): boolean {
-  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(id)
-}
-
 // Authenticate + resolve the awaited params, returning either the managed type
 // and document id, or a ready-to-return error response (401 bad key, 400
 // unmanaged type). Shared by all three handlers below.
@@ -69,7 +79,7 @@ async function guard(
     }
   }
 
-  if (!isValidDocumentId(id)) {
+  if (!isValidMarketingDocumentId(id)) {
     return {
       response: NextResponse.json({ error: 'Invalid marketing document id.' }, { status: 400 }),
     }
@@ -118,26 +128,63 @@ export async function PATCH(req: Request, context: RouteContext) {
 
   let body: unknown
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Request body must be valid JSON.' }, { status: 400 })
+    body = await readBoundedJson(req)
+    assertBoundedJson(body)
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    throw error
   }
 
-  const { set, unset, deriveSlug } = (body ?? {}) as {
+  if (!isPlainRecord(body)) {
+    return NextResponse.json({ error: 'Request body must be a JSON object.' }, { status: 400 })
+  }
+  const unknownBodyKeys = Object.keys(body).filter(
+    (key) => !['set', 'unset', 'deriveSlug', 'expectedRevision'].includes(key),
+  )
+  if (unknownBodyKeys.length) {
+    return NextResponse.json(
+      { error: `Unknown request field${unknownBodyKeys.length === 1 ? '' : 's'}: ${unknownBodyKeys.join(', ')}` },
+      { status: 400 },
+    )
+  }
+
+  const { set, unset, deriveSlug, expectedRevision } = body as {
     set?: unknown
     unset?: unknown
     deriveSlug?: unknown
+    expectedRevision?: unknown
   }
 
-  const hasSet = typeof set === 'object' && set !== null && !Array.isArray(set)
-  const unsetFields =
-    Array.isArray(unset) && unset.every((field) => typeof field === 'string')
-      ? (unset as string[])
-      : []
+  if (typeof expectedRevision !== 'string' || !isValidSanityRevision(expectedRevision)) {
+    return NextResponse.json(
+      { error: 'A valid expectedRevision is required for PATCH.' },
+      { status: 400 },
+    )
+  }
+  const hasSet = isPlainRecord(set)
+  if (set !== undefined && !hasSet) {
+    return NextResponse.json({ error: '`set` must be an object.' }, { status: 400 })
+  }
+  if (unset !== undefined && (!Array.isArray(unset) || !unset.every((field) => typeof field === 'string'))) {
+    return NextResponse.json({ error: '`unset` must be a string array.' }, { status: 400 })
+  }
+  const unsetFields = Array.isArray(unset) ? Array.from(new Set(unset as string[])) : []
 
   if (!hasSet && unsetFields.length === 0) {
     return NextResponse.json(
       { error: 'Body must include a non-empty `set` object and/or an `unset` string array.' },
+      { status: 400 },
+    )
+  }
+
+  try {
+    if (hasSet) assertAllowedMarketingFields(type, set)
+    assertAllowedMarketingUnsetPaths(type, unsetFields)
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Request contains unsupported fields.' },
       { status: 400 },
     )
   }
@@ -164,29 +211,46 @@ export async function PATCH(req: Request, context: RouteContext) {
 
   try {
     const client = clientForType(type)
-    const exists = await client.fetch<{ _id: string; status?: string; publishAt?: string } | null>(
-      '*[_type == $type && _id == $id][0]{_id, status, publishAt}',
+    const exists = await client.fetch<Record<string, unknown> | null>(
+      '*[_type == $type && _id == $id][0]',
       { type, id },
     )
     if (!exists) {
       return NextResponse.json({ error: `No ${type} found with _id ${id}.` }, { status: 404 })
     }
-    if (type === 'marketingCalendarItem') {
-      const effectiveStatus = typeof payload.status === 'string' ? payload.status : exists.status
-      const effectivePublishAt = unsetFields.includes('publishAt') ? undefined : payload.publishAt ?? exists.publishAt
-      if (effectiveStatus === 'scheduled' && (typeof effectivePublishAt !== 'string' || !effectivePublishAt.trim())) {
+    if (exists._rev !== expectedRevision) {
+      return NextResponse.json(
+        { error: 'Document changed since it was loaded. Refresh and review before saving.', expectedRevision, currentRevision: exists._rev },
+        { status: 409 },
+      )
+    }
+
+    const finalFields: MarketingFields = { ...exists, ...payload }
+    for (const field of unsetFields) delete finalFields[field]
+    for (const field of ['_id', '_type', '_rev', '_createdAt', '_updatedAt']) delete finalFields[field]
+    try {
+      buildCreatePayload(type, finalFields, { applyDefaults: false, deriveSlug: false })
+    } catch (error) {
+      if (error instanceof MarketingValidationError) {
         return NextResponse.json(
-          { error: 'Missing required field: publishAt', missing: ['publishAt'], invalid: [] },
+          { error: error.message, missing: error.missing, invalid: error.invalid },
           { status: 422 },
         )
       }
+      throw error
     }
-    let patch = client.patch(id)
+    let patch = client.patch(id).ifRevisionId(expectedRevision)
     if (Object.keys(payload).length > 0) patch = patch.set(payload)
     if (unsetFields.length > 0) patch = patch.unset(unsetFields)
     const document = await patch.commit()
     return NextResponse.json({ id, document })
   } catch (error) {
+    if (isRevisionConflict(error)) {
+      return NextResponse.json(
+        { error: 'Document changed while it was being saved. Refresh and review before retrying.' },
+        { status: 409 },
+      )
+    }
     const message = error instanceof Error ? error.message : 'Failed to patch document.'
     console.error(`Marketing patch (${type}/${id}) failed:`, error)
     return NextResponse.json({ error: message }, { status: 500 })
@@ -205,14 +269,30 @@ export async function DELETE(req: Request, context: RouteContext) {
   if ('response' in guarded) return guarded.response
   const { type, id } = guarded
 
+  const url = new URL(req.url)
+  const headerRevision = (req.headers.get('if-match') || '').replace(/^W\//, '').replace(/^"|"$/g, '')
+  const expectedRevision = (headerRevision || url.searchParams.get('expectedRevision') || '').trim()
+  if (!isValidSanityRevision(expectedRevision)) {
+    return NextResponse.json(
+      { error: 'A valid If-Match header or expectedRevision query parameter is required for DELETE.' },
+      { status: 400 },
+    )
+  }
+
   try {
     const client = clientForType(type)
-    const exists = await client.fetch<{ _id: string; key?: string } | null>(
-      '*[_type == $type && _id == $id][0]{_id, key}',
+    const exists = await client.fetch<{ _id: string; _rev: string; key?: string } | null>(
+      '*[_type == $type && _id == $id][0]{_id, _rev, key}',
       { type, id },
     )
     if (!exists) {
       return NextResponse.json({ error: `No ${type} found with _id ${id}.` }, { status: 404 })
+    }
+    if (exists._rev !== expectedRevision) {
+      return NextResponse.json(
+        { error: 'Document changed since it was loaded. Refresh and review before deleting.', expectedRevision, currentRevision: exists._rev },
+        { status: 409 },
+      )
     }
 
     const directReferences = await client.fetch<Array<{ _id: string; _type: string; title?: string }>>(
@@ -238,9 +318,27 @@ export async function DELETE(req: Request, context: RouteContext) {
       )
     }
 
-    await client.delete(id)
+    const deleted = await client.delete(
+      {
+        query: '*[_type == $type && _id == $id && _rev == $expectedRevision]',
+        params: { type, id, expectedRevision },
+      },
+      { returnFirst: false, returnDocuments: true },
+    )
+    if (!Array.isArray(deleted) || deleted.length !== 1) {
+      return NextResponse.json(
+        { error: 'Document changed while it was being deleted. Refresh and review before retrying.' },
+        { status: 409 },
+      )
+    }
     return NextResponse.json({ id, deleted: true, cascadedUnset: 0 })
   } catch (error) {
+    if (isRevisionConflict(error)) {
+      return NextResponse.json(
+        { error: 'Document changed while it was being deleted. Refresh and review before retrying.' },
+        { status: 409 },
+      )
+    }
     // Reference integrity is the common cause: Sanity refuses to delete a
     // document that is still referenced by others. Surface that as a clean 409
     // listing the referencing docs, instead of an opaque 500. (Delete them

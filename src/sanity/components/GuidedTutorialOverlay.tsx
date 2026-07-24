@@ -8,6 +8,10 @@ export type GuidedTutorialStep = {
   description: ReactNode
   nextLabel?: string
   previousLabel?: string
+  onNext?: () => void | Promise<void>
+  nextBusy?: boolean
+  mirrorTargetAction?: boolean
+  allowTargetActionFallback?: boolean
 }
 
 export type GuidedTutorialDefinition = {
@@ -35,6 +39,12 @@ type BubblePlacement = {
 type BubbleSize = {
   width: number
   height: number
+}
+
+type MirroredTargetAction = {
+  label: string
+  disabled: boolean
+  busy: boolean
 }
 
 const BUBBLE_WIDTH = 340
@@ -65,6 +75,10 @@ export function GuidedTutorialOverlay({
 }) {
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
   const [bubbleSize, setBubbleSize] = useState<BubbleSize>({ width: BUBBLE_WIDTH, height: 310 })
+  const [mirroredTargetAction, setMirroredTargetAction] = useState<MirroredTargetAction | null>(null)
+  const [mirroredActionCoolingDown, setMirroredActionCoolingDown] = useState(false)
+  const [ownedTargetId, setOwnedTargetId] = useState<string | undefined>()
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const bubbleRef = useRef<HTMLElement | null>(null)
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const onCloseRef = useRef(onClose)
@@ -74,6 +88,8 @@ export function GuidedTutorialOverlay({
   const completed = stepIndex >= tutorial.steps.length
   const currentStep = tutorial.steps[Math.min(stepIndex, Math.max(0, tutorial.steps.length - 1))]
   const currentTargetIdRef = useRef(currentStep?.targetId)
+  const mirroredActionLockRef = useRef(false)
+  const mirroredActionUnlockTimerRef = useRef<number | null>(null)
 
   onCloseRef.current = onClose
   currentTargetIdRef.current = currentStep?.targetId
@@ -92,9 +108,7 @@ export function GuidedTutorialOverlay({
 
       const focusable = focusableElements(bubbleRef.current)
       const targetId = currentTargetIdRef.current
-      const highlightedTarget = targetId
-        ? document.querySelector<HTMLElement>(`[data-tour-id="${targetId}"]`)
-        : null
+      const highlightedTarget = findTourTarget(targetId)
       if (highlightedTarget) {
         const targetFocusables = focusableElements(highlightedTarget)
         if (highlightedTarget.matches(FOCUSABLE_SELECTOR) && isKeyboardFocusable(highlightedTarget)) {
@@ -121,9 +135,38 @@ export function GuidedTutorialOverlay({
       document.removeEventListener('keydown', handleKeyDown)
       const previouslyFocused = previouslyFocusedRef.current
       previouslyFocusedRef.current = null
-      if (previouslyFocused?.isConnected) previouslyFocused.focus({ preventScroll: true })
+      // Modal isolation is restored by a separate effect cleanup. Defer focus
+      // until every cleanup has run; focusing an opener while it is still inert
+      // is ignored by the browser and strands keyboard users on <body>.
+      if (previouslyFocused?.isConnected) {
+        queueMicrotask(() => {
+          if (previouslyFocused.isConnected) previouslyFocused.focus({ preventScroll: true })
+        })
+      }
     }
   }, [active, tutorial.id])
+
+  useEffect(() => {
+    if (!active || !rootRef.current) return undefined
+
+    const target = !completed ? findTourTarget(currentStep?.targetId) : null
+    const assignedTargetId = target && !target.id
+      ? `guided-tutorial-target-${safeDomId(currentStep?.targetId || tutorial.id)}`
+      : null
+    if (target && assignedTargetId) target.id = assignedTargetId
+    setOwnedTargetId(target?.id || undefined)
+
+    // A spotlight tutorial has two intentionally reachable islands: its dialog and
+    // the highlighted control. Hide/inert every other branch so a screen-reader or
+    // keyboard user cannot wander into dimmed controls behind the coach.
+    const restoreOutside = isolateDomForModal([rootRef.current, ...(target ? [target] : [])])
+
+    return () => {
+      restoreOutside()
+      if (target && assignedTargetId && target.id === assignedTargetId) target.removeAttribute('id')
+      setOwnedTargetId(undefined)
+    }
+  }, [active, completed, currentStep?.targetId, tutorial.id])
 
   useEffect(() => {
     if (!active) return undefined
@@ -134,6 +177,81 @@ export function GuidedTutorialOverlay({
   useEffect(() => {
     scrolledTargetRef.current = null
   }, [currentStep?.targetId])
+
+  useEffect(() => {
+    mirroredActionLockRef.current = false
+    setMirroredActionCoolingDown(false)
+    if (mirroredActionUnlockTimerRef.current !== null) {
+      window.clearTimeout(mirroredActionUnlockTimerRef.current)
+      mirroredActionUnlockTimerRef.current = null
+    }
+    return () => {
+      if (mirroredActionUnlockTimerRef.current !== null) {
+        window.clearTimeout(mirroredActionUnlockTimerRef.current)
+        mirroredActionUnlockTimerRef.current = null
+      }
+    }
+  }, [active, currentStep?.id])
+
+  useEffect(() => {
+    if (!active || completed || !currentStep?.mirrorTargetAction || !currentStep.targetId) {
+      setMirroredTargetAction(null)
+      return undefined
+    }
+
+    const syncTargetAction = () => {
+      const target = findTourTarget(currentStep.targetId)
+      const actions = target
+        ? Array.from(target.querySelectorAll<HTMLElement>('[data-autopilot-next-action="true"]'))
+        : []
+      if (actions.length !== 1) {
+        setMirroredTargetAction(null)
+        return
+      }
+      const action = actions[0]
+      const label = (
+        action.getAttribute('data-autopilot-next-label')
+        || action.getAttribute('aria-label')
+        || action.textContent
+        || ''
+      ).trim()
+      const busy = action.getAttribute('aria-busy') === 'true'
+      const nextAction = {
+        label,
+        disabled:
+          action.getAttribute('disabled') !== null
+          || action.getAttribute('aria-disabled') === 'true'
+          || busy,
+        busy,
+      }
+      setMirroredTargetAction((current) =>
+        current
+        && current.label === nextAction.label
+        && current.disabled === nextAction.disabled
+        && current.busy === nextAction.busy
+          ? current
+          : nextAction,
+      )
+    }
+
+    syncTargetAction()
+    const target = findTourTarget(currentStep.targetId)
+    const observer = target && typeof MutationObserver !== 'undefined'
+      ? new MutationObserver(syncTargetAction)
+      : null
+    observer?.observe(target!, {
+      attributes: true,
+      attributeFilter: ['disabled', 'aria-disabled', 'aria-busy', 'data-autopilot-next-action', 'data-autopilot-next-label'],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    })
+    const interval = window.setInterval(syncTargetAction, 500)
+    return () => {
+      observer?.disconnect()
+      window.clearInterval(interval)
+    }
+  }, [active, completed, currentStep?.id, currentStep?.mirrorTargetAction, currentStep?.targetId])
 
   useEffect(() => {
     if (!active || completed) return undefined
@@ -147,7 +265,7 @@ export function GuidedTutorialOverlay({
           return
         }
 
-        const element = document.querySelector<HTMLElement>(`[data-tour-id="${currentStep.targetId}"]`)
+        const element = findTourTarget(currentStep.targetId)
         if (!element) {
           setTargetRect(null)
           return
@@ -217,11 +335,12 @@ export function GuidedTutorialOverlay({
 
   if (completed) {
     return (
-      <div style={styles.root}>
+      <div ref={rootRef} style={styles.root}>
         <div style={styles.scrim} />
         <section
           ref={bubbleRef}
           role="dialog"
+          aria-modal="true"
           tabIndex={-1}
           aria-labelledby={titleId}
           aria-describedby={descriptionId}
@@ -246,16 +365,60 @@ export function GuidedTutorialOverlay({
 
   const completedSteps = Math.min(stepIndex + 1, tutorial.steps.length)
   const progress = tutorial.steps.length === 0 ? 0 : (completedSteps / tutorial.steps.length) * 100
+  const useTargetActionFallback = Boolean(
+    currentStep.mirrorTargetAction
+    && currentStep.allowTargetActionFallback
+    && (!mirroredTargetAction || (mirroredTargetAction.disabled && !mirroredTargetAction.busy)),
+  )
+  const useMirroredTargetAction = Boolean(currentStep.mirrorTargetAction && !useTargetActionFallback)
+  const nextButtonDisabled = Boolean(
+    currentStep.nextBusy
+    || mirroredActionCoolingDown
+    || (useMirroredTargetAction && (!mirroredTargetAction || mirroredTargetAction.disabled)),
+  )
+  const nextButtonBusy = Boolean(currentStep.nextBusy || mirroredTargetAction?.busy)
 
   const goPrevious = () => onStepChange(Math.max(0, stepIndex - 1))
-  const goNext = () => {
+  const goNext = async () => {
+    if (nextButtonDisabled) return
+    if (useMirroredTargetAction && currentStep.targetId) {
+      // The mirrored action can change in place (for example, Check Names becomes
+      // Add Contacts). Lock before dispatching the underlying click so the second
+      // half of a double-click cannot activate the newly rendered destructive step.
+      if (mirroredActionLockRef.current) return
+      mirroredActionLockRef.current = true
+      setMirroredActionCoolingDown(true)
+      mirroredActionUnlockTimerRef.current = window.setTimeout(() => {
+        mirroredActionLockRef.current = false
+        setMirroredActionCoolingDown(false)
+        mirroredActionUnlockTimerRef.current = null
+      }, 650)
+      const target = findTourTarget(currentStep.targetId)
+      const actions = target
+        ? Array.from(target.querySelectorAll<HTMLElement>('[data-autopilot-next-action="true"]'))
+        : []
+      if (actions.length !== 1) return
+      const action = actions[0]
+      if (
+        !action.isConnected
+        || action.getAttribute('disabled') !== null
+        || action.getAttribute('aria-disabled') === 'true'
+        || action.getAttribute('aria-busy') === 'true'
+      ) return
+      action.click()
+      return
+    }
+    if (currentStep.onNext) {
+      await currentStep.onNext()
+      return
+    }
     const nextIndex = stepIndex + 1
     if (nextIndex >= tutorial.steps.length) onComplete?.()
     onStepChange(nextIndex)
   }
 
   return (
-    <div style={styles.root}>
+    <div ref={rootRef} style={styles.root}>
       {highlightRect ? (
         <>
           <div aria-hidden="true" style={{ ...styles.blocker, inset: `0 0 auto 0`, height: Math.max(0, highlightRect.top) }} />
@@ -282,6 +445,8 @@ export function GuidedTutorialOverlay({
       <section
         ref={bubbleRef}
         role="dialog"
+        aria-modal="true"
+        aria-owns={ownedTargetId}
         tabIndex={-1}
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
@@ -314,8 +479,23 @@ export function GuidedTutorialOverlay({
           <button type="button" style={styles.iconButton} disabled={stepIndex <= 0} onClick={goPrevious} aria-label={currentStep.previousLabel || 'Previous tutorial step'}>
             <ChevronLeftIcon style={{ width: 18, height: 18 }} />
           </button>
-          <button type="button" style={styles.nextButton} onClick={goNext}>
-            {currentStep.nextLabel || (stepIndex >= tutorial.steps.length - 1 ? 'Finish' : 'Next')}
+          <button
+            type="button"
+            style={styles.nextButton}
+            disabled={nextButtonDisabled}
+            aria-busy={nextButtonBusy || undefined}
+            aria-label={
+              useMirroredTargetAction && mirroredTargetAction?.label
+                ? `${mirroredTargetAction.label} in highlighted panel`
+                : undefined
+            }
+            onClick={() => void goNext()}
+          >
+            <span aria-live={currentStep.mirrorTargetAction ? 'polite' : undefined}>
+              {useMirroredTargetAction && mirroredTargetAction?.label
+                ? mirroredTargetAction.label
+                : currentStep.nextLabel || (stepIndex >= tutorial.steps.length - 1 ? 'Finish' : 'Next')}
+            </span>
             <ChevronRightIcon style={{ width: 18, height: 18 }} />
           </button>
         </div>
@@ -339,10 +519,110 @@ function focusableElements(container: HTMLElement) {
   ).filter(isKeyboardFocusable)
 }
 
+function findTourTarget(targetId?: string | null) {
+  if (!targetId) return null
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-tour-id]'))
+    .find((element) => element.getAttribute('data-tour-id') === targetId) || null
+}
+
 function isKeyboardFocusable(element: HTMLElement) {
-  if (element.hidden || element.getAttribute('aria-hidden') === 'true') return false
+  if (
+    element.hidden
+    || element.getAttribute('aria-hidden') === 'true'
+    || element.closest('[inert], [aria-hidden="true"]')
+  ) return false
   const style = window.getComputedStyle(element)
-  return style.display !== 'none' && style.visibility !== 'hidden'
+  if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false
+  const rect = element.getBoundingClientRect()
+  if (!isRectVisibleForKeyboard(rect, window.innerWidth, window.innerHeight)) return false
+
+  let visibleLeft = Math.max(0, rect.left)
+  let visibleRight = Math.min(window.innerWidth, rect.right)
+  let visibleTop = Math.max(0, rect.top)
+  let visibleBottom = Math.min(window.innerHeight, rect.bottom)
+  let ancestor = element.parentElement
+  while (ancestor && ancestor !== document.body) {
+    const ancestorStyle = window.getComputedStyle(ancestor)
+    const clipsX = /(auto|scroll|hidden|clip)/.test(ancestorStyle.overflowX)
+    const clipsY = /(auto|scroll|hidden|clip)/.test(ancestorStyle.overflowY)
+    if (clipsX || clipsY) {
+      const ancestorRect = ancestor.getBoundingClientRect()
+      if (clipsX) {
+        visibleLeft = Math.max(visibleLeft, ancestorRect.left)
+        visibleRight = Math.min(visibleRight, ancestorRect.right)
+      }
+      if (clipsY) {
+        visibleTop = Math.max(visibleTop, ancestorRect.top)
+        visibleBottom = Math.min(visibleBottom, ancestorRect.bottom)
+      }
+      if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) return false
+    }
+    ancestor = ancestor.parentElement
+  }
+  return true
+}
+
+export function isRectVisibleForKeyboard(
+  rect: Pick<DOMRect, 'top' | 'right' | 'bottom' | 'left' | 'width' | 'height'>,
+  viewportWidth: number,
+  viewportHeight: number,
+) {
+  return (
+    rect.width > 0
+    && rect.height > 0
+    && rect.right > 0
+    && rect.bottom > 0
+    && rect.left < viewportWidth
+    && rect.top < viewportHeight
+  )
+}
+
+type IsolatedElementState = {
+  element: HTMLElement
+  inert: boolean
+  ariaHidden: string | null
+}
+
+export function isolateDomForModal(protectedElements: HTMLElement[]) {
+  const protectedSet = new Set(protectedElements)
+  const protectedAncestors = new Set<HTMLElement>()
+  for (const element of protectedElements) {
+    let current: HTMLElement | null = element
+    while (current) {
+      protectedAncestors.add(current)
+      if (current === document.body) break
+      current = current.parentElement
+    }
+  }
+
+  const changed: IsolatedElementState[] = []
+  for (const ancestor of protectedAncestors) {
+    if (protectedSet.has(ancestor)) continue
+    for (const child of Array.from(ancestor.children)) {
+      if (!(child instanceof HTMLElement)) continue
+      if (protectedSet.has(child) || protectedAncestors.has(child)) continue
+      if (protectedElements.some((protectedElement) => child.contains(protectedElement))) continue
+      changed.push({
+        element: child,
+        inert: child.inert,
+        ariaHidden: child.getAttribute('aria-hidden'),
+      })
+      child.inert = true
+      child.setAttribute('aria-hidden', 'true')
+    }
+  }
+
+  return () => {
+    for (const state of changed.reverse()) {
+      state.element.inert = state.inert
+      if (state.ariaHidden === null) state.element.removeAttribute('aria-hidden')
+      else state.element.setAttribute('aria-hidden', state.ariaHidden)
+    }
+  }
+}
+
+function safeDomId(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || 'step'
 }
 
 function centeredBubblePlacement(size: BubbleSize): BubblePlacement {

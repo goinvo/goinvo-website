@@ -1,12 +1,17 @@
-import { NextResponse } from 'next/server'
 import {
   assertStudioOrApiKey,
-  buildPublishContent,
   getMarketingWriteClient,
   MarketingAuthError,
+} from '@/lib/marketing'
+import {
+  buildPublishContent,
   resolveSocialPlatform,
   SINGLE_ITEM_QUERY,
-} from '@/lib/marketing'
+  validatePublishContent,
+  validatePublishableItem,
+} from '@/lib/marketing/publishers'
+import { isValidMarketingDocumentId } from '@/lib/marketing/apiBoundary'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // GET /api/marketing/publish/preview?id=<calendarItemId>
 //
@@ -24,32 +29,59 @@ export async function GET(req: Request) {
     await assertStudioOrApiKey(req)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: 401 })
+      return privateMarketingJson({ error: error.message }, { status: 401 })
     }
     throw error
   }
 
-  const id = new URL(req.url).searchParams.get('id')?.trim()
-  if (!id) return NextResponse.json({ error: 'Missing ?id=' }, { status: 400 })
+  const searchParams = new URL(req.url).searchParams
+  if ([...searchParams.keys()].some((key) => key !== 'id') || searchParams.getAll('id').length > 1) {
+    return privateMarketingJson({ error: 'Only one `id` query parameter is allowed.' }, { status: 400 })
+  }
+  const id = searchParams.get('id')?.trim()
+  if (!id) return privateMarketingJson({ error: 'Missing ?id=' }, { status: 400 })
+  if (!isValidMarketingDocumentId(id)) {
+    return privateMarketingJson({ error: 'Invalid calendar item ID.' }, { status: 400 })
+  }
 
   let client: ReturnType<typeof getMarketingWriteClient>
   try {
     client = getMarketingWriteClient()
   } catch {
-    return NextResponse.json({ error: 'Sanity is not configured.' }, { status: 503 })
+    return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
   }
 
-  const item = await client.fetch(SINGLE_ITEM_QUERY, { id })
-  if (!item) return NextResponse.json({ error: 'Calendar item not found.' }, { status: 404 })
+  let item: Parameters<typeof buildPublishContent>[0] | null
+  try {
+    item = await client.fetch<Parameters<typeof buildPublishContent>[0] | null>(SINGLE_ITEM_QUERY, { id })
+  } catch (error) {
+    console.error('Publish preview lookup failed:', error)
+    return privateMarketingJson({ error: 'Calendar item lookup failed.' }, { status: 503 })
+  }
+  if (!item) return privateMarketingJson({ error: 'Calendar item not found.' }, { status: 404 })
 
-  const platform = resolveSocialPlatform(item)
-  const content = buildPublishContent(item)
+  let platform: ReturnType<typeof resolveSocialPlatform>
+  try {
+    platform = resolveSocialPlatform(item)
+  } catch {
+    return privateMarketingJson({ error: 'Calendar item publishing fields are malformed.' }, { status: 422 })
+  }
+  const validationPlatform = platform || 'linkedin'
+  const itemValidation = validatePublishableItem(validationPlatform, item)
+  let content: ReturnType<typeof buildPublishContent>
+  try {
+    content = itemValidation ? { text: '', media: [] } : buildPublishContent(item)
+  } catch {
+    return privateMarketingJson({ error: 'Calendar item publishing content is malformed.' }, { status: 422 })
+  }
+  const validationError = itemValidation || validatePublishContent(validationPlatform, content)
   const hasVideo = content.media.some((media) => media.type === 'video')
   const isReelType = item.contentType === 'reel' || item.contentType === 'video'
 
   // Surface the same things the publish worker / platform adapters would reject
   // or that hurt the post, so the editor sees them BEFORE it publishes.
   const warnings: string[] = []
+  if (validationError) warnings.push(validationError)
   if (!platform) {
     warnings.push(
       'This item’s channel is not a social publishing channel (LinkedIn or Instagram), so it will not auto-publish.',
@@ -73,13 +105,14 @@ export async function GET(req: Request) {
     }
   })
 
-  return NextResponse.json({
+  return privateMarketingJson({
     id,
     title: item.title ?? null,
     status: item.status ?? null,
     contentType: item.contentType ?? null,
     platform,
     content,
+    contentSuppressed: Boolean(itemValidation),
     warnings,
   })
 }

@@ -2,12 +2,21 @@ import { NextResponse } from 'next/server'
 import {
   assertMarketingApiKey,
   getMarketingWriteClient,
-  isQStashConfigured,
   MarketingAuthError,
+} from '@/lib/marketing'
+import {
+  isQStashConfigured,
   resolveSocialPlatform,
   runPublish,
   schedulePublish,
-} from '@/lib/marketing'
+} from '@/lib/marketing/publishers'
+import {
+  assertBoundedJson,
+  isPlainRecord,
+  isValidMarketingDocumentId,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
 
 // POST /api/marketing/publish/schedule — enqueue an exact-time QStash callback
 // for one calendar item (or publish immediately if it is already due).
@@ -30,6 +39,10 @@ interface ScheduleSource {
   channelKey?: string | null
 }
 
+const SCHEDULE_BODY_LIMIT = 32 * 1024
+const MAX_QSTASH_NOT_BEFORE_SECONDS = 253_402_300_799 // 9999-12-31T23:59:59Z
+const scheduleInFlight = new Map<string, ReturnType<typeof schedulePublish>>()
+
 const SOURCE_QUERY = `*[_type == "marketingCalendarItem" && _id == $id][0]{
   _id,
   status,
@@ -49,6 +62,17 @@ function readId(body: unknown, url: URL): string | undefined {
   return undefined
 }
 
+function validPublishTime(value: unknown): { iso: string; milliseconds: number } | null {
+  if (typeof value !== 'string' || value.length > 40) return null
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return null
+  const milliseconds = Date.parse(value)
+  const seconds = Math.floor(milliseconds / 1000)
+  if (!Number.isFinite(milliseconds) || !Number.isSafeInteger(seconds) || seconds < 0 || seconds > MAX_QSTASH_NOT_BEFORE_SECONDS) {
+    return null
+  }
+  return { iso: value, milliseconds }
+}
+
 export async function POST(req: Request) {
   try {
     assertMarketingApiKey(req)
@@ -64,9 +88,16 @@ export async function POST(req: Request) {
 
   let body: unknown
   try {
-    body = await req.json()
-  } catch {
-    body = undefined
+    body = req.body ? await readBoundedJson(req, SCHEDULE_BODY_LIMIT) : {}
+    assertBoundedJson(body, { maxStringLength: 10_000 })
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status })
+    }
+    throw error
+  }
+  if (!isPlainRecord(body)) {
+    return NextResponse.json({ error: 'Request body must be a JSON object.' }, { status: 400 })
   }
   const id = readId(body, url)
   if (!id) {
@@ -74,6 +105,9 @@ export async function POST(req: Request) {
       { error: 'Provide an item id via ?id=, body.id, or a Sanity webhook payload (_id).' },
       { status: 400 },
     )
+  }
+  if (!isValidMarketingDocumentId(id)) {
+    return NextResponse.json({ error: 'Invalid marketing calendar item id.' }, { status: 400 })
   }
 
   let client: ReturnType<typeof getMarketingWriteClient>
@@ -107,6 +141,14 @@ export async function POST(req: Request) {
     })
   }
 
+  const publishTime = validPublishTime(item.publishAt)
+  if (!publishTime) {
+    return NextResponse.json(
+      { id, scheduled: false, reason: 'publishAt must be a valid, bounded ISO-8601 timestamp with a timezone.' },
+      { status: 422 },
+    )
+  }
+
   const platform = resolveSocialPlatform({ channelKey: item.channelKey })
   if (!platform) {
     return NextResponse.json({
@@ -116,7 +158,7 @@ export async function POST(req: Request) {
     })
   }
 
-  const dueMs = new Date(item.publishAt).getTime()
+  const dueMs = publishTime.milliseconds
   const nowMs = Date.now()
 
   // Already due (scheduled in the past, or saved right at publish time) → post now.
@@ -148,12 +190,23 @@ export async function POST(req: Request) {
     )
   }
 
-  const result = await schedulePublish({
-    itemId: id,
-    publishAtIso: item.publishAt,
-    baseUrl: `${url.protocol}//${url.host}`,
-    forwardApiKey: process.env.MARKETING_API_KEY || '',
-  })
+  const operationKey = `${id}\n${publishTime.iso}`
+  let operation = scheduleInFlight.get(operationKey)
+  if (!operation) {
+    operation = schedulePublish({
+      itemId: id,
+      publishAtIso: publishTime.iso,
+      baseUrl: `${url.protocol}//${url.host}`,
+      forwardApiKey: process.env.MARKETING_API_KEY || '',
+    })
+    scheduleInFlight.set(operationKey, operation)
+  }
+  let result
+  try {
+    result = await operation
+  } finally {
+    if (scheduleInFlight.get(operationKey) === operation) scheduleInFlight.delete(operationKey)
+  }
 
   if (!result.ok) {
     return NextResponse.json({ id, platform, scheduled: false, error: result.error }, { status: 502 })

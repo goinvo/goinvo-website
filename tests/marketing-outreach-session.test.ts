@@ -94,6 +94,18 @@ function exchangeRequest(
   })
 }
 
+function rawExchangeRequest(body: BodyInit, headers: Record<string, string> = {}) {
+  return new NextRequest(`https://www.goinvo.com${OUTREACH_SESSION_ENDPOINT}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Origin: 'https://www.goinvo.com',
+      ...headers,
+    },
+    body,
+  })
+}
+
 function network(options: { history?: string; role?: string; historyStatus?: number; aclStatus?: number } = {}) {
   return vi.fn(async (input: string | URL | Request) => {
     const url = String(input)
@@ -147,7 +159,9 @@ describe('Outreach cookie-mode session contract', () => {
     expect(source).toContain('authenticatedMarketingRequest as outreachApi')
 
     const authenticatedCalls = source.match(/\n\s+outreachClient,\n\s+\)/g) || []
-    expect(authenticatedCalls).toHaveLength(10)
+    expect(authenticatedCalls).toHaveLength(9)
+    expect(source).toContain('const stageWarmStartSuggestions = () =>')
+    expect(source).not.toContain('const addWarmStart = async () =>')
   })
 
   it('creates only random public proof identifiers for the browser handoff', () => {
@@ -268,6 +282,38 @@ describe('Outreach one-time proof exchange', () => {
     const malformed = await POST(exchangeRequest({ proofId: 'bad', transactionId: 'also-bad' }))
     expect(malformed.status).toBe(400)
     expect(mocks.fetch).not.toHaveBeenCalled()
+    expect(mocks.patch).not.toHaveBeenCalled()
+  })
+
+  it('rejects oversized, malformed, and ambiguous bodies before reading a proof', async () => {
+    const declaredTooLarge = await POST(
+      rawExchangeRequest('{}', { 'Content-Length': String(4 * 1024 + 1) }),
+    )
+    expect(declaredTooLarge.status).toBe(413)
+
+    const streamedTooLarge = await POST(rawExchangeRequest('x'.repeat(4 * 1024 + 1)))
+    expect(streamedTooLarge.status).toBe(413)
+
+    const extraField = await POST(exchangeRequest({ proofId, transactionId, role: 'administrator' }))
+    expect(extraField.status).toBe(400)
+    expect(mocks.fetch).not.toHaveBeenCalled()
+    expect(mocks.patch).not.toHaveBeenCalled()
+  })
+
+  it('bounds Sanity history and ACL responses before parsing or consuming a proof', async () => {
+    vi.stubGlobal('fetch', network({ history: 'x'.repeat(64 * 1024 + 1) }))
+    const oversizedHistory = await POST(exchangeRequest())
+    expect(oversizedHistory.status).toBe(503)
+    expect(mocks.patch).not.toHaveBeenCalled()
+
+    vi.clearAllMocks()
+    mocks.fetch.mockResolvedValueOnce(proof())
+    vi.stubGlobal(
+      'fetch',
+      network({ history: history(), role: `editor${'x'.repeat(64 * 1024)}` }),
+    )
+    const oversizedAcl = await POST(exchangeRequest())
+    expect(oversizedAcl.status).toBe(503)
     expect(mocks.patch).not.toHaveBeenCalled()
   })
 

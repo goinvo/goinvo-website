@@ -34,21 +34,52 @@ import type { ComponentType, CSSProperties, ReactNode } from 'react'
  * ----------------------------------------------------------------- */
 
 const STORAGE_KEY = 'goinvo-knowledge-base-v1'
+const MAX_PROGRESS_STORAGE_BYTES = 100_000
 
 type ProgressState = Record<string, boolean>
+
+export function normalizeKnowledgeBaseProgress(
+  value: unknown,
+  allowedStepIds: ReadonlySet<string>,
+): ProgressState {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
+  const record = value as Record<string, unknown>
+  const normalized: ProgressState = {}
+  for (const id of allowedStepIds) {
+    if (Object.prototype.hasOwnProperty.call(record, id) && record[id] === true) normalized[id] = true
+  }
+  return normalized
+}
+
+function knowledgeBaseStepIds() {
+  return new Set(categories.flatMap((category) => category.articles).flatMap((article) => article.steps).map((step) => step.id))
+}
 
 function loadProgress(): ProgressState {
   if (typeof window === 'undefined') return {}
   try {
-    return JSON.parse(window.localStorage.getItem(STORAGE_KEY) || '{}')
-  } catch {
+    const raw = window.localStorage.getItem(STORAGE_KEY) || '{}'
+    if (raw.length > MAX_PROGRESS_STORAGE_BYTES) {
+      window.localStorage.removeItem(STORAGE_KEY)
+      return {}
+    }
+    return normalizeKnowledgeBaseProgress(JSON.parse(raw), knowledgeBaseStepIds())
+  } catch (error) {
+    console.error('Knowledge-base progress could not load:', error)
     return {}
   }
 }
 
 function saveProgress(state: ProgressState) {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  if (typeof window === 'undefined') return true
+  try {
+    const normalized = normalizeKnowledgeBaseProgress(state, knowledgeBaseStepIds())
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
+    return true
+  } catch (error) {
+    console.error('Knowledge-base progress could not save:', error)
+    return false
+  }
 }
 
 /* -----------------------------------------------------------------
@@ -325,17 +356,20 @@ const categories: Category[] = [
           },
           {
             id: 'marketing.overview.order',
-            title: 'Work from strategy to artifact',
+            title: 'Tell Marketing what changed',
             body: (
               <>
-                Start with the broad intent, then move toward the thing you
-                need to make: research plans collect SEO, collaboration, and
-                release timing inputs; campaigns set the goal and audience;
-                funnels define the next step; channels constrain the format;
-                calendar items become the actual posts or pages; and analytics
-                explains whether the work helped.
+                Coworkers do not need to translate their work into campaigns,
+                funnels, audiences, or calendar fields. On <strong>Home</strong>,
+                use <strong>Tell Marketing what changed</strong> like a quick
+                Slack update. Marketing infers the smallest operational
+                handoff, finds strong matches in existing work, and shows the
+                normalized brief before anything is saved. The accepted work
+                goes to the private shared Marketing desk; structured editors
+                are optional when someone needs to tweak the source details.
               </>
             ),
+            tip: 'The rough note is not saved. Review the proposed shared brief, then hand it off once; Marketing stores it privately and runs a free internal CMS check without publishing or using paid SEO credits.',
           },
           {
             id: 'marketing.overview.templates',
@@ -354,11 +388,62 @@ const categories: Category[] = [
       {
         id: 'marketing.dashboard',
         title: 'Start from the Dashboard',
-        blurb: 'Use ranked next actions and runway signals to decide what deserves attention first.',
+        blurb: 'Hand work to the shared Marketing desk, answer real blockers, and use health signals to decide what deserves attention next.',
         minutes: 3,
-        keywords: ['dashboard', 'home', 'next actions', 'runway', 'needs attention', 'autopilot'],
+        keywords: ['dashboard', 'home', 'marketing desk', 'shared queue', 'owner', 'due date', 'next actions', 'runway', 'needs attention', 'autopilot'],
         links: [{ path: '/marketing?view=dashboard', label: 'Open Dashboard' }],
         steps: [
+          {
+            id: 'marketing.dashboard.tell-marketing',
+            title: 'Give Marketing the rough update',
+            body: (
+              <>
+                Paste the update in your own words: a new project, deadline,
+                event, result, collaborator, idea, or change of plan. Missing
+                nice-to-have fields stay assumptions or questions; you are not
+                sent through a form. Review the normalized private handoff and
+                any strong existing source match, then choose <strong>Hand this
+                to Marketing</strong>. Nothing is saved before that review, no
+                public Research record is silently changed, and nothing is published.
+              </>
+            ),
+            tip: 'Do not paste confidential client, contact, health, credential, or private lead data. Credentials and likely personal identifiers are blocked before AI; the note is sent to the approved Marketing AI model, but only the normalized brief you review is stored in the private operations dataset.',
+          },
+          {
+            id: 'marketing.dashboard.operating-loop',
+            title: 'Work from Marketing’s desk',
+            body: (
+              <>
+                On <strong>Home</strong>, open <strong>Marketing’s desk</strong>
+                and answer the first item under <strong>Needs a person</strong>.
+                Then leave Marketing to organize the next move. Assignment and
+                date controls are corrections, not intake requirements: change
+                them only when the suggestion or team agreement is wrong. The
+                owner, due date, blocker, CMS matches, and recent outcomes are
+                shared privately, so a coworker can resume without reconstructing
+                a campaign or funnel from memory.
+              </>
+            ),
+            tip: 'System checks are live recommendations, not fake assignments. Choose Add to desk only when the team wants Marketing to own the follow-through.',
+          },
+          {
+            id: 'marketing.dashboard.safety',
+            title: 'Know where Marketing stops',
+            body: (
+              <>
+                Marketing can read shared records, deduplicate and rank work,
+                inspect the public GoInvo CMS, prepare private drafts, and log
+                an internal check. Creating or updating shared private work has
+                one reviewed handoff. Publishing, scheduling, outreach, paid
+                providers, claim approval, deletion, public-record changes, and
+                brand-voice learning require a person every time. The desk is
+                truthful about runtime: it advances safe work during a reviewed
+                handoff or while the Studio is open; it does not pretend a
+                background employee is running when no worker is configured.
+              </>
+            ),
+            tip: 'A blocked item is an escalation, not permission to widen automation. Resolve the fact or decision, then return it to the queue.',
+          },
           {
             id: 'marketing.dashboard.scan',
             title: 'Scan the runway before opening editors',
@@ -617,8 +702,11 @@ const categories: Category[] = [
             body: (
               <>
                 Choose <strong>Suggest from our past work</strong> for a reviewed warm
-                start, or paste contacts you already know. Nothing is selected by
-                default. A contact is worth researching when it names a real person,
+                start, paste contacts you already know, or import a values-only Excel/CSV file. Nothing is selected by
+                default. After selecting suggestions, <strong>Add selected</strong> copies
+                them into the searchable Add contacts table; it does not create records.
+                Current and former team-directory people are excluded automatically.
+                A contact is worth researching when it names a real person,
                 the relationship owner can explain how GoInvo knows them, and there is
                 a plausible buyer, budget, or referral path. An organization placeholder
                 remains an account lead until someone names the person to call.
@@ -630,11 +718,20 @@ const categories: Category[] = [
             title: 'Preview contact intake before saving',
             body: (
               <>
-                Paste the contact list, review the parsed names and companies,
+                Type a name and context, then press <strong>Enter</strong> to add a draft row. A multi-line paste creates
+                one row per line; pasting from Excel or importing .xlsx/.csv detects the header row and maps Name,
+                Company, Title, Email, Phone, LinkedIn, How We Know, Owner, Segment, and Warmth locally. The importer
+                chooses the strongest contact worksheet, never runs formulas, rejects macros and external-workbook links,
+                and shows skipped or invalid rows before saving. Reviewed suggestions use the same filterable, sortable
+                table. Edit or remove anything
+                that does not belong, then choose <strong>Check names</strong>. Review the parsed names and companies,
                 remove rows that should not become records, and leave detected
                 duplicates skipped. Contacts are stored in the private Outreach
-                dataset. <strong>Check names sends the raw pasted list to Claude</strong>
-                for structuring. Later, Research sends the contact&apos;s name,
+                dataset only after Add Contacts; unsaved table rows resume after a reload in the same tab.{' '}
+                For an unchanged spreadsheet import, <strong>Check names sends only the mapped fields to the private
+                intake service to compare saved contacts and the team directory; Claude is not used.</strong> In a mixed
+                batch, only typed or edited rows are sent to Claude for structuring; mapped spreadsheet fields stay
+                intact. Later, Research sends the contact&apos;s name,
                 organization, role, public LinkedIn URL, relationship notes, owner,
                 and source notes to Claude with web search enabled. Do not enter
                 secrets or sensitive personal, medical, financial, or client data.
@@ -850,7 +947,12 @@ const categories: Category[] = [
               <>
                 The Autopilot sessions tutorial shows how to reopen saved setup runs.
                 This keeps designers from wasting prompts when they are still
-                working through the same planning question.
+                working through the same planning question. Those sessions stay
+                local to this browser until you confirm a create step. By contrast,
+                a reviewed <strong>Tell Marketing what changed</strong> handoff is
+                saved privately on the shared Marketing desk, where coworkers
+                can see its owner, date, blocker, and recent outcome. Autopilot
+                remains optional browser-local coaching; it is not the team queue.
               </>
             ),
           },
@@ -2376,6 +2478,8 @@ function ArticleCard({
         </span>
       </button>
       <div id={panelId} role="region" aria-labelledby={headerId} hidden={!open} style={styles.articleBody}>
+        {open ? (
+          <>
           {article.links && article.links.length > 0 ? (
             <div style={styles.linkRow}>
               {article.links.map((link, i) => (
@@ -2395,6 +2499,8 @@ function ArticleCard({
               />
             ))}
           </div>
+          </>
+        ) : null}
       </div>
     </div>
   )
@@ -2460,12 +2566,20 @@ function CategorySection({
 
 function GettingStartedComponent() {
   const [progress, setProgress] = useState<ProgressState>({})
+  const [progressHydrated, setProgressHydrated] = useState(false)
+  const [storageError, setStorageError] = useState('')
   const [openArticles, setOpenArticles] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
 
   useEffect(() => {
     setProgress(loadProgress())
+    setProgressHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (!progressHydrated) return
+    setStorageError(saveProgress(progress) ? '' : 'Your checkmarks changed on this page, but this browser could not save them for the next visit.')
+  }, [progress, progressHydrated])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -2502,13 +2616,11 @@ function GettingStartedComponent() {
     setProgress((prev) => {
       const next = { ...prev, [id]: !prev[id] }
       if (!next[id]) delete next[id]
-      saveProgress(next)
       return next
     })
 
   const resetProgress = () => {
     if (!window.confirm('Clear all checkmarks across the knowledge base?')) return
-    saveProgress({})
     setProgress({})
   }
 
@@ -2573,6 +2685,7 @@ function GettingStartedComponent() {
           type="search"
           aria-label="Search the CMS knowledge base"
           value={query}
+          maxLength={120}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search articles, e.g. “hero image”, “categories”, “reorder”…"
           style={styles.searchInput}
@@ -2588,11 +2701,17 @@ function GettingStartedComponent() {
           </button>
         ) : null}
         {query ? (
-          <span style={styles.searchCount}>
+          <span style={styles.searchCount} role="status" aria-live="polite">
             {matchingArticles} {matchingArticles === 1 ? 'match' : 'matches'}
           </span>
         ) : null}
       </div>
+
+      {storageError ? (
+        <div role="alert" style={{ ...styles.stepTip, marginBottom: 18 }}>
+          {storageError}
+        </div>
+      ) : null}
 
       {/* Categories */}
       {categories.map((category) => (
@@ -2633,12 +2752,12 @@ function GettingStartedComponent() {
 
 function Table({ headers, rows }: { headers: string[]; rows: string[][] }) {
   return (
-    <div style={styles.tableWrap}>
+    <div style={styles.tableWrap} role="region" aria-label="Scrollable guide reference table" tabIndex={0}>
       <table style={styles.table}>
         <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} style={styles.th}>
+              <th key={h} scope="col" style={styles.th}>
                 {h}
               </th>
             ))}
@@ -2725,7 +2844,9 @@ const styles: Record<string, CSSProperties> = {
     color: 'var(--card-muted-fg-color)',
     fontSize: 12,
     cursor: 'pointer',
-    padding: 0,
+    minWidth: 44,
+    minHeight: 44,
+    padding: '0 8px',
   },
 
   searchWrap: {
@@ -2761,7 +2882,9 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     color: 'var(--card-muted-fg-color)',
     cursor: 'pointer',
-    padding: 4,
+    width: 44,
+    height: 44,
+    padding: 0,
     fontSize: 16,
   },
   searchCount: {
@@ -2897,13 +3020,13 @@ const styles: Record<string, CSSProperties> = {
     border: 'none',
     cursor: 'pointer',
     padding: 0,
-    width: 24,
-    height: 24,
+    width: 44,
+    height: 44,
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    marginTop: 2,
+    marginTop: 0,
   },
   stepTitle: {
     display: 'flex',

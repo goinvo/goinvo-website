@@ -28,6 +28,7 @@ import {
 
 export type ExperimentForDrain = {
   _id: string
+  _rev?: string
   title?: string
   flagKey?: string
   targetPath?: string
@@ -37,7 +38,7 @@ export type ExperimentForDrain = {
 }
 
 const EXPERIMENT_FOR_DRAIN_PROJECTION = `{
-  _id, title, flagKey, targetPath, variants[]{key, label},
+  _id, _rev, title, flagKey, targetPath, variants[]{key, label},
   trackedMetrics[]{key, label, comparison, source, eventName, unit},
   performanceSignals
 }`
@@ -75,6 +76,60 @@ export function variantsFromExperiment(experiment: ExperimentForDrain): DrainSig
 export interface UpsertDrainResult {
   updated: boolean
   warnings: string[]
+}
+
+function isRevisionConflict(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === 'object' &&
+    'statusCode' in error &&
+    (error as { statusCode?: unknown }).statusCode === 409,
+  )
+}
+
+/**
+ * Append the deterministic drain signal reference with optimistic concurrency.
+ * The route-level in-flight map coalesces same-instance retries; this revision
+ * guard also prevents two serverless instances from appending the same link
+ * after both read the old experiment document.
+ */
+export async function ensureDrainSignalLinked(
+  client: SanityClient,
+  initialExperiment: ExperimentForDrain,
+  signalId: string,
+): Promise<void> {
+  let experiment: Pick<ExperimentForDrain, '_id' | '_rev' | 'performanceSignals'> | null = initialExperiment
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if ((experiment.performanceSignals || []).some((ref) => ref?._ref === signalId)) return
+    if (!experiment._rev) {
+      experiment = await client.fetch<Pick<ExperimentForDrain, '_id' | '_rev' | 'performanceSignals'> | null>(
+        `*[_id == $id][0]{ _id, _rev, performanceSignals }`,
+        { id: initialExperiment._id },
+      )
+      if (!experiment) throw new Error('Marketing experiment disappeared before its drain signal could be linked.')
+      if ((experiment.performanceSignals || []).some((ref) => ref?._ref === signalId)) return
+    }
+    const revision = experiment._rev
+    if (!revision) throw new Error('Marketing experiment revision was unavailable while linking its drain signal.')
+
+    try {
+      await client
+        .patch(experiment._id)
+        .ifRevisionId(revision)
+        .setIfMissing({ performanceSignals: [] })
+        .append('performanceSignals', [{ _type: 'reference', _ref: signalId, _key: `drain-${signalId}` }])
+        .commit()
+      return
+    } catch (error) {
+      if (!isRevisionConflict(error) || attempt === 2) throw error
+      experiment = await client.fetch<Pick<ExperimentForDrain, '_id' | '_rev' | 'performanceSignals'> | null>(
+        `*[_id == $id][0]{ _id, _rev, performanceSignals }`,
+        { id: initialExperiment._id },
+      )
+      if (!experiment) throw new Error('Marketing experiment disappeared before its drain signal could be linked.')
+    }
+  }
 }
 
 /**
@@ -144,14 +199,7 @@ export async function upsertDrainSignalForFlag(
   await client.createIfNotExists({ _id, _type, title: doc.title, provider: doc.provider, status })
   await client.patch(_id).set(computedFields).commit()
 
-  const alreadyLinked = (experiment.performanceSignals || []).some((ref) => ref?._ref === signalId)
-  if (!alreadyLinked) {
-    await client
-      .patch(experiment._id)
-      .setIfMissing({ performanceSignals: [] })
-      .append('performanceSignals', [{ _type: 'reference', _ref: signalId, _key: `drain-${signalId}` }])
-      .commit()
-  }
+  await ensureDrainSignalLinked(client, experiment, signalId)
 
   return { updated: true, warnings: [] }
 }

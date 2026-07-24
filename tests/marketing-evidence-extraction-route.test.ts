@@ -78,6 +78,17 @@ function request(body: Record<string, unknown>) {
   })
 }
 
+function rawRequest(
+  body: BodyInit,
+  url = 'https://www.goinvo.com/api/marketing/outreach/extract-evidence',
+) {
+  return new NextRequest(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body,
+  })
+}
+
 async function responseJson(response: Response) {
   return (await response.json()) as Record<string, unknown>
 }
@@ -102,6 +113,64 @@ describe('marketing evidence extraction batches', () => {
         ? mocks.existingDocs.find((doc) => doc._id === params?.id) || null
         : mocks.existingDocs,
     )
+  })
+
+  it('rejects oversized and malformed request shapes before reading case studies', async () => {
+    expect((await POST(rawRequest('x'.repeat(512 * 1024 + 1)))).status).toBe(413)
+    expect((await POST(request({ limit: 0 }))).status).toBe(400)
+    expect((await POST(request({ limit: 11 }))).status).toBe(400)
+    expect((await POST(request({ force: 'yes' }))).status).toBe(400)
+    expect((await POST(request({ dryRun: 1 }))).status).toBe(400)
+    expect((await POST(request({ id: 'bad/id' }))).status).toBe(400)
+    expect((await POST(request({ model: 'x'.repeat(101) }))).status).toBe(400)
+    expect((await POST(request({ unsupported: true }))).status).toBe(400)
+    expect(mocks.readFetch).not.toHaveBeenCalled()
+    expect(mocks.outreachFetch).not.toHaveBeenCalled()
+    expect(mocks.generateClaudeText).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid or conflicting query parameters before extraction', async () => {
+    expect(
+      (
+        await POST(
+          rawRequest(
+            JSON.stringify({ id: 'case-1' }),
+            'https://www.goinvo.com/api/marketing/outreach/extract-evidence?id=case-2',
+          ),
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await POST(
+          rawRequest(
+            JSON.stringify({ limit: 2 }),
+            'https://www.goinvo.com/api/marketing/outreach/extract-evidence?limit=3',
+          ),
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await POST(
+          rawRequest(
+            '{}',
+            'https://www.goinvo.com/api/marketing/outreach/extract-evidence?limit=Infinity',
+          ),
+        )
+      ).status,
+    ).toBe(400)
+    expect(
+      (
+        await POST(
+          rawRequest(
+            '{}',
+            'https://www.goinvo.com/api/marketing/outreach/extract-evidence?force=yes',
+          ),
+        )
+      ).status,
+    ).toBe(400)
+    expect(mocks.readFetch).not.toHaveBeenCalled()
   })
 
   it('uses the continuation cursor to make progress through a forced sweep larger than the limit', async () => {

@@ -5,6 +5,7 @@ import ts from 'typescript'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { saveMarketingAiModelChange } from '@/sanity/components/marketing/MarketingAiModelSetting'
+import { WorkUpdateIntake } from '@/sanity/components/marketing/WorkUpdateIntake'
 import { requestMarketingAssist } from '@/sanity/components/marketing/marketingAssistRequest'
 import { GuidanceChecklist, Select } from '@/sanity/tools/marketingTool'
 
@@ -141,6 +142,82 @@ describe('workspace accessible names', () => {
     expect(markup).toContain('aria-label="Analytics source"')
   })
 
+  it('makes the compact Next actions preview decorative and the disclosure operable', () => {
+    const source = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
+
+    expect(source).toContain('id="marketing-next-actions-list"')
+    expect(source).toContain('aria-controls="marketing-next-actions-list"')
+    expect(source).toContain('aria-expanded={nextActionsExpanded}')
+    expect(source).toContain('data-next-actions-preview="true"')
+    expect(source).toContain('aria-hidden="true"')
+    expect(source).toContain("pointerEvents: 'none'")
+    expect(source).toContain("maskImage: 'linear-gradient(to bottom")
+    expect(source).toContain('`Collapse to top ${NEXT_ACTIONS_INITIAL_COUNT}`')
+  })
+
+  it('makes the rough work-update handoff understandable without exposing structured marketing fields', () => {
+    const intake = readFileSync('src/sanity/components/marketing/WorkUpdateIntake.tsx', 'utf8')
+    const tool = readFileSync('src/sanity/tools/marketingTool.tsx', 'utf8')
+
+    expect(intake).toContain('htmlFor="marketing-work-update"')
+    expect(intake).toContain('id="marketing-work-update"')
+    expect(intake).toContain("aria-describedby={`marketing-work-update-help marketing-work-update-safety marketing-work-update-count${error ? ' marketing-work-update-error' : ''}`}")
+    expect(intake).toContain('role="status"')
+    expect(intake).toContain('aria-live="polite"')
+    expect(intake).toContain('role="alert"')
+    expect(intake).toContain('What the handoff will do')
+    expect(intake).toContain('private shared Marketing desk')
+    expect(intake).not.toContain('type="checkbox"')
+    expect(intake).toContain('Nothing changes until you hand this off')
+    expect(intake).toContain('never publishes, contacts anyone, approves claims, changes brand voice, deletes records, or spends paid research credits')
+    expect(intake).toContain('tabIndex={-1}')
+    expect(intake).toContain('minHeight: 42')
+    expect(tool).toContain('markUnsavedChange(MARKETER_BRIEF_UNSAVED_ID')
+    expect(tool).toContain('clearUnsavedChanges(MARKETER_BRIEF_UNSAVED_ID)')
+  })
+
+  it('renders one labeled conversational work-update input with a non-destructive starting state', () => {
+    const markup = renderToStaticMarkup(
+      createElement(WorkUpdateIntake, {
+        existingProjects: [],
+        onAdopt: async () => ({
+          operationId: 'marketingOperation.test',
+          projectId: 'test-project',
+          title: 'Test project',
+          reused: false,
+          createdResults: 0,
+        }),
+        onOpenOperations: () => undefined,
+        onOpenResearch: () => undefined,
+      }),
+    )
+
+    expect(markup).toContain('data-work-update-intake="true"')
+    expect(markup).toContain('<label for="marketing-work-update"')
+    expect(markup).toContain('<textarea id="marketing-work-update"')
+    expect(markup).toContain('Messy notes are fine')
+    expect(markup).toContain('Plan the marketing updates')
+    expect(markup).not.toContain('Hand this to Marketing (1 change)')
+    expect(markup).not.toContain('type="checkbox"')
+  })
+
+  it('gives the shared Marketing desk semantic structure and explicit mutation names', () => {
+    const source = readFileSync('src/sanity/components/marketing/MarketingOperationsBoard.tsx', 'utf8')
+
+    expect(source).toContain('aria-labelledby="marketing-operations-title"')
+    expect(source).toContain('aria-label="Filter Marketing’s desk"')
+    expect(source).toContain('aria-pressed={active}')
+    expect(source).toContain('<caption')
+    expect(source).toContain('<th scope="col"')
+    expect(source).toContain('aria-label={`Accountable owner for ${item.title}`}')
+    expect(source).toContain('aria-label={`Due date for ${item.title}`}')
+    expect(source).toContain('aria-label={`Mark ${item.title} done`}')
+    expect(source).toContain('aria-label={`Answer Marketing for ${item.title}`}')
+    expect(source).toContain('aria-label={`Save answer for ${item.title} and return it to Marketing`}')
+    expect(source).toContain('role="status" aria-live="polite"')
+    expect(source).toContain('Publishing, outreach, paid research, claim approval, deletion, and brand-voice changes always wait for a person')
+  })
+
   it('gives every shared Select in the audited workspaces an explicit name', () => {
     const files = [
       'ResearchWorkspace.tsx',
@@ -186,10 +263,19 @@ describe('workspace accessible names', () => {
   it('labels the SEO audit, citation check, and outreach intake controls', () => {
     const seo = readFileSync('src/sanity/components/SeoWorkspace.tsx', 'utf8')
     const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+    const intakeGrid = readFileSync('src/sanity/components/marketing/ContactIntakeGrid.tsx', 'utf8')
 
     expect(seo).toContain('aria-label="Page audit URL"')
     expect(seo).toContain('aria-label="Citation check URL"')
     expect(outreach).toContain('aria-label="Contacts to add"')
+    expect(outreach).toContain('aria-label="Type one contact and press Enter, or paste a list"')
+    expect(intakeGrid).toContain('aria-label="Contact drafts ready to check"')
+    expect(intakeGrid).toContain('aria-label={`Remove ${row.name} from Add Contacts`}')
+    expect(outreach).toContain('Enter adds one row.')
+    expect(outreach).toContain("event.key === 'Enter' && !event.nativeEvent.isComposing")
+    expect(outreach).toContain("if (!/\\r?\\n/.test(pastedText) && !pastedText.includes('\\t')) return")
+    expect(outreach).toContain('const paste = prepareContactIntakePaste(pastedText)')
+    expect(outreach).toContain('disabled={intakeBusy !== null}')
     expect(outreach).toContain("aria-label={`Suggested opener for ${contact.name || 'contact'}`}")
     expect(outreach).toContain("aria-label={`Call brief for ${contact.name || 'contact'}`}")
   })
@@ -219,7 +305,9 @@ describe('workspace accessible names', () => {
     expect(outreach).toContain('data-outreach-contact-field="nextStep"')
     expect(outreach).toContain('subject=${encodeURIComponent(subject)}')
     expect(outreach).toContain('body=${encodeURIComponent(body)}')
-    expect(outreach).toContain("if (reopenedTerminal) unset.push('closedAt', 'closedValue', 'closeReason')")
+    expect(outreach).toContain("unset.push('closedAt', 'closedValue', 'closeReason')")
+    expect(outreach).not.toContain('data-outreach-contact-field="status"')
+    expect(outreach).toContain('Approve research or log an interaction to change pipeline status.')
     expect(outreach).toContain('Show completed contacts')
   })
 
@@ -240,7 +328,9 @@ describe('workspace accessible names', () => {
     expect(outreach).toContain('aria-labelledby="outreach-tracker-detail-heading"')
     expect(outreach).toContain('ref={logPanelRef}')
     expect(outreach).toContain('aria-labelledby="outreach-log-panel-heading"')
-    expect(outreach.match(/tabIndex=\{-1\}/g)).toHaveLength(3)
+    expect(outreach).toMatch(/ref=\{trackerDetailRef\}[\s\S]{0,240}tabIndex=\{-1\}/)
+    expect(outreach).toMatch(/ref=\{logPanelRef\}[\s\S]{0,240}tabIndex=\{-1\}/)
+    expect(outreach).toMatch(/ref=\{channelOptionsEditorRef\}[\s\S]{0,240}tabIndex=\{-1\}/)
   })
 
   it('discloses saved channel rules in the modality badge and explanation', () => {

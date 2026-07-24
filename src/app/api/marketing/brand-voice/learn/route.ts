@@ -6,6 +6,12 @@ import {
   resolveMarketingModel,
 } from '@/lib/marketing/anthropicJson'
 import {
+  assertBoundedJson,
+  isPlainRecord,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
+import {
   assertStudioWriterOrApiKey,
   MarketingAuthError,
 } from '@/lib/marketing/auth'
@@ -29,12 +35,21 @@ import {
 } from '@/lib/marketing/brandVoice'
 import { getMarketingWriteClient } from '@/lib/marketing/client'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import {
+  createMarketingRequestDeduper,
+  marketingRequestFingerprint,
+  readMarketingIdempotencyKey,
+} from '@/lib/marketing/requestDedupe'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 const MARKETING_SETTINGS_ID = 'marketingSettings'
 const MAX_REQUEST_BYTES = 200_000
+const MAX_MODEL_OUTPUT_BYTES = 48_000
+const PROPOSE_FIELDS = new Set(['action', 'voiceKey', 'surface', 'before', 'after'])
+const APPLY_FIELDS = new Set(['action', 'proposal', 'selection'])
+const runDedupedLearningRequest = createMarketingRequestDeduper<Record<string, unknown>>()
 
 type MarketingSettings = {
   _rev: string
@@ -49,6 +64,64 @@ class LearningRouteError extends Error {
     super(message)
     this.name = 'LearningRouteError'
   }
+}
+
+function parseLearningBody(value: unknown): Record<string, unknown> {
+  if (!isPlainRecord(value)) {
+    throw new LearningRouteError('Send a valid learning request.', 400)
+  }
+  assertBoundedJson(value, {
+    maxArrayItems: 50,
+    maxObjectKeys: 80,
+    maxDepth: 10,
+    maxStringLength: 10_000,
+    maxNodes: 2_000,
+  })
+  if (value.action !== 'propose' && value.action !== 'apply') {
+    throw new LearningRouteError('Unknown brand-voice learning action.', 400)
+  }
+
+  const allowed = value.action === 'propose' ? PROPOSE_FIELDS : APPLY_FIELDS
+  const unknownField = Object.keys(value).find((field) => !allowed.has(field))
+  if (unknownField) {
+    throw new LearningRouteError('Brand-voice learning request contains an unknown field.', 400)
+  }
+  if (value.action === 'propose') {
+    if (!isPlainRecord(value.before) || !isPlainRecord(value.after)) {
+      throw new LearningRouteError('Generated and edited copy must be JSON objects.', 400)
+    }
+    if (!isBrandVoiceLearningSurface(value.surface)) {
+      throw new LearningRouteError('Unknown brand-voice learning surface.', 400)
+    }
+    if (typeof value.voiceKey !== 'string' || !/^[A-Za-z0-9_-]{1,96}$/.test(value.voiceKey)) {
+      throw new LearningRouteError('Choose a valid brand voice.', 400)
+    }
+  } else if (!isPlainRecord(value.proposal) || !isPlainRecord(value.selection)) {
+    throw new LearningRouteError('Proposal and selection must be JSON objects.', 400)
+  }
+  return value
+}
+
+function learningAiTimeoutMs(): number {
+  const configured = Number(process.env.MARKETING_AI_TIMEOUT_MS || 60_000)
+  return Number.isFinite(configured)
+    ? Math.max(5_000, Math.min(90_000, Math.round(configured)))
+    : 60_000
+}
+
+function parseLearningModelOutput(text: unknown): Record<string, unknown> {
+  if (
+    typeof text !== 'string' ||
+    text.length > MAX_MODEL_OUTPUT_BYTES ||
+    new TextEncoder().encode(text).byteLength > MAX_MODEL_OUTPUT_BYTES
+  ) {
+    throw new LearningRouteError('Claude returned an invalid learning proposal. Nothing was saved.', 502)
+  }
+  const output = parseJsonObject<Record<string, unknown>>(text)
+  if (!output || !isPlainRecord(output)) {
+    throw new LearningRouteError('Claude returned an invalid learning proposal. Nothing was saved.', 502)
+  }
+  return output
 }
 
 export const BRAND_VOICE_LEARNING_SYSTEM_POLICY = [
@@ -120,6 +193,7 @@ async function propose(
   const result = await generateClaudeText({
     model,
     maxTokens: 1_800,
+    timeoutMs: learningAiTimeoutMs(),
     system: BRAND_VOICE_LEARNING_SYSTEM_POLICY,
     user: JSON.stringify({
       task: 'Propose generalized brand-voice learning; do not rewrite the document.',
@@ -138,10 +212,7 @@ async function propose(
       finalCopy: changedCopyOnly(diff.after, diff.changedFields),
     }),
   })
-  const modelOutput = parseJsonObject<Record<string, unknown>>(result.text)
-  if (!modelOutput) {
-    throw new LearningRouteError('Claude returned an invalid learning proposal. Nothing was saved.', 502)
-  }
+  const modelOutput = parseLearningModelOutput(result.text)
   return createBrandVoiceLearningProposal({
     modelOutput,
     voice,
@@ -214,42 +285,39 @@ export async function POST(request: Request) {
     // production write client. Both phases operate on shared voice settings.
     await assertStudioWriterOrApiKey(request)
 
-    const contentLength = Number(request.headers.get('content-length') || 0)
-    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
-      return privateMarketingJson({ error: 'Learning request is too large.' }, { status: 413 })
-    }
-
-    const rawBody = await request.text()
-    if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) {
-      throw new LearningRouteError('Learning request is too large.', 413)
-    }
-
     let value: unknown
     try {
-      value = JSON.parse(rawBody)
-    } catch {
-      throw new LearningRouteError('Send a valid JSON learning request.', 400)
+      value = await readBoundedJson(request, MAX_REQUEST_BYTES)
+    } catch (error) {
+      if (error instanceof MarketingRequestError && error.status === 413) {
+        throw new LearningRouteError('Learning request is too large.', 413)
+      }
+      throw error
     }
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      throw new LearningRouteError('Send a valid learning request.', 400)
-    }
-    const body = value as Record<string, unknown>
-    if (body.action !== 'propose' && body.action !== 'apply') {
-      throw new LearningRouteError('Unknown brand-voice learning action.', 400)
-    }
+    const body = parseLearningBody(value)
 
-    const client = getMarketingWriteClient()
-    if (body.action === 'propose') {
-      const proposal = await propose(client, body)
-      return privateMarketingJson({ proposal: authorizeBrandVoiceLearningProposal(proposal) })
-    }
-    const result = await apply(client, body)
-    return privateMarketingJson({ applied: true, ...result })
+    const payload = await runDedupedLearningRequest(
+      marketingRequestFingerprint(body),
+      readMarketingIdempotencyKey(request),
+      async () => {
+        const client = getMarketingWriteClient()
+        if (body.action === 'propose') {
+          const proposal = await propose(client, body)
+          return { proposal: authorizeBrandVoiceLearningProposal(proposal) }
+        }
+        const result = await apply(client, body)
+        return { applied: true, ...result }
+      },
+    )
+    return privateMarketingJson(payload)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
       return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     if (error instanceof LearningRouteError) {
+      return privateMarketingJson({ error: error.message }, { status: error.status })
+    }
+    if (error instanceof MarketingRequestError) {
       return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     if (error instanceof BrandVoiceLearningAuthorizationError) {
@@ -266,7 +334,10 @@ export async function POST(request: Request) {
         { status: 409 },
       )
     }
-    console.error('Brand-voice learning failed:', error)
+    console.error(
+      'Brand-voice learning failed.',
+      error instanceof Error ? error.name : 'UnknownError',
+    )
     return privateMarketingJson({ error: 'Brand-voice learning failed. Nothing was saved.' }, { status: 500 })
   }
 }

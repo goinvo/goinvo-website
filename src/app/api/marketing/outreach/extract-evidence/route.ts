@@ -17,6 +17,13 @@ import {
 } from '@/lib/marketing/outreach'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import {
+  assertBoundedJson,
+  isPlainRecord,
+  isValidMarketingDocumentId,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
 
 export const dynamic = 'force-dynamic'
 // Several extraction calls per invocation (no web search — local content only).
@@ -98,6 +105,69 @@ type RequestBody = {
 const MANUAL_OVERWRITE_CONFIRMATION = 'OVERWRITE_MANUAL_EVIDENCE'
 const MAX_CURSOR_IDS = 1_000
 const MAX_FAILURE_RETRIES = 2
+const EVIDENCE_REQUEST_BODY_LIMIT = 512 * 1024
+const EVIDENCE_CURSOR_CHARACTER_LIMIT = 384 * 1024
+const EVIDENCE_MODEL_NAME_LIMIT = 100
+const EVIDENCE_REQUEST_FIELDS = new Set([
+  'id',
+  'limit',
+  'force',
+  'forceEdited',
+  'overwriteManual',
+  'confirmOverwriteManual',
+  'cursor',
+  'dryRun',
+  'model',
+])
+
+async function readEvidenceRequestBody(request: Request): Promise<RequestBody> {
+  if (!request.body) return {}
+  const parsed = await readBoundedJson(request, EVIDENCE_REQUEST_BODY_LIMIT)
+  assertBoundedJson(parsed, {
+    maxArrayItems: 0,
+    maxObjectKeys: EVIDENCE_REQUEST_FIELDS.size,
+    maxDepth: 1,
+    maxStringLength: EVIDENCE_CURSOR_CHARACTER_LIMIT,
+    maxNodes: EVIDENCE_REQUEST_FIELDS.size + 1,
+  })
+  if (!isPlainRecord(parsed)) throw new MarketingRequestError('Request body must be a JSON object.', 400)
+  if (Object.keys(parsed).some((key) => !EVIDENCE_REQUEST_FIELDS.has(key))) {
+    throw new MarketingRequestError('The request contains an unsupported field.', 400)
+  }
+  if (parsed.id !== undefined && typeof parsed.id !== 'string') {
+    throw new MarketingRequestError('id must be a string.', 400)
+  }
+  if (
+    parsed.limit !== undefined
+    && (typeof parsed.limit !== 'number' || !Number.isInteger(parsed.limit) || parsed.limit < 1 || parsed.limit > 10)
+  ) {
+    throw new MarketingRequestError('limit must be an integer from 1 through 10.', 400)
+  }
+  for (const field of ['force', 'forceEdited', 'overwriteManual', 'dryRun'] as const) {
+    if (parsed[field] !== undefined && typeof parsed[field] !== 'boolean') {
+      throw new MarketingRequestError(`${field} must be a boolean.`, 400)
+    }
+  }
+  if (
+    parsed.confirmOverwriteManual !== undefined
+    && (typeof parsed.confirmOverwriteManual !== 'string' || parsed.confirmOverwriteManual.length > 64)
+  ) {
+    throw new MarketingRequestError('confirmOverwriteManual must be a short string.', 400)
+  }
+  if (
+    parsed.cursor !== undefined
+    && (typeof parsed.cursor !== 'string' || parsed.cursor.length > EVIDENCE_CURSOR_CHARACTER_LIMIT)
+  ) {
+    throw new MarketingRequestError('cursor is invalid or too large.', 400)
+  }
+  if (
+    parsed.model !== undefined
+    && (typeof parsed.model !== 'string' || parsed.model.length > EVIDENCE_MODEL_NAME_LIMIT)
+  ) {
+    throw new MarketingRequestError(`model must be at most ${EVIDENCE_MODEL_NAME_LIMIT} characters.`, 400)
+  }
+  return parsed as RequestBody
+}
 
 function normalizedSourceId(sourceId?: string): string | null {
   const normalized = sourceId?.trim().replace(/^drafts\./, '').toLowerCase()
@@ -210,31 +280,65 @@ export async function POST(request: NextRequest) {
     throw error
   }
 
-  if (!isAnthropicConfigured()) {
-    return privateMarketingJson(
-      { error: 'ANTHROPIC_API_KEY is not configured — evidence extraction is disabled.' },
-      { status: 503 },
-    )
-  }
-
-  const clients = getClients()
-  if (!clients) {
-    return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
+  let body: RequestBody
+  try {
+    body = await readEvidenceRequestBody(request)
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return privateMarketingJson({ error: error.message }, { status: error.status })
+    }
+    return privateMarketingJson({ error: 'Request body must be valid JSON.' }, { status: 400 })
   }
 
   const url = new URL(request.url)
-  const body = (await request.json().catch(() => ({}))) as RequestBody
-  const requestedId = body.id || url.searchParams.get('id') || undefined
+  const queryId = url.searchParams.get('id') || undefined
+  if (body.id && queryId && body.id.replace(/^drafts\./, '') !== queryId.replace(/^drafts\./, '')) {
+    return privateMarketingJson({ error: 'Conflicting case-study ids were provided.' }, { status: 400 })
+  }
+  const requestedId = body.id || queryId
+  if (requestedId && !isValidMarketingDocumentId(requestedId)) {
+    return privateMarketingJson({ error: 'The case-study id is invalid.' }, { status: 400 })
+  }
   // Historical evidence may point at a draft ID. Always resolve that request
   // to the published document; drafts are never extraction sources.
   const id = requestedId?.trim().replace(/^drafts\./, '') || undefined
-  const limit = Math.max(1, Math.min(10, Number(body.limit ?? url.searchParams.get('limit')) || 5))
+  const queryLimitValue = url.searchParams.get('limit')
+  const queryLimit = queryLimitValue === null ? undefined : Number(queryLimitValue)
+  if (
+    queryLimitValue !== null
+    && (
+      queryLimit === undefined
+      || !/^\d+$/.test(queryLimitValue)
+      || !Number.isInteger(queryLimit)
+      || queryLimit < 1
+      || queryLimit > 10
+    )
+  ) {
+    return privateMarketingJson({ error: 'limit must be an integer from 1 through 10.' }, { status: 400 })
+  }
+  if (body.limit !== undefined && queryLimit !== undefined && body.limit !== queryLimit) {
+    return privateMarketingJson({ error: 'Conflicting extraction limits were provided.' }, { status: 400 })
+  }
+  const limit = body.limit ?? queryLimit ?? 5
+  for (const key of ['force', 'dryRun'] as const) {
+    const queryValue = url.searchParams.get(key)
+    if (queryValue !== null && queryValue !== '0' && queryValue !== '1') {
+      return privateMarketingJson({ error: `${key} query value must be 0 or 1.` }, { status: 400 })
+    }
+  }
   const force = body.force === true || url.searchParams.get('force') === '1'
   const dryRun = body.dryRun === true || url.searchParams.get('dryRun') === '1'
   const overwriteManualRequested = body.overwriteManual === true || body.forceEdited === true
   const overwriteManual =
     overwriteManualRequested && body.confirmOverwriteManual === MANUAL_OVERWRITE_CONFIRMATION
-  const cursorValue = body.cursor || url.searchParams.get('cursor') || undefined
+  const queryCursor = url.searchParams.get('cursor') || undefined
+  if (body.cursor && queryCursor && body.cursor !== queryCursor) {
+    return privateMarketingJson({ error: 'Conflicting sweep cursors were provided.' }, { status: 400 })
+  }
+  const cursorValue = body.cursor || queryCursor
+  if (cursorValue && cursorValue.length > EVIDENCE_CURSOR_CHARACTER_LIMIT) {
+    return privateMarketingJson({ error: 'The sweep cursor is too large.' }, { status: 413 })
+  }
 
   if (overwriteManualRequested && !overwriteManual) {
     return privateMarketingJson(
@@ -274,6 +378,18 @@ export async function POST(request: NextRequest) {
       },
       { status: 400 },
     )
+  }
+
+  if (!isAnthropicConfigured()) {
+    return privateMarketingJson(
+      { error: 'ANTHROPIC_API_KEY is not configured — evidence extraction is disabled.' },
+      { status: 503 },
+    )
+  }
+
+  const clients = getClients()
+  if (!clients) {
+    return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
   }
 
   const rawSources = await clients.readClient.fetch<SourceRecord[]>(

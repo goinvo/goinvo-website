@@ -4,6 +4,13 @@ import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
 import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
+  assertBoundedJson,
+  isPlainRecord,
+  isValidMarketingDocumentId,
+  MarketingRequestError,
+  readBoundedJson,
+} from '@/lib/marketing/apiBoundary'
+import {
   generateClaudeText,
   isAnthropicConfigured,
   parseJsonObject,
@@ -72,6 +79,38 @@ type RequestBody = {
   model?: string
 }
 
+const RESEARCH_REQUEST_BODY_LIMIT = 16 * 1024
+const RESEARCH_MODEL_NAME_LIMIT = 100
+
+async function readResearchRequestBody(request: Request): Promise<RequestBody> {
+  if (!request.body) return {}
+  const parsed = await readBoundedJson(request, RESEARCH_REQUEST_BODY_LIMIT)
+  assertBoundedJson(parsed, {
+    maxArrayItems: 0,
+    maxObjectKeys: 3,
+    maxDepth: 1,
+    maxStringLength: 256,
+    maxNodes: 4,
+  })
+  if (!isPlainRecord(parsed)) throw new MarketingRequestError('Request body must be a JSON object.', 400)
+  if (Object.keys(parsed).some((key) => key !== 'id' && key !== 'dryRun' && key !== 'model')) {
+    throw new MarketingRequestError('Only id, dryRun, and model are accepted.', 400)
+  }
+  if (parsed.id !== undefined && typeof parsed.id !== 'string') {
+    throw new MarketingRequestError('id must be a string.', 400)
+  }
+  if (parsed.dryRun !== undefined && typeof parsed.dryRun !== 'boolean') {
+    throw new MarketingRequestError('dryRun must be a boolean.', 400)
+  }
+  if (
+    parsed.model !== undefined
+    && (typeof parsed.model !== 'string' || parsed.model.length > RESEARCH_MODEL_NAME_LIMIT)
+  ) {
+    throw new MarketingRequestError(`model must be at most ${RESEARCH_MODEL_NAME_LIMIT} characters.`, 400)
+  }
+  return parsed as RequestBody
+}
+
 /**
  * POST /api/marketing/outreach/research — research ONE contact (live web
  * search): org intel, offer match, RELEVANT WORK EVIDENCE (the "show them"
@@ -88,6 +127,16 @@ export async function POST(request: NextRequest) {
     throw error
   }
 
+  let body: RequestBody
+  try {
+    body = await readResearchRequestBody(request)
+  } catch (error) {
+    if (error instanceof MarketingRequestError) {
+      return privateMarketingJson({ error: error.message }, { status: error.status })
+    }
+    return privateMarketingJson({ error: 'Request body must be valid JSON.' }, { status: 400 })
+  }
+
   if (!isAnthropicConfigured()) {
     return privateMarketingJson(
       { error: 'ANTHROPIC_API_KEY is not configured — outreach research is disabled.' },
@@ -95,19 +144,22 @@ export async function POST(request: NextRequest) {
     )
   }
 
+  const url = new URL(request.url)
+  const queryId = url.searchParams.get('id') || ''
+  if (body.id && queryId && body.id !== queryId) {
+    return privateMarketingJson({ error: 'Conflicting contact ids were provided.' }, { status: 400 })
+  }
+  const id = body.id || queryId
+  const dryRun = body.dryRun === true || url.searchParams.get('dryRun') === '1'
+
+  if (!id || !isValidMarketingDocumentId(id)) {
+    return privateMarketingJson({ error: 'Provide `id` — the marketingContact _id.' }, { status: 400 })
+  }
+
   const client = getOutreachClient()
   const settingsClient = getMarketingSettingsClient()
   if (!client || !settingsClient) {
     return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
-  }
-
-  const url = new URL(request.url)
-  const body = (await request.json().catch(() => ({}))) as RequestBody
-  const id = body.id || url.searchParams.get('id') || ''
-  const dryRun = body.dryRun || url.searchParams.get('dryRun') === '1'
-
-  if (!id) {
-    return privateMarketingJson({ error: 'Provide `id` — the marketingContact _id.' }, { status: 400 })
   }
 
   const contact = await client.fetch<OutreachContact | null>(

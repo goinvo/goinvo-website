@@ -1,11 +1,10 @@
-import { NextResponse } from 'next/server'
 import {
   assertStudioWriterOrApiKey,
-  connectionStatus,
   getMarketingWriteClient,
-  isQStashConfigured,
   MarketingAuthError,
 } from '@/lib/marketing'
+import { connectionStatus, isQStashConfigured } from '@/lib/marketing/publishers'
+import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 
 // GET /api/marketing/publish/status — connection + queue visibility for the
 // social auto-publishing pipeline. Readable by a server caller with
@@ -30,9 +29,13 @@ export async function GET(req: Request) {
     await assertStudioWriterOrApiKey(req)
   } catch (error) {
     if (error instanceof MarketingAuthError) {
-      return NextResponse.json({ error: error.message }, { status: error.status })
+      return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     throw error
+  }
+
+  if ([...new URL(req.url).searchParams.keys()].length > 0) {
+    return privateMarketingJson({ error: 'Publish status does not accept query parameters.' }, { status: 400 })
   }
 
   const platforms = connectionStatus()
@@ -40,7 +43,8 @@ export async function GET(req: Request) {
   let dueCount: number | null = null
   try {
     const client = getMarketingWriteClient()
-    dueCount = await client.fetch<number>(DUE_COUNT_QUERY, { now: new Date().toISOString() })
+    const value = await client.fetch<number>(DUE_COUNT_QUERY, { now: new Date().toISOString() })
+    dueCount = Number.isSafeInteger(value) && value >= 0 ? value : null
   } catch (error) {
     // Sanity not configured / unreachable — report connection status anyway,
     // but log so a real outage is visible in server logs.
@@ -48,7 +52,7 @@ export async function GET(req: Request) {
     dueCount = null
   }
 
-  return NextResponse.json({
+  return privateMarketingJson({
     platforms,
     dueCount,
     queueConfigured: isQStashConfigured(),
