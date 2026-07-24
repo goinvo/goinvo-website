@@ -210,18 +210,19 @@ function captureBrowserFailures(page: Page, label: string, failures: string[]) {
 }
 
 async function runCorruptStorageRecovery(page: Page, baseUrl: string) {
-  await page.goto(`${baseUrl}${HARNESS_PATH}`, { waitUntil: 'networkidle' })
-  await page.evaluate(() => {
-    window.sessionStorage.setItem(
-      'goinvo.marketing.outreach.intake.v1',
-      JSON.stringify({
-        entries: ['Stored Person — Acme'],
-        draft: '',
-        preview: [{ name: 'Stored Person', organization: { unexpected: true } }],
-      }),
-    )
+  // Seed before application scripts run. Writing after the first render raced
+  // the empty-state persistence effect on slower CI runners, so the fixture
+  // could be cleared before reload and the test would exercise no recovery.
+  const storageKey = 'goinvo.marketing.outreach.intake.v1'
+  const corruptStoredIntake = JSON.stringify({
+    entries: ['Stored Person — Acme'],
+    draft: '',
+    preview: [{ name: 'Stored Person', organization: { unexpected: true } }],
   })
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.addInitScript(
+    `window.sessionStorage.setItem(${JSON.stringify(storageKey)}, ${JSON.stringify(corruptStoredIntake)});`,
+  )
+  await page.goto(`${baseUrl}${HARNESS_PATH}`, { waitUntil: 'networkidle' })
   await expectCount(
     page.getByRole('rowheader', { name: 'Stored Person', exact: true }),
     1,
