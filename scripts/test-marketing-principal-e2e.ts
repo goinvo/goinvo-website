@@ -228,9 +228,9 @@ async function runCorruptStorageRecovery(page: Page, baseUrl: string) {
     'A malformed cached preview must not destroy the recoverable source row',
   )
   await expectEnabled(
-    page.getByRole('button', { name: 'Check Names', exact: true }),
+    page.getByRole('button', { name: 'Review 1 Contact', exact: true }),
     true,
-    'A malformed cached preview must fall back to a fresh name check',
+    'A malformed cached preview must fall back to a fresh contact review',
   )
   await expectCount(
     page.getByRole('button', { name: /Add \d+ Contacts?/, exact: true }),
@@ -315,9 +315,9 @@ async function runHeaderlessTabbedPasteJourney(page: Page, baseUrl: string) {
     'Staging headerless tab-delimited rows must not call the intake API',
   )
 
-  const checkNames = page.getByRole('button', { name: 'Check Names', exact: true })
-  await expectEnabled(checkNames, true, 'Headerless tab-delimited drafts must remain eligible for review')
-  await checkNames.click()
+  const reviewContacts = page.getByRole('button', { name: 'Review 2 Contacts', exact: true })
+  await expectEnabled(reviewContacts, true, 'Headerless tab-delimited drafts must remain eligible for review')
+  await reviewContacts.click()
   await expectText(
     page.getByTestId('harness-request-log'),
     'intake:preview:2',
@@ -470,7 +470,7 @@ async function runSpreadsheetImportJourney(page: Page, baseUrl: string) {
     'Oversized workbook rejection must issue no intake request',
   )
 
-  await page.getByRole('button', { name: 'Check Names', exact: true }).click()
+  await page.getByRole('button', { name: 'Review 2 Contacts', exact: true }).click()
   await expectText(
     page.getByTestId('harness-request-log'),
     'intake:preview:structured:2',
@@ -479,7 +479,7 @@ async function runSpreadsheetImportJourney(page: Page, baseUrl: string) {
   await expectCount(
     morganHeader.locator('..').getByText('Ready to add', { exact: true }),
     1,
-    'Structured name checking must leave the imported contact ready for explicit approval',
+    'Structured contact review must leave the imported contact ready for explicit approval',
   )
   await page.getByRole('button', { name: 'Add 2 Contacts', exact: true }).click()
   await expectText(
@@ -550,7 +550,7 @@ async function runMixedSpreadsheetAndTypedJourney(page: Page, baseUrl: string) {
     'The mixed-batch privacy copy must describe the actual request split',
   )
 
-  await page.getByRole('button', { name: 'Check Names', exact: true }).click()
+  await page.getByRole('button', { name: 'Review 3 Contacts', exact: true }).click()
   await expectText(
     page.getByTestId('harness-request-log'),
     'intake:preview:mixed:2+1',
@@ -599,11 +599,11 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
   await page.getByTestId('show-intake-coach').click()
   dialog = page.getByRole('dialog')
   const mirroredEmptyCheck = dialog.getByRole('button', {
-    name: 'Check Names in highlighted panel',
+    name: 'Enter a Contact Above in highlighted panel',
     exact: true,
   })
   await mirroredEmptyCheck.waitFor()
-  await expectEnabled(mirroredEmptyCheck, false, 'Empty intake must disable mirrored Check Names')
+  await expectEnabled(mirroredEmptyCheck, false, 'Empty intake must explain that a contact is required')
   await dialog.getByRole('button', { name: 'Close tutorial', exact: true }).click()
 
   const composer = page.getByRole('textbox', {
@@ -649,7 +649,7 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
   await page.getByRole('button', { name: 'Remove Resume Person from Add Contacts', exact: true }).click()
   await composer.fill('Failure Person — FAIL_PREVIEW')
   await composer.press('Enter')
-  await page.getByRole('button', { name: 'Check Names', exact: true }).click()
+  await page.getByRole('button', { name: 'Review 1 Contact', exact: true }).click()
   await expectText(
     page.getByTestId('harness-request-log'),
     'intake:preview:error',
@@ -666,7 +666,7 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
     'Preview failure must preserve the recoverable source row',
   )
   await expectEnabled(
-    page.getByRole('button', { name: 'Check Names', exact: true }),
+    page.getByRole('button', { name: 'Review 1 Contact', exact: true }),
     true,
     'Preview failure must release the pending state for retry',
   )
@@ -688,9 +688,9 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
   await expectCount(draftTable, 0, 'Removing the final row must remove the draft table')
   assert.equal(await composer.evaluate((element) => document.activeElement === element), true)
   await expectEnabled(
-    page.getByRole('button', { name: 'Check Names', exact: true }),
+    page.getByRole('button', { name: 'Enter a Contact Above', exact: true }),
     false,
-    'Removing the final row must disable Check Names',
+    'Removing the final row must restore the explicit empty-state action',
   )
 
   await page.getByRole('button', { name: 'Suggest from our past work', exact: true }).click()
@@ -795,16 +795,16 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
   await page.getByTestId('show-intake-coach').click()
   dialog = page.getByRole('dialog')
   const mirroredCheck = dialog.getByRole('button', {
-    name: 'Check Names in highlighted panel',
+    name: 'Review 2 Contacts in highlighted panel',
     exact: true,
   })
   await mirroredCheck.waitFor()
-  await expectEnabled(mirroredCheck, true, 'Staged rows must enable the mirrored Check Names action')
+  await expectEnabled(mirroredCheck, true, 'Staged rows must enable the mirrored count-based contact review')
   await mirroredCheck.dblclick()
   await expectText(
     page.getByTestId('harness-request-log'),
     'intake:preview:2',
-    'Rapid repeated Check Names must issue exactly one preview request for two rows',
+    'Rapid repeated contact reviews must issue exactly one preview request for two rows',
   )
   const mirroredCreate = dialog.getByRole('button', {
     name: 'Add 2 Contacts in highlighted panel',

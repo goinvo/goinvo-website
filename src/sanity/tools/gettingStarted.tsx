@@ -724,11 +724,11 @@ const categories: Category[] = [
                 chooses the strongest contact worksheet, never runs formulas, rejects macros and external-workbook links,
                 and shows skipped or invalid rows before saving. Reviewed suggestions use the same filterable, sortable
                 table. Edit or remove anything
-                that does not belong, then choose <strong>Check names</strong>. Review the parsed names and companies,
+                that does not belong, then choose the count-based <strong>Review 1 Contact</strong> or <strong>Review N Contacts</strong> button. Review the parsed names and companies,
                 remove rows that should not become records, and leave detected
                 duplicates skipped. Contacts are stored in the private Outreach
                 dataset only after Add Contacts; unsaved table rows resume after a reload in the same tab.{' '}
-                For an unchanged spreadsheet import, <strong>Check names sends only the mapped fields to the private
+                For an unchanged spreadsheet import, <strong>contact review sends only the mapped fields to the private
                 intake service to compare saved contacts and the team directory; Claude is not used.</strong> In a mixed
                 batch, only typed or edited rows are sent to Claude for structuring; mapped spreadsheet fields stay
                 intact. Later, Research sends the contact&apos;s name,

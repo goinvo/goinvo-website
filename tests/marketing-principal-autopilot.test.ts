@@ -62,7 +62,7 @@ describe('principal outreach Autopilot', () => {
     expect(planCopy).toContain('Outreach progress tracker')
     expect(MARKETING_TOOL_SOURCE).not.toMatch(/This week's calls|\bcall list\b|follow-ups strip/i)
     expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[0])).toBe('Add Contacts')
-    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[1])).toBe('Check Names')
+    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[1])).toBe('Enter a Contact Above')
     expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[5])).toBe('Finish')
     expect(MARKETING_TOOL_SOURCE).toContain('!scriptedPlan && <div')
     expect(MARKETING_TOOL_SOURCE).toContain('? () => onChoice(step, primaryChoice, 0)')
@@ -92,7 +92,7 @@ describe('principal outreach Autopilot', () => {
     expect(html).not.toContain('autopilot-coach-choice-principal-plan-warm-network')
   })
 
-  it('uses Check Names as the empty-intake action before a preview exists', () => {
+  it('explains that an empty intake needs a contact before review', () => {
     const intakePlan = advanceScriptedAutopilotPlan(
       buildPrincipalOutreachPlan(),
       PRINCIPAL_STEP_IDS[0],
@@ -110,7 +110,7 @@ describe('principal outreach Autopilot', () => {
       }),
     )
 
-    expect(html).toContain('Check Names')
+    expect(html).toContain('Enter a Contact Above')
     expect(html).toContain('disabled=""')
   })
 

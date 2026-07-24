@@ -722,6 +722,13 @@ export function OutreachWorkspaceContent({
     [intakeDraft, intakeEntries],
   )
   const intakeText = preparedIntake.entries.join('\n')
+  const intakeContactCount = preparedIntake.entries.length
+  const intakeReviewLabel =
+    intakeBusy === 'preview'
+      ? 'Reviewing Contacts…'
+      : intakeContactCount === 0
+        ? 'Enter a Contact Above'
+        : `Review ${intakeContactCount} Contact${intakeContactCount === 1 ? '' : 's'}`
   const intakeReviewRows = useMemo(
     () => buildContactIntakeRows(preparedIntake.entries, intakePreview),
     [intakePreview, preparedIntake.entries],
@@ -1169,7 +1176,7 @@ export function OutreachWorkspaceContent({
       const message =
         `Imported ${merged.addedCount} contact${merged.addedCount === 1 ? '' : 's'} from ${result.sheetName ? `${result.sheetName} in ` : ''}${result.fileName}.` +
         (skipped > 0 ? ` ${skipped} row${skipped === 1 ? ' was' : 's were'} skipped or already staged.` : '') +
-        ` Review the table, then choose Check Names.`
+        ` Review the table, then choose Review ${merged.entries.length} Contact${merged.entries.length === 1 ? '' : 's'}.`
       setIntakeAnnouncement(message)
       say(message)
       window.requestAnimationFrame(() => {
@@ -1447,7 +1454,7 @@ export function OutreachWorkspaceContent({
       merged.addedCount > 0
         ? `Placed ${merged.addedCount} selected suggestion${merged.addedCount === 1 ? '' : 's'} in Add Contacts` +
             (alreadyInDraft > 0 ? ` (${alreadyInDraft} already in the draft)` : '') +
-            '. Nothing has been saved yet; review the draft, then choose Check Names.'
+            '. Nothing has been saved yet; review the draft, then review the contacts.'
         : 'Those selected suggestions are already in the Add Contacts draft. Nothing has been saved.',
     )
 
@@ -3869,7 +3876,7 @@ export function OutreachWorkspaceContent({
           description="Type one prospect, paste a list, or import an Excel/CSV file. Every contact becomes a review row before anything is saved."
         />
         <p style={{ ...styles.small, ...styles.muted, margin: '0 0 10px', lineHeight: 1.55 }}>
-          Private workflow: Excel/CSV files are read locally and formulas are never run. <strong>Check Names compares mapped
+          Private workflow: Excel/CSV files are read locally and formulas are never run. <strong>Contact review compares mapped
           spreadsheet fields with saved contacts and the team directory without Claude</strong> when the import is unchanged.
           Only typed or edited rows use Claude for structuring; mapped spreadsheet fields stay intact. Later, Research sends the selected person&apos;s public
           identity and relationship context for web research. Do not include sensitive personal, medical, financial, or
@@ -3947,7 +3954,7 @@ export function OutreachWorkspaceContent({
                     .map((column) => `${column.header} → ${column.field}`)
                     .join(', ')}.
                   {' '}{structuredCoversAllEntries
-                    ? 'Check Names will use the structured fields directly; Claude is not needed.'
+                    ? 'Contact review will use the structured fields directly; Claude is not needed.'
                     : 'Only typed or edited rows will be structured with Claude; spreadsheet fields stay intact.'}
                 </div>
                 {intakeSpreadsheetReport.result.warnings.length > 0 && (
@@ -4025,7 +4032,8 @@ export function OutreachWorkspaceContent({
                 {intakeStorageAvailable
                   ? 'Unsaved rows resume after a reload in this tab; '
                   : 'Reload recovery is unavailable in this browser — keep this tab open; '}
-                nothing is saved to Outreach until you review names and choose Add Contacts.
+                nothing is saved to Outreach until you review contacts and choose Add Contacts. Review organizes contact
+                details, catches duplicates, and excludes GoInvo team members.
               </span>
               <span>{intakeDraft.length.toLocaleString()} / {OUTREACH_INTAKE_LIMITS.lineCharacters.toLocaleString()}</span>
             </div>
@@ -4044,7 +4052,7 @@ export function OutreachWorkspaceContent({
             {intakeReviewIssueCount > 0 && (
               <div role="alert" style={{ color: '#e5bd5c', fontSize: 13, lineHeight: 1.45 }}>
                 {intakeReviewIssueCount} review row{intakeReviewIssueCount === 1 ? ' could' : 's could'} not be matched safely
-                during the name check. Edit or delete {intakeReviewIssueCount === 1 ? 'it' : 'them'}, then choose Check Names
+                during contact review. Edit or delete {intakeReviewIssueCount === 1 ? 'it' : 'them'}, then review the contacts
                 again. No contact can be added while the review and source rows disagree.
               </div>
             )}
@@ -4060,13 +4068,14 @@ export function OutreachWorkspaceContent({
             <button
               type="button"
               data-autopilot-next-action={intakePreview?.some((contact) => !contact.duplicate) ? undefined : 'true'}
-              data-autopilot-next-label={intakeBusy === 'preview' ? 'Checking Names…' : 'Check Names'}
+              data-autopilot-next-label={intakeReviewLabel}
+              aria-describedby="outreach-contact-entry-help"
               aria-busy={intakeBusy === 'preview' || undefined}
               style={styles.primaryButton}
               disabled={!intakeText.trim() || intakeBusy !== null}
               onClick={() => void previewIntake()}
             >
-              {intakeBusy === 'preview' ? 'Checking Names…' : 'Check Names'}
+              {intakeReviewLabel}
             </button>
             {intakePreview && intakePreview.some((c) => !c.duplicate) && (
               <button

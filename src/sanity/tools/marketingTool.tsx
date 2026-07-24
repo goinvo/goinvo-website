@@ -7865,7 +7865,7 @@ export function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
       title: 'Add your contacts',
       instruction: 'Paste anyone worth a call — one per line, name + company is enough.',
       why: 'We research each person against your work and rank who to call first, warmth-first, with a tailored offer.',
-      requiredAction: 'Paste names, then Check names and Add.',
+      requiredAction: 'Paste contacts, review them, then Add.',
       nextAfter: 'Run research to build your ranked call plan.',
       expectedAction: 'outreach:addContacts',
       status: 'upcoming',
@@ -7971,7 +7971,7 @@ export function advanceScriptedAutopilotPlan(
 
 const PRINCIPAL_AUTOPILOT_NEXT_LABELS: Record<string, string> = {
   'principal-plan-warm-network': 'Add Contacts',
-  'principal-outreach-intake': 'Check Names',
+  'principal-outreach-intake': 'Enter a Contact Above',
   'principal-outreach-research': 'Review Briefs',
   'principal-outreach-review': 'Open Progress Tracker',
   'principal-outreach-call': 'Log Outcomes',
