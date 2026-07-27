@@ -1,0 +1,231 @@
+/* Services page — faithful port of the "GoInvo Homepage Design" services
+   redesign (Concept B, Offerings-led). Everything is scoped under .gi-root so
+   the design tokens/type never leak into the rest of the site. Header & footer
+   are intentionally omitted — the (main) layout provides the real ones. */
+
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap');
+
+.gi-root {
+  /* Design tokens (scoped, not on :root, to avoid colliding with site theme) */
+  --paper: #fbfaf7;
+  --paper-warm: #f4f1ea;
+  --paper-deep: #ece7dc;
+  --ink: #1d1b1a;
+  --ink-2: #3a3633;
+  --ink-3: #6a6560;
+  --ink-4: #9a948c;
+  --rule: #d9d3c6;
+  --rule-soft: #e8e3d6;
+  /* Orange accent for all buttons/text/rules on this page uses the site brand
+     primary, not the design's brighter #d94d2f. Retargeting this one token
+     recolors every accent use below (buttons, eyebrows, stat numbers, links,
+     bullets, italic subtitles, the CTA band, hover shadows). */
+  --accent: var(--color-primary);
+  --accent-deep: var(--color-primary-dark);
+  --accent-soft: #f9e9e2;
+  --serif: 'EB Garamond', 'adobe-jenson-pro', 'Adobe Jenson Pro', Georgia, serif;
+  --sans: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --gi-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.gi-root * { box-sizing: border-box; }
+
+/* In-page smooth-scroll targets (e.g. #book) land below the sticky site header. */
+.gi-root section[id] { scroll-margin-top: 84px; }
+
+/* Neutralize the site's global underlined/teal link styling inside the page */
+.gi-root a { text-decoration: none; }
+
+.gi-root h1, .gi-root h2, .gi-root h3, .gi-root h4 {
+  font-family: var(--serif);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  margin: 0;
+  color: var(--ink);
+}
+
+/* — Type scale — */
+.gi-root .gi-display-2 { font-size: 72px; line-height: 1.02; letter-spacing: -0.02em; font-weight: 500; }
+.gi-root .gi-display-3 { font-size: 56px; line-height: 1.04; letter-spacing: -0.015em; font-weight: 500; }
+.gi-root .gi-h1 { font-size: 44px; line-height: 1.08; letter-spacing: -0.012em; font-weight: 500; }
+.gi-root .gi-h2 { font-size: 32px; line-height: 1.15; letter-spacing: -0.008em; font-weight: 500; }
+.gi-root .gi-h3 { font-size: 22px; line-height: 1.25; font-weight: 500; }
+
+.gi-root .gi-body-lg { font-size: 19px; line-height: 1.55; color: var(--ink-2); }
+.gi-root .gi-body { font-size: 16px; line-height: 1.6; color: var(--ink-2); }
+.gi-root .gi-small { font-size: 14px; line-height: 1.5; color: var(--ink-3); }
+.gi-root .gi-eyebrow {
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.gi-root .gi-eyebrow.accent { color: var(--accent); }
+
+/* — Buttons — */
+.gi-root .gi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 240ms var(--gi-ease), background 200ms ease, color 200ms ease, box-shadow 240ms var(--gi-ease);
+}
+.gi-root .gi-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.gi-root .gi-btn-primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); box-shadow: 0 10px 28px -10px rgba(184, 74, 14, 0.55); }
+.gi-root .gi-btn:hover { transform: translateY(-1px); }
+.gi-root .gi-btn:active { transform: translateY(0); transition-duration: 80ms; }
+.gi-root .gi-btn > span,
+.gi-root .gi-btn-text .arr {
+  display: inline-block;
+  transition: transform 360ms var(--gi-ease);
+}
+.gi-root .gi-btn:hover > span,
+.gi-root .gi-btn-text:hover .arr { transform: translateX(5px); }
+
+.gi-root .gi-btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+  padding-bottom: 4px;
+  transition: letter-spacing 240ms var(--gi-ease);
+}
+.gi-root .gi-btn-text.accent { color: var(--accent); }
+.gi-root .gi-btn-text::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform-origin: left center;
+  transition: transform 460ms var(--gi-ease);
+}
+.gi-root .gi-btn-text:hover::after { animation: gi-underline-swipe 720ms var(--gi-ease); }
+@keyframes gi-underline-swipe {
+  0%   { transform: scaleX(1); transform-origin: right center; }
+  45%  { transform: scaleX(0); transform-origin: right center; }
+  46%  { transform: scaleX(0); transform-origin: left center; }
+  100% { transform: scaleX(1); transform-origin: left center; }
+}
+
+/* — Section spacing — */
+.gi-root .gi-section {
+  padding: 96px 56px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* — Stat cluster — */
+.gi-root .gi-stat-number {
+  font-family: var(--serif);
+  font-size: 84px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  font-weight: 500;
+  color: var(--accent);
+}
+.gi-root .gi-stat-label {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-2);
+  margin-top: 12px;
+  max-width: 28ch;
+}
+
+/* — Motion — */
+@keyframes gi-fade-up {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  to   { opacity: 1; transform: none; }
+}
+.gi-root .gi-reveal {
+  opacity: 0;
+  animation: gi-fade-up 1100ms var(--gi-ease) both;
+  animation-delay: calc(var(--d, 0) * 90ms + 120ms);
+  will-change: opacity, transform;
+}
+
+@keyframes gi-ken-burns {
+  0%   { transform: scale(1.06) translate3d(0, 0, 0); }
+  100% { transform: scale(1.14) translate3d(-1.2%, -1.8%, 0); }
+}
+.gi-root .gi-ken-burns { animation: gi-ken-burns 28s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate; }
+
+/* Offering tiles — image push-in, scrim lift, content nudge on hover */
+.gi-root .gi-offer { position: relative; cursor: default; }
+.gi-root .gi-offer .gi-offer-img { transition: transform 1600ms var(--gi-ease), opacity 700ms ease; }
+.gi-root .gi-offer .gi-offer-scrim { transition: opacity 700ms ease; }
+.gi-root .gi-offer .gi-offer-body { transition: transform 700ms var(--gi-ease); }
+.gi-root .gi-offer .gi-offer-rule {
+  height: 1px; background: var(--accent); transform: scaleX(0); transform-origin: left center;
+  transition: transform 760ms var(--gi-ease);
+}
+.gi-root .gi-offer:hover .gi-offer-img { transform: scale(1.06); }
+.gi-root .gi-offer:hover .gi-offer-scrim { opacity: 0.82; }
+.gi-root .gi-offer:hover .gi-offer-body { transform: translateY(-6px); }
+.gi-root .gi-offer:hover .gi-offer-rule { transform: scaleX(1); }
+
+/* Sector image push-in on hover */
+.gi-root .gi-sector-img img { transition: transform 1400ms var(--gi-ease); }
+.gi-root .gi-sector-img:hover img { transform: scale(1.045); }
+
+/* — Responsive: collapse the desktop composition on narrow screens.
+   Uses !important to override the design's inline grid/flow styles. — */
+@media (max-width: 900px) {
+  .gi-root .gi-sec { padding-left: 24px !important; padding-right: 24px !important; }
+  .gi-root .gi-hero-inner { padding-top: 72px !important; padding-bottom: 64px !important; min-height: 0 !important; }
+  .gi-root .gi-grid-4 { grid-template-columns: 1fr 1fr !important; }
+  .gi-root .gi-grid-3 { grid-template-columns: 1fr !important; }
+  .gi-root .gi-grid-2 { grid-template-columns: 1fr !important; }
+  .gi-root .gi-split { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .gi-root .gi-sector { grid-template-columns: 1fr !important; gap: 32px !important; }
+  .gi-root .gi-sector > * { order: 0 !important; }
+  .gi-root .gi-row-between { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
+  .gi-root .gi-display-2 { font-size: 42px !important; }
+  .gi-root .gi-display-3 { font-size: 34px !important; }
+  .gi-root .gi-h1 { font-size: 30px !important; }
+}
+@media (max-width: 560px) {
+  .gi-root .gi-grid-4 { grid-template-columns: 1fr !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gi-root .gi-reveal, .gi-root .gi-ken-burns,
+  .gi-root .gi-btn, .gi-root .gi-btn-text::after,
+  .gi-root .gi-offer-img, .gi-root .gi-offer-scrim, .gi-root .gi-offer-body, .gi-root .gi-offer-rule,
+  .gi-root .gi-sector-img img {
+    animation: none !important;
+    transition: none !important;
+  }
+  .gi-root .gi-reveal { opacity: 1 !important; transform: none !important; }
+}
