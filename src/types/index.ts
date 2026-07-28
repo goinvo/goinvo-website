@@ -191,6 +191,7 @@ export interface HealthVisualization {
   image?: SanityImage
   caption?: string
   date?: string
+  category?: string
   downloadLink?: string
   learnMoreLink?: string
   order?: number

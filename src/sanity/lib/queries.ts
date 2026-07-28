@@ -191,6 +191,42 @@ export const linkInBioItemsQuery = groq`
   }
 `
 
+export const shopStorefrontQuery = groq`
+  {
+    "settings": *[_id == "marketingShopSettings"][0] {
+      storeName,
+      headline,
+      description,
+      storefrontEnabled,
+      supportEmail,
+      provider,
+      connectionStatus
+    },
+    "products": *[
+      _type == "marketingProduct"
+      && status == "active"
+      && !(_id in path("drafts.**"))
+    ] | order(coalesce(featured, false) desc, coalesce(displayOrder, 100) asc, title asc) {
+      _id,
+      title,
+      "slug": slug.current,
+      kind,
+      description,
+      featured,
+      sku,
+      trackInventory,
+      inventoryQuantity,
+      lowStockThreshold,
+      allowBackorder,
+      price,
+      currency,
+      checkoutUrl,
+      "imageUrl": image.asset->url,
+      "imageAlt": image.alt
+    }
+  }
+`
+
 // Features
 export const allFeaturesQuery = groq`
   *[_type == "feature"
@@ -346,6 +382,7 @@ export const allHealthVisualizationsQuery = groq`
     image,
     caption,
     date,
+    category,
     downloadLink,
     learnMoreLink,
     order
