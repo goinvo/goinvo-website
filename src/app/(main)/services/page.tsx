@@ -141,7 +141,7 @@ export default function ServicesPage() {
           {/* LCP image: served through next/image (AVIF/WebP, responsive, and
               preloaded via priority) instead of an unoptimized CSS background. */}
           <Image
-            src={`${IMG}/facto2.jpg`}
+            src="/images/services/mitre-dashboard.jpg"
             alt=""
             fill
             priority
