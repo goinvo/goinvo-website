@@ -181,23 +181,33 @@
 }
 .gi-root .gi-ken-burns { animation: gi-ken-burns 28s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate; }
 
-/* Offering tiles — image push-in, scrim lift, content nudge on hover */
+/* Offering tiles — static (no hover interaction). The accent rule under each
+   title is shown by default (it used to reveal only on hover). */
 .gi-root .gi-offer { position: relative; cursor: default; }
-.gi-root .gi-offer .gi-offer-img { transition: transform 1600ms var(--gi-ease), opacity 700ms ease; }
-.gi-root .gi-offer .gi-offer-scrim { transition: opacity 700ms ease; }
-.gi-root .gi-offer .gi-offer-body { transition: transform 700ms var(--gi-ease); }
 .gi-root .gi-offer .gi-offer-rule {
-  height: 1px; background: var(--accent); transform: scaleX(0); transform-origin: left center;
-  transition: transform 760ms var(--gi-ease);
+  height: 1px; background: var(--accent);
 }
-.gi-root .gi-offer:hover .gi-offer-img { transform: scale(1.06); }
-.gi-root .gi-offer:hover .gi-offer-scrim { opacity: 0.82; }
-.gi-root .gi-offer:hover .gi-offer-body { transform: translateY(-6px); }
-.gi-root .gi-offer:hover .gi-offer-rule { transform: scaleX(1); }
 
 /* Sector image push-in on hover */
 .gi-root .gi-sector-img img { transition: transform 1400ms var(--gi-ease); }
 .gi-root .gi-sector-img:hover img { transform: scale(1.045); }
+
+/* Why-clients-hire-us reason cells: a top rule on each, plus one closing bottom
+   rule on the final row. Desktop is 2 columns, so the last row is the last two
+   cells; when they stack to a single column only the very last cell closes — so
+   a middle cell's bottom rule never doubles up with the next cell's top rule. */
+.gi-root .gi-reasons > .gi-reason { border-top: 1px solid var(--rule); }
+.gi-root .gi-reasons > .gi-reason:nth-last-child(-n + 2) { border-bottom: 1px solid var(--rule); }
+@media (max-width: 900px) {
+  .gi-root .gi-reasons > .gi-reason:nth-last-child(-n + 2) { border-bottom: none; }
+  .gi-root .gi-reasons > .gi-reason:last-child { border-bottom: 1px solid var(--rule); }
+}
+
+/* Certifications: State-of-MA / Federal sits at the far right on desktop, then
+   drops below the paragraph (left-aligned) on narrow screens. */
+@media (max-width: 900px) {
+  .gi-root .gi-certs { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
+}
 
 /* — Responsive: collapse the desktop composition on narrow screens.
    Uses !important to override the design's inline grid/flow styles. — */
