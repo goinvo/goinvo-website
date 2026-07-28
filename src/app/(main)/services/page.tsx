@@ -226,16 +226,9 @@ export default function ServicesPage() {
               What you get is beautiful software. What you buy is certainty.
             </h2>
           </div>
-          <div className="gi-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
-            {REASONS.map((r, i) => (
-              <div
-                key={r.t}
-                style={{
-                  padding: '26px 0',
-                  borderTop: '1px solid var(--rule)',
-                  borderBottom: i >= REASONS.length - 2 ? '1px solid var(--rule)' : 'none',
-                }}
-              >
+          <div className="gi-grid-2 gi-reasons" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
+            {REASONS.map((r) => (
+              <div key={r.t} className="gi-reason" style={{ padding: '26px 0' }}>
                 <h3 className="gi-h3" style={{ fontSize: 19, marginBottom: 8 }}>{r.t}</h3>
                 <p className="gi-small" style={{ margin: 0 }}>{r.d}</p>
               </div>
@@ -293,7 +286,7 @@ export default function ServicesPage() {
           </div>
 
           {/* Certifications */}
-          <div style={{ marginTop: 48, padding: '28px 32px', background: '#fff', border: '1px solid var(--rule-soft)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 24 }}>
+          <div className="gi-certs" style={{ marginTop: 48, padding: '28px 32px', background: '#fff', border: '1px solid var(--rule-soft)', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 40 }}>
             <div style={{ maxWidth: '52ch' }}>
               <div className="gi-eyebrow accent" style={{ marginBottom: 8 }}>Certified &amp; contracted</div>
               <p className="gi-small" style={{ margin: 0 }}>Prequalified for IT professional services as a trusted vendor for state and federal agencies.</p>
