@@ -209,6 +209,15 @@
   .gi-root .gi-certs { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
 }
 
+/* Offer tiles ("What we do"): on desktop they hold a fixed 4/5 portrait frame,
+   but full-width on a phone that makes them enormously tall. Drop the fixed
+   aspect ratio so the tile is only as tall as its content (title + bullets),
+   trimming the height dramatically while staying full-width. */
+@media (max-width: 900px) {
+  .gi-root .gi-offer { aspect-ratio: auto !important; }
+  .gi-root .gi-offer .gi-offer-body { height: auto !important; padding: 28px 24px !important; }
+}
+
 /* — Responsive: collapse the desktop composition on narrow screens.
    Uses !important to override the design's inline grid/flow styles. — */
 @media (max-width: 900px) {
