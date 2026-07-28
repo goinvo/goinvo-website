@@ -93,7 +93,7 @@ const SECTORS = [
     bullets: ['Internal platforms & dashboards', 'Enterprise UX audits & redesigns', 'Workflow optimization & team alignment', 'Strategic design for regulated environments'],
     link: 'Explore our enterprise work',
     href: '/work?category=enterprise',
-    img: `${IMG}/coderyte1.jpg`,
+    img: '/images/services/enterprise-dashboard-design.png',
   },
   {
     k: 'AI',
