@@ -112,6 +112,17 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
+## Health Visualizations page redesign (2026-07, branch `redesign-health-visualizations`)
+
+- `/vision/health-visualizations` restyled from a flat 31-poster grid into numbered themed
+  "collections" using the services-redesign design language (EB Garamond / paper–ink–accent),
+  scoped under `.hv-root` in `src/app/(main)/vision/health-visualizations/health-visualizations.css`
+  (tokens mirror `services.css` on the `redesign-services` branch so both read as one system).
+- Poster→section mapping lives in the page's `COLLECTIONS` slug lists; a new optional Sanity
+  `healthVisualization.category` field overrides the map; unmapped/new posters render in a
+  trailing "From the archive" section, so uncategorized Sanity additions always show up.
+- Public-facing: merge to `main` only after review (preview via the Vercel branch deploy).
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.

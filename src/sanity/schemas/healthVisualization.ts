@@ -51,6 +51,23 @@ export default defineType({
         ),
     }),
     defineField({
+      name: 'category',
+      title: 'Collection',
+      type: 'string',
+      description:
+        'Which themed section of the Health Visualizations page this poster appears in. Leave blank to use the page’s built-in slug mapping (unmapped posters land in "From the archive").',
+      options: {
+        list: [
+          { title: 'Your health data', value: 'health-data' },
+          { title: 'The cost of care', value: 'cost-of-care' },
+          { title: 'Determinants of health', value: 'determinants' },
+          { title: 'Public health', value: 'public-health' },
+          { title: 'How care gets delivered', value: 'care-delivery' },
+          { title: 'Axioms & care cards', value: 'studio-craft' },
+        ],
+      },
+    }),
+    defineField({
       name: 'downloadLink',
       title: 'Download Link',
       type: 'url',
