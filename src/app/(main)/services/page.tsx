@@ -346,7 +346,7 @@ export default function ServicesPage() {
                   src={s.img}
                   alt={`Design for ${s.k}`}
                   fill
-                  sizes="(max-width: 900px) 100vw, 620px"
+                  sizes="(max-width: 900px) 100vw, 36vw"
                   style={{ objectFit: 'cover' }}
                 />
               </div>
