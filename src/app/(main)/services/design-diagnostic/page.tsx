@@ -153,6 +153,7 @@ export default function DesignDiagnosticPage() {
                   alt="Two senior GoInvo experts collaborating on a product diagnostic"
                   width={1182}
                   height={1389}
+                  sizes="(max-width: 1023px) 100vw, 360px"
                   className="w-full h-auto rounded-md mb-3"
                 />
                 <h3 className="font-sans font-semibold text-base mt-0 mb-1">
@@ -169,6 +170,7 @@ export default function DesignDiagnosticPage() {
                   alt="Tangible prototype and tactical design deliverables from a GoInvo diagnostic"
                   width={1182}
                   height={1383}
+                  sizes="(max-width: 1023px) 100vw, 360px"
                   className="w-full h-auto rounded-md mb-3"
                 />
                 <h3 className="font-sans font-semibold text-base mt-0 mb-1">
