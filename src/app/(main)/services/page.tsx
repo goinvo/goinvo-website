@@ -7,9 +7,9 @@ import './services.css'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/services' },
-  title: 'UX Design Services in Boston',
+  title: 'Software Design Services',
   description:
-    'Our UX design process is tailored to your project. Contact GoInvo today to get started in designing a beautiful UX for your product!',
+    'Expert product review, product vision, and software design for healthcare, government, enterprise, and AI.',
 }
 
 const IMG = '/images/experiments/home-2026'
@@ -17,7 +17,7 @@ const IMG = '/images/experiments/home-2026'
 const OFFERINGS = [
   {
     k: 'Expert Review',
-    bullets: ['Independent assessment', 'Product audits', 'Risk identification', 'Smoothing design'],
+    bullets: ['Independent assessment', 'Product audits', 'Risk identification', 'Design refinement'],
     img: `${IMG}/hgraphipad.jpg`,
   },
   {
@@ -107,10 +107,10 @@ const SECTORS = [
 ]
 
 const STATS = [
-  { v: '20yrs', cap: 'designing complex software, one studio, deep specialism.' },
-  { v: '60+', cap: 'shipped products across regulated enterprises and agencies.' },
-  { v: '91%', cap: 'of clients return for more engagements.' },
-  { v: 'Millions', cap: 'of people use the software we’ve designed.' },
+  { v: '20+yrs', cap: 'designing complex software, one studio, deep specialism.' },
+  { v: '100+', cap: 'software design projects since 2010.' },
+  { v: '90%', cap: 'of clients repeat business with GoInvo.' },
+  { v: '160M+', cap: 'people impacted by GoInvo designs.' },
 ]
 
 // Render a numeric stat with sup-styled "+/%/yrs" trailing modifiers. Letters/
@@ -181,20 +181,44 @@ export default function ServicesPage() {
             </div>
           ))}
         </div>
+        <details className="gi-proof-sources">
+          <summary>Sources &amp; methodology</summary>
+          <div className="gi-small">
+            <p>
+              Studio age is calculated from GoInvo&rsquo;s June 29, 2004 incorporation
+              date. Project totals count software design engagements since 2010.
+              Repeat business counts clients with more than one GoInvo engagement.
+              People impacted aggregates the reported reach of products and public
+              programs GoInvo helped design.
+            </p>
+            <ul>
+              <li>
+                <Link href="/vision/oral-history-goinvo">
+                  Studio history and incorporation date
+                </Link>
+              </li>
+              <li>
+                <Link href="/enterprise">
+                  Published project, repeat-business, and impact figures
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </details>
       </section>
 
       {/* ─── What we do: offerings + why clients hire us ────── */}
       <section className="gi-section gi-sec">
         <div style={{ marginBottom: 28 }}>
-          <div className="gi-eyebrow accent">What we do</div>
+          <h2 className="gi-h2">What we do</h2>
         </div>
 
         <div className="gi-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 72 }}>
-          {OFFERINGS.map((o, i) => (
+          {OFFERINGS.map((o) => (
             <div key={o.k} className="gi-offer" style={{ position: 'relative', aspectRatio: '4/5', overflow: 'hidden', background: 'var(--ink)' }}>
               <Image
                 src={o.img}
-                alt={o.k}
+                alt=""
                 fill
                 sizes="(max-width: 900px) 100vw, 420px"
                 className="gi-offer-img"
@@ -202,7 +226,6 @@ export default function ServicesPage() {
               />
               <div className="gi-offer-scrim" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(20,18,17,0.94) 0%, rgba(20,18,17,0.58) 58%, rgba(20,18,17,0.25) 100%)' }} />
               <div className="gi-offer-body" style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '36px 32px' }}>
-                <div className="gi-eyebrow" style={{ color: 'var(--accent)', marginBottom: 12 }}>{String(i + 1).padStart(2, '0')}</div>
                 <h3 style={{ fontFamily: 'var(--serif)', fontSize: 36, fontWeight: 500, color: 'var(--paper)', lineHeight: 1.02, marginBottom: 14 }}>{o.k}</h3>
                 <div className="gi-offer-rule" style={{ marginBottom: 18, width: 48 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
@@ -261,7 +284,7 @@ export default function ServicesPage() {
                   flexDirection: 'column',
                 }}
               >
-                {tier.featured && <div className="gi-eyebrow" style={{ color: 'var(--accent)', marginBottom: 14 }}>Most common</div>}
+                {tier.featured && <div className="gi-eyebrow" style={{ color: '#e36216', marginBottom: 14 }}>Most common</div>}
                 <h3 className="gi-h2" style={{ fontSize: 26, color: tier.featured ? 'var(--paper)' : 'var(--ink)' }}>{tier.name}</h3>
                 <p style={{ fontSize: 15, lineHeight: 1.5, color: tier.featured ? 'rgba(255,255,255,0.72)' : 'var(--ink-2)', margin: '12px 0 24px', minHeight: 66 }}>{tier.lead}</p>
                 <div style={{ borderTop: tier.featured ? '1px solid rgba(255,255,255,0.18)' : '1px solid var(--rule)', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
@@ -294,11 +317,25 @@ export default function ServicesPage() {
             <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
               <div>
                 <div className="gi-eyebrow">State of MA</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500, marginTop: 6 }}>ITS81</div>
+                <a
+                  className="gi-contract-source"
+                  href="https://www.mass.gov/doc/its81/download"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  ITS81 <span aria-hidden="true">↗</span>
+                </a>
               </div>
               <div>
                 <div className="gi-eyebrow">Federal</div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 18, fontWeight: 500, marginTop: 6 }}>GSA 47QTCA26D001W</div>
+                <a
+                  className="gi-contract-source"
+                  href="https://www.gsaelibrary.gsa.gov/ElibMain/contractorInfo.do?contractNumber=47QTCA26D001W&amp;contractorName=WE+CREATE+GOODNESS+LLC&amp;executeQuery=YES"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  GSA 47QTCA26D001W <span aria-hidden="true">↗</span>
+                </a>
               </div>
             </div>
           </div>
@@ -374,8 +411,8 @@ export default function ServicesPage() {
           <h2 className="gi-display-3" style={{ color: '#fff', marginBottom: 24, maxWidth: '22ch', marginInline: 'auto' }}>
             Choose a time to talk about your project.
           </h2>
-          <p className="gi-body-lg" style={{ color: 'rgba(255,255,255,0.85)', maxWidth: '60ch', margin: '0 auto 48px' }}>
-            Thirty minutes with a principal, not a salesperson. We&rsquo;ll talk about your problem, what shipping it would take, and whether we&rsquo;re the right firm. No deck, no obligation.
+          <p className="gi-body-lg" style={{ color: '#fff', maxWidth: '60ch', margin: '0 auto 48px' }}>
+            Thirty minutes with a principal, not a salesperson. We&rsquo;ll talk about your problem, what it will take to ship, and whether we&rsquo;re the right firm. No deck, no obligation.
           </p>
           <div style={{ background: '#fff', borderRadius: 2, overflow: 'hidden', boxShadow: '0 30px 80px -24px rgba(0,0,0,0.35)', maxWidth: 920, margin: '0 auto' }}>
             <CalendlyEmbed
@@ -386,7 +423,7 @@ export default function ServicesPage() {
               hideGdprBanner
             />
           </div>
-          <p style={{ marginTop: 32, fontSize: 13, color: 'rgba(255,255,255,0.78)' }}>
+          <p style={{ marginTop: 32, fontSize: 13, color: '#fff' }}>
             Prefer email? <a href="mailto:info@goinvo.com" style={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.5)', textDecoration: 'none', paddingBottom: 1 }}>info@goinvo.com</a>
           </p>
         </div>
