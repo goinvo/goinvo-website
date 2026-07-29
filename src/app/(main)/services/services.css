@@ -43,6 +43,11 @@
 
 /* Neutralize the site's global underlined/teal link styling inside the page */
 .gi-root a { text-decoration: none; }
+.gi-root a:focus-visible,
+.gi-root summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
 
 .gi-root h1, .gi-root h2, .gi-root h3, .gi-root h4 {
   font-family: var(--serif);
@@ -162,6 +167,38 @@
   margin-top: 12px;
   max-width: 28ch;
 }
+.gi-root .gi-proof-sources {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--rule);
+}
+.gi-root .gi-proof-sources summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+.gi-root .gi-proof-sources > div {
+  max-width: 78ch;
+  padding-top: 16px;
+}
+.gi-root .gi-proof-sources p {
+  margin: 0;
+}
+.gi-root .gi-proof-sources ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.gi-root .gi-proof-sources a {
+  color: var(--color-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 
 /* — Motion — */
 @keyframes gi-fade-up {
@@ -205,6 +242,21 @@
 
 /* Certifications: State-of-MA / Federal sits at the far right on desktop, then
    drops below the paragraph (left-aligned) on narrow screens. */
+.gi-root .gi-contract-source {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+  margin-top: 6px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 500;
+}
+.gi-root .gi-contract-source:hover {
+  border-bottom-color: var(--accent);
+  color: var(--accent-deep);
+}
 @media (max-width: 900px) {
   .gi-root .gi-certs { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
 }
