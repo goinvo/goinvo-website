@@ -1,6 +1,8 @@
 import { HomeContent } from '@/components/home/HomeContent'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
+import { AiSearchBand } from '@/components/search/AiSearchBand'
 import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
+import { isHomeAiSearchEnabled } from '@/lib/search/gate'
 import { sanityFetch } from '@/sanity/lib/live'
 import { teamMembersQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
@@ -11,6 +13,8 @@ import type { TeamMember } from '@/types'
 interface HomePageRendererProps {
   variant?: Home2026Variant
   experiment?: ExperimentExposureData
+  /** Force the AI search band on/off; undefined = env var / preview cookie. */
+  aiSearch?: boolean
 }
 
 async function getHomeTeamMembers() {
@@ -44,15 +48,25 @@ async function withConceptGridMembers(base: { name: string; image: string }[]) {
 export async function HomePageRenderer({
   variant = 'control',
   experiment,
+  aiSearch,
 }: HomePageRendererProps = {}) {
   const teamMembers = await getHomeTeamMembers()
 
-  if (variant === 'concept') {
+  // Dark-shipped AI search band: an explicit prop wins (future experiment
+  // wiring); otherwise the HOME_AI_SEARCH env var or the reviewer preview
+  // cookie (/api/search/preview?on=1) enables it. When previewing, force the
+  // concept layout so the band always has its home regardless of bucketing.
+  const showAiSearch = aiSearch ?? (await isHomeAiSearchEnabled())
+
+  if (variant === 'concept' || showAiSearch) {
     const conceptMembers = await withConceptGridMembers(teamMembers)
     return (
       <>
         {experiment && <ExperimentExposure experiment={experiment} />}
-        <HomeConceptContent teamMembers={conceptMembers} />
+        <HomeConceptContent
+          teamMembers={conceptMembers}
+          afterHeroSlot={showAiSearch ? <AiSearchBand /> : undefined}
+        />
       </>
     )
   }

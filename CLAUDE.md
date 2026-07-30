@@ -112,6 +112,34 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
+## Homepage AI search band (branch `ai-search-home`, ported 2026-07-30 — ships dark)
+
+Port of the abandoned Gatsby prototype (`goinvo.com` branch `redesign-ai-search-layout`) for
+the next homepage A/B test. Orange band under the concept-homepage hero: 4 sector buttons w/
+canned queries + free-text input → "Recommended for you" project cards with Claude-written,
+query-tailored blurbs + a one-line insight.
+
+- **Pipeline:** `src/lib/search/` — `index.ts` (Sanity GROQ project index: public case studies
+  + features → slug/href/title/caption/client/categories/image, 10-min instance cache),
+  `lexical.ts` (keyword recall, ZERO-score excluded — nonsense queries return empty, never
+  padded), `aiSearch.ts` (ONE Claude call replaces the prototype's two OpenAI fns: select the
+  genuinely relevant few + write blurbs + infer buyer persona; returns null on any failure).
+  Route: `POST /api/search` — same-origin guard, KV rate limit (20/min, 300/day per IP,
+  fail-open; the Gatsby 3/min limit would have starved the treatment arm), 24h KV response
+  cache (presets are instant/free), honest reasons: `no-matches` / `ai-unavailable` /
+  `rate-limited` — keyword results are always LABELED as such, no fake "matches".
+- **Model:** `AI_SEARCH_MODEL` env override, default `claude-haiku-4-5` (visitor-facing
+  latency; ~1–4s + cache). Needs `ANTHROPIC_API_KEY`; KV vars for limits/cache (both on Vercel).
+- **UI:** `src/components/search/AiSearchBand.tsx`, mounted via `HomeConceptContent`'s new
+  `afterHeroSlot` prop from `HomePageRenderer`.
+- **Gating (ships dark):** `HOME_AI_SEARCH=1` env = on for everyone; reviewer toggle
+  `/api/search/preview?on=1` (sets cookie, redirects home; `?on=0` clears). Preview forces the
+  concept layout so the band always renders.
+- **A/B launch checklist (after the measurement WIP lands):** add a `home-ai-search` flag in
+  `src/flags.ts` + registry entry in `src/lib/experiments/registry.ts` (needs `measurementKey`),
+  pass `variant`/`aiSearch`/`experiment` from `page.tsx` per bucket, and add band interaction
+  events (search submitted / result clicked) to the first-party beacon before starting the test.
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.
