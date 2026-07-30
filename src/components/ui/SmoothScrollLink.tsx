@@ -19,12 +19,27 @@ interface SmoothScrollLinkProps {
  */
 export function SmoothScrollLink({ href, className, style, children }: SmoothScrollLinkProps) {
   const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!href.startsWith('#')) return
+    if (
+      !href.startsWith('#') ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return
+    }
     const target = document.getElementById(href.slice(1))
     if (!target) return
     event.preventDefault()
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' })
+    const hadTabIndex = target.hasAttribute('tabindex')
+    if (!hadTabIndex) target.setAttribute('tabindex', '-1')
+    target.focus({ preventScroll: true })
+    if (!hadTabIndex) {
+      target.addEventListener('blur', () => target.removeAttribute('tabindex'), { once: true })
+    }
     window.history.replaceState(null, '', href)
   }
 
