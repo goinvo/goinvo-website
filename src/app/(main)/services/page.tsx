@@ -108,8 +108,8 @@ const SECTORS = [
 
 const STATS = [
   { v: '20+yrs', cap: 'designing complex software, one studio, deep specialism.' },
-  { v: '100+', cap: 'software design projects since 2010.' },
-  { v: '90%', cap: 'of clients repeat business with GoInvo.' },
+  { v: '60+', cap: 'shipped products across regulated enterprises and agencies.' },
+  { v: '91%', cap: 'of clients return for more engagements.' },
   { v: '160M+', cap: 'people impacted by GoInvo designs.' },
 ]
 
