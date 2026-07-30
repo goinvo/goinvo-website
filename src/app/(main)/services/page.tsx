@@ -181,30 +181,6 @@ export default function ServicesPage() {
             </div>
           ))}
         </div>
-        <details className="gi-proof-sources">
-          <summary>Sources &amp; methodology</summary>
-          <div className="gi-small">
-            <p>
-              Studio age is calculated from GoInvo&rsquo;s June 29, 2004 incorporation
-              date. Project totals count software design engagements since 2010.
-              Repeat business counts clients with more than one GoInvo engagement.
-              People impacted aggregates the reported reach of products and public
-              programs GoInvo helped design.
-            </p>
-            <ul>
-              <li>
-                <Link href="/vision/oral-history-goinvo">
-                  Studio history and incorporation date
-                </Link>
-              </li>
-              <li>
-                <Link href="/enterprise">
-                  Published project, repeat-business, and impact figures
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </details>
       </section>
 
       {/* ─── What we do: offerings + why clients hire us ────── */}
@@ -317,25 +293,11 @@ export default function ServicesPage() {
             <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
               <div>
                 <div className="gi-eyebrow">State of MA</div>
-                <a
-                  className="gi-contract-source"
-                  href="https://www.mass.gov/doc/its81/download"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  ITS81 <span aria-hidden="true">↗</span>
-                </a>
+                <span className="gi-contract-source">ITS81</span>
               </div>
               <div>
                 <div className="gi-eyebrow">Federal</div>
-                <a
-                  className="gi-contract-source"
-                  href="https://www.gsaelibrary.gsa.gov/ElibMain/contractorInfo.do?contractNumber=47QTCA26D001W&amp;contractorName=WE+CREATE+GOODNESS+LLC&amp;executeQuery=YES"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  GSA 47QTCA26D001W <span aria-hidden="true">↗</span>
-                </a>
+                <span className="gi-contract-source">GSA 47QTCA26D001W</span>
               </div>
             </div>
           </div>
