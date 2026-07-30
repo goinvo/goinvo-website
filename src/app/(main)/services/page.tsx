@@ -1,416 +1,395 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button } from '@/components/ui/Button'
-import { Quote } from '@/components/ui/Quote'
-import { Divider } from '@/components/ui/Divider'
 import { CalendlyEmbed } from '@/components/forms/CalendlyEmbed'
-import { ContactFormEmbed } from '@/components/forms/ContactFormEmbed'
-import { cloudfrontImage } from '@/lib/utils'
+import { SmoothScrollLink } from '@/components/ui/SmoothScrollLink'
+import './services.css'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/services' },
-  title: 'UX Design Services in Boston',
+  title: 'Software Design Services',
   description:
-    'Our UX design process is tailored to your project. Contact GoInvo today to get started in designing a beautiful UX for your product!',
+    'Expert product review, product vision, and software design for healthcare, government, enterprise, and AI.',
 }
 
-const services = [
+const IMG = '/images/experiments/home-2026'
+
+const OFFERINGS = [
   {
-    title: 'Design for Healthcare',
-    description:
-      'We design software that improves care, reduces friction, and drives better outcomes — from clinical decision support to policy-driven health data systems. With 20+ years of experience, we navigate clinical complexity, policy constraints, and stakeholder needs to make health systems work better for everyone.',
-    methods: [
-      'Clinical decision support design',
-      'EHR integrations & patient workflows',
-      'Public health dashboards',
-      'Data visualization for policy and advocacy',
-    ],
-    image: '/images/services/hgraph-gold.jpg',
-    color: '#EEE0CA',
-    example: {
-      link: '/work?category=healthcare',
-      title: 'Explore our healthcare work \u2192',
-    },
+    k: 'Expert Review',
+    bullets: ['Independent assessment', 'Product audits', 'Risk identification', 'Design refinement'],
+    img: `${IMG}/hgraphipad.jpg`,
   },
   {
-    title: 'Design for Government',
-    description:
-      'We design public services that are more modern, usable, equitable, and human. We partner with federal, state, and local agencies to transform services that matter — from applications that help residents get the benefits they need to digital tools for policy makers.',
-    methods: [
-      'Public benefits service design',
-      'Inclusive research & accessibility audits',
-      'Prototyping for civic tech and policy',
-      'Legacy system UX modernization',
-    ],
-    image: '/images/services/gov_snap.jpg',
-    color: '#CBE7F4',
-    example: {
-      link: '/work?category=government',
-      title: 'Explore our government work \u2192',
-    },
+    k: 'Product Vision',
+    bullets: ['Workflow redesign', 'Future state', 'Product strategy', 'Executive alignment'],
+    img: `${IMG}/precisionautismhero.jpg`,
   },
   {
-    title: 'Design for Enterprise',
-    description:
-      'We streamline internal tools and systems that power big organizations for better alignment, efficiency, and insight. We work with large teams to improve internal platforms, streamline complex workflows, and align business and user goals — delivering better tools quickly and collaboratively to reduce friction and boost efficiency.',
-    methods: [
-      'Internal platforms & dashboards',
-      'Enterprise UX audits & redesigns',
-      'Workflow optimization & team alignment',
-      'Strategic design for regulated environments',
-    ],
-    image: '/images/services/enterprise_cotiviti.jpg',
-    color: '#C0EEEC',
-    example: {
-      link: '/work?category=enterprise',
-      title: 'Explore our enterprise work \u2192',
-    },
-  },
-  {
-    title: 'Design for AI',
-    description:
-      'We design AI-powered tools that connect humans and machines, ensuring they work together seamlessly. We create human-centered interactions that make intelligent tools clear, explainable, and usable, aligned with human needs from day one.',
-    methods: [
-      'UX for ML-powered products',
-      'Human-AI interaction design',
-      'Explainability & trust-building interfaces',
-      'Ethical frameworks & transparency in design',
-    ],
-    image: '/images/services/ai_augment.jpg',
-    color: '#CFD6FF',
-    example: {
-      link: '/work?category=AI',
-      title: 'Explore our AI work \u2192',
-    },
+    k: 'Software Design',
+    bullets: ['Ship product', 'Research & discovery', 'Market validation'],
+    img: `${IMG}/ipsosherodark.jpg`,
   },
 ]
 
-const whatWeDo = [
+const REASONS = [
+  { t: 'De-risk the project', d: 'We keep work moving through org changes, tight timelines, and shifting priorities so good ideas don’t die on the whiteboard.' },
+  { t: 'Find the right problems', d: 'Through research, system mapping, and synthesis, we uncover the real needs that guide smarter investment.' },
+  { t: 'Move fast and test often', d: 'We prototype quickly and test with real users and data, reducing risk before it becomes expensive.' },
+  { t: 'Deliver & ship', d: 'We integrate with your team to ship better tools, improve performance, and keep strategy evolving.' },
+]
+
+const TIERS = [
   {
-    title: 'Clarify Product Strategy & Vision',
-    description:
-      'We help teams <strong>align around a clear product direction, providing experienced, unbiased input</strong> — whether you\'re evolving what exists, envisioning a new concept, or clarifying long-term goals.',
-    links: [
-      { href: '/work/mitre-shr', title: 'Standard health record' },
-      { href: '/vision/national-cancer-navigation', title: 'National Cancer Navigation' },
-    ],
+    name: 'Design Diagnostic',
+    lead: 'A fixed-scope read on where your product stands and what to do next.',
+    rows: ['4–8 weeks', 'Two senior designers', 'Fixed scope, fixed outputs'],
+    price: '$50K–$90K',
+    cta: 'Explore the Design Diagnostic',
+    href: '/services/design-diagnostic',
   },
   {
-    title: 'De-risking projects',
-    description:
-      'We keep projects moving through the mess — <strong>navigating org changes, tight timelines, and shifting priorities</strong> so good ideas don\'t die on the whiteboard.',
-    links: [
-      { href: '/work/mitre-flux-notes', title: 'MITRE Flux Notes' },
-      { href: '/work/insidetracker-nutrition-science', title: 'InsideTracker' },
-    ],
+    name: 'Product Launch',
+    lead: 'Design and launch working software, end to end.',
+    rows: ['2–4 months', 'Full design team', 'Concept through shipped product'],
+    price: '$75K–$250K',
+    cta: 'Talk about a launch',
+    href: '#book',
+    featured: true,
   },
   {
-    title: 'Find the right problems to solve',
-    description:
-      'Through <strong>user research, system mapping, and insight synthesis,</strong> we uncover real-world needs — guiding smarter investment and more focused solutions.',
-    links: [
-      { href: '/work/3m-coderyte', title: '3M Coderyte' },
-      { href: '/work/mass-snap', title: 'Massachusetts SNAP' },
-    ],
-  },
-  {
-    title: 'Move fast and test often',
-    description:
-      'We <strong>rapidly prototype and frequently test with real users and data</strong> — reducing risk, and informing decision-making for real-world use.',
-    links: [
-      { href: '/work/partners-insight', title: 'Mass General Brigham IRB Insight' },
-      { href: '/work/wuxi-nextcode-familycode', title: 'WuXi NextCODE FamilyCode' },
-    ],
-  },
-  {
-    title: 'Deliver & ship',
-    description:
-      'Our dedicated team will <strong>integrate seamlessly with yours to ship better tools, improve performance, and keep strategy evolving</strong> — from concept to launch to impact.',
-    links: [
-      { href: '/work/all-of-us', title: 'All of Us Research Program' },
-      { href: '/work/3m-coderyte', title: '3M Coderyte' },
-    ],
+    name: 'Embedded Partnership',
+    lead: 'We become your long-term product team.',
+    rows: ['6–24 months', 'Dedicated embedded team', 'Custom engagement'],
+    price: 'Custom',
+    cta: 'Discuss a partnership',
+    href: '#book',
   },
 ]
 
-const engagementTypes = [
+const SECTORS = [
   {
-    title: 'Design Diagnostic',
-    lines: [
-      '4-8 weeks.',
-      'Two senior healthcare designers.',
-      'Fixed scope. Fixed outputs.',
-      'Typical investment: $50K-$90K.',
-    ],
-    link: {
-      href: '/services/design-diagnostic',
-      title: 'Explore the Design Diagnostic →',
-    },
+    k: 'Healthcare',
+    sub: 'People’s lives depend on it.',
+    d: 'We design software that improves care, reduces friction, and drives better outcomes, from clinical decision support to policy-driven health data systems. Twenty years navigating clinical complexity, policy constraints, and stakeholder needs.',
+    bullets: ['Clinical decision support design', 'EHR integrations & patient workflows', 'Public health dashboards', 'Data visualization for policy and advocacy'],
+    link: 'Explore our healthcare work',
+    href: '/work?category=healthcare',
+    img: `${IMG}/hgraphipad.jpg`,
   },
   {
-    title: 'Product Launch',
-    lines: ['Design and launch software.', '2-4 months.', 'Typical investment: $75K-250K.'],
+    k: 'Government',
+    sub: 'Public trust depends on it.',
+    d: 'We design public services that are more modern, usable, equitable, and human. We partner with federal, state, and local agencies to transform the services that matter, from benefits applications to tools for policy makers.',
+    bullets: ['Public benefits service design', 'Inclusive research & accessibility audits', 'Prototyping for civic tech and policy', 'Legacy system UX modernization'],
+    link: 'Explore our government work',
+    href: '/work?category=government',
+    img: `${IMG}/snapcover.jpg`,
   },
   {
-    title: 'Embedded Design Partnerships',
-    lines: [
-      'Become your long-term healthcare product team.',
-      '6-24 months.',
-      'Custom engagements.',
-    ],
+    k: 'Enterprise',
+    sub: 'Business operations depend on it.',
+    d: 'We streamline the internal tools and systems that power big organizations, for better alignment, efficiency, and insight. We improve internal platforms, streamline complex workflows, and align business and user goals.',
+    bullets: ['Internal platforms & dashboards', 'Enterprise UX audits & redesigns', 'Workflow optimization & team alignment', 'Strategic design for regulated environments'],
+    link: 'Explore our enterprise work',
+    href: '/work?category=enterprise',
+    img: '/images/services/enterprise-dashboard-design.png',
+  },
+  {
+    k: 'AI',
+    sub: 'Human judgment depends on it.',
+    d: 'We design AI-powered tools that connect humans and machines so they work together seamlessly. We create human-centered interactions that make intelligent tools clear, explainable, and usable, aligned with human needs from day one.',
+    bullets: ['UX for ML-powered products', 'Human-AI interaction design', 'Explainability & trust-building interfaces', 'Ethical frameworks & transparency in design'],
+    link: 'Explore our AI work',
+    href: '/work?category=AI',
+    img: `${IMG}/ipsosherodark.jpg`,
   },
 ]
+
+const STATS = [
+  { v: '20+yrs', cap: 'designing complex software, one studio, deep specialism.' },
+  { v: '60+', cap: 'shipped products across regulated enterprises and agencies.' },
+  { v: '91%', cap: 'of clients return for more engagements.' },
+  { v: '160M+', cap: 'people impacted by GoInvo designs.' },
+]
+
+// Render a numeric stat with sup-styled "+/%/yrs" trailing modifiers. Letters/
+// symbols after the digits become small, top-shouldered superscripts.
+function renderStat(value: string, fontSize: number) {
+  const supSize = Math.round(fontSize * 0.34)
+  const supTop = Math.round(fontSize * 0.06)
+  const m = value.trim().match(/^(\d[\d,.]*)(.*)$/)
+  if (!m) return <span>{value}</span>
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+      <span style={{ lineHeight: 0.9 }}>{m[1]}</span>
+      {m[2] && (
+        <span style={{ fontSize: supSize, lineHeight: 1, marginLeft: 2, alignSelf: 'flex-start', position: 'relative', top: supTop, color: 'inherit' }}>
+          {m[2]}
+        </span>
+      )}
+    </span>
+  )
+}
 
 export default function ServicesPage() {
   return (
-    <div>
-      {/* Main content wrapper — matches Gatsby single max-width block */}
-      <div className="max-width content-padding lg:py-8">
-
-        {/* Why hire GoInvo */}
-        <div className="flex flex-col items-center py-8">
-          <div className="w-full lg:w-1/2">
-            <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light mb-2">
-              Why hire GoInvo
-            </p>
-            <p className="text-gray">
-              We help you move fast, reduce risk, and deliver better systems — across
-              healthcare, government, enterprise, and AI. Let&apos;s talk about your project
-              and how GoInvo can help.
-            </p>
-            <p className="text-gray">
-              Drop us an email at{' '}
-              <a href="mailto:info@goinvo.com">info@goinvo.com</a>
-            </p>
-            <p className="text-gray">Or, talk to us live on Zoom.</p>
-            <Button
-              href="#calendly-open-office-hours"
-              variant="secondary"
-              size="md"
-              className="mt-8 mb-8 w-full"
-            >
-              Schedule a chat
-            </Button>
+    <div className="gi-root">
+      {/* ─── Hero ───────────────────────────────────────────── */}
+      <section style={{ position: 'relative', background: 'var(--ink)', color: 'var(--paper)', overflow: 'hidden' }}>
+        <div className="gi-ken-burns" style={{ position: 'absolute', inset: 0, opacity: 0.55 }}>
+          {/* LCP image: served through next/image (AVIF/WebP, responsive, and
+              preloaded via priority) instead of an unoptimized CSS background. */}
+          <Image
+            src="/images/services/mitre-dashboard.jpg"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            style={{ objectFit: 'cover', objectPosition: 'center' }}
+          />
+        </div>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(95deg, rgba(20,18,17,0.94) 0%, rgba(20,18,17,0.66) 48%, rgba(20,18,17,0.2) 100%)' }} />
+        <div className="gi-hero-inner gi-sec" style={{ position: 'relative', maxWidth: 1280, margin: '0 auto', padding: '112px 56px 96px', minHeight: 640 }}>
+          <h1 className="gi-display-2 gi-reveal" style={{ color: 'var(--paper)', marginTop: 0, maxWidth: '16ch', '--d': 0 } as React.CSSProperties}>
+            Disrupt from within. Reinvent the product. Change the market.
+          </h1>
+          <p className="gi-body-lg gi-reveal" style={{ color: 'rgba(255,255,255,0.78)', marginTop: 28, maxWidth: '58ch', '--d': 2 } as React.CSSProperties}>
+            We help you move fast, reduce risk, and deliver better systems across healthcare, government, enterprise, and AI. Tell us about your project and where GoInvo can help.
+          </p>
+          <div className="gi-reveal" style={{ display: 'flex', gap: 18, alignItems: 'center', marginTop: 44, flexWrap: 'wrap', '--d': 3 } as React.CSSProperties}>
+            <SmoothScrollLink href="#book" className="gi-btn gi-btn-primary">Schedule a chat <span>→</span></SmoothScrollLink>
+            <a href="mailto:info@goinvo.com" style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600, fontSize: 15, textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.4)', paddingBottom: 2 }}>
+              Or email info@goinvo.com
+            </a>
           </div>
         </div>
+      </section>
 
-        {/* What We Do */}
-        <div>
-          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-0">
-            What We Do
-          </h3>
-          <p className="text-gray">
-            We design and deliver digital systems — from idea to execution. Our team joins
-            where we&apos;re needed most, offering end-to-end product design or focused support
-            to move things forward.
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-2 pb-8">
-            {whatWeDo.map((item) => (
-              <div key={item.title} className="lg:pr-8 mb-8 lg:py-8 first:lg:py-8">
-                <h4 className="font-sans font-semibold text-base mt-0 mb-2">
-                  {item.title}
-                </h4>
-                <p
-                  className="text-gray text-md mt-2"
-                  dangerouslySetInnerHTML={{ __html: item.description }}
-                />
-                <div className="flex flex-wrap gap-x-8">
-                  {item.links.map((link) => (
-                    <Link key={link.href} href={link.href}>
-                      {link.title}
-                    </Link>
+      {/* ─── Proof strip ────────────────────────────────────── */}
+      {/* Uses the .gi-section box (max-width 1280 with 56px padding → 1168 content)
+          so the stats align with the What-we-do / Sectors content, not the wider
+          full-bleed width. */}
+      <section className="gi-section gi-sec" style={{ paddingTop: 64, paddingBottom: 24, background: 'var(--paper)' }}>
+        <div className="gi-grid-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+          {STATS.map((s, i) => (
+            <div key={i} style={{ borderTop: '1px solid var(--ink)', paddingTop: 22 }}>
+              <div className="gi-stat-number" style={{ fontSize: 64, display: 'inline-flex', alignItems: 'baseline' }}>
+                {renderStat(s.v, 64)}
+              </div>
+              <div className="gi-stat-label">{s.cap}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── What we do: offerings + why clients hire us ────── */}
+      <section className="gi-section gi-sec">
+        <div style={{ marginBottom: 28 }}>
+          <h2 className="gi-h2">What we do</h2>
+        </div>
+
+        <div className="gi-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, marginBottom: 72 }}>
+          {OFFERINGS.map((o) => (
+            <div key={o.k} className="gi-offer" style={{ position: 'relative', aspectRatio: '4/5', overflow: 'hidden', background: 'var(--ink)' }}>
+              <Image
+                src={o.img}
+                alt=""
+                fill
+                sizes="(max-width: 900px) 100vw, 420px"
+                className="gi-offer-img"
+                style={{ objectFit: 'cover', opacity: 0.5 }}
+              />
+              <div className="gi-offer-scrim" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(20,18,17,0.94) 0%, rgba(20,18,17,0.58) 58%, rgba(20,18,17,0.25) 100%)' }} />
+              <div className="gi-offer-body" style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '36px 32px' }}>
+                <h3 style={{ fontFamily: 'var(--serif)', fontSize: 36, fontWeight: 500, color: 'var(--paper)', lineHeight: 1.02, marginBottom: 14 }}>{o.k}</h3>
+                <div className="gi-offer-rule" style={{ marginBottom: 18, width: 48 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  {o.bullets.map((b) => (
+                    <div key={b} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.4, color: 'rgba(255,255,255,0.85)' }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flex: '0 0 auto', position: 'relative', top: 5 }} />
+                      <span>{b}</span>
+                    </div>
                   ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <Divider />
-        </div>
-
-        {/* Engagement Types */}
-        <div>
-          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-0">
-            Engagement Types
-          </h3>
-          <p className="text-gray">
-            Ways to work with us: from a focused diagnostic to a long-term product
-            partnership.
-          </p>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-4">
-            {engagementTypes.map((engagement) => (
-              <div
-                key={engagement.title}
-                className="bg-white shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out rounded-md p-6 flex flex-col"
-              >
-                <h4 className="font-sans font-semibold text-base mt-0 mb-0">
-                  {engagement.title}
-                </h4>
-                <hr className="border-0 h-px w-full my-3 bg-gray-medium" />
-                <div className="text-gray text-md space-y-1">
-                  {engagement.lines.map((line) => (
-                    <p key={line} className="mb-0">
-                      {line}
-                    </p>
-                  ))}
-                </div>
-                {engagement.link && (
-                  <p className="mt-auto pt-4 mb-0">
-                    <Link href={engagement.link.href}>{engagement.link.title}</Link>
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-          <Divider />
-        </div>
-
-        {/* Certifications */}
-        <div className="py-8">
-          <h3 className="font-serif text-[1.5rem] leading-[2.125rem] font-light mt-8 mb-2">
-            Our certifications and contracts
-          </h3>
-          <p className="text-gray text-md">
-            Our contracts prequalify us for IT professional services as a
-            trusted vendor for state and federal agencies.
-          </p>
-          <ul className="ul text-gray mb-8">
-            <li>State of MA: <strong>ITS81</strong></li>
-            <li>Federal: <strong>GSA 47QTCA26D001W</strong></li>
-          </ul>
-          <p className="text-gray text-md">
-            <Link href="/government">Learn more about our government work</Link>.
-          </p>
-          <Divider />
-        </div>
-
-        {/* Service Categories */}
-        <div>
-          {services.map((service) => (
-            <div key={service.title} className="grid grid-cols-1 lg:grid-cols-2">
-              <div className="lg:pr-8 mb-4">
-                <div className="lg:pb-8">
-                  <h4 className="font-sans font-semibold text-base mb-0">
-                    {service.title}
-                  </h4>
-                  <hr
-                    className="border-0 h-[2px] w-full my-4"
-                    style={{ backgroundColor: service.color }}
-                  />
-                  <p className="text-gray mb-2">{service.description}</p>
-                  <ul className="ul text-gray mt-2 mb-4">
-                    {service.methods.map((method) => (
-                      <li key={method}>{method}</li>
-                    ))}
-                  </ul>
-                  <p className="text-gray">
-                    <Link href={service.example.link}>
-                      {service.example.title}
-                    </Link>
-                  </p>
-                </div>
-              </div>
-              <div className="lg:pl-8">
-                <div className="py-8">
-                  <Image
-                    src={cloudfrontImage(service.image)}
-                    alt={service.title}
-                    width={800}
-                    height={500}
-                    className="w-full h-auto"
-                  />
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* Quote */}
-      <Quote
-        text="With Invo, design wasn&rsquo;t just design. It impacted our IP portfolio. It changed our business."
-        author="Serban Georgescu, MD"
-        role="InfoBionic Director of Clinical Development"
-        background="gray"
-      />
+        {/* Why clients hire us */}
+        <div className="gi-split" style={{ display: 'grid', gridTemplateColumns: '1fr 2.4fr', gap: 96, alignItems: 'start' }}>
+          <div>
+            <div className="gi-eyebrow accent">Why clients hire us</div>
+            <h2 className="gi-h2" style={{ marginTop: 16, maxWidth: '16ch' }}>
+              What you get is beautiful software. What you buy is certainty.
+            </h2>
+          </div>
+          <div className="gi-grid-2 gi-reasons" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
+            {REASONS.map((r) => (
+              <div key={r.t} className="gi-reason" style={{ padding: '26px 0' }}>
+                <h3 className="gi-h3" style={{ fontSize: 19, marginBottom: 8 }}>{r.t}</h3>
+                <p className="gi-small" style={{ margin: 0 }}>{r.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {/* Calendly */}
-      <div className="max-width content-padding py-8 mb-8">
-        <div className="max-width content-padding py-8">
-          <h2
-            className="font-serif text-[1.5rem] leading-[2.125rem] font-light text-center"
-            id="calendly-open-office-hours"
-            style={{ marginBottom: '-50px' }}
-          >
+      {/* ─── Engagement types ───────────────────────────────── */}
+      <section className="gi-sec" style={{ background: 'var(--paper-warm)', padding: '96px 56px' }}>
+        {/* Full-bleed warm band, but inner content capped at 1168 to align with
+            the other sections (not the wider 1280). */}
+        <div style={{ maxWidth: 1168, margin: '0 auto' }}>
+          <div className="gi-row-between" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 56 }}>
+            <div>
+              <div className="gi-eyebrow accent">Engagement types</div>
+              <h2 className="gi-h1" style={{ marginTop: 16, maxWidth: '20ch' }}>Ways to work with us.</h2>
+            </div>
+          </div>
+          <div className="gi-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+            {TIERS.map((tier) => (
+              <div
+                key={tier.name}
+                style={{
+                  background: tier.featured ? 'var(--ink)' : '#fff',
+                  color: tier.featured ? 'var(--paper)' : 'var(--ink)',
+                  border: tier.featured ? '1px solid var(--ink)' : '1px solid var(--rule-soft)',
+                  padding: '36px 32px 32px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                {tier.featured && <div className="gi-eyebrow" style={{ color: '#e36216', marginBottom: 14 }}>Most common</div>}
+                <h3 className="gi-h2" style={{ fontSize: 26, color: tier.featured ? 'var(--paper)' : 'var(--ink)' }}>{tier.name}</h3>
+                <p style={{ fontSize: 15, lineHeight: 1.5, color: tier.featured ? 'rgba(255,255,255,0.72)' : 'var(--ink-2)', margin: '12px 0 24px', minHeight: 66 }}>{tier.lead}</p>
+                <div style={{ borderTop: tier.featured ? '1px solid rgba(255,255,255,0.18)' : '1px solid var(--rule)', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+                  {tier.rows.map((r) => (
+                    <div key={r} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: tier.featured ? 'rgba(255,255,255,0.85)' : 'var(--ink-2)' }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flex: '0 0 auto', position: 'relative', top: 7 }} />
+                      <span>{r}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 28, paddingTop: 20, borderTop: tier.featured ? '1px solid rgba(255,255,255,0.18)' : '1px solid var(--rule)' }}>
+                  <div className="gi-eyebrow" style={{ color: tier.featured ? 'rgba(255,255,255,0.55)' : 'var(--ink-3)', marginBottom: 6 }}>Typical investment</div>
+                  <div style={{ fontFamily: 'var(--serif)', fontSize: 30, fontWeight: 500, color: tier.featured ? 'var(--paper)' : 'var(--ink)', marginBottom: 22 }}>{tier.price}</div>
+                  {tier.href.startsWith('#') ? (
+                    <SmoothScrollLink href={tier.href} className="gi-btn-text" style={{ color: tier.featured ? 'var(--paper)' : 'var(--ink)' }}>{tier.cta} <span className="arr">→</span></SmoothScrollLink>
+                  ) : (
+                    <Link href={tier.href} className="gi-btn-text" style={{ color: tier.featured ? 'var(--paper)' : 'var(--ink)' }}>{tier.cta} <span className="arr">→</span></Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Certifications */}
+          <div className="gi-certs" style={{ marginTop: 48, padding: '28px 32px', background: '#fff', border: '1px solid var(--rule-soft)', display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 40 }}>
+            <div style={{ maxWidth: '52ch' }}>
+              <div className="gi-eyebrow accent" style={{ marginBottom: 8 }}>Certified &amp; contracted</div>
+              <p className="gi-small" style={{ margin: 0 }}>Prequalified for IT professional services as a trusted vendor for state and federal agencies.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+              <div>
+                <div className="gi-eyebrow">State of MA</div>
+                <span className="gi-contract-source">ITS81</span>
+              </div>
+              <div>
+                <div className="gi-eyebrow">Federal</div>
+                <span className="gi-contract-source">GSA 47QTCA26D001W</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Sectors ────────────────────────────────────────── */}
+      <section className="gi-section gi-sec">
+        <div className="gi-eyebrow accent" style={{ marginBottom: 16 }}>Where we work</div>
+        <h2 className="gi-h1" style={{ marginBottom: 64, maxWidth: '24ch' }}>Four places where software can&rsquo;t afford to fail.</h2>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {SECTORS.map((s, i) => (
+            <div
+              key={s.k}
+              className="gi-sector"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: i % 2 === 0 ? '6fr 5fr' : '5fr 6fr',
+                gap: 64,
+                alignItems: 'center',
+                padding: '56px 0',
+                borderTop: '1px solid var(--rule)',
+                borderBottom: i === SECTORS.length - 1 ? '1px solid var(--rule)' : 'none',
+              }}
+            >
+              <div style={{ order: i % 2 === 0 ? 1 : 2 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <h3 className="gi-h2" style={{ fontSize: 38, lineHeight: 1.05 }}>{s.k}</h3>
+                  <div style={{ fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 24, lineHeight: 1.2, color: 'var(--accent)', marginTop: 6 }}>{s.sub}</div>
+                </div>
+                <p className="gi-body" style={{ marginBottom: 24, maxWidth: '52ch' }}>{s.d}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', marginBottom: 28 }}>
+                  {s.bullets.map((b) => (
+                    <div key={b} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: 'var(--ink-2)' }}>
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', flex: '0 0 auto', position: 'relative', top: 7 }} />
+                      <span>{b}</span>
+                    </div>
+                  ))}
+                </div>
+                <Link href={s.href} className="gi-btn-text">{s.link} <span className="arr">→</span></Link>
+              </div>
+              <div className="gi-sector-img" style={{ order: i % 2 === 0 ? 2 : 1, position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
+                <Image
+                  src={s.img}
+                  alt={`Design for ${s.k}`}
+                  fill
+                  sizes="(max-width: 900px) 100vw, 36vw"
+                  style={{ objectFit: 'cover' }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── Testimonial ────────────────────────────────────── */}
+      <section className="gi-sec" style={{ background: 'var(--ink)', color: 'var(--paper)', padding: '112px 56px' }}>
+        <div style={{ maxWidth: 980, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'var(--serif)', fontSize: 40, lineHeight: 1.25, fontWeight: 500, letterSpacing: '-0.012em', color: 'var(--paper)', margin: 0 }}>
+            &ldquo;With Invo, design wasn&rsquo;t just design. It impacted our IP portfolio. It changed our business.&rdquo;
+          </p>
+          <div style={{ marginTop: 32, fontSize: 15 }}>
+            <div style={{ fontWeight: 700 }}>Serban Georgescu, MD</div>
+            <div style={{ color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>Director of Clinical Development, InfoBionic</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Final CTA + Calendly ───────────────────────────── */}
+      <section id="book" className="gi-sec" style={{ background: 'var(--accent)', color: '#fff', padding: '112px 56px' }}>
+        <div style={{ maxWidth: 1080, margin: '0 auto', textAlign: 'center' }}>
+          <h2 className="gi-display-3" style={{ color: '#fff', marginBottom: 24, maxWidth: '22ch', marginInline: 'auto' }}>
             Choose a time to talk about your project.
           </h2>
-          <CalendlyEmbed formLocation="services-page" formName="services_call" />
+          <p className="gi-body-lg" style={{ color: '#fff', maxWidth: '60ch', margin: '0 auto 48px' }}>
+            Thirty minutes with a principal, not a salesperson. We&rsquo;ll talk about your problem, what it will take to ship, and whether we&rsquo;re the right firm. No deck, no obligation.
+          </p>
+          <div style={{ background: '#fff', borderRadius: 2, overflow: 'hidden', boxShadow: '0 30px 80px -24px rgba(0,0,0,0.35)', maxWidth: 920, margin: '0 auto' }}>
+            <CalendlyEmbed
+              formLocation="services-page"
+              formName="services_call"
+              primaryColor="b84a0e"
+              hideEventTypeDetails
+              hideGdprBanner
+            />
+          </div>
+          <p style={{ marginTop: 32, fontSize: 13, color: '#fff' }}>
+            Prefer email? <a href="mailto:info@goinvo.com" style={{ color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.5)', textDecoration: 'none', paddingBottom: 1 }}>info@goinvo.com</a>
+          </p>
         </div>
-      </div>
-
-      {/* Contact Form */}
-      <div className="bg-gray-light">
-        <div className="py-8">
-          <div className="max-width max-width-md content-padding">
-            <ContactFormEmbed />
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom 3-column features */}
-      <div className="max-width content-padding py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div>
-            <div className="relative h-[250px] overflow-hidden mb-4">
-              <Image
-                src={cloudfrontImage('/images/services/emerging-tech-shr-layers.jpg')}
-                alt="Emerging technology"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light mb-1">Emerging technology</p>
-            <p className="text-gray mb-3">We&apos;ve worked on projects across the spectrum of emerging technology from artificial intelligence for medical coding to self-documenting voice encounters and wearable devices.</p>
-            <div className="space-y-1">
-              <div><Link href="/vision/bathroom-to-healthroom">From bathroom to healthroom</Link></div>
-              <div><Link href="/work/wuxi-nextcode-familycode">WuXi NextCODE</Link></div>
-            </div>
-          </div>
-          <div>
-            <div className="relative h-[250px] overflow-hidden mb-4">
-              <Image
-                src={cloudfrontImage('/images/services/doh-preview.jpg')}
-                alt="Information visualizations"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light mb-1">Information visualizations</p>
-            <p className="text-gray mb-3">We create beautiful printed and interactive health-related data visualizations that span payment dashboards to visualizing the social determinants of health to clinical practice guidelines for Zika.</p>
-            <div className="space-y-1">
-              <div><Link href="/vision/determinants-of-health">Determinants of Health</Link></div>
-              <div><Link href="/vision/understanding-zika">Clinical Practice Guidelines for Zika</Link></div>
-            </div>
-          </div>
-          <div>
-            <div className="relative h-[250px] overflow-hidden mb-4">
-              <Image
-                src={cloudfrontImage('/images/services/inspired-ehrs-book.jpg')}
-                alt="Open source healthcare products"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <p className="font-serif text-[1.5rem] leading-[2.125rem] font-light mb-1">Open source healthcare products</p>
-            <p className="text-gray mb-3">We&apos;ve built 10 of our own open source products and integrated open source code with a range of clients. Our services range from guidance to design and development.</p>
-            <div className="space-y-1">
-              <div><Link href="/work/inspired-ehrs">Inspired EHRs</Link></div>
-              <div><Link href="/work/paintrackr">PainTrackr</Link></div>
-              <div><Link href="/open-source-health-design">See our open source design</Link></div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

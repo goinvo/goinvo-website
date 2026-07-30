@@ -74,17 +74,9 @@ export const heroConfigs: Record<string, HeroConfig> = {
       </>
     ),
   },
-  '/services': {
-    image: '/images/services/hand-drawing.jpg',
-    bgPosition: 'center top',
-    title: (
-      <>
-        Disrupt from within,<br />
-        Reinvent your product,<br />
-        Change the market<span className="text-primary font-serif">.</span>
-      </>
-    ),
-  },
+  // NOTE: /services intentionally has no persistent-hero config — the redesigned
+  // Services page (src/app/(main)/services/page.tsx) ships its own dark hero, so
+  // the site-chrome hero must stay hidden to avoid a duplicate hero stack.
   '/about': {
     image: '/images/about/care-cards-hand.jpg',
     bgPosition: 'center',

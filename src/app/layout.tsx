@@ -65,6 +65,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://use.typekit.net" />
         <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
         <link rel="preconnect" href={siteConfig.cloudfrontUrl} />
+        {/* Google Fonts hosts (Open Sans/Montserrat globally; EB Garamond +
+            JetBrains Mono on the Services page) — open the TLS handshake during
+            HTML parse so the @import font fetch isn't a cold-connection waterfall. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
           href={`https://use.typekit.net/${siteConfig.typekitId}.css`}
