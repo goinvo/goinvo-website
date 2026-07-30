@@ -43,6 +43,11 @@
 
 /* Neutralize the site's global underlined/teal link styling inside the page */
 .gi-root a { text-decoration: none; }
+.gi-root a:focus-visible,
+.gi-root summary:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
 
 .gi-root h1, .gi-root h2, .gi-root h3, .gi-root h4 {
   font-family: var(--serif);
@@ -205,6 +210,14 @@
 
 /* Certifications: State-of-MA / Federal sits at the far right on desktop, then
    drops below the paragraph (left-aligned) on narrow screens. */
+.gi-root .gi-contract-source {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 500;
+}
 @media (max-width: 900px) {
   .gi-root .gi-certs { flex-direction: column !important; align-items: flex-start !important; gap: 24px !important; }
 }
