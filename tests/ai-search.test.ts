@@ -1,7 +1,8 @@
 import { describe, expect, it, afterEach } from 'vitest'
 import { tokenize, expandTokens, scoreItem, recall } from '@/lib/search/lexical'
 import { checkBlurbGrounding, groundedBlurb, searchCacheKey, extractAcronyms } from '@/lib/search/grounding'
-import type { SearchIndexItem } from '@/lib/search/index'
+import { normalizeSections, resolveAnchor, type SearchIndexItem } from '@/lib/search/index'
+import { headingAnchorId } from '@/lib/headingAnchor'
 
 /**
  * Guards for the persona-study fixes: acronym-aware recall (SDOH/ePRO class),
@@ -180,13 +181,46 @@ describe('cache key environment scoping', () => {
 
   it('prefixes keys with the deploy environment', () => {
     process.env.VERCEL_ENV = 'preview'
-    expect(searchCacheKey('abc123')).toBe('ais:preview:q:abc123')
+    expect(searchCacheKey('abc123')).toBe('ais:preview:q2:abc123')
     process.env.VERCEL_ENV = 'production'
-    expect(searchCacheKey('abc123')).toBe('ais:production:q:abc123')
+    expect(searchCacheKey('abc123')).toBe('ais:production:q2:abc123')
   })
 
   it('defaults to dev when unset', () => {
     delete process.env.VERCEL_ENV
-    expect(searchCacheKey('abc123')).toBe('ais:dev:q:abc123')
+    expect(searchCacheKey('abc123')).toBe('ais:dev:q2:abc123')
+  })
+})
+
+describe('section anchors (deep links that auto-scroll)', () => {
+  it('headingAnchorId matches the renderer formula', () => {
+    // Must equal text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    // — the ids PortableTextRenderer stamps on headings.
+    expect(headingAnchorId('When Guidelines Disagree')).toBe('when-guidelines-disagree')
+    expect(headingAnchorId('  89% of Health: Outside the Clinic!  ')).toBe('89-of-health-outside-the-clinic')
+    expect(headingAnchorId('---')).toBe('')
+  })
+
+  it('normalizeSections slugs, dedupes, and caps headings', () => {
+    const sections = normalizeSections([
+      { text: 'The Problem' },
+      { text: 'The  Problem ' }, // duplicate after whitespace normalization
+      { text: '' },
+      { text: 'Design Process' },
+    ])
+    expect(sections).toEqual([
+      { id: 'the-problem', title: 'The Problem' },
+      { id: 'design-process', title: 'Design Process' },
+    ])
+    const many = normalizeSections(Array.from({ length: 20 }, (_, i) => ({ text: `Section ${i}` })))
+    expect(many.length).toBe(12)
+  })
+
+  it('resolveAnchor only accepts anchors that exist on the page', () => {
+    const target = item({ sections: [{ id: 'the-problem', title: 'The Problem' }] })
+    expect(resolveAnchor(target, 'the-problem')).toEqual({ id: 'the-problem', title: 'The Problem' })
+    expect(resolveAnchor(target, 'hallucinated-section')).toBeNull()
+    expect(resolveAnchor(target, undefined)).toBeNull()
+    expect(resolveAnchor(item({}), 'the-problem')).toBeNull()
   })
 })

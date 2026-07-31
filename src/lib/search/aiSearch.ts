@@ -30,7 +30,7 @@ export const SEARCH_PERSONAS = [
 ] as const
 
 export interface AiSelection {
-  results: { slug: string; blurb: string; fit: 'direct' | 'adjacent' }[]
+  results: { slug: string; blurb: string; fit: 'direct' | 'adjacent'; anchor?: string }[]
   insight: string | null
   persona: string | null
   gapNote: string | null
@@ -46,6 +46,9 @@ function candidateLines(candidates: SearchIndexItem[]): string {
         c.client ? `client: ${c.client}` : null,
         c.categories.length ? `categories: ${c.categories.join(', ')}` : null,
         c.caption ? `about: ${c.caption.slice(0, 220)}` : null,
+        c.sections?.length
+          ? `anchors: ${c.sections.map((s) => `${s.id} ("${s.title.slice(0, 40)}")`).join(' · ')}`
+          : null,
       ].filter(Boolean)
       return `- ${parts.join(' | ')}`
     })
@@ -86,7 +89,7 @@ export async function selectAndDescribe(
     'or null if unclear (casual browsers and students are null — do not force-fit).',
     '',
     'Respond with STRICT JSON only, no prose, exactly this shape:',
-    '{"results":[{"slug":"...","blurb":"...","fit":"direct"}],"insight":"...","persona":"healthcare_executive","gapNote":null}',
+    '{"results":[{"slug":"...","blurb":"...","fit":"direct","anchor":null}],"insight":"...","persona":"healthcare_executive","gapNote":null}',
     '',
     'GROUNDING RULES — these outrank being persuasive:',
     "- A blurb may state ONLY facts present in that project's listing above (title, client, categories, about). Explaining relevance to the query is welcome; asserting that the project contains features, standards, clients, metrics, compliance, licenses, or deliverables its listing does not mention is forbidden.",
@@ -100,6 +103,8 @@ export async function selectAndDescribe(
     '- When the best you have is adjacent, set gapNote: ONE honest sentence naming the gap and the bridge, e.g. "No infusion-pump work in this set — the closest is our FDA-cleared cardiac monitor UI." Otherwise gapNote: null.',
     "- NEVER state or imply that GoInvo's portfolio lacks something — you see a shortlist, not the portfolio. No \"doesn't appear to include\", no \"does not address\". The gapNote formula \"No X in this set — closest is Y\" is the only allowed gap phrasing.",
     '- Return an empty results array only when nothing above relates at all.',
+    '',
+    'ANCHOR (deep links): when a candidate lists anchors and ONE of them clearly holds the content that answers the query, set "anchor" to that id — the visitor will land scrolled to that exact section. Use only ids from that candidate\'s own anchors list; when no section clearly fits, use null (landing at the top is better than landing somewhere misleading).',
     '',
     'BLURBS: 1–2 sentences each, most-relevant first, plain language, no "This project…" openers for every item.',
     'INSIGHT: one short sentence describing what the visitor seems to be looking for (their intent — never portfolio commentary). null if the query is too vague.',
@@ -122,7 +127,7 @@ export async function selectAndDescribe(
       .map((block) => block.text)
       .join('')
     const parsed = parseJsonBlock(text) as {
-      results?: { slug?: unknown; blurb?: unknown; fit?: unknown }[]
+      results?: { slug?: unknown; blurb?: unknown; fit?: unknown; anchor?: unknown }[]
       insight?: unknown
       persona?: unknown
       gapNote?: unknown
@@ -131,7 +136,7 @@ export async function selectAndDescribe(
     const validSlugs = new Set(candidates.map((c) => c.slug))
     const results = (Array.isArray(parsed.results) ? parsed.results : [])
       .filter(
-        (r): r is { slug: string; blurb: string; fit?: unknown } =>
+        (r): r is { slug: string; blurb: string; fit?: unknown; anchor?: unknown } =>
           typeof r.slug === 'string' &&
           validSlugs.has(r.slug) &&
           typeof r.blurb === 'string' &&
@@ -142,6 +147,8 @@ export async function selectAndDescribe(
         slug: r.slug,
         blurb: r.blurb.trim(),
         fit: (r.fit === 'adjacent' ? 'adjacent' : 'direct') as 'direct' | 'adjacent',
+        // Validated against the item's real section list in the route.
+        anchor: typeof r.anchor === 'string' && r.anchor.trim() ? r.anchor.trim() : undefined,
       }))
 
     return {

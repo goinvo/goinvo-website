@@ -34,6 +34,7 @@ interface SearchResult {
   blurb?: string
   blurbSource?: 'ai' | 'caption'
   fit?: 'direct' | 'adjacent'
+  anchorTitle?: string
 }
 
 interface SearchResponse {
@@ -335,21 +336,39 @@ function ResultCard({ result }: { result: SearchResult }) {
           )}
         </div>
         <p className="mt-2 mb-0 text-sm leading-6 text-[#3a3633]">{result.blurb || result.caption}</p>
+        {result.anchorTitle && (
+          <p className="mt-2 mb-0 text-xs text-[#6a6560]">
+            <span aria-hidden="true">§ </span>Opens at &ldquo;{result.anchorTitle}&rdquo;
+          </p>
+        )}
       </div>
     </article>
   )
 
-  return external ? (
-    <a
-      href={result.href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={result.title}
-      className="no-underline text-inherit"
-    >
-      {card}
-    </a>
-  ) : (
+  if (external) {
+    return (
+      <a
+        href={result.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={result.title}
+        className="no-underline text-inherit"
+      >
+        {card}
+      </a>
+    )
+  }
+  // Anchored deep links use a full navigation: the browser's native hash
+  // scroll reliably lands on the section (client-side Link navigation loses
+  // the scroll to the hero/reveal animations on content pages).
+  if (result.href.includes('#')) {
+    return (
+      <a href={result.href} aria-label={result.title} className="no-underline text-inherit">
+        {card}
+      </a>
+    )
+  }
+  return (
     <Link href={result.href} aria-label={result.title} className="no-underline text-inherit">
       {card}
     </Link>
