@@ -17,6 +17,39 @@ export interface SearchIndexItem {
   categories: string[]
   image?: string
   kind: 'work' | 'vision'
+  /** Curated retrieval vocabulary (see PROJECT_KEYWORDS) — searched, never displayed. */
+  keywords?: string[]
+}
+
+/**
+ * Per-project retrieval vocabulary for terms buyers type that captions don't
+ * contain. Every entry here traces to a persona-study recall miss (e.g. a
+ * state HHS director's "Medicaid eligibility and enrollment" never found
+ * eligibility-engine; a med-device HFE director's queries never found the
+ * FDA-cleared InfoBionic work). Keys are Sanity slugs; unknown keys are
+ * harmless. Keep values honest — these words make a project FINDABLE, and the
+ * grounding guard treats them as sourced facts a blurb may then repeat.
+ */
+export const PROJECT_KEYWORDS: Record<string, string[]> = {
+  'eligibility-engine': ['eligibility', 'enrollment', 'medicaid', 'integrated eligibility', 'benefits administration', 'case management', 'public assistance'],
+  'mass-snap': ['snap', 'benefits application', 'public assistance', 'food assistance', 'eligibility', 'state government'],
+  'public-sector': ['government', 'state government', 'civic', 'public services'],
+  'infobionic-heart-monitoring': ['medical device', 'fda', 'fda-cleared', 'class ii', '510(k)', 'remote monitoring', 'cardiac', 'arrhythmia', 'regulated device'],
+  'tabeeb-diagnostics': ['medical device', 'point of care', 'diagnostics', 'telemedicine', 'rural'],
+  'open-pro': ['epro', 'pro', 'patient-reported outcomes', 'open source', 'clinical research'],
+  'determinants-of-health': ['sdoh', 'social determinants', 'open source', 'poster'],
+  '3m-coderyte': ['revenue cycle', 'medical coding', 'claims', 'nlp', 'natural language processing'],
+  'prior-auth': ['prior authorization', 'utilization review', 'payer', 'insurance'],
+  'partners-insight': ['irb', 'research administration', 'clinical research', 'compliance workflow'],
+  'mount-sinai-consent': ['consent', 'e-consent', 'clinical research', 'genomics'],
+  'all-of-us': ['clinical research', 'research participants', 'nih', 'longitudinal study'],
+  'ahrq-cds': ['cds', 'clinical decision support', 'standards of care'],
+  'mitre-flux-notes': ['ehr', 'clinical documentation', 'point of care', 'structured data'],
+  'mitre-shr': ['health records', 'interoperability', 'data standards'],
+  'hgraph': ['data visualization', 'open source', 'health metrics'],
+  'ipsos-facto': ['ai platform', 'research intelligence', 'enterprise ai'],
+  'open-source-healthcare': ['open source', 'journal', 'licensing'],
+  'inspired-ehrs': ['ehr', 'electronic health records', 'open source'],
 }
 
 interface RawCaseStudy {
@@ -100,6 +133,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       categories: cleanCategories(cs.categories),
       image: imageUrl(cs.image),
       kind: 'work' as const,
+      keywords: PROJECT_KEYWORDS[cs.slug],
     }))
 
   const seen = new Set(caseStudies.map((c) => c.slug))
@@ -113,6 +147,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       categories: cleanCategories(f.categories),
       image: imageUrl(f.image),
       kind: 'vision' as const,
+      keywords: PROJECT_KEYWORDS[f.slug],
     }))
 
   const items = [...caseStudies, ...features]
