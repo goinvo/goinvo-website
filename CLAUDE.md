@@ -151,6 +151,15 @@ query-tailored blurbs + a one-line insight.
   orange-on-orange outline), persistent aria-live status, disclaimer at readable contrast +
   aria-describedby, decorative img alt, "Vision" chip on concept results. Unit tests:
   `tests/ai-search.test.ts` (every case traces to a persona finding).
+- **Anchor deep links (2026-07-31):** results can link into the exact page section that backs
+  the claim (the Orphic "verify path" applied to search). `src/lib/headingAnchor.ts` is the ONE
+  anchor-id formula, shared by `PortableTextRenderer` (now stamps `id` + `scroll-mt-24` +
+  `target:bg-primary/10` on h2/h2Large/h3 + the centered styles — covers /work AND /vision slug
+  pages) and the search index (GROQ extracts headings per project → `sections[]`, max 12). Claude
+  may set per-result `anchor` ONLY from that item's real section list (route validates via
+  `resolveAnchor`, bakes `#fragment` into href, returns `anchorTitle`; band shows "§ Opens at …").
+  Anchored results navigate via plain `<a>` (full load) — client-side Link navigation loses the
+  hash scroll to the hero/reveal animations. Cache key bumped to `q2` (payload shape change).
 - **A/B launch checklist (after the measurement WIP lands):** add a `home-ai-search` flag in
   `src/flags.ts` + registry entry in `src/lib/experiments/registry.ts` (needs `measurementKey`),
   pass `variant`/`aiSearch`/`experiment` from `page.tsx` per bucket, and add band interaction

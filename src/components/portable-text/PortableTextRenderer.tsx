@@ -18,6 +18,7 @@ import { FIHCFaceDevelopmentSection } from '@/components/portable-text/FIHCFaceD
 import { FIHCPersuasionEmotionSection } from '@/components/portable-text/FIHCPersuasionEmotionSection'
 import { IpsosWorkflowWidget } from '@/components/portable-text/IpsosWorkflowWidget'
 import { resolveCustomComponentName } from '@/lib/customComponents'
+import { headingAnchorId } from '@/lib/headingAnchor'
 import { option } from '@/lib/sanityOptions'
 import {
   LonelinessFeelingSection,
@@ -1428,16 +1429,24 @@ const components: PortableTextComponents = {
     },
   },
   block: {
-    h2: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h2 className="header-lg mt-5 mb-4">{children}</h2>
-      </ArticleReveal>
-    ),
-    h2Large: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h2 className="header-xl font-light mt-8 mb-4">{children}</h2>
-      </ArticleReveal>
-    ),
+    h2: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 id={headingAnchorId(text) || undefined} className="header-lg mt-5 mb-4 scroll-mt-24 target:bg-primary/10">{children}</h2>
+        </ArticleReveal>
+      )
+    },
+    h2Large: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="heading">
+          <h2 id={headingAnchorId(text) || undefined} className="header-xl font-light mt-8 mb-4 scroll-mt-24 target:bg-primary/10">{children}</h2>
+        </ArticleReveal>
+      )
+    },
     legacyH1Large: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h1 className="header-xl font-light mt-8 mb-6">{children}</h1>
@@ -1446,10 +1455,10 @@ const components: PortableTextComponents = {
     h2LargeCentered: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-6 text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+          <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-6 text-center scroll-mt-24 target:bg-primary/10', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
         </ArticleReveal>
       )
     },
@@ -1458,13 +1467,13 @@ const components: PortableTextComponents = {
       // long-form feature pages like Faces in Health Communication.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
           <h1
             id={anchorId}
             className={cn(
-              'header-xl font-light text-center max-w-[400px] mx-auto my-0',
+              'header-xl font-light text-center max-w-[400px] mx-auto my-0 scroll-mt-24 target:bg-primary/10',
               text.includes('\n') && 'whitespace-pre-line',
             )}
           >
@@ -1476,13 +1485,13 @@ const components: PortableTextComponents = {
     legacyH1CenteredWide: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
           <h1
             id={anchorId}
             className={cn(
-              'header-xl font-light text-center max-w-[600px] mx-auto my-0',
+              'header-xl font-light text-center max-w-[600px] mx-auto my-0 scroll-mt-24 target:bg-primary/10',
               text.includes('\n') && 'whitespace-pre-line',
             )}
           >
@@ -1494,20 +1503,20 @@ const components: PortableTextComponents = {
     h2LargeCenteredSpacious: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-[30px] text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+          <h2 id={anchorId} className={cn('header-xl font-light mt-6 mb-[30px] text-center scroll-mt-24 target:bg-primary/10', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
         </ArticleReveal>
       )
     },
     h2HealthcareMethodology: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className={cn('header-xl font-light mt-[30px] mb-[30px] text-center', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
+          <h2 id={anchorId} className={cn('header-xl font-light mt-[30px] mb-[30px] text-center scroll-mt-24 target:bg-primary/10', text.includes('\n') && 'whitespace-pre-line')}>{children}</h2>
         </ArticleReveal>
       )
     },
@@ -1515,10 +1524,10 @@ const components: PortableTextComponents = {
     h2Center: ({ children, value }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className="header-lg mt-5 mb-4 text-center">{children}</h2>
+          <h2 id={anchorId} className="header-lg mt-5 mb-4 text-center scroll-mt-24 target:bg-primary/10">{children}</h2>
         </ArticleReveal>
       )
     },
@@ -1526,10 +1535,10 @@ const components: PortableTextComponents = {
       // Centered h2 heading with auto-generated anchor ID
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-      const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const anchorId = headingAnchorId(text)
       return (
         <ArticleReveal intensity="heading">
-          <h2 id={anchorId} className="header-lg mt-5 mb-4 text-center">{children}</h2>
+          <h2 id={anchorId} className="header-lg mt-5 mb-4 text-center scroll-mt-24 target:bg-primary/10">{children}</h2>
         </ArticleReveal>
       )
     },
@@ -1543,11 +1552,15 @@ const components: PortableTextComponents = {
         <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3 text-center">{children}</h3>
       </ArticleReveal>
     ),
-    h3: ({ children }) => (
-      <ArticleReveal intensity="heading">
-        <h3 className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3">{children}</h3>
-      </ArticleReveal>
-    ),
+    h3: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
+      return (
+        <ArticleReveal intensity="heading">
+          <h3 id={headingAnchorId(text) || undefined} className="font-sans text-sm lg:text-[15px] font-semibold uppercase tracking-[2px] text-gray leading-[1.375rem] mt-8 mb-3 scroll-mt-24 target:bg-primary/10">{children}</h3>
+        </ArticleReveal>
+      )
+    },
     legacyH2Md: ({ children }) => (
       <ArticleReveal intensity="heading">
         <h2 className="header-md mt-3 mb-3">{children}</h2>
@@ -1783,20 +1796,20 @@ export function PortableTextRenderer({ content, variant = 'default', bulletStyle
           h2Center: ({ children, value }) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-            const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            const anchorId = headingAnchorId(text)
             return (
               <ArticleReveal intensity="heading">
-                <h2 id={anchorId} className="header-lg mt-8 mb-5 text-center">{children}</h2>
+                <h2 id={anchorId} className="header-lg mt-8 mb-5 text-center scroll-mt-24 target:bg-primary/10">{children}</h2>
               </ArticleReveal>
             )
           },
           sectionTitle: ({ children, value }) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const text = (value?.children as any[])?.map(c => c.text || '').join('') || ''
-            const anchorId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+            const anchorId = headingAnchorId(text)
             return (
               <ArticleReveal intensity="heading">
-                <h2 id={anchorId} className="header-lg mt-8 mb-5 text-center">{children}</h2>
+                <h2 id={anchorId} className="header-lg mt-8 mb-5 text-center scroll-mt-24 target:bg-primary/10">{children}</h2>
               </ArticleReveal>
             )
           },

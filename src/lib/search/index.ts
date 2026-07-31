@@ -1,6 +1,7 @@
 import { groq } from 'next-sanity'
 import { client } from '@/sanity/lib/client'
 import { urlForImage } from '@/sanity/lib/image'
+import { headingAnchorId } from '@/lib/headingAnchor'
 import type { SanityImage } from '@/types'
 
 /**
@@ -19,6 +20,56 @@ export interface SearchIndexItem {
   kind: 'work' | 'vision'
   /** Curated retrieval vocabulary (see PROJECT_KEYWORDS) — searched, never displayed. */
   keywords?: string[]
+  /** In-page section anchors (id = the heading's rendered `id`), for deep links
+   * that auto-scroll to the relevant content. Only ids that really exist on the
+   * page are listed — the AI may link to these and nothing else. */
+  sections?: SectionAnchor[]
+}
+
+export interface SectionAnchor {
+  id: string
+  title: string
+}
+
+/** Heading styles the PortableText renderer stamps with an `id` — keep in sync
+ * with PortableTextRenderer's block map (anchor formula: headingAnchorId). */
+const ANCHORED_STYLES = [
+  'h2',
+  'h2Large',
+  'h2LargeCentered',
+  'h2LargeCenteredSpacious',
+  'h2HealthcareMethodology',
+  'h2Center',
+  'sectionTitle',
+  'h3',
+  'legacyH1Centered',
+  'legacyH1CenteredWide',
+]
+
+const MAX_SECTIONS_PER_ITEM = 12
+
+export function normalizeSections(raw: { text?: string | null }[] | null | undefined): SectionAnchor[] {
+  const seen = new Set<string>()
+  const sections: SectionAnchor[] = []
+  for (const block of raw ?? []) {
+    const title = (block.text ?? '').replace(/\s+/g, ' ').trim()
+    if (!title || title.length > 90) continue
+    const id = headingAnchorId(title)
+    if (!id || seen.has(id)) continue
+    seen.add(id)
+    sections.push({ id, title })
+    if (sections.length >= MAX_SECTIONS_PER_ITEM) break
+  }
+  return sections
+}
+
+/** Validate an AI-chosen anchor against the item's real section list. */
+export function resolveAnchor(
+  item: SearchIndexItem,
+  anchor: string | undefined | null,
+): SectionAnchor | null {
+  if (!anchor) return null
+  return item.sections?.find((s) => s.id === anchor) ?? null
 }
 
 /**
@@ -60,6 +111,7 @@ interface RawCaseStudy {
   caption?: string
   image?: SanityImage
   categories?: (string | null)[]
+  sectionBlocks?: { text?: string | null }[]
 }
 
 interface RawFeature {
@@ -69,6 +121,7 @@ interface RawFeature {
   image?: SanityImage
   externalLink?: string
   categories?: (string | null)[]
+  sectionBlocks?: { text?: string | null }[]
 }
 
 const searchIndexQuery = groq`{
@@ -83,7 +136,8 @@ const searchIndexQuery = groq`{
     client,
     caption,
     image,
-    "categories": categories[]->title
+    "categories": categories[]->title,
+    "sectionBlocks": content[_type == "block" && style in ${JSON.stringify(ANCHORED_STYLES)}]{ "text": pt::text(@) }
   },
   "features": *[_type == "feature"
     && title != "Untitled"
@@ -94,7 +148,8 @@ const searchIndexQuery = groq`{
     description,
     image,
     externalLink,
-    categories
+    categories,
+    "sectionBlocks": content[_type == "block" && style in ${JSON.stringify(ANCHORED_STYLES)}]{ "text": pt::text(@) }
   }
 }`
 
@@ -134,6 +189,7 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       image: imageUrl(cs.image),
       kind: 'work' as const,
       keywords: PROJECT_KEYWORDS[cs.slug],
+      sections: normalizeSections(cs.sectionBlocks),
     }))
 
   const seen = new Set(caseStudies.map((c) => c.slug))
@@ -148,6 +204,8 @@ export async function getSearchIndex(): Promise<SearchIndexItem[]> {
       image: imageUrl(f.image),
       kind: 'vision' as const,
       keywords: PROJECT_KEYWORDS[f.slug],
+      // External features scroll nowhere we control — no anchors for those.
+      sections: f.externalLink ? [] : normalizeSections(f.sectionBlocks),
     }))
 
   const items = [...caseStudies, ...features]

@@ -125,8 +125,10 @@ export function groundedBlurb(
 }
 
 /** Environment-scoped cache key: preview/dev cache entries must never serve
- * production (and vice versa) — the persona study caught a cross-env hit. */
+ * production (and vice versa) — the persona study caught a cross-env hit.
+ * The `q2` segment versions the payload shape (bumped for anchor deep links);
+ * bump it whenever cached responses become incompatible with the UI. */
 export function searchCacheKey(hashedQuery: string): string {
   const env = process.env.VERCEL_ENV || 'dev'
-  return `ais:${env}:q:${hashedQuery}`
+  return `ais:${env}:q2:${hashedQuery}`
 }

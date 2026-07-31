@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
-import { getSearchIndex, type SearchIndexItem } from '@/lib/search/index'
+import { getSearchIndex, resolveAnchor, type SearchIndexItem } from '@/lib/search/index'
 import { recall } from '@/lib/search/lexical'
 import { selectAndDescribe } from '@/lib/search/aiSearch'
 import { groundedBlurb, searchCacheKey, type BlurbSource } from '@/lib/search/grounding'
@@ -37,6 +37,8 @@ interface SearchResponseItem {
   blurb?: string
   blurbSource?: BlurbSource
   fit?: 'direct' | 'adjacent'
+  /** When set, href carries a #fragment that auto-scrolls to this section. */
+  anchorTitle?: string
 }
 
 const RATE_PER_MINUTE = 20
@@ -175,8 +177,11 @@ export async function POST(request: NextRequest) {
       if (!item) return null
       // Grounding guard: unsourced claims fall back to the caption.
       const blurb = groundedBlurb(r.blurb, item, query)
+      // Deep link: only anchors that verifiably exist on the page survive.
+      const section = item.href.startsWith('/') ? resolveAnchor(item, r.anchor) : null
       return {
         ...toResponseItem(item),
+        ...(section ? { href: `${item.href}#${section.id}`, anchorTitle: section.title } : {}),
         blurb: blurb.text,
         blurbSource: blurb.source,
         fit: r.fit,
