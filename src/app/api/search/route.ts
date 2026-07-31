@@ -3,21 +3,28 @@ import { createHash } from 'node:crypto'
 import { getSearchIndex, type SearchIndexItem } from '@/lib/search/index'
 import { recall } from '@/lib/search/lexical'
 import { selectAndDescribe } from '@/lib/search/aiSearch'
+import { groundedBlurb, searchCacheKey, type BlurbSource } from '@/lib/search/grounding'
 
 export const maxDuration = 30
 
 /**
  * AI project search for the homepage search band.
  *
- * POST { query } →
- *   { results, aiGenerated, insight?, persona?, reason? }
+ * POST { query, instant? } →
+ *   { results, aiGenerated, insight?, persona?, gapNote?, alsoRelated?, reason? }
  *
- * Honest fallback contract (fixes the Gatsby prototype's failure modes):
+ * instant: true skips the AI stage entirely (fast lexical-only pass the client
+ * renders while the AI answer is in flight — two-phase render).
+ *
+ * Honest fallback contract (from the persona study):
  * - no lexical matches        → results: [],   reason: 'no-matches'
  * - Claude unavailable/error  → keyword top 9, reason: 'ai-unavailable'
- * - Claude says nothing fits  → results: [],   reason: 'no-matches' (aiGenerated)
- * Rate limiting is generous (Haiku calls cost fractions of a cent) and
- * fail-open — a limited visitor gets keyword results, never an error wall.
+ * - Claude says nothing fits  → results: [],   reason: 'no-matches' (aiGenerated, persona still included)
+ * Every AI blurb passes the grounding guard (checkBlurbGrounding); a blurb
+ * that asserts unsourced claims is replaced by the project's own caption and
+ * marked blurbSource: 'caption'. Sparse AI selections are backfilled with
+ * caption-only lexical neighbors under alsoRelated. Rate limiting is generous
+ * and fail-open — a limited visitor gets keyword results, never an error wall.
  */
 
 interface SearchResponseItem {
@@ -26,12 +33,16 @@ interface SearchResponseItem {
   title: string
   caption: string
   image?: string
+  kind: 'work' | 'vision'
   blurb?: string
+  blurbSource?: BlurbSource
+  fit?: 'direct' | 'adjacent'
 }
 
 const RATE_PER_MINUTE = 20
 const RATE_PER_DAY = 300
 const CACHE_TTL_SECONDS = 24 * 60 * 60
+const MIN_RESULTS_BEFORE_BACKFILL = 3
 
 // --- Minimal Upstash/Vercel KV REST helper (fail-open on any error) ---------
 
@@ -73,14 +84,14 @@ async function overRateLimit(ip: string): Promise<boolean> {
 
 // ---------------------------------------------------------------------------
 
-function toResponseItem(item: SearchIndexItem, blurb?: string): SearchResponseItem {
+function toResponseItem(item: SearchIndexItem): SearchResponseItem {
   return {
     slug: item.slug,
     href: item.href,
     title: item.title,
     caption: item.caption,
     image: item.image,
-    blurb,
+    kind: item.kind,
   }
 }
 
@@ -103,9 +114,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'payload too large' }, { status: 413 })
   }
   let query = ''
+  let instant = false
   try {
-    const body = JSON.parse(raw) as { query?: unknown }
+    const body = JSON.parse(raw) as { query?: unknown; instant?: unknown }
     query = typeof body.query === 'string' ? body.query.trim() : ''
+    instant = body.instant === true
   } catch {
     return NextResponse.json({ error: 'invalid JSON' }, { status: 400 })
   }
@@ -120,8 +133,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ results: [], aiGenerated: false, reason: 'no-matches' })
   }
 
+  // Instant pass: lexical-only, no AI, no KV — the client's first paint while
+  // the full AI request runs.
+  if (instant) {
+    return NextResponse.json({
+      results: shortlist.slice(0, 9).map((s) => toResponseItem(s.item)),
+      aiGenerated: false,
+      reason: 'instant',
+    })
+  }
+
   // Cached AI responses make repeat + sector-preset queries instant and free.
-  const cacheKey = `ais:q:${createHash('sha256').update(query.toLowerCase()).digest('hex').slice(0, 24)}`
+  // Keys are environment-scoped so preview/dev entries never serve production.
+  const cacheKey = searchCacheKey(createHash('sha256').update(query.toLowerCase()).digest('hex').slice(0, 24))
   const cached = (await kv(['GET', cacheKey])) as string | null
   if (cached) {
     try {
@@ -146,21 +170,54 @@ export async function POST(request: NextRequest) {
 
   const bySlug = new Map(shortlist.map((s) => [s.item.slug, s.item]))
   const results = selection.results
-    .map((r) => {
+    .map((r): SearchResponseItem | null => {
       const item = bySlug.get(r.slug)
-      return item ? toResponseItem(item, r.blurb) : null
+      if (!item) return null
+      // Grounding guard: unsourced claims fall back to the caption.
+      const blurb = groundedBlurb(r.blurb, item, query)
+      return {
+        ...toResponseItem(item),
+        blurb: blurb.text,
+        blurbSource: blurb.source,
+        fit: r.fit,
+      }
     })
     .filter((r): r is SearchResponseItem => r !== null)
 
-  const payload =
-    results.length === 0
-      ? { results: [], aiGenerated: true, reason: 'no-matches', insight: selection.insight }
-      : {
-          results,
-          aiGenerated: true,
-          insight: selection.insight,
-          persona: selection.persona,
-        }
+  if (results.length === 0) {
+    // Persona still included — specialist buyers must stay measurable even
+    // when the answer is "nothing fits" (a round-2 finding).
+    const payload = {
+      results: [] as SearchResponseItem[],
+      aiGenerated: true,
+      reason: 'no-matches',
+      insight: selection.insight,
+      persona: selection.persona,
+      gapNote: selection.gapNote,
+    }
+    await kv(['SET', cacheKey, JSON.stringify(payload), 'EX', CACHE_TTL_SECONDS])
+    return NextResponse.json(payload)
+  }
+
+  // Sparse selections read as thin inventory: backfill with the next lexical
+  // neighbors, caption-only, honestly separated under alsoRelated.
+  const selected = new Set(results.map((r) => r.slug))
+  const alsoRelated =
+    results.length < MIN_RESULTS_BEFORE_BACKFILL
+      ? shortlist
+          .filter((s) => !selected.has(s.item.slug))
+          .slice(0, MIN_RESULTS_BEFORE_BACKFILL - results.length)
+          .map((s) => toResponseItem(s.item))
+      : []
+
+  const payload = {
+    results,
+    aiGenerated: true,
+    insight: selection.insight,
+    persona: selection.persona,
+    gapNote: selection.gapNote,
+    ...(alsoRelated.length > 0 ? { alsoRelated } : {}),
+  }
 
   await kv(['SET', cacheKey, JSON.stringify(payload), 'EX', CACHE_TTL_SECONDS])
   return NextResponse.json(payload)

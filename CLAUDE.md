@@ -135,10 +135,28 @@ query-tailored blurbs + a one-line insight.
 - **Gating (ships dark):** `HOME_AI_SEARCH=1` env = on for everyone; reviewer toggle
   `/api/search/preview?on=1` (sets cookie, redirects home; `?on=0` clears). Preview forces the
   concept layout so the band always renders.
+- **Persona-study fixes (2026-07-31, shipped on this branch):** an 8-persona scored study
+  (artifact "Six People Try the AI Search") found the model asserting visitor vocabulary as
+  project fact (~25% of buyer blurbs invented claims: "documented" metrics, "Built" for /vision/
+  concepts, fabricated FDA/MLR/license claims) and recall starving on acronyms (SDOH/ePRO).
+  Shipped: (1) grounding — rewritten prompt (caption-only facts, work-vs-vision kind labels, no
+  delivery language for concepts, fit: direct/adjacent + honest `gapNote`, NEVER portfolio-absence
+  claims) + deterministic post-check `src/lib/search/grounding.ts` (unsourced regulatory/evidence/
+  license claims, query-acronym echo, delivery-verbs-for-vision → blurb replaced by caption,
+  `blurbSource: 'caption'`); (2) recall — query acronym expansion in `lexical.ts` + curated
+  `PROJECT_KEYWORDS` by slug in `index.ts` (keywords are treated as sourced facts by the guard —
+  keep them honest); (3) route — env-prefixed KV cache keys (`ais:<VERCEL_ENV>:q:`), `instant:true`
+  lexical-only mode (client two-phase render), `alsoRelated` backfill under 3 results, persona
+  emitted on no-matches; (4) band a11y — white focus rings (box-shadow, not the invisible
+  orange-on-orange outline), persistent aria-live status, disclaimer at readable contrast +
+  aria-describedby, decorative img alt, "Vision" chip on concept results. Unit tests:
+  `tests/ai-search.test.ts` (every case traces to a persona finding).
 - **A/B launch checklist (after the measurement WIP lands):** add a `home-ai-search` flag in
   `src/flags.ts` + registry entry in `src/lib/experiments/registry.ts` (needs `measurementKey`),
   pass `variant`/`aiSearch`/`experiment` from `page.tsx` per bucket, and add band interaction
-  events (search submitted / result clicked) to the first-party beacon before starting the test.
+  events (search submitted / result clicked / `aiGenerated` + `blurbSource` + persona rates) to
+  the first-party beacon before starting the test; judge on buyer-persona engagement (non-buyer
+  delight inflates raw metrics).
 
 ## Marketing CMS (the "marketing tool")
 
