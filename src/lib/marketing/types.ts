@@ -31,6 +31,7 @@ export const MANAGED_MARKETING_TYPES = [
   'marketingContact',
   'marketingOffer',
   'marketingWorkEvidence',
+  'marketingLeadMagnet',
 ] as const
 
 /** A document type the marketing CMS manages. */

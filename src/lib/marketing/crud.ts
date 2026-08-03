@@ -10,7 +10,7 @@ import type { SanityClient } from '@sanity/client'
 import { randomKey, slugify } from './derive'
 import { ARRAY_ITEM_TYPES, DEFAULTS, REQUIRED_FIELDS, SLUG_TYPES } from './defaults'
 import { isManagedMarketingType, type ManagedMarketingType } from './types'
-import { CALENDAR_STATUS_VALUES } from './enums'
+import { CALENDAR_STATUS_VALUES, LEAD_MAGNET_STATUS_VALUES } from './enums'
 
 /** A loose field bag for a marketing document being created or patched. */
 export type MarketingFields = Record<string, unknown>
@@ -81,6 +81,10 @@ export class MarketingValidationError extends Error {
 // only; the worker also reports a non-social channel as skipped in its run summary.)
 const ENUM_FIELDS: Partial<Record<ManagedMarketingType, Record<string, readonly string[]>>> = {
   marketingCalendarItem: { status: CALENDAR_STATUS_VALUES },
+  // Lead magnet `status` gates the PUBLIC subscribe endpoint (only `live`
+  // magnets accept signups), so an out-of-set value must fail loudly here
+  // rather than silently disable capture.
+  marketingLeadMagnet: { status: LEAD_MAGNET_STATUS_VALUES },
 }
 
 function collectInvalidEnums(type: ManagedMarketingType, fields: MarketingFields): InvalidFieldValue[] {
