@@ -63,12 +63,22 @@ export const PUBLISH_STATE_OPTIONS: MarketingOption[] = [
   { title: 'Skipped', value: 'skipped' },
 ]
 
+// Lead magnet lifecycle. Only `live` magnets accept signups through the public
+// subscribe endpoint — the API refuses draft/retired so an unfinished magnet
+// can never silently collect emails.
+export const LEAD_MAGNET_STATUS_OPTIONS: MarketingOption[] = [
+  { title: 'Draft', value: 'draft' },
+  { title: 'Live', value: 'live' },
+  { title: 'Retired', value: 'retired' },
+]
+
 const values = (options: MarketingOption[]): string[] => options.map((o) => o.value)
 
 export const CALENDAR_STATUS_VALUES = values(CALENDAR_STATUS_OPTIONS)
 export const CONTENT_TYPE_VALUES = values(CONTENT_TYPE_OPTIONS)
 export const CHANNEL_VALUES = values(CHANNEL_OPTIONS)
 export const PUBLISH_STATE_VALUES = values(PUBLISH_STATE_OPTIONS)
+export const LEAD_MAGNET_STATUS_VALUES = values(LEAD_MAGNET_STATUS_OPTIONS)
 
 /** Channel keys with a native social-publishing adapter (the only auto-publish targets). */
 export const SOCIAL_CHANNEL_KEYS = ['linkedin', 'instagram'] as const

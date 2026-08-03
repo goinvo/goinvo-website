@@ -51,6 +51,7 @@ export const DEFAULTS: Record<ManagedMarketingType, Record<string, unknown>> = {
   marketingContact: { status: 'new', warmth: 'unknown', currency: 'USD' },
   marketingOffer: { status: 'active', order: 100 },
   marketingWorkEvidence: { status: 'active', sourceType: 'caseStudy', manuallyEdited: false },
+  marketingLeadMagnet: { status: 'draft', createOutreachContacts: true },
 }
 
 /**
@@ -135,11 +136,13 @@ export const ARRAY_ITEM_TYPES: Record<ManagedMarketingType, Record<string, strin
   marketingWorkEvidence: {
     highlights: 'evidenceHighlight',
   },
+  marketingLeadMagnet: {},
 }
 
 /** Document types that have a `slug` field (so a slug can be derived from title). */
 export const SLUG_TYPES: Set<ManagedMarketingType> = new Set<ManagedMarketingType>([
   'marketingCampaign',
+  'marketingLeadMagnet',
 ])
 
 /** Top-level fields marked `Rule.required()` in each schema. */
@@ -167,6 +170,7 @@ export const REQUIRED_FIELDS: Record<ManagedMarketingType, string[]> = {
   marketingContact: ['name', 'status'],
   marketingOffer: ['title', 'key', 'status'],
   marketingWorkEvidence: ['title', 'status'],
+  marketingLeadMagnet: ['title', 'status'],
 }
 
 // Compile-time guard: every managed type must have an entry in each record above.
