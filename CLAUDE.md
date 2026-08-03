@@ -112,6 +112,26 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
+## Lead magnet system + Clinical AI Pilot Pre-Mortem (started 2026-08-03)
+
+Pipeline-first strategy (Juhan approved via Slack): lead magnet before homepage
+experiments. Content drafts + strategy + build status live in **`docs/lead-magnet/`**.
+The **lead magnet system v1** is built: `marketingLeadMagnet` managed type (per-magnet
+`createOutreachContacts` opt-out), first-party **`POST /api/newsletter/subscribe`**
+(EmailOctopus server-side upsert + cold `marketingContact` w/ identity claims in the
+PRIVATE outreach dataset + best-effort GA4 MP `newsletter_signup` + gated-asset
+`downloadUrl`), Studio Dashboard "Lead Magnets" panel with signup counts and an
+EmailOctopus connection pill (`GET /api/marketing/lead-magnets/status`). Fail-closed:
+503 until `EMAILOCTOPUS_API_KEY` + `EMAILOCTOPUS_LIST_ID` are set (.env.local + Vercel).
+Signup contacts carry `attributionChannel` `lead-magnet:<slug>` / `newsletter` — the
+panel counts by that discriminator. The OLD EmailOctopus embed forms
+(`SubscribeForm`/`NewsletterForm`, eocampaign1.com scripts — blockable, uninstrumented,
+zero GA4 signup events ever) still exist; swapping them to the first-party endpoint is
+part of the page build (needs Shirley's public-facing review). Content guardrail: the
+whitepaper/worksheet use ONLY public info + published case studies (fix methodology
+stays paid). Citation cautions: never cite the "KLAS 23%" vendor-blog stat; the HIMSS
+"18% ready" figure is unverified.
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.

@@ -30,6 +30,7 @@ import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLear
 import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
 import { LatestExclusiveRequestGate, type AsyncRequestTicket } from '../components/marketing/asyncRequestGate'
 import { MarketingFinancialPostureSetting } from '../components/marketing/MarketingFinancialPostureSetting'
+import { LeadMagnetsPanel } from '../components/marketing/LeadMagnetsPanel'
 import { MarketingOperationsBoard } from '../components/marketing/MarketingOperationsBoard'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
@@ -3675,6 +3676,7 @@ function MarketingComponent() {
                     })
                   }
                 />
+                <LeadMagnetsPanel client={client} />
               </>
             )}
             {view === 'strategy' && (
