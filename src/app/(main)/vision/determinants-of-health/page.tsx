@@ -5,8 +5,18 @@ import { NewsletterSection } from '@/components/forms/NewsletterSection'
 import { Divider } from '@/components/ui/Divider'
 import { References } from '@/components/ui/References'
 import { DeterminantsExplorer } from './DeterminantsExplorer'
+import { DownloadFollowUp } from '@/components/vision/DownloadFollowUp'
 import { cloudfrontImage } from '@/lib/utils'
 import { JsonLd } from '@/components/seo/JsonLd'
+
+// Gift-first capture on the poster downloads: the file downloads untouched,
+// then a quiet inline row offers revision notices (magnet `doh-revisions`).
+const dohFollowUp = {
+  magnetSlug: 'doh-revisions',
+  prompt:
+    'Downloading — enjoy. We revise this poster as the research changes; want one email when it’s updated?',
+  finePrint: 'One note per revision. No newsletter unless you ask for it.',
+}
 
 const heroImage = '/images/services/doh-preview.jpg'
 const ogImage = cloudfrontImage(heroImage)
@@ -187,14 +197,12 @@ export default function DeterminantsOfHealthPage() {
             <div className="margin-bottom--double">
               <div className="pure-g button-group margin-bottom">
                 <div className="pure-u-1 pure-u-lg-1-2">
-                  <a
+                  <DownloadFollowUp
                     href="https://github.com/goinvo/HealthDeterminants/raw/master/poster/health_determinants_poster_42x50.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="button button--secondary margin-top--double margin-bottom--half button--block margin-right"
-                  >
-                    Download
-                  </a>
+                    label="Download"
+                    anchorClassName="button button--secondary margin-top--double margin-bottom--half button--block margin-right"
+                    {...dohFollowUp}
+                  />
                 </div>
                 <div className="pure-u-1 pure-u-lg-1-2">
                   <a
@@ -208,16 +216,14 @@ export default function DeterminantsOfHealthPage() {
                 </div>
               </div>
               <div className="button-group">
-                <a
+                <DownloadFollowUp
                   href={cloudfrontImage(
                     '/pdf/vision/posters/determinantes_de_la_salud_42x50.pdf'
                   )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="button button--secondary button--lg margin-bottom--double button--block"
-                >
-                  en Espa&ntilde;ol
-                </a>
+                  label={<>en Espa&ntilde;ol</>}
+                  anchorClassName="button button--secondary button--lg margin-bottom--double button--block"
+                  {...dohFollowUp}
+                />
               </div>
               <div className="pure-g pad-bottom text--center">
                 <div className="pure-u-1 pure-u-lg-1-3">
@@ -257,26 +263,22 @@ export default function DeterminantsOfHealthPage() {
               />
             </div>
             <div className="button-group">
-              <a
+              <DownloadFollowUp
                 href="https://github.com/goinvo/HealthDeterminants/raw/master/poster/health_determinants_poster_42x50.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="button button--secondary button--lg margin-top--double margin-bottom button--block"
-              >
-                Download Poster
-              </a>
+                label="Download Poster"
+                anchorClassName="button button--secondary button--lg margin-top--double margin-bottom button--block"
+                {...dohFollowUp}
+              />
             </div>
             <div className="button-group">
-              <a
+              <DownloadFollowUp
                 href={cloudfrontImage(
                   '/pdf/vision/posters/determinantes_de_la_salud_42x50.pdf'
                 )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="button button--secondary button--lg margin-bottom--double button--block"
-              >
-                en Espa&ntilde;ol
-              </a>
+                label={<>en Espa&ntilde;ol</>}
+                anchorClassName="button button--secondary button--lg margin-bottom--double button--block"
+                {...dohFollowUp}
+              />
             </div>
 
             <div>

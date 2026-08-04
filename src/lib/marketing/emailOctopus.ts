@@ -1,9 +1,11 @@
 /**
  * EmailOctopus (server-side) — first-party newsletter / lead-magnet capture.
  *
- * Env:
- *   EMAILOCTOPUS_API_KEY  — API key (Bearer), from EmailOctopus → Settings → API.
- *   EMAILOCTOPUS_LIST_ID  — id of the list signups are written to.
+ * Env (both spellings accepted; the underscore-free name wins when both set):
+ *   EMAILOCTOPUS_API_KEY / EMAIL_OCTOPUS_API_KEY — API key (Bearer), from
+ *     EmailOctopus → Settings → API.
+ *   EMAILOCTOPUS_LIST_ID / EMAIL_OCTOPUS_LIST_ID — id of the list signups are
+ *     written to.
  *
  * Fail-closed: when unconfigured, `isEmailOctopusConfigured()` is false and the
  * subscribe endpoint must refuse loudly (503) — a silently dropped signup is the
@@ -24,11 +26,11 @@ const EMAILOCTOPUS_TIMEOUT_MS = 8000
 const MAX_ERROR_BODY_CHARS = 300
 
 function emailOctopusApiKey(): string {
-  return process.env.EMAILOCTOPUS_API_KEY?.trim() || ''
+  return (process.env.EMAILOCTOPUS_API_KEY || process.env.EMAIL_OCTOPUS_API_KEY)?.trim() || ''
 }
 
 function emailOctopusListId(): string {
-  return process.env.EMAILOCTOPUS_LIST_ID?.trim() || ''
+  return (process.env.EMAILOCTOPUS_LIST_ID || process.env.EMAIL_OCTOPUS_LIST_ID)?.trim() || ''
 }
 
 export function isEmailOctopusConfigured(): boolean {
