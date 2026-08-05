@@ -123,6 +123,10 @@ export function renderBriefCardHtml(data: BriefCardData): string {
   .offer { margin-top: 24px; border-top: 2px solid ${INK}; padding-top: 16px; display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: baseline; }
   .offer h2 { font-size: 18px; letter-spacing: -0.01em; }
   .offer p { font-size: 14px; color: ${MUTED}; max-width: 62ch; }
+  .offer .price { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: ${INK}; border: 1px solid ${INK}; border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+  .first-step { margin-top: 16px; background: ${INK}; color: ${PAPER}; padding: 14px 18px; display: grid; grid-template-columns: auto 1fr; gap: 4px 18px; align-items: baseline; }
+  .first-step .label { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; color: ${ACCENT}; }
+  .first-step p { font-size: 14.5px; max-width: 66ch; }
   .foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid ${LINE}; display: flex; justify-content: space-between; gap: 16px; font-size: 11.5px; color: ${MUTED}; }
   .foot .verify { font-weight: 600; }
 </style>
@@ -166,7 +170,15 @@ export function renderBriefCardHtml(data: BriefCardData): string {
 
     <div class="offer">
       <h2>${escapeHtml(data.offerTitle)}</h2>
-      <p>${escapeHtml(data.offerLine)}</p>
+      <div>
+        <p>${escapeHtml(data.offerLine)}</p>
+        ${data.offerPriceBand ? `<span class="price">${escapeHtml(data.offerPriceBand)}</span>` : ''}
+      </div>
+    </div>
+
+    <div class="first-step">
+      <span class="label">First step — free</span>
+      <p>${escapeHtml(data.copy.firstStep)}</p>
     </div>
 
     <div class="foot">

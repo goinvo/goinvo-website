@@ -65,6 +65,11 @@ export interface BriefCardCopy {
   radarModes: BriefCardFailureModeKey[]
   /** One line under the radar tying the three modes to their situation. */
   radarCaption: string
+  /**
+   * The conversion rung below the priced engagement: a concrete, free,
+   * 30-minute working-session invitation specific to their context.
+   */
+  firstStep: string
 }
 
 export interface BriefCardData {
@@ -75,6 +80,8 @@ export interface BriefCardData {
   receipts: BriefCardReceipt[]
   offerTitle: string
   offerLine: string
+  /** CMS-owned price band from the matched marketingOffer — pricing lives in the Studio, never hardcoded. */
+  offerPriceBand?: string
   preparedLabel: string
 }
 
@@ -107,8 +114,9 @@ export function buildBriefCardPrompts(
     '- Voice: GoInvo — short declarative sentences, quiet confidence, zero flattery, zero urgency. Address the situation, not the person\'s ego.',
     '- If the research is too thin for a specific hook, write at the segment level ("organizations building X") — never guess specifics.',
     'Reply with ONLY a JSON object:',
-    '{"seeing": [1-2 short paragraphs, strings], "sources": "Sources: …", "premortemQuestion": "It\'s 18 months out, and … What killed it?", "premortemBet": one line, "radarModes": [exactly 3 keys], "radarCaption": one line tying the three modes to their situation}',
+    '{"seeing": [1-2 short paragraphs, strings], "sources": "Sources: …", "premortemQuestion": "It\'s 18 months out, and … What killed it?", "premortemBet": one line, "radarModes": [exactly 3 keys], "radarCaption": one line tying the three modes to their situation, "firstStep": one sentence}',
     `Valid radarModes keys: ${modeList}.`,
+    'firstStep: a concrete, FREE, 30-minute working-session invitation specific to their context — name who should be in the room and what gets scoped in that half hour. No price talk, no "learn more about us", no demo language. It ends with "— reply and we\'ll set it up."',
   ].join('\n')
 
   const offers = (contact.proposedOffers || [])
@@ -146,8 +154,10 @@ export function normalizeBriefCardCopy(parsed: unknown): BriefCardCopy {
     : []
   if (radarModes.length !== 3) throw new Error('Brief card copy needs exactly 3 valid radarModes.')
   const radarCaption = typeof record.radarCaption === 'string' ? record.radarCaption.trim() : ''
+  const firstStep = typeof record.firstStep === 'string' ? record.firstStep.trim() : ''
+  if (!firstStep) throw new Error('Brief card copy needs a firstStep (the free 30-minute session invitation).')
 
-  const copy: BriefCardCopy = { seeing, sources, premortemQuestion, premortemBet, radarModes, radarCaption }
+  const copy: BriefCardCopy = { seeing, sources, premortemQuestion, premortemBet, radarModes, radarCaption, firstStep }
   assertBriefCardSafe(JSON.stringify(copy), 'generated copy')
   return copy
 }
