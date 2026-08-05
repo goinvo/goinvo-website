@@ -67,6 +67,7 @@ interface CardContact {
   organization?: string
   segment?: string
   researchSummary?: string
+  suggestedOfferKey?: string
   proposedOffers?: Array<{ title?: string; oneLiner?: string }>
   relevantEvidence?: Array<{ evidenceId?: string; title?: string }>
 }
@@ -74,8 +75,8 @@ interface CardContact {
 async function main() {
   const contact = await outreachClient.fetch<CardContact | null>(
     id
-      ? `*[_type == "marketingContact" && _id == $key][0]{ _id, name, role, organization, segment, researchSummary, proposedOffers[]{title, oneLiner}, relevantEvidence[]{evidenceId, title} }`
-      : `*[_type == "marketingContact" && lower(email) == $key][0]{ _id, name, role, organization, segment, researchSummary, proposedOffers[]{title, oneLiner}, relevantEvidence[]{evidenceId, title} }`,
+      ? `*[_type == "marketingContact" && _id == $key][0]{ _id, name, role, organization, segment, researchSummary, suggestedOfferKey, proposedOffers[]{title, oneLiner}, relevantEvidence[]{evidenceId, title} }`
+      : `*[_type == "marketingContact" && lower(email) == $key][0]{ _id, name, role, organization, segment, researchSummary, suggestedOfferKey, proposedOffers[]{title, oneLiner}, relevantEvidence[]{evidenceId, title} }`,
     { key: id || email },
   )
   if (!contact) throw new Error('Contact not found.')
@@ -108,6 +109,16 @@ async function main() {
   if (!offer?.title || !offer.oneLiner) throw new Error('Contact has no proposed offer to feature.')
   assertBriefCardSafe(`${offer.title} ${offer.oneLiner}`, 'offer line')
 
+  // Pricing is CMS-owned: the matched base offer's priceBand, editable in the
+  // Studio (Outreach offers). Absent band → the card simply omits the chip.
+  const offerPriceBand = contact.suggestedOfferKey
+    ? await outreachClient.fetch<string | null>(
+        `*[_type == "marketingOffer" && key == $key][0].priceBand`,
+        { key: contact.suggestedOfferKey },
+      )
+    : null
+  if (offerPriceBand) assertBriefCardSafe(offerPriceBand, 'price band')
+
   const data: BriefCardData = {
     name: contact.name || 'Unknown',
     role: contact.role,
@@ -116,6 +127,7 @@ async function main() {
     receipts: assembleBriefCardReceipts(contact.relevantEvidence, evidenceDocs),
     offerTitle: offer.title,
     offerLine: offer.oneLiner,
+    offerPriceBand: offerPriceBand || undefined,
     preparedLabel: `Briefing · ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
   }
   const html = renderBriefCardHtml(data)
