@@ -564,6 +564,22 @@ export default defineType({
       group: 'outreach',
       description: 'Market intel from the conversation — e.g. what got funded in their org this year.',
     }),
+    defineField({
+      name: 'briefCardUrl',
+      title: 'Brief Card',
+      type: 'url',
+      group: 'outreach',
+      readOnly: true,
+      description:
+        'The designed per-contact outreach brief card (generated; contains only public, face-test-safe content — never engagement data).',
+    }),
+    defineField({
+      name: 'briefCardGeneratedAt',
+      title: 'Brief Card Generated At',
+      type: 'datetime',
+      group: 'outreach',
+      readOnly: true,
+    }),
   ],
   preview: {
     select: { title: 'name', organization: 'organization', status: 'status', score: 'feasibilityScore' },
