@@ -5,6 +5,7 @@ import { stripeDisputeDocumentId } from './ids'
 import {
   ensureDisputeChannel,
   postDisputeCard,
+  postDisputeHubPointer,
   postDisputeNote,
   type DisputeCardInput,
 } from './disputeSlack'
@@ -216,6 +217,16 @@ export async function syncDisputeFromStripe(dispute: Stripe.Dispute): Promise<Di
         .patch(disputeDocId)
         .set({ 'slack.alertMessageTs': posted.ts, 'slack.alertChannelId': posted.channel })
         .commit()
+
+      // The card lives in the dispute's own channel; this makes it visible from
+      // the channel the team already watches. Best-effort — a chargeback is
+      // already recorded and alerted by this point.
+      if (channelId) {
+        await postDisputeHubPointer({ card, channelId }).catch((error) => {
+          console.error(`Dispute ${dispute.id}: hub pointer failed`, error)
+          return null
+        })
+      }
     }
   } else if (statusChanged) {
     await postDisputeNote({

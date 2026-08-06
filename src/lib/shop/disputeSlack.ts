@@ -212,6 +212,32 @@ export async function postDisputeCard(input: {
   })
 }
 
+/**
+ * A one-line heads-up in the channel the team actually watches, pointing at the
+ * dispute's own channel. Mirrors how visitor chat announces a new conversation
+ * in the hub: the alert is where people look, the conversation stays where the
+ * replies can be captured as evidence.
+ */
+export async function postDisputeHubPointer(input: {
+  card: DisputeCardInput
+  channelId: string
+}) {
+  const hub = getShopSlackChannelId()
+  // Nothing to point at if the card already landed in the hub itself.
+  if (!hub || hub === input.channelId) return null
+
+  const stage = input.card.stage === 'inquiry' ? 'Card inquiry' : 'Chargeback'
+  const text = [
+    `${input.card.livemode ? '' : 'Sandbox '}${stage} opened`,
+    input.card.orderNumber ? ` on ${escapeSlack(input.card.orderNumber)}` : '',
+    ` · ${formatMoney(input.card.amount, input.card.currency)}`,
+    ` · ${formatDeadline(input.card.dueBy, new Date())}`,
+    ` Details and replies: <#${input.channelId}>`,
+  ].join('')
+
+  return postSlackMessage({ channel: hub, text })
+}
+
 /** A short system line in the dispute channel (evidence submitted, status changed). */
 export async function postDisputeNote(input: { channelId?: string; text: string }) {
   const channel = input.channelId || getShopSlackChannelId()

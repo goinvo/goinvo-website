@@ -380,7 +380,7 @@ describe('syncing a dispute is idempotent across redelivery', () => {
     // resetModules clears the module cache but NOT the mock registry, so a mock
     // registered by another suite in this file would still be in force here.
     vi.doUnmock('@/lib/shop/disputes')
-    const calls = { channelsCreated: 0, cardsPosted: 0, notesPosted: 0 }
+    const calls = { channelsCreated: 0, cardsPosted: 0, notesPosted: 0, hubPointers: 0 }
     const committed: Array<Record<string, unknown>> = []
     const patched: Array<Record<string, unknown>> = []
 
@@ -431,6 +431,7 @@ describe('syncing a dispute is idempotent across redelivery', () => {
         // to the shared shop channel.
         return { ts: '111.222', channel: args.channelId || SHARED_SHOP_CHANNEL }
       },
+      postDisputeHubPointer: async () => { calls.hubPointers += 1; return { ts: '555.666' } },
       postDisputeNote: async () => { calls.notesPosted += 1; return { ts: '333.444' } },
     }))
 
@@ -477,6 +478,20 @@ describe('syncing a dispute is idempotent across redelivery', () => {
     const { patched } = await loadSync(null)
 
     expect(patched.some((fields) => fields['slack.channelId'] === 'C123')).toBe(true)
+  })
+
+  it('announces the dispute in the watched channel, pointing at its own channel', async () => {
+    const { calls } = await loadSync(null)
+
+    expect(calls.hubPointers).toBe(1)
+  })
+
+  it('does not announce when there is no separate channel to point at', async () => {
+    const { calls } = await loadSync(null, { channel: { status: 'disabled' } })
+
+    // The card already went to the watched channel; a pointer to itself is noise.
+    expect(calls.cardsPosted).toBe(1)
+    expect(calls.hubPointers).toBe(0)
   })
 
   it('writes dotted paths so a later patch cannot wipe a stored channel id', async () => {
