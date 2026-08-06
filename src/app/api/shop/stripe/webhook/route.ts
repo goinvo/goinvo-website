@@ -87,7 +87,12 @@ export async function POST(request: Request) {
         typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id
 
       const result = await reconcilePaymentSettlement({ chargeId, paymentIntentId, source: 'refund' })
-      if (result.status === 'applied') {
+      // ONE refund fires charge.refunded, charge.refund.updated AND
+      // refund.updated. Every one of them must reconcile — the ledger is an
+      // absolute recompute, so repeats are harmless and a missed event
+      // self-corrects — but only the canonical "money went back" event may
+      // alert, or a single refund posts the same message three times.
+      if (result.status === 'applied' && event.type === 'charge.refunded') {
         try {
           await notifySlackShopRefund(result)
         } catch (error) {

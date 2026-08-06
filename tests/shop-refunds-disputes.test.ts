@@ -631,6 +631,21 @@ describe('webhook robustness under redelivery, outages, and stray events', () =>
     expect(calls.notifyRefund).toBe(1)
   })
 
+  it('reconciles every refund event but alerts only once', async () => {
+    // Stripe fires charge.refunded, charge.refund.updated and refund.updated
+    // for a single refund. All must correct the ledger; only one may speak.
+    for (const type of ['refund.updated', 'refund.failed', 'charge.refund.updated']) {
+      const { response, body, calls } = await loadWebhook({
+        event: { type, data: { object: { id: 're_1', charge: 'ch_1' } } },
+      })
+
+      expect(response.status).toBe(200)
+      expect(body.refund).toBe('applied')
+      expect(calls.reconcile).toBe(1)
+      expect(calls.notifyRefund).toBe(0)
+    }
+  })
+
   it('keeps the refund recorded when Slack is down', async () => {
     // The ledger is already correct; a Slack outage must not turn that into a
     // 500, because repeated 500s let Stripe disable the endpoint entirely.
