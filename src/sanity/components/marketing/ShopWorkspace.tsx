@@ -62,6 +62,7 @@ type ShopOrder = {
   processor?: string
   processorPaymentId?: string
   paymentUrl?: string
+  shippingAddress?: string
   contact?: { _id?: string; name?: string; email?: string }
   items?: Array<{
     _key?: string
@@ -149,7 +150,7 @@ const SHOP_PUBLIC_QUERY = `{
 const SHOP_PRIVATE_QUERY = `{
   "orders": *[_type == "marketingOrder" && !(_id in path("drafts.**"))]
     | order(placedAt desc)[0...100] {
-      _id, orderNumber, status, placedAt, customerName, customerEmail,
+      _id, orderNumber, status, placedAt, customerName, customerEmail, shippingAddress,
       subtotal, shipping, donation, tax, total, currency, processor, processorPaymentId, paymentUrl,
       "contact": contact->{_id, name, email},
       "items": items[]{
@@ -499,7 +500,9 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
           placedAt: now.toISOString(),
           items: [
             {
-              product: { _type: 'reference', _ref: product._id },
+              // Weak: the product lives in the public dataset, the order in the
+              // private one, and a strong cross-dataset reference is rejected.
+              product: { _type: 'reference', _ref: product._id, _weak: true },
               title: product.title || 'Product',
               sku: product.sku,
               quantity,
@@ -520,12 +523,26 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
         }),
       )
 
-      if (product.trackInventory && ['paid', 'processing', 'fulfilled'].includes(orderDraft.status)) {
-        transaction = transaction.patch(product._id, (patch) =>
-          patch.set({ inventoryQuantity: Math.max(0, (product.inventoryQuantity || 0) - quantity) }),
-        )
-      }
       await transaction.commit()
+
+      // Inventory lives on the product in the PUBLIC dataset, so it cannot ride
+      // along in the order transaction above — a single transaction only spans
+      // one dataset. The order is the record that matters, so it commits first
+      // and a failed inventory decrement is surfaced without losing the sale.
+      if (product.trackInventory && ['paid', 'processing', 'fulfilled'].includes(orderDraft.status)) {
+        try {
+          await client
+            .patch(product._id)
+            .set({ inventoryQuantity: Math.max(0, (product.inventoryQuantity || 0) - quantity) })
+            .commit()
+        } catch (error) {
+          toast.push({
+            status: 'warning',
+            title: `${orderNumber} was recorded, but inventory was not updated`,
+            description: error instanceof Error ? error.message : undefined,
+          })
+        }
+      }
       setOrderDraft({ ...emptyOrderDraft })
       toast.push({
         status: 'success',
@@ -901,6 +918,20 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                       {(order.donation || 0) > 0 && (
                         <div style={{ ...styles.small, color: '#7dd69e', marginTop: 3 }}>
                           Includes {money(order.donation, order.currency)} support
+                        </div>
+                      )}
+                      {/* What to print and where to send it — without these the
+                          order card cannot actually be fulfilled. */}
+                      {(order.items || []).length > 0 && (
+                        <div style={{ ...styles.small, marginTop: 6 }}>
+                          {(order.items || [])
+                            .map((item) => `${item.quantity || 1} × ${item.title || 'Print'}`)
+                            .join(' · ')}
+                        </div>
+                      )}
+                      {order.shippingAddress && (
+                        <div style={{ ...styles.muted, ...styles.small, marginTop: 6, whiteSpace: 'pre-line' }}>
+                          {order.shippingAddress}
                         </div>
                       )}
                     </div>

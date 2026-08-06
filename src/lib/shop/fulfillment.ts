@@ -178,11 +178,16 @@ export async function fulfillStripeCheckout(sessionId: string): Promise<Fulfillm
     return {
       _key: createHash('sha256').update(lineItem.id).digest('hex').slice(0, 16),
       _type: 'shopOrderItem',
+      // WEAK references on purpose: orders live in the private outreach
+      // dataset while products and visualizations live in the public one, and
+      // the Content Lake rejects a strong reference whose target is not in the
+      // same dataset — which would fail every print order. The title and sku
+      // snapshots below carry the human-readable detail regardless.
       product: marketingProductId
-        ? { _type: 'reference', _ref: marketingProductId }
+        ? { _type: 'reference', _ref: marketingProductId, _weak: true }
         : undefined,
       visualization: visualizationId
-        ? { _type: 'reference', _ref: visualizationId }
+        ? { _type: 'reference', _ref: visualizationId, _weak: true }
         : undefined,
       title: lineItem.description || product?.name || 'GoInvo print',
       sku: product?.metadata.visualization_slug,
@@ -266,8 +271,18 @@ export async function fulfillStripeCheckout(sessionId: string): Promise<Fulfillm
     await transaction.commit()
     return { status: 'created', orderId, notification }
   } catch (error) {
+    // A 409 usually means Stripe re-delivered a webhook we already fulfilled —
+    // but it is ALSO what the Content Lake returns when the mutation is invalid
+    // (a broken reference, say). Only claim idempotency once we have confirmed
+    // the order really is on disk; otherwise rethrow so the webhook fails, the
+    // shopper is not told "order recorded", and Stripe retries the delivery.
     if (isConflictError(error)) {
-      return { status: 'already-created', orderId, notification }
+      const existing = await cms
+        .getDocument(orderId)
+        .catch(() => null)
+      if (existing) {
+        return { status: 'already-created', orderId, notification }
+      }
     }
     throw error
   }

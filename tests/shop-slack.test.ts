@@ -52,9 +52,12 @@ describe('shop Slack purchase notifications', () => {
     expect(serialized).toContain('Determinants of Health')
     expect(serialized).toContain('Open order in CMS')
     expect(serialized).not.toContain('shippingAddress')
+    // Orders live in the private outreach dataset, which the Studio's document
+    // editor cannot open — the link must land on the Shop view that reads it.
     expect(getMarketingOrderStudioUrl(order.orderId)).toBe(
-      'https://preview.goinvo.com/studio/intent/edit/id=marketingOrder.stripe-cs_test_123;type=marketingOrder',
+      'https://preview.goinvo.com/studio/marketing?view=shop',
     )
+    expect(getMarketingOrderStudioUrl(order.orderId)).not.toContain('intent/edit')
   })
 
   it('uses a stable UUID message ID so webhook retries do not create a second alert', () => {
