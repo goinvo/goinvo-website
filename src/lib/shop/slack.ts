@@ -184,6 +184,7 @@ export async function notifySlackShopOrder(
 export type ShopRefundNotification = {
   orderId: string
   chargeId: string
+  livemode?: boolean
   settlement: {
     amountCaptured: number
     amountRefunded: number
@@ -200,7 +201,9 @@ export type ShopRefundNotification = {
 export function buildShopRefundSlackMessage(input: ShopRefundNotification) {
   const { settlement } = input
   const fullyRefunded = settlement.settlementState === 'refunded'
-  const heading = fullyRefunded ? 'Order refunded' : 'Partial refund issued'
+  // Sandbox traffic shares the Slack channel with real orders, so it says so.
+  const prefix = input.livemode === false ? 'Sandbox ' : ''
+  const heading = `${prefix}${fullyRefunded ? 'Order refunded' : 'Partial refund issued'}`
   const summary = `${formatMoney(settlement.amountRefunded, 'USD')} of ${formatMoney(
     settlement.amountCaptured,
     'USD',

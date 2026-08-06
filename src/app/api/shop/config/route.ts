@@ -12,6 +12,9 @@ export async function GET() {
       checkoutEnabled: status.enabled,
       mode: status.mode === 'test' || status.mode === 'live' ? status.mode : null,
       automaticTaxEnabled: status.automaticTaxEnabled,
+      // Names the reason when a test-mode deployment is switched off, so
+      // "checkoutEnabled: false" is diagnosable without reading the code.
+      ...(status.sandboxIsolated ? {} : { blocked: 'sandbox-not-isolated' }),
     },
     {
       headers: {
