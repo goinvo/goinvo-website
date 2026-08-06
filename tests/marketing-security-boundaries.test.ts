@@ -311,6 +311,7 @@ describe('public experiment beacon validation', () => {
   const valid = {
     experiment_id: 'home-2026',
     flag_key: 'home-2026-variant',
+    measurement_key: '2026-07-27-visitor-dedupe-v1',
     variant: 'concept',
     page_path: '/',
   }
@@ -326,6 +327,7 @@ describe('public experiment beacon validation', () => {
   it.each([
     { flag_key: 'attacker-flag' },
     { experiment_id: 'attacker-experiment' },
+    { measurement_key: 'stale-window' },
     { variant: 'attacker-variant' },
     { page_path: '/admin' },
     { eventName: 'attacker_event' },

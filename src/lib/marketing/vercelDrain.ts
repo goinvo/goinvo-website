@@ -84,6 +84,22 @@ export interface VariantEngagementInput {
   averageSessionDuration?: number
 }
 
+export interface DrainSignalSectionEngagement {
+  _key: string
+  _type: 'performanceSectionEngagement'
+  variantKey: string
+  sectionKey: string
+  views: number
+  averageVisibleDuration: number
+}
+
+export interface SectionEngagementInput {
+  variantKey: string
+  sectionKey: string
+  views: number
+  averageVisibleDuration: number
+}
+
 export const DEFAULT_EXPOSURE_EVENT = 'experiment_exposure'
 
 const DIMENSION_KEYS = ['experiment_id', 'flag_key', 'variant', 'page_path'] as const
@@ -332,9 +348,9 @@ export function buildSignalMetricsFromAggregates(
     metrics.push({
       _key: `${slugifyKey(variant.key)}-${slugifyKey(exposureEvent)}`,
       _type: 'performanceMetric',
-      label: `${variant.label} visits / exposures`,
+      label: `${variant.label} unique visitors / exposures`,
       value,
-      unit: 'visits',
+      unit: 'visitors',
       variantKey: variant.key,
       eventName: exposureEvent,
     })
@@ -413,7 +429,7 @@ export function summarizeDrainSignal(input: DrainSignalSummaryInput): string {
     else if (lift < 0) controlLeads += 1
   }
 
-  const exposureLine = `${treatment?.label || 'Variant'} ${treatmentExposure} visits, ${control?.label || 'Control'} ${controlExposure} visits.`
+  const exposureLine = `${treatment?.label || 'Variant'} ${treatmentExposure} unique visitors, ${control?.label || 'Control'} ${controlExposure} unique visitors.`
   const total = input.conversionEvents.length
   const leaderLine = total > 0
     ? ` ${treatment?.label || 'Variant'} leads on ${treatmentLeads} of ${total} tracked event${total === 1 ? '' : 's'} by rate; ${control?.label || 'control'} leads on ${controlLeads}.`
@@ -460,6 +476,40 @@ export function buildVariantEngagementEntries(
   return entries
 }
 
+export function buildSectionEngagementEntries(
+  inputs: SectionEngagementInput[] | undefined,
+  variantKeys: Iterable<string>,
+): DrainSignalSectionEngagement[] {
+  if (!inputs || inputs.length === 0) return []
+  const allowed = new Set(Array.from(variantKeys, (key) => key.trim()).filter(Boolean))
+  const entries: DrainSignalSectionEngagement[] = []
+  const seen = new Set<string>()
+  for (const input of inputs) {
+    const variantKey = input.variantKey?.trim()
+    const sectionKey = input.sectionKey?.trim()
+    const compositeKey = `${variantKey}:${sectionKey}`
+    if (
+      !variantKey ||
+      !sectionKey ||
+      !/^[a-z0-9][a-z0-9-]{0,47}$/.test(sectionKey) ||
+      (allowed.size > 0 && !allowed.has(variantKey)) ||
+      seen.has(compositeKey) ||
+      !Number.isFinite(input.views) ||
+      !Number.isFinite(input.averageVisibleDuration)
+    ) continue
+    seen.add(compositeKey)
+    entries.push({
+      _key: `section-${slugifyKey(variantKey)}-${slugifyKey(sectionKey)}`,
+      _type: 'performanceSectionEngagement',
+      variantKey,
+      sectionKey,
+      views: Math.max(0, Math.round(input.views)),
+      averageVisibleDuration: Math.max(0, input.averageVisibleDuration),
+    })
+  }
+  return entries
+}
+
 export interface DrainSignalDocInput {
   signalId: string
   experimentId: string
@@ -468,6 +518,7 @@ export interface DrainSignalDocInput {
   pageUrl?: string
   metrics: DrainSignalMetric[]
   variantEngagement?: DrainSignalVariantEngagement[]
+  sectionEngagement?: DrainSignalSectionEngagement[]
   interpretation: string
   metricDate?: string
   periodStart?: string
@@ -489,6 +540,7 @@ export interface DrainSignalDoc {
   periodEnd?: string
   metrics: DrainSignalMetric[]
   variantEngagement?: DrainSignalVariantEngagement[]
+  sectionEngagement?: DrainSignalSectionEngagement[]
   interpretation: string
   recommendation: string
   rawImport: string
@@ -529,6 +581,7 @@ export function buildDrainPerformanceSignalDoc(input: DrainSignalDocInput): Drai
           eventName: metric.eventName,
           change: metric.change,
         })),
+        sectionEngagement: input.sectionEngagement,
       },
       null,
       2,
@@ -542,6 +595,7 @@ export function buildDrainPerformanceSignalDoc(input: DrainSignalDocInput): Drai
   // Optional, backward-compatible: only set when present so older signals and
   // count-only drain paths keep their existing shape.
   if (input.variantEngagement && input.variantEngagement.length > 0) doc.variantEngagement = input.variantEngagement
+  if (input.sectionEngagement && input.sectionEngagement.length > 0) doc.sectionEngagement = input.sectionEngagement
 
   return doc
 }

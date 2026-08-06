@@ -634,8 +634,25 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
   )
   await composer.fill('Resume Person — Reload Org')
   await composer.press('Enter')
+  const unsavedWarning = page.locator('[data-outreach-intake-unsaved-warning="true"]')
+  await expectCount(unsavedWarning, 1, 'A staged contact must show a prominent unsaved warning')
+  assert.match(
+    (await unsavedWarning.textContent()) || '',
+    /Not saved to Outreach yet.*needs Review Contacts, then Add Contacts/s,
+    'The warning must name both remaining save steps',
+  )
+  await expectCount(
+    page.getByText('Team contact-intake status (1)', { exact: true }),
+    1,
+    'A metadata-only team checkpoint must appear after staging a contact',
+  )
   await page.waitForFunction(() => window.sessionStorage.getItem('goinvo.marketing.outreach.intake.v1')?.includes('Resume Person'))
-  await page.reload({ waitUntil: 'networkidle' })
+  const leaveDialogPromise = page.waitForEvent('dialog')
+  const reloadPromise = page.reload({ waitUntil: 'networkidle' })
+  const leaveDialog = await leaveDialogPromise
+  assert.equal(leaveDialog.type(), 'beforeunload', 'Leaving with staged contacts must trigger the browser warning')
+  await leaveDialog.accept()
+  await reloadPromise
   const resumedTable = page.getByRole('table', { name: 'Contact drafts ready to check', exact: true })
   await expectCount(
     resumedTable.getByRole('rowheader', { name: 'Resume Person', exact: true }),
@@ -807,6 +824,19 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
     'intake:preview:2',
     'Rapid repeated contact reviews must issue exactly one preview request for two rows',
   )
+  assert.match(
+    (await unsavedWarning.textContent()) || '',
+    /2 reviewed contacts are still only in this browser tab\. Choose Add Contacts before leaving\./,
+    'Reviewed contacts must still be labeled unsaved and name the exact final action',
+  )
+  await page.waitForFunction(() => document.body.textContent?.includes('2 reviewed; Add Contacts not completed'))
+  const checkpointPanel = page.locator('[data-outreach-intake-checkpoints="true"]')
+  await expectCount(checkpointPanel, 1, 'The team checkpoint panel must remain available during intake')
+  assert.match(
+    (await checkpointPanel.textContent()) || '',
+    /Harness Principal:\s*2 reviewed; Add Contacts not completed/,
+    'The team checkpoint must identify review as the point where work stopped',
+  )
   const mirroredCreate = dialog.getByRole('button', {
     name: 'Add 2 Contacts in highlighted panel',
     exact: true,
@@ -821,6 +851,11 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
   )
   await dialog.getByRole('button', { name: 'Close tutorial', exact: true }).click()
   await page.getByRole('heading', { name: 'Contact records (2)', exact: true }).waitFor()
+  assert.match(
+    (await checkpointPanel.textContent()) || '',
+    /Harness Principal:\s*2 contacts saved/,
+    'The team checkpoint must distinguish durable saved contacts from a reviewed browser draft',
+  )
   await expectText(
     page.getByText('Showing 2 of 2 contacts.', { exact: true }),
     'Showing 2 of 2 contacts.',
@@ -854,6 +889,60 @@ async function runDesktopJourney(page: Page, baseUrl: string) {
     page.getByTestId('harness-completion'),
     'outreach:addContacts',
     'Successful contact creation must signal Autopilot completion',
+  )
+}
+
+async function runFullOutreachPipeline(page: Page, baseUrl: string) {
+  await page.goto(`${baseUrl}${HARNESS_PATH}`, { waitUntil: 'networkidle' })
+  const composer = page.getByRole('textbox', {
+    name: 'Type one contact and press Enter, or paste a list',
+    exact: true,
+  })
+  await composer.fill('Pipeline Principal — Northstar Health')
+  await composer.press('Enter')
+  await page.getByRole('button', { name: 'Review 1 Contact', exact: true }).click()
+  await page.getByRole('button', { name: 'Add 1 Contact', exact: true }).click()
+  await page.getByRole('heading', { name: 'Contact records (1)', exact: true }).waitFor()
+
+  await page.getByRole('button', { name: 'Research all new (1)', exact: true }).click()
+  await expectText(
+    page.getByTestId('harness-completion'),
+    'outreach:research',
+    'A saved research result must signal the research step instead of relying on a coach confirmation',
+  )
+  await expectCount(
+    page.locator('[data-tour-id="autopilot-outreach-workflow"]'),
+    1,
+    'The research and review coach target must exist in rendered output',
+  )
+
+  await page.getByRole('button', { name: 'Review brief for Pipeline Principal', exact: true }).click()
+  const approve = page.getByRole('button', { name: 'Approve for call plan', exact: true })
+  await expectEnabled(approve, true, 'A fully supported researched brief must be explicitly approvable')
+  await approve.click()
+  await expectText(
+    page.getByTestId('harness-completion'),
+    'outreach:review',
+    'Human approval must signal the review step',
+  )
+
+  await page
+    .getByRole('region', { name: 'Recommended next outreach', exact: true })
+    .getByRole('button', { name: 'Log result for Pipeline Principal', exact: true })
+    .click()
+  await page.getByPlaceholder('Outcome of the call/message', { exact: true }).fill('Interested; send the diagnostic outline next Tuesday.')
+  await page.getByRole('button', { name: 'Save log', exact: true }).click()
+  await expectText(
+    page.getByTestId('harness-completion'),
+    'outreach:log',
+    'The pipeline must finish only after a durable interaction is saved',
+  )
+  const callHistory = page.getByText('Call history (1)', { exact: true }).locator('..')
+  await callHistory.getByText('Call history (1)', { exact: true }).click()
+  assert.match(
+    (await callHistory.textContent()) || '',
+    /Interested; send the diagnostic outline next Tuesday\./,
+    'The saved interaction must remain visible in the rendered contact history',
   )
 }
 
@@ -950,6 +1039,7 @@ async function main() {
       ['spreadsheet import and recovery', runSpreadsheetImportJourney],
       ['mixed spreadsheet and typed intake', runMixedSpreadsheetAndTypedJourney],
       ['desktop contact workflow', runDesktopJourney],
+      ['full research-review-contact-log pipeline', runFullOutreachPipeline],
       ['mobile containment', runMobileLayout],
     ] as const
     assert.ok(scenarios.length > 0, 'Marketing E2E must discover at least one browser scenario.')

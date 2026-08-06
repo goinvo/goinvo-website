@@ -23,7 +23,8 @@
     "manage": "tsx scripts/manage.ts",
     "audit:superscripts": "tsx scripts/manage.ts audit:superscripts",
     "audit:linebreaks": "tsx scripts/manage.ts audit:linebreaks",
-    "check:charts": "node scripts/check-chart-pages.mjs"
+    "check:charts": "node scripts/check-chart-pages.mjs",
+    "shop:sync-stripe": "tsx scripts/sync-stripe-shop-catalog.ts"
   },
   "dependencies": {
     "@flags-sdk/vercel": "^1.3.0",
@@ -62,6 +63,7 @@
     "react-fast-marquee": "^1.6.5",
     "react-google-charts": "^5.2.1",
     "sanity": "^3.99.0",
+    "stripe": "^22.3.2",
     "styled-components": "^6.3.9",
     "three": "^0.183.2",
     "web-vitals": "^5.1.0",

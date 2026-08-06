@@ -115,7 +115,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
   return (
     <div ref={containerRef}>
       {/* 1. Hero Section */}
-      <section className="relative flex flex-col justify-end min-h-[max(250px,30vh)]">
+      <section data-experiment-section="hero" className="relative flex flex-col justify-end min-h-[max(250px,30vh)]">
         <Image
           src={cloudfrontImage('/images/homepage/bg-wavy-lines.jpg')}
           alt=""
@@ -161,6 +161,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
           totaled ~58s on a slow connection); switching to <Image>
           removes the load-delay and download-time portions. */}
       <section
+        data-experiment-section="case-study-3m"
         data-morph-section="3m"
         className="relative py-16 md:py-16 min-h-[500px] md:min-h-[600px] flex items-start overflow-hidden"
       >
@@ -206,6 +207,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
 
       {/* 3. Eric Topol Testimonial */}
       <section
+          data-experiment-section="testimonial-topol"
           className="relative py-16 md:py-24 bg-cover min-h-[500px] md:min-h-[600px]"
           style={{
             backgroundImage: `url(${cloudfrontImage('/images/homepage/eric-topol-2.jpg')})`,
@@ -250,6 +252,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
 
       {/* 4. Weeks to Hours - Ipsos Case Study (RIGHT) */}
       <section
+        data-experiment-section="case-study-ipsos"
         data-morph-section="ipsos"
         className="relative py-16 md:py-16 bg-cover min-h-[500px] md:min-h-[600px] flex items-start overflow-hidden"
         style={{
@@ -287,7 +290,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       </section>
 
       {/* 5. Partner Logos */}
-      <section className="py-12 md:py-16" style={{ backgroundColor: '#F7FAFE' }}>
+      <section data-experiment-section="client-proof" className="py-12 md:py-16" style={{ backgroundColor: '#F7FAFE' }}>
         <div className="max-width content-padding">
           <p className="text-sm font-normal text-gray uppercase tracking-wider mb-6">
             Trusted by ambitious startups and Fortune 500&apos;s:
@@ -298,6 +301,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
 
       {/* 6. 10x increase - SNAP Impact (LEFT) */}
       <section
+        data-experiment-section="case-study-snap"
         data-morph-section="snap"
         className="relative py-16 md:py-16 bg-cover bg-center min-h-[500px] md:min-h-[600px] flex items-start overflow-hidden"
         style={{
@@ -348,7 +352,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
 
       {/* 7. Newsletter */}
       <Reveal style="slide-up">
-        <section className="py-8">
+        <section data-experiment-section="newsletter" className="py-8">
           <div className="max-width-md content-padding mx-auto">
             <SubscribeForm />
           </div>
@@ -356,7 +360,7 @@ export function HomeContent({ teamMembers }: HomeContentProps) {
       </Reveal>
 
       {/* 9. We are GoInvo */}
-      <section className="overflow-hidden">
+      <section data-experiment-section="team" className="overflow-hidden">
         {/* Top marquee - scrolls right */}
         <div className="h-[300px] overflow-hidden" aria-hidden="true">
           <Marquee direction="right" speed={30} gradient={false} pauseOnHover={false} autoFill>

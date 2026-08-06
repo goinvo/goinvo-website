@@ -13,6 +13,14 @@ import {
 import { teamHeadshots } from '@/data/team-headshots'
 import { cloudfrontImage } from '@/lib/utils'
 import { trackChatMessageSent } from '@/lib/analytics'
+import {
+  CHAT_ENTRY_STORAGE_KEY,
+  CHAT_OPEN_EVENT,
+  POSTER_USE_OPTIONS,
+  formatPosterInquiryMessage,
+  type ChatEntryFlow,
+  type PosterUse,
+} from '@/lib/chat/entry'
 
 const THREAD_STORAGE_KEY = 'goinvo-chat-thread-v1'
 const THREADS_STORAGE_KEY = 'goinvo-chat-threads-v1'
@@ -48,7 +56,10 @@ interface ChatMessage {
   authorName?: string
   text: string
   createdAt: string
-  attachments?: Pick<ChatAttachment, 'filename' | 'contentType' | 'size' | 'uploadStatus' | 'slackPermalink'>[]
+  attachments?: Pick<
+    ChatAttachment,
+    'filename' | 'contentType' | 'size' | 'uploadStatus' | 'slackPermalink'
+  >[]
 }
 
 interface StoredThread {
@@ -88,7 +99,9 @@ export function ChatWidget() {
   const [viewMode, setViewMode] = useState<ChatViewMode>('new')
   const [threadStatus, setThreadStatus] = useState<string>('new')
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [pollingIntervalMs, setPollingIntervalMs] = useState<number>(siteConfig.chat.pollingIntervalMs)
+  const [pollingIntervalMs, setPollingIntervalMs] = useState<number>(
+    siteConfig.chat.pollingIntervalMs,
+  )
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [initialMessage, setInitialMessage] = useState('')
@@ -96,11 +109,39 @@ export function ChatWidget() {
   const [initialAttachment, setInitialAttachment] = useState<File | null>(null)
   const [replyAttachment, setReplyAttachment] = useState<File | null>(null)
   const [website, setWebsite] = useState('')
+  const [entryFlow, setEntryFlow] = useState<ChatEntryFlow | null>(null)
+  const [posterUse, setPosterUse] = useState<PosterUse | ''>('')
+  const [posterOtherUse, setPosterOtherUse] = useState('')
+  const [posterInterests, setPosterInterests] = useState('')
+  const [posterQuantity, setPosterQuantity] = useState('')
+  const [posterDestination, setPosterDestination] = useState('')
+  const [posterTimeline, setPosterTimeline] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const initialAttachmentInputRef = useRef<HTMLInputElement>(null)
   const replyAttachmentInputRef = useRef<HTMLInputElement>(null)
+  const entryFlowRef = useRef<ChatEntryFlow | null>(null)
+
+  const beginPosterInquiry = useCallback(() => {
+    setIsOpen(true)
+    setError(null)
+    setThread(null)
+    setThreadStatus('new')
+    setMessages([])
+    setInitialMessage('')
+    setInitialAttachment(null)
+    entryFlowRef.current = 'posters'
+    setEntryFlow('posters')
+    setPosterUse('')
+    setPosterOtherUse('')
+    setPosterInterests('')
+    setPosterQuantity('')
+    setPosterDestination('')
+    setPosterTimeline('')
+    localStorage.removeItem(THREAD_STORAGE_KEY)
+    setViewMode('new')
+  }, [])
 
   const loadThread = useCallback(async (storedThread: StoredThread) => {
     const response = await fetch(
@@ -131,6 +172,24 @@ export function ChatWidget() {
   }, [])
 
   useEffect(() => {
+    const openChat = (event: Event) => {
+      const flow = (event as CustomEvent<{ flow?: ChatEntryFlow }>).detail?.flow
+      if (flow !== 'posters') return
+      window.sessionStorage.removeItem(CHAT_ENTRY_STORAGE_KEY)
+      beginPosterInquiry()
+    }
+
+    window.addEventListener(CHAT_OPEN_EVENT, openChat)
+
+    if (window.sessionStorage.getItem(CHAT_ENTRY_STORAGE_KEY) === 'posters') {
+      window.sessionStorage.removeItem(CHAT_ENTRY_STORAGE_KEY)
+      beginPosterInquiry()
+    }
+
+    return () => window.removeEventListener(CHAT_OPEN_EVENT, openChat)
+  }, [beginPosterInquiry])
+
+  useEffect(() => {
     let isCancelled = false
 
     fetch('/api/chat/config', { cache: 'no-store' })
@@ -142,6 +201,7 @@ export function ChatWidget() {
 
         const availableThreads = loadStoredThreads()
         setStoredThreads(availableThreads)
+        if (entryFlowRef.current === 'posters') return
         const storedThread = loadStoredThread()
         if (storedThread) {
           try {
@@ -181,40 +241,81 @@ export function ChatWidget() {
   const handleStartThread = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError(null)
+
+    if (
+      entryFlow === 'posters' &&
+      (!posterUse ||
+        (posterUse === 'other' && !posterOtherUse.trim()) ||
+        !posterInterests.trim() ||
+        !posterQuantity.trim() ||
+        !posterDestination.trim() ||
+        !name.trim() ||
+        !email.trim())
+    ) {
+      setError('Complete the required poster details so our team can follow up.')
+      return
+    }
+
+    const outgoingMessage =
+      entryFlow === 'posters' && posterUse
+        ? formatPosterInquiryMessage({
+            use: posterUse,
+            otherUse: posterOtherUse,
+            posters: posterInterests,
+            quantity: posterQuantity,
+            destination: posterDestination,
+            timeline: posterTimeline,
+          })
+        : initialMessage
+
     setIsSubmitting(true)
 
     try {
-      const data = await sendChatRequest('/api/chat/threads', {
-        name,
-        email,
-        message: initialMessage,
-        pageUrl: window.location.href,
-        pageTitle: document.title,
-        referrer: document.referrer,
-        sessionId: getBrowserSessionId(),
-        language: navigator.language,
-        website,
-      }, initialAttachment)
+      const data = await sendChatRequest(
+        '/api/chat/threads',
+        {
+          name,
+          email,
+          message: outgoingMessage,
+          pageUrl: window.location.href,
+          pageTitle: document.title,
+          referrer: document.referrer,
+          sessionId: getBrowserSessionId(),
+          language: navigator.language,
+          website,
+        },
+        initialAttachment,
+      )
 
       // First message reached the server → a qualified-lead conversion (attributed,
       // and counted by the experiment when the chat is started on the test page).
       trackChatMessageSent()
 
-      let storedThread = mergeStoredThreadWithResponse({
-        threadId: data.threadId,
-        visitorKey: data.visitorKey || '',
-        title: data.title,
-        name: name.trim() || data.visitor?.name,
-        email: email.trim() || data.visitor?.email,
-      }, data)
+      let storedThread = mergeStoredThreadWithResponse(
+        {
+          threadId: data.threadId,
+          visitorKey: data.visitorKey || '',
+          title: data.title,
+          name: name.trim() || data.visitor?.name,
+          email: email.trim() || data.visitor?.email,
+        },
+        data,
+      )
 
       setStoredThreads(saveStoredThread(storedThread))
       setThread(storedThread)
       setViewMode('conversation')
       setThreadStatus(data.status)
       setMessages(data.messages || [])
+      entryFlowRef.current = null
+      setEntryFlow(null)
       if (data.directUpload && initialAttachment) {
-        const uploadedData = await uploadDirectAttachment(data.threadId, storedThread.visitorKey, data.directUpload, initialAttachment)
+        const uploadedData = await uploadDirectAttachment(
+          data.threadId,
+          storedThread.visitorKey,
+          data.directUpload,
+          initialAttachment,
+        )
         storedThread = mergeStoredThreadWithResponse(storedThread, uploadedData)
         setStoredThreads(saveStoredThread(storedThread))
         setThread(storedThread)
@@ -256,7 +357,12 @@ export function ChatWidget() {
       setName(updatedThread.name || '')
       setEmail(updatedThread.email || '')
       if (data.directUpload && replyAttachment) {
-        const uploadedData = await uploadDirectAttachment(thread.threadId, thread.visitorKey, data.directUpload, replyAttachment)
+        const uploadedData = await uploadDirectAttachment(
+          thread.threadId,
+          thread.visitorKey,
+          data.directUpload,
+          replyAttachment,
+        )
         updatedThread = mergeStoredThreadWithResponse(updatedThread, uploadedData)
         setStoredThreads(saveStoredThread(updatedThread))
         setThread(updatedThread)
@@ -275,6 +381,8 @@ export function ChatWidget() {
 
   const handleShowThreads = () => {
     setError(null)
+    entryFlowRef.current = null
+    setEntryFlow(null)
     setStoredThreads(loadStoredThreads())
     setViewMode('threads')
   }
@@ -296,6 +404,14 @@ export function ChatWidget() {
     setReplyAttachment(null)
     setInitialAttachment(null)
     setInitialMessage('')
+    entryFlowRef.current = null
+    setEntryFlow(null)
+    setPosterUse('')
+    setPosterOtherUse('')
+    setPosterInterests('')
+    setPosterQuantity('')
+    setPosterDestination('')
+    setPosterTimeline('')
     localStorage.removeItem(THREAD_STORAGE_KEY)
     setViewMode('new')
     if (initialAttachmentInputRef.current) initialAttachmentInputRef.current.value = ''
@@ -307,7 +423,12 @@ export function ChatWidget() {
   const hasThread = viewMode === 'conversation' && Boolean(thread)
   const isThreadList = viewMode === 'threads'
   const showBackButton = viewMode !== 'threads' && storedThreads.length > 0
-  const statusLabel = threadStatus === 'waitingOnVisitor' ? 'Replied' : threadStatus === 'resolved' ? 'Resolved' : null
+  const statusLabel =
+    threadStatus === 'waitingOnVisitor'
+      ? 'Replied'
+      : threadStatus === 'resolved'
+        ? 'Resolved'
+        : null
   return (
     <div className="fixed right-4 bottom-4 z-[1200] font-sans sm:right-6 sm:bottom-6">
       {isOpen && (
@@ -328,14 +449,22 @@ export function ChatWidget() {
                   <ArrowLeftIcon />
                 </button>
               )}
-              {!isThreadList && <ChatTeamAvatar src={getChatTeamAvatarSrc()} size="header" showStatus />}
+              {!isThreadList && (
+                <ChatTeamAvatar src={getChatTeamAvatarSrc()} size="header" showStatus />
+              )}
               <div className="min-w-0">
                 <h2 className="mb-0 font-sans text-base font-semibold leading-6">
                   {isThreadList ? 'Messages' : 'GoInvo'}
                 </h2>
                 {(isThreadList || !hasThread || statusLabel) && (
                   <p className="mb-0 text-xs leading-5 text-white/85">
-                    {isThreadList ? 'Conversations' : hasThread ? statusLabel : 'Ask us anything'}
+                    {isThreadList
+                      ? 'Conversations'
+                      : hasThread
+                        ? statusLabel
+                        : entryFlow === 'posters'
+                          ? 'Poster print inquiry'
+                          : 'Ask us anything'}
                   </p>
                 )}
               </div>
@@ -359,6 +488,175 @@ export function ChatWidget() {
                 onOpenThread={handleOpenThread}
                 onStartNewThread={handleStartNewThread}
               />
+            ) : entryFlow === 'posters' && !hasThread ? (
+              <div data-poster-chat-flow className="space-y-4">
+                <div className="flex items-start gap-2">
+                  <ChatTeamAvatar src={getChatTeamAvatarSrc()} />
+                  <div className="min-w-0 max-w-[calc(100%-3rem)] rounded-[18px] rounded-bl-none border border-gray-medium bg-white px-3 py-2 text-sm leading-6 text-black">
+                    <p className="mb-1 font-semibold leading-6">Tell us what you need.</p>
+                    <p className="mb-0 leading-6 text-gray">
+                      A few details will help us route your poster request to the right person.
+                    </p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div
+                    className="rounded-none border border-red bg-red/5 px-3 py-2 text-sm leading-5 text-red"
+                    role="alert"
+                  >
+                    {error}
+                  </div>
+                )}
+
+                <form
+                  onSubmit={handleStartThread}
+                  className="space-y-4 rounded-none border border-gray-medium bg-white p-4"
+                >
+                  <fieldset>
+                    <legend className="mb-2 text-sm font-semibold text-black">
+                      What are the posters for? <span className="text-primary">*</span>
+                    </legend>
+                    <div className="grid grid-cols-1 gap-2">
+                      {POSTER_USE_OPTIONS.map((option) => (
+                        <label
+                          key={option.value}
+                          className={`flex cursor-pointer items-center gap-2 border px-3 py-2 text-sm leading-5 transition-colors ${
+                            posterUse === option.value
+                              ? 'border-secondary bg-secondary/5 text-secondary'
+                              : 'border-gray-medium bg-white text-black hover:border-secondary'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="poster-use"
+                            value={option.value}
+                            checked={posterUse === option.value}
+                            onChange={() => setPosterUse(option.value)}
+                            className="accent-secondary"
+                            required
+                            data-poster-use-option
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  {posterUse === 'other' && (
+                    <label className="block text-sm font-semibold text-black">
+                      Tell us what you have in mind <span className="text-primary">*</span>
+                      <input
+                        type="text"
+                        value={posterOtherUse}
+                        onChange={(event) => setPosterOtherUse(event.target.value)}
+                        maxLength={180}
+                        required
+                        data-poster-other-use
+                        className="mt-2 h-10 w-full rounded-none border border-gray-medium px-3 text-sm font-normal outline-none focus:border-secondary"
+                      />
+                    </label>
+                  )}
+
+                  <label className="block text-sm font-semibold text-black">
+                    Which posters or topics interest you? <span className="text-primary">*</span>
+                    <textarea
+                      value={posterInterests}
+                      onChange={(event) => setPosterInterests(event.target.value)}
+                      data-poster-chat-field="interests"
+                      rows={3}
+                      maxLength={600}
+                      required
+                      placeholder="Titles, topics, or a general direction"
+                      className="mt-2 min-h-20 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm font-normal leading-6 outline-none focus:border-secondary"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="block text-sm font-semibold text-black">
+                      Approximate quantity <span className="text-primary">*</span>
+                      <input
+                        type="text"
+                        value={posterQuantity}
+                        onChange={(event) => setPosterQuantity(event.target.value)}
+                        data-poster-chat-field="quantity"
+                        maxLength={80}
+                        required
+                        placeholder="1, 25, or unsure"
+                        className="mt-2 h-10 w-full rounded-none border border-gray-medium px-3 text-sm font-normal outline-none focus:border-secondary"
+                      />
+                    </label>
+                    <label className="block text-sm font-semibold text-black">
+                      Needed by
+                      <input
+                        type="text"
+                        value={posterTimeline}
+                        onChange={(event) => setPosterTimeline(event.target.value)}
+                        data-poster-chat-field="timeline"
+                        maxLength={100}
+                        placeholder="Date or flexible"
+                        className="mt-2 h-10 w-full rounded-none border border-gray-medium px-3 text-sm font-normal outline-none focus:border-secondary"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="block text-sm font-semibold text-black">
+                    Shipping destination <span className="text-primary">*</span>
+                    <input
+                      type="text"
+                      value={posterDestination}
+                      onChange={(event) => setPosterDestination(event.target.value)}
+                      data-poster-chat-field="destination"
+                      maxLength={180}
+                      required
+                      placeholder="City, state, and country"
+                      className="mt-2 h-10 w-full rounded-none border border-gray-medium px-3 text-sm font-normal outline-none focus:border-secondary"
+                    />
+                  </label>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <label className="block text-sm font-semibold text-black">
+                      Name <span className="text-primary">*</span>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        data-poster-chat-field="name"
+                        maxLength={120}
+                        autoComplete="name"
+                        required
+                        className="mt-2 h-10 w-full rounded-none border border-gray-medium px-3 text-sm font-normal outline-none focus:border-secondary"
+                      />
+                    </label>
+                    <label className="block text-sm font-semibold text-black">
+                      Email <span className="text-primary">*</span>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        data-poster-chat-field="email"
+                        maxLength={254}
+                        autoComplete="email"
+                        required
+                        className="mt-2 h-10 w-full rounded-none border border-gray-medium px-3 text-sm font-normal outline-none focus:border-secondary"
+                      />
+                    </label>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    data-poster-chat-submit
+                    className="h-11 w-full rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[1.5px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
+                  >
+                    {isSubmitting ? 'Connecting...' : 'Connect with the GoInvo team'}
+                  </button>
+                  <p className="mb-0 text-xs leading-5 text-gray">
+                    This starts a live conversation with our staff. We can reply here or follow up
+                    by email.
+                  </p>
+                </form>
+              </div>
             ) : !hasThread ? (
               <div className="flex items-start gap-2">
                 <ChatTeamAvatar src={getChatTeamAvatarSrc()} />
@@ -371,7 +669,9 @@ export function ChatWidget() {
               <div className="space-y-3">
                 {messages.map((message) => {
                   const isVisitor = message.authorType === 'visitor'
-                  const teamAvatarSrc = isVisitor ? undefined : getChatTeamAvatarSrc(message.authorName)
+                  const teamAvatarSrc = isVisitor
+                    ? undefined
+                    : getChatTeamAvatarSrc(message.authorName)
                   return (
                     <div
                       key={message.id}
@@ -400,7 +700,9 @@ export function ChatWidget() {
                                 <span className="block max-w-full break-all font-semibold leading-5">
                                   {attachment.filename}
                                 </span>
-                                <span className="block opacity-80">{formatAttachmentSize(attachment.size)}</span>
+                                <span className="block opacity-80">
+                                  {formatAttachmentSize(attachment.size)}
+                                </span>
                                 {attachment.uploadStatus === 'failed' && (
                                   <span className="block font-semibold">Upload failed</span>
                                 )}
@@ -417,112 +719,119 @@ export function ChatWidget() {
             )}
           </div>
 
-          <div className="border-t border-gray-medium bg-white p-4">
-            {error && (
-              <div className="mb-3 rounded-none border border-red bg-red/5 px-3 py-2 text-sm leading-5 text-red" role="alert">
-                {error}
-              </div>
-            )}
+          {(entryFlow !== 'posters' || hasThread) && (
+            <div className="border-t border-gray-medium bg-white p-4">
+              {error && (
+                <div
+                  className="mb-3 rounded-none border border-red bg-red/5 px-3 py-2 text-sm leading-5 text-red"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
 
-            {isThreadList ? (
-              <button
-                type="button"
-                onClick={handleStartNewThread}
-                className="h-10 w-full rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
-              >
-                New conversation
-              </button>
-            ) : !hasThread ? (
-              <form onSubmit={handleStartThread} className="space-y-3">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Email (optional)"
-                  autoComplete="email"
-                  aria-label="Email (optional)"
-                  className="h-10 w-full rounded-none border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
-                />
-                <label className="sr-only" htmlFor="chat-website">
-                  Website
-                </label>
-                <input
-                  id="chat-website"
-                  type="text"
-                  value={website}
-                  onChange={(event) => setWebsite(event.target.value)}
-                  tabIndex={-1}
-                  autoComplete="off"
-                  className="hidden"
-                />
-                <textarea
-                  value={initialMessage}
-                  onChange={(event) => setInitialMessage(event.target.value)}
-                  placeholder="Write a message"
-                  rows={4}
-                  maxLength={2000}
-                  className="min-h-24 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
-                  required={!initialAttachment}
-                />
-                <AttachmentSummary
-                  attachment={initialAttachment}
-                  onRemove={() => {
-                    setInitialAttachment(null)
-                    if (initialAttachmentInputRef.current) initialAttachmentInputRef.current.value = ''
-                  }}
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || (!initialMessage.trim() && !initialAttachment)}
-                    className="h-10 flex-1 rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    {isSubmitting ? 'Sending...' : 'Send'}
-                  </button>
-                  <AttachmentPicker
-                    id="chat-initial-attachment"
-                    inputRef={initialAttachmentInputRef}
+              {isThreadList ? (
+                <button
+                  type="button"
+                  onClick={handleStartNewThread}
+                  className="h-10 w-full rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark"
+                >
+                  New conversation
+                </button>
+              ) : !hasThread ? (
+                <form onSubmit={handleStartThread} className="space-y-3">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="Email (optional)"
+                    autoComplete="email"
+                    aria-label="Email (optional)"
+                    className="h-10 w-full rounded-none border border-gray-medium px-3 text-sm outline-none focus:border-secondary"
+                  />
+                  <label className="sr-only" htmlFor="chat-website">
+                    Website
+                  </label>
+                  <input
+                    id="chat-website"
+                    type="text"
+                    value={website}
+                    onChange={(event) => setWebsite(event.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="hidden"
+                  />
+                  <textarea
+                    value={initialMessage}
+                    onChange={(event) => setInitialMessage(event.target.value)}
+                    placeholder="Write a message"
+                    rows={4}
+                    maxLength={2000}
+                    className="min-h-24 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
+                    required={!initialAttachment}
+                  />
+                  <AttachmentSummary
                     attachment={initialAttachment}
-                    onSelect={(file) => handleAttachmentSelect(file, setInitialAttachment)}
+                    onRemove={() => {
+                      setInitialAttachment(null)
+                      if (initialAttachmentInputRef.current)
+                        initialAttachmentInputRef.current.value = ''
+                    }}
                   />
-                </div>
-              </form>
-            ) : (
-              <form onSubmit={handleSendReply} className="space-y-3">
-                <textarea
-                  value={replyMessage}
-                  onChange={(event) => setReplyMessage(event.target.value)}
-                  placeholder="Write a reply"
-                  rows={3}
-                  maxLength={2000}
-                  className="min-h-20 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
-                  required={!replyAttachment}
-                />
-                <AttachmentSummary
-                  attachment={replyAttachment}
-                  onRemove={() => {
-                    setReplyAttachment(null)
-                    if (replyAttachmentInputRef.current) replyAttachmentInputRef.current.value = ''
-                  }}
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || (!replyMessage.trim() && !replyAttachment)}
-                    className="h-10 flex-1 rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    {isSubmitting ? 'Sending...' : 'Send'}
-                  </button>
-                  <AttachmentPicker
-                    id="chat-reply-attachment"
-                    inputRef={replyAttachmentInputRef}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || (!initialMessage.trim() && !initialAttachment)}
+                      className="h-10 flex-1 rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      {isSubmitting ? 'Sending...' : 'Send'}
+                    </button>
+                    <AttachmentPicker
+                      id="chat-initial-attachment"
+                      inputRef={initialAttachmentInputRef}
+                      attachment={initialAttachment}
+                      onSelect={(file) => handleAttachmentSelect(file, setInitialAttachment)}
+                    />
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleSendReply} className="space-y-3">
+                  <textarea
+                    value={replyMessage}
+                    onChange={(event) => setReplyMessage(event.target.value)}
+                    placeholder="Write a reply"
+                    rows={3}
+                    maxLength={2000}
+                    className="min-h-20 w-full resize-none rounded-none border border-gray-medium px-3 py-2 text-sm leading-6 outline-none focus:border-secondary"
+                    required={!replyAttachment}
+                  />
+                  <AttachmentSummary
                     attachment={replyAttachment}
-                    onSelect={(file) => handleAttachmentSelect(file, setReplyAttachment)}
+                    onRemove={() => {
+                      setReplyAttachment(null)
+                      if (replyAttachmentInputRef.current)
+                        replyAttachmentInputRef.current.value = ''
+                    }}
                   />
-                </div>
-              </form>
-            )}
-          </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || (!replyMessage.trim() && !replyAttachment)}
+                      className="h-10 flex-1 rounded-none bg-primary px-4 text-sm font-semibold uppercase tracking-[2px] text-white transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-55"
+                    >
+                      {isSubmitting ? 'Sending...' : 'Send'}
+                    </button>
+                    <AttachmentPicker
+                      id="chat-reply-attachment"
+                      inputRef={replyAttachmentInputRef}
+                      attachment={replyAttachment}
+                      onSelect={(file) => handleAttachmentSelect(file, setReplyAttachment)}
+                    />
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -533,7 +842,10 @@ export function ChatWidget() {
           className="group flex min-h-12 max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[18px] rounded-br-none bg-[#252a3c] py-3 pl-4 pr-5 text-left text-white shadow-[0_12px_30px_rgba(29,27,26,0.22)] transition-colors hover:bg-tertiary sm:max-w-none"
           aria-expanded={isOpen}
         >
-          <span className="block h-3 w-3 shrink-0 rounded-full border-2 border-white bg-[#44c961]" aria-hidden="true" />
+          <span
+            className="block h-3 w-3 shrink-0 rounded-full border-2 border-white bg-[#44c961]"
+            aria-hidden="true"
+          />
           <span className="block text-sm font-semibold leading-5 tracking-normal sm:text-[15px]">
             {siteConfig.chat.greeting}
           </span>
@@ -561,7 +873,9 @@ async function sendChatRequest(
   fields: Record<string, string>,
   attachment: File | null,
 ) {
-  const usesDirectSlackUpload = Boolean(attachment && attachment.size > MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES)
+  const usesDirectSlackUpload = Boolean(
+    attachment && attachment.size > MAX_CHAT_ATTACHMENT_INLINE_SIZE_BYTES,
+  )
   const response = await fetch(url, {
     method: 'POST',
     ...(usesDirectSlackUpload
@@ -648,7 +962,9 @@ function ThreadList({
         <h3 className="mb-2 font-sans text-sm font-semibold uppercase tracking-[2px] text-tertiary">
           No messages yet
         </h3>
-        <p className="mb-4 text-sm leading-6 text-gray">Start a conversation and we will reply here.</p>
+        <p className="mb-4 text-sm leading-6 text-gray">
+          Start a conversation and we will reply here.
+        </p>
         <button
           type="button"
           onClick={onStartNewThread}
@@ -687,7 +1003,9 @@ function ThreadList({
               </span>
               <span className="shrink-0 text-right">
                 {storedThread.lastMessageAt && (
-                  <span className="block text-[11px] leading-5 text-gray">{formatThreadDate(storedThread.lastMessageAt)}</span>
+                  <span className="block text-[11px] leading-5 text-gray">
+                    {formatThreadDate(storedThread.lastMessageAt)}
+                  </span>
                 )}
                 {storedThread.status && (
                   <span className="mt-1 block text-[11px] font-semibold uppercase leading-5 tracking-[1px] text-secondary">
@@ -843,7 +1161,9 @@ function loadStoredThreads(): StoredThread[] {
     const raw = localStorage.getItem(THREADS_STORAGE_KEY)
     const parsed = raw ? JSON.parse(raw) : []
     if (Array.isArray(parsed)) {
-      threads = parsed.map((item) => parseStoredThread(JSON.stringify(item))).filter(Boolean) as StoredThread[]
+      threads = parsed
+        .map((item) => parseStoredThread(JSON.stringify(item)))
+        .filter(Boolean) as StoredThread[]
     }
   } catch {
     threads = []
@@ -906,7 +1226,9 @@ function parseStoredThread(raw: string | null): StoredThread | null {
       ...(typeof value.email === 'string' ? { email: value.email } : {}),
       ...(typeof value.status === 'string' ? { status: value.status } : {}),
       ...(typeof value.lastMessageAt === 'string' ? { lastMessageAt: value.lastMessageAt } : {}),
-      ...(typeof value.lastMessagePreview === 'string' ? { lastMessagePreview: value.lastMessagePreview } : {}),
+      ...(typeof value.lastMessagePreview === 'string'
+        ? { lastMessagePreview: value.lastMessagePreview }
+        : {}),
     }
   } catch {
     return null
@@ -921,7 +1243,9 @@ function sortStoredThreads(threads: StoredThread[]) {
   return [...threads].sort((first, second) => {
     const firstTime = Date.parse(first.lastMessageAt || '')
     const secondTime = Date.parse(second.lastMessageAt || '')
-    return (Number.isFinite(secondTime) ? secondTime : 0) - (Number.isFinite(firstTime) ? firstTime : 0)
+    return (
+      (Number.isFinite(secondTime) ? secondTime : 0) - (Number.isFinite(firstTime) ? firstTime : 0)
+    )
   })
 }
 
@@ -966,7 +1290,10 @@ function normalizeChatTeamName(value?: string) {
 function formatThreadDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }).format(date)
 }
 
 function getBrowserSessionId() {

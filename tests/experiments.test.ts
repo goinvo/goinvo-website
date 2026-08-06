@@ -73,6 +73,7 @@ function experiment(overrides: Partial<PageExperiment> = {}): PageExperiment {
     targetPath: '/',
     status: 'running',
     flagKey: 'test-flag',
+    measurementKey: 'test-window-v1',
     flag: mockFlag('test-flag'),
     variants: [
       { key: 'control', label: 'Control' },
@@ -96,13 +97,13 @@ afterEach(() => {
 })
 
 describe('page experiment registry', () => {
-  it('defines the homepage experiment with a control fallback', () => {
+  it('keeps the ended homepage experiment as a historical registry entry', () => {
     expect(home2026Experiment).toMatchObject({
       id: 'home-2026',
       code: 'home-2026',
       targetPath: '/',
       flagKey: 'home-2026-variant',
-      status: 'running',
+      status: 'ended',
     })
     expect(home2026Experiment.variants.map((variant) => variant.key)).toEqual([
       'control',
@@ -136,27 +137,16 @@ describe('page experiment registry', () => {
     expect(getExperimentExposure(home2026Experiment, 'concept', '/?utm=1')).toEqual({
       experiment_id: 'home-2026',
       flag_key: 'home-2026-variant',
+      measurement_key: '2026-07-27-visitor-dedupe-v1',
       variant: 'concept',
       page_path: '/',
     })
   })
 
-  it('validates forced preview variant query params for the current experiment path', () => {
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toMatchObject({
-      experiment: home2026Experiment,
-      variant: 'concept',
-      source: 'variant-param',
-    })
-    expect(getForcedExperimentVariant('/', new URLSearchParams('home-2026-variant=control'))).toMatchObject({
-      experiment: home2026Experiment,
-      variant: 'control',
-      source: 'flag-key-param',
-    })
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-2026:concept`))).toMatchObject({
-      experiment: home2026Experiment,
-      variant: 'concept',
-      source: 'assignment-param',
-    })
+  it('ignores forced preview params after the homepage experiment ends', () => {
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toBeNull()
+    expect(getForcedExperimentVariant('/', new URLSearchParams('home-2026-variant=control'))).toBeNull()
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-2026:concept`))).toBeNull()
     expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=missing`))).toBeNull()
     expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toBeNull()
   })
@@ -189,10 +179,10 @@ describe('visitor IDs and proxy scope', () => {
     expect(headerBacked).toBe('header-id')
   })
 
-  it('only proxies configured marketing experiment paths', () => {
+  it('does not proxy the homepage after its experiment ends', () => {
     expect(proxyConfig.matcher).toEqual(['/', '/vision/:path*'])
-    expect(shouldProxyMarketingExperiment('/')).toBe(true)
-    expect(shouldProxyMarketingExperiment('/', 'HEAD')).toBe(true)
+    expect(shouldProxyMarketingExperiment('/')).toBe(false)
+    expect(shouldProxyMarketingExperiment('/', 'HEAD')).toBe(false)
     expect(shouldProxyMarketingExperiment('/', 'POST')).toBe(false)
 
     for (const path of ['/api/hello', '/_next/static/app.js', '/studio', '/logo.svg', '/__exp/home-2026']) {
@@ -207,6 +197,16 @@ describe('visitor IDs and proxy scope', () => {
 })
 
 describe('experiment renderers and content variants', () => {
+  it('renders the concept variant on the canonical homepage', async () => {
+    const { default: HomePage } = await import('@/app/(main)/page')
+    const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
+    const homepage = await HomePage()
+
+    expect(React.isValidElement(homepage)).toBe(true)
+    expect(homepage.type).toBe(HomePageRenderer)
+    expect(homepage.props).toMatchObject({ variant: 'concept' })
+  })
+
   it('defaults the homepage renderer to the control component', async () => {
     const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
     const children = reactChildren(await HomePageRenderer())
@@ -258,6 +258,70 @@ describe('experiment renderers and content variants', () => {
 })
 
 describe('experiment analytics', () => {
+  it('counts an exposure once per browser and measurement window across reloads', () => {
+    const stored = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => stored.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => stored.set(key, value)),
+    }
+    const sendBeacon = vi.fn(() => true)
+    vi.stubGlobal('window', { gtag: vi.fn(), localStorage })
+    vi.stubGlobal('navigator', { sendBeacon })
+
+    const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
+    setExperimentContext(exposure)
+    trackExperimentExposure(exposure)
+
+    // Reset module memory to simulate a full page reload. Persistent browser
+    // storage remains, so the same visitor is not counted a second time.
+    resetExperimentAnalyticsForTests()
+    setExperimentContext(exposure)
+    trackExperimentExposure(exposure)
+
+    expect(
+      vi.mocked(trackVercelEvent).mock.calls.filter(([name]) => name === 'experiment_exposure'),
+    ).toHaveLength(1)
+    expect(sendBeacon).toHaveBeenCalledTimes(1)
+    expect(Array.from(stored.keys())).toContain(
+      'goinvo:experiment-event:home-2026:2026-07-27-visitor-dedupe-v1:concept:experiment_exposure',
+    )
+  })
+
+  it('counts tracked conversion events once per browser while retaining general interaction events', async () => {
+    const stored = new Map<string, string>()
+    const localStorage = {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    }
+    const bodies: Blob[] = []
+    vi.stubGlobal('window', { gtag: vi.fn(), localStorage })
+    vi.stubGlobal('navigator', {
+      sendBeacon: vi.fn((_url: string, body: Blob) => {
+        bodies.push(body)
+        return true
+      }),
+    })
+
+    const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
+    setExperimentContext(exposure)
+    trackQualifiedDiscoveryCallClick({
+      cta_text: 'Book a discovery call',
+      cta_location: 'concept hero',
+      cta_url: '#book',
+    })
+    trackQualifiedDiscoveryCallClick({
+      cta_text: 'Book a discovery call',
+      cta_location: 'concept selected work',
+      cta_url: '#book',
+    })
+
+    const eventNames = await Promise.all(
+      bodies.map(async (body) => JSON.parse(await body.text()).eventName as string),
+    )
+    expect(eventNames.filter((name) => name === 'qualified_discovery_call_click')).toHaveLength(1)
+    expect(eventNames.filter((name) => name === 'cta_click')).toHaveLength(2)
+  })
+
   it('fires one exposure per page and variant, then enriches later conversion events', () => {
     const gtag = vi.fn()
     vi.stubGlobal('window', { gtag })

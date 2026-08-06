@@ -1386,6 +1386,67 @@ const categories: Category[] = [
         ],
       },
       {
+        id: 'marketing.shop',
+        title: 'Run the shop',
+        blurb: 'Manage the storefront, stock, customers, orders, and payment handoff.',
+        minutes: 5,
+        keywords: ['shop', 'store', 'storefront', 'product', 'inventory', 'order', 'payment', 'stripe'],
+        links: [
+          { path: '/marketing?view=shop', label: 'Open Shop' },
+          { path: '/../vision/health-visualizations', label: 'View the public storefront' },
+        ],
+        steps: [
+          {
+            id: 'marketing.shop.catalog',
+            title: 'Build the catalog',
+            body: (
+              <>
+                Add products in <strong>Shop → Storefront</strong>. Each product
+                has public copy, a SKU, price, stock rules, and an optional
+                hosted payment link. Add product photography and less common
+                relationships from the collapsed Advanced fields dropdown.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.shop.inventory',
+            title: 'Keep inventory accurate',
+            body: (
+              <>
+                Use <strong>Inventory</strong> for fast stock adjustments. The
+                workspace highlights products at or below their reorder point,
+                and paid orders recorded in the CMS reduce tracked stock.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.shop.customers',
+            title: 'Link customers to marketing',
+            body: (
+              <>
+                When contact sync is enabled, an order matches an existing
+                Marketing contact by email or creates a new one. The order keeps
+                a customer snapshot while Outreach retains the reusable contact
+                record for future campaigns and relationship work.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.shop.payments',
+            title: 'Connect checkout safely',
+            body: (
+              <>
+                Choose the processor and connection state under{' '}
+                <strong>Payments &amp; settings</strong>, then place hosted
+                checkout URLs on products. Store only safe account labels and
+                external payment IDs in Sanity. API keys, signing secrets, and
+                card data belong in the deployment environment or processor.
+              </>
+            ),
+          },
+        ],
+      },
+      {
         id: 'marketing.quick-links',
         title: 'Manage Quick Links',
         blurb: 'Control the public /links page used by Instagram and social posts.',

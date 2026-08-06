@@ -1,4 +1,5 @@
 import {
+  BasketIcon,
   CalendarIcon,
   DashboardIcon,
   LinkIcon,
@@ -229,6 +230,12 @@ export const MARKETING_TOOL_VIEWS: Array<{
     description: 'Manage the public /links page for Instagram and social posts.',
     icon: LinkIcon,
   },
+  {
+    id: 'shop',
+    title: 'Shop',
+    description: 'Run the storefront, products, inventory, customers, orders, and payments.',
+    icon: BasketIcon,
+  },
 ]
 
 export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
@@ -241,6 +248,7 @@ export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
   'calendar',
   'channels',
   'linkTree',
+  'shop',
 ]
 
 // Top-level information architecture: the flat view list above collapses into 5 task-shaped
@@ -315,6 +323,14 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
       { view: 'abTesting', label: 'A/B tests' },
       { view: 'analytics', label: 'Analytics sources' },
     ],
+  },
+  {
+    id: 'shop',
+    title: 'Shop',
+    description: 'Sell products and resources, track stock, and connect customers to marketing.',
+    icon: BasketIcon,
+    landingView: 'shop',
+    tabs: [{ view: 'shop', label: 'Storefront & operations' }],
   },
   {
     id: 'settings',
@@ -2197,6 +2213,44 @@ export function getAbTestingVariantEngagement(
   return { sessions: null, bounceRate: null, averageSessionDuration: null }
 }
 
+export type AbTestingSectionEngagement = {
+  variantKey: string
+  sectionKey: string
+  views: number
+  averageVisibleDuration: number
+}
+
+export function getAbTestingSectionEngagement(
+  experiment: MarketingExperiment,
+): AbTestingSectionEngagement[] {
+  const entries: AbTestingSectionEngagement[] = []
+  const seen = new Set<string>()
+  for (const signal of uniqueById((experiment.performanceSignals || []).filter(Boolean))) {
+    for (const entry of signal.sectionEngagement || []) {
+      const variantKey = entry.variantKey?.trim()
+      const sectionKey = entry.sectionKey?.trim()
+      const compositeKey = `${variantKey}:${sectionKey}`
+      if (
+        !variantKey ||
+        !sectionKey ||
+        seen.has(compositeKey) ||
+        typeof entry.views !== 'number' ||
+        !Number.isFinite(entry.views) ||
+        typeof entry.averageVisibleDuration !== 'number' ||
+        !Number.isFinite(entry.averageVisibleDuration)
+      ) continue
+      seen.add(compositeKey)
+      entries.push({
+        variantKey,
+        sectionKey,
+        views: Math.max(0, Math.round(entry.views)),
+        averageVisibleDuration: Math.max(0, entry.averageVisibleDuration),
+      })
+    }
+  }
+  return entries
+}
+
 /** Formats a 0–1 fraction or 0–100 percent bounce rate as a whole-ish percent. */
 export function formatAbTestingBounceRate(value: number | null): string {
   if (value === null) return '—'
@@ -2227,7 +2281,7 @@ export function formatAbTestingEventCount(value: number | null, unit?: string) {
 export function formatAbTestingEventRate(cell: AbTestingVariantEventCell) {
   if (cell.value === null) return 'Event count missing'
   if (cell.denominator === null) return 'Visit count missing'
-  if (cell.denominator <= 0) return '0 visits'
+  if (cell.denominator <= 0) return '0 visitors'
   const rate = cell.rate || 0
   // A rate above 100% means more events than exposures (a sample/instrumentation
   // artifact). Show the honest ratio instead of a misleading "500% of visits".

@@ -7,7 +7,7 @@ import {
 } from '@/flags'
 
 export type ExperimentPageKind = 'homepage' | 'vision'
-export type ExperimentStatus = 'running' | 'paused' | 'draft'
+export type ExperimentStatus = 'running' | 'paused' | 'draft' | 'ended'
 
 export type PageExperiment<Variant extends string = string> = {
   id: string
@@ -16,6 +16,7 @@ export type PageExperiment<Variant extends string = string> = {
   targetPath: string
   status: ExperimentStatus
   flagKey: string
+  measurementKey: string
   flag: Flag<Variant>
   variants: Array<{
     key: Variant
@@ -26,6 +27,7 @@ export type PageExperiment<Variant extends string = string> = {
 export type ExperimentExposure = {
   experiment_id: string
   flag_key: string
+  measurement_key: string
   variant: string
   page_path: string
 }
@@ -44,8 +46,9 @@ export const home2026Experiment: PageExperiment<Home2026Variant> = {
   code: 'home-2026',
   kind: 'homepage',
   targetPath: '/',
-  status: 'running',
+  status: 'ended',
   flagKey: home2026Variant.key,
+  measurementKey: '2026-07-27-visitor-dedupe-v1',
   flag: home2026Variant,
   variants: [
     { key: 'control', label: 'Current homepage' },
@@ -86,6 +89,7 @@ export function getExperimentExposure(
   return {
     experiment_id: experiment.id,
     flag_key: experiment.flagKey,
+    measurement_key: experiment.measurementKey,
     variant,
     page_path: normalizeExperimentPath(pagePath),
   }
