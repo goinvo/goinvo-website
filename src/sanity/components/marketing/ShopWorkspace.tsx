@@ -63,6 +63,11 @@ type ShopOrder = {
   processorPaymentId?: string
   paymentUrl?: string
   shippingAddress?: string
+  settlementState?: string
+  amountRefunded?: number
+  amountDisputeHeld?: number
+  netCollected?: number
+  ledgerSyncError?: string
   contact?: { _id?: string; name?: string; email?: string }
   items?: Array<{
     _key?: string
@@ -92,9 +97,28 @@ type ShopSettings = {
   contactSourceNote?: string
 }
 
+type ShopDispute = {
+  _id: string
+  disputeId?: string
+  status?: string
+  stage?: string
+  reason?: string
+  amount?: number
+  currency?: string
+  orderNumber?: string
+  customerEmail?: string
+  dueBy?: string
+  canRespond?: boolean
+  evidenceSubmittedAt?: string
+  openedAt?: string
+  noteCount?: number
+  channelName?: string
+}
+
 type ShopData = {
   products: ShopProduct[]
   orders: ShopOrder[]
+  disputes: ShopDispute[]
   settings: ShopSettings | null
   contactCount: number
   customerCount: number
@@ -152,11 +176,18 @@ const SHOP_PRIVATE_QUERY = `{
     | order(placedAt desc)[0...100] {
       _id, orderNumber, status, placedAt, customerName, customerEmail, shippingAddress,
       subtotal, shipping, donation, tax, total, currency, processor, processorPaymentId, paymentUrl,
+      settlementState, amountRefunded, amountDisputeHeld, netCollected, ledgerSyncError,
       "contact": contact->{_id, name, email},
       "items": items[]{
         _key, title, sku, quantity, unitPrice,
         "product": product->{_id}
       }
+    },
+  "disputes": *[_type == "marketingDispute" && !(_id in path("drafts.**"))]
+    | order(coalesce(dueBy, openedAt) asc)[0...25] {
+      _id, disputeId, status, stage, reason, amount, currency, orderNumber,
+      customerEmail, dueBy, canRespond, evidenceSubmittedAt, openedAt,
+      "noteCount": count(notes), "channelName": slack.channelName
     },
   "contactCount": count(*[_type == "marketingContact" && !(_id in path("drafts.**"))]),
   "customerCount": count(*[
@@ -165,6 +196,28 @@ const SHOP_PRIVATE_QUERY = `{
     && sourceNotes match "*Shop*"
   ])
 }`
+
+const SETTLEMENT_LABELS: Record<string, string> = {
+  collected: 'Collected',
+  partiallyRefunded: 'Partially refunded',
+  refunded: 'Refunded',
+  disputeInquiry: 'Inquiry open',
+  disputeOpen: 'Chargeback open',
+  disputeLost: 'Chargeback lost',
+}
+
+const DO_NOT_SHIP_STATES = ['disputeOpen', 'disputeLost', 'refunded']
+
+function disputeDeadlineLabel(dueBy: string | undefined) {
+  if (!dueBy) return 'No response allowed'
+  const due = new Date(dueBy)
+  if (Number.isNaN(due.getTime())) return 'Deadline unknown'
+
+  const days = Math.ceil((due.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+  if (days < 0) return 'Deadline passed'
+  if (days === 0) return 'Due today'
+  return `${days} day${days === 1 ? '' : 's'} left`
+}
 
 const emptyProductDraft: ProductDraft = {
   title: '',
@@ -295,6 +348,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
   const [data, setData] = useState<ShopData>({
     products: [],
     orders: [],
+    disputes: [],
     settings: null,
     contactCount: 0,
     customerCount: 0,
@@ -316,6 +370,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
       setData({
         products: next?.products || [],
         orders: priv?.orders || [],
+        disputes: priv?.disputes || [],
         settings: next?.settings || null,
         contactCount: priv?.contactCount || 0,
         customerCount: priv?.customerCount || 0,
@@ -357,9 +412,17 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
     if (!product.trackInventory || product.status === 'archived') return false
     return (product.inventoryQuantity ?? 0) <= (product.lowStockThreshold ?? 5)
   })
+  // Prefer the settled figure over the order total: a refunded or charged-back
+  // order still has its original total, so summing totals reports money we no
+  // longer hold as revenue. `netCollected` is absent only on orders recorded
+  // before settlement tracking existed, which fall back to the total.
   const paidRevenue = data.orders
     .filter((order) => !['canceled', 'refunded', 'pending'].includes(order.status || ''))
-    .reduce((sum, order) => sum + (order.total || 0), 0)
+    .reduce(
+      (sum, order) => sum + (typeof order.netCollected === 'number' ? order.netCollected : order.total || 0),
+      0,
+    )
+  const amountAtRisk = data.orders.reduce((sum, order) => sum + (order.amountDisputeHeld || 0), 0)
 
   const orderProduct = data.products.find((product) => product._id === orderDraft.productId)
   const orderSubtotal = (orderProduct?.price || 0) * Math.max(1, numberValue(orderDraft.quantity, 1))
@@ -649,7 +712,15 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
         <SummaryCard label="Live products" value={activeProducts.length} detail={`${data.products.length} total in catalog`} />
         <SummaryCard label="Low stock" value={lowStockProducts.length} detail="At or below reorder point" />
         <SummaryCard label="Orders" value={data.orders.length} detail={`${data.customerCount} shop contacts`} />
-        <SummaryCard label="Recorded revenue" value={money(paidRevenue)} detail="Paid, processing, and fulfilled" />
+        <SummaryCard
+          label="Net collected"
+          value={money(paidRevenue)}
+          detail={
+            amountAtRisk > 0
+              ? `After refunds · ${money(amountAtRisk)} held by open disputes`
+              : 'After refunds and chargebacks'
+          }
+        />
       </div>
 
       <nav
@@ -934,6 +1005,33 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                           {order.shippingAddress}
                         </div>
                       )}
+                      {/* Money truth, separate from the fulfilment status a
+                          human sets. Anything that says do-not-ship has to be
+                          impossible to miss while packing a tube. */}
+                      {order.settlementState && order.settlementState !== 'collected' && (
+                        <div
+                          style={{
+                            ...styles.small,
+                            marginTop: 6,
+                            fontWeight: 800,
+                            color: DO_NOT_SHIP_STATES.includes(order.settlementState) ? '#e2725b' : '#d6a93f',
+                          }}
+                        >
+                          {SETTLEMENT_LABELS[order.settlementState] || order.settlementState}
+                          {typeof order.netCollected === 'number' && (
+                            <span style={{ fontWeight: 500 }}>
+                              {' '}
+                              · {money(order.netCollected, order.currency)} still collected
+                            </span>
+                          )}
+                          {DO_NOT_SHIP_STATES.includes(order.settlementState) && ' · do not ship'}
+                        </div>
+                      )}
+                      {order.ledgerSyncError && (
+                        <div style={{ ...styles.small, marginTop: 4, color: '#d6a93f' }}>
+                          Ledger out of date: {order.ledgerSyncError}
+                        </div>
+                      )}
                     </div>
                     <strong>{money(order.total, order.currency)}</strong>
                   </div>
@@ -959,6 +1057,58 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
               ))}
               {data.orders.length === 0 && <p style={styles.muted}>No orders recorded yet.</p>}
             </div>
+
+            {/* Disputes sit next to orders, sorted by deadline: the only thing
+                that matters about a chargeback is how long is left to answer. */}
+            {data.disputes.length > 0 && (
+              <div style={{ marginTop: 18 }}>
+                <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Disputes</h3>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {data.disputes.map((dispute) => {
+                    const urgent = dispute.canRespond && !dispute.evidenceSubmittedAt
+                    return (
+                      <div
+                        key={dispute._id}
+                        style={{
+                          border: `1px solid ${urgent ? '#e2725b' : 'var(--card-border-color)'}`,
+                          borderRadius: 8,
+                          padding: 12,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                          <div>
+                            <strong>{dispute.orderNumber || 'Unmatched order'}</strong>
+                            <div style={{ ...styles.muted, ...styles.small }}>
+                              {dispute.stage === 'inquiry' ? 'Inquiry' : 'Chargeback'}
+                              {dispute.reason ? ` · ${dispute.reason}` : ''}
+                              {dispute.customerEmail ? ` · ${dispute.customerEmail}` : ''}
+                            </div>
+                            <div style={{ ...styles.small, marginTop: 4 }}>
+                              {dispute.evidenceSubmittedAt
+                                ? 'Evidence submitted'
+                                : `${dispute.noteCount || 0} note${dispute.noteCount === 1 ? '' : 's'} drafted`}
+                              {dispute.channelName ? ` · #${dispute.channelName}` : ''}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <strong>{money(dispute.amount, dispute.currency)}</strong>
+                            <div
+                              style={{
+                                ...styles.small,
+                                fontWeight: 800,
+                                color: urgent ? '#e2725b' : '#7d8698',
+                              }}
+                            >
+                              {dispute.evidenceSubmittedAt ? dispute.status : disputeDeadlineLabel(dispute.dueBy)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </section>
         </div>
       )}

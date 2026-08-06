@@ -93,12 +93,13 @@ function expandedPaymentIntent(session: Stripe.Checkout.Session) {
     : null
 }
 
+function expandedCharge(session: Stripe.Checkout.Session) {
+  const charge = expandedPaymentIntent(session)?.latest_charge
+  return charge && typeof charge !== 'string' && !('deleted' in charge) ? charge : null
+}
+
 function receiptUrl(session: Stripe.Checkout.Session) {
-  const paymentIntent = expandedPaymentIntent(session)
-  const charge = paymentIntent?.latest_charge
-  return charge && typeof charge !== 'string' && !('deleted' in charge)
-    ? charge.receipt_url || undefined
-    : undefined
+  return expandedCharge(session)?.receipt_url || undefined
 }
 
 function isConflictError(error: unknown) {
@@ -219,7 +220,20 @@ export async function fulfillStripeCheckout(sessionId: string): Promise<Fulfillm
       typeof session.payment_intent === 'string'
         ? session.payment_intent
         : paymentIntent?.id,
+    // The charge id is the handle a refund or dispute arrives under. It is in
+    // hand here via the latest_charge expansion, so persist it rather than
+    // paying for a lookup later.
+    processorChargeId: expandedCharge(session)?.id,
     paymentUrl: receiptUrl(session),
+    // Opening ledger position. Refunds and disputes overwrite these from live
+    // Stripe state; until one happens, what we captured is what we collected.
+    settlementState: 'collected',
+    amountCaptured: centsToCurrency(expandedCharge(session)?.amount_captured || session.amount_total || 0),
+    amountRefunded: 0,
+    amountDisputeHeld: 0,
+    amountLostToDispute: 0,
+    netCollected: centsToCurrency(expandedCharge(session)?.amount_captured || session.amount_total || 0),
+    ledgerSyncedAt: new Date().toISOString(),
     notes: [
       `Stripe Checkout session: ${session.id}`,
       `Promotional email consent: ${promotionalConsent}`,

@@ -63,8 +63,25 @@ Subscribe it to:
 
 - `checkout.session.completed`
 - `checkout.session.async_payment_succeeded`
+- `charge.refunded`
+- `refund.updated`
+- `refund.failed`
+- `charge.dispute.created`
+- `charge.dispute.updated`
+- `charge.dispute.closed`
+- `charge.dispute.funds_withdrawn`
+- `charge.dispute.funds_reinstated`
+
+**The refund and dispute events must be subscribed explicitly.** Without them the endpoint
+still returns 200 and nothing breaks visibly — refunds silently never correct the ledger and
+disputes are never seen at all, which is how an evidence deadline gets missed.
 
 Use the endpoint signing secret as `STRIPE_WEBHOOK_SECRET`.
+
+If the deployment uses a **restricted** key (`rk_…`) rather than a standard one, it needs
+*Charges: read*, *Refunds: read*, *Payment intents: read*, *Checkout sessions: read*, and
+**Disputes: write** — the write permission is what allows submitting evidence when a real
+chargeback lands.
 
 In Marketing CMS → Shop → Payments & settings, set:
 
@@ -148,3 +165,31 @@ This should only be used for a short, coordinated test.
 
 Enable `STRIPE_AUTOMATIC_TAX_ENABLED=true` only after Stripe Tax registrations and product tax
 settings have been reviewed.
+
+## Refunds and disputes
+
+Money that comes back after a sale is handled by re-deriving the order's ledger from live Stripe
+state rather than by accumulating events, so a redelivered or out-of-order webhook always produces
+the same answer.
+
+- **Refunds** (full or partial) update `settlementState`, `amountRefunded`, and `netCollected` on
+  the order, and post a Slack alert saying whether it is still shippable.
+- **Disputes** create a `marketingDispute` record in the private outreach dataset plus a dedicated
+  Slack channel named `shop-dispute-<dispute id>`. The card in that channel shows the amount, the
+  reason, whether funds are actually held (a chargeback) or not (an inquiry), and the hard evidence
+  deadline.
+- **Replying:** anything typed in the dispute channel is stored as a note on the dispute. Nothing is
+  ever sent automatically. Reaching the customer is a `mailto:` button that opens your own mail
+  client; reaching Stripe is the **Submit evidence to Stripe** button, behind a confirmation, because
+  Stripe normally accepts one submission and it cannot be retracted.
+- **Backstop:** a daily cron (`/api/shop/disputes/reconcile`, 13:00 UTC, in `vercel.json`) lists
+  recent disputes directly from Stripe and re-reconciles recent orders. Discovery therefore does not
+  depend on the webhook — a dropped delivery costs a day of latency, not a deadline. It authenticates
+  with `CRON_SECRET` or `MARKETING_API_KEY`.
+
+Set `SHOP_DISPUTE_CHANNELS_ENABLED=false` to keep everything in the main shop channel instead of
+creating a channel per dispute.
+
+Orders carry a `settlementState` that is worker-owned and read-only; `status` remains the human
+fulfilment lifecycle. They never contend, so marking an order fulfilled cannot be undone by a
+dispute update, and a dispute cannot be hidden by someone editing the status.

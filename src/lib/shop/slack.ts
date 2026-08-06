@@ -181,6 +181,71 @@ export async function notifySlackShopOrder(
   return { status: 'sent', ...result }
 }
 
+export type ShopRefundNotification = {
+  orderId: string
+  chargeId: string
+  settlement: {
+    amountCaptured: number
+    amountRefunded: number
+    netCollected: number
+    settlementState: string
+  }
+}
+
+/**
+ * Refund alert. Deliberately quieter than an order alert: it states the new
+ * ledger position rather than re-describing the sale, because the question an
+ * operator has when money goes back is "do I still ship this?".
+ */
+export function buildShopRefundSlackMessage(input: ShopRefundNotification) {
+  const { settlement } = input
+  const fullyRefunded = settlement.settlementState === 'refunded'
+  const heading = fullyRefunded ? 'Order refunded' : 'Partial refund issued'
+  const summary = `${formatMoney(settlement.amountRefunded, 'USD')} of ${formatMoney(
+    settlement.amountCaptured,
+    'USD',
+  )} refunded · ${formatMoney(settlement.netCollected, 'USD')} still collected`
+
+  return {
+    text: `${heading}: ${summary}.${fullyRefunded ? ' Do not ship this order.' : ''}`,
+    blocks: [
+      { type: 'header', text: { type: 'plain_text', text: heading } },
+      { type: 'section', text: { type: 'mrkdwn', text: summary } },
+      ...(fullyRefunded
+        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: '*Do not ship this order.*' }] }]
+        : []),
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            action_id: 'goinvo_refund_open_cms',
+            text: { type: 'plain_text', text: 'Open order in CMS' },
+            url: getMarketingOrderStudioUrl(input.orderId),
+          },
+        ],
+      },
+    ],
+  }
+}
+
+export async function notifySlackShopRefund(
+  input: ShopRefundNotification,
+): Promise<ShopSlackNotificationResult> {
+  const channel = getShopSlackChannelId()
+  if (!getSlackConfig().botToken || !channel) {
+    return { status: 'not-configured' }
+  }
+
+  const message = buildShopRefundSlackMessage(input)
+  const result = await postSlackMessage({ channel, ...message })
+  if (!result) {
+    throw new Error(`Slack refund notification failed for ${input.orderId}.`)
+  }
+
+  return { status: 'sent', ...result }
+}
+
 function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -203,7 +268,7 @@ function formatPlacedAt(value: string) {
   }).format(date)
 }
 
-function escapeSlack(value: string) {
+export function escapeSlack(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 

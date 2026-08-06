@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server'
+import type Stripe from 'stripe'
 import { fulfillStripeCheckout } from '@/lib/shop/fulfillment'
-import { notifySlackShopOrder } from '@/lib/shop/slack'
+import { notifySlackShopOrder, notifySlackShopRefund } from '@/lib/shop/slack'
 import { getStripeClient, getStripeWebhookSecret } from '@/lib/shop/stripeConfig'
 import { isMissingStripeResource } from '@/lib/shop/checkout'
+import { reconcilePaymentSettlement } from '@/lib/shop/reconcile'
+import { syncDisputeFromStripe } from '@/lib/shop/disputes'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -62,6 +65,47 @@ export async function POST(request: Request) {
           return NextResponse.json({ received: true, alert: 'failed' })
         }
       }
+    }
+
+    // Money coming BACK. The event body is treated as a ping only: the ledger
+    // is recomputed from live Stripe state, which is what makes a redelivered
+    // or out-of-order event produce the same result as a first delivery.
+    if (
+      event.type === 'charge.refunded' ||
+      event.type === 'charge.refund.updated' ||
+      event.type === 'refund.updated' ||
+      event.type === 'refund.failed'
+    ) {
+      const object = event.data.object as { id?: string; charge?: string | { id: string }; payment_intent?: string | { id: string } }
+      const chargeId =
+        event.type === 'charge.refunded'
+          ? object.id
+          : typeof object.charge === 'string'
+            ? object.charge
+            : object.charge?.id
+      const paymentIntentId =
+        typeof object.payment_intent === 'string' ? object.payment_intent : object.payment_intent?.id
+
+      const result = await reconcilePaymentSettlement({ chargeId, paymentIntentId, source: 'refund' })
+      if (result.status === 'applied') {
+        try {
+          await notifySlackShopRefund(result)
+        } catch (error) {
+          console.error(`Refund recorded for ${result.orderId} but the Slack alert failed.`, error)
+        }
+      }
+      return NextResponse.json({ received: true, refund: result.status })
+    }
+
+    if (
+      event.type === 'charge.dispute.created' ||
+      event.type === 'charge.dispute.updated' ||
+      event.type === 'charge.dispute.closed' ||
+      event.type === 'charge.dispute.funds_withdrawn' ||
+      event.type === 'charge.dispute.funds_reinstated'
+    ) {
+      const result = await syncDisputeFromStripe(event.data.object as Stripe.Dispute)
+      return NextResponse.json({ received: true, dispute: result.status })
     }
 
     return NextResponse.json({ received: true })

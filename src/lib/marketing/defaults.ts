@@ -62,6 +62,8 @@ export const DEFAULTS: Record<ManagedMarketingType, Record<string, unknown>> = {
     currency: 'USD',
   },
   marketingOrder: { status: 'pending', shipping: 0, donation: 0, tax: 0, currency: 'USD' },
+  // No defaults: every field is written from live Stripe state by the worker.
+  marketingDispute: {},
   marketingShopSettings: {
     storeName: 'GoInvo Shop',
     headline: 'Tools and artifacts for healthier systems.',
@@ -161,6 +163,9 @@ export const ARRAY_ITEM_TYPES: Record<ManagedMarketingType, Record<string, strin
   marketingOrder: {
     items: 'shopOrderItem',
   },
+  marketingDispute: {
+    notes: 'disputeNote',
+  },
   marketingShopSettings: {},
   marketingWorkEvidence: {
     highlights: 'evidenceHighlight',
@@ -198,6 +203,7 @@ export const REQUIRED_FIELDS: Record<ManagedMarketingType, string[]> = {
   marketingContact: ['name', 'status'],
   marketingOffer: ['title', 'key', 'status'],
   marketingProduct: ['title', 'slug', 'status', 'kind', 'sku', 'price', 'currency'],
+  marketingDispute: ['disputeId', 'status'],
   marketingOrder: [
     'orderNumber',
     'status',
