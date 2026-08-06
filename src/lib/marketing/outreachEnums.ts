@@ -158,6 +158,9 @@ export const OUTREACH_DATASET_TYPES = [
   'marketingOffer',
   'marketingWorkEvidence',
   'marketingOperation',
+  'marketingOutreachCheckpoint',
+  // Shop orders carry buyer name, email, and full shipping address.
+  'marketingOrder',
 ]
 
 /** Identity-verification confidence for person research (wrong-person guard). */

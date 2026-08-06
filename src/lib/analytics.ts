@@ -6,6 +6,7 @@ type EventParams = Record<string, EventParamValue>
 export interface ExperimentAnalyticsParams extends Record<string, string> {
   experiment_id: string
   flag_key: string
+  measurement_key: string
   variant: string
   page_path: string
 }
@@ -44,12 +45,15 @@ export function trackEvent(name: string, params?: EventParams) {
 function beaconExperimentEvent(name: string) {
   if (!experimentContext) return
   if (typeof navigator === 'undefined' || typeof navigator.sendBeacon !== 'function') return
+  const uniqueEvent = UNIQUE_EXPERIMENT_EVENTS.has(name)
+  if (uniqueEvent && hasPersistentExperimentEvent(name)) return
   try {
     const identity = getGaIdentity()
     const body = JSON.stringify({
       eventName: name,
       flag_key: experimentContext.flag_key,
       experiment_id: experimentContext.experiment_id,
+      measurement_key: experimentContext.measurement_key,
       variant: experimentContext.variant,
       page_path: experimentContext.page_path,
       // Campaign attribution (utm_*/gclid from the landing URL) so /collect can
@@ -61,7 +65,11 @@ function beaconExperimentEvent(name: string) {
       ga_client_id: identity.clientId,
       ...(identity.sessionId ? { ga_session_id: identity.sessionId } : {}),
     })
-    navigator.sendBeacon('/api/marketing/analytics/collect', new Blob([body], { type: 'application/json' }))
+    const accepted = navigator.sendBeacon(
+      '/api/marketing/analytics/collect',
+      new Blob([body], { type: 'application/json' }),
+    )
+    if (accepted && uniqueEvent) markPersistentExperimentEvent(name)
   } catch {
     // Best-effort: collection must never affect the page.
   }
@@ -218,6 +226,54 @@ function ensureClientAnalyticsQueues() {
 
 let experimentContext: ExperimentAnalyticsParams | null = null
 const trackedExperimentExposures = new Set<string>()
+const UNIQUE_EXPERIMENT_EVENTS = new Set([
+  'experiment_exposure',
+  'qualified_discovery_call_click',
+  'view_work_click',
+  'discovery_form_start',
+  'nav_click',
+  'discovery_call_booked',
+  'chat_message_sent',
+])
+const persistentExperimentEvents = new Set<string>()
+
+function experimentEventStorageKey(name: string) {
+  if (!experimentContext) return ''
+  return [
+    'goinvo',
+    'experiment-event',
+    experimentContext.experiment_id,
+    experimentContext.measurement_key,
+    experimentContext.variant,
+    name,
+  ].join(':')
+}
+
+function hasPersistentExperimentEvent(name: string) {
+  const key = experimentEventStorageKey(name)
+  if (!key) return false
+  if (persistentExperimentEvents.has(key)) return true
+  try {
+    if (window.localStorage?.getItem(key) === '1') {
+      persistentExperimentEvents.add(key)
+      return true
+    }
+  } catch {
+    // Storage may be unavailable in privacy modes; the in-memory guard remains.
+  }
+  return false
+}
+
+function markPersistentExperimentEvent(name: string) {
+  const key = experimentEventStorageKey(name)
+  if (!key) return
+  persistentExperimentEvents.add(key)
+  try {
+    window.localStorage?.setItem(key, '1')
+  } catch {
+    // Best-effort. No visitor identifier is stored or transmitted.
+  }
+}
 
 // Set true the first time a tracked experiment conversion fires during this
 // page-session. The first-party engagement tracker reads it so a session that
@@ -248,8 +304,10 @@ export function withExperimentContext(params?: EventParams): EventParams | undef
 }
 
 export function trackExperimentExposure(params: ExperimentAnalyticsParams) {
-  const exposureKey = `${params.experiment_id}:${params.variant}:${params.page_path}`
+  setExperimentContext(params)
+  const exposureKey = `${params.experiment_id}:${params.measurement_key}:${params.variant}:${params.page_path}`
   if (trackedExperimentExposures.has(exposureKey)) return
+  if (hasPersistentExperimentEvent('experiment_exposure')) return
 
   trackedExperimentExposures.add(exposureKey)
   // Attribute this visitor's GA4 data to their variant cohort (user-scoped) so
@@ -293,6 +351,7 @@ export function trackExperimentConversion(params: {
 export function resetExperimentAnalyticsForTests() {
   experimentContext = null
   trackedExperimentExposures.clear()
+  persistentExperimentEvents.clear()
   experimentConversionFired = false
 }
 

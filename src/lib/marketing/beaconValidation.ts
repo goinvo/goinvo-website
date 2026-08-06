@@ -32,6 +32,7 @@ export type ValidatedExperimentBeacon = {
   kind: 'engagement' | 'event'
   experimentId: string
   flagKey: string
+  measurementKey: string
   variant: string
   pagePath: string
   eventName?: string
@@ -42,6 +43,7 @@ export function validateExperimentBeacon(
 ): ValidatedExperimentBeacon | null {
   const flagKey = String(body.flag_key ?? body.flagKey ?? '').trim()
   const experimentId = String(body.experiment_id ?? body.experimentId ?? '').trim()
+  const measurementKey = String(body.measurement_key ?? body.measurementKey ?? '').trim()
   const variant = String(body.variant ?? '').trim()
   const rawPagePath = String(body.page_path ?? body.pagePath ?? '').trim()
   if (!rawPagePath.startsWith('/')) return null
@@ -54,14 +56,15 @@ export function validateExperimentBeacon(
       candidate.flagKey === flagKey,
   )
   if (!experiment) return null
+  if (!measurementKey || measurementKey !== experiment.measurementKey) return null
   if (!isAllowedExperimentVariant(experiment, variant)) return null
   if (normalizeExperimentPath(experiment.targetPath) !== pagePath) return null
 
   if (String(body.type ?? '').trim() === 'engagement') {
-    return { kind: 'engagement', experimentId, flagKey, variant, pagePath }
+    return { kind: 'engagement', experimentId, flagKey, measurementKey, variant, pagePath }
   }
 
   const eventName = String(body.eventName ?? body.event ?? body.name ?? '').trim()
   if (!ALLOWED_EXPERIMENT_EVENTS.has(eventName)) return null
-  return { kind: 'event', experimentId, flagKey, variant, pagePath, eventName }
+  return { kind: 'event', experimentId, flagKey, measurementKey, variant, pagePath, eventName }
 }

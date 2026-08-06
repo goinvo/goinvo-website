@@ -4,6 +4,9 @@ import {
   parseKvCounterField,
   aggregatesFromKvHash,
   engagementCountersFromKvHash,
+  engSectionSessionsField,
+  engSectionVisibleMsField,
+  sectionEngagementFromKvHash,
   variantEngagementFromKvHash,
   isEngagementField,
   ENG_SESSIONS_FIELD,
@@ -166,5 +169,37 @@ describe('first-party engagement fields', () => {
     const control = variantEngagementFromKvHash(hash)[0]
     expect(control.bounceRate).toBe(1)
     expect(control.averageSessionDuration).toBe(0) // bad visible_ms ignored -> 0/10
+  })
+
+  it('computes per-section views and average visible time without emitting fake events', () => {
+    const hash = {
+      [kvCounterField('control', '/', engSectionSessionsField('hero'))]: 80,
+      [kvCounterField('control', '/', engSectionVisibleMsField('hero'))]: 1_600_000,
+      [kvCounterField('control', '/', engSectionSessionsField('case-study-3m'))]: 40,
+      [kvCounterField('control', '/', engSectionVisibleMsField('case-study-3m'))]: 600_000,
+      [kvCounterField('concept', '/', engSectionSessionsField('hero'))]: 100,
+      [kvCounterField('concept', '/', engSectionVisibleMsField('hero'))]: 1_000_000,
+    }
+
+    const sections = sectionEngagementFromKvHash(hash)
+    expect(sections).toContainEqual({
+      variantKey: 'control',
+      sectionKey: 'hero',
+      views: 80,
+      averageVisibleDuration: 20,
+    })
+    expect(sections).toContainEqual({
+      variantKey: 'control',
+      sectionKey: 'case-study-3m',
+      views: 40,
+      averageVisibleDuration: 15,
+    })
+    expect(sections).toContainEqual({
+      variantKey: 'concept',
+      sectionKey: 'hero',
+      views: 100,
+      averageVisibleDuration: 10,
+    })
+    expect(aggregatesFromKvHash('home-2026-variant', hash)).toEqual([])
   })
 })

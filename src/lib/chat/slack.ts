@@ -10,6 +10,7 @@ interface SlackPostMessageInput {
   blocks?: SlackBlock[]
   threadTs?: string
   replyBroadcast?: boolean
+  clientMsgId?: string
 }
 
 interface SlackPostMessageResponse {
@@ -171,6 +172,7 @@ export async function postSlackMessage(input: SlackPostMessageInput): Promise<Sl
       ...(input.blocks ? { blocks: input.blocks } : {}),
       ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
       ...(input.replyBroadcast ? { reply_broadcast: true } : {}),
+      ...(input.clientMsgId ? { client_msg_id: input.clientMsgId } : {}),
     }),
   })
 

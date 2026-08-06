@@ -112,6 +112,20 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
+## Lead magnet: Clinical AI Pilot Pre-Mortem (started 2026-08-03)
+
+Pipeline-first strategy (Juhan approved via Slack): lead magnet before homepage
+experiments. Full package + strategy + build plan in **`docs/lead-magnet/`** (article
+draft, worksheet/facilitator-kit draft, README with open decisions + build plan).
+Key facts: ungated article + ungated one-page scorecard, email gate ONLY on the
+facilitator's kit; public info + published case studies only (the fix methodology
+stays paid); the F1–F8 failure taxonomy is INTERNAL-only strategy content today —
+publishing it is an open decision (Shirley). Email capture today = third-party
+EmailOctopus embeds (`eocampaign1.com`, form id in `src/lib/config.ts`) — blockable,
+uninstrumented (zero signup events in GA4 ever); the build plan replaces it with a
+first-party `/api/newsletter/subscribe` route (needs `EMAILOCTOPUS_API_KEY`).
+Citation cautions: never cite the "KLAS 23%" vendor-blog stat; HIMSS 18% unverified.
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.
