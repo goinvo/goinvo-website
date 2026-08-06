@@ -151,14 +151,18 @@ export async function fulfillStripeCheckout(sessionId: string): Promise<Fulfillm
     (await getSettingsClient().fetch<ShopSettings | null>(
       '*[_id == "marketingShopSettings"][0]{syncContacts, contactSegment, contactSourceNote}',
     )) || {}
-  const existingContact = settings.syncContacts === false
-    ? null
-    : await cms.fetch<{ _id: string } | null>(
+  // Sandbox purchases share the real outreach dataset, which is fine for the
+  // order record — but a fake buyer must not be filed among genuine contacts,
+  // and reusing a real person's email in a test must not attach a test order
+  // to them. Test-mode orders therefore never sync a contact.
+  const syncContacts = settings.syncContacts !== false && session.livemode
+  const existingContact = syncContacts
+    ? await cms.fetch<{ _id: string } | null>(
         '*[_type == "marketingContact" && lower(email) == $email][0]{_id}',
         { email },
       )
-  const contactId =
-    settings.syncContacts === false ? null : existingContact?._id || shopContactDocumentId(email)
+    : null
+  const contactId = syncContacts ? existingContact?._id || shopContactDocumentId(email) : null
   const promotionalConsent = session.consent?.promotions || 'not_collected'
   const donationCents = donationItems.reduce(
     (total, lineItem) => total + (lineItem.amount_total || 0),
@@ -215,6 +219,10 @@ export async function fulfillStripeCheckout(sessionId: string): Promise<Fulfillm
     customerName,
     customerEmail: email,
     shippingAddress: formatShippingAddress(shippingDetails),
+    // Structured, not just a line in `notes`: test orders share the dataset
+    // with real ones, so every reader — revenue totals included — needs to be
+    // able to tell them apart.
+    livemode: Boolean(session.livemode),
     processor: 'stripe',
     processorPaymentId:
       typeof session.payment_intent === 'string'

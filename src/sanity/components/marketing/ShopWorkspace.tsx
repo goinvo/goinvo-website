@@ -68,6 +68,7 @@ type ShopOrder = {
   amountDisputeHeld?: number
   netCollected?: number
   ledgerSyncError?: string
+  livemode?: boolean
   contact?: { _id?: string; name?: string; email?: string }
   items?: Array<{
     _key?: string
@@ -176,7 +177,7 @@ const SHOP_PRIVATE_QUERY = `{
     | order(placedAt desc)[0...100] {
       _id, orderNumber, status, placedAt, customerName, customerEmail, shippingAddress,
       subtotal, shipping, donation, tax, total, currency, processor, processorPaymentId, paymentUrl,
-      settlementState, amountRefunded, amountDisputeHeld, netCollected, ledgerSyncError,
+      settlementState, amountRefunded, amountDisputeHeld, netCollected, ledgerSyncError, livemode,
       "contact": contact->{_id, name, email},
       "items": items[]{
         _key, title, sku, quantity, unitPrice,
@@ -416,13 +417,18 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
   // order still has its original total, so summing totals reports money we no
   // longer hold as revenue. `netCollected` is absent only on orders recorded
   // before settlement tracking existed, which fall back to the total.
-  const paidRevenue = data.orders
+  // Sandbox orders live in the same dataset as real ones, so they are excluded
+  // here by explicit flag. `livemode === false` is only ever set by Stripe test
+  // mode; orders predating the flag are undefined and still count.
+  const realOrders = data.orders.filter((order) => order.livemode !== false)
+  const paidRevenue = realOrders
     .filter((order) => !['canceled', 'refunded', 'pending'].includes(order.status || ''))
     .reduce(
       (sum, order) => sum + (typeof order.netCollected === 'number' ? order.netCollected : order.total || 0),
       0,
     )
-  const amountAtRisk = data.orders.reduce((sum, order) => sum + (order.amountDisputeHeld || 0), 0)
+  const amountAtRisk = realOrders.reduce((sum, order) => sum + (order.amountDisputeHeld || 0), 0)
+  const sandboxOrderCount = data.orders.length - realOrders.length
 
   const orderProduct = data.products.find((product) => product._id === orderDraft.productId)
   const orderSubtotal = (orderProduct?.price || 0) * Math.max(1, numberValue(orderDraft.quantity, 1))
@@ -711,7 +717,15 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
       >
         <SummaryCard label="Live products" value={activeProducts.length} detail={`${data.products.length} total in catalog`} />
         <SummaryCard label="Low stock" value={lowStockProducts.length} detail="At or below reorder point" />
-        <SummaryCard label="Orders" value={data.orders.length} detail={`${data.customerCount} shop contacts`} />
+        <SummaryCard
+          label="Orders"
+          value={realOrders.length}
+          detail={
+            sandboxOrderCount > 0
+              ? `${data.customerCount} shop contacts · ${sandboxOrderCount} sandbox`
+              : `${data.customerCount} shop contacts`
+          }
+        />
         <SummaryCard
           label="Net collected"
           value={money(paidRevenue)}
@@ -983,6 +997,21 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
                     <div>
                       <strong>{order.orderNumber || 'Order'}</strong>
+                      {order.livemode === false && (
+                        <span
+                          style={{
+                            ...styles.small,
+                            marginLeft: 6,
+                            padding: '1px 6px',
+                            borderRadius: 4,
+                            fontWeight: 800,
+                            border: '1px solid #d6a93f',
+                            color: '#d6a93f',
+                          }}
+                        >
+                          SANDBOX
+                        </span>
+                      )}
                       <div style={{ ...styles.muted, ...styles.small }}>
                         {order.customerName} · {order.customerEmail}
                       </div>

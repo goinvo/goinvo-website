@@ -2,7 +2,6 @@ import 'server-only'
 
 import Stripe from 'stripe'
 import { projectId, writeToken } from '@/sanity/env'
-import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { stripeKeyMode } from './checkout'
 
 export type StripeCheckoutMode = 'test' | 'live' | 'unconfigured' | 'invalid'
@@ -13,8 +12,6 @@ export type StripeCheckoutStatus = {
   secretKeyConfigured: boolean
   webhookConfigured: boolean
   sanityWriterConfigured: boolean
-  /** False when test mode would write into the real outreach dataset. */
-  sandboxIsolated: boolean
   automaticTaxEnabled: boolean
   promotionsConsentEnabled: boolean
 }
@@ -44,24 +41,14 @@ export function getStripeCheckoutStatus(): StripeCheckoutStatus {
     (mode === 'test' && testModeAllowed) || (mode === 'live' && liveModeEnabled)
   const webhookConfigured = webhookSecret.startsWith('whsec_')
   const sanityWriterConfigured = Boolean(projectId && writeToken)
-  // Test-mode traffic must write to its own dataset. If it does not, a sandbox
-  // purchase files a fake buyer alongside the real outreach contacts and can
-  // attach a fake order to a REAL contact whose email the tester happens to
-  // reuse. Fail closed rather than trusting the env var to have been set.
-  const sandboxIsolated = mode !== 'test' || OUTREACH_DATASET !== 'outreach'
 
   return {
     enabled:
-      !explicitlyDisabled &&
-      secretKeyConfigured &&
-      webhookConfigured &&
-      sanityWriterConfigured &&
-      sandboxIsolated,
+      !explicitlyDisabled && secretKeyConfigured && webhookConfigured && sanityWriterConfigured,
     mode,
     secretKeyConfigured,
     webhookConfigured,
     sanityWriterConfigured,
-    sandboxIsolated,
     automaticTaxEnabled: process.env.STRIPE_AUTOMATIC_TAX_ENABLED === 'true',
     promotionsConsentEnabled: process.env.STRIPE_PROMOTIONS_CONSENT_ENABLED === 'true',
   }

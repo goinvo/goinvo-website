@@ -7,11 +7,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
  * outreach dataset alongside genuine customers.
  */
 
-const loadStatus = async (env: Record<string, string | undefined>, outreachDataset = 'outreach') => {
+const loadStatus = async (env: Record<string, string | undefined>) => {
   vi.resetModules()
   vi.doMock('server-only', () => ({}))
   vi.doMock('@/sanity/env', () => ({ projectId: 'test', writeToken: 'token' }))
-  vi.doMock('@/lib/marketing/outreachEnums', () => ({ OUTREACH_DATASET: outreachDataset }))
 
   const previous: Record<string, string | undefined> = {}
   for (const [key, value] of Object.entries(env)) {
@@ -68,57 +67,101 @@ describe('a preview deployment can never take a real payment', () => {
     expect(status.enabled).toBe(true)
   })
 
-  it('accepts a test key on a preview deployment once it is isolated', async () => {
-    const status = await loadStatus(
-      {
-        STRIPE_SECRET_KEY: TEST_KEY,
-        STRIPE_WEBHOOK_SECRET: WEBHOOK,
-        VERCEL_ENV: 'preview',
-        STRIPE_LIVE_MODE_ENABLED: undefined,
-        STRIPE_CHECKOUT_ENABLED: undefined,
-      },
-      'outreach-sandbox',
-    )
+  it('accepts a test key on a preview deployment', async () => {
+    const status = await loadStatus({
+      STRIPE_SECRET_KEY: TEST_KEY,
+      STRIPE_WEBHOOK_SECRET: WEBHOOK,
+      VERCEL_ENV: 'preview',
+      STRIPE_LIVE_MODE_ENABLED: undefined,
+      STRIPE_CHECKOUT_ENABLED: undefined,
+    })
 
     expect(status.mode).toBe('test')
     expect(status.enabled).toBe(true)
-    expect(status.sandboxIsolated).toBe(true)
   })
 })
 
-describe('test-mode traffic cannot land in the real outreach dataset', () => {
-  it('switches checkout off when a test key would write to the real dataset', async () => {
-    const status = await loadStatus(
-      {
-        STRIPE_SECRET_KEY: TEST_KEY,
-        STRIPE_WEBHOOK_SECRET: WEBHOOK,
-        VERCEL_ENV: 'preview',
-        STRIPE_CHECKOUT_ENABLED: undefined,
-      },
-      'outreach',
-    )
+/**
+ * Sandbox orders share the real dataset by design. What must NOT happen is a
+ * fake buyer being filed among genuine outreach contacts, or a test order
+ * attaching itself to a real person because a tester reused their email.
+ */
+describe('a sandbox purchase never touches the real contact list', () => {
+  const loadFulfillment = async (livemode: boolean) => {
+    vi.resetModules()
+    const committed: Array<Record<string, unknown>> = []
 
-    // Forgetting the dataset var must fail LOUDLY here rather than quietly
-    // filing a fake buyer next to 1,962 real contacts.
-    expect(status.sandboxIsolated).toBe(false)
-    expect(status.enabled).toBe(false)
+    vi.doMock('server-only', () => ({}))
+    vi.doMock('@/sanity/env', () => ({
+      apiVersion: '2024-01-01', dataset: 'production', projectId: 'test', writeToken: 'token',
+    }))
+    vi.doMock('@/lib/shop/stripeConfig', () => ({
+      getStripeClient: () => ({
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              id: 'cs_1',
+              created: 1_770_000_000,
+              livemode,
+              payment_status: 'paid',
+              amount_total: 1200,
+              currency: 'usd',
+              customer_details: { email: 'tester@example.com', name: 'Test Buyer' },
+              collected_information: {
+                shipping_details: {
+                  name: 'Test Buyer',
+                  address: { line1: '1 Test St', city: 'Boston', state: 'MA', postal_code: '02118', country: 'US' },
+                },
+              },
+              total_details: { amount_shipping: 600 },
+              consent: { promotions: 'opt_in' },
+            }),
+            listLineItems: async () => ({
+              data: [{
+                id: 'li_1', description: 'Poster', quantity: 1, amount_total: 600, amount_subtotal: 600,
+                price: { product: { metadata: { kind: 'poster' } } },
+              }],
+            }),
+          },
+        },
+      }),
+    }))
+    vi.doMock('@sanity/client', () => ({
+      createClient: () => {
+        const transaction = {
+          createIfNotExists: (doc: Record<string, unknown>) => { committed.push(doc); return transaction },
+          create: (doc: Record<string, unknown>) => { committed.push(doc); return transaction },
+          commit: async () => ({}),
+        }
+        return {
+          fetch: async (query: string) =>
+            query.includes('marketingShopSettings') ? { syncContacts: true } : null,
+          transaction: () => transaction,
+          getDocument: async () => null,
+        }
+      },
+    }))
+
+    const { fulfillStripeCheckout } = await import('@/lib/shop/fulfillment')
+    await fulfillStripeCheckout('cs_1')
+    return committed
+  }
+
+  it('creates no marketing contact for a sandbox order', async () => {
+    const committed = await loadFulfillment(false)
+
+    expect(committed.some((doc) => doc._type === 'marketingContact')).toBe(false)
+    const order = committed.find((doc) => doc._type === 'marketingOrder')
+    expect(order?.livemode).toBe(false)
+    // Nothing to attach to, so the order carries no contact reference either.
+    expect(order?.contact).toBeUndefined()
   })
 
-  it('does not impose the isolation requirement on live mode', async () => {
-    const status = await loadStatus(
-      {
-        STRIPE_SECRET_KEY: LIVE_KEY,
-        STRIPE_WEBHOOK_SECRET: WEBHOOK,
-        STRIPE_LIVE_MODE_ENABLED: 'true',
-        VERCEL_ENV: 'production',
-        STRIPE_CHECKOUT_ENABLED: undefined,
-      },
-      'outreach',
-    )
+  it('still syncs a contact for a real order', async () => {
+    const committed = await loadFulfillment(true)
 
-    // Live orders belong in the real dataset — that is the whole point.
-    expect(status.sandboxIsolated).toBe(true)
-    expect(status.enabled).toBe(true)
+    expect(committed.some((doc) => doc._type === 'marketingContact')).toBe(true)
+    expect(committed.find((doc) => doc._type === 'marketingOrder')?.livemode).toBe(true)
   })
 })
 

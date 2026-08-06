@@ -239,6 +239,14 @@ export default defineType({
      * someone already marked fulfilled.
      */
     defineField({
+      name: 'livemode',
+      title: 'Real payment',
+      type: 'boolean',
+      group: 'settlement',
+      readOnly: true,
+      description: 'False for Stripe sandbox orders. Test orders are excluded from revenue totals.',
+    }),
+    defineField({
       name: 'processorChargeId',
       title: 'Stripe charge ID',
       type: 'string',
