@@ -525,6 +525,21 @@ describe('syncing a dispute is idempotent across redelivery', () => {
     expect(calls.notesPosted).toBe(1)
   })
 
+  it('stops offering the evidence button once a submission has been spent', async () => {
+    // Submitting evidence makes Stripe fire dispute.updated. Recomputing
+    // canRespond from status alone would re-arm a button for a submission
+    // Stripe has already accepted.
+    const { committed } = await loadSync({
+      _id: 'marketingDispute.stripe-du_1',
+      status: 'under_review',
+      evidenceSubmittedAt: '2026-08-06T22:14:02.282Z',
+      slack: { channelId: 'C123', alertMessageTs: '111.222' },
+    })
+
+    const fields = committed.find((doc) => 'canRespond' in doc)
+    expect(fields?.canRespond).toBe(false)
+  })
+
   it('writes the dispute to a deterministic id so redelivery updates one record', async () => {
     const { committed } = await loadSync(null)
     const created = committed.find((doc) => doc._id)
