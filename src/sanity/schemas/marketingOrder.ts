@@ -64,19 +64,24 @@ export default defineType({
           title: 'Order item',
           type: 'object',
           fields: [
+            // Weak: orders live in the private outreach dataset, their targets
+            // in the public one. A strong reference across datasets is rejected
+            // outright, so Studio edits must not re-strengthen these.
             defineField({
               name: 'product',
               title: 'Product',
               type: 'reference',
               to: [{ type: 'marketingProduct' }],
-              description: 'Linked shop product when one exists.',
+              weak: true,
+              description: 'Linked shop product when one exists (weak: lives in the public dataset).',
             }),
             defineField({
               name: 'visualization',
               title: 'Health visualization',
               type: 'reference',
               to: [{ type: 'healthVisualization' }],
-              description: 'Source visualization for storefront print orders.',
+              weak: true,
+              description: 'Source visualization (weak: lives in the public dataset).',
             }),
             defineField({
               name: 'title',

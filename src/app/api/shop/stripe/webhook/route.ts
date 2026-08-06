@@ -48,7 +48,19 @@ export async function POST(request: Request) {
 
       const fulfillment = await fulfillStripeCheckout(session.id)
       if (fulfillment.status !== 'unpaid') {
-        await notifySlackShopOrder(fulfillment.notification)
+        // The order is already committed at this point, so a Slack outage must
+        // not turn a recorded sale into a webhook failure: repeated 500s let
+        // Stripe disable the endpoint, and then real orders WOULD be lost. The
+        // alert is a convenience; the CMS is the record.
+        try {
+          await notifySlackShopOrder(fulfillment.notification)
+        } catch (error) {
+          console.error(
+            `Shop order ${fulfillment.orderId} was recorded but its Slack alert failed.`,
+            error,
+          )
+          return NextResponse.json({ received: true, alert: 'failed' })
+        }
       }
     }
 

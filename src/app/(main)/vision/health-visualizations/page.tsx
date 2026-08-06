@@ -5,6 +5,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery, shopStorefrontQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
+import { SHOP_SHIPPING_PRICE_CENTS } from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { PosterChatCta } from '@/components/chat/PosterChatCta'
 import {
@@ -406,6 +407,21 @@ export default async function HealthVisualizationsPage() {
           price: item.price,
           priceCurrency: item.currency,
           availability: 'https://schema.org/InStock',
+          // Shipping is a real, non-zero cost and the US is the only
+          // destination — search results that omit either mislead the buyer
+          // before they ever reach checkout.
+          shippingDetails: {
+            '@type': 'OfferShippingDetails',
+            shippingRate: {
+              '@type': 'MonetaryAmount',
+              value: SHOP_SHIPPING_PRICE_CENTS / 100,
+              currency: item.currency,
+            },
+            shippingDestination: {
+              '@type': 'DefinedRegion',
+              addressCountry: 'US',
+            },
+          },
         },
       },
     })),
@@ -452,7 +468,7 @@ export default async function HealthVisualizationsPage() {
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#d9dee7]">
               <span>✓ Free open-source PDFs</span>
-              <span>✓ $6 per print, shipped in the US</span>
+              <span>✓ $6 per print, plus $6 flat US shipping</span>
               <span>✓ Optional support helps fund new work</span>
             </div>
           </div>

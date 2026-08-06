@@ -40,16 +40,22 @@ export function isShopSlackNotificationConfigured() {
   return Boolean(getSlackConfig().botToken && getShopSlackChannelId())
 }
 
-export function getMarketingOrderStudioUrl(orderId: string) {
+/**
+ * Links to the Marketing tool's Shop view, NOT a document intent link. Orders
+ * live in the private outreach dataset, and the Studio's document editor is
+ * bound to the public one — an intent link resolves to an empty editor. The
+ * Shop view reads outreach directly, so this is the only place an order is
+ * actually visible.
+ */
+export function getMarketingOrderStudioUrl(_orderId: string) {
   const configuredBase =
     process.env.SHOP_STUDIO_BASE_URL ||
     process.env.CHAT_STUDIO_BASE_URL ||
     process.env.NEXT_PUBLIC_SANITY_STUDIO_URL ||
     'https://www.goinvo.com'
   const baseUrl = normalizeHttpBaseUrl(configuredBase) || 'https://www.goinvo.com'
-  const path = `/studio/intent/edit/id=${encodeURIComponent(orderId)};type=marketingOrder`
 
-  return new URL(path, baseUrl).toString()
+  return new URL('/studio/marketing?view=shop', baseUrl).toString()
 }
 
 export function shopOrderSlackClientMessageId(orderId: string) {
