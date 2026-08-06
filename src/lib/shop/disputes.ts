@@ -40,6 +40,7 @@ type StoredDispute = {
   _id: string
   _rev?: string
   status?: string
+  evidenceSubmittedAt?: string
   slack?: {
     channelId?: string
     channelName?: string
@@ -109,7 +110,11 @@ export async function syncDisputeFromStripe(dispute: Stripe.Dispute): Promise<Di
 
   const stage = disputeStage(dispute.status)
   const terminal = isTerminalDisputeStatus(dispute.status)
-  const canRespond = !terminal && Boolean(dispute.evidence_details?.due_by)
+  // Submitting evidence makes Stripe fire dispute.updated, which lands back
+  // here. Without the third clause that re-sync would set canRespond true again
+  // and re-offer a button for a submission that has already been spent.
+  const canRespond =
+    !terminal && Boolean(dispute.evidence_details?.due_by) && !existing?.evidenceSubmittedAt
   const statusChanged = Boolean(existing) && existing?.status !== dispute.status
 
   const fields = {
