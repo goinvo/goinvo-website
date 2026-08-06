@@ -161,6 +161,8 @@ export const OUTREACH_DATASET_TYPES = [
   'marketingOutreachCheckpoint',
   // Shop orders carry buyer name, email, and full shipping address.
   'marketingOrder',
+  // Disputes carry the cardholder's claim text and the customer email.
+  'marketingDispute',
 ]
 
 /** Identity-verification confidence for person research (wrong-person guard). */

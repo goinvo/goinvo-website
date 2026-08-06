@@ -243,6 +243,46 @@ export function buildSlackConversationChannelName(input: {
   return `website-chat-${visitorSlug}${suffix}`.slice(0, 80).replace(/-+$/g, '')
 }
 
+export type SlackChannelCreateResult =
+  | { ok: true; id: string; name: string }
+  | { ok: false; error?: string; detail?: string }
+
+/**
+ * Creates one public channel by exact name, with no renaming or retry.
+ *
+ * Callers own the naming policy: visitor chat appends a random suffix when a
+ * name is taken, while a dispute channel must stay deterministic so a
+ * redelivered webhook re-finds the existing channel instead of opening a
+ * second one for the same chargeback.
+ */
+export async function createSlackChannelByName(name: string): Promise<SlackChannelCreateResult> {
+  const config = getSlackConfig()
+  if (!config.botToken) return { ok: false, error: 'not_configured' }
+
+  const response = await fetch('https://slack.com/api/conversations.create', {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${config.botToken}`,
+      'content-type': 'application/json; charset=utf-8',
+    },
+    body: JSON.stringify({
+      name,
+      is_private: false,
+    }),
+  })
+
+  const data = (await response.json()) as SlackCreateConversationResponse
+  if (response.ok && data.ok && data.channel?.id) {
+    return { ok: true, id: data.channel.id, name: data.channel.name || name }
+  }
+
+  return {
+    ok: false,
+    error: data.error,
+    detail: formatSlackApiError(data, response.statusText),
+  }
+}
+
 export async function createSlackConversationChannel(input: {
   threadId: string
   visitorUid?: string
@@ -256,31 +296,16 @@ export async function createSlackConversationChannel(input: {
   const fallbackName = `${baseName.slice(0, 74)}-${Date.now().toString(36).slice(-5)}`.slice(0, 80)
 
   for (const name of [baseName, fallbackName]) {
-    const response = await fetch('https://slack.com/api/conversations.create', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${config.botToken}`,
-        'content-type': 'application/json; charset=utf-8',
-      },
-      body: JSON.stringify({
-        name,
-        is_private: false,
-      }),
-    })
-
-    const data = (await response.json()) as SlackCreateConversationResponse
-    if (response.ok && data.ok && data.channel?.id) {
-      return {
-        id: data.channel.id,
-        name: data.channel.name || name,
-      }
+    const result = await createSlackChannelByName(name)
+    if (result.ok) {
+      return { id: result.id, name: result.name }
     }
 
-    if (data.error === 'name_taken' && name === baseName) {
+    if (result.error === 'name_taken' && name === baseName) {
       continue
     }
 
-    console.error('Slack conversations.create failed:', formatSlackApiError(data, response.statusText))
+    console.error('Slack conversations.create failed:', result.detail || result.error)
     return null
   }
 

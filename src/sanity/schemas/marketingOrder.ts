@@ -20,6 +20,7 @@ export default defineType({
     { name: 'customer', title: 'Customer' },
     { name: 'payment', title: 'Payment' },
     { name: 'attribution', title: 'Marketing attribution' },
+    { name: 'settlement', title: 'Settlement (automatic)' },
   ],
   fields: [
     defineField({
@@ -228,6 +229,68 @@ export default defineType({
       type: 'text',
       rows: 3,
       group: 'order',
+    }),
+
+    /**
+     * Settlement is WORKER-OWNED and recomputed from live Stripe state, so all
+     * of it is read-only: a hand edit would be overwritten by the next event or
+     * the daily reconcile. `status` stays the human fulfilment lifecycle — the
+     * two never contend, which is why a won dispute cannot clobber a shipment
+     * someone already marked fulfilled.
+     */
+    defineField({
+      name: 'processorChargeId',
+      title: 'Stripe charge ID',
+      type: 'string',
+      group: 'settlement',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'settlementState',
+      title: 'Settlement state',
+      type: 'string',
+      group: 'settlement',
+      readOnly: true,
+      description: 'Money truth, derived from Stripe. Do not ship on disputeOpen, disputeLost, or refunded.',
+    }),
+    defineField({ name: 'amountCaptured', title: 'Captured', type: 'number', group: 'settlement', readOnly: true }),
+    defineField({ name: 'amountRefunded', title: 'Refunded', type: 'number', group: 'settlement', readOnly: true }),
+    defineField({
+      name: 'amountDisputeHeld',
+      title: 'Held by open chargeback',
+      type: 'number',
+      group: 'settlement',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'amountLostToDispute',
+      title: 'Lost to chargeback',
+      type: 'number',
+      group: 'settlement',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'netCollected',
+      title: 'Net collected',
+      type: 'number',
+      group: 'settlement',
+      readOnly: true,
+      description: 'Captured minus refunds, chargeback losses, and funds currently held.',
+    }),
+    defineField({
+      name: 'ledgerSyncedAt',
+      title: 'Ledger synced at',
+      type: 'datetime',
+      group: 'settlement',
+      readOnly: true,
+    }),
+    defineField({
+      name: 'ledgerSyncError',
+      title: 'Ledger sync error',
+      type: 'string',
+      group: 'settlement',
+      readOnly: true,
+      description: 'Set when the last reconcile failed, so a silent stale ledger is visible.',
     }),
   ],
   preview: {

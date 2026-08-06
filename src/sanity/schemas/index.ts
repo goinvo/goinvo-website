@@ -23,6 +23,7 @@ import marketingMessagePillar from './marketingMessagePillar'
 import marketingOffer from './marketingOffer'
 import marketingOperation from './marketingOperation'
 import marketingOutreachCheckpoint from './marketingOutreachCheckpoint'
+import marketingDispute from './marketingDispute'
 import marketingOrder from './marketingOrder'
 import marketingProduct from './marketingProduct'
 import marketingShopSettings from './marketingShopSettings'
@@ -77,6 +78,7 @@ export const schemaTypes = [
   marketingOffer,
   marketingProduct,
   marketingOrder,
+  marketingDispute,
   marketingShopSettings,
   marketingOperation,
   marketingOutreachCheckpoint,

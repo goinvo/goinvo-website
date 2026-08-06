@@ -32,6 +32,7 @@ export const MANAGED_MARKETING_TYPES = [
   'marketingOffer',
   'marketingProduct',
   'marketingOrder',
+  'marketingDispute',
   'marketingShopSettings',
   'marketingWorkEvidence',
 ] as const
