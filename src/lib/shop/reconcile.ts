@@ -24,7 +24,7 @@ export type ReconcileResult =
   | { status: 'not-configured' }
   | { status: 'no-charge'; reason: string }
   | { status: 'no-order'; chargeId: string; paymentIntentId?: string }
-  | { status: 'applied'; orderId: string; chargeId: string; settlement: Settlement }
+  | { status: 'applied'; orderId: string; chargeId: string; settlement: Settlement; livemode: boolean }
 
 type OrderRow = { _id: string; orderNumber?: string; customerEmail?: string; customerName?: string }
 
@@ -151,7 +151,13 @@ export async function reconcilePaymentSettlement(input: {
     .unset(['ledgerSyncError'])
     .commit()
 
-  return { status: 'applied', orderId: order._id, chargeId: charge.id, settlement }
+  return {
+    status: 'applied',
+    orderId: order._id,
+    chargeId: charge.id,
+    settlement,
+    livemode: Boolean(charge.livemode),
+  }
 }
 
 /**

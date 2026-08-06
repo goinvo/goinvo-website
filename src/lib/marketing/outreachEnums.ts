@@ -150,7 +150,14 @@ export const WARMTH_RANK: Record<string, number> = { hot: 0, warm: 1, cool: 2, c
  * SANITY_OUTREACH_DATASET; the Studio uses the same default constant.
  */
 export const OUTREACH_DATASET =
-  (typeof process !== 'undefined' && process.env?.SANITY_OUTREACH_DATASET) || 'outreach'
+  (typeof process !== 'undefined' &&
+    (process.env?.SANITY_OUTREACH_DATASET ||
+      // The NEXT_PUBLIC alias exists because this constant is imported by
+      // Studio components that run in the BROWSER, where a server-only var is
+      // undefined. Without it a sandbox deployment would write to the sandbox
+      // dataset while its own Studio kept reading the real one.
+      process.env?.NEXT_PUBLIC_SANITY_OUTREACH_DATASET)) ||
+  'outreach'
 
 /** Managed marketing types that are stored in the private outreach dataset. */
 export const OUTREACH_DATASET_TYPES = [

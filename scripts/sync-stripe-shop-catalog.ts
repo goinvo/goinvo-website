@@ -121,6 +121,16 @@ async function main() {
       'Live catalog writes require --write --live and STRIPE_LIVE_MODE_ENABLED=true.',
     )
   }
+  // The mirror image, and the one that would actually break the storefront:
+  // writing SANDBOX price IDs over the live catalog repoints production at
+  // products that exist only in test mode. There is no flag for this because
+  // it is never right — sandbox checkout works without stored IDs via the
+  // inline-price fallback in the checkout route.
+  if (write && keyMode === 'test' && sanityDataset === 'production') {
+    throw new Error(
+      'Refusing to write test-mode Stripe IDs into the production catalog. Sandbox checkout does not need them.',
+    )
+  }
 
   const cms = createClient({
     projectId: sanityProjectId,

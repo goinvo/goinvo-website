@@ -48,21 +48,27 @@ export function getDisputeChannelsEnabled() {
  * That is what makes `name_taken` a SUCCESS signal (the channel is already
  * there from a previous delivery) rather than a reason to create a duplicate.
  */
-export function buildDisputeChannelName(disputeId: string) {
+export function buildDisputeChannelName(disputeId: string, livemode = true) {
   const slug = disputeId
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
 
-  return `shop-dispute-${slug || 'unknown'}`.slice(0, 80).replace(/-+$/g, '')
+  // A rehearsal channel is named as one. Someone scrolling the channel list
+  // months later must not mistake a test chargeback for a real one.
+  const prefix = livemode ? 'shop-dispute-' : 'sandbox-shop-dispute-'
+  return `${prefix}${slug || 'unknown'}`.slice(0, 80).replace(/-+$/g, '')
 }
 
-export async function ensureDisputeChannel(disputeId: string): Promise<DisputeChannelResult> {
+export async function ensureDisputeChannel(
+  disputeId: string,
+  livemode = true,
+): Promise<DisputeChannelResult> {
   if (!getDisputeChannelsEnabled()) return { status: 'disabled' }
   if (!getSlackConfig().botToken) return { status: 'not-configured' }
 
-  const name = buildDisputeChannelName(disputeId)
+  const name = buildDisputeChannelName(disputeId, livemode)
   const result = await createSlackChannelByName(name)
 
   if (result.ok) return { status: 'created', channelId: result.id, channelName: result.name }

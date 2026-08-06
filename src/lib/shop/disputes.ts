@@ -170,7 +170,7 @@ export async function syncDisputeFromStripe(dispute: Stripe.Dispute): Promise<Di
   const alreadyAnnounced = Boolean(stored?.slack?.alertMessageTs)
 
   if (!alreadyAnnounced && (await claimAnnounce(cms, disputeDocId, stored?._rev))) {
-    const channel = await ensureDisputeChannel(dispute.id).catch(() => null)
+    const channel = await ensureDisputeChannel(dispute.id, Boolean(dispute.livemode)).catch(() => null)
 
     // Every field is written with a DOTTED path. Setting the whole `slack`
     // object would replace it, wiping a channel id stored by an earlier
@@ -215,7 +215,7 @@ export async function syncDisputeFromStripe(dispute: Stripe.Dispute): Promise<Di
   } else if (statusChanged) {
     await postDisputeNote({
       channelId,
-      text: `Dispute status changed to *${dispute.status}*${
+      text: `${dispute.livemode ? '' : 'Sandbox: '}Dispute status changed to *${dispute.status}*${
         terminal ? ' — this dispute is now closed.' : '.'
       }`,
     }).catch(() => null)
