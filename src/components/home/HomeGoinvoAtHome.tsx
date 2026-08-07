@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { cloudfrontImage } from '@/lib/utils'
 import { HomeGoinvoAtHomeCta } from './HomeGoinvoAtHomeCta'
 
 /**
@@ -87,7 +88,7 @@ export function HomeGoinvoAtHome() {
                     this keeps the marketing thumbnail free of next/image config. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={print.imageUrl}
+                  src={cloudfrontImage(print.imageUrl)}
                   alt={print.title || 'GoInvo health visualization print'}
                   loading="lazy"
                   className="h-full w-full object-cover"
