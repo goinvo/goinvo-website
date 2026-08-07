@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
 import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery, shopStorefrontQuery } from '@/sanity/lib/queries'
@@ -388,7 +387,12 @@ export default async function HealthVisualizationsPage() {
   })
   const supportEmail = storefrontData?.settings?.supportEmail || 'hello@goinvo.com'
   const storeName = storefrontData?.settings?.storeName || 'GoInvo Health and Design Collection'
-  const heroPrints = visualizations.filter((visualization) => visualization.imageUrl).slice(0, 3)
+  // Jon's picks for the hero spray (2026-08-07): a set whose orientations sit
+  // well together, shown as full posters below.
+  const HERO_SLUGS = ['make-things', 'precision-autism', 'own-your-health-data']
+  const heroPrints = HERO_SLUGS.map((slug) =>
+    visualizations.find((visualization) => visualization.slug === slug && visualization.imageUrl),
+  ).filter((print): print is VisualizationPrint => Boolean(print))
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -486,15 +490,12 @@ export default async function HealthVisualizationsPage() {
                         : 'right-16 bottom-0 -rotate-2'
                   }`}
                 >
-                  <div className="relative h-[245px] bg-white">
-                    <Image
-                      src={print.imageUrl!}
-                      alt=""
-                      fill
-                      sizes="245px"
-                      unoptimized
-                      className="object-contain"
-                    />
+                  {/* Full poster at its natural aspect — no square letterbox, so
+                      a landscape print doesn't sit in awkward white space
+                      (Jon's feedback, 2026-08-07). */}
+                  <div className="bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={print.imageUrl!} alt="" className="block h-auto w-full" />
                   </div>
                   <p className="font-serif text-[#11141f] text-lg leading-tight mt-3 mb-0 truncate">
                     {print.title}
