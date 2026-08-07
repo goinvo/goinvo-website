@@ -100,6 +100,16 @@ const collectionSlugs: Record<Exclude<CollectionId, 'all'>, string[]> = {
   ],
 }
 
+/**
+ * Per-item overrides (Jon's feedback, 2026-08-07): not everything is a poster.
+ * Own Your Health Data is a comic book; the Open Source Healthcare Journal is a
+ * magazine we may be out of, so its print isn't buyable right now.
+ */
+const BUY_LABEL_BY_SLUG: Record<string, string> = {
+  'own-your-health-data': 'Buy Comic Book',
+}
+const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
+
 /** The launch band: complete posters, no crops (Jon's feedback, 2026-08-05). */
 const FEATURED_SLUGS = {
   hero: 'determinants-of-health',
@@ -904,23 +914,29 @@ export function VisualizationStorefront({
                                 </span>
                               </a>
                             )}
-                            <button
-                              type="button"
-                              aria-pressed={selected}
-                              onClick={() => toggleItem(item._id)}
-                              className={`grid min-h-[3.5rem] w-full grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 font-semibold transition-colors ${
-                                selected
-                                  ? 'bg-[#24434d] text-white hover:bg-[#182f36]'
-                                  : 'bg-primary text-white hover:bg-primary-dark'
-                              }`}
-                            >
-                              <span className="whitespace-nowrap text-left">
-                                {selected ? 'Remove' : 'Buy Poster'}
-                              </span>
-                              <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
-                                {printPrice} + US shipping
-                              </span>
-                            </button>
+                            {PRINT_UNAVAILABLE_SLUGS.has(item.slug || '') ? (
+                              <p className="mb-0 min-h-[3.5rem] flex items-center px-5 py-3 text-sm text-gray">
+                                Print currently unavailable — download the PDF above.
+                              </p>
+                            ) : (
+                              <button
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => toggleItem(item._id)}
+                                className={`grid min-h-[3.5rem] w-full grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 font-semibold transition-colors ${
+                                  selected
+                                    ? 'bg-[#24434d] text-white hover:bg-[#182f36]'
+                                    : 'bg-primary text-white hover:bg-primary-dark'
+                                }`}
+                              >
+                                <span className="whitespace-nowrap text-left">
+                                  {selected ? 'Remove' : BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy Poster'}
+                                </span>
+                                <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
+                                  {printPrice} + US shipping
+                                </span>
+                              </button>
+                            )}
                             {selected && (
                               <label className="mt-2 grid min-h-[3.25rem] grid-cols-[1fr_auto] items-center gap-3 border border-[#cfc9be] bg-[#f8f6f2] px-5 py-2 text-sm font-semibold text-[#24434d]">
                                 <span className="text-left">Print quantity</span>
@@ -1125,12 +1141,19 @@ export function VisualizationStorefront({
                   ? `${selectedPrintCount} ${selectedPrintCount === 1 ? 'poster' : 'posters'}${donationAmount > 0 ? ' + support' : ''}`
                   : 'Support the work'}
               </p>
+              {/* Break out shipping in the first popup so the total isn't a
+                  surprise (Jon's feedback, 2026-08-07). */}
               <p data-shop-cart-total className="mb-0 text-sm text-[#c5ccda]">
-                {formatPrice(
-                  selectedTotal + (selectedPrints.length > 0 ? SHOP_SHIPPING_PRICE_CENTS / 100 : 0),
-                  selectedItems[0]?.currency,
-                )}{' '}
-                total
+                {selectedPrints.length > 0
+                  ? `${formatPrice(selectedSubtotal, selectedItems[0]?.currency)} + ${formatPrice(
+                      SHOP_SHIPPING_PRICE_CENTS / 100,
+                      selectedItems[0]?.currency,
+                    )} shipping${
+                      donationAmount > 0
+                        ? ` + ${formatPrice(donationAmount, selectedItems[0]?.currency)} support`
+                        : ''
+                    }`
+                  : `${formatPrice(donationAmount, selectedItems[0]?.currency)} support`}
               </p>
             </div>
             <div className="flex gap-2">
