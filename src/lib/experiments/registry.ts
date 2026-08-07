@@ -9,7 +9,7 @@ import {
 } from '@/flags'
 
 export type ExperimentPageKind = 'homepage' | 'vision'
-export type ExperimentStatus = 'running' | 'paused' | 'draft'
+export type ExperimentStatus = 'running' | 'paused' | 'draft' | 'retired'
 
 export type PageExperiment<Variant extends string = string> = {
   id: string
@@ -46,7 +46,9 @@ export const home2026Experiment: PageExperiment<Home2026Variant> = {
   code: 'home-2026',
   kind: 'homepage',
   targetPath: '/',
-  status: 'running',
+  // Retired: the studio chose the concept homepage. Kept in the registry so its
+  // historical exposure payloads still resolve, but it no longer runs.
+  status: 'retired',
   flagKey: home2026Variant.key,
   flag: home2026Variant,
   variants: [
@@ -60,10 +62,8 @@ export const homeShopSectionExperiment: PageExperiment<HomeShopSectionVariant> =
   code: 'home-shop-section',
   kind: 'homepage',
   targetPath: '/',
-  // DRAFT until you decide to run it: the registry forbids two experiments
-  // running on '/' at once (home-2026 still holds that slot). Flip this to
-  // 'running' — and home-2026 to 'paused' — to start collecting, then set FLAGS.
-  status: 'draft',
+  // The active homepage experiment now that home-2026 is retired.
+  status: 'running',
   flagKey: homeShopSectionVariant.key,
   flag: homeShopSectionVariant,
   variants: [
