@@ -1,4 +1,6 @@
 import { HomeContent } from '@/components/home/HomeContent'
+import { HomeGoinvoAtHome } from '@/components/home/HomeGoinvoAtHome'
+import { ShopSectionGate } from '@/components/home/ShopSectionGate'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
 import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
 import { sanityFetch } from '@/sanity/lib/live'
@@ -53,6 +55,9 @@ export async function HomePageRenderer({
       <>
         {experiment && <ExperimentExposure experiment={experiment} />}
         <HomeConceptContent teamMembers={conceptMembers} />
+        <ShopSectionGate>
+          <HomeGoinvoAtHome />
+        </ShopSectionGate>
       </>
     )
   }
@@ -61,6 +66,9 @@ export async function HomePageRenderer({
     <>
       {experiment && <ExperimentExposure experiment={experiment} />}
       <HomeContent teamMembers={teamMembers} />
+      <ShopSectionGate>
+        <HomeGoinvoAtHome />
+      </ShopSectionGate>
     </>
   )
 }
