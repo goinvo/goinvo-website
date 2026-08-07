@@ -64,6 +64,7 @@ export const MARKETING_OPERATION_TARGET_VIEWS = [
   'linkTree',
   'outreach',
   'workEvidence',
+  'shop',
 ] as const
 
 export type MarketingOperationStatus = (typeof MARKETING_OPERATION_STATUSES)[number]
