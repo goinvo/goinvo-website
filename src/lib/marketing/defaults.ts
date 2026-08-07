@@ -50,6 +50,33 @@ export const DEFAULTS: Record<ManagedMarketingType, Record<string, unknown>> = {
   marketingTemplate: { kind: 'campaign', status: 'active', order: 100 },
   marketingContact: { status: 'new', warmth: 'unknown', currency: 'USD' },
   marketingOffer: { status: 'active', order: 100 },
+  marketingProduct: {
+    status: 'draft',
+    kind: 'physical',
+    featured: false,
+    displayOrder: 100,
+    trackInventory: true,
+    inventoryQuantity: 0,
+    lowStockThreshold: 5,
+    allowBackorder: false,
+    currency: 'USD',
+  },
+  marketingOrder: { status: 'pending', shipping: 0, donation: 0, tax: 0, currency: 'USD' },
+  // No defaults: every field is written from live Stripe state by the worker.
+  marketingDispute: {},
+  marketingShopSettings: {
+    storeName: 'GoInvo Shop',
+    headline: 'Tools and artifacts for healthier systems.',
+    description: 'Practical objects, guides, and design resources created by GoInvo.',
+    storefrontEnabled: false,
+    supportEmail: 'hello@goinvo.com',
+    provider: 'none',
+    connectionStatus: 'notConnected',
+    webhookStatus: 'notConfigured',
+    syncContacts: true,
+    contactSegment: 'other',
+    contactSourceNote: 'GoInvo Shop customer',
+  },
   marketingWorkEvidence: { status: 'active', sourceType: 'caseStudy', manuallyEdited: false },
 }
 
@@ -132,6 +159,14 @@ export const ARRAY_ITEM_TYPES: Record<ManagedMarketingType, Record<string, strin
     channelOverrides: 'outreachChannelOverride',
   },
   marketingOffer: {},
+  marketingProduct: {},
+  marketingOrder: {
+    items: 'shopOrderItem',
+  },
+  marketingDispute: {
+    notes: 'disputeNote',
+  },
+  marketingShopSettings: {},
   marketingWorkEvidence: {
     highlights: 'evidenceHighlight',
   },
@@ -140,6 +175,7 @@ export const ARRAY_ITEM_TYPES: Record<ManagedMarketingType, Record<string, strin
 /** Document types that have a `slug` field (so a slug can be derived from title). */
 export const SLUG_TYPES: Set<ManagedMarketingType> = new Set<ManagedMarketingType>([
   'marketingCampaign',
+  'marketingProduct',
 ])
 
 /** Top-level fields marked `Rule.required()` in each schema. */
@@ -166,6 +202,20 @@ export const REQUIRED_FIELDS: Record<ManagedMarketingType, string[]> = {
   marketingTemplate: ['title', 'kind', 'status'],
   marketingContact: ['name', 'status'],
   marketingOffer: ['title', 'key', 'status'],
+  marketingProduct: ['title', 'slug', 'status', 'kind', 'sku', 'price', 'currency'],
+  marketingDispute: ['disputeId', 'status'],
+  marketingOrder: [
+    'orderNumber',
+    'status',
+    'placedAt',
+    'items',
+    'subtotal',
+    'total',
+    'currency',
+    'customerName',
+    'customerEmail',
+  ],
+  marketingShopSettings: ['storeName', 'provider'],
   marketingWorkEvidence: ['title', 'status'],
 }
 
