@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { sanityFetch } from '@/sanity/lib/live'
-import { urlForImage } from '@/sanity/lib/image'
 import { HomeGoinvoAtHomeCta } from './HomeGoinvoAtHomeCta'
 
 /**
@@ -20,17 +19,22 @@ type HomePrint = { _id: string; title?: string; slug?: string; imageUrl?: string
 
 async function getFeaturedPrints(): Promise<HomePrint[]> {
   try {
+    // Resolve the CDN URL straight from the asset in GROQ (no urlForImage
+    // dependency), then size it with Sanity CDN params. Robust to any image
+    // helper edge case — the whole section is best-effort anyway.
     const { data } = (await sanityFetch({
-      query: `*[_type == "healthVisualization" && defined(image)][0...3]{
-        _id, title, "slug": slug.current, image
+      query: `*[_type == "healthVisualization" && defined(image.asset)][0...3]{
+        _id, title, "slug": slug.current, "imageUrl": image.asset->url
       }`,
-    })) as { data: Array<{ _id: string; title?: string; slug?: string; image?: unknown }> }
-    return (data || []).map((item) => ({
-      _id: item._id,
-      title: item.title,
-      slug: item.slug,
-      imageUrl: item.image ? urlForImage(item.image as never).width(600).height(760).url() : undefined,
-    }))
+    })) as { data: Array<{ _id: string; title?: string; slug?: string; imageUrl?: string }> }
+    return (data || [])
+      .filter((item) => item.imageUrl)
+      .map((item) => ({
+        _id: item._id,
+        title: item.title,
+        slug: item.slug,
+        imageUrl: `${item.imageUrl}?w=600&h=760&fit=crop&auto=format`,
+      }))
   } catch {
     // The section stands on its own without imagery; never let a fetch hiccup
     // remove it from the page.
@@ -47,7 +51,11 @@ export async function HomeGoinvoAtHome() {
       aria-labelledby="goinvo-at-home-heading"
       className="scroll-mt-24 bg-[#11141f] py-20 text-white"
     >
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
+      <div
+        className={`mx-auto grid max-w-6xl gap-12 px-6 lg:items-center ${
+          prints.length > 0 ? 'lg:grid-cols-2' : 'max-w-3xl'
+        }`}
+      >
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#7fd4e0]">
             Open-source health design
