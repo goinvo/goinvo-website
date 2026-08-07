@@ -1305,7 +1305,11 @@ export function VisualizationStorefront({
                         type="number"
                         min="0"
                         max="1000"
-                        step="1"
+                        // Cent precision, so a converted-from-another-currency amount
+                        // like 17.43 is valid. The handler already rounds to whole
+                        // cents (Math.round(amount * 100)); step="1" wrongly flagged
+                        // any non-whole-dollar value as invalid.
+                        step="0.01"
                         inputMode="decimal"
                         value={customDonation}
                         onChange={(event) => {
