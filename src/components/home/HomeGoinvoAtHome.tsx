@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { sanityFetch } from '@/sanity/lib/live'
 import { HomeGoinvoAtHomeCta } from './HomeGoinvoAtHomeCta'
 
 /**
@@ -15,35 +14,19 @@ import { HomeGoinvoAtHomeCta } from './HomeGoinvoAtHomeCta'
  * only removes it for the experiment's "absent" cohort.
  */
 
-type HomePrint = { _id: string; title?: string; slug?: string; imageUrl?: string }
+type HomePrint = { _id: string; title: string; imageUrl: string }
 
-async function getFeaturedPrints(): Promise<HomePrint[]> {
-  try {
-    // Resolve the CDN URL straight from the asset in GROQ (no urlForImage
-    // dependency), then size it with Sanity CDN params. Robust to any image
-    // helper edge case — the whole section is best-effort anyway.
-    const { data } = (await sanityFetch({
-      query: `*[_type == "healthVisualization" && defined(image.asset)][0...3]{
-        _id, title, "slug": slug.current, "imageUrl": image.asset->url
-      }`,
-    })) as { data: Array<{ _id: string; title?: string; slug?: string; imageUrl?: string }> }
-    return (data || [])
-      .filter((item) => item.imageUrl)
-      .map((item) => ({
-        _id: item._id,
-        title: item.title,
-        slug: item.slug,
-        imageUrl: `${item.imageUrl}?w=600&h=760&fit=crop&auto=format`,
-      }))
-  } catch {
-    // The section stands on its own without imagery; never let a fetch hiccup
-    // remove it from the page.
-    return []
-  }
-}
+// Curated straight from the storefront's own poster set (static files in
+// /public/images/features). The visualizations carry no Sanity image, so these
+// are the canonical print images — same source the collection page uses.
+const FEATURED_PRINTS: HomePrint[] = [
+  { _id: 'precision-autism', title: 'Precision Autism', imageUrl: '/images/features/precision-autism/precision-autism.jpg' },
+  { _id: 'patient-data-ownership', title: 'Own Your Health Data', imageUrl: '/images/features/own-your-health-data/patient-data-ownership.jpg' },
+  { _id: 'how-to-vote-early', title: 'How to Vote Early', imageUrl: '/images/features/posters/how-to-vote-early.jpg' },
+]
 
-export async function HomeGoinvoAtHome() {
-  const prints = (await getFeaturedPrints()).filter((print) => print.imageUrl)
+export function HomeGoinvoAtHome() {
+  const prints = FEATURED_PRINTS
 
   return (
     <section
