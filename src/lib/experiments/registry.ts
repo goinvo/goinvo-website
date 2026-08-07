@@ -2,8 +2,10 @@ import { getPrecomputed, type Flag } from 'flags/next'
 import {
   getMarketingFlagsSecret,
   home2026Variant,
+  homeShopSectionVariant,
   marketingExperimentFlags,
   type Home2026Variant,
+  type HomeShopSectionVariant,
 } from '@/flags'
 
 export type ExperimentPageKind = 'homepage' | 'vision'
@@ -53,7 +55,24 @@ export const home2026Experiment: PageExperiment<Home2026Variant> = {
   ],
 }
 
-export const pageExperiments = [home2026Experiment] as const
+export const homeShopSectionExperiment: PageExperiment<HomeShopSectionVariant> = {
+  id: 'home-shop-section',
+  code: 'home-shop-section',
+  kind: 'homepage',
+  targetPath: '/',
+  // DRAFT until you decide to run it: the registry forbids two experiments
+  // running on '/' at once (home-2026 still holds that slot). Flip this to
+  // 'running' — and home-2026 to 'paused' — to start collecting, then set FLAGS.
+  status: 'draft',
+  flagKey: homeShopSectionVariant.key,
+  flag: homeShopSectionVariant,
+  variants: [
+    { key: 'control', label: 'No prints section (current homepage)' },
+    { key: 'present', label: 'Prints section shown' },
+  ],
+}
+
+export const pageExperiments = [home2026Experiment, homeShopSectionExperiment] as const
 
 export function normalizeExperimentPath(pathname: string) {
   if (!pathname || pathname === '/') return '/'
