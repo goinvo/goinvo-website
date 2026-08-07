@@ -4,6 +4,7 @@ import type { Flag } from 'flags/next'
 import { track as trackVercelEvent } from '@vercel/analytics'
 import { config as proxyConfig } from '@/proxy'
 import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
+import { ShopSectionGate } from '@/components/home/ShopSectionGate'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
 import { HomeContent } from '@/components/home/HomeContent'
 import {
@@ -211,10 +212,11 @@ describe('experiment renderers and content variants', () => {
     const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
     const children = reactChildren(await HomePageRenderer())
 
-    expect(children).toHaveLength(1)
+    expect(children).toHaveLength(2)
     const homeChild = children[0] as React.ReactElement<{ teamMembers?: unknown[] }>
     expect(homeChild.type).toBe(HomeContent)
     expect(homeChild.props.teamMembers).toHaveLength(1)
+    expect(children[1].type).toBe(ShopSectionGate)
   })
 
   it('renders the concept homepage when the precomputed variant selects it', async () => {
@@ -222,9 +224,10 @@ describe('experiment renderers and content variants', () => {
     const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
     const children = reactChildren(await HomePageRenderer({ variant: 'concept', experiment: exposure }))
 
-    expect(children).toHaveLength(2)
+    expect(children).toHaveLength(3)
     expect(children[0].type).toBe(ExperimentExposure)
     expect(children[1].type).toBe(HomeConceptContent)
+    expect(children[2].type).toBe(ShopSectionGate)
   })
 
   it('preserves article content unless a matching Sanity-authored variant is selected', () => {
