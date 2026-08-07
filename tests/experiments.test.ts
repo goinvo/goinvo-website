@@ -14,6 +14,7 @@ import {
   getForcedExperimentVariant,
   getExperimentExposure,
   home2026Experiment,
+  homeShopSectionExperiment,
   normalizeExperimentPath,
   validatePageExperimentRegistry,
   type PageExperiment,
@@ -97,18 +98,20 @@ afterEach(() => {
 })
 
 describe('page experiment registry', () => {
-  it('defines the homepage experiment with a control fallback', () => {
-    expect(home2026Experiment).toMatchObject({
-      id: 'home-2026',
-      code: 'home-2026',
+  it('retires home-2026 and runs the shop-section experiment on the homepage', () => {
+    expect(home2026Experiment.status).toBe('retired')
+    expect(homeShopSectionExperiment).toMatchObject({
+      id: 'home-shop-section',
+      code: 'home-shop-section',
       targetPath: '/',
-      flagKey: 'home-2026-variant',
+      flagKey: 'home-shop-section-variant',
       status: 'running',
     })
-    expect(home2026Experiment.variants.map((variant) => variant.key)).toEqual([
+    expect(homeShopSectionExperiment.variants.map((variant) => variant.key)).toEqual([
       'control',
-      'concept',
+      'present',
     ])
+    // One running experiment on '/', each with a control variant -> valid.
     expect(validatePageExperimentRegistry()).toEqual([])
   })
 
@@ -143,28 +146,28 @@ describe('page experiment registry', () => {
   })
 
   it('validates forced preview variant query params for the current experiment path', () => {
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toMatchObject({
-      experiment: home2026Experiment,
-      variant: 'concept',
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=present`))).toMatchObject({
+      experiment: homeShopSectionExperiment,
+      variant: 'present',
       source: 'variant-param',
     })
-    expect(getForcedExperimentVariant('/', new URLSearchParams('home-2026-variant=control'))).toMatchObject({
-      experiment: home2026Experiment,
+    expect(getForcedExperimentVariant('/', new URLSearchParams('home-shop-section-variant=control'))).toMatchObject({
+      experiment: homeShopSectionExperiment,
       variant: 'control',
       source: 'flag-key-param',
     })
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-2026:concept`))).toMatchObject({
-      experiment: home2026Experiment,
-      variant: 'concept',
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-shop-section:present`))).toMatchObject({
+      experiment: homeShopSectionExperiment,
+      variant: 'present',
       source: 'assignment-param',
     })
     expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=missing`))).toBeNull()
-    expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toBeNull()
+    expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=present`))).toBeNull()
   })
 
   it('builds shareable forced preview URLs while preserving custom query params', () => {
-    expect(getForcedExperimentUrl('/?utm_source=qa', 'concept', 'http://localhost:3000')).toBe(
-      'http://localhost:3000/?utm_source=qa&goinvo_ab_variant=concept',
+    expect(getForcedExperimentUrl('/?utm_source=qa', 'present', 'http://localhost:3000')).toBe(
+      'http://localhost:3000/?utm_source=qa&goinvo_ab_variant=present',
     )
   })
 })
@@ -208,26 +211,14 @@ describe('visitor IDs and proxy scope', () => {
 })
 
 describe('experiment renderers and content variants', () => {
-  it('defaults the homepage renderer to the control component', async () => {
+  it('renders the concept homepage with the prints section gate', async () => {
     const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
     const children = reactChildren(await HomePageRenderer())
 
+    // Concept is the homepage now; the prints section rides along, gated.
     expect(children).toHaveLength(2)
-    const homeChild = children[0] as React.ReactElement<{ teamMembers?: unknown[] }>
-    expect(homeChild.type).toBe(HomeContent)
-    expect(homeChild.props.teamMembers).toHaveLength(1)
+    expect(children[0].type).toBe(HomeConceptContent)
     expect(children[1].type).toBe(ShopSectionGate)
-  })
-
-  it('renders the concept homepage when the precomputed variant selects it', async () => {
-    const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
-    const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
-    const children = reactChildren(await HomePageRenderer({ variant: 'concept', experiment: exposure }))
-
-    expect(children).toHaveLength(3)
-    expect(children[0].type).toBe(ExperimentExposure)
-    expect(children[1].type).toBe(HomeConceptContent)
-    expect(children[2].type).toBe(ShopSectionGate)
   })
 
   it('preserves article content unless a matching Sanity-authored variant is selected', () => {

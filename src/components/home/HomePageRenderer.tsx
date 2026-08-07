@@ -1,19 +1,10 @@
-import { HomeContent } from '@/components/home/HomeContent'
 import { HomeGoinvoAtHome } from '@/components/home/HomeGoinvoAtHome'
 import { ShopSectionGate } from '@/components/home/ShopSectionGate'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
-import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
 import { sanityFetch } from '@/sanity/lib/live'
 import { teamMembersQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
-import type { ExperimentExposure as ExperimentExposureData } from '@/lib/experiments/registry'
-import type { Home2026Variant } from '@/flags'
 import type { TeamMember } from '@/types'
-
-interface HomePageRendererProps {
-  variant?: Home2026Variant
-  experiment?: ExperimentExposureData
-}
 
 async function getHomeTeamMembers() {
   const { data: members } = (await sanityFetch({ query: teamMembersQuery })) as { data: TeamMember[] }
@@ -43,33 +34,18 @@ async function withConceptGridMembers(base: { name: string; image: string }[]) {
   return [...base, { name: data.name, image: urlForImage(data.image).width(300).height(300).url() }]
 }
 
-export async function HomePageRenderer({
-  variant = 'control',
-  experiment,
-}: HomePageRendererProps = {}) {
+export async function HomePageRenderer() {
   const teamMembers = await getHomeTeamMembers()
+  const conceptMembers = await withConceptGridMembers(teamMembers)
 
-  if (variant === 'concept') {
-    const conceptMembers = await withConceptGridMembers(teamMembers)
-    return (
-      <>
-        {experiment && <ExperimentExposure experiment={experiment} />}
-        <HomeConceptContent teamMembers={conceptMembers} />
-        <ShopSectionGate>
-          <HomeGoinvoAtHome />
-        </ShopSectionGate>
-      </>
-    )
-  }
-
+  // The concept homepage is the homepage now (home-2026 retired). The prints
+  // section rides along, gated by its own presence/absence experiment.
   return (
     <>
-      {experiment && <ExperimentExposure experiment={experiment} />}
-      <HomeContent teamMembers={teamMembers} />
+      <HomeConceptContent teamMembers={conceptMembers} />
       <ShopSectionGate>
         <HomeGoinvoAtHome />
       </ShopSectionGate>
     </>
   )
 }
-
