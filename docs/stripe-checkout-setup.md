@@ -190,6 +190,22 @@ the same answer.
 Set `SHOP_DISPUTE_CHANNELS_ENABLED=false` to keep everything in the main shop channel instead of
 creating a channel per dispute.
 
+### Sandbox webhook and the Vercel bot challenge
+
+The preview branch's stable alias (`…-git-shop-preview-….vercel.app`) sits behind Vercel's
+Security Checkpoint, which 403s non-browser callers — including Stripe. The fix is the project's
+**Protection Bypass for Automation** secret (Settings → Deployment Protection), passed as a query
+parameter in the webhook URL, since Stripe cannot send custom headers:
+
+```text
+https://…-git-shop-preview-….vercel.app/api/shop/stripe/webhook?x-vercel-protection-bypass=<secret>
+```
+
+This keeps the webhook on the stable alias, so redeploys of the branch need no Stripe changes.
+The secret's only power is viewing preview deployments; it is visible to anyone with Stripe
+dashboard access, which is acceptable for the sandbox. Note: the secret takes ~a minute to
+propagate after generation — a 403 immediately afterwards is not failure.
+
 Orders carry a `settlementState` that is worker-owned and read-only; `status` remains the human
 fulfilment lifecycle. They never contend, so marking an order fulfilled cannot be undone by a
 dispute update, and a dispute cannot be hidden by someone editing the status.

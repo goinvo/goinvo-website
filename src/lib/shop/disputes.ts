@@ -48,6 +48,7 @@ type StoredDispute = {
     alertMessageTs?: string
     alertChannelId?: string
     announceClaimAt?: string
+    lastNotedStatus?: string
   }
 }
 
@@ -228,13 +229,28 @@ export async function syncDisputeFromStripe(dispute: Stripe.Dispute): Promise<Di
         })
       }
     }
-  } else if (statusChanged) {
-    await postDisputeNote({
-      channelId,
-      text: `${dispute.livemode ? '' : 'Sandbox: '}Dispute status changed to *${dispute.status}*${
-        terminal ? ' — this dispute is now closed.' : '.'
-      }`,
-    }).catch(() => null)
+  } else if (statusChanged && stored?.slack?.lastNotedStatus !== dispute.status) {
+    // Stripe fires dispute.updated AND dispute.closed for one transition,
+    // often in the same second — both syncs read the old status before either
+    // wrote it. The note gets the same claim treatment as the announce: record
+    // which status was announced under a revision guard, and the race's loser
+    // stays silent instead of repeating the message.
+    const claimed = await cms
+      .patch(disputeDocId)
+      .set({ 'slack.lastNotedStatus': dispute.status })
+      .ifRevisionId(stored?._rev || '')
+      .commit()
+      .then(() => true)
+      .catch(() => false)
+
+    if (claimed) {
+      await postDisputeNote({
+        channelId,
+        text: `${dispute.livemode ? '' : 'Sandbox: '}Dispute status changed to *${dispute.status}*${
+          terminal ? ' — this dispute is now closed.' : '.'
+        }`,
+      }).catch(() => null)
+    }
   }
 
   return {

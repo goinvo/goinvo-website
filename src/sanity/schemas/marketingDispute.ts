@@ -179,6 +179,7 @@ export default defineType({
           description: 'May be the shared shop channel; never used to capture replies.',
         }),
         defineField({ name: 'announceClaimAt', title: 'Announce claimed at', type: 'string' }),
+        defineField({ name: 'lastNotedStatus', title: 'Last status announced in Slack', type: 'string' }),
         defineField({ name: 'channelError', title: 'Channel error', type: 'string' }),
       ],
     }),
