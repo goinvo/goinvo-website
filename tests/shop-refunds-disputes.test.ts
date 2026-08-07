@@ -540,6 +540,19 @@ describe('syncing a dispute is idempotent across redelivery', () => {
     expect(calls.notesPosted).toBe(1)
   })
 
+  it('does not repeat a status note already announced for this status', async () => {
+    // dispute.updated and dispute.closed both fire for one transition; the
+    // second delivery finds the status already announced and stays silent.
+    const { calls } = await loadSync({
+      _id: 'marketingDispute.stripe-du_1',
+      status: 'under_review',
+      slack: { channelId: 'C123', alertMessageTs: '111.222', lastNotedStatus: 'needs_response' },
+    })
+
+    // The incoming status in this harness is needs_response — same as noted.
+    expect(calls.notesPosted).toBe(0)
+  })
+
   it('stops offering the evidence button once a submission has been spent', async () => {
     // Submitting evidence makes Stripe fire dispute.updated. Recomputing
     // canRespond from status alone would re-arm a button for a submission
