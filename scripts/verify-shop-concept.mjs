@@ -1,0 +1,876 @@
+import puppeteer from 'puppeteer'
+
+const baseUrl = process.env.SHOP_BASE_URL || 'http://localhost:3000'
+const storefrontPath = '/vision/health-visualizations'
+const browser = await puppeteer.launch({ headless: true })
+
+async function loadLazyImages(page) {
+  const height = await page.evaluate(() => document.documentElement.scrollHeight)
+  for (let y = 0; y < height; y += 700) {
+    await page.evaluate((position) => window.scrollTo(0, position), y)
+    await new Promise((resolve) => setTimeout(resolve, 90))
+  }
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll('article img')].every(
+        (image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+      ),
+    { timeout: 60_000 },
+  )
+}
+
+try {
+  const redirectPage = await browser.newPage()
+  const redirectResponse = await redirectPage.goto(`${baseUrl}/shop`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+  const shopRedirect = {
+    status: redirectResponse?.status(),
+    finalPath: new URL(redirectPage.url()).pathname,
+  }
+  if (shopRedirect.finalPath !== storefrontPath) {
+    throw new Error(
+      `The legacy shop route did not reach the combined page: ${JSON.stringify(shopRedirect)}`,
+    )
+  }
+  await redirectPage.close()
+
+  const page = await browser.newPage()
+  await page.setViewport({ width: 1064, height: 900, deviceScaleFactor: 1 })
+  await page.goto(`${baseUrl}${storefrontPath}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+  await page.waitForSelector('[data-shop-print-card]')
+  await loadLazyImages(page)
+  const checkoutConfig = await page.evaluate(async () => {
+    const response = await fetch('/api/shop/config', { cache: 'no-store' })
+    return {
+      status: response.status,
+      body: await response.json(),
+    }
+  })
+  if (
+    checkoutConfig.status !== 200 ||
+    typeof checkoutConfig.body.checkoutEnabled !== 'boolean'
+  ) {
+    throw new Error(`Stripe checkout config is unavailable: ${JSON.stringify(checkoutConfig)}`)
+  }
+
+  const desktop = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-shop-print-card]')]
+    const addButtons = [...document.querySelectorAll('button')].filter((button) =>
+      button.textContent?.includes('Buy Poster'),
+    )
+    const rect = (element) => {
+      const bounds = element.getBoundingClientRect()
+      return {
+        top: bounds.top,
+        bottom: bounds.bottom,
+        width: bounds.width,
+        height: bounds.height,
+      }
+    }
+    const firstRowCards = cards.slice(0, 3)
+    const stepItems = [...document.querySelectorAll('#how-it-works li')]
+
+    return {
+      title: document.querySelector('h1')?.textContent?.trim(),
+      cardCount: cards.length,
+      addButtonCount: addButtons.length,
+      downloadCount: document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]')
+        .length,
+      openSourceLabelCount: [
+        ...document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]'),
+      ].filter((link) => link.textContent?.includes('Free Download')).length,
+      printPriceCount: addButtons.filter((button) => button.textContent?.includes('$6 + US shipping'))
+        .length,
+      imageDownloadCount: document.querySelectorAll('[data-shop-image-download]').length,
+      imageDownloadTargetsMatch: cards.every((card) => {
+        const imageLink = card.querySelector('[data-shop-image-download]')
+        const buttonLink = card.querySelector('[data-shop-download-button]')
+        return imageLink?.getAttribute('href') === buttonLink?.getAttribute('href')
+      }),
+      // Fulfillment is uniform, so it is stated once on the page — never per card.
+      cardFulfillmentLabels: [...document.querySelectorAll('[data-shop-print-card] span')].filter(
+        (element) => /^(In stock|Printed on demand)$/.test(element.textContent?.trim() || ''),
+      ).length,
+      pageStatesPrintOnDemand: /printed on demand/i.test(
+        document.querySelector('#how-it-works')?.textContent || '',
+      ),
+      // Three parallel facts — no numbering that implies a sequence.
+      stepNumbering: [...document.querySelectorAll('#how-it-works li')].filter((item) =>
+        /^\s*0?[123]\b/.test(item.textContent || ''),
+      ).length,
+      descriptions: [...document.querySelectorAll('[data-shop-print-description]')].map(
+        (element) => element.textContent?.trim() || '',
+      ),
+      genericDescriptionCount: [
+        ...document.querySelectorAll('[data-shop-print-description]'),
+      ].filter((element) =>
+        element.textContent?.includes('open-source health and design collection'),
+      ).length,
+      actionLabelAlignments: cards.flatMap((card) => {
+        const download = card.querySelector('[data-shop-download-button]')
+        const order = [...card.querySelectorAll('button')].find((button) =>
+          button.textContent?.includes('Buy Poster'),
+        )
+        return [download?.firstElementChild, order?.firstElementChild].map((element) =>
+          element ? getComputedStyle(element).textAlign : null,
+        )
+      }),
+      imageCount: document.querySelectorAll('[data-shop-print-card] img:not([aria-hidden="true"])')
+        .length,
+      loadedImageCount: [
+        ...document.querySelectorAll('[data-shop-print-card] img:not([aria-hidden="true"])'),
+      ].filter((image) => image instanceof HTMLImageElement && image.naturalWidth > 0).length,
+      failedImages: [
+        ...document.querySelectorAll('[data-shop-print-card] img:not([aria-hidden="true"])'),
+      ]
+        .filter((image) => image instanceof HTMLImageElement && image.naturalWidth === 0)
+        .map((image) => ({
+          alt: image.getAttribute('alt'),
+          src: image.getAttribute('src'),
+        })),
+      featuredPosterCount: document.querySelectorAll('[data-shop-featured-poster]').length,
+      featuredPostersLoaded: [
+        ...document.querySelectorAll('[data-shop-featured-poster] img'),
+      ].every((image) => image instanceof HTMLImageElement && image.naturalWidth > 0),
+      // Rail captions must all lay out the same way regardless of title length:
+      // one tile wrapping its actions while its neighbors sat inline read as a bug.
+      featuredRailCaptions: [...document.querySelectorAll('[data-shop-featured-poster]')]
+        .slice(1)
+        .map((tile) => {
+          const title = tile.querySelector('figcaption p')?.getBoundingClientRect()
+          const actions = tile.querySelector('figcaption span')?.getBoundingClientRect()
+          if (!title || !actions) return null
+          return {
+            slug: tile.getAttribute('data-shop-featured-poster'),
+            stacked: actions.top >= title.bottom - 2,
+            alignedLeft: Math.abs(actions.left - title.left) < 2,
+            withinTile: actions.right <= tile.getBoundingClientRect().right + 1,
+          }
+        }),
+      featuredHeading: document.querySelector('#artifact-collections h2')?.textContent?.trim(),
+      featuredSummary: document
+        .querySelector('[data-shop-featured-summary]')
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim(),
+      featuredBrowseLinks: [...document.querySelectorAll('#artifact-collections button')].filter(
+        (button) => button.textContent?.includes('Browse'),
+      ).length,
+      // Collections are presented as cards with a preview of what is inside,
+      // not as bare text links.
+      seriesCards: [...document.querySelectorAll('[data-shop-series-card]')].map((card) => ({
+        id: card.getAttribute('data-shop-series-card'),
+        thumbnails: card.querySelectorAll('img').length,
+        thumbnailsLoaded: [...card.querySelectorAll('img')].every(
+          (image) => image instanceof HTMLImageElement && image.naturalWidth > 0,
+        ),
+        hasCount: /\d+\s+pieces?/.test(card.textContent || ''),
+      })),
+      sectionHeads: [...document.querySelectorAll('[data-shop-section-head]')].map(
+        (head) => head.textContent?.trim(),
+      ),
+      heroHeight: document.querySelector('h1')?.closest('section')?.getBoundingClientRect().height,
+      searchCount: document.querySelectorAll('input[type="search"]').length,
+      collectionCount: document.querySelectorAll('[aria-label="Visualization collections"] button')
+        .length,
+      sortCount: document.querySelectorAll('select').length,
+      licenseLink: (() => {
+        const link = document.querySelector('[data-shop-license-link]')
+        return {
+          count: document.querySelectorAll('[data-shop-license-link]').length,
+          text: link?.textContent?.trim(),
+          href: link?.getAttribute('href'),
+          standaloneLinkCount: [...document.querySelectorAll('#how-it-works a')].filter(
+            (candidate) => candidate.textContent?.includes('Read the license'),
+          ).length,
+        }
+      })(),
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      alignment: {
+        steps: stepItems.map(rect),
+        media: firstRowCards.map((card) => rect(card.children[1])),
+        downloads: firstRowCards.map((card) =>
+          rect(
+            [...card.querySelectorAll('a')].find((link) =>
+              link.textContent?.includes('Free Download'),
+            ),
+          ),
+        ),
+        orders: firstRowCards.map((card) =>
+          rect(
+            [...card.querySelectorAll('button')].find((button) =>
+              button.textContent?.includes('Buy Poster'),
+            ),
+          ),
+        ),
+      },
+    }
+  })
+
+  if (desktop.title !== 'Health ideas, made visible.') {
+    throw new Error(`Unexpected shop title: ${desktop.title}`)
+  }
+  if (
+    desktop.cardCount === 0 ||
+    desktop.addButtonCount !== desktop.cardCount ||
+    desktop.downloadCount !== desktop.cardCount ||
+    desktop.openSourceLabelCount !== desktop.cardCount ||
+    desktop.printPriceCount !== desktop.cardCount ||
+    desktop.imageDownloadCount !== desktop.cardCount ||
+    !desktop.imageDownloadTargetsMatch ||
+    desktop.cardFulfillmentLabels !== 0 ||
+    !desktop.pageStatesPrintOnDemand ||
+    desktop.stepNumbering !== 0 ||
+    desktop.descriptions.length !== desktop.cardCount ||
+    new Set(desktop.descriptions).size !== desktop.cardCount ||
+    desktop.descriptions.some((description) => description.length < 40) ||
+    desktop.genericDescriptionCount !== 0 ||
+    desktop.actionLabelAlignments.some((alignment) => alignment !== 'left')
+  ) {
+    throw new Error(`Expected selectable catalog cards, found ${JSON.stringify(desktop)}`)
+  }
+  if (desktop.imageCount !== desktop.cardCount || desktop.loadedImageCount !== desktop.cardCount) {
+    throw new Error(`Expected an image for every catalog card, found ${JSON.stringify(desktop)}`)
+  }
+  if (desktop.scrollWidth > desktop.viewportWidth + 3) {
+    throw new Error(`Desktop horizontal overflow: ${JSON.stringify(desktop)}`)
+  }
+  for (const [name, rectangles] of Object.entries(desktop.alignment)) {
+    const topRange =
+      Math.max(...rectangles.map((item) => item.top)) -
+      Math.min(...rectangles.map((item) => item.top))
+    const heightRange =
+      Math.max(...rectangles.map((item) => item.height)) -
+      Math.min(...rectangles.map((item) => item.height))
+    if (topRange > 3 || heightRange > 3) {
+      throw new Error(`${name} are not aligned: ${JSON.stringify(rectangles)}`)
+    }
+  }
+  if (
+    desktop.searchCount !== 1 ||
+    desktop.collectionCount !== 7 ||
+    desktop.sortCount !== 1 ||
+    desktop.licenseLink.count !== 1 ||
+    desktop.licenseLink.text !== 'open-source license' ||
+    desktop.licenseLink.href !== 'https://creativecommons.org/licenses/by/3.0/us/' ||
+    desktop.licenseLink.standaloneLinkCount !== 0 ||
+    desktop.heroHeight < 600 ||
+    desktop.featuredPosterCount !== 4 ||
+    !desktop.featuredPostersLoaded ||
+    desktop.featuredRailCaptions.length !== 3 ||
+    !desktop.featuredRailCaptions.every(
+      (caption) => caption && caption.stacked && caption.alignedLeft && caption.withinTile,
+    ) ||
+    desktop.featuredHeading !== 'Featured visualizations' ||
+    desktop.featuredSummary !==
+      'Download the source files to use or adapt. Order physical prints for your home, clinic, classroom, or workspace.' ||
+    desktop.featuredSummary.includes('$25') ||
+    desktop.featuredBrowseLinks !== 2 ||
+    desktop.seriesCards.length !== 2 ||
+    !desktop.seriesCards.every(
+      (card) => card.thumbnails === 3 && card.thumbnailsLoaded && card.hasCount,
+    ) ||
+    // Unfiltered browsing shows curated sections with sub-heads.
+    desktop.sectionHeads.length < 5 ||
+    desktop.sectionHeads[0] !== 'Design Axioms'
+  ) {
+    throw new Error(`Catalog navigation or hero decoration is missing: ${JSON.stringify(desktop)}`)
+  }
+
+  const stepStrip = await page.$('#how-it-works')
+  if (!stepStrip) throw new Error('How-it-works strip is missing')
+  await stepStrip.screenshot({ path: '.audit/shop-layout-steps.png' })
+
+  const featuredItems = await page.$('#artifact-collections')
+  if (!featuredItems) throw new Error('Featured Items section is missing')
+  await featuredItems.screenshot({ path: '.audit/shop-featured-items.png' })
+
+  const firstRowClip = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-shop-print-card]')].slice(0, 3)
+    if (cards.length !== 3) throw new Error('The first catalog row is incomplete')
+    const bounds = cards.map((card) => card.getBoundingClientRect())
+    const x = Math.min(...bounds.map((item) => item.left))
+    const y = Math.min(...bounds.map((item) => item.top)) + window.scrollY
+    const right = Math.max(...bounds.map((item) => item.right))
+    const bottom = Math.max(...bounds.map((item) => item.bottom)) + window.scrollY
+    return { x, y, width: right - x, height: bottom - y }
+  })
+  await page.screenshot({
+    path: '.audit/shop-layout-cards.png',
+    clip: firstRowClip,
+    captureBeyondViewport: true,
+  })
+
+  await page.type('input[type="search"]', 'autism')
+  await page.waitForFunction(() => document.querySelectorAll('[data-shop-print-card]').length === 1)
+  const searchResult = await page.evaluate(() => ({
+    cardCount: document.querySelectorAll('[data-shop-print-card]').length,
+    cardTitle: document.querySelector('[data-shop-print-card] h3')?.textContent?.trim(),
+  }))
+  if (searchResult.cardTitle !== 'Precision Autism') {
+    throw new Error(`Search returned the wrong print: ${JSON.stringify(searchResult)}`)
+  }
+
+  await page.click('input[type="search"]')
+  await page.keyboard.down('Control')
+  await page.keyboard.press('A')
+  await page.keyboard.up('Control')
+  await page.keyboard.press('Backspace')
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-shop-print-card]').length === 31,
+  )
+
+  // The floating pay-what-you-want button is gone: support is asked in a
+  // once-per-session dialog after a download (or via the cart's own selector).
+  const strayTrigger = await page.evaluate(
+    () => document.querySelectorAll('[data-shop-donate-trigger]').length,
+  )
+  if (strayTrigger !== 0) {
+    throw new Error(`Floating donate trigger should be removed: found ${strayTrigger}`)
+  }
+
+  // A download click opens the support dialog. The download itself is untouched
+  // in production; navigation is suppressed here so the test stays on the page.
+  await page.evaluate(() => {
+    document.addEventListener('click', (event) => event.preventDefault(), {
+      capture: true,
+      once: true,
+    })
+    const link = document.querySelector('[data-shop-image-download]')
+    if (!(link instanceof HTMLElement)) throw new Error('No download link found')
+    link.click()
+  })
+  await page.waitForSelector('[data-shop-support-dialog]', { visible: true })
+  const supportDialog = await page.evaluate(() => {
+    const trigger = document.querySelector('[data-shop-support-dialog] [data-shop-donate-trigger]')
+    return {
+      donateText: trigger?.textContent?.trim(),
+      chipCount: document.querySelectorAll('[data-shop-support-dialog] [data-shop-donation-chip]').length,
+      hasEmailSubmit: Boolean(document.querySelector('[data-shop-support-email-submit]')),
+    }
+  })
+  if (
+    supportDialog.donateText !== 'Pay what you want' ||
+    supportDialog.chipCount !== 3 ||
+    !supportDialog.hasEmailSubmit
+  ) {
+    throw new Error(`Support dialog is incomplete: ${JSON.stringify(supportDialog)}`)
+  }
+
+  // "Pay what you want" opens the checkout screen with the support editor.
+  await page.click('[data-shop-support-dialog] [data-shop-donate-trigger]')
+  await page.waitForSelector('[data-shop-donation-panel]', { visible: true })
+  await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
+  await page.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$15 contribution'),
+  )
+  const standaloneSupport = await page.evaluate(() => {
+    const panel = document.querySelector('[data-shop-donation-panel]')
+    const fallback = document.querySelector('[data-shop-donation-fallback]')
+    const checkout = document.querySelector('[data-shop-stripe-checkout]')
+    return {
+      text: panel?.textContent?.replace(/\s+/g, ' ').trim(),
+      total: document.querySelector('[data-shop-order-total]')?.textContent?.trim(),
+      fallbackCount: document.querySelectorAll('[data-shop-donation-fallback]').length,
+      checkoutCount: document.querySelectorAll('[data-shop-stripe-checkout]').length,
+      href: fallback?.getAttribute('href') || '',
+      checkoutText: checkout?.textContent?.trim() || '',
+    }
+  })
+  if (
+    !standaloneSupport.text?.includes('Add support') ||
+    !standaloneSupport.text.includes('Pay-what-you-want for 20+ years') ||
+    standaloneSupport.total !== '$15 contribution' ||
+    (checkoutConfig.body.checkoutEnabled
+      ? standaloneSupport.checkoutCount !== 1 || standaloneSupport.fallbackCount !== 0
+      : standaloneSupport.checkoutCount !== 0 ||
+        standaloneSupport.fallbackCount !== 1 ||
+        !decodeURIComponent(standaloneSupport.href).includes('contribute $15') ||
+        !decodeURIComponent(standaloneSupport.href).includes('more than 20 years'))
+  ) {
+    throw new Error(
+      `Standalone pay-what-you-want flow is not ready: ${JSON.stringify(standaloneSupport)}`,
+    )
+  }
+  // Toggle the support back off and close so later flows start from $0.
+  await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
+  await page.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$0 contribution'),
+  )
+  await page.click('[data-shop-cart-close]')
+  await page.waitForSelector('[data-shop-donation-panel]', { hidden: true })
+
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent?.trim() === 'Design Axioms',
+    )
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Design Axioms filter is missing')
+    button.click()
+  })
+  await page.waitForFunction(() => document.querySelectorAll('[data-shop-print-card]').length === 3)
+  const designAxiomsCount = await page.evaluate(
+    () => document.querySelectorAll('[data-shop-print-card]').length,
+  )
+
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent?.trim() === 'Health Cards',
+    )
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Health Cards filter is missing')
+    button.click()
+  })
+  await page.waitForFunction(() => document.querySelectorAll('[data-shop-print-card]').length === 3)
+  const healthCardsCount = await page.evaluate(
+    () => document.querySelectorAll('[data-shop-print-card]').length,
+  )
+
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent?.trim() === 'Design culture',
+    )
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Design culture filter is missing')
+    button.click()
+  })
+  await page.waitForFunction(() => document.querySelectorAll('[data-shop-print-card]').length === 4)
+  const designCollectionCount = await page.evaluate(
+    () => document.querySelectorAll('[data-shop-print-card]').length,
+  )
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')].find(
+      (candidate) => candidate.textContent?.trim() === 'All designs',
+    )
+    if (!(button instanceof HTMLButtonElement)) throw new Error('All designs filter is missing')
+    button.click()
+  })
+  await page.waitForFunction(
+    () => document.querySelectorAll('[data-shop-print-card]').length === 31,
+  )
+
+  await page.evaluate(() => {
+    const button = [...document.querySelectorAll('button')].find((candidate) =>
+      candidate.textContent?.includes('Buy Poster'),
+    )
+    if (!(button instanceof HTMLButtonElement)) throw new Error('No add-print button found')
+    button.click()
+  })
+  await page.waitForSelector('[data-shop-cart-bar]')
+  await page.evaluate(() => document.querySelector('[data-shop-open-cart]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+  await page.waitForSelector('[data-shop-donation-panel]', { visible: true })
+  const cart = await page.evaluate(() => {
+    const requestLink = [...document.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Request order'),
+    )
+    return {
+      text: document.querySelector('[data-shop-donation-panel]')?.textContent?.replace(/\s+/g, ' ').trim(),
+      href: requestLink?.getAttribute('href'),
+      donationChips: document.querySelectorAll('[data-shop-donation-panel] [data-shop-donation-chip]').length,
+      customToggle: document.querySelectorAll('[data-shop-donation-custom-toggle]').length,
+      fallbackCount: document.querySelectorAll('[data-shop-order-fallback]').length,
+      stripeCheckoutCount: document.querySelectorAll('[data-shop-stripe-checkout]').length,
+    }
+  })
+
+  if (
+    !cart.text?.includes('$12 total with $6 US shipping') ||
+    cart.donationChips !== 3 ||
+    cart.customToggle !== 1
+  ) {
+    throw new Error(`The print order request is not ready: ${JSON.stringify(cart)}`)
+  }
+  if (
+    checkoutConfig.body.checkoutEnabled
+      ? cart.stripeCheckoutCount !== 1 || cart.fallbackCount !== 0
+      : cart.fallbackCount !== 1 ||
+        cart.stripeCheckoutCount !== 0 ||
+        !cart.href?.startsWith('mailto:') ||
+        !decodeURIComponent(cart.href).includes('Optional support: $0') ||
+        !decodeURIComponent(cart.href).includes('Order total: $12')
+  ) {
+    throw new Error(`Checkout handoff does not match its configuration: ${JSON.stringify({
+      checkoutConfig,
+      cart,
+    })}`)
+  }
+
+  await page.select('[data-shop-cart-quantity]', '3')
+  await page.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$24 total'),
+  )
+  const quantityOrder = await page.evaluate(() => {
+    const requestLink = [...document.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Request order'),
+    )
+    const quantitySelect = document.querySelector('[data-shop-cart-quantity]')
+    return {
+      total: document.querySelector('[data-shop-order-total]')?.textContent?.replace(/\s+/g, ' ').trim(),
+      order: decodeURIComponent(requestLink?.getAttribute('href') || ''),
+      quantity: quantitySelect instanceof HTMLSelectElement ? quantitySelect.value : '',
+      quantityOptionCount: quantitySelect?.querySelectorAll('option').length || 0,
+    }
+  })
+  if (
+    quantityOrder.total !== '$24 total with $6 US shipping' ||
+    quantityOrder.quantity !== '3' ||
+    quantityOrder.quantityOptionCount !== 20 ||
+    (!checkoutConfig.body.checkoutEnabled &&
+      (!quantityOrder.order.includes('Own Your Health Data × 3: $18') ||
+        !quantityOrder.order.includes('Order total: $24')))
+  ) {
+    throw new Error(`Print quantity is not reflected in the order: ${JSON.stringify(quantityOrder)}`)
+  }
+  await page.select('[data-shop-cart-quantity]', '1')
+  await page.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$12 total'),
+  )
+
+  await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
+  await page.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$27 total'),
+  )
+  const presetDonation = await page.evaluate(() => {
+    const requestLink = [...document.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Request order'),
+    )
+    return {
+      total: document.querySelector('[data-shop-order-total]')?.textContent?.replace(/\s+/g, ' ').trim(),
+      order: decodeURIComponent(requestLink?.getAttribute('href') || ''),
+    }
+  })
+  if (
+    !presetDonation.total?.includes('$27 total') ||
+    (!checkoutConfig.body.checkoutEnabled &&
+      (!presetDonation.order.includes('Optional support: $15') ||
+        !presetDonation.order.includes('Order total: $27')))
+  ) {
+    throw new Error(`Preset donation is not reflected in the order: ${JSON.stringify(presetDonation)}`)
+  }
+
+  await page.click('[data-shop-donation-custom-toggle]')
+  await page.waitForSelector('[data-shop-custom-donation]', { visible: true })
+  await page.type('[data-shop-custom-donation]', '12')
+  await page.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$24 total'),
+  )
+  const customDonation = await page.evaluate(() => {
+    const requestLink = [...document.querySelectorAll('a')].find((link) =>
+      link.textContent?.includes('Request order'),
+    )
+    return {
+      total: document.querySelector('[data-shop-order-total]')?.textContent?.replace(/\s+/g, ' ').trim(),
+      order: decodeURIComponent(requestLink?.getAttribute('href') || ''),
+      customFieldCount: document.querySelectorAll('[data-shop-custom-donation]').length,
+    }
+  })
+  if (
+    customDonation.customFieldCount !== 1 ||
+    !customDonation.total?.includes('$24 total') ||
+    (!checkoutConfig.body.checkoutEnabled &&
+      (!customDonation.order.includes('Optional support: $12') ||
+        !customDonation.order.includes('Order total: $24')))
+  ) {
+    throw new Error(`Custom donation is not reflected in the order: ${JSON.stringify(customDonation)}`)
+  }
+  const orderPanel = await page.$('[data-shop-donation-panel]')
+  if (!orderPanel) throw new Error('Checkout screen is missing')
+  await orderPanel.screenshot({ path: '.audit/shop-donation-cart.png' })
+  await page.click('[data-shop-cart-close]')
+  await page.waitForSelector('[data-shop-donation-panel]', { hidden: true })
+
+  await page.evaluate(() => {
+    const cta = document.querySelector('[data-poster-chat-cta]')
+    if (!(cta instanceof HTMLButtonElement)) throw new Error('Poster chat CTA is missing')
+    cta.click()
+  })
+  await page.waitForSelector('[data-poster-chat-flow]', { visible: true })
+  const posterChat = await page.evaluate(() => {
+    const widget = document.querySelector('[aria-label="GoInvo chat"]')
+    const flow = document.querySelector('[data-poster-chat-flow]')
+    const submit = document.querySelector('[data-poster-chat-submit]')
+    const fieldNames = [...document.querySelectorAll('[data-poster-chat-field]')].map((field) =>
+      field.getAttribute('data-poster-chat-field'),
+    )
+    const rect = widget?.getBoundingClientRect()
+    return {
+      flowCount: document.querySelectorAll('[data-poster-chat-flow]').length,
+      optionCount: document.querySelectorAll('[data-poster-use-option]').length,
+      submitText: submit?.textContent?.trim(),
+      intro: flow?.textContent?.replace(/\s+/g, ' ').trim(),
+      fieldNames,
+      widgetRect: rect
+        ? { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left }
+        : null,
+    }
+  })
+  if (
+    posterChat.flowCount !== 1 ||
+    posterChat.optionCount !== 6 ||
+    posterChat.submitText !== 'Connect with the GoInvo team' ||
+    !posterChat.intro?.includes('route your poster request to the right person') ||
+    !posterChat.intro?.includes('live conversation with our staff') ||
+    !['interests', 'quantity', 'timeline', 'destination', 'name', 'email'].every((field) =>
+      posterChat.fieldNames.includes(field),
+    ) ||
+    !posterChat.widgetRect ||
+    posterChat.widgetRect.top < 0 ||
+    posterChat.widgetRect.right > 1440 ||
+    posterChat.widgetRect.bottom > 1000 ||
+    posterChat.widgetRect.left < 0
+  ) {
+    throw new Error(`Poster chat flow is incomplete: ${JSON.stringify(posterChat)}`)
+  }
+
+  await page.click('[data-poster-use-option][value="other"]')
+  await page.waitForSelector('[data-poster-other-use]', { visible: true })
+  const otherFieldVisible = await page.$eval(
+    '[data-poster-other-use]',
+    (field) => field instanceof HTMLInputElement && field.required,
+  )
+  if (!otherFieldVisible) throw new Error('The required Other field did not appear')
+
+  const chatWidget = await page.$('[aria-label="GoInvo chat"]')
+  if (!chatWidget) throw new Error('Chat widget is missing after the poster CTA opens it')
+  await chatWidget.screenshot({ path: '.audit/shop-poster-chat.png' })
+  await page.$eval('[data-poster-chat-submit]', (submit) =>
+    submit.scrollIntoView({ block: 'center' }),
+  )
+  const posterSubmitVisible = await page.$eval('[data-poster-chat-submit]', (submit) => {
+    const rect = submit.getBoundingClientRect()
+    return rect.top >= 0 && rect.bottom <= window.innerHeight
+  })
+  if (!posterSubmitVisible) throw new Error('Poster chat submit button is not reachable')
+  await chatWidget.screenshot({ path: '.audit/shop-poster-chat-details.png' })
+
+  await page.screenshot({
+    path: '.audit/shop-concept-desktop.png',
+    fullPage: true,
+  })
+
+  const mobilePage = await browser.newPage()
+  await mobilePage.setViewport({
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 1,
+  })
+  await mobilePage.goto(`${baseUrl}${storefrontPath}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+  await mobilePage.waitForSelector('[data-shop-print-card]')
+  await loadLazyImages(mobilePage)
+  const mobile = await mobilePage.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    cardCount: document.querySelectorAll('[data-shop-print-card]').length,
+  }))
+  if (mobile.scrollWidth > mobile.viewportWidth + 3 || mobile.cardCount !== desktop.cardCount) {
+    throw new Error(`Mobile layout mismatch: ${JSON.stringify(mobile)}`)
+  }
+  await mobilePage.screenshot({
+    path: '.audit/shop-concept-mobile.png',
+    fullPage: true,
+  })
+  // The support ask opens after a download (once per session), then hands off
+  // to the checkout screen.
+  await mobilePage.evaluate(() => {
+    document.addEventListener('click', (event) => event.preventDefault(), {
+      capture: true,
+      once: true,
+    })
+    const link = document.querySelector('[data-shop-image-download]')
+    if (!(link instanceof HTMLElement)) throw new Error('Mobile download link is missing')
+    link.click()
+  })
+  await mobilePage.waitForSelector('[data-shop-support-dialog]', { visible: true })
+  await mobilePage.click('[data-shop-support-dialog] [data-shop-donate-trigger]')
+  await mobilePage.waitForSelector('[data-shop-donation-panel]', { visible: true })
+  const mobileStandaloneSupport = await mobilePage.evaluate(() => {
+    const panel = document.querySelector('[data-shop-donation-panel]')
+    const rect = panel?.getBoundingClientRect()
+    return {
+      text: panel?.textContent?.replace(/\s+/g, ' ').trim(),
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      panelRect: rect
+        ? { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left }
+        : null,
+    }
+  })
+  if (
+    !mobileStandaloneSupport.text?.includes('Add support') ||
+    mobileStandaloneSupport.scrollWidth > mobileStandaloneSupport.viewportWidth + 3 ||
+    !mobileStandaloneSupport.panelRect ||
+    mobileStandaloneSupport.panelRect.left < 0 ||
+    mobileStandaloneSupport.panelRect.right > 390 ||
+    mobileStandaloneSupport.panelRect.bottom > 844
+  ) {
+    throw new Error(
+      `Mobile standalone support layout mismatch: ${JSON.stringify(mobileStandaloneSupport)}`,
+    )
+  }
+  const mobileSupportPanel = await mobilePage.$('[data-shop-donation-panel]')
+  if (!mobileSupportPanel) throw new Error('Mobile standalone support panel is missing')
+  await mobileSupportPanel.screenshot({ path: '.audit/shop-support-mobile.png' })
+  await mobilePage.click('[data-shop-cart-close]')
+  await mobilePage.waitForSelector('[data-shop-donation-panel]', { hidden: true })
+  await mobilePage.evaluate(() => {
+    const button = [...document.querySelectorAll('button')].find((candidate) =>
+      candidate.textContent?.includes('Buy Poster'),
+    )
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Mobile order button is missing')
+    button.click()
+  })
+  await mobilePage.waitForSelector('[data-shop-cart-bar]')
+  await mobilePage.evaluate(() => document.querySelector('[data-shop-open-cart]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
+  await mobilePage.waitForSelector('[data-shop-donation-panel]', { visible: true })
+  await mobilePage.select('[data-shop-cart-quantity]', '3')
+  await mobilePage.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$24 total'),
+  )
+  const mobileQuantity = await mobilePage.evaluate(() => {
+    const select = document.querySelector('[data-shop-cart-quantity]')
+    const rect = select?.getBoundingClientRect()
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      total: document.querySelector('[data-shop-order-total]')?.textContent?.replace(/\s+/g, ' ').trim(),
+      selectRect: rect
+        ? { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left }
+        : null,
+    }
+  })
+  if (
+    mobileQuantity.scrollWidth > mobileQuantity.viewportWidth + 3 ||
+    mobileQuantity.total !== '$24 total with $6 US shipping' ||
+    !mobileQuantity.selectRect ||
+    mobileQuantity.selectRect.left < 0 ||
+    mobileQuantity.selectRect.right > 390
+  ) {
+    throw new Error(`Mobile print quantity layout mismatch: ${JSON.stringify(mobileQuantity)}`)
+  }
+  await mobilePage.select('[data-shop-cart-quantity]', '1')
+  await mobilePage.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$12 total'),
+  )
+  await mobilePage.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
+  await mobilePage.waitForFunction(
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$27 total'),
+  )
+  const mobileDonation = await mobilePage.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    total: document.querySelector('[data-shop-order-total]')?.textContent?.replace(/\s+/g, ' ').trim(),
+    chipCount: document.querySelectorAll('[data-shop-donation-panel] [data-shop-donation-chip]').length,
+    panelRect: (() => {
+      const rect = document
+        .querySelector('[data-shop-donation-panel]')
+        ?.getBoundingClientRect()
+      return rect
+        ? { top: rect.top, right: rect.right, bottom: rect.bottom, left: rect.left }
+        : null
+    })(),
+  }))
+  if (
+    mobileDonation.scrollWidth > mobileDonation.viewportWidth + 3 ||
+    mobileDonation.total !== '$27 total with $6 US shipping' ||
+    mobileDonation.chipCount !== 3 ||
+    !mobileDonation.panelRect ||
+    mobileDonation.panelRect.left < 0 ||
+    mobileDonation.panelRect.right > 390 ||
+    mobileDonation.panelRect.bottom > 844
+  ) {
+    throw new Error(`Mobile donation layout mismatch: ${JSON.stringify(mobileDonation)}`)
+  }
+  const mobileOrderPanel = await mobilePage.$('[data-shop-donation-panel]')
+  if (!mobileOrderPanel) throw new Error('Mobile checkout screen is missing')
+  await mobileOrderPanel.screenshot({ path: '.audit/shop-donation-cart-mobile.png' })
+  await mobilePage.click('[data-shop-cart-close]')
+  await mobilePage.waitForSelector('[data-shop-donation-panel]', { hidden: true })
+
+  await mobilePage.evaluate(() => {
+    const cta = document.querySelector('[data-poster-chat-cta]')
+    if (!(cta instanceof HTMLButtonElement)) throw new Error('Mobile poster chat CTA is missing')
+    cta.click()
+  })
+  await mobilePage.waitForSelector('[data-poster-chat-flow]', { visible: true })
+  await mobilePage.click('[data-poster-use-option][value="other"]')
+  await mobilePage.$eval('[data-poster-chat-submit]', (submit) =>
+    submit.scrollIntoView({ block: 'center' }),
+  )
+  const mobileChat = await mobilePage.evaluate(() => {
+    const widget = document.querySelector('[aria-label="GoInvo chat"]')
+    const submit = document.querySelector('[data-poster-chat-submit]')
+    const widgetRect = widget?.getBoundingClientRect()
+    const submitRect = submit?.getBoundingClientRect()
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      optionCount: document.querySelectorAll('[data-poster-use-option]').length,
+      otherFieldCount: document.querySelectorAll('[data-poster-other-use]').length,
+      widgetRect: widgetRect
+        ? {
+            top: widgetRect.top,
+            right: widgetRect.right,
+            bottom: widgetRect.bottom,
+            left: widgetRect.left,
+          }
+        : null,
+      submitVisible: submitRect
+        ? submitRect.top >= 0 && submitRect.bottom <= window.innerHeight
+        : false,
+    }
+  })
+  if (
+    mobileChat.scrollWidth > mobileChat.viewportWidth + 3 ||
+    mobileChat.optionCount !== 6 ||
+    mobileChat.otherFieldCount !== 1 ||
+    !mobileChat.widgetRect ||
+    mobileChat.widgetRect.top < 0 ||
+    mobileChat.widgetRect.right > 390 ||
+    mobileChat.widgetRect.bottom > 844 ||
+    mobileChat.widgetRect.left < 0 ||
+    !mobileChat.submitVisible
+  ) {
+    throw new Error(`Mobile poster chat layout mismatch: ${JSON.stringify(mobileChat)}`)
+  }
+  const mobileChatWidget = await mobilePage.$('[aria-label="GoInvo chat"]')
+  if (!mobileChatWidget) throw new Error('Mobile chat widget is missing')
+  await mobileChatWidget.screenshot({ path: '.audit/shop-poster-chat-mobile.png' })
+
+  console.log(
+    JSON.stringify(
+      {
+        desktop,
+        shopRedirect,
+        checkoutConfig,
+        searchResult,
+        designAxiomsCount,
+        healthCardsCount,
+        designCollectionCount,
+        supportDialog,
+        standaloneSupport,
+        cart,
+        quantityOrder,
+        presetDonation,
+        customDonation,
+        posterChat,
+        otherFieldVisible,
+        posterSubmitVisible,
+        mobile,
+        mobileStandaloneSupport,
+        mobileQuantity,
+        mobileDonation,
+        mobileChat,
+      },
+      null,
+      2,
+    ),
+  )
+} finally {
+  await browser.close()
+}
