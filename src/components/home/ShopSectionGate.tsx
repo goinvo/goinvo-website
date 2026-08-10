@@ -76,6 +76,28 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
   // 'control' is the baseline homepage with no section.
   const visible = variant === 'present'
 
+  /**
+   * Honour a deep link to anything inside the gated subtree.
+   *
+   * The section mounts after hydration, so on a cold load the browser resolves
+   * `#goinvo-at-home` while the element still does not exist, finds nothing,
+   * and silently stays at the top. Anyone sent that link lands on the hero and
+   * has to scroll eight thousand pixels to reach what the link named. Once the
+   * section is mounted, run the jump the browser could not.
+   *
+   * Only from an untouched scroll position: if the reader has already started
+   * moving down the page, yanking them elsewhere is worse than not scrolling.
+   */
+  useEffect(() => {
+    if (!visible) return
+    const id = decodeURIComponent(window.location.hash.replace(/^#/, ''))
+    if (!id || window.scrollY > 0) return
+    const target = document.getElementById(id)
+    // Instant, not smooth: this is a deep link resolving late, not a nav
+    // gesture, and an animated eight-thousand-pixel scroll reads as a bug.
+    target?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }, [visible])
+
   return (
     <>
       {inExperiment && (
