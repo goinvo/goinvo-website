@@ -1009,6 +1009,32 @@ try {
   const homeSectionHandle = await homePage.$('#goinvo-at-home')
   await homeSectionHandle.screenshot({ path: '.audit/home-goinvo-at-home.png' })
 
+  // A shared link carries the #goinvo-at-home fragment. The section mounts
+  // after hydration, so the browser's own attempt to resolve that fragment
+  // finds nothing; the gate has to finish the jump or the recipient lands on
+  // the hero with the section thousands of pixels below the fold.
+  const anchorPage = await browser.newPage()
+  await anchorPage.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
+  await anchorPage.goto(`${baseUrl}/?home-shop-section-variant=present#goinvo-at-home`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+  await anchorPage.waitForSelector('#goinvo-at-home', { timeout: 30_000 })
+  await anchorPage.waitForFunction(() => window.scrollY > 0, { timeout: 15_000 }).catch(() => {})
+  const anchorScroll = await anchorPage.evaluate(() => {
+    const element = document.getElementById('goinvo-at-home')
+    const bounds = element?.getBoundingClientRect()
+    return {
+      scrollY: Math.round(window.scrollY),
+      sectionTop: bounds ? Math.round(bounds.top) : null,
+      inViewport: bounds ? bounds.top < window.innerHeight && bounds.bottom > 0 : false,
+    }
+  })
+  if (!anchorScroll.inViewport || anchorScroll.scrollY <= 0) {
+    throw new Error(`The #goinvo-at-home deep link did not scroll: ${JSON.stringify(anchorScroll)}`)
+  }
+  await anchorPage.close()
+
   console.log(
     JSON.stringify(
       {
@@ -1023,6 +1049,7 @@ try {
         firstOrderTitle,
         cartBar,
         homeSection,
+        anchorScroll,
         supportDialog,
         standaloneSupport,
         cart,
