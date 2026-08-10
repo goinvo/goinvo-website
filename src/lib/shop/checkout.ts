@@ -1,7 +1,9 @@
 import type Stripe from 'stripe'
 import { z } from 'zod'
 
-export const SHOP_PRINT_PRICE_CENTS = 600
+// Default print price when a marketingProduct doc doesn't override it.
+// $30 per Juhan, 2026-08-07 (was $6 at launch).
+export const SHOP_PRINT_PRICE_CENTS = 3000
 // Flat standard-US rate shown to the buyer as its own shipping line (storefront
 // summary + Stripe checkout). $6 per Shirley, 2026-08-05.
 export const SHOP_SHIPPING_PRICE_CENTS = 600

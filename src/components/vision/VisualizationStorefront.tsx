@@ -30,7 +30,6 @@ type CollectionId =
   | 'care-systems'
   | 'public-health'
   | 'design-culture'
-type SortId = 'curated' | 'newest' | 'title'
 type DonationChoice = '0' | '5' | '15' | '30' | 'custom'
 type CheckoutAvailability = {
   loaded: boolean
@@ -167,13 +166,6 @@ function normalizeGoInvoLink(link?: string) {
   return match ? match[1] : link
 }
 
-function parseVisualizationDate(date?: string) {
-  if (!date) return 0
-  const [month, year] = date.split('.')
-  const monthIndex = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(month)
-  return Number(year) * 12 + Math.max(monthIndex, 0)
-}
-
 function itemMatchesCollection(item: VisualizationPrint, collection: CollectionId) {
   if (collection === 'all') return true
   return collectionSlugs[collection].includes(item.slug || '')
@@ -255,8 +247,9 @@ export function VisualizationStorefront({
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
+  // No sort control: 31 curated designs don't need one, and "curated order" as
+  // a sort option read as noise (Juhan's feedback, 2026-08-07).
   const [collection, setCollection] = useState<CollectionId>('all')
-  const [sort, setSort] = useState<SortId>('curated')
   const [donationChoice, setDonationChoice] = useState<DonationChoice>('0')
   const [customDonation, setCustomDonation] = useState('')
   const [cartOpen, setCartOpen] = useState(false)
@@ -313,23 +306,15 @@ export function VisualizationStorefront({
   const selectedTotal = selectedSubtotal + donationAmount
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
-    const filtered = items.filter((item) => {
+    return items.filter((item) => {
       const matchesCollection = itemMatchesCollection(item, collection)
       const matchesQuery =
         !normalizedQuery ||
         `${item.title} ${item.caption || ''}`.toLowerCase().includes(normalizedQuery)
       return matchesCollection && matchesQuery
     })
-
-    if (sort === 'title') return [...filtered].sort((a, b) => a.title.localeCompare(b.title))
-    if (sort === 'newest') {
-      return [...filtered].sort(
-        (a, b) => parseVisualizationDate(b.date) - parseVisualizationDate(a.date),
-      )
-    }
-    return filtered
-  }, [collection, items, query, sort])
-  const hasFilters = query.trim().length > 0 || collection !== 'all' || sort !== 'curated'
+  }, [collection, items, query])
+  const hasFilters = query.trim().length > 0 || collection !== 'all'
 
   useEffect(() => {
     let cancelled = false
@@ -514,18 +499,11 @@ export function VisualizationStorefront({
         className="bg-[#f2e8d5] border-b border-[#d8cbb5] scroll-mt-24"
       >
         <div className="max-width content-padding py-14 lg:py-20">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <h2 className="mb-0 font-serif text-[2.15rem] font-light leading-[1.08] lg:text-[3rem]">
-              Featured visualizations
-            </h2>
-            <p
-              data-shop-featured-summary
-              className="mb-1 max-w-[46ch] text-sm leading-relaxed text-gray"
-            >
-              Download the source files to use or adapt. Order physical prints for your home,
-              clinic, classroom, or workspace.
-            </p>
-          </div>
+          {/* No tan "download the source files…" byline here — the hero already
+              says it once (Juhan's feedback, 2026-08-07). */}
+          <h2 className="mb-8 font-serif text-[2.15rem] font-light leading-[1.08] lg:text-[3rem]">
+            Featured visualizations
+          </h2>
 
           {(() => {
             const bySlug = new Map(items.map((item) => [item.slug, item]))
@@ -684,36 +662,25 @@ export function VisualizationStorefront({
               aria-label="Browse visualization catalog"
               className="sticky top-[var(--spacing-header-height)] z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 mb-9 bg-[#f5f3ef]/95 backdrop-blur-md border-y border-[#d9d5ce] shadow-[0_12px_30px_rgba(36,67,77,.06)]"
             >
-              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                <label className="relative flex-1 min-w-0">
-                  <span className="sr-only">Search designs</span>
-                  <span
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-lg"
-                    aria-hidden="true"
-                  >
-                    ⌕
-                  </span>
-                  <input
-                    type="search"
-                    value={query}
-                    onChange={(event) => setQuery(event.currentTarget.value)}
-                    placeholder="Search by title or topic…"
-                    className="w-full bg-white border border-[#cfc9be] pl-11 pr-4 py-3 text-black placeholder:text-gray focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
-                  />
-                </label>
-                <label className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap">
-                  <span>Sort</span>
-                  <select
-                    value={sort}
-                    onChange={(event) => setSort(event.currentTarget.value as SortId)}
-                    className="bg-white border border-[#cfc9be] px-3 py-3 text-black focus:outline-none focus:border-secondary"
-                  >
-                    <option value="curated">Curated order</option>
-                    <option value="newest">Newest first</option>
-                    <option value="title">Title A–Z</option>
-                  </select>
-                </label>
-              </div>
+              <label className="relative block min-w-0">
+                <span className="sr-only">Search designs</span>
+                <span
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-secondary text-lg"
+                  aria-hidden="true"
+                >
+                  ⌕
+                </span>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.currentTarget.value)}
+                  placeholder="Search by title or topic…"
+                  className="w-full bg-white border border-[#cfc9be] pl-11 pr-4 py-3 text-black placeholder:text-gray focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+                />
+              </label>
+              {/* Just search + collection chips: the sort select and the "Clear
+                  filters" tag-along are gone — "All designs" already resets the
+                  collection (Juhan's feedback, 2026-08-07). */}
               <div className="flex gap-2 mt-3 overflow-x-auto pb-1" aria-label="Visualization collections">
                 {collections.map((option) => (
                   <button
@@ -730,19 +697,6 @@ export function VisualizationStorefront({
                     {option.label}
                   </button>
                 ))}
-                {hasFilters && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuery('')
-                      setCollection('all')
-                      setSort('curated')
-                    }}
-                    className="shrink-0 px-4 py-2 text-sm font-semibold text-primary hover:underline"
-                  >
-                    Clear filters
-                  </button>
-                )}
               </div>
             </nav>
           )}
@@ -756,9 +710,34 @@ export function VisualizationStorefront({
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-4 mb-5">
+              {/* When a filter is on, the rest of the collection "disappears" —
+                  name the filter and offer the way back so nobody is spooked
+                  (Juhan's feedback, 2026-08-07). */}
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
                 <p className="text-sm text-gray mb-0" aria-live="polite">
-                  Showing {visibleItems.length} of {items.length} designs
+                  {hasFilters ? (
+                    <>
+                      Showing{' '}
+                      {collection !== 'all' && (
+                        <strong className="font-semibold text-[#24434d]">
+                          {collections.find((entry) => entry.id === collection)?.label} —{' '}
+                        </strong>
+                      )}
+                      {visibleItems.length} of {items.length} designs ·{' '}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuery('')
+                          setCollection('all')
+                        }}
+                        className="font-semibold text-secondary hover:underline"
+                      >
+                        Show all {items.length}
+                      </button>
+                    </>
+                  ) : (
+                    <>Showing all {items.length} designs</>
+                  )}
                 </p>
                 {selectedItems.length > 0 && (
                   <p className="text-sm font-semibold text-secondary mb-0">
@@ -787,9 +766,9 @@ export function VisualizationStorefront({
               ) : (
                 (() => {
                   // Unfiltered browsing gets curated sections with sub-heads;
-                  // any search/filter/sort switches to the flat grid.
+                  // any search/filter switches to the flat grid.
                   const groupedSections =
-                    collection === 'all' && !query.trim() && sort === 'curated'
+                    collection === 'all' && !query.trim()
                       ? groupItemsIntoSections(visibleItems)
                       : null
 
@@ -919,6 +898,9 @@ export function VisualizationStorefront({
                                 Print currently unavailable — download the PDF above.
                               </p>
                             ) : (
+                              // Outline, not a filled orange slab: the posters
+                              // are the show, the CTAs shouldn't compete with
+                              // them (Juhan's feedback, 2026-08-07).
                               <button
                                 type="button"
                                 aria-pressed={selected}
@@ -926,7 +908,7 @@ export function VisualizationStorefront({
                                 className={`grid min-h-[3.5rem] w-full grid-cols-[1fr_auto] items-center gap-3 px-5 py-3 font-semibold transition-colors ${
                                   selected
                                     ? 'bg-[#24434d] text-white hover:bg-[#182f36]'
-                                    : 'bg-primary text-white hover:bg-primary-dark'
+                                    : 'border border-primary text-primary hover:bg-primary hover:text-white'
                                 }`}
                               >
                                 <span className="whitespace-nowrap text-left">

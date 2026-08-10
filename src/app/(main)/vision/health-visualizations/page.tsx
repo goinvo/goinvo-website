@@ -4,7 +4,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery, shopStorefrontQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
-import { SHOP_SHIPPING_PRICE_CENTS } from '@/lib/shop/checkout'
+import { SHOP_PRINT_PRICE_CENTS, SHOP_SHIPPING_PRICE_CENTS } from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { PosterChatCta } from '@/components/chat/PosterChatCta'
 import {
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
 }
 
-const DEFAULT_PRINT_PRICE = 6
+const DEFAULT_PRINT_PRICE = SHOP_PRINT_PRICE_CENTS / 100
 const DEFAULT_PRINT_CURRENCY = 'USD'
 
 // Normalized card data shared by both Sanity and fallback paths
@@ -446,15 +446,16 @@ export default async function HealthVisualizationsPage() {
         <div className="absolute -left-10 top-1/2 h-32 w-32 -translate-y-1/2 rounded-full border border-[#79d9e5]/20" />
         <div className="relative max-width content-padding grid lg:grid-cols-[minmax(0,1fr)_420px] gap-12 lg:items-center">
           <div>
-            <p className="font-sans text-xs font-bold uppercase tracking-[2px] text-[#79d9e5] mb-5">
-              Open Source Health Design · GoInvo
-            </p>
             <h1 className="font-serif font-light text-[2.65rem] leading-[1.03] sm:text-[3.5rem] lg:text-[4.6rem] lg:leading-[.98] max-w-[760px] mb-7">
               Health ideas, made visible.
             </h1>
+            {/* Two offers, two lines with air between them, one CTA — browsing
+                and downloading are the same trip (Juhan's feedback, 2026-08-07). */}
+            <p className="font-sans text-lg leading-relaxed text-[#d9dee7] max-w-[650px] mb-4">
+              Download the open-source files and make them your own.
+            </p>
             <p className="font-sans text-lg leading-relaxed text-[#d9dee7] max-w-[650px] mb-8">
-              Download the open-source files and make them your own. Want a finished piece? Buy a
-              poster and we&apos;ll ship it to you.
+              Want a finished piece? Buy a poster and we&apos;ll ship it to you.
             </p>
             <div className="flex flex-wrap gap-3 mb-7">
               <a
@@ -463,17 +464,21 @@ export default async function HealthVisualizationsPage() {
               >
                 Browse the collection
               </a>
-              <a
-                href="#how-it-works"
-                className="border border-white/35 text-white no-underline font-semibold px-6 py-3 hover:bg-white hover:text-[#11141f] transition-colors"
-              >
-                Download or print
-              </a>
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#d9dee7]">
-              <span>✓ Free open-source PDFs</span>
-              <span>✓ $6 per print, plus $6 flat US shipping</span>
-              <span>✓ Optional support helps fund new work</span>
+              <span>
+                ✓ Free PDFs under an{' '}
+                <Link
+                  href="https://creativecommons.org/licenses/by/3.0/us/"
+                  target="_blank"
+                  rel="noreferrer"
+                  data-shop-license-link
+                  className="text-[#79d9e5] underline underline-offset-2"
+                >
+                  open-source license
+                </Link>
+              </span>
+              <span>✓ $30 per print, printed on demand, plus $6 flat US shipping</span>
             </div>
           </div>
 
@@ -510,56 +515,10 @@ export default async function HealthVisualizationsPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="bg-white border-b border-[#d9d5ce] scroll-mt-24">
-        <div className="max-width content-padding py-8 lg:py-10">
-          {/* Three parallel facts, not a sequence — numbering them implied an
-              order that does not exist (you can buy without downloading). */}
-          <ul className="grid list-none border-y border-[#dedad2] p-0 md:grid-cols-3 md:divide-x md:divide-[#dedad2]">
-            {[
-              {
-                title: 'Free open-source PDFs',
-                detail: (
-                  <>
-                    Download any design and use or adapt it under an{' '}
-                    <Link
-                      href="https://creativecommons.org/licenses/by/3.0/us/"
-                      target="_blank"
-                      rel="noreferrer"
-                      data-shop-license-link
-                      className="text-secondary underline underline-offset-2"
-                    >
-                      open-source license
-                    </Link>
-                    .
-                  </>
-                ),
-              },
-              {
-                title: 'Printed on demand',
-                detail: 'Every poster is printed when you order it — $6 plus standard US shipping.',
-              },
-              {
-                title: 'Search or browse',
-                detail: 'Find a design by topic, or browse the complete collection.',
-              },
-            ].map((fact) => (
-              <li
-                key={fact.title}
-                className="border-b border-[#dedad2] py-6 last:border-b-0 md:border-b-0 md:px-7 md:first:pl-0 md:last:pr-0"
-              >
-                <span className="mb-3 block h-[3px] w-9 bg-primary" aria-hidden="true" />
-                <h2 className="mb-2 font-sans text-sm font-bold uppercase tracking-[1.2px]">
-                  {fact.title}
-                </h2>
-                <p className="mb-0 max-w-[17rem] text-sm leading-relaxed text-gray">
-                  {fact.detail}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
+      {/* The old three-column "how it works" band is gone: its facts (free
+          PDFs + license, printed on demand, browse) now live as one quiet line
+          in the hero — the labels had too much priority, especially on mobile
+          (Juhan's feedback, 2026-08-07). */}
       <VisualizationStorefront items={visualizations} supportEmail={supportEmail} />
 
       <section className="bg-gray-light py-8">
