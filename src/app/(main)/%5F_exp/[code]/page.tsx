@@ -1,6 +1,14 @@
 import { generatePermutations } from 'flags/next'
 import { HomePageRenderer } from '@/components/home/HomePageRenderer'
-import { getMarketingFlagsSecret, marketingExperimentFlags } from '@/flags'
+import {
+  getExperimentExposure,
+  getPrecomputedExperimentVariant,
+} from '@/lib/experiments/registry'
+import { getMarketingFlagsSecret, marketingExperimentFlags, type Home2026Variant } from '@/flags'
+
+interface Props {
+  params: Promise<{ code: string }>
+}
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -20,9 +28,13 @@ export async function generateStaticParams() {
   return codes.map((code) => ({ code }))
 }
 
-// Served at / via the A/B rewrite so the shop-section variant cookie is set at
-// the edge. The homepage content is the concept homepage for everyone now; the
-// section's presence is decided client-side from that cookie (ShopSectionGate).
-export default async function ExperimentHomePage() {
-  return <HomePageRenderer />
+export default async function ExperimentHomePage({ params }: Props) {
+  const { code } = await params
+  const resolved = await getPrecomputedExperimentVariant('/', code)
+  const variant = (resolved?.variant || 'control') as Home2026Variant
+  const experiment = resolved
+    ? getExperimentExposure(resolved.experiment, variant, '/')
+    : undefined
+
+  return <HomePageRenderer variant={variant} experiment={experiment} />
 }

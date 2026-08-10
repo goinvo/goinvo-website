@@ -33,7 +33,6 @@ import { MarketingFinancialPostureSetting } from '../components/marketing/Market
 import { MarketingOperationsBoard } from '../components/marketing/MarketingOperationsBoard'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
-import { ShopWorkspace } from '../components/marketing/ShopWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
 import { OutreachWorkspace, OutreachEvidenceWorkspace } from '../components/marketing/OutreachWorkspace'
 import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
@@ -828,7 +827,6 @@ export type MarketingViewId =
   | 'analytics'
   | 'linkTree'
   | 'seo'
-  | 'shop'
 export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 
 export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = {
@@ -847,7 +845,6 @@ export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = 
   analytics: 'marketing.analytics',
   linkTree: 'marketing.quick-links',
   seo: 'marketing.seo',
-  shop: 'marketing.shop',
 }
 export type MarketingAssistKind =
   | 'campaign'
@@ -3792,7 +3789,6 @@ function MarketingComponent() {
                 </div>
               </>
             )}
-            {view === 'shop' && <ShopWorkspace client={client} />}
             {view === 'outreach' && (
               <div data-tour-id="autopilot-outreach-workflow">
                 <OutreachWorkspace

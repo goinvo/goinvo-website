@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
 import { verifySlackRequest } from '@/lib/chat/slack'
-import { submitDisputeEvidence } from '@/lib/shop/disputeEvidence'
-import { stripeDisputeDocumentId } from '@/lib/shop/ids'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,38 +87,6 @@ export async function POST(request: NextRequest) {
     })
 
     // Immediate ack — stops the button spinner.
-    return new NextResponse(null, { status: 200 })
-  }
-
-  if (
-    payload.type === 'block_actions' &&
-    action?.action_id === 'goinvo_dispute_submit_evidence' &&
-    action.value
-  ) {
-    const disputeId = action.value
-    const responseUrl = payload.response_url
-    const userName = payload.user?.name || payload.user?.username
-
-    // Same 3s-ack shape as above: Stripe calls and Sanity writes happen after
-    // the ack so the button never hangs and Slack never retries the click.
-    after(async () => {
-      const result = await submitDisputeEvidence({
-        disputeDocId: stripeDisputeDocumentId(disputeId),
-        submittedBy: userName,
-      })
-
-      const messages: Record<string, string> = {
-        'not-configured': 'The shop CMS is not configured, so nothing was sent.',
-        'not-found': 'That dispute is not in the CMS — nothing was sent.',
-        submitted: `Evidence submitted to Stripe${userName ? ` by ${userName}` : ''}.`,
-      }
-      await postSlackResponse(
-        responseUrl,
-        messages[result.status] ||
-          ('message' in result ? result.message : 'Could not submit the evidence.'),
-      )
-    })
-
     return new NextResponse(null, { status: 200 })
   }
 

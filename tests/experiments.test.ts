@@ -4,7 +4,6 @@ import type { Flag } from 'flags/next'
 import { track as trackVercelEvent } from '@vercel/analytics'
 import { config as proxyConfig } from '@/proxy'
 import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
-import { ShopSectionGate } from '@/components/home/ShopSectionGate'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
 import { HomeContent } from '@/components/home/HomeContent'
 import {
@@ -14,7 +13,6 @@ import {
   getForcedExperimentVariant,
   getExperimentExposure,
   home2026Experiment,
-  homeShopSectionExperiment,
   normalizeExperimentPath,
   validatePageExperimentRegistry,
   type PageExperiment,
@@ -98,20 +96,18 @@ afterEach(() => {
 })
 
 describe('page experiment registry', () => {
-  it('retires home-2026 and runs the shop-section experiment on the homepage', () => {
-    expect(home2026Experiment.status).toBe('retired')
-    expect(homeShopSectionExperiment).toMatchObject({
-      id: 'home-shop-section',
-      code: 'home-shop-section',
+  it('defines the homepage experiment with a control fallback', () => {
+    expect(home2026Experiment).toMatchObject({
+      id: 'home-2026',
+      code: 'home-2026',
       targetPath: '/',
-      flagKey: 'home-shop-section-variant',
+      flagKey: 'home-2026-variant',
       status: 'running',
     })
-    expect(homeShopSectionExperiment.variants.map((variant) => variant.key)).toEqual([
+    expect(home2026Experiment.variants.map((variant) => variant.key)).toEqual([
       'control',
-      'present',
+      'concept',
     ])
-    // One running experiment on '/', each with a control variant -> valid.
     expect(validatePageExperimentRegistry()).toEqual([])
   })
 
@@ -146,28 +142,28 @@ describe('page experiment registry', () => {
   })
 
   it('validates forced preview variant query params for the current experiment path', () => {
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=present`))).toMatchObject({
-      experiment: homeShopSectionExperiment,
-      variant: 'present',
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toMatchObject({
+      experiment: home2026Experiment,
+      variant: 'concept',
       source: 'variant-param',
     })
-    expect(getForcedExperimentVariant('/', new URLSearchParams('home-shop-section-variant=control'))).toMatchObject({
-      experiment: homeShopSectionExperiment,
+    expect(getForcedExperimentVariant('/', new URLSearchParams('home-2026-variant=control'))).toMatchObject({
+      experiment: home2026Experiment,
       variant: 'control',
       source: 'flag-key-param',
     })
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-shop-section:present`))).toMatchObject({
-      experiment: homeShopSectionExperiment,
-      variant: 'present',
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-2026:concept`))).toMatchObject({
+      experiment: home2026Experiment,
+      variant: 'concept',
       source: 'assignment-param',
     })
     expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=missing`))).toBeNull()
-    expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=present`))).toBeNull()
+    expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=concept`))).toBeNull()
   })
 
   it('builds shareable forced preview URLs while preserving custom query params', () => {
-    expect(getForcedExperimentUrl('/?utm_source=qa', 'present', 'http://localhost:3000')).toBe(
-      'http://localhost:3000/?utm_source=qa&goinvo_ab_variant=present',
+    expect(getForcedExperimentUrl('/?utm_source=qa', 'concept', 'http://localhost:3000')).toBe(
+      'http://localhost:3000/?utm_source=qa&goinvo_ab_variant=concept',
     )
   })
 })
@@ -211,14 +207,24 @@ describe('visitor IDs and proxy scope', () => {
 })
 
 describe('experiment renderers and content variants', () => {
-  it('renders the concept homepage with the prints section gate', async () => {
+  it('defaults the homepage renderer to the control component', async () => {
     const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
     const children = reactChildren(await HomePageRenderer())
 
-    // Concept is the homepage now; the prints section rides along, gated.
+    expect(children).toHaveLength(1)
+    const homeChild = children[0] as React.ReactElement<{ teamMembers?: unknown[] }>
+    expect(homeChild.type).toBe(HomeContent)
+    expect(homeChild.props.teamMembers).toHaveLength(1)
+  })
+
+  it('renders the concept homepage when the precomputed variant selects it', async () => {
+    const { HomePageRenderer } = await import('@/components/home/HomePageRenderer')
+    const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
+    const children = reactChildren(await HomePageRenderer({ variant: 'concept', experiment: exposure }))
+
     expect(children).toHaveLength(2)
-    expect(children[0].type).toBe(HomeConceptContent)
-    expect(children[1].type).toBe(ShopSectionGate)
+    expect(children[0].type).toBe(ExperimentExposure)
+    expect(children[1].type).toBe(HomeConceptContent)
   })
 
   it('preserves article content unless a matching Sanity-authored variant is selected', () => {

@@ -144,9 +144,8 @@ describe('marketing guide and tutorial behavior', () => {
       channels: 'marketing.channels',
       analytics: 'marketing.analytics',
       linkTree: 'marketing.quick-links',
-      shop: 'marketing.shop',
     })
-    expect(new Set(Object.values(MARKETING_GUIDE_ARTICLE_BY_VIEW)).size).toBe(16)
+    expect(new Set(Object.values(MARKETING_GUIDE_ARTICLE_BY_VIEW)).size).toBe(15)
   })
 
   it('documents the conversational coworker handoff and its privacy and publishing boundaries', () => {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { HomePageRenderer } from '@/components/home/HomePageRenderer'
+import { HomeExperimentExposure } from '@/components/analytics/HomeExperimentExposure'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
@@ -12,6 +13,9 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   return (
-    <HomePageRenderer />
+    <>
+      <HomeExperimentExposure />
+      <HomePageRenderer />
+    </>
   )
 }
