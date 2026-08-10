@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
-import { SHOP_CATALOG_REVALIDATE_SECONDS, fetchStorefrontCatalog } from '@/lib/shop/catalog'
+import { fetchStorefrontCatalog } from '@/lib/shop/catalog'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
@@ -58,7 +58,11 @@ function formatUsd(amount: number) {
 }
 
 // Prices are editable in the Studio, so the page must not be baked at build.
-export const revalidate = SHOP_CATALOG_REVALIDATE_SECONDS
+// Next only accepts a literal here, not an imported constant (it reads this
+// statically and fails the build with "Invalid segment configuration export"),
+// so this must stay in step with SHOP_CATALOG_REVALIDATE_SECONDS. A test pins
+// the two together.
+export const revalidate = 60
 
 // Normalized card data shared by both Sanity and fallback paths
 interface PosterCard {

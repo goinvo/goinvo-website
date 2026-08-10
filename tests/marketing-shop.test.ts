@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { SHOP_CATALOG_REVALIDATE_SECONDS } from '@/lib/shop/catalog'
 
 import { buildCreatePayload } from '@/lib/marketing'
 import { ARRAY_ITEM_TYPES, DEFAULTS, REQUIRED_FIELDS } from '@/lib/marketing/defaults'
@@ -169,5 +172,20 @@ describe('marketing shop', () => {
         'Needed by: October 15',
       ].join('\n'),
     )
+  })
+})
+
+describe('Storefront revalidation', () => {
+  // Next reads `export const revalidate` statically, so the page cannot import
+  // the constant; it has to repeat the literal. Pin them together, because the
+  // failure mode is silent: the page keeps serving a price the studio changed.
+  it('keeps the page segment revalidate in step with the catalog fetch', () => {
+    const pageSource = readFileSync(
+      resolve(process.cwd(), 'src/app/(main)/vision/health-visualizations/page.tsx'),
+      'utf8',
+    )
+    const literal = pageSource.match(/export const revalidate = (\d+)/)
+    expect(literal, 'the storefront page must export a revalidate literal').toBeTruthy()
+    expect(Number(literal![1])).toBe(SHOP_CATALOG_REVALIDATE_SECONDS)
   })
 })
