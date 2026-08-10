@@ -31,6 +31,23 @@ const EXPERIMENT_ID = 'home-shop-section'
 const FLAG_KEY = 'home-shop-section-variant'
 const ALLOWED_VARIANTS = ['control', 'present']
 
+/**
+ * The homepage is NOT changing yet (Shirley, 2026-08-10). The shop ships to
+ * production on its own; the homepage stays exactly as it is until the studio
+ * says otherwise.
+ *
+ * This has to be an explicit switch rather than something left to flag config:
+ * the flag's defaultValue is 'present' (src/flags.ts), so with FLAGS and
+ * FLAGS_SECRET both set in production the edge would assign real visitors to
+ * the cohort that SEES the section. Leaving it to configuration would have
+ * shipped a homepage change nobody asked for.
+ *
+ * Flip to true to start the A/B. Nothing else needs to change: the cohort
+ * split, the exposure beacon, and the per-variant engagement measurement are
+ * all already wired underneath.
+ */
+const LIVE_TO_ASSIGNED_COHORT = false
+
 function readCookie(name: string): string | undefined {
   if (typeof document === 'undefined') return undefined
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
@@ -72,9 +89,17 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
     setVariant(value && ALLOWED_VARIANTS.includes(value) ? value : '')
   }, [])
 
-  const inExperiment = !forced && (variant === 'control' || variant === 'present')
-  // 'control' is the baseline homepage with no section.
-  const visible = variant === 'present'
+  const assigned = variant === 'control' || variant === 'present'
+  // No exposure beacon while the test is not live: recording an exposure for a
+  // cohort whose section never renders would poison the results before the
+  // test has even started.
+  const inExperiment = LIVE_TO_ASSIGNED_COHORT && !forced && assigned
+  // 'control' is the baseline homepage with no section. A forced view is a
+  // reviewer opening the share link, which stays available while the test is
+  // parked so the section can still be shown to the studio.
+  const visible = forced
+    ? variant === 'present'
+    : LIVE_TO_ASSIGNED_COHORT && variant === 'present'
 
   // Latched by the reader's first scroll gesture. Sampling window.scrollY once
   // is not enough: a wheel or touch delta can be in flight and not yet applied

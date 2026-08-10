@@ -981,22 +981,33 @@ try {
   // spray, and the $30 fact line (Juhan's feedback, 2026-08-07).
   const homePage = await browser.newPage()
   await homePage.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
-  // The section is opt-in per cohort. The "control" half must get NOTHING:
-  // before this gate was inverted, every unassigned visitor saw the section,
-  // which is a launch rather than a test.
-  const controlPage = await browser.newPage()
-  await controlPage.goto(`${baseUrl}/?home-shop-section-variant=control`, {
-    waitUntil: 'domcontentloaded',
-    timeout: 60_000,
-  })
-  await new Promise((resolve) => setTimeout(resolve, 4_000))
-  const controlSections = await controlPage.evaluate(
-    () => document.querySelectorAll('#goinvo-at-home').length,
-  )
-  if (controlSections !== 0) {
-    throw new Error(`The control cohort must not see the prints section: ${controlSections}`)
+  // The homepage is not changing yet, so NO ordinary visitor may see the
+  // section — including one the edge assigned to the cohort that would show it.
+  // The flag's defaultValue is 'present', so a plain visit is exactly the case
+  // that would leak a homepage change.
+  for (const [label, path] of [
+    ['a plain visitor', '/'],
+    ['the control cohort', '/?home-shop-section-variant=control'],
+  ]) {
+    const visitorPage = await browser.newPage()
+    await visitorPage.goto(`${baseUrl}${path}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60_000,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 4_000))
+    const sections = await visitorPage.evaluate(
+      () => document.querySelectorAll('#goinvo-at-home').length,
+    )
+    const assignedVariant = await visitorPage.evaluate(
+      () => (document.cookie.match(/home-shop-section-variant=([a-z]*)/) || [])[1] || null,
+    )
+    if (sections !== 0) {
+      throw new Error(
+        `The homepage must be unchanged for ${label} (assigned "${assignedVariant}"), found ${sections} section(s)`,
+      )
+    }
+    await visitorPage.close()
   }
-  await controlPage.close()
 
   await homePage.goto(`${baseUrl}/?home-shop-section-variant=present`, {
     waitUntil: 'domcontentloaded',
