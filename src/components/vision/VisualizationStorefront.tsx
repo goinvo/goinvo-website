@@ -102,12 +102,22 @@ const collectionSlugs: Record<Exclude<CollectionId, 'all'>, string[]> = {
 /**
  * Per-item overrides (Jon's feedback, 2026-08-07): not everything is a poster.
  * Own Your Health Data is a comic book; the Open Source Healthcare Journal is a
- * magazine we may be out of, so its print isn't buyable right now.
+ * magazine we may be out of, so its print isn't orderable right now.
  */
 const BUY_LABEL_BY_SLUG: Record<string, string> = {
   'own-your-health-data': 'Buy Comic Book',
 }
 const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
+
+/**
+ * Printed sizes for the pieces the studio keeps in stock (Jon's note,
+ * 2026-08-07). Jon gave these from memory, so they are stated as approximate
+ * until someone measures the actual stock.
+ */
+const PRINT_SIZE_BY_SLUG: Record<string, string> = {
+  'determinants-of-health': 'about 24 × 36 in',
+  'healthcare-is-a-human-right': 'about 11 × 14 in',
+}
 
 /** The launch band: complete posters, no crops (Jon's feedback, 2026-08-05). */
 const FEATURED_SLUGS = {
@@ -122,14 +132,12 @@ const SERIES: Array<{ id: Exclude<CollectionId, 'all'>; label: string; blurb: st
   {
     id: 'design-axioms',
     label: 'Design Axioms',
-    blurb:
-      'Practical principles for creating usable, elegant interfaces. Put them to work in studios, classrooms, and project rooms.',
+    blurb: 'Practical principles for creating usable, elegant interfaces.',
   },
   {
     id: 'health-cards',
     label: 'Health Cards',
-    blurb:
-      'Simple, direct reminders for healthier everyday choices. Use them in homes, clinics, classes, and conversations.',
+    blurb: 'Simple, direct reminders for healthier everyday choices.',
   },
 ]
 
@@ -139,9 +147,9 @@ const SERIES: Array<{ id: Exclude<CollectionId, 'all'>; label: string; blurb: st
  * not duplicate cards). Order chosen so each section keeps a sensible size.
  */
 const CATALOG_SECTIONS: Array<{ id: Exclude<CollectionId, 'all'>; blurb: string }> = [
-  { id: 'design-axioms', blurb: 'Practical principles for usable, elegant interfaces — for studios, classrooms, and project rooms.' },
+  { id: 'design-axioms', blurb: 'Practical principles for usable, elegant interfaces.' },
   { id: 'health-cards', blurb: 'Simple, direct reminders for healthier everyday choices.' },
-  { id: 'health-data', blurb: 'Maps of the health-data economy — who holds it, who profits, and where it flows.' },
+  { id: 'health-data', blurb: 'Maps of the health-data economy: who holds it, who profits, where it flows.' },
   { id: 'care-systems', blurb: 'How care actually gets delivered: plans, encounters, and the systems around them.' },
   { id: 'public-health', blurb: 'Guides and warnings for everyday public-health decisions.' },
   { id: 'design-culture', blurb: 'How the studio works.' },
@@ -184,13 +192,23 @@ function formatPrice(amount: number, currency = 'USD') {
   }).format(amount)
 }
 
+/**
+ * A zero price means the piece is being given away, and a bare "$0" reads as a
+ * bug or a catch. Say "Free" instead and let the shipping line carry the cost.
+ */
+function priceLabel(amount: number, currency = 'USD') {
+  return amount <= 0 ? 'Free' : formatPrice(amount, currency)
+}
+
+const shippingPrice = SHOP_SHIPPING_PRICE_CENTS / 100
+
 function orderHref(items: SelectedPrint[], supportEmail: string, donationAmount: number) {
   const currency = items[0]?.item.currency || 'USD'
-  const shipping = SHOP_SHIPPING_PRICE_CENTS / 100
+  const shipping = shippingPrice
   const lines = items
     .map(({ item, quantity }) => {
       const lineTotal = printPriceOf(item) * quantity
-      return `- ${item.title} × ${quantity}: ${formatPrice(lineTotal, item.currency || currency)}`
+      return `- ${item.title} × ${quantity}: ${priceLabel(lineTotal, item.currency || currency)}`
     })
     .join('\n')
   const subtotal = items.reduce(
@@ -199,14 +217,14 @@ function orderHref(items: SelectedPrint[], supportEmail: string, donationAmount:
   )
   const orderTotal = subtotal + shipping + donationAmount
   const printCount = items.reduce((total, item) => total + item.quantity, 0)
-  const subject = `GoInvo poster order (${printCount})`
+  const subject = `GoInvo print order (${printCount})`
   const body = [
     'Hello GoInvo,',
     '',
-    'I would like to order these posters:',
+    'I would like to order these prints:',
     lines,
     '',
-    `Posters: ${formatPrice(subtotal, currency)}`,
+    `Prints: ${priceLabel(subtotal, currency)}`,
     `Standard US shipping: ${formatPrice(shipping, currency)}`,
     `Optional support: ${formatPrice(donationAmount, currency)}`,
     `Order total: ${formatPrice(orderTotal, currency)}`,
@@ -570,7 +588,7 @@ export function VisualizationStorefront({
                         onClick={() => toggleItem(item._id)}
                         className={`font-semibold ${selected ? 'text-[#24434d]' : 'text-primary'} hover:underline`}
                       >
-                        {selected ? 'Added ✓' : `Buy · ${formatPrice(printPriceOf(item), item.currency)}`}
+                        {selected ? 'Added ✓' : `Buy · ${priceLabel(printPriceOf(item), item.currency)}`}
                       </button>
                     </span>
                   </figcaption>
@@ -603,7 +621,10 @@ export function VisualizationStorefront({
                     type="button"
                     data-shop-series-card={series.id}
                     onClick={() => browseCollection(series.id)}
-                    className="group border border-[#d8cbb5] bg-white text-left shadow-[0_14px_36px_rgba(63,48,29,.10)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-secondary hover:shadow-[0_20px_46px_rgba(63,48,29,.16)]"
+                    /* flex-col matters: a stretched <button> centers its own
+                       content, so the shorter card floated with a band of dead
+                       white above its thumbnails (Shirley, 2026-08-10). */
+                    className="group flex flex-col border border-[#d8cbb5] bg-white text-left shadow-[0_14px_36px_rgba(63,48,29,.10)] transition-[border-color,box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:border-secondary hover:shadow-[0_20px_46px_rgba(63,48,29,.16)]"
                   >
                     <span className="flex gap-2 border-b border-[#eee6d8] bg-[#faf6ee] p-3">
                       {seriesItems.slice(0, 3).map((item) => (
@@ -621,7 +642,7 @@ export function VisualizationStorefront({
                         </span>
                       ))}
                     </span>
-                    <span className="block p-5">
+                    <span className="flex flex-1 flex-col p-5">
                       <span className="mb-1 flex flex-wrap items-baseline gap-x-3">
                         <span className="font-serif text-[1.5rem] font-light">{series.label}</span>
                         <span className="text-sm text-gray">
@@ -629,7 +650,9 @@ export function VisualizationStorefront({
                         </span>
                       </span>
                       <span className="mb-4 block leading-relaxed text-gray">{series.blurb}</span>
-                      <span className="font-semibold text-secondary group-hover:underline">
+                      {/* mt-auto keeps both cards' links on the same line even
+                          when one blurb runs a line longer. */}
+                      <span className="mt-auto font-semibold text-secondary group-hover:underline">
                         Browse {series.label} →
                       </span>
                     </span>
@@ -720,7 +743,7 @@ export function VisualizationStorefront({
                       Showing{' '}
                       {collection !== 'all' && (
                         <strong className="font-semibold text-[#24434d]">
-                          {collections.find((entry) => entry.id === collection)?.label} —{' '}
+                          {collections.find((entry) => entry.id === collection)?.label}:{' '}
                         </strong>
                       )}
                       {visibleItems.length} of {items.length} designs ·{' '}
@@ -776,7 +799,8 @@ export function VisualizationStorefront({
                     const selected = selectedIds.includes(item._id)
                     const downloadLink = normalizeGoInvoLink(item.downloadLink)
                     const learnMoreLink = normalizeGoInvoLink(item.learnMoreLink)
-                    const printPrice = formatPrice(printPriceOf(item), item.currency)
+                    const printPrice = priceLabel(printPriceOf(item), item.currency)
+                    const printSize = PRINT_SIZE_BY_SLUG[item.slug || '']
 
                     return (
                       <article
@@ -877,6 +901,13 @@ export function VisualizationStorefront({
                                   Learn more
                                 </a>
                               )}
+                              {/* Printed size, for the pieces we keep in stock
+                                  (Jon's note, 2026-08-07). */}
+                              {printSize && (
+                                <span data-shop-print-size={item.slug} className="text-gray">
+                                  Printed {printSize}
+                                </span>
+                              )}
                             </div>
                             {downloadLink && (
                               <a
@@ -895,7 +926,7 @@ export function VisualizationStorefront({
                             )}
                             {PRINT_UNAVAILABLE_SLUGS.has(item.slug || '') ? (
                               <p className="mb-0 min-h-[3.5rem] flex items-center px-5 py-3 text-sm text-gray">
-                                Print currently unavailable — download the PDF above.
+                                Print currently unavailable. Download the PDF above.
                               </p>
                             ) : (
                               // Outline, not a filled orange slab: the posters
@@ -915,7 +946,7 @@ export function VisualizationStorefront({
                                   {selected ? 'Remove' : BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy Poster'}
                                 </span>
                                 <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
-                                  {printPrice} + US shipping
+                                  {printPrice} · {formatPrice(shippingPrice)} shipping
                                 </span>
                               </button>
                             )}
@@ -952,16 +983,28 @@ export function VisualizationStorefront({
                     <div className="grid gap-12">
                       {groupedSections.map((section) => (
                         <section key={section.id} aria-labelledby={`catalog-${section.id}`}>
-                          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b-2 border-[#1d1b1a] pb-3">
-                            <h3
-                              id={`catalog-${section.id}`}
-                              data-shop-section-head
-                              className="mb-0 font-serif text-[1.9rem] font-light"
+                          {/* The blurb sits under the heading it describes, not
+                              jammed next to the count, where it made a long
+                              ragged line (Shirley, 2026-08-10). */}
+                          <div className="mb-5 border-b-2 border-[#1d1b1a] pb-3">
+                            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                              <h3
+                                id={`catalog-${section.id}`}
+                                data-shop-section-head
+                                className="mb-0 font-serif text-[1.9rem] font-light"
+                              >
+                                {collections.find((entry) => entry.id === section.id)?.label}
+                              </h3>
+                              <p className="mb-0 text-sm text-gray">
+                                {section.items.length}{' '}
+                                {section.items.length === 1 ? 'design' : 'designs'}
+                              </p>
+                            </div>
+                            <p
+                              data-shop-section-blurb
+                              className="mb-0 mt-1 max-w-[60ch] text-sm leading-relaxed text-gray"
                             >
-                              {collections.find((entry) => entry.id === section.id)?.label}
-                            </h3>
-                            <p className="mb-0 text-sm text-gray">
-                              {section.items.length} {section.items.length === 1 ? 'design' : 'designs'} · {section.blurb}
+                              {section.blurb}
                             </p>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -1005,7 +1048,7 @@ export function VisualizationStorefront({
             {supportEmailState === 'done' ? (
               <>
                 <h3 id="shop-support-title" className="mb-2 font-serif text-[1.7rem] font-light">
-                  Thanks — talk soon.
+                  Thanks, talk soon.
                 </h3>
                 <p className="mb-6 leading-relaxed text-gray">
                   We&apos;ll email you when new work ships. Nothing else, promise.
@@ -1027,7 +1070,7 @@ export function VisualizationStorefront({
                   Enjoy the download
                 </h3>
                 <p className="mb-5 leading-relaxed text-gray">
-                  If this work is useful, chip in what you like — it funds the next open release.
+                  If this work is useful, chip in what you like. It funds the next open release.
                 </p>
                 <div className="mb-3 grid grid-cols-3 gap-2">
                   {(['5', '15', '30'] as const).map((amount) => (
@@ -1093,7 +1136,7 @@ export function VisualizationStorefront({
                 </form>
                 <p className="mt-2 mb-0 text-xs leading-5 text-gray">
                   {supportEmailState === 'error'
-                    ? 'That didn’t go through — mind trying again in a minute?'
+                    ? 'That didn’t go through. Mind trying again in a minute?'
                     : 'One email when new work ships. No newsletter unless you ask for it.'}
                 </p>
                 <button
@@ -1120,15 +1163,15 @@ export function VisualizationStorefront({
             <div className="min-w-0">
               <p className="mb-0 font-semibold">
                 {selectedPrintCount > 0
-                  ? `${selectedPrintCount} ${selectedPrintCount === 1 ? 'poster' : 'posters'}${donationAmount > 0 ? ' + support' : ''}`
+                  ? `${selectedPrintCount} ${selectedPrintCount === 1 ? 'print' : 'prints'}${donationAmount > 0 ? ' + support' : ''}`
                   : 'Support the work'}
               </p>
               {/* Break out shipping in the first popup so the total isn't a
                   surprise (Jon's feedback, 2026-08-07). */}
               <p data-shop-cart-total className="mb-0 text-sm text-[#c5ccda]">
                 {selectedPrints.length > 0
-                  ? `${formatPrice(selectedSubtotal, selectedItems[0]?.currency)} + ${formatPrice(
-                      SHOP_SHIPPING_PRICE_CENTS / 100,
+                  ? `${priceLabel(selectedSubtotal, selectedItems[0]?.currency)} + ${formatPrice(
+                      shippingPrice,
                       selectedItems[0]?.currency,
                     )} shipping${
                       donationAmount > 0
@@ -1197,7 +1240,7 @@ export function VisualizationStorefront({
             <div className="flex-1 overflow-y-auto px-6 py-5 sm:px-8">
               {selectedPrints.length === 0 ? (
                 <p className="mb-6 leading-relaxed text-gray">
-                  No posters yet — add any design from the collection, or just leave some support
+                  No prints yet. Add any design from the collection, or just leave some support
                   below.
                 </p>
               ) : (
@@ -1219,7 +1262,10 @@ export function VisualizationStorefront({
                       <div className="min-w-0 flex-1">
                         <p className="mb-0 truncate font-semibold">{item.title}</p>
                         <p className="mb-0 text-sm text-gray">
-                          {formatPrice(printPriceOf(item), item.currency)} each
+                          {priceLabel(printPriceOf(item), item.currency)}
+                          {PRINT_SIZE_BY_SLUG[item.slug || '']
+                            ? ` · printed ${PRINT_SIZE_BY_SLUG[item.slug || '']}`
+                            : ''}
                         </p>
                       </div>
                       <label className="flex items-center gap-2 text-sm">
@@ -1240,7 +1286,7 @@ export function VisualizationStorefront({
                         </select>
                       </label>
                       <p className="mb-0 w-16 text-right font-semibold">
-                        {formatPrice(printPriceOf(item) * quantity, item.currency)}
+                        {priceLabel(printPriceOf(item) * quantity, item.currency)}
                       </p>
                       <button
                         type="button"
@@ -1337,16 +1383,16 @@ export function VisualizationStorefront({
                   <>
                     <div className="flex justify-between py-1">
                       <dt className="text-gray">
-                        Posters ({selectedPrintCount})
+                        Prints ({selectedPrintCount})
                       </dt>
                       <dd className="mb-0 font-semibold">
-                        {formatPrice(selectedSubtotal, selectedItems[0]?.currency)}
+                        {priceLabel(selectedSubtotal, selectedItems[0]?.currency)}
                       </dd>
                     </div>
                     <div className="flex justify-between py-1">
                       <dt className="text-gray">Standard US shipping</dt>
                       <dd className="mb-0 font-semibold">
-                        {formatPrice(SHOP_SHIPPING_PRICE_CENTS / 100, selectedItems[0]?.currency)}
+                        {formatPrice(shippingPrice, selectedItems[0]?.currency)}
                       </dd>
                     </div>
                   </>
@@ -1361,7 +1407,7 @@ export function VisualizationStorefront({
                   <dt className="font-semibold">Total</dt>
                   <dd className="mb-0 font-bold" data-shop-order-total>
                     {selectedPrints.length > 0
-                      ? `${formatPrice(selectedTotal + SHOP_SHIPPING_PRICE_CENTS / 100, selectedItems[0]?.currency)} total with ${formatPrice(SHOP_SHIPPING_PRICE_CENTS / 100, selectedItems[0]?.currency)} US shipping`
+                      ? `${formatPrice(selectedTotal + shippingPrice, selectedItems[0]?.currency)} total`
                       : `${formatPrice(donationAmount)} contribution`}
                   </dd>
                 </div>

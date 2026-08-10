@@ -92,8 +92,10 @@ try {
         link.textContent?.trim(),
       ),
       heroHasEyebrow: (hero?.textContent || '').includes('Open Source Health Design · GoInvo'),
-      heroStatesPrice: /\$30 per print/.test(hero?.textContent || '')
-        && /plus \$6 flat US shipping/.test(hero?.textContent || ''),
+      // Price and shipping are stated together, once, in the hero fact line.
+      heroStatesPrice: /\$30 per print, printed on demand, plus \$6 flat US shipping/.test(
+        hero?.textContent || '',
+      ),
       heroStatesPrintOnDemand: /printed on demand/i.test(hero?.textContent || ''),
       howItWorksBandCount: document.querySelectorAll('#how-it-works').length,
       cardCount: cards.length,
@@ -105,7 +107,7 @@ try {
       openSourceLabelCount: [
         ...document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]'),
       ].filter((link) => link.textContent?.includes('Free Download')).length,
-      printPriceCount: addButtons.filter((button) => button.textContent?.includes('$30 + US shipping'))
+      printPriceCount: addButtons.filter((button) => button.textContent?.includes('$30 · $6 shipping'))
         .length,
       imageDownloadCount: document.querySelectorAll('[data-shop-image-download]').length,
       imageDownloadTargetsMatch: cards.every((card) => {
@@ -177,13 +179,40 @@ try {
       ).length,
       // Collections are presented as cards with a preview of what is inside,
       // not as bare text links.
-      seriesCards: [...document.querySelectorAll('[data-shop-series-card]')].map((card) => ({
-        id: card.getAttribute('data-shop-series-card'),
-        thumbnails: card.querySelectorAll('img').length,
-        thumbnailsLoaded: [...card.querySelectorAll('img')].every(
-          (image) => image instanceof HTMLImageElement && image.naturalWidth > 0,
+      seriesCards: [...document.querySelectorAll('[data-shop-series-card]')].map((card) => {
+        const strip = card.firstElementChild
+        return {
+          id: card.getAttribute('data-shop-series-card'),
+          thumbnails: card.querySelectorAll('img').length,
+          thumbnailsLoaded: [...card.querySelectorAll('img')].every(
+            (image) => image instanceof HTMLImageElement && image.naturalWidth > 0,
+          ),
+          hasCount: /\d+\s+pieces?/.test(card.textContent || ''),
+          // A stretched <button> centers its own content, which left a band of
+          // dead white above the shorter card's thumbnails. The thumbnail strip
+          // must start flush with the top of its card.
+          stripOffsetFromTop:
+            strip && card
+              ? Math.round(strip.getBoundingClientRect().top - card.getBoundingClientRect().top)
+              : null,
+        }
+      }),
+      // Every card's "Browse ..." link sits on one line across the row.
+      seriesLinkTops: [...document.querySelectorAll('[data-shop-series-card]')].map((card) =>
+        Math.round(
+          [...card.querySelectorAll('span')]
+            .find((span) => span.textContent?.startsWith('Browse '))
+            ?.getBoundingClientRect().top ?? -1,
         ),
-        hasCount: /\d+\s+pieces?/.test(card.textContent || ''),
+      ),
+      // Section blurbs live under their heading, never appended to the count.
+      sectionCountLines: [...document.querySelectorAll('[data-shop-section-head]')].map((head) =>
+        head.parentElement?.querySelector('p')?.textContent?.trim(),
+      ),
+      sectionBlurbCount: document.querySelectorAll('[data-shop-section-blurb]').length,
+      printSizes: [...document.querySelectorAll('[data-shop-print-size]')].map((element) => ({
+        slug: element.getAttribute('data-shop-print-size'),
+        text: element.textContent?.trim(),
       })),
       sectionHeads: [...document.querySelectorAll('[data-shop-section-head]')].map(
         (head) => head.textContent?.trim(),
@@ -293,7 +322,23 @@ try {
     desktop.featuredBrowseLinks !== 2 ||
     desktop.seriesCards.length !== 2 ||
     !desktop.seriesCards.every(
-      (card) => card.thumbnails === 3 && card.thumbnailsLoaded && card.hasCount,
+      (card) =>
+        card.thumbnails === 3 &&
+        card.thumbnailsLoaded &&
+        card.hasCount &&
+        card.stripOffsetFromTop !== null &&
+        card.stripOffsetFromTop <= 1,
+    ) ||
+    new Set(desktop.seriesLinkTops).size !== 1 ||
+    desktop.sectionBlurbCount !== desktop.sectionHeads.length ||
+    desktop.sectionCountLines.some((line) => !/^\d+ designs?$/.test(line || '')) ||
+    desktop.printSizes.length !== 2 ||
+    !desktop.printSizes.some(
+      (size) => size.slug === 'determinants-of-health' && size.text === 'Printed about 24 × 36 in',
+    ) ||
+    !desktop.printSizes.some(
+      (size) =>
+        size.slug === 'healthcare-is-a-human-right' && size.text === 'Printed about 11 × 14 in',
     ) ||
     // Unfiltered browsing shows curated sections with sub-heads.
     desktop.sectionHeads.length < 5 ||
@@ -522,7 +567,7 @@ try {
   })
 
   if (
-    !cart.text?.includes('$36 total with $6 US shipping') ||
+    !cart.text?.includes('$36 total') ||
     cart.donationChips !== 3 ||
     cart.customToggle !== 1
   ) {
@@ -560,7 +605,7 @@ try {
     }
   })
   if (
-    quantityOrder.total !== '$96 total with $6 US shipping' ||
+    quantityOrder.total !== '$96 total' ||
     quantityOrder.quantity !== '3' ||
     quantityOrder.quantityOptionCount !== 20 ||
     (!checkoutConfig.body.checkoutEnabled &&
@@ -791,7 +836,7 @@ try {
   })
   if (
     mobileQuantity.scrollWidth > mobileQuantity.viewportWidth + 3 ||
-    mobileQuantity.total !== '$96 total with $6 US shipping' ||
+    mobileQuantity.total !== '$96 total' ||
     !mobileQuantity.selectRect ||
     mobileQuantity.selectRect.left < 0 ||
     mobileQuantity.selectRect.right > 390
@@ -822,7 +867,7 @@ try {
   }))
   if (
     mobileDonation.scrollWidth > mobileDonation.viewportWidth + 3 ||
-    mobileDonation.total !== '$51 total with $6 US shipping' ||
+    mobileDonation.total !== '$51 total' ||
     mobileDonation.chipCount !== 3 ||
     !mobileDonation.panelRect ||
     mobileDonation.panelRect.left < 0 ||

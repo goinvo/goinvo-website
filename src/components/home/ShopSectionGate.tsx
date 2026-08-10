@@ -7,12 +7,21 @@ import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
  * Presence/absence A/B gate for the "bring GoInvo home" section (experiment
  * `home-shop-section`, flag `home-shop-section-variant`).
  *
- * The section is server-rendered by default, so it — and its anchor — exist
- * without JS and for every visitor who is NOT in the experiment. When the
- * experiment is live, the edge (src/proxy.ts) writes a JS-readable variant
- * cookie; this reads it after hydration and, for the "absent" cohort, removes
- * the section. Either way it fires the exposure + per-variant engagement beacon
- * so we can see whether the section repels visitors or helps them.
+ * The section renders ONLY for the "present" cohort. The edge (src/proxy.ts)
+ * assigns a variant and writes it to a JS-readable cookie; this reads that
+ * cookie after hydration, shows the section to the assigned half, and fires the
+ * exposure + per-variant engagement beacon so we can see whether the section
+ * repels visitors or helps them.
+ *
+ * Showing it is deliberately opt-in rather than opt-out (Shirley, 2026-08-10):
+ * with the old default, any visitor the experiment had not assigned, including
+ * every visitor when the flags secret is unset, saw the section. That is not an
+ * A/B test, it is a launch. Absent an assignment the homepage stays as it was.
+ *
+ * Consequence: the section and its #goinvo-at-home anchor do not exist in the
+ * server HTML, so they need JS. That is correct for an experiment surface; when
+ * the studio decides to keep the section, render it unconditionally instead of
+ * loosening this gate.
  *
  * Keep the id/flag/variant literals in sync with homeShopSectionExperiment in
  * lib/experiments/registry and homeShopSectionVariant in flags.ts.
@@ -29,9 +38,9 @@ function readCookie(name: string): string | undefined {
 }
 
 export function ShopSectionGate({ children }: { children: ReactNode }) {
-  // null until the cookie is read. Initial (SSR + first client) render shows the
-  // section, matching the server HTML, so there is no hydration mismatch; the
-  // "absent" cohort loses it one tick later, below the fold.
+  // null until the cookie is read. SSR and the first client render both show
+  // nothing, so there is no hydration mismatch; the assigned "present" cohort
+  // gains the section one tick later, below the fold.
   const [variant, setVariant] = useState<string | null>(null)
 
   useEffect(() => {
@@ -41,7 +50,7 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
 
   const inExperiment = variant === 'control' || variant === 'present'
   // 'control' is the baseline homepage with no section.
-  const hidden = variant === 'control'
+  const visible = variant === 'present'
 
   return (
     <>
@@ -55,7 +64,7 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
           }}
         />
       )}
-      {!hidden && children}
+      {visible && children}
     </>
   )
 }
