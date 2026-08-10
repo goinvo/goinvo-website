@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { sanityFetch } from '@/sanity/lib/live'
-import { allHealthVisualizationsQuery, shopStorefrontQuery } from '@/sanity/lib/queries'
+import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
+import { SHOP_CATALOG_REVALIDATE_SECONDS, fetchStorefrontCatalog } from '@/lib/shop/catalog'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
@@ -27,6 +28,37 @@ export const metadata: Metadata = {
 }
 
 const DEFAULT_PRINT_CURRENCY = 'USD'
+
+// Editors set prices in the CMS, so the hero cannot hard-code one: the moment
+// someone changes a price the page would be advertising a number it no longer
+// charges. Take the price most pieces share and state that.
+function standardPrintPrice(items: VisualizationPrint[]): number {
+  const counts = new Map<number, number>()
+  for (const item of items) {
+    if (typeof item.price !== 'number') continue
+    counts.set(item.price, (counts.get(item.price) || 0) + 1)
+  }
+  let standard = 0
+  let seen = 0
+  for (const [price, count] of counts) {
+    if (count > seen || (count === seen && price > standard)) {
+      standard = price
+      seen = count
+    }
+  }
+  return standard
+}
+
+function formatUsd(amount: number) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: amount % 1 === 0 ? 0 : 2,
+  }).format(amount)
+}
+
+// Prices are editable in the Studio, so the page must not be baked at build.
+export const revalidate = SHOP_CATALOG_REVALIDATE_SECONDS
 
 // Normalized card data shared by both Sanity and fallback paths
 interface PosterCard {
@@ -345,10 +377,14 @@ function normalizeFallbackItems(): PosterCard[] {
 }
 
 export default async function HealthVisualizationsPage() {
-  const [{ data: sanityVizItems }, { data: storefrontData }] = (await Promise.all([
+  // Products come through the shop's own reader, not the public query: the
+  // marketingProduct documents are not anonymously readable, so a public fetch
+  // silently returns nothing and every price falls back to code while checkout
+  // charges what the CMS says. Same reader, same credentials, same numbers.
+  const [{ data: sanityVizItems }, storefrontData] = (await Promise.all([
     sanityFetch({ query: allHealthVisualizationsQuery }),
-    sanityFetch({ query: shopStorefrontQuery }),
-  ])) as [{ data: HealthVisualization[] }, { data: StorefrontData | null }]
+    fetchStorefrontCatalog(),
+  ])) as [{ data: HealthVisualization[] }, StorefrontData | null]
 
   const cards =
     sanityVizItems && sanityVizItems.length > 0
@@ -384,6 +420,7 @@ export default async function HealthVisualizationsPage() {
             : 'print-on-demand',
     }
   })
+  const standardPrice = standardPrintPrice(visualizations)
   const supportEmail = storefrontData?.settings?.supportEmail || 'hello@goinvo.com'
   const storeName = storefrontData?.settings?.storeName || 'GoInvo Health and Design Collection'
   // Jon's picks for the hero spray (2026-08-07): a set whose orientations sit
@@ -477,7 +514,10 @@ export default async function HealthVisualizationsPage() {
                   open-source license
                 </Link>
               </span>
-              <span>✓ $30 per print, printed on demand, plus $6 flat US shipping</span>
+              <span>
+                ✓ {formatUsd(standardPrice)} per print, printed on demand, plus{' '}
+                {formatUsd(SHOP_SHIPPING_PRICE_CENTS / 100)} flat US shipping
+              </span>
             </div>
           </div>
 
