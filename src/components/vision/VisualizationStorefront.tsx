@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { SHOP_PRINT_PRICE_CENTS, SHOP_SHIPPING_PRICE_CENTS } from '@/lib/shop/checkout'
+import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
 import { getGaIdentity } from '@/lib/analytics'
 
 export type VisualizationPrint = {
@@ -105,7 +105,8 @@ const collectionSlugs: Record<Exclude<CollectionId, 'all'>, string[]> = {
  * magazine we may be out of, so its print isn't orderable right now.
  */
 const BUY_LABEL_BY_SLUG: Record<string, string> = {
-  'own-your-health-data': 'Buy Comic Book',
+  // "Buy Comic Book" did not fit the button (Jon, 2026-08-10).
+  'own-your-health-data': 'Buy Comic',
 }
 const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
 
@@ -179,9 +180,11 @@ function itemMatchesCollection(item: VisualizationPrint, collection: CollectionI
   return collectionSlugs[collection].includes(item.slug || '')
 }
 
-// Mirrors the server-side catalog fallback so an unpriced print never renders $0.
+// Mirrors the server-side catalog fallback so an unpriced print never renders
+// $0, and so a per-piece price (the comic book) shows the same number the
+// checkout will charge.
 function printPriceOf(item: VisualizationPrint) {
-  return item.price || SHOP_PRINT_PRICE_CENTS / 100
+  return item.price || shopPriceCentsFor(item.slug) / 100
 }
 
 function formatPrice(amount: number, currency = 'USD') {

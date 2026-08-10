@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   SHOP_MAX_DONATION_CENTS,
+  SHOP_PRINT_PRICE_CENTS,
   SHOP_SHIPPING_PRICE_CENTS,
+  shopPriceCentsFor,
   buildShippingOptions,
   buildStripeLineItems,
   checkoutRequestSchema,
@@ -224,5 +226,44 @@ describe('Stripe storefront checkout', () => {
     expect(stripeOrderDocumentId('cs_test_123')).not.toBe(
       stripeOrderDocumentId('cs_test_456'),
     )
+  })
+})
+
+describe('Per-piece pricing', () => {
+  // The storefront card and the server-side checkout both resolve through
+  // shopPriceCentsFor. If they ever stop agreeing, a visitor is shown one
+  // number and charged another, which is the one bug in a shop that is never
+  // acceptable.
+  it('prices the comic book on its own and everything else at the print price', () => {
+    expect(shopPriceCentsFor('own-your-health-data')).toBe(900)
+    expect(shopPriceCentsFor('determinants-of-health')).toBe(SHOP_PRINT_PRICE_CENTS)
+    expect(shopPriceCentsFor('a-slug-that-does-not-exist')).toBe(SHOP_PRINT_PRICE_CENTS)
+    expect(shopPriceCentsFor(undefined)).toBe(SHOP_PRINT_PRICE_CENTS)
+  })
+
+  it('keeps every per-piece price a whole cent and above the Stripe floor', () => {
+    for (const cents of [SHOP_PRINT_PRICE_CENTS, shopPriceCentsFor('own-your-health-data')]) {
+      expect(Number.isSafeInteger(cents)).toBe(true)
+      expect(cents).toBeGreaterThanOrEqual(50)
+    }
+  })
+
+  it('carries the resolved price into the Stripe line item unchanged', () => {
+    const [line] = buildStripeLineItems(
+      [
+        {
+          visualizationId: 'viz-comic',
+          slug: 'own-your-health-data',
+          title: 'Own Your Health Data',
+          currency: 'USD',
+          unitAmount: shopPriceCentsFor('own-your-health-data'),
+          quantity: 2,
+        },
+      ],
+      0,
+    )
+
+    expect(line.price_data?.unit_amount).toBe(900)
+    expect(line.quantity).toBe(2)
   })
 })

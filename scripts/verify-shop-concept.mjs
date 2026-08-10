@@ -63,12 +63,12 @@ try {
 
   const desktop = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('[data-shop-print-card]')]
-    // Per-item labels (Jon, 2026-08-07): posters say "Buy Poster", the comic
-    // book says "Buy Comic Book", and the out-of-stock journal has no buy
-    // button at all — count each shape explicitly.
+    // Per-item labels (Jon): posters say "Buy Poster", the comic book says
+    // "Buy Comic", and the out-of-stock journal has no buy button at all.
+    // Count each shape explicitly.
     const cardButtons = [...document.querySelectorAll('[data-shop-print-card] button')]
-    const addButtons = cardButtons.filter((button) => /^Buy (Poster|Comic Book)/.test(button.textContent?.trim() || ''))
-    const comicButtons = cardButtons.filter((button) => button.textContent?.includes('Buy Comic Book'))
+    const addButtons = cardButtons.filter((button) => /^Buy (Poster|Comic)/.test(button.textContent?.trim() || ''))
+    const comicButtons = cardButtons.filter((button) => button.textContent?.includes('Buy Comic'))
     const unavailableCards = cards.filter((card) =>
       card.textContent?.includes('Print currently unavailable'),
     )
@@ -107,8 +107,11 @@ try {
       openSourceLabelCount: [
         ...document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]'),
       ].filter((link) => link.textContent?.includes('Free Download')).length,
+      // Every poster is $30; the comic book is priced on its own at $9 and
+      // must show that same number the checkout will charge.
       printPriceCount: addButtons.filter((button) => button.textContent?.includes('$30 · $6 shipping'))
         .length,
+      comicPriceLabel: comicButtons[0]?.textContent?.replace(/\s+/g, ' ').trim(),
       imageDownloadCount: document.querySelectorAll('[data-shop-image-download]').length,
       imageDownloadTargetsMatch: cards.every((card) => {
         const imageLink = card.querySelector('[data-shop-image-download]')
@@ -132,7 +135,7 @@ try {
       actionLabelAlignments: cards.flatMap((card) => {
         const download = card.querySelector('[data-shop-download-button]')
         const order = [...card.querySelectorAll('button')].find((button) =>
-          /^Buy (Poster|Comic Book)/.test(button.textContent?.trim() || ''),
+          /^Buy (Poster|Comic)/.test(button.textContent?.trim() || ''),
         )
         return [download?.firstElementChild, order?.firstElementChild]
           .filter((element) => element)
@@ -274,7 +277,8 @@ try {
     desktop.unavailableCardCount !== 1 ||
     desktop.downloadCount !== desktop.cardCount ||
     desktop.openSourceLabelCount !== desktop.cardCount ||
-    desktop.printPriceCount !== desktop.addButtonCount ||
+    desktop.printPriceCount !== desktop.addButtonCount - desktop.comicButtonCount ||
+    desktop.comicPriceLabel !== 'Buy Comic$9 · $6 shipping' ||
     desktop.imageDownloadCount !== desktop.cardCount ||
     !desktop.imageDownloadTargetsMatch ||
     desktop.cardFulfillmentLabels !== 0 ||

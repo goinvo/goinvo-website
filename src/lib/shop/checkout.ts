@@ -4,6 +4,28 @@ import { z } from 'zod'
 // Default print price when a marketingProduct doc doesn't override it.
 // $30 per Juhan, 2026-08-07 (was $6 at launch).
 export const SHOP_PRINT_PRICE_CENTS = 3000
+
+/**
+ * Per-piece prices for items a flat print price gets wrong. Own Your Health
+ * Data is a comic book, not a poster, and $30 is too much for it (Jon,
+ * 2026-08-10).
+ *
+ * This lives here, next to the default, because BOTH the storefront's
+ * displayed price and the server-side checkout price resolve through
+ * shopPriceCentsFor. Pricing an item in one place and not the other would show
+ * a visitor one number and charge them another.
+ *
+ * A marketingProduct document still wins over this: the CMS is the real
+ * pricing surface, this is the fallback for pieces that have no document yet.
+ */
+export const SHOP_PRICE_CENTS_BY_SLUG: Record<string, number> = {
+  'own-your-health-data': 900,
+}
+
+export function shopPriceCentsFor(slug: string | undefined): number {
+  const override = slug ? SHOP_PRICE_CENTS_BY_SLUG[slug] : undefined
+  return typeof override === 'number' ? override : SHOP_PRINT_PRICE_CENTS
+}
 // Flat standard-US rate shown to the buyer as its own shipping line (storefront
 // summary + Stripe checkout). $6 per Shirley, 2026-08-05.
 export const SHOP_SHIPPING_PRICE_CENTS = 600
