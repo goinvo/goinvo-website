@@ -61,7 +61,7 @@ export function HomeGoinvoAtHome() {
             Put a little GoInvo on your wall.
           </h2>
           <p className="mt-5 max-w-md text-lg leading-relaxed text-[#d9dee7]">
-            The health visualizations we make are free to download and open-source — take the files
+            The health visualizations we make are free to download and open-source. Take the files
             and use them however you like. Want a finished piece for the studio, the clinic, or the
             kitchen? Order it as a print and we&rsquo;ll ship it to you.
           </p>
