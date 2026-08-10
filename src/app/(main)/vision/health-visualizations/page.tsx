@@ -1,69 +1,289 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
+import Link from 'next/link'
 import { sanityFetch } from '@/sanity/lib/live'
-import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
+import { allHealthVisualizationsQuery, shopStorefrontQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
-import { cloudfrontImage, cn } from '@/lib/utils'
-import { Reveal } from '@/components/ui/Reveal'
+import { cloudfrontImage } from '@/lib/utils'
+import { SHOP_PRINT_PRICE_CENTS, SHOP_SHIPPING_PRICE_CENTS } from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
-import { SetCaseStudyHero } from '@/components/work/SetCaseStudyHero'
+import { PosterChatCta } from '@/components/chat/PosterChatCta'
+import {
+  VisualizationStorefront,
+  type VisualizationPrint,
+} from '@/components/vision/VisualizationStorefront'
 import type { HealthVisualization } from '@/types'
 
 export const metadata: Metadata = {
   alternates: { canonical: '/vision/health-visualizations' },
-  title: 'Open Source Healthcare Visualizations',
+  title: 'Health Visualizations, Design Axioms, and Health Cards',
   description:
-    'A repo of open source health visualizations and graphics available to all for use or modification, under a Creative Commons Attribution v3 license or MIT license.',
+    'Download GoInvo health visualizations under an open-source license or order them as physical prints.',
+  openGraph: {
+    title: 'GoInvo Health and Design Collection',
+    description:
+      'Download the open-source files or order physical prints of GoInvo health visualizations, Design Axioms, and Health Cards.',
+    images: ['/images/features/posters/health-visualizations-hero-2.jpg'],
+  },
 }
+
+const DEFAULT_PRINT_PRICE = SHOP_PRINT_PRICE_CENTS / 100
+const DEFAULT_PRINT_CURRENCY = 'USD'
 
 // Normalized card data shared by both Sanity and fallback paths
 interface PosterCard {
   id: string
+  slug: string
   title: string
   caption?: string
+  date?: string
   imageUrl: string
   downloadUrl: string
   learnMoreLink: string
 }
 
+type StorefrontSettings = {
+  storeName?: string
+  supportEmail?: string
+}
+
+type MarketingProduct = {
+  slug?: string
+  price?: number
+  currency?: string
+  checkoutUrl?: string
+  trackInventory?: boolean
+  inventoryQuantity?: number
+}
+
+type StorefrontData = {
+  settings: StorefrontSettings | null
+  products: MarketingProduct[]
+}
+
 // Fallback data from the old Gatsby site
 const fallbackPosters = [
-  { id: 'own-your-health-data', title: 'Own Your Health Data', image: '/images/features/own-your-health-data/patient-data-ownership.jpg', downloadLink: '/pdf/vision/own-your-health-data/OwnYourHealthData.pdf', learnMoreLink: '/vision/own-your-health-data/' },
-  { id: 'how-to-vote-early', title: 'How To Vote Early', image: '/images/features/posters/how-to-vote-early.jpg', downloadLink: '/pdf/vision/posters/how-to-vote-early.pdf', learnMoreLink: '' },
-  { id: 'precision-autism', title: 'Precision Autism', image: '/images/features/precision-autism/precision-autism.jpg', downloadLink: '/pdf/vision/precision-autism/Precision-Autism-25.Aug.2020.pdf', learnMoreLink: '/vision/precision-autism/' },
-  { id: 'test-treat-trace', title: 'Test. Treat. Trace.', image: '/images/features/test-treat-trace/test-treat-trace-2.jpg', downloadLink: '/pdf/vision/test-treat-trace/Test-Treat-Trace-18Jun2020.pdf', learnMoreLink: '/vision/test-treat-trace/' },
-  { id: 'washhands', title: 'Wash Your Hands', image: '/images/features/coronavirus/wash-hands.jpg', downloadLink: '/pdf/vision/posters/understandingcoronavirus_wash-hands-poster.pdf', learnMoreLink: '/vision/coronavirus/' },
-  { id: 'vapepocolypse', title: 'Vapepocolypse', image: '/images/features/vapepocolypse/vapepocolypse-hero.jpg', downloadLink: '/pdf/vision/vapepocolypse/Vapepocolypse.pdf', learnMoreLink: '/vision/vapepocolypse/' },
-  { id: 'who-uses-my-health-data', title: 'Who Uses My Health Data?', image: '/images/features/health-data-use/health-data-use-hero-2.jpg', downloadLink: '/pdf/vision/health-data-use/health-data-use-poster-medium.pdf', learnMoreLink: '/vision/who-uses-my-health-data/' },
-  { id: 'health-payment-system-complexity', title: 'Health Payment System Complexity', image: '/images/features/posters/health-payment-system-complexity-hero.jpg', downloadLink: '/pdf/vision/posters/health-payment-system-complexity.pdf', learnMoreLink: '' },
-  { id: 'insuring-price-increase', title: 'Insuring Price Increase', image: '/images/features/posters/insuring-price-increase-hero.jpg', downloadLink: '/pdf/vision/posters/insuring-price-increase.pdf', learnMoreLink: '' },
-  { id: 'healthcare-dollars', title: 'Where Your Health Dollars Go', image: '/images/features/healthcare-dollars/healthcare-dollars-hero.jpg', downloadLink: '/pdf/vision/healthcare-dollars/healthcare-dollars-visualization.pdf', learnMoreLink: '/vision/healthcare-dollars/' },
-  { id: 'determinants-of-health-spanish', title: 'Determinantes de la Salud', image: '/images/features/posters/determinantes_de_la_salud.jpg', downloadLink: '/pdf/vision/posters/determinantes_de_la_salud_42x50.pdf', learnMoreLink: '/vision/determinants-of-health/' },
-  { id: 'determinants-of-health', title: 'Determinants of Health', image: '/images/features/determinants-of-health/determinants-of-health-poster.jpg', downloadLink: '/pdf/vision/posters/health-determinants.pdf', learnMoreLink: '/vision/determinants-of-health/' },
-  { id: 'open-healthcare-systems', title: 'Open Healthcare Systems Model', image: '/images/features/posters/precision-prism-architecture-diagram.jpg', downloadLink: '/pdf/vision/posters/precision-prism-architecture-diagram.pdf', learnMoreLink: '' },
-  { id: 'virtual-care-encounters', title: 'Virtual Care Encounters', image: '/images/features/posters/virtual-care-encounters.jpg', downloadLink: '/pdf/vision/posters/virtual-care-encounters.pdf', learnMoreLink: '/vision/virtual-care/' },
-  { id: 'open-source-healthcare', title: 'Open Source Healthcare Journal', image: '/images/features/posters/oshc-book.jpg', downloadLink: '/pdf/vision/open-source-healthcare/open-source-healthcare-journal.pdf', learnMoreLink: '/vision/open-source-healthcare/' },
-  { id: 'hie-data-access', title: 'HIE Data Access Workflow', image: '/images/features/posters/hie-data-access-workflow.jpg', downloadLink: '/pdf/vision/posters/hie-data-access-workflow.pdf', learnMoreLink: '' },
-  { id: 'sources-of-clinical-data', title: 'Sources of Clinical Health Data', image: '/images/features/posters/sources-of-clinical-health-data-2.jpg', downloadLink: '/pdf/vision/posters/sources-of-clinical-health-data.pdf', learnMoreLink: '/work/fastercures-health-data-basics' },
-  { id: 'sources-of-data', title: 'Sources of Your Personal Health Data', image: '/images/features/posters/sources-of-data.jpg', downloadLink: '/pdf/vision/posters/sources-of-data.pdf', learnMoreLink: '/work/fastercures-health-data-basics' },
-  { id: 'sdoh-spend', title: 'Spending within the Determinants of Health', image: '/images/features/determinants-of-health/sdoh-spend-mockup.jpg', downloadLink: '/pdf/vision/posters/sdoh-spend-v12.pdf', learnMoreLink: '/vision/determinants-of-health/#determinants-spending' },
-  { id: 'critical-mass', title: 'Critical MASS', image: '/images/features/posters/critical-mass.jpg', downloadLink: '/pdf/vision/posters/critical-mass.pdf', learnMoreLink: '' },
-  { id: 'ebola', title: 'Ebola Care Guideline', image: '/images/features/posters/ebola-care-guideline.jpg', downloadLink: '/pdf/vision/posters/ebola-care-guideline.pdf', learnMoreLink: '/vision/ebola-care-guideline/' },
-  { id: 'data-interop', title: 'Standardized Data for Interoperability', image: '/images/features/posters/standard-health-data.jpg', downloadLink: '/pdf/vision/posters/standard-health-data.pdf', learnMoreLink: 'https://yes.goinvo.com/articles/a-path-towards-standardized-health' },
-  { id: 'healthcare-is-a-human-right', title: 'Healthcare is a Human Right', image: '/images/features/posters/care-card-healthcare-is-a-human-right.jpg', downloadLink: '/pdf/vision/posters/care-card-healthcare-is-a-human-right.pdf', learnMoreLink: 'http://carecards.me/#healthcare-human-right' },
-  { id: 'examine-yourself', title: 'Examine Yourself', image: '/images/features/posters/care-card-examine-yourself-2.jpg', downloadLink: '/pdf/vision/posters/care-card-examine-yourself.pdf', learnMoreLink: 'http://carecards.me/#examine-yourself' },
-  { id: 'sugar-kills', title: 'Sugar Kills', image: '/images/features/posters/care-card-sugar-kills.jpg', downloadLink: '/pdf/vision/posters/care-card-sugar-kills-2.pdf', learnMoreLink: 'http://carecards.me/#sugar-kills' },
-  { id: 'make-things', title: 'Make Things', image: '/images/features/posters/design-axiom-make-things.jpg', downloadLink: '/pdf/vision/posters/design-axiom-make-things.pdf', learnMoreLink: 'http://designaxioms.com/' },
-  { id: 'let-data-scream', title: 'Let Data Scream', image: '/images/features/posters/design-axiom-let-data-scream.jpg', downloadLink: '/pdf/vision/posters/design-axiom-let-data-scream.pdf', learnMoreLink: 'http://designaxioms.com/' },
-  { id: 'prototype-like-crazy', title: 'Prototype Like Crazy', image: '/images/features/posters/design-axiom-prototype-like-crazy.jpg', downloadLink: '/pdf/vision/posters/design-axiom-prototype-like-crazy-2.pdf', learnMoreLink: 'http://designaxioms.com/' },
-  { id: 'care-plans-process', title: 'Care Planning Process', image: '/images/features/posters/careplans-process.jpg', downloadLink: '/pdf/vision/posters/careplans-process.pdf', learnMoreLink: '/vision/care-plans/' },
-  { id: 'shr-medical-encounter', title: 'SHR Medical Encounter Journey Map', image: '/images/features/posters/shr-medical-encounter-journey-map.jpg', downloadLink: '/pdf/vision/posters/shr-medical-encounter-journey-map.pdf', learnMoreLink: '/work/mitre-shr' },
-  { id: 'care-plans-ecosystem', title: 'Care Plans Ecosystem', image: '/images/features/posters/careplans-ecosystem.jpg', downloadLink: '/pdf/vision/posters/careplans-ecosystem.pdf', learnMoreLink: '/vision/care-plans/' },
+  {
+    id: 'own-your-health-data',
+    title: 'Own Your Health Data',
+    image: '/images/features/own-your-health-data/patient-data-ownership.jpg',
+    downloadLink: '/pdf/vision/own-your-health-data/OwnYourHealthData.pdf',
+    learnMoreLink: '/vision/own-your-health-data/',
+  },
+  {
+    id: 'how-to-vote-early',
+    title: 'How To Vote Early',
+    image: '/images/features/posters/how-to-vote-early.jpg',
+    downloadLink: '/pdf/vision/posters/how-to-vote-early.pdf',
+    learnMoreLink: '',
+  },
+  {
+    id: 'precision-autism',
+    title: 'Precision Autism',
+    image: '/images/features/precision-autism/precision-autism.jpg',
+    downloadLink: '/pdf/vision/precision-autism/Precision-Autism-25.Aug.2020.pdf',
+    learnMoreLink: '/vision/precision-autism/',
+  },
+  {
+    id: 'test-treat-trace',
+    title: 'Test. Treat. Trace.',
+    image: '/images/features/test-treat-trace/test-treat-trace-2.jpg',
+    downloadLink: '/pdf/vision/test-treat-trace/Test-Treat-Trace-18Jun2020.pdf',
+    learnMoreLink: '/vision/test-treat-trace/',
+  },
+  {
+    id: 'washhands',
+    title: 'Wash Your Hands',
+    image: '/images/features/coronavirus/wash-hands.jpg',
+    downloadLink: '/pdf/vision/posters/understandingcoronavirus_wash-hands-poster.pdf',
+    learnMoreLink: '/vision/coronavirus/',
+  },
+  {
+    id: 'vapepocolypse',
+    title: 'Vapepocolypse',
+    image: '/images/features/vapepocolypse/vapepocolypse-hero.jpg',
+    downloadLink: '/pdf/vision/vapepocolypse/Vapepocolypse.pdf',
+    learnMoreLink: '/vision/vapepocolypse/',
+  },
+  {
+    id: 'who-uses-my-health-data',
+    title: 'Who Uses My Health Data?',
+    image: '/images/features/health-data-use/health-data-use-hero-2.jpg',
+    downloadLink: '/pdf/vision/health-data-use/health-data-use-poster-medium.pdf',
+    learnMoreLink: '/vision/who-uses-my-health-data/',
+  },
+  {
+    id: 'health-payment-system-complexity',
+    title: 'Health Payment System Complexity',
+    image: '/images/features/posters/health-payment-system-complexity-hero.jpg',
+    downloadLink: '/pdf/vision/posters/health-payment-system-complexity.pdf',
+    learnMoreLink: '',
+  },
+  {
+    id: 'insuring-price-increase',
+    title: 'Insuring Price Increase',
+    image: '/images/features/posters/insuring-price-increase-hero.jpg',
+    downloadLink: '/pdf/vision/posters/insuring-price-increase.pdf',
+    learnMoreLink: '',
+  },
+  {
+    id: 'healthcare-dollars',
+    title: 'Where Your Health Dollars Go',
+    image: '/images/features/healthcare-dollars/healthcare-dollars-hero.jpg',
+    downloadLink: '/pdf/vision/healthcare-dollars/healthcare-dollars-visualization.pdf',
+    learnMoreLink: '/vision/healthcare-dollars/',
+  },
+  {
+    id: 'determinants-of-health-spanish',
+    title: 'Determinantes de la Salud',
+    image: '/images/features/posters/determinantes_de_la_salud.jpg',
+    downloadLink: '/pdf/vision/posters/determinantes_de_la_salud_42x50.pdf',
+    learnMoreLink: '/vision/determinants-of-health/',
+  },
+  {
+    id: 'determinants-of-health',
+    title: 'Determinants of Health',
+    image: '/images/features/determinants-of-health/determinants-of-health-poster.jpg',
+    downloadLink: '/pdf/vision/posters/health-determinants.pdf',
+    learnMoreLink: '/vision/determinants-of-health/',
+  },
+  {
+    id: 'open-healthcare-systems',
+    title: 'Open Healthcare Systems Model',
+    image: '/images/features/posters/precision-prism-architecture-diagram.jpg',
+    downloadLink: '/pdf/vision/posters/precision-prism-architecture-diagram.pdf',
+    learnMoreLink: '',
+  },
+  {
+    id: 'virtual-care-encounters',
+    title: 'Virtual Care Encounters',
+    image: '/images/features/posters/virtual-care-encounters.jpg',
+    downloadLink: '/pdf/vision/posters/virtual-care-encounters.pdf',
+    learnMoreLink: '/vision/virtual-care/',
+  },
+  {
+    id: 'open-source-healthcare',
+    title: 'Open Source Healthcare Journal',
+    image: '/images/features/posters/oshc-book.jpg',
+    downloadLink: '/pdf/vision/open-source-healthcare/open-source-healthcare-journal.pdf',
+    learnMoreLink: '/vision/open-source-healthcare/',
+  },
+  {
+    id: 'hie-data-access',
+    title: 'HIE Data Access Workflow',
+    image: '/images/features/posters/hie-data-access-workflow.jpg',
+    downloadLink: '/pdf/vision/posters/hie-data-access-workflow.pdf',
+    learnMoreLink: '',
+  },
+  {
+    id: 'sources-of-clinical-data',
+    title: 'Sources of Clinical Health Data',
+    image: '/images/features/posters/sources-of-clinical-health-data-2.jpg',
+    downloadLink: '/pdf/vision/posters/sources-of-clinical-health-data.pdf',
+    learnMoreLink: '/work/fastercures-health-data-basics',
+  },
+  {
+    id: 'sources-of-data',
+    title: 'Sources of Your Personal Health Data',
+    image: '/images/features/posters/sources-of-data.jpg',
+    downloadLink: '/pdf/vision/posters/sources-of-data.pdf',
+    learnMoreLink: '/work/fastercures-health-data-basics',
+  },
+  {
+    id: 'sdoh-spend',
+    title: 'Spending within the Determinants of Health',
+    image: '/images/features/determinants-of-health/sdoh-spend-mockup.jpg',
+    downloadLink: '/pdf/vision/posters/sdoh-spend-v12.pdf',
+    learnMoreLink: '/vision/determinants-of-health/#determinants-spending',
+  },
+  {
+    id: 'critical-mass',
+    title: 'Critical MASS',
+    image: '/images/features/posters/critical-mass.jpg',
+    downloadLink: '/pdf/vision/posters/critical-mass.pdf',
+    learnMoreLink: '',
+  },
+  {
+    id: 'ebola',
+    title: 'Ebola Care Guideline',
+    image: '/images/features/posters/ebola-care-guideline.jpg',
+    downloadLink: '/pdf/vision/posters/ebola-care-guideline.pdf',
+    learnMoreLink: '/vision/ebola-care-guideline/',
+  },
+  {
+    id: 'data-interop',
+    title: 'Standardized Data for Interoperability',
+    image: '/images/features/posters/standard-health-data.jpg',
+    downloadLink: '/pdf/vision/posters/standard-health-data.pdf',
+    learnMoreLink: 'https://yes.goinvo.com/articles/a-path-towards-standardized-health',
+  },
+  {
+    id: 'healthcare-is-a-human-right',
+    title: 'Healthcare is a Human Right',
+    image: '/images/features/posters/care-card-healthcare-is-a-human-right.jpg',
+    downloadLink: '/pdf/vision/posters/care-card-healthcare-is-a-human-right.pdf',
+    learnMoreLink: 'http://carecards.me/#healthcare-human-right',
+  },
+  {
+    id: 'examine-yourself',
+    title: 'Examine Yourself',
+    image: '/images/features/posters/care-card-examine-yourself-2.jpg',
+    downloadLink: '/pdf/vision/posters/care-card-examine-yourself.pdf',
+    learnMoreLink: 'http://carecards.me/#examine-yourself',
+  },
+  {
+    id: 'sugar-kills',
+    title: 'Sugar Kills',
+    image: '/images/features/posters/care-card-sugar-kills.jpg',
+    downloadLink: '/pdf/vision/posters/care-card-sugar-kills-2.pdf',
+    learnMoreLink: 'http://carecards.me/#sugar-kills',
+  },
+  {
+    id: 'make-things',
+    title: 'Make Things',
+    image: '/images/features/posters/design-axiom-make-things.jpg',
+    downloadLink: '/pdf/vision/posters/design-axiom-make-things.pdf',
+    learnMoreLink: 'http://designaxioms.com/',
+  },
+  {
+    id: 'let-data-scream',
+    title: 'Let Data Scream',
+    image: '/images/features/posters/design-axiom-let-data-scream.jpg',
+    downloadLink: '/pdf/vision/posters/design-axiom-let-data-scream.pdf',
+    learnMoreLink: 'http://designaxioms.com/',
+  },
+  {
+    id: 'prototype-like-crazy',
+    title: 'Prototype Like Crazy',
+    image: '/images/features/posters/design-axiom-prototype-like-crazy.jpg',
+    downloadLink: '/pdf/vision/posters/design-axiom-prototype-like-crazy-2.pdf',
+    learnMoreLink: 'http://designaxioms.com/',
+  },
+  {
+    id: 'care-plans-process',
+    title: 'Care Planning Process',
+    image: '/images/features/posters/careplans-process.jpg',
+    downloadLink: '/pdf/vision/posters/careplans-process.pdf',
+    learnMoreLink: '/vision/care-plans/',
+  },
+  {
+    id: 'shr-medical-encounter',
+    title: 'SHR Medical Encounter Journey Map',
+    image: '/images/features/posters/shr-medical-encounter-journey-map.jpg',
+    downloadLink: '/pdf/vision/posters/shr-medical-encounter-journey-map.pdf',
+    learnMoreLink: '/work/mitre-shr',
+  },
+  {
+    id: 'care-plans-ecosystem',
+    title: 'Care Plans Ecosystem',
+    image: '/images/features/posters/careplans-ecosystem.jpg',
+    downloadLink: '/pdf/vision/posters/careplans-ecosystem.pdf',
+    learnMoreLink: '/vision/care-plans/',
+  },
 ]
 
 // Slug-to-CloudFront-image lookup so Sanity items without uploaded images still render
 const slugToImage: Record<string, string> = Object.fromEntries(
-  fallbackPosters.map((p) => [p.id, p.image])
+  fallbackPosters.map((p) => [p.id, p.image]),
 )
 
 const learnMorePathOverrides: Record<string, string> = {
@@ -82,9 +302,7 @@ function resolveDownloadUrl(link: string): string {
 function normalizeLearnMoreLink(link: string): string {
   if (!link) return ''
   const trimmed = link.trim()
-  const goinvoPath = trimmed.match(
-    /^https?:\/\/(?:www\.)?goinvo\.com(\/[^?#]*)([?#].*)?$/
-  )
+  const goinvoPath = trimmed.match(/^https?:\/\/(?:www\.)?goinvo\.com(\/[^?#]*)([?#].*)?$/)
   const localLink = goinvoPath ? `${goinvoPath[1]}${goinvoPath[2] ?? ''}` : trimmed
   const [path, hash] = localLink.split('#')
   const normalizedPath = path.replace(/\/$/, '')
@@ -100,17 +318,15 @@ function normalizeLearnMoreLink(link: string): string {
 function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
   return items.map((viz) => {
     const slug = viz.slug?.current ?? ''
-    const sanityImageUrl = viz.image
-      ? urlForImage(viz.image).width(600).height(450).url()
-      : null
-    const fallbackImageUrl = slugToImage[slug]
-      ? cloudfrontImage(slugToImage[slug])
-      : ''
+    const sanityImageUrl = viz.image ? urlForImage(viz.image).width(600).height(450).url() : null
+    const fallbackImageUrl = slugToImage[slug] ? cloudfrontImage(slugToImage[slug]) : ''
 
     return {
       id: viz._id,
+      slug,
       title: viz.title,
       caption: viz.caption ?? '',
+      date: viz.date,
       imageUrl: sanityImageUrl || fallbackImageUrl,
       downloadUrl: resolveDownloadUrl(viz.downloadLink ?? ''),
       learnMoreLink: normalizeLearnMoreLink(viz.learnMoreLink ?? ''),
@@ -121,6 +337,7 @@ function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
 function normalizeFallbackItems(): PosterCard[] {
   return fallbackPosters.map((p) => ({
     id: p.id,
+    slug: p.id,
     title: p.title,
     imageUrl: cloudfrontImage(p.image),
     downloadUrl: resolveDownloadUrl(p.downloadLink),
@@ -129,123 +346,195 @@ function normalizeFallbackItems(): PosterCard[] {
 }
 
 export default async function HealthVisualizationsPage() {
-  const { data: sanityVizItems } = (await sanityFetch({
-    query: allHealthVisualizationsQuery,
-  })) as { data: HealthVisualization[] }
+  const [{ data: sanityVizItems }, { data: storefrontData }] = (await Promise.all([
+    sanityFetch({ query: allHealthVisualizationsQuery }),
+    sanityFetch({ query: shopStorefrontQuery }),
+  ])) as [{ data: HealthVisualization[] }, { data: StorefrontData | null }]
 
   const cards =
     sanityVizItems && sanityVizItems.length > 0
       ? normalizeSanityItems(sanityVizItems)
       : normalizeFallbackItems()
+  const productBySlug = new Map(
+    (storefrontData?.products || [])
+      .filter((product) => product.slug)
+      .map((product) => [product.slug!, product]),
+  )
+  const visualizations: VisualizationPrint[] = cards.map((card) => {
+    const product = productBySlug.get(card.slug)
+
+    return {
+      _id: card.id,
+      slug: card.slug,
+      title: card.title,
+      caption: card.caption,
+      date: card.date,
+      downloadLink: card.downloadUrl,
+      learnMoreLink: card.learnMoreLink,
+      imageUrl: card.imageUrl,
+      price: product?.price ?? DEFAULT_PRINT_PRICE,
+      currency: product?.currency || DEFAULT_PRINT_CURRENCY,
+      checkoutUrl: product?.checkoutUrl,
+      fulfillment:
+        product?.trackInventory === true
+          ? (product.inventoryQuantity || 0) > 0
+            ? 'in-stock'
+            : 'print-on-demand'
+          : card.slug === 'determinants-of-health' || card.slug === 'healthcare-dollars'
+            ? 'in-stock'
+            : 'print-on-demand',
+    }
+  })
+  const supportEmail = storefrontData?.settings?.supportEmail || 'hello@goinvo.com'
+  const storeName = storefrontData?.settings?.storeName || 'GoInvo Health and Design Collection'
+  // Jon's picks for the hero spray (2026-08-07): a set whose orientations sit
+  // well together, shown as full posters below.
+  const HERO_SLUGS = ['make-things', 'precision-autism', 'own-your-health-data']
+  const heroPrints = HERO_SLUGS.map((slug) =>
+    visualizations.find((visualization) => visualization.slug === slug && visualization.imageUrl),
+  ).filter((print): print is VisualizationPrint => Boolean(print))
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: storeName,
+    itemListElement: visualizations.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: item.title,
+        description: item.caption,
+        image: item.imageUrl,
+        url: 'https://www.goinvo.com/vision/health-visualizations',
+        offers: {
+          '@type': 'Offer',
+          price: item.price,
+          priceCurrency: item.currency,
+          availability: 'https://schema.org/InStock',
+          // Shipping is a real, non-zero cost and the US is the only
+          // destination — search results that omit either mislead the buyer
+          // before they ever reach checkout.
+          shippingDetails: {
+            '@type': 'OfferShippingDetails',
+            shippingRate: {
+              '@type': 'MonetaryAmount',
+              value: SHOP_SHIPPING_PRICE_CENTS / 100,
+              currency: item.currency,
+            },
+            shippingDestination: {
+              '@type': 'DefinedRegion',
+              addressCountry: 'US',
+            },
+          },
+        },
+      },
+    })),
+  }
 
   return (
-    <div>
-      <SetCaseStudyHero image={cloudfrontImage('/images/features/posters/health-visualizations-hero-2.jpg')} />
+    <div id="shop-top" className="bg-[#f5f3ef] text-black">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData).replaceAll('<', '\\u003c'),
+        }}
+      />
 
-      {/* Intro */}
-      <section className="max-width max-width-md content-padding py-12">
-        <h1 className="font-serif text-[1.75rem] leading-[2.0625rem] lg:text-[2.25rem] lg:leading-[2.625rem] font-light mb-4">Health Visualizations</h1>
-        <Reveal style="slide-up">
-          <p className="text-gray leading-relaxed">
-            These infographics are open source, available to all under a{' '}
-            <a
-              href="https://creativecommons.org/licenses/by/3.0/us/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-secondary hover:underline"
-            >
-              Creative Commons Attribution v3
-            </a>{' '}
-            license or for the SHR Journey Map and HIE diagram, under a{' '}
-            <a
-              href="https://opensource.org/licenses/MIT"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-secondary hover:underline"
-            >
-              MIT
-            </a>{' '}
-            license.
-          </p>
-        </Reveal>
-      </section>
+      <section className="relative overflow-hidden bg-[#11141f] text-white pt-[calc(var(--spacing-header-height)+4rem)] pb-16 lg:pt-[calc(var(--spacing-header-height)+6rem)] lg:pb-20">
+        <div className="absolute inset-0 opacity-70 bg-[linear-gradient(rgba(255,255,255,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.035)_1px,transparent_1px),radial-gradient(circle_at_78%_28%,rgba(227,98,22,.75)_0_4%,transparent_18%),radial-gradient(circle_at_67%_45%,rgba(77,196,214,.38),transparent_32%),linear-gradient(135deg,transparent_35%,rgba(0,115,133,.56))] bg-[size:34px_34px,34px_34px,auto,auto,auto]" />
+        <div className="absolute -left-20 top-1/2 h-52 w-52 -translate-y-1/2 rounded-full border border-white/10" />
+        <div className="absolute -left-10 top-1/2 h-32 w-32 -translate-y-1/2 rounded-full border border-[#79d9e5]/20" />
+        <div className="relative max-width content-padding grid lg:grid-cols-[minmax(0,1fr)_420px] gap-12 lg:items-center">
+          <div>
+            <h1 className="font-serif font-light text-[2.65rem] leading-[1.03] sm:text-[3.5rem] lg:text-[4.6rem] lg:leading-[.98] max-w-[760px] mb-7">
+              Health ideas, made visible.
+            </h1>
+            {/* Two offers, two lines with air between them, one CTA — browsing
+                and downloading are the same trip (Juhan's feedback, 2026-08-07). */}
+            <p className="font-sans text-lg leading-relaxed text-[#d9dee7] max-w-[650px] mb-4">
+              Download the open-source files and make them your own.
+            </p>
+            <p className="font-sans text-lg leading-relaxed text-[#d9dee7] max-w-[650px] mb-8">
+              Want a finished piece? Buy a poster and we&apos;ll ship it to you.
+            </p>
+            <div className="flex flex-wrap gap-3 mb-7">
+              <a
+                href="#catalog"
+                className="bg-primary text-white no-underline font-semibold px-6 py-3 hover:bg-primary-dark transition-colors"
+              >
+                Browse the collection
+              </a>
+            </div>
+            <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#d9dee7]">
+              <span>
+                ✓ Free PDFs under an{' '}
+                <Link
+                  href="https://creativecommons.org/licenses/by/3.0/us/"
+                  target="_blank"
+                  rel="noreferrer"
+                  data-shop-license-link
+                  className="text-[#79d9e5] underline underline-offset-2"
+                >
+                  open-source license
+                </Link>
+              </span>
+              <span>✓ $30 per print, printed on demand, plus $6 flat US shipping</span>
+            </div>
+          </div>
 
-      {/* Poster Grid */}
-      <section className="max-width max-width-md content-padding pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {cards.map((card, i) => (
-            <Reveal key={card.id} style="slide-up" delay={Math.min(i * 0.05, 0.3)} className="h-full">
-              <PosterCardComponent card={card} />
-            </Reveal>
-          ))}
+          {heroPrints.length > 0 && (
+            <div className="relative hidden lg:block h-[430px]" aria-hidden="true">
+              {heroPrints.map((print, index) => (
+                <div
+                  key={print._id}
+                  className={`absolute w-[245px] bg-[#f7f3ea] p-3 shadow-[0_26px_65px_rgba(0,0,0,.42)] border border-white/20 ${
+                    index === 0
+                      ? 'left-0 top-14 -rotate-6'
+                      : index === 1
+                        ? 'right-0 top-0 rotate-6'
+                        : 'right-16 bottom-0 -rotate-2'
+                  }`}
+                >
+                  {/* Full poster at its natural aspect — no square letterbox, so
+                      a landscape print doesn't sit in awkward white space
+                      (Jon's feedback, 2026-08-07). */}
+                  <div className="bg-white">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={print.imageUrl!} alt="" className="block h-auto w-full" />
+                  </div>
+                  <p className="font-serif text-[#11141f] text-lg leading-tight mt-3 mb-0 truncate">
+                    {print.title}
+                  </p>
+                </div>
+              ))}
+              <div className="absolute right-4 bottom-10 bg-primary text-white px-4 py-3 font-bold uppercase tracking-[1.5px] text-xs rotate-3 shadow-xl">
+                Source files + physical prints
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Subscribe */}
+      {/* The old three-column "how it works" band is gone: its facts (free
+          PDFs + license, printed on demand, browse) now live as one quiet line
+          in the hero — the labels had too much priority, especially on mobile
+          (Juhan's feedback, 2026-08-07). */}
+      <VisualizationStorefront items={visualizations} supportEmail={supportEmail} />
+
       <section className="bg-gray-light py-8">
         <div className="max-width max-width-md content-padding mx-auto">
-          <Reveal style="slide-up">
-            <SubscribeForm />
-          </Reveal>
+          <SubscribeForm />
         </div>
       </section>
 
-    </div>
-  )
-}
-
-function PosterCardComponent({ card }: { card: PosterCard }) {
-  const imageBlock = card.imageUrl ? (
-    <div className="h-[250px] overflow-hidden">
-      <Image
-        src={card.imageUrl}
-        alt={card.title}
-        width={600}
-        height={450}
-        className="w-full h-full object-cover transition-transform duration-500 ease-out will-change-transform hover:scale-[1.025]"
-      />
-    </div>
-  ) : (
-    <div className="h-[250px] bg-gray-light" />
-  )
-
-  return (
-    <div className="flex h-full flex-col bg-white rounded shadow-card hover:shadow-card-hover transition-shadow duration-500 ease-out overflow-hidden">
-      {card.downloadUrl ? (
-        <a href={card.downloadUrl} target="_blank" rel="noopener noreferrer">
-          {imageBlock}
-        </a>
-      ) : (
-        imageBlock
-      )}
-      <div className="p-4">
-        <h4 className={cn('header-sm text-black', card.caption ? 'mb-2' : 'mb-[21px]')}>{card.title}</h4>
-        {card.caption && (
-          <p className="text-gray text-sm leading-relaxed mb-[21px]">{card.caption}</p>
-        )}
-        {card.downloadUrl && (
-          <a
-            href={card.downloadUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center border border-primary text-primary font-semibold py-2 text-sm uppercase tracking-[2px] no-underline hover:bg-primary hover:text-white transition-colors"
-          >
-            Download
-          </a>
-        )}
-        {card.learnMoreLink && (
-          <p className="text-center mt-3 text-sm">
-            <a
-              href={card.learnMoreLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-secondary hover:underline"
-            >
-              Learn More
-            </a>
-          </p>
-        )}
-      </div>
+      <section className="bg-[#24434d] text-white">
+        <div className="max-width content-padding py-12 lg:py-16 flex flex-col lg:flex-row justify-between gap-7 lg:items-center">
+          <h2 className="font-serif font-light text-[2rem] lg:text-[2.5rem] leading-tight mb-0">
+            Need a different format? Ask about sizes, quantities, or event packs.
+          </h2>
+          <PosterChatCta />
+        </div>
+      </section>
     </div>
   )
 }
