@@ -4,7 +4,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { allHealthVisualizationsQuery, shopStorefrontQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
-import { SHOP_PRINT_PRICE_CENTS, SHOP_SHIPPING_PRICE_CENTS } from '@/lib/shop/checkout'
+import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { PosterChatCta } from '@/components/chat/PosterChatCta'
 import {
@@ -26,7 +26,6 @@ export const metadata: Metadata = {
   },
 }
 
-const DEFAULT_PRINT_PRICE = SHOP_PRINT_PRICE_CENTS / 100
 const DEFAULT_PRINT_CURRENCY = 'USD'
 
 // Normalized card data shared by both Sanity and fallback paths
@@ -372,7 +371,7 @@ export default async function HealthVisualizationsPage() {
       downloadLink: card.downloadUrl,
       learnMoreLink: card.learnMoreLink,
       imageUrl: card.imageUrl,
-      price: product?.price ?? DEFAULT_PRINT_PRICE,
+      price: product?.price ?? shopPriceCentsFor(card.slug) / 100,
       currency: product?.currency || DEFAULT_PRINT_CURRENCY,
       checkoutUrl: product?.checkoutUrl,
       fulfillment:

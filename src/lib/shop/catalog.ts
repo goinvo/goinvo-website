@@ -3,7 +3,7 @@ import 'server-only'
 import { createClient } from '@sanity/client'
 import { apiVersion, dataset, previewToken, projectId } from '@/sanity/env'
 import {
-  SHOP_PRINT_PRICE_CENTS,
+  shopPriceCentsFor,
   type CheckoutCatalogItem,
   type CheckoutRequest,
 } from './checkout'
@@ -120,7 +120,7 @@ export async function resolveCheckoutCatalog(
     const configuredPrice =
       typeof product?.price === 'number'
         ? Math.round(product.price * 100)
-        : SHOP_PRINT_PRICE_CENTS
+        : shopPriceCentsFor(requestedItem.slug)
     if (!Number.isSafeInteger(configuredPrice) || configuredPrice < 50) {
       throw new Error(`${visualization.title} has an invalid checkout price.`)
     }
