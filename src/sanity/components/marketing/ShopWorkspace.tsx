@@ -470,9 +470,13 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
         checkoutUrl: draft.checkoutUrl.trim() || undefined,
       }
       if (selectedProductId && selectedProductId !== 'new') {
-        await client.patch(selectedProductId).set(fields).set({
-          slug: { _type: 'slug', current: slugify(draft.title) },
-        }).commit()
+        // Deliberately does NOT touch the slug. The storefront and the checkout
+        // both join a product to its visualization by slug, and those slugs do
+        // not all match slugify(title) — 13 of the 31 differ ("Wash Your Hands"
+        // is washhands, "Ebola Care Guideline" is ebola). Re-deriving it here
+        // meant that editing a price silently detached the product, so the new
+        // price was quietly ignored and the page kept showing the old one.
+        await client.patch(selectedProductId).set(fields).commit()
         toast.push({ status: 'success', title: 'Product updated' })
       } else {
         const created = await client.create(buildCreatePayload('marketingProduct', fields))
