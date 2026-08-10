@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
-import { getGaIdentity } from '@/lib/analytics'
 
 export type VisualizationPrint = {
   _id: string
@@ -286,9 +285,6 @@ export function VisualizationStorefront({
   // Post-download support dialog: gift-first (never blocks the download),
   // fires at most once per session, dismisses without friction.
   const [supportDialogOpen, setSupportDialogOpen] = useState(false)
-  const [supportEmailValue, setSupportEmailValue] = useState('')
-  const [supportHoneypot, setSupportHoneypot] = useState('')
-  const [supportEmailState, setSupportEmailState] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
   const supportPromptedRef = useRef(false)
   const supportDialogRef = useRef<HTMLDivElement>(null)
   // Overlays portal to <body>: page sections sit inside transformed animation
@@ -480,30 +476,6 @@ export function VisualizationStorefront({
     }
   }
 
-  async function submitSupportEmail(event: React.FormEvent) {
-    event.preventDefault()
-    if (supportEmailState === 'submitting') return
-    setSupportEmailState('submitting')
-    try {
-      const identity = getGaIdentity()
-      const response = await fetch('/api/newsletter/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: supportEmailValue,
-          magnetSlug: 'poster-downloads',
-          sourcePath: window.location.pathname,
-          website: supportHoneypot,
-          ...(identity.clientId ? { ga_client_id: identity.clientId } : {}),
-          ...(identity.sessionId ? { ga_session_id: identity.sessionId } : {}),
-        }),
-      })
-      const data = (await response.json().catch(() => null)) as { ok?: boolean } | null
-      setSupportEmailState(response.ok && data?.ok ? 'done' : 'error')
-    } catch {
-      setSupportEmailState('error')
-    }
-  }
 
   function browseCollection(nextCollection: CollectionId) {
     setQuery('')
@@ -1048,24 +1020,7 @@ export function VisualizationStorefront({
             className="relative w-full max-w-[480px] overflow-hidden border border-[#d9d5ce] bg-white p-6 shadow-[0_30px_80px_rgba(17,20,31,.35)] outline-none sm:p-8"
           >
             <div className="absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden="true" />
-            {supportEmailState === 'done' ? (
-              <>
-                <h3 id="shop-support-title" className="mb-2 font-serif text-[1.7rem] font-light">
-                  Thanks, talk soon.
-                </h3>
-                <p className="mb-6 leading-relaxed text-gray">
-                  We&apos;ll email you when new work ships. Nothing else, promise.
-                </p>
-                <button
-                  type="button"
-                  onClick={dismissSupportDialog}
-                  className="w-full border border-[#cfc9be] px-5 py-3 font-semibold text-[#24434d] transition-colors hover:border-secondary hover:text-secondary"
-                >
-                  Close
-                </button>
-              </>
-            ) : (
-              <>
+            <>
                 <p className="mb-1 text-[11px] font-bold uppercase tracking-[2px] text-primary">
                   Free &amp; open source
                 </p>
@@ -1099,49 +1054,6 @@ export function VisualizationStorefront({
                 >
                   Pay what you want
                 </button>
-                <div className="mb-4 flex items-center gap-3 text-xs uppercase tracking-[1.5px] text-gray" aria-hidden="true">
-                  <span className="h-px flex-1 bg-[#d9d5ce]" />
-                  or
-                  <span className="h-px flex-1 bg-[#d9d5ce]" />
-                </div>
-                <form onSubmit={submitSupportEmail}>
-                  <input
-                    type="text"
-                    name="website"
-                    value={supportHoneypot}
-                    onChange={(event) => setSupportHoneypot(event.target.value)}
-                    tabIndex={-1}
-                    autoComplete="off"
-                    aria-hidden="true"
-                    style={{ position: 'absolute', left: '-9999px', height: 0, width: 0, opacity: 0 }}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      type="email"
-                      required
-                      value={supportEmailValue}
-                      onChange={(event) => setSupportEmailValue(event.target.value)}
-                      placeholder="or just leave your email"
-                      aria-label="Email address for release updates"
-                      disabled={supportEmailState === 'submitting'}
-                      className="min-w-0 flex-1 border border-[#cfc9be] px-4 py-3 text-black placeholder:text-gray focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
-                    />
-                    <button
-                      type="submit"
-                      disabled={supportEmailState === 'submitting'}
-                      aria-busy={supportEmailState === 'submitting'}
-                      data-shop-support-email-submit
-                      className="border border-secondary px-5 py-3 font-semibold text-secondary transition-colors hover:bg-secondary hover:text-white disabled:opacity-60"
-                    >
-                      {supportEmailState === 'submitting' ? 'Sending…' : 'Keep me posted'}
-                    </button>
-                  </div>
-                </form>
-                <p className="mt-2 mb-0 text-xs leading-5 text-gray">
-                  {supportEmailState === 'error'
-                    ? 'That didn’t go through. Mind trying again in a minute?'
-                    : 'One email when new work ships. No newsletter unless you ask for it.'}
-                </p>
                 <button
                   type="button"
                   onClick={dismissSupportDialog}
@@ -1149,8 +1061,7 @@ export function VisualizationStorefront({
                 >
                   No thanks
                 </button>
-              </>
-            )}
+            </>
           </div>
         </div>,
         document.body,
