@@ -37,18 +37,42 @@ function readCookie(name: string): string | undefined {
   return match ? decodeURIComponent(match[1]) : undefined
 }
 
+/**
+ * Review override: `?home-shop-section-variant=present` shows the section on
+ * any deploy.
+ *
+ * The edge normally assigns the cohort, but it needs FLAGS_SECRET, which only
+ * Production and one preview branch have. Without this a reviewer on a preview
+ * URL cannot see the section at all. Reading the param here costs nothing and
+ * is not a security boundary: the section is public content either way.
+ */
+function readForcedVariant(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const value = new URLSearchParams(window.location.search).get(FLAG_KEY)
+  return value || undefined
+}
+
 export function ShopSectionGate({ children }: { children: ReactNode }) {
   // null until the cookie is read. SSR and the first client render both show
   // nothing, so there is no hydration mismatch; the assigned "present" cohort
   // gains the section one tick later, below the fold.
   const [variant, setVariant] = useState<string | null>(null)
+  // A forced view is a human looking at the page, not a sampled visitor, so it
+  // must never emit an exposure beacon and skew the results.
+  const [forced, setForced] = useState(false)
 
   useEffect(() => {
+    const override = readForcedVariant()
+    if (override && ALLOWED_VARIANTS.includes(override)) {
+      setForced(true)
+      setVariant(override)
+      return
+    }
     const value = readCookie(FLAG_KEY)
     setVariant(value && ALLOWED_VARIANTS.includes(value) ? value : '')
   }, [])
 
-  const inExperiment = variant === 'control' || variant === 'present'
+  const inExperiment = !forced && (variant === 'control' || variant === 'present')
   // 'control' is the baseline homepage with no section.
   const visible = variant === 'present'
 
