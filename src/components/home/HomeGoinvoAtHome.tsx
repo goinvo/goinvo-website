@@ -33,13 +33,20 @@ const FEATURED_PRINTS: HomePrint[] = [
   { _id: 'patient-data-ownership', title: 'Own Your Health Data', imageUrl: '/images/features/own-your-health-data/patient-data-ownership.jpg' },
 ]
 
-// Mirrors the storefront hero's composition: portrait left, landscape high
-// right, portrait tucked bottom-right. Percentage widths keep the spray
-// assembled at every viewport instead of collapsing to tiny cropped tiles.
+/**
+ * Mirrors the storefront hero's composition: portrait left, landscape high
+ * right, the third tucked across their corner so the three read as one pile.
+ *
+ * The tiles must OVERLAP. These posters have very different proportions, so
+ * spacing them evenly leaves the tall portrait stranded with dead space under
+ * it and a gap on the right; the group stops reading as an arrangement and
+ * starts reading as a layout bug. Percentage widths keep it assembled at every
+ * viewport instead of collapsing to tiny cropped tiles.
+ */
 const SPRAY_PLACEMENT = [
-  'left-0 top-[10%] w-[44%] -rotate-6',
+  'left-0 top-[4%] w-[47%] -rotate-6',
   'right-0 top-0 w-[54%] rotate-6',
-  'right-[8%] bottom-0 w-[40%] -rotate-2',
+  'left-[24%] bottom-0 w-[47%] -rotate-2',
 ]
 
 export function HomeGoinvoAtHome() {
@@ -84,7 +91,7 @@ export function HomeGoinvoAtHome() {
           href="/vision/health-visualizations"
           aria-hidden="true"
           tabIndex={-1}
-          className="relative block aspect-square max-w-[520px] justify-self-center w-full lg:justify-self-end"
+          className="relative block aspect-[6/5] max-w-[520px] justify-self-center w-full lg:justify-self-end"
         >
           {prints.map((print, index) => (
             <span
