@@ -62,6 +62,15 @@ try {
   }
 
   const desktop = await page.evaluate(() => {
+    // Money is read off the page, never assumed: prices are CMS-owned.
+    const priceFromLabel = (text) => {
+      const match = (text || '').match(/\$(\d[\d,.]*)/)
+      return match ? Number(match[1].replace(/,/g, '')) : 0
+    }
+    const shippingFromLabel = (text) => {
+      const match = (text || '').match(/\$(\d[\d,.]*) shipping/)
+      return match ? Number(match[1].replace(/,/g, '')) : 0
+    }
     const cards = [...document.querySelectorAll('[data-shop-print-card]')]
     // Per-item labels (Jon): posters say "Buy Poster", the comic book says
     // "Buy Comic", and the out-of-stock journal has no buy button at all.
@@ -93,9 +102,14 @@ try {
       ),
       heroHasEyebrow: (hero?.textContent || '').includes('Open Source Health Design · GoInvo'),
       // Price and shipping are stated together, once, in the hero fact line.
-      heroStatesPrice: /\$30 per print, printed on demand, plus \$6 flat US shipping/.test(
+      // The amount is whatever the CMS says, so match the shape, not a number.
+      heroStatesPrice: /\$\d[\d,.]* per print, printed on demand, plus \$\d[\d,.]* flat US shipping/.test(
         hero?.textContent || '',
       ),
+      heroPrice: (() => {
+        const match = (hero?.textContent || '').match(/\$(\d[\d,.]*) per print/)
+        return match ? Number(match[1].replace(/,/g, '')) : 0
+      })(),
       heroStatesPrintOnDemand: /printed on demand/i.test(hero?.textContent || ''),
       howItWorksBandCount: document.querySelectorAll('#how-it-works').length,
       cardCount: cards.length,
@@ -107,11 +121,16 @@ try {
       openSourceLabelCount: [
         ...document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]'),
       ].filter((link) => link.textContent?.includes('Free Download')).length,
-      // Every poster is $30; the comic book is priced on its own at $9 and
-      // must show that same number the checkout will charge.
-      printPriceCount: addButtons.filter((button) => button.textContent?.includes('$30 · $6 shipping'))
-        .length,
-      comicPriceLabel: comicButtons[0]?.textContent?.replace(/\s+/g, ' ').trim(),
+      // Prices live in the CMS and editors change them, so read the prices
+      // off the page rather than pinning numbers a legitimate edit would break.
+      // What must hold is the SHAPE: every buy button names a price and the
+      // shipping charge, and the comic is priced apart from the posters.
+      buyLabels: addButtons.map((button) => button.textContent?.replace(/\s+/g, ' ').trim() || ''),
+      shippingLabel: shippingFromLabel(addButtons[0]?.textContent || ''),
+      posterPrice: priceFromLabel(
+        addButtons.find((button) => button.textContent?.startsWith('Buy Poster'))?.textContent || '',
+      ),
+      comicPrice: priceFromLabel(comicButtons[0]?.textContent || ''),
       imageDownloadCount: document.querySelectorAll('[data-shop-image-download]').length,
       imageDownloadTargetsMatch: cards.every((card) => {
         const imageLink = card.querySelector('[data-shop-image-download]')
@@ -277,8 +296,11 @@ try {
     desktop.unavailableCardCount !== 1 ||
     desktop.downloadCount !== desktop.cardCount ||
     desktop.openSourceLabelCount !== desktop.cardCount ||
-    desktop.printPriceCount !== desktop.addButtonCount - desktop.comicButtonCount ||
-    desktop.comicPriceLabel !== 'Buy Comic$9 · $6 shipping' ||
+    desktop.buyLabels.some((label) => !/^Buy (Poster|Comic)\$\d[\d,.]* · \$\d[\d,.]* shipping$/.test(label)) ||
+    !(desktop.posterPrice > 0) ||
+    !(desktop.comicPrice > 0) ||
+    desktop.comicPrice >= desktop.posterPrice ||
+    desktop.shippingLabel <= 0 ||
     desktop.imageDownloadCount !== desktop.cardCount ||
     !desktop.imageDownloadTargetsMatch ||
     desktop.cardFulfillmentLabels !== 0 ||
@@ -548,10 +570,14 @@ try {
   await page.waitForSelector('[data-shop-cart-bar]')
   // The first popup breaks out shipping (Jon's feedback): "$30 + $6 shipping",
   // never a bare surprise total.
+  const unit = desktop.posterPrice
+  const ship = desktop.shippingLabel
+  const money = (amount) =>
+    `$${Number.isInteger(amount) ? amount : amount.toFixed(2)}`
   const cartBar = await page.$eval('[data-shop-cart-total]', (element) =>
     element.textContent?.replace(/\s+/g, ' ').trim(),
   )
-  if (cartBar !== '$30 + $6 shipping') {
+  if (cartBar !== `${money(unit)} + ${money(ship)} shipping`) {
     throw new Error(`The cart bar should break out shipping: ${JSON.stringify(cartBar)}`)
   }
   await page.evaluate(() => document.querySelector('[data-shop-open-cart]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
@@ -571,7 +597,7 @@ try {
   })
 
   if (
-    !cart.text?.includes('$36 total') ||
+    !cart.text?.includes(`${money(unit + ship)} total`) ||
     cart.donationChips !== 3 ||
     cart.customToggle !== 1
   ) {
@@ -584,7 +610,7 @@ try {
         cart.stripeCheckoutCount !== 0 ||
         !cart.href?.startsWith('mailto:') ||
         !decodeURIComponent(cart.href).includes('Optional support: $0') ||
-        !decodeURIComponent(cart.href).includes('Order total: $36')
+        !decodeURIComponent(cart.href).includes(`Order total: ${money(unit + ship)}`)
   ) {
     throw new Error(`Checkout handoff does not match its configuration: ${JSON.stringify({
       checkoutConfig,
@@ -594,7 +620,9 @@ try {
 
   await page.select('[data-shop-cart-quantity]', '3')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$96 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit * 3 + ship)} total`,
   )
   const quantityOrder = await page.evaluate(() => {
     const requestLink = [...document.querySelectorAll('a')].find((link) =>
@@ -609,23 +637,27 @@ try {
     }
   })
   if (
-    quantityOrder.total !== '$96 total' ||
+    quantityOrder.total !== `${money(unit * 3 + ship)} total` ||
     quantityOrder.quantity !== '3' ||
     quantityOrder.quantityOptionCount !== 20 ||
     (!checkoutConfig.body.checkoutEnabled &&
-      (!quantityOrder.order.includes(`${firstOrderTitle} × 3: $90`) ||
-        !quantityOrder.order.includes('Order total: $96')))
+      (!quantityOrder.order.includes(`${firstOrderTitle} × 3: ${money(unit * 3)}`) ||
+        !quantityOrder.order.includes(`Order total: ${money(unit * 3 + ship)}`)))
   ) {
     throw new Error(`Print quantity is not reflected in the order: ${JSON.stringify(quantityOrder)}`)
   }
   await page.select('[data-shop-cart-quantity]', '1')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$36 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit + ship)} total`,
   )
 
   await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$51 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit + ship + 15)} total`,
   )
   const presetDonation = await page.evaluate(() => {
     const requestLink = [...document.querySelectorAll('a')].find((link) =>
@@ -637,10 +669,10 @@ try {
     }
   })
   if (
-    !presetDonation.total?.includes('$51 total') ||
+    !presetDonation.total?.includes(`${money(unit + ship + 15)} total`) ||
     (!checkoutConfig.body.checkoutEnabled &&
       (!presetDonation.order.includes('Optional support: $15') ||
-        !presetDonation.order.includes('Order total: $51')))
+        !presetDonation.order.includes(`Order total: ${money(unit + ship + 15)}`)))
   ) {
     throw new Error(`Preset donation is not reflected in the order: ${JSON.stringify(presetDonation)}`)
   }
@@ -649,7 +681,9 @@ try {
   await page.waitForSelector('[data-shop-custom-donation]', { visible: true })
   await page.type('[data-shop-custom-donation]', '12')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$48 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit + ship + 12)} total`,
   )
   const customDonation = await page.evaluate(() => {
     const requestLink = [...document.querySelectorAll('a')].find((link) =>
@@ -663,10 +697,10 @@ try {
   })
   if (
     customDonation.customFieldCount !== 1 ||
-    !customDonation.total?.includes('$48 total') ||
+    !customDonation.total?.includes(`${money(unit + ship + 12)} total`) ||
     (!checkoutConfig.body.checkoutEnabled &&
       (!customDonation.order.includes('Optional support: $12') ||
-        !customDonation.order.includes('Order total: $48')))
+        !customDonation.order.includes(`Order total: ${money(unit + ship + 12)}`)))
   ) {
     throw new Error(`Custom donation is not reflected in the order: ${JSON.stringify(customDonation)}`)
   }
@@ -824,7 +858,9 @@ try {
   await mobilePage.waitForSelector('[data-shop-donation-panel]', { visible: true })
   await mobilePage.select('[data-shop-cart-quantity]', '3')
   await mobilePage.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$96 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit * 3 + ship)} total`,
   )
   const mobileQuantity = await mobilePage.evaluate(() => {
     const select = document.querySelector('[data-shop-cart-quantity]')
@@ -840,7 +876,7 @@ try {
   })
   if (
     mobileQuantity.scrollWidth > mobileQuantity.viewportWidth + 3 ||
-    mobileQuantity.total !== '$96 total' ||
+    mobileQuantity.total !== `${money(unit * 3 + ship)} total` ||
     !mobileQuantity.selectRect ||
     mobileQuantity.selectRect.left < 0 ||
     mobileQuantity.selectRect.right > 390
@@ -849,11 +885,15 @@ try {
   }
   await mobilePage.select('[data-shop-cart-quantity]', '1')
   await mobilePage.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$36 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit + ship)} total`,
   )
   await mobilePage.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
   await mobilePage.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$51 total'),
+    (expected) => document.querySelector('[data-shop-order-total]')?.textContent?.includes(expected),
+    {},
+    `${money(unit + ship + 15)} total`,
   )
   const mobileDonation = await mobilePage.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
@@ -871,7 +911,7 @@ try {
   }))
   if (
     mobileDonation.scrollWidth > mobileDonation.viewportWidth + 3 ||
-    mobileDonation.total !== '$51 total' ||
+    mobileDonation.total !== `${money(unit + ship + 15)} total` ||
     mobileDonation.chipCount !== 3 ||
     !mobileDonation.panelRect ||
     mobileDonation.panelRect.left < 0 ||
