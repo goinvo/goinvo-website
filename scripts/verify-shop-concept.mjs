@@ -442,7 +442,9 @@ try {
       // /api/newsletter/subscribe, which does not exist, so it 404'd on every
       // submission, and the page already has the real newsletter form further
       // down. A second one here also implied a separate list that we do not run.
-      hasEmailSubmit: Boolean(document.querySelector('[data-shop-support-email-submit]')),
+      // The capture is the studio's ONE newsletter, wired to a route that
+      // exists. It must never again promise a separate list.
+      hasNewsletterSubmit: Boolean(document.querySelector('[data-shop-newsletter-submit]')),
       promisesASeparateList: /No newsletter unless you ask for it/.test(
         document.querySelector('[data-shop-support-dialog]')?.textContent || '',
       ),
@@ -451,7 +453,7 @@ try {
   if (
     supportDialog.donateText !== 'Pay what you want' ||
     supportDialog.chipCount !== 3 ||
-    supportDialog.hasEmailSubmit ||
+    !supportDialog.hasNewsletterSubmit ||
     supportDialog.promisesASeparateList
   ) {
     throw new Error(`Support dialog is incomplete: ${JSON.stringify(supportDialog)}`)
