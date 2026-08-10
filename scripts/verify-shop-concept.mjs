@@ -2,7 +2,9 @@ import puppeteer from 'puppeteer'
 
 const baseUrl = process.env.SHOP_BASE_URL || 'http://localhost:3000'
 const storefrontPath = '/vision/health-visualizations'
-const browser = await puppeteer.launch({ headless: true })
+// Dev-server first compiles + 31 unoptimized poster images can outlast the
+// default 180s CDP timeout.
+const browser = await puppeteer.launch({ headless: true, protocolTimeout: 600_000 })
 
 async function loadLazyImages(page) {
   const height = await page.evaluate(() => document.documentElement.scrollHeight)
@@ -61,8 +63,14 @@ try {
 
   const desktop = await page.evaluate(() => {
     const cards = [...document.querySelectorAll('[data-shop-print-card]')]
-    const addButtons = [...document.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('Buy Poster'),
+    // Per-item labels (Jon, 2026-08-07): posters say "Buy Poster", the comic
+    // book says "Buy Comic Book", and the out-of-stock journal has no buy
+    // button at all — count each shape explicitly.
+    const cardButtons = [...document.querySelectorAll('[data-shop-print-card] button')]
+    const addButtons = cardButtons.filter((button) => /^Buy (Poster|Comic Book)/.test(button.textContent?.trim() || ''))
+    const comicButtons = cardButtons.filter((button) => button.textContent?.includes('Buy Comic Book'))
+    const unavailableCards = cards.filter((card) =>
+      card.textContent?.includes('Print currently unavailable'),
     )
     const rect = (element) => {
       const bounds = element.getBoundingClientRect()
@@ -74,18 +82,30 @@ try {
       }
     }
     const firstRowCards = cards.slice(0, 3)
-    const stepItems = [...document.querySelectorAll('#how-it-works li')]
+    const hero = document.querySelector('h1')?.closest('section')
 
     return {
       title: document.querySelector('h1')?.textContent?.trim(),
+      // One CTA — browsing and downloading are the same trip. The old
+      // "Download or print" second button and the eyebrow are gone.
+      heroCtas: [...(hero?.querySelectorAll('a[href^="#"]') || [])].map((link) =>
+        link.textContent?.trim(),
+      ),
+      heroHasEyebrow: (hero?.textContent || '').includes('Open Source Health Design · GoInvo'),
+      heroStatesPrice: /\$30 per print/.test(hero?.textContent || '')
+        && /plus \$6 flat US shipping/.test(hero?.textContent || ''),
+      heroStatesPrintOnDemand: /printed on demand/i.test(hero?.textContent || ''),
+      howItWorksBandCount: document.querySelectorAll('#how-it-works').length,
       cardCount: cards.length,
       addButtonCount: addButtons.length,
+      comicButtonCount: comicButtons.length,
+      unavailableCardCount: unavailableCards.length,
       downloadCount: document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]')
         .length,
       openSourceLabelCount: [
         ...document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]'),
       ].filter((link) => link.textContent?.includes('Free Download')).length,
-      printPriceCount: addButtons.filter((button) => button.textContent?.includes('$6 + US shipping'))
+      printPriceCount: addButtons.filter((button) => button.textContent?.includes('$30 + US shipping'))
         .length,
       imageDownloadCount: document.querySelectorAll('[data-shop-image-download]').length,
       imageDownloadTargetsMatch: cards.every((card) => {
@@ -97,13 +117,6 @@ try {
       cardFulfillmentLabels: [...document.querySelectorAll('[data-shop-print-card] span')].filter(
         (element) => /^(In stock|Printed on demand)$/.test(element.textContent?.trim() || ''),
       ).length,
-      pageStatesPrintOnDemand: /printed on demand/i.test(
-        document.querySelector('#how-it-works')?.textContent || '',
-      ),
-      // Three parallel facts — no numbering that implies a sequence.
-      stepNumbering: [...document.querySelectorAll('#how-it-works li')].filter((item) =>
-        /^\s*0?[123]\b/.test(item.textContent || ''),
-      ).length,
       descriptions: [...document.querySelectorAll('[data-shop-print-description]')].map(
         (element) => element.textContent?.trim() || '',
       ),
@@ -112,14 +125,16 @@ try {
       ].filter((element) =>
         element.textContent?.includes('open-source health and design collection'),
       ).length,
+      // Not every card has a buy button (comic book label, unavailable
+      // journal) — check alignment only on the labels that exist.
       actionLabelAlignments: cards.flatMap((card) => {
         const download = card.querySelector('[data-shop-download-button]')
         const order = [...card.querySelectorAll('button')].find((button) =>
-          button.textContent?.includes('Buy Poster'),
+          /^Buy (Poster|Comic Book)/.test(button.textContent?.trim() || ''),
         )
-        return [download?.firstElementChild, order?.firstElementChild].map((element) =>
-          element ? getComputedStyle(element).textAlign : null,
-        )
+        return [download?.firstElementChild, order?.firstElementChild]
+          .filter((element) => element)
+          .map((element) => getComputedStyle(element).textAlign)
       }),
       imageCount: document.querySelectorAll('[data-shop-print-card] img:not([aria-hidden="true"])')
         .length,
@@ -154,10 +169,9 @@ try {
           }
         }),
       featuredHeading: document.querySelector('#artifact-collections h2')?.textContent?.trim(),
-      featuredSummary: document
-        .querySelector('[data-shop-featured-summary]')
-        ?.textContent?.replace(/\s+/g, ' ')
-        .trim(),
+      // The tan "download the source files…" byline was cut — the hero already
+      // says it once.
+      featuredSummaryCount: document.querySelectorAll('[data-shop-featured-summary]').length,
       featuredBrowseLinks: [...document.querySelectorAll('#artifact-collections button')].filter(
         (button) => button.textContent?.includes('Browse'),
       ).length,
@@ -178,6 +192,8 @@ try {
       searchCount: document.querySelectorAll('input[type="search"]').length,
       collectionCount: document.querySelectorAll('[aria-label="Visualization collections"] button')
         .length,
+      // The sort dropdown is gone — with nothing selected there are no selects
+      // on the page at all.
       sortCount: document.querySelectorAll('select').length,
       licenseLink: (() => {
         const link = document.querySelector('[data-shop-license-link]')
@@ -185,15 +201,11 @@ try {
           count: document.querySelectorAll('[data-shop-license-link]').length,
           text: link?.textContent?.trim(),
           href: link?.getAttribute('href'),
-          standaloneLinkCount: [...document.querySelectorAll('#how-it-works a')].filter(
-            (candidate) => candidate.textContent?.includes('Read the license'),
-          ).length,
         }
       })(),
       viewportWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
       alignment: {
-        steps: stepItems.map(rect),
         media: firstRowCards.map((card) => rect(card.children[1])),
         downloads: firstRowCards.map((card) =>
           rect(
@@ -217,16 +229,26 @@ try {
     throw new Error(`Unexpected shop title: ${desktop.title}`)
   }
   if (
+    desktop.heroCtas.length !== 1 ||
+    desktop.heroCtas[0] !== 'Browse the collection' ||
+    desktop.heroHasEyebrow ||
+    !desktop.heroStatesPrice ||
+    !desktop.heroStatesPrintOnDemand ||
+    desktop.howItWorksBandCount !== 0
+  ) {
+    throw new Error(`The hero should carry one CTA and the quiet fact line: ${JSON.stringify(desktop)}`)
+  }
+  if (
     desktop.cardCount === 0 ||
-    desktop.addButtonCount !== desktop.cardCount ||
+    desktop.addButtonCount !== desktop.cardCount - 1 ||
+    desktop.comicButtonCount !== 1 ||
+    desktop.unavailableCardCount !== 1 ||
     desktop.downloadCount !== desktop.cardCount ||
     desktop.openSourceLabelCount !== desktop.cardCount ||
-    desktop.printPriceCount !== desktop.cardCount ||
+    desktop.printPriceCount !== desktop.addButtonCount ||
     desktop.imageDownloadCount !== desktop.cardCount ||
     !desktop.imageDownloadTargetsMatch ||
     desktop.cardFulfillmentLabels !== 0 ||
-    !desktop.pageStatesPrintOnDemand ||
-    desktop.stepNumbering !== 0 ||
     desktop.descriptions.length !== desktop.cardCount ||
     new Set(desktop.descriptions).size !== desktop.cardCount ||
     desktop.descriptions.some((description) => description.length < 40) ||
@@ -255,11 +277,10 @@ try {
   if (
     desktop.searchCount !== 1 ||
     desktop.collectionCount !== 7 ||
-    desktop.sortCount !== 1 ||
+    desktop.sortCount !== 0 ||
     desktop.licenseLink.count !== 1 ||
     desktop.licenseLink.text !== 'open-source license' ||
     desktop.licenseLink.href !== 'https://creativecommons.org/licenses/by/3.0/us/' ||
-    desktop.licenseLink.standaloneLinkCount !== 0 ||
     desktop.heroHeight < 600 ||
     desktop.featuredPosterCount !== 4 ||
     !desktop.featuredPostersLoaded ||
@@ -268,9 +289,7 @@ try {
       (caption) => caption && caption.stacked && caption.alignedLeft && caption.withinTile,
     ) ||
     desktop.featuredHeading !== 'Featured visualizations' ||
-    desktop.featuredSummary !==
-      'Download the source files to use or adapt. Order physical prints for your home, clinic, classroom, or workspace.' ||
-    desktop.featuredSummary.includes('$25') ||
+    desktop.featuredSummaryCount !== 0 ||
     desktop.featuredBrowseLinks !== 2 ||
     desktop.seriesCards.length !== 2 ||
     !desktop.seriesCards.every(
@@ -282,10 +301,6 @@ try {
   ) {
     throw new Error(`Catalog navigation or hero decoration is missing: ${JSON.stringify(desktop)}`)
   }
-
-  const stepStrip = await page.$('#how-it-works')
-  if (!stepStrip) throw new Error('How-it-works strip is missing')
-  await stepStrip.screenshot({ path: '.audit/shop-layout-steps.png' })
 
   const featuredItems = await page.$('#artifact-collections')
   if (!featuredItems) throw new Error('Featured Items section is missing')
@@ -417,6 +432,23 @@ try {
   const designAxiomsCount = await page.evaluate(
     () => document.querySelectorAll('[data-shop-print-card]').length,
   )
+  // Filtering must announce itself: the collection is named and a "Show all"
+  // path back is offered, so the vanished prints don't spook anyone.
+  const filteredNotice = await page.evaluate(() => {
+    const status = document.querySelector('#catalog p[aria-live="polite"]')
+    const showAll = status?.querySelector('button')
+    return {
+      text: status?.textContent?.replace(/\s+/g, ' ').trim(),
+      showAllText: showAll?.textContent?.trim(),
+    }
+  })
+  if (
+    !filteredNotice.text?.includes('Design Axioms') ||
+    !filteredNotice.text.includes('3 of 31 designs') ||
+    filteredNotice.showAllText !== 'Show all 31'
+  ) {
+    throw new Error(`The filtered state is not announced: ${JSON.stringify(filteredNotice)}`)
+  }
 
   await page.evaluate(() => {
     const button = [...document.querySelectorAll('button')].find(
@@ -441,25 +473,38 @@ try {
   const designCollectionCount = await page.evaluate(
     () => document.querySelectorAll('[data-shop-print-card]').length,
   )
+  // The announced "Show all 31" button is the way back from a filter.
   await page.evaluate(() => {
-    const button = [...document.querySelectorAll('button')].find(
-      (candidate) => candidate.textContent?.trim() === 'All designs',
-    )
-    if (!(button instanceof HTMLButtonElement)) throw new Error('All designs filter is missing')
+    const button = document.querySelector('#catalog p[aria-live="polite"] button')
+    if (!(button instanceof HTMLButtonElement)) throw new Error('Show all button is missing')
     button.click()
   })
   await page.waitForFunction(
     () => document.querySelectorAll('[data-shop-print-card]').length === 31,
   )
 
-  await page.evaluate(() => {
-    const button = [...document.querySelectorAll('button')].find((candidate) =>
-      candidate.textContent?.includes('Buy Poster'),
+  const firstOrderTitle = await page.evaluate(() => {
+    const button = [...document.querySelectorAll('[data-shop-print-card] button')].find(
+      (candidate) => candidate.textContent?.includes('Buy Poster'),
     )
     if (!(button instanceof HTMLButtonElement)) throw new Error('No add-print button found')
+    const title = button
+      .closest('[data-shop-print-card]')
+      ?.querySelector('h3')
+      ?.textContent?.trim()
     button.click()
+    return title
   })
+  if (!firstOrderTitle) throw new Error('Could not resolve the ordered print title')
   await page.waitForSelector('[data-shop-cart-bar]')
+  // The first popup breaks out shipping (Jon's feedback): "$30 + $6 shipping",
+  // never a bare surprise total.
+  const cartBar = await page.$eval('[data-shop-cart-total]', (element) =>
+    element.textContent?.replace(/\s+/g, ' ').trim(),
+  )
+  if (cartBar !== '$30 + $6 shipping') {
+    throw new Error(`The cart bar should break out shipping: ${JSON.stringify(cartBar)}`)
+  }
   await page.evaluate(() => document.querySelector('[data-shop-open-cart]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })))
   await page.waitForSelector('[data-shop-donation-panel]', { visible: true })
   const cart = await page.evaluate(() => {
@@ -477,7 +522,7 @@ try {
   })
 
   if (
-    !cart.text?.includes('$12 total with $6 US shipping') ||
+    !cart.text?.includes('$36 total with $6 US shipping') ||
     cart.donationChips !== 3 ||
     cart.customToggle !== 1
   ) {
@@ -490,7 +535,7 @@ try {
         cart.stripeCheckoutCount !== 0 ||
         !cart.href?.startsWith('mailto:') ||
         !decodeURIComponent(cart.href).includes('Optional support: $0') ||
-        !decodeURIComponent(cart.href).includes('Order total: $12')
+        !decodeURIComponent(cart.href).includes('Order total: $36')
   ) {
     throw new Error(`Checkout handoff does not match its configuration: ${JSON.stringify({
       checkoutConfig,
@@ -500,7 +545,7 @@ try {
 
   await page.select('[data-shop-cart-quantity]', '3')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$24 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$96 total'),
   )
   const quantityOrder = await page.evaluate(() => {
     const requestLink = [...document.querySelectorAll('a')].find((link) =>
@@ -515,23 +560,23 @@ try {
     }
   })
   if (
-    quantityOrder.total !== '$24 total with $6 US shipping' ||
+    quantityOrder.total !== '$96 total with $6 US shipping' ||
     quantityOrder.quantity !== '3' ||
     quantityOrder.quantityOptionCount !== 20 ||
     (!checkoutConfig.body.checkoutEnabled &&
-      (!quantityOrder.order.includes('Own Your Health Data × 3: $18') ||
-        !quantityOrder.order.includes('Order total: $24')))
+      (!quantityOrder.order.includes(`${firstOrderTitle} × 3: $90`) ||
+        !quantityOrder.order.includes('Order total: $96')))
   ) {
     throw new Error(`Print quantity is not reflected in the order: ${JSON.stringify(quantityOrder)}`)
   }
   await page.select('[data-shop-cart-quantity]', '1')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$12 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$36 total'),
   )
 
   await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$27 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$51 total'),
   )
   const presetDonation = await page.evaluate(() => {
     const requestLink = [...document.querySelectorAll('a')].find((link) =>
@@ -543,10 +588,10 @@ try {
     }
   })
   if (
-    !presetDonation.total?.includes('$27 total') ||
+    !presetDonation.total?.includes('$51 total') ||
     (!checkoutConfig.body.checkoutEnabled &&
       (!presetDonation.order.includes('Optional support: $15') ||
-        !presetDonation.order.includes('Order total: $27')))
+        !presetDonation.order.includes('Order total: $51')))
   ) {
     throw new Error(`Preset donation is not reflected in the order: ${JSON.stringify(presetDonation)}`)
   }
@@ -555,7 +600,7 @@ try {
   await page.waitForSelector('[data-shop-custom-donation]', { visible: true })
   await page.type('[data-shop-custom-donation]', '12')
   await page.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$24 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$48 total'),
   )
   const customDonation = await page.evaluate(() => {
     const requestLink = [...document.querySelectorAll('a')].find((link) =>
@@ -569,10 +614,10 @@ try {
   })
   if (
     customDonation.customFieldCount !== 1 ||
-    !customDonation.total?.includes('$24 total') ||
+    !customDonation.total?.includes('$48 total') ||
     (!checkoutConfig.body.checkoutEnabled &&
       (!customDonation.order.includes('Optional support: $12') ||
-        !customDonation.order.includes('Order total: $24')))
+        !customDonation.order.includes('Order total: $48')))
   ) {
     throw new Error(`Custom donation is not reflected in the order: ${JSON.stringify(customDonation)}`)
   }
@@ -730,7 +775,7 @@ try {
   await mobilePage.waitForSelector('[data-shop-donation-panel]', { visible: true })
   await mobilePage.select('[data-shop-cart-quantity]', '3')
   await mobilePage.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$24 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$96 total'),
   )
   const mobileQuantity = await mobilePage.evaluate(() => {
     const select = document.querySelector('[data-shop-cart-quantity]')
@@ -746,7 +791,7 @@ try {
   })
   if (
     mobileQuantity.scrollWidth > mobileQuantity.viewportWidth + 3 ||
-    mobileQuantity.total !== '$24 total with $6 US shipping' ||
+    mobileQuantity.total !== '$96 total with $6 US shipping' ||
     !mobileQuantity.selectRect ||
     mobileQuantity.selectRect.left < 0 ||
     mobileQuantity.selectRect.right > 390
@@ -755,11 +800,11 @@ try {
   }
   await mobilePage.select('[data-shop-cart-quantity]', '1')
   await mobilePage.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$12 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$36 total'),
   )
   await mobilePage.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
   await mobilePage.waitForFunction(
-    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$27 total'),
+    () => document.querySelector('[data-shop-order-total]')?.textContent?.includes('$51 total'),
   )
   const mobileDonation = await mobilePage.evaluate(() => ({
     viewportWidth: document.documentElement.clientWidth,
@@ -777,7 +822,7 @@ try {
   }))
   if (
     mobileDonation.scrollWidth > mobileDonation.viewportWidth + 3 ||
-    mobileDonation.total !== '$27 total with $6 US shipping' ||
+    mobileDonation.total !== '$51 total with $6 US shipping' ||
     mobileDonation.chipCount !== 3 ||
     !mobileDonation.panelRect ||
     mobileDonation.panelRect.left < 0 ||
@@ -842,6 +887,69 @@ try {
   if (!mobileChatWidget) throw new Error('Mobile chat widget is missing')
   await mobileChatWidget.screenshot({ path: '.audit/shop-poster-chat-mobile.png' })
 
+  // Homepage "bring GoInvo home" section: one CTA (no second "Download the
+  // files" button → no anchor-jump double hop), the shop hero's matted poster
+  // spray, and the $30 fact line (Juhan's feedback, 2026-08-07).
+  const homePage = await browser.newPage()
+  await homePage.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
+  // The section's presence is A/B tested (home-shop-section) and the proxy
+  // re-assigns the cookie on every response, so pinning the cookie is not
+  // enough — force the "present" cohort through the registry's flag-key param.
+  await homePage.goto(`${baseUrl}/?home-shop-section-variant=present`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+  await homePage.waitForSelector('#goinvo-at-home')
+  await homePage.evaluate(() =>
+    document.getElementById('goinvo-at-home')?.scrollIntoView({ block: 'center' }),
+  )
+  await homePage.waitForFunction(
+    () =>
+      [...document.querySelectorAll('#goinvo-at-home img')].length > 0 &&
+      [...document.querySelectorAll('#goinvo-at-home img')].every(
+        (image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0,
+      ),
+    { timeout: 60_000 },
+  )
+  const homeSection = await homePage.evaluate(() => {
+    const section = document.getElementById('goinvo-at-home')
+    if (!section) return null
+    // The poster spray is a decorative tabindex=-1 link; the real CTAs are the
+    // remaining links.
+    const ctaTexts = [...section.querySelectorAll('a:not([tabindex="-1"])')]
+      .map((link) => link.textContent?.trim())
+      .filter((text) => text && text.length > 0)
+    const sprayTiles = [...section.querySelectorAll('a[tabindex="-1"] > span')]
+    return {
+      ctaTexts,
+      mentionsDownloadFiles: (section.textContent || '').includes('Download the files'),
+      statesPrice: /\$30 per print, plus \$6 flat US shipping/.test(section.textContent || ''),
+      sprayTileCount: sprayTiles.length,
+      // Tailwind v4 rotate-* utilities set the CSS `rotate` property.
+      sprayTilted: sprayTiles.filter((tile) => {
+        const style = getComputedStyle(tile)
+        return style.transform !== 'none' || (style.rotate && style.rotate !== 'none')
+      }).length,
+      sprayMatted: sprayTiles.every((tile) =>
+        getComputedStyle(tile).backgroundColor.startsWith('rgb(247'),
+      ),
+    }
+  })
+  if (
+    !homeSection ||
+    homeSection.ctaTexts.length !== 1 ||
+    homeSection.ctaTexts[0] !== 'Explore the collection' ||
+    homeSection.mentionsDownloadFiles ||
+    !homeSection.statesPrice ||
+    homeSection.sprayTileCount !== 3 ||
+    homeSection.sprayTilted !== 3 ||
+    !homeSection.sprayMatted
+  ) {
+    throw new Error(`The homepage prints section is not right: ${JSON.stringify(homeSection)}`)
+  }
+  const homeSectionHandle = await homePage.$('#goinvo-at-home')
+  await homeSectionHandle.screenshot({ path: '.audit/home-goinvo-at-home.png' })
+
   console.log(
     JSON.stringify(
       {
@@ -850,8 +958,12 @@ try {
         checkoutConfig,
         searchResult,
         designAxiomsCount,
+        filteredNotice,
         healthCardsCount,
         designCollectionCount,
+        firstOrderTitle,
+        cartBar,
+        homeSection,
         supportDialog,
         standaloneSupport,
         cart,
