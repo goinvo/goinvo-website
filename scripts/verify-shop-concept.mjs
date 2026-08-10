@@ -438,13 +438,21 @@ try {
     return {
       donateText: trigger?.textContent?.trim(),
       chipCount: document.querySelectorAll('[data-shop-support-dialog] [data-shop-donation-chip]').length,
+      // The dialog must not carry an email capture: it posted to
+      // /api/newsletter/subscribe, which does not exist, so it 404'd on every
+      // submission, and the page already has the real newsletter form further
+      // down. A second one here also implied a separate list that we do not run.
       hasEmailSubmit: Boolean(document.querySelector('[data-shop-support-email-submit]')),
+      promisesASeparateList: /No newsletter unless you ask for it/.test(
+        document.querySelector('[data-shop-support-dialog]')?.textContent || '',
+      ),
     }
   })
   if (
     supportDialog.donateText !== 'Pay what you want' ||
     supportDialog.chipCount !== 3 ||
-    !supportDialog.hasEmailSubmit
+    supportDialog.hasEmailSubmit ||
+    supportDialog.promisesASeparateList
   ) {
     throw new Error(`Support dialog is incomplete: ${JSON.stringify(supportDialog)}`)
   }
