@@ -285,6 +285,12 @@ export function VisualizationStorefront({
   // Post-download support dialog: gift-first (never blocks the download),
   // fires at most once per session, dismisses without friction.
   const [supportDialogOpen, setSupportDialogOpen] = useState(false)
+  // Newsletter signup. This is the studio's ONE list, the same one the form
+  // further down this page subscribes to, so the copy says "newsletter" and
+  // promises nothing separate.
+  const [newsletterEmail, setNewsletterEmail] = useState('')
+  const [newsletterHoneypot, setNewsletterHoneypot] = useState('')
+  const [newsletterState, setNewsletterState] = useState<'idle' | 'submitting' | 'done' | 'error'>('idle')
   const supportPromptedRef = useRef(false)
   const supportDialogRef = useRef<HTMLDivElement>(null)
   // Overlays portal to <body>: page sections sit inside transformed animation
@@ -467,6 +473,27 @@ export function VisualizationStorefront({
    * up (a draft-mode guard reload, a dev hot reload) burned the one prompt of
    * the session and it never came back.
    */
+  async function subscribeToNewsletter(event: React.FormEvent) {
+    event.preventDefault()
+    if (newsletterState === 'submitting') return
+    setNewsletterState('submitting')
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newsletterEmail,
+          sourcePath: window.location.pathname,
+          website: newsletterHoneypot,
+        }),
+      })
+      const data = (await response.json().catch(() => null)) as { ok?: boolean } | null
+      setNewsletterState(response.ok && data?.ok ? 'done' : 'error')
+    } catch {
+      setNewsletterState('error')
+    }
+  }
+
   function dismissSupportDialog() {
     setSupportDialogOpen(false)
     try {
@@ -1054,6 +1081,55 @@ export function VisualizationStorefront({
                 >
                   Pay what you want
                 </button>
+                <div className="mb-4 mt-5 flex items-center gap-3 text-xs uppercase tracking-[1.5px] text-gray" aria-hidden="true">
+                  <span className="h-px flex-1 bg-[#d9d5ce]" />
+                  or
+                  <span className="h-px flex-1 bg-[#d9d5ce]" />
+                </div>
+                {newsletterState === 'done' ? (
+                  <p data-shop-newsletter-done className="mb-0 leading-relaxed text-gray">
+                    You&apos;re on the list. Thanks for reading.
+                  </p>
+                ) : (
+                  <form onSubmit={subscribeToNewsletter}>
+                    <input
+                      type="text"
+                      name="website"
+                      value={newsletterHoneypot}
+                      onChange={(event) => setNewsletterHoneypot(event.target.value)}
+                      tabIndex={-1}
+                      autoComplete="off"
+                      aria-hidden="true"
+                      style={{ position: 'absolute', left: '-9999px', height: 0, width: 0, opacity: 0 }}
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <input
+                        type="email"
+                        required
+                        value={newsletterEmail}
+                        onChange={(event) => setNewsletterEmail(event.target.value)}
+                        placeholder="you@example.com"
+                        aria-label="Email address for the GoInvo newsletter"
+                        disabled={newsletterState === 'submitting'}
+                        className="min-w-0 flex-1 border border-[#cfc9be] px-4 py-3 text-black placeholder:text-gray focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+                      />
+                      <button
+                        type="submit"
+                        disabled={newsletterState === 'submitting'}
+                        aria-busy={newsletterState === 'submitting'}
+                        data-shop-newsletter-submit
+                        className="border border-secondary px-5 py-3 font-semibold text-secondary transition-colors hover:bg-secondary hover:text-white disabled:opacity-60"
+                      >
+                        {newsletterState === 'submitting' ? 'Signing up…' : 'Get the newsletter'}
+                      </button>
+                    </div>
+                    <p className="mt-2 mb-0 text-xs leading-5 text-gray">
+                      {newsletterState === 'error'
+                        ? 'That didn’t go through. Mind trying again in a minute?'
+                        : 'The GoInvo newsletter: new open-source work when it ships.'}
+                    </p>
+                  </form>
+                )}
                 <button
                   type="button"
                   onClick={dismissSupportDialog}
