@@ -1,5 +1,4 @@
 import {
-  BasketIcon,
   CalendarIcon,
   DashboardIcon,
   LinkIcon,
@@ -230,12 +229,6 @@ export const MARKETING_TOOL_VIEWS: Array<{
     description: 'Manage the public /links page for Instagram and social posts.',
     icon: LinkIcon,
   },
-  {
-    id: 'shop',
-    title: 'Shop',
-    description: 'Run the storefront, products, inventory, customers, orders, and payments.',
-    icon: BasketIcon,
-  },
 ]
 
 export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
@@ -248,7 +241,6 @@ export const PRIMARY_MARKETING_VIEW_IDS: MarketingViewId[] = [
   'calendar',
   'channels',
   'linkTree',
-  'shop',
 ]
 
 // Top-level information architecture: the flat view list above collapses into 5 task-shaped
@@ -323,14 +315,6 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
       { view: 'abTesting', label: 'A/B tests' },
       { view: 'analytics', label: 'Analytics sources' },
     ],
-  },
-  {
-    id: 'shop',
-    title: 'Shop',
-    description: 'Sell products and resources, track stock, and connect customers to marketing.',
-    icon: BasketIcon,
-    landingView: 'shop',
-    tabs: [{ view: 'shop', label: 'Storefront & operations' }],
   },
   {
     id: 'settings',

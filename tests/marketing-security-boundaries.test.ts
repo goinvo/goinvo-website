@@ -309,9 +309,9 @@ describe('marketing-plan session signatures', () => {
 
 describe('public experiment beacon validation', () => {
   const valid = {
-    experiment_id: 'home-shop-section',
-    flag_key: 'home-shop-section-variant',
-    variant: 'present',
+    experiment_id: 'home-2026',
+    flag_key: 'home-2026-variant',
+    variant: 'concept',
     page_path: '/',
   }
 

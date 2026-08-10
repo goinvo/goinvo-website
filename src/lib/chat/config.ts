@@ -12,17 +12,8 @@ export function getAllowedChatHosts() {
     .split(',')
     .map(normalizeHost)
     .filter(Boolean)
-  const vercelHosts = [
-    process.env.VERCEL_URL,
-    process.env.VERCEL_BRANCH_URL,
-    process.env.VERCEL_PROJECT_PRODUCTION_URL,
-  ]
-    .filter((host): host is string => Boolean(host))
-    .map(normalizeHost)
 
-  return Array.from(
-    new Set([...siteConfig.chat.allowedHosts.map(normalizeHost), ...envHosts, ...vercelHosts]),
-  )
+  return Array.from(new Set([...siteConfig.chat.allowedHosts.map(normalizeHost), ...envHosts]))
 }
 
 export function isChatGloballyEnabled() {

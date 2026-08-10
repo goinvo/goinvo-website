@@ -2,14 +2,12 @@ import { getPrecomputed, type Flag } from 'flags/next'
 import {
   getMarketingFlagsSecret,
   home2026Variant,
-  homeShopSectionVariant,
   marketingExperimentFlags,
   type Home2026Variant,
-  type HomeShopSectionVariant,
 } from '@/flags'
 
 export type ExperimentPageKind = 'homepage' | 'vision'
-export type ExperimentStatus = 'running' | 'paused' | 'draft' | 'retired'
+export type ExperimentStatus = 'running' | 'paused' | 'draft'
 
 export type PageExperiment<Variant extends string = string> = {
   id: string
@@ -46,9 +44,7 @@ export const home2026Experiment: PageExperiment<Home2026Variant> = {
   code: 'home-2026',
   kind: 'homepage',
   targetPath: '/',
-  // Retired: the studio chose the concept homepage. Kept in the registry so its
-  // historical exposure payloads still resolve, but it no longer runs.
-  status: 'retired',
+  status: 'running',
   flagKey: home2026Variant.key,
   flag: home2026Variant,
   variants: [
@@ -57,22 +53,7 @@ export const home2026Experiment: PageExperiment<Home2026Variant> = {
   ],
 }
 
-export const homeShopSectionExperiment: PageExperiment<HomeShopSectionVariant> = {
-  id: 'home-shop-section',
-  code: 'home-shop-section',
-  kind: 'homepage',
-  targetPath: '/',
-  // The active homepage experiment now that home-2026 is retired.
-  status: 'running',
-  flagKey: homeShopSectionVariant.key,
-  flag: homeShopSectionVariant,
-  variants: [
-    { key: 'control', label: 'No prints section (current homepage)' },
-    { key: 'present', label: 'Prints section shown' },
-  ],
-}
-
-export const pageExperiments = [home2026Experiment, homeShopSectionExperiment] as const
+export const pageExperiments = [home2026Experiment] as const
 
 export function normalizeExperimentPath(pathname: string) {
   if (!pathname || pathname === '/') return '/'

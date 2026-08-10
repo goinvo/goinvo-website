@@ -146,7 +146,6 @@ describe('Marketing CMS schemas', () => {
       'channels',
       'analytics',
       'linkTree',
-      'shop',
     ])
     expect(PRIMARY_MARKETING_VIEW_IDS).toEqual([
       'dashboard',
@@ -158,7 +157,6 @@ describe('Marketing CMS schemas', () => {
       'calendar',
       'channels',
       'linkTree',
-      'shop',
     ])
   })
 

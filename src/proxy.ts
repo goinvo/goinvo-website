@@ -66,19 +66,6 @@ export async function proxy(request: NextRequest) {
     })
   }
 
-  // Same JS-readable-cookie trick for the shop-section presence/absence test.
-  const shopSectionIndex = marketingExperimentFlags.findIndex(
-    (flag) => flag.key === 'home-shop-section-variant',
-  )
-  if (shopSectionIndex >= 0) {
-    response.cookies.set('home-shop-section-variant', String(values[shopSectionIndex] ?? 'present'), {
-      path: '/',
-      maxAge: visitorCookieMaxAge,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    })
-  }
-
   if (forcedVariant) {
     response.headers.set('x-goinvo-experiment-forced-variant', forcedVariant.variant)
     response.headers.set('x-robots-tag', 'noindex, nofollow')
