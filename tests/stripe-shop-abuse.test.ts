@@ -1,0 +1,460 @@
+import { describe, expect, it, vi } from 'vitest'
+import {
+  SHOP_MAX_DONATION_CENTS,
+  buildStripeLineItems,
+  checkoutRequestSchema,
+  stripeKeyMode,
+} from '@/lib/shop/checkout'
+
+/**
+ * Adversarial coverage for the money path. The storefront takes real payments,
+ * so every one of these is an attempt to pay less than owed, extract value, or
+ * smuggle attacker-controlled data into Stripe/Sanity/Slack. Each case asserts
+ * the request never survives validation — prices are ALWAYS resolved
+ * server-side from the CMS, never accepted from the client.
+ */
+
+const checkoutId = '017f22e2-79b0-4d1b-88f5-e7f8c18fe64b'
+const validCart = {
+  checkoutId,
+  items: [{ slug: 'own-your-health-data', quantity: 1 }],
+  donationCents: 0,
+}
+const rejects = (body: unknown) => expect(checkoutRequestSchema.safeParse(body).success).toBe(false)
+
+describe('checkout abuse: paying less than owed', () => {
+  it('rejects negative and fractional donations (no negative line items)', () => {
+    rejects({ ...validCart, donationCents: -5000 })
+    rejects({ ...validCart, donationCents: -1 })
+    rejects({ ...validCart, donationCents: 10.5 })
+    rejects({ ...validCart, donationCents: 0.1 })
+  })
+
+  it('rejects numeric edge cases that could wrap or coerce', () => {
+    rejects({ ...validCart, donationCents: Number.MAX_SAFE_INTEGER })
+    rejects({ ...validCart, donationCents: SHOP_MAX_DONATION_CENTS + 1 })
+    rejects({ ...validCart, donationCents: Infinity })
+    rejects({ ...validCart, donationCents: NaN })
+    rejects({ ...validCart, donationCents: '500' })
+    rejects({ ...validCart, donationCents: null })
+  })
+
+  it('rejects quantity manipulation', () => {
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: -3 }] })
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: 0 }] })
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: 1.5 }] })
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: 21 }] })
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: '2' }] })
+  })
+
+  it('refuses client-supplied prices outright rather than ignoring them', () => {
+    // .strict() means a tampered body is rejected, not silently accepted — an
+    // attacker gets no signal that price fields are simply overridden.
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: 1, price: 0 }] })
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: 1, unitAmount: 1 }] })
+    rejects({ ...validCart, items: [{ slug: 'own-your-health-data', quantity: 1, currency: 'usd' }] })
+    rejects({ ...validCart, unitAmount: 1 })
+    rejects({ ...validCart, shipping: 0 })
+    rejects({ ...validCart, coupon: 'FREE' })
+  })
+
+  it('rejects an empty payment and duplicate or oversized carts', () => {
+    rejects({ checkoutId, items: [], donationCents: 0 })
+    rejects({
+      ...validCart,
+      items: [
+        { slug: 'own-your-health-data', quantity: 1 },
+        { slug: 'own-your-health-data', quantity: 20 },
+      ],
+    })
+    rejects({
+      ...validCart,
+      items: Array.from({ length: 51 }, (_, i) => ({ slug: `poster-${i}`, quantity: 1 })),
+    })
+  })
+
+  it('accepts only a well-formed cart', () => {
+    expect(checkoutRequestSchema.safeParse(validCart).success).toBe(true)
+    expect(
+      checkoutRequestSchema.safeParse({ checkoutId, items: [], donationCents: 500 }).success,
+    ).toBe(true)
+  })
+})
+
+describe('checkout abuse: injection through the slug and body', () => {
+  it('rejects GROQ/query injection attempts in slugs', () => {
+    for (const slug of [
+      '*[_type=="marketingContact"]',
+      'own-your-health-data" || _type=="user',
+      "own'--",
+      'own-your-health-data]{...}',
+      '../../etc/passwd',
+      'Own-Your-Health-Data',
+      'own_your_health_data',
+      'own your health data',
+      'a'.repeat(97),
+      '',
+    ]) {
+      rejects({ ...validCart, items: [{ slug, quantity: 1 }] })
+    }
+  })
+
+  it('rejects control characters and unicode tricks in slugs', () => {
+    rejects({ ...validCart, items: [{ slug: 'own\u0000-data', quantity: 1 }] })
+    rejects({ ...validCart, items: [{ slug: 'own\n-data', quantity: 1 }] })
+    rejects({ ...validCart, items: [{ slug: 'ｏｗｎ-data', quantity: 1 }] })
+  })
+
+  it('rejects a non-uuid checkoutId (idempotency key is never attacker-shaped)', () => {
+    rejects({ ...validCart, checkoutId: 'not-a-uuid' })
+    rejects({ ...validCart, checkoutId: '../../admin' })
+    rejects({ ...validCart, checkoutId: `${checkoutId}\n\rX-Injected: 1` })
+  })
+
+  it('does not let a JSON body pollute Object.prototype', () => {
+    const polluted = JSON.parse(
+      `{"checkoutId":"${checkoutId}","items":[{"slug":"own-your-health-data","quantity":1}],"donationCents":0,"__proto__":{"polluted":"yes"}}`,
+    )
+    checkoutRequestSchema.safeParse(polluted)
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined()
+  })
+})
+
+describe('line items are built from trusted catalog data only', () => {
+  it('prices every line from the server-resolved amount, never the request', () => {
+    const [line] = buildStripeLineItems(
+      [
+        {
+          visualizationId: 'viz-1',
+          slug: 'own-your-health-data',
+          title: 'Own Your Health Data',
+          currency: 'USD',
+          unitAmount: 600,
+          quantity: 3,
+        },
+      ],
+      0,
+    )
+    expect(line.price_data?.unit_amount).toBe(600)
+    expect(line.quantity).toBe(3)
+  })
+
+  it('never emits a negative or zero-amount donation line', () => {
+    expect(buildStripeLineItems([], 0)).toHaveLength(0)
+    const [donation] = buildStripeLineItems([], 1500)
+    expect(donation.price_data?.unit_amount).toBe(1500)
+  })
+})
+
+describe('Stripe key handling', () => {
+  it('recognizes restricted keys so they are neither invalid nor exempt from live guards', () => {
+    expect(stripeKeyMode('rk_live_abc')).toBe('live')
+    expect(stripeKeyMode('rk_test_abc')).toBe('test')
+    expect(stripeKeyMode('sk_live_abc')).toBe('live')
+    expect(stripeKeyMode('sk_test_abc')).toBe('test')
+    expect(stripeKeyMode('pk_live_abc')).toBe('invalid')
+    expect(stripeKeyMode('garbage')).toBe('invalid')
+    expect(stripeKeyMode('')).toBe('unconfigured')
+    expect(stripeKeyMode(undefined)).toBe('unconfigured')
+  })
+})
+
+describe('buyer PII never reaches the world-readable dataset', () => {
+  it('writes orders and customer contacts to the private outreach dataset', async () => {
+    vi.resetModules()
+    const datasetsUsed: string[] = []
+    const committed: Array<Record<string, unknown>> = []
+
+    vi.doMock('server-only', () => ({}))
+    vi.doMock('@/sanity/env', () => ({
+      apiVersion: '2024-01-01',
+      dataset: 'production',
+      projectId: 'test',
+      writeToken: 'token',
+    }))
+    vi.doMock('@/lib/shop/stripeConfig', () => ({
+      getStripeClient: () => ({
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              id: 'cs_live_1',
+              created: 1_770_000_000,
+              livemode: true,
+              payment_status: 'paid',
+              amount_total: 1200,
+              currency: 'usd',
+              customer_details: { email: 'buyer@example.com', name: 'Jane Doe' },
+              collected_information: {
+                shipping_details: {
+                  name: 'Jane Doe',
+                  address: {
+                    line1: '12 Elm St', city: 'Boston', state: 'MA',
+                    postal_code: '02118', country: 'US',
+                  },
+                },
+              },
+              total_details: { amount_shipping: 600 },
+              line_items: { data: [] },
+              consent: { promotions: 'opt_in' },
+            }),
+            listLineItems: async () => ({
+              data: [
+                {
+                  id: 'li_1',
+                  description: 'Own Your Health Data',
+                  quantity: 1,
+                  amount_total: 600,
+                  amount_subtotal: 600,
+                  price: { product: { metadata: { kind: 'poster' } } },
+                },
+              ],
+            }),
+          },
+        },
+      }),
+    }))
+    vi.doMock('@sanity/client', () => ({
+      createClient: (config: { dataset: string }) => {
+        datasetsUsed.push(config.dataset)
+        const transaction = {
+          createIfNotExists: (doc: Record<string, unknown>) => { committed.push({ ...doc, __dataset: config.dataset }); return transaction },
+          create: (doc: Record<string, unknown>) => { committed.push({ ...doc, __dataset: config.dataset }); return transaction },
+          commit: async () => ({}),
+        }
+        return {
+          fetch: async (query: string) =>
+            query.includes('marketingShopSettings') ? { syncContacts: true } : null,
+          transaction: () => transaction,
+        }
+      },
+    }))
+
+    const { fulfillStripeCheckout } = await import('@/lib/shop/fulfillment')
+    await fulfillStripeCheckout('cs_live_1')
+
+    const piiDocs = committed.filter(
+      (doc) => doc._type === 'marketingOrder' || doc._type === 'marketingContact',
+    )
+    expect(piiDocs.length).toBeGreaterThan(0)
+    // The whole point: nothing carrying a name, email, or street address may be
+    // written to the public dataset, which serves unauthenticated GROQ.
+    for (const doc of piiDocs) {
+      expect(doc.__dataset).toBe('outreach')
+      expect(doc.__dataset).not.toBe('production')
+    }
+    const order = piiDocs.find((doc) => doc._type === 'marketingOrder')
+    expect(order?.shippingAddress).toContain('12 Elm St')
+  })
+})
+
+/**
+ * The private-dataset split above created a trap: an order in `outreach` that
+ * strongly references a product in `production` is rejected by the Content Lake
+ * with a 409, and a 409 used to be read as "already fulfilled" — so the shopper
+ * was charged, Slack announced the sale, Stripe got a 200, and the order existed
+ * nowhere. These pin both halves shut.
+ */
+describe('an order that cannot be written is never reported as a sale', () => {
+  type Harness = { commit: () => Promise<unknown>; getDocument?: () => Promise<unknown> }
+
+  const loadFulfillment = async ({ commit, getDocument }: Harness) => {
+    vi.resetModules()
+    const committed: Array<Record<string, unknown>> = []
+
+    vi.doMock('server-only', () => ({}))
+    vi.doMock('@/sanity/env', () => ({
+      apiVersion: '2024-01-01',
+      dataset: 'production',
+      projectId: 'test',
+      writeToken: 'token',
+    }))
+    vi.doMock('@/lib/shop/stripeConfig', () => ({
+      getStripeClient: () => ({
+        checkout: {
+          sessions: {
+            retrieve: async () => ({
+              id: 'cs_live_1',
+              created: 1_770_000_000,
+              livemode: true,
+              payment_status: 'paid',
+              amount_total: 1200,
+              currency: 'usd',
+              customer_details: { email: 'buyer@example.com', name: 'Jane Doe' },
+              collected_information: {
+                shipping_details: {
+                  name: 'Jane Doe',
+                  address: {
+                    line1: '12 Elm St', city: 'Boston', state: 'MA',
+                    postal_code: '02118', country: 'US',
+                  },
+                },
+              },
+              total_details: { amount_shipping: 600 },
+              consent: { promotions: 'opt_in' },
+            }),
+            listLineItems: async () => ({
+              data: [
+                {
+                  id: 'li_1',
+                  description: 'Own Your Health Data',
+                  quantity: 1,
+                  amount_total: 600,
+                  amount_subtotal: 600,
+                  price: {
+                    product: {
+                      metadata: {
+                        kind: 'poster',
+                        marketing_product_id: 'marketingProduct.poster-1',
+                        visualization_id: 'healthVisualization.viz-1',
+                      },
+                    },
+                  },
+                },
+              ],
+            }),
+          },
+        },
+      }),
+    }))
+    vi.doMock('@sanity/client', () => ({
+      createClient: (config: { dataset: string }) => {
+        const transaction = {
+          createIfNotExists: (doc: Record<string, unknown>) => { committed.push(doc); return transaction },
+          create: (doc: Record<string, unknown>) => { committed.push(doc); return transaction },
+          commit,
+        }
+        return {
+          fetch: async (query: string) =>
+            query.includes('marketingShopSettings') ? { syncContacts: true } : null,
+          transaction: () => transaction,
+          getDocument: getDocument || (async () => null),
+          __dataset: config.dataset,
+        }
+      },
+    }))
+
+    const { fulfillStripeCheckout } = await import('@/lib/shop/fulfillment')
+    return { fulfillStripeCheckout, committed }
+  }
+
+  const conflict = Object.assign(new Error('Mutation failed: references non-existent document'), {
+    statusCode: 409,
+  })
+
+  it('links products and visualizations weakly, because they live in another dataset', async () => {
+    const { fulfillStripeCheckout, committed } = await loadFulfillment({ commit: async () => ({}) })
+    await fulfillStripeCheckout('cs_live_1')
+
+    const order = committed.find((doc) => doc._type === 'marketingOrder')
+    const items = order?.items as Array<Record<string, Record<string, unknown>>>
+    expect(items).toHaveLength(1)
+    // A strong reference here fails EVERY print order at commit time.
+    expect(items[0].product._weak).toBe(true)
+    expect(items[0].visualization._weak).toBe(true)
+    // The snapshot fields must survive independently — the targets are not
+    // resolvable from the outreach dataset at all.
+    expect(order?.items).toMatchObject([{ title: 'Own Your Health Data', quantity: 1 }])
+  })
+
+  it('rethrows a 409 when the order is not actually on disk, so Stripe retries', async () => {
+    const { fulfillStripeCheckout } = await loadFulfillment({
+      commit: async () => { throw conflict },
+      getDocument: async () => null,
+    })
+
+    await expect(fulfillStripeCheckout('cs_live_1')).rejects.toThrow(/non-existent document/)
+  })
+
+  it('only claims idempotency once the order is confirmed present', async () => {
+    const { fulfillStripeCheckout } = await loadFulfillment({
+      commit: async () => { throw conflict },
+      getDocument: async () => ({ _id: 'marketingOrder.stripe-cs_live_1' }),
+    })
+
+    await expect(fulfillStripeCheckout('cs_live_1')).resolves.toMatchObject({
+      status: 'already-created',
+    })
+  })
+})
+
+describe('catalog resolution rejects unsafe or mispriced products', () => {
+  const loadCatalog = async (products: unknown[], visualizations?: unknown[]) => {
+    vi.resetModules()
+    // `server-only` is a build-time guard with no runtime implementation here.
+    vi.doMock('server-only', () => ({}))
+    vi.doMock('@/sanity/env', () => ({
+      apiVersion: '2024-01-01',
+      dataset: 'production',
+      projectId: 'test',
+      previewToken: undefined,
+    }))
+    vi.doMock('@sanity/client', () => ({
+      createClient: () => ({
+        fetch: async () => ({
+          visualizations: visualizations ?? [
+            { _id: 'viz-1', title: 'Own Your Health Data', slug: 'own-your-health-data' },
+          ],
+          products,
+        }),
+      }),
+    }))
+    return (await import('@/lib/shop/catalog')).resolveCheckoutCatalog
+  }
+
+  const request = {
+    checkoutId,
+    items: [{ slug: 'own-your-health-data', quantity: 1 }],
+    donationCents: 0,
+  }
+
+  it('throws when a CMS price is below the floor (no free or dust-priced orders)', async () => {
+    const resolve = await loadCatalog([
+      { _id: 'p1', slug: 'own-your-health-data', price: 0, currency: 'USD' },
+    ])
+    await expect(resolve(request)).rejects.toThrow(/invalid checkout price/i)
+
+    const resolveNegative = await loadCatalog([
+      { _id: 'p1', slug: 'own-your-health-data', price: -100, currency: 'USD' },
+    ])
+    await expect(resolveNegative(request)).rejects.toThrow(/invalid checkout price/i)
+  })
+
+  it('throws on a non-USD product instead of mixing currencies', async () => {
+    const resolve = await loadCatalog([
+      { _id: 'p1', slug: 'own-your-health-data', price: 6, currency: 'EUR' },
+    ])
+    await expect(resolve(request)).rejects.toThrow(/USD/i)
+  })
+
+  it('throws a 400-classified error when the slug is not a published visualization', async () => {
+    const resolve = await loadCatalog([], [])
+    await expect(resolve(request)).rejects.toThrow(/no longer available/i)
+    // A bad cart must not be reported as a server fault, or real outages get
+    // buried in monitoring noise.
+    await expect(resolve(request)).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('keeps operator misconfiguration as a server error worth alerting on', async () => {
+    const resolve = await loadCatalog([
+      { _id: 'p1', slug: 'own-your-health-data', price: 6, currency: 'EUR' },
+    ])
+    await expect(resolve(request)).rejects.not.toMatchObject({ status: 400 })
+  })
+
+  it('uses the CMS price and ignores a stale Stripe price of a different amount', async () => {
+    const resolve = await loadCatalog([
+      {
+        _id: 'p1',
+        slug: 'own-your-health-data',
+        price: 6,
+        currency: 'USD',
+        stripePriceId: 'price_stale',
+        stripePriceUnitAmount: 100,
+        stripePriceCurrency: 'USD',
+      },
+    ])
+    const [item] = await resolve(request)
+    expect(item.unitAmount).toBe(600)
+    expect(item.stripePriceId).toBeUndefined()
+  })
+})
