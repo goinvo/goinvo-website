@@ -937,9 +937,23 @@ try {
   // spray, and the $30 fact line (Juhan's feedback, 2026-08-07).
   const homePage = await browser.newPage()
   await homePage.setViewport({ width: 1280, height: 900, deviceScaleFactor: 1 })
-  // The section's presence is A/B tested (home-shop-section) and the proxy
-  // re-assigns the cookie on every response, so pinning the cookie is not
-  // enough — force the "present" cohort through the registry's flag-key param.
+  // The section is opt-in per cohort. The "control" half must get NOTHING:
+  // before this gate was inverted, every unassigned visitor saw the section,
+  // which is a launch rather than a test.
+  const controlPage = await browser.newPage()
+  await controlPage.goto(`${baseUrl}/?home-shop-section-variant=control`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  })
+  await new Promise((resolve) => setTimeout(resolve, 4_000))
+  const controlSections = await controlPage.evaluate(
+    () => document.querySelectorAll('#goinvo-at-home').length,
+  )
+  if (controlSections !== 0) {
+    throw new Error(`The control cohort must not see the prints section: ${controlSections}`)
+  }
+  await controlPage.close()
+
   await homePage.goto(`${baseUrl}/?home-shop-section-variant=present`, {
     waitUntil: 'domcontentloaded',
     timeout: 60_000,
