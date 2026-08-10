@@ -123,6 +123,24 @@ export async function fetchStorefrontCatalog(): Promise<StorefrontCatalog> {
   }
 }
 
+/**
+ * Size the artwork Stripe is asked to fetch.
+ *
+ * The posters are 2000px masters, up to ~1.7MB each. Stripe downloads and
+ * caches whatever URL it is handed and shows it on the payment page, so
+ * shipping the master makes checkout slower for the customer for no visible
+ * gain. Sanity resizes on its CDN, so ask for a checkout-sized copy.
+ */
+export function checkoutImageUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined
+  if (!url.startsWith('https://cdn.sanity.io/')) return url
+  // Deliberately no auto=format: that hands a webp-capable fetcher a webp, and
+  // this URL is consumed by Stripe rather than by a browser we control. A plain
+  // jpeg is the format every payment page is certain to render, and it costs
+  // nothing here (a 2000px master drops from ~584kb to ~31kb either way).
+  return `${url}?w=600&h=600&fit=max`
+}
+
 export async function resolveCheckoutCatalog(
   request: CheckoutRequest,
 ): Promise<Array<CheckoutCatalogItem & { quantity: number }>> {
@@ -184,7 +202,7 @@ export async function resolveCheckoutCatalog(
       title: visualization.title,
       currency,
       unitAmount: configuredPrice,
-      imageUrl: product?.imageUrl || visualization.imageUrl,
+      imageUrl: checkoutImageUrl(product?.imageUrl || visualization.imageUrl),
       quantity: requestedItem.quantity,
     }
   })

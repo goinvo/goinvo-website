@@ -131,6 +131,33 @@ async function run() {
       await new Promise((resolve) => setTimeout(resolve, 700))
     }
 
+    // Product artwork is painted as CSS background-image, which nothing above
+    // waits for, so a shot taken here catches empty tiles and reads as "the
+    // images are broken". Ask the browser to actually decode each one first.
+    {
+      const settled = await page
+        .evaluate(async () => {
+          const urls = Array.from(document.querySelectorAll('*'))
+            .map((element) => getComputedStyle(element).backgroundImage)
+            .filter((value) => value && value.startsWith('url('))
+            .map((value) => value.slice(4, -1).replace(/["']/g, ''))
+          if (urls.length === 0) return 0
+          await Promise.all(
+            [...new Set(urls)].map(
+              (url) =>
+                new Promise((resolve) => {
+                  const image = new Image()
+                  image.onload = image.onerror = () => resolve()
+                  image.src = url
+                }),
+            ),
+          )
+          return new Set(urls).size
+        })
+        .catch(() => 0)
+      if (settled > 0) await new Promise((resolve) => setTimeout(resolve, 400))
+    }
+
     await page.screenshot({ path: OUT, fullPage: true })
     console.log(`Screenshot written to ${OUT}`)
   } finally {

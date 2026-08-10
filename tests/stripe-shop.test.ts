@@ -11,6 +11,7 @@ import {
   withoutStoredStripePrices,
 } from '@/lib/shop/checkout'
 import { shopContactDocumentId, stripeOrderDocumentId } from '@/lib/shop/ids'
+import { checkoutImageUrl } from '@/lib/shop/catalog'
 
 const checkoutId = '017f22e2-79b0-4d1b-88f5-e7f8c18fe64b'
 
@@ -265,5 +266,17 @@ describe('Per-piece pricing', () => {
 
     expect(line.price_data?.unit_amount).toBe(900)
     expect(line.quantity).toBe(2)
+  })
+})
+
+describe('Checkout artwork', () => {
+  it('asks Stripe for a sized copy of a Sanity poster, and leaves other hosts alone', () => {
+    expect(
+      checkoutImageUrl('https://cdn.sanity.io/images/a1wsimxr/production/abc-2000x2857.jpg'),
+    ).toBe('https://cdn.sanity.io/images/a1wsimxr/production/abc-2000x2857.jpg?w=600&h=600&fit=max')
+    expect(checkoutImageUrl('https://dd17w042cevyt.cloudfront.net/images/a.jpg')).toBe(
+      'https://dd17w042cevyt.cloudfront.net/images/a.jpg',
+    )
+    expect(checkoutImageUrl(undefined)).toBeUndefined()
   })
 })
