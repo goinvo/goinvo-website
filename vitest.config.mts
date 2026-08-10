@@ -11,8 +11,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // Build-time guard with no runtime implementation; see the stub's note.
-      'server-only': path.resolve(__dirname, './tests/support/server-only-stub.ts'),
     },
   },
 })

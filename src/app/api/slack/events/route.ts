@@ -2,12 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
 import { getSlackConfig, getSlackUserDisplayName, verifySlackRequest } from '@/lib/chat/slack'
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
-import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
 
 export const dynamic = 'force-dynamic'
-
-/** Well under Stripe's 20k evidence cap, but far above the visitor-chat limit. */
-const MAX_DISPUTE_NOTE_LENGTH = 8000
 
 interface SlackEventEnvelope {
   type?: string
@@ -67,7 +63,8 @@ async function handleSlackEvent(event: SlackMessageEvent) {
 
   if (isHubChannel && !eventThreadTs) return
 
-  if (!event.text.trim()) return
+  const text = normalizeChatText(event.text)
+  if (!text) return
 
   const client = getChatSanityClient()
   if (!client) return
@@ -78,34 +75,9 @@ async function handleSlackEvent(event: SlackMessageEvent) {
     isHubChannel,
   })
 
+  if (!thread || thread.status === 'spam' || thread.status === 'archived') return
   const createdAt = slackTimestampToIso(event.ts)
   const authorName = await getSlackUserDisplayName(event.user)
-
-  // Not a visitor chat channel — it may be a shop dispute channel, where a
-  // reply is drafting the response to a chargeback rather than talking to a
-  // visitor. Checked only after the chat lookup misses, so visitor chat keeps
-  // its existing behavior exactly.
-  if (!thread) {
-    // Dispute evidence is written by a colleague, not a stranger, and a long
-    // careful account of what shipped is exactly what wins a chargeback — so
-    // it gets its own, much larger limit instead of the visitor-chat cap that
-    // would silently discard it.
-    await appendDisputeNoteFromSlack({
-      channelId: event.channel,
-      text: event.text.replace(/\r\n/g, '\n').trim().slice(0, MAX_DISPUTE_NOTE_LENGTH),
-      authorName: authorName || undefined,
-      slackUserId: event.user,
-      slackMessageTs: event.ts,
-      createdAt,
-    })
-    return
-  }
-
-  if (thread.status === 'spam' || thread.status === 'archived') return
-
-  // Visitor chat keeps its own gate exactly as before.
-  const text = normalizeChatText(event.text)
-  if (!text) return
   const message = createChatMessage({
     authorType: 'team',
     authorName: authorName || 'GoInvo',

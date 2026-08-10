@@ -69,41 +69,5 @@ export const home2026Variant = flag<Home2026Variant, MarketingFlagEntities>({
   ...home2026FlagProvider,
 })
 
-export type HomeShopSectionVariant = 'control' | 'present'
-
-// Same deterministic FNV-1a 50/50 as the home-2026 split, seeded differently so
-// a visitor's shop-section cohort is independent of their homepage cohort.
-export function assignHomeShopSectionVariant(visitorId?: string): HomeShopSectionVariant {
-  if (!visitorId) return 'present'
-  const input = `home-shop-section-variant:${visitorId}`
-  let hash = 2166136261
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0) % 100 < 50 ? 'control' : 'present'
-}
-
-// Dormant default is 'present' — with the experiment off, the section simply
-// ships and shows for everyone. FLAGS turns the 50/50 split on.
-const homeShopSectionFlagProvider = process.env.FLAGS
-  ? {
-      decide: ({ entities }: { entities?: MarketingFlagEntities }) =>
-        assignHomeShopSectionVariant(entities?.visitor?.id),
-    }
-  : { decide: () => 'present' as HomeShopSectionVariant }
-
-export const homeShopSectionVariant = flag<HomeShopSectionVariant, MarketingFlagEntities>({
-  key: 'home-shop-section-variant',
-  description: 'Homepage A/B test: presence vs absence of the "bring GoInvo home" prints section.',
-  defaultValue: 'present',
-  options: [
-    { value: 'control', label: 'No prints section (current homepage)' },
-    { value: 'present', label: 'Prints section shown' },
-  ],
-  identify: identifyMarketingVisitor,
-  ...homeShopSectionFlagProvider,
-})
-
-export const marketingExperimentFlags = [home2026Variant, homeShopSectionVariant] as const
+export const marketingExperimentFlags = [home2026Variant] as const
 
