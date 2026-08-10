@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
 
 /**
@@ -76,6 +76,21 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
   // 'control' is the baseline homepage with no section.
   const visible = variant === 'present'
 
+  // Latched by the reader's first scroll gesture. Sampling window.scrollY once
+  // is not enough: a wheel or touch delta can be in flight and not yet applied
+  // at the instant the gate checks, which read as "idle" and jumped anyway, on
+  // top of their scroll, landing past the section with its heading off-screen.
+  const readerMovedRef = useRef(false)
+  useEffect(() => {
+    const mark = () => {
+      readerMovedRef.current = true
+    }
+    const options: AddEventListenerOptions = { passive: true, capture: true }
+    const events = ['wheel', 'touchstart', 'touchmove', 'keydown', 'scroll'] as const
+    events.forEach((event) => window.addEventListener(event, mark, options))
+    return () => events.forEach((event) => window.removeEventListener(event, mark, options))
+  }, [])
+
   /**
    * Honour a deep link to anything inside the gated subtree.
    *
@@ -91,11 +106,31 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!visible) return
     const id = decodeURIComponent(window.location.hash.replace(/^#/, ''))
-    if (!id || window.scrollY > 0) return
-    const target = document.getElementById(id)
-    // Instant, not smooth: this is a deep link resolving late, not a nav
-    // gesture, and an animated eight-thousand-pixel scroll reads as a bug.
-    target?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    if (!id) return
+
+    let cancelled = false
+    // One frame of delay so a gesture that arrived while the section was
+    // mounting is applied before we decide the reader is sitting still.
+    const frame = requestAnimationFrame(() => {
+      if (cancelled || readerMovedRef.current || window.scrollY > 0) return
+      const target = document.getElementById(id)
+      if (!target) return
+      try {
+        // Instant, not smooth: this is a deep link resolving late, not a nav
+        // gesture, and an animated eight-thousand-pixel scroll reads as a bug.
+        target.scrollIntoView({ block: 'start', behavior: 'instant' })
+      } catch {
+        // WebKit before 15.4 rejects the 'instant' enum member with a
+        // TypeError, which would otherwise kill this effect on exactly the
+        // older phones people open shared links on.
+        target.scrollIntoView(true)
+      }
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+    }
   }, [visible])
 
   return (

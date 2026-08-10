@@ -9,10 +9,12 @@ import { HomeGoinvoAtHomeCta } from './HomeGoinvoAtHomeCta'
  * store: the offer is the design, free to download or available as a print.
  *
  * Presence/absence is A/B tested via ShopSectionGate (experiment
- * `home-shop-section`), so we can confirm it guides people to the collection
- * without dampening the homepage's primary job. Server-rendered by default so
- * the section — and its #goinvo-at-home anchor — exist without JS; the gate
- * only removes it for the experiment's "absent" cohort.
+ * `home-shop-section`, variants control/present), so we can confirm it guides
+ * people to the collection without dampening the homepage's primary job. The
+ * gate renders this ONLY for the "present" cohort, which means the section and
+ * its #goinvo-at-home anchor are absent from the server HTML and need JS. The
+ * gate also re-runs the anchor jump on mount, because the browser resolves the
+ * fragment long before this exists.
  *
  * One CTA, and the posters are assembled like the shop page's own hero spray
  * (full posters on cream mats, slight rotations) — the flat cropped-thumbnail
