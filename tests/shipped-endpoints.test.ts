@@ -71,7 +71,10 @@ describe('Shipped components only call endpoints that exist', () => {
 
   it('actually detects a missing route, so a green result means something', () => {
     expect(routeExistsFor('/api/shop/config')).toBe(true)
-    expect(routeExistsFor('/api/newsletter/subscribe')).toBe(false)
+    // The route whose absence caused the 404'd signup form. It exists now, and
+    // this asserts it stays: removing it silently would break the capture again.
+    expect(routeExistsFor('/api/newsletter/subscribe')).toBe(true)
     expect(routeExistsFor('/api/definitely-not-a-route')).toBe(false)
+    expect(routeExistsFor('/api/shop/config/deeper-than-the-route')).toBe(false)
   })
 })
