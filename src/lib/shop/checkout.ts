@@ -22,16 +22,40 @@ export const SHOP_PRICE_CENTS_BY_SLUG: Record<string, number> = {
   'own-your-health-data': 900,
 }
 
+/** How a piece is produced, as set on its marketingProduct document. */
+export type ProductProduction = 'print-on-demand' | 'from-stock'
+
+export type ProductAvailabilityInput = {
+  status?: string
+  orderable?: boolean
+  trackInventory?: boolean
+  inventoryQuantity?: number
+  allowBackorder?: boolean
+}
+
 /**
- * Pieces that cannot be ordered as prints right now (the Open Source Healthcare
- * Journal is a magazine the studio may be out of).
+ * Whether a piece can be ordered, decided from its CMS document rather than a
+ * hardcoded list of slugs.
  *
- * Lives here, not in the storefront component, because the page's structured
- * data needs it too: a `Set` exported from a 'use client' module reaches the
- * server as a client reference, not a Set, and telling Google an item is in
- * stock while the card says otherwise is exactly the contradiction to avoid.
+ * Three ways to take something off sale, in the order an editor would reach for
+ * them: archive/unpublish it, switch "Can be ordered" off, or let tracked
+ * inventory run to zero without backorders. Availability has to come from ONE
+ * place because the card, the buy button and the structured data all consume
+ * it, and Google penalises a page whose markup disagrees with what it shows.
+ *
+ * Absent a product document the piece stays orderable: the catalog is the
+ * exception list, not the permission list, so a new visualization is on sale by
+ * default exactly as it was before any of this existed.
  */
-export const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
+export function isProductOrderable(product: ProductAvailabilityInput | undefined): boolean {
+  if (!product) return true
+  if (product.status && product.status !== 'active') return false
+  if (product.orderable === false) return false
+  if (product.trackInventory && !product.allowBackorder && (product.inventoryQuantity || 0) <= 0) {
+    return false
+  }
+  return true
+}
 
 export function shopPriceCentsFor(slug: string | undefined): number {
   const override = slug ? SHOP_PRICE_CENTS_BY_SLUG[slug] : undefined
