@@ -4,7 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
+import {
+  PRINT_UNAVAILABLE_SLUGS,
+  SHOP_SHIPPING_PRICE_CENTS,
+  shopPriceCentsFor,
+} from '@/lib/shop/checkout'
 
 export type VisualizationPrint = {
   _id: string
@@ -107,7 +111,6 @@ const BUY_LABEL_BY_SLUG: Record<string, string> = {
   // "Buy Comic Book" did not fit the button (Jon, 2026-08-10).
   'own-your-health-data': 'Buy Comic',
 }
-const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
 
 /**
  * Printed sizes for the pieces the studio keeps in stock (Jon's note,
@@ -594,7 +597,9 @@ export function VisualizationStorefront({
                         onClick={() => toggleItem(item._id)}
                         className={`font-semibold ${selected ? 'text-[#24434d]' : 'text-primary'} hover:underline`}
                       >
-                        {selected ? 'Added ✓' : `Buy · ${priceLabel(printPriceOf(item), item.currency)}`}
+                        {selected
+                          ? 'Remove'
+                          : `${BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy'} · ${priceLabel(printPriceOf(item), item.currency)}`}
                       </button>
                     </span>
                   </figcaption>
@@ -734,7 +739,7 @@ export function VisualizationStorefront({
             <div className="border-t border-[#c8c2b8] pt-8">
               <h2 className="font-serif font-light text-[2rem] mb-4">The collection is updating.</h2>
               <p className="text-gray mb-0">
-                You can still <Link href="/vision/health-visualizations">browse the visualization library</Link>.
+                Check back shortly, or <Link href="/vision">browse the rest of our open work</Link>.
               </p>
             </div>
           ) : (
@@ -1092,7 +1097,7 @@ export function VisualizationStorefront({
                 </div>
                 {newsletterState === 'done' ? (
                   <p data-shop-newsletter-done className="mb-0 leading-relaxed text-gray">
-                    You&apos;re on the list. Thanks for reading.
+                    Subscribed. Thanks.
                   </p>
                 ) : (
                   <form onSubmit={subscribeToNewsletter}>
@@ -1112,7 +1117,7 @@ export function VisualizationStorefront({
                         required
                         value={newsletterEmail}
                         onChange={(event) => setNewsletterEmail(event.target.value)}
-                        placeholder="you@example.com"
+                        placeholder="Your email"
                         aria-label="Email address for the GoInvo newsletter"
                         disabled={newsletterState === 'submitting'}
                         className="min-w-0 flex-1 border border-[#cfc9be] px-4 py-3 text-black placeholder:text-gray focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"

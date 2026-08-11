@@ -101,16 +101,19 @@ try {
         link.textContent?.trim(),
       ),
       heroHasEyebrow: (hero?.textContent || '').includes('Open Source Health Design · GoInvo'),
-      // Price and shipping are stated together, once, in the hero fact line.
-      // The amount is whatever the CMS says, so match the shape, not a number.
-      heroStatesPrice: /\$\d[\d,.]* per print, printed on demand, plus \$\d[\d,.]* flat US shipping/.test(
+      // Price and shipping are stated together, once, in the hero fact line,
+      // in the words Juhan dictated. The amount is whatever the CMS says, so
+      // match the shape, not a number. "printed on demand" must NOT come back:
+      // it was never asked for and the page's own data marks two pieces as
+      // stock, so a blanket made-to-order claim is false.
+      heroStatesPrice: /\$\d[\d,.]* per print, plus \$\d[\d,.]* flat US shipping/.test(
         hero?.textContent || '',
       ),
+      heroClaimsPrintOnDemand: /printed on demand/i.test(hero?.textContent || ''),
       heroPrice: (() => {
         const match = (hero?.textContent || '').match(/\$(\d[\d,.]*) per print/)
         return match ? Number(match[1].replace(/,/g, '')) : 0
       })(),
-      heroStatesPrintOnDemand: /printed on demand/i.test(hero?.textContent || ''),
       howItWorksBandCount: document.querySelectorAll('#how-it-works').length,
       cardCount: cards.length,
       addButtonCount: addButtons.length,
@@ -284,7 +287,7 @@ try {
     desktop.heroCtas[0] !== 'Browse the collection' ||
     desktop.heroHasEyebrow ||
     !desktop.heroStatesPrice ||
-    !desktop.heroStatesPrintOnDemand ||
+    desktop.heroClaimsPrintOnDemand ||
     desktop.howItWorksBandCount !== 0
   ) {
     throw new Error(`The hero should carry one CTA and the quiet fact line: ${JSON.stringify(desktop)}`)
@@ -1047,7 +1050,13 @@ try {
     return {
       ctaTexts,
       mentionsDownloadFiles: (section.textContent || '').includes('Download the files'),
-      statesPrice: /\$30 per print, plus \$6 flat US shipping/.test(section.textContent || ''),
+      // The homepage must NOT quote a print price: prices are CMS-owned, so a
+      // hardcoded number here goes stale the first time an editor changes one.
+      // Shipping is a code constant, so naming it is safe.
+      statesPrice: /Free open-source PDFs · Prints ship flat-rate in the US/.test(
+        section.textContent || '',
+      ),
+      quotesAStalePrice: /\$\d[\d,.]* per print/.test(section.textContent || ''),
       sprayTileCount: sprayTiles.length,
       // Tailwind v4 rotate-* utilities set the CSS `rotate` property.
       sprayTilted: sprayTiles.filter((tile) => {
@@ -1065,6 +1074,7 @@ try {
     homeSection.ctaTexts[0] !== 'Explore the collection' ||
     homeSection.mentionsDownloadFiles ||
     !homeSection.statesPrice ||
+    homeSection.quotesAStalePrice ||
     homeSection.sprayTileCount !== 3 ||
     homeSection.sprayTilted !== 3 ||
     !homeSection.sprayMatted
