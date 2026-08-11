@@ -1238,7 +1238,7 @@ export function VisualizationStorefront({
 
       {(selectedItems.length > 0 || donationAmount > 0) && !cartOpen && (
         <aside
-          className="sticky bottom-20 z-30 max-width content-padding pb-4 sm:bottom-4"
+          className="sticky bottom-20 z-[1300] max-width content-padding pb-4"
           aria-label="Order summary"
           data-shop-cart-bar
         >
@@ -1574,7 +1574,7 @@ export function VisualizationStorefront({
       <a
         href="#shop-top"
         aria-label="Back to top"
-        className="fixed right-4 bottom-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-white text-[#24434d] border border-[#d9d5ce] shadow-[0_10px_30px_rgba(36,67,77,.18)] no-underline hover:bg-[#24434d] hover:text-white transition-colors"
+        className="fixed left-4 bottom-4 z-20 grid h-11 w-11 place-items-center rounded-full bg-white text-[#24434d] border border-[#d9d5ce] shadow-[0_10px_30px_rgba(36,67,77,.18)] no-underline hover:bg-[#24434d] hover:text-white transition-colors"
       >
         ↑
       </a>
