@@ -5,7 +5,11 @@ import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
 import { fetchStorefrontCatalog } from '@/lib/shop/catalog'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
-import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
+import {
+  PRINT_UNAVAILABLE_SLUGS,
+  SHOP_SHIPPING_PRICE_CENTS,
+  shopPriceCentsFor,
+} from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { PosterChatCta } from '@/components/chat/PosterChatCta'
 import {
@@ -450,7 +454,13 @@ export default async function HealthVisualizationsPage() {
           '@type': 'Offer',
           price: item.price,
           priceCurrency: item.currency,
-          availability: 'https://schema.org/InStock',
+          // Must agree with the card. The Open Source Healthcare Journal shows
+          // "Print currently unavailable" on the page while this told Google it
+          // was in stock, which is the kind of contradiction that earns a
+          // manual action and, worse, a buyer expecting to order it.
+          availability: PRINT_UNAVAILABLE_SLUGS.has(item.slug || '')
+            ? 'https://schema.org/OutOfStock'
+            : 'https://schema.org/InStock',
           // Shipping is a real, non-zero cost and the US is the only
           // destination — search results that omit either mislead the buyer
           // before they ever reach checkout.
@@ -519,7 +529,7 @@ export default async function HealthVisualizationsPage() {
                 </Link>
               </span>
               <span>
-                ✓ {formatUsd(standardPrice)} per print, printed on demand, plus{' '}
+                ✓ {formatUsd(standardPrice)} per print, plus{' '}
                 {formatUsd(SHOP_SHIPPING_PRICE_CENTS / 100)} flat US shipping
               </span>
             </div>
