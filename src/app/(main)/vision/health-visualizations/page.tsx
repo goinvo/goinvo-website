@@ -550,9 +550,6 @@ export default async function HealthVisualizationsPage() {
                   </p>
                 </div>
               ))}
-              <div className="absolute right-4 bottom-10 bg-primary text-white px-4 py-3 font-bold uppercase tracking-[1.5px] text-xs rotate-3 shadow-xl">
-                Source files + physical prints
-              </div>
             </div>
           )}
         </div>
