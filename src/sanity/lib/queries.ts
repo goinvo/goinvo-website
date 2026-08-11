@@ -346,6 +346,8 @@ export const allHealthVisualizationsQuery = groq`
     image,
     caption,
     date,
+    license,
+    licenseUrl,
     downloadLink,
     learnMoreLink,
     order
@@ -375,6 +377,9 @@ export const shopStorefrontQuery = groq`
       description,
       featured,
       sku,
+      status,
+      orderable,
+      production,
       trackInventory,
       inventoryQuantity,
       lowStockThreshold,

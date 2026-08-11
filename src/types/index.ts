@@ -185,6 +185,8 @@ export interface SEO {
 }
 
 export interface HealthVisualization {
+  license?: string
+  licenseUrl?: string
   _id: string
   title: string
   slug: { current: string }
