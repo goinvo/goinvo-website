@@ -580,7 +580,7 @@ export default async function HealthVisualizationsPage() {
       <section className="bg-[#24434d] text-white">
         <div className="max-width content-padding py-12 lg:py-16 flex flex-col lg:flex-row justify-between gap-7 lg:items-center">
           <h2 className="font-serif font-light text-[2rem] lg:text-[2.5rem] leading-tight mb-0">
-            Need a different format? Ask about sizes, quantities, or event packs.
+            Need a different size or a larger quantity? Ask us.
           </h2>
           <PosterChatCta />
         </div>

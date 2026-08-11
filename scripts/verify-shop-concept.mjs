@@ -79,7 +79,7 @@ try {
     const addButtons = cardButtons.filter((button) => /^Buy (Poster|Comic)/.test(button.textContent?.trim() || ''))
     const comicButtons = cardButtons.filter((button) => button.textContent?.includes('Buy Comic'))
     const unavailableCards = cards.filter((card) =>
-      card.textContent?.includes('Print currently unavailable'),
+      card.textContent?.includes('Not available as a print'),
     )
     const rect = (element) => {
       const bounds = element.getBoundingClientRect()
@@ -299,7 +299,7 @@ try {
     desktop.unavailableCardCount !== 1 ||
     desktop.downloadCount !== desktop.cardCount ||
     desktop.openSourceLabelCount !== desktop.cardCount ||
-    desktop.buyLabels.some((label) => !/^Buy (Poster|Comic)\$\d[\d,.]* · \$\d[\d,.]* shipping$/.test(label)) ||
+    desktop.buyLabels.some((label) => !/^Buy (Poster|Comic)\$\d[\d,.]* · \$\d[\d,.]* shipping per order$/.test(label)) ||
     !(desktop.posterPrice > 0) ||
     !(desktop.comicPrice > 0) ||
     desktop.comicPrice >= desktop.posterPrice ||
@@ -484,7 +484,10 @@ try {
   })
   if (
     !standaloneSupport.text?.includes('Add support') ||
-    !standaloneSupport.text.includes('Pay-what-you-want for 20+ years') ||
+    // Plain and factual: the old line pitched "Pay-what-you-want for 20+ years
+    // of open-source health design", which is crowdfunding voice nobody asked
+    // for, and explained a mechanic the totals already show.
+    !standaloneSupport.text.includes('Optional, and it rides along in this order') ||
     standaloneSupport.total !== '$15 contribution' ||
     (checkoutConfig.body.checkoutEnabled
       ? standaloneSupport.checkoutCount !== 1 || standaloneSupport.fallbackCount !== 0
