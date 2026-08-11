@@ -72,14 +72,13 @@ try {
       return match ? Number(match[1].replace(/,/g, '')) : 0
     }
     const cards = [...document.querySelectorAll('[data-shop-print-card]')]
-    // Per-item labels (Jon): posters say "Buy Poster", the comic book says
-    // "Buy Comic", and the out-of-stock journal has no buy button at all.
-    // Count each shape explicitly.
+    // "Add to cart" is what the button does; it does not buy anything on its
+    // own (Shirley, 2026-08-11). A piece taken off sale in the CMS has no
+    // button at all.
     const cardButtons = [...document.querySelectorAll('[data-shop-print-card] button')]
-    const addButtons = cardButtons.filter((button) => /^Buy (Poster|Comic)/.test(button.textContent?.trim() || ''))
-    const comicButtons = cardButtons.filter((button) => button.textContent?.includes('Buy Comic'))
+    const addButtons = cardButtons.filter((button) => /^Add to cart/.test(button.textContent?.trim() || ''))
     const unavailableCards = cards.filter((card) =>
-      card.textContent?.includes('Not available as a print'),
+      card.textContent?.includes('Not available right now'),
     )
     const rect = (element) => {
       const bounds = element.getBoundingClientRect()
@@ -101,23 +100,21 @@ try {
         link.textContent?.trim(),
       ),
       heroHasEyebrow: (hero?.textContent || '').includes('Open Source Health Design · GoInvo'),
-      // Price and shipping are stated together, once, in the hero fact line,
-      // in the words Juhan dictated. The amount is whatever the CMS says, so
-      // match the shape, not a number. "printed on demand" must NOT come back:
-      // it was never asked for and the page's own data marks two pieces as
-      // stock, so a blanket made-to-order claim is false.
-      heroStatesPrice: /\$\d[\d,.]* per print, plus \$\d[\d,.]* flat US shipping/.test(
-        hero?.textContent || '',
-      ),
+      // No headline price at all: prices are per piece and CMS-owned, so any
+      // single number here is one edit away from being a lie. Shipping is a
+      // code constant, so the hero may state it. And no blanket production
+      // claim: that is per piece now too.
+      heroQuotesAPrice: /\$\d[\d,.]* per print/.test(hero?.textContent || ''),
       heroClaimsPrintOnDemand: /printed on demand/i.test(hero?.textContent || ''),
-      heroPrice: (() => {
-        const match = (hero?.textContent || '').match(/\$(\d[\d,.]*) per print/)
-        return match ? Number(match[1].replace(/,/g, '')) : 0
-      })(),
+      heroStatesShipping: /flat US\s*shipping, however many you order/.test(
+        (hero?.textContent || '').replace(/\s+/g, ' '),
+      ),
+      heroSaysPublicLicense: /free PDF under a public license/.test(
+        (hero?.textContent || '').replace(/\s+/g, ' '),
+      ),
       howItWorksBandCount: document.querySelectorAll('#how-it-works').length,
       cardCount: cards.length,
       addButtonCount: addButtons.length,
-      comicButtonCount: comicButtons.length,
       unavailableCardCount: unavailableCards.length,
       downloadCount: document.querySelectorAll('[data-shop-print-card] [data-shop-download-button]')
         .length,
@@ -130,20 +127,24 @@ try {
       // shipping charge, and the comic is priced apart from the posters.
       buyLabels: addButtons.map((button) => button.textContent?.replace(/\s+/g, ' ').trim() || ''),
       shippingLabel: shippingFromLabel(addButtons[0]?.textContent || ''),
-      posterPrice: priceFromLabel(
-        addButtons.find((button) => button.textContent?.startsWith('Buy Poster'))?.textContent || '',
+      posterPrice: priceFromLabel(addButtons[0]?.textContent || ''),
+      // Every distinct price on the page, so a per-piece price (the comic) is
+      // visible without pinning which piece or which number.
+      distinctPrices: [
+        ...new Set(addButtons.map((button) => priceFromLabel(button.textContent || ''))),
+      ].filter(Boolean),
+      // Production is per piece now: posters printed to order, books off a shelf.
+      productionLabels: [...document.querySelectorAll('[data-shop-production]')].map((element) =>
+        element.getAttribute('data-shop-production'),
       ),
-      comicPrice: priceFromLabel(comicButtons[0]?.textContent || ''),
+      licenseLabels: document.querySelectorAll('[data-shop-license]').length,
       imageDownloadCount: document.querySelectorAll('[data-shop-image-download]').length,
       imageDownloadTargetsMatch: cards.every((card) => {
         const imageLink = card.querySelector('[data-shop-image-download]')
         const buttonLink = card.querySelector('[data-shop-download-button]')
         return imageLink?.getAttribute('href') === buttonLink?.getAttribute('href')
       }),
-      // Fulfillment is uniform, so it is stated once on the page — never per card.
-      cardFulfillmentLabels: [...document.querySelectorAll('[data-shop-print-card] span')].filter(
-        (element) => /^(In stock|Printed on demand)$/.test(element.textContent?.trim() || ''),
-      ).length,
+
       descriptions: [...document.querySelectorAll('[data-shop-print-description]')].map(
         (element) => element.textContent?.trim() || '',
       ),
@@ -152,12 +153,12 @@ try {
       ].filter((element) =>
         element.textContent?.includes('open-source health and design collection'),
       ).length,
-      // Not every card has a buy button (comic book label, unavailable
-      // journal) — check alignment only on the labels that exist.
+      // Not every card has a button (a piece can be off sale) — check
+      // alignment only on the labels that exist.
       actionLabelAlignments: cards.flatMap((card) => {
         const download = card.querySelector('[data-shop-download-button]')
         const order = [...card.querySelectorAll('button')].find((button) =>
-          /^Buy (Poster|Comic)/.test(button.textContent?.trim() || ''),
+          /^Add to cart/.test(button.textContent?.trim() || ''),
         )
         return [download?.firstElementChild, order?.firstElementChild]
           .filter((element) => element)
@@ -271,7 +272,7 @@ try {
         orders: firstRowCards.map((card) =>
           rect(
             [...card.querySelectorAll('button')].find((button) =>
-              button.textContent?.includes('Buy Poster'),
+              button.textContent?.includes('Add to cart'),
             ),
           ),
         ),
@@ -286,27 +287,32 @@ try {
     desktop.heroCtas.length !== 1 ||
     desktop.heroCtas[0] !== 'Browse the collection' ||
     desktop.heroHasEyebrow ||
-    !desktop.heroStatesPrice ||
+    desktop.heroQuotesAPrice ||
     desktop.heroClaimsPrintOnDemand ||
+    !desktop.heroStatesShipping ||
+    !desktop.heroSaysPublicLicense ||
     desktop.howItWorksBandCount !== 0
   ) {
     throw new Error(`The hero should carry one CTA and the quiet fact line: ${JSON.stringify(desktop)}`)
   }
   if (
     desktop.cardCount === 0 ||
-    desktop.addButtonCount !== desktop.cardCount - 1 ||
-    desktop.comicButtonCount !== 1 ||
+    desktop.addButtonCount !== desktop.cardCount - desktop.unavailableCardCount ||
     desktop.unavailableCardCount !== 1 ||
+    // Production is stated per piece, from the CMS, and both kinds appear.
+    desktop.productionLabels.length !== desktop.cardCount ||
+    !desktop.productionLabels.includes('print-on-demand') ||
+    !desktop.productionLabels.includes('from-stock') ||
+    desktop.licenseLabels !== desktop.cardCount ||
     desktop.downloadCount !== desktop.cardCount ||
     desktop.openSourceLabelCount !== desktop.cardCount ||
-    desktop.buyLabels.some((label) => !/^Buy (Poster|Comic)\$\d[\d,.]* · \$\d[\d,.]* shipping per order$/.test(label)) ||
+    desktop.buyLabels.some((label) => !/^Add to cart\$\d[\d,.]* · \$\d[\d,.]* shipping per order$/.test(label)) ||
     !(desktop.posterPrice > 0) ||
-    !(desktop.comicPrice > 0) ||
-    desktop.comicPrice >= desktop.posterPrice ||
+    // Per-piece pricing is real: more than one price on the page.
+    desktop.distinctPrices.length < 2 ||
     desktop.shippingLabel <= 0 ||
     desktop.imageDownloadCount !== desktop.cardCount ||
     !desktop.imageDownloadTargetsMatch ||
-    desktop.cardFulfillmentLabels !== 0 ||
     desktop.descriptions.length !== desktop.cardCount ||
     new Set(desktop.descriptions).size !== desktop.cardCount ||
     desktop.descriptions.some((description) => description.length < 40) ||
@@ -337,7 +343,9 @@ try {
     desktop.collectionCount !== 7 ||
     desktop.sortCount !== 0 ||
     desktop.licenseLink.count !== 1 ||
-    desktop.licenseLink.text !== 'open-source license' ||
+    // The hero names the licence generically; the specific licence rides on
+    // each piece from the CMS, because the catalog is not all one licence.
+    desktop.licenseLink.text !== 'public license' ||
     desktop.licenseLink.href !== 'https://creativecommons.org/licenses/by/3.0/us/' ||
     desktop.heroHeight < 600 ||
     desktop.featuredPosterCount !== 4 ||
@@ -454,7 +462,7 @@ try {
     }
   })
   if (
-    supportDialog.donateText !== 'Pay what you want' ||
+    supportDialog.donateText !== 'Another amount' ||
     supportDialog.chipCount !== 3 ||
     !supportDialog.hasNewsletterSubmit ||
     supportDialog.promisesASeparateList
@@ -462,7 +470,8 @@ try {
     throw new Error(`Support dialog is incomplete: ${JSON.stringify(supportDialog)}`)
   }
 
-  // "Pay what you want" opens the checkout screen with the support editor.
+  // "Another amount" opens the checkout screen with the support editor.
+  // It must fire once and never again for this visitor (Shirley, 2026-08-11).
   await page.click('[data-shop-support-dialog] [data-shop-donate-trigger]')
   await page.waitForSelector('[data-shop-donation-panel]', { visible: true })
   await page.click('[data-shop-donation-panel] [data-shop-donation-chip="15"]')
@@ -487,7 +496,7 @@ try {
     // Plain and factual: the old line pitched "Pay-what-you-want for 20+ years
     // of open-source health design", which is crowdfunding voice nobody asked
     // for, and explained a mechanic the totals already show.
-    !standaloneSupport.text.includes('Optional, and it rides along in this order') ||
+    !standaloneSupport.text.includes('Added to this order') ||
     standaloneSupport.total !== '$15 contribution' ||
     (checkoutConfig.body.checkoutEnabled
       ? standaloneSupport.checkoutCount !== 1 || standaloneSupport.fallbackCount !== 0
@@ -507,6 +516,29 @@ try {
   )
   await page.click('[data-shop-cart-close]')
   await page.waitForSelector('[data-shop-donation-panel]', { hidden: true })
+
+  // Second download, same visitor: the support ask must NOT come back. It is
+  // stored in localStorage rather than sessionStorage precisely so a new tab or
+  // a return visit tomorrow does not ask again.
+  await page.evaluate(() => {
+    document.addEventListener('click', (event) => event.preventDefault(), {
+      capture: true,
+      once: true,
+    })
+    document.querySelector('[data-shop-image-download]')?.click()
+  })
+  await new Promise((resolve) => setTimeout(resolve, 2_500))
+  const askedTwice = await page.evaluate(
+    () => document.querySelectorAll('[data-shop-support-dialog]').length,
+  )
+  const promptMarker = await page.evaluate(() =>
+    window.localStorage.getItem('goinvo-shop-support-prompted'),
+  )
+  if (askedTwice !== 0 || promptMarker !== '1') {
+    throw new Error(
+      `The support ask must fire once per visitor, not per session: ${JSON.stringify({ askedTwice, promptMarker })}`,
+    )
+  }
 
   await page.evaluate(() => {
     const button = [...document.querySelectorAll('button')].find(
@@ -572,7 +604,7 @@ try {
 
   const firstOrderTitle = await page.evaluate(() => {
     const button = [...document.querySelectorAll('[data-shop-print-card] button')].find(
-      (candidate) => candidate.textContent?.includes('Buy Poster'),
+      (candidate) => candidate.textContent?.includes('Add to cart'),
     )
     if (!(button instanceof HTMLButtonElement)) throw new Error('No add-print button found')
     const title = button
@@ -821,7 +853,10 @@ try {
   })
   // The support ask opens after a download (once per session), then hands off
   // to the checkout screen.
+  // Same browser profile as the desktop pass, and the ask is now once per
+  // visitor, so clear the marker before exercising the dialog here.
   await mobilePage.evaluate(() => {
+    window.localStorage.removeItem('goinvo-shop-support-prompted')
     document.addEventListener('click', (event) => event.preventDefault(), {
       capture: true,
       once: true,
@@ -864,7 +899,7 @@ try {
   await mobilePage.waitForSelector('[data-shop-donation-panel]', { hidden: true })
   await mobilePage.evaluate(() => {
     const button = [...document.querySelectorAll('button')].find((candidate) =>
-      candidate.textContent?.includes('Buy Poster'),
+      candidate.textContent?.includes('Add to cart'),
     )
     if (!(button instanceof HTMLButtonElement)) throw new Error('Mobile order button is missing')
     button.click()

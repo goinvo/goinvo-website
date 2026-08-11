@@ -4,11 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import {
-  PRINT_UNAVAILABLE_SLUGS,
-  SHOP_SHIPPING_PRICE_CENTS,
-  shopPriceCentsFor,
-} from '@/lib/shop/checkout'
+import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
 
 export type VisualizationPrint = {
   _id: string
@@ -22,7 +18,12 @@ export type VisualizationPrint = {
   price?: number
   currency?: string
   checkoutUrl?: string
-  fulfillment?: 'in-stock' | 'print-on-demand'
+  /** How this piece is produced, from its product document. */
+  production?: 'print-on-demand' | 'from-stock'
+  /** False when the CMS has taken it off sale or stock has run out. */
+  orderable?: boolean
+  license?: string
+  licenseUrl?: string
 }
 
 type CollectionId =
@@ -102,21 +103,17 @@ const collectionSlugs: Record<Exclude<CollectionId, 'all'>, string[]> = {
   ],
 }
 
-/**
- * Per-item overrides (Jon's feedback, 2026-08-07): not everything is a poster.
- * Own Your Health Data is a comic book; the Open Source Healthcare Journal is a
- * magazine we may be out of, so its print isn't orderable right now.
- */
-const BUY_LABEL_BY_SLUG: Record<string, string> = {
-  // "Buy Comic Book" did not fit the button (Jon, 2026-08-10).
-  'own-your-health-data': 'Buy Comic',
-}
 
 /**
  * Printed sizes for the pieces the studio keeps in stock (Jon's note,
  * 2026-08-07). Jon gave these from memory, so they are stated as approximate
  * until someone measures the actual stock.
  */
+const PRODUCTION_LABEL: Record<string, string> = {
+  'print-on-demand': 'Printed when you order it',
+  'from-stock': 'Ships from our shelf',
+}
+
 const PRINT_SIZE_BY_SLUG: Record<string, string> = {
   'determinants-of-health': 'about 24 × 36 in',
   'healthcare-is-a-human-right': 'about 11 × 14 in',
@@ -465,7 +462,7 @@ export function VisualizationStorefront({
   function maybeOpenSupportDialog() {
     if (supportPromptedRef.current) return
     try {
-      if (window.sessionStorage.getItem('goinvo-shop-support-prompted')) return
+      if (window.localStorage.getItem('goinvo-shop-support-prompted')) return
     } catch {
       // Storage unavailable — the ref below still limits it to once per visit.
     }
@@ -503,7 +500,7 @@ export function VisualizationStorefront({
   function dismissSupportDialog() {
     setSupportDialogOpen(false)
     try {
-      window.sessionStorage.setItem('goinvo-shop-support-prompted', '1')
+      window.localStorage.setItem('goinvo-shop-support-prompted', '1')
     } catch {
       // Best-effort only.
     }
@@ -598,7 +595,7 @@ export function VisualizationStorefront({
                       >
                         {selected
                           ? 'Remove'
-                          : `${BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy'} · ${priceLabel(printPriceOf(item), item.currency)}`}
+                          : `Add to cart · ${priceLabel(printPriceOf(item), item.currency)}`}
                       </button>
                     </span>
                   </figcaption>
@@ -619,7 +616,7 @@ export function VisualizationStorefront({
           <div className="mt-12 border-t border-[#d8cbb5] pt-9">
             <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
               <h3 className="mb-0 font-serif text-[1.7rem] font-light">Collections</h3>
-              <p className="mb-0 text-sm text-gray">Sets made to be used together.</p>
+              <p className="mb-0 text-sm text-gray">Two sets we print together.</p>
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
@@ -918,6 +915,30 @@ export function VisualizationStorefront({
                                   Printed {printSize}
                                 </span>
                               )}
+                              {/* Not every piece is made the same way: posters
+                                  are printed to order, books come off a shelf
+                                  (Shirley, 2026-08-11). Per piece, from the CMS.*/}
+                              {item.production && PRODUCTION_LABEL[item.production] && (
+                                <span data-shop-production={item.production} className="text-gray">
+                                  {PRODUCTION_LABEL[item.production]}
+                                </span>
+                              )}
+                              {item.license && (
+                                <span data-shop-license className="text-gray">
+                                  {item.licenseUrl ? (
+                                    <a
+                                      href={item.licenseUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-gray underline underline-offset-2"
+                                    >
+                                      {item.license}
+                                    </a>
+                                  ) : (
+                                    item.license
+                                  )}
+                                </span>
+                              )}
                             </div>
                             {downloadLink && (
                               <a
@@ -934,9 +955,9 @@ export function VisualizationStorefront({
                                 </span>
                               </a>
                             )}
-                            {PRINT_UNAVAILABLE_SLUGS.has(item.slug || '') ? (
+                            {item.orderable === false ? (
                               <p className="mb-0 min-h-[3.5rem] flex items-center px-5 py-3 text-sm text-gray">
-                                Not available as a print. The PDF above is free.
+                                Not available right now. The PDF above is free.
                               </p>
                             ) : (
                               // Outline, not a filled orange slab: the posters
@@ -953,7 +974,7 @@ export function VisualizationStorefront({
                                 }`}
                               >
                                 <span className="whitespace-nowrap text-left">
-                                  {selected ? 'Remove' : BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy Poster'}
+                                  {selected ? 'Remove' : 'Add to cart'}
                                 </span>
                                 <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
                                   {printPrice} · {formatPrice(shippingPrice)} shipping per order
@@ -1057,10 +1078,10 @@ export function VisualizationStorefront({
             <div className="absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden="true" />
             <>
                 <h3 id="shop-support-title" className="mb-2 font-serif text-[1.9rem] font-light leading-tight">
-                  Enjoy the download
+                  That download is yours
                 </h3>
                 <p className="mb-5 leading-relaxed text-gray">
-                  If this work is useful, chip in what you like. It funds the next open release.
+                  We give this work away. If you want to help pay for the next piece, you can.
                 </p>
                 <div className="mb-3 grid grid-cols-3 gap-2">
                   {(['5', '15', '30'] as const).map((amount) => (
@@ -1084,7 +1105,7 @@ export function VisualizationStorefront({
                   onClick={() => openCartForSupport('custom')}
                   className="mb-5 w-full border border-[#cfc9be] px-4 py-2.5 text-sm font-semibold text-[#24434d] transition-colors hover:border-secondary hover:text-secondary"
                 >
-                  Pay what you want
+                  Another amount
                 </button>
                 <div className="mb-4 mt-5 flex items-center gap-3 text-xs uppercase tracking-[1.5px] text-gray" aria-hidden="true">
                   <span className="h-px flex-1 bg-[#d9d5ce]" />
@@ -1093,7 +1114,7 @@ export function VisualizationStorefront({
                 </div>
                 {newsletterState === 'done' ? (
                   <p data-shop-newsletter-done className="mb-0 leading-relaxed text-gray">
-                    Subscribed. Thanks.
+                    You're subscribed.
                   </p>
                 ) : (
                   <form onSubmit={subscribeToNewsletter}>
@@ -1131,7 +1152,7 @@ export function VisualizationStorefront({
                     <p className="mt-2 mb-0 text-xs leading-5 text-gray">
                       {newsletterState === 'error'
                         ? 'That didn’t go through. Mind trying again in a minute?'
-                        : 'The same GoInvo newsletter as the sign-up further down this page.'}
+                        : 'The same newsletter as the sign-up further down this page.'}
                     </p>
                   </form>
                 )}
@@ -1302,7 +1323,7 @@ export function VisualizationStorefront({
                 </p>
                 <p className="mb-1 font-serif text-[1.35rem] font-light">Add support</p>
                 <p className="mb-3 text-sm leading-relaxed text-gray">
-                  Optional, and it rides along in this order.
+                  Added to this order.
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   {(['5', '15', '30'] as const).map((amount) => (
