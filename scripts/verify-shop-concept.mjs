@@ -616,6 +616,43 @@ try {
   })
   if (!firstOrderTitle) throw new Error('Could not resolve the ordered print title')
   await page.waitForSelector('[data-shop-cart-bar]')
+
+  // The ONLY route to checkout must actually be clickable. The order bar shared
+  // the bottom-right corner with the chat launcher (z-1200), so at every
+  // desktop and tablet width the centre of "Review order" resolved to the chat
+  // widget and clicking checkout opened a chat instead. Mobile escaped it only
+  // because the bar sat higher. Check the real hit target, not the geometry.
+  for (const [width, height] of [
+    [1440, 900],
+    [1280, 800],
+    [1024, 768],
+    [820, 1180],
+  ]) {
+    await page.setViewport({ width, height, deviceScaleFactor: 1 })
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    const blockedBy = await page.evaluate(() => {
+      const button = document.querySelector('[data-shop-open-cart]')
+      if (!button) return 'the review-order button is missing'
+      const bounds = button.getBoundingClientRect()
+      const points = [
+        [bounds.left + bounds.width / 2, bounds.top + bounds.height / 2],
+        [bounds.left + 5, bounds.top + 5],
+        [bounds.right - 5, bounds.bottom - 5],
+      ]
+      for (const [x, y] of points) {
+        const hit = document.elementFromPoint(x, y)
+        if (!hit || !hit.closest('[data-shop-cart-bar]')) {
+          return hit ? `${hit.tagName.toLowerCase()}.${(hit.className || '').toString().split(' ')[0]}` : 'nothing'
+        }
+      }
+      return null
+    })
+    if (blockedBy) {
+      throw new Error(`Checkout CTA is not clickable at ${width}x${height}: covered by ${blockedBy}`)
+    }
+  }
+  await page.setViewport({ width: 1064, height: 900, deviceScaleFactor: 1 })
+
   // The first popup breaks out shipping (Jon's feedback): "$30 + $6 shipping",
   // never a bare surprise total.
   const unit = desktop.posterPrice
