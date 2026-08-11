@@ -6,8 +6,8 @@ import { fetchStorefrontCatalog } from '@/lib/shop/catalog'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
 import {
-  PRINT_UNAVAILABLE_SLUGS,
   SHOP_SHIPPING_PRICE_CENTS,
+  isProductOrderable,
   shopPriceCentsFor,
 } from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
@@ -33,25 +33,9 @@ export const metadata: Metadata = {
 
 const DEFAULT_PRINT_CURRENCY = 'USD'
 
-// Editors set prices in the CMS, so the hero cannot hard-code one: the moment
-// someone changes a price the page would be advertising a number it no longer
-// charges. Take the price most pieces share and state that.
-function standardPrintPrice(items: VisualizationPrint[]): number {
-  const counts = new Map<number, number>()
-  for (const item of items) {
-    if (typeof item.price !== 'number') continue
-    counts.set(item.price, (counts.get(item.price) || 0) + 1)
-  }
-  let standard = 0
-  let seen = 0
-  for (const [price, count] of counts) {
-    if (count > seen || (count === seen && price > standard)) {
-      standard = price
-      seen = count
-    }
-  }
-  return standard
-}
+// No headline price on this page by design (Shirley, 2026-08-11): prices are
+// CMS-owned and per piece, so any single number in the hero would be both
+// incomplete and one edit away from being wrong. Each card states its own.
 
 function formatUsd(amount: number) {
   return new Intl.NumberFormat('en-US', {
@@ -78,6 +62,8 @@ interface PosterCard {
   imageUrl: string
   downloadUrl: string
   learnMoreLink: string
+  license?: string
+  licenseUrl?: string
 }
 
 type StorefrontSettings = {
@@ -90,8 +76,12 @@ type MarketingProduct = {
   price?: number
   currency?: string
   checkoutUrl?: string
+  status?: string
+  orderable?: boolean
+  production?: 'print-on-demand' | 'from-stock'
   trackInventory?: boolean
   inventoryQuantity?: number
+  allowBackorder?: boolean
 }
 
 type StorefrontData = {
@@ -369,6 +359,8 @@ function normalizeSanityItems(items: HealthVisualization[]): PosterCard[] {
       imageUrl: sanityImageUrl || fallbackImageUrl,
       downloadUrl: resolveDownloadUrl(viz.downloadLink ?? ''),
       learnMoreLink: normalizeLearnMoreLink(viz.learnMoreLink ?? ''),
+      license: viz.license,
+      licenseUrl: viz.licenseUrl,
     }
   })
 }
@@ -418,17 +410,16 @@ export default async function HealthVisualizationsPage() {
       price: product?.price ?? shopPriceCentsFor(card.slug) / 100,
       currency: product?.currency || DEFAULT_PRINT_CURRENCY,
       checkoutUrl: product?.checkoutUrl,
-      fulfillment:
-        product?.trackInventory === true
-          ? (product.inventoryQuantity || 0) > 0
-            ? 'in-stock'
-            : 'print-on-demand'
-          : card.slug === 'determinants-of-health' || card.slug === 'healthcare-dollars'
-            ? 'in-stock'
-            : 'print-on-demand',
+      // Production and availability come from the piece's own document, so an
+      // editor can take something off sale or say a book ships from stock
+      // without a deploy, and so the card and the structured data below can
+      // never disagree about it.
+      production: product?.production || 'print-on-demand',
+      orderable: isProductOrderable(product),
+      license: card.license,
+      licenseUrl: card.licenseUrl,
     }
   })
-  const standardPrice = standardPrintPrice(visualizations)
   const supportEmail = storefrontData?.settings?.supportEmail || 'hello@goinvo.com'
   const storeName = storefrontData?.settings?.storeName || 'GoInvo Health and Design Collection'
   // Jon's picks for the hero spray (2026-08-07): a set whose orientations sit
@@ -458,9 +449,10 @@ export default async function HealthVisualizationsPage() {
           // "Print currently unavailable" on the page while this told Google it
           // was in stock, which is the kind of contradiction that earns a
           // manual action and, worse, a buyer expecting to order it.
-          availability: PRINT_UNAVAILABLE_SLUGS.has(item.slug || '')
-            ? 'https://schema.org/OutOfStock'
-            : 'https://schema.org/InStock',
+          availability:
+            item.orderable === false
+              ? 'https://schema.org/OutOfStock'
+              : 'https://schema.org/InStock',
           // Shipping is a real, non-zero cost and the US is the only
           // destination — search results that omit either mislead the buyer
           // before they ever reach checkout.
@@ -517,7 +509,7 @@ export default async function HealthVisualizationsPage() {
             </div>
             <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-[#d9dee7]">
               <span>
-                ✓ Free PDFs under an{' '}
+                ✓ Every design is a free PDF under a{' '}
                 <Link
                   href="https://creativecommons.org/licenses/by/3.0/us/"
                   target="_blank"
@@ -525,12 +517,12 @@ export default async function HealthVisualizationsPage() {
                   data-shop-license-link
                   className="text-[#79d9e5] underline underline-offset-2"
                 >
-                  open-source license
+                  public license
                 </Link>
               </span>
               <span>
-                ✓ {formatUsd(standardPrice)} per print, plus{' '}
-                {formatUsd(SHOP_SHIPPING_PRICE_CENTS / 100)} flat US shipping
+                ✓ Prints are priced per piece. {formatUsd(SHOP_SHIPPING_PRICE_CENTS / 100)} flat US
+                shipping, however many you order
               </span>
             </div>
           </div>
@@ -580,7 +572,8 @@ export default async function HealthVisualizationsPage() {
       <section className="bg-[#24434d] text-white">
         <div className="max-width content-padding py-12 lg:py-16 flex flex-col lg:flex-row justify-between gap-7 lg:items-center">
           <h2 className="font-serif font-light text-[2rem] lg:text-[2.5rem] leading-tight mb-0">
-            Need a different size or a larger quantity? Ask us.
+            Want a different size, a set for an event, a rush order, or shipping outside the US?
+            Tell us what you need.
           </h2>
           <PosterChatCta />
         </div>

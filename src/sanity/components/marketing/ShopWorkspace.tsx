@@ -35,6 +35,8 @@ type ShopProduct = {
   featured?: boolean
   displayOrder?: number
   sku?: string
+  production?: 'print-on-demand' | 'from-stock'
+  orderable?: boolean
   trackInventory?: boolean
   inventoryQuantity?: number
   lowStockThreshold?: number
@@ -135,6 +137,8 @@ type ProductDraft = {
   currency: string
   inventoryQuantity: string
   lowStockThreshold: string
+  production: 'print-on-demand' | 'from-stock'
+  orderable: boolean
   trackInventory: boolean
   allowBackorder: boolean
   featured: boolean
@@ -160,7 +164,7 @@ const SHOP_PUBLIC_QUERY = `{
   "products": *[_type == "marketingProduct" && !(_id in path("drafts.**"))]
     | order(coalesce(featured, false) desc, coalesce(displayOrder, 100) asc, title asc) {
       _id, _rev, title, slug, status, kind, description, featured, displayOrder,
-      sku, trackInventory, inventoryQuantity, lowStockThreshold, allowBackorder,
+      sku, production, orderable, trackInventory, inventoryQuantity, lowStockThreshold, allowBackorder,
       price, currency, checkoutUrl,
       "imageUrl": image.asset->url,
       "imageAlt": image.alt
@@ -230,6 +234,8 @@ const emptyProductDraft: ProductDraft = {
   currency: 'USD',
   inventoryQuantity: '0',
   lowStockThreshold: '5',
+  production: 'print-on-demand',
+  orderable: true,
   trackInventory: true,
   allowBackorder: false,
   featured: false,
@@ -280,6 +286,8 @@ function productDraft(product?: ShopProduct | null): ProductDraft {
     currency: product.currency || 'USD',
     inventoryQuantity: String(product.inventoryQuantity ?? 0),
     lowStockThreshold: String(product.lowStockThreshold ?? 5),
+    production: product.production === 'from-stock' ? 'from-stock' : 'print-on-demand',
+    orderable: product.orderable !== false,
     trackInventory: product.trackInventory !== false,
     allowBackorder: product.allowBackorder === true,
     featured: product.featured === true,
@@ -465,6 +473,8 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
         inventoryQuantity: Math.max(0, Math.round(numberValue(draft.inventoryQuantity))),
         lowStockThreshold: Math.max(0, Math.round(numberValue(draft.lowStockThreshold, 5))),
         allowBackorder: draft.allowBackorder,
+        production: draft.production,
+        orderable: draft.orderable,
         price: Math.max(0, numberValue(draft.price)),
         currency: draft.currency.trim().toUpperCase() || 'USD',
         checkoutUrl: draft.checkoutUrl.trim() || undefined,
@@ -1293,7 +1303,29 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
               <Field label="Hosted payment link" hint="Paste a Stripe, Square, PayPal, Shopify, or custom checkout URL.">
                 <input type="url" style={styles.input} value={draft.checkoutUrl} onChange={(event) => setDraft((current) => ({ ...current, checkoutUrl: event.currentTarget.value }))} />
               </Field>
+              <Field
+                label="How it is produced"
+                hint="Printed on demand is made when someone orders it. From stock is a piece we already have, like the books. This is what the product card tells the buyer."
+              >
+                <select
+                  style={styles.input}
+                  value={draft.production}
+                  onChange={(event) =>
+                    setDraft((current) => ({
+                      ...current,
+                      production: event.currentTarget.value === 'from-stock' ? 'from-stock' : 'print-on-demand',
+                    }))
+                  }
+                >
+                  <option value="print-on-demand">Printed on demand</option>
+                  <option value="from-stock">Ships from studio stock</option>
+                </select>
+              </Field>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', gap: 7, alignItems: 'center', fontWeight: 700 }}>
+                  <input type="checkbox" checked={draft.orderable} onChange={(event) => setDraft((current) => ({ ...current, orderable: event.currentTarget.checked }))} />
+                  Can be ordered
+                </label>
                 <label style={{ display: 'flex', gap: 7, alignItems: 'center', fontWeight: 700 }}>
                   <input type="checkbox" checked={draft.trackInventory} onChange={(event) => setDraft((current) => ({ ...current, trackInventory: event.currentTarget.checked }))} />
                   Track inventory

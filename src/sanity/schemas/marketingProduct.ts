@@ -7,6 +7,17 @@ export const productStatusOptions = [
   { title: 'Archived', value: 'archived' },
 ]
 
+/**
+ * How a piece is produced. Not every item is made to order: the posters are
+ * printed on demand, the books and magazines are physical stock the studio
+ * already has on a shelf (Shirley, 2026-08-11). The page must not make one
+ * blanket claim for the whole catalog.
+ */
+export const productProductionOptions = [
+  { title: 'Printed on demand', value: 'print-on-demand' },
+  { title: 'Ships from studio stock', value: 'from-stock' },
+]
+
 export const productKindOptions = [
   { title: 'Physical product', value: 'physical' },
   { title: 'Digital product', value: 'digital' },
@@ -65,6 +76,26 @@ export default defineType({
       options: { list: productKindOptions, layout: 'radio' },
       initialValue: 'physical',
       validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'production',
+      title: 'How it is produced',
+      type: 'string',
+      group: 'inventory',
+      description:
+        'Printed on demand is made when someone orders it. Ships from studio stock is a piece we already have (books, magazines, posters we keep on hand). This is what the product card tells the buyer.',
+      options: { list: productProductionOptions, layout: 'radio' },
+      initialValue: 'print-on-demand',
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: 'orderable',
+      title: 'Can be ordered',
+      type: 'boolean',
+      group: 'inventory',
+      description:
+        'Turn this off to take a piece off sale without archiving it. A piece also becomes unorderable on its own when it tracks inventory, has none left, and does not allow backorders.',
+      initialValue: true,
     }),
     defineField({
       name: 'description',
