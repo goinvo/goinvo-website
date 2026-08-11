@@ -4,7 +4,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
+import {
+  SHOP_MAX_DONATION_CENTS,
+  SHOP_MIN_DONATION_CENTS,
+  SHOP_SHIPPING_PRICE_CENTS,
+  shopPriceCentsFor,
+} from '@/lib/shop/checkout'
 
 export type VisualizationPrint = {
   _id: string
@@ -301,6 +306,57 @@ export function VisualizationStorefront({
   // site header (z-1000) no matter the overlay's own z-index.
   const [portalReady, setPortalReady] = useState(false)
   useEffect(() => setPortalReady(true), [])
+
+  /**
+   * Keep the cart across a trip to Stripe.
+   *
+   * Stripe's cancel_url returns the visitor to this page, and the selection
+   * lived only in React state, so backing out of payment silently emptied a
+   * cart someone had just spent minutes filling. sessionStorage is the right
+   * scope: it survives the round trip and the tab, and does not resurrect a
+   * stale cart weeks later.
+   */
+  const CART_STORAGE_KEY = 'goinvo-shop-cart-v1'
+  const cartRestoredRef = useRef(false)
+
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem(CART_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored) as {
+          ids?: string[]
+          quantities?: Record<string, number>
+        }
+        // Only restore pieces still in the catalog: a piece taken off sale
+        // while the visitor was away must not come back in their cart.
+        const live = (parsed.ids || []).filter((id) =>
+          items.some((item) => item._id === id && item.orderable !== false),
+        )
+        if (live.length > 0) {
+          setSelectedIds(live)
+          setSelectedQuantities(parsed.quantities || {})
+        }
+      }
+    } catch {
+      // A blocked or full storage must never stop the page rendering.
+    }
+    cartRestoredRef.current = true
+  }, [items])
+
+  useEffect(() => {
+    if (!cartRestoredRef.current) return
+    try {
+      if (selectedIds.length === 0) window.sessionStorage.removeItem(CART_STORAGE_KEY)
+      else {
+        window.sessionStorage.setItem(
+          CART_STORAGE_KEY,
+          JSON.stringify({ ids: selectedIds, quantities: selectedQuantities }),
+        )
+      }
+    } catch {
+      // Best effort only.
+    }
+  }, [selectedIds, selectedQuantities])
   const selectedItems = useMemo(
     () => items.filter((item) => selectedIds.includes(item._id)),
     [items, selectedIds],
@@ -325,10 +381,21 @@ export function VisualizationStorefront({
       ),
     [selectedPrints],
   )
+  const donationMinimum = SHOP_MIN_DONATION_CENTS / 100
+  const donationMaximum = SHOP_MAX_DONATION_CENTS / 100
   const donationAmount =
     donationChoice === 'custom'
       ? Math.max(0, Number.parseFloat(customDonation) || 0)
       : Number(donationChoice)
+  // The server refuses these exactly, so say so here rather than letting the
+  // visitor reach Stripe and meet a failure that blames their cart.
+  const donationTooSmall = donationAmount > 0 && donationAmount < donationMinimum
+  const donationTooLarge = donationAmount > donationMaximum
+  const donationProblem = donationTooSmall
+    ? `The smallest support amount we can process is ${formatPrice(donationMinimum)}.`
+    : donationTooLarge
+      ? `The largest support amount we can process online is ${formatPrice(donationMaximum)}. For more than that, email us and we will sort it out.`
+      : null
   const selectedTotal = selectedSubtotal + donationAmount
   const visibleItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -1369,8 +1436,8 @@ export function VisualizationStorefront({
                       <span aria-hidden="true">$</span>
                       <input
                         type="number"
-                        min="0"
-                        max="1000"
+                        min={donationMinimum}
+                        max={donationMaximum}
                         // Cent precision, so a converted-from-another-currency amount
                         // like 17.43 is valid. The handler already rounds to whole
                         // cents (Math.round(amount * 100)); step="1" wrongly flagged
@@ -1392,6 +1459,12 @@ export function VisualizationStorefront({
                   )}
                 </div>
               </div>
+
+              {donationProblem && (
+                <p data-shop-donation-problem className="mb-4 text-sm leading-5 text-primary" role="alert">
+                  {donationProblem}
+                </p>
+              )}
 
               <dl className="mb-0 border-t border-[#d9d5ce] pt-4 text-sm">
                 {selectedPrints.length > 0 && (
@@ -1447,7 +1520,11 @@ export function VisualizationStorefront({
                   <button
                     type="button"
                     onClick={startStripeCheckout}
-                    disabled={isStartingCheckout || (selectedItems.length === 0 && donationAmount <= 0)}
+                    disabled={
+                      isStartingCheckout ||
+                      Boolean(donationProblem) ||
+                      (selectedItems.length === 0 && donationAmount <= 0)
+                    }
                     data-shop-stripe-checkout
                     className="flex-1 bg-primary px-6 py-3 font-semibold whitespace-nowrap text-white transition-colors hover:bg-primary-dark disabled:cursor-wait disabled:opacity-60"
                   >

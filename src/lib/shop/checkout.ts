@@ -66,6 +66,13 @@ export function shopPriceCentsFor(slug: string | undefined): number {
 export const SHOP_SHIPPING_PRICE_CENTS = 600
 export const SHOP_MAX_CART_ITEMS = 50
 export const SHOP_MAX_DONATION_CENTS = 100_000
+/**
+ * Stripe will not create a line item below 50 cents, so a smaller support
+ * amount is a bad request rather than a server fault. Named here so the form
+ * and the route refuse the same amounts, and the visitor is told why before
+ * they click rather than meeting a generic failure afterwards.
+ */
+export const SHOP_MIN_DONATION_CENTS = 50
 
 export const checkoutRequestSchema = z
   .object({
