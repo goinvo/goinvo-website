@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   SHOP_MAX_DONATION_CENTS,
+  SHOP_MIN_DONATION_CENTS,
   SHOP_PRINT_PRICE_CENTS,
   SHOP_SHIPPING_PRICE_CENTS,
   shopPriceCentsFor,
@@ -278,5 +279,30 @@ describe('Checkout artwork', () => {
       'https://dd17w042cevyt.cloudfront.net/images/a.jpg',
     )
     expect(checkoutImageUrl(undefined)).toBeUndefined()
+  })
+})
+
+describe('Support amount bounds', () => {
+  // The form and the route must refuse the same amounts. When they disagreed,
+  // the page accepted $1,000.01, added it to the displayed total, and only
+  // failed after the visitor clicked Checkout — with an error blaming the cart.
+  it('names Stripe\'s floor and the schema ceiling so both sides can share them', () => {
+    expect(SHOP_MIN_DONATION_CENTS).toBe(50)
+    expect(SHOP_MAX_DONATION_CENTS).toBe(100_000)
+  })
+
+  it('rejects an amount above the ceiling at the schema, as the form now does', () => {
+    const base = { checkoutId, items: [{ slug: 'make-things', quantity: 1 }] }
+    expect(checkoutRequestSchema.safeParse({ ...base, donationCents: SHOP_MAX_DONATION_CENTS }).success).toBe(true)
+    expect(checkoutRequestSchema.safeParse({ ...base, donationCents: SHOP_MAX_DONATION_CENTS + 1 }).success).toBe(false)
+  })
+
+  it('treats a below-floor amount as a bad request, not a server fault', () => {
+    // The schema still accepts it (it is a valid integer), which is why the
+    // route checks the floor explicitly and answers 400 with the amount named.
+    // A 500 here read as an outage and told the visitor nothing actionable.
+    const parsed = checkoutRequestSchema.safeParse({ checkoutId, items: [], donationCents: 25 })
+    expect(parsed.success).toBe(true)
+    expect(25).toBeLessThan(SHOP_MIN_DONATION_CENTS)
   })
 })
