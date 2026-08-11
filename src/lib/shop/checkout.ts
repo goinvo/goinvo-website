@@ -22,6 +22,17 @@ export const SHOP_PRICE_CENTS_BY_SLUG: Record<string, number> = {
   'own-your-health-data': 900,
 }
 
+/**
+ * Pieces that cannot be ordered as prints right now (the Open Source Healthcare
+ * Journal is a magazine the studio may be out of).
+ *
+ * Lives here, not in the storefront component, because the page's structured
+ * data needs it too: a `Set` exported from a 'use client' module reaches the
+ * server as a client reference, not a Set, and telling Google an item is in
+ * stock while the card says otherwise is exactly the contradiction to avoid.
+ */
+export const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
+
 export function shopPriceCentsFor(slug: string | undefined): number {
   const override = slug ? SHOP_PRICE_CENTS_BY_SLUG[slug] : undefined
   return typeof override === 'number' ? override : SHOP_PRINT_PRICE_CENTS
