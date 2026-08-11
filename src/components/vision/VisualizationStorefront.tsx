@@ -147,8 +147,12 @@ const SERIES: Array<{ id: Exclude<CollectionId, 'all'>; label: string; blurb: st
  * not duplicate cards). Order chosen so each section keeps a sensible size.
  */
 const CATALOG_SECTIONS: Array<{ id: Exclude<CollectionId, 'all'>; blurb: string }> = [
-  { id: 'design-axioms', blurb: 'Practical principles for usable, elegant interfaces.' },
-  { id: 'health-cards', blurb: 'Simple, direct reminders for healthier everyday choices.' },
+  // These must not restate the Collections cards higher up the page, which
+  // already describe Design Axioms and Health Cards. Saying nearly the same
+  // sentence twice on one page is the repetition Juhan objected to; say what
+  // the set is FOR instead.
+  { id: 'design-axioms', blurb: 'Put them up where the work happens.' },
+  { id: 'health-cards', blurb: 'One reminder per card, for a wall or a waiting room.' },
   { id: 'health-data', blurb: 'Maps of the health-data economy: who holds it, who profits, where it flows.' },
   { id: 'care-systems', blurb: 'How care actually gets delivered: plans, encounters, and the systems around them.' },
   { id: 'public-health', blurb: 'Guides and warnings for everyday public-health decisions.' },
@@ -1126,7 +1130,7 @@ export function VisualizationStorefront({
                     <p className="mt-2 mb-0 text-xs leading-5 text-gray">
                       {newsletterState === 'error'
                         ? 'That didn’t go through. Mind trying again in a minute?'
-                        : 'The GoInvo newsletter: new open-source work when it ships.'}
+                        : 'The same GoInvo newsletter as the sign-up further down this page.'}
                     </p>
                   </form>
                 )}
