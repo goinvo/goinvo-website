@@ -5,6 +5,7 @@ import {
   buildShippingOptions,
   isMissingStripeResource,
   withoutStoredStripePrices,
+  SHOP_MIN_DONATION_CENTS,
 } from '@/lib/shop/checkout'
 import { resolveCheckoutCatalog } from '@/lib/shop/catalog'
 import { getStripeCheckoutStatus, getStripeClient } from '@/lib/shop/stripeConfig'
@@ -127,6 +128,17 @@ export async function POST(request: NextRequest) {
       )
     }
     const isDonationOnly = catalogItems.length === 0
+    if (
+      parsed.data.donationCents > 0 &&
+      parsed.data.donationCents < SHOP_MIN_DONATION_CENTS
+    ) {
+      return NextResponse.json(
+        {
+          error: `The smallest support amount we can process is ${(SHOP_MIN_DONATION_CENTS / 100).toFixed(2)} USD.`,
+        },
+        { status: 400 },
+      )
+    }
 
     const stripe = getStripeClient()
     const createSession = (
