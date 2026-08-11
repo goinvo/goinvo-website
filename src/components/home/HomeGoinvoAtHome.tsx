@@ -60,9 +60,6 @@ export function HomeGoinvoAtHome() {
     >
       <div className="mx-auto grid max-w-6xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#7fd4e0]">
-            Open-source health design
-          </p>
           <h2
             id="goinvo-at-home-heading"
             className="mt-3 text-4xl font-semibold leading-tight sm:text-5xl"
@@ -70,8 +67,8 @@ export function HomeGoinvoAtHome() {
             Put a little GoInvo on your wall.
           </h2>
           <p className="mt-5 max-w-md text-lg leading-relaxed text-[#d9dee7]">
-            The health visualizations we make are free to download and open-source. Take the files
-            and use them however you like. Want a finished piece for the studio, the clinic, or the
+            The health visualizations we make are free to download, published open-source under a
+            Creative Commons license. Want a finished piece for the studio, the clinic, or the
             kitchen? Order it as a print and we&rsquo;ll ship it to you.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -83,7 +80,7 @@ export function HomeGoinvoAtHome() {
             </HomeGoinvoAtHomeCta>
           </div>
           <p className="mt-5 text-sm text-[#9aa4b2]">
-            Free open-source PDFs · $30 per print, plus $6 flat US shipping
+            Free open-source PDFs · Prints ship flat-rate in the US
           </p>
         </div>
 

@@ -5,7 +5,11 @@ import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
 import { fetchStorefrontCatalog } from '@/lib/shop/catalog'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
-import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
+import {
+  PRINT_UNAVAILABLE_SLUGS,
+  SHOP_SHIPPING_PRICE_CENTS,
+  shopPriceCentsFor,
+} from '@/lib/shop/checkout'
 import { SubscribeForm } from '@/components/forms/SubscribeForm'
 import { PosterChatCta } from '@/components/chat/PosterChatCta'
 import {
@@ -277,21 +281,21 @@ const fallbackPosters = [
     title: 'Make Things',
     image: '/images/features/posters/design-axiom-make-things.jpg',
     downloadLink: '/pdf/vision/posters/design-axiom-make-things.pdf',
-    learnMoreLink: 'http://designaxioms.com/',
+    learnMoreLink: 'http://www.designaxioms.com/',
   },
   {
     id: 'let-data-scream',
     title: 'Let Data Scream',
     image: '/images/features/posters/design-axiom-let-data-scream.jpg',
     downloadLink: '/pdf/vision/posters/design-axiom-let-data-scream.pdf',
-    learnMoreLink: 'http://designaxioms.com/',
+    learnMoreLink: 'http://www.designaxioms.com/',
   },
   {
     id: 'prototype-like-crazy',
     title: 'Prototype Like Crazy',
     image: '/images/features/posters/design-axiom-prototype-like-crazy.jpg',
     downloadLink: '/pdf/vision/posters/design-axiom-prototype-like-crazy-2.pdf',
-    learnMoreLink: 'http://designaxioms.com/',
+    learnMoreLink: 'http://www.designaxioms.com/',
   },
   {
     id: 'care-plans-process',
@@ -450,7 +454,13 @@ export default async function HealthVisualizationsPage() {
           '@type': 'Offer',
           price: item.price,
           priceCurrency: item.currency,
-          availability: 'https://schema.org/InStock',
+          // Must agree with the card. The Open Source Healthcare Journal shows
+          // "Print currently unavailable" on the page while this told Google it
+          // was in stock, which is the kind of contradiction that earns a
+          // manual action and, worse, a buyer expecting to order it.
+          availability: PRINT_UNAVAILABLE_SLUGS.has(item.slug || '')
+            ? 'https://schema.org/OutOfStock'
+            : 'https://schema.org/InStock',
           // Shipping is a real, non-zero cost and the US is the only
           // destination — search results that omit either mislead the buyer
           // before they ever reach checkout.
@@ -519,7 +529,7 @@ export default async function HealthVisualizationsPage() {
                 </Link>
               </span>
               <span>
-                ✓ {formatUsd(standardPrice)} per print, printed on demand, plus{' '}
+                ✓ {formatUsd(standardPrice)} per print, plus{' '}
                 {formatUsd(SHOP_SHIPPING_PRICE_CENTS / 100)} flat US shipping
               </span>
             </div>
@@ -550,9 +560,6 @@ export default async function HealthVisualizationsPage() {
                   </p>
                 </div>
               ))}
-              <div className="absolute right-4 bottom-10 bg-primary text-white px-4 py-3 font-bold uppercase tracking-[1.5px] text-xs rotate-3 shadow-xl">
-                Source files + physical prints
-              </div>
             </div>
           )}
         </div>
@@ -573,7 +580,7 @@ export default async function HealthVisualizationsPage() {
       <section className="bg-[#24434d] text-white">
         <div className="max-width content-padding py-12 lg:py-16 flex flex-col lg:flex-row justify-between gap-7 lg:items-center">
           <h2 className="font-serif font-light text-[2rem] lg:text-[2.5rem] leading-tight mb-0">
-            Need a different format? Ask about sizes, quantities, or event packs.
+            Need a different size or a larger quantity? Ask us.
           </h2>
           <PosterChatCta />
         </div>

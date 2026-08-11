@@ -4,7 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { SHOP_SHIPPING_PRICE_CENTS, shopPriceCentsFor } from '@/lib/shop/checkout'
+import {
+  PRINT_UNAVAILABLE_SLUGS,
+  SHOP_SHIPPING_PRICE_CENTS,
+  shopPriceCentsFor,
+} from '@/lib/shop/checkout'
 
 export type VisualizationPrint = {
   _id: string
@@ -107,7 +111,6 @@ const BUY_LABEL_BY_SLUG: Record<string, string> = {
   // "Buy Comic Book" did not fit the button (Jon, 2026-08-10).
   'own-your-health-data': 'Buy Comic',
 }
-const PRINT_UNAVAILABLE_SLUGS = new Set<string>(['open-source-healthcare'])
 
 /**
  * Printed sizes for the pieces the studio keeps in stock (Jon's note,
@@ -147,8 +150,12 @@ const SERIES: Array<{ id: Exclude<CollectionId, 'all'>; label: string; blurb: st
  * not duplicate cards). Order chosen so each section keeps a sensible size.
  */
 const CATALOG_SECTIONS: Array<{ id: Exclude<CollectionId, 'all'>; blurb: string }> = [
-  { id: 'design-axioms', blurb: 'Practical principles for usable, elegant interfaces.' },
-  { id: 'health-cards', blurb: 'Simple, direct reminders for healthier everyday choices.' },
+  // These must not restate the Collections cards higher up the page, which
+  // already describe Design Axioms and Health Cards. Saying nearly the same
+  // sentence twice on one page is the repetition Juhan objected to; say what
+  // the set is FOR instead.
+  { id: 'design-axioms', blurb: 'Put them up where the work happens.' },
+  { id: 'health-cards', blurb: 'One reminder per card, for a wall or a waiting room.' },
   { id: 'health-data', blurb: 'Maps of the health-data economy: who holds it, who profits, where it flows.' },
   { id: 'care-systems', blurb: 'How care actually gets delivered: plans, encounters, and the systems around them.' },
   { id: 'public-health', blurb: 'Guides and warnings for everyday public-health decisions.' },
@@ -230,7 +237,6 @@ function orderHref(items: SelectedPrint[], supportEmail: string, donationAmount:
     `Standard US shipping: ${formatPrice(shipping, currency)}`,
     `Optional support: ${formatPrice(donationAmount, currency)}`,
     `Order total: ${formatPrice(orderTotal, currency)}`,
-    'For expedited or international delivery, please confirm shipping options.',
     '',
     'Name and organization:',
     '',
@@ -590,7 +596,9 @@ export function VisualizationStorefront({
                         onClick={() => toggleItem(item._id)}
                         className={`font-semibold ${selected ? 'text-[#24434d]' : 'text-primary'} hover:underline`}
                       >
-                        {selected ? 'Added ✓' : `Buy · ${priceLabel(printPriceOf(item), item.currency)}`}
+                        {selected
+                          ? 'Remove'
+                          : `${BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy'} · ${priceLabel(printPriceOf(item), item.currency)}`}
                       </button>
                     </span>
                   </figcaption>
@@ -730,7 +738,7 @@ export function VisualizationStorefront({
             <div className="border-t border-[#c8c2b8] pt-8">
               <h2 className="font-serif font-light text-[2rem] mb-4">The collection is updating.</h2>
               <p className="text-gray mb-0">
-                You can still <Link href="/vision/health-visualizations">browse the visualization library</Link>.
+                Check back shortly, or <Link href="/vision">browse the rest of our open work</Link>.
               </p>
             </div>
           ) : (
@@ -928,7 +936,7 @@ export function VisualizationStorefront({
                             )}
                             {PRINT_UNAVAILABLE_SLUGS.has(item.slug || '') ? (
                               <p className="mb-0 min-h-[3.5rem] flex items-center px-5 py-3 text-sm text-gray">
-                                Print currently unavailable. Download the PDF above.
+                                Not available as a print. The PDF above is free.
                               </p>
                             ) : (
                               // Outline, not a filled orange slab: the posters
@@ -948,13 +956,13 @@ export function VisualizationStorefront({
                                   {selected ? 'Remove' : BUY_LABEL_BY_SLUG[item.slug || ''] || 'Buy Poster'}
                                 </span>
                                 <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
-                                  {printPrice} · {formatPrice(shippingPrice)} shipping
+                                  {printPrice} · {formatPrice(shippingPrice)} shipping per order
                                 </span>
                               </button>
                             )}
                             {selected && (
                               <label className="mt-2 grid min-h-[3.25rem] grid-cols-[1fr_auto] items-center gap-3 border border-[#cfc9be] bg-[#f8f6f2] px-5 py-2 text-sm font-semibold text-[#24434d]">
-                                <span className="text-left">Print quantity</span>
+                                <span className="text-left">Quantity</span>
                                 <select
                                   value={selectedQuantities[item._id] || 1}
                                   onChange={(event) =>
@@ -1048,9 +1056,6 @@ export function VisualizationStorefront({
           >
             <div className="absolute inset-x-0 top-0 h-1 bg-primary" aria-hidden="true" />
             <>
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[2px] text-primary">
-                  Free &amp; open source
-                </p>
                 <h3 id="shop-support-title" className="mb-2 font-serif text-[1.9rem] font-light leading-tight">
                   Enjoy the download
                 </h3>
@@ -1088,7 +1093,7 @@ export function VisualizationStorefront({
                 </div>
                 {newsletterState === 'done' ? (
                   <p data-shop-newsletter-done className="mb-0 leading-relaxed text-gray">
-                    You&apos;re on the list. Thanks for reading.
+                    Subscribed. Thanks.
                   </p>
                 ) : (
                   <form onSubmit={subscribeToNewsletter}>
@@ -1108,7 +1113,7 @@ export function VisualizationStorefront({
                         required
                         value={newsletterEmail}
                         onChange={(event) => setNewsletterEmail(event.target.value)}
-                        placeholder="you@example.com"
+                        placeholder="Your email"
                         aria-label="Email address for the GoInvo newsletter"
                         disabled={newsletterState === 'submitting'}
                         className="min-w-0 flex-1 border border-[#cfc9be] px-4 py-3 text-black placeholder:text-gray focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
@@ -1126,7 +1131,7 @@ export function VisualizationStorefront({
                     <p className="mt-2 mb-0 text-xs leading-5 text-gray">
                       {newsletterState === 'error'
                         ? 'That didn’t go through. Mind trying again in a minute?'
-                        : 'The GoInvo newsletter: new open-source work when it ships.'}
+                        : 'The same GoInvo newsletter as the sign-up further down this page.'}
                     </p>
                   </form>
                 )}
@@ -1297,8 +1302,7 @@ export function VisualizationStorefront({
                 </p>
                 <p className="mb-1 font-serif text-[1.35rem] font-light">Add support</p>
                 <p className="mb-3 text-sm leading-relaxed text-gray">
-                  Pay-what-you-want for 20+ years of open-source health design. It rides along in
-                  the same checkout.
+                  Optional, and it rides along in this order.
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   {(['5', '15', '30'] as const).map((amount) => (
