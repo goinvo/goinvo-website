@@ -44,6 +44,25 @@
 > `gh search code "<filename>" --owner goinvo`. CloudFront 404s for anything not migrated; that
 > part of the old note is correct.
 >
+> Gotchas that cost time on the 2026-08-12 timeline recovery (55 photos):
+> - **Strip query strings** before treating a URL as an object key — `...jpg?dl=0` 403s.
+> - **The requested path is not always where the file lives.** `images/team_photos/adam_pere.jpg`
+>   only exists at `images/features/us-healthcare/adam_pere.jpg`; copy it to the requested path.
+> - **Some legacy paths carry an extra segment**: the Ebola PDF is
+>   `features/ebola/files/understanding_ebola.pdf`, not `images/features/ebola/...`.
+> - **Git Bash mangles a leading `/old/...` argument** into `C:/Program Files/Git/old/...` —
+>   pass the path without the leading slash.
+> - **Not everything on a legacy page is ours.** `hs-fs/hub/356419/...` is HubSpot-hosted
+>   (`yes.goinvo.com`) and was never broken; don't hunt for it.
+> - Content that lives **outside the repo** (the studio timeline's slides come from a Google
+>   Sheet) is invisible to grep. `tests/fixtures/legacy-timeline-media.txt` pins those URLs and
+>   `tests/legacy-timeline-media.test.ts` fails if a file goes missing again.
+>
+> **Broken links across the CMS:** `node scripts/check-cms-links.mjs` scans every published
+> document for relative hrefs (`../x/` resolves differently per page depth — always a latent
+> 404), dead internal paths and, with `--external`, off-site links. `--fix` rewrites relative
+> hrefs to absolute and applies its documented old-slug → new-slug map.
+>
 > Caveat: legacy scripts hard-code `/old/images/...`, but this site serves the
 > canonical `/images/...`. The careplans whitepaper + zika guide PDFs were **consolidated OUT of
 > `public/old/`** (that dir is now removed) to their canonical `public/images/features/...` path
