@@ -239,7 +239,19 @@
   margin-bottom: 1em;
 }
 
+/*
+ * Restore the disc the browser used to supply.
+ *
+ * This rule is a faithful copy of Gatsby's `_coronavirus.scss` (`ul {
+ * padding-left: 18px }`, 0 at large) — which never named a marker because it
+ * did not have to: a bare <ul> got the browser default. Tailwind's preflight
+ * strips `list-style` from every ul, and globals.css only restores a marker for
+ * `.ul` and for `ol` inside `.max-width-md`, so these lists shipped with NO
+ * marker of any kind (verified on production: list-style-type none,
+ * list-style-image none, no ::marker, no ::before).
+ */
 .coronavirus ul {
+  list-style-type: disc;
   padding-left: 18px;
 }
 @media (min-width: 864px) {
