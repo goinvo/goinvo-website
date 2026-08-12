@@ -220,8 +220,17 @@
   background-position: center;
 }
 
+/*
+ * The placeholder IS the hero image here, so it must stay visible.
+ *
+ * On the 2018 site this rule read `visibility: hidden`, because the artwork was
+ * painted by `background-image` rules on `.video-container[data-page="N"]` and
+ * the <img> existed only to reserve the right aspect ratio. Those background
+ * rules and the data-page attribute were not carried into this port, so the
+ * hidden spacer was the ONLY thing left in the hero: below 800px, where no
+ * <video> is substituted, every Disrupt hero rendered as a white void.
+ */
 #disrupt-legacy .video-container .placeholder {
-  visibility: hidden;
   width: 100%;
   height: auto;
   display: block;
