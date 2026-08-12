@@ -198,6 +198,24 @@ Protocol** to recover the rest.
 - `node scripts/page-visual-audit.mjs <url> <out.png>` — HTTP status, overflow, broken images, screenshot.
 - `.audit/legacy-features/<slug>-legacy.png` — Gatsby reference screenshots for migration fidelity.
 - `node scripts/studio-screenshot.mjs ...` — authenticated Studio screenshots (above).
+- `node scripts/check-cms-links.mjs [--fix] [--external]` — every link stored in Sanity;
+  relative hrefs (`../x/`) are always a latent 404 because they resolve against page depth.
+- `node scripts/check-shop-button-fit.mjs --base <url>` — storefront controls whose text
+  outgrows its box. Page-level overflow checks miss this: the document doesn't scroll
+  sideways, a single grid cell just spills past its edge.
+- `node scripts/check-disrupt-heroes.mjs --base <url>` — proves the Disrupt heroes actually
+  paint by reading back rendered pixels. `naturalWidth > 0` passed the whole time they were
+  invisible white voids.
+- `node scripts/recover-old-assets.mjs --list <file> --apply` — pull missing legacy assets
+  from the public 2018 S3 bucket (see the top of this file).
+- `python scripts/compress-poster-pdfs.py --src <dir> --out public/pdf/vision/posters` —
+  flatten oversized poster PDFs; rejects any rebuild that drifts from the original per pixel.
+
+**When fixing a rendering/layout bug, run the detector against PRODUCTION first.** A checker
+that doesn't fail on the broken site isn't evidence of anything. Both checkers above earned
+their keep that way — and both produced large batches of FALSE positives first (a DOM
+ancestor-walk for contrast; counting deliberate `overflow: hidden` crops), so confirm a
+failure visually before treating it as real.
 
 ## Critical lessons
 
