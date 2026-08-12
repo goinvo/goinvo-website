@@ -76,6 +76,7 @@
   "thankyou/index.html#career": "/thank-you/#career",
   "old/images/features/careplans/CarePlans_Whitepaper_Involution_Studios.pdf": "/images/features/careplans/CarePlans_Whitepaper_Involution_Studios.pdf",
   "old/images/features/zika/understanding_zika.pdf": "/images/features/zika/understanding_zika.pdf",
+  "old/images/:path*": "/images/:path*",
   "index.php/index.html": "/",
   "baseball/index.html": "/",
   "category/events/index.html": "https://yes.goinvo.com/articles/topic/events",
