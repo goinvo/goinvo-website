@@ -211,11 +211,45 @@ Protocol** to recover the rest.
 - `python scripts/compress-poster-pdfs.py --src <dir> --out public/pdf/vision/posters` —
   flatten oversized poster PDFs; rejects any rebuild that drifts from the original per pixel.
 
+- `node scripts/check-list-markers.mjs --base <url>` — every sitemap route, for list items
+  painting TWO markers or none. Distinguishes a deliberate `list-style: none` from Tailwind
+  preflight's by looking for an author rule that NAMES the list.
+- `node scripts/scope-page-css.mjs --file <css> --scope <class> --write` — confine a ported
+  legacy stylesheet to its page. Refuses to write if the rule count changes.
+- `npx vitest run tests/page-css-scoping.test.ts` — fails if any page stylesheet uses a
+  selector that doesn't start with a class/id.
+
 **When fixing a rendering/layout bug, run the detector against PRODUCTION first.** A checker
 that doesn't fail on the broken site isn't evidence of anything. Both checkers above earned
 their keep that way — and both produced large batches of FALSE positives first (a DOM
 ancestor-walk for contrast; counting deliberate `overflow: hidden` crops), so confirm a
 failure visually before treating it as real.
+
+## Ported CSS: globals.css vs the 22 per-page stylesheets
+
+The Gatsby port copied each page's stylesheet verbatim into `src/app/**/<page>.css` AND
+re-implemented Gatsby's GLOBAL layer as `globals.css`. Where a copied page file kept a chunk
+of Gatsby's *global* rules, one visual is implemented twice — and because the two use
+different MECHANISMS they STACK rather than override. Scoping the page rule does not help.
+Three cascade facts make these invisible; check them before diagnosing anything CSS-shaped:
+
+1. **`list-style-type: none` does NOT suppress a `list-style-image`** — the type is only a
+   fallback for when the image fails to load. (This drew every Determinants bullet twice.)
+2. **A page stylesheet is GLOBAL and is never unloaded.** It is merely *imported* by one
+   route; after client-side navigation it keeps applying. A bare `body {}` / `header {}`
+   selector in a page file restyles the WHOLE SITE for the rest of the session — zika.css
+   left every page dark, careplans.css kept overriding the site header. Reach outside the
+   page only via `body:has(.page-wrapper)`, which releases when the wrapper unmounts.
+3. **globals.css sits in `@layer utilities`; page CSS is UNLAYERED.** Unlayered *normal*
+   declarations BEAT layered ones, so page CSS silently overrides globals. But for
+   `!important` the cascade REVERSES layer order — an unlayered `!important` LOSES to a
+   layered one. A page therefore cannot override an `!important` in globals at all; that fix
+   must go in globals.
+
+Also: `view-transition-name` must be unique per document — a duplicate ABORTS the transition
+(a bare `header {}` rule disabled view transitions on 9 pages), and `.gatsby-article ul
+{ padding-left: 2em }` in globals outranks globals' own `.ul { padding-left: 0 }`, so a page
+deleting its own `.ul` padding gets bullets 32px out of place.
 
 ## Critical lessons
 
