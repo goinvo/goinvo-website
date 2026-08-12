@@ -24,8 +24,27 @@
 > across the org: `gh search code "<distinctive-filename>" --owner goinvo`. Individual features
 > also have their own public repos (`goinvo/Careplans` [design PDFs], `goinvo/EmergingTechnologiesBookWebsite`
 > [disrupt], `goinvo/InvoUnderstandingZika` [the PDF], `goinvo/KillerTruths`, `goinvo/healthroom`).
-> Do NOT chase S3 creds (`www.goinvo.com-2018` is redirect-only) or CloudFront — the public repo
-> is the source. Caveat: legacy scripts hard-code `/old/images/...`, but this site serves the
+>
+> ### THE OLD SITE'S S3 BUCKET IS LIVE AND PUBLIC — try it FIRST
+> ```
+> https://s3.amazonaws.com/goinvo.com/<path>          # e.g. images/history/foo.jpg
+> https://s3.amazonaws.com/www.goinvo.com/<path>      # same content, both public, no creds
+> ```
+> It serves the **whole 2018 site's** assets at their original paths, so a dead `/old/images/X`
+> becomes `https://s3.amazonaws.com/goinvo.com/images/X`. Verified 2026-08-12: byte-identical to
+> the GitHub copy (`images/history/invoSV_dirk_andrei_start.jpg`, 111,198 bytes, `image/jpeg`).
+> **No credentials needed** — it is a public read. `scripts/recover-old-assets.mjs` does the pull.
+>
+> A previous note here said "do NOT chase S3, the public repo is the source". That was WRONG and
+> cost real time twice. It was concluded from the ONE bucket `www.goinvo.com-2018` (403, and it is
+> genuinely redirect-only) and generalised to all of S3 without testing `goinvo.com` /
+> `www.goinvo.com`. Order of attack for any missing legacy asset: **S3 bucket first** (complete,
+> original paths), then the public repo `goinvo/goinvo.com-2018-old-features` under `source/`
+> (has the old *feature microsites* but not everything), then
+> `gh search code "<filename>" --owner goinvo`. CloudFront 404s for anything not migrated; that
+> part of the old note is correct.
+>
+> Caveat: legacy scripts hard-code `/old/images/...`, but this site serves the
 > canonical `/images/...`. The careplans whitepaper + zika guide PDFs were **consolidated OUT of
 > `public/old/`** (that dir is now removed) to their canonical `public/images/features/...` path
 > and serve directly; **reverse** redirects in `redirects.json` (`old/images/.../*.pdf` →
