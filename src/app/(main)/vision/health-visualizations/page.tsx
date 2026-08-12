@@ -5,6 +5,7 @@ import { allHealthVisualizationsQuery } from '@/sanity/lib/queries'
 import { fetchStorefrontCatalog } from '@/lib/shop/catalog'
 import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
+import { resolveDownloadUrl } from '@/lib/shop/posterDownloads'
 import {
   SHOP_SHIPPING_PRICE_CENTS,
   isProductOrderable,
@@ -320,12 +321,6 @@ const learnMorePathOverrides: Record<string, string> = {
   '/vision/careplans': '/vision/care-plans/',
 }
 
-function resolveDownloadUrl(link: string): string {
-  if (!link) return ''
-  const goinvoPdf = link.match(/^https?:\/\/(?:www\.)?goinvo\.com(\/pdf\/.+)$/)
-  if (goinvoPdf) return cloudfrontImage(goinvoPdf[1])
-  return link.startsWith('http') ? link : cloudfrontImage(link)
-}
 
 /** Rewrite legacy GoInvo URLs to current local routes. */
 function normalizeLearnMoreLink(link: string): string {

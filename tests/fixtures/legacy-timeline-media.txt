@@ -1,0 +1,60 @@
+# Media the KnightLab timeline embed loads from our host (the slide data lives
+# in a Google Sheet we cannot version, so the URLs it points at are pinned here).
+# Every line must resolve: the file exists under public/ at the same path minus
+# /old/, and redirects.json maps /old/images/:path* onto it.
+# Recover a missing one with: node scripts/recover-old-assets.mjs --path <url> --apply
+/old/images/clients/3m/3m-early-ui-design-version.jpg
+/old/images/clients/dataxu/dataxu-group-design-session.jpg
+/old/images/clients/hgraph/hgraph-labs-health-metrics.jpg
+/old/images/clients/hgraph/hgraph-your-health-in-one-picture.jpg
+/old/images/clients/mcafee/mcafee-total-protection-desktop-app-design.jpg
+/old/images/clients/microsoft/microsoft-expression-studio-product-architecture.jpg
+/old/images/clients/numera/numera-goals-facebook-design.jpg
+/old/images/clients/ruelala/ruelala-current-workflow-documentation.jpg
+/old/images/features/an-oral-history/hero-part_2.jpg
+/old/images/features/careplans/Pamphlet.png
+/old/images/features/democracy/legislature.jpg
+/old/images/features/disrupt/remarkable-1280.jpg
+/old/images/features/ebola-care-guideline/haz_zoom_bg.png
+/old/images/features/ebola/Ebola-04.png
+/old/images/features/print-big/crane-delivery.jpg
+/old/images/features/print-big/point-5.jpg
+/old/images/features/us-healthcare/jumbotron3.jpg
+/old/images/features/zika/FlavivirusGraph_v3.png
+/old/images/history/20100513_Shutterfly_UI_v01.jpg
+/old/images/history/3tshirts_studio.jpg
+/old/images/history/InvoSV_Office_DSC_0185.jpg
+/old/images/history/MIT2009_fall2016_invo_crew.jpg
+/old/images/history/MITRE_Andrei_Dirk_Harry_Juhan_Elsie.jpg
+/old/images/history/ProE_SnowTrecker_Circular_Menu_Extended.jpg
+/old/images/history/beth_stanford_careplan_talk.jpg
+/old/images/history/carecards_zen_minipack_IMG_7836_sm.jpg
+/old/images/history/eric_7years_beards_cake.jpg
+/old/images/history/faster_cures_screen_carecards_IMG_0391_sm.jpg
+/old/images/history/invoSV_apple_campus_IMG_2598_sm.jpg
+/old/images/history/invoSV_ben_donna_tiffani.jpg
+/old/images/history/invoSV_dirk_andrei_start.jpg
+/old/images/history/invoSV_group_hakkone.jpg
+/old/images/history/invoSV_napa_offsite_apr_2009.jpg
+/old/images/history/invoSV_office20_L1000593.jpg
+/old/images/history/invoSV_office_modules.jpg
+/old/images/history/invoSV_plants_in_bedingfields_truck.jpg
+/old/images/history/invoSV_robbrackett_chair.jpg
+/old/images/history/invoSV_uday_1st_studio_L1000472.jpg
+/old/images/history/invo_MassInno_juhan_healthaxioms.JPG
+/old/images/history/invo_arlington_advocate_cover.jpg
+/old/images/history/invo_booth_partners_connectedhealth_img_8841_sm.jpg
+/old/images/history/invo_citizen_designers_book_IMG_7808_sm.jpg
+/old/images/history/invo_emergingtech_book_chinese_healthroom_IMG_7814_sm.jpg
+/old/images/history/jen_5years_IMG_1985_sm.jpg
+/old/images/history/jon_marvin_moths_book_IMG_8929_sm.jpg
+/old/images/history/killer_truths_snapshot.jpg
+/old/images/history/sdoh_poster_balcony_img_8976_sm.jpg
+/old/images/history/smart_home_scripps.jpg
+/old/images/history/sugarkills_susannahfox_alexdrane_IMG_7796_sm.jpg
+/old/images/history/ysb_home_page.jpg
+/old/images/team_photos/adam_pere.jpg
+/old/images/team_photos/bryson_wong.jpg
+/old/images/team_photos/daniel_reeves.jpg
+/old/images/team_photos/jon_follett.jpg
+/old/images/team_photos/karishma_bhatia.jpg
