@@ -84,7 +84,11 @@ export default function OpenOfficeHoursPage() {
               <h2 className="header-lg mb-6">
                 How can we help<span className="text-primary font-serif">?</span>
               </h2>
-              <ul className="space-y-3">
+              {/* list-none is deliberate, matching the 2018 page's
+                  `<ul className="list--unstyled">`. Stated explicitly so it
+                  reads as a decision rather than a dropped bullet — the port
+                  lost several markers exactly that way. */}
+              <ul className="list-none space-y-3">
                 {helpTopics.map((topic) => (
                   <li key={topic} className="text-gray text-md">
                     {topic}

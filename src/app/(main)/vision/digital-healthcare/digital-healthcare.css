@@ -68,7 +68,17 @@
 }
 
 /* ===== HEADER QUOTE ===== */
+/*
+ * These two are <h4> elements used as display text, not headings, so they must
+ * opt out of the site's heading font. globals.css styles every h1-h6 with the
+ * serif and line-height 1.2; the ported page never restated the family because
+ * on the Gatsby site an h4 inherited the body sans. Verified against the still-
+ * live 2018 page: the quotes rasterize as Open Sans there and as Adobe Jenson
+ * Pro here. The file already does exactly this for the ported <h1>
+ * (.title-heading) and <h2> (.section-header h2).
+ */
 .digital-healthcare .header-quote {
+  font-family: var(--font-sans);
   font-size: 0.45em;
   line-height: 1.5em;
   color: #0b5e94;
@@ -383,6 +393,9 @@
 
 /* Intro quote */
 .digital-healthcare .intro-quote {
+  /* See the note on .header-quote: <h4> used as display text, not a heading. */
+  font-family: var(--font-sans);
+  line-height: inherit;
   color: #849caa;
   font-size: 1.5em;
   font-weight: 200;
