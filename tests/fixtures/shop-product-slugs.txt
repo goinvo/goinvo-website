@@ -1,0 +1,35 @@
+# Every healthVisualization slug in the shop, snapshotted so the print-size map
+# can be validated offline. A size keyed to a slug that is not in this list
+# silently shows nothing on the card - the exact failure this pins.
+# Regenerate from Sanity if the catalog changes.
+care-plans-ecosystem
+care-plans-process
+critical-mass
+data-interop
+determinants-of-health
+determinants-of-health-spanish
+ebola
+examine-yourself
+health-payment-system-complexity
+healthcare-dollars
+healthcare-is-a-human-right
+hie-data-access
+how-to-vote-early
+insuring-price-increase
+let-data-scream
+make-things
+open-healthcare-systems
+open-source-healthcare
+own-your-health-data
+precision-autism
+prototype-like-crazy
+sdoh-spend
+shr-medical-encounter
+sources-of-clinical-data
+sources-of-data
+sugar-kills
+test-treat-trace
+vapepocolypse
+virtual-care-encounters
+washhands
+who-uses-my-health-data
