@@ -1043,8 +1043,15 @@ export function VisualizationStorefront({
                                 <span className="whitespace-nowrap text-left">
                                   {selected ? 'Remove' : 'Add to cart'}
                                 </span>
+                                {/*
+                                  Price only. The shipping rate is stated once at
+                                  the top of the page and again in the cart
+                                  summary; repeating it on every button overflowed
+                                  the container on the live site and told the
+                                  visitor nothing new (Shirley, 2026-08-12).
+                                */}
                                 <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
-                                  {printPrice} · {formatPrice(shippingPrice)} shipping per order
+                                  {printPrice}
                                 </span>
                               </button>
                             )}
