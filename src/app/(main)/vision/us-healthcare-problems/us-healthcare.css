@@ -26,6 +26,22 @@
 
 /* Page-specific */
 .us-healthcare-problems .problem { padding: 1rem; margin: 10px 0; }
+
+/*
+ * Give the card title back its bottom margin.
+ *
+ * ProblemCard emits a classless <h2>. This page re-implements Gatsby's heading
+ * system only under .header--xl / --lg / --md, so a bare heading keeps Tailwind
+ * preflight's `margin: 0` while still picking up the serif and 36px from
+ * globals' `h1,h2,...` rule — leaving the title sitting 3.19px off the body
+ * text it introduces, on all 50 cards, at every width.
+ *
+ * Only the rhythm is restored here. The 36px size is left alone: it may well be
+ * deliberate, and shrinking it is a design decision rather than a defect fix.
+ */
+.us-healthcare-problems .problem h2 {
+  margin-bottom: 0.75rem;
+}
 .us-healthcare-problems .airtable { max-width: 85%; text-align: center; display: block; margin: 0 auto; }
 @media (max-width: 768px) { .us-healthcare-problems .airtable { max-width: 100%; padding: 0 1rem; } }
 

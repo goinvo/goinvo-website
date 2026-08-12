@@ -35,7 +35,25 @@ const IMG = '/images/features/zika'
 
 export default function UnderstandingZikaPage() {
   return (
-    <div id="feature-article" className="pt-[var(--spacing-header-height)]">
+    // `understanding-zika` confines zika.css to this page. That stylesheet is a
+    // verbatim 2018 file including `body { background: #232323; color: #fff }`,
+    // and an App Router page stylesheet is global — once loaded it is never
+    // unloaded, so visiting this page and clicking any link used to leave the
+    // whole site dark, homepage included. Every selector is now scoped to this
+    // wrapper (scripts/scope-page-css.mjs); the id stays because other legacy
+    // pages share `#feature-article` and 77 of this page's own rules target it.
+    //
+    // The scope class must sit on an OUTER element, not on #feature-article
+    // itself: scoping rewrites `#feature-article .x` to
+    // `.understanding-zika #feature-article .x`, which needs a DESCENDANT with
+    // that id. Putting the class on the same element made all 77 rules stop
+    // matching and stripped the page back to unstyled text.
+    //
+    // min-h-screen: the dark canvas used to come from `body`, which always
+    // filled the viewport. Now that it paints here, this element has to reach
+    // the bottom or short sections would sit on white.
+    <div className="understanding-zika min-h-screen">
+      <div id="feature-article" className="pt-[var(--spacing-header-height)]">
       <ZikaNav />
 
       <div className="header">
@@ -2048,6 +2066,7 @@ export default function UnderstandingZikaPage() {
         </span>
       </div>
 
+      </div>
     </div>
   )
 }
