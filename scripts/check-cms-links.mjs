@@ -66,8 +66,11 @@ const LINK_REPAIRS = {
   '/work/infobionic/': '/work/infobionic-heart-monitoring',
   // The old site served case studies under /features/; they live under /work/ now.
   '/features/care-cards': '/work/care-cards',
-  // Recovered from the 2018 S3 bucket to its canonical path (it was never migrated).
-  '/features/ebola/understanding_ebola.pdf': '/images/features/ebola/understanding_ebola.pdf',
+  // The 2018 URL for a PDF the migration DID bring over, under a different name.
+  // Recovering it from S3 produced a byte-identical duplicate of this file, so
+  // point at the copy already shipping rather than carrying 2.8 MB twice.
+  '/features/ebola/understanding_ebola.pdf': '/pdf/vision/understanding-ebola.pdf',
+  '/images/features/ebola/understanding_ebola.pdf': '/pdf/vision/understanding-ebola.pdf',
   // Serve these directly instead of through the /old/ compatibility redirect.
   'https://www.goinvo.com/old/images/features/careplans/CarePlans_Whitepaper_Involution_Studios.pdf':
     '/images/features/careplans/CarePlans_Whitepaper_Involution_Studios.pdf',
