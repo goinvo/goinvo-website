@@ -4,6 +4,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { PRINT_SIZE_BY_SLUG } from '@/lib/shop/printSizes'
 import {
   SHOP_MAX_DONATION_CENTS,
   SHOP_MIN_DONATION_CENTS,
@@ -117,11 +118,6 @@ const collectionSlugs: Record<Exclude<CollectionId, 'all'>, string[]> = {
 const PRODUCTION_LABEL: Record<string, string> = {
   'print-on-demand': 'Printed when you order it',
   'from-stock': 'Ships from our shelf',
-}
-
-const PRINT_SIZE_BY_SLUG: Record<string, string> = {
-  'determinants-of-health': 'about 24 × 36 in',
-  'healthcare-is-a-human-right': 'about 11 × 14 in',
 }
 
 /** The launch band: complete posters, no crops (Jon's feedback, 2026-08-05). */
