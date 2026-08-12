@@ -4,8 +4,19 @@
 /* header's intended row layout and re-show the nav links across all   */
 /* four /vision/care-plans routes. Replace with a scoped Bootstrap     */
 /* vendor when the legacy markup is ported to Tailwind.                */
+/*                                                                     */
+/* Every rule is gated on `body:has(.legacy-careplans)`. The header is  */
+/* rendered by the shared layout, OUTSIDE this page's wrapper, so a     */
+/* descendant selector cannot reach it — but a bare `header.fixed`      */
+/* rule would apply on every route, because an App Router page          */
+/* stylesheet is global and is never unloaded once fetched. That is not */
+/* hypothetical: these `!important` declarations were still overriding  */
+/* the header after navigating away (measured: the logo link kept       */
+/* careplans' #1d1b1a instead of its own colour on the homepage), and   */
+/* they would silently win over any future change to the real header.   */
+/* `:has()` releases the moment the visitor leaves the page.            */
 /* ----------------------------------------------------------------- */
-header.fixed {
+body:has(.legacy-careplans) header.fixed {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -14,24 +25,24 @@ header.fixed {
 /* Bootstrap recolors all <a> to its hyperlink blue; restore the dark
    text-[#1d1b1a] the global header uses, and the white text inside the
    contact CTA pill. axe-core flags the blue as insufficient contrast. */
-header.fixed > a[href] {
+body:has(.legacy-careplans) header.fixed > a[href] {
   color: #1d1b1a !important;
   text-decoration: none !important;
 }
-header.fixed > a[href="/contact"] span {
+body:has(.legacy-careplans) header.fixed > a[href="/contact"] span {
   color: #ffffff !important;
 }
 @media (min-width: 1024px) {
-  header.fixed {
+  body:has(.legacy-careplans) header.fixed {
     justify-content: space-around !important;
   }
-  header.fixed > a[href]:not([aria-label="GoInvo Home"]) {
+  body:has(.legacy-careplans) header.fixed > a[href]:not([aria-label="GoInvo Home"]) {
     display: flex !important;
   }
 }
 @media (min-width: 640px) and (max-width: 1023.98px) {
-  header.fixed > a[href][href="/work"],
-  header.fixed > a[href][href="/vision"] {
+  body:has(.legacy-careplans) header.fixed > a[href][href="/work"],
+  body:has(.legacy-careplans) header.fixed > a[href][href="/vision"] {
     display: flex !important;
   }
 }
@@ -93,7 +104,29 @@ header.fixed > a[href="/contact"] span {
 .careplans-popover-body {
   padding: 10px 12px;
 }
-.legacy-careplans [data-toggle="popover"]:focus,
+/*
+ * Keyboard focus must be visible on these cells.
+ *
+ * All 131 comparison-table cells are `tabindex="0"` spans that open a popover,
+ * so they are keyboard-reachable — but measured on production AND locally, a
+ * focused cell computed `outline-style: none`, `outline-width: 0px`, no
+ * box-shadow. No focus indicator at all, which is a WCAG 2.4.7 failure on the
+ * page's entire primary interaction.
+ *
+ * The previous rule here was correct in principle and still lost, so this one
+ * is written to win outright rather than to be minimal: the id raises
+ * specificity above the legacy Bootstrap sheet, `!important` clears its
+ * `outline: 0`, and box-shadow is a second channel in case something zeroes the
+ * outline again. `:focus-visible` keeps the ring off mouse clicks.
+ */
+.legacy-careplans #feature-article [data-toggle="popover"]:focus-visible,
+.legacy-careplans [data-toggle="popover"]:focus-visible {
+  outline: 2px solid rgba(228, 86, 47, 0.9) !important;
+  outline-offset: 1px !important;
+  box-shadow: 0 0 0 4px rgba(228, 86, 47, 0.25) !important;
+}
+
+/* Hover keeps the softer affordance it always had. */
 .legacy-careplans [data-toggle="popover"]:hover {
   outline: 2px solid rgba(228, 86, 47, 0.4);
   outline-offset: 1px;

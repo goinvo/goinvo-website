@@ -250,30 +250,34 @@
   }
 }
 
+/*
+ * Do NOT re-declare the bullet here.
+ *
+ * This page used to carry a verbatim copy of the 2018 site's global
+ * `_lists.scss` — `list-style-image: url(/images/bullet.svg)` with
+ * `list-style-type: none`. The Next port replaced that mechanism with
+ * `.ul li::before` in globals.css, but the copy stayed, and BOTH painted:
+ * `list-style-type: none` does not suppress a `list-style-image`. Every bullet
+ * list on the page rendered two stars — one hanging outside the list, one
+ * sitting on top of the first letter of each item ("✦NCHHSTP", the I in
+ * "Institute" swallowed entirely).
+ *
+ * globals.css owns the marker and the nested-list indent. The page must still
+ * state its own left padding, though: this page also carries `gatsby-article`,
+ * and globals' `.gatsby-article ul { padding-left: 2em }` outranks its own
+ * `.ul { padding-left: 0 }` (same layer, higher specificity). Deleting this
+ * block entirely pushed every bullet 32px right of the paragraph above it.
+ */
 .determinants-of-health .ul {
-  list-style-position: outside;
-  list-style-type: none;
-  list-style-image: url('/images/bullet.svg');
-  padding-left: 21px;
-}
-
-@media (min-width: 864px) {
-  .determinants-of-health .ul {
-    padding-left: 0;
-  }
+  padding-left: 0;
 }
 
 .determinants-of-health .ul li {
   line-height: 1.5rem;
-  padding: 0.2rem;
+  /* Left padding must stay in step with the 21px that globals.css gives the
+     absolutely-positioned ::before star, or the bullet lands on the text. */
+  padding: 0.2rem 0.2rem 0.2rem 21px;
   margin-bottom: 0;
-}
-
-.determinants-of-health .ul ul,
-.determinants-of-health .ul ol,
-.determinants-of-health ol .ul,
-.determinants-of-health ol ol {
-  padding-left: 15px;
 }
 
 .determinants-of-health .list--unstyled {
