@@ -174,9 +174,35 @@
     color: var(--color-white) !important;
   }
 
-  .button--secondary {
+  /*
+   * Pin the resting colours only — never the hover/press states.
+   *
+   * With `color: … !important` applied in EVERY state, a page that fills this
+   * button on hover or press got orange text on an orange fill. Measured on
+   * production: /vision/augmented-clinical-decision-support hovered = 1.00:1
+   * contrast across 8 CTAs, /vision/determinants-of-health pressed = 1.00:1
+   * across 10 CTAs. A solid rectangle with no readable label.
+   *
+   * The page cannot fix this from outside. Unlayered normal declarations lose to
+   * layered `!important` ones, and adding `!important` in the page does not help
+   * either — for important declarations the cascade REVERSES layer order, so an
+   * unlayered `!important` ranks BELOW a layered one. Both were tested in a
+   * browser; both stayed orange-on-orange.
+   *
+   * Excluding the interactive states hands them back to the page, which is where
+   * they belong: the two pages using this class both want a different hover
+   * (one fills with primary, one tints the background), and neither can be
+   * expressed here. Safe to scope this way — `.button--secondary` appears on
+   * exactly those two pages, and both define their own hover and press.
+   */
+  .button--secondary:not(:hover):not(:active) {
     border-color: var(--color-primary) !important;
     color: var(--color-primary) !important;
+  }
+
+  /* The border is not the problem — keep it pinned in every state. */
+  .button--secondary {
+    border-color: var(--color-primary) !important;
   }
 
   footer a {
@@ -910,8 +936,20 @@
 
 /* ── View Transitions (cross-page morphing) ── */
 
-/* Opt the header out so it stays stable during transitions */
-header {
+/*
+ * Opt the site header out so it stays stable during transitions.
+ *
+ * This must name the ONE chrome header, not every <header> element. A
+ * view-transition-name has to be unique per document: if two elements share it
+ * the browser aborts the whole transition, so a bare `header` selector silently
+ * disabled view transitions on every ported page that uses <header> for its own
+ * article sections — 9 page files do, oral-history with 11 of them and
+ * bathroom-to-healthroom with 7.
+ *
+ * `position: fixed` is what actually distinguishes the site header (see
+ * components/layout/Header.tsx); legacy in-page headers are static.
+ */
+header.fixed {
   view-transition-name: header;
 }
 
