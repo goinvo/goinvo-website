@@ -262,9 +262,16 @@
  * sitting on top of the first letter of each item ("✦NCHHSTP", the I in
  * "Institute" swallowed entirely).
  *
- * globals.css owns the marker AND the nested-list indent. Only genuinely
- * page-specific spacing belongs below.
+ * globals.css owns the marker and the nested-list indent. The page must still
+ * state its own left padding, though: this page also carries `gatsby-article`,
+ * and globals' `.gatsby-article ul { padding-left: 2em }` outranks its own
+ * `.ul { padding-left: 0 }` (same layer, higher specificity). Deleting this
+ * block entirely pushed every bullet 32px right of the paragraph above it.
  */
+.determinants-of-health .ul {
+  padding-left: 0;
+}
+
 .determinants-of-health .ul li {
   line-height: 1.5rem;
   /* Left padding must stay in step with the 21px that globals.css gives the
