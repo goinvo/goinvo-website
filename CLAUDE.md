@@ -150,6 +150,51 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
+## Gated internal plan pages: /marketing-plan, /outreach-plan, /action-plan
+
+Three unlisted, noindexed internal decks, all gated by ONE `MARKETING_PLAN_KEY` (HMAC session
+cookie `goinvo_marketing_plan_session`, 8h, minted by `POST /api/marketing/plan-session` with a
+hidden allowlisted `next` field). `/marketing-plan` = strategy deck (public-dataset CMS records);
+`/outreach-plan` = warm-network brief (private outreach dataset); **`/action-plan` = the
+execution plan (built 2026-08-17)** — the 12-week Sep–Nov 2026 plan rendered from LIVE CMS docs:
+timeline with phase progress, month calendar (`?month=YYYY-MM`, clamped), next-two-weeks queue,
+decision gates, and live-composed supporting documents (per-segment call scripts from real
+openers/offers/evidence, email templates, offer one-pagers).
+
+- **Data model:** plan actions are REAL documents. 16 `marketingOperation` docs in the PRIVATE
+  outreach dataset (sourceKey prefix `exec-plan-2026q4/`, deterministic `_id`s, phases
+  `phase1|phase2|phase3|gate`) + 13 neutral `marketingCalendarItem` docs in production (`_id`
+  prefix `mcal-plan2026q4-`, `idea`/`drafting`, `autoPublish:false` — the publish worker can
+  never claim them). Mark work done in Studio (Operations board / Calendar) → the page follows.
+- **Seed:** `npx tsx scripts/seed-execution-plan.ts` (dry-run default; `--write --confirm
+  seed:exec-plan-2026q4`). `createIfNotExists` ONLY — re-runs are no-ops, Studio edits always
+  survive, catalog edits do NOT propagate (birth certificate, not a sync source). Catalog:
+  `src/lib/marketing/executionPlanSeed.ts`; pure helpers `src/lib/marketing/executionPlan.ts`;
+  tests `tests/execution-plan.test.ts` include a **neutrality guard** (production-bound
+  titles/briefs must carry no crisis framing / person names / emails — that dataset is
+  world-readable; candid framing lives only on the outreach-dataset operations).
+- **Gotchas fixed 2026-08-17, don't regress:** the session cookie must be `path: '/'` (it was
+  `/marketing-plan`, which made every OTHER gated page loop on its gate forever — covered in
+  `tests/marketing-plan-session-route.test.ts`); a new gated route must be added to
+  `ALLOWED_DESTINATIONS` in the plan-session route; calendar-style CSS grids need
+  `repeat(7, minmax(0,1fr))` (bare `1fr` floors at the widest nowrap chip and scrolls the page
+  sideways); GROQ `count(*[...].array[])` counts a NULL per doc missing the array — use
+  `math::sum(*[...]{"n": count(coalesce(array, []))}.n)`.
+
+## Lead magnet: Clinical AI Pilot Pre-Mortem (started 2026-08-03)
+
+Pipeline-first strategy (Juhan approved via Slack): lead magnet before homepage
+experiments. Full package + strategy + build plan in **`docs/lead-magnet/`** (article
+draft, worksheet/facilitator-kit draft, README with open decisions + build plan).
+Key facts: ungated article + ungated one-page scorecard, email gate ONLY on the
+facilitator's kit; public info + published case studies only (the fix methodology
+stays paid); the F1–F8 failure taxonomy is INTERNAL-only strategy content today —
+publishing it is an open decision (Shirley). Email capture today = third-party
+EmailOctopus embeds (`eocampaign1.com`, form id in `src/lib/config.ts`) — blockable,
+uninstrumented (zero signup events in GA4 ever); the build plan replaces it with a
+first-party `/api/newsletter/subscribe` route (needs `EMAILOCTOPUS_API_KEY`).
+Citation cautions: never cite the "KLAS 23%" vendor-blog stat; HIMSS 18% unverified.
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.

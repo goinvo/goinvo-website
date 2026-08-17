@@ -12,6 +12,10 @@ import {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// One key unlocks every internal deck; the form says which one to return to.
+const DEFAULT_DESTINATION = '/marketing-plan'
+const ALLOWED_DESTINATIONS = ['/marketing-plan', '/outreach-plan', '/action-plan']
+
 const FAILURE_LIMIT = 10
 const FAILURE_WINDOW_SECONDS = 10 * 60
 const memoryFailures = new Map<string, { count: number; expiresAt: number }>()
@@ -72,9 +76,14 @@ export async function POST(request: Request) {
   }
 
   let candidate = ''
+  let destination = DEFAULT_DESTINATION
   try {
     const form = await request.formData()
     candidate = String(form.get('key') || '')
+    // Allowlisted only: a caller-supplied redirect target would otherwise turn
+    // this into an open redirect that borrows our domain's credibility.
+    const requested = String(form.get('next') || '')
+    if (ALLOWED_DESTINATIONS.includes(requested)) destination = requested
   } catch {
     return noStore(NextResponse.json({ error: 'Expected a form submission.' }, { status: 400 }))
   }
@@ -88,18 +97,21 @@ export async function POST(request: Request) {
       response.headers.set('Retry-After', String(FAILURE_WINDOW_SECONDS))
       return noStore(response)
     }
-    return noStore(NextResponse.redirect(new URL('/marketing-plan?denied=1', request.url), 303))
+    return noStore(NextResponse.redirect(new URL(`${destination}?denied=1`, request.url), 303))
   }
 
   const session = marketingPlanSessionValue()
   if (!session) return noStore(NextResponse.json({ error: 'Not found.' }, { status: 404 }))
 
-  const response = NextResponse.redirect(new URL('/marketing-plan', request.url), 303)
+  const response = NextResponse.redirect(new URL(destination, request.url), 303)
   response.cookies.set(MARKETING_PLAN_SESSION_COOKIE, session, {
     httpOnly: true,
     sameSite: 'strict',
     secure: process.env.NODE_ENV === 'production',
-    path: '/marketing-plan',
+    // Path=/ so one login covers every gated plan page. A path of
+    // '/marketing-plan' means the browser never sends the cookie to
+    // /outreach-plan or /action-plan, which re-show the gate forever.
+    path: '/',
     maxAge: MARKETING_PLAN_SESSION_MAX_AGE,
   })
   return noStore(response)
