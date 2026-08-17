@@ -98,6 +98,7 @@ export const footerLinks = {
     { href: '/vision', title: 'Vision' },
     { href: '/open-source-health-design', title: 'Open Design' },
     { href: '/about/studio-timeline', title: 'Studio Timeline' },
+    { href: '/vision/health-visualizations', title: 'Shop' },
   ],
   contact: [
     { href: '/contact', title: 'Contact Us' },
