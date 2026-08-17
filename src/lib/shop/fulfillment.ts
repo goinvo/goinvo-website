@@ -254,6 +254,9 @@ export async function fulfillStripeCheckout(sessionId: string): Promise<Fulfillm
     placedAt: orderDocument.placedAt,
     customerName,
     customerEmail: email,
+    // Already computed for the order document above; passing it through is what
+    // makes the alert fulfillable on its own, without a Stripe login.
+    shippingAddress: orderDocument.shippingAddress || undefined,
     items: orderItems.map((item) => ({
       title: item.title,
       quantity: item.quantity,

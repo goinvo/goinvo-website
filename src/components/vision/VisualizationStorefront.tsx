@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PRINT_SIZE_BY_SLUG } from '@/lib/shop/printSizes'
+import { CART_STORAGE_KEY } from '@/lib/shop/cartStorage'
 import {
   SHOP_MAX_DONATION_CENTS,
   SHOP_MIN_DONATION_CENTS,
@@ -312,7 +313,6 @@ export function VisualizationStorefront({
    * scope: it survives the round trip and the tab, and does not resurrect a
    * stale cart weeks later.
    */
-  const CART_STORAGE_KEY = 'goinvo-shop-cart-v1'
   const cartRestoredRef = useRef(false)
 
   useEffect(() => {
