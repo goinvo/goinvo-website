@@ -5,6 +5,7 @@ import {
   aggregatesFromKvHash,
   getKvClient,
   kvCounterKey,
+  sectionEngagementFromKvHash,
   upsertDrainSignalForFlag,
   variantEngagementFromKvHash,
   KV_FLAGS_KEY,
@@ -53,7 +54,12 @@ export async function GET(request: NextRequest) {
     // hash's reserved `__eng_*` fields. This is the sole writer of engagement on
     // the signal (the retired GA4 A/B route no longer exists).
     const variantEngagement = variantEngagementFromKvHash(hash)
-    const result = await upsertDrainSignalForFlag(client, flagKey, aggregates, { metricDate, variantEngagement })
+    const sectionEngagement = sectionEngagementFromKvHash(hash)
+    const result = await upsertDrainSignalForFlag(client, flagKey, aggregates, {
+      metricDate,
+      variantEngagement,
+      sectionEngagement,
+    })
     warnings.push(...result.warnings)
     if (result.updated) updatedSignals += 1
   }

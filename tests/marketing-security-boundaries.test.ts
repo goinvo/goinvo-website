@@ -311,6 +311,7 @@ describe('public experiment beacon validation', () => {
   const valid = {
     experiment_id: 'home-shop-section',
     flag_key: 'home-shop-section-variant',
+    measurement_key: '2026-08-12-initial-v1',
     variant: 'present',
     page_path: '/',
   }
@@ -326,6 +327,7 @@ describe('public experiment beacon validation', () => {
   it.each([
     { flag_key: 'attacker-flag' },
     { experiment_id: 'attacker-experiment' },
+    { measurement_key: 'stale-window' },
     { variant: 'attacker-variant' },
     { page_path: '/admin' },
     { eventName: 'attacker_event' },

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   aggregateDrainEvents,
   buildDrainPerformanceSignalDoc,
+  buildSectionEngagementEntries,
   buildSignalMetricsFromAggregates,
   drainSignalId,
   extractExperimentDimensions,
@@ -169,16 +170,16 @@ describe('Vercel drain signal metrics', () => {
     expect(metrics).toContainEqual(
       expect.objectContaining({
         _type: 'performanceMetric',
-        label: 'Current homepage visits / exposures',
+        label: 'Current homepage unique visitors / exposures',
         value: 300,
-        unit: 'visits',
+        unit: 'visitors',
         variantKey: 'control',
         eventName: 'experiment_exposure',
       }),
     )
     expect(metrics).toContainEqual(
       expect.objectContaining({
-        label: '2026 concept homepage visits / exposures',
+        label: '2026 concept homepage unique visitors / exposures',
         value: 300,
         variantKey: 'concept',
         eventName: 'experiment_exposure',
@@ -214,10 +215,10 @@ describe('Vercel drain signal metrics', () => {
     const metrics = buildSignalMetricsFromAggregates(aggregates, { variants: HOME_VARIANTS, conversionEvents })
     const summary = summarizeDrainSignal({ metrics, variants: HOME_VARIANTS, conversionEvents })
 
-    expect(summary).toContain('2026 concept homepage 120 visits')
-    expect(summary).toContain('Current homepage 100 visits')
+    expect(summary).toContain('2026 concept homepage 120 unique visitors')
+    expect(summary).toContain('Current homepage 100 unique visitors')
     expect(summary).toContain('leads on 1 of 1 tracked event')
-    expect(summary).not.toMatch(/visitor/i)
+    expect(summary).not.toMatch(/visitor[_-]?id|client[_-]?id/i)
   })
 })
 
@@ -235,6 +236,13 @@ describe('Vercel drain Sanity upsert shape', () => {
       conversionEvents: [HOME_CONVERSIONS[0]],
     })
     const signalId = drainSignalId('home-2026-variant')
+    const sectionEngagement = buildSectionEngagementEntries(
+      [
+        { variantKey: 'control', sectionKey: 'hero', views: 80, averageVisibleDuration: 20 },
+        { variantKey: 'concept', sectionKey: 'hero', views: 100, averageVisibleDuration: 10 },
+      ],
+      HOME_VARIANTS.map((variant) => variant.key),
+    )
     expect(signalId).toBe('marketing-vercel-drain-home-2026-variant')
 
     const doc = buildDrainPerformanceSignalDoc({
@@ -244,6 +252,7 @@ describe('Vercel drain Sanity upsert shape', () => {
       flagKey: 'home-2026-variant',
       pageUrl: 'https://www.goinvo.com/',
       metrics,
+      sectionEngagement,
       interpretation: 'Auto-updated readout.',
       metricDate: '2026-06-01',
       periodEnd: '2026-06-01',
@@ -263,10 +272,12 @@ describe('Vercel drain Sanity upsert shape', () => {
     expect(doc.title).toContain('Homepage 2026 concept test')
     expect(doc.metrics).toBe(metrics)
     expect(doc.metrics.every((metric) => metric.variantKey && metric.eventName)).toBe(true)
+    expect(doc.sectionEngagement).toEqual(sectionEngagement)
 
     const raw = JSON.parse(doc.rawImport)
     expect(raw.flagKey).toBe('home-2026-variant')
-    expect(JSON.stringify(raw)).not.toMatch(/visitor/i)
+    expect(raw.sectionEngagement).toEqual(sectionEngagement)
+    expect(JSON.stringify(raw)).not.toMatch(/visitor[_-]?id|client[_-]?id/i)
   })
 
   it('omits a non-absolute page url', () => {

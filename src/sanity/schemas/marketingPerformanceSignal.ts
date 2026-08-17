@@ -44,6 +44,31 @@ const performanceVariantEngagementFields = [
   }),
 ]
 
+const performanceSectionEngagementFields = [
+  defineField({
+    name: 'variantKey',
+    title: 'Variant Key',
+    type: 'string',
+    validation: (Rule) => Rule.required(),
+  }),
+  defineField({
+    name: 'sectionKey',
+    title: 'Section Key',
+    type: 'string',
+    validation: (Rule) => Rule.required(),
+  }),
+  defineField({
+    name: 'views',
+    title: 'Section Views',
+    type: 'number',
+  }),
+  defineField({
+    name: 'averageVisibleDuration',
+    title: 'Average Visible Time (Seconds)',
+    type: 'number',
+  }),
+]
+
 const performanceMetricFields = [
   defineField({
     name: 'label',
@@ -241,6 +266,30 @@ export default defineType({
       ],
     }),
     defineField({
+      name: 'sectionEngagement',
+      title: 'Per-Section Engagement',
+      type: 'array',
+      group: 'signal',
+      description: 'First-party section reach and average visible time, split by experiment variant.',
+      of: [
+        {
+          name: 'performanceSectionEngagement',
+          title: 'Section Engagement',
+          type: 'object',
+          fields: performanceSectionEngagementFields,
+          preview: {
+            select: { section: 'sectionKey', variant: 'variantKey', views: 'views' },
+            prepare({ section, variant, views }) {
+              return {
+                title: section || 'Untitled section',
+                subtitle: [variant, typeof views === 'number' ? `${views} views` : ''].filter(Boolean).join(' / '),
+              }
+            },
+          },
+        },
+      ],
+    }),
+    defineField({
       name: 'interpretation',
       title: 'Interpretation',
       type: 'text',
@@ -283,4 +332,10 @@ export default defineType({
   ],
 })
 
-export { performanceMetricFields, performanceVariantEngagementFields, performanceProviderOptions, performanceSignalStatusOptions }
+export {
+  performanceMetricFields,
+  performanceVariantEngagementFields,
+  performanceSectionEngagementFields,
+  performanceProviderOptions,
+  performanceSignalStatusOptions,
+}
