@@ -184,8 +184,14 @@ openers/offers/evidence, email templates, offer one-pagers).
 ## Lead magnet: Clinical AI Pilot Pre-Mortem (started 2026-08-03)
 
 Pipeline-first strategy (Juhan approved via Slack): lead magnet before homepage
-experiments. Full package + strategy + build plan in **`docs/lead-magnet/`** (article
-draft, worksheet/facilitator-kit draft, README with open decisions + build plan).
+experiments. **The drafts now live in the CMS, not the repo** (moved 2026-08-17; this repo is
+PUBLIC, so unpublished drafts must not be committed here). Three `marketingIdea` documents hold
+the byte-exact markdown — `marketingIdea.lead-magnet-premortem-article`,
+`…-premortem-worksheet`, `…-package-strategy`. `marketingIdea` is anon-hidden (verified: 23 docs
+with a token, 0 without), which is what makes it a safe home for an article whose taxonomy
+question is still undecided. The open decisions + citation cautions are also
+`marketingOperation` docs under `exec-plan-2026q4/phase2/decision-*` in the private outreach
+dataset, so they surface on the Operations board and on /action-plan.
 Key facts: ungated article + ungated one-page scorecard, email gate ONLY on the
 facilitator's kit; public info + published case studies only (the fix methodology
 stays paid); the F1–F8 failure taxonomy is INTERNAL-only strategy content today —
