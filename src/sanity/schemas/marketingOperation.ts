@@ -20,6 +20,7 @@ const labels: Record<string, string> = {
   abTesting: 'A/B testing',
   linkTree: 'Quick Links',
   workEvidence: 'Outreach evidence',
+  shop: 'Shop',
 }
 
 const options = (values: readonly string[]) => values.map((value) => ({
