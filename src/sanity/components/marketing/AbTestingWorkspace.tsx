@@ -54,6 +54,7 @@ import {
   getAbTestingInsightActionTarget,
   getAbTestingLaunchChecklistItems,
   getAbTestingStats,
+  getAbTestingSectionEngagement,
   getAbTestingTrackedVercelEvents,
   getAbTestingVariantValidationError,
   getAbTestingVariantEngagement,
@@ -1230,13 +1231,17 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
   const hasEngagement = engagementByVariant.some(
     ({ engagement }) => engagement.sessions !== null || engagement.bounceRate !== null || engagement.averageSessionDuration !== null,
   )
+  const sectionEngagement = getAbTestingSectionEngagement(experiment)
+  const sectionKeys = Array.from(new Set(sectionEngagement.map((entry) => entry.sectionKey)))
+  const sectionLabel = (sectionKey: string) =>
+    sectionKey.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 
   return (
     <div style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12, display: 'grid', gap: 10 }}>
       <div>
-        <h3 style={{ margin: 0, fontSize: 16 }}>Visits and events</h3>
+        <h3 style={{ margin: 0, fontSize: 16 }}>Unique visitors and events</h3>
         <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
-          Shows total visits or exposures for each version, then how many visitors triggered each tracked event, plus per-version bounce rate and avg time on page.
+          Shows deduplicated visitors exposed to each version, then how many unique visitors triggered each tracked event, plus session-based bounce rate and avg time on page.
         </p>
         <p style={{ ...styles.small, ...styles.muted, margin: '4px 0 0', lineHeight: 1.45 }}>
           Every metric here is first-party measured from the same on-page pipeline. Bounce rate and avg time on page come from each session&apos;s visible time on the page (a session counts as engaged at 10s visible or once it converts); Sessions is the number of measured page-sessions behind those figures.
@@ -1270,7 +1275,7 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
               </div>
               {row.cells.map((cell) => (
                 <div key={`${row.key}-${cell.variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
-                  <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{formatAbTestingEventCount(cell.value, row.isExposure ? cell.unit || 'visits' : cell.unit || 'events')}</strong>
+                  <strong style={{ fontSize: 14, lineHeight: 1.2 }}>{formatAbTestingEventCount(cell.value, row.isExposure ? cell.unit || 'visitors' : cell.unit || 'events')}</strong>
                   {!row.isExposure && (
                     <span style={{ ...styles.small, ...styles.muted }}>
                       {formatAbTestingEventRate(cell)}
@@ -1295,6 +1300,53 @@ function AbTestingVariantEventTable({ experiment }: { experiment: MarketingExper
           ))}
         </div>
       </div>
+      {sectionKeys.length > 0 && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16 }}>Section engagement</h3>
+            <p style={{ ...styles.small, ...styles.muted, margin: '5px 0 0', lineHeight: 1.45 }}>
+              Average visible time starts when at least 15% of a section is on screen. Reach is the share of measured sessions that viewed that section.
+            </p>
+          </div>
+          <div data-mobile-scroll="true" style={{ overflowX: 'auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns, minWidth: 190 + variants.length * 150, borderTop: '1px solid var(--card-border-color)' }}>
+              <div style={{ ...styles.small, ...styles.muted, fontWeight: 900, padding: '8px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
+                Section
+              </div>
+              {variants.map((variant) => (
+                <div key={`section-header-${variant.key}`} style={{ ...styles.small, ...styles.muted, fontWeight: 900, padding: '8px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)' }}>
+                  {variant.label}
+                </div>
+              ))}
+              {sectionKeys.map((sectionKey) => (
+                <Fragment key={sectionKey}>
+                  <div style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)' }}>
+                    <strong style={{ display: 'block', fontSize: 13, lineHeight: 1.25 }}>{sectionLabel(sectionKey)}</strong>
+                  </div>
+                  {engagementByVariant.map(({ variant, engagement }) => {
+                    const entry = sectionEngagement.find(
+                      (candidate) => candidate.variantKey === variant.key && candidate.sectionKey === sectionKey,
+                    )
+                    const reach = entry && engagement.sessions && engagement.sessions > 0
+                      ? `${Math.round((entry.views / engagement.sessions) * 1000) / 10}% reach`
+                      : 'Reach unavailable'
+                    return (
+                      <div key={`${sectionKey}-${variant.key}`} style={{ padding: '9px 10px', borderBottom: '1px solid var(--card-border-color)', borderLeft: '1px solid var(--card-border-color)', display: 'grid', gap: 3 }}>
+                        <strong style={{ fontSize: 14, lineHeight: 1.2 }}>
+                          {entry ? formatAbTestingAvgTime(entry.averageVisibleDuration) : '—'}
+                        </strong>
+                        <span style={{ ...styles.small, ...styles.muted }}>
+                          {entry ? `${formatOptionalNumber(entry.views)} views · ${reach}` : 'No section data'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
       {!hasEngagement && (
         <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.45 }}>
           Bounce rate, avg time on page, and measured sessions fill in once the first-party engagement rollup has run for this test.

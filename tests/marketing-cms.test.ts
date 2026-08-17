@@ -217,7 +217,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('onClick={() => void createHomepageExperiment()}')
     expect(source).toContain('How this test is going')
     expect(source).toContain('Suggested improvements')
-    expect(source).toContain('Visits and events')
+    expect(source).toContain('Unique visitors and events')
     expect(source).toContain('Fix result evidence')
     expect(source).toContain('Measurement blocked')
     expect(source).toContain('Variant visits and event counts captured')
