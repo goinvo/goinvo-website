@@ -22,9 +22,17 @@ const PRINCIPAL_STEP_IDS = [
   'principal-outreach-intake',
   'principal-outreach-research',
   'principal-outreach-review',
-  'principal-outreach-call',
-  'principal-outreach-log',
+  'principal-outreach-contact-log',
 ] as const
+
+const READY_PREREQUISITES = {
+  contactCount: 1,
+  evidenceCount: 1,
+  callReadyOfferCount: 1,
+  researchedContactCount: 1,
+  reviewedContactCount: 1,
+  interactionCount: 1,
+}
 
 describe('principal outreach Autopilot', () => {
   it('builds a truthful end-to-end plan in execution order', () => {
@@ -37,7 +45,6 @@ describe('principal outreach Autopilot', () => {
       'outreach:addContacts',
       'outreach:research',
       'outreach:review',
-      'outreach:call',
       'outreach:log',
     ])
     expect(plan.steps.map((step) => step.status)).toEqual([
@@ -46,11 +53,10 @@ describe('principal outreach Autopilot', () => {
       'upcoming',
       'upcoming',
       'upcoming',
-      'upcoming',
     ])
     expect(plan.currentStepId).toBe(PRINCIPAL_STEP_IDS[0])
     expect(plan.coachOpen).toBe(true)
-    expect(plan.steps.find((step) => step.id === 'principal-outreach-call')?.targetId).toBe('outreach-progress-tracker')
+    expect(plan.steps.find((step) => step.id === 'principal-outreach-contact-log')?.targetId).toBe('outreach-progress-tracker')
   })
 
   it('uses the progress tracker name consistently and puts scripted advancement in the footer', () => {
@@ -63,7 +69,7 @@ describe('principal outreach Autopilot', () => {
     expect(MARKETING_TOOL_SOURCE).not.toMatch(/This week's calls|\bcall list\b|follow-ups strip/i)
     expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[0])).toBe('Add Contacts')
     expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[1])).toBe('Enter a Contact Above')
-    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[5])).toBe('Finish')
+    expect(getPrincipalAutopilotNextLabel(PRINCIPAL_STEP_IDS[4], READY_PREREQUISITES)).toBe('Finish Outreach Setup')
     expect(MARKETING_TOOL_SOURCE).toContain('!scriptedPlan && <div')
     expect(MARKETING_TOOL_SOURCE).toContain('? () => onChoice(step, primaryChoice, 0)')
     expect(MARKETING_TOOL_SOURCE).toContain('Checking live readiness…')
@@ -90,6 +96,40 @@ describe('principal outreach Autopilot', () => {
     expect(html).not.toContain('Preflight checked — add contacts')
     expect(html).not.toContain('Keep setup open')
     expect(html).not.toContain('autopilot-coach-choice-principal-plan-warm-network')
+  })
+
+  it('names the missing work and disables advancement instead of offering a no-op next action', () => {
+    const plan = buildPrincipalOutreachPlan()
+    const blocked = {
+      ...READY_PREREQUISITES,
+      evidenceCount: 0,
+    }
+    const tutorial = buildAutopilotCoachTutorial(
+      plan,
+      () => undefined,
+      () => undefined,
+      {
+        checkingPrerequisites: false,
+        prerequisiteNotice: getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[0], blocked),
+        contactCount: blocked.contactCount,
+        principalPrerequisites: blocked,
+      },
+    )
+    const html = renderToStaticMarkup(
+      createElement(GuidedTutorialOverlay, {
+        active: true,
+        tutorial,
+        stepIndex: 0,
+        onStepChange: () => undefined,
+        onClose: () => undefined,
+        onRestart: () => undefined,
+        onShowLibrary: () => undefined,
+      }),
+    )
+
+    expect(html).toContain('Extract Work Evidence Above')
+    expect(html).toContain('disabled=""')
+    expect(html).not.toContain('>Add Contacts<')
   })
 
   it('explains that an empty intake needs a contact before review', () => {
@@ -143,30 +183,58 @@ describe('principal outreach Autopilot', () => {
 
   it('does not confirm scripted work when known live prerequisites are missing', () => {
     const initial = buildPrincipalOutreachPlan()
-    const noOffers = { contactCount: 0, callReadyOfferCount: 0 }
+    const noOffers = {
+      ...READY_PREREQUISITES,
+      contactCount: 0,
+      evidenceCount: 0,
+      callReadyOfferCount: 0,
+      researchedContactCount: 0,
+      reviewedContactCount: 0,
+      interactionCount: 0,
+    }
 
     expect(getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[0], noOffers)).toContain('real currency amount')
+    expect(getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[0], noOffers)).toContain('Extract work evidence')
     expect(advanceScriptedAutopilotPlan(initial, PRINCIPAL_STEP_IDS[0], noOffers)).toBe(initial)
 
     const preflightComplete = advanceScriptedAutopilotPlan(initial, PRINCIPAL_STEP_IDS[0], {
+      ...READY_PREREQUISITES,
       contactCount: 0,
-      callReadyOfferCount: 1,
     })
     expect(preflightComplete.currentStepId).toBe(PRINCIPAL_STEP_IDS[1])
     expect(getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[1], {
+      ...READY_PREREQUISITES,
       contactCount: 0,
-      callReadyOfferCount: 1,
     })).toContain('Add at least one contact')
     expect(advanceScriptedAutopilotPlan(preflightComplete, PRINCIPAL_STEP_IDS[1], {
+      ...READY_PREREQUISITES,
       contactCount: 0,
-      callReadyOfferCount: 1,
     })).toBe(preflightComplete)
 
     const contactsComplete = advanceScriptedAutopilotPlan(preflightComplete, PRINCIPAL_STEP_IDS[1], {
-      contactCount: 1,
-      callReadyOfferCount: 1,
+      ...READY_PREREQUISITES,
     })
     expect(contactsComplete.currentStepId).toBe(PRINCIPAL_STEP_IDS[2])
+  })
+
+  it('refuses to skip research, human review, or durable interaction logging', () => {
+    let plan = buildPrincipalOutreachPlan()
+    plan = advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[0], READY_PREREQUISITES)
+    plan = advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[1], READY_PREREQUISITES)
+
+    const withoutResearch = { ...READY_PREREQUISITES, researchedContactCount: 0 }
+    expect(getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[2], withoutResearch)).toContain('Research at least one contact')
+    expect(advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[2], withoutResearch)).toBe(plan)
+    plan = advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[2], READY_PREREQUISITES)
+
+    const withoutReview = { ...READY_PREREQUISITES, reviewedContactCount: 0 }
+    expect(getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[3], withoutReview)).toContain('Approve at least one')
+    expect(advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[3], withoutReview)).toBe(plan)
+    plan = advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[3], READY_PREREQUISITES)
+
+    const withoutInteraction = { ...READY_PREREQUISITES, interactionCount: 0 }
+    expect(getPrincipalOutreachPrerequisiteBlocker(PRINCIPAL_STEP_IDS[4], withoutInteraction)).toContain('save the result')
+    expect(advanceScriptedAutopilotPlan(plan, PRINCIPAL_STEP_IDS[4], withoutInteraction)).toBe(plan)
   })
 
   it('persists every confirmed step so resume opens the next unfinished decision', () => {

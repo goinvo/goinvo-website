@@ -531,7 +531,7 @@ const MARKETING_QUERY = `{
     vercelDashboardUrl,
     "campaign": campaign->{_id, title, status},
     "calendarItem": calendarItem->{_id, title, status, publishAt},
-    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, "experiment": experiment->{_id, title, status}, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, interpretation, recommendation},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, "experiment": experiment->{_id, title, status}, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, sectionEngagement[]{_key, variantKey, sectionKey, views, averageVisibleDuration}, interpretation, recommendation},
     result,
     decision,
     decisionDate,
@@ -558,6 +558,7 @@ const MARKETING_QUERY = `{
     periodEnd,
     metrics[]{_key, label, value, unit, change, variantKey, eventName},
     variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration},
+    sectionEngagement[]{_key, variantKey, sectionKey, views, averageVisibleDuration},
     interpretation,
     recommendation,
     rawImport
@@ -827,8 +828,8 @@ export type MarketingViewId =
   | 'channels'
   | 'analytics'
   | 'linkTree'
-  | 'seo'
   | 'shop'
+  | 'seo'
 export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 
 export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = {
@@ -846,8 +847,8 @@ export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = 
   channels: 'marketing.channels',
   analytics: 'marketing.analytics',
   linkTree: 'marketing.quick-links',
-  seo: 'marketing.seo',
   shop: 'marketing.shop',
+  seo: 'marketing.seo',
 }
 export type MarketingAssistKind =
   | 'campaign'
@@ -1465,6 +1466,7 @@ export interface MarketingPerformanceSignal {
   periodEnd?: string
   metrics?: Array<{ _key?: string; label?: string; value?: number; unit?: string; change?: string; variantKey?: string; eventName?: string }>
   variantEngagement?: Array<{ _key?: string; variantKey?: string; sessions?: number; bounceRate?: number; averageSessionDuration?: number }>
+  sectionEngagement?: Array<{ _key?: string; variantKey?: string; sectionKey?: string; views?: number; averageVisibleDuration?: number }>
   interpretation?: string
   recommendation?: string
   rawImport?: string
@@ -7807,8 +7809,16 @@ function isScriptedAutopilotPlan(plan: MarketingAutopilotPlan | null | undefined
 export type PrincipalOutreachPrerequisites = {
   /** `null` means the private outreach dataset has not been checked yet. */
   contactCount: number | null
+  /** Active work-evidence records that can support a credible outreach brief. */
+  evidenceCount: number | null
   /** Active offers whose price band contains a real currency amount. */
   callReadyOfferCount: number | null
+  /** Contacts with a saved research result. */
+  researchedContactCount: number | null
+  /** Contacts whose latest research has been approved by a person. */
+  reviewedContactCount: number | null
+  /** Contacts with at least one durable outreach interaction. */
+  interactionCount: number | null
 }
 
 export function getPrincipalOutreachPrerequisiteBlocker(
@@ -7817,11 +7827,21 @@ export function getPrincipalOutreachPrerequisiteBlocker(
 ): string | null {
   if (!prerequisites || !stepId.startsWith('principal-')) return null
   const missing: string[] = []
-  if (stepId !== 'principal-plan-warm-network' && prerequisites.contactCount === 0) {
-    missing.push('Add at least one contact before confirming this step.')
-  }
-  if (prerequisites.callReadyOfferCount === 0) {
-    missing.push('Set a real currency amount on at least one active offer before continuing.')
+  if (stepId === 'principal-plan-warm-network') {
+    if (prerequisites.evidenceCount === 0) {
+      missing.push('Extract work evidence before starting contact research.')
+    }
+    if (prerequisites.callReadyOfferCount === 0) {
+      missing.push('Set a real currency amount on at least one active offer before continuing.')
+    }
+  } else if (stepId === 'principal-outreach-intake' && prerequisites.contactCount === 0) {
+    missing.push('Add at least one contact before continuing.')
+  } else if (stepId === 'principal-outreach-research' && prerequisites.researchedContactCount === 0) {
+    missing.push('Research at least one contact and wait for the saved result.')
+  } else if (stepId === 'principal-outreach-review' && prerequisites.reviewedContactCount === 0) {
+    missing.push('Approve at least one researched brief for the call plan.')
+  } else if (stepId === 'principal-outreach-contact-log' && prerequisites.interactionCount === 0) {
+    missing.push('Contact someone, then save the result in Log interaction.')
   }
   return missing.length > 0 ? `Stay on this step: ${missing.join(' ')}` : null
 }
@@ -7831,20 +7851,35 @@ async function loadPrincipalOutreachPrerequisites(
 ): Promise<PrincipalOutreachPrerequisites> {
   const result = await outreachClient.fetch<{
     contactCount?: number
+    evidenceCount?: number
+    researchedContactCount?: number
+    reviewedContactCount?: number
+    interactionCount?: number
     offers?: Array<{ priceBand?: string }>
   }>(`{
     "contactCount": count(*[_type == "marketingContact" && !(_id in path("drafts.**"))]),
+    "evidenceCount": count(*[_type == "marketingWorkEvidence" && status == "active" && !(_id in path("drafts.**"))]),
+    "researchedContactCount": count(*[_type == "marketingContact" && defined(researchedAt) && !(_id in path("drafts.**"))]),
+    "reviewedContactCount": count(*[_type == "marketingContact" && defined(researchReviewedAt) && !(_id in path("drafts.**"))]),
+    "interactionCount": count(*[_type == "marketingContact" && count(interactions) > 0 && !(_id in path("drafts.**"))]),
     "offers": *[_type == "marketingOffer" && status == "active" && !(_id in path("drafts.**"))]{priceBand}
   }`)
-  const contactCount = typeof result.contactCount === 'number' && Number.isFinite(result.contactCount)
-    ? Math.max(0, result.contactCount)
-    : 0
+  const safeCount = (value: number | undefined) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0
+  const contactCount = safeCount(result.contactCount)
   const callReadyOfferCount = (result.offers || []).filter((offer) => hasPricedOffer(offer.priceBand)).length
-  return { contactCount, callReadyOfferCount }
+  return {
+    contactCount,
+    evidenceCount: safeCount(result.evidenceCount),
+    callReadyOfferCount,
+    researchedContactCount: safeCount(result.researchedContactCount),
+    reviewedContactCount: safeCount(result.reviewedContactCount),
+    interactionCount: safeCount(result.interactionCount),
+  }
 }
 
 // A principal/founder gets a hand-authored end-to-end guided plan: preflight the
-// offer/evidence setup, add contacts, research, review, call, and log. It's a
+// offer/evidence setup, add contacts, research, review, then contact and log. It's a
 // normal MarketingAutopilotPlan, so the coach overlay, resume card, and target-
 // opening all work unchanged. The coach footer advances the persisted plan;
 // closing the coach leaves the current step untouched.
@@ -7899,25 +7934,13 @@ export function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
       status: 'upcoming',
     },
     {
-      id: 'principal-outreach-call',
+      id: 'principal-outreach-contact-log',
       view: 'outreach',
       targetId: 'outreach-progress-tracker',
-      title: 'Call from the Outreach progress tracker',
-      instruction: 'Start with Recommended next in the Outreach progress tracker; use the linked proof, priced offer, opener, and intelligence question.',
-      why: 'The list ranks relationship warmth before model fit, so the fastest credible conversations stay at the top.',
-      requiredAction: 'Call or message the approved contacts, adapting the suggested opener in your own voice.',
-      nextAfter: 'Log what happened and set the next touch.',
-      expectedAction: 'outreach:call',
-      status: 'upcoming',
-    },
-    {
-      id: 'principal-outreach-log',
-      view: 'outreach',
-      targetId: 'autopilot-outreach-workflow',
-      title: 'Log outcomes before you leave',
-      instruction: 'Open Log interaction for every touch, record what happened, and save the follow-up date.',
-      why: 'A short outcome note keeps the team from repeating work while the default seven-day follow-up makes the next action resurface automatically.',
-      requiredAction: 'Save an outcome for each call; add intelligence, opportunity value, offer, evidence, or next step when known.',
+      title: 'Contact someone and log the result',
+      instruction: 'Start with Recommended next, contact them using the suggested channel, then open Log interaction and save what happened.',
+      why: 'The system cannot know whether an external call, email, or LinkedIn message happened until you log it. One combined step keeps the checklist honest and gives the team a durable handoff.',
+      requiredAction: 'Contact at least one approved person and save the outcome, channel, and next touch in Log interaction.',
       nextAfter: 'The outreach loop is complete; follow-ups will resurface when due.',
       expectedAction: 'outreach:log',
       status: 'upcoming',
@@ -7976,13 +7999,31 @@ export function advanceScriptedAutopilotPlan(
 const PRINCIPAL_AUTOPILOT_NEXT_LABELS: Record<string, string> = {
   'principal-plan-warm-network': 'Add Contacts',
   'principal-outreach-intake': 'Enter a Contact Above',
-  'principal-outreach-research': 'Review Briefs',
-  'principal-outreach-review': 'Open Progress Tracker',
-  'principal-outreach-call': 'Log Outcomes',
-  'principal-outreach-log': 'Finish',
+  'principal-outreach-research': 'Research a Contact Above',
+  'principal-outreach-review': 'Approve a Brief Above',
+  'principal-outreach-contact-log': 'Contact Someone, Then Log the Result',
 }
 
-export function getPrincipalAutopilotNextLabel(stepId: string): string {
+export function getPrincipalAutopilotNextLabel(
+  stepId: string,
+  prerequisites?: PrincipalOutreachPrerequisites | null,
+): string {
+  if (stepId === 'principal-plan-warm-network') {
+    if (prerequisites?.evidenceCount === 0) return 'Extract Work Evidence Above'
+    if (prerequisites?.callReadyOfferCount === 0) return 'Set an Offer Price Above'
+  }
+  if (stepId === 'principal-outreach-intake' && (prerequisites?.contactCount || 0) > 0) {
+    return 'Research Contacts'
+  }
+  if (stepId === 'principal-outreach-research' && (prerequisites?.researchedContactCount || 0) > 0) {
+    return 'Review Briefs'
+  }
+  if (stepId === 'principal-outreach-review' && (prerequisites?.reviewedContactCount || 0) > 0) {
+    return 'Open Progress Tracker'
+  }
+  if (stepId === 'principal-outreach-contact-log' && (prerequisites?.interactionCount || 0) > 0) {
+    return 'Finish Outreach Setup'
+  }
   return PRINCIPAL_AUTOPILOT_NEXT_LABELS[stepId] || 'Next step'
 }
 
@@ -8030,23 +8071,13 @@ function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPr
       ],
     }
   }
-  if (step.id === 'principal-outreach-call') {
+  if (step.id === 'principal-outreach-contact-log') {
     return {
-      question: 'Work down the Outreach progress tracker',
-      shortReason: 'The Outreach progress tracker ranks relationship warmth first. Start with Recommended next and use the proof, price, opener, and intelligence question on each approved contact.',
+      question: 'Contact someone and leave a clean handoff',
+      shortReason: 'Start with Recommended next, use the suggested channel, then log the result. Outreach cannot observe an external call, email, or LinkedIn message until you save that interaction.',
       choices: [
-        { label: 'Calls made — log outcomes', detail: 'Move on to recording what happened and what comes next.', tone: 'primary' },
-        { label: 'Keep the progress tracker open', detail: 'Leave this step current while I finish the calls.' },
-      ],
-    }
-  }
-  if (step.id === 'principal-outreach-log') {
-    return {
-      question: 'Leave the team a clean handoff',
-      shortReason: 'Log each touch with at least the outcome. The default follow-up is seven days; add the offer, proof, value, intelligence, or next step when known.',
-      choices: [
-        { label: 'Outcomes saved — finish', detail: 'The calls are logged and follow-ups can resurface without me.', tone: 'primary' },
-        { label: 'Keep logging', detail: 'Leave the final step current until every touch is recorded.' },
+        { label: 'Interaction saved; finish', detail: 'The result is durable and follow-ups can resurface without me.', tone: 'primary' },
+        { label: 'Keep working the tracker', detail: 'Leave this step current until the first result is saved.' },
       ],
     }
   }
@@ -8451,6 +8482,7 @@ function AutopilotCoachOverlay({
         checkingPrerequisites,
         prerequisiteNotice,
         contactCount: principalPrerequisites?.contactCount ?? null,
+        principalPrerequisites,
       })}
       stepIndex={safeVisibleStepIndex}
       onStepChange={handleStepChange}
@@ -8470,10 +8502,12 @@ export function buildAutopilotCoachTutorial(
     checkingPrerequisites: boolean
     prerequisiteNotice: string | null
     contactCount: number | null
+    principalPrerequisites?: PrincipalOutreachPrerequisites | null
   } = {
     checkingPrerequisites: false,
     prerequisiteNotice: null,
     contactCount: null,
+    principalPrerequisites: null,
   },
 ) {
   const scriptedPlan = isScriptedAutopilotPlan(plan)
@@ -8494,9 +8528,17 @@ export function buildAutopilotCoachTutorial(
         targetId: step.targetId,
         instruction: prompt.question,
         nextLabel: scriptedPlan
-          ? existingContactsSatisfyIntake
-            ? 'Research Contacts'
-            : getPrincipalAutopilotNextLabel(step.id)
+          ? getPrincipalAutopilotNextLabel(
+              step.id,
+              prerequisiteState.principalPrerequisites || {
+                contactCount: prerequisiteState.contactCount,
+                evidenceCount: null,
+                callReadyOfferCount: null,
+                researchedContactCount: null,
+                reviewedContactCount: null,
+                interactionCount: null,
+              },
+            )
           : index === plan.steps.length - 1
             ? 'Close coach'
             : 'Next step',
@@ -8505,6 +8547,10 @@ export function buildAutopilotCoachTutorial(
           ? () => onChoice(step, primaryChoice, 0)
           : undefined,
         nextBusy: currentScriptedStep && prerequisiteState.checkingPrerequisites,
+        nextDisabled:
+          currentScriptedStep
+          && step.id !== 'principal-outreach-intake'
+          && Boolean(prerequisiteState.prerequisiteNotice),
         mirrorTargetAction: currentScriptedStep && step.id === 'principal-outreach-intake',
         allowTargetActionFallback: currentScriptedStep && existingContactsSatisfyIntake,
         description: (
