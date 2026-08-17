@@ -10,6 +10,7 @@ export type GuidedTutorialStep = {
   previousLabel?: string
   onNext?: () => void | Promise<void>
   nextBusy?: boolean
+  nextDisabled?: boolean
   mirrorTargetAction?: boolean
   allowTargetActionFallback?: boolean
 }
@@ -373,6 +374,7 @@ export function GuidedTutorialOverlay({
   const useMirroredTargetAction = Boolean(currentStep.mirrorTargetAction && !useTargetActionFallback)
   const nextButtonDisabled = Boolean(
     currentStep.nextBusy
+    || currentStep.nextDisabled
     || mirroredActionCoolingDown
     || (useMirroredTargetAction && (!mirroredTargetAction || mirroredTargetAction.disabled)),
   )
