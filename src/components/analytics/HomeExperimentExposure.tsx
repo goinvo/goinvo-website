@@ -25,9 +25,21 @@ export function HomeExperimentExposure() {
   const [experiment, setExperiment] = useState<ExperimentAnalyticsParams | null>(null)
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    if (
+      searchParams.has('goinvo_ab_variant') ||
+      searchParams.has('goinvo_ab') ||
+      searchParams.has('home-2026-variant')
+    ) return
     const variant = readCookie('home-2026-variant')
     if (!variant || !ALLOWED_VARIANTS.includes(variant)) return
-    setExperiment({ experiment_id: 'home-2026', flag_key: 'home-2026-variant', variant, page_path: '/' })
+    setExperiment({
+      experiment_id: 'home-2026',
+      flag_key: 'home-2026-variant',
+      measurement_key: '2026-07-27-visitor-dedupe-v1',
+      variant,
+      page_path: '/',
+    })
   }, [])
 
   if (!experiment) return null

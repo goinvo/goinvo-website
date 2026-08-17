@@ -18,6 +18,7 @@ export type PageExperiment<Variant extends string = string> = {
   targetPath: string
   status: ExperimentStatus
   flagKey: string
+  measurementKey: string
   flag: Flag<Variant>
   variants: Array<{
     key: Variant
@@ -28,6 +29,7 @@ export type PageExperiment<Variant extends string = string> = {
 export type ExperimentExposure = {
   experiment_id: string
   flag_key: string
+  measurement_key: string
   variant: string
   page_path: string
 }
@@ -50,6 +52,7 @@ export const home2026Experiment: PageExperiment<Home2026Variant> = {
   // historical exposure payloads still resolve, but it no longer runs.
   status: 'retired',
   flagKey: home2026Variant.key,
+  measurementKey: '2026-07-27-visitor-dedupe-v1',
   flag: home2026Variant,
   variants: [
     { key: 'control', label: 'Current homepage' },
@@ -65,6 +68,7 @@ export const homeShopSectionExperiment: PageExperiment<HomeShopSectionVariant> =
   // The active homepage experiment now that home-2026 is retired.
   status: 'running',
   flagKey: homeShopSectionVariant.key,
+  measurementKey: '2026-08-12-initial-v1',
   flag: homeShopSectionVariant,
   variants: [
     { key: 'control', label: 'No prints section (current homepage)' },
@@ -105,6 +109,7 @@ export function getExperimentExposure(
   return {
     experiment_id: experiment.id,
     flag_key: experiment.flagKey,
+    measurement_key: experiment.measurementKey,
     variant,
     page_path: normalizeExperimentPath(pagePath),
   }

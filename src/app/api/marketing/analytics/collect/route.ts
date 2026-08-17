@@ -11,6 +11,8 @@ import {
   ENG_SESSIONS_FIELD,
   ENG_VISIBLE_MS_FIELD,
   ENG_BOUNCES_FIELD,
+  engSectionSessionsField,
+  engSectionVisibleMsField,
 } from '@/lib/marketing/drainSink'
 import { sendGa4MpEvents } from '@/lib/marketing/ga4MeasurementProtocol'
 import { isLikelyBot } from '@/lib/marketing/botFilter'
@@ -121,6 +123,20 @@ export async function POST(request: NextRequest) {
       ? Math.min(MAX_VISIBLE_MS, Math.round(rawVisibleMs))
       : 0
     const engaged = body.engaged === true
+    const sections = new Map<string, number>()
+    if (Array.isArray(body.sections)) {
+      for (const candidate of body.sections.slice(0, 16)) {
+        if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue
+        const record = candidate as Record<string, unknown>
+        const sectionKey = String(record.key ?? '').trim()
+        if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(sectionKey) || sections.has(sectionKey)) continue
+        const rawSectionVisibleMs = Number(record.visibleMs)
+        const sectionVisibleMs = Number.isFinite(rawSectionVisibleMs) && rawSectionVisibleMs > 0
+          ? Math.min(MAX_VISIBLE_MS, Math.round(rawSectionVisibleMs))
+          : 0
+        sections.set(sectionKey, sectionVisibleMs)
+      }
+    }
 
     try {
       const counterKey = kvCounterKey(flagKey)
@@ -129,6 +145,16 @@ export async function POST(request: NextRequest) {
         await kv.hincrby(counterKey, kvCounterField(variant, pagePath, ENG_VISIBLE_MS_FIELD), visibleMs)
       }
       await kv.hincrby(counterKey, kvCounterField(variant, pagePath, ENG_BOUNCES_FIELD), engaged ? 0 : 1)
+      for (const [sectionKey, sectionVisibleMs] of sections) {
+        await kv.hincrby(counterKey, kvCounterField(variant, pagePath, engSectionSessionsField(sectionKey)), 1)
+        if (sectionVisibleMs > 0) {
+          await kv.hincrby(
+            counterKey,
+            kvCounterField(variant, pagePath, engSectionVisibleMsField(sectionKey)),
+            sectionVisibleMs,
+          )
+        }
+      }
       await kv.sadd(KV_FLAGS_KEY, flagKey)
     } catch {
       // Never surface collection errors to the page.
