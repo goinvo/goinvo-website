@@ -2,14 +2,19 @@ import type Stripe from 'stripe'
 import { z } from 'zod'
 
 // Default print price when a marketingProduct doc doesn't override it.
-// $50 per Juhan, 2026-08-17 (was $30 from 2026-08-07, $6 at launch).
+//
+// Back to $30 on 2026-08-17: an email already quoted $30, so that price is
+// honoured for a month rather than raised out from under anyone who received
+// it. The rise to $50 (Juhan) is scheduled for 2026-09-17 and tracked as an
+// operation on the Outreach board so it is not quietly forgotten.
+// ($30 from 2026-08-07; $6 at launch.)
 //
 // The CMS is the source of truth: every piece on the storefront has a
 // marketingProduct document whose `price` wins over this constant, so in
 // practice this is unreachable. It is kept in step with the CMS anyway — a
 // stale default here is what a brand-new piece with no document yet would be
 // sold for, and a number nobody chose is worse than one that is merely old.
-export const SHOP_PRINT_PRICE_CENTS = 5000
+export const SHOP_PRINT_PRICE_CENTS = 3000
 
 /**
  * Per-piece prices for items a flat print price gets wrong. Own Your Health
