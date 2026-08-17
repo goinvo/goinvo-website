@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getStripeClient } from '@/lib/shop/stripeConfig'
+import { ClearCartOnPurchase } from '@/components/shop/ClearCartOnPurchase'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +52,9 @@ export default async function ShopOrderConfirmationPage({
 
   return (
     <div className="bg-[#f5f3ef] text-black">
+      {/* Only on a server-confirmed paid session, so an abandoned checkout
+          never wipes a cart the shopper still wants. */}
+      {confirmation?.paid && <ClearCartOnPurchase />}
       <section className="min-h-[70vh] pt-[calc(var(--spacing-header-height)+5rem)] pb-20">
         <div className="max-width content-padding">
           <div className="mx-auto max-w-[700px] border border-[#d9d5ce] bg-white p-7 shadow-[0_18px_50px_rgba(36,67,77,.1)] sm:p-12">

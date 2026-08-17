@@ -11,6 +11,14 @@ export type ShopOrderNotification = {
   placedAt: string
   customerName: string
   customerEmail: string
+  /**
+   * Flattened "name / line1 / city, state postal / country" for print orders.
+   * Included so the alert is enough to fulfill from on its own — otherwise
+   * whoever packs the order has to sign into Stripe with 2FA to find out where
+   * it goes (Eric, 2026-08-17). Absent for donation-only checkouts, which
+   * collect no shipping details.
+   */
+  shippingAddress?: string
   items: Array<{
     title: string
     quantity: number
@@ -92,6 +100,9 @@ export function buildShopOrderSlackMessage(order: ShopOrderNotification) {
     `*${heading}*`,
     `*Order:* ${escapeSlack(order.orderNumber)}`,
     `*Customer:* ${escapeSlack(order.customerName)} · ${escapeSlack(order.customerEmail)}`,
+    order.shippingAddress
+      ? `*Ship to:*\n${escapeSlack(order.shippingAddress)}`
+      : undefined,
     `*Total:* ${total}`,
     order.supportAmount > 0 ? `*Pay what you want:* ${support}` : undefined,
     order.shipping > 0 ? `*Additional shipping:* ${shipping}` : undefined,
