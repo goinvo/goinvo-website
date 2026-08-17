@@ -1,13 +1,97 @@
+import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
+import { EverythingIsDesignedMark } from '@/components/home/EverythingIsDesignedMark'
+import { LETTERING_LINE_TWO_START, LETTERING_PEN } from '@/components/home/letteringData'
 import { HomeConceptCalendlyCta } from '@/components/home/HomeConceptCalendlyCta'
 import { HomeConceptCtaLink } from '@/components/home/HomeConceptCtaLink'
 import { HomeConceptInteractions } from '@/components/home/HomeConceptInteractions'
 import { HomeConceptTrackedArrowLink } from '@/components/home/HomeConceptTrackedArrowLink'
+import { HomeHeroSchematics } from '@/components/home/HomeHeroSchematics'
 import { ConceptReferenceArrow } from '@/components/home/ConceptReferenceArrow'
 
 const imageBase = '/images/experiments/home-2026'
+
+// The supporting copy arrives while the SECOND line is still being written, so
+// the hero never sits dead waiting for the pen to finish — everything is on
+// screen a little before the phrase completes. Derived from the writing
+// timeline rather than hardcoded, so re-tracing the art keeps this in step.
+const secondLineAt = LETTERING_PEN[LETTERING_LINE_TWO_START]?.paths[0]?.t0 ?? 2400
+const copyDelay = (step: number) => `${secondLineAt + step * 300}ms`
+
+// Hero motion. Server-rendered into the initial HTML rather than injected by the
+// client interactions component, so the lettering starts writing itself on first
+// paint instead of waiting for hydration. Every selector is scoped to a hero
+// class — a bare element selector here would leak to the whole session (a page
+// <style> is global and outlives client-side navigation).
+const heroCss = `
+  /* The nib: a brush-width line swept along the path the brush really travelled.
+     pathLength="1" normalises every sub-path, so one dasharray covers them all
+     regardless of how long each actually is. */
+  .eid-nib path {
+    fill: none;
+    stroke: #fff;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: eid-write var(--dur) linear var(--t0) forwards;
+  }
+
+  @keyframes eid-write {
+    to { stroke-dashoffset: 0; }
+  }
+
+  .eid-hero .eid-fade {
+    opacity: 0;
+    animation: eid-fade 640ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
+    animation-delay: var(--eid-delay, 0ms);
+  }
+
+  @keyframes eid-fade {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .eid-schematic * {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .eid-schematic {
+    opacity: 0;
+    animation:
+      eid-schematic-in 1600ms ease-out 900ms both,
+      eid-drift var(--dur, 20s) ease-in-out 900ms infinite alternate;
+  }
+
+  @keyframes eid-schematic-in {
+    from { opacity: 0; }
+    to { opacity: 0.075; }
+  }
+
+  @keyframes eid-drift {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(var(--dx, 0), var(--dy, 0), 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .eid-hero .eid-fade,
+    .eid-schematic {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    /* mask fully open, so the phrase is simply there */
+    .eid-nib path {
+      animation: none;
+      stroke-dashoffset: 0;
+    }
+
+    .eid-schematic { opacity: 0.075; }
+  }
+`
 
 const logos = [
   '3M',
@@ -223,30 +307,45 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
-      <section className="relative overflow-hidden bg-[#1d1b1a] text-white">
-        <Image
-          src={`${imageBase}/ipsosherodark.jpg`}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover opacity-70"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(20,18,17,.95)_0%,rgba(20,18,17,.68)_52%,rgba(20,18,17,.18)_100%)]" />
-        <div className="relative max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 pt-[clamp(72px,10vw,120px)] pb-[clamp(72px,10vw,96px)] min-h-[clamp(480px,60vw,720px)] flex flex-col justify-center">
-          <h1
-            className="text-[2.25rem] leading-[1.02] sm:text-[4.5rem] font-medium tracking-[-0.025em] max-w-[16ch] mb-6"
-            style={{
-              viewTransitionName: 'page-title',
-              fontFamily: 'adobe-jenson-pro-display, Georgia, serif',
-            }}
+      <section className="eid-hero relative isolate overflow-hidden bg-[#141211] text-white">
+        <style>{heroCss}</style>
+        <HomeHeroSchematics />
+        {/* pooled light so the ink sits on something rather than floating in flat black */}
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(118%_76%_at_50%_36%,rgba(255,255,255,0.085)_0%,rgba(255,255,255,0)_60%)]" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(to_bottom,rgba(20,18,17,0),rgba(20,18,17,0.85))]" />
+
+        {/* Spacing is tuned so the CTA clears the fold on a 1100x800 laptop, which
+            is where a hero this tall stops converting. */}
+        <div className="relative mx-auto flex min-h-[clamp(540px,78vh,820px)] max-w-[1280px] flex-col items-center justify-center px-5 pb-[clamp(48px,6vw,72px)] pt-[clamp(72px,8vw,100px)] text-center sm:px-8 lg:px-14">
+          <p
+            className="eid-fade font-mono text-[10px] uppercase tracking-[0.32em] text-white/45"
+            style={{ '--eid-delay': '120ms' } as CSSProperties}
           >
-            Complex software that ships, and moves the numbers.
-          </h1>
-          <p className="text-lg lg:text-xl leading-8 text-white/80 max-w-[720px]">
-            A design studio that turns nascent ideas into shipped software, for enterprise and healthcare leaders who need results this fiscal year.
+            GoInvo · Boston
           </p>
-          <div className="mt-10 flex flex-wrap items-center gap-5">
+
+          <h1 className="mt-6 w-full" style={{ viewTransitionName: 'page-title' }}>
+            <span className="sr-only">Everything is designed</span>
+            <EverythingIsDesignedMark className="eid-mark mx-auto block w-full max-w-[560px] lg:max-w-[620px] xl:max-w-[720px]" />
+          </h1>
+
+          <p
+            className="eid-fade mt-7 max-w-[720px] text-balance text-lg leading-8 text-white/85 sm:text-xl"
+            style={{ '--eid-delay': copyDelay(0) } as CSSProperties}
+          >
+            The intake form. The denial letter. The discharge instructions no one can follow. Someone designed all of it.
+          </p>
+          <p
+            className="eid-fade mt-4 max-w-[600px] text-balance text-base leading-7 text-white/55"
+            style={{ '--eid-delay': copyDelay(1) } as CSSProperties}
+          >
+            GoInvo is a Boston design studio for healthcare and enterprise software. We turn nascent ideas into products that ship, get adopted, and move the numbers.
+          </p>
+
+          <div
+            className="eid-fade mt-8 flex flex-wrap items-center justify-center gap-5"
+            style={{ '--eid-delay': copyDelay(2) } as CSSProperties}
+          >
             <HomeConceptCtaLink
               href="#book"
               label="Book a discovery call"
@@ -267,19 +366,18 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               Or see the work
             </HomeConceptTrackedArrowLink>
           </div>
-          <div className="mt-14 inline-flex max-w-[480px] flex-col border border-white/15 bg-white/[.07] p-6 backdrop-blur" data-home-concept-reveal>
-            <div className="font-serif text-primary font-semibold leading-none">
-              <span className="text-[5.5rem] lg:text-[8rem]">90</span>
-              <span className="text-3xl align-top">+%</span>
-            </div>
-            <div className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-white/90">Enterprise adoption</div>
-            <p className="mt-3 text-sm leading-6 text-white/90">
-              Ipsos Facto. The share of analysts using the AI research platform we shipped across the firm, with 10M+ API calls and 700K prompts per month.
-            </p>
-          </div>
-        </div>
-        <div className="pointer-events-none absolute bottom-5 right-5 font-mono text-[10px] uppercase tracking-[0.08em] text-white/50 sm:right-8 lg:right-14">
-          Ipsos · Facto AI platform
+
+          <p
+            className="eid-fade mt-10 flex max-w-[520px] flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-white/55"
+            style={{ '--eid-delay': copyDelay(3) } as CSSProperties}
+          >
+            <span className="font-serif text-[2rem] font-semibold leading-none text-primary">
+              90<span className="align-top text-sm">+%</span>
+            </span>
+            <span className="max-w-[400px] text-center leading-6 sm:text-left">
+              enterprise adoption of the AI research platform we shipped for Ipsos — 10M+ API calls and 700K prompts a month.
+            </span>
+          </p>
         </div>
       </section>
 
