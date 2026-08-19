@@ -7,6 +7,8 @@ import { shopStorefrontQuery } from '@/sanity/lib/queries'
 /** How long a price edit can take to reach the site. */
 export const SHOP_CATALOG_REVALIDATE_SECONDS = 60
 import {
+  SHOP_SHIPPING_PRICE_CENTS,
+  shippingCentsFromSettings,
   shopPriceCentsFor,
   type CheckoutCatalogItem,
   type CheckoutRequest,
@@ -107,6 +109,28 @@ export type StorefrontCatalog = {
  * Cached briefly rather than per-request so an editor's price change appears on
  * the site within a minute, with no deploy.
  */
+/**
+ * The flat shipping rate to charge, in cents, read from the CMS.
+ *
+ * Server-side and tokened, exactly like prices: the storefront shows this
+ * number and the Stripe session charges it, so a rate change cannot leave the
+ * page and the checkout disagreeing. Any read failure falls back to the
+ * built-in rate rather than shipping free by accident.
+ */
+export async function fetchShippingCents(): Promise<number> {
+  if (!projectId) return SHOP_SHIPPING_PRICE_CENTS
+  try {
+    const dollars = await getCatalogClient().fetch<number | null>(
+      '*[_id == "marketingShopSettings"][0].shippingFlatRate',
+      {},
+      { next: { revalidate: SHOP_CATALOG_REVALIDATE_SECONDS, tags: ['marketingShopSettings'] } },
+    )
+    return shippingCentsFromSettings(dollars)
+  } catch {
+    return SHOP_SHIPPING_PRICE_CENTS
+  }
+}
+
 export async function fetchStorefrontCatalog(): Promise<StorefrontCatalog> {
   if (!projectId) return { settings: null, products: [] }
 

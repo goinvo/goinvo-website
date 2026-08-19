@@ -7,7 +7,7 @@ import { urlForImage } from '@/sanity/lib/image'
 import { cloudfrontImage } from '@/lib/utils'
 import { resolveDownloadUrl } from '@/lib/shop/posterDownloads'
 import {
-  SHOP_SHIPPING_PRICE_CENTS,
+  shippingCentsFromSettings,
   isProductOrderable,
   shopPriceCentsFor,
 } from '@/lib/shop/checkout'
@@ -70,11 +70,14 @@ interface PosterCard {
 type StorefrontSettings = {
   storeName?: string
   supportEmail?: string
+  shippingFlatRate?: number
 }
 
 type MarketingProduct = {
   slug?: string
   price?: number
+  /** Struck-through "was" price. Display only — never charged. */
+  compareAtPrice?: number
   currency?: string
   checkoutUrl?: string
   status?: string
@@ -403,6 +406,14 @@ export default async function HealthVisualizationsPage() {
       learnMoreLink: card.learnMoreLink,
       imageUrl: card.imageUrl,
       price: product?.price ?? shopPriceCentsFor(card.slug) / 100,
+      // Only a genuine reduction reaches the card: a compare-at at or below the
+      // price is not an offer, it is a mistake, and it must not render.
+      compareAtPrice:
+        typeof product?.compareAtPrice === 'number' &&
+        typeof product?.price === 'number' &&
+        product.compareAtPrice > product.price
+          ? product.compareAtPrice
+          : undefined,
       currency: product?.currency || DEFAULT_PRINT_CURRENCY,
       checkoutUrl: product?.checkoutUrl,
       // Production and availability come from the piece's own document, so an
@@ -416,6 +427,9 @@ export default async function HealthVisualizationsPage() {
     }
   })
   const supportEmail = storefrontData?.settings?.supportEmail || 'hello@goinvo.com'
+  // One rate for the page and the Stripe session; the CMS value wins when set.
+  const shippingCents = shippingCentsFromSettings(storefrontData?.settings?.shippingFlatRate)
+  const shippingRate = shippingCents / 100
   const storeName = storefrontData?.settings?.storeName || 'GoInvo Health and Design Collection'
   // Jon's picks for the hero spray (2026-08-07): a set whose orientations sit
   // well together, shown as full posters below.
@@ -455,7 +469,7 @@ export default async function HealthVisualizationsPage() {
             '@type': 'OfferShippingDetails',
             shippingRate: {
               '@type': 'MonetaryAmount',
-              value: SHOP_SHIPPING_PRICE_CENTS / 100,
+              value: shippingRate,
               currency: item.currency,
             },
             shippingDestination: {
@@ -516,7 +530,7 @@ export default async function HealthVisualizationsPage() {
                 </Link>
               </span>
               <span>
-                ✓ Prints are priced per piece. {formatUsd(SHOP_SHIPPING_PRICE_CENTS / 100)} flat US
+                ✓ Prints are priced per piece. {formatUsd(shippingRate)} flat US
                 shipping, however many you order
               </span>
             </div>
@@ -556,7 +570,11 @@ export default async function HealthVisualizationsPage() {
           PDFs + license, printed on demand, browse) now live as one quiet line
           in the hero — the labels had too much priority, especially on mobile
           (Juhan's feedback, 2026-08-07). */}
-      <VisualizationStorefront items={visualizations} supportEmail={supportEmail} />
+      <VisualizationStorefront
+        items={visualizations}
+        supportEmail={supportEmail}
+        shippingRate={shippingRate}
+      />
 
       <section className="bg-gray-light py-8">
         <div className="max-width max-width-md content-padding mx-auto">

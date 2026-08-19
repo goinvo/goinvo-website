@@ -190,16 +190,41 @@ export function buildStripeLineItems(
  * One flat "Standard US shipping" rate per order, displayed by Stripe as its
  * own line (fulfillment reads it back from total_details.amount_shipping).
  */
-export function buildShippingOptions(): Stripe.Checkout.SessionCreateParams.ShippingOption[] {
+export function buildShippingOptions(
+  shippingCents: number = SHOP_SHIPPING_PRICE_CENTS,
+): Stripe.Checkout.SessionCreateParams.ShippingOption[] {
   return [
     {
       shipping_rate_data: {
         display_name: 'Standard US shipping',
         type: 'fixed_amount',
-        fixed_amount: { amount: SHOP_SHIPPING_PRICE_CENTS, currency: 'usd' },
+        fixed_amount: { amount: resolveShippingCents(shippingCents), currency: 'usd' },
       },
     },
   ]
+}
+
+/**
+ * The flat shipping rate the buyer is charged, in cents.
+ *
+ * The CMS value wins so the rate can change without a deploy, but it is bounded
+ * here rather than trusted: a blank, negative, or fractional field must never
+ * reach Stripe as an amount. Anything unusable falls back to the built-in rate,
+ * which is the same number the storefront shows.
+ */
+export function resolveShippingCents(value?: number | null): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+    return SHOP_SHIPPING_PRICE_CENTS
+  }
+  return Math.round(value)
+}
+
+/** CMS dollars (e.g. 9) to the cents the checkout and the storefront use. */
+export function shippingCentsFromSettings(dollars?: number | null): number {
+  if (typeof dollars !== 'number' || !Number.isFinite(dollars) || dollars < 0) {
+    return SHOP_SHIPPING_PRICE_CENTS
+  }
+  return Math.round(dollars * 100)
 }
 
 /**

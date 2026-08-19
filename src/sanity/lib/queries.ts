@@ -362,6 +362,7 @@ export const shopStorefrontQuery = groq`
       description,
       storefrontEnabled,
       supportEmail,
+      shippingFlatRate,
       provider,
       connectionStatus
     },
@@ -385,6 +386,7 @@ export const shopStorefrontQuery = groq`
       lowStockThreshold,
       allowBackorder,
       price,
+      compareAtPrice,
       currency,
       checkoutUrl,
       "imageUrl": image.asset->url,
