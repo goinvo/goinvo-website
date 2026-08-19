@@ -7,7 +7,7 @@ import {
   withoutStoredStripePrices,
   SHOP_MIN_DONATION_CENTS,
 } from '@/lib/shop/checkout'
-import { resolveCheckoutCatalog } from '@/lib/shop/catalog'
+import { fetchShippingCents, resolveCheckoutCatalog } from '@/lib/shop/catalog'
 import { getStripeCheckoutStatus, getStripeClient } from '@/lib/shop/stripeConfig'
 import { getKvClient } from '@/lib/marketing/drainSink'
 import { isLikelyBot } from '@/lib/marketing/botFilter'
@@ -140,6 +140,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Read once, before the session is built: the retry path below recreates
+    // the session and must charge the same shipping as the first attempt.
+    const shippingCents = isDonationOnly ? 0 : await fetchShippingCents()
     const stripe = getStripeClient()
     const createSession = (
       items: typeof catalogItems,
@@ -157,7 +160,7 @@ export async function POST(request: NextRequest) {
           : {
               allowed_countries: ['US'],
             },
-        shipping_options: isDonationOnly ? undefined : buildShippingOptions(),
+        shipping_options: isDonationOnly ? undefined : buildShippingOptions(shippingCents),
         name_collection: {
           individual: { enabled: true, optional: false },
           business: { enabled: true, optional: true },
