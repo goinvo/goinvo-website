@@ -10,7 +10,6 @@ import {
   type ManagedMarketingType,
   type MarketingFields,
 } from '@/lib/marketing'
-import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
   assertBoundedJson,
@@ -21,6 +20,7 @@ import {
   MarketingRequestError,
   readBoundedJson,
 } from '@/lib/marketing/apiBoundary'
+import { clientForType as routeClientForType } from '@/lib/marketing/datasetRouting'
 import {
   assertAllowedMarketingFields,
   assertAllowedMarketingUnsetPaths,
@@ -48,9 +48,10 @@ type RouteContext = {
   params: Promise<{ type: string; id: string }>
 }
 
+// Dataset routing lives in one place now (src/lib/marketing/datasetRouting.ts)
+// so a type cannot be internal in one route and public in another.
 function clientForType(type: ManagedMarketingType) {
-  const base = getMarketingWriteClient()
-  return OUTREACH_DATASET_TYPES.includes(type) ? base.withConfig({ dataset: OUTREACH_DATASET }) : base
+  return routeClientForType(getMarketingWriteClient(), type)
 }
 
 // Authenticate + resolve the awaited params, returning either the managed type
