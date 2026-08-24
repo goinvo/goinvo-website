@@ -51,6 +51,9 @@ const valueFor = (name: string) => {
 }
 const limit = Number(valueFor('limit') || 5)
 const onlySegment = valueFor('segment')
+// Live web search is slow (~1 min/org). Raising this is the difference between
+// a coffee break and an afternoon; past ~4 the API starts queueing anyway.
+const concurrency = Math.max(1, Math.min(6, Number(valueFor('concurrency') || 2)))
 
 if (!isAnthropicConfigured()) {
   throw new Error('ANTHROPIC_API_KEY is not set. This script does nothing without it.')
@@ -105,17 +108,14 @@ async function main() {
 
   const model = await resolveMarketingModel(client)
   console.log(`dataset ${dataset} · ${byOrg.size} buyer-side organisations · researching ${targets.length}`)
-  console.log(`model ${model} · web search on${apply ? '' : ' · DRY RUN'}`)
+  console.log(`model ${model} · web search on · ${concurrency} at a time${apply ? '' : ' · DRY RUN'}`)
   console.log('')
 
   let stored = 0
   let thin = 0
 
-  // Two at a time: live web search is slow, and hammering it is neither faster
-  // nor polite.
-  const CONCURRENCY = 2
-  for (let i = 0; i < targets.length; i += CONCURRENCY) {
-    const batch = targets.slice(i, i + CONCURRENCY)
+  for (let i = 0; i < targets.length; i += concurrency) {
+    const batch = targets.slice(i, i + concurrency)
     const results = await Promise.all(
       batch.map(async ([organization, meta]) => {
         try {
