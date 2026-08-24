@@ -604,10 +604,20 @@ function ChannelEditor({
           <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
             Use the full Sanity document only when this manager does not expose the field you need.
           </p>
-          <a href={advancedEditHref('marketingChannel', channel._id)} style={styles.inlineLink}>
-            <LaunchIcon style={{ width: 15, height: 15 }} />
-            Open full channel document
-          </a>
+          {advancedEditHref('marketingChannel', channel._id) ? (
+            <a
+              href={advancedEditHref('marketingChannel', channel._id) as string}
+              style={styles.inlineLink}
+            >
+              <LaunchIcon style={{ width: 15, height: 15 }} />
+              Open full channel document
+            </a>
+          ) : (
+            <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>
+              Channels live in the private marketing dataset, which the document editor cannot
+              open. Use the fields above.
+            </p>
+          )}
         </div>
       </details>
       <div

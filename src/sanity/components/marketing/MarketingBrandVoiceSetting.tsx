@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useClient } from 'sanity'
+import { clientForType } from '../../../lib/marketing/datasetRouting'
 
 import {
   normalizeMarketingBrandVoices,
@@ -59,7 +60,10 @@ function messageForError(error: unknown) {
  * the UI calls out the publish-safe boundary before anyone pastes examples.
  */
 export function MarketingBrandVoiceSetting() {
-  const client = useClient({ apiVersion: '2024-01-01' })
+  // marketingSettings moves with the dataset split, so this must not write to
+  // whatever dataset the workspace happens to be on.
+  const baseClient = useClient({ apiVersion: '2024-01-01' })
+  const client = useMemo(() => clientForType(baseClient, 'marketingSettings'), [baseClient])
   const { clearUnsavedChanges, markUnsavedChange } = useMarketingUnsavedGuard()
   const [voices, setVoices] = useState<MarketingBrandVoice[]>([])
   const [savedVoices, setSavedVoices] = useState<MarketingBrandVoice[]>([])

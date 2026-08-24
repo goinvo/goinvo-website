@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useClient } from 'sanity'
+import { clientForType } from '../../../lib/marketing/datasetRouting'
 import { useToast } from '@sanity/ui'
 
 import { MARKETING_SETTINGS_ID } from '../../schemas/marketingSettings'
@@ -14,7 +15,10 @@ import { DEFAULT_WEEKLY_MARKETING_HOURS } from '../../../lib/marketing/effort'
  * the model picker as a first-class setting rather than buried in a document.
  */
 export function MarketingWeeklyHoursSetting() {
-  const client = useClient({ apiVersion: '2024-01-01' })
+  // marketingSettings moves with the dataset split, so this must not write to
+  // whatever dataset the workspace happens to be on.
+  const baseClient = useClient({ apiVersion: '2024-01-01' })
+  const client = useMemo(() => clientForType(baseClient, 'marketingSettings'), [baseClient])
   const toast = useToast()
   const [hours, setHours] = useState<string>('')
   const [loaded, setLoaded] = useState(false)
