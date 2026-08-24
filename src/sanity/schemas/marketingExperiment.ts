@@ -261,6 +261,10 @@ export default defineType({
       type: 'reference',
       group: 'pageTest',
       to: [{ type: 'feature' }],
+      // Crosses the public/private dataset boundary: a STRONG reference across
+      // datasets fails the write with a 409, so this must stay weak.
+      weak: true,
+
       hidden: ({ document }) => document?.targetType !== 'vision',
     }),
     defineField({

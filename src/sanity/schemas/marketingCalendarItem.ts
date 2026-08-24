@@ -114,6 +114,9 @@ export default defineType({
       type: 'reference',
       group: 'planning',
       to: [{ type: 'teamMember' }],
+      // Crosses the public/private dataset boundary: a STRONG reference across
+      // datasets fails the write with a 409, so this must stay weak.
+      weak: true,
     }),
     defineField({
       name: 'campaign',
@@ -229,6 +232,9 @@ export default defineType({
       of: [
         {
           type: 'reference',
+          // Content documents stay in the public dataset; this reference has to
+          // survive crossing that line.
+          weak: true,
           to: [
             { type: 'feature' },
             { type: 'caseStudy' },
