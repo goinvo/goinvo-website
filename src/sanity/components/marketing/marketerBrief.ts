@@ -417,7 +417,7 @@ export function buildMarketerBriefResearchDocument(proposal: MarketerBriefPropos
   return {
     _type: 'marketingResearchProject',
     ...normalizeMarketerBriefProject(proposal),
-    internalNotes: 'Created through Tell Marketing after a coworker reviewed the normalized brief. The raw coworker note was not saved. An internal CMS scan may run automatically; approve findings before creating downstream records.',
+    internalNotes: 'Created through Tell Marqueta after a coworker reviewed the normalized brief. The raw coworker note was not saved. An internal CMS scan may run automatically; approve findings before creating downstream records.',
   }
 }
 
@@ -502,7 +502,7 @@ export function buildMarketerBriefResearchPatch(
     collaborators: mergeCollaborators(existing.collaborators, incoming.collaborators),
     internalNotes: mergeParagraphs(
       existing.internalNotes,
-      'Updated through Tell Marketing from a reviewed, normalized coworker update. The raw note was not saved; approve fresh findings before creating downstream records.',
+      'Updated through Tell Marqueta from a reviewed, normalized coworker update. The raw note was not saved; approve fresh findings before creating downstream records.',
     ),
   }
 }

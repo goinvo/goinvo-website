@@ -339,7 +339,7 @@ export function StrategyWorkspace({
       })
 
       if (!payload.suggestion?.strategyAsset) {
-        throw new Error('Marketing assistant did not return a strategy draft.')
+        throw new Error('Marqueta did not return a strategy draft.')
       }
 
       return {

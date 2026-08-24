@@ -4169,7 +4169,7 @@ function MarketingDashboard({
   const { markUnsavedChange, clearUnsavedChanges } = useMarketingUnsavedGuard()
   const handleWorkUpdateDirtyState = useCallback(
     (dirty: boolean) => {
-      if (dirty) markUnsavedChange(MARKETER_BRIEF_UNSAVED_ID, 'rough work update waiting for Marketing')
+      if (dirty) markUnsavedChange(MARKETER_BRIEF_UNSAVED_ID, 'rough work update waiting for Marqueta')
       else clearUnsavedChanges(MARKETER_BRIEF_UNSAVED_ID)
     },
     [clearUnsavedChanges, markUnsavedChange],
@@ -4190,9 +4190,9 @@ function MarketingDashboard({
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, maxWidth: 760 }}>
             <div style={{ ...styles.kicker, marginBottom: 6 }}>Start here</div>
-            <h2 style={{ margin: 0, fontSize: 26 }}>Tell Marketing what changed</h2>
+            <h2 style={{ margin: 0, fontSize: 26 }}>Tell Marqueta what changed</h2>
             <p style={{ ...styles.muted, margin: '6px 0 0', lineHeight: 1.55 }}>
-              Paste a rough update—project, deadline, result, or change of plan. Marketing connects it to the suite and shows one review before saving.
+              Paste a rough update—project, deadline, result, or change of plan. Marqueta connects it to the suite and shows one review before saving.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
