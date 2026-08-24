@@ -171,25 +171,6 @@ export const alumniQuery = groq`
   }
 `
 
-export const linkInBioItemsQuery = groq`
-  *[
-    _type == "marketingLinkItem"
-    && status == "active"
-    && defined(url)
-    && url != ""
-    && (!defined(expiresAt) || dateTime(expiresAt) > dateTime(now()))
-    && (!defined(publishAt) || dateTime(publishAt) <= dateTime(now()))
-  ] | order(coalesce(order, 100) asc, _updatedAt desc) {
-    _id,
-    title,
-    description,
-    url,
-    type,
-    featured,
-    image,
-    sourceChannel
-  }
-`
 
 // Features
 export const allFeaturesQuery = groq`

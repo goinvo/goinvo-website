@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient, type SanityClient } from '@sanity/client'
 import { apiVersion, dataset, projectId, previewToken } from '@/sanity/env'
+import { datasetForType } from '@/lib/marketing/datasetRouting'
 import {
   isMarketingPlanConfigured,
   MARKETING_PLAN_SESSION_COOKIE,
@@ -38,7 +39,10 @@ function getSanityClient(): SanityClient | null {
   if (!projectId) return (sanityClient = null)
   sanityClient = createClient({
     projectId,
-    dataset,
+    // Every type this deck reads is a marketing type, so it follows the split.
+    // safeFetch swallows errors and only console.errors, so getting this wrong
+    // renders eight blank sections with no visible failure.
+    dataset: datasetForType('marketingMessagePillar', dataset),
     apiVersion,
     token: previewToken || undefined,
     useCdn: false,

@@ -3,7 +3,7 @@ import {
   assertStudioOrApiKey,
   buildCreatePayload,
   buildLinkFromPost,
-  getMarketingWriteClient,
+  getMarketingWriteClientFor,
   marketingCloneDocumentId,
   MarketingAuthError,
   MarketingValidationError,
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const client = getMarketingWriteClient()
+    const client = getMarketingWriteClientFor('marketingCalendarItem')
 
     const item = await client.fetch<CalendarItemForLink | null>(
       '*[_type == "marketingCalendarItem" && _id == $id][0]',
