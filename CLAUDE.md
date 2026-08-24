@@ -365,11 +365,19 @@ Full plan: [`docs/dataset-split-migration-plan.md`](docs/dataset-split-migration
   strong references at end-of-transaction, so batching breaks any reference whose target
   lands in a later batch. References pointing *outside* the wave are weakened in transit
   (weakening a schema field only governs new writes; stored documents keep their strong refs).
-- **State:** Steps 1–6 done. 125 Wave-1 documents copied to `outreach` and verified
-  (0 missing, 0 differing); production untouched, so both datasets hold the data and the
-  window is reversible. **Step 7 (cutover) = append the Wave-1 types to
-  `INTERNAL_MARKETING_TYPES`** — one line. **Step 8 (delete from production after a soak)
-  is what actually closes the leak.** Waves 2/3 = `previewShareLink`, `cmsFeedback`.
+- **State: CUT OVER 2026-08-24 (Steps 1–7 done).** The 24 Wave-1 types are in
+  `INTERNAL_MARKETING_TYPES`, so all reads/writes for them now resolve to `outreach`
+  (probe: `internalTypes=31`). The documents ALSO still exist in production, so the window
+  stays reversible — and **the leak is NOT closed yet**: the probe correctly reports 12 types
+  as `LEAKING` and `anonymouslyReadable` is still **73**. **Step 8 (delete from production
+  after a soak) is what closes it.** Waves 2/3 = `previewShareLink`, `cmsFeedback`.
+- **Cutover gotchas, all silent:** a mock/client without `withConfig` now throws inside
+  `clientForType` for any internal type (the assist tests hit this — fix the mock, do NOT
+  make the router fall back to the base client, which would quietly read the public copy);
+  `assertSplitIsReal` only bites once the type list grows, so its "internal === public"
+  test flips from not-throwing to throwing at cutover; and `tests/dataset-routing.test.ts`
+  pins the router against `WAVE_1` in the mover script so the two cannot drift (a drift
+  reads from a dataset the documents were never copied to and returns `[]`, not an error).
 
 ## Marketing suite architecture — portable + testable (decided 2026-06)
 
