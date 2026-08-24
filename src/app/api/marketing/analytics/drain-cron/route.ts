@@ -1,6 +1,7 @@
 import { createClient } from '@sanity/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { datasetForType } from '@/lib/marketing/datasetRouting'
 import {
   aggregatesFromKvHash,
   getKvClient,
@@ -39,7 +40,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Sanity write token is not configured.' }, { status: 500 })
   }
 
-  const client = createClient({ projectId, dataset, token: writeToken, apiVersion, useCdn: false })
+  // Experiments and performance signals move with the split. Unrouted, the
+  // flagKey lookup simply misses: the drain still reports success while
+  // writing zero signals, and the A/B readout quietly freezes.
+  const client = createClient({
+    projectId,
+    dataset: datasetForType('marketingExperiment', dataset),
+    token: writeToken,
+    apiVersion,
+    useCdn: false,
+  })
   const flagKeys = ((await kv.smembers(KV_FLAGS_KEY)) as string[]) || []
 
   const metricDate = new Date().toISOString().slice(0, 10)

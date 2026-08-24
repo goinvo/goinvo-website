@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/marketing', () => ({
   assertMarketingApiKey: vi.fn(),
   getMarketingWriteClient: () => ({ fetch: mocks.fetch }),
+  getMarketingWriteClientFor: () => ({ fetch: mocks.fetch }),
   MarketingAuthError: class extends Error {},
 }))
 

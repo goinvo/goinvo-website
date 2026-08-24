@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import {
   assertStudioOrApiKey,
   createResearchProjectRecords,
-  getMarketingWriteClient,
+  getMarketingWriteClientFor,
   MarketingAuthError,
   type CascadeResearchProject,
 } from '@/lib/marketing'
@@ -104,7 +104,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const client = getMarketingWriteClient()
+    const client = getMarketingWriteClientFor('marketingResearchProject')
 
     const project = await client.fetch<CascadeResearchProject | null>(PROJECT_QUERY, {
       id: projectId,

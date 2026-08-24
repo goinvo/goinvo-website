@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import type { SanityImageSource } from '@sanity/image-url/lib/types/types'
 import { siteConfig } from '@/lib/config'
-import { sanityFetch } from '@/sanity/lib/live'
-import { linkInBioItemsQuery } from '@/sanity/lib/queries'
+import { createClient } from '@sanity/client'
+import { apiVersion, dataset, previewToken, projectId } from '@/sanity/env'
+import { datasetForType } from '@/lib/marketing/datasetRouting'
 import { urlForImageWithFallback } from '@/sanity/lib/image'
 
 type LinkInBioItem = {
@@ -16,6 +17,46 @@ type LinkInBioItem = {
   image?: SanityImageSource
   sourceChannel?: string
 }
+
+/**
+ * Link items are a marketing type, so this page needs a TOKENED client.
+ *
+ * sanityFetch cannot serve it: @sanity/next-loader only sends the server token
+ * when the perspective is not "published", so a public page read is always
+ * anonymous. That is why this page is broken today — the items have dotted ids,
+ * which Sanity's public-dataset grant hides from an anonymous reader, so the
+ * page renders "No links are currently published" while two active links exist.
+ */
+const linkItemsClient = projectId
+  ? createClient({
+      projectId,
+      dataset: datasetForType('marketingLinkItem', dataset),
+      apiVersion,
+      token: previewToken,
+      useCdn: false,
+      perspective: 'published',
+    })
+  : null
+
+const linkInBioItemsQuery = `
+  *[
+    _type == "marketingLinkItem"
+    && status == "active"
+    && defined(url)
+    && url != ""
+    && (!defined(expiresAt) || dateTime(expiresAt) > dateTime(now()))
+    && (!defined(publishAt) || dateTime(publishAt) <= dateTime(now()))
+  ] | order(coalesce(order, 100) asc, _updatedAt desc) {
+    _id,
+    title,
+    description,
+    url,
+    type,
+    featured,
+    image,
+    sourceChannel
+  }
+`
 
 export const revalidate = 60
 
@@ -33,8 +74,11 @@ export const metadata: Metadata = {
 }
 
 export default async function LinksPage() {
-  const { data } = (await sanityFetch({ query: linkInBioItemsQuery })) as { data: LinkInBioItem[] }
-  const links = data
+  const links = linkItemsClient
+    ? await linkItemsClient
+        .fetch<LinkInBioItem[]>(linkInBioItemsQuery, {}, { next: { revalidate: 60 } })
+        .catch(() => [] as LinkInBioItem[])
+    : []
 
   return (
     <main className="min-h-screen bg-[#f7faf9] text-black">

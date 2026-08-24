@@ -2,6 +2,7 @@ import { createClient, type SanityClient } from '@sanity/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { datasetForType } from '@/lib/marketing/datasetRouting'
 import { verifyDrainAuthorization } from '@/lib/marketing/drainAuth'
 import {
   aggregateDrainEvents,
@@ -47,7 +48,13 @@ const inFlightDeliveries = new Map<string, Promise<DrainResponseBody>>()
 function getSanityClient() {
   if (!writeToken || !projectId) return null
   if (!sanityClient) {
-    sanityClient = createClient({ projectId, dataset, token: writeToken, apiVersion, useCdn: false })
+    sanityClient = createClient({
+      projectId,
+      dataset: datasetForType('marketingExperiment', dataset),
+      token: writeToken,
+      apiVersion,
+      useCdn: false,
+    })
   }
   return sanityClient
 }

@@ -57,7 +57,8 @@ export type {
 } from './crud'
 
 // Write client.
-export { getMarketingWriteClient } from './client'
+export { getMarketingWriteClient,
+  getMarketingWriteClientFor } from './client'
 
 // API authentication.
 export { MarketingAuthError, assertMarketingApiKey, assertStudioOrApiKey, assertStudioWriterOrApiKey } from './auth'

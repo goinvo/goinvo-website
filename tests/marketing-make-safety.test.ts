@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 
 import { buildCreatePayload, buildLinkFromPost, MarketingValidationError } from '@/lib/marketing'
-import { linkInBioItemsQuery } from '@/sanity/lib/queries'
 import {
   isCalendarItemPublishReady,
   normalizeDraftContentFrames,
@@ -78,6 +77,10 @@ describe('marketing Make workflow safety', () => {
   })
 
   it('makes the public query honor the Quick Link record itself', () => {
+    // The query moved into the page when link items became a private type: a
+    // public page cannot read them through sanityFetch, which is always
+    // anonymous. Assert against its new home so the coverage survives the move.
+    const linkInBioItemsQuery = source('src/app/links/page.tsx')
     expect(linkInBioItemsQuery).toContain('status == "active"')
     expect(linkInBioItemsQuery).toContain('defined(url)')
     expect(linkInBioItemsQuery).not.toContain('calendarItem->status')
