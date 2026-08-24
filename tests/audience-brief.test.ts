@@ -4,6 +4,7 @@ import {
   assessReadiness,
   clusterOrganizations,
   coverageGaps,
+  leadRecommendation,
   summariseSegments,
   type BriefContact,
 } from '@/lib/marketing/audienceBrief'
@@ -134,5 +135,43 @@ describe('coverageGaps', () => {
 
   it('returns nothing when every targeted segment clears the threshold', () => {
     expect(coverageGaps(contacts, ['healthtech'], 3)).toEqual([])
+  })
+})
+
+describe('leadRecommendation', () => {
+  // Nine people at one hospital is a relationship; one person at each of nine
+  // companies is a set of doors. Same contact count, different play.
+  const concentrated: BriefContact[] = Array.from({ length: 9 }, () => ({
+    organization: 'One Big Hospital',
+    researchSuggestedSegment: 'provider',
+  }))
+  const spreadOut: BriefContact[] = Array.from({ length: 8 }, (_, i) => ({
+    organization: `Pharma ${i}`,
+    researchSuggestedSegment: 'pharma',
+  }))
+
+  it('leads with the biggest buyer cluster', () => {
+    const contacts = [...concentrated, ...spreadOut]
+    const { lead } = leadRecommendation(clusterOrganizations(contacts), contacts)
+    expect(lead?.segment).toBe('provider')
+    expect(lead?.total).toBe(9)
+  })
+
+  it('picks the thinnest-spread cluster as the door-opener, not the second biggest', () => {
+    const contacts = [...concentrated, ...spreadOut]
+    const { doorOpener, spread } = leadRecommendation(clusterOrganizations(contacts), contacts)
+    expect(doorOpener?.segment).toBe('pharma')
+    // 8 organisations across 8 contacts vs 1 organisation across 9.
+    expect(spread(doorOpener!)).toBe(1)
+  })
+
+  it('ignores clusters too small to be a play', () => {
+    const contacts = [...concentrated, { organization: 'Solo', researchSuggestedSegment: 'payer' }]
+    const { doorOpener } = leadRecommendation(clusterOrganizations(contacts), contacts)
+    expect(doorOpener).toBeNull()
+  })
+
+  it('returns nulls rather than throwing on an empty list', () => {
+    expect(leadRecommendation([], [])).toMatchObject({ lead: null, doorOpener: null })
   })
 })
