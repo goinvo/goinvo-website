@@ -3331,7 +3331,7 @@ function MarketingComponent() {
         setSavingId(null)
       }
     },
-    [clearUnsavedChanges, client, data, loadData],
+    [clearUnsavedChanges, data, loadData, marketingClient],
   )
 
   const generateMarketingPlan = useCallback(
