@@ -8,6 +8,7 @@ import {
   MARKETING_PLAN_SESSION_COOKIE,
   verifyMarketingPlanSession,
 } from '@/lib/marketing/marketingPlanAuth'
+import { ORG_RESEARCH_TYPE, type OrgResearch } from '@/lib/marketing/orgResearch'
 import {
   assessReadiness,
   clusterOrganizations,
@@ -85,6 +86,7 @@ type BriefData = {
   offers: { key?: string; title?: string; priceBand?: string }[]
   weeklyHours: number | null
   posture: string | null
+  orgResearch: (OrgResearch & { researchedAt?: string })[]
 }
 
 // count(*[...].array[]) counts a NULL for every doc missing the array, so the
@@ -100,7 +102,11 @@ const BRIEF_QUERY = `{
     key, title, priceBand
   },
   "weeklyHours": *[_id == "marketingSettings"][0].weeklyMarketingHours,
-  "posture": *[_id == "marketingFinancialPosture"][0].posture
+  "posture": *[_id == "marketingFinancialPosture"][0].posture,
+  "orgResearch": *[_type == "${ORG_RESEARCH_TYPE}" && confidence != "low"]{
+    organization, recentSignal, reachableAbout, suggestedOfferKey, confidence, researchedAt,
+    sources[]{ title, url }
+  }
 }`
 
 const EMPTY: BriefData = {
@@ -111,6 +117,7 @@ const EMPTY: BriefData = {
   offers: [],
   weeklyHours: null,
   posture: null,
+  orgResearch: [],
 }
 
 const pct = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 100) : 0)
@@ -184,6 +191,20 @@ export default async function AudienceBriefPage({
     (offer) => !offer.priceBand || !/\d/.test(String(offer.priceBand)),
   )
   const maxCluster = clusters.length > 0 ? clusters[0].total : 0
+  const researchByOrg = new Map(
+    (data.orgResearch || []).map((entry) => [entry.organization.toLowerCase(), entry]),
+  )
+  // Openings worth acting on this week, densest organisations first.
+  const openings = clusters
+    .flatMap((cluster) =>
+      cluster.organizations.map((org) => ({
+        org,
+        cluster,
+        research: researchByOrg.get(org.name.toLowerCase()),
+      })),
+    )
+    .filter((row) => row.research)
+    .sort((a, b) => b.org.count - a.org.count)
   const buyerRows = segments.rows.filter((row) => row.isBuyer)
   const otherRows = segments.rows.filter((row) => !row.isBuyer)
 
@@ -199,6 +220,7 @@ export default async function AudienceBriefPage({
         </p>
         <nav className="ab-jump" aria-label="Sections">
           <a href="#ask">What we need from you</a>
+          <a href="#openings">Openings</a>
           <a href="#evidence">The evidence</a>
           <a href="#organisations">Organisations</a>
           <a href="/action-plan">Execution plan ↗</a>
@@ -317,7 +339,55 @@ export default async function AudienceBriefPage({
         )}
       </section>
 
-      {/* ── 3. The working ──────────────────────────────────────────────── */}
+      {/* ── 3. Where to start ───────────────────────────────────────────── */}
+      {openings.length > 0 && (
+        <section className="ab-section" id="openings">
+          <h2>Openings we could make this week</h2>
+          <p className="ab-note ab-note-lead">
+            Live web research on the organisations where we have the most people. Each opening is
+            tied to something specific and published — anything the research could not cite is not
+            here, because an uncited signal read out on a call is worse than no call.
+          </p>
+          <ol className="ab-openings">
+            {openings.map(({ org, cluster, research }) => (
+              <li key={org.name}>
+                <div className="ab-opening-head">
+                  <strong>{org.name}</strong>
+                  <span className="ab-opening-meta">
+                    {cluster.label} · {org.count} {org.count === 1 ? 'contact' : 'contacts'}
+                  </span>
+                  {research!.confidence === 'medium' && (
+                    <span className="ab-confidence">check before using</span>
+                  )}
+                </div>
+                {research!.recentSignal && (
+                  <p className="ab-signal">
+                    <span className="ab-tag">What changed</span>
+                    {research!.recentSignal}
+                  </p>
+                )}
+                {research!.reachableAbout && (
+                  <p className="ab-opening-line">
+                    <span className="ab-tag">The opening</span>
+                    {research!.reachableAbout}
+                  </p>
+                )}
+                {research!.sources.length > 0 && (
+                  <p className="ab-sources">
+                    {research!.sources.slice(0, 4).map((source, index) => (
+                      <a key={source.url} href={source.url} target="_blank" rel="noreferrer">
+                        {source.title?.trim() ? source.title.slice(0, 46) : `source ${index + 1}`}
+                      </a>
+                    ))}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+
+      {/* ── 4. The working ──────────────────────────────────────────────── */}
       <section className="ab-section" id="evidence">
         <h2>The evidence</h2>
 
@@ -513,7 +583,23 @@ function BriefStyles() {
       .ab-more[open] summary { margin-bottom: 12px; }
       .ab-more .ab-decisions li { border-left-color: #d8d2c9; }
 
-      /* 3. Evidence */
+      /* 3. Openings */
+      .ab-openings { list-style: none; margin: 0; padding: 0; counter-reset: opening; }
+      .ab-openings li { position: relative; border: 1px solid #e7e2db; border-left: 3px solid ${TEAL}; background: #fff; padding: 15px 18px 15px 52px; margin-bottom: 10px; counter-increment: opening; }
+      .ab-openings li::before { content: counter(opening); position: absolute; left: 17px; top: 15px; font-size: 1.05rem; font-weight: 700; color: #c6c0b8; font-variant-numeric: tabular-nums; }
+      .ab-opening-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+      .ab-opening-head strong { font-size: 1.04rem; }
+      .ab-opening-meta { font-size: .78rem; color: #8a847c; }
+      .ab-confidence { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: ${WARN}; background: #fdf3f1; padding: 1px 7px; }
+      .ab-tag { display: inline-block; min-width: 92px; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #a8a29a; vertical-align: baseline; }
+      .ab-signal, .ab-opening-line { margin: 0 0 7px; font-size: .93rem; max-width: 86ch; }
+      .ab-opening-line { color: ${INK}; }
+      .ab-signal { color: #6f6a64; }
+      .ab-sources { margin: 9px 0 0; display: flex; gap: 8px; flex-wrap: wrap; }
+      .ab-sources a { font-size: .74rem; color: ${TEAL}; border: 1px solid #d9e8ea; padding: 2px 8px; text-decoration: none; }
+      .ab-sources a:hover { border-color: ${TEAL}; }
+
+      /* 4. Evidence */
       .ab-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
       .ab-stat { border: 1px solid #e7e2db; padding: 14px 16px; background: #fff; }
       .ab-stat.is-missing { border-color: #f0d9d3; background: #fdf7f5; }

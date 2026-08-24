@@ -147,6 +147,7 @@ const ORG_NAMES = {
   'stanfordhealthcare.org': 'Stanford Health Care',
   'atriumhealth.org': 'Atrium Health',
   'insidetracker.com': 'InsideTracker',
+  // Segterra is InsideTracker's legal name; one company, one record.
   'segterra.com': 'InsideTracker',
   'vibrenthealth.com': 'Vibrent Health',
   'thecommonsproject.org': 'The Commons Project',
