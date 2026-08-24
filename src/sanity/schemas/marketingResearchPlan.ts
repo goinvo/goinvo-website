@@ -141,6 +141,10 @@ export default defineType({
       type: 'reference',
       group: 'strategy',
       to: [{ type: 'teamMember' }],
+      // Crosses the public/private dataset boundary: a STRONG reference across
+      // datasets fails the write with a 409, so this must stay weak.
+      weak: true,
+
     }),
     defineField({
       name: 'summary',

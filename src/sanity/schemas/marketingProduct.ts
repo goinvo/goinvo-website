@@ -261,13 +261,19 @@ export default defineType({
       type: 'reference',
       group: 'marketing',
       to: [{ type: 'marketingCampaign' }],
+      // Crosses the public/private dataset boundary: a STRONG reference across
+      // datasets fails the write with a 409, so this must stay weak.
+      weak: true,
+
     }),
     defineField({
       name: 'audiences',
       title: 'Audiences',
       type: 'array',
       group: 'marketing',
-      of: [{ type: 'reference', to: [{ type: 'marketingAudienceProfile' }] }],
+      // Products stay public while audience profiles move private, so this
+      // reference crosses the boundary in the opposite direction.
+      of: [{ type: 'reference', weak: true, to: [{ type: 'marketingAudienceProfile' }] }],
     }),
     defineField({
       name: 'notes',
