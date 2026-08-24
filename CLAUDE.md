@@ -201,6 +201,30 @@ uninstrumented (zero signup events in GA4 ever); the build plan replaces it with
 first-party `/api/newsletter/subscribe` route (needs `EMAILOCTOPUS_API_KEY`).
 Citation cautions: never cite the "KLAS 23%" vendor-blog stat; HIMSS 18% unverified.
 
+## The weekly marketing plan — "This week" (built 2026-08-24)
+
+The suite decides WHAT to do (gap detection + `marketingOperation` board); this decides HOW MUCH
+fits in the hours the studio has. **`marketingSettings.weeklyMarketingHours`** (default 4) is the
+budget; **`marketingOperation.estimatedMinutes`** is the per-task cost (explicit wins; otherwise
+inferred from `kind` in `src/lib/marketing/effort.ts`).
+
+- **Planner:** `src/lib/marketing/weeklyPlan.ts` — pure + unit-tested (`tests/weekly-plan.test.ts`).
+  Order: overdue → due this week → undated → future (pulled forward only when hours are spare).
+  `survival`/`rebuild` posture promotes outreach. Greedy fill that BACKFILLS (a 3h task never
+  starves the week). Decisions always surface but are **capped at 4/week**. Every deferral carries
+  a reason; invariant: every operation returns exactly once (item | decision | deferral).
+- **Route:** `POST|GET /api/marketing/plan-week` (`?dryRun=1`), `assertStudioWriterOrApiKey`,
+  reads the PRIVATE outreach dataset. Idempotent per ISO week via
+  `sourceKey: weekly-plan/<YYYY-Www>` — re-planning updates the same doc, never forks the week.
+- **AI does NOT budget.** Claude is handed the already-decided plan and only writes the theme +
+  rationale; it cannot add/drop/reorder. Missing `ANTHROPIC_API_KEY` = plan still returns, minus
+  the narrative.
+- **View:** `WeeklyPlanWorkspace.tsx`, first tab of the Home surface. Studio components MUST call
+  marketing routes through `authenticatedMarketingRequest` (sends `x-sanity-session`) — a bare
+  `fetch` is silently 401'd.
+- Two lessons pinned by tests: excluding future-dated work **emptied the week** (the seeded
+  quarter is Sep–Nov), and 13 open decisions ate 205 of 240 minutes.
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.
