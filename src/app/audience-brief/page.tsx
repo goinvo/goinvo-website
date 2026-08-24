@@ -86,7 +86,15 @@ type BriefData = {
   offers: { key?: string; title?: string; priceBand?: string }[]
   weeklyHours: number | null
   posture: string | null
-  orgResearch: (OrgResearch & { researchedAt?: string })[]
+  orgResearch: (OrgResearch & {
+    researchedAt?: string
+    verification?: {
+      status?: string
+      reason?: string
+      checkedAt?: string
+      evidence?: { url: string; title: string; quote: string; textFragmentUrl: string }[]
+    }
+  })[]
 }
 
 // count(*[...].array[]) counts a NULL for every doc missing the array, so the
@@ -105,7 +113,8 @@ const BRIEF_QUERY = `{
   "posture": *[_id == "marketingFinancialPosture"][0].posture,
   "orgResearch": *[_type == "${ORG_RESEARCH_TYPE}" && confidence != "low"]{
     organization, recentSignal, reachableAbout, suggestedOfferKey, confidence, researchedAt,
-    sources[]{ title, url }
+    sources[]{ title, url },
+    verification{ status, reason, checkedAt, evidence[]{ url, title, quote, textFragmentUrl } }
   }
 }`
 
@@ -204,7 +213,14 @@ export default async function AudienceBriefPage({
       })),
     )
     .filter((row) => row.research)
-    .sort((a, b) => b.org.count - a.org.count)
+    // Verified claims first: an opening you can actually stand behind outranks a
+    // bigger organisation whose signal is still unconfirmed.
+    .sort((a, b) => {
+      const rank = (status?: string) =>
+        status === 'verified' ? 0 : status === 'overreach' ? 1 : 2
+      const byStatus = rank(a.research?.verification?.status) - rank(b.research?.verification?.status)
+      return byStatus !== 0 ? byStatus : b.org.count - a.org.count
+    })
   const buyerRows = segments.rows.filter((row) => row.isBuyer)
   const otherRows = segments.rows.filter((row) => !row.isBuyer)
 
@@ -356,14 +372,43 @@ export default async function AudienceBriefPage({
                   <span className="ab-opening-meta">
                     {cluster.label} · {org.count} {org.count === 1 ? 'contact' : 'contacts'}
                   </span>
-                  {research!.confidence === 'medium' && (
-                    <span className="ab-confidence">check before using</span>
+                  {research!.verification?.status === 'verified' ? (
+                    <span className="ab-badge is-verified">verified against source</span>
+                  ) : research!.verification?.status === 'overreach' ? (
+                    <span className="ab-badge is-overreach">partly unverified</span>
+                  ) : research!.verification?.status ? (
+                    <span className="ab-badge">unverified</span>
+                  ) : (
+                    <span className="ab-badge">not yet checked</span>
                   )}
                 </div>
+                {research!.verification?.evidence?.[0] && (
+                  <p className="ab-verified">
+                    <span className="ab-tag">Verified</span>
+                    <span>
+                      &ldquo;{research!.verification.evidence[0].quote}&rdquo;{' '}
+                      <a
+                        href={research!.verification.evidence[0].textFragmentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        see it in the source
+                      </a>
+                    </span>
+                  </p>
+                )}
                 {research!.recentSignal && (
                   <p className="ab-signal">
-                    <span className="ab-tag">What changed</span>
+                    <span className="ab-tag">
+                      {research!.verification?.status === 'verified' ? 'What changed' : 'Unverified'}
+                    </span>
                     {research!.recentSignal}
+                  </p>
+                )}
+                {research!.verification?.status === 'overreach' && research!.verification.reason && (
+                  <p className="ab-overreach">
+                    <span className="ab-tag">Careful</span>
+                    {research!.verification.reason}
                   </p>
                 )}
                 {research!.reachableAbout && (
@@ -590,7 +635,12 @@ function BriefStyles() {
       .ab-opening-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
       .ab-opening-head strong { font-size: 1.04rem; }
       .ab-opening-meta { font-size: .78rem; color: #8a847c; }
-      .ab-confidence { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: ${WARN}; background: #fdf3f1; padding: 1px 7px; }
+      .ab-badge { font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #8a847c; background: #f4f1ec; padding: 1px 7px; }
+      .ab-badge.is-verified { color: #2c6e49; background: #eaf4ee; }
+      .ab-badge.is-overreach { color: ${WARN}; background: #fdf3f1; }
+      .ab-verified { margin: 0 0 7px; font-size: .93rem; max-width: 86ch; color: ${INK}; }
+      .ab-verified a { color: ${TEAL}; font-size: .82rem; white-space: nowrap; }
+      .ab-overreach { margin: 0 0 7px; font-size: .87rem; max-width: 86ch; color: ${WARN}; }
       .ab-tag { display: inline-block; min-width: 92px; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #a8a29a; vertical-align: baseline; }
       .ab-signal, .ab-opening-line { margin: 0 0 7px; font-size: .93rem; max-width: 86ch; }
       .ab-opening-line { color: ${INK}; }
