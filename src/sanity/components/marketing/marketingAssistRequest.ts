@@ -25,13 +25,13 @@ export async function requestMarketingAssist<T extends MarketingAssistPayload>(
   } catch {
     throw new Error(
       response.ok
-        ? 'Marketing assistant returned an unreadable response.'
-        : `Marketing assistant request failed (${response.status}).`,
+        ? 'Marqueta returned an unreadable response.'
+        : `Marqueta request failed (${response.status}).`,
     )
   }
 
   if (!response.ok) {
-    throw new Error(payload.error || `Marketing assistant request failed (${response.status}).`)
+    throw new Error(payload.error || `Marqueta request failed (${response.status}).`)
   }
 
   return payload

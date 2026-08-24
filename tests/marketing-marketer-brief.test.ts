@@ -11,7 +11,7 @@ import {
   type MarketerBriefProposal,
 } from '@/sanity/components/marketing/marketerBrief'
 
-describe('Tell Marketing brief privacy and normalization', () => {
+describe('Tell Marqueta brief privacy and normalization', () => {
   it('isolates the raw coworker update in the bounded assistant prompt', () => {
     const rawUpdate = `Private client launch ${'x'.repeat(MARKETER_BRIEF_MAX_LENGTH)}`
     const payload = buildMarketerBriefAssistPayload(rawUpdate)
@@ -175,7 +175,7 @@ describe('Tell Marketing brief privacy and normalization', () => {
   })
 })
 
-describe('Tell Marketing project reuse and merge behavior', () => {
+describe('Tell Marqueta project reuse and merge behavior', () => {
   const proposal: MarketerBriefProposal = {
     researchProject: {
       title: 'Care navigation launch',

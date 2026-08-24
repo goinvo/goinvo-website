@@ -65,7 +65,7 @@ export default defineType({
     }),
     defineField({ name: 'nextCheckAt', title: 'Next check', type: 'datetime' }),
     defineField({ name: 'blocker', title: 'Blocker', type: 'text', rows: 3, validation: (Rule) => Rule.max(600) }),
-    defineField({ name: 'lastOutcome', title: 'Marketing already did', type: 'text', rows: 3, validation: (Rule) => Rule.max(700) }),
+    defineField({ name: 'lastOutcome', title: 'Marqueta already did', type: 'text', rows: 3, validation: (Rule) => Rule.max(700) }),
     defineField({ name: 'targetView', title: 'Open in', type: 'string', options: { list: options(MARKETING_OPERATION_TARGET_VIEWS) }, validation: (Rule) => Rule.required() }),
     defineField({ name: 'sourceKey', title: 'Idempotency source key', type: 'string', readOnly: true, validation: (Rule) => Rule.required() }),
     defineField({ name: 'sourceFingerprint', title: 'Source condition fingerprint', type: 'string', readOnly: true, validation: (Rule) => Rule.required() }),

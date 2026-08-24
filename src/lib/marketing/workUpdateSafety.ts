@@ -20,7 +20,7 @@ export function findWorkUpdatePrivacyIssue(value: unknown): WorkUpdatePrivacyIss
   ) {
     return {
       code: 'credential',
-      message: 'Remove the password, API key, token, or private key before asking Marketing to analyze this update.',
+      message: 'Remove the password, API key, token, or private key before asking Marqueta to analyze this update.',
     }
   }
 
@@ -38,7 +38,7 @@ export function findWorkUpdatePrivacyIssue(value: unknown): WorkUpdatePrivacyIss
   if (/\b(?:medical record number|medical record #|mrn|patient id|patient name|date of birth|dob)\b/i.test(text)) {
     return {
       code: 'healthIdentifier',
-      message: 'Remove patient or health-record identifiers before asking Marketing to analyze this update.',
+      message: 'Remove patient or health-record identifiers before asking Marqueta to analyze this update.',
     }
   }
 

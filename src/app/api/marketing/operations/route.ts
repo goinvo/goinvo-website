@@ -232,7 +232,7 @@ async function upsertReviewedHandoff(
   const lastOutcome = scanError
     ? scanError
     : evidence.length > 0
-      ? `Marketing found ${evidence.length} potentially reusable GoInvo item${evidence.length === 1 ? '' : 's'} in the internal CMS.`
+      ? `Marqueta found ${evidence.length} potentially reusable GoInvo item${evidence.length === 1 ? '' : 's'} in the internal CMS.`
       : 'Marketing checked the internal CMS and found no strong match.'
   const finalDocument = normalizeMarketingOperationInput({
     ...document,
@@ -242,10 +242,10 @@ async function upsertReviewedHandoff(
     blocker: scanError || (evidence.length === 0 ? 'No strong internal source matched this update.' : ''),
     humanQuestion: evidence.length > 0
       ? 'Which existing work is safe and useful to reuse?'
-      : 'Can you add one reliable source, destination, or missing fact so Marketing can continue?',
+      : 'Can you add one reliable source, destination, or missing fact so Marqueta can continue?',
     nextAction: evidence.length > 0
       ? 'Review the matched GoInvo work and choose what should guide the marketing brief.'
-      : 'Add a reliable source or answer the missing context, then ask Marketing to check again.',
+      : 'Add a reliable source or answer the missing context, then ask Marqueta to check again.',
     lastOutcome,
     activity: [
       ...(existing?.activity || []),
