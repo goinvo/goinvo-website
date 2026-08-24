@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import {
   assertMarketingApiKey,
-  getMarketingWriteClient,
+  getMarketingWriteClientFor,
   MarketingAuthError,
 } from '@/lib/marketing'
 import {
@@ -110,9 +110,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid marketing calendar item id.' }, { status: 400 })
   }
 
-  let client: ReturnType<typeof getMarketingWriteClient>
+  let client: ReturnType<typeof getMarketingWriteClientFor>
   try {
-    client = getMarketingWriteClient()
+    client = getMarketingWriteClientFor('marketingCalendarItem')
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Sanity write client unavailable.' },

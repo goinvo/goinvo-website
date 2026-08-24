@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { createClient, type SanityClient } from '@sanity/client'
-import { apiVersion, dataset as productionDataset, previewToken, projectId } from '@/sanity/env'
+import { apiVersion, previewToken, projectId } from '@/sanity/env'
 import { FOLLOW_UP_STATUSES, OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import {
   isMarketingPlanConfigured,
@@ -68,22 +68,6 @@ function getOutreachClient(): SanityClient | null {
   return outreachClient
 }
 
-let prodClient: SanityClient | null = null
-let prodResolved = false
-function getProductionClient(): SanityClient | null {
-  if (prodResolved) return prodClient
-  prodResolved = true
-  if (!projectId) return (prodClient = null)
-  prodClient = createClient({
-    projectId,
-    dataset: productionDataset,
-    apiVersion,
-    token: previewToken || undefined,
-    useCdn: false,
-    perspective: 'published',
-  })
-  return prodClient
-}
 
 type OutreachData = {
   totals: {
@@ -219,7 +203,9 @@ export default async function ActionPlanPage({
 
   const now = new Date()
   const outreach = getOutreachClient()
-  const production = getProductionClient()
+  // Calendar items move with the split, so both halves of this page now read
+  // the same private dataset; the separate production client is gone.
+  const production = outreach
   const [data, contentItems] = await Promise.all([
     outreach
       ? outreach

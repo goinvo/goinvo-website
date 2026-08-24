@@ -36,6 +36,9 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('@/lib/marketing/client', () => ({
   getMarketingWriteClient: mocks.getMarketingWriteClient,
+  // The route now asks for a client scoped to the type's dataset. Delegating
+  // keeps the existing "did it reach for a write client" assertions honest.
+  getMarketingWriteClientFor: mocks.getMarketingWriteClient,
 }))
 
 vi.mock('@/lib/marketing/auth', () => {

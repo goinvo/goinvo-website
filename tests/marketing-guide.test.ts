@@ -129,7 +129,8 @@ describe('marketing guide and tutorial behavior', () => {
 
   it('routes contextual Marketing help to the active workspace article', () => {
     expect(MARKETING_GUIDE_ARTICLE_BY_VIEW).toEqual({
-      dashboard: 'marketing.dashboard',
+      thisWeek: 'marketing.dashboard',
+    dashboard: 'marketing.dashboard',
       research: 'marketing.research',
       seo: 'marketing.seo',
       strategy: 'marketing.strategy',

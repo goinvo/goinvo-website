@@ -21,6 +21,7 @@ import path from 'node:path'
 import { createClient } from '@sanity/client'
 import { config as loadEnv } from 'dotenv'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { datasetForType } from '@/lib/marketing/datasetRouting'
 import { MARKETING_OPERATION_TYPE } from '@/lib/marketing/operations'
 import {
   buildSeedCalendarDocs,
@@ -52,7 +53,15 @@ if (!projectId || !token) throw new Error('Sanity project ID and write token are
 
 const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-01-01'
 const outreachClient = createClient({ projectId, dataset: OUTREACH_DATASET, apiVersion, token, useCdn: false })
-const productionClient = createClient({ projectId, dataset: productionDataset, apiVersion, token, useCdn: false })
+// Calendar items follow the dataset split like every other marketing type.
+const calendarDataset = datasetForType('marketingCalendarItem', productionDataset)
+const productionClient = createClient({
+  projectId,
+  dataset: calendarDataset,
+  apiVersion,
+  token,
+  useCdn: false,
+})
 
 type Row = {
   dataset: string
@@ -90,7 +99,7 @@ async function main() {
       title: doc.title,
     })),
     ...calendarDocs.map((doc): Row => ({
-      dataset: productionDataset,
+      dataset: calendarDataset,
       action: existingItemIds.has(doc._id) ? 'skip' : 'create',
       _id: doc._id,
       date: String(doc.publishAt || '').slice(0, 10),
@@ -117,7 +126,7 @@ async function main() {
   const skips = rows.filter((row) => row.action === 'skip')
   console.log(
     `\n${rows.length} documents (${operationDocs.length} operations → ${OUTREACH_DATASET}, ` +
-      `${calendarDocs.length} calendar items → ${productionDataset}): ` +
+      `${calendarDocs.length} calendar items → ${calendarDataset}): ` +
       `${creates.length} to create, ${skips.length} already exist.`,
   )
 

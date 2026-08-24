@@ -1,6 +1,6 @@
 import {
   assertStudioWriterOrApiKey,
-  getMarketingWriteClient,
+  getMarketingWriteClientFor,
   MarketingAuthError,
 } from '@/lib/marketing'
 import { connectionStatus, isQStashConfigured } from '@/lib/marketing/publishers'
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
 
   let dueCount: number | null = null
   try {
-    const client = getMarketingWriteClient()
+    const client = getMarketingWriteClientFor('marketingCalendarItem')
     const value = await client.fetch<number>(DUE_COUNT_QUERY, { now: new Date().toISOString() })
     dueCount = Number.isSafeInteger(value) && value >= 0 ? value : null
   } catch (error) {

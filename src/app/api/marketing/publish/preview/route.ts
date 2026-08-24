@@ -1,6 +1,6 @@
 import {
   assertStudioOrApiKey,
-  getMarketingWriteClient,
+  getMarketingWriteClientFor,
   MarketingAuthError,
 } from '@/lib/marketing'
 import {
@@ -44,9 +44,9 @@ export async function GET(req: Request) {
     return privateMarketingJson({ error: 'Invalid calendar item ID.' }, { status: 400 })
   }
 
-  let client: ReturnType<typeof getMarketingWriteClient>
+  let client: ReturnType<typeof getMarketingWriteClientFor>
   try {
-    client = getMarketingWriteClient()
+    client = getMarketingWriteClientFor('marketingCalendarItem')
   } catch {
     return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
   }
