@@ -49,6 +49,7 @@ export const MARKETING_OPERATION_AUTONOMY = [
 ] as const
 
 export const MARKETING_OPERATION_TARGET_VIEWS = [
+  'thisWeek',
   'dashboard',
   'strategy',
   'strategyBrief',
@@ -122,6 +123,8 @@ export type MarketingOperation = {
   ownerSanityUserId?: string
   dueAt?: string
   nextCheckAt?: string
+  /** Minutes this is expected to take. Set by a person; the planner estimates when absent. */
+  estimatedMinutes?: number
   blocker?: string
   lastOutcome?: string
   targetView: MarketingOperationTargetView
@@ -320,6 +323,9 @@ export function normalizeMarketingOperationInput(value: unknown): MarketingOpera
     ownerSanityUserId: compactText(input.ownerSanityUserId, 180),
     dueAt: safeIso(input.dueAt),
     nextCheckAt: safeIso(input.nextCheckAt),
+    ...(typeof input.estimatedMinutes === 'number' && Number.isFinite(input.estimatedMinutes) && input.estimatedMinutes > 0
+      ? { estimatedMinutes: Math.round(input.estimatedMinutes) }
+      : {}),
     blocker: compactText(input.blocker, 600),
     lastOutcome: compactText(input.lastOutcome, 700),
     targetView: member<MarketingOperationTargetView>(input.targetView, TARGET_VIEW_SET, 'dashboard'),

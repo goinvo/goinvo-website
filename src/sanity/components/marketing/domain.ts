@@ -141,6 +141,12 @@ export const MARKETING_TOOL_VIEWS: Array<{
   icon: typeof CalendarIcon
 }> = [
   {
+    id: 'thisWeek',
+    title: 'This week',
+    description: 'The marketing that fits the hours you have, in the order to do it.',
+    icon: DashboardIcon,
+  },
+  {
     id: 'dashboard',
     title: 'Dashboard',
     description: 'See content runway, strategy gaps, and the next best fixes.',
@@ -272,8 +278,11 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
     title: 'Home',
     description: 'Your next best actions, ranked. Start here.',
     icon: DashboardIcon,
-    landingView: 'dashboard',
-    tabs: [{ view: 'dashboard', label: 'Overview' }],
+    landingView: 'thisWeek',
+    tabs: [
+      { view: 'thisWeek', label: 'This week' },
+      { view: 'dashboard', label: 'Overview' },
+    ],
   },
   {
     id: 'plan',
