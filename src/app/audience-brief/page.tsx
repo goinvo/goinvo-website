@@ -12,8 +12,11 @@ import {
   assessReadiness,
   clusterOrganizations,
   coverageGaps,
+  groupDecisionsByOwner,
+  leadRecommendation,
   summariseSegments,
   type BriefContact,
+  type BriefDecision,
 } from '@/lib/marketing/audienceBrief'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,9 +27,15 @@ import {
 // WHO WE ACTUALLY HAVE, because the other three are written around a warm
 // network the CMS does not contain.
 //
+// Ordered finding → ask → evidence, deliberately. An earlier draft led with the
+// data and buried the recommendation two thirds down, under a table whose top
+// row was its least useful number. A brief is read top-down by someone with
+// five minutes: what did we learn, what do you need to decide, and only then
+// show your working.
+//
 // Every number is read live from the private outreach dataset. Nothing is
-// transcribed: if the list changes in the Studio, this page changes, and a
-// claim here can always be checked against the records behind it.
+// transcribed, and the headline claim is derived rather than written, so it
+// cannot drift away from the table underneath it.
 //
 // Route: /audience-brief (server component; unlisted; noindex). Same
 // MARKETING_PLAN_KEY session as its siblings.
@@ -47,6 +56,9 @@ const WARN = '#a12820'
 
 /** Segments the turnaround plan names as targets, to check the list against. */
 const TARGETED_SEGMENTS = ['medDevice', 'pharma', 'provider', 'healthtech'] as const
+
+/** Who this brief is written for; their decisions sort first. */
+const READER = 'Juhan'
 
 let outreachClient: SanityClient | null = null
 let outreachResolved = false
@@ -69,14 +81,7 @@ type BriefData = {
   contacts: BriefContact[]
   checkpointsLogged: number
   interactionsLogged: number
-  decisions: {
-    _id: string
-    title: string
-    ownerName?: string
-    humanQuestion?: string
-    dueAt?: string
-    priority?: string
-  }[]
+  decisions: BriefDecision[]
   offers: { key?: string; title?: string; priceBand?: string }[]
   weeklyHours: number | null
   posture: string | null
@@ -110,14 +115,16 @@ const EMPTY: BriefData = {
 
 const pct = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 100) : 0)
 
-function Stat({ value, label, tone }: { value: string; label: string; tone?: 'warn' }) {
+function Decision({ decision }: { decision: BriefDecision }) {
   return (
-    <div className="ab-stat">
-      <div className="ab-stat-value" style={tone === 'warn' ? { color: WARN } : undefined}>
-        {value}
+    <li>
+      <div className="ab-decision-head">
+        <strong>{decision.title}</strong>
+        {decision.ownerName && <span className="ab-owner">{decision.ownerName}</span>}
+        {decision.dueAt && <span className="ab-due">{String(decision.dueAt).slice(0, 10)}</span>}
       </div>
-      <div className="ab-stat-label">{label}</div>
-    </div>
+      {decision.humanQuestion && <p>{decision.humanQuestion}</p>}
+    </li>
   )
 }
 
@@ -171,10 +178,14 @@ export default async function AudienceBriefPage({
     interactionsLogged: data.interactionsLogged,
   })
   const gaps = coverageGaps(data.contacts, TARGETED_SEGMENTS, 10)
+  const { lead, doorOpener, spread } = leadRecommendation(clusters, data.contacts)
+  const { mine, others } = groupDecisionsByOwner(data.decisions, READER)
   const vaguePricing = data.offers.filter(
     (offer) => !offer.priceBand || !/\d/.test(String(offer.priceBand)),
   )
-  const biggest = clusters[0]
+  const maxCluster = clusters.length > 0 ? clusters[0].total : 0
+  const buyerRows = segments.rows.filter((row) => row.isBuyer)
+  const otherRows = segments.rows.filter((row) => !row.isBuyer)
 
   return (
     <main className="ab-page">
@@ -186,101 +197,229 @@ export default async function AudienceBriefPage({
           contains today, read straight from the private dataset — so we choose a segment from
           evidence rather than from intent.
         </p>
-        <p className="ab-siblings">
-          <a href="/marketing-plan">Strategy</a> · <a href="/outreach-plan">Outreach</a> ·{' '}
-          <a href="/action-plan">Execution plan</a>
-        </p>
+        <nav className="ab-jump" aria-label="Sections">
+          <a href="#ask">What we need from you</a>
+          <a href="#evidence">The evidence</a>
+          <a href="#organisations">Organisations</a>
+          <a href="/action-plan">Execution plan ↗</a>
+        </nav>
       </header>
 
-      {readiness.isColdList && (
-        <section className="ab-alarm">
-          <h2>This list has never been used.</h2>
-          <p>
-            Across all {readiness.total.toLocaleString()} contacts there are{' '}
-            <strong>zero logged interactions</strong>, <strong>zero outreach checkpoints</strong>,
-            and <strong>nobody marked as contacted</strong>. It is the EmailOctopus newsletter
-            import: real people who opted in to hear from us, but not relationships anyone has
-            worked yet.
-          </p>
-          <p>
-            That matters because the execution plan says <em>“call the top-ranked ten warm
-            contacts.”</em> There is no ranking to draw on — not because the work slipped, but
-            because the input was never there. Warmth is deliberately left blank rather than
-            guessed: a domain can prove where somebody works, never that they know us.
-          </p>
-        </section>
-      )}
+      {/* ── 1. The finding, and what follows from it ─────────────────────── */}
+      <section className="ab-bottomline">
+        {readiness.isColdList && (
+          <>
+            <p className="ab-kicker">The finding</p>
+            <h2>This list has never been used.</h2>
+            <p className="ab-bl-lead">
+              Across all {readiness.total.toLocaleString()} contacts there are{' '}
+              <strong>zero logged interactions</strong>, <strong>zero outreach checkpoints</strong>,
+              and <strong>nobody marked as contacted</strong>. It is the EmailOctopus newsletter
+              import: real people who opted in to hear from us, but not relationships anyone has
+              worked yet. The execution plan says <em>“call the top-ranked ten warm contacts”</em>{' '}
+              — there is no ranking to draw on, because the input was never there.
+            </p>
+          </>
+        )}
 
-      <section className="ab-section">
-        <h2>The list at a glance</h2>
-        <div className="ab-stats">
-          <Stat value={readiness.total.toLocaleString()} label="contacts" />
-          <Stat
-            value={`${readiness.withOrganization.toLocaleString()}`}
-            label={`with an employer (${pct(readiness.withOrganization, readiness.total)}%)`}
-          />
-          <Stat value={segments.buyerSide.toLocaleString()} label="buyer-side organisations" />
-          <Stat value={String(readiness.everContacted)} label="ever contacted" tone="warn" />
-          <Stat value={String(readiness.confirmedSegment)} label="segment confirmed by a person" tone="warn" />
+        <div className="ab-verdicts">
+          {lead && (
+            <div className="ab-verdict">
+              <p className="ab-verdict-label">Lead with</p>
+              <p className="ab-verdict-value">{lead.label}</p>
+              <p className="ab-verdict-why">
+                The densest real cluster: {lead.total} contacts, and{' '}
+                {Math.round(spread(lead) * lead.total)} distinct organisations behind them.
+                Several people at the same company is a foothold — someone can introduce you
+                internally, which is a warmer start than any cold email.
+              </p>
+            </div>
+          )}
+          {doorOpener && (
+            <div className="ab-verdict">
+              <p className="ab-verdict-label">Open doors with</p>
+              <p className="ab-verdict-value">{doorOpener.label}</p>
+              <p className="ab-verdict-why">
+                {doorOpener.total} contacts spread across{' '}
+                {Math.round(spread(doorOpener) * doorOpener.total)} different companies — roughly
+                one person each. That is a set of doors to knock on, not a book of business, which
+                is exactly the shape the Clinical AI Pilot Pre-Mortem is built for.
+              </p>
+            </div>
+          )}
+          {gaps.map((gap) => (
+            <div key={gap.segment} className="ab-verdict is-warn">
+              <p className="ab-verdict-label">Do not lead with</p>
+              <p className="ab-verdict-value">{gap.label}</p>
+              <p className="ab-verdict-why">
+                The turnaround plan targets this segment and the list holds {gap.count}{' '}
+                {gap.count === 1 ? 'contact' : 'contacts'}. It can still be a deliberate
+                cold-outreach bet — but it should be chosen with that cost visible, not assumed.
+              </p>
+            </div>
+          ))}
         </div>
-        <p className="ab-note">
-          Employer and sector are inferred from the email domain and stored as a{' '}
-          <em>suggestion</em>. They stay suggestions until someone confirms them in
-          Outreach → Contacts, which is why “segment confirmed by a person” is its own number
-          rather than folded into the others.
+
+        <p className="ab-caveat">
+          Every sector below is a machine suggestion until a person confirms it. Confirming the
+          segment on the organisations that matter is the cheapest step that makes the rest of
+          the plan real.
         </p>
       </section>
 
-      <section className="ab-section">
-        <h2>Where the audience actually is</h2>
+      {/* ── 2. The ask ───────────────────────────────────────────────────── */}
+      <section className="ab-section" id="ask">
+        <h2>What we need from you</h2>
+
+        {vaguePricing.length > 0 && (
+          <div className="ab-blocker">
+            <p className="ab-kicker">Blocking every first call</p>
+            <p>
+              {vaguePricing.length} of {data.offers.length} active offers still carry a price band
+              with no numbers in it. Buyers screen on range before they take a meeting, so this
+              gates every conversation the plan schedules.
+            </p>
+            <ul className="ab-offers">
+              {vaguePricing.map((offer) => (
+                <li key={offer.key || offer.title}>
+                  <strong>{offer.title}</strong>
+                  <span className="ab-offer-band">{offer.priceBand || 'no band set'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {mine.length > 0 && (
+          <>
+            <h3>
+              Yours to decide <span className="ab-count">{mine.length}</span>
+            </h3>
+            <ul className="ab-decisions">
+              {mine.map((decision) => (
+                <Decision key={decision._id} decision={decision} />
+              ))}
+            </ul>
+          </>
+        )}
+
+        {others.length > 0 && (
+          <details className="ab-more">
+            <summary>
+              {others.length} more decisions owned by someone else
+            </summary>
+            <ul className="ab-decisions">
+              {others.map((decision) => (
+                <Decision key={decision._id} decision={decision} />
+              ))}
+            </ul>
+          </details>
+        )}
+      </section>
+
+      {/* ── 3. The working ──────────────────────────────────────────────── */}
+      <section className="ab-section" id="evidence">
+        <h2>The evidence</h2>
+
+        <div className="ab-stats">
+          <div className="ab-stat">
+            <div className="ab-stat-value">{readiness.total.toLocaleString()}</div>
+            <div className="ab-stat-label">contacts on the list</div>
+          </div>
+          <div className="ab-stat">
+            <div className="ab-stat-value">{readiness.withOrganization.toLocaleString()}</div>
+            <div className="ab-stat-label">
+              we can name an employer for ({pct(readiness.withOrganization, readiness.total)}%)
+            </div>
+          </div>
+          <div className="ab-stat">
+            <div className="ab-stat-value">{segments.buyerSide.toLocaleString()}</div>
+            <div className="ab-stat-label">at organisations that could buy</div>
+          </div>
+          <div className="ab-stat is-missing">
+            <div className="ab-stat-value">{readiness.everContacted}</div>
+            <div className="ab-stat-label">have ever been contacted</div>
+          </div>
+          <div className="ab-stat is-missing">
+            <div className="ab-stat-value">{readiness.confirmedSegment}</div>
+            <div className="ab-stat-label">have a segment a person confirmed</div>
+          </div>
+        </div>
+        <p className="ab-note">
+          The two red figures are the gap between the plan and the list. Employer and sector are
+          inferred from the email domain and stored as a suggestion — a domain can prove where
+          somebody works, never that they know us, which is why warmth is left blank rather than
+          guessed.
+        </p>
+
+        <h3>Where the audience actually is</h3>
         <table className="ab-table">
+          <caption className="ab-caption">
+            Buyer-side segments first. Everything below the rule is real audience, but not
+            somebody who can commission work.
+          </caption>
           <thead>
             <tr>
-              <th>Segment</th>
-              <th className="ab-num">Contacts</th>
-              <th className="ab-num">Share</th>
-              <th>Can they buy design work?</th>
+              <th scope="col">Segment</th>
+              <th scope="col" className="ab-num">Contacts</th>
+              <th scope="col" className="ab-num">Share</th>
             </tr>
           </thead>
           <tbody>
-            {segments.rows.map((row) => (
-              <tr key={row.segment} className={row.isBuyer ? 'is-buyer' : undefined}>
+            {buyerRows.map((row) => (
+              <tr key={row.segment} className="is-buyer">
                 <td>{row.label}</td>
                 <td className="ab-num">{row.count.toLocaleString()}</td>
                 <td className="ab-num">{Math.round(row.share * 100)}%</td>
-                <td>{row.isBuyer ? <span className="ab-yes">buyer-side</span> : <span className="ab-no">no</span>}</td>
               </tr>
             ))}
-            <tr className="ab-row-rest">
+            <tr className="ab-subtotal">
+              <td>Buyer-side total</td>
+              <td className="ab-num">{segments.buyerSide.toLocaleString()}</td>
+              <td className="ab-num">{pct(segments.buyerSide, segments.total)}%</td>
+            </tr>
+          </tbody>
+          <tbody className="ab-tbody-rest">
+            {otherRows.map((row) => (
+              <tr key={row.segment}>
+                <td>{row.label}</td>
+                <td className="ab-num">{row.count.toLocaleString()}</td>
+                <td className="ab-num">{Math.round(row.share * 100)}%</td>
+              </tr>
+            ))}
+            <tr>
               <td>Unclassified (mostly personal addresses)</td>
               <td className="ab-num">{segments.unclassified.toLocaleString()}</td>
               <td className="ab-num">{pct(segments.unclassified, segments.total)}%</td>
-              <td>
-                <span className="ab-no">unknown</span>
-              </td>
             </tr>
           </tbody>
         </table>
         <p className="ab-note">
-          A personal address proves nothing about where someone works, so those are left
-          unclassified rather than guessed at. Academics and design-agency peers are counted but
-          are not buyers — the first is students and faculty, the second is our competitors.
+          Academics and design-agency peers are counted but cannot buy: the first is students and
+          faculty, the second is our competitors.
         </p>
       </section>
 
-      <section className="ab-section">
+      <section className="ab-section" id="organisations">
         <h2>The organisations behind those numbers</h2>
         <p className="ab-note ab-note-lead">
-          A count on its own does not tell you whether a segment is worth a quarter of work —
-          “{biggest ? biggest.total : 0} contacts” could be one company or thirty. These are the
-          names.
+          A count alone cannot tell you whether a segment is worth a quarter of work — “33
+          contacts” could be one hospital or thirty companies. These are the names, with the bar
+          showing each segment against the largest.
         </p>
         <div className="ab-clusters">
           {clusters.map((cluster) => (
             <div key={cluster.segment} className="ab-cluster">
-              <h3>
-                {cluster.label} <span className="ab-cluster-total">{cluster.total}</span>
-              </h3>
+              <div className="ab-cluster-head">
+                <h3>{cluster.label}</h3>
+                <span className="ab-cluster-total">{cluster.total}</span>
+              </div>
+              <div className="ab-bar" aria-hidden="true">
+                <div
+                  className="ab-bar-fill"
+                  style={{ width: `${maxCluster > 0 ? (cluster.total / maxCluster) * 100 : 0}%` }}
+                />
+              </div>
               <ul>
                 {cluster.organizations.map((org) => (
                   <li key={org.name}>
@@ -294,102 +433,13 @@ export default async function AudienceBriefPage({
         </div>
       </section>
 
-      {gaps.length > 0 && (
-        <section className="ab-section">
-          <h2>Segments we name but cannot reach</h2>
-          <div className="ab-gaps">
-            {gaps.map((gap) => (
-              <div key={gap.segment} className="ab-gap">
-                <div className="ab-gap-count">{gap.count}</div>
-                <div>
-                  <strong>{gap.label}</strong>
-                  <p>
-                    The turnaround plan targets this segment, and the list holds {gap.count}{' '}
-                    {gap.count === 1 ? 'contact' : 'contacts'}. Leading with it means cold
-                    outreach with no warm entry — possible, but a different and slower job than
-                    the plan assumes.
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="ab-section">
-        <h2>What this suggests</h2>
-        <ol className="ab-reco">
-          <li>
-            <strong>Lead where there is density.</strong> The strongest real cluster is
-            providers and health IT — and it is largely on our doorstep in Boston, which makes an
-            introduction a coffee rather than a cold email.
-          </li>
-          <li>
-            <strong>Use pharma as the door-opener, not the pipeline.</strong> A handful of
-            contacts spread one-per-company across major pharma is exactly the shape the Clinical
-            AI Pilot Pre-Mortem is built for: a reason to make contact, not a book of business.
-          </li>
-          <li>
-            <strong>Do not lead with a segment the list cannot support.</strong> See the gap
-            above. It can be a deliberate cold-outreach bet, but it should be chosen with that
-            cost visible.
-          </li>
-          <li>
-            <strong>Confirm before calling.</strong> Every sector here is a machine suggestion.
-            Confirming the segment on the organisations that matter is the cheapest step that
-            makes the rest of the plan real.
-          </li>
-        </ol>
-      </section>
-
-      {vaguePricing.length > 0 && (
-        <section className="ab-section">
-          <h2>Blocking the first call</h2>
-          <p className="ab-note ab-note-lead">
-            {vaguePricing.length} of {data.offers.length} active offers still carry a price band
-            with no numbers in it. Buyers screen on range before they take a meeting, so this is
-            load-bearing for every conversation the plan schedules.
-          </p>
-          <ul className="ab-offers">
-            {vaguePricing.map((offer) => (
-              <li key={offer.key || offer.title}>
-                <strong>{offer.title}</strong>
-                <span className="ab-offer-band">{offer.priceBand || 'no band set'}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {data.decisions.length > 0 && (
-        <section className="ab-section">
-          <h2>Decisions waiting on a person</h2>
-          <p className="ab-note ab-note-lead">
-            Live from the operations board — {data.decisions.length} open. These are the ones
-            nothing else can move past.
-          </p>
-          <ul className="ab-decisions">
-            {data.decisions.slice(0, 12).map((decision) => (
-              <li key={decision._id}>
-                <div className="ab-decision-head">
-                  <strong>{decision.title}</strong>
-                  {decision.ownerName && <span className="ab-owner">{decision.ownerName}</span>}
-                  {decision.dueAt && (
-                    <span className="ab-due">{String(decision.dueAt).slice(0, 10)}</span>
-                  )}
-                </div>
-                {decision.humanQuestion && <p>{decision.humanQuestion}</p>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       <footer className="ab-footer">
         <p>
           Everything above is read live from the private <code>{OUTREACH_DATASET}</code> dataset
-          each time this page loads. To change it, edit the records in the Studio — Outreach →
-          Contacts and Offers, or the Operations board — and reload.
+          each time this page loads, and the recommendation at the top is derived from the same
+          numbers rather than written down — so it cannot drift out of step with the table. To
+          change it, edit the records in the Studio (Outreach → Contacts and Offers, or the
+          Operations board) and reload.
           {data.posture && (
             <>
               {' '}
@@ -413,67 +463,87 @@ function BriefStyles() {
   return (
     <style>{`
       .ab-page, .ab-gate { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: ${INK}; background: #fdfcfa; }
-      .ab-page { max-width: 1080px; margin: 0 auto; padding: 56px 24px 96px; line-height: 1.6; }
+      .ab-page { max-width: 1020px; margin: 0 auto; padding: 56px 24px 96px; line-height: 1.6; }
       .ab-eyebrow { margin: 0 0 10px; color: ${TEAL}; font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
-      .ab-header { border-bottom: 2px solid ${INK}; padding-bottom: 28px; margin-bottom: 36px; }
-      .ab-header h1 { font-size: clamp(2.1rem, 5vw, 3rem); line-height: 1.05; letter-spacing: -.02em; margin: 0 0 14px; font-weight: 300; }
-      .ab-lede { font-size: 1.12rem; max-width: 64ch; margin: 0 0 14px; color: #4a453f; }
-      .ab-siblings { display: flex; gap: 8px; font-size: .9rem; margin: 0; color: #c6c0b8; }
-      .ab-siblings a { color: ${TEAL}; }
-      .ab-section { margin-bottom: 52px; }
-      .ab-section h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -.01em; margin: 0 0 18px; }
-      .ab-note { color: #6f6a64; font-size: .95rem; max-width: 72ch; }
+      .ab-kicker { margin: 0 0 6px; color: ${WARN}; font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+      .ab-header { border-bottom: 2px solid ${INK}; padding-bottom: 24px; margin-bottom: 32px; }
+      .ab-header h1 { font-size: clamp(2.2rem, 5vw, 3.1rem); line-height: 1.03; letter-spacing: -.025em; margin: 0 0 14px; font-weight: 300; }
+      .ab-lede { font-size: 1.14rem; max-width: 62ch; margin: 0 0 18px; color: #4a453f; }
+      .ab-jump { display: flex; gap: 18px; flex-wrap: wrap; font-size: .88rem; }
+      .ab-jump a { color: ${TEAL}; text-decoration: none; border-bottom: 1px solid #cfe4e7; padding-bottom: 1px; }
+      .ab-jump a:hover { border-bottom-color: ${TEAL}; }
+
+      /* 1. Bottom line — the only block with a filled background, so the eye
+         lands here first on a page that is otherwise white. */
+      .ab-bottomline { background: #fff; border: 1px solid #e7e2db; border-top: 3px solid ${WARN}; padding: 28px 30px; margin-bottom: 44px; }
+      .ab-bottomline h2 { margin: 0 0 12px; font-size: 1.6rem; font-weight: 700; letter-spacing: -.015em; }
+      .ab-bl-lead { margin: 0 0 24px; max-width: 74ch; font-size: 1.02rem; }
+      .ab-verdicts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+      .ab-verdict { border-left: 3px solid ${TEAL}; padding: 2px 0 2px 14px; }
+      .ab-verdict.is-warn { border-left-color: ${WARN}; }
+      .ab-verdict-label { margin: 0; font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #8a847c; }
+      .ab-verdict-value { margin: 2px 0 6px; font-size: 1.18rem; font-weight: 700; letter-spacing: -.01em; }
+      .ab-verdict.is-warn .ab-verdict-value { color: ${WARN}; }
+      .ab-verdict-why { margin: 0; font-size: .9rem; color: #6f6a64; }
+      .ab-caveat { margin: 22px 0 0; padding-top: 16px; border-top: 1px solid #efeae3; color: #6f6a64; font-size: .9rem; max-width: 78ch; }
+
+      .ab-section { margin-bottom: 56px; scroll-margin-top: 20px; }
+      .ab-section h2 { font-size: 1.55rem; font-weight: 600; letter-spacing: -.015em; margin: 0 0 20px; padding-bottom: 10px; border-bottom: 1px solid #e7e2db; }
+      .ab-section h3 { font-size: 1.02rem; font-weight: 700; margin: 30px 0 12px; display: flex; align-items: baseline; gap: 9px; }
+      .ab-count { background: ${ACCENT}; color: #fff; font-size: .72rem; font-weight: 700; border-radius: 10px; padding: 1px 8px; }
+      .ab-note { color: #6f6a64; font-size: .93rem; max-width: 74ch; }
       .ab-note-lead { margin-top: 0; margin-bottom: 18px; }
 
-      .ab-alarm { border-left: 4px solid ${WARN}; background: #fdf3f1; padding: 22px 24px; margin-bottom: 44px; }
-      .ab-alarm h2 { margin: 0 0 10px; font-size: 1.25rem; font-weight: 700; color: ${WARN}; }
-      .ab-alarm p { margin: 0 0 10px; max-width: 74ch; }
-      .ab-alarm p:last-child { margin-bottom: 0; }
-
-      .ab-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
-      .ab-stat { border: 1px solid #e7e2db; padding: 14px 16px; background: #fff; }
-      .ab-stat-value { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; color: ${ACCENT}; }
-      .ab-stat-label { font-size: .82rem; color: #6f6a64; margin-top: 2px; }
-
-      /* Wide content scrolls inside its own box; the page never scrolls sideways. */
-      .ab-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e7e2db; margin-bottom: 14px; display: block; overflow-x: auto; white-space: nowrap; }
-      .ab-table th, .ab-table td { border-bottom: 1px solid #efeae3; padding: 9px 14px; text-align: left; font-size: .92rem; }
-      .ab-table th { background: #faf8f4; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: #6f6a64; }
-      .ab-num { text-align: right; font-variant-numeric: tabular-nums; }
-      .ab-table tr.is-buyer td { font-weight: 600; }
-      .ab-row-rest td { color: #8a847c; }
-      .ab-yes { color: ${TEAL}; font-weight: 700; font-size: .8rem; }
-      .ab-no { color: #a8a29a; font-size: .8rem; }
-
-      .ab-clusters { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-      .ab-cluster { border: 1px solid #e7e2db; background: #fff; padding: 16px 18px; }
-      .ab-cluster h3 { margin: 0 0 10px; font-size: 1rem; font-weight: 700; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-      .ab-cluster-total { color: ${ACCENT}; font-variant-numeric: tabular-nums; }
-      .ab-cluster ul { list-style: none; margin: 0; padding: 0; }
-      .ab-cluster li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px solid #f4f1ec; font-size: .9rem; }
-      .ab-cluster li:last-child { border-bottom: 0; }
-      .ab-org-count { color: ${ACCENT}; font-weight: 700; font-variant-numeric: tabular-nums; }
-
-      .ab-gaps { display: grid; gap: 12px; }
-      .ab-gap { display: flex; gap: 18px; align-items: flex-start; border: 1px solid #f0d9d3; background: #fdf7f5; padding: 16px 18px; }
-      .ab-gap-count { font-size: 2.2rem; font-weight: 700; color: ${WARN}; line-height: 1; min-width: 48px; font-variant-numeric: tabular-nums; }
-      .ab-gap p { margin: 4px 0 0; color: #6f6a64; font-size: .93rem; max-width: 70ch; }
-
-      .ab-reco { margin: 0; padding-left: 22px; }
-      .ab-reco li { margin-bottom: 12px; max-width: 76ch; }
-
+      /* 2. The ask */
+      .ab-blocker { border: 1px solid #f0d9d3; background: #fdf7f5; padding: 18px 20px; margin-bottom: 8px; }
+      .ab-blocker p { margin: 0 0 12px; max-width: 74ch; }
       .ab-offers { list-style: none; margin: 0; padding: 0; }
-      .ab-offers li { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; border: 1px solid #e7e2db; background: #fff; padding: 10px 14px; margin-bottom: 6px; font-size: .93rem; }
+      .ab-offers li { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; background: #fff; border: 1px solid #f0e2dd; padding: 8px 12px; margin-bottom: 5px; font-size: .9rem; }
+      .ab-offers li:last-child { margin-bottom: 0; }
       .ab-offer-band { color: #8a847c; font-style: italic; }
 
       .ab-decisions { list-style: none; margin: 0; padding: 0; }
-      .ab-decisions li { border: 1px solid #e7e2db; background: #fff; padding: 12px 16px; margin-bottom: 8px; }
-      .ab-decisions p { margin: 6px 0 0; color: #6f6a64; font-size: .92rem; max-width: 74ch; }
+      .ab-decisions li { border: 1px solid #e7e2db; border-left: 3px solid ${ACCENT}; background: #fff; padding: 12px 16px; margin-bottom: 8px; }
+      .ab-decisions p { margin: 6px 0 0; color: #6f6a64; font-size: .91rem; max-width: 76ch; }
       .ab-decision-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
-      .ab-owner { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: ${TEAL}; }
+      .ab-owner { font-size: .7rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: ${TEAL}; }
       .ab-due { font-size: .78rem; color: #8a847c; font-variant-numeric: tabular-nums; }
+      .ab-more { margin-top: 22px; }
+      .ab-more summary { cursor: pointer; color: ${TEAL}; font-size: .92rem; font-weight: 600; padding: 6px 0; }
+      .ab-more[open] summary { margin-bottom: 12px; }
+      .ab-more .ab-decisions li { border-left-color: #d8d2c9; }
 
-      .ab-footer { border-top: 1px solid #e7e2db; padding-top: 18px; color: #8a847c; font-size: .88rem; }
+      /* 3. Evidence */
+      .ab-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+      .ab-stat { border: 1px solid #e7e2db; padding: 14px 16px; background: #fff; }
+      .ab-stat.is-missing { border-color: #f0d9d3; background: #fdf7f5; }
+      .ab-stat-value { font-size: 1.7rem; font-weight: 700; letter-spacing: -.025em; color: ${ACCENT}; font-variant-numeric: tabular-nums; }
+      .ab-stat.is-missing .ab-stat-value { color: ${WARN}; }
+      .ab-stat-label { font-size: .8rem; color: #6f6a64; margin-top: 3px; line-height: 1.35; }
+
+      /* Wide content scrolls inside its own box; the page never scrolls sideways. */
+      .ab-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e7e2db; margin-bottom: 12px; display: block; overflow-x: auto; }
+      .ab-caption { caption-side: top; text-align: left; color: #6f6a64; font-size: .86rem; padding: 10px 14px 12px; max-width: 74ch; }
+      .ab-table th, .ab-table td { border-bottom: 1px solid #efeae3; padding: 9px 14px; text-align: left; font-size: .93rem; white-space: nowrap; }
+      .ab-table th { background: #faf8f4; font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: #6f6a64; }
+      .ab-num { text-align: right; font-variant-numeric: tabular-nums; }
+      .ab-table tr.is-buyer td { font-weight: 600; }
+      .ab-subtotal td { font-weight: 700; border-bottom: 2px solid ${INK}; }
+      .ab-tbody-rest td { color: #8a847c; }
+
+      .ab-clusters { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+      .ab-cluster { border: 1px solid #e7e2db; background: #fff; padding: 16px 18px; }
+      .ab-cluster-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+      .ab-cluster-head h3 { margin: 0; font-size: .98rem; font-weight: 700; }
+      .ab-cluster-total { color: ${ACCENT}; font-weight: 700; font-variant-numeric: tabular-nums; }
+      .ab-bar { height: 4px; background: #f4f1ec; margin: 9px 0 12px; }
+      .ab-bar-fill { height: 100%; background: ${TEAL}; opacity: .85; }
+      .ab-cluster ul { list-style: none; margin: 0; padding: 0; }
+      .ab-cluster li { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; border-bottom: 1px solid #f4f1ec; font-size: .89rem; }
+      .ab-cluster li:last-child { border-bottom: 0; }
+      .ab-org-count { color: ${ACCENT}; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+      .ab-footer { border-top: 1px solid #e7e2db; padding-top: 18px; color: #8a847c; font-size: .87rem; max-width: 82ch; }
       .ab-footer code { background: #f4f1ec; padding: 1px 5px; }
 
       .ab-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -486,7 +556,7 @@ function BriefStyles() {
 
       @media (max-width: 600px) {
         .ab-page { padding: 36px 16px 72px; }
-        .ab-gap { flex-direction: column; gap: 8px; }
+        .ab-bottomline { padding: 20px 18px; }
       }
     `}</style>
   )

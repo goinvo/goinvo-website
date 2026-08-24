@@ -172,6 +172,86 @@ export function assessReadiness(input: {
   }
 }
 
+export type BriefDecision = {
+  _id: string
+  title: string
+  ownerName?: string
+  humanQuestion?: string
+  dueAt?: string
+  priority?: string
+}
+
+/**
+ * Split decisions into the reader's own and everyone else's.
+ *
+ * This page is written for one person. A flat list of fourteen decisions makes
+ * them hunt for the three that are actually theirs, so the ones they can act on
+ * today come first and the rest stay visible as context.
+ */
+export function groupDecisionsByOwner(
+  decisions: BriefDecision[],
+  reader: string,
+): { mine: BriefDecision[]; others: BriefDecision[] } {
+  const target = reader.trim().toLowerCase()
+  const mine: BriefDecision[] = []
+  const others: BriefDecision[] = []
+  for (const decision of decisions) {
+    const owner = String(decision.ownerName || '').trim().toLowerCase()
+    // Match on the first name too: owners are stored as "Juhan", but a record
+    // written as "Juhan Sonin" is the same person and must not fall through.
+    const isMine = target !== '' && (owner === target || owner.split(/\s+/)[0] === target)
+    ;(isMine ? mine : others).push(decision)
+  }
+  return { mine, others }
+}
+
+export type LeadRecommendation = {
+  lead: OrgCluster | null
+  doorOpener: OrgCluster | null
+  /** Distinct organisations per contact, 0–1. High means spread thin. */
+  spread: (cluster: OrgCluster) => number
+}
+
+/**
+ * Which segment to lead with, derived rather than asserted.
+ *
+ * The page used to state "lead with providers and health IT" as prose. That was
+ * true when it was written and would have quietly kept saying so after the data
+ * moved. Deriving it means the headline claim cannot drift away from the table
+ * underneath it.
+ *
+ * `lead` is simply the biggest buyer cluster. `doorOpener` is the one whose
+ * contacts are spread thinnest across distinct organisations — one person at
+ * each of ten companies is a set of doors to knock on, not a book of business,
+ * and that is a different play from a segment where we know nine people at the
+ * same hospital.
+ */
+export function leadRecommendation(clusters: OrgCluster[], allContacts: BriefContact[]): LeadRecommendation {
+  const distinctOrgs = new Map<string, Set<string>>()
+  for (const contact of allContacts) {
+    const segment = (contact.segment || contact.researchSuggestedSegment || '').trim()
+    const name = String(contact.organization || '').trim()
+    if (!segment || !name) continue
+    if (!distinctOrgs.has(segment)) distinctOrgs.set(segment, new Set())
+    distinctOrgs.get(segment)!.add(name)
+  }
+  const spread = (cluster: OrgCluster) => {
+    const orgs = distinctOrgs.get(cluster.segment)?.size ?? cluster.organizations.length
+    return cluster.total > 0 ? orgs / cluster.total : 0
+  }
+
+  const ranked = [...clusters].sort((a, b) => b.total - a.total)
+  const lead = ranked[0] ?? null
+  // Needs enough contacts to be worth a play at all; below that it is noise.
+  const candidates = ranked.filter((cluster) => cluster !== lead && cluster.total >= 5)
+  const doorOpener =
+    candidates.length > 0
+      ? candidates.reduce((best, cluster) => (spread(cluster) > spread(best) ? cluster : best))
+      : null
+
+  return { lead, doorOpener, spread }
+}
+
 /** A segment named in the strategy that the list cannot actually support. */
 export type CoverageGap = {
   segment: string
