@@ -24,6 +24,7 @@ import {
 } from '@/lib/marketing/requestDedupe'
 import { findWorkUpdatePrivacyIssue } from '@/lib/marketing/workUpdateSafety'
 import { client } from '@/sanity/lib/client'
+import { clientForType } from '@/lib/marketing/datasetRouting'
 
 // The strategist/suggestion generations run 10–45s (large system + site
 // context, up to 2600 output tokens). Without this, Vercel's default function
@@ -166,7 +167,8 @@ type SiteContext = {
   }
 }
 
-const MARKETING_CONTEXT_QUERY = `{
+/** Public content: features, case studies, categories. Never moves dataset. */
+const SITE_CONTENT_QUERY = `{
   "features": *[_type == "feature" && title != "Untitled" && !(slug.current match "untitled-*")]|order(coalesce(date, _updatedAt) desc)[0...14] {
     title,
     "slug": slug.current,
@@ -187,7 +189,16 @@ const MARKETING_CONTEXT_QUERY = `{
   "categories": *[_type == "category"]|order(title asc)[0...20] {
     title,
     description
-  },
+  }
+}`
+
+/**
+ * The marketing half of the assistant's context.
+ *
+ * Split from the content half because one query cannot span two datasets.
+ * Merged back together in getSiteContext, so the prompt is unchanged.
+ */
+const MARKETING_CONTEXT_QUERY = `{
   "existingMarketing": {
     "campaigns": *[_type == "marketingCampaign"]|order(_updatedAt desc)[0...10] {
       title,
@@ -660,7 +671,11 @@ async function buildMarketingAssistPayload(
 
 async function getSiteContext(): Promise<SiteContext> {
   try {
-    const data = await client.fetch<Partial<SiteContext>>(MARKETING_CONTEXT_QUERY)
+    const [content, marketing] = await Promise.all([
+      client.fetch<Partial<SiteContext>>(SITE_CONTENT_QUERY),
+      clientForType(client, 'marketingCampaign').fetch<Partial<SiteContext>>(MARKETING_CONTEXT_QUERY),
+    ])
+    const data: Partial<SiteContext> = { ...content, ...marketing }
     return {
       features: data.features || [],
       caseStudies: data.caseStudies || [],
