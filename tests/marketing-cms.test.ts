@@ -131,6 +131,7 @@ describe('Marketing CMS schemas', () => {
     expect(marketingTool.name).toBe('marketing')
     expect(marketingTool.title).toBe('Marketing')
     expect(MARKETING_TOOL_VIEWS.map((view) => view.id)).toEqual([
+      'thisWeek',
       'dashboard',
       'research',
       'seo',

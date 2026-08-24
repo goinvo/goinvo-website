@@ -25,6 +25,7 @@ import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
 import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
 import { MarketingAiModelSetting } from '../components/marketing/MarketingAiModelSetting'
+import { MarketingWeeklyHoursSetting } from '../components/marketing/MarketingWeeklyHoursSetting'
 import { MarketingBrandVoiceSetting } from '../components/marketing/MarketingBrandVoiceSetting'
 import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLearningReview'
 import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
@@ -34,6 +35,7 @@ import { MarketingOperationsBoard } from '../components/marketing/MarketingOpera
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ShopWorkspace } from '../components/marketing/ShopWorkspace'
+import { WeeklyPlanWorkspace } from '../components/marketing/WeeklyPlanWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
 import { OutreachWorkspace, OutreachEvidenceWorkspace } from '../components/marketing/OutreachWorkspace'
 import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
@@ -814,6 +816,7 @@ export type StudioClient = ReturnType<typeof useClient>
 export type MarketingDocumentInput = { _type: string } & Record<string, unknown>
 
 export type MarketingViewId =
+  | 'thisWeek'
   | 'dashboard'
   | 'strategy'
   | 'strategyBrief'
@@ -833,6 +836,7 @@ export type MarketingViewId =
 export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 
 export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = {
+  thisWeek: 'marketing.dashboard',
   dashboard: 'marketing.dashboard',
   strategy: 'marketing.strategy',
   strategyBrief: 'marketing.strategy-brief',
@@ -3780,6 +3784,7 @@ function MarketingComponent() {
                   </div>
                   <div id="marketing-settings-ai" style={{ scrollMarginTop: 16 }}>
                     <MarketingAiModelSetting />
+                    <MarketingWeeklyHoursSetting />
                   </div>
                 </div>
                 <div id="marketing-settings-channels" style={{ scrollMarginTop: 16 }}>
@@ -3794,6 +3799,7 @@ function MarketingComponent() {
                 </div>
               </>
             )}
+            {view === 'thisWeek' && <WeeklyPlanWorkspace proofClient={outreachClient} />}
             {view === 'shop' && <ShopWorkspace client={client} />}
             {view === 'outreach' && (
               <div data-tour-id="autopilot-outreach-workflow">
