@@ -124,12 +124,20 @@ export function buildTextFragmentUrl(url: string, quote: string): string {
  * sheet wearing a tick.
  */
 export function resolveVerificationStatus(input: {
-  fetchedAnySource: boolean
+  sourcesTried: number
+  sourcesReadable: number
   evidence: VerifiedEvidence[]
   entailment: 'supported' | 'partial' | 'unsupported' | null
 }): VerificationStatus {
-  if (!input.fetchedAnySource) return 'unchecked'
-  if (input.evidence.length === 0) return 'unsupported'
+  if (input.sourcesReadable === 0) return 'unchecked'
+  if (input.evidence.length === 0) {
+    // "We read one of four pages and it did not happen to contain support" is
+    // not the same as "the claim is unsupported". Paywalls and bot blocks are
+    // extremely common, and reporting a fetch failure as a failed claim would
+    // blame the research for the network.
+    const readMost = input.sourcesReadable * 2 >= input.sourcesTried
+    return readMost ? 'unsupported' : 'unchecked'
+  }
   if (input.entailment === 'supported') return 'verified'
   if (input.entailment === 'unsupported') return 'unsupported'
   return 'overreach'

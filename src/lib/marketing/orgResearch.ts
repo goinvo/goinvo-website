@@ -37,8 +37,14 @@ export type OrgResearch = {
   organization: string
   /** One line on what they actually do. */
   whatTheyDo: string
-  /** Something specific and recent, with a date if there is one. */
+  /** Only what the quoted passage proves. Nothing else. */
   recentSignal: string
+  /** The exact passage the claim rests on. */
+  quote: string
+  /** Which cited URL the quote came from. */
+  quoteUrl: string
+  /** Wider picture the model could not tie to one passage. Never shown as fact. */
+  context: string
   /** The opening we could credibly make. */
   reachableAbout: string
   /** Which of our offers this points at, if any. */
@@ -54,24 +60,41 @@ GoInvo is a Boston healthcare design studio: clinical software, human factors fo
 regulated products, data visualisation, and open-source health work. It sells
 fixed-scope engagements, not staff augmentation.
 
-Rules, in order of importance:
+THE HARD RULE: every word of "recentSignal" must be provable from ONE passage you
+quote. Not from your memory, not from three pages stitched together, not from
+what you infer is probably also true. One passage, quoted exactly, that a
+sceptical reader can open and check.
 
-1. Only state things you found and can cite. If you cannot find a recent, specific
-   signal, say so plainly and set confidence "low". A vague but confident-sounding
-   answer is worse than an empty one, because somebody will read it out on a call.
-2. Prefer the concrete and dated: a named product, a published pilot, a funding
-   round, a regulatory submission, a hiring push, a public commitment. Not
-   adjectives about how innovative they are.
-3. "reachableAbout" must be a specific opening a designer could say out loud, tied
-   to the signal. Not "they care about patient experience".
-4. Never invent statistics, and never attribute a claim to a source that does not
-   make it.
+This is checked automatically afterwards. Your quote is searched for verbatim in
+the page you attribute it to, and the claim is compared against it. A claim that
+reaches past its quote is rejected, so padding it costs you the whole record.
+
+Concretely:
+- No date in the claim unless that date is in the quote.
+- No number, headcount, dollar figure or percentage unless it is in the quote.
+- No person's name, product name or partner name unless it is in the quote.
+- No "leading", "major", "rapidly growing" - adjectives you cannot cite.
+- If the quote says a partnership was announced, do not write that it launched.
+
+Prefer a small true claim to a big shaky one. "Announced a partnership with X"
+that survives checking is worth more than a paragraph that does not.
+
+Everything else you learned - the wider picture, the numbers you saw elsewhere,
+your read on what it means - goes in "context", which is clearly labelled as
+unverified and is never repeated as fact.
+
+If you cannot find one citable passage worth building an approach on, say so:
+empty recentSignal, empty quote, confidence "low". That is a perfectly good
+answer and much better than a confident guess.
 
 Reply with ONLY a JSON object:
 {
   "whatTheyDo": "one sentence",
-  "recentSignal": "specific and dated, or empty string if none found",
-  "reachableAbout": "the concrete opening, or empty string",
+  "recentSignal": "only what the quote below proves, or empty string",
+  "quote": "the exact passage, copied character for character, or empty string",
+  "quoteUrl": "the URL the quote came from, or empty string",
+  "context": "wider unverified picture, may be empty",
+  "reachableAbout": "the concrete opening this justifies, or empty string",
   "suggestedOfferKey": "one of the offer keys given, or empty string",
   "confidence": "high" | "medium" | "low"
 }`
@@ -133,6 +156,9 @@ export function normaliseOrgResearch(input: {
     organization: input.organization,
     whatTheyDo: str('whatTheyDo'),
     recentSignal: signal,
+    quote: str('quote'),
+    quoteUrl: str('quoteUrl'),
+    context: str('context'),
     reachableAbout: str('reachableAbout'),
     suggestedOfferKey: str('suggestedOfferKey'),
     confidence,
@@ -140,7 +166,16 @@ export function normaliseOrgResearch(input: {
   }
 }
 
-/** Is this worth putting in front of a person? */
+/**
+ * Is this worth putting in front of a person?
+ *
+ * A quote is now part of the contract, not a nicety. Under the old prompt the
+ * model returned a rich paragraph and a bag of links, and every one of the first
+ * twenty claims failed verification. A record that cannot point at the passage
+ * it rests on has nothing for the verifier to check, so it does not get stored.
+ */
 export function isUsableOrgResearch(research: OrgResearch): boolean {
-  return Boolean(research.reachableAbout && research.sources.length > 0)
+  return Boolean(
+    research.reachableAbout && research.recentSignal && research.quote && research.sources.length > 0,
+  )
 }
