@@ -126,7 +126,7 @@ async function main() {
     const claim = String(doc.recentSignal || '')
     const sources = (doc.sources || []).filter((source) => source?.url).slice(0, MAX_SOURCES_PER_CLAIM)
     const evidence: VerifiedEvidence[] = []
-    let fetchedAnySource = false
+    let sourcesReadable = 0
 
     for (const source of sources) {
       const text = await fetchPageText(source.url!)
@@ -134,7 +134,7 @@ async function main() {
         pagesUnreadable += 1
         continue
       }
-      fetchedAnySource = true
+      sourcesReadable += 1
 
       let quote = ''
       try {
@@ -205,10 +205,18 @@ async function main() {
       }
     }
 
-    const status = resolveVerificationStatus({ fetchedAnySource, evidence, entailment })
+    const status = resolveVerificationStatus({
+      sourcesTried: sources.length,
+      sourcesReadable,
+      evidence,
+      entailment,
+    })
     tally[status] = (tally[status] || 0) + 1
 
-    console.log(`  ${doc.organization.padEnd(26)} ${status}${reason ? ` — ${reason}` : ''}`)
+    console.log(
+      `  ${doc.organization.padEnd(26)} ${status}  (${sourcesReadable}/${sources.length} sources readable)` +
+        (reason ? ` — ${reason}` : ''),
+    )
     if (evidence.length) console.log(`     ${evidence.length} verified quote(s) across ${evidence.length} source(s)`)
 
     if (apply) {
