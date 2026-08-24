@@ -339,7 +339,7 @@ deleting its own `.ul` padding gets bullets 32px out of place.
 ## Marketing dataset split — internal records out of the public dataset (in progress 2026-08-24)
 
 Sanity's public-dataset grant is `_id in path("*")`, which matches every id **without a dot** —
-so today's "privacy" is an accident of id naming, not a rule. 73 internal marketing documents
+so today's "privacy" is an accident of id naming, not a rule. 75 internal marketing documents
 (calendar, research, ideas, experiments…) are readable by anyone who knows the project id.
 Full plan: [`docs/dataset-split-migration-plan.md`](docs/dataset-split-migration-plan.md).
 
@@ -359,7 +359,9 @@ Full plan: [`docs/dataset-split-migration-plan.md`](docs/dataset-split-migration
   (needs a server + `MARKETING_API_KEY`) wraps `/api/marketing/health/dataset`. Per type it
   reports configured dataset, count there, count in the other, and **anonymouslyReadable**.
   Every failure mode here is silent — a repointed query that misses returns `[]`, not an
-  error — so this number is the only real evidence. **Baseline: 73.**
+  error — so this number is the only real evidence. **Baseline: 75.** The watch list is
+  derived from `INTERNAL_MARKETING_TYPES`, so a type the router protects cannot escape the
+  probe; it read 73 until `marketingLeadMagnet` was found missing from BOTH source lists.
 - **Data move:** `node scripts/split-marketing-dataset.mjs --wave 1 --copy|--verify|--delete`
   (dry-run by default). Copy writes the whole wave in **ONE transaction** — Sanity validates
   strong references at end-of-transaction, so batching breaks any reference whose target
@@ -369,7 +371,7 @@ Full plan: [`docs/dataset-split-migration-plan.md`](docs/dataset-split-migration
   `INTERNAL_MARKETING_TYPES`, so all reads/writes for them now resolve to `outreach`
   (probe: `internalTypes=31`). The documents ALSO still exist in production, so the window
   stays reversible — and **the leak is NOT closed yet**: the probe correctly reports 12 types
-  as `LEAKING` and `anonymouslyReadable` is still **73**. **Step 8 (delete from production
+  as `LEAKING` and `anonymouslyReadable` is still **75**. **Step 8 (delete from production
   after a soak) is what closes it.** Waves 2/3 = `previewShareLink`, `cmsFeedback`.
 - **Cutover gotchas, all silent:** a mock/client without `withConfig` now throws inside
   `clientForType` for any internal type (the assist tests hit this — fix the mock, do NOT
