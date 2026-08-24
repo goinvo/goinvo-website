@@ -43,6 +43,7 @@ import {
   uniqueById,
 } from '@/lib/marketing'
 import type { FinancialPostureId } from '@/lib/marketing/financialPosture'
+import { isInternalMarketingType } from '@/lib/marketing/datasetRouting'
 import type {
   AbTestingComparisonResult,
   AbTestingComparisonScoreboard,
@@ -8151,7 +8152,17 @@ export function normalizeStringList(items: string[]) {
   return Array.from(new Set((items || []).map((item) => item.trim()).filter(Boolean)))
 }
 
-export function advancedEditHref(type: string, id: string) {
+/**
+ * Link into the full Sanity document form, when that is actually reachable.
+ *
+ * sanity.config.ts defines ONE workspace on ONE dataset, so the intent route
+ * can only open documents in that dataset. For a type that lives in the private
+ * dataset the link resolves to an empty new-document form, and saving it would
+ * create a ghost duplicate in the public dataset. Returning null lets callers
+ * hide the hatch rather than offer a broken one.
+ */
+export function advancedEditHref(type: string, id: string): string | null {
+  if (isInternalMarketingType(type)) return null
   return `/studio/content/intent/edit/id=${encodeURIComponent(id)};type=${encodeURIComponent(type)}`
 }
 

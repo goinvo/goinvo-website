@@ -3008,6 +3008,12 @@ function MarketingComponent() {
   const hasUnsavedChanges = Object.keys(unsavedChanges).length > 0
   const hasUnsavedChange = useCallback((id: string) => Boolean(unsavedChanges[id]), [unsavedChanges])
   const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
+  // Every marketing workspace reads and writes marketing types only, so they
+  // all take a client already scoped to the dataset those types live in.
+  // Scoping once here beats remembering to route at fourteen call sites — and a
+  // missed one would delete or patch against the wrong dataset and report
+  // success, which is the failure mode this migration keeps running into.
+  const marketingClient = useMemo(() => clientForType(client, 'marketingCalendarItem'), [client])
 
   const markUnsavedChange = useCallback((id = MARKETING_UNSAVED_FORM_ID, label = 'form fields you edited') => {
     setUnsavedChanges((current) => (current[id] === label ? current : { ...current, [id]: label }))
@@ -3310,7 +3316,7 @@ function MarketingComponent() {
       setError(null)
       setNotice(null)
       try {
-        const result = await generateInstagramCarouselSetup(client, data, questionnaire)
+        const result = await generateInstagramCarouselSetup(marketingClient, data, questionnaire)
         if (await loadData()) {
           clearUnsavedChanges()
           setNotice('Created the suggested marketing setup.')
@@ -3798,7 +3804,7 @@ function MarketingComponent() {
             {view === 'strategyBrief' && <StrategyBriefWorkspace />}
             {view === 'research' && (
               <ResearchWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -3809,7 +3815,7 @@ function MarketingComponent() {
                 onAutopilotComplete={reportAutopilotCompletion}
               />
             )}
-            {view === 'seo' && <SeoWorkspace client={client} />}
+            {view === 'seo' && <SeoWorkspace client={marketingClient} />}
             {view === 'abTesting' && (
               <AbTestingWorkspace
                 data={data}
@@ -3829,7 +3835,7 @@ function MarketingComponent() {
             )}
             {view === 'calendar' && (
               <CalendarWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -3857,7 +3863,7 @@ function MarketingComponent() {
             )}
             {view === 'templates' && (
               <TemplateWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -3887,7 +3893,7 @@ function MarketingComponent() {
                 </div>
                 <div id="marketing-settings-channels" style={{ scrollMarginTop: 16 }}>
                   <ChannelWorkspace
-                    client={client}
+                    client={marketingClient}
                     data={data}
                     savingId={savingId}
                     createDocument={createDocument}
@@ -3912,7 +3918,7 @@ function MarketingComponent() {
             {view === 'workEvidence' && <OutreachEvidenceWorkspace client={client} />}
             {view === 'linkTree' && (
               <LinkTreeWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -9861,10 +9867,17 @@ export function AdvancedFieldsDropdown({ type, id }: { type: string; id: string 
         <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
           Use the full Sanity document only when this workflow form does not expose the field you need.
         </p>
-        <a href={advancedEditHref(type, id)} style={styles.inlineLink}>
-          <LaunchIcon style={{ width: 15, height: 15 }} />
-          Open full Sanity document
-        </a>
+        {advancedEditHref(type, id) ? (
+          <a href={advancedEditHref(type, id) as string} style={styles.inlineLink}>
+            <LaunchIcon style={{ width: 15, height: 15 }} />
+            Open full Sanity document
+          </a>
+        ) : (
+          <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>
+            This record lives in the private marketing dataset, which the document editor cannot
+            open. Use the fields above.
+          </p>
+        )}
       </div>
     </details>
   )

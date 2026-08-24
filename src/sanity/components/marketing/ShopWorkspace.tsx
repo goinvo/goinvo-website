@@ -1424,7 +1424,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                 <p style={{ ...styles.muted, ...styles.small }}>
                   Use the full document editor for uncommon fields. Payment secrets must stay in deployment environment variables.
                 </p>
-                <a href={advancedEditHref('marketingShopSettings', MARKETING_SHOP_SETTINGS_ID)} style={styles.inlineLink}>
+                <a href={advancedEditHref('marketingShopSettings', MARKETING_SHOP_SETTINGS_ID) ?? undefined} style={styles.inlineLink}>
                   Open full shop settings
                   <LaunchIcon style={{ width: 15, height: 15 }} />
                 </a>
@@ -1541,7 +1541,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                 <details style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
                   <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced fields</summary>
                   <p style={{ ...styles.muted, ...styles.small }}>Add the product image, campaign links, audiences, internal notes, and other uncommon fields.</p>
-                  <a href={advancedEditHref('marketingProduct', selectedProduct._id)} style={styles.inlineLink}>
+                  <a href={advancedEditHref('marketingProduct', selectedProduct._id) ?? undefined} style={styles.inlineLink}>
                     Open full product editor
                     <LaunchIcon style={{ width: 15, height: 15 }} />
                   </a>
