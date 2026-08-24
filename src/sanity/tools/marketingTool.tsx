@@ -811,7 +811,18 @@ const MARKETING_QUERY = `{
     notes,
     conversionGoal,
     stages[]{_key, _type, stage, goal, offer, callToAction, destinationUrl, metrics}
-  },
+  }
+}`
+
+/**
+ * The half of the tool's data that stays in the PUBLIC dataset.
+ *
+ * Team members and features are content, not marketing records, so they do not
+ * move. Split out because one query cannot span two datasets: after cutover the
+ * marketing half runs against the private dataset and this half does not.
+ * Fetched together and merged, so nothing downstream notices.
+ */
+const MARKETING_PUBLIC_QUERY = `{
   "teamMembers": *[_type == "teamMember" && coalesce(isAlumni, false) != true]|order(name asc) {
     _id,
     "title": name
@@ -824,6 +835,8 @@ const MARKETING_QUERY = `{
     slug
   }
 }`
+
+import { clientForType } from '@/lib/marketing/datasetRouting'
 
 export type StudioClient = ReturnType<typeof useClient>
 export type MarketingDocumentInput = { _type: string } & Record<string, unknown>
@@ -3043,7 +3056,13 @@ function MarketingComponent() {
     if (options.showRefreshProgress) setRefreshing(true)
     setError(null)
     try {
-      const nextData = await client.fetch<MarketingData>(MARKETING_QUERY)
+      // Two fetches, one merge: the marketing half follows the dataset split,
+      // the content half always stays public.
+      const [marketingData, publicData] = await Promise.all([
+        clientForType(client, 'marketingCalendarItem').fetch<MarketingData>(MARKETING_QUERY),
+        client.fetch<Pick<MarketingData, 'teamMembers' | 'features'>>(MARKETING_PUBLIC_QUERY),
+      ])
+      const nextData: MarketingData = { ...marketingData, ...publicData }
       if (generation !== loadDataGenerationRef.current) return false
       setData({
         // Re-attach anything a cross-dataset weak reference stopped resolving.
@@ -3223,7 +3242,21 @@ function MarketingComponent() {
       setError(null)
       setNotice(null)
       try {
-        let patch = client.patch(id)
+        // Only an id arrives here, never a _type, so this cannot route per
+        // document. Every internal type moves together, so the internal client
+        // is correct for all of them — but a public type reaching this path
+        // would silently patch the wrong dataset, so say so loudly in dev.
+        const patchClient = clientForType(client, 'marketingCalendarItem')
+        if (process.env.NODE_ENV !== 'production') {
+          const publicPrefixes = ['feature', 'caseStudy', 'healthVisualization', 'teamMember', 'category']
+          if (publicPrefixes.some((prefix) => id.startsWith(prefix))) {
+            throw new Error(
+              `commitPatch received "${id}", which looks like a public content document. ` +
+                'It routes every patch to the internal dataset and would silently write to the wrong place.',
+            )
+          }
+        }
+        let patch = patchClient.patch(id)
         if (Object.keys(set).length > 0) patch = patch.set(set)
         if (unset.length > 0) patch = patch.unset(unset)
         await patch.commit()
@@ -3249,7 +3282,11 @@ function MarketingComponent() {
       setError(null)
       setNotice(null)
       try {
-        const created = await client.create(document)
+        // Route by type. Unrouted this line SUCCEEDS while being wrong: a new
+        // internal record would be written into the world-readable dataset
+        // while the tool reads the private one, so the record vanishes from the
+        // UI and the leak reopens on every "New" click.
+        const created = await clientForType(client, document._type).create(document)
         if (await loadData()) {
           clearUnsavedChanges()
           setNotice('Created a new marketing record.')
