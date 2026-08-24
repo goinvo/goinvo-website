@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { createClient, type SanityClient } from '@sanity/client'
 import { apiVersion, previewToken, projectId } from '@/sanity/env'
@@ -46,6 +47,13 @@ import { toDateInputValue } from '@/lib/marketing/dates'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// Gated and unlisted, but unlisted is not the same as noindexed: a crawler
+// that finds the URL still indexes the gate. Say it explicitly.
+export const metadata: Metadata = {
+  title: 'Execution Plan — GoInvo Internal',
+  robots: { index: false, follow: false },
+}
 
 const INK = '#1d1b1a'
 const ACCENT = '#d94d2f'

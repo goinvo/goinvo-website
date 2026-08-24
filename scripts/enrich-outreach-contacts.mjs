@@ -229,7 +229,19 @@ for (const contact of contacts) {
     const derived = organizationFor(domain)
     if (derived && derived.toLowerCase() !== current.toLowerCase()) set.organization = derived
   }
-  if (sector && !contact.researchSuggestedSegment) set.researchSuggestedSegment = sector
+  // A stored suggestion normally wins - the research route sees far more than a
+  // domain does. The exception is an unambiguous TLD: a .edu or .gov address is
+  // a university or an agency, whatever an earlier guess decided. One umd.edu
+  // contact was sitting in the med-device cluster, which quietly inflated the
+  // very segment the brief flags as unreachable. Named provider and government
+  // rules run first, so mayo.edu and cms.hhs.gov are unaffected.
+  const tldAuthoritative =
+    (sector === 'research' && domain.endsWith('.edu')) ||
+    (sector === 'government' && (domain.endsWith('.gov') || domain.endsWith('.mil')))
+  const storedSuggestion = String(contact.researchSuggestedSegment || '')
+  if (sector && (!storedSuggestion || (tldAuthoritative && storedSuggestion !== sector))) {
+    set.researchSuggestedSegment = sector
+  }
   if (Object.keys(set).length === 0) {
     skipped[sector ? 'alreadyDone' : 'unclassified'] += 1
     continue
