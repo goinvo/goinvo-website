@@ -150,7 +150,7 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
-## Gated internal plan pages: /marketing-plan, /outreach-plan, /action-plan
+## Gated internal plan pages: /marketing-plan, /outreach-plan, /action-plan, /audience-brief
 
 Three unlisted, noindexed internal decks, all gated by ONE `MARKETING_PLAN_KEY` (HMAC session
 cookie `goinvo_marketing_plan_session`, 8h, minted by `POST /api/marketing/plan-session` with a
@@ -173,6 +173,19 @@ openers/offers/evidence, email templates, offer one-pagers).
   tests `tests/execution-plan.test.ts` include a **neutrality guard** (production-bound
   titles/briefs must carry no crisis framing / person names / emails — that dataset is
   world-readable; candid framing lives only on the outreach-dataset operations).
+- **/audience-brief (built 2026-08-24)** answers WHO WE ACTUALLY HAVE — the other three are
+  written around a warm network the CMS does not contain. Renders live from the private
+  dataset: segment mix, the named organisations behind each buyer segment, coverage gaps
+  (a segment the plan targets but the list cannot support), offers whose price band has no
+  numbers, and the open `needsHuman` decisions. Pure helpers + tests:
+  `src/lib/marketing/audienceBrief.ts`, `tests/audience-brief.test.ts`.
+  Never write `warmth` or `segment` from a domain — a domain proves where someone works,
+  never that they know us. Enrichment: `node scripts/enrich-outreach-contacts.mjs [--apply]`,
+  which sets `organization` + `researchSuggestedSegment` ONLY. An unambiguous TLD (.edu/.gov)
+  is allowed to correct a stored suggestion — a umd.edu contact was sitting in the
+  med-device cluster and inflating the very segment the brief flags as unreachable.
+- All four pages now set `robots: { index: false, follow: false }`. They were only *unlisted*
+  before (absent from the sitemap), which does not stop a crawler that finds the URL.
 - **Gotchas fixed 2026-08-17, don't regress:** the session cookie must be `path: '/'` (it was
   `/marketing-plan`, which made every OTHER gated page loop on its gate forever — covered in
   `tests/marketing-plan-session-route.test.ts`); a new gated route must be added to
