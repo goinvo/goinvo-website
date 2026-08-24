@@ -98,19 +98,19 @@ describe('buildTextFragmentUrl', () => {
 describe('resolveVerificationStatus', () => {
   it('verifies only when a real quote also entails the claim', () => {
     expect(
-      resolveVerificationStatus({ fetchedAnySource: true, evidence, entailment: 'supported' }),
+      resolveVerificationStatus({ sourcesTried: 2, sourcesReadable: 2, evidence, entailment: 'supported' }),
     ).toBe('verified')
   })
 
   it('calls a claim that reaches past its evidence overreach, not verified', () => {
     expect(
-      resolveVerificationStatus({ fetchedAnySource: true, evidence, entailment: 'partial' }),
+      resolveVerificationStatus({ sourcesTried: 2, sourcesReadable: 2, evidence, entailment: 'partial' }),
     ).toBe('overreach')
   })
 
   it('is unsupported when no cited source contained the text', () => {
     expect(
-      resolveVerificationStatus({ fetchedAnySource: true, evidence: [], entailment: null }),
+      resolveVerificationStatus({ sourcesTried: 2, sourcesReadable: 2, evidence: [], entailment: null }),
     ).toBe('unsupported')
   })
 
@@ -118,12 +118,37 @@ describe('resolveVerificationStatus', () => {
     // Treating "could not check" as verified is how an unverified claim reaches
     // a call sheet wearing a tick.
     const status = resolveVerificationStatus({
-      fetchedAnySource: false,
+      sourcesTried: 2,
+      sourcesReadable: 0,
       evidence,
       entailment: 'supported',
     })
     expect(status).toBe('unchecked')
     expect(isPublishable(status)).toBe(false)
+  })
+
+  it('says "could not check" when most sources were unreadable and none supported', () => {
+    // Paywalls and bot blocks are common. Reporting a fetch failure as a failed
+    // claim would blame the research for the network.
+    expect(
+      resolveVerificationStatus({
+        sourcesTried: 4,
+        sourcesReadable: 1,
+        evidence: [],
+        entailment: null,
+      }),
+    ).toBe('unchecked')
+  })
+
+  it('still says unsupported when we did read most of the sources', () => {
+    expect(
+      resolveVerificationStatus({
+        sourcesTried: 4,
+        sourcesReadable: 3,
+        evidence: [],
+        entailment: null,
+      }),
+    ).toBe('unsupported')
   })
 
   it('treats only "verified" as publishable', () => {
