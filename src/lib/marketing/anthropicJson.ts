@@ -20,6 +20,8 @@
 
 import Anthropic from '@anthropic-ai/sdk'
 import type { SanityClient } from '@sanity/client'
+import { datasetForType } from './datasetRouting'
+import { dataset as PUBLIC_DATASET } from '@/sanity/env'
 
 export const MARKETING_ALLOWED_CLAUDE_MODELS = [
   'claude-opus-4-8',
@@ -40,12 +42,24 @@ export function isAnthropicConfigured(): boolean {
 // `MARKETING_CLAUDE_MODEL` env > Opus default. The Studio setting lets non-devs
 // change the model from inside the Studio without touching env vars.
 export async function resolveMarketingModel(
-  client: Pick<SanityClient, 'fetch'>,
+  client: Pick<SanityClient, 'fetch'> & Partial<Pick<SanityClient, 'withConfig'>>,
   override?: string,
 ): Promise<string> {
   if (isAllowedMarketingModel(override)) return override
   try {
-    const chosen = await client.fetch<string | null>(`*[_id == "marketingSettings"][0].aiModel`)
+    // Read the setting from wherever marketingSettings actually lives rather
+    // than from the caller's dataset. Callers hand over whatever client they
+    // already hold — the outreach routes an outreach-bound one, assist a
+    // production-bound one — so without this the model picked in the Studio is
+    // honoured by some routes and silently ignored by others, with no error
+    // either way. Pinned explicitly in BOTH directions, because clientForType
+    // only re-scopes internal types and passes everything else through
+    // untouched: before cutover an outreach-bound caller would still read
+    // settings from outreach.
+    const target = datasetForType('marketingSettings', PUBLIC_DATASET)
+    const settingsClient =
+      typeof client.withConfig === 'function' ? client.withConfig({ dataset: target }) : client
+    const chosen = await settingsClient.fetch<string | null>(`*[_id == "marketingSettings"][0].aiModel`)
     if (isAllowedMarketingModel(chosen)) return chosen
   } catch {
     // Settings unreadable → fall back to env/default.

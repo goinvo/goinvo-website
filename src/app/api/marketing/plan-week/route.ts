@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { createClient, type SanityClient } from '@sanity/client'
 import { apiVersion, projectId, writeToken } from '@/sanity/env'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { getMarketingWriteClientFor } from '@/lib/marketing/client'
 import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
@@ -148,12 +149,18 @@ async function handle(request: NextRequest, dryRun: boolean) {
     )
   }
 
+  // Safe: the 503 guard above already proved the project id and token exist.
+  const settingsClient = getMarketingWriteClientFor('marketingSettings')
   const [operations, postureRaw, settings] = await Promise.all([
     client.fetch<MarketingOperation[]>(OPERATIONS_QUERY).catch(() => [] as MarketingOperation[]),
     client
       .fetch<string | null>(`*[_id == $id][0].posture`, { id: FINANCIAL_POSTURE_DOC_ID })
       .catch(() => null),
-    client
+    // marketingSettings is routed, NOT pinned to the private dataset like the
+    // operations above. Reading it from the wrong side is silent: the Studio
+    // writes the hours where the router says, this read looked somewhere else,
+    // and the planner quietly used the default 4h instead of what was set.
+    settingsClient
       .fetch<{ weeklyMarketingHours?: number } | null>(
         `*[_id == "marketingSettings"][0]{ weeklyMarketingHours }`,
       )

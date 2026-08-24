@@ -30,7 +30,17 @@ import { MANAGED_MARKETING_TYPES } from '@/lib/marketing/types'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const EXTRA_TYPES = ['cmsFeedback', 'previewShareLink', 'chatThread', 'aiCitationSnapshot']
+// marketingSettings is a singleton rather than a managed type, so it is not in
+// MANAGED_MARKETING_TYPES — and it went astray precisely because nothing was
+// watching it: the planner read it from one dataset while the Studio wrote it
+// to the other. A singleton the split can strand belongs in the probe.
+const EXTRA_TYPES = [
+  'cmsFeedback',
+  'previewShareLink',
+  'chatThread',
+  'aiCitationSnapshot',
+  'marketingSettings',
+]
 
 export async function GET(request: NextRequest) {
   try {

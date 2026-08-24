@@ -336,6 +336,41 @@ deleting its own `.ul` padding gets bullets 32px out of place.
 - The Gatsby→Next port shipped "dead-CSS" regressions (generic markup not mounting a page's own
   ported CSS); compare against the Gatsby legacy refs, not just structural DOM checks.
 
+## Marketing dataset split — internal records out of the public dataset (in progress 2026-08-24)
+
+Sanity's public-dataset grant is `_id in path("*")`, which matches every id **without a dot** —
+so today's "privacy" is an accident of id naming, not a rule. 73 internal marketing documents
+(calendar, research, ideas, experiments…) are readable by anyone who knows the project id.
+Full plan: [`docs/dataset-split-migration-plan.md`](docs/dataset-split-migration-plan.md).
+
+- **The rule lives in ONE place:** `src/lib/marketing/datasetRouting.ts` —
+  `INTERNAL_MARKETING_TYPES` / `datasetForType(type, publicDataset)` /
+  `clientForType(base, type)`. Server code uses `getMarketingWriteClientFor(type)`
+  (`src/lib/marketing/client.ts`); Studio components use `clientForType(useClient(...), type)`.
+  **Never** hand a bare workspace client to a marketing read/write — it writes to whatever
+  dataset the workspace happens to be on and reports success.
+- **Escape hatch:** `NEXT_PUBLIC_MARKETING_INTERNAL_DATASET` set back to the public dataset
+  reverts the whole split in ~a minute, no git operation.
+- **`clientForType` only re-scopes INTERNAL types** — public types pass through on the
+  caller's client. Anything that must read one specific dataset regardless of caller has to
+  pin it explicitly with `withConfig({ dataset: datasetForType(type, PUBLIC_DATASET) })`
+  (this is what `resolveMarketingModel` does for the `marketingSettings` singleton).
+- **Health probe — run before AND after every step:** `node scripts/check-dataset-split.mjs`
+  (needs a server + `MARKETING_API_KEY`) wraps `/api/marketing/health/dataset`. Per type it
+  reports configured dataset, count there, count in the other, and **anonymouslyReadable**.
+  Every failure mode here is silent — a repointed query that misses returns `[]`, not an
+  error — so this number is the only real evidence. **Baseline: 73.**
+- **Data move:** `node scripts/split-marketing-dataset.mjs --wave 1 --copy|--verify|--delete`
+  (dry-run by default). Copy writes the whole wave in **ONE transaction** — Sanity validates
+  strong references at end-of-transaction, so batching breaks any reference whose target
+  lands in a later batch. References pointing *outside* the wave are weakened in transit
+  (weakening a schema field only governs new writes; stored documents keep their strong refs).
+- **State:** Steps 1–6 done. 125 Wave-1 documents copied to `outreach` and verified
+  (0 missing, 0 differing); production untouched, so both datasets hold the data and the
+  window is reversible. **Step 7 (cutover) = append the Wave-1 types to
+  `INTERNAL_MARKETING_TYPES`** — one line. **Step 8 (delete from production after a soak)
+  is what actually closes the leak.** Waves 2/3 = `previewShareLink`, `cmsFeedback`.
+
 ## Marketing suite architecture — portable + testable (decided 2026-06)
 
 Goal: decompose the `marketingTool.tsx` monolith, expose every CMS write as a testable HTTP
