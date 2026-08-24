@@ -27,13 +27,43 @@ export const INTERNAL_DATASET =
 /**
  * Every type that belongs in the private dataset.
  *
- * Starts as exactly the seven already-private types, so adding this module
- * changes no behaviour at all. Wave 1 types are appended at cutover, which is
- * the single line that moves the split from "wired" to "live".
+ * The seven already-private types, plus the wave-1 marketing core, cut over on
+ * 2026-08-24 after its 125 documents were copied and verified. This list is
+ * what makes the split live: reads and writes for these types resolve to
+ * INTERNAL_DATASET from here on.
+ *
+ * The documents still ALSO exist in the public dataset during the soak, so the
+ * leak is not closed yet — deleting them there is what closes it, and the
+ * health probe keeps reporting them as leaking until that happens.
+ *
+ * Keep this list in step with WAVE_1 in scripts/split-marketing-dataset.mjs.
  */
 export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   ...OUTREACH_DATASET_TYPES,
-  // Wave 1 types are added here at cutover (Step 7).
+  'marketingCalendarItem',
+  'marketingCampaign',
+  'marketingChannel',
+  'marketingFunnel',
+  'marketingAnalyticsSource',
+  'marketingAudienceProfile',
+  'marketingMessagePillar',
+  'marketingProofPoint',
+  'marketingCta',
+  'marketingTrackingRule',
+  'marketingQualityGate',
+  'marketingExperiment',
+  'marketingPerformanceSignal',
+  'marketingLinkItem',
+  'marketingIdea',
+  'marketingTemplate',
+  'marketingResearchProject',
+  'marketingResearchResult',
+  'marketingResearchRun',
+  'marketingResearchPlan',
+  'marketingSettings',
+  'marketingCitationCheck',
+  'aiCitationSnapshot',
+  'marketingLeadMagnet',
 ]
 
 export function isInternalMarketingType(type: string): boolean {

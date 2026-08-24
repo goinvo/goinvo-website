@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -25,13 +27,38 @@ describe('dataset routing', () => {
     }
   })
 
-  it('is a no-op before cutover', () => {
-    // Wave 1 has not been added yet, so the list must be exactly the types that
-    // were already private. This is what makes Steps 1-5 safe to ship early.
-    expect([...INTERNAL_MARKETING_TYPES]).toEqual([...OUTREACH_DATASET_TYPES])
-    // Types slated to move must still resolve to production until cutover.
-    for (const type of ['marketingCalendarItem', 'marketingIdea', 'cmsFeedback']) {
+  it('routes the wave-1 marketing core to the internal dataset after cutover', () => {
+    // Cut over on 2026-08-24. Every already-private type must survive the
+    // change, and the wave-1 core must now resolve internally — reading these
+    // from production would silently return the stale copies that are still
+    // there until the step-8 delete.
+    for (const type of OUTREACH_DATASET_TYPES) {
+      expect(isInternalMarketingType(type)).toBe(true)
+    }
+    for (const type of ['marketingCalendarItem', 'marketingIdea', 'marketingSettings']) {
+      expect(datasetForType(type, 'production')).toBe(INTERNAL_DATASET)
+    }
+  })
+
+  it('has not moved the types still waiting on waves 2 and 3', () => {
+    for (const type of ['cmsFeedback', 'previewShareLink']) {
       expect(datasetForType(type, 'production')).toBe('production')
+    }
+  })
+
+  it('keeps the routing table in step with the mover script', () => {
+    // The script copies exactly WAVE_1; the router decides where reads go. If
+    // the two drift, documents are read from a dataset they were never copied
+    // to and the query just returns nothing — no error anywhere.
+    const mover = readFileSync(
+      new URL('../scripts/split-marketing-dataset.mjs', import.meta.url),
+      'utf8',
+    )
+    const block = mover.split('const WAVE_1 = [')[1]?.split(']')[0] ?? ''
+    const waveTypes = [...block.matchAll(/'([^']+)'/g)].map((match) => match[1])
+    expect(waveTypes.length).toBeGreaterThan(0)
+    for (const type of waveTypes) {
+      expect(isInternalMarketingType(type)).toBe(true)
     }
   })
 
@@ -68,8 +95,13 @@ describe('dataset routing', () => {
     // Guard against the worst misconfiguration: extra types marked internal
     // while pointing at the world-readable dataset would silently reopen the
     // leak this whole migration exists to close.
+    // A real public dataset is fine.
     expect(() => assertSplitIsReal('production')).not.toThrow()
-    expect(() => assertSplitIsReal(INTERNAL_DATASET)).not.toThrow()
+    // Pointing the internal dataset AT the public one is the misconfiguration.
+    // Before cutover this was inert because no extra types were marked
+    // internal; now that wave 1 is live it must throw rather than quietly serve
+    // private records from the world-readable dataset.
+    expect(() => assertSplitIsReal(INTERNAL_DATASET)).toThrow(/internal dataset is the public one/)
   })
 })
 
