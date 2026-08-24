@@ -12,6 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The same build outputs ANYWHERE, not just at the repo root. A leftover
+    // git worktree under .claude/worktrees carries its own .next, and the
+    // root-anchored patterns above do not match it — eslint then walked ~3,600
+    // generated files including 8MB bundled chunks and exhausted the V8 heap.
+    // It crashed with a stack dump but still exited 0, so `npm run lint` looked
+    // like it passed.
+    "**/.next/**",
+    "**/out/**",
+    "**/build/**",
+    // Agent scratch space: worktrees, session state. Never our source.
+    ".claude/**",
     // Generated/static migration artifacts; lint source and tests instead.
     "public/demos/**",
     "public/features/**",
