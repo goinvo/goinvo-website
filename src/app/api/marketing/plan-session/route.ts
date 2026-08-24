@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 // One key unlocks every internal deck; the form says which one to return to.
 const DEFAULT_DESTINATION = '/marketing-plan'
-const ALLOWED_DESTINATIONS = ['/marketing-plan', '/outreach-plan', '/action-plan']
+const ALLOWED_DESTINATIONS = ['/marketing-plan', '/outreach-plan', '/action-plan', '/audience-brief']
 
 const FAILURE_LIMIT = 10
 const FAILURE_WINDOW_SECONDS = 10 * 60

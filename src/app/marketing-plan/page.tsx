@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { createClient, type SanityClient } from '@sanity/client'
@@ -25,6 +26,13 @@ import {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+// Gated and unlisted, but unlisted is not the same as noindexed: a crawler
+// that finds the URL still indexes the gate. Say it explicitly.
+export const metadata: Metadata = {
+  title: 'Marketing Plan — GoInvo Internal',
+  robots: { index: false, follow: false },
+}
 
 // Server-side Sanity read client. Mirrors the marketing API-route pattern
 // (createClient from src/sanity/env) but reads: prefer the preview token
