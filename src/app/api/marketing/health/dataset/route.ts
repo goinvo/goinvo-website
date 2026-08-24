@@ -65,7 +65,15 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const types = Array.from(new Set([...MANAGED_MARKETING_TYPES, ...EXTRA_TYPES])).sort()
+  // INTERNAL_MARKETING_TYPES must be in here, not just the managed list. The
+  // baseline was under-reported by 2 because marketingLeadMagnet is a wave-1
+  // type that is anonymously readable but was in neither list — so the probe
+  // said 73 while a stranger could actually read 75. Deriving the watch list
+  // from the router means any type the split claims to protect is measured by
+  // construction, and adding a type to a future wave cannot silently escape it.
+  const types = Array.from(
+    new Set([...MANAGED_MARKETING_TYPES, ...INTERNAL_MARKETING_TYPES, ...EXTRA_TYPES]),
+  ).sort()
   const authed = (ds: string) =>
     createClient({ projectId, dataset: ds, apiVersion, token: writeToken, useCdn: false, perspective: 'published' })
 
