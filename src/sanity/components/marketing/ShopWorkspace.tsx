@@ -13,7 +13,7 @@ import { useToast } from '@sanity/ui'
 
 import { buildCreatePayload } from '@/lib/marketing'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
-import { randomKey, slugify } from '@/lib/marketing'
+import { randomKey } from '@/lib/marketing'
 import { MARKETING_SHOP_SETTINGS_ID, paymentProviderOptions } from '../../schemas/marketingShopSettings'
 import {
   advancedEditHref,
@@ -420,7 +420,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
     } finally {
       setLoading(false)
     }
-  }, [client, toast])
+  }, [client, outreachClient, toast])
 
   useEffect(() => {
     void load()
