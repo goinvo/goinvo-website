@@ -9,6 +9,7 @@ import {
   isInternalMarketingType,
 } from '@/lib/marketing/datasetRouting'
 import { OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
+import { resolveMarketingModel } from '@/lib/marketing/anthropicJson'
 
 describe('dataset routing', () => {
   it('sends public content types to the public dataset', () => {
@@ -69,5 +70,40 @@ describe('dataset routing', () => {
     // leak this whole migration exists to close.
     expect(() => assertSplitIsReal('production')).not.toThrow()
     expect(() => assertSplitIsReal(INTERNAL_DATASET)).not.toThrow()
+  })
+})
+
+describe('resolveMarketingModel dataset routing', () => {
+  /**
+   * The model picker is written by the Studio to wherever the router says
+   * marketingSettings lives. Callers of resolveMarketingModel hand over
+   * whatever client they already hold — the outreach routes pass an
+   * outreach-bound one, the assist route a production-bound one — so reading
+   * through the caller's client made the setting apply to some routes and not
+   * others, with no error on either side.
+   */
+  function fakeClient(byDataset: Record<string, string | null>, startDataset: string) {
+    const make = (dataset: string) => ({
+      dataset,
+      fetch: async () => byDataset[dataset] ?? null,
+      withConfig: (config: { dataset?: string }) => make(config.dataset ?? dataset),
+    })
+    return make(startDataset)
+  }
+
+  it('reads the setting from the settings dataset, not the caller dataset', async () => {
+    const settingsDataset = datasetForType('marketingSettings', 'production')
+    const client = fakeClient(
+      { [settingsDataset]: 'claude-haiku-4-5', somewhere_else: 'claude-sonnet-4-6' },
+      'somewhere_else',
+    )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(await resolveMarketingModel(client as any)).toBe('claude-haiku-4-5')
+  })
+
+  it('still works for a client that cannot re-scope itself', async () => {
+    const client = { fetch: async () => 'claude-sonnet-4-6' }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect(await resolveMarketingModel(client as any)).toBe('claude-sonnet-4-6')
   })
 })

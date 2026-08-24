@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { definePlugin, type Tool, useClient } from 'sanity'
+import { clientForType } from '../../lib/marketing/datasetRouting'
 import { CommentIcon } from '@sanity/icons'
 import { useCurrentUser } from 'sanity'
 
@@ -95,7 +96,10 @@ function getInitialTaskStates(): Record<string, TaskState> {
 }
 
 function FeedbackComponent() {
-  const client = useClient({ apiVersion: '2024-01-01' })
+  // cmsFeedback moves in wave 3 of the dataset split; route it rather than
+  // taking whatever dataset the workspace happens to be on.
+  const baseClient = useClient({ apiVersion: '2024-01-01' })
+  const client = useMemo(() => clientForType(baseClient, 'cmsFeedback'), [baseClient])
   const currentUser = useCurrentUser()
 
   const [savedProgress] = useState(loadProgress)
