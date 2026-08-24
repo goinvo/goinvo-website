@@ -346,6 +346,10 @@ const MARKETING_QUERY = `{
     publishState,
     publishError,
     "owner": owner->{_id, "title": name},
+    // The raw ref survives the dataset split: a weak reference does NOT
+    // dereference across datasets, it silently returns null. Keeping both lets
+    // the same code work before and after cutover.
+    "ownerRef": owner._ref,
     "campaign": campaign->{_id, title, status},
     "funnel": funnel->{_id, title, status},
     "analyticsSource": ${ANALYTICS_SOURCE_PROJECTION},
@@ -520,6 +524,8 @@ const MARKETING_QUERY = `{
     targetType,
     targetPath,
     "targetFeature": targetFeature->{_id, title, slug},
+    // Same reason as owner above: features stay public while experiments move.
+    "targetFeatureRef": targetFeature._ref,
     flagKey,
     measurementStart,
     variants[]{_key, key, label, notes, previewUrl},
@@ -809,6 +815,13 @@ const MARKETING_QUERY = `{
   "teamMembers": *[_type == "teamMember" && coalesce(isAlumni, false) != true]|order(name asc) {
     _id,
     "title": name
+  },
+  // Fetched so an experiment's target article can be re-joined client-side once
+  // experiments move dataset and targetFeature-> stops resolving.
+  "features": *[_type == "feature" && !(_id in path("drafts.**"))]|order(title asc) {
+    _id,
+    title,
+    slug
   }
 }`
 
@@ -1157,6 +1170,35 @@ export function studioSessionToken(): string | null {
 
 // Header map that authenticates a Studio→/api/marketing request as the logged-in
 // Studio user (so auth-gated routes like /assist accept it). Empty when no token.
+/**
+ * Re-attach references that stop dereferencing once a type moves dataset.
+ *
+ * A weak reference across datasets resolves to null rather than failing, so a
+ * calendar item would quietly lose its owner and an experiment its target
+ * article — visible as blank fields, with nothing in any log. The raw `_ref` is
+ * fetched alongside, and this fills the gap from lists already in hand.
+ *
+ * Prefers whatever the query already resolved, so it is a no-op before cutover.
+ */
+export function joinAcrossDatasets<T extends { _id: string }>(
+  items: T[],
+  lookup: Array<{ _id: string; title?: string; name?: string }>,
+  refKey: string,
+  valueKey: string,
+): T[] {
+  if (items.length === 0) return items
+  const byId = new Map(lookup.map((entry) => [entry._id, entry]))
+  return items.map((item) => {
+    const record = item as unknown as Record<string, unknown>
+    if (record[valueKey]) return item
+    const ref = record[refKey]
+    if (typeof ref !== 'string') return item
+    const match = byId.get(ref)
+    if (!match) return item
+    return { ...item, [valueKey]: { _id: match._id, title: match.title || match.name } } as T
+  })
+}
+
 export function studioSessionHeader(): Record<string, string> {
   const token = studioSessionToken()
   return token ? { 'x-sanity-session': token } : {}
@@ -1224,6 +1266,8 @@ export interface MarketingCalendarItem {
   publishState?: string
   publishError?: string
   owner?: RefSummary
+  /** Raw ref, used to re-join owner once team members live in another dataset. */
+  ownerRef?: string
   campaign?: RefSummary
   funnel?: RefSummary
   channelRef?: MarketingChannel
@@ -1429,6 +1473,8 @@ export interface MarketingExperiment {
   targetType?: string
   targetPath?: string
   targetFeature?: RefSummary & { slug?: { current?: string } }
+  /** Raw ref, used to re-join the feature across the dataset boundary. */
+  targetFeatureRef?: string
   flagKey?: string
   measurementStart?: string
   variants?: Array<{ _key?: string; key?: string; label?: string; notes?: string; previewUrl?: string }>
@@ -1932,6 +1978,8 @@ export interface MarketingData {
   researchPlans: MarketingResearchPlan[]
   templates: MarketingTemplate[]
   teamMembers?: RefSummary[]
+  /** Public content, fetched so experiments can re-join their target article. */
+  features?: Array<RefSummary & { slug?: { current?: string } }>
 }
 
 export type MarketingAiSuggestion = {
@@ -2998,7 +3046,14 @@ function MarketingComponent() {
       const nextData = await client.fetch<MarketingData>(MARKETING_QUERY)
       if (generation !== loadDataGenerationRef.current) return false
       setData({
-        calendarItems: nextData.calendarItems || [],
+        // Re-attach anything a cross-dataset weak reference stopped resolving.
+        // No-ops before cutover, because the query already resolved them.
+        calendarItems: joinAcrossDatasets(
+          nextData.calendarItems || [],
+          nextData.teamMembers || [],
+          'ownerRef',
+          'owner',
+        ),
         campaigns: nextData.campaigns || [],
         funnels: nextData.funnels || [],
         analyticsSources: nextData.analyticsSources || [],
@@ -3008,7 +3063,12 @@ function MarketingComponent() {
         ctas: nextData.ctas || [],
         trackingRules: nextData.trackingRules || [],
         qualityGates: nextData.qualityGates || [],
-        experiments: nextData.experiments || [],
+        experiments: joinAcrossDatasets(
+          nextData.experiments || [],
+          nextData.features || [],
+          'targetFeatureRef',
+          'targetFeature',
+        ),
         performanceSignals: nextData.performanceSignals || [],
         channels: nextData.channels || [],
         linkItems: nextData.linkItems || [],
@@ -3018,6 +3078,7 @@ function MarketingComponent() {
         researchPlans: nextData.researchPlans || [],
         templates: nextData.templates || [],
         teamMembers: nextData.teamMembers || [],
+        features: nextData.features || [],
       })
       setLastLoaded(new Date().toLocaleTimeString())
       return true
