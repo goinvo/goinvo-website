@@ -383,6 +383,33 @@ failed verification.
    plain containment, no fuzzy matching) then **advisory** (does the quote support the claim).
    A model asked to confirm a quote it just produced will confirm it.
 
+**Verification costs NOTHING now — do not reintroduce per-claim API calls.** The research
+prompt makes the model return the exact passage it relied on plus its URL, so checking it is a
+fetch and a string comparison:
+- `npx tsx scripts/check-org-quotes.ts --render --only-absent --apply --out <file>` proves the
+  quote is literally in the cited page. No model.
+- `npx tsx scripts/judge-org-claims.ts <file> --apply` checks the claim asserts nothing the
+  quote lacks (`findUncitedSpecifics`). No model. It names the offending token, so the verdict
+  is auditable.
+- `npx tsx scripts/diagnose-unfetchable.ts` classifies a failure as bot-wall / paywall / thin /
+  no-match. Those need completely different responses and "the fetcher is bad" hides all four.
+- `src/lib/marketing/textProvider.ts` picks `none | ollama | anthropic`, defaulting to **none**
+  so no script can spend by accident.
+
+**The fetcher: Puppeteer IS client-side rendering.** A VM or heavier browser runs the same
+engine, so if a quote is missing the cause is something else. Three self-inflicted bugs cost
+real time, all of which silently discarded a good render:
+- Accepting a render only when it was LONGER than the fetched text. `innerText` is usually
+  SHORTER than crude tag-stripping (which keeps nav), so every success was thrown away. Judge
+  by whether it CONTAINS the quote; length is only a tie-break.
+- Aborting image/font requests to save bandwidth — sites hang intersection observers off
+  exactly those loads, so article bodies never attach. Do not intercept.
+- Scrolling in steps and back to the top, which re-virtualises long lists and unloads the text.
+  **One scroll to `scrollHeight`, settle ~1.4s, and STAY at the bottom.** Measured against a
+  no-scroll baseline and a progressive scroll (`scripts/compare-scroll-strategies.ts`):
+  progressive reads ~3% more text and recovered nothing extra, so simple wins. Re-measure
+  before adding complexity — an elaborate scroll lost to the naive one twice.
+
 **Hard-won rules, all of which cost a wrong answer to learn:**
 - The prompt forbids any date, number, name or superlative that is not in the quote. Under the
   earlier prompt **0 of 20 claims verified** — not fabrications, but over-specified: true in
