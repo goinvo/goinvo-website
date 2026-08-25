@@ -248,3 +248,15 @@ describe('findUncitedSpecifics false positives', () => {
     ).toContain('Homeward Health')
   })
 })
+
+describe('findUncitedSpecifics ignore matching', () => {
+  it('treats "Pearlhealth" and "Pearl Health" as the same organisation', () => {
+    // The stored organisation name is squashed; the claim writes it properly.
+    // A space must not make one look like a different company.
+    expect(
+      findUncitedSpecifics('Pearl Health says new capital will fund expansion', 'The company says the new capital will fund expansion', {
+        ignore: ['Pearlhealth'],
+      }),
+    ).toEqual([])
+  })
+})

@@ -237,9 +237,13 @@ export function findUncitedSpecifics(
 ): string[] {
   const haystack = normaliseForComparison(quote)
   const has = (token: string) => haystack.includes(normaliseForComparison(token))
-  const ignored = (options.ignore || []).map((value) => normaliseForComparison(value)).filter(Boolean)
+  // Compare ignore-list entries with punctuation and spacing removed: the stored
+  // organisation is "Pearlhealth" while the claim writes "Pearl Health", and a
+  // space should not make one look like a different company from the other.
+  const squash = (value: string) => normaliseForComparison(value).replace(/[^a-z0-9]/g, '')
+  const ignored = (options.ignore || []).map(squash).filter(Boolean)
   const isIgnored = (token: string) => {
-    const value = normaliseForComparison(token)
+    const value = squash(token)
     return ignored.some((entry) => entry.includes(value) || value.includes(entry))
   }
 
