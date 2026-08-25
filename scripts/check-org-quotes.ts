@@ -20,6 +20,7 @@
  */
 import path from 'node:path'
 import { writeFileSync } from 'node:fs'
+import puppeteer, { type Browser } from 'puppeteer'
 import { createClient } from '@sanity/client'
 import { config as loadEnv } from 'dotenv'
 import {
@@ -33,6 +34,8 @@ loadEnv({ quiet: true })
 
 const args = process.argv.slice(2)
 const apply = args.includes('--apply')
+const render = args.includes('--render')
+const onlyAbsent = args.includes('--only-absent')
 const outIndex = args.indexOf('--out')
 const outPath = outIndex >= 0 ? args[outIndex + 1] : null
 const limitIndex = args.indexOf('--limit')
@@ -51,6 +54,53 @@ const client = createClient({
   token,
   useCdn: false,
 })
+
+
+/**
+ * Render a page in headless Chrome and read what a human would see.
+ *
+ * A third of the cited pages returned HTML containing only navigation: the
+ * article is assembled client-side, so a plain fetch sees nothing to quote and
+ * the claim looks unsupported when it is merely unfetched. Chrome runs the
+ * scripts and `innerText` returns laid-out text, which also sidesteps HTML
+ * entity decoding entirely - `&#160;` arrives as a space because the browser
+ * already resolved it.
+ *
+ * It is roughly twenty times slower than fetch, so it is a FALLBACK: only pages
+ * that plain fetching could not satisfy are worth a browser.
+ */
+let browser: Browser | null = null
+
+async function getBrowser(): Promise<Browser> {
+  if (!browser) {
+    browser = await puppeteer.launch({ headless: 'new' as never, args: ['--no-sandbox'] })
+  }
+  return browser
+}
+
+async function renderPageText(url: string): Promise<string | null> {
+  let page = null
+  try {
+    page = await (await getBrowser()).newPage()
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+    )
+    // Images and fonts are most of the bytes and none of the text.
+    await page.setRequestInterception(true)
+    page.on('request', (request) => {
+      const type = request.resourceType()
+      if (type === 'image' || type === 'font' || type === 'media') request.abort().catch(() => {})
+      else request.continue().catch(() => {})
+    })
+    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+    const text = await page.evaluate(() => document.body?.innerText || '')
+    return String(text).replace(/\s+/g, ' ').trim().slice(0, 80_000)
+  } catch {
+    return null
+  } finally {
+    if (page) await page.close().catch(() => {})
+  }
+}
 
 async function fetchPageText(url: string): Promise<string | null> {
   try {
@@ -73,16 +123,20 @@ async function fetchPageText(url: string): Promise<string | null> {
 async function main() {
   const docs = await client.fetch(
     `*[_type == "marketingOrgResearch" && defined(quote) && quote != ""]{
-       _id, organization, recentSignal, quote, quoteUrl, sources[]{title, url}, verification
+       _id, organization, recentSignal, quote, quoteUrl, sources[]{title, url}, verification, quoteCheck
      }`,
   )
 
-  const targets = docs.slice(0, Number.isFinite(limit) ? limit : docs.length)
+  const pool = onlyAbsent
+    ? docs.filter((doc: { quoteCheck?: { status?: string } }) => doc.quoteCheck?.status !== 'quote-present')
+    : docs
+  const targets = pool.slice(0, Number.isFinite(limit) ? limit : pool.length)
   console.log(`${docs.length} claims carry a quote · checking ${targets.length} · no model, no API spend`)
   console.log('')
 
   const pending = []
   let present = 0
+  let renderedWins = 0
   let absent = 0
   let unreachable = 0
 
@@ -96,8 +150,18 @@ async function main() {
 
     let found = null
     let anyReadable = false
+    let neededBrowser = false
     for (const url of tried) {
-      const text = await fetchPageText(url)
+      let text = await fetchPageText(url)
+      // Only reach for a browser when plain fetching did not settle it: either
+      // the page came back empty, or it came back without the quote.
+      if (render && (!text || text.length < 200 || !quoteAppearsIn(text, doc.quote))) {
+        const rendered = await renderPageText(url)
+        if (rendered && rendered.length > (text?.length ?? 0)) {
+          text = rendered
+          neededBrowser = true
+        }
+      }
       if (!text || text.length < 200) continue
       anyReadable = true
       if (quoteAppearsIn(text, doc.quote)) {
@@ -105,6 +169,7 @@ async function main() {
         break
       }
     }
+    if (neededBrowser && found) renderedWins += 1
 
     const status = found ? 'quote-present' : anyReadable ? 'quote-absent' : 'unreachable'
     if (found) present += 1
@@ -147,6 +212,8 @@ async function main() {
   console.log(`quote present in the cited page   ${present}`)
   console.log(`quote NOT in any cited page       ${absent}`)
   console.log(`no cited page could be read       ${unreachable}`)
+  if (render) console.log(`found ONLY after rendering        ${renderedWins}`)
+  if (browser) await browser.close()
 
   if (outPath) {
     writeFileSync(outPath, JSON.stringify(pending, null, 2))
