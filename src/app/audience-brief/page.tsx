@@ -112,7 +112,8 @@ const BRIEF_QUERY = `{
   "weeklyHours": *[_id == "marketingSettings"][0].weeklyMarketingHours,
   "posture": *[_id == "marketingFinancialPosture"][0].posture,
   "orgResearch": *[_type == "${ORG_RESEARCH_TYPE}" && confidence != "low"]{
-    organization, recentSignal, reachableAbout, suggestedOfferKey, confidence, researchedAt,
+    organization, recentSignal, context, quote, quoteUrl, reachableAbout, suggestedOfferKey,
+    confidence, researchedAt,
     sources[]{ title, url },
     verification{ status, reason, checkedAt, evidence[]{ url, title, quote, textFragmentUrl } }
   }
@@ -411,6 +412,12 @@ export default async function AudienceBriefPage({
                     {research!.verification.reason}
                   </p>
                 )}
+                {research!.context && (
+                  <details className="ab-context">
+                    <summary>Background — not verified, do not repeat as fact</summary>
+                    <p>{research!.context}</p>
+                  </details>
+                )}
                 {research!.reachableAbout && (
                   <p className="ab-opening-line">
                     <span className="ab-tag">The opening</span>
@@ -641,6 +648,11 @@ function BriefStyles() {
       .ab-verified { margin: 0 0 7px; font-size: .93rem; max-width: 86ch; color: ${INK}; }
       .ab-verified a { color: ${TEAL}; font-size: .82rem; white-space: nowrap; }
       .ab-overreach { margin: 0 0 7px; font-size: .87rem; max-width: 86ch; color: ${WARN}; }
+      /* Collapsed by default and labelled on the summary itself: the point of
+         separating this from the claim is that it never gets read as evidence. */
+      .ab-context { margin: 8px 0 0; }
+      .ab-context summary { cursor: pointer; font-size: .76rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #a8a29a; }
+      .ab-context p { margin: 8px 0 0; font-size: .88rem; color: #8a847c; max-width: 86ch; border-left: 2px dashed #d8d2c9; padding-left: 12px; }
       .ab-tag { display: inline-block; min-width: 92px; font-size: .68rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #a8a29a; vertical-align: baseline; }
       .ab-signal, .ab-opening-line { margin: 0 0 7px; font-size: .93rem; max-width: 86ch; }
       .ab-opening-line { color: ${INK}; }

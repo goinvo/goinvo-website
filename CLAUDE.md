@@ -349,6 +349,59 @@ deleting its own `.ul` padding gets bullets 32px out of place.
 - The Gatsby→Next port shipped "dead-CSS" regressions (generic markup not mounting a page's own
   ported CSS); compare against the Gatsby legacy refs, not just structural DOM checks.
 
+## Outreach research: identity from registries, claims from Claude, then verified
+
+Three stages, in this order, because each answers a different KIND of question. Getting them
+mixed up is what produced "Carolinashealthcare" as an organisation name and twenty claims that
+failed verification.
+
+1. **Identity is a LOOKUP, not a judgement.** `node scripts/resolve-outreach-organizations.mjs
+   [--apply]` resolves a domain to an official name via **Clearbit autocomplete** and a sector
+   via **Wikidata** — both keyless and free. Never ask a model to recall a company's name.
+   - Clearbit returns FUZZY matches: querying `partners.org` returns "Charleys Philly Steaks".
+     Only accept a hit whose domain is EXACTLY the one queried.
+   - Wikidata's top hit for "MITRE" is the surname ("family name"). Reject descriptions that
+     prove the match is not an organisation.
+   - Sector needles must name health explicitly. "software company" made Salesforce healthtech;
+     "clinic" matched inside "clinical trial". A generic word is worse than no answer.
+   - SEC EDGAR also works keyless (10,403 US filers) if tickers/SIC codes are ever wanted.
+
+2. **What they are reachable about is live, and genuinely needs a model.**
+   `npx tsx scripts/research-organizations.ts [--apply] [--limit N] [--concurrency N]
+   [--segment X] [--refresh]` runs Claude with the built-in `web_search` tool. One record per
+   ORGANISATION (`marketingOrgResearch`, data-API managed like `previewShareLink`), not per
+   contact — nine people at one hospital share one answer.
+   - **NO thinking alongside web_search** — that combination 500s server-side.
+   - Records written before the quote requirement (no `quote` field) are re-researched
+     automatically; `--refresh` redoes everything.
+
+3. **A claim is publishable because its evidence is inspectable, not because a model agreed.**
+   `npx tsx scripts/verify-org-research.ts [--apply] [--refresh]`, adapted from
+   `plig-framework/scripts/verify-quotes.ts` + `verify-claims.ts` and the evidence-pipeline
+   plan in `bioinfo-workspace/biopharma-stewardship-discovery`. Two stages that must not be
+   collapsed: **deterministic** (the quoted span must literally occur in the fetched page —
+   plain containment, no fuzzy matching) then **advisory** (does the quote support the claim).
+   A model asked to confirm a quote it just produced will confirm it.
+
+**Hard-won rules, all of which cost a wrong answer to learn:**
+- The prompt forbids any date, number, name or superlative that is not in the quote. Under the
+  earlier prompt **0 of 20 claims verified** — not fabrications, but over-specified: true in
+  substance while asserting more than the page states. Unprovable richness goes to `context`,
+  shown on the page collapsed and labelled "not verified, do not repeat as fact".
+- **`unchecked` is never a pass.** When fewer than half the cited pages could be fetched
+  (paywalls and bot-blocks are the norm — 17 in one run), the status is `unchecked`, not
+  `unsupported`. Reporting a fetch failure as a failed claim blames the research for the network.
+- Attaching one claim to a BAG of sources is the "broadening a citation to every quote from a
+  source" anti-pattern; verification binds a claim to the sources whose text supports it.
+- Judge a claim against ALL its verified quotes. Judging a multi-source claim against one of
+  them manufactures false "overreach".
+
+Surfaced on **/audience-brief** as "Openings we could make this week": the verified quote leads
+with a `#:~:text=` deep link, the fuller claim is demoted to "Unverified", and verified
+openings sort first. Pure helpers + tests: `src/lib/marketing/orgResearch.ts`,
+`src/lib/marketing/sourceVerification.ts`, `tests/org-research.test.ts`,
+`tests/source-verification.test.ts`.
+
 ## Marketing dataset split — internal records out of the public dataset (in progress 2026-08-24)
 
 Sanity's public-dataset grant is `_id in path("*")`, which matches every id **without a dot** —

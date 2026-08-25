@@ -51,6 +51,7 @@ const valueFor = (name: string) => {
 }
 const limit = Number(valueFor('limit') || 5)
 const onlySegment = valueFor('segment')
+const refresh = args.includes('--refresh')
 // Live web search is slow (~1 min/org). Raising this is the difference between
 // a coffee break and an afternoon; past ~4 the API starts queueing anyway.
 const concurrency = Math.max(1, Math.min(6, Number(valueFor('concurrency') || 2)))
@@ -82,10 +83,19 @@ async function main() {
       '*[_type == "marketingContact" && defined(organization)]{organization, researchSuggestedSegment, segment}',
     ),
     client.fetch<OfferRow[]>('*[_type == "marketingOffer" && status == "active"]{key, title, oneLiner}'),
-    client.fetch<string[]>(`*[_type == "${ORG_RESEARCH_TYPE}"]._id`),
+    client.fetch<{ _id: string; quote?: string }[]>(
+      `*[_type == "${ORG_RESEARCH_TYPE}"]{_id, quote}`,
+    ),
   ])
 
-  const alreadyResearched = new Set(existing)
+  // A record with no quote was written under the old prompt, which asserted more
+  // than its sources supported and failed verification every time. Those are
+  // re-researched automatically rather than left to rot behind a flag nobody
+  // remembers; --refresh redoes even the good ones.
+  const settled = new Set(
+    existing.filter((doc) => refresh === false && String(doc.quote || '').trim()).map((doc) => doc._id),
+  )
+  const stale = existing.length - settled.size
 
   // Group by organisation, keeping the segment and how many people we have there.
   const byOrg = new Map<string, { segment: string; count: number }>()
@@ -103,11 +113,14 @@ async function main() {
   // Densest first: those are the names on the brief, and the ones worth a call.
   const targets = [...byOrg.entries()]
     .sort((a, b) => b[1].count - a[1].count || a[0].localeCompare(b[0]))
-    .filter(([name]) => !alreadyResearched.has(orgResearchDocId(name)))
+    .filter(([name]) => !settled.has(orgResearchDocId(name)))
     .slice(0, limit)
 
   const model = await resolveMarketingModel(client)
-  console.log(`dataset ${dataset} · ${byOrg.size} buyer-side organisations · researching ${targets.length}`)
+  console.log(
+    `dataset ${dataset} · ${byOrg.size} buyer-side organisations · researching ${targets.length}` +
+      (stale > 0 ? ` (${stale} re-done: written before the quote was required)` : ''),
+  )
   console.log(`model ${model} · web search on · ${concurrency} at a time${apply ? '' : ' · DRY RUN'}`)
   console.log('')
 
