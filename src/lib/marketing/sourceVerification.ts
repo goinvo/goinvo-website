@@ -75,14 +75,37 @@ export function extractReadableText(html: string): string {
     .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#0?39;|&apos;/gi, "'")
-    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#x([0-9a-f]+);/gi, (_m, hex) => codePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_m, dec) => codePoint(parseInt(dec, 10)))
+    .replace(/&(nbsp|amp|lt|gt|quot|apos|mdash|ndash|rsquo|lsquo|ldquo|rdquo|hellip|middot|times|deg|reg|copy|trade|eacute|shy);/gi,
+      (_m, name) => NAMED_ENTITIES[String(name).toLowerCase()] ?? ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+/**
+ * Numeric entities are the ones that actually bite.
+ *
+ * An SEC filing writes a non-breaking space as `&#160;`, and leaving it literal
+ * broke exact-quote matching about forty characters into every quote from one.
+ * That looked exactly like the model fabricating quotes, and it was this
+ * function all along — so decode numerics, not just the handful of named ones.
+ */
+const NAMED_ENTITIES: Record<string, string> = {
+  nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
+  mdash: '—', ndash: '–', rsquo: '’', lsquo: '‘',
+  ldquo: '“', rdquo: '”', hellip: '…', middot: '·',
+  times: '×', deg: '°', reg: '®', copy: '©',
+  trade: '™', eacute: 'é', shy: '',
+}
+
+function codePoint(value: number): string {
+  if (!Number.isFinite(value) || value < 9 || value > 0x10ffff) return ' '
+  try {
+    return String.fromCodePoint(value)
+  } catch {
+    return ' '
+  }
 }
 
 /**
@@ -180,3 +203,72 @@ Being strict here is the point. This is the last check before somebody repeats
 the claim to a customer.
 
 Reply with ONLY: {"verdict": "supported" | "partial" | "unsupported", "reason": "one sentence"}`
+
+/**
+ * Which specifics does the claim assert that its quote does not contain?
+ *
+ * The prompt's rule - no date, number, or proper name unless it is in the quote
+ * - is a rule about tokens, so it can be checked without a model at all. That
+ * matters twice: a deterministic check costs nothing per claim, and it gives a
+ * reason a person can audit ("the claim says 4,000, the quote does not") rather
+ * than a verdict they have to take on trust.
+ *
+ * Three kinds of false positive were real enough to design against, because a
+ * checker that cries wolf gets switched off:
+ *
+ *   - trailing punctuation ("Alcohol Use Disorder." vs "Alcohol Use Disorder");
+ *   - a sentence-initial word glued to a name ("On December", "The FDA");
+ *   - the organisation's own name missing from a first-person quote on its own
+ *     site ("We have 38 locations" is CCH Healthcare saying it about itself).
+ *
+ * It deliberately does not judge meaning. A claim with no uncited specifics can
+ * still misread its source, so this narrows the human's job rather than
+ * replacing it.
+ */
+const PHRASE_LEAD_INS = new Set([
+  'the', 'on', 'in', 'a', 'an', 'this', 'these', 'those', 'following', 'with',
+  'by', 'for', 'at', 'from', 'its', 'their', 'our', 'and', 'to', 'as', 'after',
+])
+
+export function findUncitedSpecifics(
+  claim: string,
+  quote: string,
+  options: { ignore?: string[] } = {},
+): string[] {
+  const haystack = normaliseForComparison(quote)
+  const has = (token: string) => haystack.includes(normaliseForComparison(token))
+  const ignored = (options.ignore || []).map((value) => normaliseForComparison(value)).filter(Boolean)
+  const isIgnored = (token: string) => {
+    const value = normaliseForComparison(token)
+    return ignored.some((entry) => entry.includes(value) || value.includes(entry))
+  }
+
+  const uncited = new Set<string>()
+
+  // Numbers: 4,000 / $116 / 1.5 / 38 / 300+ / 12%. Compared on digits alone so
+  // "$116 million" still matches "116 million" in the source.
+  for (const match of String(claim).matchAll(/[$]?[0-9][0-9,.]*[+]?[%]?/g)) {
+    const token = match[0].replace(/[.,]+$/, '')
+    const bare = token.replace(/[$,+%]/g, '')
+    if (!bare) continue
+    if (!has(bare) && !has(token)) uncited.add(token)
+  }
+
+  const MONTHS = /(January|February|March|April|May|June|July|August|September|October|November|December)/g
+  for (const match of String(claim).matchAll(MONTHS)) {
+    if (!has(match[0])) uncited.add(match[0])
+  }
+
+  for (const match of String(claim).matchAll(/([A-Z][A-Za-z0-9&.'-]*(?:[ ][A-Z][A-Za-z0-9&.'-]*)+)/g)) {
+    let phrase = match[1].trim().replace(/[.,;:]+$/, '')
+    // Peel sentence-initial words that are only capitalised by position.
+    let words = phrase.split(/[ ]+/)
+    while (words.length > 1 && PHRASE_LEAD_INS.has(words[0].toLowerCase())) words = words.slice(1)
+    phrase = words.join(' ')
+    if (words.length < 2) continue
+    if (isIgnored(phrase)) continue
+    if (!has(phrase)) uncited.add(phrase)
+  }
+
+  return [...uncited]
+}
