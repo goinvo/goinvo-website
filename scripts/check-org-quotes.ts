@@ -36,6 +36,7 @@ const args = process.argv.slice(2)
 const apply = args.includes('--apply')
 const render = args.includes('--render')
 const onlyAbsent = args.includes('--only-absent')
+const verbose = args.includes('--verbose')
 const outIndex = args.indexOf('--out')
 const outPath = outIndex >= 0 ? args[outIndex + 1] : null
 const limitIndex = args.indexOf('--limit')
@@ -85,20 +86,50 @@ async function renderPageText(url: string): Promise<string | null> {
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
     )
-    // Images and fonts are most of the bytes and none of the text.
-    await page.setRequestInterception(true)
-    page.on('request', (request) => {
-      const type = request.resourceType()
-      if (type === 'image' || type === 'font' || type === 'media') request.abort().catch(() => {})
-      else request.continue().catch(() => {})
-    })
+    // Deliberately NOT intercepting requests. Aborting images/fonts saved a
+    // little bandwidth and broke lazy-loading: sites hang their intersection
+    // observers off exactly those loads, so the article body never attached and
+    // every render came back without the text it was fetched for.
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 })
+    // One scroll to the bottom, then let it settle. This exact sequence is the
+    // one proven to recover lazy-loaded article bodies; a more elaborate
+    // multi-step scroll did not, so it is deliberately kept simple.
+    await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight))
+    await new Promise((resolve) => setTimeout(resolve, 1400))
     const text = await page.evaluate(() => document.body?.innerText || '')
     return String(text).replace(/\s+/g, ' ').trim().slice(0, 80_000)
   } catch {
     return null
   } finally {
     if (page) await page.close().catch(() => {})
+  }
+}
+
+
+/**
+ * The Wayback Machine's copy of a page we are not allowed to read.
+ *
+ * Four of the cited pages answer 403 behind a bot wall and two are now 404 at a
+ * URL that worked when the research ran. An archived snapshot is the same
+ * publisher's text at a known date, which is exactly what a citation needs — and
+ * it is free and keyless. If there is no snapshot, we simply do not get to
+ * verify that claim, which is the honest outcome.
+ */
+async function archivedPageText(url: string): Promise<string | null> {
+  try {
+    const lookup = await fetch(
+      `https://archive.org/wayback/available?url=${encodeURIComponent(url)}`,
+      { signal: AbortSignal.timeout(12000) },
+    )
+    if (!lookup.ok) return null
+    const body = (await lookup.json()) as {
+      archived_snapshots?: { closest?: { available?: boolean; url?: string } }
+    }
+    const snapshot = body.archived_snapshots?.closest
+    if (!snapshot?.available || !snapshot.url) return null
+    return await renderPageText(snapshot.url)
+  } catch {
+    return null
   }
 }
 
@@ -137,6 +168,7 @@ async function main() {
   const pending = []
   let present = 0
   let renderedWins = 0
+  let archiveWins = 0
   let absent = 0
   let unreachable = 0
 
@@ -157,10 +189,30 @@ async function main() {
       // the page came back empty, or it came back without the quote.
       if (render && (!text || text.length < 200 || !quoteAppearsIn(text, doc.quote))) {
         const rendered = await renderPageText(url)
-        if (rendered && rendered.length > (text?.length ?? 0)) {
+        // Prefer the rendered text when it CONTAINS the quote — never when it is
+        // merely longer. innerText is usually SHORTER than crude tag-stripping,
+        // which keeps nav and boilerplate, so a length test threw away every
+        // successful render. Length is only the tie-breaker when neither matches.
+        if (rendered && quoteAppearsIn(rendered, doc.quote)) {
+          text = rendered
+          neededBrowser = true
+        } else if (rendered && rendered.length > (text?.length ?? 0)) {
           text = rendered
           neededBrowser = true
         }
+        // Still nothing usable: the publisher is refusing us, not hiding the
+        // text. Ask the archive for the same page.
+        if (!text || text.length < 600 || !quoteAppearsIn(text, doc.quote)) {
+          const archived = await archivedPageText(url)
+          if (archived && quoteAppearsIn(archived, doc.quote)) {
+            text = archived
+            neededBrowser = true
+            archiveWins += 1
+          }
+        }
+      }
+      if (verbose) {
+        console.log(`     [${text ? text.length : 0} chars] ${neededBrowser ? 'rendered' : 'fetched'} ${url.slice(0, 70)}`)
       }
       if (!text || text.length < 200) continue
       anyReadable = true
@@ -213,6 +265,7 @@ async function main() {
   console.log(`quote NOT in any cited page       ${absent}`)
   console.log(`no cited page could be read       ${unreachable}`)
   if (render) console.log(`found ONLY after rendering        ${renderedWins}`)
+  if (render) console.log(`  of which came from the archive  ${archiveWins}`)
   if (browser) await browser.close()
 
   if (outPath) {
