@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildTextFragmentUrl,
   extractReadableText,
+  findUncitedSpecifics,
   isPublishable,
   normaliseForComparison,
   quoteAppearsIn,
@@ -156,5 +157,94 @@ describe('resolveVerificationStatus', () => {
     for (const status of ['overreach', 'unsupported', 'unchecked'] as const) {
       expect(isPublishable(status)).toBe(false)
     }
+  })
+})
+
+describe('extractReadableText entity decoding', () => {
+  it('decodes NUMERIC entities, which is what actually broke matching', () => {
+    // An SEC filing writes a non-breaking space as &#160;. Leaving it literal
+    // broke every quote from that filing ~40 characters in, and looked exactly
+    // like the model fabricating quotes.
+    expect(extractReadableText('<p>Washington, D.C.&#160;20549</p>')).toBe('Washington, D.C. 20549')
+    expect(extractReadableText('<p>March 20, 2025 &#8212; Alnylam</p>')).toBe('March 20, 2025 — Alnylam')
+    expect(extractReadableText('<p>it&#x2019;s here</p>')).toBe('it’s here')
+  })
+
+  it('decodes the named entities that appear in press releases', () => {
+    expect(extractReadableText('<p>CHARLOTTE &mdash; Advocate&rsquo;s pilot&hellip;</p>')).toBe(
+      'CHARLOTTE — Advocate’s pilot…',
+    )
+  })
+
+  it('lets a real filing quote match once entities are decoded', () => {
+    const page = extractReadableText('<p>Washington, D.C.&#160;20549 On March 20, 2025, Alnylam issued a press release.</p>')
+    expect(quoteAppearsIn(page, 'On March 20, 2025, Alnylam issued a press release.')).toBe(true)
+  })
+})
+
+describe('findUncitedSpecifics', () => {
+  it('finds a number the quote never states', () => {
+    expect(
+      findUncitedSpecifics('Available to 4,000 physicians across 21 hospitals', 'available to physicians'),
+    ).toEqual(expect.arrayContaining(['4,000', '21']))
+  })
+
+  it('accepts a number the quote does state, in either notation', () => {
+    expect(findUncitedSpecifics('raising $116 million', 'raising $116 million in Series E')).toEqual([])
+    expect(findUncitedSpecifics('raising $116 million', 'raising 116 million in Series E')).toEqual([])
+  })
+
+  it('flags a month the quote does not give', () => {
+    expect(findUncitedSpecifics('On March 20, 2025 they announced', 'they announced a result')).toContain(
+      'March',
+    )
+  })
+
+  it('flags a multi-word name the quote does not contain', () => {
+    expect(
+      findUncitedSpecifics('acquired Homeward Health in an all-stock deal', 'acquired a company'),
+    ).toContain('Homeward Health')
+  })
+
+  it('does not flag names and numbers the quote does contain', () => {
+    expect(
+      findUncitedSpecifics(
+        'Cityblock Health entered an agreement to acquire Homeward Health',
+        'Cityblock Health has entered into a definitive agreement to acquire Homeward Health',
+      ),
+    ).toEqual([])
+  })
+
+  it('ignores single capitalised words, which are too noisy to mean anything', () => {
+    // "Following" at a sentence start is not a proper noun.
+    expect(findUncitedSpecifics('Following a pilot they expanded', 'they expanded')).toEqual([])
+  })
+})
+
+describe('findUncitedSpecifics false positives', () => {
+  it('ignores trailing punctuation on a name', () => {
+    expect(
+      findUncitedSpecifics('trial for Alcohol Use Disorder.', 'trial in individuals with Alcohol Use Disorder (AUD)'),
+    ).toEqual([])
+  })
+
+  it('peels a sentence-initial word off a name', () => {
+    // "On December" and "The FDA" are not organisations.
+    expect(findUncitedSpecifics('On December 20 Commure acquired it', 'December 20 Commure acquired it')).toEqual([])
+    expect(findUncitedSpecifics('The FDA cleared it', 'FDA cleared it')).toEqual([])
+  })
+
+  it('does not flag an organisation for being absent from its own first-person quote', () => {
+    expect(
+      findUncitedSpecifics('CCH Healthcare states it has 38 locations', 'We have 38 locations and are still growing!', {
+        ignore: ['CCH Healthcare'],
+      }),
+    ).toEqual([])
+  })
+
+  it('still flags a genuinely absent name', () => {
+    expect(
+      findUncitedSpecifics('acquired Homeward Health', 'acquired a company', { ignore: ['Cityblock'] }),
+    ).toContain('Homeward Health')
   })
 })
