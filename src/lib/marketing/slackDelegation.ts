@@ -68,6 +68,8 @@ function formatMinutes(minutes: number): string {
 export type DigestTask = {
   _id: string
   title: string
+  kind?: string
+  priority?: string
   ownerName?: string
   slackUserId?: string
   minutes?: number
@@ -472,17 +474,6 @@ const PRIORITY_COLOR: Record<string, string> = {
   low: '#6f7a90',
 }
 
-const KIND_EMOJI: Record<string, string> = {
-  decision: ':thinking_face:',
-  outreach: ':telephone_receiver:',
-  content: ':pencil2:',
-  research: ':mag:',
-  measurement: ':bar_chart:',
-  maintenance: ':wrench:',
-  blocker: ':octagonal_sign:',
-  update: ':information_source:',
-}
-
 export type DigestMessage = { blocks: Block[]; attachments: Block[] }
 
 /**
@@ -494,7 +485,6 @@ export type DigestMessage = { blocks: Block[]; attachments: Block[] }
  * entire row per task and keeps the whole week visible without scrolling.
  */
 export function buildTaskAttachment(task: DigestTask & { kind?: string; priority?: string }): Block {
-  const emoji = KIND_EMOJI[String(task.kind || '')] || ':white_square_button:'
   const value = encodeActionValue({ taskId: task._id, ownerName: task.ownerName })
 
   const facts: Block[] = []
@@ -511,22 +501,25 @@ export function buildTaskAttachment(task: DigestTask & { kind?: string; priority
     blocks: [
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: `${emoji}  *${task.title}*` },
-        accessory: {
-          type: 'button',
-          action_id: MARKETING_ACTION.claim,
-          text: { type: 'plain_text', text: "I'll take it" },
-          style: 'primary',
-          value,
-        },
+        text: { type: 'mrkdwn', text: `*${task.title}*` },
       },
       ...facts,
       ...(task.whyNow
         ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: `_${task.whyNow}_` }] }]
         : []),
       {
+        // All three together in one row. As an accessory the primary button sat
+        // detached in the top-right corner, reading as unrelated to the two
+        // below it — the choice is one choice, so it looks like one.
         type: 'actions',
         elements: [
+          {
+            type: 'button',
+            action_id: MARKETING_ACTION.claim,
+            text: { type: 'plain_text', text: "I'll take it" },
+            style: 'primary',
+            value,
+          },
           {
             type: 'button',
             action_id: MARKETING_ACTION.details,
@@ -569,7 +562,11 @@ export function markTaskInAttachments(
         ),
     )
     if (!owns) return attachment
-    const title = String(blocks[0]?.text?.text || '').replace(/^\S+\s+/, '').replace(/\*/g, '')
+    // Take what is between the asterisks. The previous version stripped the
+    // first whitespace-delimited token to remove an emoji — with the emoji gone
+    // that silently ate the first word, turning "Call MEDITECH" into "MEDITECH".
+    const raw = String(blocks[0]?.text?.text || '')
+    const title = (raw.match(/\*([^*]+)\*/)?.[1] || raw).trim()
     return {
       color: '#3f7d5c',
       blocks: [

@@ -354,10 +354,18 @@ describe('buildTaskAttachment', () => {
     expect(buildTaskAttachment({ ...task, priority: 'weird' }).color).toBeTruthy()
   })
 
-  it('puts the primary action on the title row as an accessory, saving a row', () => {
-    const first = buildTaskAttachment(task).blocks[0]
-    expect(first.accessory).toMatchObject({ action_id: MARKETING_ACTION.claim })
-    expect(first.text.text).toContain('Call the top ten')
+  it('keeps all three buttons in ONE row', () => {
+    // As an accessory the primary button sat detached in the corner, reading as
+    // unrelated to the two below it.
+    const blocks = buildTaskAttachment(task).blocks
+    expect(blocks[0].accessory).toBeUndefined()
+    const actions = blocks.filter((b: { type: string }) => b.type === 'actions')
+    expect(actions).toHaveLength(1)
+    expect(actions[0].elements.map((e: { action_id: string }) => e.action_id)).toEqual([
+      MARKETING_ACTION.claim,
+      MARKETING_ACTION.details,
+      MARKETING_ACTION.decline,
+    ])
   })
 
   it('lays the metadata out in two columns instead of a run-on line', () => {
@@ -395,5 +403,20 @@ describe('markTaskInAttachments', () => {
 
   it('does nothing for a task that is not there', () => {
     expect(markTaskInAttachments(attachments, 'nope', 'done')).toEqual(attachments)
+  })
+})
+
+describe('task cards without emoji', () => {
+  it('shows the title alone', () => {
+    const card = buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH', kind: 'outreach' })
+    expect(card.blocks[0].text.text).toBe('*Call MEDITECH*')
+  })
+
+  it('keeps the WHOLE title when checked off', () => {
+    // The old extraction stripped the first token to remove an emoji; with no
+    // emoji that ate the first word, turning "Call MEDITECH" into "MEDITECH".
+    const attachments = [buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH' })]
+    const next = markTaskInAttachments(attachments, 'op1', 'done')
+    expect(json(next)).toContain('~Call MEDITECH~')
   })
 })
