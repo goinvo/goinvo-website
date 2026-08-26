@@ -62,3 +62,12 @@ describe('isAnswerableInSlack', () => {
     expect(isAnswerableInSlack({})).toBe(false)
   })
 })
+
+describe('the plan link must name its view', () => {
+  it('never links to the bare Studio path', () => {
+    // Without ?view= the Studio restores the last view from localStorage, so
+    // "Open the plan" landed on whatever page you happened to visit last.
+    const url = studioTaskUrl({ baseUrl: 'https://www.goinvo.com', taskId: 'op1', targetView: 'outreach' })
+    expect(url).toMatch(/[?&]view=/)
+  })
+})
