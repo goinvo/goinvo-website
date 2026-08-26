@@ -124,3 +124,33 @@ export async function setMarketingAvailability(input: {
         : `Availability updated: ${input.status} from ${from}.`,
   }
 }
+
+/**
+ * Link a Slack user to the owner name used on operations.
+ *
+ * Patched onto the availability record rather than createOrReplace'd: somebody
+ * linking their identity must not silently cancel the holiday they booked five
+ * minutes earlier.
+ */
+export async function linkMarketingIdentity(input: {
+  ownerName: string
+  slackUserId: string
+}): Promise<MarketingSlackActionResult> {
+  const client = getMarketingWriteClientFor(TEAM_AVAILABILITY_TYPE)
+  const _id = availabilityDocId(input.ownerName)
+
+  await client
+    .transaction()
+    .createIfNotExists({
+      _id,
+      _type: TEAM_AVAILABILITY_TYPE,
+      ownerName: input.ownerName,
+      status: 'available',
+    })
+    .patch(_id, (patch) =>
+      patch.set({ slackUserId: input.slackUserId, ownerName: input.ownerName, updatedAt: new Date().toISOString() }),
+    )
+    .commit()
+
+  return { ok: true, message: `Linked to ${input.ownerName}.` }
+}

@@ -349,6 +349,39 @@ deleting its own `.ul` padding gets bullets 32px out of place.
 - The Gatsby→Next port shipped "dead-CSS" regressions (generic markup not mounting a page's own
   ported CSS); compare against the Gatsby legacy refs, not just structural DOM checks.
 
+## Marqueta in Slack: weekly digest + task delegation (built 2026-08-26)
+
+Posts the week's marketing work to **#marketing-bot** (`C0BSFACJY6T`) with a button per task, so
+the plan is delegated rather than announced. Extends the EXISTING Slack app (the one behind the
+website chat widget) — same bot token, same signing secret, same
+`/api/slack/interactions` route, which already verifies signatures and dispatches on `action_id`.
+
+- **Post it:** `POST /api/marketing/slack/digest` (`?dryRun=1` returns the exact blocks without
+  posting). Auth: `assertStudioWriterOrApiKey`. **Fail-closed** — no token/channel, nothing posts.
+- **Channel:** `SLACK_MARKETING_CHANNEL_ID`, separate from `SLACK_CHANNEL_ID` (the website-chat
+  channel) so a weekly plan never lands in the middle of live visitor conversations.
+- **Buttons:** "I'll take it" sets the owner; "Not me this week" CLEARS it and marks the task
+  `needsHuman` — deliberately NOT reassigning to someone else, because picking a colleague
+  without asking is how a plan loses the team's trust. "I'm away this week" writes a
+  `marketingTeamAvailability` record and the next digest surfaces that person's work with the
+  names of whoever is actually free.
+- **Identity:** owners are names ("Juhan"); Slack has user IDs. The digest appends a one-time
+  consent prompt (a select of unmapped owners) that stores the presser's Slack ID against the
+  name they choose. It states what it stores, and removes itself once everyone is mapped.
+- **Core:** `src/lib/marketing/availability.ts` (pure date logic — both bounds INCLUSIVE, because
+  "away 1st–5th" must mean away ON the 5th), `slackDelegation.ts` (Block Kit + action encoding),
+  `slackActions.server.ts` (the writes; all safe to run twice, since Slack retries).
+
+**TWO MANUAL SLACK STEPS — the code cannot do these itself:**
+1. **Invite the bot to the channel.** In #marketing-bot: `/invite @goinvo_website_chat`.
+   Without it every post fails `not_in_channel`. The bot cannot self-join (needs `channels:join`)
+   and cannot self-invite (`conversations.invite` requires already being in the channel).
+2. **Add the `chat:write.customize` scope and reinstall** for the digest to appear as
+   **Marqueta**. Granted scopes today are `chat:write, channels:history, users:read,
+   channels:manage, files:write`; without `chat:write.customize` Slack silently IGNORES the
+   `username`/`icon_emoji` fields and posts under the app name. Identity is set per message on
+   purpose — renaming the app itself would rename it for the website chat too.
+
 ## Outreach research: identity from registries, claims from Claude, then verified
 
 Three stages, in this order, because each answers a different KIND of question. Getting them

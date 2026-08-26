@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   buildActionAcknowledgement,
+  buildIdentityPromptBlocks,
   buildWeeklyDigestBlocks,
   decodeActionValue,
   encodeActionValue,
@@ -160,5 +161,32 @@ describe('buildActionAcknowledgement', () => {
     expect(buildActionAcknowledgement({ action: MARKETING_ACTION.away, userId: 'U1' })).toContain(
       'away this week',
     )
+  })
+})
+
+describe('buildIdentityPromptBlocks', () => {
+  it('offers each unmapped owner as a choice', () => {
+    const blocks = buildIdentityPromptBlocks(['Juhan', 'Shirley'])
+    expect(json(blocks)).toContain(MARKETING_ACTION.linkIdentity)
+    expect(json(blocks)).toContain('Juhan')
+    expect(json(blocks)).toContain('Shirley')
+  })
+
+  it('states what is stored before anyone presses anything', () => {
+    // The asking IS the consent, so the prompt has to say what it keeps.
+    const text = json(buildIdentityPromptBlocks(['Juhan']))
+    expect(text).toContain('Slack user ID')
+    expect(text).toContain('only for the people who choose to')
+  })
+
+  it('disappears entirely once everyone is mapped, rather than nagging', () => {
+    expect(buildIdentityPromptBlocks([])).toEqual([])
+    expect(buildIdentityPromptBlocks(['', ''])).toEqual([])
+  })
+
+  it('caps the list so one enormous team cannot break the message', () => {
+    const many = Array.from({ length: 40 }, (_, i) => `Person ${i}`)
+    const select = buildIdentityPromptBlocks(many)[2].elements[0]
+    expect(select.options).toHaveLength(20)
   })
 })

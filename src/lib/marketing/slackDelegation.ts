@@ -18,6 +18,7 @@ export const MARKETING_ACTION = {
   claim: 'goinvo_marketing_claim_task',
   decline: 'goinvo_marketing_decline_task',
   away: 'goinvo_marketing_set_away',
+  linkIdentity: 'goinvo_marketing_link_identity',
 } as const
 
 export type MarketingActionId = (typeof MARKETING_ACTION)[keyof typeof MARKETING_ACTION]
@@ -207,6 +208,51 @@ export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
   return blocks
 }
 
+
+/**
+ * Ask people to say which name is theirs, once.
+ *
+ * Operations are owned by a name ("Juhan"); Slack knows a user id. Nothing can
+ * @-mention the right person until those are linked, and guessing from display
+ * names is how a bot pings the wrong colleague.
+ *
+ * So it asks, and the asking IS the consent: the prompt states exactly what gets
+ * stored and why before anybody presses anything. It only appears while owners
+ * are still unmapped, so it disappears on its own rather than nagging.
+ */
+export function buildIdentityPromptBlocks(unmappedOwners: string[]): Block[] {
+  const owners = unmappedOwners.filter(Boolean).slice(0, 20)
+  if (owners.length === 0) return []
+  return [
+    { type: 'divider' },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text:
+          "*One-time setup* — I don't know who is who yet, so the names above are plain text " +
+          'rather than @-mentions.\n' +
+          'Pick your name and I will store your Slack user ID against it, so future tasks ' +
+          'mention you directly. That is all it stores, and only for the people who choose to.',
+      },
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'static_select',
+          action_id: MARKETING_ACTION.linkIdentity,
+          placeholder: { type: 'plain_text', text: 'Which one is you?' },
+          options: owners.map((owner) => ({
+            text: { type: 'plain_text', text: owner },
+            value: owner,
+          })),
+        },
+      ],
+    },
+  ]
+}
+
 /**
  * What to say back when someone presses a button.
  *
@@ -228,6 +274,8 @@ export function buildActionAcknowledgement(input: {
       return `${who} passed on ${task} — it needs another owner.`
     case MARKETING_ACTION.away:
       return `${who} is away this week. Their work needs reassigning.`
+    case MARKETING_ACTION.linkIdentity:
+      return `${who} is now linked, and will be @-mentioned on their tasks.`
     default:
       return `${who} responded.`
   }
