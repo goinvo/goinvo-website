@@ -54,7 +54,7 @@ export const dynamic = 'force-dynamic'
 
 const DATA_QUERY = `{
   "operations": *[_type == "marketingOperation" && status in ["queued", "working", "needsHuman"]]
-    | order(coalesce(dueAt, "9999") asc)[0...12]{
+    | order(coalesce(dueAt, "9999") asc)[0...40]{
       _id, title, ownerName, ownerSlackUserId, estimatedMinutes, whyNow, kind, status,
       priority, sourceKey
     },
@@ -153,6 +153,18 @@ async function handle(request: NextRequest) {
     kind: operation.kind,
     priority: operation.priority,
   }))
+
+  // Sort by priority first, then by date. Ordering on date alone buried the
+  // concrete outreach behind a wall of decisions, because a call scheduled for
+  // "this week" has no deadline the way a gate review does — and the work you
+  // can actually go and do is the work worth showing.
+  const PRIORITY_RANK: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 }
+  const KIND_RANK: Record<string, number> = { outreach: 0, content: 1, decision: 2 }
+  tasks.sort((a, b) => {
+    const byKind = (KIND_RANK[a.kind || ''] ?? 1.5) - (KIND_RANK[b.kind || ''] ?? 1.5)
+    if (byKind !== 0) return byKind
+    return (PRIORITY_RANK[a.priority || 'normal'] ?? 2) - (PRIORITY_RANK[b.priority || 'normal'] ?? 2)
+  })
 
   // Anyone away this week has their work surfaced for reassignment rather than
   // silently left on their plate.
