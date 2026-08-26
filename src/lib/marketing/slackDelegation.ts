@@ -22,6 +22,11 @@ export const MARKETING_ACTION = {
   details: 'goinvo_marketing_task_details',
 } as const
 
+/** Modal submit + the input inside it. */
+export const MARKETING_ANSWER_CALLBACK = 'goinvo_marketing_answer_task'
+export const MARKETING_ANSWER_BLOCK = 'goinvo_marketing_answer_block'
+export const MARKETING_ANSWER_INPUT = 'goinvo_marketing_answer_input'
+
 export type MarketingActionId = (typeof MARKETING_ACTION)[keyof typeof MARKETING_ACTION]
 
 export function isMarketingAction(actionId: string | undefined): actionId is MarketingActionId {
@@ -337,6 +342,114 @@ export function buildTaskDetailBlocks(task: TaskDetail): Block[] {
   }
 
   return blocks
+}
+
+
+/**
+ * The whole modal, not just its body.
+ *
+ * A modal that only tells you things is a dead end: you read it, close it, and
+ * still have to go and find the work. So this adds the two ways out —
+ * answer a decision right here, or jump straight to the Studio view that owns
+ * it, with the task named so the Studio can point at what needs filling.
+ *
+ * The text box appears ONLY for a decision with a question. Offering one for
+ * "write the article" would promise something a modal cannot deliver.
+ */
+export function buildTaskDetailView(
+  task: TaskDetail,
+  options: { studioUrl?: string } = {},
+): Record<string, unknown> {
+  const blocks = buildTaskDetailBlocks(task)
+  const answerable = Boolean(task.humanQuestion && task.kind === 'decision')
+
+  if (options.studioUrl) {
+    blocks.push({ type: 'divider' })
+    blocks.push({
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          text: { type: 'plain_text', text: 'Open where this happens' },
+          url: options.studioUrl,
+          style: answerable ? undefined : 'primary',
+        },
+      ],
+    })
+  }
+
+  if (answerable) {
+    blocks.push({ type: 'divider' })
+    blocks.push({
+      type: 'input',
+      block_id: MARKETING_ANSWER_BLOCK,
+      label: { type: 'plain_text', text: 'Answer it here' },
+      hint: { type: 'plain_text', text: 'Saved onto the task and marked decided.' },
+      optional: true,
+      element: {
+        type: 'plain_text_input',
+        action_id: MARKETING_ANSWER_INPUT,
+        multiline: true,
+        placeholder: { type: 'plain_text', text: 'Your decision, in a sentence or two' },
+      },
+    })
+  }
+
+  return {
+    type: 'modal',
+    callback_id: MARKETING_ANSWER_CALLBACK,
+    // Slack hands private_metadata back on submit; it is how we know which task
+    // was answered without trusting anything the client could edit.
+    private_metadata: task._id,
+    title: { type: 'plain_text', text: modalTitle(task.title) },
+    close: { type: 'plain_text', text: 'Close' },
+    ...(answerable ? { submit: { type: 'plain_text', text: 'Save answer' } } : {}),
+    blocks,
+  }
+}
+
+
+/**
+ * Rewrite the digest so a finished task checks itself off.
+ *
+ * Without this the message is a permanent to-do list: someone claims a task and
+ * the channel still shows it unclaimed, so the next person claims it too. The
+ * buttons for that task are removed as well — a button that has already been
+ * pressed either does nothing or, worse, does it twice.
+ *
+ * Works by finding the actions block whose encoded value names the task, since
+ * that is the only place the id appears; the section immediately above it is the
+ * task's own line.
+ */
+export function markTaskInBlocks(
+  blocks: Block[],
+  taskId: string,
+  statusLine: string,
+): Block[] {
+  if (!taskId) return blocks
+
+  const actionsIndex = blocks.findIndex(
+    (block) =>
+      block.type === 'actions' &&
+      (block.elements || []).some((element: Record<string, unknown>) => {
+        const decoded = decodeActionValue(element.value as string | undefined)
+        return decoded?.taskId === taskId
+      }),
+  )
+  if (actionsIndex < 1) return blocks
+
+  const sectionIndex = actionsIndex - 1
+  const original = String(blocks[sectionIndex]?.text?.text || '')
+  // Keep the title line, drop the buttons, and say what happened to it.
+  const titleLine = original.split('\n')[0].replace(/^\*|\*$/g, '')
+
+  const next = [...blocks]
+  next[sectionIndex] = {
+    type: 'section',
+    text: { type: 'mrkdwn', text: `:white_check_mark: ~${titleLine}~\n${statusLine}` },
+  }
+  next.splice(actionsIndex, 1)
+  return next
 }
 
 /**
