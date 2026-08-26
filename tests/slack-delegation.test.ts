@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildActionAcknowledgement,
   buildIdentityPromptBlocks,
+  buildTaskAttachment,
   buildTaskDetailBlocks,
   buildTaskDetailView,
   buildWeeklyDigestBlocks,
+  markTaskInAttachments,
   markTaskInBlocks,
   MARKETING_ANSWER_BLOCK,
   modalTitle,
@@ -330,5 +332,68 @@ describe('buildTaskDetailView', () => {
 
   it('omits the link rather than emitting a button with no url', () => {
     expect(json(buildTaskDetailView(decision))).not.toContain('Open where this happens')
+  })
+})
+
+describe('buildTaskAttachment', () => {
+  const task = {
+    _id: 'op1',
+    title: 'Call the top ten',
+    ownerName: 'Juhan',
+    slackUserId: 'U123',
+    minutes: 45,
+    kind: 'outreach',
+    priority: 'urgent',
+    whyNow: 'Wave 1 begins Sep 18.',
+  }
+
+  it('colours the card by priority — the only custom colour Slack allows', () => {
+    expect(buildTaskAttachment(task).color).toBe('#d94d2f')
+    expect(buildTaskAttachment({ ...task, priority: 'normal' }).color).toBe('#4fb3a5')
+    // An unknown priority must still render, not vanish.
+    expect(buildTaskAttachment({ ...task, priority: 'weird' }).color).toBeTruthy()
+  })
+
+  it('puts the primary action on the title row as an accessory, saving a row', () => {
+    const first = buildTaskAttachment(task).blocks[0]
+    expect(first.accessory).toMatchObject({ action_id: MARKETING_ACTION.claim })
+    expect(first.text.text).toContain('Call the top ten')
+  })
+
+  it('lays the metadata out in two columns instead of a run-on line', () => {
+    const fieldsBlock = buildTaskAttachment(task).blocks.find((b: { fields?: unknown }) => b.fields)
+    const text = json(fieldsBlock)
+    expect(text).toContain('*Owner*')
+    expect(text).toContain('<@U123>')
+    expect(text).toContain('*Effort*')
+    expect(text).toContain('45m')
+  })
+
+  it('says unclaimed rather than leaving the owner field blank', () => {
+    expect(json(buildTaskAttachment({ _id: 'x', title: 'T' }))).toContain('unclaimed')
+  })
+})
+
+describe('markTaskInAttachments', () => {
+  const attachments = [
+    buildTaskAttachment({ _id: 'op1', title: 'Call the top ten', priority: 'urgent' }),
+    buildTaskAttachment({ _id: 'op2', title: 'Write the article', priority: 'normal' }),
+  ]
+
+  it('collapses the finished card to one struck-through line', () => {
+    const next = markTaskInAttachments(attachments, 'op1', '<@U1> picked it up.')
+    expect(next[0].blocks).toHaveLength(1)
+    expect(json(next[0])).toContain('~Call the top ten~')
+    expect(json(next[0])).toContain('picked it up')
+    expect(next[0].color).toBe('#3f7d5c')
+  })
+
+  it('leaves the other cards completely alone', () => {
+    const next = markTaskInAttachments(attachments, 'op1', 'done')
+    expect(next[1]).toEqual(attachments[1])
+  })
+
+  it('does nothing for a task that is not there', () => {
+    expect(markTaskInAttachments(attachments, 'nope', 'done')).toEqual(attachments)
   })
 })
