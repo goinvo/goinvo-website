@@ -199,8 +199,12 @@ async function handle(request: NextRequest) {
     tasks: [],
     callSheet,
     awayNotices,
+    // MUST name the view. Without ?view= the Studio restores whatever the
+    // person last had open (localStorage), so "Open the plan" landed on the
+    // Shop for anyone who had been there last — a link that goes somewhere
+    // plausible but wrong is worse than one that is obviously broken.
     studioUrl: process.env.MARKETING_PUBLIC_BASE_URL
-      ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing`
+      ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
       : undefined,
   })
 
