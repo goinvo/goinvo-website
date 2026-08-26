@@ -22,6 +22,15 @@ interface SlackPostMessageInput {
    */
   username?: string
   iconEmoji?: string
+  /**
+   * Suppress Slack's link previews.
+   *
+   * The marketing digest cites a source per opening, and Slack expands every
+   * one into a full card with a hero image — three citations turned a compact
+   * message into pages of scrolling, burying the buttons the digest exists
+   * for. The links still work; they just stay links.
+   */
+  unfurl?: boolean
 }
 
 interface SlackPostMessageResponse {
@@ -186,6 +195,7 @@ export async function postSlackMessage(input: SlackPostMessageInput): Promise<Sl
       ...(input.clientMsgId ? { client_msg_id: input.clientMsgId } : {}),
       ...(input.username ? { username: input.username } : {}),
       ...(input.iconEmoji ? { icon_emoji: input.iconEmoji } : {}),
+      ...(input.unfurl === false ? { unfurl_links: false, unfurl_media: false } : {}),
     }),
   })
 
@@ -800,4 +810,32 @@ function formatSlackApiError(
   ].filter(Boolean)
 
   return details.length ? `${error} (${details.join('; ')})` : error
+}
+
+/**
+ * Open a modal in Slack.
+ *
+ * `trigger_id` is valid for about three seconds, so callers must do this on the
+ * request path rather than deferring it — anything queued behind `after()`
+ * arrives too late and Slack answers `expired_trigger_id`.
+ */
+export async function openSlackModal(triggerId: string, view: unknown): Promise<boolean> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !triggerId) return false
+  try {
+    const response = await fetch('https://slack.com/api/views.open', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${botToken}`,
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({ trigger_id: triggerId, view }),
+    })
+    const data = (await response.json()) as { ok?: boolean; error?: string }
+    if (!data.ok) console.error('Slack views.open failed:', data.error)
+    return Boolean(data.ok)
+  } catch (error) {
+    console.error('Slack views.open threw', error)
+    return false
+  }
 }

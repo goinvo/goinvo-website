@@ -217,6 +217,9 @@ async function handle(request: NextRequest) {
     // chat and must keep its own name there.
     username: MARQUETA_NAME,
     iconEmoji: MARQUETA_ICON,
+    // Every opening cites a source, and an unfurled card per link buries the
+    // buttons under pages of hero images.
+    unfurl: false,
     text: `This week in marketing — ${tasks.length} task(s)`,
     blocks,
   })
