@@ -3,6 +3,7 @@ import { useToast } from '@sanity/ui'
 import type { SanityClient } from '@sanity/client'
 import { formatMinutes } from '../../../lib/marketing/effort'
 import { authenticatedMarketingRequest } from './authenticatedMarketingRequest'
+import { OutreachCallSheet } from './OutreachCallSheet'
 
 /**
  * The week, as decided.
@@ -233,6 +234,10 @@ export function WeeklyPlanWorkspace({
           </p>
         </div>
       </section>
+
+      {/* Directly under the theme, above the boards. The plan says what to do;
+          this is the only block that lets you actually go and do it. */}
+      <OutreachCallSheet />
 
       {plan.decisions.length > 0 && (
         <section style={{ ...styles.panel, borderColor: 'rgba(190,80,70,.35)' }}>
