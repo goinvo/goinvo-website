@@ -64,6 +64,12 @@ export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   'marketingCitationCheck',
   'aiCitationSnapshot',
   'marketingLeadMagnet',
+  // Organisation research: what a company is publicly working on, plus the
+  // quote and verification behind it. Private by nature — it names prospects
+  // and how we plan to approach them — and it only ever existed in outreach, so
+  // a Studio component reading it through the workspace client would silently
+  // get nothing back from production.
+  'marketingOrgResearch',
 ]
 
 export function isInternalMarketingType(type: string): boolean {

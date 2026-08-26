@@ -139,3 +139,12 @@ describe('resolveMarketingModel dataset routing', () => {
     expect(await resolveMarketingModel(client as any)).toBe('claude-sonnet-4-6')
   })
 })
+
+describe('marketingOrgResearch routing', () => {
+  it('resolves to the private dataset', () => {
+    // It names prospects and how we plan to approach them, and it only ever
+    // existed in outreach — reading it from production returns nothing at all.
+    expect(datasetForType('marketingOrgResearch', 'production')).toBe(INTERNAL_DATASET)
+    expect(isInternalMarketingType('marketingOrgResearch')).toBe(true)
+  })
+})
