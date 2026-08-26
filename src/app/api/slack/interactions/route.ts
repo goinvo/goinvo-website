@@ -10,6 +10,7 @@ import {
 import {
   claimMarketingTask,
   declineMarketingTask,
+  linkMarketingIdentity,
   setMarketingAvailability,
 } from '@/lib/marketing/slackActions.server'
 import { submitDisputeEvidence } from '@/lib/shop/disputeEvidence'
@@ -20,7 +21,12 @@ export const dynamic = 'force-dynamic'
 interface SlackInteractionPayload {
   type?: string
   user?: { id?: string; name?: string; username?: string }
-  actions?: Array<{ action_id?: string; value?: string }>
+  actions?: Array<{
+    action_id?: string
+    value?: string
+    // static_select sends the chosen option here rather than in `value`.
+    selected_option?: { value?: string }
+  }>
   // Slack includes this on block_actions; POST a message here to reply.
   response_url?: string
 }
@@ -76,6 +82,20 @@ export async function POST(request: NextRequest) {
       try {
         const personName =
           (await getSlackUserDisplayName(userId)) || payload.user?.name || payload.user?.username || 'Someone'
+
+        if (actionId === MARKETING_ACTION.linkIdentity) {
+          const ownerName = action?.selected_option?.value || ''
+          if (!ownerName) {
+            await postSlackResponse(responseUrl, 'No name was selected.')
+            return
+          }
+          const linked = await linkMarketingIdentity({ ownerName, slackUserId: userId })
+          await postSlackResponse(
+            responseUrl,
+            `${buildActionAcknowledgement({ action: actionId, userId })} ${linked.message || ''}`.trim(),
+          )
+          return
+        }
 
         if (actionId === MARKETING_ACTION.away) {
           const result = await setMarketingAvailability({
