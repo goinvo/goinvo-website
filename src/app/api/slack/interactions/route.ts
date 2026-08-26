@@ -4,14 +4,19 @@ import { getSlackUserDisplayName, openSlackModal, verifySlackRequest } from '@/l
 import {
   MARKETING_ACTION,
   buildActionAcknowledgement,
+  MARKETING_ANSWER_BLOCK,
+  MARKETING_ANSWER_INPUT,
   buildTaskDetailBlocks,
+  buildTaskDetailView,
   decodeActionValue,
+  markTaskInBlocks,
   isMarketingAction,
-  modalTitle,
 } from '@/lib/marketing/slackDelegation'
+import { studioTaskUrl } from '@/lib/marketing/taskLinks'
 import {
   claimMarketingTask,
   declineMarketingTask,
+  answerMarketingTask,
   getMarketingTaskDetail,
   linkMarketingIdentity,
   setMarketingAvailability,
@@ -22,6 +27,9 @@ import { stripeDisputeDocumentId } from '@/lib/shop/ids'
 export const dynamic = 'force-dynamic'
 
 interface SlackInteractionPayload {
+  /** The message the button lives in, so it can be rewritten in place. */
+  message?: { blocks?: Record<string, unknown>[]; text?: string }
+
   type?: string
   user?: { id?: string; name?: string; username?: string }
   actions?: Array<{
@@ -34,6 +42,10 @@ interface SlackInteractionPayload {
   response_url?: string
   /** Valid for ~3 seconds; required to open a modal. */
   trigger_id?: string
+  view?: {
+    private_metadata?: string
+    state?: { values?: Record<string, Record<string, { value?: string | null }>> }
+  }
 }
 
 // For block_actions, the HTTP body is ignored — confirmations must be POSTed to
@@ -58,6 +70,30 @@ async function postSlackResponse(
   }
 }
 
+
+/**
+ * Rewrite the message the button lives in.
+ *
+ * `replace_original` only works against the interaction's own response_url, and
+ * only for the message that was clicked — which is exactly what is wanted here.
+ */
+async function replaceSlackMessage(
+  responseUrl: string | undefined,
+  blocks: unknown[],
+  text: string,
+) {
+  if (!responseUrl) return
+  try {
+    await fetch(responseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replace_original: true, text, blocks }),
+    })
+  } catch (err) {
+    console.error('[slack] replace_original failed', err)
+  }
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
@@ -74,6 +110,34 @@ export async function POST(request: NextRequest) {
   const payload = JSON.parse(payloadValue) as SlackInteractionPayload
   const action = payload.actions?.[0]
 
+  // A decision answered inside the modal. Returning an empty body closes it;
+  // the write happens after, because Slack expects the response in ~3 seconds.
+  if (payload.type === 'view_submission' && payload.view?.private_metadata) {
+    const taskId = payload.view.private_metadata
+    const answer =
+      payload.view.state?.values?.[MARKETING_ANSWER_BLOCK]?.[MARKETING_ANSWER_INPUT]?.value || ''
+    const userId = payload.user?.id || ''
+
+    if (answer.trim()) {
+      after(async () => {
+        try {
+          const personName =
+            (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+          const result = await answerMarketingTask({ taskId, answer: answer.trim(), personName })
+          await postSlackResponse(
+            payload.response_url,
+            result.ok
+              ? `<@${userId}> answered *${result.taskTitle}*.`
+              : result.message || 'That did not save.',
+          )
+        } catch (err) {
+          console.error('[slack] marketing answer failed', err)
+        }
+      })
+    }
+    return NextResponse.json({})
+  }
+
   // Task detail. Handled ON the request path, not deferred: trigger_id expires
   // in about three seconds, so anything queued behind after() is too late and
   // Slack answers expired_trigger_id.
@@ -82,16 +146,19 @@ export async function POST(request: NextRequest) {
     if (decoded) {
       const task = await getMarketingTaskDetail(decoded.taskId)
       if (task) {
-        const blocks = buildTaskDetailBlocks({
-          ...task,
-          minutes: task.estimatedMinutes,
-        })
-        const opened = await openSlackModal(payload.trigger_id || '', {
-          type: 'modal',
-          title: { type: 'plain_text', text: modalTitle(task.title) },
-          close: { type: 'plain_text', text: 'Close' },
-          blocks,
-        })
+        const detail = { ...task, minutes: task.estimatedMinutes }
+        const blocks = buildTaskDetailBlocks(detail)
+        const opened = await openSlackModal(
+          payload.trigger_id || '',
+          buildTaskDetailView(detail, {
+            studioUrl: studioTaskUrl({
+              baseUrl: process.env.MARKETING_PUBLIC_BASE_URL,
+              taskId: task._id,
+              targetView: task.targetView,
+              kind: task.kind,
+            }),
+          }),
+        )
         // A modal can still fail (expired trigger, transient error). Falling back
         // to an ephemeral reply means the person gets the detail either way.
         if (!opened) {
@@ -163,12 +230,21 @@ export async function POST(request: NextRequest) {
             ? await claimMarketingTask({ taskId: decoded.taskId, personName, slackUserId: userId })
             : await declineMarketingTask({ taskId: decoded.taskId, personName })
 
-        await postSlackResponse(
-          responseUrl,
-          result.ok
-            ? buildActionAcknowledgement({ action: actionId, userId, taskTitle: result.taskTitle })
-            : result.message || 'That did not work.',
-        )
+        const note = result.ok
+          ? buildActionAcknowledgement({ action: actionId, userId, taskTitle: result.taskTitle })
+          : result.message || 'That did not work.'
+
+        // Check it off in the message itself, so the channel stops showing it as
+        // available and nobody claims the same task twice.
+        if (result.ok && payload.message?.blocks) {
+          await replaceSlackMessage(
+            responseUrl,
+            markTaskInBlocks(payload.message.blocks as never[], decoded.taskId, note),
+            payload.message.text || 'This week in marketing',
+          )
+        } else {
+          await postSlackResponse(responseUrl, note)
+        }
       } catch (err) {
         console.error('[slack] marketing action failed', err)
         await postSlackResponse(responseUrl, 'Something went wrong recording that. The plan in the Studio is still correct.')

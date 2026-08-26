@@ -181,3 +181,36 @@ export async function getMarketingTaskDetail(taskId: string) {
     { id: taskId },
   )
 }
+
+/**
+ * Record a decision made in Slack.
+ *
+ * The answer is written to humanResponse and the task leaves needsHuman, which
+ * is what unblocks everything downstream of it. The question is deliberately
+ * kept, so the record still reads as a question and its answer rather than an
+ * answer floating on its own.
+ */
+export async function answerMarketingTask(input: {
+  taskId: string
+  answer: string
+  personName: string
+}): Promise<MarketingSlackActionResult> {
+  const client = getMarketingWriteClientFor(MARKETING_OPERATION_TYPE)
+  const task = await client.fetch<{ _id: string; title?: string } | null>(
+    `*[_id == $id][0]{_id, title}`,
+    { id: input.taskId },
+  )
+  if (!task) return { ok: false, message: 'That task no longer exists.' }
+
+  await client
+    .patch(task._id)
+    .set({
+      humanResponse: input.answer,
+      status: 'queued',
+      lastOutcome: `Answered in Slack by ${input.personName}`,
+      lastEvaluatedAt: new Date().toISOString(),
+    })
+    .commit()
+
+  return { ok: true, taskTitle: task.title }
+}

@@ -31,6 +31,7 @@ import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLear
 import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
 import { LatestExclusiveRequestGate, type AsyncRequestTicket } from '../components/marketing/asyncRequestGate'
 import { MarketingFinancialPostureSetting } from '../components/marketing/MarketingFinancialPostureSetting'
+import { TaskFocusBanner } from '../components/marketing/TaskFocusBanner'
 import { MarketingOperationsBoard } from '../components/marketing/MarketingOperationsBoard'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
@@ -3760,6 +3761,10 @@ function MarketingComponent() {
               activeView={view}
               onSelect={requestMarketingView}
             />
+            {/* Above every view, not just the dashboard: a Slack deep link can
+                land on any of them, and the reason you came must arrive with
+                you rather than staying behind in Slack. */}
+            <TaskFocusBanner />
             {view === 'dashboard' && (
               <>
                 <MarketingFinancialPostureSetting

@@ -4,7 +4,10 @@ import {
   buildActionAcknowledgement,
   buildIdentityPromptBlocks,
   buildTaskDetailBlocks,
+  buildTaskDetailView,
   buildWeeklyDigestBlocks,
+  markTaskInBlocks,
+  MARKETING_ANSWER_BLOCK,
   modalTitle,
   decodeActionValue,
   encodeActionValue,
@@ -260,5 +263,72 @@ describe('modalTitle', () => {
   it('leaves a short title alone and falls back when empty', () => {
     expect(modalTitle('Call ten')).toBe('Call ten')
     expect(modalTitle('')).toBe('Task')
+  })
+})
+
+describe('markTaskInBlocks', () => {
+  const blocks = buildWeeklyDigestBlocks(baseDigest)
+
+  it('checks the task off and strikes its title', () => {
+    const next = markTaskInBlocks(blocks, 'op1', '<@U1> picked it up.')
+    const text = json(next)
+    expect(text).toContain('white_check_mark')
+    expect(text).toContain('~Call the top ten~')
+    expect(text).toContain('picked it up')
+  })
+
+  it('removes that task’s buttons so it cannot be claimed twice', () => {
+    const before = blocks.filter((b) => b.type === 'actions').length
+    const next = markTaskInBlocks(blocks, 'op1', 'done')
+    expect(next.filter((b) => b.type === 'actions').length).toBe(before - 1)
+    // The other task keeps its buttons.
+    expect(json(next)).toContain('op2')
+  })
+
+  it('leaves the rest of the message untouched', () => {
+    const next = markTaskInBlocks(blocks, 'op1', 'done')
+    expect(json(next)).toContain('Start calling your warmest contacts')
+    expect(json(next)).toContain('Put price bands in writing')
+    expect(next[0]).toMatchObject({ type: 'header' })
+  })
+
+  it('does nothing for a task that is not in the message', () => {
+    expect(markTaskInBlocks(blocks, 'nope', 'done')).toEqual(blocks)
+    expect(markTaskInBlocks(blocks, '', 'done')).toEqual(blocks)
+  })
+})
+
+describe('buildTaskDetailView', () => {
+  const decision = {
+    _id: 'op1',
+    title: 'Decide the price bands',
+    kind: 'decision',
+    humanQuestion: 'Which bands go public?',
+    nextAction: 'Mark each offer public or call-only.',
+  }
+
+  it('offers a text box for a decision, so it can be answered in place', () => {
+    const view = buildTaskDetailView(decision)
+    const text = json(view)
+    expect(text).toContain(MARKETING_ANSWER_BLOCK)
+    expect(text).toContain('Save answer')
+    expect(view.private_metadata).toBe('op1')
+  })
+
+  it('does NOT offer a text box for work a modal cannot do', () => {
+    // Promising "write the article" can be finished here would be a lie.
+    const view = buildTaskDetailView({ _id: 'op2', title: 'Write the article', kind: 'content' })
+    expect(json(view)).not.toContain(MARKETING_ANSWER_BLOCK)
+    expect(view.submit).toBeUndefined()
+  })
+
+  it('links to where the work happens when a url is available', () => {
+    const view = buildTaskDetailView(decision, { studioUrl: 'https://x.test/studio/marketing?view=shop' })
+    expect(json(view)).toContain('Open where this happens')
+    expect(json(view)).toContain('view=shop')
+  })
+
+  it('omits the link rather than emitting a button with no url', () => {
+    expect(json(buildTaskDetailView(decision))).not.toContain('Open where this happens')
   })
 })
