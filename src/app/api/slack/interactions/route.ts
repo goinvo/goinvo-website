@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
-import { verifySlackRequest } from '@/lib/chat/slack'
+import { getSlackUserDisplayName, verifySlackRequest } from '@/lib/chat/slack'
+import {
+  MARKETING_ACTION,
+  buildActionAcknowledgement,
+  decodeActionValue,
+  isMarketingAction,
+} from '@/lib/marketing/slackDelegation'
+import {
+  claimMarketingTask,
+  declineMarketingTask,
+  setMarketingAvailability,
+} from '@/lib/marketing/slackActions.server'
 import { submitDisputeEvidence } from '@/lib/shop/disputeEvidence'
 import { stripeDisputeDocumentId } from '@/lib/shop/ids'
 
@@ -51,6 +62,58 @@ export async function POST(request: NextRequest) {
 
   const payload = JSON.parse(payloadValue) as SlackInteractionPayload
   const action = payload.actions?.[0]
+
+  // Marketing delegation: claim a task, hand it back, or say you are away.
+  if (payload.type === 'block_actions' && isMarketingAction(action?.action_id)) {
+    const responseUrl = payload.response_url
+    const userId = payload.user?.id || ''
+    const decoded = decodeActionValue(action?.value)
+    const actionId = action!.action_id!
+
+    // Answer Slack immediately and do the write afterwards: an interaction that
+    // takes longer than 3 seconds shows the user a failure even when it worked.
+    after(async () => {
+      try {
+        const personName =
+          (await getSlackUserDisplayName(userId)) || payload.user?.name || payload.user?.username || 'Someone'
+
+        if (actionId === MARKETING_ACTION.away) {
+          const result = await setMarketingAvailability({
+            personName,
+            slackUserId: userId,
+            status: 'away',
+          })
+          await postSlackResponse(
+            responseUrl,
+            `${buildActionAcknowledgement({ action: actionId, userId })} ${result.message || ''}`.trim(),
+          )
+          return
+        }
+
+        if (!decoded) {
+          await postSlackResponse(responseUrl, 'That button is missing its task — try the plan in the Studio.')
+          return
+        }
+
+        const result =
+          actionId === MARKETING_ACTION.claim
+            ? await claimMarketingTask({ taskId: decoded.taskId, personName, slackUserId: userId })
+            : await declineMarketingTask({ taskId: decoded.taskId, personName })
+
+        await postSlackResponse(
+          responseUrl,
+          result.ok
+            ? buildActionAcknowledgement({ action: actionId, userId, taskTitle: result.taskTitle })
+            : result.message || 'That did not work.',
+        )
+      } catch (err) {
+        console.error('[slack] marketing action failed', err)
+        await postSlackResponse(responseUrl, 'Something went wrong recording that. The plan in the Studio is still correct.')
+      }
+    })
+
+    return NextResponse.json({ ok: true })
+  }
 
   if (
     payload.type === 'block_actions' &&
