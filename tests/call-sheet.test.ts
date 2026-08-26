@@ -157,6 +157,9 @@ describe('firstNameFor', () => {
   it('gives up rather than guess a wrong name', () => {
     // A wrong name is worse than no name.
     expect(firstNameFor({ email: 'jsmith12@acme.com' })).toBe('')
+    // An initial glued to a surname yields "Lgartley", which is not a name.
+    expect(firstNameFor({ email: 'lgartley@segterra.com' })).toBe('')
+    expect(firstNameFor({ email: 'gblander@insidetracker.com' })).toBe('')
     expect(firstNameFor({ email: 'hr@acme.com' })).toBe('')
     expect(firstNameFor({})).toBe('')
   })

@@ -132,8 +132,11 @@ export function firstNameFor(contact: { name?: string | null; email?: string | n
     if (first.length > 1) return first
   }
   const local = String(contact.email || name || '').split('@')[0]
+  // Only a separated local part is safe. "nate.murray" is clearly a first name
+  // followed by a surname; "lgartley" is an initial glued to one, and guessing
+  // gives you "Lgartley" — which is worse than not using a name at all.
+  if (!/[._-]/.test(local)) return ''
   const part = local.split(/[._-]/)[0]
-  // Reject initials and handles like "jsmith12" — a wrong name is worse than none.
   if (part.length < 3 || /\d/.test(part)) return ''
   return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
 }
