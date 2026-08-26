@@ -154,3 +154,30 @@ export async function linkMarketingIdentity(input: {
 
   return { ok: true, message: `Linked to ${input.ownerName}.` }
 }
+
+/** Fetch one task with everything needed to explain it. */
+export async function getMarketingTaskDetail(taskId: string) {
+  const client = getMarketingWriteClientFor(MARKETING_OPERATION_TYPE)
+  return client.fetch<{
+    _id: string
+    title: string
+    nextAction?: string
+    whyNow?: string
+    summary?: string
+    humanQuestion?: string
+    blocker?: string
+    kind?: string
+    priority?: string
+    status?: string
+    ownerName?: string
+    dueAt?: string
+    estimatedMinutes?: number
+    targetView?: string
+  } | null>(
+    `*[_id == $id][0]{
+      _id, title, nextAction, whyNow, summary, humanQuestion, blocker,
+      kind, priority, status, ownerName, dueAt, estimatedMinutes, targetView
+    }`,
+    { id: taskId },
+  )
+}
