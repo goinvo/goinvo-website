@@ -19,6 +19,7 @@ export const MARKETING_ACTION = {
   decline: 'goinvo_marketing_decline_task',
   away: 'goinvo_marketing_set_away',
   linkIdentity: 'goinvo_marketing_link_identity',
+  details: 'goinvo_marketing_task_details',
 } as const
 
 export type MarketingActionId = (typeof MARKETING_ACTION)[keyof typeof MARKETING_ACTION]
@@ -142,6 +143,12 @@ export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
             text: { type: 'plain_text', text: 'Not me this week' },
             value: encodeActionValue({ taskId: task._id, ownerName: task.ownerName }),
           },
+          {
+            type: 'button',
+            action_id: MARKETING_ACTION.details,
+            text: { type: 'plain_text', text: "What's involved" },
+            value: encodeActionValue({ taskId: task._id, ownerName: task.ownerName }),
+          },
         ],
       })
     }
@@ -251,6 +258,85 @@ export function buildIdentityPromptBlocks(unmappedOwners: string[]): Block[] {
       ],
     },
   ]
+}
+
+
+export type TaskDetail = {
+  _id: string
+  title: string
+  /** The concrete thing to do. The single most useful field, so it leads. */
+  nextAction?: string
+  whyNow?: string
+  summary?: string
+  /** For a decision, the question that has to be answered. */
+  humanQuestion?: string
+  blocker?: string
+  kind?: string
+  priority?: string
+  status?: string
+  ownerName?: string
+  dueAt?: string
+  minutes?: number
+  targetView?: string
+}
+
+/**
+ * Slack modal titles are capped at 24 characters and the API REJECTS a longer
+ * one outright, so a real task title has to be trimmed rather than passed
+ * through. The full title is repeated in the body, where there is room.
+ */
+export function modalTitle(text: string, fallback = 'Task'): string {
+  const value = String(text || '').trim() || fallback
+  return value.length <= 24 ? value : `${value.slice(0, 23)}\u2026`
+}
+
+/**
+ * Everything a person needs to actually start the task.
+ *
+ * The digest deliberately shows only a title and a line of context — a channel
+ * message with six paragraphs per task is one nobody reads. But that left
+ * "what am I actually supposed to do here?" unanswered, so this is the other
+ * half: `nextAction` first, because it is the concrete instruction, then why it
+ * matters now, then the background behind it.
+ */
+export function buildTaskDetailBlocks(task: TaskDetail): Block[] {
+  const chips = [
+    task.kind,
+    task.priority ? `${task.priority} priority` : '',
+    task.status,
+    task.ownerName ? `owner: ${task.ownerName}` : 'unowned',
+    task.dueAt ? `due ${String(task.dueAt).slice(0, 10)}` : '',
+    task.minutes ? formatMinutes(task.minutes) : '',
+  ].filter(Boolean)
+
+  const blocks: Block[] = [
+    { type: 'section', text: { type: 'mrkdwn', text: `*${task.title}*` } },
+    { type: 'context', elements: [{ type: 'mrkdwn', text: chips.join('  ·  ') }] },
+  ]
+
+  const section = (label: string, body?: string) => {
+    if (!body || !body.trim()) return
+    blocks.push({ type: 'divider' })
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*${label}*\n${body.trim()}` } })
+  }
+
+  section('What needs doing', task.nextAction)
+  section(task.kind === 'decision' ? 'The question to answer' : 'Why now', task.humanQuestion || task.whyNow)
+  if (task.humanQuestion && task.whyNow) section('Why now', task.whyNow)
+  section('Background', task.summary)
+  section('Blocked by', task.blocker)
+
+  if (!task.nextAction && !task.summary && !task.whyNow && !task.humanQuestion) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: '_This task has no detail recorded yet. Open it in the Studio to add what needs doing._',
+      },
+    })
+  }
+
+  return blocks
 }
 
 /**

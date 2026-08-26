@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest'
 import {
   buildActionAcknowledgement,
   buildIdentityPromptBlocks,
+  buildTaskDetailBlocks,
   buildWeeklyDigestBlocks,
+  modalTitle,
   decodeActionValue,
   encodeActionValue,
   isMarketingAction,
@@ -188,5 +190,75 @@ describe('buildIdentityPromptBlocks', () => {
     const many = Array.from({ length: 40 }, (_, i) => `Person ${i}`)
     const select = buildIdentityPromptBlocks(many)[2].elements[0]
     expect(select.options).toHaveLength(20)
+  })
+})
+
+describe('buildTaskDetailBlocks', () => {
+  const task = {
+    _id: 'op1',
+    title: 'Decide which price bands go public on the services pages',
+    nextAction: 'Mark each offer public or call-only.',
+    whyNow: 'The pricing calendar item is blocked on this.',
+    summary: 'Public price bands qualify buyers before the first call.',
+    humanQuestion: 'Which of the five bands are we comfortable publishing?',
+    kind: 'decision',
+    priority: 'high',
+    status: 'needsHuman',
+    ownerName: 'Juhan',
+    dueAt: '2026-11-06T17:00:00.000Z',
+  }
+
+  it('leads with what needs doing, because that is the missing bit', () => {
+    const text = json(buildTaskDetailBlocks(task))
+    expect(text).toContain('What needs doing')
+    expect(text).toContain('Mark each offer public or call-only')
+    // It must come before the background.
+    expect(text.indexOf('What needs doing')).toBeLessThan(text.indexOf('Background'))
+  })
+
+  it('shows a decision as a question to answer', () => {
+    const text = json(buildTaskDetailBlocks(task))
+    expect(text).toContain('The question to answer')
+    expect(text).toContain('comfortable publishing')
+    // "Why now" still appears when both exist.
+    expect(text).toContain('Why now')
+  })
+
+  it('puts the facts in a context line', () => {
+    const text = json(buildTaskDetailBlocks({ ...task, minutes: 45 }))
+    expect(text).toContain('high priority')
+    expect(text).toContain('owner: Juhan')
+    expect(text).toContain('due 2026-11-06')
+    expect(text).toContain('45m')
+  })
+
+  it('says "unowned" rather than leaving the owner blank', () => {
+    expect(json(buildTaskDetailBlocks({ _id: 'x', title: 'T', nextAction: 'do it' }))).toContain('unowned')
+  })
+
+  it('admits when a task has no detail instead of showing an empty modal', () => {
+    const text = json(buildTaskDetailBlocks({ _id: 'x', title: 'Bare task' }))
+    expect(text).toContain('no detail recorded yet')
+  })
+
+  it('omits sections that have no content', () => {
+    const text = json(buildTaskDetailBlocks({ _id: 'x', title: 'T', nextAction: 'do it' }))
+    expect(text).not.toContain('Blocked by')
+    expect(text).not.toContain('Background')
+  })
+})
+
+describe('modalTitle', () => {
+  it('trims to Slack’s 24-character limit, which the API enforces', () => {
+    // views.open REJECTS a longer title outright, so a real task title cannot
+    // be passed through untouched.
+    const title = modalTitle('Decide which price bands go public on the services pages')
+    expect(title.length).toBeLessThanOrEqual(24)
+    expect(title.endsWith('…')).toBe(true)
+  })
+
+  it('leaves a short title alone and falls back when empty', () => {
+    expect(modalTitle('Call ten')).toBe('Call ten')
+    expect(modalTitle('')).toBe('Task')
   })
 })

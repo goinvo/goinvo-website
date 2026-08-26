@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
-import { getSlackUserDisplayName, verifySlackRequest } from '@/lib/chat/slack'
+import { getSlackUserDisplayName, openSlackModal, verifySlackRequest } from '@/lib/chat/slack'
 import {
   MARKETING_ACTION,
   buildActionAcknowledgement,
+  buildTaskDetailBlocks,
   decodeActionValue,
   isMarketingAction,
+  modalTitle,
 } from '@/lib/marketing/slackDelegation'
 import {
   claimMarketingTask,
   declineMarketingTask,
+  getMarketingTaskDetail,
   linkMarketingIdentity,
   setMarketingAvailability,
 } from '@/lib/marketing/slackActions.server'
@@ -29,6 +32,8 @@ interface SlackInteractionPayload {
   }>
   // Slack includes this on block_actions; POST a message here to reply.
   response_url?: string
+  /** Valid for ~3 seconds; required to open a modal. */
+  trigger_id?: string
 }
 
 // For block_actions, the HTTP body is ignored — confirmations must be POSTed to
@@ -68,6 +73,44 @@ export async function POST(request: NextRequest) {
 
   const payload = JSON.parse(payloadValue) as SlackInteractionPayload
   const action = payload.actions?.[0]
+
+  // Task detail. Handled ON the request path, not deferred: trigger_id expires
+  // in about three seconds, so anything queued behind after() is too late and
+  // Slack answers expired_trigger_id.
+  if (payload.type === 'block_actions' && action?.action_id === MARKETING_ACTION.details) {
+    const decoded = decodeActionValue(action.value)
+    if (decoded) {
+      const task = await getMarketingTaskDetail(decoded.taskId)
+      if (task) {
+        const blocks = buildTaskDetailBlocks({
+          ...task,
+          minutes: task.estimatedMinutes,
+        })
+        const opened = await openSlackModal(payload.trigger_id || '', {
+          type: 'modal',
+          title: { type: 'plain_text', text: modalTitle(task.title) },
+          close: { type: 'plain_text', text: 'Close' },
+          blocks,
+        })
+        // A modal can still fail (expired trigger, transient error). Falling back
+        // to an ephemeral reply means the person gets the detail either way.
+        if (!opened) {
+          const lines = blocks
+            .map((block) => (block.text?.text as string) || '')
+            .filter(Boolean)
+            .join(String.fromCharCode(10, 10))
+          after(async () => {
+            await postSlackResponse(payload.response_url, lines || task.title)
+          })
+        }
+        return NextResponse.json({ ok: true })
+      }
+    }
+    after(async () => {
+      await postSlackResponse(payload.response_url, 'That task no longer exists.')
+    })
+    return NextResponse.json({ ok: true })
+  }
 
   // Marketing delegation: claim a task, hand it back, or say you are away.
   if (payload.type === 'block_actions' && isMarketingAction(action?.action_id)) {
