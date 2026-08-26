@@ -4,9 +4,13 @@ import { apiVersion, projectId, writeToken } from '@/sanity/env'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
-import { isSlackPostingConfigured, postSlackMessage } from '@/lib/chat/slack'
+import { postSlackMessage } from '@/lib/chat/slack'
 import { buildOutreachCallSheet } from '@/lib/marketing/callSheet'
-import { buildWeeklyDigestBlocks, type DigestTask } from '@/lib/marketing/slackDelegation'
+import {
+  buildIdentityPromptBlocks,
+  buildWeeklyDigestBlocks,
+  type DigestTask,
+} from '@/lib/marketing/slackDelegation'
 import { findReassignments, type TeamMemberAvailability } from '@/lib/marketing/availability'
 import { estimateOperationMinutes } from '@/lib/marketing/effort'
 
@@ -29,6 +33,20 @@ const PLAN_SOURCE_PREFIX = 'weekly-plan/'
  *   GET|POST /api/marketing/slack/digest?dryRun=1
  *   POST     /api/marketing/slack/digest
  */
+
+/**
+ * The marketing digest gets its own channel.
+ *
+ * SLACK_CHANNEL_ID is the website-chat channel: a weekly plan landing in the
+ * middle of live visitor conversations would bury both. Falls back to the
+ * default only if no marketing channel is configured.
+ */
+/** The assistant's name in the Studio, and now in Slack. */
+const MARQUETA_NAME = 'Marqueta'
+const MARQUETA_ICON = ':chart_with_upwards_trend:'
+
+const marketingChannelId = () =>
+  process.env.SLACK_MARKETING_CHANNEL_ID || process.env.SLACK_CHANNEL_ID || ''
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -76,10 +94,10 @@ async function handle(request: NextRequest) {
   if (!projectId || !writeToken) {
     return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
   }
-  if (!dryRun && !isSlackPostingConfigured()) {
+  if (!dryRun && !(process.env.SLACK_BOT_TOKEN && marketingChannelId())) {
     return privateMarketingJson(
       {
-        error: 'Slack is not configured. Set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID.',
+        error: 'Slack is not configured. Set SLACK_BOT_TOKEN and SLACK_MARKETING_CHANNEL_ID.',
         hint: 'Add ?dryRun=1 to preview the message without posting.',
       },
       { status: 503 },
@@ -170,25 +188,46 @@ async function handle(request: NextRequest) {
       : undefined,
   })
 
+  // Only while somebody is still unmapped: the prompt removes itself once
+  // everyone who wants to be linked has been.
+  const unmappedOwners = Array.from(
+    new Set(tasks.filter((task) => task.ownerName && !task.slackUserId).map((task) => task.ownerName!)),
+  )
+  blocks.push(...buildIdentityPromptBlocks(unmappedOwners))
+
   if (dryRun) {
     return privateMarketingJson({
       dryRun: true,
       wouldPost: true,
-      slackConfigured: isSlackPostingConfigured(),
+      slackConfigured: Boolean(process.env.SLACK_BOT_TOKEN && marketingChannelId()),
+      channel: marketingChannelId(),
       taskCount: tasks.length,
       awayCount: awayNotices.length,
       callSheetCount: callSheet.length,
+      unmappedOwners,
       blocks,
     })
   }
 
+  const channel = marketingChannelId()
   const result = await postSlackMessage({
+    channel,
+    // The marketing assistant is Marqueta everywhere else, so she is Marqueta
+    // here too. Per-message, because the same Slack app also serves the website
+    // chat and must keep its own name there.
+    username: MARQUETA_NAME,
+    iconEmoji: MARQUETA_ICON,
     text: `This week in marketing — ${tasks.length} task(s)`,
     blocks,
   })
 
   return privateMarketingJson({
     posted: Boolean(result),
+    channel,
+    // postSlackMessage returns null when Slack refuses, most often because the
+    // bot has not been invited to the channel. Say so rather than reporting a
+    // silent success.
+    hint: result ? undefined : 'Slack returned no result — is the bot invited to that channel?',
     taskCount: tasks.length,
     awayCount: awayNotices.length,
     callSheetCount: callSheet.length,

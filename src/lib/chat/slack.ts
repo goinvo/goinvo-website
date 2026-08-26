@@ -11,6 +11,17 @@ interface SlackPostMessageInput {
   threadTs?: string
   replyBroadcast?: boolean
   clientMsgId?: string
+  /**
+   * Post under a different name and icon.
+   *
+   * The workspace has ONE bot app, shared by the website chat and the marketing
+   * assistant. Renaming the app would rename it for both, so identity is set
+   * per message instead: chat stays "goinvo_website_chat", the marketing digest
+   * arrives as Marqueta. Requires the chat:write.customize scope; without it
+   * Slack ignores these fields rather than failing.
+   */
+  username?: string
+  iconEmoji?: string
 }
 
 interface SlackPostMessageResponse {
@@ -173,6 +184,8 @@ export async function postSlackMessage(input: SlackPostMessageInput): Promise<Sl
       ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
       ...(input.replyBroadcast ? { reply_broadcast: true } : {}),
       ...(input.clientMsgId ? { client_msg_id: input.clientMsgId } : {}),
+      ...(input.username ? { username: input.username } : {}),
+      ...(input.iconEmoji ? { icon_emoji: input.iconEmoji } : {}),
     }),
   })
 
