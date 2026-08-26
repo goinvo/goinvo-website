@@ -452,6 +452,136 @@ export function markTaskInBlocks(
   return next
 }
 
+
+/**
+ * Slack gives almost no styling control — no CSS, no fonts, no text colour. The
+ * levers that DO exist are worth using deliberately:
+ *
+ *   attachment color   the one custom colour available, a bar down the left edge
+ *   section fields     two-column key/value instead of a run-on sentence
+ *   accessory          a control on the RIGHT of a section, saving a whole row
+ *   emoji              the only glyphs there are
+ *
+ * Priority is the thing worth colouring: it is what decides reading order, and
+ * a wall of identical grey blocks hides it completely.
+ */
+const PRIORITY_COLOR: Record<string, string> = {
+  urgent: '#d94d2f',
+  high: '#c08a6a',
+  normal: '#4fb3a5',
+  low: '#6f7a90',
+}
+
+const KIND_EMOJI: Record<string, string> = {
+  decision: ':thinking_face:',
+  outreach: ':telephone_receiver:',
+  content: ':pencil2:',
+  research: ':mag:',
+  measurement: ':bar_chart:',
+  maintenance: ':wrench:',
+  blocker: ':octagonal_sign:',
+  update: ':information_source:',
+}
+
+export type DigestMessage = { blocks: Block[]; attachments: Block[] }
+
+/**
+ * One attachment per task.
+ *
+ * Per-task colour is only possible this way — `color` lives on an attachment,
+ * not a block — so each task becomes its own small card. The primary action
+ * sits as an accessory on the title row rather than below it, which removes an
+ * entire row per task and keeps the whole week visible without scrolling.
+ */
+export function buildTaskAttachment(task: DigestTask & { kind?: string; priority?: string }): Block {
+  const emoji = KIND_EMOJI[String(task.kind || '')] || ':white_square_button:'
+  const value = encodeActionValue({ taskId: task._id, ownerName: task.ownerName })
+
+  const facts: Block[] = []
+  const fields = [
+    task.ownerName ? `*Owner*\n${mention(task.slackUserId, task.ownerName)}` : '*Owner*\n_unclaimed_',
+    task.minutes ? `*Effort*\n${formatMinutes(task.minutes)}` : '',
+    task.priority ? `*Priority*\n${task.priority}` : '',
+    task.kind ? `*Type*\n${task.kind}` : '',
+  ].filter(Boolean)
+  if (fields.length) facts.push({ type: 'section', fields: fields.map((t) => ({ type: 'mrkdwn', text: t })) })
+
+  return {
+    color: PRIORITY_COLOR[String(task.priority || 'normal')] || PRIORITY_COLOR.normal,
+    blocks: [
+      {
+        type: 'section',
+        text: { type: 'mrkdwn', text: `${emoji}  *${task.title}*` },
+        accessory: {
+          type: 'button',
+          action_id: MARKETING_ACTION.claim,
+          text: { type: 'plain_text', text: "I'll take it" },
+          style: 'primary',
+          value,
+        },
+      },
+      ...facts,
+      ...(task.whyNow
+        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: `_${task.whyNow}_` }] }]
+        : []),
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            action_id: MARKETING_ACTION.details,
+            text: { type: 'plain_text', text: "What's involved" },
+            value,
+          },
+          {
+            type: 'button',
+            action_id: MARKETING_ACTION.decline,
+            text: { type: 'plain_text', text: 'Not me' },
+            value,
+          },
+        ],
+      },
+    ],
+  }
+}
+
+/**
+ * Rewrite a finished task inside its attachment.
+ *
+ * Same job as markTaskInBlocks, but attachments nest their blocks one level
+ * deeper. The whole card collapses to a single struck-through line, which is
+ * what makes a half-done week readable at a glance.
+ */
+export function markTaskInAttachments(
+  attachments: Block[],
+  taskId: string,
+  statusLine: string,
+): Block[] {
+  if (!taskId) return attachments
+  return attachments.map((attachment) => {
+    const blocks: Block[] = attachment.blocks || []
+    const owns = blocks.some(
+      (block) =>
+        (block.accessory && decodeActionValue(block.accessory.value)?.taskId === taskId) ||
+        (block.elements || []).some(
+          (element: Record<string, unknown>) =>
+            decodeActionValue(element.value as string | undefined)?.taskId === taskId,
+        ),
+    )
+    if (!owns) return attachment
+    const title = String(blocks[0]?.text?.text || '').replace(/^\S+\s+/, '').replace(/\*/g, '')
+    return {
+      color: '#3f7d5c',
+      blocks: [
+        {
+          type: 'section',
+          text: { type: 'mrkdwn', text: `:white_check_mark:  ~${title}~\n${statusLine}` },
+        },
+      ],
+    }
+  })
+}
+
 /**
  * What to say back when someone presses a button.
  *

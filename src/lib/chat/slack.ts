@@ -31,6 +31,8 @@ interface SlackPostMessageInput {
    * for. The links still work; they just stay links.
    */
   unfurl?: boolean
+  /** Attachments carry the only custom colour Slack offers (a left-edge bar). */
+  attachments?: unknown[]
 }
 
 interface SlackPostMessageResponse {
@@ -196,6 +198,7 @@ export async function postSlackMessage(input: SlackPostMessageInput): Promise<Sl
       ...(input.username ? { username: input.username } : {}),
       ...(input.iconEmoji ? { icon_emoji: input.iconEmoji } : {}),
       ...(input.unfurl === false ? { unfurl_links: false, unfurl_media: false } : {}),
+      ...(input.attachments ? { attachments: input.attachments } : {}),
     }),
   })
 

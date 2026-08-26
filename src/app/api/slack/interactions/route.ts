@@ -9,6 +9,7 @@ import {
   buildTaskDetailBlocks,
   buildTaskDetailView,
   decodeActionValue,
+  markTaskInAttachments,
   markTaskInBlocks,
   isMarketingAction,
 } from '@/lib/marketing/slackDelegation'
@@ -28,7 +29,11 @@ export const dynamic = 'force-dynamic'
 
 interface SlackInteractionPayload {
   /** The message the button lives in, so it can be rewritten in place. */
-  message?: { blocks?: Record<string, unknown>[]; text?: string }
+  message?: {
+    blocks?: Record<string, unknown>[]
+    attachments?: Record<string, unknown>[]
+    text?: string
+  }
 
   type?: string
   user?: { id?: string; name?: string; username?: string }
@@ -79,15 +84,14 @@ async function postSlackResponse(
  */
 async function replaceSlackMessage(
   responseUrl: string | undefined,
-  blocks: unknown[],
-  text: string,
+  payload: { blocks?: unknown[]; attachments?: unknown[]; text: string },
 ) {
   if (!responseUrl) return
   try {
     await fetch(responseUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ replace_original: true, text, blocks }),
+      body: JSON.stringify({ replace_original: true, ...payload }),
     })
   } catch (err) {
     console.error('[slack] replace_original failed', err)
@@ -236,12 +240,20 @@ export async function POST(request: NextRequest) {
 
         // Check it off in the message itself, so the channel stops showing it as
         // available and nobody claims the same task twice.
-        if (result.ok && payload.message?.blocks) {
-          await replaceSlackMessage(
-            responseUrl,
-            markTaskInBlocks(payload.message.blocks as never[], decoded.taskId, note),
-            payload.message.text || 'This week in marketing',
-          )
+        if (result.ok && (payload.message?.attachments || payload.message?.blocks)) {
+          await replaceSlackMessage(responseUrl, {
+            text: payload.message.text || 'This week in marketing',
+            blocks: markTaskInBlocks(
+              (payload.message.blocks || []) as never[],
+              decoded.taskId,
+              note,
+            ),
+            attachments: markTaskInAttachments(
+              (payload.message.attachments || []) as never[],
+              decoded.taskId,
+              note,
+            ),
+          })
         } else {
           await postSlackResponse(responseUrl, note)
         }

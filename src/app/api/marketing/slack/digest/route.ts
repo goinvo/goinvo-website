@@ -8,6 +8,7 @@ import { postSlackMessage } from '@/lib/chat/slack'
 import { buildOutreachCallSheet } from '@/lib/marketing/callSheet'
 import {
   buildIdentityPromptBlocks,
+  buildTaskAttachment,
   buildWeeklyDigestBlocks,
   type DigestTask,
 } from '@/lib/marketing/slackDelegation'
@@ -149,6 +150,8 @@ async function handle(request: NextRequest) {
     // planned of 4h", which reads as though there is nothing to do.
     minutes: estimateOperationMinutes(operation).minutes,
     whyNow: operation.whyNow,
+    kind: operation.kind,
+    priority: operation.priority,
   }))
 
   // Anyone away this week has their work surfaced for reassignment rather than
@@ -180,7 +183,8 @@ async function handle(request: NextRequest) {
     weekEnd: end,
     plannedMinutes: tasks.reduce((sum, task) => sum + (task.minutes || 0), 0),
     budgetMinutes: 240,
-    tasks,
+    // Tasks render as coloured attachment cards instead of plain blocks.
+    tasks: [],
     callSheet,
     awayNotices,
     studioUrl: process.env.MARKETING_PUBLIC_BASE_URL
@@ -206,12 +210,16 @@ async function handle(request: NextRequest) {
       callSheetCount: callSheet.length,
       unmappedOwners,
       blocks,
+      attachments: tasks.slice(0, 8).map((task) => buildTaskAttachment(task)),
     })
   }
 
   const channel = marketingChannelId()
+  const attachments = tasks.slice(0, 8).map((task) => buildTaskAttachment(task))
+
   const result = await postSlackMessage({
     channel,
+    attachments,
     // The marketing assistant is Marqueta everywhere else, so she is Marqueta
     // here too. Per-message, because the same Slack app also serves the website
     // chat and must keep its own name there.
