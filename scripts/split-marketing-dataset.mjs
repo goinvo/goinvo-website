@@ -23,6 +23,7 @@
  *   node scripts/split-marketing-dataset.mjs --wave 1 --delete --apply --confirm delete:wave1
  */
 import path from 'node:path'
+import { writeFileSync } from 'node:fs'
 import { createClient } from '@sanity/client'
 import { config as loadEnv } from 'dotenv'
 
@@ -83,6 +84,13 @@ const apply = has('apply')
 const doCopy = has('copy')
 const doVerify = has('verify')
 const doDelete = has('delete')
+const postCutover = has('post-cutover')
+const allowMissing = new Set(
+  String(valueFor('allow-missing') || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean),
+)
 if (!doCopy && !doVerify && !doDelete) {
   throw new Error('Choose a phase: --copy, --verify, or --delete.')
 }
@@ -205,8 +213,35 @@ async function verifyPhase() {
   console.log(`present but different: ${differing.length}`)
   for (const id of missing.slice(0, 10)) console.log(`  MISSING  ${id}`)
   for (const id of differing.slice(0, 10)) console.log(`  DIFFERS  ${id}`)
-  const ok = missing.length === 0 && differing.length === 0 && fromPublic.length > 0
-  console.log(ok ? '\nVerified: every document copied faithfully.' : '\nNOT VERIFIED — do not delete.')
+
+  // Before cutover, production and outreach must match exactly: outreach is a
+  // copy and any difference means the copy is wrong.
+  //
+  // After cutover they MUST diverge, because outreach is now the live dataset
+  // and production is a frozen copy nobody writes to. Demanding equality then
+  // would block the delete forever, and worse, would train someone to pass a
+  // --force flag. What still has to hold is that nothing is LOST: every
+  // production document must exist in outreach, unless it was deliberately
+  // deleted there and named in --allow-missing.
+  const unexplainedMissing = missing.filter((id) => !allowMissing.has(id))
+  if (postCutover) {
+    for (const id of missing.filter((id) => allowMissing.has(id))) {
+      console.log(`  allowed to be missing (deleted on purpose): ${id}`)
+    }
+    if (differing.length > 0) {
+      console.log(`\n${differing.length} document(s) differ — expected after cutover, since edits now land in ${internalDataset}.`)
+    }
+  }
+  const ok = postCutover
+    ? unexplainedMissing.length === 0 && fromPublic.length > 0
+    : missing.length === 0 && differing.length === 0 && fromPublic.length > 0
+  console.log(
+    ok
+      ? postCutover
+        ? '\nSafe to delete: every production document still exists in the private dataset.'
+        : '\nVerified: every document copied faithfully.'
+      : '\nNOT VERIFIED — do not delete.',
+  )
   process.exitCode = ok ? 0 : 1
   return ok
 }
@@ -224,15 +259,21 @@ async function deletePhase() {
     console.log('Dry run — nothing deleted. Re-run with --apply.')
     return
   }
-  const BATCH = 50
-  let removed = 0
-  for (let i = 0; i < fromPublic.length; i += BATCH) {
-    let tx = publicClient.transaction()
-    for (const doc of fromPublic.slice(i, i + BATCH)) tx = tx.delete(doc._id)
-    await tx.commit()
-    removed += Math.min(BATCH, fromPublic.length - i)
-    console.log(`  deleted ${removed}/${fromPublic.length}`)
-  }
+  // Write the documents to disk before removing them. This is the only step in
+  // the migration that cannot be undone, and "it is all in the other dataset"
+  // is a claim rather than a file until something has actually been saved.
+  const backupPath = valueFor('backup') || `wave${wave}-production-backup.json`
+  writeFileSync(backupPath, JSON.stringify(fromPublic, null, 2))
+  console.log(`Backed up ${fromPublic.length} documents to ${backupPath} before deleting.`)
+
+  // ONE transaction, for the same reason the copy needs one: Sanity validates
+  // references at the END of a transaction. Deleting in batches of 50 fails the
+  // moment a document in an early batch is still referenced by one in a later
+  // batch — which is exactly what a research result and its research run do.
+  let tx = publicClient.transaction()
+  for (const doc of fromPublic) tx = tx.delete(doc._id)
+  await tx.commit()
+  const removed = fromPublic.length
   console.log(`\nDeleted ${removed} documents from ${publicDataset}. The leak is closed for wave ${wave}.`)
 }
 
