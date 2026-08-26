@@ -2,94 +2,113 @@ import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
-import { EverythingIsDesignedMark } from '@/components/home/EverythingIsDesignedMark'
-import { LETTERING_LINE_TWO_START, LETTERING_PEN } from '@/components/home/letteringData'
 import { HomeConceptCalendlyCta } from '@/components/home/HomeConceptCalendlyCta'
 import { HomeConceptCtaLink } from '@/components/home/HomeConceptCtaLink'
 import { HomeConceptInteractions } from '@/components/home/HomeConceptInteractions'
 import { HomeConceptTrackedArrowLink } from '@/components/home/HomeConceptTrackedArrowLink'
-import { HomeHeroSchematics } from '@/components/home/HomeHeroSchematics'
+import { HomeHeroRunway } from '@/components/home/HomeHeroRunway'
 import { ConceptReferenceArrow } from '@/components/home/ConceptReferenceArrow'
 
 const imageBase = '/images/experiments/home-2026'
 
-// The supporting copy arrives while the SECOND line is still being written, so
-// the hero never sits dead waiting for the pen to finish — everything is on
-// screen a little before the phrase completes. Derived from the writing
-// timeline rather than hardcoded, so re-tracing the art keeps this in step.
-const secondLineAt = LETTERING_PEN[LETTERING_LINE_TWO_START]?.paths[0]?.t0 ?? 2400
-const copyDelay = (step: number) => `${secondLineAt + step * 300}ms`
-
 // Hero motion. Server-rendered into the initial HTML rather than injected by the
-// client interactions component, so the lettering starts writing itself on first
-// paint instead of waiting for hydration. Every selector is scoped to a hero
-// class — a bare element selector here would leak to the whole session (a page
-// <style> is global and outlives client-side navigation).
+// client interactions component, so the runway is in place on first paint
+// instead of waiting for hydration. Every selector is scoped to a hero class —
+// a bare element selector here would leak to the whole session (a page <style>
+// is global and outlives client-side navigation).
+//
+// Geometry ported verbatim from the design's `.gi-runway` rules ("A.m · The
+// runway", Claude Design → GoInvo Homepage Design).
 const heroCss = `
-  /* The nib: a brush-width line swept along the path the brush really travelled.
-     pathLength="1" normalises every sub-path, so one dasharray covers them all
-     regardless of how long each actually is. */
-  .eid-nib path {
-    fill: none;
-    stroke: #fff;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-dasharray: 1;
-    stroke-dashoffset: 1;
-    animation: eid-write var(--dur) linear var(--t0) forwards;
+  /* The plane sits BELOW the fold line of the section and is clipped by it. The
+     mask keeps the first 200px from starting hard against the lettering. */
+  .eid-runway {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -40px;
+    height: 560px;
+    perspective: 900px;
+    perspective-origin: 50% 0%;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 60px, #000 200px);
+    mask-image: linear-gradient(180deg, transparent 0, transparent 60px, #000 200px);
   }
 
-  @keyframes eid-write {
-    to { stroke-dashoffset: 0; }
+  .eid-runway-plane {
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 860px;
+    height: 1400px;
+    margin-left: -430px;
+    transform-origin: 50% 0%;
+    transition: transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    z-index: 1;
   }
 
-  .eid-hero .eid-fade {
+  .eid-runway-belt { animation: eid-runway-glide 42s linear infinite; }
+
+  /* The belt is rendered twice and travels exactly one copy, so the seam never
+     shows. Change the row count and this still holds. */
+  @keyframes eid-runway-glide {
+    from { transform: translateY(-50%); }
+    to { transform: translateY(0); }
+  }
+
+  .eid-runway-row { padding-bottom: 26px; }
+
+  .eid-runway-row img {
+    width: 100%;
+    height: 600px;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+
+  /* Solid at the horizon end, clearing as the plane comes toward the viewer —
+     this is what makes the work read as receding INTO the black. */
+  .eid-runway-fade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    transform: translateZ(1px);
+    background: linear-gradient(180deg, #000 0%, #000 18%, rgba(0, 0, 0, 0.92) 32%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0) 100%);
+  }
+
+  /* The design canvas is 1280px only. Below that the plane is scaled down
+     rather than cropped, so a phone gets the same picture, not a slice of it. */
+  @media (max-width: 767px) {
+    .eid-runway { height: 400px; bottom: -24px; }
+    .eid-runway-plane { width: 560px; height: 1000px; margin-left: -280px; }
+    .eid-runway-row { padding-bottom: 18px; }
+    .eid-runway-row img { height: 420px; }
+  }
+
+  /* The design's gi-reveal: fade up on first paint, staggered via --d. */
+  .eid-hero .eid-reveal {
     opacity: 0;
-    animation: eid-fade 640ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
-    animation-delay: var(--eid-delay, 0ms);
+    animation: eid-fade-up 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--d, 0) * 90ms + 120ms);
   }
 
-  @keyframes eid-fade {
-    from { opacity: 0; transform: translateY(12px); }
+  @keyframes eid-fade-up {
+    from { opacity: 0; transform: translate3d(0, 16px, 0); }
     to { opacity: 1; transform: none; }
   }
 
-  .eid-schematic * {
-    vector-effect: non-scaling-stroke;
-  }
-
-  .eid-schematic {
-    opacity: 0;
-    animation:
-      eid-schematic-in 1600ms ease-out 900ms both,
-      eid-drift var(--dur, 20s) ease-in-out 900ms infinite alternate;
-  }
-
-  @keyframes eid-schematic-in {
-    from { opacity: 0; }
-    to { opacity: 0.075; }
-  }
-
-  @keyframes eid-drift {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(var(--dx, 0), var(--dy, 0), 0); }
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .eid-hero .eid-fade,
-    .eid-schematic {
+    .eid-hero .eid-reveal {
       animation: none;
       opacity: 1;
       transform: none;
     }
 
-    /* mask fully open, so the phrase is simply there */
-    .eid-nib path {
-      animation: none;
-      stroke-dashoffset: 0;
-    }
-
-    .eid-schematic { opacity: 0.075; }
+    .eid-runway-belt { animation: none; }
+    .eid-runway-plane { transition: none; }
   }
 `
 
@@ -307,44 +326,47 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
-      <section className="eid-hero relative isolate overflow-hidden bg-[#141211] text-white">
+      <section className="eid-hero relative isolate overflow-hidden bg-black text-white">
         <style>{heroCss}</style>
-        <HomeHeroSchematics />
-        {/* pooled light so the ink sits on something rather than floating in flat black */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(118%_76%_at_50%_36%,rgba(255,255,255,0.085)_0%,rgba(255,255,255,0)_60%)]" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(to_bottom,rgba(20,18,17,0),rgba(20,18,17,0.85))]" />
+        <HomeHeroRunway />
 
-        {/* Spacing is tuned so the CTA clears the fold on a 1100x800 laptop, which
-            is where a hero this tall stops converting. */}
-        <div className="relative mx-auto flex min-h-[clamp(540px,78vh,820px)] max-w-[1280px] flex-col items-center justify-center px-5 pb-[clamp(48px,6vw,72px)] pt-[clamp(72px,8vw,100px)] text-center sm:px-8 lg:px-14">
-          <p
-            className="eid-fade font-mono text-[10px] uppercase tracking-[0.32em] text-white/45"
-            style={{ '--eid-delay': '120ms' } as CSSProperties}
-          >
-            GoInvo · Boston
-          </p>
-
-          <h1 className="mt-6 w-full" style={{ viewTransitionName: 'page-title' }}>
+        {/* The tall bottom padding is what the runway occupies — it is clipped by
+            this section, so the plane needs the room to recede into. */}
+        {/* The design's 40px top padding sat the lettering hard under the header;
+            it gets room to breathe instead. */}
+        <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-[clamp(230px,26vw,320px)] pt-[clamp(72px,9vw,140px)] text-center sm:px-8 lg:px-14">
+          <h1 style={{ viewTransitionName: 'page-title' }}>
+            {/* Real text in the heading rather than only the image's alt — it is
+                what crawlers read, and it survives the image failing to load. */}
             <span className="sr-only">Everything is designed</span>
-            <EverythingIsDesignedMark className="eid-mark mx-auto block w-full max-w-[560px] lg:max-w-[620px] xl:max-w-[720px]" />
+            <Image
+              src={`${imageBase}/everything-is-designed.png`}
+              alt=""
+              width={852}
+              height={459}
+              priority
+              sizes="(max-width: 940px) 100vw, 880px"
+              className="eid-reveal mx-auto block h-auto w-full max-w-[880px]"
+              // The ink is white on transparency and sits over photography, so it
+              // carries its own shadow rather than relying on the fade behind it.
+              style={{ filter: 'drop-shadow(0 10px 60px rgba(0,0,0,0.9))', '--d': 0 } as CSSProperties}
+            />
           </h1>
 
+          {/* The design pulls this up 28px into the lettering's baked-in padding.
+              This PNG is cropped tight to the ink, so it gets a real gap instead. */}
           <p
-            className="eid-fade mt-7 max-w-[720px] text-balance text-lg leading-8 text-white/85 sm:text-xl"
-            style={{ '--eid-delay': copyDelay(0) } as CSSProperties}
+            className="eid-reveal mx-auto mt-7 max-w-[54ch] text-[19px] leading-[1.55] text-white/[.78] sm:text-[21px]"
+            style={{ '--d': 1 } as CSSProperties}
           >
-            The intake form. The denial letter. The discharge instructions no one can follow. Someone designed all of it.
-          </p>
-          <p
-            className="eid-fade mt-4 max-w-[600px] text-balance text-base leading-7 text-white/55"
-            style={{ '--eid-delay': copyDelay(1) } as CSSProperties}
-          >
-            GoInvo is a Boston design studio for healthcare and enterprise software. We turn nascent ideas into products that ship, get adopted, and move the numbers.
+            Little of it is designed well.
+            <br />
+            We&rsquo;re a design studio that turns nascent ideas into shipped software for enterprise and healthcare leaders.
           </p>
 
           <div
-            className="eid-fade mt-8 flex flex-wrap items-center justify-center gap-5"
-            style={{ '--eid-delay': copyDelay(2) } as CSSProperties}
+            className="eid-reveal mt-11 flex flex-wrap items-center justify-center gap-[18px]"
+            style={{ '--d': 2 } as CSSProperties}
           >
             <HomeConceptCtaLink
               href="#book"
@@ -366,18 +388,6 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               Or see the work
             </HomeConceptTrackedArrowLink>
           </div>
-
-          <p
-            className="eid-fade mt-10 flex max-w-[520px] flex-wrap items-baseline justify-center gap-x-3 gap-y-1 text-sm text-white/55"
-            style={{ '--eid-delay': copyDelay(3) } as CSSProperties}
-          >
-            <span className="font-serif text-[2rem] font-semibold leading-none text-primary">
-              90<span className="align-top text-sm">+%</span>
-            </span>
-            <span className="max-w-[400px] text-center leading-6 sm:text-left">
-              enterprise adoption of the AI research platform we shipped for Ipsos — 10M+ API calls and 700K prompts a month.
-            </span>
-          </p>
         </div>
       </section>
 
