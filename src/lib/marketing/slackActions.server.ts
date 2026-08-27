@@ -232,38 +232,3 @@ export async function answerMarketingTask(input: {
 
   return { ok: true, taskTitle: task.title }
 }
-
-/**
- * Put a task back exactly as it was.
- *
- * The previous owner and status travel in the button itself rather than being
- * looked up, because by the time undo is pressed the "previous" state is gone
- * from the record — that is what the action overwrote.
- */
-export async function undoMarketingTask(input: {
-  taskId: string
-  ownerName: string
-  status: string
-  personName: string
-}): Promise<MarketingSlackActionResult> {
-  const client = getMarketingWriteClientFor(MARKETING_OPERATION_TYPE)
-  const task = await client.fetch<{ _id: string; title?: string } | null>(
-    `*[_id == $id][0]{_id, title}`,
-    { id: input.taskId },
-  )
-  if (!task) return { ok: false, message: 'That task no longer exists.' }
-
-  await client
-    .patch(task._id)
-    .set({
-      ownerName: input.ownerName,
-      status: input.status,
-      lastOutcome: `Undone in Slack by ${input.personName}`,
-    })
-    // humanQuestion was only added by declining; leaving it behind would make an
-    // ordinary task look like it is waiting on a decision.
-    .unset(input.status === 'needsHuman' ? [] : ['humanQuestion'])
-    .commit()
-
-  return { ok: true, taskTitle: task.title }
-}

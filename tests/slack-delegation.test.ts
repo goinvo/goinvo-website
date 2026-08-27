@@ -7,7 +7,7 @@ import {
   buildTaskDetailBlocks,
   buildTaskDetailView,
   buildWeeklyDigestBlocks,
-  markTaskInAttachments,
+  refreshTaskInAttachments,
   markTaskInBlocks,
   MARKETING_ANSWER_BLOCK,
   modalTitle,
@@ -382,29 +382,6 @@ describe('buildTaskAttachment', () => {
   })
 })
 
-describe('markTaskInAttachments', () => {
-  const attachments = [
-    buildTaskAttachment({ _id: 'op1', title: 'Call the top ten', priority: 'urgent' }),
-    buildTaskAttachment({ _id: 'op2', title: 'Write the article', priority: 'normal' }),
-  ]
-
-  it('collapses the finished card to one struck-through line', () => {
-    const next = markTaskInAttachments(attachments, 'op1', '<@U1> picked it up.')
-    expect(next[0].blocks).toHaveLength(1)
-    expect(json(next[0])).toContain('~Call the top ten~')
-    expect(json(next[0])).toContain('picked it up')
-    expect(next[0].color).toBe('#3f7d5c')
-  })
-
-  it('leaves the other cards completely alone', () => {
-    const next = markTaskInAttachments(attachments, 'op1', 'done')
-    expect(next[1]).toEqual(attachments[1])
-  })
-
-  it('does nothing for a task that is not there', () => {
-    expect(markTaskInAttachments(attachments, 'nope', 'done')).toEqual(attachments)
-  })
-})
 
 describe('task cards without emoji', () => {
   it('shows the title alone', () => {
@@ -412,53 +389,71 @@ describe('task cards without emoji', () => {
     expect(card.blocks[0].text.text).toBe('*Call MEDITECH*')
   })
 
-  it('keeps the WHOLE title when checked off', () => {
-    // The old extraction stripped the first token to remove an emoji; with no
-    // emoji that ate the first word, turning "Call MEDITECH" into "MEDITECH".
+  it('keeps the WHOLE title after a state change', () => {
+    // The old collapse stripped the first token to drop an emoji, which without
+    // one ate the first word — "Call MEDITECH" became "MEDITECH". The card is
+    // re-rendered from the record now, so the title cannot be mangled at all.
     const attachments = [buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH' })]
-    const next = markTaskInAttachments(attachments, 'op1', 'done')
-    expect(json(next)).toContain('~Call MEDITECH~')
+    const next = refreshTaskInAttachments(attachments, 'op1', {
+      _id: 'op1',
+      title: 'Call MEDITECH',
+      ownerName: 'Juhan',
+    })
+    expect(json(next)).toContain('Call MEDITECH')
   })
 })
 
-describe('undo', () => {
-  const attachments = [buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH', ownerName: 'Juhan' })]
+describe('the card always offers the reverse action', () => {
+  const base = { _id: 'op1', title: 'Call MEDITECH', kind: 'outreach', priority: 'normal' }
 
-  it('offers a way back on the collapsed card', () => {
-    const next = markTaskInAttachments(attachments, 'op1', 'done', {
+  it('an unowned task can be taken or passed', () => {
+    const labels = buildTaskAttachment(base).blocks.at(-1).elements.map((e: { text: { text: string } }) => e.text.text)
+    expect(labels).toEqual(["I'll take it", "What's involved", 'Not me'])
+  })
+
+  it('an OWNED task offers a way to hand it back', () => {
+    // This is what "undo a claim" means once the card reads from the record.
+    const labels = buildTaskAttachment({ ...base, ownerName: 'Juhan' }).blocks.at(-1).elements.map(
+      (e: { text: { text: string } }) => e.text.text,
+    )
+    expect(labels).toContain('Hand it back')
+    expect(labels).toContain('Take it over')
+  })
+
+  it('a PASSED task can still be picked up — never a dead end', () => {
+    // Declining used to collapse the card; somebody who passed had no way back.
+    const card = buildTaskAttachment({ ...base, ownerName: '', status: 'needsHuman' })
+    const labels = card.blocks.at(-1).elements.map((e: { text: { text: string } }) => e.text.text)
+    expect(labels).toContain("I'll take it")
+    expect(labels).not.toContain('Not me')
+    expect(card.color).toBe('#6f7a90')
+  })
+
+  it('notes what just happened without hiding the task', () => {
+    const card = buildTaskAttachment({ ...base, ownerName: 'Juhan', note: '<@U1> picked it up.' })
+    expect(json(card)).toContain('picked it up')
+    expect(json(card)).toContain('Call MEDITECH')
+  })
+})
+
+describe('refreshTaskInAttachments', () => {
+  const attachments = [
+    buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH' }),
+    buildTaskAttachment({ _id: 'op2', title: 'Call MGB' }),
+  ]
+
+  it('re-renders only the task that changed', () => {
+    const next = refreshTaskInAttachments(attachments, 'op1', {
+      _id: 'op1',
+      title: 'Call MEDITECH',
       ownerName: 'Juhan',
-      status: 'queued',
+      note: 'claimed',
     })
-    const accessory = next[0].blocks[0].accessory
-    expect(accessory).toMatchObject({ action_id: MARKETING_ACTION.undo })
-    expect(decodeActionValue(accessory.value)).toEqual({
-      taskId: 'op1',
-      ownerName: 'Juhan',
-      status: 'queued',
-    })
+    expect(json(next[0])).toContain('Hand it back')
+    expect(next[1]).toEqual(attachments[1])
   })
 
-  it('carries the PREVIOUS state, not a guessed default', () => {
-    // Undoing a claim on a task that was unowned must not invent an owner.
-    const next = markTaskInAttachments(attachments, 'op1', 'done', { ownerName: '', status: 'needsHuman' })
-    expect(decodeActionValue(next[0].blocks[0].accessory.value)).toEqual({
-      taskId: 'op1',
-      ownerName: '',
-      status: 'needsHuman',
-    })
-  })
-
-  it('shows no undo when there is no prior state to restore', () => {
-    const next = markTaskInAttachments(attachments, 'op1', 'done')
-    expect(next[0].blocks[0].accessory).toBeUndefined()
-  })
-
-  it('round-trips prior state through the action value', () => {
-    const value = encodeActionValue({ taskId: 'op1', ownerName: 'Shirley', status: 'working' })
-    expect(decodeActionValue(value)).toEqual({
-      taskId: 'op1',
-      ownerName: 'Shirley',
-      status: 'working',
-    })
+  it('leaves everything alone for an unknown task', () => {
+    expect(refreshTaskInAttachments(attachments, 'nope', { _id: 'nope', title: 'x' })).toEqual(attachments)
   })
 })
