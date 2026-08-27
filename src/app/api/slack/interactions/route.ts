@@ -15,7 +15,9 @@ import {
   RUNWAY_MONTHS_BLOCK,
   buildRunwayView,
   readRunwaySubmission,
+  decodeIdeaValue,
 } from '@/lib/marketing/slackDelegation'
+import { discardCapturedIdea, keepCapturedIdea } from '@/lib/marketing/ideaCapture.server'
 import { confirmRunway, readRunway, recordSignedWork, setRunway } from '@/lib/marketing/runway.server'
 import { studioTaskUrl } from '@/lib/marketing/taskLinks'
 import {
@@ -223,6 +225,58 @@ export async function POST(request: NextRequest) {
     }
     after(async () => {
       await postSlackResponse(payload.response_url, 'That task no longer exists.')
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Judging a captured idea. Marqueta guessed that a message was a proposal;
+  // this is the person saying whether she was right. The reply REPLACES the
+  // thread message rather than adding to it, so a settled idea leaves one line
+  // behind instead of a conversation with itself.
+  if (
+    payload.type === 'block_actions' &&
+    (action?.action_id === MARKETING_ACTION.ideaKeep || action?.action_id === MARKETING_ACTION.ideaDiscard)
+  ) {
+    const keep = action.action_id === MARKETING_ACTION.ideaKeep
+    const decoded = decodeIdeaValue(action.value)
+    const responseUrl = payload.response_url
+    const userId = payload.user?.id || ''
+
+    after(async () => {
+      if (!decoded) {
+        await postSlackResponse(responseUrl, 'That button lost track of which message it belonged to.')
+        return
+      }
+      try {
+        const personName = (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+        const result = keep
+          ? await keepCapturedIdea({ ...decoded, personName })
+          : await discardCapturedIdea({ ...decoded, personName })
+
+        if (!result.ok) {
+          await postSlackResponse(responseUrl, result.message || 'That did not save.')
+          return
+        }
+        await replaceSlackMessage(responseUrl, {
+          text: keep ? 'Idea kept' : 'Not an idea',
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: keep
+                    ? `On the board, confirmed by <@${userId}>.`
+                    : `<@${userId}> says this was not a proposal. Dropped, and I will keep the miss on file.`,
+                },
+              ],
+            },
+          ],
+        })
+      } catch (err) {
+        console.error('[slack] idea judgement failed', err)
+        await postSlackResponse(responseUrl, 'Something went wrong recording that.')
+      }
     })
     return NextResponse.json({ ok: true })
   }

@@ -238,6 +238,32 @@ inferred from `kind` in `src/lib/marketing/effort.ts`).
 - Two lessons pinned by tests: excluding future-dated work **emptied the week** (the seeded
   quarter is Sep–Nov), and 13 open decisions ate 205 of 240 minutes.
 
+## Marqueta catches ideas floated in Slack (built 2026-08-27)
+
+Projects get proposed in #marketing-bot and then scroll away. Marqueta watches the channel and
+puts a proposal on the board — always as a PROPOSAL: `needsReview: true`, one press to bin.
+
+- **Filter is pure, free, and deliberately conservative:** `src/lib/marketing/ideaCapture.ts`
+  (`looksLikeAnIdea` — proposal markers, minus status-questions / availability / bare links /
+  anything under 25 chars). NO model call, so it runs on every message at zero cost. Missing an
+  idea costs nothing (it is still in the channel); capturing chatter costs the board's
+  credibility. Tests: `tests/idea-capture.test.ts`.
+- **Wiring:** `src/app/api/slack/events/route.ts` handles `SLACK_MARKETING_CHANNEL_ID` FIRST and
+  returns, so an idea can never fall through into the visitor-chat/dispute lookups. Thread
+  replies are skipped (they are answers to the digest, not new proposals).
+- **Reply is IN THREAD** (`chat:write`, no new scope) with *Keep it* / *Not an idea* — a reply
+  per idea in the channel would double traffic and get the bot muted.
+- **Judge it anywhere:** the Slack thread, the **This week** Studio surface (`Caught in Slack —
+  are these ideas?`), or `GET|POST /api/marketing/ideas/review`. Discard marks `dropped`, never
+  deletes — deleting lets a Slack redelivery recreate it and loses the record of the miss.
+- **Idempotent:** deterministic `_id` = `marketingIdea.slack-<channel>-<ts>`, and a redelivery
+  posts no second thread reply. Verified with signed events against the live route.
+- `relatedUrl` comes from **`chat.getPermalink`** (`getSlackPermalink` in `src/lib/chat/slack.ts`),
+  not a constructed URL — no `SLACK_WORKSPACE_DOMAIN` to configure or get wrong.
+- **GOTCHA:** there is **no `ideas` Studio view** (`marketingIdea` only renders inside SEO). An
+  unknown `?view=` makes the Studio restore the last-opened view from localStorage — the same
+  bug that once sent "open the plan" to the Shop. Links point at `view=thisWeek`.
+
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 
 The financial posture used to be a hand-picked bin (`survival`) with a timestamp. A bin does
