@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
-import { getSlackConfig, getSlackUserDisplayName, verifySlackRequest } from '@/lib/chat/slack'
+import { getSlackConfig, getSlackUserDisplayName, postSlackMessage, verifySlackRequest } from '@/lib/chat/slack'
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
 import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
+import { looksLikeAnIdea } from '@/lib/marketing/ideaCapture'
+import { captureIdeaFromMessage } from '@/lib/marketing/ideaCapture.server'
+import { buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
 
 export const dynamic = 'force-dynamic'
 
@@ -56,10 +59,68 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({ ok: true })
 }
 
+/**
+ * Someone floated an idea in the marketing channel.
+ *
+ * Only ever a PROPOSAL: the message is captured as an idea marked "needs
+ * review", Marqueta replies in the thread saying so, and one press bins it.
+ * The filter is pure and free (`looksLikeAnIdea`), so this runs on every
+ * message without a per-message API bill and without a model deciding what
+ * counts as work.
+ */
+async function handleMarketingChannelMessage(event: SlackMessageEvent) {
+  // Only messages floated in the channel. A reply inside a thread is almost
+  // always somebody answering the digest, and capturing those would turn every
+  // conversation about a task into a second copy of that task.
+  if (event.thread_ts && event.thread_ts !== event.ts) return
+
+  const verdict = looksLikeAnIdea(event.text || '')
+  if (!verdict.capture) return
+
+  const personName = (await getSlackUserDisplayName(event.user)) || 'Someone'
+  const result = await captureIdeaFromMessage({
+    text: event.text || '',
+    personName,
+    channel: event.channel || '',
+    ts: event.ts || '',
+  })
+
+  // Silent on a redelivery. Slack retries an event it thinks failed, and a
+  // second "noted this" under the same message reads as a bug.
+  if (!result.ok || result.alreadyCaptured || !result.idea) return
+
+  await postSlackMessage({
+    channel: event.channel || '',
+    threadTs: event.ts,
+    username: 'Marqueta',
+    iconEmoji: ':chart_with_upwards_trend:',
+    unfurl: false,
+    text: `Noted an idea: ${result.idea.title}`,
+    blocks: buildIdeaCaptureBlocks({
+      title: result.idea.title,
+      category: result.idea.category,
+      channel: event.channel || '',
+      ts: event.ts || '',
+      studioUrl: process.env.MARKETING_PUBLIC_BASE_URL
+        ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
+        : undefined,
+    }),
+  })
+}
+
 async function handleSlackEvent(event: SlackMessageEvent) {
   if (event.type !== 'message') return
   if (event.subtype || event.bot_id) return
   if (!event.text || !event.ts || !event.channel) return
+
+  // The marketing channel is Marqueta's, not the visitor chat's. Handled first
+  // and returned, so an idea can never fall through into the chat/dispute
+  // lookups below and be answered as though a visitor had written it.
+  const marketingChannel = process.env.SLACK_MARKETING_CHANNEL_ID
+  if (marketingChannel && event.channel === marketingChannel) {
+    await handleMarketingChannelMessage(event)
+    return
+  }
 
   const { channelId } = getSlackConfig()
   const eventThreadTs = event.thread_ts && event.thread_ts !== event.ts ? event.thread_ts : undefined
