@@ -50,7 +50,22 @@ export default defineType({
     defineField({ name: 'kind', title: 'Kind', type: 'string', options: { list: options(MARKETING_OPERATION_KINDS) }, validation: (Rule) => Rule.required() }),
     defineField({ name: 'origin', title: 'Origin', type: 'string', options: { list: options(MARKETING_OPERATION_ORIGINS) }, validation: (Rule) => Rule.required() }),
     defineField({ name: 'autonomy', title: 'Safety class', type: 'string', options: { list: options(MARKETING_OPERATION_AUTONOMY) }, validation: (Rule) => Rule.required() }),
-    defineField({ name: 'ownerName', title: 'Accountable owner', type: 'string', validation: (Rule) => Rule.max(120) }),
+    defineField({
+      name: 'ownerName',
+      title: 'Accountable owner',
+      type: 'string',
+      description: 'Who has ACTUALLY taken this on. Empty until somebody claims it.',
+      validation: (Rule) => Rule.max(120),
+    }),
+    defineField({
+      name: 'suggestedOwner',
+      title: 'Suggested owner',
+      type: 'string',
+      description:
+        'Who the plan thinks should do this. A recommendation, not a commitment — ' +
+        'it must never render as though that person accepted it.',
+      validation: (Rule) => Rule.max(120),
+    }),
     defineField({ name: 'ownerSanityUserId', title: 'Owner Sanity user ID', type: 'string', hidden: true }),
     defineField({ name: 'dueAt', title: 'Due', type: 'datetime' }),
     defineField({
