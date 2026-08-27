@@ -137,15 +137,18 @@ export function hoursForWeek(input: {
 }): number {
   const status = statusOn(input.entries, input.ownerName, input.dateKey)
   if (status === 'away') return 0
-  if (status === 'reduced') {
-    const entry = input.entries.find(
-      (candidate) =>
-        String(candidate.ownerName || '').trim().toLowerCase() ===
-          String(input.ownerName).trim().toLowerCase() && isInForceOn(candidate, input.dateKey),
-    )
-    const hours = Number(entry?.weeklyHours)
-    if (Number.isFinite(hours) && hours >= 0) return hours
-  }
+
+  // weeklyHours is an ALLOCATION, not only a reduction. "Juhan does 4h of calls
+  // and Shirley does 4h of content" is two available people with different
+  // budgets, and reading the number only when status is "reduced" forced that
+  // to be recorded as though both were working at less than normal capacity.
+  const entry = input.entries.find(
+    (candidate) =>
+      String(candidate.ownerName || '').trim().toLowerCase() ===
+        String(input.ownerName).trim().toLowerCase() && isInForceOn(candidate, input.dateKey),
+  )
+  const hours = Number(entry?.weeklyHours)
+  if (Number.isFinite(hours) && hours >= 0) return hours
   return input.defaultHours
 }
 

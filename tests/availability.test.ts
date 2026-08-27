@@ -107,6 +107,17 @@ describe('hoursForWeek', () => {
     expect(hoursForWeek({ entries, ownerName: 'Shirley', dateKey: '2026-09-03', defaultHours: 4 })).toBe(1)
   })
 
+  it('uses a stated allocation even when the person is fully available', () => {
+    // "Juhan does 4h of calls, Shirley does 4h of content" is two AVAILABLE
+    // people with different budgets, not two reduced ones.
+    const allocations = [
+      { ownerName: 'Juhan', status: 'available' as const, weeklyHours: 4 },
+      { ownerName: 'Shirley', status: 'available' as const, weeklyHours: 4 },
+    ]
+    expect(hoursForWeek({ entries: allocations, ownerName: 'Juhan', dateKey: '2026-09-03', defaultHours: 8 })).toBe(4)
+    expect(hoursForWeek({ entries: allocations, ownerName: 'Shirley', dateKey: '2026-09-03', defaultHours: 8 })).toBe(4)
+  })
+
   it('falls back to the studio default', () => {
     expect(hoursForWeek({ entries, ownerName: 'Jon', dateKey: '2026-09-03', defaultHours: 4 })).toBe(4)
     // Reduced but with no number given: better the default than a guess of zero.

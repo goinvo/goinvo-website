@@ -85,6 +85,8 @@ export type DigestTask = {
   title: string
   kind?: string
   priority?: string
+  status?: string
+  suggestedOwner?: string
   ownerName?: string
   slackUserId?: string
   minutes?: number
@@ -512,7 +514,13 @@ export type DigestMessage = { blocks: Block[]; attachments: Block[] }
  * message still being the one you originally clicked.
  */
 export function buildTaskAttachment(
-  task: DigestTask & { kind?: string; priority?: string; status?: string; note?: string },
+  task: DigestTask & {
+    kind?: string
+    priority?: string
+    status?: string
+    note?: string
+    suggestedOwner?: string
+  },
 ): Block {
   const value = encodeActionValue({ taskId: task._id, ownerName: task.ownerName })
   const owner = String(task.ownerName || '').trim()
@@ -541,8 +549,18 @@ export function buildTaskAttachment(
   // A passed task has nothing to hand back, so it offers only the way forward.
   const elements = passed ? [takeButton, detailsButton] : [takeButton, detailsButton, releaseButton]
 
+  // A suggestion must read as a suggestion. Showing "Owner: Juhan" for someone
+  // who never accepted the work makes the board report commitment that does not
+  // exist, and hides the fact that nobody has picked it up.
+  const suggested = String(task.suggestedOwner || '').trim()
+  const ownerField = owner
+    ? '*Taken by*' + '\n' + mention(task.slackUserId, owner)
+    : suggested
+      ? '*Unclaimed*' + '\n' + '_suggested: ' + suggested + '_'
+      : '*Unclaimed*' + '\n' + '_anyone_'
+
   const fields = [
-    owner ? '*Owner*' + '\n' + mention(task.slackUserId, owner) : '*Owner*' + '\n' + '_unclaimed_',
+    ownerField,
     task.minutes ? '*Effort*' + '\n' + formatMinutes(task.minutes) : '',
     task.priority ? '*Priority*' + '\n' + task.priority : '',
     task.kind ? '*Type*' + '\n' + task.kind : '',

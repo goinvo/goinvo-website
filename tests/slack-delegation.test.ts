@@ -371,14 +371,15 @@ describe('buildTaskAttachment', () => {
   it('lays the metadata out in two columns instead of a run-on line', () => {
     const fieldsBlock = buildTaskAttachment(task).blocks.find((b: { fields?: unknown }) => b.fields)
     const text = json(fieldsBlock)
-    expect(text).toContain('*Owner*')
+    // Labelled 'Taken by' now, because 'Owner' read as ownership even when nobody had claimed it.
+    expect(text).toContain('*Taken by*')
     expect(text).toContain('<@U123>')
     expect(text).toContain('*Effort*')
     expect(text).toContain('45m')
   })
 
   it('says unclaimed rather than leaving the owner field blank', () => {
-    expect(json(buildTaskAttachment({ _id: 'x', title: 'T' }))).toContain('unclaimed')
+    expect(json(buildTaskAttachment({ _id: 'x', title: 'T' }))).toContain('Unclaimed')
   })
 })
 
@@ -455,5 +456,37 @@ describe('refreshTaskInAttachments', () => {
 
   it('leaves everything alone for an unknown task', () => {
     expect(refreshTaskInAttachments(attachments, 'nope', { _id: 'nope', title: 'x' })).toEqual(attachments)
+  })
+})
+
+describe('a suggestion is not a commitment', () => {
+  const base = { _id: 'op1', title: 'Call MEDITECH', kind: 'outreach', priority: 'normal' }
+
+  it('shows a recommended person as UNCLAIMED, not as the owner', () => {
+    // Rendering "Owner: Juhan" for someone who never accepted makes the board
+    // report commitment that does not exist — every one of the 23 owned records
+    // in the dataset turned out to be a recommendation.
+    const text = json(buildTaskAttachment({ ...base, suggestedOwner: 'Juhan' }))
+    expect(text).toContain('Unclaimed')
+    expect(text).toContain('suggested: Juhan')
+    expect(text).not.toContain('Taken by')
+  })
+
+  it('says who actually took it once somebody has', () => {
+    const text = json(buildTaskAttachment({ ...base, ownerName: 'Juhan', suggestedOwner: 'Juhan' }))
+    expect(text).toContain('Taken by')
+    expect(text).not.toContain('suggested:')
+  })
+
+  it('says anyone when there is no suggestion either', () => {
+    expect(json(buildTaskAttachment(base))).toContain('anyone')
+  })
+
+  it('still offers the take button when only suggested', () => {
+    const labels = buildTaskAttachment({ ...base, suggestedOwner: 'Juhan' })
+      .blocks.at(-1)
+      .elements.map((e: { text: { text: string } }) => e.text.text)
+    expect(labels).toContain("I'll take it")
+    expect(labels).not.toContain('Hand it back')
   })
 })

@@ -55,7 +55,7 @@ export const dynamic = 'force-dynamic'
 const DATA_QUERY = `{
   "operations": *[_type == "marketingOperation" && status in ["queued", "working", "needsHuman"]]
     | order(coalesce(dueAt, "9999") asc)[0...40]{
-      _id, title, ownerName, ownerSlackUserId, estimatedMinutes, whyNow, kind, status,
+      _id, title, ownerName, suggestedOwner, ownerSlackUserId, estimatedMinutes, whyNow, kind, status,
       priority, sourceKey
     },
   "availability": *[_type == "marketingTeamAvailability"]{
@@ -68,7 +68,8 @@ const DATA_QUERY = `{
   "contacts": *[_type == "marketingContact" && defined(organization)]{
     _id, name, role, organization, email, status
   },
-  "offers": *[_type == "marketingOffer" && status == "active"]{ key, title, oneLiner }
+  "offers": *[_type == "marketingOffer" && status == "active"]{ key, title, oneLiner },
+  "weeklyHours": *[_id == "marketingSettings"][0].weeklyMarketingHours
 }`
 
 function isoWeekBounds(now: Date): { start: string; end: string } {
@@ -119,6 +120,7 @@ async function handle(request: NextRequest) {
       estimatedMinutes?: number
       ownerSlackUserId?: string
       sourceKey?: string
+      suggestedOwner?: string
       kind?: string
       priority?: string
       status?: string
@@ -127,6 +129,7 @@ async function handle(request: NextRequest) {
     research: never[]
     contacts: never[]
     offers: never[]
+    weeklyHours: number | null
   }>(DATA_QUERY)
 
   const now = new Date()
@@ -152,6 +155,8 @@ async function handle(request: NextRequest) {
     whyNow: operation.whyNow,
     kind: operation.kind,
     priority: operation.priority,
+    status: operation.status,
+    suggestedOwner: operation.suggestedOwner,
   }))
 
   // Sort by priority first, then by date. Ordering on date alone buried the
@@ -194,7 +199,9 @@ async function handle(request: NextRequest) {
     weekStart: start,
     weekEnd: end,
     plannedMinutes: tasks.reduce((sum, task) => sum + (task.minutes || 0), 0),
-    budgetMinutes: 240,
+    // Read the real budget rather than assuming 4h: it is 8h now, split between
+    // calls and content, and hardcoding it made every week look over-committed.
+    budgetMinutes: (data.weeklyHours || 4) * 60,
     // Tasks render as coloured attachment cards instead of plain blocks.
     tasks: [],
     callSheet,
