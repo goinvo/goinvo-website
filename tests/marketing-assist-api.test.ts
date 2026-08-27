@@ -1,11 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const clientFetch = vi.hoisted(() => vi.fn())
+
+// withConfig matters: the marketing context query is routed through
+// clientForType, and now that the wave-1 types are internal that re-scopes the
+// client to the private dataset. A mock without withConfig throws a TypeError
+// the route swallows, which surfaces as an empty context rather than a failure.
+// Re-scoping returns the same mock so every query still lands on clientFetch.
+// Both live in vi.hoisted because vi.mock is lifted above ordinary consts.
+const { clientFetch, mockSanityClient } = vi.hoisted(() => {
+  const clientFetch = vi.fn()
+  const mockSanityClient: { fetch: typeof clientFetch; withConfig: () => unknown } = {
+    fetch: clientFetch,
+    withConfig: () => mockSanityClient,
+  }
+  return { clientFetch, mockSanityClient }
+})
 
 vi.mock('@/sanity/lib/client', () => ({
-  client: {
-    fetch: clientFetch,
-  },
+  client: mockSanityClient,
 }))
 
 // The assistant now generates via Claude (the shared helper). Mock generateClaudeText

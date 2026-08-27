@@ -14,6 +14,7 @@ import {
   type ResolvedMarketingBrandVoice,
 } from '@/lib/marketing/brandVoice'
 import { financialPostureAiContext, FINANCIAL_POSTURE_DOC_ID } from '@/lib/marketing/financialPosture'
+import { describeRunway, resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
 import { getMarketingWriteClient } from '@/lib/marketing/client'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
@@ -24,6 +25,7 @@ import {
 } from '@/lib/marketing/requestDedupe'
 import { findWorkUpdatePrivacyIssue } from '@/lib/marketing/workUpdateSafety'
 import { client } from '@/sanity/lib/client'
+import { clientForType } from '@/lib/marketing/datasetRouting'
 
 // The strategist/suggestion generations run 10–45s (large system + site
 // context, up to 2600 output tokens). Without this, Vercel's default function
@@ -45,11 +47,22 @@ type FinancialPostureContext = ReturnType<typeof financialPostureAiContext>
 async function fetchFinancialPostureContext(): Promise<FinancialPostureContext> {
   try {
     const postureClient = getMarketingWriteClient().withConfig({ dataset: OUTREACH_DATASET })
-    const doc = await postureClient.fetch<{ posture?: string | null; setAt?: string | null } | null>(
-      `*[_id == $id][0]{posture, setAt}`,
+    const doc = await postureClient.fetch<StoredPosture | null>(
+      `*[_id == $id][0]{posture, setAt, runway}`,
       { id: FINANCIAL_POSTURE_DOC_ID },
     )
-    return financialPostureAiContext(doc?.posture, doc?.setAt)
+    // Resolve against the runway date first. Handing the model a bin picked in
+    // July would have it advising survival tactics against a runway that has
+    // since been re-measured - and the model has no way to notice.
+    const resolved = resolveRunwayPosture(doc || {})
+    const context = financialPostureAiContext(resolved.id, doc?.setAt)
+    return {
+      ...context,
+      // The number itself, so the model can reason about the actual horizon
+      // rather than the label. It also stops it inventing one.
+      runway: describeRunway(doc || {}),
+      confirmed: resolved.confirmed,
+    }
   } catch {
     return financialPostureAiContext(null, null)
   }
@@ -166,7 +179,8 @@ type SiteContext = {
   }
 }
 
-const MARKETING_CONTEXT_QUERY = `{
+/** Public content: features, case studies, categories. Never moves dataset. */
+const SITE_CONTENT_QUERY = `{
   "features": *[_type == "feature" && title != "Untitled" && !(slug.current match "untitled-*")]|order(coalesce(date, _updatedAt) desc)[0...14] {
     title,
     "slug": slug.current,
@@ -187,7 +201,16 @@ const MARKETING_CONTEXT_QUERY = `{
   "categories": *[_type == "category"]|order(title asc)[0...20] {
     title,
     description
-  },
+  }
+}`
+
+/**
+ * The marketing half of the assistant's context.
+ *
+ * Split from the content half because one query cannot span two datasets.
+ * Merged back together in getSiteContext, so the prompt is unchanged.
+ */
+const MARKETING_CONTEXT_QUERY = `{
   "existingMarketing": {
     "campaigns": *[_type == "marketingCampaign"]|order(_updatedAt desc)[0...10] {
       title,
@@ -451,7 +474,7 @@ const runDedupedAssistRequest = createMarketingRequestDeduper<Record<string, unk
 
 function parseMarketingAssistBody(value: unknown): MarketingAssistRequestBody {
   if (!isPlainRecord(value)) {
-    throw new MarketingRequestError('Marketing assistant request must be a JSON object.', 400)
+    throw new MarketingRequestError('Marqueta request must be a JSON object.', 400)
   }
   assertBoundedJson(value, {
     maxArrayItems: 100,
@@ -462,7 +485,7 @@ function parseMarketingAssistBody(value: unknown): MarketingAssistRequestBody {
   })
   const unknownField = Object.keys(value).find((field) => !MARKETING_ASSIST_BODY_FIELDS.has(field))
   if (unknownField) {
-    throw new MarketingRequestError('Marketing assistant request contains an unknown field.', 400)
+    throw new MarketingRequestError('Marqueta request contains an unknown field.', 400)
   }
   if (
     typeof value.kind !== 'string' ||
@@ -471,10 +494,10 @@ function parseMarketingAssistBody(value: unknown): MarketingAssistRequestBody {
     throw new MarketingRequestError('Unknown marketing assistant target.', 400)
   }
   if (value.draft !== undefined && !isPlainRecord(value.draft)) {
-    throw new MarketingRequestError('Marketing assistant draft must be a JSON object.', 400)
+    throw new MarketingRequestError('Marqueta draft must be a JSON object.', 400)
   }
   if (value.prompt !== undefined && typeof value.prompt !== 'string') {
-    throw new MarketingRequestError('Marketing assistant prompt must be text.', 400)
+    throw new MarketingRequestError('Marqueta prompt must be text.', 400)
   }
   if (value.analyticsTakeaways !== undefined && !Array.isArray(value.analyticsTakeaways)) {
     throw new MarketingRequestError('Analytics takeaways must be a list.', 400)
@@ -536,7 +559,7 @@ export async function POST(request: Request) {
       parsedBody = await readBoundedJson(request, MARKETING_ASSIST_REQUEST_BYTES)
     } catch (error) {
       if (error instanceof MarketingRequestError && error.status === 413) {
-        throw new MarketingRequestError('Marketing assistant request is too large.', 413)
+        throw new MarketingRequestError('Marqueta request is too large.', 413)
       }
       throw error
     }
@@ -575,10 +598,10 @@ export async function POST(request: Request) {
       return privateMarketingJson({ error: error.message }, { status: error.status })
     }
     console.error(
-      'Marketing assistant failed.',
+      'Marqueta failed.',
       error instanceof Error ? error.name : 'UnknownError',
     )
-    return privateMarketingJson({ error: 'Marketing assistant failed.' }, { status: 500 })
+    return privateMarketingJson({ error: 'Marqueta failed.' }, { status: 500 })
   }
 }
 
@@ -628,7 +651,7 @@ async function buildMarketingAssistPayload(
         usedAi = true
       } catch (error) {
         console.error(
-          'Marketing assistant Claude generation failed.',
+          'Marqueta Claude generation failed.',
           error instanceof Error ? error.name : 'UnknownError',
         )
         aiError = 'AI suggestion is temporarily unavailable; showing the safe fallback.'
@@ -660,7 +683,11 @@ async function buildMarketingAssistPayload(
 
 async function getSiteContext(): Promise<SiteContext> {
   try {
-    const data = await client.fetch<Partial<SiteContext>>(MARKETING_CONTEXT_QUERY)
+    const [content, marketing] = await Promise.all([
+      client.fetch<Partial<SiteContext>>(SITE_CONTENT_QUERY),
+      clientForType(client, 'marketingCampaign').fetch<Partial<SiteContext>>(MARKETING_CONTEXT_QUERY),
+    ])
+    const data: Partial<SiteContext> = { ...content, ...marketing }
     return {
       features: data.features || [],
       caseStudies: data.caseStudies || [],
@@ -685,7 +712,7 @@ async function getSiteContext(): Promise<SiteContext> {
     }
   } catch (error) {
     console.error(
-      'Marketing assistant context fetch failed.',
+      'Marqueta context fetch failed.',
       error instanceof Error ? error.name : 'UnknownError',
     )
     return {
@@ -2011,13 +2038,13 @@ function buildFallbackSuggestion(
     ).slice(0, 6)
     return {
       summary: coworkerUpdateIntake
-        ? 'Turned the rough work update into one research-first handoff that Marketing can pick up without requiring a form.'
+        ? 'Turned the rough work update into one research-first handoff that Marqueta can pick up without requiring a form.'
         : 'Suggested a research-first setup that gathers provider SEO scores and source evidence before any release records are generated.',
       rationale: coworkerUpdateIntake
         ? [
             'The coworker update remains a source note; missing facts become research questions instead of invented setup fields.',
             'Existing GoInvo work is reused only when the available context provides a confident match.',
-            'Marketing can scan internal source material first; campaigns, calendar items, and public content still wait for reviewed evidence.',
+            'Marqueta can scan internal source material first; campaigns, calendar items, and public content still wait for reviewed evidence.',
           ]
         : [
             'A project directive keeps the research focused on decisions rather than a premature plan.',
@@ -2288,7 +2315,7 @@ function buildFallbackSuggestion(
               },
             ]
           : [],
-        internalNotes: 'Generated by the Marketing assistant. Designers should edit the opportunities before converting them into CMS records.',
+        internalNotes: 'Generated by Marqueta. Designers should edit the opportunities before converting them into CMS records.',
       },
     }
   }

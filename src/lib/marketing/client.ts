@@ -8,6 +8,7 @@
  */
 import { createClient, type SanityClient } from '@sanity/client'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
+import { clientForType } from './datasetRouting'
 
 /**
  * Returns a configured Sanity write client (useCdn: false so writes and reads
@@ -33,4 +34,16 @@ export function getMarketingWriteClient(): SanityClient {
     token: writeToken,
     useCdn: false,
   })
+}
+
+/**
+ * The write client, scoped to the dataset a type actually lives in.
+ *
+ * Prefer this over getMarketingWriteClient anywhere the type is known. The
+ * plain client is bound to the public dataset, so using it for an internal type
+ * does not fail — it writes to the wrong place and reports success, which is
+ * the failure mode this whole migration is trying to avoid.
+ */
+export function getMarketingWriteClientFor(type: string) {
+  return clientForType(getMarketingWriteClient(), type)
 }

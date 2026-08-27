@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { PRINT_SIZE_BY_SLUG } from '@/lib/shop/printSizes'
+import { CART_STORAGE_KEY } from '@/lib/shop/cartStorage'
 import {
   SHOP_MAX_DONATION_CENTS,
   SHOP_MIN_DONATION_CENTS,
@@ -22,6 +23,11 @@ export type VisualizationPrint = {
   learnMoreLink?: string
   imageUrl?: string
   price?: number
+  /**
+   * Struck-through "was" price. Display only: every charged figure resolves
+   * through printPriceOf, which never reads this.
+   */
+  compareAtPrice?: number
   currency?: string
   checkoutUrl?: string
   /** How this piece is produced, from its product document. */
@@ -207,7 +213,20 @@ function priceLabel(amount: number, currency = 'USD') {
   return amount <= 0 ? 'Free' : formatPrice(amount, currency)
 }
 
+/**
+ * Flat US shipping, charged once per order. The CMS value wins when set so the
+ * rate can change without a deploy; this constant is the fallback the Stripe
+ * checkout uses too, so the two can never disagree.
+ */
 const shippingPrice = SHOP_SHIPPING_PRICE_CENTS / 100
+
+/** A piece is on offer only when the was-price is genuinely above the price. */
+function saleLabelOf(item: VisualizationPrint) {
+  const was = item.compareAtPrice
+  const now = printPriceOf(item)
+  if (typeof was !== 'number' || was <= now) return null
+  return formatPrice(was, item.currency)
+}
 
 function orderHref(items: SelectedPrint[], supportEmail: string, donationAmount: number) {
   const currency = items[0]?.item.currency || 'USD'
@@ -264,10 +283,19 @@ function donationHref(supportEmail: string, donationAmount: number) {
 export function VisualizationStorefront({
   items,
   supportEmail,
+  shippingRate,
 }: {
   items: VisualizationPrint[]
   supportEmail: string
+  /** Flat US shipping in dollars, from the CMS. Omitted falls back to the code rate. */
+  shippingRate?: number
 }) {
+  // Shadow the module fallback so every figure in this component — the summary,
+  // the order email, the total — uses the same number the checkout charges.
+  const shippingPrice =
+    typeof shippingRate === 'number' && Number.isFinite(shippingRate) && shippingRate >= 0
+      ? shippingRate
+      : SHOP_SHIPPING_PRICE_CENTS / 100
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [selectedQuantities, setSelectedQuantities] = useState<Record<string, number>>({})
   const [query, setQuery] = useState('')
@@ -312,7 +340,6 @@ export function VisualizationStorefront({
    * scope: it survives the round trip and the tab, and does not resurrect a
    * stale cart weeks later.
    */
-  const CART_STORAGE_KEY = 'goinvo-shop-cart-v1'
   const cartRestoredRef = useRef(false)
 
   useEffect(() => {
@@ -870,6 +897,7 @@ export function VisualizationStorefront({
                     const downloadLink = normalizeGoInvoLink(item.downloadLink)
                     const learnMoreLink = normalizeGoInvoLink(item.learnMoreLink)
                     const printPrice = priceLabel(printPriceOf(item), item.currency)
+                    const wasPrice = saleLabelOf(item)
                     const printSize = PRINT_SIZE_BY_SLUG[item.slug || '']
 
                     return (
@@ -1047,6 +1075,9 @@ export function VisualizationStorefront({
                                   visitor nothing new (Shirley, 2026-08-12).
                                 */}
                                 <span className="whitespace-nowrap text-right text-xs font-normal leading-tight">
+                                  {wasPrice && (
+                                    <span className="mr-1 text-[#7b736a] line-through">{wasPrice}</span>
+                                  )}
                                   {printPrice}
                                 </span>
                               </button>

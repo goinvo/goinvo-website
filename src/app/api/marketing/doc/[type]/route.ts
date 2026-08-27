@@ -10,7 +10,6 @@ import {
   type MarketingCreatePayload,
   type MarketingFields,
 } from '@/lib/marketing'
-import { OUTREACH_DATASET, OUTREACH_DATASET_TYPES } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
   assertBoundedJson,
@@ -20,6 +19,7 @@ import {
   readBoundedJson,
 } from '@/lib/marketing/apiBoundary'
 import { assertAllowedMarketingFields } from '@/lib/marketing/fieldPolicy'
+import { clientForType as routeClientForType } from '@/lib/marketing/datasetRouting'
 
 // Marketing documents can contain internal planning material, and Outreach
 // types contain PII. Preserve the familiar response call sites while making
@@ -29,9 +29,10 @@ const NextResponse = { json: privateMarketingJson }
 // Outreach types (contacts, offers, work evidence) live in the PRIVATE
 // outreach dataset — contact PII must never land in the world-readable
 // production dataset. Everything else stays on the default dataset.
+// Dataset routing lives in one place now (src/lib/marketing/datasetRouting.ts)
+// so a type cannot be internal in one route and public in another.
 function clientForType(type: ManagedMarketingType) {
-  const base = getMarketingWriteClient()
-  return OUTREACH_DATASET_TYPES.includes(type) ? base.withConfig({ dataset: OUTREACH_DATASET }) : base
+  return routeClientForType(getMarketingWriteClient(), type)
 }
 
 // REST surface for the portable marketing CMS. This file handles the

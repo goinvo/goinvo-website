@@ -1,17 +1,63 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
-import { verifySlackRequest } from '@/lib/chat/slack'
+import { getSlackUserDisplayName, openSlackModal, verifySlackRequest } from '@/lib/chat/slack'
+import {
+  MARKETING_ACTION,
+  buildActionAcknowledgement,
+  MARKETING_ANSWER_BLOCK,
+  MARKETING_ANSWER_INPUT,
+  buildTaskDetailBlocks,
+  buildTaskDetailView,
+  decodeActionValue,
+  refreshTaskInAttachments,
+  isMarketingAction,
+  MARKETING_RUNWAY_CALLBACK,
+  RUNWAY_MONTHS_BLOCK,
+  buildRunwayView,
+  readRunwaySubmission,
+  decodeIdeaValue,
+} from '@/lib/marketing/slackDelegation'
+import { discardCapturedIdea, keepCapturedIdea } from '@/lib/marketing/ideaCapture.server'
+import { confirmRunway, readRunway, recordSignedWork, setRunway } from '@/lib/marketing/runway.server'
+import { studioTaskUrl } from '@/lib/marketing/taskLinks'
+import {
+  claimMarketingTask,
+  declineMarketingTask,
+  answerMarketingTask,
+  getMarketingTaskDetail,
+  linkMarketingIdentity,
+  setMarketingAvailability,
+} from '@/lib/marketing/slackActions.server'
 import { submitDisputeEvidence } from '@/lib/shop/disputeEvidence'
 import { stripeDisputeDocumentId } from '@/lib/shop/ids'
 
 export const dynamic = 'force-dynamic'
 
 interface SlackInteractionPayload {
+  /** The message the button lives in, so it can be rewritten in place. */
+  message?: {
+    blocks?: Record<string, unknown>[]
+    attachments?: Record<string, unknown>[]
+    text?: string
+  }
+
   type?: string
   user?: { id?: string; name?: string; username?: string }
-  actions?: Array<{ action_id?: string; value?: string }>
+  actions?: Array<{
+    action_id?: string
+    value?: string
+    // static_select sends the chosen option here rather than in `value`.
+    selected_option?: { value?: string }
+  }>
   // Slack includes this on block_actions; POST a message here to reply.
   response_url?: string
+  /** Valid for ~3 seconds; required to open a modal. */
+  trigger_id?: string
+  view?: {
+    callback_id?: string
+    private_metadata?: string
+    state?: { values?: Record<string, Record<string, { value?: string | null }>> }
+  }
 }
 
 // For block_actions, the HTTP body is ignored — confirmations must be POSTed to
@@ -36,6 +82,29 @@ async function postSlackResponse(
   }
 }
 
+
+/**
+ * Rewrite the message the button lives in.
+ *
+ * `replace_original` only works against the interaction's own response_url, and
+ * only for the message that was clicked — which is exactly what is wanted here.
+ */
+async function replaceSlackMessage(
+  responseUrl: string | undefined,
+  payload: { blocks?: unknown[]; attachments?: unknown[]; text: string },
+) {
+  if (!responseUrl) return
+  try {
+    await fetch(responseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ replace_original: true, ...payload }),
+    })
+  } catch (err) {
+    console.error('[slack] replace_original failed', err)
+  }
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text()
 
@@ -51,6 +120,298 @@ export async function POST(request: NextRequest) {
 
   const payload = JSON.parse(payloadValue) as SlackInteractionPayload
   const action = payload.actions?.[0]
+
+  // The runway modal. Checked before the task-answer handler below, which
+  // treats any private_metadata as a task id - two modals sharing that field
+  // would have made "we signed a SoW" try to answer a decision.
+  if (payload.type === 'view_submission' && payload.view?.callback_id === MARKETING_RUNWAY_CALLBACK) {
+    const kind = payload.view.private_metadata === 'signed' ? 'signed' : 'update'
+    const { months, label, basis } = readRunwaySubmission(payload.view.state?.values)
+    const userId = payload.user?.id || ''
+
+    // Slack shows this inline under the offending field and keeps the modal
+    // open, which is the right place for "that is not a number" - far better
+    // than closing it and posting a failure into the channel.
+    if (months === null) {
+      return NextResponse.json({
+        response_action: 'errors',
+        errors: {
+          [RUNWAY_MONTHS_BLOCK]: 'Give a number of months, like 4.5.',
+        },
+      })
+    }
+
+    after(async () => {
+      try {
+        const personName = (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+        const state =
+          kind === 'signed'
+            ? await recordSignedWork({ label: label || 'Signed work', monthsAdded: months, personName })
+            : await setRunway({ months, basis, personName })
+        await postSlackResponse(
+          payload.response_url,
+          `<@${userId}> updated the runway. ${state.summary}`,
+        )
+      } catch (err) {
+        console.error('[slack] runway update failed', err)
+        await postSlackResponse(payload.response_url, 'That did not save. The runway is unchanged.')
+      }
+    })
+    return NextResponse.json({})
+  }
+
+  // A decision answered inside the modal. Returning an empty body closes it;
+  // the write happens after, because Slack expects the response in ~3 seconds.
+  if (payload.type === 'view_submission' && payload.view?.private_metadata) {
+    const taskId = payload.view.private_metadata
+    const answer =
+      payload.view.state?.values?.[MARKETING_ANSWER_BLOCK]?.[MARKETING_ANSWER_INPUT]?.value || ''
+    const userId = payload.user?.id || ''
+
+    if (answer.trim()) {
+      after(async () => {
+        try {
+          const personName =
+            (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+          const result = await answerMarketingTask({ taskId, answer: answer.trim(), personName })
+          await postSlackResponse(
+            payload.response_url,
+            result.ok
+              ? `<@${userId}> answered *${result.taskTitle}*.`
+              : result.message || 'That did not save.',
+          )
+        } catch (err) {
+          console.error('[slack] marketing answer failed', err)
+        }
+      })
+    }
+    return NextResponse.json({})
+  }
+
+  // Task detail. Handled ON the request path, not deferred: trigger_id expires
+  // in about three seconds, so anything queued behind after() is too late and
+  // Slack answers expired_trigger_id.
+  if (payload.type === 'block_actions' && action?.action_id === MARKETING_ACTION.details) {
+    const decoded = decodeActionValue(action.value)
+    if (decoded) {
+      const task = await getMarketingTaskDetail(decoded.taskId)
+      if (task) {
+        const detail = { ...task, minutes: task.estimatedMinutes }
+        const blocks = buildTaskDetailBlocks(detail)
+        const opened = await openSlackModal(
+          payload.trigger_id || '',
+          buildTaskDetailView(detail, {
+            studioUrl: studioTaskUrl({
+              baseUrl: process.env.MARKETING_PUBLIC_BASE_URL,
+              taskId: task._id,
+              targetView: task.targetView,
+              kind: task.kind,
+            }),
+          }),
+        )
+        // A modal can still fail (expired trigger, transient error). Falling back
+        // to an ephemeral reply means the person gets the detail either way.
+        if (!opened) {
+          const lines = blocks
+            .map((block) => (block.text?.text as string) || '')
+            .filter(Boolean)
+            .join(String.fromCharCode(10, 10))
+          after(async () => {
+            await postSlackResponse(payload.response_url, lines || task.title)
+          })
+        }
+        return NextResponse.json({ ok: true })
+      }
+    }
+    after(async () => {
+      await postSlackResponse(payload.response_url, 'That task no longer exists.')
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Judging a captured idea. Marqueta guessed that a message was a proposal;
+  // this is the person saying whether she was right. The reply REPLACES the
+  // thread message rather than adding to it, so a settled idea leaves one line
+  // behind instead of a conversation with itself.
+  if (
+    payload.type === 'block_actions' &&
+    (action?.action_id === MARKETING_ACTION.ideaKeep || action?.action_id === MARKETING_ACTION.ideaDiscard)
+  ) {
+    const keep = action.action_id === MARKETING_ACTION.ideaKeep
+    const decoded = decodeIdeaValue(action.value)
+    const responseUrl = payload.response_url
+    const userId = payload.user?.id || ''
+
+    after(async () => {
+      if (!decoded) {
+        await postSlackResponse(responseUrl, 'That button lost track of which message it belonged to.')
+        return
+      }
+      try {
+        const personName = (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+        const result = keep
+          ? await keepCapturedIdea({ ...decoded, personName })
+          : await discardCapturedIdea({ ...decoded, personName })
+
+        if (!result.ok) {
+          await postSlackResponse(responseUrl, result.message || 'That did not save.')
+          return
+        }
+        await replaceSlackMessage(responseUrl, {
+          text: keep ? 'Idea kept' : 'Not an idea',
+          blocks: [
+            {
+              type: 'context',
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: keep
+                    ? `On the board, confirmed by <@${userId}>.`
+                    : `<@${userId}> says this was not a proposal. Dropped, and I will keep the miss on file.`,
+                },
+              ],
+            },
+          ],
+        })
+      } catch (err) {
+        console.error('[slack] idea judgement failed', err)
+        await postSlackResponse(responseUrl, 'Something went wrong recording that.')
+      }
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Runway buttons. The two that open a modal are handled inline rather than in
+  // after(), for the same reason as task details: a trigger_id queued behind a
+  // Sanity round trip is already expired when the modal call reaches Slack.
+  if (
+    payload.type === 'block_actions' &&
+    (action?.action_id === MARKETING_ACTION.runwaySigned || action?.action_id === MARKETING_ACTION.runwayUpdate)
+  ) {
+    const kind = action.action_id === MARKETING_ACTION.runwaySigned ? 'signed' : 'update'
+    let current = ''
+    try {
+      current = (await readRunway()).summary
+    } catch {
+      // Showing the modal without the current number is worse than not showing
+      // it at all only if the number is what you came to change - it is not.
+    }
+    const opened = await openSlackModal(payload.trigger_id || '', buildRunwayView(kind, current))
+    if (!opened) {
+      after(async () => {
+        await postSlackResponse(payload.response_url, 'That form would not open. Try again, or set it in the Studio.')
+      })
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  if (payload.type === 'block_actions' && action?.action_id === MARKETING_ACTION.runwayConfirm) {
+    const responseUrl = payload.response_url
+    const userId = payload.user?.id || ''
+    after(async () => {
+      try {
+        const personName = (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+        const state = await confirmRunway({ personName })
+        await postSlackResponse(responseUrl, `<@${userId}> confirmed the runway. ${state.summary}`)
+      } catch (err) {
+        console.error('[slack] runway confirm failed', err)
+        await postSlackResponse(responseUrl, 'That did not save.')
+      }
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Marketing delegation: claim a task, hand it back, or say you are away.
+  if (payload.type === 'block_actions' && isMarketingAction(action?.action_id)) {
+    const responseUrl = payload.response_url
+    const userId = payload.user?.id || ''
+    const decoded = decodeActionValue(action?.value)
+    const actionId = action!.action_id!
+
+    // Answer Slack immediately and do the write afterwards: an interaction that
+    // takes longer than 3 seconds shows the user a failure even when it worked.
+    after(async () => {
+      try {
+        const personName =
+          (await getSlackUserDisplayName(userId)) || payload.user?.name || payload.user?.username || 'Someone'
+
+        if (actionId === MARKETING_ACTION.linkIdentity) {
+          const ownerName = action?.selected_option?.value || ''
+          if (!ownerName) {
+            await postSlackResponse(responseUrl, 'No name was selected.')
+            return
+          }
+          const linked = await linkMarketingIdentity({ ownerName, slackUserId: userId })
+          await postSlackResponse(
+            responseUrl,
+            `${buildActionAcknowledgement({ action: actionId, userId })} ${linked.message || ''}`.trim(),
+          )
+          return
+        }
+
+        if (actionId === MARKETING_ACTION.away) {
+          const result = await setMarketingAvailability({
+            personName,
+            slackUserId: userId,
+            status: 'away',
+          })
+          await postSlackResponse(
+            responseUrl,
+            `${buildActionAcknowledgement({ action: actionId, userId })} ${result.message || ''}`.trim(),
+          )
+          return
+        }
+
+        if (!decoded) {
+          await postSlackResponse(responseUrl, 'That button is missing its task — try the plan in the Studio.')
+          return
+        }
+
+        const result =
+          actionId === MARKETING_ACTION.claim
+            ? await claimMarketingTask({ taskId: decoded.taskId, personName, slackUserId: userId })
+            : await declineMarketingTask({ taskId: decoded.taskId, personName })
+
+        const note = result.ok
+          ? buildActionAcknowledgement({ action: actionId, userId, taskTitle: result.taskTitle })
+          : result.message || 'That did not work.'
+
+        // Check it off in the message itself, so the channel stops showing it as
+        // available and nobody claims the same task twice.
+        // Re-render the card from the record, so it always offers whatever
+        // reverses its new state. Nothing collapses, so nothing gets stuck.
+        const fresh = result.ok ? await getMarketingTaskDetail(decoded.taskId) : null
+        if (fresh && payload.message?.attachments) {
+          await replaceSlackMessage(responseUrl, {
+            text: payload.message.text || 'This week in marketing',
+            blocks: (payload.message.blocks || []) as unknown[],
+            attachments: refreshTaskInAttachments(
+              (payload.message.attachments || []) as never[],
+              decoded.taskId,
+              {
+                _id: fresh._id,
+                title: fresh.title,
+                ownerName: fresh.ownerName,
+                minutes: fresh.estimatedMinutes,
+                whyNow: fresh.whyNow,
+                kind: fresh.kind,
+                priority: fresh.priority,
+                status: fresh.status,
+                note,
+              },
+            ),
+          })
+        } else {
+          await postSlackResponse(responseUrl, note)
+        }
+      } catch (err) {
+        console.error('[slack] marketing action failed', err)
+        await postSlackResponse(responseUrl, 'Something went wrong recording that. The plan in the Studio is still correct.')
+      }
+    })
+
+    return NextResponse.json({ ok: true })
+  }
 
   if (
     payload.type === 'block_actions' &&

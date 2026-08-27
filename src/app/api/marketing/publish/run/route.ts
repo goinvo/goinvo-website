@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { assertMarketingApiKey, getMarketingWriteClient } from '@/lib/marketing'
+import { assertMarketingApiKey, getMarketingWriteClientFor } from '@/lib/marketing'
 import { runPublish, scheduleFinalize } from '@/lib/marketing/publishers'
 import {
   assertBoundedJson,
@@ -162,9 +162,9 @@ async function handle(req: Request): Promise<NextResponse> {
     throw error
   }
 
-  let client: ReturnType<typeof getMarketingWriteClient>
+  let client: ReturnType<typeof getMarketingWriteClientFor>
   try {
-    client = getMarketingWriteClient()
+    client = getMarketingWriteClientFor('marketingCalendarItem')
   } catch (error) {
     return privateMarketingJson(
       { error: error instanceof Error ? error.message : 'Sanity write client unavailable.' },

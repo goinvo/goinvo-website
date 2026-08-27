@@ -11,6 +11,28 @@ interface SlackPostMessageInput {
   threadTs?: string
   replyBroadcast?: boolean
   clientMsgId?: string
+  /**
+   * Post under a different name and icon.
+   *
+   * The workspace has ONE bot app, shared by the website chat and the marketing
+   * assistant. Renaming the app would rename it for both, so identity is set
+   * per message instead: chat stays "goinvo_website_chat", the marketing digest
+   * arrives as Marqueta. Requires the chat:write.customize scope; without it
+   * Slack ignores these fields rather than failing.
+   */
+  username?: string
+  iconEmoji?: string
+  /**
+   * Suppress Slack's link previews.
+   *
+   * The marketing digest cites a source per opening, and Slack expands every
+   * one into a full card with a hero image — three citations turned a compact
+   * message into pages of scrolling, burying the buttons the digest exists
+   * for. The links still work; they just stay links.
+   */
+  unfurl?: boolean
+  /** Attachments carry the only custom colour Slack offers (a left-edge bar). */
+  attachments?: unknown[]
 }
 
 interface SlackPostMessageResponse {
@@ -131,6 +153,29 @@ export function getSlackConfig() {
   }
 }
 
+/**
+ * The canonical link to a message.
+ *
+ * Asked of Slack rather than assembled from a workspace domain: the domain is
+ * one more thing to configure and to get wrong, and Slack already knows the
+ * answer. Returns undefined on any failure - a captured idea without a link
+ * back is still useful, a broken link is not.
+ */
+export async function getSlackPermalink(channel: string, ts: string): Promise<string | undefined> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !channel || !ts) return undefined
+  try {
+    const response = await fetch(
+      `https://slack.com/api/chat.getPermalink?channel=${encodeURIComponent(channel)}&message_ts=${encodeURIComponent(ts)}`,
+      { headers: { authorization: `Bearer ${botToken}` } },
+    )
+    const data = (await response.json()) as { ok?: boolean; permalink?: string }
+    return data.ok && data.permalink ? data.permalink : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export function isSlackPostingConfigured() {
   const config = getSlackConfig()
   return Boolean(config.botToken && config.channelId)
@@ -173,6 +218,10 @@ export async function postSlackMessage(input: SlackPostMessageInput): Promise<Sl
       ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
       ...(input.replyBroadcast ? { reply_broadcast: true } : {}),
       ...(input.clientMsgId ? { client_msg_id: input.clientMsgId } : {}),
+      ...(input.username ? { username: input.username } : {}),
+      ...(input.iconEmoji ? { icon_emoji: input.iconEmoji } : {}),
+      ...(input.unfurl === false ? { unfurl_links: false, unfurl_media: false } : {}),
+      ...(input.attachments ? { attachments: input.attachments } : {}),
     }),
   })
 
@@ -787,4 +836,32 @@ function formatSlackApiError(
   ].filter(Boolean)
 
   return details.length ? `${error} (${details.join('; ')})` : error
+}
+
+/**
+ * Open a modal in Slack.
+ *
+ * `trigger_id` is valid for about three seconds, so callers must do this on the
+ * request path rather than deferring it — anything queued behind `after()`
+ * arrives too late and Slack answers `expired_trigger_id`.
+ */
+export async function openSlackModal(triggerId: string, view: unknown): Promise<boolean> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !triggerId) return false
+  try {
+    const response = await fetch('https://slack.com/api/views.open', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${botToken}`,
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({ trigger_id: triggerId, view }),
+    })
+    const data = (await response.json()) as { ok?: boolean; error?: string }
+    if (!data.ok) console.error('Slack views.open failed:', data.error)
+    return Boolean(data.ok)
+  } catch (error) {
+    console.error('Slack views.open threw', error)
+    return false
+  }
 }

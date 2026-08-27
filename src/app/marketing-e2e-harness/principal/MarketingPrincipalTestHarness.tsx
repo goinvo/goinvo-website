@@ -12,7 +12,11 @@ import {
   type StudioClient,
 } from '@/sanity/tools/marketingTool'
 
-const HARNESS_USER = { roles: [{ name: 'administrator' }] }
+const HARNESS_USER = {
+  id: 'harness-principal-user',
+  name: 'Harness Principal',
+  roles: [{ name: 'administrator' }],
+}
 
 const HARNESS_OFFERS = [
   {
@@ -23,6 +27,22 @@ const HARNESS_OFFERS = [
     oneLiner: 'A fixed-scope diagnostic for a blocked healthcare product.',
     priceBand: 'Fixed fee, $40–60K',
     order: 1,
+  },
+]
+
+const HARNESS_EVIDENCE = [
+  {
+    _id: 'marketingWorkEvidence.harness',
+    sourceId: 'caseStudy.harness',
+    sourceType: 'caseStudy',
+    sourceSlug: 'harness-work',
+    title: 'Healthcare product strategy and delivery',
+    summary: 'GoInvo helped a healthcare team move from evidence to a shipped product.',
+    status: 'active',
+    tags: ['healthcare', 'product strategy'],
+    services: ['Product design'],
+    outcomes: ['Shipped product'],
+    highlights: ['Evidence-backed roadmap'],
   },
 ]
 
@@ -84,6 +104,10 @@ function createHarnessRuntime(onRequest: (event: string) => void): {
   // one mutable array lets React memos stay stale after a create, which can make
   // the harness both invent UI bugs and conceal real update behavior.
   let contacts: Array<Record<string, unknown>> = []
+  let intakeCheckpoints: Array<Record<string, unknown>> = []
+  const updateContact = (id: string, update: (contact: Record<string, unknown>) => Record<string, unknown>) => {
+    contacts = contacts.map((contact) => (contact._id === id ? update(contact) : contact))
+  }
   const client = {
     withConfig: () => client,
     fetch: async (query: string) => {
@@ -97,15 +121,109 @@ function createHarnessRuntime(onRequest: (event: string) => void): {
         return {
           contacts: contacts.map((contact) => ({ ...contact })),
           offers: HARNESS_OFFERS,
-          evidenceLinks: [],
+          evidenceLinks: HARNESS_EVIDENCE,
+          intakeCheckpoints: intakeCheckpoints.map((checkpoint) => ({ ...checkpoint })),
           financialPosture: 'survival',
         }
       }
       if (query.includes('brandVoices')) return []
       throw new Error(`The Marketing E2E harness received an unexpected query: ${query.slice(0, 80)}`)
     },
+    createOrReplace: async (document: Record<string, unknown>) => {
+      intakeCheckpoints = [
+        { ...document },
+        ...intakeCheckpoints.filter((checkpoint) => checkpoint._id !== document._id),
+      ]
+      return { ...document }
+    },
+    patch: (id: string) => {
+      let valuesToSet: Record<string, unknown> = {}
+      let valuesToSetIfMissing: Record<string, unknown> = {}
+      let fieldsToUnset: string[] = []
+      let entriesToInsert: Array<Record<string, unknown>> = []
+      const patch = {
+        set: (values: Record<string, unknown>) => {
+          valuesToSet = { ...valuesToSet, ...values }
+          return patch
+        },
+        setIfMissing: (values: Record<string, unknown>) => {
+          valuesToSetIfMissing = { ...valuesToSetIfMissing, ...values }
+          return patch
+        },
+        unset: (fields: string[]) => {
+          fieldsToUnset = [...fieldsToUnset, ...fields]
+          return patch
+        },
+        insert: (_position: string, path: string, entries: Array<Record<string, unknown>>) => {
+          if (path !== 'interactions[-1]') {
+            throw new Error(`The Marketing E2E harness received an unexpected insert path: ${path}`)
+          }
+          entriesToInsert = [...entriesToInsert, ...entries]
+          return patch
+        },
+        ifRevisionId: () => patch,
+        commit: async () => {
+          updateContact(id, (contact) => {
+            const next = { ...contact }
+            for (const [key, value] of Object.entries(valuesToSetIfMissing)) {
+              if (next[key] === undefined) next[key] = value
+            }
+            Object.assign(next, valuesToSet)
+            for (const field of fieldsToUnset) delete next[field]
+            if (entriesToInsert.length > 0) {
+              next.interactions = [
+                ...((next.interactions as Array<Record<string, unknown>> | undefined) || []),
+                ...entriesToInsert,
+              ]
+            }
+            next._rev = `harness-${Date.now()}`
+            next._updatedAt = new Date().toISOString()
+            return next
+          })
+          return { _id: id }
+        },
+      }
+      return patch
+    },
   }
   const request: HarnessRequest = async <T,>(path: string, body?: unknown) => {
+    if (path === '/api/marketing/outreach/research') {
+      const contactId = (body as { id?: string } | undefined)?.id
+      if (!contactId || !contacts.some((contact) => contact._id === contactId)) {
+        throw new Error('The Marketing E2E harness research request did not identify a saved contact.')
+      }
+      onRequest(`research:${contactId}`)
+      updateContact(contactId, (contact) => ({
+        ...contact,
+        status: 'needsReview',
+        researchedAt: new Date().toISOString(),
+        researchSummary: 'Verified healthcare leader with a relevant active initiative.',
+        personVerified: true,
+        identityConfidence: 'high',
+        warmth: contact.warmth || 'warm',
+        howWeKnow: contact.howWeKnow || 'Known through prior GoInvo work',
+        email: contact.email || 'principal-pipeline@example.com',
+        callBrief: 'Discuss the active healthcare initiative, show the relevant work, and offer a focused diagnostic.',
+        suggestedOpener: 'I thought of your current initiative after reviewing a similar product challenge we shipped.',
+        suggestedOfferKey: HARNESS_OFFERS[0]?.key,
+        relevantEvidence: [
+          {
+            _key: 'harness-evidence',
+            evidenceId: HARNESS_EVIDENCE[0]?._id,
+            title: HARNESS_EVIDENCE[0]?.title,
+            why: 'Relevant healthcare product strategy and delivery work.',
+          },
+        ],
+        researchSources: [
+          {
+            _key: 'harness-source',
+            title: 'Harness organization profile',
+            url: 'https://example.com/harness-profile',
+          },
+        ],
+      }))
+      return { feasibilityScore: 85, personVerified: true, evidenceIndexSize: 1 } as T
+    }
     if (path !== '/api/marketing/outreach/intake') {
       throw new Error(`The Marketing E2E harness received an unexpected request: ${path}`)
     }
@@ -203,12 +321,14 @@ export function MarketingPrincipalTestHarness() {
           {completion?.action || 'none'}
         </output>
       </div>
-      <OutreachWorkspaceContent
-        client={runtime.client}
-        currentUser={HARNESS_USER}
-        request={runtime.request}
-        onAutopilotComplete={setCompletion}
-      />
+      <div data-tour-id="autopilot-outreach-workflow">
+        <OutreachWorkspaceContent
+          client={runtime.client}
+          currentUser={HARNESS_USER}
+          request={runtime.request}
+          onAutopilotComplete={setCompletion}
+        />
+      </div>
       {coachStep !== null && (
         <GuidedTutorialOverlay
           active

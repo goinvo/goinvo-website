@@ -48,6 +48,21 @@ const ALLOWED_VARIANTS = ['control', 'present']
  */
 const LIVE_TO_ASSIGNED_COHORT = false
 
+/**
+ * Shipped to everyone (Shirley, 2026-08-17). The studio decided the prints
+ * section stays, so it renders for 100% of visitors rather than a cohort.
+ *
+ * This short-circuits BEFORE the cookie effect, so the section and its
+ * #goinvo-at-home anchor are present in the server HTML — no post-hydration
+ * pop-in, and deep links resolve natively instead of needing the scroll
+ * fallback below.
+ *
+ * The experiment machinery underneath is intentionally left intact and inert:
+ * no cohort is read and no exposure beacon fires while this is true. To run the
+ * A/B after all, set this to false and LIVE_TO_ASSIGNED_COHORT to true.
+ */
+const SHIPPED_TO_EVERYONE = true
+
 function readCookie(name: string): string | undefined {
   if (typeof document === 'undefined') return undefined
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'))
@@ -89,17 +104,20 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
     setVariant(value && ALLOWED_VARIANTS.includes(value) ? value : '')
   }, [])
 
+  const shippedToEveryone = SHIPPED_TO_EVERYONE
   const assigned = variant === 'control' || variant === 'present'
   // No exposure beacon while the test is not live: recording an exposure for a
   // cohort whose section never renders would poison the results before the
   // test has even started.
-  const inExperiment = LIVE_TO_ASSIGNED_COHORT && !forced && assigned
+  const inExperiment = !shippedToEveryone && LIVE_TO_ASSIGNED_COHORT && !forced && assigned
   // 'control' is the baseline homepage with no section. A forced view is a
   // reviewer opening the share link, which stays available while the test is
   // parked so the section can still be shown to the studio.
-  const visible = forced
-    ? variant === 'present'
-    : LIVE_TO_ASSIGNED_COHORT && variant === 'present'
+  const visible = shippedToEveryone
+    ? true
+    : forced
+      ? variant === 'present'
+      : LIVE_TO_ASSIGNED_COHORT && variant === 'present'
 
   // Latched by the reader's first scroll gesture. Sampling window.scrollY once
   // is not enough: a wheel or touch delta can be in flight and not yet applied
@@ -165,6 +183,9 @@ export function ShopSectionGate({ children }: { children: ReactNode }) {
           experiment={{
             experiment_id: EXPERIMENT_ID,
             flag_key: FLAG_KEY,
+            // Must match homeShopSectionExperiment.measurementKey in the registry,
+            // or validateExperimentBeacon drops every exposure from this gate.
+            measurement_key: '2026-08-12-initial-v1',
             variant: variant as string,
             page_path: '/',
           }}

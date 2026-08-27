@@ -868,7 +868,10 @@ function CalendarItemEditor({
     }
 
     if (ownerId) {
-      set.owner = { _type: 'reference', _ref: ownerId }
+      // Team members stay in the public dataset while calendar items move
+      // private, so this reference crosses the boundary. A strong one fails the
+      // write with a 409; the schema field is weak to match.
+      set.owner = { _type: 'reference', _ref: ownerId, _weak: true }
     } else {
       unset.push('owner')
     }

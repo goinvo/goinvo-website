@@ -150,6 +150,158 @@ Verify (dev server on :3000): `node scripts/verify-preview-share-links.mjs` (tok
 `node scripts/verify-preview-share.mjs` (the underlying enable-route: previews in a plain tab, no
 leak in a fresh tab). Unit: `npx vitest run tests/preview-share.test.ts`.
 
+## Gated internal plan pages: /marketing-plan, /outreach-plan, /action-plan, /audience-brief
+
+Three unlisted, noindexed internal decks, all gated by ONE `MARKETING_PLAN_KEY` (HMAC session
+cookie `goinvo_marketing_plan_session`, 8h, minted by `POST /api/marketing/plan-session` with a
+hidden allowlisted `next` field). `/marketing-plan` = strategy deck (public-dataset CMS records);
+`/outreach-plan` = warm-network brief (private outreach dataset); **`/action-plan` = the
+execution plan (built 2026-08-17)** — the 12-week Sep–Nov 2026 plan rendered from LIVE CMS docs:
+timeline with phase progress, month calendar (`?month=YYYY-MM`, clamped), next-two-weeks queue,
+decision gates, and live-composed supporting documents (per-segment call scripts from real
+openers/offers/evidence, email templates, offer one-pagers).
+
+- **Data model:** plan actions are REAL documents. 16 `marketingOperation` docs in the PRIVATE
+  outreach dataset (sourceKey prefix `exec-plan-2026q4/`, deterministic `_id`s, phases
+  `phase1|phase2|phase3|gate`) + 13 neutral `marketingCalendarItem` docs in production (`_id`
+  prefix `mcal-plan2026q4-`, `idea`/`drafting`, `autoPublish:false` — the publish worker can
+  never claim them). Mark work done in Studio (Operations board / Calendar) → the page follows.
+- **Seed:** `npx tsx scripts/seed-execution-plan.ts` (dry-run default; `--write --confirm
+  seed:exec-plan-2026q4`). `createIfNotExists` ONLY — re-runs are no-ops, Studio edits always
+  survive, catalog edits do NOT propagate (birth certificate, not a sync source). Catalog:
+  `src/lib/marketing/executionPlanSeed.ts`; pure helpers `src/lib/marketing/executionPlan.ts`;
+  tests `tests/execution-plan.test.ts` include a **neutrality guard** (production-bound
+  titles/briefs must carry no crisis framing / person names / emails — that dataset is
+  world-readable; candid framing lives only on the outreach-dataset operations).
+- **/audience-brief (built 2026-08-24)** answers WHO WE ACTUALLY HAVE — the other three are
+  written around a warm network the CMS does not contain. Renders live from the private
+  dataset: segment mix, the named organisations behind each buyer segment, coverage gaps
+  (a segment the plan targets but the list cannot support), offers whose price band has no
+  numbers, and the open `needsHuman` decisions. Pure helpers + tests:
+  `src/lib/marketing/audienceBrief.ts`, `tests/audience-brief.test.ts`.
+  Never write `warmth` or `segment` from a domain — a domain proves where someone works,
+  never that they know us. Enrichment: `node scripts/enrich-outreach-contacts.mjs [--apply]`,
+  which sets `organization` + `researchSuggestedSegment` ONLY. An unambiguous TLD (.edu/.gov)
+  is allowed to correct a stored suggestion — a umd.edu contact was sitting in the
+  med-device cluster and inflating the very segment the brief flags as unreachable.
+- All four pages now set `robots: { index: false, follow: false }`. They were only *unlisted*
+  before (absent from the sitemap), which does not stop a crawler that finds the URL.
+- **Gotchas fixed 2026-08-17, don't regress:** the session cookie must be `path: '/'` (it was
+  `/marketing-plan`, which made every OTHER gated page loop on its gate forever — covered in
+  `tests/marketing-plan-session-route.test.ts`); a new gated route must be added to
+  `ALLOWED_DESTINATIONS` in the plan-session route; calendar-style CSS grids need
+  `repeat(7, minmax(0,1fr))` (bare `1fr` floors at the widest nowrap chip and scrolls the page
+  sideways); GROQ `count(*[...].array[])` counts a NULL per doc missing the array — use
+  `math::sum(*[...]{"n": count(coalesce(array, []))}.n)`.
+
+## Lead magnet: Clinical AI Pilot Pre-Mortem (started 2026-08-03)
+
+Pipeline-first strategy (Juhan approved via Slack): lead magnet before homepage
+experiments. **The drafts now live in the CMS, not the repo** (moved 2026-08-17; this repo is
+PUBLIC, so unpublished drafts must not be committed here). Three `marketingIdea` documents hold
+the byte-exact markdown — `marketingIdea.lead-magnet-premortem-article`,
+`…-premortem-worksheet`, `…-package-strategy`. `marketingIdea` is anon-hidden (verified: 23 docs
+with a token, 0 without), which is what makes it a safe home for an article whose taxonomy
+question is still undecided. The open decisions + citation cautions are also
+`marketingOperation` docs under `exec-plan-2026q4/phase2/decision-*` in the private outreach
+dataset, so they surface on the Operations board and on /action-plan.
+Key facts: ungated article + ungated one-page scorecard, email gate ONLY on the
+facilitator's kit; public info + published case studies only (the fix methodology
+stays paid); the F1–F8 failure taxonomy is INTERNAL-only strategy content today —
+publishing it is an open decision (Shirley). Email capture today = third-party
+EmailOctopus embeds (`eocampaign1.com`, form id in `src/lib/config.ts`) — blockable,
+uninstrumented (zero signup events in GA4 ever); the build plan replaces it with a
+first-party `/api/newsletter/subscribe` route (needs `EMAILOCTOPUS_API_KEY`).
+Citation cautions: never cite the "KLAS 23%" vendor-blog stat; HIMSS 18% unverified.
+
+## The weekly marketing plan — "This week" (built 2026-08-24)
+
+The suite decides WHAT to do (gap detection + `marketingOperation` board); this decides HOW MUCH
+fits in the hours the studio has. **`marketingSettings.weeklyMarketingHours`** (default 4) is the
+budget; **`marketingOperation.estimatedMinutes`** is the per-task cost (explicit wins; otherwise
+inferred from `kind` in `src/lib/marketing/effort.ts`).
+
+- **Planner:** `src/lib/marketing/weeklyPlan.ts` — pure + unit-tested (`tests/weekly-plan.test.ts`).
+  Order: overdue → due this week → undated → future (pulled forward only when hours are spare).
+  `survival`/`rebuild` posture promotes outreach. Greedy fill that BACKFILLS (a 3h task never
+  starves the week). Decisions always surface but are **capped at 4/week**. Every deferral carries
+  a reason; invariant: every operation returns exactly once (item | decision | deferral).
+- **Route:** `POST|GET /api/marketing/plan-week` (`?dryRun=1`), `assertStudioWriterOrApiKey`,
+  reads the PRIVATE outreach dataset. Idempotent per ISO week via
+  `sourceKey: weekly-plan/<YYYY-Www>` — re-planning updates the same doc, never forks the week.
+- **AI does NOT budget.** Claude is handed the already-decided plan and only writes the theme +
+  rationale; it cannot add/drop/reorder. Missing `ANTHROPIC_API_KEY` = plan still returns, minus
+  the narrative.
+- **View:** `WeeklyPlanWorkspace.tsx`, first tab of the Home surface. Studio components MUST call
+  marketing routes through `authenticatedMarketingRequest` (sends `x-sanity-session`) — a bare
+  `fetch` is silently 401'd.
+- Two lessons pinned by tests: excluding future-dated work **emptied the week** (the seeded
+  quarter is Sep–Nov), and 13 open decisions ate 205 of 240 minutes.
+
+## Marqueta catches ideas floated in Slack (built 2026-08-27)
+
+Projects get proposed in #marketing-bot and then scroll away. Marqueta watches the channel and
+puts a proposal on the board — always as a PROPOSAL: `needsReview: true`, one press to bin.
+
+- **Filter is pure, free, and deliberately conservative:** `src/lib/marketing/ideaCapture.ts`
+  (`looksLikeAnIdea` — proposal markers, minus status-questions / availability / bare links /
+  anything under 25 chars). NO model call, so it runs on every message at zero cost. Missing an
+  idea costs nothing (it is still in the channel); capturing chatter costs the board's
+  credibility. Tests: `tests/idea-capture.test.ts`.
+- **Wiring:** `src/app/api/slack/events/route.ts` handles `SLACK_MARKETING_CHANNEL_ID` FIRST and
+  returns, so an idea can never fall through into the visitor-chat/dispute lookups. Thread
+  replies are skipped (they are answers to the digest, not new proposals).
+- **Reply is IN THREAD** (`chat:write`, no new scope) with *Keep it* / *Not an idea* — a reply
+  per idea in the channel would double traffic and get the bot muted.
+- **Judge it anywhere:** the Slack thread, the **This week** Studio surface (`Caught in Slack —
+  are these ideas?`), or `GET|POST /api/marketing/ideas/review`. Discard marks `dropped`, never
+  deletes — deleting lets a Slack redelivery recreate it and loses the record of the miss.
+- **Idempotent:** deterministic `_id` = `marketingIdea.slack-<channel>-<ts>`, and a redelivery
+  posts no second thread reply. Verified with signed events against the live route.
+- `relatedUrl` comes from **`chat.getPermalink`** (`getSlackPermalink` in `src/lib/chat/slack.ts`),
+  not a constructed URL — no `SLACK_WORKSPACE_DOMAIN` to configure or get wrong.
+- **GOTCHA:** there is **no `ideas` Studio view** (`marketingIdea` only renders inside SEO). An
+  unknown `?view=` makes the Studio restore the last-opened view from localStorage — the same
+  bug that once sent "open the plan" to the Shop. Links point at `view=thisWeek`.
+
+## Runway — the number the whole strategy is derived from (built 2026-08-27)
+
+The financial posture used to be a hand-picked bin (`survival`) with a timestamp. A bin does
+not decay: it was set 2026-07-11 and would still have read "survival" in 2027. So the stored
+fact is now a DATE — the last day the studio is confident it can pay for — and the bin is
+COMPUTED from it. Recorded 2026-08-27: **4.5 months, `certainUntil: 2027-01-11` → Rebuild**
+(it was reading Survival).
+
+- **Pure core:** `src/lib/marketing/runway.ts` — `monthsOfRunway`, `postureForRunwayMonths`
+  (bounds come from `maxMonths` on the bins in `financialPosture.ts`, one source),
+  `resolveRunwayPosture`, `runwayCheckIn`, `applyCommitment`, `describeRunway`. Tests:
+  `tests/runway.test.ts`.
+- **Recency decides.** A hand-set bin newer than the runway confirmation WINS (someone knows
+  something the date does not); a runway confirmed later wins instead. They never silently
+  disagree — `resolved.disagreement` says which was used and why, and the digest shows it.
+- **Signed work EXTENDS, never replaces.** 3 months signed in August against a runway already
+  reaching January means April, not November — `applyCommitment`, tested. If the runway has
+  already run out it extends from today instead (signed money cannot buy back spent months).
+- **Storage:** `runway` object on the `marketingFinancialPosture` doc in the PRIVATE outreach
+  dataset. Server helpers `runway.server.ts`; every write stamps `confirmedAt`, which is the
+  entire mechanism behind the check-in.
+- **Inputs:** `npx tsx scripts/set-runway.ts [--months 4.5|--until DATE|--confirm|--signed "X" --months 3]`
+  (no args = read); `GET|POST /api/marketing/runway` (`confirm`/`set`/`signed`); and in Slack
+  the digest's **Runway** card — *Still right* / *We signed something* / *It has changed*.
+- **Consumers wired:** `plan-week` and `assist` now resolve through the runway instead of
+  reading `.posture` raw, so the plan tightens on its own as the money runs down.
+
+### GOTCHA that cost a real leak: an unlisted type writes to the PUBLIC dataset
+`getMarketingWriteClientFor(type)` → `clientForType` **passes any type not in
+`INTERNAL_MARKETING_TYPES` straight through to the public dataset and reports success.**
+`marketingTeamAvailability` and `marketingFinancialPosture` were both missing. Consequence:
+pressing "I'm away" in Slack wrote to **production** while the digest read **outreach** — the
+change silently did nothing — and it put a colleague's name + Slack id in the world-readable
+dataset (one real record, found and removed 2026-08-27). Both types are now listed, with
+guards in `tests/dataset-routing.test.ts` including one asserting availability routes to the
+same dataset the digest reads. **When adding any `marketing*` type, add it to the router in
+the same commit.**
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.
@@ -260,6 +412,164 @@ deleting its own `.ul` padding gets bullets 32px out of place.
   `codex/marketing-cms` and reaches prod by merging to `main`.
 - The Gatsby→Next port shipped "dead-CSS" regressions (generic markup not mounting a page's own
   ported CSS); compare against the Gatsby legacy refs, not just structural DOM checks.
+
+## Marqueta in Slack: weekly digest + task delegation (built 2026-08-26)
+
+Posts the week's marketing work to **#marketing-bot** (`C0BSFACJY6T`) with a button per task, so
+the plan is delegated rather than announced. Extends the EXISTING Slack app (the one behind the
+website chat widget) — same bot token, same signing secret, same
+`/api/slack/interactions` route, which already verifies signatures and dispatches on `action_id`.
+
+- **Post it:** `POST /api/marketing/slack/digest` (`?dryRun=1` returns the exact blocks without
+  posting). Auth: `assertStudioWriterOrApiKey`. **Fail-closed** — no token/channel, nothing posts.
+- **Channel:** `SLACK_MARKETING_CHANNEL_ID`, separate from `SLACK_CHANNEL_ID` (the website-chat
+  channel) so a weekly plan never lands in the middle of live visitor conversations.
+- **Buttons:** "I'll take it" sets the owner; "Not me this week" CLEARS it and marks the task
+  `needsHuman` — deliberately NOT reassigning to someone else, because picking a colleague
+  without asking is how a plan loses the team's trust. "I'm away this week" writes a
+  `marketingTeamAvailability` record and the next digest surfaces that person's work with the
+  names of whoever is actually free.
+- **Identity:** owners are names ("Juhan"); Slack has user IDs. The digest appends a one-time
+  consent prompt (a select of unmapped owners) that stores the presser's Slack ID against the
+  name they choose. It states what it stores, and removes itself once everyone is mapped.
+- **Core:** `src/lib/marketing/availability.ts` (pure date logic — both bounds INCLUSIVE, because
+  "away 1st–5th" must mean away ON the 5th), `slackDelegation.ts` (Block Kit + action encoding),
+  `slackActions.server.ts` (the writes; all safe to run twice, since Slack retries).
+
+**TWO MANUAL SLACK STEPS — the code cannot do these itself:**
+1. **Invite the bot to the channel.** In #marketing-bot: `/invite @goinvo_website_chat`.
+   Without it every post fails `not_in_channel`. The bot cannot self-join (needs `channels:join`)
+   and cannot self-invite (`conversations.invite` requires already being in the channel).
+2. **Add the `chat:write.customize` scope and reinstall** for the digest to appear as
+   **Marqueta**. Granted scopes today are `chat:write, channels:history, users:read,
+   channels:manage, files:write`; without `chat:write.customize` Slack silently IGNORES the
+   `username`/`icon_emoji` fields and posts under the app name. Identity is set per message on
+   purpose — renaming the app itself would rename it for the website chat too.
+
+## Outreach research: identity from registries, claims from Claude, then verified
+
+Three stages, in this order, because each answers a different KIND of question. Getting them
+mixed up is what produced "Carolinashealthcare" as an organisation name and twenty claims that
+failed verification.
+
+1. **Identity is a LOOKUP, not a judgement.** `node scripts/resolve-outreach-organizations.mjs
+   [--apply]` resolves a domain to an official name via **Clearbit autocomplete** and a sector
+   via **Wikidata** — both keyless and free. Never ask a model to recall a company's name.
+   - Clearbit returns FUZZY matches: querying `partners.org` returns "Charleys Philly Steaks".
+     Only accept a hit whose domain is EXACTLY the one queried.
+   - Wikidata's top hit for "MITRE" is the surname ("family name"). Reject descriptions that
+     prove the match is not an organisation.
+   - Sector needles must name health explicitly. "software company" made Salesforce healthtech;
+     "clinic" matched inside "clinical trial". A generic word is worse than no answer.
+   - SEC EDGAR also works keyless (10,403 US filers) if tickers/SIC codes are ever wanted.
+
+2. **What they are reachable about is live, and genuinely needs a model.**
+   `npx tsx scripts/research-organizations.ts [--apply] [--limit N] [--concurrency N]
+   [--segment X] [--refresh]` runs Claude with the built-in `web_search` tool. One record per
+   ORGANISATION (`marketingOrgResearch`, data-API managed like `previewShareLink`), not per
+   contact — nine people at one hospital share one answer.
+   - **NO thinking alongside web_search** — that combination 500s server-side.
+   - Records written before the quote requirement (no `quote` field) are re-researched
+     automatically; `--refresh` redoes everything.
+
+3. **A claim is publishable because its evidence is inspectable, not because a model agreed.**
+   `npx tsx scripts/verify-org-research.ts [--apply] [--refresh]`, adapted from
+   `plig-framework/scripts/verify-quotes.ts` + `verify-claims.ts` and the evidence-pipeline
+   plan in `bioinfo-workspace/biopharma-stewardship-discovery`. Two stages that must not be
+   collapsed: **deterministic** (the quoted span must literally occur in the fetched page —
+   plain containment, no fuzzy matching) then **advisory** (does the quote support the claim).
+   A model asked to confirm a quote it just produced will confirm it.
+
+**Verification costs NOTHING now — do not reintroduce per-claim API calls.** The research
+prompt makes the model return the exact passage it relied on plus its URL, so checking it is a
+fetch and a string comparison:
+- `npx tsx scripts/check-org-quotes.ts --render --only-absent --apply --out <file>` proves the
+  quote is literally in the cited page. No model.
+- `npx tsx scripts/judge-org-claims.ts <file> --apply` checks the claim asserts nothing the
+  quote lacks (`findUncitedSpecifics`). No model. It names the offending token, so the verdict
+  is auditable.
+- `npx tsx scripts/diagnose-unfetchable.ts` classifies a failure as bot-wall / paywall / thin /
+  no-match. Those need completely different responses and "the fetcher is bad" hides all four.
+- `src/lib/marketing/textProvider.ts` picks `none | ollama | anthropic`, defaulting to **none**
+  so no script can spend by accident.
+
+**The fetcher: Puppeteer IS client-side rendering.** A VM or heavier browser runs the same
+engine, so if a quote is missing the cause is something else. Three self-inflicted bugs cost
+real time, all of which silently discarded a good render:
+- Accepting a render only when it was LONGER than the fetched text. `innerText` is usually
+  SHORTER than crude tag-stripping (which keeps nav), so every success was thrown away. Judge
+  by whether it CONTAINS the quote; length is only a tie-break.
+- Aborting image/font requests to save bandwidth — sites hang intersection observers off
+  exactly those loads, so article bodies never attach. Do not intercept.
+- Scrolling in steps and back to the top, which re-virtualises long lists and unloads the text.
+  **One scroll to `scrollHeight`, settle ~1.4s, and STAY at the bottom.** Measured against a
+  no-scroll baseline and a progressive scroll (`scripts/compare-scroll-strategies.ts`):
+  progressive reads ~3% more text and recovered nothing extra, so simple wins. Re-measure
+  before adding complexity — an elaborate scroll lost to the naive one twice.
+
+**Hard-won rules, all of which cost a wrong answer to learn:**
+- The prompt forbids any date, number, name or superlative that is not in the quote. Under the
+  earlier prompt **0 of 20 claims verified** — not fabrications, but over-specified: true in
+  substance while asserting more than the page states. Unprovable richness goes to `context`,
+  shown on the page collapsed and labelled "not verified, do not repeat as fact".
+- **`unchecked` is never a pass.** When fewer than half the cited pages could be fetched
+  (paywalls and bot-blocks are the norm — 17 in one run), the status is `unchecked`, not
+  `unsupported`. Reporting a fetch failure as a failed claim blames the research for the network.
+- Attaching one claim to a BAG of sources is the "broadening a citation to every quote from a
+  source" anti-pattern; verification binds a claim to the sources whose text supports it.
+- Judge a claim against ALL its verified quotes. Judging a multi-source claim against one of
+  them manufactures false "overreach".
+
+Surfaced on **/audience-brief** as "Openings we could make this week": the verified quote leads
+with a `#:~:text=` deep link, the fuller claim is demoted to "Unverified", and verified
+openings sort first. Pure helpers + tests: `src/lib/marketing/orgResearch.ts`,
+`src/lib/marketing/sourceVerification.ts`, `tests/org-research.test.ts`,
+`tests/source-verification.test.ts`.
+
+## Marketing dataset split — internal records out of the public dataset (in progress 2026-08-24)
+
+Sanity's public-dataset grant is `_id in path("*")`, which matches every id **without a dot** —
+so today's "privacy" is an accident of id naming, not a rule. 75 internal marketing documents
+(calendar, research, ideas, experiments…) are readable by anyone who knows the project id.
+Full plan: [`docs/dataset-split-migration-plan.md`](docs/dataset-split-migration-plan.md).
+
+- **The rule lives in ONE place:** `src/lib/marketing/datasetRouting.ts` —
+  `INTERNAL_MARKETING_TYPES` / `datasetForType(type, publicDataset)` /
+  `clientForType(base, type)`. Server code uses `getMarketingWriteClientFor(type)`
+  (`src/lib/marketing/client.ts`); Studio components use `clientForType(useClient(...), type)`.
+  **Never** hand a bare workspace client to a marketing read/write — it writes to whatever
+  dataset the workspace happens to be on and reports success.
+- **Escape hatch:** `NEXT_PUBLIC_MARKETING_INTERNAL_DATASET` set back to the public dataset
+  reverts the whole split in ~a minute, no git operation.
+- **`clientForType` only re-scopes INTERNAL types** — public types pass through on the
+  caller's client. Anything that must read one specific dataset regardless of caller has to
+  pin it explicitly with `withConfig({ dataset: datasetForType(type, PUBLIC_DATASET) })`
+  (this is what `resolveMarketingModel` does for the `marketingSettings` singleton).
+- **Health probe — run before AND after every step:** `node scripts/check-dataset-split.mjs`
+  (needs a server + `MARKETING_API_KEY`) wraps `/api/marketing/health/dataset`. Per type it
+  reports configured dataset, count there, count in the other, and **anonymouslyReadable**.
+  Every failure mode here is silent — a repointed query that misses returns `[]`, not an
+  error — so this number is the only real evidence. **Baseline: 75.** The watch list is
+  derived from `INTERNAL_MARKETING_TYPES`, so a type the router protects cannot escape the
+  probe; it read 73 until `marketingLeadMagnet` was found missing from BOTH source lists.
+- **Data move:** `node scripts/split-marketing-dataset.mjs --wave 1 --copy|--verify|--delete`
+  (dry-run by default). Copy writes the whole wave in **ONE transaction** — Sanity validates
+  strong references at end-of-transaction, so batching breaks any reference whose target
+  lands in a later batch. References pointing *outside* the wave are weakened in transit
+  (weakening a schema field only governs new writes; stored documents keep their strong refs).
+- **State: CUT OVER 2026-08-24 (Steps 1–7 done).** The 24 Wave-1 types are in
+  `INTERNAL_MARKETING_TYPES`, so all reads/writes for them now resolve to `outreach`
+  (probe: `internalTypes=31`). The documents ALSO still exist in production, so the window
+  stays reversible — and **the leak is NOT closed yet**: the probe correctly reports 12 types
+  as `LEAKING` and `anonymouslyReadable` is still **75**. **Step 8 (delete from production
+  after a soak) is what closes it.** Waves 2/3 = `previewShareLink`, `cmsFeedback`.
+- **Cutover gotchas, all silent:** a mock/client without `withConfig` now throws inside
+  `clientForType` for any internal type (the assist tests hit this — fix the mock, do NOT
+  make the router fall back to the base client, which would quietly read the public copy);
+  `assertSplitIsReal` only bites once the type list grows, so its "internal === public"
+  test flips from not-throwing to throwing at cutover; and `tests/dataset-routing.test.ts`
+  pins the router against `WAVE_1` in the mover script so the two cannot drift (a drift
+  reads from a dataset the documents were never copied to and returns `[]`, not an error).
 
 ## Marketing suite architecture — portable + testable (decided 2026-06)
 

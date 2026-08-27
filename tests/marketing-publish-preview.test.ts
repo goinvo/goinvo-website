@@ -10,6 +10,7 @@ vi.mock('@/lib/marketing', async () => {
     ...actual,
     assertStudioOrApiKey: vi.fn(async () => {}),
     getMarketingWriteClient: () => ({ fetch: fetchMock }),
+    getMarketingWriteClientFor: () => ({ fetch: fetchMock }),
   }
 })
 

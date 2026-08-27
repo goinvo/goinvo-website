@@ -21,6 +21,18 @@ export default defineType({
   icon: CogIcon,
   fields: [
     defineField({
+      name: 'weeklyMarketingHours',
+      title: 'Marketing hours a week',
+      type: 'number',
+      description:
+        'How much time the studio can give marketing in a normal week. The weekly plan fits ' +
+        'the work to this number instead of handing you an endless list, and says what it ' +
+        'dropped. Be honest rather than aspirational — a plan built on hours you do not have ' +
+        'is the one that gets abandoned.',
+      initialValue: 4,
+      validation: (Rule) => Rule.min(0.5).max(40),
+    }),
+    defineField({
       name: 'aiModel',
       title: 'AI model for the marketing suite',
       description:

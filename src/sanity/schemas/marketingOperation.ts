@@ -20,6 +20,8 @@ const labels: Record<string, string> = {
   abTesting: 'A/B testing',
   linkTree: 'Quick Links',
   workEvidence: 'Outreach evidence',
+  shop: 'Shop',
+  thisWeek: 'This week',
 }
 
 const options = (values: readonly string[]) => values.map((value) => ({
@@ -48,12 +50,37 @@ export default defineType({
     defineField({ name: 'kind', title: 'Kind', type: 'string', options: { list: options(MARKETING_OPERATION_KINDS) }, validation: (Rule) => Rule.required() }),
     defineField({ name: 'origin', title: 'Origin', type: 'string', options: { list: options(MARKETING_OPERATION_ORIGINS) }, validation: (Rule) => Rule.required() }),
     defineField({ name: 'autonomy', title: 'Safety class', type: 'string', options: { list: options(MARKETING_OPERATION_AUTONOMY) }, validation: (Rule) => Rule.required() }),
-    defineField({ name: 'ownerName', title: 'Accountable owner', type: 'string', validation: (Rule) => Rule.max(120) }),
+    defineField({
+      name: 'ownerName',
+      title: 'Accountable owner',
+      type: 'string',
+      description: 'Who has ACTUALLY taken this on. Empty until somebody claims it.',
+      validation: (Rule) => Rule.max(120),
+    }),
+    defineField({
+      name: 'suggestedOwner',
+      title: 'Suggested owner',
+      type: 'string',
+      description:
+        'Who the plan thinks should do this. A recommendation, not a commitment — ' +
+        'it must never render as though that person accepted it.',
+      validation: (Rule) => Rule.max(120),
+    }),
     defineField({ name: 'ownerSanityUserId', title: 'Owner Sanity user ID', type: 'string', hidden: true }),
     defineField({ name: 'dueAt', title: 'Due', type: 'datetime' }),
+    defineField({
+      name: 'estimatedMinutes',
+      title: 'Estimated minutes',
+      type: 'number',
+      description:
+        'Roughly how long this takes. Left empty, the weekly planner estimates it from the ' +
+        'kind of work; set it and your number always wins. This is what lets a week of ' +
+        'marketing fit the hours you actually have.',
+      validation: (Rule) => Rule.min(1).max(2400).integer(),
+    }),
     defineField({ name: 'nextCheckAt', title: 'Next check', type: 'datetime' }),
     defineField({ name: 'blocker', title: 'Blocker', type: 'text', rows: 3, validation: (Rule) => Rule.max(600) }),
-    defineField({ name: 'lastOutcome', title: 'Marketing already did', type: 'text', rows: 3, validation: (Rule) => Rule.max(700) }),
+    defineField({ name: 'lastOutcome', title: 'Marqueta already did', type: 'text', rows: 3, validation: (Rule) => Rule.max(700) }),
     defineField({ name: 'targetView', title: 'Open in', type: 'string', options: { list: options(MARKETING_OPERATION_TARGET_VIEWS) }, validation: (Rule) => Rule.required() }),
     defineField({ name: 'sourceKey', title: 'Idempotency source key', type: 'string', readOnly: true, validation: (Rule) => Rule.required() }),
     defineField({ name: 'sourceFingerprint', title: 'Source condition fingerprint', type: 'string', readOnly: true, validation: (Rule) => Rule.required() }),

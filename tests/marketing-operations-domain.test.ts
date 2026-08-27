@@ -137,7 +137,7 @@ describe('private Marketing Operations domain', () => {
   })
 })
 
-describe('Tell Marketing privacy preflight', () => {
+describe('Tell Marqueta privacy preflight', () => {
   it('quarantines credentials, contact PII, and health identifiers before AI', () => {
     expect(findWorkUpdatePrivacyIssue('password = supersecret123')).toMatchObject({ code: 'credential' })
     expect(findWorkUpdatePrivacyIssue('Email alex@example.com about the launch')).toMatchObject({ code: 'contactPii' })

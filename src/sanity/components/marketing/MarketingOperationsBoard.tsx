@@ -43,7 +43,7 @@ type OperationsResponse = {
 
 const GROUP_LABELS: Record<MarketingOperationGroup | 'all', string> = {
   needsHuman: 'Needs a person',
-  marketingHandling: 'Marketing handling',
+  marketingHandling: 'Marqueta handling',
   comingUp: 'Coming up',
   history: 'Done / history',
   all: 'All active',
@@ -51,7 +51,7 @@ const GROUP_LABELS: Record<MarketingOperationGroup | 'all', string> = {
 
 const STATUS_LABELS: Record<MarketingOperationStatus, string> = {
   queued: 'Queued',
-  working: 'Marketing working',
+  working: 'Marqueta working',
   needsHuman: 'Needs a person',
   waiting: 'Waiting',
   blocked: 'Blocked',
@@ -181,7 +181,7 @@ function ItemDetails({ item }: { item: MarketingOperation }) {
       </summary>
       <div style={{ display: 'grid', gap: 8, marginTop: 8, ...styles.small }}>
         {item.whyNow && <div><strong style={{ color: 'var(--card-fg-color)' }}>Why now: </strong>{item.whyNow}</div>}
-        {item.lastOutcome && <div><strong style={{ color: 'var(--card-fg-color)' }}>Marketing already did: </strong>{item.lastOutcome}</div>}
+        {item.lastOutcome && <div><strong style={{ color: 'var(--card-fg-color)' }}>Marqueta already did: </strong>{item.lastOutcome}</div>}
         {item.humanQuestion && <div><strong style={{ color: 'var(--card-fg-color)' }}>Needed from a person: </strong>{item.humanQuestion}</div>}
         {item.humanResponse && <div><strong style={{ color: 'var(--card-fg-color)' }}>Latest team answer: </strong>{item.humanResponse}</div>}
         {item.blocker && <div><strong style={{ color: '#E36216' }}>Blocker: </strong>{item.blocker}</div>}
@@ -560,9 +560,9 @@ export function MarketingOperationsBoardContent({
   }
 
   const emptyMessage = filter === 'needsHuman'
-    ? 'You’re clear. Marketing has no decisions waiting on the team.'
+    ? 'You’re clear. Marqueta has no decisions waiting on the team.'
     : items.length === 0
-      ? 'No shared work yet. Give Marketing one rough update and it will build the queue.'
+      ? 'No shared work yet. Give Marqueta one rough update and it will build the queue.'
       : `No work is currently in ${GROUP_LABELS[filter].toLowerCase()}.`
 
   return (
@@ -593,7 +593,7 @@ export function MarketingOperationsBoardContent({
           </div>
           <h2 id="marketing-operations-title" style={{ margin: '5px 0 0', fontSize: 26 }}>Marketing’s desk</h2>
           <p style={{ ...styles.small, margin: '6px 0 0', fontSize: 13 }}>
-            Marketing handles safe internal work, keeps the next move visible, and stops when a person must decide, provide a fact, or approve an external action.
+            Marqueta handles safe internal work, keeps the next move visible, and stops when a person must decide, provide a fact, or approve an external action.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -607,7 +607,7 @@ export function MarketingOperationsBoardContent({
       <div data-marketing-ops-summary="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginTop: 14 }}>
         {[
           ['Needs you', counts.needsHuman],
-          ['Marketing handling', counts.marketingHandling],
+          ['Marqueta handling', counts.marketingHandling],
           ['Coming up', counts.comingUp],
           ['Overdue', counts.overdue],
         ].map(([label, value]) => (
@@ -619,7 +619,7 @@ export function MarketingOperationsBoardContent({
       </div>
 
       <div style={{ ...styles.small, marginTop: 10 }}>
-        Ready for Marketing when this workspace is open. Shared assignments, dates, blockers, and outcomes persist privately for the team.
+        Ready for Marqueta when this workspace is open. Shared assignments, dates, blockers, and outcomes persist privately for the team.
       </div>
 
       <div data-marketing-ops-filters="true" role="group" aria-label="Filter Marketing’s desk" style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 14 }}>
@@ -771,7 +771,7 @@ export function MarketingOperationsBoardContent({
             System checks ready to queue ({availableSignals.length})
           </summary>
           <p style={{ ...styles.small, margin: '4px 0 10px' }}>
-            These are live recommendations, not assignments. Add one only when the team wants Marketing to own the follow-through.
+            These are live recommendations, not assignments. Add one only when the team wants Marqueta to own the follow-through.
           </p>
           <div style={{ display: 'grid', gap: 8 }}>
             {pagedSignals.map((signal) => (
@@ -811,7 +811,7 @@ export function MarketingOperationsBoardContent({
       )}
 
       <div style={{ marginTop: 14, border: '1px solid rgba(77, 196, 214, 0.3)', borderRadius: 8, padding: 10, background: 'rgba(0, 115, 133, 0.07)', ...styles.small }}>
-        <strong style={{ color: 'var(--card-fg-color)' }}>Where Marketing stops: </strong>
+        <strong style={{ color: 'var(--card-fg-color)' }}>Where Marqueta stops: </strong>
         It may inspect shared records, organize work, and prepare private drafts. Publishing, outreach, paid research, claim approval, deletion, and brand-voice changes always wait for a person.
       </div>
     </section>

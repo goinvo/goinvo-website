@@ -131,6 +131,7 @@ describe('Marketing CMS schemas', () => {
     expect(marketingTool.name).toBe('marketing')
     expect(marketingTool.title).toBe('Marketing')
     expect(MARKETING_TOOL_VIEWS.map((view) => view.id)).toEqual([
+      'thisWeek',
       'dashboard',
       'research',
       'seo',
@@ -217,7 +218,7 @@ describe('Marketing CMS schemas', () => {
     expect(source).toContain('onClick={() => void createHomepageExperiment()}')
     expect(source).toContain('How this test is going')
     expect(source).toContain('Suggested improvements')
-    expect(source).toContain('Visits and events')
+    expect(source).toContain('Unique visitors and events')
     expect(source).toContain('Fix result evidence')
     expect(source).toContain('Measurement blocked')
     expect(source).toContain('Variant visits and event counts captured')

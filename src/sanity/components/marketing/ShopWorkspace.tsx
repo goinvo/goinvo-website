@@ -13,7 +13,7 @@ import { useToast } from '@sanity/ui'
 
 import { buildCreatePayload } from '@/lib/marketing'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
-import { randomKey, slugify } from '@/lib/marketing'
+import { randomKey } from '@/lib/marketing'
 import { MARKETING_SHOP_SETTINGS_ID, paymentProviderOptions } from '../../schemas/marketingShopSettings'
 import {
   advancedEditHref,
@@ -42,6 +42,8 @@ type ShopProduct = {
   lowStockThreshold?: number
   allowBackorder?: boolean
   price?: number
+  /** Struck-through "was" price. Display only; checkout never charges it. */
+  compareAtPrice?: number
   currency?: string
   checkoutUrl?: string
   imageUrl?: string
@@ -90,6 +92,7 @@ type ShopSettings = {
   description?: string
   storefrontEnabled?: boolean
   supportEmail?: string
+  shippingFlatRate?: number
   provider?: string
   connectionStatus?: string
   accountLabel?: string
@@ -134,6 +137,7 @@ type ProductDraft = {
   kind: string
   description: string
   price: string
+  compareAtPrice: string
   currency: string
   inventoryQuantity: string
   lowStockThreshold: string
@@ -165,12 +169,12 @@ const SHOP_PUBLIC_QUERY = `{
     | order(coalesce(featured, false) desc, coalesce(displayOrder, 100) asc, title asc) {
       _id, _rev, title, slug, status, kind, description, featured, displayOrder,
       sku, production, orderable, trackInventory, inventoryQuantity, lowStockThreshold, allowBackorder,
-      price, currency, checkoutUrl,
+      price, compareAtPrice, currency, checkoutUrl,
       "imageUrl": image.asset->url,
       "imageAlt": image.alt
     },
   "settings": *[_id == "${MARKETING_SHOP_SETTINGS_ID}"][0] {
-    _id, _rev, storeName, headline, description, storefrontEnabled, supportEmail,
+    _id, _rev, storeName, headline, description, storefrontEnabled, supportEmail, shippingFlatRate,
     provider, connectionStatus, accountLabel, dashboardUrl, webhookStatus,
     syncContacts, contactSegment, contactSourceNote
   }
@@ -231,6 +235,7 @@ const emptyProductDraft: ProductDraft = {
   kind: 'physical',
   description: '',
   price: '',
+  compareAtPrice: '',
   currency: 'USD',
   inventoryQuantity: '0',
   lowStockThreshold: '5',
@@ -283,6 +288,7 @@ function productDraft(product?: ShopProduct | null): ProductDraft {
     kind: product.kind || 'physical',
     description: product.description || '',
     price: String(product.price ?? ''),
+    compareAtPrice: String(product.compareAtPrice ?? ''),
     currency: product.currency || 'USD',
     inventoryQuantity: String(product.inventoryQuantity ?? 0),
     lowStockThreshold: String(product.lowStockThreshold ?? 5),
@@ -368,6 +374,11 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
   const [draft, setDraft] = useState<ProductDraft>({ ...emptyProductDraft })
   const [orderDraft, setOrderDraft] = useState<OrderDraft>({ ...emptyOrderDraft })
   const [settingsDraft, setSettingsDraft] = useState<ShopSettings | null>(null)
+  // Bulk edit: repricing 30 posters one card at a time is the job this tab
+  // exists to avoid.
+  const [bulkIds, setBulkIds] = useState<string[]>([])
+  const [bulkPrice, setBulkPrice] = useState('')
+  const [bulkSale, setBulkSale] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -409,7 +420,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
     } finally {
       setLoading(false)
     }
-  }, [client, toast])
+  }, [client, outreachClient, toast])
 
   useEffect(() => {
     void load()
@@ -455,6 +466,63 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
     setDraft(productDraft(product))
   }
 
+  /**
+   * Apply one field to every selected product in a single transaction.
+   *
+   * A transaction so a half-applied price change cannot happen: either the
+   * whole selection moves or none of it does. `null` clears the field, which is
+   * how a sale ends.
+   */
+  const applyBulk = async (field: 'price' | 'compareAtPrice', value: number | null) => {
+    if (bulkIds.length === 0) return
+    if (value !== null && (!Number.isFinite(value) || value < 0)) {
+      toast.push({ status: 'warning', title: 'Enter an amount of 0 or more first.' })
+      return
+    }
+    // A was-price at or below the price is not an offer. Refuse rather than
+    // publish a struck-through number that makes the shop look broken.
+    if (field === 'compareAtPrice' && value !== null) {
+      const conflict = data.products.filter(
+        (product) => bulkIds.includes(product._id) && typeof product.price === 'number' && value <= product.price,
+      )
+      if (conflict.length > 0) {
+        toast.push({
+          status: 'warning',
+          title: `Was-price must be above the price`,
+          description: `${conflict.length} selected ${conflict.length === 1 ? 'piece is' : 'pieces are'} priced at or above ${money(value)}. Raise the was-price or deselect them.`,
+        })
+        return
+      }
+    }
+    setSaving(true)
+    try {
+      let transaction = client.transaction()
+      bulkIds.forEach((id) => {
+        transaction = transaction.patch(
+          id,
+          value === null ? { unset: [field] } : { set: { [field]: value } },
+        )
+      })
+      await transaction.commit()
+      const label =
+        field === 'price'
+          ? `Price set to ${money(value || 0)}`
+          : value === null
+            ? 'Sale cleared'
+            : `Was-price set to ${money(value)}`
+      toast.push({ status: 'success', title: `${label} on ${bulkIds.length} ${bulkIds.length === 1 ? 'piece' : 'pieces'}` })
+      await load()
+    } catch (error) {
+      toast.push({
+        status: 'error',
+        title: 'Bulk update failed',
+        description: error instanceof Error ? error.message : 'Nothing was changed.',
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const saveProduct = async () => {
     if (!draft.title.trim() || !draft.sku.trim() || draft.price === '') {
       toast.push({ status: 'warning', title: 'Add a product name, SKU, and price first.' })
@@ -476,6 +544,13 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
         production: draft.production,
         orderable: draft.orderable,
         price: Math.max(0, numberValue(draft.price)),
+        // Blank clears the sale. Anything at or below the price is not an
+        // offer, so it is dropped rather than rendered as a broken discount.
+        compareAtPrice:
+          draft.compareAtPrice.trim() === '' ||
+          numberValue(draft.compareAtPrice) <= Math.max(0, numberValue(draft.price))
+            ? undefined
+            : Math.max(0, numberValue(draft.compareAtPrice)),
         currency: draft.currency.trim().toUpperCase() || 'USD',
         checkoutUrl: draft.checkoutUrl.trim() || undefined,
       }
@@ -656,6 +731,10 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
         description: settings.description || '',
         storefrontEnabled: settings.storefrontEnabled === true,
         supportEmail: settings.supportEmail || '',
+        shippingFlatRate:
+          typeof settings.shippingFlatRate === 'number' && settings.shippingFlatRate >= 0
+            ? settings.shippingFlatRate
+            : undefined,
         provider: settings.provider || 'none',
         connectionStatus: settings.connectionStatus || 'notConnected',
         accountLabel: settings.accountLabel || '',
@@ -804,6 +883,74 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
               <button type="button" style={styles.primaryButton} onClick={() => beginProduct()}>Add first product</button>
             </div>
           ) : (
+            <>
+            <div
+              style={{
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10,
+                padding: '12px 14px', marginBottom: 12, borderRadius: 8,
+                border: '1px solid rgba(140,150,170,.22)',
+                background: bulkIds.length ? 'rgba(77,196,214,.10)' : 'transparent',
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700 }}>
+                <input
+                  type="checkbox"
+                  checked={bulkIds.length > 0 && bulkIds.length === data.products.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = bulkIds.length > 0 && bulkIds.length < data.products.length
+                  }}
+                  onChange={(event) =>
+                    setBulkIds(event.currentTarget.checked ? data.products.map((p) => p._id) : [])
+                  }
+                />
+                {bulkIds.length ? `${bulkIds.length} selected` : 'Select all'}
+              </label>
+
+              <span style={{ ...styles.muted, fontSize: 12 }}>Set price</span>
+              <input
+                type="number" min={0} step="0.01" placeholder="30"
+                aria-label="Bulk price"
+                style={{ ...styles.input, width: 92 }}
+                value={bulkPrice}
+                onChange={(event) => setBulkPrice(event.currentTarget.value)}
+              />
+              <button
+                type="button" style={styles.button}
+                disabled={saving || !bulkIds.length || bulkPrice === ''}
+                onClick={() => void applyBulk('price', Number(bulkPrice))}
+              >
+                Apply price
+              </button>
+
+              <span style={{ ...styles.muted, fontSize: 12 }}>Was</span>
+              <input
+                type="number" min={0} step="0.01" placeholder="50"
+                aria-label="Bulk was-price"
+                style={{ ...styles.input, width: 92 }}
+                value={bulkSale}
+                onChange={(event) => setBulkSale(event.currentTarget.value)}
+              />
+              <button
+                type="button" style={styles.button}
+                disabled={saving || !bulkIds.length || bulkSale === ''}
+                onClick={() => void applyBulk('compareAtPrice', Number(bulkSale))}
+              >
+                Mark on sale
+              </button>
+              <button
+                type="button" style={styles.button}
+                disabled={saving || !bulkIds.length}
+                onClick={() => void applyBulk('compareAtPrice', null)}
+              >
+                End sale
+              </button>
+
+              <span style={{ ...styles.muted, fontSize: 12, flexBasis: '100%', margin: 0 }}>
+                &ldquo;Was&rdquo; is display only &mdash; checkout always charges Price. Shipping is
+                one flat rate for the whole shop; set it under Settings.
+              </span>
+            </div>
+
             <div
               data-mobile-stack="true"
               style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14 }}
@@ -849,17 +996,44 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                         {product.description || 'Add a short storefront description.'}
                       </p>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                        <strong style={{ fontSize: 20 }}>{money(product.price, product.currency)}</strong>
+                        <strong style={{ fontSize: 20 }}>
+                          {typeof product.compareAtPrice === 'number' &&
+                            typeof product.price === 'number' &&
+                            product.compareAtPrice > product.price && (
+                              <span style={{ ...styles.muted, fontSize: 13, textDecoration: 'line-through', marginRight: 6 }}>
+                                {money(product.compareAtPrice, product.currency)}
+                              </span>
+                            )}
+                          {money(product.price, product.currency)}
+                        </strong>
                         <span style={{ padding: '4px 7px', borderRadius: 999, fontSize: 11, fontWeight: 800, color: stock.color, background: stock.background }}>
                           {stock.label}
                         </span>
                       </div>
-                      <button type="button" style={styles.button} onClick={() => beginProduct(product)}>Edit product</button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, ...styles.muted }}>
+                          <input
+                            type="checkbox"
+                            checked={bulkIds.includes(product._id)}
+                            aria-label={`Select ${product.title || 'product'} for bulk edit`}
+                            onChange={(event) =>
+                              setBulkIds((current) =>
+                                event.currentTarget.checked
+                                  ? [...current, product._id]
+                                  : current.filter((id) => id !== product._id),
+                              )
+                            }
+                          />
+                          Select
+                        </label>
+                        <button type="button" style={{ ...styles.button, flex: 1 }} onClick={() => beginProduct(product)}>Edit product</button>
+                      </div>
                     </div>
                   </article>
                 )
               })}
             </div>
+            </>
           )}
         </div>
       )}
@@ -1171,6 +1345,24 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
               <Field label="Description">
                 <textarea rows={3} style={styles.input} value={settings.description || ''} onChange={(event) => setSettingsDraft((current) => current ? { ...current, description: event.currentTarget.value } : current)} />
               </Field>
+              <Field label="Flat US shipping">
+                <input
+                  type="number" min={0} step="0.01" placeholder="6"
+                  style={styles.input}
+                  value={settings.shippingFlatRate ?? ''}
+                  onChange={(event) =>
+                    setSettingsDraft((current) =>
+                      current
+                        ? {
+                            ...current,
+                            shippingFlatRate:
+                              event.currentTarget.value === '' ? undefined : Number(event.currentTarget.value),
+                          }
+                        : current,
+                    )
+                  }
+                />
+              </Field>
               <Field label="Support email">
                 <input type="email" style={styles.input} value={settings.supportEmail || ''} onChange={(event) => setSettingsDraft((current) => current ? { ...current, supportEmail: event.currentTarget.value } : current)} />
               </Field>
@@ -1232,7 +1424,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                 <p style={{ ...styles.muted, ...styles.small }}>
                   Use the full document editor for uncommon fields. Payment secrets must stay in deployment environment variables.
                 </p>
-                <a href={advancedEditHref('marketingShopSettings', MARKETING_SHOP_SETTINGS_ID)} style={styles.inlineLink}>
+                <a href={advancedEditHref('marketingShopSettings', MARKETING_SHOP_SETTINGS_ID) ?? undefined} style={styles.inlineLink}>
                   Open full shop settings
                   <LaunchIcon style={{ width: 15, height: 15 }} />
                 </a>
@@ -1273,6 +1465,9 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
               <div data-mobile-stack="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
                 <Field label="Price">
                   <input type="number" min={0} step="0.01" style={styles.input} value={draft.price} onChange={(event) => setDraft((current) => ({ ...current, price: event.currentTarget.value }))} />
+                </Field>
+                <Field label="Was (sale)">
+                  <input type="number" min={0} step="0.01" placeholder="empty = not on sale" style={styles.input} value={draft.compareAtPrice} onChange={(event) => setDraft((current) => ({ ...current, compareAtPrice: event.currentTarget.value }))} />
                 </Field>
                 <Field label="Currency">
                   <input maxLength={3} style={styles.input} value={draft.currency} onChange={(event) => setDraft((current) => ({ ...current, currency: event.currentTarget.value.toUpperCase() }))} />
@@ -1346,7 +1541,7 @@ export function ShopWorkspace({ client }: { client: StudioClient }) {
                 <details style={{ borderTop: '1px solid var(--card-border-color)', paddingTop: 12 }}>
                   <summary style={{ cursor: 'pointer', fontWeight: 800 }}>Advanced fields</summary>
                   <p style={{ ...styles.muted, ...styles.small }}>Add the product image, campaign links, audiences, internal notes, and other uncommon fields.</p>
-                  <a href={advancedEditHref('marketingProduct', selectedProduct._id)} style={styles.inlineLink}>
+                  <a href={advancedEditHref('marketingProduct', selectedProduct._id) ?? undefined} style={styles.inlineLink}>
                     Open full product editor
                     <LaunchIcon style={{ width: 15, height: 15 }} />
                   </a>

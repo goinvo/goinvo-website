@@ -25,15 +25,18 @@ import { StrategyBriefWorkspace } from '../components/StrategyBriefWorkspace'
 import { AbTestingWorkspace } from '../components/marketing/AbTestingWorkspace'
 import { AnalyticsWorkspace } from '../components/marketing/AnalyticsWorkspace'
 import { MarketingAiModelSetting } from '../components/marketing/MarketingAiModelSetting'
+import { MarketingWeeklyHoursSetting } from '../components/marketing/MarketingWeeklyHoursSetting'
 import { MarketingBrandVoiceSetting } from '../components/marketing/MarketingBrandVoiceSetting'
 import { BrandVoiceLearningReview } from '../components/marketing/BrandVoiceLearningReview'
 import { authenticatedMarketingRequest } from '../components/marketing/authenticatedMarketingRequest'
 import { LatestExclusiveRequestGate, type AsyncRequestTicket } from '../components/marketing/asyncRequestGate'
 import { MarketingFinancialPostureSetting } from '../components/marketing/MarketingFinancialPostureSetting'
+import { TaskFocusBanner } from '../components/marketing/TaskFocusBanner'
 import { MarketingOperationsBoard } from '../components/marketing/MarketingOperationsBoard'
 import { CalendarWorkspace } from '../components/marketing/CalendarWorkspace'
 import { CampaignWorkspace } from '../components/marketing/CampaignWorkspace'
 import { ShopWorkspace } from '../components/marketing/ShopWorkspace'
+import { WeeklyPlanWorkspace } from '../components/marketing/WeeklyPlanWorkspace'
 import { ChannelWorkspace } from '../components/marketing/ChannelWorkspace'
 import { OutreachWorkspace, OutreachEvidenceWorkspace } from '../components/marketing/OutreachWorkspace'
 import { FunnelWorkspace } from '../components/marketing/FunnelWorkspace'
@@ -344,6 +347,10 @@ const MARKETING_QUERY = `{
     publishState,
     publishError,
     "owner": owner->{_id, "title": name},
+    // The raw ref survives the dataset split: a weak reference does NOT
+    // dereference across datasets, it silently returns null. Keeping both lets
+    // the same code work before and after cutover.
+    "ownerRef": owner._ref,
     "campaign": campaign->{_id, title, status},
     "funnel": funnel->{_id, title, status},
     "analyticsSource": ${ANALYTICS_SOURCE_PROJECTION},
@@ -518,6 +525,8 @@ const MARKETING_QUERY = `{
     targetType,
     targetPath,
     "targetFeature": targetFeature->{_id, title, slug},
+    // Same reason as owner above: features stay public while experiments move.
+    "targetFeatureRef": targetFeature._ref,
     flagKey,
     measurementStart,
     variants[]{_key, key, label, notes, previewUrl},
@@ -531,7 +540,7 @@ const MARKETING_QUERY = `{
     vercelDashboardUrl,
     "campaign": campaign->{_id, title, status},
     "calendarItem": calendarItem->{_id, title, status, publishAt},
-    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, "experiment": experiment->{_id, title, status}, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, interpretation, recommendation},
+    "performanceSignals": performanceSignals[]->{_id, title, provider, status, signalType, "experiment": experiment->{_id, title, status}, metricDate, periodStart, periodEnd, metrics[]{_key, label, value, unit, change, variantKey, eventName}, variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration}, sectionEngagement[]{_key, variantKey, sectionKey, views, averageVisibleDuration}, interpretation, recommendation},
     result,
     decision,
     decisionDate,
@@ -558,6 +567,7 @@ const MARKETING_QUERY = `{
     periodEnd,
     metrics[]{_key, label, value, unit, change, variantKey, eventName},
     variantEngagement[]{_key, variantKey, sessions, bounceRate, averageSessionDuration},
+    sectionEngagement[]{_key, variantKey, sectionKey, views, averageVisibleDuration},
     interpretation,
     recommendation,
     rawImport
@@ -802,17 +812,38 @@ const MARKETING_QUERY = `{
     notes,
     conversionGoal,
     stages[]{_key, _type, stage, goal, offer, callToAction, destinationUrl, metrics}
-  },
+  }
+}`
+
+/**
+ * The half of the tool's data that stays in the PUBLIC dataset.
+ *
+ * Team members and features are content, not marketing records, so they do not
+ * move. Split out because one query cannot span two datasets: after cutover the
+ * marketing half runs against the private dataset and this half does not.
+ * Fetched together and merged, so nothing downstream notices.
+ */
+const MARKETING_PUBLIC_QUERY = `{
   "teamMembers": *[_type == "teamMember" && coalesce(isAlumni, false) != true]|order(name asc) {
     _id,
     "title": name
+  },
+  // Fetched so an experiment's target article can be re-joined client-side once
+  // experiments move dataset and targetFeature-> stops resolving.
+  "features": *[_type == "feature" && !(_id in path("drafts.**"))]|order(title asc) {
+    _id,
+    title,
+    slug
   }
 }`
+
+import { clientForType } from '@/lib/marketing/datasetRouting'
 
 export type StudioClient = ReturnType<typeof useClient>
 export type MarketingDocumentInput = { _type: string } & Record<string, unknown>
 
 export type MarketingViewId =
+  | 'thisWeek'
   | 'dashboard'
   | 'strategy'
   | 'strategyBrief'
@@ -827,11 +858,12 @@ export type MarketingViewId =
   | 'channels'
   | 'analytics'
   | 'linkTree'
-  | 'seo'
   | 'shop'
+  | 'seo'
 export type MarketingViewOpener = (view: MarketingViewId) => boolean | void
 
 export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = {
+  thisWeek: 'marketing.dashboard',
   dashboard: 'marketing.dashboard',
   strategy: 'marketing.strategy',
   strategyBrief: 'marketing.strategy-brief',
@@ -846,8 +878,8 @@ export const MARKETING_GUIDE_ARTICLE_BY_VIEW: Record<MarketingViewId, string> = 
   channels: 'marketing.channels',
   analytics: 'marketing.analytics',
   linkTree: 'marketing.quick-links',
-  seo: 'marketing.seo',
   shop: 'marketing.shop',
+  seo: 'marketing.seo',
 }
 export type MarketingAssistKind =
   | 'campaign'
@@ -1152,6 +1184,35 @@ export function studioSessionToken(): string | null {
 
 // Header map that authenticates a Studio→/api/marketing request as the logged-in
 // Studio user (so auth-gated routes like /assist accept it). Empty when no token.
+/**
+ * Re-attach references that stop dereferencing once a type moves dataset.
+ *
+ * A weak reference across datasets resolves to null rather than failing, so a
+ * calendar item would quietly lose its owner and an experiment its target
+ * article — visible as blank fields, with nothing in any log. The raw `_ref` is
+ * fetched alongside, and this fills the gap from lists already in hand.
+ *
+ * Prefers whatever the query already resolved, so it is a no-op before cutover.
+ */
+export function joinAcrossDatasets<T extends { _id: string }>(
+  items: T[],
+  lookup: Array<{ _id: string; title?: string; name?: string }>,
+  refKey: string,
+  valueKey: string,
+): T[] {
+  if (items.length === 0) return items
+  const byId = new Map(lookup.map((entry) => [entry._id, entry]))
+  return items.map((item) => {
+    const record = item as unknown as Record<string, unknown>
+    if (record[valueKey]) return item
+    const ref = record[refKey]
+    if (typeof ref !== 'string') return item
+    const match = byId.get(ref)
+    if (!match) return item
+    return { ...item, [valueKey]: { _id: match._id, title: match.title || match.name } } as T
+  })
+}
+
 export function studioSessionHeader(): Record<string, string> {
   const token = studioSessionToken()
   return token ? { 'x-sanity-session': token } : {}
@@ -1219,6 +1280,8 @@ export interface MarketingCalendarItem {
   publishState?: string
   publishError?: string
   owner?: RefSummary
+  /** Raw ref, used to re-join owner once team members live in another dataset. */
+  ownerRef?: string
   campaign?: RefSummary
   funnel?: RefSummary
   channelRef?: MarketingChannel
@@ -1424,6 +1487,8 @@ export interface MarketingExperiment {
   targetType?: string
   targetPath?: string
   targetFeature?: RefSummary & { slug?: { current?: string } }
+  /** Raw ref, used to re-join the feature across the dataset boundary. */
+  targetFeatureRef?: string
   flagKey?: string
   measurementStart?: string
   variants?: Array<{ _key?: string; key?: string; label?: string; notes?: string; previewUrl?: string }>
@@ -1465,6 +1530,7 @@ export interface MarketingPerformanceSignal {
   periodEnd?: string
   metrics?: Array<{ _key?: string; label?: string; value?: number; unit?: string; change?: string; variantKey?: string; eventName?: string }>
   variantEngagement?: Array<{ _key?: string; variantKey?: string; sessions?: number; bounceRate?: number; averageSessionDuration?: number }>
+  sectionEngagement?: Array<{ _key?: string; variantKey?: string; sectionKey?: string; views?: number; averageVisibleDuration?: number }>
   interpretation?: string
   recommendation?: string
   rawImport?: string
@@ -1926,6 +1992,8 @@ export interface MarketingData {
   researchPlans: MarketingResearchPlan[]
   templates: MarketingTemplate[]
   teamMembers?: RefSummary[]
+  /** Public content, fetched so experiments can re-join their target article. */
+  features?: Array<RefSummary & { slug?: { current?: string } }>
 }
 
 export type MarketingAiSuggestion = {
@@ -2941,6 +3009,12 @@ function MarketingComponent() {
   const hasUnsavedChanges = Object.keys(unsavedChanges).length > 0
   const hasUnsavedChange = useCallback((id: string) => Boolean(unsavedChanges[id]), [unsavedChanges])
   const outreachClient = useMemo(() => client.withConfig({ dataset: OUTREACH_DATASET }), [client])
+  // Every marketing workspace reads and writes marketing types only, so they
+  // all take a client already scoped to the dataset those types live in.
+  // Scoping once here beats remembering to route at fourteen call sites — and a
+  // missed one would delete or patch against the wrong dataset and report
+  // success, which is the failure mode this migration keeps running into.
+  const marketingClient = useMemo(() => clientForType(client, 'marketingCalendarItem'), [client])
 
   const markUnsavedChange = useCallback((id = MARKETING_UNSAVED_FORM_ID, label = 'form fields you edited') => {
     setUnsavedChanges((current) => (current[id] === label ? current : { ...current, [id]: label }))
@@ -2989,10 +3063,23 @@ function MarketingComponent() {
     if (options.showRefreshProgress) setRefreshing(true)
     setError(null)
     try {
-      const nextData = await client.fetch<MarketingData>(MARKETING_QUERY)
+      // Two fetches, one merge: the marketing half follows the dataset split,
+      // the content half always stays public.
+      const [marketingData, publicData] = await Promise.all([
+        clientForType(client, 'marketingCalendarItem').fetch<MarketingData>(MARKETING_QUERY),
+        client.fetch<Pick<MarketingData, 'teamMembers' | 'features'>>(MARKETING_PUBLIC_QUERY),
+      ])
+      const nextData: MarketingData = { ...marketingData, ...publicData }
       if (generation !== loadDataGenerationRef.current) return false
       setData({
-        calendarItems: nextData.calendarItems || [],
+        // Re-attach anything a cross-dataset weak reference stopped resolving.
+        // No-ops before cutover, because the query already resolved them.
+        calendarItems: joinAcrossDatasets(
+          nextData.calendarItems || [],
+          nextData.teamMembers || [],
+          'ownerRef',
+          'owner',
+        ),
         campaigns: nextData.campaigns || [],
         funnels: nextData.funnels || [],
         analyticsSources: nextData.analyticsSources || [],
@@ -3002,7 +3089,12 @@ function MarketingComponent() {
         ctas: nextData.ctas || [],
         trackingRules: nextData.trackingRules || [],
         qualityGates: nextData.qualityGates || [],
-        experiments: nextData.experiments || [],
+        experiments: joinAcrossDatasets(
+          nextData.experiments || [],
+          nextData.features || [],
+          'targetFeatureRef',
+          'targetFeature',
+        ),
         performanceSignals: nextData.performanceSignals || [],
         channels: nextData.channels || [],
         linkItems: nextData.linkItems || [],
@@ -3012,6 +3104,7 @@ function MarketingComponent() {
         researchPlans: nextData.researchPlans || [],
         templates: nextData.templates || [],
         teamMembers: nextData.teamMembers || [],
+        features: nextData.features || [],
       })
       setLastLoaded(new Date().toLocaleTimeString())
       return true
@@ -3156,7 +3249,21 @@ function MarketingComponent() {
       setError(null)
       setNotice(null)
       try {
-        let patch = client.patch(id)
+        // Only an id arrives here, never a _type, so this cannot route per
+        // document. Every internal type moves together, so the internal client
+        // is correct for all of them — but a public type reaching this path
+        // would silently patch the wrong dataset, so say so loudly in dev.
+        const patchClient = clientForType(client, 'marketingCalendarItem')
+        if (process.env.NODE_ENV !== 'production') {
+          const publicPrefixes = ['feature', 'caseStudy', 'healthVisualization', 'teamMember', 'category']
+          if (publicPrefixes.some((prefix) => id.startsWith(prefix))) {
+            throw new Error(
+              `commitPatch received "${id}", which looks like a public content document. ` +
+                'It routes every patch to the internal dataset and would silently write to the wrong place.',
+            )
+          }
+        }
+        let patch = patchClient.patch(id)
         if (Object.keys(set).length > 0) patch = patch.set(set)
         if (unset.length > 0) patch = patch.unset(unset)
         await patch.commit()
@@ -3182,7 +3289,11 @@ function MarketingComponent() {
       setError(null)
       setNotice(null)
       try {
-        const created = await client.create(document)
+        // Route by type. Unrouted this line SUCCEEDS while being wrong: a new
+        // internal record would be written into the world-readable dataset
+        // while the tool reads the private one, so the record vanishes from the
+        // UI and the leak reopens on every "New" click.
+        const created = await clientForType(client, document._type).create(document)
         if (await loadData()) {
           clearUnsavedChanges()
           setNotice('Created a new marketing record.')
@@ -3206,7 +3317,7 @@ function MarketingComponent() {
       setError(null)
       setNotice(null)
       try {
-        const result = await generateInstagramCarouselSetup(client, data, questionnaire)
+        const result = await generateInstagramCarouselSetup(marketingClient, data, questionnaire)
         if (await loadData()) {
           clearUnsavedChanges()
           setNotice('Created the suggested marketing setup.')
@@ -3221,7 +3332,7 @@ function MarketingComponent() {
         setSavingId(null)
       }
     },
-    [clearUnsavedChanges, client, data, loadData],
+    [clearUnsavedChanges, data, loadData, marketingClient],
   )
 
   const generateMarketingPlan = useCallback(
@@ -3650,6 +3761,10 @@ function MarketingComponent() {
               activeView={view}
               onSelect={requestMarketingView}
             />
+            {/* Above every view, not just the dashboard: a Slack deep link can
+                land on any of them, and the reason you came must arrive with
+                you rather than staying behind in Slack. */}
+            <TaskFocusBanner />
             {view === 'dashboard' && (
               <>
                 <MarketingFinancialPostureSetting
@@ -3694,7 +3809,7 @@ function MarketingComponent() {
             {view === 'strategyBrief' && <StrategyBriefWorkspace />}
             {view === 'research' && (
               <ResearchWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -3705,7 +3820,7 @@ function MarketingComponent() {
                 onAutopilotComplete={reportAutopilotCompletion}
               />
             )}
-            {view === 'seo' && <SeoWorkspace client={client} />}
+            {view === 'seo' && <SeoWorkspace client={marketingClient} />}
             {view === 'abTesting' && (
               <AbTestingWorkspace
                 data={data}
@@ -3725,7 +3840,7 @@ function MarketingComponent() {
             )}
             {view === 'calendar' && (
               <CalendarWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -3753,7 +3868,7 @@ function MarketingComponent() {
             )}
             {view === 'templates' && (
               <TemplateWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -3778,11 +3893,12 @@ function MarketingComponent() {
                   </div>
                   <div id="marketing-settings-ai" style={{ scrollMarginTop: 16 }}>
                     <MarketingAiModelSetting />
+                    <MarketingWeeklyHoursSetting />
                   </div>
                 </div>
                 <div id="marketing-settings-channels" style={{ scrollMarginTop: 16 }}>
                   <ChannelWorkspace
-                    client={client}
+                    client={marketingClient}
                     data={data}
                     savingId={savingId}
                     createDocument={createDocument}
@@ -3792,6 +3908,7 @@ function MarketingComponent() {
                 </div>
               </>
             )}
+            {view === 'thisWeek' && <WeeklyPlanWorkspace proofClient={outreachClient} />}
             {view === 'shop' && <ShopWorkspace client={client} />}
             {view === 'outreach' && (
               <div data-tour-id="autopilot-outreach-workflow">
@@ -3806,7 +3923,7 @@ function MarketingComponent() {
             {view === 'workEvidence' && <OutreachEvidenceWorkspace client={client} />}
             {view === 'linkTree' && (
               <LinkTreeWorkspace
-                client={client}
+                client={marketingClient}
                 data={data}
                 savingId={savingId}
                 createDocument={createDocument}
@@ -4057,7 +4174,7 @@ function MarketingDashboard({
   const { markUnsavedChange, clearUnsavedChanges } = useMarketingUnsavedGuard()
   const handleWorkUpdateDirtyState = useCallback(
     (dirty: boolean) => {
-      if (dirty) markUnsavedChange(MARKETER_BRIEF_UNSAVED_ID, 'rough work update waiting for Marketing')
+      if (dirty) markUnsavedChange(MARKETER_BRIEF_UNSAVED_ID, 'rough work update waiting for Marqueta')
       else clearUnsavedChanges(MARKETER_BRIEF_UNSAVED_ID)
     },
     [clearUnsavedChanges, markUnsavedChange],
@@ -4078,9 +4195,9 @@ function MarketingDashboard({
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0, maxWidth: 760 }}>
             <div style={{ ...styles.kicker, marginBottom: 6 }}>Start here</div>
-            <h2 style={{ margin: 0, fontSize: 26 }}>Tell Marketing what changed</h2>
+            <h2 style={{ margin: 0, fontSize: 26 }}>Tell Marqueta what changed</h2>
             <p style={{ ...styles.muted, margin: '6px 0 0', lineHeight: 1.55 }}>
-              Paste a rough update—project, deadline, result, or change of plan. Marketing connects it to the suite and shows one review before saving.
+              Paste a rough update—project, deadline, result, or change of plan. Marqueta connects it to the suite and shows one review before saving.
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -7807,8 +7924,16 @@ function isScriptedAutopilotPlan(plan: MarketingAutopilotPlan | null | undefined
 export type PrincipalOutreachPrerequisites = {
   /** `null` means the private outreach dataset has not been checked yet. */
   contactCount: number | null
+  /** Active work-evidence records that can support a credible outreach brief. */
+  evidenceCount: number | null
   /** Active offers whose price band contains a real currency amount. */
   callReadyOfferCount: number | null
+  /** Contacts with a saved research result. */
+  researchedContactCount: number | null
+  /** Contacts whose latest research has been approved by a person. */
+  reviewedContactCount: number | null
+  /** Contacts with at least one durable outreach interaction. */
+  interactionCount: number | null
 }
 
 export function getPrincipalOutreachPrerequisiteBlocker(
@@ -7817,11 +7942,21 @@ export function getPrincipalOutreachPrerequisiteBlocker(
 ): string | null {
   if (!prerequisites || !stepId.startsWith('principal-')) return null
   const missing: string[] = []
-  if (stepId !== 'principal-plan-warm-network' && prerequisites.contactCount === 0) {
-    missing.push('Add at least one contact before confirming this step.')
-  }
-  if (prerequisites.callReadyOfferCount === 0) {
-    missing.push('Set a real currency amount on at least one active offer before continuing.')
+  if (stepId === 'principal-plan-warm-network') {
+    if (prerequisites.evidenceCount === 0) {
+      missing.push('Extract work evidence before starting contact research.')
+    }
+    if (prerequisites.callReadyOfferCount === 0) {
+      missing.push('Set a real currency amount on at least one active offer before continuing.')
+    }
+  } else if (stepId === 'principal-outreach-intake' && prerequisites.contactCount === 0) {
+    missing.push('Add at least one contact before continuing.')
+  } else if (stepId === 'principal-outreach-research' && prerequisites.researchedContactCount === 0) {
+    missing.push('Research at least one contact and wait for the saved result.')
+  } else if (stepId === 'principal-outreach-review' && prerequisites.reviewedContactCount === 0) {
+    missing.push('Approve at least one researched brief for the call plan.')
+  } else if (stepId === 'principal-outreach-contact-log' && prerequisites.interactionCount === 0) {
+    missing.push('Contact someone, then save the result in Log interaction.')
   }
   return missing.length > 0 ? `Stay on this step: ${missing.join(' ')}` : null
 }
@@ -7831,20 +7966,35 @@ async function loadPrincipalOutreachPrerequisites(
 ): Promise<PrincipalOutreachPrerequisites> {
   const result = await outreachClient.fetch<{
     contactCount?: number
+    evidenceCount?: number
+    researchedContactCount?: number
+    reviewedContactCount?: number
+    interactionCount?: number
     offers?: Array<{ priceBand?: string }>
   }>(`{
     "contactCount": count(*[_type == "marketingContact" && !(_id in path("drafts.**"))]),
+    "evidenceCount": count(*[_type == "marketingWorkEvidence" && status == "active" && !(_id in path("drafts.**"))]),
+    "researchedContactCount": count(*[_type == "marketingContact" && defined(researchedAt) && !(_id in path("drafts.**"))]),
+    "reviewedContactCount": count(*[_type == "marketingContact" && defined(researchReviewedAt) && !(_id in path("drafts.**"))]),
+    "interactionCount": count(*[_type == "marketingContact" && count(interactions) > 0 && !(_id in path("drafts.**"))]),
     "offers": *[_type == "marketingOffer" && status == "active" && !(_id in path("drafts.**"))]{priceBand}
   }`)
-  const contactCount = typeof result.contactCount === 'number' && Number.isFinite(result.contactCount)
-    ? Math.max(0, result.contactCount)
-    : 0
+  const safeCount = (value: number | undefined) =>
+    typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : 0
+  const contactCount = safeCount(result.contactCount)
   const callReadyOfferCount = (result.offers || []).filter((offer) => hasPricedOffer(offer.priceBand)).length
-  return { contactCount, callReadyOfferCount }
+  return {
+    contactCount,
+    evidenceCount: safeCount(result.evidenceCount),
+    callReadyOfferCount,
+    researchedContactCount: safeCount(result.researchedContactCount),
+    reviewedContactCount: safeCount(result.reviewedContactCount),
+    interactionCount: safeCount(result.interactionCount),
+  }
 }
 
 // A principal/founder gets a hand-authored end-to-end guided plan: preflight the
-// offer/evidence setup, add contacts, research, review, call, and log. It's a
+// offer/evidence setup, add contacts, research, review, then contact and log. It's a
 // normal MarketingAutopilotPlan, so the coach overlay, resume card, and target-
 // opening all work unchanged. The coach footer advances the persisted plan;
 // closing the coach leaves the current step untouched.
@@ -7899,25 +8049,13 @@ export function buildPrincipalOutreachPlan(): MarketingAutopilotPlan {
       status: 'upcoming',
     },
     {
-      id: 'principal-outreach-call',
+      id: 'principal-outreach-contact-log',
       view: 'outreach',
       targetId: 'outreach-progress-tracker',
-      title: 'Call from the Outreach progress tracker',
-      instruction: 'Start with Recommended next in the Outreach progress tracker; use the linked proof, priced offer, opener, and intelligence question.',
-      why: 'The list ranks relationship warmth before model fit, so the fastest credible conversations stay at the top.',
-      requiredAction: 'Call or message the approved contacts, adapting the suggested opener in your own voice.',
-      nextAfter: 'Log what happened and set the next touch.',
-      expectedAction: 'outreach:call',
-      status: 'upcoming',
-    },
-    {
-      id: 'principal-outreach-log',
-      view: 'outreach',
-      targetId: 'autopilot-outreach-workflow',
-      title: 'Log outcomes before you leave',
-      instruction: 'Open Log interaction for every touch, record what happened, and save the follow-up date.',
-      why: 'A short outcome note keeps the team from repeating work while the default seven-day follow-up makes the next action resurface automatically.',
-      requiredAction: 'Save an outcome for each call; add intelligence, opportunity value, offer, evidence, or next step when known.',
+      title: 'Contact someone and log the result',
+      instruction: 'Start with Recommended next, contact them using the suggested channel, then open Log interaction and save what happened.',
+      why: 'The system cannot know whether an external call, email, or LinkedIn message happened until you log it. One combined step keeps the checklist honest and gives the team a durable handoff.',
+      requiredAction: 'Contact at least one approved person and save the outcome, channel, and next touch in Log interaction.',
       nextAfter: 'The outreach loop is complete; follow-ups will resurface when due.',
       expectedAction: 'outreach:log',
       status: 'upcoming',
@@ -7976,13 +8114,31 @@ export function advanceScriptedAutopilotPlan(
 const PRINCIPAL_AUTOPILOT_NEXT_LABELS: Record<string, string> = {
   'principal-plan-warm-network': 'Add Contacts',
   'principal-outreach-intake': 'Enter a Contact Above',
-  'principal-outreach-research': 'Review Briefs',
-  'principal-outreach-review': 'Open Progress Tracker',
-  'principal-outreach-call': 'Log Outcomes',
-  'principal-outreach-log': 'Finish',
+  'principal-outreach-research': 'Research a Contact Above',
+  'principal-outreach-review': 'Approve a Brief Above',
+  'principal-outreach-contact-log': 'Contact Someone, Then Log the Result',
 }
 
-export function getPrincipalAutopilotNextLabel(stepId: string): string {
+export function getPrincipalAutopilotNextLabel(
+  stepId: string,
+  prerequisites?: PrincipalOutreachPrerequisites | null,
+): string {
+  if (stepId === 'principal-plan-warm-network') {
+    if (prerequisites?.evidenceCount === 0) return 'Extract Work Evidence Above'
+    if (prerequisites?.callReadyOfferCount === 0) return 'Set an Offer Price Above'
+  }
+  if (stepId === 'principal-outreach-intake' && (prerequisites?.contactCount || 0) > 0) {
+    return 'Research Contacts'
+  }
+  if (stepId === 'principal-outreach-research' && (prerequisites?.researchedContactCount || 0) > 0) {
+    return 'Review Briefs'
+  }
+  if (stepId === 'principal-outreach-review' && (prerequisites?.reviewedContactCount || 0) > 0) {
+    return 'Open Progress Tracker'
+  }
+  if (stepId === 'principal-outreach-contact-log' && (prerequisites?.interactionCount || 0) > 0) {
+    return 'Finish Outreach Setup'
+  }
   return PRINCIPAL_AUTOPILOT_NEXT_LABELS[stepId] || 'Next step'
 }
 
@@ -8030,23 +8186,13 @@ function getPrincipalCoachPrompt(step: MarketingAutopilotStep): AutopilotCoachPr
       ],
     }
   }
-  if (step.id === 'principal-outreach-call') {
+  if (step.id === 'principal-outreach-contact-log') {
     return {
-      question: 'Work down the Outreach progress tracker',
-      shortReason: 'The Outreach progress tracker ranks relationship warmth first. Start with Recommended next and use the proof, price, opener, and intelligence question on each approved contact.',
+      question: 'Contact someone and leave a clean handoff',
+      shortReason: 'Start with Recommended next, use the suggested channel, then log the result. Outreach cannot observe an external call, email, or LinkedIn message until you save that interaction.',
       choices: [
-        { label: 'Calls made — log outcomes', detail: 'Move on to recording what happened and what comes next.', tone: 'primary' },
-        { label: 'Keep the progress tracker open', detail: 'Leave this step current while I finish the calls.' },
-      ],
-    }
-  }
-  if (step.id === 'principal-outreach-log') {
-    return {
-      question: 'Leave the team a clean handoff',
-      shortReason: 'Log each touch with at least the outcome. The default follow-up is seven days; add the offer, proof, value, intelligence, or next step when known.',
-      choices: [
-        { label: 'Outcomes saved — finish', detail: 'The calls are logged and follow-ups can resurface without me.', tone: 'primary' },
-        { label: 'Keep logging', detail: 'Leave the final step current until every touch is recorded.' },
+        { label: 'Interaction saved; finish', detail: 'The result is durable and follow-ups can resurface without me.', tone: 'primary' },
+        { label: 'Keep working the tracker', detail: 'Leave this step current until the first result is saved.' },
       ],
     }
   }
@@ -8451,6 +8597,7 @@ function AutopilotCoachOverlay({
         checkingPrerequisites,
         prerequisiteNotice,
         contactCount: principalPrerequisites?.contactCount ?? null,
+        principalPrerequisites,
       })}
       stepIndex={safeVisibleStepIndex}
       onStepChange={handleStepChange}
@@ -8470,10 +8617,12 @@ export function buildAutopilotCoachTutorial(
     checkingPrerequisites: boolean
     prerequisiteNotice: string | null
     contactCount: number | null
+    principalPrerequisites?: PrincipalOutreachPrerequisites | null
   } = {
     checkingPrerequisites: false,
     prerequisiteNotice: null,
     contactCount: null,
+    principalPrerequisites: null,
   },
 ) {
   const scriptedPlan = isScriptedAutopilotPlan(plan)
@@ -8494,9 +8643,17 @@ export function buildAutopilotCoachTutorial(
         targetId: step.targetId,
         instruction: prompt.question,
         nextLabel: scriptedPlan
-          ? existingContactsSatisfyIntake
-            ? 'Research Contacts'
-            : getPrincipalAutopilotNextLabel(step.id)
+          ? getPrincipalAutopilotNextLabel(
+              step.id,
+              prerequisiteState.principalPrerequisites || {
+                contactCount: prerequisiteState.contactCount,
+                evidenceCount: null,
+                callReadyOfferCount: null,
+                researchedContactCount: null,
+                reviewedContactCount: null,
+                interactionCount: null,
+              },
+            )
           : index === plan.steps.length - 1
             ? 'Close coach'
             : 'Next step',
@@ -8505,6 +8662,10 @@ export function buildAutopilotCoachTutorial(
           ? () => onChoice(step, primaryChoice, 0)
           : undefined,
         nextBusy: currentScriptedStep && prerequisiteState.checkingPrerequisites,
+        nextDisabled:
+          currentScriptedStep
+          && step.id !== 'principal-outreach-intake'
+          && Boolean(prerequisiteState.prerequisiteNotice),
         mirrorTargetAction: currentScriptedStep && step.id === 'principal-outreach-intake',
         allowTargetActionFallback: currentScriptedStep && existingContactsSatisfyIntake,
         description: (
@@ -9711,10 +9872,17 @@ export function AdvancedFieldsDropdown({ type, id }: { type: string; id: string 
         <p style={{ ...styles.small, ...styles.muted, margin: 0, lineHeight: 1.5 }}>
           Use the full Sanity document only when this workflow form does not expose the field you need.
         </p>
-        <a href={advancedEditHref(type, id)} style={styles.inlineLink}>
-          <LaunchIcon style={{ width: 15, height: 15 }} />
-          Open full Sanity document
-        </a>
+        {advancedEditHref(type, id) ? (
+          <a href={advancedEditHref(type, id) as string} style={styles.inlineLink}>
+            <LaunchIcon style={{ width: 15, height: 15 }} />
+            Open full Sanity document
+          </a>
+        ) : (
+          <p style={{ ...styles.small, ...styles.muted, margin: 0 }}>
+            This record lives in the private marketing dataset, which the document editor cannot
+            open. Use the fields above.
+          </p>
+        )}
       </div>
     </details>
   )
