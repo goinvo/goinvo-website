@@ -34,7 +34,7 @@ const json = (blocks: unknown) => JSON.stringify(blocks)
 describe('encode/decodeActionValue', () => {
   it('round-trips a task and owner', () => {
     const value = encodeActionValue({ taskId: 'op1', ownerName: 'Juhan' })
-    expect(decodeActionValue(value)).toEqual({ taskId: 'op1', ownerName: 'Juhan' })
+    expect(decodeActionValue(value)).toEqual({ taskId: 'op1', ownerName: 'Juhan', status: '' })
   })
 
   it('stays inside Slack’s value limit', () => {
@@ -418,5 +418,47 @@ describe('task cards without emoji', () => {
     const attachments = [buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH' })]
     const next = markTaskInAttachments(attachments, 'op1', 'done')
     expect(json(next)).toContain('~Call MEDITECH~')
+  })
+})
+
+describe('undo', () => {
+  const attachments = [buildTaskAttachment({ _id: 'op1', title: 'Call MEDITECH', ownerName: 'Juhan' })]
+
+  it('offers a way back on the collapsed card', () => {
+    const next = markTaskInAttachments(attachments, 'op1', 'done', {
+      ownerName: 'Juhan',
+      status: 'queued',
+    })
+    const accessory = next[0].blocks[0].accessory
+    expect(accessory).toMatchObject({ action_id: MARKETING_ACTION.undo })
+    expect(decodeActionValue(accessory.value)).toEqual({
+      taskId: 'op1',
+      ownerName: 'Juhan',
+      status: 'queued',
+    })
+  })
+
+  it('carries the PREVIOUS state, not a guessed default', () => {
+    // Undoing a claim on a task that was unowned must not invent an owner.
+    const next = markTaskInAttachments(attachments, 'op1', 'done', { ownerName: '', status: 'needsHuman' })
+    expect(decodeActionValue(next[0].blocks[0].accessory.value)).toEqual({
+      taskId: 'op1',
+      ownerName: '',
+      status: 'needsHuman',
+    })
+  })
+
+  it('shows no undo when there is no prior state to restore', () => {
+    const next = markTaskInAttachments(attachments, 'op1', 'done')
+    expect(next[0].blocks[0].accessory).toBeUndefined()
+  })
+
+  it('round-trips prior state through the action value', () => {
+    const value = encodeActionValue({ taskId: 'op1', ownerName: 'Shirley', status: 'working' })
+    expect(decodeActionValue(value)).toEqual({
+      taskId: 'op1',
+      ownerName: 'Shirley',
+      status: 'working',
+    })
   })
 })

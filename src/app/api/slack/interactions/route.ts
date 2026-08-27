@@ -9,6 +9,7 @@ import {
   buildTaskDetailBlocks,
   buildTaskDetailView,
   decodeActionValue,
+  buildTaskAttachment,
   markTaskInAttachments,
   markTaskInBlocks,
   isMarketingAction,
@@ -20,6 +21,7 @@ import {
   answerMarketingTask,
   getMarketingTaskDetail,
   linkMarketingIdentity,
+  undoMarketingTask,
   setMarketingAvailability,
 } from '@/lib/marketing/slackActions.server'
 import { submitDisputeEvidence } from '@/lib/shop/disputeEvidence'
@@ -197,6 +199,47 @@ export async function POST(request: NextRequest) {
         const personName =
           (await getSlackUserDisplayName(userId)) || payload.user?.name || payload.user?.username || 'Someone'
 
+        if (actionId === MARKETING_ACTION.undo) {
+          if (!decoded) {
+            await postSlackResponse(responseUrl, 'That undo button is missing its task.')
+            return
+          }
+          const undone = await undoMarketingTask({
+            taskId: decoded.taskId,
+            ownerName: decoded.ownerName,
+            status: decoded.status || 'queued',
+            personName,
+          })
+          // Rebuild the card from the restored record rather than trying to
+          // remember what it looked like — the record is now the truth again.
+          const fresh = await getMarketingTaskDetail(decoded.taskId)
+          if (undone.ok && fresh && payload.message?.attachments) {
+            const rebuilt = (payload.message.attachments as Record<string, unknown>[]).map(
+              (attachment) => {
+                const json = JSON.stringify(attachment)
+                if (!json.includes(decoded.taskId)) return attachment
+                return buildTaskAttachment({
+                  _id: fresh._id,
+                  title: fresh.title,
+                  ownerName: fresh.ownerName,
+                  minutes: fresh.estimatedMinutes,
+                  whyNow: fresh.whyNow,
+                  kind: fresh.kind,
+                  priority: fresh.priority,
+                })
+              },
+            )
+            await replaceSlackMessage(responseUrl, {
+              text: payload.message.text || 'This week in marketing',
+              blocks: (payload.message.blocks || []) as unknown[],
+              attachments: rebuilt,
+            })
+          } else {
+            await postSlackResponse(responseUrl, undone.message || 'Put back.')
+          }
+          return
+        }
+
         if (actionId === MARKETING_ACTION.linkIdentity) {
           const ownerName = action?.selected_option?.value || ''
           if (!ownerName) {
@@ -252,6 +295,7 @@ export async function POST(request: NextRequest) {
               (payload.message.attachments || []) as never[],
               decoded.taskId,
               note,
+              result.previous,
             ),
           })
         } else {

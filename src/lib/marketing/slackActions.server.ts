@@ -17,6 +17,14 @@ export type MarketingSlackActionResult = {
   ok: boolean
   taskTitle?: string
   message?: string
+  /**
+   * What the task looked like BEFORE this action.
+   *
+   * Undo has to restore a specific previous state, not a guessed default:
+   * declining a task that was already unowned must not invent an owner, and
+   * claiming one that was queued must not send it back to needsHuman.
+   */
+  previous?: { ownerName: string; status: string }
 }
 
 function endOfWeek(from: Date): string {
@@ -36,10 +44,12 @@ export async function claimMarketingTask(input: {
   slackUserId: string
 }): Promise<MarketingSlackActionResult> {
   const client = getMarketingWriteClientFor(MARKETING_OPERATION_TYPE)
-  const task = await client.fetch<{ _id: string; title?: string; ownerName?: string } | null>(
-    `*[_id == $id][0]{_id, title, ownerName}`,
-    { id: input.taskId },
-  )
+  const task = await client.fetch<{
+    _id: string
+    title?: string
+    ownerName?: string
+    status?: string
+  } | null>(`*[_id == $id][0]{_id, title, ownerName, status}`, { id: input.taskId })
   if (!task) return { ok: false, message: 'That task no longer exists.' }
 
   await client
@@ -51,7 +61,11 @@ export async function claimMarketingTask(input: {
     })
     .commit()
 
-  return { ok: true, taskTitle: task.title }
+  return {
+    ok: true,
+    taskTitle: task.title,
+    previous: { ownerName: task.ownerName || '', status: task.status || 'queued' },
+  }
 }
 
 /**
@@ -66,11 +80,15 @@ export async function declineMarketingTask(input: {
   personName: string
 }): Promise<MarketingSlackActionResult> {
   const client = getMarketingWriteClientFor(MARKETING_OPERATION_TYPE)
-  const task = await client.fetch<{ _id: string; title?: string } | null>(
-    `*[_id == $id][0]{_id, title}`,
-    { id: input.taskId },
-  )
+  const task = await client.fetch<{
+    _id: string
+    title?: string
+    ownerName?: string
+    status?: string
+  } | null>(`*[_id == $id][0]{_id, title, ownerName, status}`, { id: input.taskId })
   if (!task) return { ok: false, message: 'That task no longer exists.' }
+
+  const previous = { ownerName: task.ownerName || '', status: task.status || 'queued' }
 
   await client
     .patch(task._id)
@@ -82,7 +100,7 @@ export async function declineMarketingTask(input: {
     })
     .commit()
 
-  return { ok: true, taskTitle: task.title }
+  return { ok: true, taskTitle: task.title, previous }
 }
 
 /** Record that somebody is away, and for how long. */
@@ -210,6 +228,41 @@ export async function answerMarketingTask(input: {
       lastOutcome: `Answered in Slack by ${input.personName}`,
       lastEvaluatedAt: new Date().toISOString(),
     })
+    .commit()
+
+  return { ok: true, taskTitle: task.title }
+}
+
+/**
+ * Put a task back exactly as it was.
+ *
+ * The previous owner and status travel in the button itself rather than being
+ * looked up, because by the time undo is pressed the "previous" state is gone
+ * from the record — that is what the action overwrote.
+ */
+export async function undoMarketingTask(input: {
+  taskId: string
+  ownerName: string
+  status: string
+  personName: string
+}): Promise<MarketingSlackActionResult> {
+  const client = getMarketingWriteClientFor(MARKETING_OPERATION_TYPE)
+  const task = await client.fetch<{ _id: string; title?: string } | null>(
+    `*[_id == $id][0]{_id, title}`,
+    { id: input.taskId },
+  )
+  if (!task) return { ok: false, message: 'That task no longer exists.' }
+
+  await client
+    .patch(task._id)
+    .set({
+      ownerName: input.ownerName,
+      status: input.status,
+      lastOutcome: `Undone in Slack by ${input.personName}`,
+    })
+    // humanQuestion was only added by declining; leaving it behind would make an
+    // ordinary task look like it is waiting on a decision.
+    .unset(input.status === 'needsHuman' ? [] : ['humanQuestion'])
     .commit()
 
   return { ok: true, taskTitle: task.title }
