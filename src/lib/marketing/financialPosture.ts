@@ -24,6 +24,8 @@ export const FINANCIAL_POSTURE_DOC_TYPE = 'marketingFinancialPosture'
 export const FINANCIAL_POSTURES = [
   {
     id: 'survival',
+    /** Upper bound in months, exclusive. null = no ceiling. */
+    maxMonths: 3,
     title: 'Survival',
     runwayLabel: 'under ~3 months of confident runway',
     strategy:
@@ -33,6 +35,7 @@ export const FINANCIAL_POSTURES = [
   },
   {
     id: 'rebuild',
+    maxMonths: 6,
     title: 'Rebuild',
     runwayLabel: '~3–6 months of runway',
     strategy:
@@ -42,6 +45,7 @@ export const FINANCIAL_POSTURES = [
   },
   {
     id: 'stable',
+    maxMonths: 12,
     title: 'Stable',
     runwayLabel: '~6–12 months of runway',
     strategy:
@@ -51,6 +55,7 @@ export const FINANCIAL_POSTURES = [
   },
   {
     id: 'growth',
+    maxMonths: null,
     title: 'Growth',
     runwayLabel: '12+ months of runway',
     strategy:

@@ -14,6 +14,7 @@ import {
   type ResolvedMarketingBrandVoice,
 } from '@/lib/marketing/brandVoice'
 import { financialPostureAiContext, FINANCIAL_POSTURE_DOC_ID } from '@/lib/marketing/financialPosture'
+import { describeRunway, resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
 import { getMarketingWriteClient } from '@/lib/marketing/client'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
@@ -46,11 +47,22 @@ type FinancialPostureContext = ReturnType<typeof financialPostureAiContext>
 async function fetchFinancialPostureContext(): Promise<FinancialPostureContext> {
   try {
     const postureClient = getMarketingWriteClient().withConfig({ dataset: OUTREACH_DATASET })
-    const doc = await postureClient.fetch<{ posture?: string | null; setAt?: string | null } | null>(
-      `*[_id == $id][0]{posture, setAt}`,
+    const doc = await postureClient.fetch<StoredPosture | null>(
+      `*[_id == $id][0]{posture, setAt, runway}`,
       { id: FINANCIAL_POSTURE_DOC_ID },
     )
-    return financialPostureAiContext(doc?.posture, doc?.setAt)
+    // Resolve against the runway date first. Handing the model a bin picked in
+    // July would have it advising survival tactics against a runway that has
+    // since been re-measured - and the model has no way to notice.
+    const resolved = resolveRunwayPosture(doc || {})
+    const context = financialPostureAiContext(resolved.id, doc?.setAt)
+    return {
+      ...context,
+      // The number itself, so the model can reason about the actual horizon
+      // rather than the label. It also stops it inventing one.
+      runway: describeRunway(doc || {}),
+      confirmed: resolved.confirmed,
+    }
   } catch {
     return financialPostureAiContext(null, null)
   }

@@ -5,11 +5,8 @@ import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { getMarketingWriteClientFor } from '@/lib/marketing/client'
 import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
-import {
-  DEFAULT_FINANCIAL_POSTURE_ID,
-  FINANCIAL_POSTURE_DOC_ID,
-  isFinancialPostureId,
-} from '@/lib/marketing/financialPosture'
+import { FINANCIAL_POSTURE_DOC_ID } from '@/lib/marketing/financialPosture'
+import { resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
 import {
   generateClaudeText,
   isAnthropicConfigured,
@@ -153,8 +150,13 @@ async function handle(request: NextRequest, dryRun: boolean) {
   const settingsClient = getMarketingWriteClientFor('marketingSettings')
   const [operations, postureRaw, settings] = await Promise.all([
     client.fetch<MarketingOperation[]>(OPERATIONS_QUERY).catch(() => [] as MarketingOperation[]),
+    // Both the hand-set bin AND the runway date, because the bin alone does not
+    // decay: this record said "survival" from July onwards and would have said
+    // it in 2027. resolveRunwayPosture picks whichever is the newer fact.
     client
-      .fetch<string | null>(`*[_id == $id][0].posture`, { id: FINANCIAL_POSTURE_DOC_ID })
+      .fetch<StoredPosture | null>(`*[_id == $id][0]{ posture, setAt, runway }`, {
+        id: FINANCIAL_POSTURE_DOC_ID,
+      })
       .catch(() => null),
     // marketingSettings is routed, NOT pinned to the private dataset like the
     // operations above. Reading it from the wrong side is silent: the Studio
@@ -167,7 +169,10 @@ async function handle(request: NextRequest, dryRun: boolean) {
       .catch(() => null),
   ])
 
-  const posture = isFinancialPostureId(postureRaw) ? postureRaw : DEFAULT_FINANCIAL_POSTURE_ID
+  // The runway date wins when it is the newer fact, so the plan tightens on its
+  // own as the money runs down instead of waiting for somebody to remember to
+  // change a setting.
+  const posture = resolveRunwayPosture(postureRaw || {}).id
   const budgetMinutes = resolveWeeklyMinutes(settings?.weeklyMarketingHours)
   const now = new Date()
 
