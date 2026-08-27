@@ -1022,6 +1022,23 @@ export function OutreachWorkspaceContent({
   })
   const intakeComposerRef = useRef<HTMLInputElement>(null)
 
+  // Intake focus restoration has to wait for the render that re-enables the
+  // control. Every intake control is disabled while `intakeBusy` is set, and a
+  // requestAnimationFrame can fire before React commits the state that clears
+  // it — focus() on a still-disabled element is silently dropped and the
+  // keyboard user is stranded. Requesting focus by token instead lets the
+  // effect below run after the commit, when the target can actually take it.
+  const [intakeFocusRequest, setIntakeFocusRequest] = useState<{
+    target: 'import' | 'composer' | 'next-action'
+    token: number
+    caretAt?: number
+  } | null>(null)
+  const intakeFocusTokenRef = useRef(0)
+  const requestIntakeFocus = (target: 'import' | 'composer' | 'next-action', caretAt?: number) => {
+    intakeFocusTokenRef.current += 1
+    setIntakeFocusRequest({ target, token: intakeFocusTokenRef.current, caretAt })
+  }
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [segmentFilter, setSegmentFilter] = useState('all')
   const [warmthFilter, setWarmthFilter] = useState('all')
@@ -1209,6 +1226,25 @@ export function OutreachWorkspaceContent({
 
   // ---- Intake ----
 
+  useEffect(() => {
+    if (!intakeFocusRequest || intakeBusy !== null) return
+    const element = intakeFocusRequest.target === 'import'
+      ? intakeImportButtonRef.current
+      : intakeFocusRequest.target === 'composer'
+        ? intakeComposerRef.current
+        : document.querySelector<HTMLButtonElement>(
+          '#outreach-add-contacts button[data-autopilot-next-action="true"]',
+        )
+    // Leave the request standing if the target is not focusable yet; a later
+    // commit that mounts or re-enables it will run this effect again.
+    if (!element || element.disabled) return
+    element.focus()
+    if (typeof intakeFocusRequest.caretAt === 'number' && element === intakeComposerRef.current) {
+      intakeComposerRef.current?.setSelectionRange(intakeFocusRequest.caretAt, intakeFocusRequest.caretAt)
+    }
+    setIntakeFocusRequest(null)
+  }, [intakeBusy, intakeFocusRequest])
+
   const stageContactSpreadsheet = async (input: {
     fileName: string
     mimeType?: string
@@ -1230,7 +1266,7 @@ export function OutreachWorkspaceContent({
       const message = `Keep contact spreadsheets under ${(CONTACT_SPREADSHEET_IMPORT_LIMITS.fileBytes / 1024 / 1024).toLocaleString()} MB.`
       setIntakeImportError(message)
       setIntakeAnnouncement(`Import failed. ${message}`)
-      window.requestAnimationFrame(() => intakeImportButtonRef.current?.focus())
+      requestIntakeFocus('import')
       return
     }
 
@@ -1290,9 +1326,7 @@ export function OutreachWorkspaceContent({
         ` Review the table, then choose Review ${merged.entries.length} Contact${merged.entries.length === 1 ? '' : 's'}.`
       setIntakeAnnouncement(message)
       say(message)
-      window.requestAnimationFrame(() => {
-        document.querySelector<HTMLButtonElement>('#outreach-add-contacts button[data-autopilot-next-action="true"]')?.focus()
-      })
+      requestIntakeFocus('next-action')
     } catch (error) {
       if (generation !== intakeImportGenerationRef.current) return
       const message = error instanceof ContactSpreadsheetImportError || error instanceof Error
@@ -1300,7 +1334,7 @@ export function OutreachWorkspaceContent({
         : 'That contact spreadsheet could not be read.'
       setIntakeImportError(message)
       setIntakeAnnouncement(`Import failed. ${message}`)
-      window.requestAnimationFrame(() => intakeImportButtonRef.current?.focus())
+      requestIntakeFocus('import')
     } finally {
       if (generation === intakeImportGenerationRef.current) setIntakeBusy(null)
     }
@@ -1363,7 +1397,7 @@ export function OutreachWorkspaceContent({
       clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
       void saveIntakeCheckpoint('discarded', 0, 0)
     }
-    window.requestAnimationFrame(() => intakeComposerRef.current?.focus())
+    requestIntakeFocus('composer')
   }
 
   const editIntakeRow = (row: ContactIntakeRow) => {
@@ -1383,11 +1417,7 @@ export function OutreachWorkspaceContent({
     })
     setIntakeAnnouncement(`Editing ${row.name}. Press Enter to return it to the table.`)
     markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
-    window.requestAnimationFrame(() => {
-      const input = intakeComposerRef.current
-      input?.focus()
-      input?.setSelectionRange(entry.length, entry.length)
-    })
+    requestIntakeFocus('composer', entry.length)
   }
 
   const previewIntake = async () => {
