@@ -20,6 +20,7 @@ export const MARKETING_ACTION = {
   away: 'goinvo_marketing_set_away',
   linkIdentity: 'goinvo_marketing_link_identity',
   details: 'goinvo_marketing_task_details',
+  undo: 'goinvo_marketing_undo',
 } as const
 
 /** Modal submit + the input inside it. */
@@ -38,16 +39,31 @@ export function isMarketingAction(actionId: string | undefined): actionId is Mar
  * than assumed. Slack caps `value` at 2000 characters and will silently drop a
  * message that exceeds it, so this stays deliberately small: an id and a name.
  */
-export function encodeActionValue(input: { taskId: string; ownerName?: string }): string {
-  return JSON.stringify({ t: input.taskId, o: input.ownerName || '' }).slice(0, 1900)
+export function encodeActionValue(input: {
+  taskId: string
+  ownerName?: string
+  /** Prior state, carried so undo can restore it after the record has changed. */
+  status?: string
+}): string {
+  return JSON.stringify({
+    t: input.taskId,
+    o: input.ownerName || '',
+    ...(input.status ? { s: input.status } : {}),
+  }).slice(0, 1900)
 }
 
-export function decodeActionValue(value: string | undefined): { taskId: string; ownerName: string } | null {
+export function decodeActionValue(
+  value: string | undefined,
+): { taskId: string; ownerName: string; status: string } | null {
   try {
     const parsed = JSON.parse(String(value || ''))
     const taskId = String(parsed?.t || '')
     if (!taskId) return null
-    return { taskId, ownerName: String(parsed?.o || '') }
+    return {
+      taskId,
+      ownerName: String(parsed?.o || ''),
+      status: String(parsed?.s || ''),
+    }
   } catch {
     return null
   }
@@ -549,6 +565,8 @@ export function markTaskInAttachments(
   attachments: Block[],
   taskId: string,
   statusLine: string,
+  /** Prior state; when given, the collapsed card offers a way back. */
+  undoTo?: { ownerName: string; status: string },
 ): Block[] {
   if (!taskId) return attachments
   return attachments.map((attachment) => {
@@ -573,6 +591,22 @@ export function markTaskInAttachments(
         {
           type: 'section',
           text: { type: 'mrkdwn', text: `:white_check_mark:  ~${title}~\n${statusLine}` },
+          // Undo sits as an accessory rather than a row: it is a correction,
+          // not a choice being offered, so it must not compete with live tasks.
+          ...(undoTo
+            ? {
+                accessory: {
+                  type: 'button',
+                  action_id: MARKETING_ACTION.undo,
+                  text: { type: 'plain_text', text: 'Undo' },
+                  value: encodeActionValue({
+                    taskId,
+                    ownerName: undoTo.ownerName,
+                    status: undoTo.status,
+                  }),
+                },
+              }
+            : {}),
         },
       ],
     }
