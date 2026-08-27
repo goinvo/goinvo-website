@@ -7,6 +7,7 @@ import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import { postSlackMessage } from '@/lib/chat/slack'
 import { buildOutreachCallSheet } from '@/lib/marketing/callSheet'
 import {
+  buildIdeaReviewBlocks,
   buildIdentityPromptBlocks,
   buildRunwayBlocks,
   buildTaskAttachment,
@@ -14,6 +15,7 @@ import {
   type DigestTask,
 } from '@/lib/marketing/slackDelegation'
 import { readRunway } from '@/lib/marketing/runway.server'
+import { ideasNeedingReview } from '@/lib/marketing/ideaCapture.server'
 import { findReassignments, type TeamMemberAvailability } from '@/lib/marketing/availability'
 import { estimateOperationMinutes } from '@/lib/marketing/effort'
 
@@ -234,6 +236,26 @@ async function handle(request: NextRequest) {
     // A digest without the runway line is still a useful digest. Failing the
     // whole post because one private read failed would be the worse trade.
     console.error('[digest] runway read failed', error)
+  }
+
+  // Ideas caught in the channel that nobody has judged. The thread reply asks
+  // once, and a thread is easy to miss.
+  try {
+    const pending = await ideasNeedingReview(5)
+    blocks.push(
+      ...buildIdeaReviewBlocks(
+        pending,
+        process.env.MARKETING_PUBLIC_BASE_URL
+          ? // MUST be a real view id. There is no "ideas" view - marketingIdea
+            // only renders inside SEO - and an unknown ?view= makes the Studio
+            // fall back to whatever the person last had open, which is how
+            // "open the plan" once landed on the Shop.
+            `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
+          : undefined,
+      ),
+    )
+  } catch (error) {
+    console.error('[digest] idea review read failed', error)
   }
 
   // Only while somebody is still unmapped: the prompt removes itself once

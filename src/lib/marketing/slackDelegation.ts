@@ -23,6 +23,8 @@ export const MARKETING_ACTION = {
   runwayConfirm: 'goinvo_marketing_runway_confirm',
   runwayUpdate: 'goinvo_marketing_runway_update',
   runwaySigned: 'goinvo_marketing_runway_signed',
+  ideaKeep: 'goinvo_marketing_idea_keep',
+  ideaDiscard: 'goinvo_marketing_idea_discard',
 } as const
 
 /** Modal submit + the input inside it. */
@@ -450,6 +452,109 @@ export function readRunwaySubmission(values: Record<string, Record<string, { val
     months: Number.isFinite(parsed) && parsed > 0 ? parsed : null,
     label: at(RUNWAY_LABEL_BLOCK, RUNWAY_LABEL_INPUT),
     basis: at(RUNWAY_BASIS_BLOCK, RUNWAY_BASIS_INPUT),
+  }
+}
+
+/**
+ * What Marqueta says when she notices somebody proposing work.
+ *
+ * Posted IN THREAD, deliberately. A reply in the channel for every idea would
+ * double the traffic in a channel people already have to skim, and the fastest
+ * way to get a bot muted is to make it talkative. In a thread it is there when
+ * you want it and invisible when you do not.
+ *
+ * It states what it did and offers the two honest answers. "Keep it" is not
+ * primary: the capture was a guess, and making the confirm button the brightest
+ * thing in the message nudges people into blessing guesses.
+ */
+export function buildIdeaCaptureBlocks(input: {
+  title: string
+  category?: string
+  channel: string
+  ts: string
+  studioUrl?: string
+}): Block[] {
+  const value = JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
+  const detail = input.category ? ' Filed under ' + input.category + '.' : ''
+
+  const elements: Array<Record<string, unknown>> = [
+    {
+      type: 'button',
+      action_id: MARKETING_ACTION.ideaKeep,
+      text: { type: 'plain_text', text: 'Keep it' },
+      value,
+    },
+    {
+      type: 'button',
+      action_id: MARKETING_ACTION.ideaDiscard,
+      text: { type: 'plain_text', text: 'Not an idea' },
+      value,
+    },
+  ]
+  if (input.studioUrl) {
+    elements.push({
+      type: 'button',
+      text: { type: 'plain_text', text: 'Open the board' },
+      url: input.studioUrl,
+    })
+  }
+
+  return [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text:
+          'Noted this as an idea so it does not scroll away:' +
+          '\n' +
+          '*' + input.title + '*' +
+          detail +
+          '\n' +
+          '_Marked as needing review - it is my guess that this was a proposal, not yours._',
+      },
+    },
+    { type: 'actions', elements },
+  ]
+}
+
+/**
+ * Ideas Marqueta caught that nobody has judged yet.
+ *
+ * The thread reply asks once, at the moment of capture, and a thread is easy to
+ * miss. Without this an unreviewed idea sits in limbo forever - present on the
+ * board, trusted by nobody, because no one ever said whether it was real.
+ */
+export function buildIdeaReviewBlocks(ideas: Array<{ title: string }>, studioUrl?: string): Block[] {
+  if (ideas.length === 0) return []
+  const names = ideas.slice(0, 3).map((idea) => '• ' + idea.title)
+  const more = ideas.length > 3 ? ' and ' + (ideas.length - 3) + ' more' : ''
+  return [
+    {
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text:
+            '_I caught ' + ideas.length + ' thing' + (ideas.length === 1 ? '' : 's') +
+            ' in the channel that might be ideas' + more + ' - still waiting on a yes or no:_' +
+            '\n' + names.join('\n') +
+            (studioUrl ? '\n' + '<' + studioUrl + '|Judge them on the board>' : ''),
+        },
+      ],
+    },
+  ]
+}
+
+/** Which message a Keep / Not-an-idea press refers to. */
+export function decodeIdeaValue(value: string | undefined): { channel: string; ts: string } | null {
+  try {
+    const parsed = JSON.parse(String(value || ''))
+    const channel = String(parsed?.c || '')
+    const ts = String(parsed?.ts || '')
+    if (!channel || !ts) return null
+    return { channel, ts }
+  } catch {
+    return null
   }
 }
 

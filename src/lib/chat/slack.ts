@@ -153,6 +153,29 @@ export function getSlackConfig() {
   }
 }
 
+/**
+ * The canonical link to a message.
+ *
+ * Asked of Slack rather than assembled from a workspace domain: the domain is
+ * one more thing to configure and to get wrong, and Slack already knows the
+ * answer. Returns undefined on any failure - a captured idea without a link
+ * back is still useful, a broken link is not.
+ */
+export async function getSlackPermalink(channel: string, ts: string): Promise<string | undefined> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !channel || !ts) return undefined
+  try {
+    const response = await fetch(
+      `https://slack.com/api/chat.getPermalink?channel=${encodeURIComponent(channel)}&message_ts=${encodeURIComponent(ts)}`,
+      { headers: { authorization: `Bearer ${botToken}` } },
+    )
+    const data = (await response.json()) as { ok?: boolean; permalink?: string }
+    return data.ok && data.permalink ? data.permalink : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export function isSlackPostingConfigured() {
   const config = getSlackConfig()
   return Boolean(config.botToken && config.channelId)

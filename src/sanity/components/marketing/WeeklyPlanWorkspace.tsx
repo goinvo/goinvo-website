@@ -109,6 +109,44 @@ export function WeeklyPlanWorkspace({
   const [plan, setPlan] = useState<WeekPlanResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [planning, setPlanning] = useState(false)
+  // Ideas Marqueta caught in the marketing channel and nobody has judged.
+  const [pendingIdeas, setPendingIdeas] = useState<Array<{ _id: string; title: string }>>([])
+
+  const loadIdeas = useCallback(async () => {
+    try {
+      const body = await request<{ pending: Array<{ _id: string; title: string }> }>(
+        '/api/marketing/ideas/review',
+        undefined,
+        'GET',
+        proofClient,
+      )
+      setPendingIdeas(body.pending || [])
+    } catch {
+      // A missing review list must never stop the week rendering. It is a
+      // prompt, not the plan.
+      setPendingIdeas([])
+    }
+  }, [request, proofClient])
+
+  const judgeIdea = useCallback(
+    async (id: string, keep: boolean) => {
+      // Removed from the list immediately: the judgement is the whole
+      // interaction, and watching a row sit there implies it did not take.
+      setPendingIdeas((current) => current.filter((idea) => idea._id !== id))
+      try {
+        await request('/api/marketing/ideas/review', { id, keep }, 'POST', proofClient)
+        toast.push({ status: 'success', title: keep ? 'Kept' : 'Dropped' })
+      } catch (error) {
+        toast.push({
+          status: 'error',
+          title: 'That did not save',
+          description: error instanceof Error ? error.message : String(error),
+        })
+        void loadIdeas()
+      }
+    },
+    [request, proofClient, toast, loadIdeas],
+  )
 
   const load = useCallback(
     async (replan: boolean) => {
@@ -142,7 +180,8 @@ export function WeeklyPlanWorkspace({
 
   useEffect(() => {
     void load(false)
-  }, [load])
+    void loadIdeas()
+  }, [load, loadIdeas])
 
   const fill = useMemo(() => {
     if (!plan || plan.budgetMinutes <= 0) return 0
@@ -322,6 +361,42 @@ export function WeeklyPlanWorkspace({
           </ol>
         )}
       </section>
+
+      {pendingIdeas.length > 0 && (
+        <section style={styles.panel}>
+          <h3 style={{ margin: '0 0 4px' }}>Caught in Slack — are these ideas?</h3>
+          <p style={{ ...styles.muted, fontSize: 13, marginBottom: 14 }}>
+            I thought these sounded like somebody proposing work. That is my guess, not theirs —
+            so nothing counts as an idea until you say so.
+          </p>
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
+            {pendingIdeas.map((idea) => (
+              <li
+                key={idea._id}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  borderTop: '1px solid rgba(140,150,170,.16)',
+                  paddingTop: 10,
+                }}
+              >
+                <span style={{ fontSize: 14, flex: '1 1 320px' }}>{idea.title}</span>
+                <span style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" style={styles.button} onClick={() => void judgeIdea(idea._id, true)}>
+                    Keep it
+                  </button>
+                  <button type="button" style={styles.button} onClick={() => void judgeIdea(idea._id, false)}>
+                    Not an idea
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {deferredByReason.length > 0 && (
         <section style={styles.panel}>
