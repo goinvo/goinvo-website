@@ -11,7 +11,12 @@ import {
   decodeActionValue,
   refreshTaskInAttachments,
   isMarketingAction,
+  MARKETING_RUNWAY_CALLBACK,
+  RUNWAY_MONTHS_BLOCK,
+  buildRunwayView,
+  readRunwaySubmission,
 } from '@/lib/marketing/slackDelegation'
+import { confirmRunway, readRunway, recordSignedWork, setRunway } from '@/lib/marketing/runway.server'
 import { studioTaskUrl } from '@/lib/marketing/taskLinks'
 import {
   claimMarketingTask,
@@ -47,6 +52,7 @@ interface SlackInteractionPayload {
   /** Valid for ~3 seconds; required to open a modal. */
   trigger_id?: string
   view?: {
+    callback_id?: string
     private_metadata?: string
     state?: { values?: Record<string, Record<string, { value?: string | null }>> }
   }
@@ -113,6 +119,45 @@ export async function POST(request: NextRequest) {
   const payload = JSON.parse(payloadValue) as SlackInteractionPayload
   const action = payload.actions?.[0]
 
+  // The runway modal. Checked before the task-answer handler below, which
+  // treats any private_metadata as a task id - two modals sharing that field
+  // would have made "we signed a SoW" try to answer a decision.
+  if (payload.type === 'view_submission' && payload.view?.callback_id === MARKETING_RUNWAY_CALLBACK) {
+    const kind = payload.view.private_metadata === 'signed' ? 'signed' : 'update'
+    const { months, label, basis } = readRunwaySubmission(payload.view.state?.values)
+    const userId = payload.user?.id || ''
+
+    // Slack shows this inline under the offending field and keeps the modal
+    // open, which is the right place for "that is not a number" - far better
+    // than closing it and posting a failure into the channel.
+    if (months === null) {
+      return NextResponse.json({
+        response_action: 'errors',
+        errors: {
+          [RUNWAY_MONTHS_BLOCK]: 'Give a number of months, like 4.5.',
+        },
+      })
+    }
+
+    after(async () => {
+      try {
+        const personName = (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+        const state =
+          kind === 'signed'
+            ? await recordSignedWork({ label: label || 'Signed work', monthsAdded: months, personName })
+            : await setRunway({ months, basis, personName })
+        await postSlackResponse(
+          payload.response_url,
+          `<@${userId}> updated the runway. ${state.summary}`,
+        )
+      } catch (err) {
+        console.error('[slack] runway update failed', err)
+        await postSlackResponse(payload.response_url, 'That did not save. The runway is unchanged.')
+      }
+    })
+    return NextResponse.json({})
+  }
+
   // A decision answered inside the modal. Returning an empty body closes it;
   // the write happens after, because Slack expects the response in ~3 seconds.
   if (payload.type === 'view_submission' && payload.view?.private_metadata) {
@@ -178,6 +223,46 @@ export async function POST(request: NextRequest) {
     }
     after(async () => {
       await postSlackResponse(payload.response_url, 'That task no longer exists.')
+    })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Runway buttons. The two that open a modal are handled inline rather than in
+  // after(), for the same reason as task details: a trigger_id queued behind a
+  // Sanity round trip is already expired when the modal call reaches Slack.
+  if (
+    payload.type === 'block_actions' &&
+    (action?.action_id === MARKETING_ACTION.runwaySigned || action?.action_id === MARKETING_ACTION.runwayUpdate)
+  ) {
+    const kind = action.action_id === MARKETING_ACTION.runwaySigned ? 'signed' : 'update'
+    let current = ''
+    try {
+      current = (await readRunway()).summary
+    } catch {
+      // Showing the modal without the current number is worse than not showing
+      // it at all only if the number is what you came to change - it is not.
+    }
+    const opened = await openSlackModal(payload.trigger_id || '', buildRunwayView(kind, current))
+    if (!opened) {
+      after(async () => {
+        await postSlackResponse(payload.response_url, 'That form would not open. Try again, or set it in the Studio.')
+      })
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  if (payload.type === 'block_actions' && action?.action_id === MARKETING_ACTION.runwayConfirm) {
+    const responseUrl = payload.response_url
+    const userId = payload.user?.id || ''
+    after(async () => {
+      try {
+        const personName = (await getSlackUserDisplayName(userId)) || payload.user?.name || 'Someone'
+        const state = await confirmRunway({ personName })
+        await postSlackResponse(responseUrl, `<@${userId}> confirmed the runway. ${state.summary}`)
+      } catch (err) {
+        console.error('[slack] runway confirm failed', err)
+        await postSlackResponse(responseUrl, 'That did not save.')
+      }
     })
     return NextResponse.json({ ok: true })
   }

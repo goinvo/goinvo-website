@@ -20,12 +20,24 @@ export const MARKETING_ACTION = {
   away: 'goinvo_marketing_set_away',
   linkIdentity: 'goinvo_marketing_link_identity',
   details: 'goinvo_marketing_task_details',
+  runwayConfirm: 'goinvo_marketing_runway_confirm',
+  runwayUpdate: 'goinvo_marketing_runway_update',
+  runwaySigned: 'goinvo_marketing_runway_signed',
 } as const
 
 /** Modal submit + the input inside it. */
 export const MARKETING_ANSWER_CALLBACK = 'goinvo_marketing_answer_task'
 export const MARKETING_ANSWER_BLOCK = 'goinvo_marketing_answer_block'
 export const MARKETING_ANSWER_INPUT = 'goinvo_marketing_answer_input'
+
+/** The runway modal, and the fields inside it. */
+export const MARKETING_RUNWAY_CALLBACK = 'goinvo_marketing_runway'
+export const RUNWAY_MONTHS_BLOCK = 'goinvo_runway_months_block'
+export const RUNWAY_MONTHS_INPUT = 'goinvo_runway_months_input'
+export const RUNWAY_LABEL_BLOCK = 'goinvo_runway_label_block'
+export const RUNWAY_LABEL_INPUT = 'goinvo_runway_label_input'
+export const RUNWAY_BASIS_BLOCK = 'goinvo_runway_basis_block'
+export const RUNWAY_BASIS_INPUT = 'goinvo_runway_basis_input'
 
 export type MarketingActionId = (typeof MARKETING_ACTION)[keyof typeof MARKETING_ACTION]
 
@@ -284,6 +296,162 @@ export function buildIdentityPromptBlocks(unmappedOwners: string[]): Block[] {
   ]
 }
 
+
+/**
+ * The runway line, and the three answers a principal actually has.
+ *
+ * Money is the input the whole strategy hangs off, and it was the one thing the
+ * suite never asked about — it held a bin picked in July and would still have
+ * been planning against it in 2027. So Marqueta asks, in the channel, at the
+ * moment the number is about to stop being true.
+ *
+ * It states the number rather than the bin. "Rebuild" invites the reader to
+ * assume somebody decided it; "4.5 months, to 11 Jan 2027" can be argued with,
+ * and being argued with is the point.
+ *
+ * Shown only when a check-in is due. A permanent banner about money in a team
+ * channel is a banner people learn to scroll past.
+ */
+export function buildRunwayBlocks(input: {
+  summary: string
+  checkIn: { due: boolean; urgent: boolean; reason: string; question: string }
+  disagreement?: string | null
+}): Block[] {
+  if (!input.checkIn.due && !input.disagreement) return []
+
+  const lines = [input.summary]
+  if (input.checkIn.due) lines.push(input.checkIn.reason + ' ' + input.checkIn.question)
+  if (input.disagreement) lines.push('_' + input.disagreement + '_')
+
+  return [
+    { type: 'divider' },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: '*Runway*' + '\n' + lines.filter(Boolean).join('\n') },
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          action_id: MARKETING_ACTION.runwayConfirm,
+          text: { type: 'plain_text', text: 'Still right' },
+          // Not primary: confirming is the cheap answer, and making it the
+          // brightest button invites a reflex press on the one number the whole
+          // strategy depends on.
+        },
+        {
+          type: 'button',
+          action_id: MARKETING_ACTION.runwaySigned,
+          text: { type: 'plain_text', text: 'We signed something' },
+          style: 'primary',
+        },
+        {
+          type: 'button',
+          action_id: MARKETING_ACTION.runwayUpdate,
+          text: { type: 'plain_text', text: 'It has changed' },
+        },
+      ],
+    },
+  ]
+}
+
+/**
+ * The modal behind "we signed something" and "it has changed".
+ *
+ * Two shapes, one callback. Signing asks what and how much runway it buys,
+ * because a commitment with no months cannot move the date and guessing one
+ * would inflate the runway on nothing.
+ */
+export function buildRunwayView(kind: 'signed' | 'update', current?: string): Record<string, unknown> {
+  const signed = kind === 'signed'
+  const blocks: Block[] = []
+
+  if (current) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: current } })
+    blocks.push({ type: 'divider' })
+  }
+
+  if (signed) {
+    blocks.push({
+      type: 'input',
+      block_id: RUNWAY_LABEL_BLOCK,
+      label: { type: 'plain_text', text: 'What was signed' },
+      element: {
+        type: 'plain_text_input',
+        action_id: RUNWAY_LABEL_INPUT,
+        placeholder: { type: 'plain_text', text: 'SoW - Acme, discovery phase' },
+      },
+    })
+  }
+
+  blocks.push({
+    type: 'input',
+    block_id: RUNWAY_MONTHS_BLOCK,
+    label: { type: 'plain_text', text: signed ? 'Months of runway it buys' : 'Months of runway left' },
+    hint: {
+      type: 'plain_text',
+      text: signed
+        ? 'Added to the runway we already had, not counted from today.'
+        : 'Assuming nothing new closes. Half months are fine.',
+    },
+    element: {
+      type: 'plain_text_input',
+      action_id: RUNWAY_MONTHS_INPUT,
+      placeholder: { type: 'plain_text', text: signed ? '3' : '4.5' },
+    },
+  })
+
+  if (!signed) {
+    blocks.push({
+      type: 'input',
+      block_id: RUNWAY_BASIS_BLOCK,
+      optional: true,
+      label: { type: 'plain_text', text: 'What that assumes' },
+      element: {
+        type: 'plain_text_input',
+        action_id: RUNWAY_BASIS_INPUT,
+        multiline: true,
+        placeholder: { type: 'plain_text', text: 'Signed work in hand, nothing new closing.' },
+      },
+    })
+  }
+
+  return {
+    type: 'modal',
+    callback_id: MARKETING_RUNWAY_CALLBACK,
+    // How the submit handler knows which shape came back. Slack titles are
+    // capped at 24 characters, so both stay short.
+    private_metadata: kind,
+    title: { type: 'plain_text', text: signed ? 'Signed work' : 'Update runway' },
+    submit: { type: 'plain_text', text: 'Save' },
+    close: { type: 'plain_text', text: 'Cancel' },
+    blocks,
+  }
+}
+
+/** Pull the runway modal's fields out of a view_submission payload. */
+export function readRunwaySubmission(values: Record<string, Record<string, { value?: string | null }>> | undefined): {
+  months: number | null
+  label: string
+  basis: string
+} {
+  const at = (block: string, input: string) => String(values?.[block]?.[input]?.value || '').trim()
+  const raw = at(RUNWAY_MONTHS_BLOCK, RUNWAY_MONTHS_INPUT)
+  // "4.5 months", "about 4.5", "4,5" - people type units. Take the number and
+  // reject anything that is not one rather than storing NaN as a date.
+  //
+  // The minus is checked BEFORE stripping, because stripping it turns "-2" into
+  // "2": someone saying they are two months PAST the end would have extended
+  // the runway by two months instead.
+  const negative = /-\s*[0-9]/.test(raw)
+  const parsed = negative ? NaN : Number(raw.replace(',', '.').replace(/[^0-9.]/g, ''))
+  return {
+    months: Number.isFinite(parsed) && parsed > 0 ? parsed : null,
+    label: at(RUNWAY_LABEL_BLOCK, RUNWAY_LABEL_INPUT),
+    basis: at(RUNWAY_BASIS_BLOCK, RUNWAY_BASIS_INPUT),
+  }
+}
 
 export type TaskDetail = {
   _id: string

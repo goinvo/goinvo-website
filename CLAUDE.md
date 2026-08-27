@@ -238,6 +238,44 @@ inferred from `kind` in `src/lib/marketing/effort.ts`).
 - Two lessons pinned by tests: excluding future-dated work **emptied the week** (the seeded
   quarter is Sep–Nov), and 13 open decisions ate 205 of 240 minutes.
 
+## Runway — the number the whole strategy is derived from (built 2026-08-27)
+
+The financial posture used to be a hand-picked bin (`survival`) with a timestamp. A bin does
+not decay: it was set 2026-07-11 and would still have read "survival" in 2027. So the stored
+fact is now a DATE — the last day the studio is confident it can pay for — and the bin is
+COMPUTED from it. Recorded 2026-08-27: **4.5 months, `certainUntil: 2027-01-11` → Rebuild**
+(it was reading Survival).
+
+- **Pure core:** `src/lib/marketing/runway.ts` — `monthsOfRunway`, `postureForRunwayMonths`
+  (bounds come from `maxMonths` on the bins in `financialPosture.ts`, one source),
+  `resolveRunwayPosture`, `runwayCheckIn`, `applyCommitment`, `describeRunway`. Tests:
+  `tests/runway.test.ts`.
+- **Recency decides.** A hand-set bin newer than the runway confirmation WINS (someone knows
+  something the date does not); a runway confirmed later wins instead. They never silently
+  disagree — `resolved.disagreement` says which was used and why, and the digest shows it.
+- **Signed work EXTENDS, never replaces.** 3 months signed in August against a runway already
+  reaching January means April, not November — `applyCommitment`, tested. If the runway has
+  already run out it extends from today instead (signed money cannot buy back spent months).
+- **Storage:** `runway` object on the `marketingFinancialPosture` doc in the PRIVATE outreach
+  dataset. Server helpers `runway.server.ts`; every write stamps `confirmedAt`, which is the
+  entire mechanism behind the check-in.
+- **Inputs:** `npx tsx scripts/set-runway.ts [--months 4.5|--until DATE|--confirm|--signed "X" --months 3]`
+  (no args = read); `GET|POST /api/marketing/runway` (`confirm`/`set`/`signed`); and in Slack
+  the digest's **Runway** card — *Still right* / *We signed something* / *It has changed*.
+- **Consumers wired:** `plan-week` and `assist` now resolve through the runway instead of
+  reading `.posture` raw, so the plan tightens on its own as the money runs down.
+
+### GOTCHA that cost a real leak: an unlisted type writes to the PUBLIC dataset
+`getMarketingWriteClientFor(type)` → `clientForType` **passes any type not in
+`INTERNAL_MARKETING_TYPES` straight through to the public dataset and reports success.**
+`marketingTeamAvailability` and `marketingFinancialPosture` were both missing. Consequence:
+pressing "I'm away" in Slack wrote to **production** while the digest read **outreach** — the
+change silently did nothing — and it put a colleague's name + Slack id in the world-readable
+dataset (one real record, found and removed 2026-08-27). Both types are now listed, with
+guards in `tests/dataset-routing.test.ts` including one asserting availability routes to the
+same dataset the digest reads. **When adding any `marketing*` type, add it to the router in
+the same commit.**
+
 ## Marketing CMS (the "marketing tool")
 
 - Custom Sanity Studio tool: `src/sanity/tools/marketingTool.tsx`, at `/studio` → **Marketing**.

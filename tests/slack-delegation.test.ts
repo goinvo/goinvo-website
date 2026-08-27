@@ -15,6 +15,14 @@ import {
   encodeActionValue,
   isMarketingAction,
   MARKETING_ACTION,
+  MARKETING_RUNWAY_CALLBACK,
+  RUNWAY_MONTHS_BLOCK,
+  RUNWAY_MONTHS_INPUT,
+  RUNWAY_LABEL_BLOCK,
+  RUNWAY_LABEL_INPUT,
+  buildRunwayBlocks,
+  buildRunwayView,
+  readRunwaySubmission,
 } from '@/lib/marketing/slackDelegation'
 
 const baseDigest = {
@@ -488,5 +496,117 @@ describe('a suggestion is not a commitment', () => {
       .elements.map((e: { text: { text: string } }) => e.text.text)
     expect(labels).toContain("I'll take it")
     expect(labels).not.toContain('Hand it back')
+  })
+})
+
+
+describe('buildRunwayBlocks', () => {
+  const quiet = { due: false, urgent: false, reason: '', question: '' }
+  const asking = {
+    due: true,
+    urgent: false,
+    reason: 'The runway was last confirmed 40 days ago.',
+    question: 'Still 4.5 months of certain runway, or has that moved?',
+  }
+
+  it('says nothing when the number was recently confirmed', () => {
+    // A permanent banner about money in a team channel is a banner people learn
+    // to scroll past, and then it is worthless on the week it matters.
+    expect(buildRunwayBlocks({ summary: '4.5 months', checkIn: quiet })).toEqual([])
+  })
+
+  it('asks when the record has gone stale', () => {
+    const blocks = buildRunwayBlocks({ summary: '4.5 months of certain runway', checkIn: asking })
+    const text = JSON.stringify(blocks)
+    expect(text).toContain('Runway')
+    expect(text).toContain('40 days ago')
+  })
+
+  it('leads with the number, not the bin', () => {
+    // "Rebuild" invites the reader to assume somebody decided it; a date and a
+    // count of months can be argued with, which is the entire point of asking.
+    const blocks = buildRunwayBlocks({ summary: '4.5 months of certain runway (to 11 Jan 2027)', checkIn: asking })
+    expect(JSON.stringify(blocks)).toContain('11 Jan 2027')
+  })
+
+  it('offers all three answers a principal actually has', () => {
+    const ids = JSON.stringify(buildRunwayBlocks({ summary: 'x', checkIn: asking }))
+    expect(ids).toContain(MARKETING_ACTION.runwayConfirm)
+    expect(ids).toContain(MARKETING_ACTION.runwaySigned)
+    expect(ids).toContain(MARKETING_ACTION.runwayUpdate)
+  })
+
+  it('does not make confirming the brightest button', () => {
+    // Primary on "still right" would invite a reflex press on the one number
+    // the whole strategy depends on.
+    const blocks = buildRunwayBlocks({ summary: 'x', checkIn: asking })
+    const actions = blocks.find((block) => block.type === 'actions')
+    const confirm = (actions?.elements as Array<Record<string, unknown>>).find(
+      (element) => element.action_id === MARKETING_ACTION.runwayConfirm,
+    )
+    expect(confirm?.style).toBeUndefined()
+  })
+
+  it('surfaces a disagreement even when nothing is due', () => {
+    const blocks = buildRunwayBlocks({
+      summary: '4.5 months',
+      checkIn: quiet,
+      disagreement: 'The date says Rebuild but the setting says Survival.',
+    })
+    expect(JSON.stringify(blocks)).toContain('Survival')
+  })
+})
+
+describe('buildRunwayView', () => {
+  it('asks what was signed, and what it buys', () => {
+    const view = buildRunwayView('signed')
+    const text = JSON.stringify(view)
+    expect(view.callback_id).toBe(MARKETING_RUNWAY_CALLBACK)
+    expect(view.private_metadata).toBe('signed')
+    expect(text).toContain(RUNWAY_LABEL_BLOCK)
+    expect(text).toContain(RUNWAY_MONTHS_BLOCK)
+  })
+
+  it('says signed months are added, not counted from today', () => {
+    // The rule people get wrong, stated where they are about to get it wrong.
+    expect(JSON.stringify(buildRunwayView('signed'))).toContain('not counted from today')
+  })
+
+  it('does not ask what was signed when nothing was', () => {
+    expect(JSON.stringify(buildRunwayView('update'))).not.toContain(RUNWAY_LABEL_BLOCK)
+  })
+
+  it('keeps both titles inside Slack limit of 24 characters', () => {
+    for (const kind of ['signed', 'update'] as const) {
+      const title = (buildRunwayView(kind).title as { text: string }).text
+      expect(title.length).toBeLessThanOrEqual(24)
+    }
+  })
+})
+
+describe('readRunwaySubmission', () => {
+  const withMonths = (value: string) => ({
+    [RUNWAY_MONTHS_BLOCK]: { [RUNWAY_MONTHS_INPUT]: { value } },
+    [RUNWAY_LABEL_BLOCK]: { [RUNWAY_LABEL_INPUT]: { value: 'SoW - Acme' } },
+  })
+
+  it('takes the number out of what people actually type', () => {
+    expect(readRunwaySubmission(withMonths('4.5')).months).toBe(4.5)
+    expect(readRunwaySubmission(withMonths('4.5 months')).months).toBe(4.5)
+    expect(readRunwaySubmission(withMonths('about 3')).months).toBe(3)
+    expect(readRunwaySubmission(withMonths('4,5')).months).toBe(4.5)
+  })
+
+  it('returns null rather than storing a guess', () => {
+    // NaN months becomes an invalid date, and an invalid date reads as "no
+    // runway recorded" - which would quietly undo the number it replaced.
+    expect(readRunwaySubmission(withMonths('a while')).months).toBeNull()
+    expect(readRunwaySubmission(withMonths('')).months).toBeNull()
+    expect(readRunwaySubmission(withMonths('-2')).months).toBeNull()
+    expect(readRunwaySubmission(undefined).months).toBeNull()
+  })
+
+  it('keeps what was signed', () => {
+    expect(readRunwaySubmission(withMonths('3')).label).toBe('SoW - Acme')
   })
 })

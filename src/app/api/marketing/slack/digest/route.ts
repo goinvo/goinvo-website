@@ -8,10 +8,12 @@ import { postSlackMessage } from '@/lib/chat/slack'
 import { buildOutreachCallSheet } from '@/lib/marketing/callSheet'
 import {
   buildIdentityPromptBlocks,
+  buildRunwayBlocks,
   buildTaskAttachment,
   buildWeeklyDigestBlocks,
   type DigestTask,
 } from '@/lib/marketing/slackDelegation'
+import { readRunway } from '@/lib/marketing/runway.server'
 import { findReassignments, type TeamMemberAvailability } from '@/lib/marketing/availability'
 import { estimateOperationMinutes } from '@/lib/marketing/effort'
 
@@ -214,6 +216,25 @@ async function handle(request: NextRequest) {
       ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
       : undefined,
   })
+
+  // Money, but only when it needs asking about. The runway is the input the
+  // whole strategy hangs off and the one thing the suite never checked - it
+  // held a bin picked in July. This asks before the number stops being true,
+  // and stays silent otherwise.
+  try {
+    const runway = await readRunway(now)
+    blocks.push(
+      ...buildRunwayBlocks({
+        summary: runway.summary,
+        checkIn: runway.checkIn,
+        disagreement: runway.resolved.disagreement,
+      }),
+    )
+  } catch (error) {
+    // A digest without the runway line is still a useful digest. Failing the
+    // whole post because one private read failed would be the worse trade.
+    console.error('[digest] runway read failed', error)
+  }
 
   // Only while somebody is still unmapped: the prompt removes itself once
   // everyone who wants to be linked has been.
