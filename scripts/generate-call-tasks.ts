@@ -106,7 +106,12 @@ async function main() {
       priority: entry.contacts.length >= 4 ? 'high' : 'normal',
       origin: 'manual',
       autonomy: 'humanReview',
-      ownerName: 'Juhan',
+      // NO owner. Assigning work to somebody who never agreed to it makes the
+      // board lie about commitment, and it makes the take button meaningless
+      // because everything already looks taken. A generated task stays
+      // available until a person claims it - that claim is the signal worth
+      // having, and it is the whole point of the button.
+      ownerName: '',
       targetView: 'outreach',
       sourceKey: `call-sheet/${slug(entry.organization)}`,
       estimatedMinutes: 15,
