@@ -49,6 +49,7 @@ export const MARKETING_OPERATION_AUTONOMY = [
 ] as const
 
 export const MARKETING_OPERATION_TARGET_VIEWS = [
+  'thisWeek',
   'dashboard',
   'strategy',
   'strategyBrief',
@@ -119,9 +120,13 @@ export type MarketingOperation = {
   origin: MarketingOperationOrigin
   autonomy: MarketingOperationAutonomy
   ownerName?: string
+  /** Who the plan RECOMMENDS. Never implies acceptance. */
+  suggestedOwner?: string
   ownerSanityUserId?: string
   dueAt?: string
   nextCheckAt?: string
+  /** Minutes this is expected to take. Set by a person; the planner estimates when absent. */
+  estimatedMinutes?: number
   blocker?: string
   lastOutcome?: string
   targetView: MarketingOperationTargetView
@@ -147,6 +152,7 @@ export type MarketingOperationPatch = Partial<
     | 'status'
     | 'priority'
     | 'ownerName'
+    | 'suggestedOwner'
     | 'ownerSanityUserId'
     | 'dueAt'
     | 'nextCheckAt'
@@ -317,9 +323,13 @@ export function normalizeMarketingOperationInput(value: unknown): MarketingOpera
     origin: member<MarketingOperationOrigin>(input.origin, ORIGIN_SET, 'manual'),
     autonomy: member<MarketingOperationAutonomy>(input.autonomy, AUTONOMY_SET, 'humanReview'),
     ownerName: compactText(input.ownerName, 120),
+    suggestedOwner: compactText(input.suggestedOwner, 120),
     ownerSanityUserId: compactText(input.ownerSanityUserId, 180),
     dueAt: safeIso(input.dueAt),
     nextCheckAt: safeIso(input.nextCheckAt),
+    ...(typeof input.estimatedMinutes === 'number' && Number.isFinite(input.estimatedMinutes) && input.estimatedMinutes > 0
+      ? { estimatedMinutes: Math.round(input.estimatedMinutes) }
+      : {}),
     blocker: compactText(input.blocker, 600),
     lastOutcome: compactText(input.lastOutcome, 700),
     targetView: member<MarketingOperationTargetView>(input.targetView, TARGET_VIEW_SET, 'dashboard'),
@@ -341,6 +351,7 @@ export function normalizeMarketingOperationPatch(value: unknown): MarketingOpera
   if (typeof input.status === 'string' && STATUS_SET.has(input.status)) patch.status = input.status
   if (typeof input.priority === 'string' && PRIORITY_SET.has(input.priority)) patch.priority = input.priority
   if ('ownerName' in input) patch.ownerName = compactText(input.ownerName, 120)
+  if ('suggestedOwner' in input) patch.suggestedOwner = compactText(input.suggestedOwner, 120)
   if ('ownerSanityUserId' in input) patch.ownerSanityUserId = compactText(input.ownerSanityUserId, 180)
   if ('dueAt' in input) patch.dueAt = safeIso(input.dueAt)
   if ('nextCheckAt' in input) patch.nextCheckAt = safeIso(input.nextCheckAt)

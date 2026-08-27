@@ -3,7 +3,7 @@ import {
   assertStudioOrApiKey,
   buildCreatePayload,
   buildProofPointFromResult,
-  getMarketingWriteClient,
+  getMarketingWriteClientFor,
   marketingCloneDocumentId,
   MarketingAuthError,
   MarketingValidationError,
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       : undefined
 
   try {
-    const client = getMarketingWriteClient()
+    const client = getMarketingWriteClientFor('marketingResearchResult')
 
     const proofId = marketingCloneDocumentId('proof-from-result', resultId)
 

@@ -166,7 +166,7 @@ describe('workspace accessible names', () => {
     expect(intake).toContain('aria-live="polite"')
     expect(intake).toContain('role="alert"')
     expect(intake).toContain('What the handoff will do')
-    expect(intake).toContain('private shared Marketing desk')
+    expect(intake).toContain('Marqueta’s private shared desk')
     expect(intake).not.toContain('type="checkbox"')
     expect(intake).toContain('Nothing changes until you hand this off')
     expect(intake).toContain('never publishes, contacts anyone, approves claims, changes brand voice, deletes records, or spends paid research credits')
@@ -201,7 +201,7 @@ describe('workspace accessible names', () => {
     expect(markup).not.toContain('type="checkbox"')
   })
 
-  it('gives the shared Marketing desk semantic structure and explicit mutation names', () => {
+  it('gives Marqueta’s shared desk semantic structure and explicit mutation names', () => {
     const source = readFileSync('src/sanity/components/marketing/MarketingOperationsBoard.tsx', 'utf8')
 
     expect(source).toContain('aria-labelledby="marketing-operations-title"')

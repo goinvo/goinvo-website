@@ -129,7 +129,8 @@ describe('marketing guide and tutorial behavior', () => {
 
   it('routes contextual Marketing help to the active workspace article', () => {
     expect(MARKETING_GUIDE_ARTICLE_BY_VIEW).toEqual({
-      dashboard: 'marketing.dashboard',
+      thisWeek: 'marketing.dashboard',
+    dashboard: 'marketing.dashboard',
       research: 'marketing.research',
       seo: 'marketing.seo',
       strategy: 'marketing.strategy',
@@ -158,7 +159,7 @@ describe('marketing guide and tutorial behavior', () => {
     ).replace(/\s+/g, ' ')
 
     expect(source).toContain("id: 'marketing.overview.order'")
-    expect(source).toContain('Tell Marketing what changed')
+    expect(source).toContain('Tell Marqueta what changed')
     expect(dashboardGuide).toContain("id: 'marketing.dashboard.tell-marketing'")
     expect(dashboardGuide).toContain('not sent through a form')
     expect(dashboardGuide).toContain('Nothing is saved before that')
@@ -167,7 +168,7 @@ describe('marketing guide and tutorial behavior', () => {
     expect(dashboardGuide).toContain('only the normalized brief you review is stored in the private operations dataset')
     expect(dashboardGuide).toContain("id: 'marketing.dashboard.operating-loop'")
     expect(dashboardGuide).toContain("id: 'marketing.dashboard.safety'")
-    expect(normalizedSource).toContain('saved privately on the shared Marketing desk')
+    expect(normalizedSource).toContain('saved privately on Marqueta’s shared desk')
     expect(normalizedSource).toContain('Autopilot remains optional browser-local coaching')
   })
 

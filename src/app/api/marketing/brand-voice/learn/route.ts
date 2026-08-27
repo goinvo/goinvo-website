@@ -33,7 +33,7 @@ import {
   normalizeMarketingBrandVoices,
   type MarketingBrandVoice,
 } from '@/lib/marketing/brandVoice'
-import { getMarketingWriteClient } from '@/lib/marketing/client'
+import { getMarketingWriteClientFor } from '@/lib/marketing/client'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import {
   createMarketingRequestDeduper,
@@ -300,7 +300,7 @@ export async function POST(request: Request) {
       marketingRequestFingerprint(body),
       readMarketingIdempotencyKey(request),
       async () => {
-        const client = getMarketingWriteClient()
+        const client = getMarketingWriteClientFor('marketingSettings')
         if (body.action === 'propose') {
           const proposal = await propose(client, body)
           return { proposal: authorizeBrandVoiceLearningProposal(proposal) }

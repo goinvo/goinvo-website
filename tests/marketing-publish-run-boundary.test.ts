@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/marketing', () => ({
   assertMarketingApiKey: mocks.authorize,
   getMarketingWriteClient: mocks.getClient,
+  getMarketingWriteClientFor: mocks.getClient,
 }))
 
 vi.mock('@/lib/marketing/publishers', () => ({

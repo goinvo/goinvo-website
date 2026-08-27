@@ -75,6 +75,7 @@ function experiment(overrides: Partial<PageExperiment> = {}): PageExperiment {
     targetPath: '/',
     status: 'running',
     flagKey: 'test-flag',
+    measurementKey: 'test-window-v1',
     flag: mockFlag('test-flag'),
     variants: [
       { key: 'control', label: 'Control' },
@@ -140,6 +141,7 @@ describe('page experiment registry', () => {
     expect(getExperimentExposure(home2026Experiment, 'concept', '/?utm=1')).toEqual({
       experiment_id: 'home-2026',
       flag_key: 'home-2026-variant',
+      measurement_key: '2026-07-27-visitor-dedupe-v1',
       variant: 'concept',
       page_path: '/',
     })
@@ -252,6 +254,70 @@ describe('experiment renderers and content variants', () => {
 })
 
 describe('experiment analytics', () => {
+  it('counts an exposure once per browser and measurement window across reloads', () => {
+    const stored = new Map<string, string>()
+    const localStorage = {
+      getItem: vi.fn((key: string) => stored.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => stored.set(key, value)),
+    }
+    const sendBeacon = vi.fn(() => true)
+    vi.stubGlobal('window', { gtag: vi.fn(), localStorage })
+    vi.stubGlobal('navigator', { sendBeacon })
+
+    const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
+    setExperimentContext(exposure)
+    trackExperimentExposure(exposure)
+
+    // Reset module memory to simulate a full page reload. Persistent browser
+    // storage remains, so the same visitor is not counted a second time.
+    resetExperimentAnalyticsForTests()
+    setExperimentContext(exposure)
+    trackExperimentExposure(exposure)
+
+    expect(
+      vi.mocked(trackVercelEvent).mock.calls.filter(([name]) => name === 'experiment_exposure'),
+    ).toHaveLength(1)
+    expect(sendBeacon).toHaveBeenCalledTimes(1)
+    expect(Array.from(stored.keys())).toContain(
+      'goinvo:experiment-event:home-2026:2026-07-27-visitor-dedupe-v1:concept:experiment_exposure',
+    )
+  })
+
+  it('counts tracked conversion events once per browser while retaining general interaction events', async () => {
+    const stored = new Map<string, string>()
+    const localStorage = {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    }
+    const bodies: Blob[] = []
+    vi.stubGlobal('window', { gtag: vi.fn(), localStorage })
+    vi.stubGlobal('navigator', {
+      sendBeacon: vi.fn((_url: string, body: Blob) => {
+        bodies.push(body)
+        return true
+      }),
+    })
+
+    const exposure = getExperimentExposure(home2026Experiment, 'concept', '/')
+    setExperimentContext(exposure)
+    trackQualifiedDiscoveryCallClick({
+      cta_text: 'Book a discovery call',
+      cta_location: 'concept hero',
+      cta_url: '#book',
+    })
+    trackQualifiedDiscoveryCallClick({
+      cta_text: 'Book a discovery call',
+      cta_location: 'concept selected work',
+      cta_url: '#book',
+    })
+
+    const eventNames = await Promise.all(
+      bodies.map(async (body) => JSON.parse(await body.text()).eventName as string),
+    )
+    expect(eventNames.filter((name) => name === 'qualified_discovery_call_click')).toHaveLength(1)
+    expect(eventNames.filter((name) => name === 'cta_click')).toHaveLength(2)
+  })
+
   it('fires one exposure per page and variant, then enriches later conversion events', () => {
     const gtag = vi.fn()
     vi.stubGlobal('window', { gtag })

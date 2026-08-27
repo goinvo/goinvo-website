@@ -46,6 +46,7 @@ import {
   OUTREACH_INTAKE_FIELD_LIMITS,
   OUTREACH_INTAKE_LIMITS,
 } from '@/lib/marketing/outreachIntake'
+import { marketingOperationHash } from '@/lib/marketing/operations'
 import {
   buildMarketingContactIdentityClaims,
   fetchMarketingContactIdentityClaims,
@@ -137,6 +138,32 @@ interface OutreachWorkspaceContentProps extends OutreachWorkspaceProps {
 interface IntakeSpreadsheetReport {
   result: ContactSpreadsheetImportResult
   addedCount: number
+}
+
+type OutreachIntakeCheckpointStage = 'drafting' | 'reviewed' | 'saved' | 'discarded'
+
+interface OutreachIntakeCheckpoint {
+  _id: string
+  ownerName?: string
+  ownerSanityUserId?: string
+  stage: OutreachIntakeCheckpointStage
+  stagedCount: number
+  readyCount: number
+  savedCount: number
+  updatedAt: string
+}
+
+function outreachIntakeCheckpointLabel(checkpoint: OutreachIntakeCheckpoint) {
+  if (checkpoint.stage === 'drafting') {
+    return `${checkpoint.stagedCount} staged; Review Contacts not completed`
+  }
+  if (checkpoint.stage === 'reviewed') {
+    return `${checkpoint.readyCount} reviewed; Add Contacts not completed`
+  }
+  if (checkpoint.stage === 'saved') {
+    return `${checkpoint.savedCount} contact${checkpoint.savedCount === 1 ? '' : 's'} saved`
+  }
+  return 'Draft deliberately discarded'
 }
 
 const SPREADSHEET_DRAFT_LINE_CHARACTERS = 500
@@ -589,12 +616,14 @@ function OutreachPlanPanel({
   offerReadyCount,
   offerTotal,
   contactCount,
+  onOpenEvidence,
 }: {
   posture: FinancialPosture
   evidenceCount: number | null
   offerReadyCount: number
   offerTotal: number
   contactCount: number
+  onOpenEvidence?: () => void
 }) {
   const shortRunway = posture.id === 'survival' || posture.id === 'rebuild'
   const offerCount = offerReadyCount
@@ -606,6 +635,11 @@ function OutreachPlanPanel({
           <strong style={{ fontSize: 16, lineHeight: 1.35 }}>Line up work through people who already know GoInvo</strong>
           <p style={{ margin: 0, fontSize: 14, lineHeight: 1.65 }}>{posture.strategy}</p>
           <div data-outreach-plan-actions="true" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            {evidenceCount === 0 && onOpenEvidence && (
+              <button type="button" style={styles.button} onClick={onOpenEvidence}>
+                Extract work evidence
+              </button>
+            )}
             <button
               type="button"
               style={styles.primaryButton}
@@ -613,13 +647,13 @@ function OutreachPlanPanel({
             >
               {contactCount > 0 ? 'Add another contact' : 'Add named contacts'}
             </button>
-            {offerTotal > 0 && offerReadyCount === 0 && (
+            {offerReadyCount === 0 && (
               <button
                 type="button"
                 style={styles.button}
                 onClick={() => document.getElementById('outreach-offers')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
               >
-                Set a real offer price
+                {offerTotal > 0 ? 'Set a real offer price' : 'Set up a priced offer'}
               </button>
             )}
             <span style={{ fontSize: 13, lineHeight: 1.5, color: 'var(--card-muted-fg-color)' }}>
@@ -717,6 +751,7 @@ export function OutreachWorkspaceContent({
   const intakeHydrationAttemptedRef = useRef(false)
   const [intakeStorageHydrated, setIntakeStorageHydrated] = useState(false)
   const [intakeStorageAvailable, setIntakeStorageAvailable] = useState(true)
+  const [intakeCheckpoints, setIntakeCheckpoints] = useState<OutreachIntakeCheckpoint[]>([])
   const preparedIntake = useMemo(
     () => appendIntakeDraftEntries(intakeEntries, intakeDraft),
     [intakeDraft, intakeEntries],
@@ -838,6 +873,77 @@ export function OutreachWorkspaceContent({
     }
   }, [intakeDraft, intakeEntries, intakePreview, intakeStorageHydrated, intakeStructuredContacts])
 
+  // Contact intake is important enough to defend locally as well as through the
+  // suite-wide unsaved-change guard. This keeps the warning active in isolated
+  // embeds and test harnesses, and prevents a parent-provider regression from
+  // silently allowing staged contact details to disappear on reload or close.
+  useEffect(() => {
+    if (preparedIntake.entries.length === 0 || typeof window === 'undefined') return
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeLeaving)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving)
+  }, [preparedIntake.entries.length])
+
+  const intakeCheckpointIdentity = currentUser?.id || currentUser?.name || ''
+  const intakeCheckpointId = intakeCheckpointIdentity
+    ? `marketingOutreachCheckpoint.${marketingOperationHash(intakeCheckpointIdentity)}`
+    : ''
+  const saveIntakeCheckpoint = useCallback(
+    async (
+      stage: OutreachIntakeCheckpointStage,
+      stagedCount: number,
+      readyCount: number,
+      savedCount = 0,
+    ) => {
+      if (!intakeCheckpointId) return
+      const checkpoint: OutreachIntakeCheckpoint = {
+        _id: intakeCheckpointId,
+        ownerName: currentUser?.name || currentUser?.id || 'Studio user',
+        ...(currentUser?.id ? {ownerSanityUserId: currentUser.id} : {}),
+        stage,
+        stagedCount: Math.max(0, stagedCount),
+        readyCount: Math.max(0, readyCount),
+        savedCount: Math.max(0, savedCount),
+        updatedAt: new Date().toISOString(),
+      }
+      try {
+        await outreachClient.createOrReplace({
+          ...checkpoint,
+          _type: 'marketingOutreachCheckpoint',
+        })
+        setIntakeCheckpoints((current) => [
+          checkpoint,
+          ...current.filter((candidate) => candidate._id !== checkpoint._id),
+        ].slice(0, 30))
+      } catch (checkpointError) {
+        console.error('Could not save the private Outreach intake checkpoint:', checkpointError)
+      }
+    },
+    [currentUser?.id, currentUser?.name, intakeCheckpointId, outreachClient],
+  )
+
+  useEffect(() => {
+    if (!intakeStorageHydrated || !intakeCheckpointId || preparedIntake.entries.length === 0) return
+    const readyCount = intakePreview?.filter((contact) => !contact.duplicate).length || 0
+    const timer = window.setTimeout(() => {
+      void saveIntakeCheckpoint(
+        intakePreview ? 'reviewed' : 'drafting',
+        preparedIntake.entries.length,
+        readyCount,
+      )
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [
+    intakeCheckpointId,
+    intakePreview,
+    intakeStorageHydrated,
+    preparedIntake.entries.length,
+    saveIntakeCheckpoint,
+  ])
+
   const [postureId, setPostureId] = useState<string | null>(null)
   const [warmStart, setWarmStart] = useState<WarmStartSuggestion[] | null>(null)
   const [warmStartSelected, setWarmStartSelected] = useState<ReadonlySet<string>>(new Set())
@@ -951,6 +1057,7 @@ export function OutreachWorkspaceContent({
           contacts: MarketingContact[]
           offers: MarketingOffer[]
           evidenceLinks: Array<WorkEvidence & { _id: string }>
+          intakeCheckpoints: OutreachIntakeCheckpoint[]
           financialPosture: string | null
         }>(
           `{
@@ -960,6 +1067,9 @@ export function OutreachWorkspaceContent({
             },
             "evidenceLinks": *[_type == "marketingWorkEvidence" && status == "active"]{
               _id, sourceId, slug, url, manuallyEdited, extractedAt, title, status
+            },
+            "intakeCheckpoints": *[_type == "marketingOutreachCheckpoint"]|order(updatedAt desc)[0...30]{
+              _id, ownerName, ownerSanityUserId, stage, stagedCount, readyCount, savedCount, updatedAt
             },
             "financialPosture": *[_id == "${FINANCIAL_POSTURE_DOC_ID}"][0].posture
           }`,
@@ -974,6 +1084,7 @@ export function OutreachWorkspaceContent({
       const nextEvidenceLinks = result.evidenceLinks || []
       setContacts(result.contacts || [])
       setOffers(result.offers || [])
+      setIntakeCheckpoints(result.intakeCheckpoints || [])
       setBrandVoices(normalizeMarketingBrandVoices(voiceSettings))
       setEvidenceCount(
         compactEvidenceIndex(nextEvidenceLinks, { max: Math.max(nextEvidenceLinks.length, 1) }).length,
@@ -1250,6 +1361,7 @@ export function OutreachWorkspaceContent({
       markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
     } else {
       clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
+      void saveIntakeCheckpoint('discarded', 0, 0)
     }
     window.requestAnimationFrame(() => intakeComposerRef.current?.focus())
   }
@@ -1345,6 +1457,7 @@ export function OutreachWorkspaceContent({
       setIntakeImportError(null)
       clearStoredOutreachIntake()
       clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
+      await saveIntakeCheckpoint('saved', 0, 0, result.created.length)
       await loadOutreach()
       say(
         `Added ${result.created.length} contact${result.created.length === 1 ? '' : 's'}` +
@@ -1515,6 +1628,7 @@ export function OutreachWorkspaceContent({
         outreachClient,
       )
       await loadOutreach()
+      onAutopilotComplete?.({ action: 'outreach:research', recordId: contact._id })
       say(
         `Researched ${contact.name || 'contact'} — review identity, evidence, and the priced offer before approving the call brief` +
           (result.personVerified === false ? ' (person unverified — org-level research only)' : '') +
@@ -1535,6 +1649,7 @@ export function OutreachWorkspaceContent({
     if (targets.length === 0) return
     setBatch({ done: 0, total: targets.length, current: targets[0]?.name || '' })
     const failures: string[] = []
+    let completedContactId: string | undefined
     let missingEvidence = false
     for (let i = 0; i < targets.length; i += 1) {
       const target = targets[i]
@@ -1550,6 +1665,7 @@ export function OutreachWorkspaceContent({
           'POST',
           outreachClient,
         )
+        completedContactId ||= target._id
         if (result.evidenceIndexSize === 0) missingEvidence = true
       } catch (err) {
         failures.push(`${target.name || target._id}: ${err instanceof Error ? err.message : 'failed'}`)
@@ -1564,6 +1680,9 @@ export function OutreachWorkspaceContent({
     if (failures.length) {
       fail(new Error(`${failures.length} of ${targets.length} failed — ${failures[0]}`), 'Research batch failed.')
     } else {
+      if (completedContactId) {
+        onAutopilotComplete?.({ action: 'outreach:research', recordId: completedContactId })
+      }
       say(
         `Researched ${targets.length} contact${targets.length === 1 ? '' : 's'}. Review and approve each brief before it enters the call plan.` +
           (missingEvidence
@@ -2003,6 +2122,7 @@ export function OutreachWorkspaceContent({
         .commit()
       setLoggingId(null)
       await loadOutreach()
+      onAutopilotComplete?.({ action: 'outreach:log', recordId: contact._id })
       restoreRevealedPanelOpener('log')
       clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)
       say(
@@ -2512,6 +2632,7 @@ export function OutreachWorkspaceContent({
       if (contact._rev) patch = patch.ifRevisionId(contact._rev)
       await patch.commit()
       await loadOutreach()
+      onAutopilotComplete?.({ action: 'outreach:review', recordId: contact._id })
       say(
         returnsToCallPlan
           ? `${contact.name || 'Contact'} approved for the ranked call plan.`
@@ -3353,6 +3474,7 @@ export function OutreachWorkspaceContent({
         offerReadyCount={readyOffers.length}
         offerTotal={offers.filter((offer) => offer.status === 'active').length}
         contactCount={contacts.length}
+        onOpenEvidence={onOpenEvidence}
       />
 
       <section style={{ ...styles.panel, padding: '10px 14px' }}>
@@ -3882,6 +4004,33 @@ export function OutreachWorkspaceContent({
           identity and relationship context for web research. Do not include sensitive personal, medical, financial, or
           confidential client information.
         </p>
+        {intakeCheckpoints.length > 0 && (
+          <details
+            data-outreach-intake-checkpoints="true"
+            style={{ ...styles.guidePanel, boxShadow: 'none', padding: 12, marginBottom: 10 }}
+          >
+            <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 850 }}>
+              Team contact-intake status ({intakeCheckpoints.length})
+            </summary>
+            <p style={{ ...styles.small, ...styles.muted, margin: '8px 0', lineHeight: 1.5 }}>
+              Shows where each person last stopped. This stores only workflow stage and counts in the private Outreach dataset - never contact names, rows, or files.
+            </p>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {intakeCheckpoints.map((checkpoint) => (
+                <div
+                  key={checkpoint._id}
+                  style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 8, fontSize: 13 }}
+                >
+                  <span>
+                    <strong>{checkpoint.ownerName || checkpoint.ownerSanityUserId || 'Studio user'}:</strong>{' '}
+                    {outreachIntakeCheckpointLabel(checkpoint)}
+                  </span>
+                  <span style={styles.muted}>{new Date(checkpoint.updatedAt).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
         <div style={{ display: 'grid', gap: 10 }}>
           <div
             role="group"
@@ -3996,6 +4145,7 @@ export function OutreachWorkspaceContent({
                   markUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID, 'contact intake draft')
                 } else {
                   clearUnsavedChanges(OUTREACH_INTAKE_UNSAVED_ID)
+                  void saveIntakeCheckpoint('discarded', 0, 0)
                 }
                 // Edited text invalidates the old preview — never commit a parse
                 // the user hasn't seen.
@@ -4037,6 +4187,29 @@ export function OutreachWorkspaceContent({
               </span>
               <span>{intakeDraft.length.toLocaleString()} / {OUTREACH_INTAKE_LIMITS.lineCharacters.toLocaleString()}</span>
             </div>
+            {preparedIntake.entries.length > 0 && (
+              <div
+                role="status"
+                aria-live="polite"
+                data-outreach-intake-unsaved-warning="true"
+                style={{
+                  border: '1px solid rgba(214, 169, 63, 0.58)',
+                  background: 'rgba(214, 169, 63, 0.11)',
+                  borderRadius: 7,
+                  color: 'var(--card-fg-color)',
+                  padding: '10px 12px',
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong>Not saved to Outreach yet.</strong>{' '}
+                {intakePreview
+                  ? `${intakePreview.filter((contact) => !contact.duplicate).length} reviewed contact${intakePreview.filter((contact) => !contact.duplicate).length === 1 ? ' is' : 's are'} still only in this browser tab. Choose Add Contacts before leaving.`
+                  : `${preparedIntake.entries.length} staged contact${preparedIntake.entries.length === 1 ? ' needs' : 's need'} Review Contacts, then Add Contacts, before the team can use them.`}
+                {' '}The browser will warn before navigation. Reloading this tab can recover the draft, but closing the tab or switching devices can lose the contact details.
+                {' '}The shared checkpoint records only this stage and the counts - never names or contact details.
+              </div>
+            )}
             {intakeLimitError && (
               <div id="outreach-contact-entry-error" role="alert" style={{ color: '#e59a9a', fontSize: 13, lineHeight: 1.45 }}>
                 {intakeLimitError}
@@ -4108,6 +4281,7 @@ export function OutreachWorkspaceContent({
                 disabled={intakeBusy !== null}
                 onClick={() => {
                   if (!confirmDiscardUnsavedChange(OUTREACH_INTAKE_UNSAVED_ID)) return
+                  void saveIntakeCheckpoint('discarded', 0, 0)
                   intakeImportGenerationRef.current += 1
                   setIntakeEntries([])
                   setIntakeDraft('')

@@ -150,6 +150,9 @@ export default defineType({
               of: [
                 {
                   type: 'reference',
+                  // feature/caseStudy stay public while funnels move, so this
+                  // list spans the boundary and must be weak.
+                  weak: true,
                   to: [
                     { type: 'feature' },
                     { type: 'caseStudy' },

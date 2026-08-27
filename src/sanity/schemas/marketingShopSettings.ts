@@ -63,6 +63,17 @@ export default defineType({
       initialValue: 'hello@goinvo.com',
     }),
     defineField({
+      name: 'shippingFlatRate',
+      title: 'Flat US shipping',
+      type: 'number',
+      group: 'storefront',
+      description:
+        'Charged once per order however many prints are in it. Both the storefront and the ' +
+        'Stripe checkout read this, so they can never disagree. Leave empty to fall back to the ' +
+        'built-in default.',
+      validation: (Rule) => Rule.min(0).precision(2),
+    }),
+    defineField({
       name: 'provider',
       title: 'Payment processor',
       type: 'string',

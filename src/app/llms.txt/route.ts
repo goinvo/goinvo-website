@@ -72,6 +72,9 @@ export async function GET() {
       `- [Careers](${url}/about/careers): join the team.`,
       `- [Contact](${url}/contact): start a project or ask a question.`,
     ]),
+    section('Shop', [
+      `- [Health Visualizations and Prints](${url}/vision/health-visualizations): download open-source files or order physical prints from GoInvo.`,
+    ]),
     section('More', [`- [Full sitemap](${url}/sitemap.xml)`]),
   ]
     .filter(Boolean)

@@ -15,6 +15,7 @@ import type { SanityClient } from '@sanity/client'
 import { createClient as createKvClient, type VercelKV } from '@vercel/kv'
 import {
   buildDrainPerformanceSignalDoc,
+  buildSectionEngagementEntries,
   buildSignalMetricsFromAggregates,
   buildVariantEngagementEntries,
   drainSignalId,
@@ -23,6 +24,7 @@ import {
   type DrainAggregate,
   type DrainConversionEvent,
   type DrainSignalVariant,
+  type SectionEngagementInput,
   type VariantEngagementInput,
 } from '@/lib/marketing/vercelDrain'
 
@@ -142,7 +144,11 @@ export async function upsertDrainSignalForFlag(
   client: SanityClient,
   flagKey: string,
   flagAggregates: DrainAggregate[],
-  options: { metricDate?: string; variantEngagement?: VariantEngagementInput[] } = {},
+  options: {
+    metricDate?: string
+    variantEngagement?: VariantEngagementInput[]
+    sectionEngagement?: SectionEngagementInput[]
+  } = {},
 ): Promise<UpsertDrainResult> {
   const experiment = await client.fetch<ExperimentForDrain | null>(
     `*[_type == "marketingExperiment" && flagKey == $flagKey][0]${EXPERIMENT_FOR_DRAIN_PROJECTION}`,
@@ -176,6 +182,10 @@ export async function upsertDrainSignalForFlag(
     options.variantEngagement,
     variants.map((variant) => variant.key),
   )
+  const sectionEngagement = buildSectionEngagementEntries(
+    options.sectionEngagement,
+    variants.map((variant) => variant.key),
+  )
 
   const metricDate = options.metricDate || new Date().toISOString().slice(0, 10)
   const signalId = drainSignalId(flagKey)
@@ -190,6 +200,7 @@ export async function upsertDrainSignalForFlag(
     pageUrl,
     metrics,
     variantEngagement,
+    sectionEngagement,
     interpretation,
     metricDate,
     periodEnd: metricDate,
@@ -287,6 +298,16 @@ export const ENG_FIELD_PREFIX = '__eng_'
 export const ENG_SESSIONS_FIELD = '__eng_sessions'
 export const ENG_VISIBLE_MS_FIELD = '__eng_visible_ms'
 export const ENG_BOUNCES_FIELD = '__eng_bounces'
+export const ENG_SECTION_SESSIONS_PREFIX = '__eng_section_sessions:'
+export const ENG_SECTION_VISIBLE_MS_PREFIX = '__eng_section_visible_ms:'
+
+export function engSectionSessionsField(sectionKey: string): string {
+  return `${ENG_SECTION_SESSIONS_PREFIX}${sectionKey}`
+}
+
+export function engSectionVisibleMsField(sectionKey: string): string {
+  return `${ENG_SECTION_VISIBLE_MS_PREFIX}${sectionKey}`
+}
 
 /** True when a parsed counter field's event name is a reserved engagement field. */
 export function isEngagementField(eventName: string): boolean {
@@ -364,6 +385,45 @@ export function variantEngagementFromKvHash(
     })
   }
   return inputs
+}
+
+export function sectionEngagementFromKvHash(
+  hash: Record<string, unknown> | null | undefined,
+): SectionEngagementInput[] {
+  if (!hash) return []
+  const grouped = new Map<string, { variantKey: string; sectionKey: string; views: number; visibleMs: number }>()
+  for (const [field, raw] of Object.entries(hash)) {
+    const parsed = parseKvCounterField(field)
+    if (!parsed) continue
+    const isSessions = parsed.eventName.startsWith(ENG_SECTION_SESSIONS_PREFIX)
+    const isVisibleMs = parsed.eventName.startsWith(ENG_SECTION_VISIBLE_MS_PREFIX)
+    if (!isSessions && !isVisibleMs) continue
+    const sectionKey = parsed.eventName.slice(
+      (isSessions ? ENG_SECTION_SESSIONS_PREFIX : ENG_SECTION_VISIBLE_MS_PREFIX).length,
+    )
+    if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(sectionKey)) continue
+    const value = typeof raw === 'number' ? raw : Number(raw)
+    if (!Number.isFinite(value) || value < 0) continue
+    const key = `${parsed.variant}${FIELD_DELIM}${sectionKey}`
+    const totals = grouped.get(key) || {
+      variantKey: parsed.variant,
+      sectionKey,
+      views: 0,
+      visibleMs: 0,
+    }
+    if (isSessions) totals.views += value
+    else totals.visibleMs += value
+    grouped.set(key, totals)
+  }
+  return Array.from(grouped.values())
+    .filter((entry) => entry.views > 0)
+    .map((entry) => ({
+      variantKey: entry.variantKey,
+      sectionKey: entry.sectionKey,
+      views: entry.views,
+      averageVisibleDuration: entry.visibleMs / entry.views / 1000,
+    }))
+    .sort((a, b) => a.sectionKey.localeCompare(b.sectionKey) || a.variantKey.localeCompare(b.variantKey))
 }
 
 /**

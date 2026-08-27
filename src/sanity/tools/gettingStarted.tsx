@@ -356,20 +356,20 @@ const categories: Category[] = [
           },
           {
             id: 'marketing.overview.order',
-            title: 'Tell Marketing what changed',
+            title: 'Tell Marqueta what changed',
             body: (
               <>
                 Coworkers do not need to translate their work into campaigns,
                 funnels, audiences, or calendar fields. On <strong>Home</strong>,
-                use <strong>Tell Marketing what changed</strong> like a quick
+                use <strong>Tell Marqueta what changed</strong> like a quick
                 Slack update. Marketing infers the smallest operational
                 handoff, finds strong matches in existing work, and shows the
                 normalized brief before anything is saved. The accepted work
-                goes to the private shared Marketing desk; structured editors
+                goes to Marqueta’s private shared desk; structured editors
                 are optional when someone needs to tweak the source details.
               </>
             ),
-            tip: 'The rough note is not saved. Review the proposed shared brief, then hand it off once; Marketing stores it privately and runs a free internal CMS check without publishing or using paid SEO credits.',
+            tip: 'The rough note is not saved. Review the proposed shared brief, then hand it off once; Marqueta stores it privately and runs a free internal CMS check without publishing or using paid SEO credits.',
           },
           {
             id: 'marketing.overview.templates',
@@ -388,14 +388,14 @@ const categories: Category[] = [
       {
         id: 'marketing.dashboard',
         title: 'Start from the Dashboard',
-        blurb: 'Hand work to the shared Marketing desk, answer real blockers, and use health signals to decide what deserves attention next.',
+        blurb: 'Hand work to Marqueta’s shared desk, answer real blockers, and use health signals to decide what deserves attention next.',
         minutes: 3,
         keywords: ['dashboard', 'home', 'marketing desk', 'shared queue', 'owner', 'due date', 'next actions', 'runway', 'needs attention', 'autopilot'],
         links: [{ path: '/marketing?view=dashboard', label: 'Open Dashboard' }],
         steps: [
           {
             id: 'marketing.dashboard.tell-marketing',
-            title: 'Give Marketing the rough update',
+            title: 'Give Marqueta the rough update',
             body: (
               <>
                 Paste the update in your own words: a new project, deadline,
@@ -407,7 +407,7 @@ const categories: Category[] = [
                 public Research record is silently changed, and nothing is published.
               </>
             ),
-            tip: 'Do not paste confidential client, contact, health, credential, or private lead data. Credentials and likely personal identifiers are blocked before AI; the note is sent to the approved Marketing AI model, but only the normalized brief you review is stored in the private operations dataset.',
+            tip: 'Do not paste confidential client, contact, health, credential, or private lead data. Credentials and likely personal identifiers are blocked before AI; the note is sent to the approved Marqueta model, but only the normalized brief you review is stored in the private operations dataset.',
           },
           {
             id: 'marketing.dashboard.operating-loop',
@@ -416,7 +416,7 @@ const categories: Category[] = [
               <>
                 On <strong>Home</strong>, open <strong>Marketing’s desk</strong>
                 and answer the first item under <strong>Needs a person</strong>.
-                Then leave Marketing to organize the next move. Assignment and
+                Then leave Marqueta to organize the next move. Assignment and
                 date controls are corrections, not intake requirements: change
                 them only when the suggestion or team agreement is wrong. The
                 owner, due date, blocker, CMS matches, and recent outcomes are
@@ -424,14 +424,14 @@ const categories: Category[] = [
                 a campaign or funnel from memory.
               </>
             ),
-            tip: 'System checks are live recommendations, not fake assignments. Choose Add to desk only when the team wants Marketing to own the follow-through.',
+            tip: 'System checks are live recommendations, not fake assignments. Choose Add to desk only when the team wants Marqueta to own the follow-through.',
           },
           {
             id: 'marketing.dashboard.safety',
-            title: 'Know where Marketing stops',
+            title: 'Know where Marqueta stops',
             body: (
               <>
-                Marketing can read shared records, deduplicate and rank work,
+                Marqueta can read shared records, deduplicate and rank work,
                 inspect the public GoInvo CMS, prepare private drafts, and log
                 an internal check. Creating or updating shared private work has
                 one reviewed handoff. Publishing, scheduling, outreach, paid
@@ -949,8 +949,8 @@ const categories: Category[] = [
                 This keeps designers from wasting prompts when they are still
                 working through the same planning question. Those sessions stay
                 local to this browser until you confirm a create step. By contrast,
-                a reviewed <strong>Tell Marketing what changed</strong> handoff is
-                saved privately on the shared Marketing desk, where coworkers
+                a reviewed <strong>Tell Marqueta what changed</strong> handoff is
+                saved privately on Marqueta’s shared desk, where coworkers
                 can see its owner, date, blocker, and recent outcome. Autopilot
                 remains optional browser-local coaching; it is not the team queue.
               </>
@@ -1001,7 +1001,7 @@ const categories: Category[] = [
             title: 'Choose an approved AI model deliberately',
             body: (
               <>
-                The selected model is shared by Marketing AI assistance. Use
+                The selected model is shared by Marqueta assistance. Use
                 one of the supported choices shown in Settings; changing it can
                 affect response speed, cost, and writing quality across the suite.
               </>
@@ -1380,6 +1380,67 @@ const categories: Category[] = [
                 website signals. Pair them with campaign UTMs or GA4 when you
                 need channel attribution, source/medium reporting, or keyword
                 and creative variation data.
+              </>
+            ),
+          },
+        ],
+      },
+      {
+        id: 'marketing.shop',
+        title: 'Run the shop',
+        blurb: 'Manage the storefront, stock, customers, orders, and payment handoff.',
+        minutes: 5,
+        keywords: ['shop', 'store', 'storefront', 'product', 'inventory', 'order', 'payment', 'stripe'],
+        links: [
+          { path: '/marketing?view=shop', label: 'Open Shop' },
+          { path: '/../vision/health-visualizations', label: 'View the public storefront' },
+        ],
+        steps: [
+          {
+            id: 'marketing.shop.catalog',
+            title: 'Build the catalog',
+            body: (
+              <>
+                Add products in <strong>Shop → Storefront</strong>. Each product
+                has public copy, a SKU, price, stock rules, and an optional
+                hosted payment link. Add product photography and less common
+                relationships from the collapsed Advanced fields dropdown.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.shop.inventory',
+            title: 'Keep inventory accurate',
+            body: (
+              <>
+                Use <strong>Inventory</strong> for fast stock adjustments. The
+                workspace highlights products at or below their reorder point,
+                and paid orders recorded in the CMS reduce tracked stock.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.shop.customers',
+            title: 'Link customers to marketing',
+            body: (
+              <>
+                When contact sync is enabled, an order matches an existing
+                Marketing contact by email or creates a new one. The order keeps
+                a customer snapshot while Outreach retains the reusable contact
+                record for future campaigns and relationship work.
+              </>
+            ),
+          },
+          {
+            id: 'marketing.shop.payments',
+            title: 'Connect checkout safely',
+            body: (
+              <>
+                Choose the processor and connection state under{' '}
+                <strong>Payments &amp; settings</strong>, then place hosted
+                checkout URLs on products. Store only safe account labels and
+                external payment IDs in Sanity. API keys, signing secrets, and
+                card data belong in the deployment environment or processor.
               </>
             ),
           },

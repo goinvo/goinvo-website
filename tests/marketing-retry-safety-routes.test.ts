@@ -17,6 +17,7 @@ vi.mock('@/lib/marketing', async (importOriginal) => {
     assertStudioOrApiKey: vi.fn(async () => undefined),
     assertMarketingApiKey: vi.fn(() => undefined),
     getMarketingWriteClient: vi.fn(() => mocks.client),
+    getMarketingWriteClientFor: vi.fn(() => mocks.client),
   }
 })
 

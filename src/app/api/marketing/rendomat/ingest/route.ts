@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { SanityClient } from '@sanity/client'
-import { assertMarketingApiKey, getMarketingWriteClient } from '@/lib/marketing'
+import { assertMarketingApiKey, getMarketingWriteClientFor } from '@/lib/marketing'
 import { schedulePublish } from '@/lib/marketing/publishers'
 import {
   buildCalendarItemFields,
@@ -224,7 +224,7 @@ export async function POST(req: Request) {
     )
   }
 
-  const client = getMarketingWriteClient()
+  const client = getMarketingWriteClientFor('marketingCalendarItem')
   const baseUrl = `${url.protocol}//${url.host}`
   const forwardApiKey = process.env.MARKETING_API_KEY || ''
   const results: IngestResult[] = []

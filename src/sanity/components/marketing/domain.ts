@@ -43,6 +43,7 @@ import {
   uniqueById,
 } from '@/lib/marketing'
 import type { FinancialPostureId } from '@/lib/marketing/financialPosture'
+import { isInternalMarketingType } from '@/lib/marketing/datasetRouting'
 import type {
   AbTestingComparisonResult,
   AbTestingComparisonScoreboard,
@@ -140,6 +141,12 @@ export const MARKETING_TOOL_VIEWS: Array<{
   description: string
   icon: typeof CalendarIcon
 }> = [
+  {
+    id: 'thisWeek',
+    title: 'This week',
+    description: 'The marketing that fits the hours you have, in the order to do it.',
+    icon: DashboardIcon,
+  },
   {
     id: 'dashboard',
     title: 'Dashboard',
@@ -272,8 +279,11 @@ export const MARKETING_SURFACES: MarketingSurface[] = [
     title: 'Home',
     description: 'Your next best actions, ranked. Start here.',
     icon: DashboardIcon,
-    landingView: 'dashboard',
-    tabs: [{ view: 'dashboard', label: 'Overview' }],
+    landingView: 'thisWeek',
+    tabs: [
+      { view: 'thisWeek', label: 'This week' },
+      { view: 'dashboard', label: 'Overview' },
+    ],
   },
   {
     id: 'plan',
@@ -2213,6 +2223,44 @@ export function getAbTestingVariantEngagement(
   return { sessions: null, bounceRate: null, averageSessionDuration: null }
 }
 
+export type AbTestingSectionEngagement = {
+  variantKey: string
+  sectionKey: string
+  views: number
+  averageVisibleDuration: number
+}
+
+export function getAbTestingSectionEngagement(
+  experiment: MarketingExperiment,
+): AbTestingSectionEngagement[] {
+  const entries: AbTestingSectionEngagement[] = []
+  const seen = new Set<string>()
+  for (const signal of uniqueById((experiment.performanceSignals || []).filter(Boolean))) {
+    for (const entry of signal.sectionEngagement || []) {
+      const variantKey = entry.variantKey?.trim()
+      const sectionKey = entry.sectionKey?.trim()
+      const compositeKey = `${variantKey}:${sectionKey}`
+      if (
+        !variantKey ||
+        !sectionKey ||
+        seen.has(compositeKey) ||
+        typeof entry.views !== 'number' ||
+        !Number.isFinite(entry.views) ||
+        typeof entry.averageVisibleDuration !== 'number' ||
+        !Number.isFinite(entry.averageVisibleDuration)
+      ) continue
+      seen.add(compositeKey)
+      entries.push({
+        variantKey,
+        sectionKey,
+        views: Math.max(0, Math.round(entry.views)),
+        averageVisibleDuration: Math.max(0, entry.averageVisibleDuration),
+      })
+    }
+  }
+  return entries
+}
+
 /** Formats a 0–1 fraction or 0–100 percent bounce rate as a whole-ish percent. */
 export function formatAbTestingBounceRate(value: number | null): string {
   if (value === null) return '—'
@@ -2243,7 +2291,7 @@ export function formatAbTestingEventCount(value: number | null, unit?: string) {
 export function formatAbTestingEventRate(cell: AbTestingVariantEventCell) {
   if (cell.value === null) return 'Event count missing'
   if (cell.denominator === null) return 'Visit count missing'
-  if (cell.denominator <= 0) return '0 visits'
+  if (cell.denominator <= 0) return '0 visitors'
   const rate = cell.rate || 0
   // A rate above 100% means more events than exposures (a sample/instrumentation
   // artifact). Show the honest ratio instead of a misleading "500% of visits".
@@ -8104,7 +8152,17 @@ export function normalizeStringList(items: string[]) {
   return Array.from(new Set((items || []).map((item) => item.trim()).filter(Boolean)))
 }
 
-export function advancedEditHref(type: string, id: string) {
+/**
+ * Link into the full Sanity document form, when that is actually reachable.
+ *
+ * sanity.config.ts defines ONE workspace on ONE dataset, so the intent route
+ * can only open documents in that dataset. For a type that lives in the private
+ * dataset the link resolves to an empty new-document form, and saving it would
+ * create a ghost duplicate in the public dataset. Returning null lets callers
+ * hide the hatch rather than offer a broken one.
+ */
+export function advancedEditHref(type: string, id: string): string | null {
+  if (isInternalMarketingType(type)) return null
   return `/studio/content/intent/edit/id=${encodeURIComponent(id)};type=${encodeURIComponent(type)}`
 }
 

@@ -180,6 +180,27 @@ export default defineType({
       validation: (Rule) => Rule.required().min(0).precision(2),
     }),
     defineField({
+      name: 'compareAtPrice',
+      title: 'Compare-at price (was)',
+      type: 'number',
+      group: 'checkout',
+      description:
+        'Shown struck through beside the price so the piece reads as reduced. DISPLAY ONLY - ' +
+        'checkout always charges Price, never this. Leave empty when the piece is not on offer. ' +
+        'Only advertise a was-price the shop actually sold at for a real period.',
+      validation: (Rule) =>
+        Rule.min(0)
+          .precision(2)
+          .custom((value, context) => {
+            const price = (context.document as { price?: number } | undefined)?.price
+            if (value === undefined || value === null) return true
+            if (typeof price === 'number' && value <= price) {
+              return 'Compare-at price must be higher than the price, or the piece is not reduced.'
+            }
+            return true
+          }),
+    }),
+    defineField({
       name: 'currency',
       title: 'Currency',
       type: 'string',
@@ -240,13 +261,19 @@ export default defineType({
       type: 'reference',
       group: 'marketing',
       to: [{ type: 'marketingCampaign' }],
+      // Crosses the public/private dataset boundary: a STRONG reference across
+      // datasets fails the write with a 409, so this must stay weak.
+      weak: true,
+
     }),
     defineField({
       name: 'audiences',
       title: 'Audiences',
       type: 'array',
       group: 'marketing',
-      of: [{ type: 'reference', to: [{ type: 'marketingAudienceProfile' }] }],
+      // Products stay public while audience profiles move private, so this
+      // reference crosses the boundary in the opposite direction.
+      of: [{ type: 'reference', weak: true, to: [{ type: 'marketingAudienceProfile' }] }],
     }),
     defineField({
       name: 'notes',

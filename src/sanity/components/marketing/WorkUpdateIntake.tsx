@@ -185,14 +185,14 @@ export function WorkUpdateIntake({
       )
       if (!analysisGateRef.current.isCurrent(requestTicket) || updateRef.current.trim() !== trimmed) return
       if (!payload.suggestion?.researchProject) {
-        throw new Error('Marketing could not turn that update into a safe working brief. Add a little more context and try again.')
+        throw new Error('Marqueta could not turn that update into a safe working brief. Add a little more context and try again.')
       }
       setProposal(payload.suggestion)
       setUsedAi(Boolean(payload.usedAi))
       window.setTimeout(() => reviewHeadingRef.current?.focus(), 0)
     } catch (analysisError) {
       if (!analysisGateRef.current.isCurrent(requestTicket)) return
-      setError(analysisError instanceof Error ? analysisError.message : 'Marketing could not analyze this update.')
+      setError(analysisError instanceof Error ? analysisError.message : 'Marqueta could not analyze this update.')
     } finally {
       if (analysisGateRef.current.finish(requestTicket) && mountedRef.current) {
         setAnalyzing(false)
@@ -212,7 +212,7 @@ export function WorkUpdateIntake({
       window.setTimeout(() => successHeadingRef.current?.focus(), 0)
     } catch (handoffError) {
       if (!mountedRef.current) return
-      setError(handoffError instanceof Error ? handoffError.message : 'Marketing could not save this handoff.')
+      setError(handoffError instanceof Error ? handoffError.message : 'Marqueta could not save this handoff.')
     } finally {
       adoptionPendingRef.current = false
       if (mountedRef.current) setAdopting(false)
@@ -255,7 +255,7 @@ export function WorkUpdateIntake({
         Messy notes are fine—no campaign, funnel, audience, owner, or content type required.
       </div>
       <div id="marketing-work-update-safety" style={{ ...styles.small, color: '#e89b67' }}>
-        Keep confidential client, contact, health, login, and private-lead data out. The approved Marketing AI sees this note; Sanity stores only the brief you review.
+        Keep confidential client, contact, health, login, and private-lead data out. The approved Marqueta sees this note; Sanity stores only the brief you review.
       </div>
 
       {!handoffResult && (
@@ -267,17 +267,17 @@ export function WorkUpdateIntake({
           >
             {analyzing ? 'Planning marketing updates…' : 'Plan the marketing updates'}
           </button>
-          <span data-work-update-review-note="true" style={styles.small}>Marketing will show one review before saving anything.</span>
+          <span data-work-update-review-note="true" style={styles.small}>Marqueta will show one review before saving anything.</span>
         </div>
       )}
 
       <div role="status" aria-live="polite" aria-atomic="true" style={styles.small}>
-        {analyzing ? 'Marketing is checking current work, finding strong matches, and drafting the smallest useful plan…' : ''}
+        {analyzing ? 'Marqueta is checking current work, finding strong matches, and drafting the smallest useful plan…' : ''}
       </div>
 
       {error && (
         <div id="marketing-work-update-error" role="alert" style={styles.warning}>
-          <strong>Marketing needs another try.</strong>
+          <strong>Marqueta needs another try.</strong>
           <div style={{ marginTop: 3 }}>{error}</div>
         </div>
       )}
@@ -294,7 +294,7 @@ export function WorkUpdateIntake({
               tabIndex={-1}
               style={{ margin: '4px 0 0', fontSize: 20 }}
             >
-              What Marketing understood
+              What Marqueta understood
             </h3>
           </div>
 
@@ -333,7 +333,7 @@ export function WorkUpdateIntake({
               )}
               {normalized.researchQuestions.length > 0 && (
                 <div>
-                  <strong style={{ fontSize: 13 }}>Questions Marketing will verify</strong>
+                  <strong style={{ fontSize: 13 }}>Questions Marqueta will verify</strong>
                   <ul style={styles.list}>
                     {normalized.researchQuestions.slice(0, 4).map((question) => (
                       <li key={question._key}>{question.question}</li>
@@ -379,7 +379,7 @@ export function WorkUpdateIntake({
                   </ul>
                 </div>
               ) : (
-                <div style={styles.small}>No confident existing source match was found; Marketing will start with the internal CMS scan.</div>
+                <div style={styles.small}>No confident existing source match was found; Marqueta will start with the internal CMS scan.</div>
               )}
             </div>
           </details>
@@ -387,7 +387,7 @@ export function WorkUpdateIntake({
           <div style={{ border: '1px solid var(--card-border-color)', borderRadius: 9, padding: 12 }}>
             <strong style={{ display: 'block' }}>What the handoff will do</strong>
             <ul style={styles.list}>
-              <li>Add one normalized item to the private shared Marketing desk.</li>
+              <li>Add one normalized item to Marqueta’s private shared desk.</li>
               <li>Run a free, internal-only GoInvo CMS check and log the result.</li>
               {reuseMatch ? (
                 <li>Link the existing <strong>{reuseMatch.project.title || normalized.title}</strong> as a read-only source match ({reuseMatch.reason}); it will not be changed.</li>
@@ -398,7 +398,7 @@ export function WorkUpdateIntake({
           </div>
 
           <div style={styles.warning}>
-            Nothing changes until you hand this off. The reviewed brief is stored privately. Marketing may organize it and inspect the internal CMS; it never publishes, contacts anyone, approves claims, changes brand voice, deletes records, or spends paid research credits.
+            Nothing changes until you hand this off. The reviewed brief is stored privately. Marqueta may organize it and inspect the internal CMS; it never publishes, contacts anyone, approves claims, changes brand voice, deletes records, or spends paid research credits.
           </div>
 
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -426,10 +426,10 @@ export function WorkUpdateIntake({
               tabIndex={-1}
               style={{ margin: 0, fontSize: 20 }}
             >
-              Marketing picked it up
+              Marqueta picked it up
             </h3>
             <div style={{ marginTop: 6, lineHeight: 1.55 }}>
-              Added <strong>{handoffResult.title}</strong> to Marketing’s private shared desk. Marketing found {handoffResult.createdResults} internal CMS match{handoffResult.createdResults === 1 ? '' : 'es'} to review. Nothing was published and no public marketing record was changed.
+              Added <strong>{handoffResult.title}</strong> to Marketing’s private shared desk. Marqueta found {handoffResult.createdResults} internal CMS match{handoffResult.createdResults === 1 ? '' : 'es'} to review. Nothing was published and no public marketing record was changed.
             </div>
             {handoffResult.scanWarning && (
               <div style={{ ...styles.small, marginTop: 7 }}>
@@ -447,7 +447,7 @@ export function WorkUpdateIntake({
               </button>
             )}
             <button type="button" style={styles.button} onClick={resetForAnotherUpdate}>
-              Tell Marketing something else
+              Tell Marqueta something else
             </button>
           </div>
         </section>

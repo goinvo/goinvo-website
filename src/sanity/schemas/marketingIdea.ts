@@ -99,6 +99,16 @@ export default defineType({
       type: 'string',
       description: 'Where this came from, e.g. SEO analysis, strategist chat, Search Console.',
     }),
+    defineField({
+      name: 'needsReview',
+      title: 'Needs review',
+      type: 'boolean',
+      description:
+        'Captured automatically (usually from Slack) and not yet confirmed by a person. ' +
+        'Without this flag a filter’s guess looks exactly like an idea somebody entered ' +
+        'deliberately, and the board stops meaning anything.',
+      initialValue: false,
+    }),
   ],
   preview: {
     select: { title: 'title', category: 'category', status: 'status', priority: 'priority' },
