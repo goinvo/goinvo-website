@@ -46,7 +46,16 @@ const client = createClient({
  * Umbrella items that describe a routine rather than name a piece of work.
  * Matched on sourceKey so a re-worded title cannot quietly resurrect them.
  */
-const VAGUE_SOURCE_KEYS = ['exec-plan-2026q4/phase1/weekly-cadence']
+const VAGUE_SOURCE_KEYS = [
+  'exec-plan-2026q4/phase1/weekly-cadence',
+  // The waves have the same problem: "call the top-ranked ten" never says which
+  // ten, so doing one starts with a research question. The per-organisation
+  // tasks generated here are what they were always shorthand for.
+  'exec-plan-2026q4/phase1/wave-1-calls',
+  'exec-plan-2026q4/phase1/wave-2-calls',
+  'exec-plan-2026q4/phase1/wave-3-calls',
+  'exec-plan-2026q4/phase1/wave-4-calls',
+]
 
 /** End of the current week — a call task with no date sorts behind everything. */
 function endOfWeekIso(): string {
