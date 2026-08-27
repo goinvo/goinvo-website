@@ -70,6 +70,15 @@ export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   // a Studio component reading it through the workspace client would silently
   // get nothing back from production.
   'marketingOrgResearch',
+  // Who is around this week, and how the studio is doing financially. Both were
+  // missing from this list, and both are written by Slack through
+  // getMarketingWriteClientFor - which passes an unlisted type straight through
+  // to the PUBLIC dataset. That produced exactly the failure this module exists
+  // to prevent: pressing "I'm away" in Slack wrote to production, the digest
+  // read outreach, and the change silently did nothing while reporting success.
+  // It also put a colleague's name and Slack id in the world-readable dataset.
+  'marketingTeamAvailability',
+  'marketingFinancialPosture',
 ]
 
 export function isInternalMarketingType(type: string): boolean {

@@ -148,3 +148,29 @@ describe('marketingOrgResearch routing', () => {
     expect(isInternalMarketingType('marketingOrgResearch')).toBe(true)
   })
 })
+
+describe('availability and financial posture routing', () => {
+  it('keeps who is around this week out of the public dataset', () => {
+    // Both were missing from the list, and getMarketingWriteClientFor passes an
+    // unlisted type straight through to the PUBLIC dataset. A real record was
+    // found in production on 2026-08-27 carrying a colleague's name and Slack
+    // id, written by the Slack identity-link button the day before.
+    expect(datasetForType('marketingTeamAvailability', 'production')).toBe(INTERNAL_DATASET)
+    expect(isInternalMarketingType('marketingTeamAvailability')).toBe(true)
+  })
+
+  it('keeps the runway out of the public dataset', () => {
+    // This one says in plain numbers how close the studio is to running out of
+    // money. An unauthenticated GROQ query must never be able to answer it.
+    expect(datasetForType('marketingFinancialPosture', 'production')).toBe(INTERNAL_DATASET)
+    expect(isInternalMarketingType('marketingFinancialPosture')).toBe(true)
+  })
+
+  it('routes the Slack availability write to the same place the digest reads', () => {
+    // The failure was not a leak alone: the digest reads outreach, so pressing
+    // "I'm away" wrote to production, changed nothing, and reported success.
+    expect(datasetForType('marketingTeamAvailability', 'production')).toBe(
+      datasetForType('marketingOperation', 'production'),
+    )
+  })
+})
