@@ -20,7 +20,6 @@ export const MARKETING_ACTION = {
   away: 'goinvo_marketing_set_away',
   linkIdentity: 'goinvo_marketing_link_identity',
   details: 'goinvo_marketing_task_details',
-  undo: 'goinvo_marketing_undo',
 } as const
 
 /** Modal submit + the input inside it. */
@@ -493,125 +492,97 @@ const PRIORITY_COLOR: Record<string, string> = {
 export type DigestMessage = { blocks: Block[]; attachments: Block[] }
 
 /**
- * One attachment per task.
+ * One card per task, rendered from its CURRENT state.
  *
- * Per-task colour is only possible this way — `color` lives on an attachment,
- * not a block — so each task becomes its own small card. The primary action
- * sits as an accessory on the title row rather than below it, which removes an
- * entire row per task and keeps the whole week visible without scrolling.
+ * The first version collapsed a claimed or declined task into a struck-through
+ * line with a single Undo button. That made the MESSAGE the source of truth,
+ * with two consequences: reverse it once and you are stuck, and reposting the
+ * digest loses the button entirely — so somebody who declined a call had no way
+ * back to it at all.
+ *
+ * The card is a function of the record instead. Every state offers the action
+ * that reverses it, however many times it has changed hands:
+ *
+ *   unowned          I'll take it   ·   Not me
+ *   owned by you     Hand it back
+ *   owned by others  Take it over
+ *   passed           I'll take it
+ *
+ * Nothing collapses, so nothing is a dead end, and none of it depends on the
+ * message still being the one you originally clicked.
  */
-export function buildTaskAttachment(task: DigestTask & { kind?: string; priority?: string }): Block {
+export function buildTaskAttachment(
+  task: DigestTask & { kind?: string; priority?: string; status?: string; note?: string },
+): Block {
   const value = encodeActionValue({ taskId: task._id, ownerName: task.ownerName })
+  const owner = String(task.ownerName || '').trim()
+  const passed = !owner && task.status === 'needsHuman'
 
-  const facts: Block[] = []
+  const detailsButton = {
+    type: 'button',
+    action_id: MARKETING_ACTION.details,
+    text: { type: 'plain_text', text: "What's involved" },
+    value,
+  }
+  const takeButton = {
+    type: 'button',
+    action_id: MARKETING_ACTION.claim,
+    text: { type: 'plain_text', text: owner ? 'Take it over' : "I'll take it" },
+    style: 'primary',
+    value,
+  }
+  const releaseButton = {
+    type: 'button',
+    action_id: MARKETING_ACTION.decline,
+    text: { type: 'plain_text', text: owner ? 'Hand it back' : 'Not me' },
+    value,
+  }
+
+  // A passed task has nothing to hand back, so it offers only the way forward.
+  const elements = passed ? [takeButton, detailsButton] : [takeButton, detailsButton, releaseButton]
+
   const fields = [
-    task.ownerName ? `*Owner*\n${mention(task.slackUserId, task.ownerName)}` : '*Owner*\n_unclaimed_',
-    task.minutes ? `*Effort*\n${formatMinutes(task.minutes)}` : '',
-    task.priority ? `*Priority*\n${task.priority}` : '',
-    task.kind ? `*Type*\n${task.kind}` : '',
+    owner ? '*Owner*' + '\n' + mention(task.slackUserId, owner) : '*Owner*' + '\n' + '_unclaimed_',
+    task.minutes ? '*Effort*' + '\n' + formatMinutes(task.minutes) : '',
+    task.priority ? '*Priority*' + '\n' + task.priority : '',
+    task.kind ? '*Type*' + '\n' + task.kind : '',
   ].filter(Boolean)
-  if (fields.length) facts.push({ type: 'section', fields: fields.map((t) => ({ type: 'mrkdwn', text: t })) })
 
   return {
-    color: PRIORITY_COLOR[String(task.priority || 'normal')] || PRIORITY_COLOR.normal,
+    color: passed
+      ? '#6f7a90'
+      : PRIORITY_COLOR[String(task.priority || 'normal')] || PRIORITY_COLOR.normal,
     blocks: [
-      {
-        type: 'section',
-        text: { type: 'mrkdwn', text: `*${task.title}*` },
-      },
-      ...facts,
+      { type: 'section', text: { type: 'mrkdwn', text: '*' + task.title + '*' } },
+      { type: 'section', fields: fields.map((t) => ({ type: 'mrkdwn', text: t })) },
       ...(task.whyNow
-        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: `_${task.whyNow}_` }] }]
+        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: '_' + task.whyNow + '_' }] }]
         : []),
-      {
-        // All three together in one row. As an accessory the primary button sat
-        // detached in the top-right corner, reading as unrelated to the two
-        // below it — the choice is one choice, so it looks like one.
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            action_id: MARKETING_ACTION.claim,
-            text: { type: 'plain_text', text: "I'll take it" },
-            style: 'primary',
-            value,
-          },
-          {
-            type: 'button',
-            action_id: MARKETING_ACTION.details,
-            text: { type: 'plain_text', text: "What's involved" },
-            value,
-          },
-          {
-            type: 'button',
-            action_id: MARKETING_ACTION.decline,
-            text: { type: 'plain_text', text: 'Not me' },
-            value,
-          },
-        ],
-      },
+      // What just happened, so the channel sees the change without re-reading.
+      ...(task.note ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: task.note }] }] : []),
+      { type: 'actions', elements },
     ],
   }
 }
 
 /**
- * Rewrite a finished task inside its attachment.
+ * Swap one task's card for a freshly rendered one.
  *
- * Same job as markTaskInBlocks, but attachments nest their blocks one level
- * deeper. The whole card collapses to a single struck-through line, which is
- * what makes a half-done week readable at a glance.
+ * Replaces the collapse-and-offer-undo approach. Because the card is drawn from
+ * the record, "undo" is just the reverse action being available again — there is
+ * no separate undo state to get stuck in.
  */
-export function markTaskInAttachments(
+export function refreshTaskInAttachments(
   attachments: Block[],
   taskId: string,
-  statusLine: string,
-  /** Prior state; when given, the collapsed card offers a way back. */
-  undoTo?: { ownerName: string; status: string },
+  task: DigestTask & { kind?: string; priority?: string; status?: string; note?: string },
 ): Block[] {
   if (!taskId) return attachments
-  return attachments.map((attachment) => {
-    const blocks: Block[] = attachment.blocks || []
-    const owns = blocks.some(
-      (block) =>
-        (block.accessory && decodeActionValue(block.accessory.value)?.taskId === taskId) ||
-        (block.elements || []).some(
-          (element: Record<string, unknown>) =>
-            decodeActionValue(element.value as string | undefined)?.taskId === taskId,
-        ),
-    )
-    if (!owns) return attachment
-    // Take what is between the asterisks. The previous version stripped the
-    // first whitespace-delimited token to remove an emoji — with the emoji gone
-    // that silently ate the first word, turning "Call MEDITECH" into "MEDITECH".
-    const raw = String(blocks[0]?.text?.text || '')
-    const title = (raw.match(/\*([^*]+)\*/)?.[1] || raw).trim()
-    return {
-      color: '#3f7d5c',
-      blocks: [
-        {
-          type: 'section',
-          text: { type: 'mrkdwn', text: `:white_check_mark:  ~${title}~\n${statusLine}` },
-          // Undo sits as an accessory rather than a row: it is a correction,
-          // not a choice being offered, so it must not compete with live tasks.
-          ...(undoTo
-            ? {
-                accessory: {
-                  type: 'button',
-                  action_id: MARKETING_ACTION.undo,
-                  text: { type: 'plain_text', text: 'Undo' },
-                  value: encodeActionValue({
-                    taskId,
-                    ownerName: undoTo.ownerName,
-                    status: undoTo.status,
-                  }),
-                },
-              }
-            : {}),
-        },
-      ],
-    }
-  })
+  return attachments.map((attachment) =>
+    JSON.stringify(attachment).includes(taskId) ? buildTaskAttachment(task) : attachment,
+  )
 }
+
 
 /**
  * What to say back when someone presses a button.
