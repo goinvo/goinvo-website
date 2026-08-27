@@ -9,7 +9,6 @@ import {
   buildTaskDetailBlocks,
   buildTaskDetailView,
   decodeActionValue,
-  buildTaskAttachment,
   refreshTaskInAttachments,
   isMarketingAction,
 } from '@/lib/marketing/slackDelegation'
