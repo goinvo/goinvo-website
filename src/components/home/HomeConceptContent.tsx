@@ -20,6 +20,17 @@ const imageBase = '/images/experiments/home-2026'
 // Geometry ported verbatim from the design's `.gi-runway` rules ("A.m · The
 // runway", Claude Design → GoInvo Homepage Design).
 const heroCss = `
+  /* The hero's ground colour, and the ONLY place it is written down. The runway
+     fade below dissolves into this exact value, so a seam is impossible.
+     They had drifted: the section carried Tailwind's \`bg-black\`, which this
+     site's theme redefines as #1d1b1a (--color-black), while the fade was
+     written as a literal #000 — so the flat top of the hero sat a visible step
+     lighter than the black the plane receded into. */
+  .eid-hero {
+    --eid-ink: 0 0 0;
+    background-color: rgb(var(--eid-ink));
+  }
+
   /* The plane sits BELOW the fold line of the section and is clipped by it. The
      mask keeps the first 200px from starting hard against the lettering. */
   .eid-runway {
@@ -76,7 +87,14 @@ const heroCss = `
     pointer-events: none;
     z-index: 2;
     transform: translateZ(1px);
-    background: linear-gradient(180deg, #000 0%, #000 18%, rgba(0, 0, 0, 0.92) 32%, rgba(0, 0, 0, 0.25) 65%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(
+      180deg,
+      rgb(var(--eid-ink)) 0%,
+      rgb(var(--eid-ink)) 18%,
+      rgb(var(--eid-ink) / 0.92) 32%,
+      rgb(var(--eid-ink) / 0.25) 65%,
+      rgb(var(--eid-ink) / 0) 100%
+    );
   }
 
   /* The design canvas is 1280px only. Below that the plane is scaled down
@@ -326,6 +344,10 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
+      {/* `bg-black` is only a floor: this site's theme redefines --color-black
+          as #1d1b1a, so the real ground colour comes from .eid-hero below,
+          which the runway fade shares. Page CSS is unlayered and beats the
+          layered Tailwind utility, so the darker value wins. */}
       <section className="eid-hero relative isolate overflow-hidden bg-black text-white">
         <style>{heroCss}</style>
         <HomeHeroRunway />
