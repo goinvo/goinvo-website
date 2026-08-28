@@ -545,6 +545,58 @@ export function buildIdeaReviewBlocks(ideas: Array<{ title: string }>, studioUrl
   ]
 }
 
+/**
+ * What Marqueta says when somebody shares written work rather than an idea.
+ *
+ * A draft is further along than a proposal, so the offer is different: it is
+ * already on the calendar as `drafting`, with the copy attached, and the useful
+ * next step is to open it and give it a date. It still says plainly that it
+ * filed the thing on a guess, and binning it is the same one press.
+ */
+export function buildDraftCaptureBlocks(input: {
+  title: string
+  contentType?: string
+  channel: string
+  ts: string
+  studioUrl?: string
+}): Block[] {
+  const value = JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
+  const kind = input.contentType && input.contentType !== 'other' ? input.contentType : 'draft'
+
+  const elements: Array<Record<string, unknown>> = [
+    {
+      type: 'button',
+      action_id: MARKETING_ACTION.ideaDiscard,
+      text: { type: 'plain_text', text: 'Not for the calendar' },
+      value,
+    },
+  ]
+  if (input.studioUrl) {
+    elements.unshift({
+      type: 'button',
+      text: { type: 'plain_text', text: 'Open it and set a date' },
+      url: input.studioUrl,
+      style: 'primary',
+    })
+  }
+
+  return [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text:
+          'That looks like written work, so I put it on the calendar with the copy attached:' +
+          '\n' +
+          '*' + input.title + '*  ·  ' + kind + ', drafting' +
+          '\n' +
+          '_It has no date and will not post itself. My guess that this was a draft, not yours._',
+      },
+    },
+    { type: 'actions', elements },
+  ]
+}
+
 /** Which message a Keep / Not-an-idea press refers to. */
 export function decodeIdeaValue(value: string | undefined): { channel: string; ts: string } | null {
   try {
