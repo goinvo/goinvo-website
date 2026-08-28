@@ -1,20 +1,137 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  buildCapturedDraft,
   buildCapturedIdea,
+  bulletsIn,
+  classifyMessage,
+  draftBodyFrom,
+  draftContentTypeFrom,
+  draftTitleFrom,
   ideaCategoryFrom,
   ideaDocIdForMessage,
   ideaTitleFrom,
   looksLikeAnIdea,
   messageProse,
+  quotedBlockIn,
   slackPermalink,
 } from '@/lib/marketing/ideaCapture'
+
+/**
+ * The two real messages Marqueta missed on 2026-08-27, verbatim.
+ *
+ * Pinned as fixtures because they are the reason the filter changed: the first
+ * set of markers was written from imagination rather than from how this team
+ * actually talks, and a regression here means she stops catching the exact
+ * thing she was built for.
+ */
+const JUHAN_MERCH = [
+  [
+    'What about:',
+    '• custom printed patch of Kindness is Power',
+    '• custom tattoos of Sugar Kills',
+    '• custom iron-on decal for shirts, Kindness is Power',
+    '... for Arlington Town Day',
+  ].join('\n'),
+  "Yup, we'll have some tshirts... but this might be a good compliment.",
+  'any other ideas or designs or...?',
+  'custom patches and stickers are good, inexpensive experiments!',
+]
+
+const JUHAN_NEWSLETTER = [
+  'Next newsletter is for <https://TheBlanding.com|TheBlanding.com>.',
+  '',
+  'Here’s a draft:',
+  '> Look across a parking lot.',
+  '>',
+  '> It’s a sea of black, blue, and grey.',
+  '> A bruise on our brains.',
+  '>',
+  '> We’ve designed the fun out of everything.',
+  '> Let’s get the fun gene back into expression.',
+].join('\n')
+
+describe('the messages Marqueta actually missed', () => {
+  it('catches every part of the merch burst', () => {
+    for (const text of JUHAN_MERCH) {
+      expect(classifyMessage(text).kind, text).toBe('idea')
+    }
+  })
+
+  it('reads the newsletter as a draft, not an idea', () => {
+    // Filing this as an "idea" would throw away the copy, which is the only
+    // part that took any effort.
+    expect(classifyMessage(JUHAN_NEWSLETTER).kind).toBe('draft')
+  })
+
+  it('titles the bulleted list by its subject, not its first bullet', () => {
+    // "custom printed patch of Kindness is Power" as a title hides the other
+    // two ideas and the occasion that made them worth having.
+    const title = ideaTitleFrom(JUHAN_MERCH[0])
+    expect(title).toContain('Arlington Town Day')
+    expect(title).toContain('3 ideas')
+  })
+
+  it('keeps all three merch ideas, each on its own line', () => {
+    const idea = buildCapturedIdea({ text: JUHAN_MERCH[0], personName: 'Juhan', channel: 'C1', ts: '1.1' })
+    expect(bulletsIn(JUHAN_MERCH[0])).toHaveLength(3)
+    expect(idea.summary).toContain('Sugar Kills')
+    expect(idea.summary).toContain('iron-on decal')
+    expect(idea.category).toBe('product')
+  })
+
+  it('files the newsletter with its copy, dateless and unable to post itself', () => {
+    const draft = buildCapturedDraft({ text: JUHAN_NEWSLETTER, personName: 'Juhan', channel: 'C1', ts: '1.1' })
+    expect(draft.title).toContain('TheBlanding.com')
+    expect(draft.contentType).toBe('newsletter')
+    expect(draft.contentDraft).toContain('A bruise on our brains.')
+    expect(draft.contentDraft).toContain('fun gene back into expression')
+    // The announcement is not part of the copy.
+    expect(draft.contentDraft).not.toContain('Next newsletter is for')
+    expect(draft.status).toBe('drafting')
+    // Nothing Marqueta catches may ever post itself.
+    expect(draft.autoPublish).toBe(false)
+  })
+})
+
+describe('quotedBlockIn', () => {
+  it('reads the pasted copy out of a Slack blockquote', () => {
+    expect(quotedBlockIn(JUHAN_NEWSLETTER)).toContain('Look across a parking lot.')
+  })
+
+  it('ignores a single stray quoted line', () => {
+    // One "> yes" is somebody quoting a colleague, not sharing a draft.
+    expect(quotedBlockIn('> yes\nagreed')).toBe('')
+  })
+})
+
+describe('draftContentTypeFrom', () => {
+  it('uses what the message says it is', () => {
+    expect(draftContentTypeFrom(JUHAN_NEWSLETTER)).toBe('newsletter')
+    expect(draftContentTypeFrom("here's a draft of the reel script")).toBe('reel')
+  })
+
+  it('falls back to other rather than guessing a channel', () => {
+    expect(draftContentTypeFrom("here's a draft:\n> some words\n> and more of them")).toBe('other')
+  })
+})
+
+describe('draftTitleFrom and draftBodyFrom', () => {
+  it('names the thing from the line that announced it', () => {
+    expect(draftTitleFrom(JUHAN_NEWSLETTER)).toBe('Next newsletter is for TheBlanding.com')
+  })
+
+  it('separates the copy from the preamble when there is no blockquote', () => {
+    const text = "Here's a draft:\nThe first line of the actual copy goes here and runs on a while."
+    expect(draftBodyFrom(text)).toBe('The first line of the actual copy goes here and runs on a while.')
+  })
+})
 
 describe('looksLikeAnIdea', () => {
   it('catches somebody proposing work', () => {
     const proposals = [
       'we should do a reel about the Heard project before the intern leaves',
-      "what if we turned the determinants poster into a short explainer video?",
+      'what if we turned the determinants poster into a short explainer video?',
       'Idea: a one-pager comparing our pilot pre-mortem to the usual vendor checklist',
       "let's write up the Ipsos migration as a case study, it keeps coming up on calls",
       'could we send a short note to everyone who downloaded the poster last year?',
@@ -94,6 +211,7 @@ describe('ideaCategoryFrom', () => {
   it('labels what it is confident about', () => {
     expect(ideaCategoryFrom('we should do a reel about the intern work')).toBe('content')
     expect(ideaCategoryFrom('we should look at our search console rankings')).toBe('seo')
+    expect(ideaCategoryFrom('custom patches and stickers are good, cheap experiments')).toBe('product')
   })
 
   it('returns nothing rather than guessing', () => {
@@ -121,6 +239,14 @@ describe('messageProse', () => {
   it('strips Slack markup so the filter reads what a person typed', () => {
     expect(messageProse('<@U123> we should *definitely* do this <#C456|general>')).toBe(
       'we should definitely do this',
+    )
+  })
+
+  it('keeps the label out of a Slack link, not the url', () => {
+    // "Next newsletter is for TheBlanding.com" must survive; the raw href
+    // would otherwise take the title's place.
+    expect(messageProse('Next newsletter is for <https://TheBlanding.com|TheBlanding.com>.')).toBe(
+      'Next newsletter is for TheBlanding.com.',
     )
   })
 })

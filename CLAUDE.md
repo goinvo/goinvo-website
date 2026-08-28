@@ -260,6 +260,28 @@ puts a proposal on the board — always as a PROPOSAL: `needsReview: true`, one 
   posts no second thread reply. Verified with signed events against the live route.
 - `relatedUrl` comes from **`chat.getPermalink`** (`getSlackPermalink` in `src/lib/chat/slack.ts`),
   not a constructed URL — no `SLACK_WORKSPACE_DOMAIN` to configure or get wrong.
+### The three reasons she missed the first two real ideas (fixed 2026-08-28)
+Juhan posted merch ideas for Arlington Town Day and a finished newsletter draft; Marqueta
+caught neither. Three independent causes, all worth remembering:
+1. **She was in the wrong room.** She watched `#marketing-bot` (built FOR her, **0 human
+   messages ever**) while marketing is discussed elsewhere. `SLACK_MARKETING_CHANNEL_IDS`
+   (comma-separated, falls back to the singular var) now lets her sit in several. She also has
+   no `channels:read`, so `conversations.list` 500s — she cannot discover channels herself;
+   **someone must `/invite @goinvo_website_chat` and give the id.**
+2. **The markers were imagined, not observed.** "What about:" over a bulleted list matched
+   nothing. Added `what about`, `might be a good`, `any other ideas`, and proposal-by-assertion
+   (`inexpensive experiment`, `quick win`). Write markers from real channel text.
+3. **A draft is not an idea.** "Next newsletter is for X, here's a draft: >…" has no proposal
+   phrasing at all, and filing it on the idea board would throw away the copy. `classifyMessage`
+   now returns `idea | draft | none`; a draft becomes a `marketingCalendarItem`
+   (`status: drafting`, `autoPublish: false`, `contentDraft` = the blockquote, **no date**).
+
+**Burst coalescing:** one thought said over four messages is ONE idea. `findBurstToJoin` folds a
+follow-on into the same person's unreviewed capture in the same channel within
+`BURST_WINDOW_MINUTES` (12) and posts no second thread reply. Only *unreviewed* captures are
+joinable — appending to one somebody already judged changes something they signed off.
+Both real messages are pinned verbatim as fixtures in `tests/idea-capture.test.ts`.
+
 - **GOTCHA:** there is **no `ideas` Studio view** (`marketingIdea` only renders inside SEO). An
   unknown `?view=` makes the Studio restore the last-opened view from localStorage — the same
   bug that once sent "open the plan" to the Shop. Links point at `view=thisWeek`.

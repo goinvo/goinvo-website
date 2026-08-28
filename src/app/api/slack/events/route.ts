@@ -3,9 +3,9 @@ import { getChatSanityClient } from '@/lib/chat/sanity'
 import { getSlackConfig, getSlackUserDisplayName, postSlackMessage, verifySlackRequest } from '@/lib/chat/slack'
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
 import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
-import { looksLikeAnIdea } from '@/lib/marketing/ideaCapture'
-import { captureIdeaFromMessage } from '@/lib/marketing/ideaCapture.server'
-import { buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
+import { classifyMessage } from '@/lib/marketing/ideaCapture'
+import { captureFromMessage } from '@/lib/marketing/ideaCapture.server'
+import { buildDraftCaptureBlocks, buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,13 +60,32 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Someone floated an idea in the marketing channel.
+ * Every channel Marqueta watches.
  *
- * Only ever a PROPOSAL: the message is captured as an idea marked "needs
- * review", Marqueta replies in the thread saying so, and one press bins it.
- * The filter is pure and free (`looksLikeAnIdea`), so this runs on every
- * message without a per-message API bill and without a model deciding what
- * counts as work.
+ * Plural on purpose. She was pointed at #marketing-bot - the channel built FOR
+ * her - while the actual marketing conversation happens elsewhere, so the first
+ * two real ideas she was meant to catch were posted in a room she was not in.
+ * A comma-separated list means she can sit where the work is discussed as well
+ * as where she reports.
+ */
+function watchedMarketingChannels(): string[] {
+  const raw = process.env.SLACK_MARKETING_CHANNEL_IDS || process.env.SLACK_MARKETING_CHANNEL_ID || ''
+  return raw
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+}
+
+/**
+ * Somebody floated something in a marketing channel.
+ *
+ * Two outcomes, because a proposal and a finished draft are different things:
+ * an idea goes to the board, a draft goes to the calendar with the copy
+ * attached. Either way it is only ever a PROPOSAL - marked as needing review,
+ * and one press bins it.
+ *
+ * The filter is pure and free, so this runs on every message with no
+ * per-message bill and no model deciding what counts as work.
  */
 async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   // Only messages floated in the channel. A reply inside a thread is almost
@@ -74,21 +93,46 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   // conversation about a task into a second copy of that task.
   if (event.thread_ts && event.thread_ts !== event.ts) return
 
-  const verdict = looksLikeAnIdea(event.text || '')
+  const verdict = classifyMessage(event.text || '')
   if (!verdict.capture) return
 
   const personName = (await getSlackUserDisplayName(event.user)) || 'Someone'
-  const result = await captureIdeaFromMessage({
+  const result = await captureFromMessage({
     text: event.text || '',
     personName,
     channel: event.channel || '',
     ts: event.ts || '',
   })
 
-  // Silent on a redelivery. Slack retries an event it thinks failed, and a
-  // second "noted this" under the same message reads as a bug.
-  if (!result.ok || result.alreadyCaptured || !result.idea) return
+  // Silent on a redelivery, and silent when this was folded into a thought
+  // captured moments ago - a second "noted this" under one burst of messages
+  // is precisely the chattiness that gets a bot muted.
+  if (!result.ok || result.alreadyCaptured || result.mergedInto) return
 
+  const studioUrl = process.env.MARKETING_PUBLIC_BASE_URL
+    ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=${result.kind === 'draft' ? 'calendar' : 'thisWeek'}`
+    : undefined
+
+  if (result.kind === 'draft' && result.draft) {
+    await postSlackMessage({
+      channel: event.channel || '',
+      threadTs: event.ts,
+      username: 'Marqueta',
+      iconEmoji: ':chart_with_upwards_trend:',
+      unfurl: false,
+      text: `Put a draft on the calendar: ${result.draft.title}`,
+      blocks: buildDraftCaptureBlocks({
+        title: result.draft.title,
+        contentType: result.draft.contentType,
+        channel: event.channel || '',
+        ts: event.ts || '',
+        studioUrl,
+      }),
+    })
+    return
+  }
+
+  if (!result.idea) return
   await postSlackMessage({
     channel: event.channel || '',
     threadTs: event.ts,
@@ -101,12 +145,11 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
       category: result.idea.category,
       channel: event.channel || '',
       ts: event.ts || '',
-      studioUrl: process.env.MARKETING_PUBLIC_BASE_URL
-        ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
-        : undefined,
+      studioUrl,
     }),
   })
 }
+
 
 async function handleSlackEvent(event: SlackMessageEvent) {
   if (event.type !== 'message') return
@@ -116,8 +159,7 @@ async function handleSlackEvent(event: SlackMessageEvent) {
   // The marketing channel is Marqueta's, not the visitor chat's. Handled first
   // and returned, so an idea can never fall through into the chat/dispute
   // lookups below and be answered as though a visitor had written it.
-  const marketingChannel = process.env.SLACK_MARKETING_CHANNEL_ID
-  if (marketingChannel && event.channel === marketingChannel) {
+  if (watchedMarketingChannels().includes(event.channel)) {
     await handleMarketingChannelMessage(event)
     return
   }
