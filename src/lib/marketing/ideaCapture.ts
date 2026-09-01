@@ -145,6 +145,37 @@ function unwrapSlackLinks(text: string): string {
   return String(text || '').replace(/<(https?:\/\/[^|>]+)\|([^>]+)>/g, '$2')
 }
 
+/**
+ * Does this text contain the marker as a WORD, not as a run of letters?
+ *
+ * Plain `includes` matched "lets " inside "duplicate bul-lets on them" and
+ * captured a bug report about the Determinants page as a proposal. Found by
+ * running the filter over 189 real messages from #marketing rather than over
+ * examples I had written myself, which is the only way this class of mistake
+ * shows up.
+ */
+function containsMarker(lower: string, marker: string): boolean {
+  const isWordChar = (character: string) => /[a-z0-9]/.test(character)
+  // Only guard an end that is itself a letter: markers like "idea:" and
+  // "proposal:" end in punctuation and have no trailing boundary to find.
+  const guardEnd = isWordChar(marker[marker.length - 1])
+
+  // EVERY occurrence, not just the first. Checking only indexOf would let one
+  // accidental match early in a message ("bullets on") hide a real one later.
+  for (let at = lower.indexOf(marker); at >= 0; at = lower.indexOf(marker, at + 1)) {
+    const before = at === 0 ? '' : lower[at - 1]
+    const after = lower[at + marker.length] || ''
+    // A trailing plural still counts: "inexpensive experiments" is the same
+    // marker as "inexpensive experiment". Anything longer does not, so "we can"
+    // is not found inside "we cannot" - which means the opposite.
+    const afterNext = lower[at + marker.length + 1] || ''
+    const endsClean =
+      !guardEnd || !after || !isWordChar(after) || (after === 's' && !isWordChar(afterNext))
+    if ((!before || !isWordChar(before)) && endsClean) return true
+  }
+  return false
+}
+
 /** What is left after Slack's markup and links — the part a human actually typed. */
 export function messageProse(text: string): string {
   return unwrapSlackLinks(text)
@@ -203,18 +234,18 @@ export function classifyMessage(text: string): CaptureVerdict {
     return { kind: 'none', capture: false, reason: 'too short to be a plan' }
   }
 
-  if (AVAILABILITY_MARKERS.some((marker) => lower.includes(marker))) {
+  if (AVAILABILITY_MARKERS.some((marker) => containsMarker(lower, marker))) {
     return { kind: 'none', capture: false, reason: 'about availability, which has its own path' }
   }
 
-  const draftMarker = DRAFT_MARKERS.find((candidate) => lower.includes(candidate))
+  const draftMarker = DRAFT_MARKERS.find((candidate) => containsMarker(lower, candidate))
   // A draft marker alone is not enough — "wrote this" in passing is not a
   // draft. There has to be something that looks like the writing itself.
   if (draftMarker && (quotedBlockIn(text) || prose.length > 220)) {
     return { kind: 'draft', capture: true, reason: `looks like written work: "${draftMarker}"`, marker: draftMarker }
   }
 
-  if (STATUS_QUESTION_MARKERS.some((marker) => lower.includes(marker))) {
+  if (STATUS_QUESTION_MARKERS.some((marker) => containsMarker(lower, marker))) {
     return { kind: 'none', capture: false, reason: 'asking about existing work, not proposing new work' }
   }
 
@@ -224,7 +255,7 @@ export function classifyMessage(text: string): CaptureVerdict {
     return { kind: 'none', capture: false, reason: 'a shared link, not a proposal' }
   }
 
-  const marker = PROPOSAL_MARKERS.find((candidate) => lower.includes(candidate))
+  const marker = PROPOSAL_MARKERS.find((candidate) => containsMarker(lower, candidate))
   if (!marker) {
     return { kind: 'none', capture: false, reason: 'nobody is proposing anything' }
   }
@@ -267,7 +298,7 @@ export function ideaTitleFrom(text: string, maxLength = 90): string {
   const prose = messageProse(text)
   const sentences = prose.split(/(?<=[.!?])\s+/).filter(Boolean)
   const lower = prose.toLowerCase()
-  const marker = PROPOSAL_MARKERS.find((candidate) => lower.includes(candidate))
+  const marker = PROPOSAL_MARKERS.find((candidate) => containsMarker(lower, candidate))
 
   const carrying =
     (marker && sentences.find((sentence) => sentence.toLowerCase().includes(marker))) || sentences[0] || prose

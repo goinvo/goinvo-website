@@ -77,6 +77,24 @@ function watchedMarketingChannels(): string[] {
 }
 
 /**
+ * The channel that is Marqueta's own - where she posts the weekly digest.
+ *
+ * She TALKS in her own room and LISTENS QUIETLY in other people's. Running the
+ * filter over 189 real messages in #marketing showed why: it would have caught
+ * 22 things, of which roughly seven are genuinely board-worthy. A bot replying
+ * under two-thirds-wrong guesses in a channel people actually work in is a bot
+ * somebody mutes within a week, and then the third that WAS right is lost too.
+ *
+ * So in a watched human channel she captures silently, and the review happens
+ * in one batch on the This week surface and in the digest, where saying no to
+ * a dozen guesses costs a dozen clicks in one place instead of a dozen
+ * interruptions in everybody's feed.
+ */
+function isMarquetasOwnChannel(channelId: string): boolean {
+  return Boolean(process.env.SLACK_MARKETING_CHANNEL_ID) && channelId === process.env.SLACK_MARKETING_CHANNEL_ID
+}
+
+/**
  * Somebody floated something in a marketing channel.
  *
  * Two outcomes, because a proposal and a finished draft are different things:
@@ -108,6 +126,11 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   // captured moments ago - a second "noted this" under one burst of messages
   // is precisely the chattiness that gets a bot muted.
   if (!result.ok || result.alreadyCaptured || result.mergedInto) return
+
+  // Captured either way; she only SAYS so in her own channel. Everything lands
+  // on the This week review list regardless, so nothing is lost by staying
+  // quiet here.
+  if (!isMarquetasOwnChannel(event.channel || '')) return
 
   const studioUrl = process.env.MARKETING_PUBLIC_BASE_URL
     ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=${result.kind === 'draft' ? 'calendar' : 'thisWeek'}`
