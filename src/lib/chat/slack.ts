@@ -176,6 +176,34 @@ export async function getSlackPermalink(channel: string, ts: string): Promise<st
   }
 }
 
+/**
+ * Marqueta's own Slack user id, so she can tell when she is being addressed.
+ *
+ * Asked of Slack once and cached for the life of the process rather than
+ * configured: an id pasted into an env var is one more thing to get wrong, and
+ * getting it wrong makes her deaf to her own name with no error anywhere.
+ */
+let cachedBotUserId: string | null | undefined
+
+export async function getSlackBotUserId(): Promise<string | undefined> {
+  if (cachedBotUserId !== undefined) return cachedBotUserId || undefined
+  const { botToken } = getSlackConfig()
+  if (!botToken) return undefined
+  try {
+    const response = await fetch('https://slack.com/api/auth.test', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${botToken}` },
+    })
+    const data = (await response.json()) as { ok?: boolean; user_id?: string }
+    cachedBotUserId = data.ok && data.user_id ? data.user_id : null
+  } catch {
+    // Not cached as a miss: a transient failure should not make her deaf for
+    // the rest of the process.
+    return undefined
+  }
+  return cachedBotUserId || undefined
+}
+
 export function isSlackPostingConfigured() {
   const config = getSlackConfig()
   return Boolean(config.botToken && config.channelId)

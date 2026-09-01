@@ -4,6 +4,9 @@ import { getSlackConfig, getSlackUserDisplayName, postSlackMessage, verifySlackR
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
 import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
 import { classifyMessage } from '@/lib/marketing/ideaCapture'
+import { addressesMarqueta, stripMention } from '@/lib/marketing/marquetaChat'
+import { answerMarqueta } from '@/lib/marketing/marquetaChat.server'
+import { getSlackBotUserId } from '@/lib/chat/slack'
 import { captureFromMessage } from '@/lib/marketing/ideaCapture.server'
 import { buildDraftCaptureBlocks, buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
 
@@ -74,6 +77,46 @@ function watchedMarketingChannels(): string[] {
     .split(',')
     .map((id) => id.trim())
     .filter(Boolean)
+}
+
+/**
+ * Somebody spoke to Marqueta - by @-mentioning her, or in a direct message.
+ *
+ * She answers, wherever it was, including in a channel where she is otherwise
+ * silent. Being asked a question is not noise, and the whole reason to stay
+ * quiet in a working channel is so that the times she does speak are wanted.
+ *
+ * Every answer is a lookup or a write she already knows how to make - no model
+ * call - so she cannot invent a runway figure or a task that does not exist.
+ */
+async function handleMarquetaConversation(event: SlackMessageEvent, addressed: boolean) {
+  const botUserId = await getSlackBotUserId()
+  const personName = (await getSlackUserDisplayName(event.user)) || 'Someone'
+  const reply = await answerMarqueta({
+    text: stripMention(event.text || '', botUserId),
+    personName,
+    slackUserId: event.user,
+    channel: event.channel || '',
+    ts: event.ts || '',
+  })
+  if (!reply) return
+
+  await postSlackMessage({
+    channel: event.channel || '',
+    // In a channel, answer in a thread so a conversation with her does not
+    // push everyone else's messages up the screen. In a DM there is no thread
+    // to make, and one would just look odd.
+    threadTs: addressed && !isDirectMessage(event.channel) ? event.thread_ts || event.ts : undefined,
+    username: 'Marqueta',
+    iconEmoji: ':chart_with_upwards_trend:',
+    unfurl: false,
+    text: reply,
+  })
+}
+
+/** Slack gives every direct-message conversation an id beginning with D. */
+function isDirectMessage(channelId: string | undefined): boolean {
+  return String(channelId || '').startsWith('D')
 }
 
 /**
@@ -182,6 +225,16 @@ async function handleSlackEvent(event: SlackMessageEvent) {
   // The marketing channel is Marqueta's, not the visitor chat's. Handled first
   // and returned, so an idea can never fall through into the chat/dispute
   // lookups below and be answered as though a visitor had written it.
+  // Addressed directly, or messaged privately: she answers wherever it was.
+  // Checked BEFORE the silent-capture path, so "@Marqueta what's on this week"
+  // gets an answer rather than being quietly filed as an idea.
+  const botUserId = await getSlackBotUserId()
+  const addressed = addressesMarqueta(event.text, botUserId)
+  if (addressed || isDirectMessage(event.channel)) {
+    await handleMarquetaConversation(event, addressed)
+    return
+  }
+
   if (watchedMarketingChannels().includes(event.channel)) {
     await handleMarketingChannelMessage(event)
     return
