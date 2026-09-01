@@ -276,6 +276,22 @@ caught neither. Three independent causes, all worth remembering:
    now returns `idea | draft | none`; a draft becomes a `marketingCalendarItem`
    (`status: drafting`, `autoPublish: false`, `contentDraft` = the blockquote, **no date**).
 
+**She is in `#marketing` (`CE4AA4BHP`) as of 2026-09-01, and TALKS ONLY IN HER OWN ROOM.**
+`SLACK_MARKETING_CHANNEL_IDS=C0BSFACJY6T,CE4AA4BHP` (watched); `SLACK_MARKETING_CHANNEL_ID`
+(#marketing-bot) is where she posts and where she replies in-thread. In a watched human
+channel she captures **silently** — reviewed in one batch on **This week** and in the digest.
+Why: replaying the filter over **189 real #marketing messages** would have caught 22 things,
+of which only ~7 are board-worthy. A bot replying under two-thirds-wrong guesses in a channel
+people work in gets muted, and then the third that WAS right is lost too.
+
+**Run the filter over real channel history before trusting it** (`conversations.history` +
+`classifyMessage`). Doing so found two substring bugs that examples never would:
+`"bul-LETS ON them"` matched `lets ` (a bug report captured as a proposal) and
+`"mo-OOO-oore"` matched the availability marker `ooo` (real feedback thrown away as a
+holiday notice). Markers are now matched on **word boundaries**, with a trailing plural
+allowed (`inexpensive experiments`) but nothing longer, so `we can` is not found inside
+`we cannot` — which means the opposite. Both are pinned in `tests/idea-capture.test.ts`.
+
 **Burst coalescing:** one thought said over four messages is ONE idea. `findBurstToJoin` folds a
 follow-on into the same person's unreviewed capture in the same channel within
 `BURST_WINDOW_MINUTES` (12) and posts no second thread reply. Only *unreviewed* captures are

@@ -294,3 +294,35 @@ describe('buildCapturedIdea', () => {
     expect(idea.status).toBe('idea')
   })
 })
+
+describe('markers must match whole words', () => {
+  /**
+   * Both of these were found by running the filter over 189 real messages from
+   * #marketing rather than over examples I had written myself — which is the
+   * only way this class of mistake ever shows up.
+   */
+  it('does not find "lets" inside "bullets"', () => {
+    // A bug report about the Determinants page — "all the bullet lists have
+    // duplicate bullets on them" — was captured as a proposal, because
+    // "bul-LETS ON them" contains the marker "lets ".
+    const bugReport =
+      'could you look at the "Determinants of Health" page? I just noticed that all the ' +
+      'bullet lists on the page have duplicate bullets on them.'
+    expect(classifyMessage(bugReport).kind).toBe('none')
+  })
+
+  it('does not find "ooo" inside "mooooore"', () => {
+    // The costlier direction: "no need to say it mooooore" matched the
+    // availability marker "ooo", so a real page-feedback message was thrown
+    // away as though somebody had announced a holiday.
+    const feedback =
+      'quick hits on the home page: the heading repeats itself, no need to say it mooooore. ' +
+      'ps: how about just "browse" for the button?'
+    expect(classifyMessage(feedback).kind).toBe('idea')
+  })
+
+  it('still matches a marker that is genuinely there', () => {
+    expect(classifyMessage("lets do a reel about the intern projects this month").kind).toBe('idea')
+    expect(classifyMessage('I am away next week, we should pick this up after').kind).toBe('none')
+  })
+})
