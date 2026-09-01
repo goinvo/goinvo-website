@@ -131,7 +131,8 @@ export default defineType({
       type: 'number',
       group: 'order',
       initialValue: 0,
-      description: 'Additional shipping charge. Standard US shipping is included in print prices.',
+      description: 'Shipping charged on this order, and already counted inside Total. Standard US shipping has been '
+        + 'its own $6 line since 2026-08-05 - it is NOT included in the print price.',
       validation: (Rule) => Rule.min(0).precision(2),
     }),
     defineField({
