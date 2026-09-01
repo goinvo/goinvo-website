@@ -292,6 +292,28 @@ holiday notice). Markers are now matched on **word boundaries**, with a trailing
 allowed (`inexpensive experiments`) but nothing longer, so `we can` is not found inside
 `we cannot` — which means the opposite. Both are pinned in `tests/idea-capture.test.ts`.
 
+### Talking TO Marqueta (built 2026-09-01)
+She listens silently but ANSWERS when addressed — `@Marqueta <x>` in any channel she is in,
+or a DM. Being asked is not noise, so she replies even in a channel where she is otherwise
+quiet (in-thread in a channel, plain in a DM).
+
+- **Pure intent parsing:** `src/lib/marketing/marquetaChat.ts` (`parseMarquetaIntent`,
+  `addressesMarqueta`, `stripMention`, `marquetaHelpText`). Answers:
+  `src/lib/marketing/marquetaChat.server.ts`. Tests: `tests/marqueta-chat.test.ts`.
+- **NO model call** — every answer is a lookup she already knows how to do, so a question
+  about the runway is answered from the runway record or not at all.
+- **Intent order matters:** explicit `capture <x>` beats everything (being told to file
+  something is not an invitation to judge it) → availability → question keywords matched
+  ANYWHERE but only when the message is not itself a proposal (so "we should review the
+  board every week" is filed, not answered) → the shared `classifyMessage`.
+- **She knows her own id** via `getSlackBotUserId()` (cached `auth.test`) — no env var to
+  paste wrong and no way to go deaf to her own name silently.
+- **DMs need a manual Slack step:** add the **`im:history`** scope and subscribe to the
+  **`message.im`** event, then reinstall. Mentions in channels need NOTHING new (they arrive
+  on `message.channels`, which she already has).
+
+**Burst coalescing:**
+
 **Burst coalescing:** one thought said over four messages is ONE idea. `findBurstToJoin` folds a
 follow-on into the same person's unreviewed capture in the same channel within
 `BURST_WINDOW_MINUTES` (12) and posts no second thread reply. Only *unreviewed* captures are
