@@ -128,3 +128,54 @@ describe('Slack notification escaping', () => {
     expect(JSON.stringify(message.blocks)).not.toMatch(/<https:\/\/evil\.example/)
   })
 })
+
+describe('the money in the order alert', () => {
+  /**
+   * Eric's real production order, SHOP-20260817-P0HKUFMR: one Own Your Health
+   * Data comic at $9 plus $6 shipping, and Stripe collected $15.
+   *
+   * The alert used to print "Total: $15.00" and then "Additional shipping:
+   * $6.00" underneath, which reads as $21 — "additional" says plainly that it
+   * is on top. It never was. Anyone reconciling takings off these messages
+   * would have been over by the shipping on every single order.
+   */
+  const realOrder: ShopOrderNotification = {
+    orderId: 'marketingOrder.stripe-cs_live_real',
+    orderNumber: 'SHOP-20260817-P0HKUFMR',
+    placedAt: '2026-08-17T15:55:48.000Z',
+    customerName: 'Eric Benoit',
+    customerEmail: 'benwa02@gmail.com',
+    items: [{ title: 'Own Your Health Data', quantity: 1 }],
+    supportAmount: 0,
+    shipping: 6,
+    total: 15,
+    currency: 'USD',
+    testMode: false,
+  }
+
+  it('never presents shipping as something to add to the total', () => {
+    const text = JSON.stringify(buildShopOrderSlackMessage(realOrder))
+    expect(text).not.toContain('Additional shipping')
+  })
+
+  it('shows what the total is made of, so it cannot be misread', () => {
+    const text = JSON.stringify(buildShopOrderSlackMessage(realOrder))
+    expect(text).toContain('Total paid:* $15.00')
+    expect(text).toContain('$9.00 items + $6.00 shipping')
+  })
+
+  it('keeps the breakdown adding up to the total', () => {
+    // Derived from the total rather than passed in, so the explanation can
+    // never disagree with the number it is explaining.
+    const withSupport: ShopOrderNotification = { ...realOrder, supportAmount: 10, total: 25 }
+    const text = JSON.stringify(buildShopOrderSlackMessage(withSupport))
+    expect(text).toContain('$9.00 items + $6.00 shipping + $10.00 pay-what-you-want')
+  })
+
+  it('says nothing about a breakdown when there is nothing to break down', () => {
+    const plain: ShopOrderNotification = { ...realOrder, shipping: 0, supportAmount: 0, total: 9 }
+    const text = JSON.stringify(buildShopOrderSlackMessage(plain))
+    expect(text).toContain('Total paid:* $9.00')
+    expect(text).not.toContain('shipping')
+  })
+})

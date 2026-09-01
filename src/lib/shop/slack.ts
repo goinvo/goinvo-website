@@ -86,6 +86,17 @@ export function buildShopOrderSlackMessage(order: ShopOrderNotification) {
   const total = formatMoney(order.total, order.currency)
   const support = formatMoney(order.supportAmount, order.currency)
   const shipping = formatMoney(order.shipping, order.currency)
+  // Everything that is not shipping or a support amount. Derived rather than
+  // passed, so it can never disagree with the total it is explaining.
+  const itemsAmount = Math.max(0, order.total - order.shipping - order.supportAmount)
+  const breakdown = [
+    itemsAmount > 0 ? `${formatMoney(itemsAmount, order.currency)} items` : undefined,
+    order.shipping > 0 ? `${shipping} shipping` : undefined,
+    order.supportAmount > 0 ? `${support} pay-what-you-want` : undefined,
+  ]
+    .filter(Boolean)
+    .join(' + ')
+
   const itemLines = order.items.slice(0, 10).map(
     (item) => `• ${item.quantity} × ${escapeSlack(item.title)}`,
   )
@@ -103,9 +114,17 @@ export function buildShopOrderSlackMessage(order: ShopOrderNotification) {
     order.shippingAddress
       ? `*Ship to:*\n${escapeSlack(order.shippingAddress)}`
       : undefined,
-    `*Total:* ${total}`,
-    order.supportAmount > 0 ? `*Pay what you want:* ${support}` : undefined,
-    order.shipping > 0 ? `*Additional shipping:* ${shipping}` : undefined,
+    // What was actually collected, and what is inside it.
+    //
+    // This used to read "Total: $15.00" and then "Additional shipping: $6.00"
+    // on the next line, which any reader adds up to $21 - "additional" says
+    // plainly that it is on top. It never was: the total comes from Stripe's
+    // amount_total, so shipping and support are already in it. A real order
+    // was queried to settle whether the charge or the wording was wrong, and
+    // it was the wording. Anyone reconciling takings off this message would
+    // have been over by the shipping on every order.
+    `*Total paid:* ${total}`,
+    breakdown ? `_${breakdown}_` : undefined,
   ]
     .filter(Boolean)
     .join('\n')
