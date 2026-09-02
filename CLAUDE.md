@@ -351,6 +351,11 @@ exactly 2 `weekly-plan/*` records, both from a human calling the route by hand.
 - Digest accepts `{ planRecorded }` and says out loud when the plan did not save, rather than
   presenting the raw board as though it were a planned week.
 - **Needs on Vercel:** `CRON_SECRET` and `MARKETING_API_KEY` (the tick calls the other routes with it).
+- **Watchdog lives OUTSIDE Vercel:** `.github/workflows/marketing-heartbeat.yml` runs
+  `npm run check:heartbeat` on Tuesdays and exits non-zero when the tick never ran / failed /
+  went stale, so GitHub emails somebody. A watchdog inside the tick shares its failure domain and
+  is decoration. Needs repo secrets `NEXT_PUBLIC_SANITY_PROJECT_ID` + `SANITY_API_READ_TOKEN`.
+  It correctly FAILS today, because nothing is scheduled in production yet.
 
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 
