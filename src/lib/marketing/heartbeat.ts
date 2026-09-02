@@ -25,7 +25,7 @@ export const HEARTBEAT_DOC_TYPE = 'marketingHeartbeat'
 
 /** What one scheduled run did, in the order it tried to do it. */
 export type HeartbeatStep = {
-  name: 'plan' | 'digest'
+  name: 'plan' | 'digest' | 'domains'
   ok: boolean
   /** One line a person can read. "Planned 8h across 11 items." */
   detail: string
