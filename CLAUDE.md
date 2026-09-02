@@ -351,6 +351,24 @@ exactly 2 `weekly-plan/*` records, both from a human calling the route by hand.
 - Digest accepts `{ planRecorded }` and says out loud when the plan did not save, rather than
   presenting the raw board as though it were a planned week.
 - **Needs on Vercel:** `CRON_SECRET` and `MARKETING_API_KEY` (the tick calls the other routes with it).
+### Domain expiry — free, keyless, no model (built 2026-09-02)
+goinvo.com was **nine hours from expiry** and nobody knew (renewed same day; now 2027-09-03).
+A lapsed domain takes the site, client email and every scheduled job down together.
+
+- **RDAP, not WHOIS**: the registries' own JSON API. No key, no account, no vendor, no LLM — an
+  expiry date is a fact to read, not a judgement. `src/lib/marketing/domainWatch.ts` (pure) +
+  `domainWatch.server.ts` (fetch, never throws). Tests: `tests/domain-watch.test.ts`.
+- Straight to the registry per TLD (`rdap.verisign.com` for com/net,
+  `rdap.publicinterestregistry.org` for org); `rdap.org` only as fallback for other TLDs.
+- **Tiered and SILENT by default**: nothing until 60 days out, then notice / warning (30) /
+  urgent (7) / expired. Both domains currently read `ok`, so the digest says nothing.
+- **A failed lookup is `unknown`, never `ok`** — a silently-failing check is indistinguishable
+  from a healthy domain, which is the exact failure being prevented.
+- **Urgent fails the tick on purpose**, so the GitHub watchdog emails rather than leaving it in a
+  Slack line people scroll past.
+- Watch list: `MARKETING_WATCHED_DOMAINS` (defaults `goinvo.com,determinantsofhealth.org`).
+- **The real killer is auto-renew succeeding against an expired card** — the urgent copy says so.
+
 - **Watchdog lives OUTSIDE Vercel:** `.github/workflows/marketing-heartbeat.yml` runs
   `npm run check:heartbeat` on Tuesdays and exits non-zero when the tick never ran / failed /
   went stale, so GitHub emails somebody. A watchdog inside the tick shares its failure domain and

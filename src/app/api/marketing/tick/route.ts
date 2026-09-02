@@ -5,6 +5,8 @@ import { apiVersion, projectId, writeToken } from '@/sanity/env'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import { isoWeekKey } from '@/lib/marketing/weeklyPlan'
+import { checkWatchedDomains } from '@/lib/marketing/domainWatch.server'
+import { domainsWorthMentioning } from '@/lib/marketing/domainWatch'
 import {
   HEARTBEAT_DOC_ID,
   HEARTBEAT_DOC_TYPE,
@@ -153,14 +155,38 @@ async function run(request: NextRequest, dryRun: boolean) {
     }
   }
 
-  // 3. Tell the team. Posted even when the plan did not persist — silence would
+  // 3. Registry records. Free, keyless, no model: an expiry date is a fact to
+  //    be read, not a judgement. goinvo.com was nine hours from expiry on
+  //    2026-09-02 and nobody knew - and a lapsed domain takes the site, the
+  //    client email and every other job on this list down together.
+  let domainNotes: string[] = []
+  try {
+    const statuses = await checkWatchedDomains()
+    const worth = domainsWorthMentioning(statuses)
+    domainNotes = worth.map((status) => status.message)
+    steps.push({
+      name: 'domains',
+      // Urgent means the run is NOT healthy: the external watchdog reads this,
+      // and a domain days from lapsing should reach somebody by email rather
+      // than sit in a Slack line that everybody scrolls past.
+      ok: !statuses.some((status) => status.level === 'urgent' || status.level === 'expired'),
+      count: worth.length,
+      detail: worth.length
+        ? `${worth.length} domain(s) need attention.`
+        : `${statuses.length} domain(s) checked, all clear.`,
+    })
+  } catch (error) {
+    steps.push({ name: 'domains', ok: false, count: 0, detail: `domain check threw: ${String(error)}` })
+  }
+
+  // 4. Tell the team. Posted even when the plan did not persist — silence would
   //    hide the breakage — but the digest is told to say so.
   try {
     const digestUrl = `${origin}/api/marketing/slack/digest${dryRun ? '?dryRun=1' : ''}`
     const result = await callRoute(digestUrl, {
       method: 'POST',
       headers: auth,
-      body: JSON.stringify({ planRecorded: dryRun ? true : planRecorded, week }),
+      body: JSON.stringify({ planRecorded: dryRun ? true : planRecorded, week, domainNotes }),
     })
     const posted = Boolean(result.body.posted) || Boolean(result.body.dryRun)
     steps.push({
