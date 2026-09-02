@@ -27,6 +27,7 @@ export type MarquetaIntent =
   | { kind: 'week' }
   | { kind: 'runway' }
   | { kind: 'ideas' }
+  | { kind: 'heartbeat' }
   | { kind: 'capture'; text: string; explicit: boolean }
   | { kind: 'availability'; text: string }
   | { kind: 'help' }
@@ -105,6 +106,12 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
     if (asksWhatToDo || mentionsAny(lower, ['week', 'plan', 'todo', 'workload'])) return { kind: 'week' }
     if (mentionsAny(lower, ['runway', 'money', 'finances', 'posture', 'budget'])) return { kind: 'runway' }
     if (mentionsAny(lower, ['ideas', 'board', 'review'])) return { kind: 'ideas' }
+    // Asking whether she is still running at all. Worth its own answer:
+    // the whole suite spent months built-but-never-fired, and the only
+    // way that becomes visible is if somebody can ask.
+    if (mentionsAny(lower, ['heartbeat', 'tick', 'schedule', 'cron', 'running', 'alive'])) {
+      return { kind: 'heartbeat' }
+    }
     if (startsWithAny(lower, ['help', 'hi', 'hello', 'hey', 'what can you do'])) return { kind: 'help' }
   }
 
@@ -121,6 +128,7 @@ export function marquetaHelpText(): string {
     '• *week* — what is on this week and what nobody has taken',
     '• *runway* — how long the studio can pay for, and whether it needs re-confirming',
     '• *ideas* — what I have caught that still needs a yes or no',
+    '• *tick* — whether my weekly schedule actually ran, and what it did',
     '• *capture <thing>* — put something on the board, whatever it sounds like',
     '• *away next week* — I will note it and stop planning work for you',
     '',
