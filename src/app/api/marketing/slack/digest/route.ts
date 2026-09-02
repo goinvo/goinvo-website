@@ -97,6 +97,14 @@ async function handle(request: NextRequest) {
 
   const dryRun = new URL(request.url).searchParams.get('dryRun') === '1'
 
+  // The tick tells us whether the week it just planned actually persisted. A
+  // digest that announces a week the Studio never recorded creates two sources
+  // of truth on the one morning everybody reads it - so when the plan did not
+  // land, the message says so instead of quietly presenting the raw board as
+  // though it were the plan.
+  const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {}
+  const planRecorded = (body as { planRecorded?: boolean }).planRecorded !== false
+
   if (!projectId || !writeToken) {
     return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
   }
@@ -218,6 +226,22 @@ async function handle(request: NextRequest) {
       ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
       : undefined,
   })
+
+  // Said out loud rather than hidden: if the scheduled plan did not persist,
+  // everything below is the raw board, not the week that was planned.
+  if (!planRecorded) {
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text:
+            '_This week’s plan did not save, so this is the open board rather than a planned week. ' +
+            'Re-plan on the This week tab.  I would rather say that than pretend._',
+        },
+      ],
+    })
+  }
 
   // Money, but only when it needs asking about. The runway is the input the
   // whole strategy hangs off and the one thing the suite never checked - it

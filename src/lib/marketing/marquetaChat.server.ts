@@ -12,6 +12,7 @@ import { captureFromMessage } from './ideaCapture.server'
 import { ideasNeedingReview } from './ideaCapture.server'
 import { captureConfirmation, marquetaHelpText, parseMarquetaIntent } from './marquetaChat'
 import { readRunway } from './runway.server'
+import { heartbeatHealth, HEARTBEAT_DOC_ID, type HeartbeatRecord } from './heartbeat'
 import { parseAvailabilityCommand } from './availability'
 import { setMarketingAvailability } from './slackActions.server'
 
@@ -82,6 +83,30 @@ async function answerIdeas(): Promise<string> {
 }
 
 /**
+ * Whether the weekly schedule is actually alive.
+ *
+ * The answer names what the last run DID, not merely that it succeeded: a tick
+ * that reports ok while planning nothing is the exact shape of an inert
+ * mechanism, and this codebase has been caught by that class of bug before.
+ */
+async function answerHeartbeat(): Promise<string> {
+  const client = getMarketingWriteClientFor(OPERATION_TYPE)
+  const record = await client.fetch<HeartbeatRecord | null>(
+    `*[_id == $id][0]{ week, ranAt, lastHealthyAt, steps, error }`,
+    { id: HEARTBEAT_DOC_ID },
+  )
+  const health = heartbeatHealth(record)
+  const lines = [health.summary]
+  for (const step of record?.steps || []) {
+    lines.push(`${step.ok ? '✓' : '✗'} ${step.name} — ${step.detail}`)
+  }
+  if (!health.everRan) {
+    lines.push('_Once the cron is deployed this answers with what it actually did each Monday._')
+  }
+  return lines.join('\n')
+}
+
+/**
  * Reply to a message addressed to Marqueta.
  *
  * Returns the text to post, or null when there is nothing worth saying —
@@ -100,6 +125,7 @@ export async function answerMarqueta(input: {
     if (intent.kind === 'week') return await answerWeek()
     if (intent.kind === 'runway') return await answerRunway()
     if (intent.kind === 'ideas') return await answerIdeas()
+    if (intent.kind === 'heartbeat') return await answerHeartbeat()
 
     if (intent.kind === 'availability') {
       const parsed = parseAvailabilityCommand(intent.text, new Date().toISOString().slice(0, 10))

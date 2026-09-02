@@ -324,6 +324,34 @@ Both real messages are pinned verbatim as fixtures in `tests/idea-capture.test.t
   unknown `?view=` makes the Studio restore the last-opened view from localStorage — the same
   bug that once sent "open the plan" to the Shop. Links point at `view=thisWeek`.
 
+## The weekly tick — the suite finally runs on its own (built 2026-09-02)
+
+Nothing was ever scheduled. The planner, digest, runway check-in, identity prompt and
+unjudged-idea nudge were all built and **none had ever fired by itself** — the dataset held
+exactly 2 `weekly-plan/*` records, both from a human calling the route by hand.
+
+- **`/api/marketing/tick`** (`vercel.json` cron, Mondays `0 13 * * 1` = 9am EDT). Plans the week,
+  **verifies the week actually persisted by querying for `weekly-plan/<ISO week>`**, then posts the
+  digest. Auth is `CRON_SECRET` ONLY — not the Studio session auth, since it writes the week and
+  posts to a channel of colleagues.
+- **`GET /api/marketing/plan-week` is hardcoded `dryRun`** (`route.ts:128-130`, `handle(request, true)`)
+  so the Studio can read safely. **Vercel crons issue GET**, so a cron pointed straight at it would
+  compute the week, return 200 and persist NOTHING. The tick POSTs instead. Do not "fix" the GET.
+- **Liveness is the point, not the schedule.** `src/lib/marketing/heartbeat.ts` +
+  `marketingHeartbeat` doc record what each run DID; `heartbeatHealth` separates never-ran /
+  ran-and-failed / stale (collapsing them is how a dead job looks healthy) and `tickDidSomething`
+  asks whether anything actually changed. Ask her in Slack: **`@Marqueta tick`**.
+- **Step counts are DATA, not prose.** The first `tickDidSomething` regex-matched `detail` for a
+  non-zero digit and found the YEAR in `"0 item(s) planned for 2026-W36"` — an inert run reporting
+  itself productive, which is the exact bug the feature exists to catch. Tests: `tests/heartbeat.test.ts`.
+- **The tick calls its OWN origin, never `MARKETING_PUBLIC_BASE_URL`.** That var is
+  `https://www.goinvo.com` in every environment including a laptop, so the first local dry run
+  drove PRODUCTION (it only surfaced as a 401 because the local key differs). With matching keys a
+  test run would have planned the real week and posted to the team's Slack.
+- Digest accepts `{ planRecorded }` and says out loud when the plan did not save, rather than
+  presenting the raw board as though it were a planned week.
+- **Needs on Vercel:** `CRON_SECRET` and `MARKETING_API_KEY` (the tick calls the other routes with it).
+
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 
 The financial posture used to be a hand-picked bin (`survival`) with a timestamp. A bin does
