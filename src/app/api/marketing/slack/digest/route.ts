@@ -104,6 +104,9 @@ async function handle(request: NextRequest) {
   // though it were the plan.
   const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {}
   const planRecorded = (body as { planRecorded?: boolean }).planRecorded !== false
+  // Registry warnings, passed in by the tick. Absent in a manual post, and
+  // empty whenever every domain has months left - silence is the default.
+  const domainNotes = ((body as { domainNotes?: string[] }).domainNotes || []).filter(Boolean)
 
   if (!projectId || !writeToken) {
     return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
@@ -240,6 +243,16 @@ async function handle(request: NextRequest) {
             'Re-plan on the This week tab.  I would rather say that than pretend._',
         },
       ],
+    })
+  }
+
+  // Renewals, only when one is close. This is the cheapest item in the whole
+  // digest and the only one whose failure takes everything else down with it.
+  if (domainNotes.length) {
+    blocks.push({ type: 'divider' })
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: '*Renewals*' + '\n' + domainNotes.join('\n') },
     })
   }
 
