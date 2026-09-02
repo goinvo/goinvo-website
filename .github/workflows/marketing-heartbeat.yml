@@ -1,0 +1,42 @@
+# Is the weekly marketing tick still alive?
+#
+# Deliberately in GitHub Actions rather than as a step inside the tick itself.
+# The tick reports its own death by producing silence, so the thing that notices
+# must not share a failure domain with it: a broken Vercel deploy, a deleted
+# cron, an expired token or a Sanity outage all take the tick down AND any
+# watchdog living inside it.
+#
+# Marqueta can already answer "did the tick run?" when somebody asks her in
+# Slack. What was missing is push — nobody was ever going to ask on the week it
+# broke. A failed job here emails whoever owns the repo, which is the whole
+# mechanism.
+#
+# Runs Tuesdays, a day after the Monday tick, so a missed run is caught while
+# the week can still be salvaged.
+name: Marketing heartbeat
+
+on:
+  schedule:
+    - cron: '0 15 * * 2'
+  # So it can be checked on demand without waiting a week.
+  workflow_dispatch:
+
+jobs:
+  heartbeat:
+    name: Weekly tick liveness
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+      - name: Check the tick actually ran
+        run: node scripts/check-heartbeat.mjs
+        env:
+          NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
+          SANITY_API_READ_TOKEN: ${{ secrets.SANITY_API_READ_TOKEN }}
+          NEXT_PUBLIC_MARKETING_INTERNAL_DATASET: outreach
