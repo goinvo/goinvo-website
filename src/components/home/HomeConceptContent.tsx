@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -5,9 +6,129 @@ import { HomeConceptCalendlyCta } from '@/components/home/HomeConceptCalendlyCta
 import { HomeConceptCtaLink } from '@/components/home/HomeConceptCtaLink'
 import { HomeConceptInteractions } from '@/components/home/HomeConceptInteractions'
 import { HomeConceptTrackedArrowLink } from '@/components/home/HomeConceptTrackedArrowLink'
+import { HomeHeroRunway } from '@/components/home/HomeHeroRunway'
 import { ConceptReferenceArrow } from '@/components/home/ConceptReferenceArrow'
 
 const imageBase = '/images/experiments/home-2026'
+
+// Hero motion. Server-rendered into the initial HTML rather than injected by the
+// client interactions component, so the runway is in place on first paint
+// instead of waiting for hydration. Every selector is scoped to a hero class —
+// a bare element selector here would leak to the whole session (a page <style>
+// is global and outlives client-side navigation).
+//
+// Geometry ported verbatim from the design's `.gi-runway` rules ("A.m · The
+// runway", Claude Design → GoInvo Homepage Design).
+const heroCss = `
+  /* The hero's ground colour, and the ONLY place it is written down. The runway
+     fade below dissolves into this exact value, so a seam is impossible.
+     They had drifted: the section carried Tailwind's \`bg-black\`, which this
+     site's theme redefines as #1d1b1a (--color-black), while the fade was
+     written as a literal #000 — so the flat top of the hero sat a visible step
+     lighter than the black the plane receded into. */
+  .eid-hero {
+    --eid-ink: 0 0 0;
+    background-color: rgb(var(--eid-ink));
+  }
+
+  /* The plane sits BELOW the fold line of the section and is clipped by it. The
+     mask keeps the first 200px from starting hard against the lettering. */
+  .eid-runway {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -40px;
+    height: 560px;
+    perspective: 900px;
+    perspective-origin: 50% 0%;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 60px, #000 200px);
+    mask-image: linear-gradient(180deg, transparent 0, transparent 60px, #000 200px);
+  }
+
+  .eid-runway-plane {
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 860px;
+    height: 1400px;
+    margin-left: -430px;
+    transform-origin: 50% 0%;
+    transition: transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    z-index: 1;
+  }
+
+  .eid-runway-belt { animation: eid-runway-glide 42s linear infinite; }
+
+  /* The belt is rendered twice and travels exactly one copy, so the seam never
+     shows. Change the row count and this still holds. */
+  @keyframes eid-runway-glide {
+    from { transform: translateY(-50%); }
+    to { transform: translateY(0); }
+  }
+
+  .eid-runway-row { padding-bottom: 26px; }
+
+  .eid-runway-row img {
+    width: 100%;
+    height: 600px;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+
+  /* Solid at the horizon end, clearing as the plane comes toward the viewer —
+     this is what makes the work read as receding INTO the black. */
+  .eid-runway-fade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    transform: translateZ(1px);
+    background: linear-gradient(
+      180deg,
+      rgb(var(--eid-ink)) 0%,
+      rgb(var(--eid-ink)) 18%,
+      rgb(var(--eid-ink) / 0.92) 32%,
+      rgb(var(--eid-ink) / 0.25) 65%,
+      rgb(var(--eid-ink) / 0) 100%
+    );
+  }
+
+  /* The design canvas is 1280px only. Below that the plane is scaled down
+     rather than cropped, so a phone gets the same picture, not a slice of it. */
+  @media (max-width: 767px) {
+    .eid-runway { height: 400px; bottom: -24px; }
+    .eid-runway-plane { width: 560px; height: 1000px; margin-left: -280px; }
+    .eid-runway-row { padding-bottom: 18px; }
+    .eid-runway-row img { height: 420px; }
+  }
+
+  /* The design's gi-reveal: fade up on first paint, staggered via --d. */
+  .eid-hero .eid-reveal {
+    opacity: 0;
+    animation: eid-fade-up 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--d, 0) * 90ms + 120ms);
+  }
+
+  @keyframes eid-fade-up {
+    from { opacity: 0; transform: translate3d(0, 16px, 0); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .eid-hero .eid-reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    .eid-runway-belt { animation: none; }
+    .eid-runway-plane { transition: none; }
+  }
+`
 
 const logos = [
   '3M',
@@ -223,30 +344,52 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
-      <section className="relative overflow-hidden bg-[#1d1b1a] text-white">
-        <Image
-          src={`${imageBase}/ipsosherodark.jpg`}
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover opacity-70"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(20,18,17,.95)_0%,rgba(20,18,17,.68)_52%,rgba(20,18,17,.18)_100%)]" />
-        <div className="relative max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 pt-[clamp(72px,10vw,120px)] pb-[clamp(72px,10vw,96px)] min-h-[clamp(480px,60vw,720px)] flex flex-col justify-center">
-          <h1
-            className="text-[2.25rem] leading-[1.02] sm:text-[4.5rem] font-medium tracking-[-0.025em] max-w-[16ch] mb-6"
-            style={{
-              viewTransitionName: 'page-title',
-              fontFamily: 'adobe-jenson-pro-display, Georgia, serif',
-            }}
-          >
-            Complex software that ships, and moves the numbers.
+      {/* `bg-black` is only a floor: this site's theme redefines --color-black
+          as #1d1b1a, so the real ground colour comes from .eid-hero below,
+          which the runway fade shares. Page CSS is unlayered and beats the
+          layered Tailwind utility, so the darker value wins. */}
+      <section className="eid-hero relative isolate overflow-hidden bg-black text-white">
+        <style>{heroCss}</style>
+        <HomeHeroRunway />
+
+        {/* The tall bottom padding is what the runway occupies — it is clipped by
+            this section, so the plane needs the room to recede into. */}
+        {/* The design's 40px top padding sat the lettering hard under the header;
+            it gets room to breathe instead. */}
+        <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-[clamp(230px,26vw,320px)] pt-[clamp(72px,9vw,140px)] text-center sm:px-8 lg:px-14">
+          <h1 style={{ viewTransitionName: 'page-title' }}>
+            {/* Real text in the heading rather than only the image's alt — it is
+                what crawlers read, and it survives the image failing to load. */}
+            <span className="sr-only">Everything is designed</span>
+            <Image
+              src={`${imageBase}/everything-is-designed.png`}
+              alt=""
+              width={852}
+              height={459}
+              priority
+              sizes="(max-width: 940px) 100vw, 880px"
+              className="eid-reveal mx-auto block h-auto w-full max-w-[880px]"
+              // The ink is white on transparency and sits over photography, so it
+              // carries its own shadow rather than relying on the fade behind it.
+              style={{ filter: 'drop-shadow(0 10px 60px rgba(0,0,0,0.9))', '--d': 0 } as CSSProperties}
+            />
           </h1>
-          <p className="text-lg lg:text-xl leading-8 text-white/80 max-w-[720px]">
-            A design studio that turns nascent ideas into shipped software, for enterprise and healthcare leaders who need results this fiscal year.
+
+          {/* The design pulls this up 28px into the lettering's baked-in padding.
+              This PNG is cropped tight to the ink, so it gets a real gap instead. */}
+          <p
+            className="eid-reveal mx-auto mt-7 max-w-[54ch] text-[19px] leading-[1.55] text-white/[.78] sm:text-[21px]"
+            style={{ '--d': 1 } as CSSProperties}
+          >
+            Little of it is designed well.
+            <br />
+            We&rsquo;re a design studio that turns nascent ideas into shipped software for enterprise and healthcare leaders.
           </p>
-          <div className="mt-10 flex flex-wrap items-center gap-5">
+
+          <div
+            className="eid-reveal mt-11 flex flex-wrap items-center justify-center gap-[18px]"
+            style={{ '--d': 2 } as CSSProperties}
+          >
             <HomeConceptCtaLink
               href="#book"
               label="Book a discovery call"
@@ -267,19 +410,6 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
               Or see the work
             </HomeConceptTrackedArrowLink>
           </div>
-          <div className="mt-14 inline-flex max-w-[480px] flex-col border border-white/15 bg-white/[.07] p-6 backdrop-blur" data-home-concept-reveal>
-            <div className="font-serif text-primary font-semibold leading-none">
-              <span className="text-[5.5rem] lg:text-[8rem]">90</span>
-              <span className="text-3xl align-top">+%</span>
-            </div>
-            <div className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-white/90">Enterprise adoption</div>
-            <p className="mt-3 text-sm leading-6 text-white/90">
-              Ipsos Facto. The share of analysts using the AI research platform we shipped across the firm, with 10M+ API calls and 700K prompts per month.
-            </p>
-          </div>
-        </div>
-        <div className="pointer-events-none absolute bottom-5 right-5 font-mono text-[10px] uppercase tracking-[0.08em] text-white/50 sm:right-8 lg:right-14">
-          Ipsos · Facto AI platform
         </div>
       </section>
 
