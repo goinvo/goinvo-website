@@ -55,6 +55,10 @@ export function HomeGoinvoAtHome() {
   return (
     <section
       id="goinvo-at-home"
+      // This section IS the home-shop-section experiment's variant, so it is the
+      // one whose engagement most needs measuring: the control simply has no
+      // element here, and the beacon reports whichever sections exist.
+      data-experiment-section="prints"
       aria-labelledby="goinvo-at-home-heading"
       className="scroll-mt-24 bg-[#11141f] py-20 text-white"
     >
