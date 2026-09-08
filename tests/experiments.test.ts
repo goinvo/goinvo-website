@@ -1,12 +1,11 @@
 import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Flag } from 'flags/next'
 import { track as trackVercelEvent } from '@vercel/analytics'
 import { config as proxyConfig } from '@/proxy'
-import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
 import { ShopSectionGate } from '@/components/home/ShopSectionGate'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
-import { HomeContent } from '@/components/home/HomeContent'
 import {
   EXPERIMENT_FORCE_ASSIGNMENT_PARAM,
   EXPERIMENT_FORCE_VARIANT_PARAM,
@@ -221,6 +220,33 @@ describe('experiment renderers and content variants', () => {
     expect(children).toHaveLength(2)
     expect(children[0].type).toBe(HomeConceptContent)
     expect(children[1].type).toBe(ShopSectionGate)
+  })
+
+  it('marks every homepage section for engagement measurement', () => {
+    // The engagement beacon attributes scroll depth by querying
+    // [data-experiment-section] against the LIVE DOM. Markers were once added to
+    // the retired home-2026 component instead, which nothing renders — so the
+    // homepage reported one section out of ten and the hero could not be
+    // measured at all. Render what actually ships and count.
+    // Called directly rather than through createElement, the way HomePageRenderer
+    // is above: teamMembers is optional, so createElement infers P as
+    // `Props | undefined`, fails its `P extends {}` constraint, and silently
+    // falls through to the overload that accepts no custom props at all.
+    const html = renderToStaticMarkup(
+      HomeConceptContent({ teamMembers: [{ name: 'Ada GoInvo', image: '/team/ada.jpg' }] }),
+    )
+
+    const sections = html.match(/<section\b[^>]*>/g) ?? []
+    const unmarked = sections.filter((tag) => !tag.includes('data-experiment-section='))
+    expect(unmarked).toEqual([])
+
+    const keys = [...html.matchAll(/data-experiment-section="([^"]+)"/g)].map((match) => match[1])
+    // The key has to survive ExperimentExposure's own validation, or the section
+    // is silently dropped from the beacon rather than reported as broken.
+    for (const key of keys) expect(key).toMatch(/^[a-z0-9][a-z0-9-]{0,47}$/)
+    expect(new Set(keys).size).toBe(keys.length)
+    expect(keys).toContain('hero')
+    expect(keys).toContain('book-call')
   })
 
   it('preserves article content unless a matching Sanity-authored variant is selected', () => {

@@ -55,14 +55,23 @@ export function HomeGoinvoAtHome() {
   return (
     <section
       id="goinvo-at-home"
+      // This section IS the home-shop-section experiment's variant, so it is the
+      // one whose engagement most needs measuring: the control simply has no
+      // element here, and the beacon reports whichever sections exist.
+      data-experiment-section="prints"
       aria-labelledby="goinvo-at-home-heading"
       className="scroll-mt-24 bg-[#11141f] py-20 text-white"
     >
       <div className="mx-auto grid max-w-6xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
         <div>
+          {/* Same type as every other section heading ("Small by Design.",
+              "Open Source Design"). This one carried font-semibold, which beat
+              the `font-weight: 400` globals.css sets on h2 — an element selector
+              loses to a class in the same layer — so it rendered 600 while its
+              siblings rendered 400. */}
           <h2
             id="goinvo-at-home-heading"
-            className="mt-3 text-4xl font-semibold leading-tight sm:text-5xl"
+            className="mt-3 font-serif text-3xl leading-tight lg:text-5xl"
           >
             Put a little GoInvo on your wall.
           </h2>
