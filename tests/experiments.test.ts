@@ -1,4 +1,4 @@
-import React, { createElement } from 'react'
+import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Flag } from 'flags/next'
@@ -228,8 +228,12 @@ describe('experiment renderers and content variants', () => {
     // the retired home-2026 component instead, which nothing renders — so the
     // homepage reported one section out of ten and the hero could not be
     // measured at all. Render what actually ships and count.
+    // Called directly rather than through createElement, the way HomePageRenderer
+    // is above: teamMembers is optional, so createElement infers P as
+    // `Props | undefined`, fails its `P extends {}` constraint, and silently
+    // falls through to the overload that accepts no custom props at all.
     const html = renderToStaticMarkup(
-      createElement(HomeConceptContent, { teamMembers: [{ name: 'Ada GoInvo', image: '/team/ada.jpg' }] }),
+      HomeConceptContent({ teamMembers: [{ name: 'Ada GoInvo', image: '/team/ada.jpg' }] }),
     )
 
     const sections = html.match(/<section\b[^>]*>/g) ?? []
