@@ -3,10 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Flag } from 'flags/next'
 import { track as trackVercelEvent } from '@vercel/analytics'
 import { config as proxyConfig } from '@/proxy'
-import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
 import { ShopSectionGate } from '@/components/home/ShopSectionGate'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
-import { HomeContent } from '@/components/home/HomeContent'
 import {
   EXPERIMENT_FORCE_ASSIGNMENT_PARAM,
   EXPERIMENT_FORCE_VARIANT_PARAM,
