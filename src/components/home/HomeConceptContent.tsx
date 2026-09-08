@@ -32,18 +32,43 @@ const heroCss = `
   }
 
   /* The plane sits BELOW the fold line of the section and is clipped by it. The
-     mask keeps the first 200px from starting hard against the lettering. */
+     mask keeps the first 200px from starting hard against the lettering, and
+     the last --eid-tail from ending hard against the section edge.
+
+     That tail is not decoration. The belt glides, so the section's bottom edge
+     lands on a DIFFERENT part of the plane every second — a row's near edge, the
+     26px gap between rows, the middle of a screenshot. Unmasked, that cut showed
+     as a stack of hard full-width bands (black gutter, then a solid stripe of
+     whatever colour the next row happened to be). Nothing static fixes a moving
+     seam; the layer has to dissolve before it gets there. It is masked on the
+     CONTAINER so the images AND the fade over them go together — .eid-runway-fade
+     alone can only tint toward the ink, it cannot end the layer. */
   .eid-runway {
     position: absolute;
     left: 0;
     right: 0;
-    bottom: -40px;
+    /* How much of the layer the section crops, and how long the tail gets to
+       dissolve in. The mask has to reach zero at the CROP line, not at its own
+       100% — 40px of this element is never painted. */
+    --eid-lead-start: 60px;
+    --eid-lead: 200px;
+    --eid-overhang: 40px;
+    --eid-tail: 150px;
+    bottom: calc(-1 * var(--eid-overhang));
     height: 560px;
     perspective: 900px;
     perspective-origin: 50% 0%;
     overflow: hidden;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0, transparent 60px, #000 200px);
-    mask-image: linear-gradient(180deg, transparent 0, transparent 60px, #000 200px);
+    -webkit-mask-image: var(--eid-runway-mask);
+    mask-image: var(--eid-runway-mask);
+    --eid-runway-mask: linear-gradient(
+      180deg,
+      transparent 0,
+      transparent var(--eid-lead-start),
+      #000 var(--eid-lead),
+      #000 calc(100% - var(--eid-overhang) - var(--eid-tail)),
+      transparent calc(100% - var(--eid-overhang))
+    );
   }
 
   .eid-runway-plane {
@@ -100,7 +125,19 @@ const heroCss = `
   /* The design canvas is 1280px only. Below that the plane is scaled down
      rather than cropped, so a phone gets the same picture, not a slice of it. */
   @media (max-width: 767px) {
-    .eid-runway { height: 400px; bottom: -24px; }
+    /* A 400px layer has to spend its budget differently: a shorter lead-in to
+       buy a LONGER tail. At 560px of plane the near rows are legible work worth
+       holding; at 390px wide they are a texture, and a solid-coloured frame
+       arriving at the section edge reads as a stripe unless it has real room to
+       dissolve. Set --eid-overhang here rather than the bottom offset — the mask
+       reads it, so the two can never drift apart. */
+    .eid-runway {
+      height: 400px;
+      --eid-lead-start: 40px;
+      --eid-lead: 140px;
+      --eid-overhang: 24px;
+      --eid-tail: 210px;
+    }
     .eid-runway-plane { width: 560px; height: 1000px; margin-left: -280px; }
     .eid-runway-row { padding-bottom: 18px; }
     .eid-runway-row img { height: 420px; }
