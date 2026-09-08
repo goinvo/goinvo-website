@@ -385,7 +385,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
           as #1d1b1a, so the real ground colour comes from .eid-hero below,
           which the runway fade shares. Page CSS is unlayered and beats the
           layered Tailwind utility, so the darker value wins. */}
-      <section className="eid-hero relative isolate overflow-hidden bg-black text-white">
+      <section data-experiment-section="hero" className="eid-hero relative isolate overflow-hidden bg-black text-white">
         <style>{heroCss}</style>
         <HomeHeroRunway />
 
@@ -450,7 +450,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section className="py-14 lg:py-20">
+      <section data-experiment-section="client-proof" className="py-14 lg:py-20">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
           <p className="text-center text-sm text-[#6a6560] mb-8">
             Twenty years designing enterprise and healthcare software for Fortune 500s, federal agencies, and funded startups.
@@ -482,7 +482,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="services" className="py-16 lg:py-24">
+      <section id="services" data-experiment-section="services" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[1fr_2.2fr]">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">What we do</p>
@@ -505,7 +505,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="work" className="py-16 lg:py-24 bg-[#f4f1ea]">
+      <section id="work" data-experiment-section="selected-work" className="py-16 lg:py-24 bg-[#f4f1ea]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
           <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
             <div>
@@ -563,7 +563,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="about" className="py-16 lg:py-24">
+      <section id="about" data-experiment-section="why-goinvo" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[5fr_4fr]">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">Why GoInvo</p>
@@ -589,7 +589,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="open" className="py-16 lg:py-24 bg-[#1d1b1a] text-white">
+      <section id="open" data-experiment-section="open-source" className="py-16 lg:py-24 bg-[#1d1b1a] text-white">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
           <h2 className="font-serif text-3xl lg:text-5xl leading-tight mb-10">Open Source Design</h2>
           <div className="grid gap-6 lg:grid-cols-3">
@@ -616,7 +616,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="vision" className="py-16 lg:py-24">
+      <section id="vision" data-experiment-section="studio" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[1fr_1.05fr] items-center">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">The studio</p>
@@ -673,7 +673,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section className="py-16 lg:py-24 bg-[#f4f1ea]">
+      <section data-experiment-section="testimonials" className="py-16 lg:py-24 bg-[#f4f1ea]">
         <div className="max-w-[920px] mx-auto px-5 sm:px-8 text-center">
           <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">Testimonials</p>
           <blockquote className="mt-8 font-serif text-3xl lg:text-5xl leading-tight">

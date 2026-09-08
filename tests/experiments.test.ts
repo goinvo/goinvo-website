@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Flag } from 'flags/next'
 import { track as trackVercelEvent } from '@vercel/analytics'
@@ -219,6 +220,29 @@ describe('experiment renderers and content variants', () => {
     expect(children).toHaveLength(2)
     expect(children[0].type).toBe(HomeConceptContent)
     expect(children[1].type).toBe(ShopSectionGate)
+  })
+
+  it('marks every homepage section for engagement measurement', () => {
+    // The engagement beacon attributes scroll depth by querying
+    // [data-experiment-section] against the LIVE DOM. Markers were once added to
+    // the retired home-2026 component instead, which nothing renders — so the
+    // homepage reported one section out of ten and the hero could not be
+    // measured at all. Render what actually ships and count.
+    const html = renderToStaticMarkup(
+      createElement(HomeConceptContent, { teamMembers: [{ name: 'Ada GoInvo', image: '/team/ada.jpg' }] }),
+    )
+
+    const sections = html.match(/<section\b[^>]*>/g) ?? []
+    const unmarked = sections.filter((tag) => !tag.includes('data-experiment-section='))
+    expect(unmarked).toEqual([])
+
+    const keys = [...html.matchAll(/data-experiment-section="([^"]+)"/g)].map((match) => match[1])
+    // The key has to survive ExperimentExposure's own validation, or the section
+    // is silently dropped from the beacon rather than reported as broken.
+    for (const key of keys) expect(key).toMatch(/^[a-z0-9][a-z0-9-]{0,47}$/)
+    expect(new Set(keys).size).toBe(keys.length)
+    expect(keys).toContain('hero')
+    expect(keys).toContain('book-call')
   })
 
   it('preserves article content unless a matching Sanity-authored variant is selected', () => {
