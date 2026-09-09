@@ -1,6 +1,9 @@
 import { generatePermutations } from 'flags/next'
 import { HomePageRenderer } from '@/components/home/HomePageRenderer'
 import { getMarketingFlagsSecret, marketingExperimentFlags } from '@/flags'
+import { getExperimentExposure, getPrecomputedExperimentVariant } from '@/lib/experiments/registry'
+import { ExperimentExposure } from '@/components/analytics/ExperimentExposure'
+import { metadata as homeMetadata } from '@/app/(main)/page'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -9,6 +12,7 @@ export const dynamicParams = true
 // Canonicalize to / so search engines index the homepage and consolidate the
 // internal /__exp variant URLs onto it (Google's recommended A/B-test setup).
 export const metadata = {
+  ...homeMetadata,
   alternates: { canonical: '/' },
 }
 
@@ -20,9 +24,16 @@ export async function generateStaticParams() {
   return codes.map((code) => ({ code }))
 }
 
-// Served at / via the A/B rewrite so the shop-section variant cookie is set at
-// the edge. The homepage content is the concept homepage for everyone now; the
-// section's presence is decided client-side from that cookie (ShopSectionGate).
-export default async function ExperimentHomePage() {
-  return <HomePageRenderer />
+// Resolve before rendering so the assigned hero is in the first HTML response.
+export default async function ExperimentHomePage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  const assignment = await getPrecomputedExperimentVariant('/', code)
+  // eslint-disable-next-line no-restricted-syntax -- Flags SDK values are not Sanity stega-encoded fields.
+  const heroVariant = assignment?.variant === 'runway' ? 'runway' : 'control'
+  return (
+    <>
+      {assignment && <ExperimentExposure experiment={getExperimentExposure(assignment.experiment, heroVariant, '/')} />}
+      <HomePageRenderer heroVariant={heroVariant} />
+    </>
+  )
 }

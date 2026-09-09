@@ -309,10 +309,10 @@ describe('marketing-plan session signatures', () => {
 
 describe('public experiment beacon validation', () => {
   const valid = {
-    experiment_id: 'home-shop-section',
-    flag_key: 'home-shop-section-variant',
-    measurement_key: '2026-08-12-initial-v1',
-    variant: 'present',
+    experiment_id: 'home-hero-runway',
+    flag_key: 'home-hero-runway-variant',
+    measurement_key: '2026-09-08-initial-v1',
+    variant: 'runway',
     page_path: '/',
   }
 
