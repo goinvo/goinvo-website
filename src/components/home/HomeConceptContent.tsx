@@ -1,3 +1,6 @@
+import type { CSSProperties } from 'react'
+import type { HomeHeroVariant } from '@/flags'
+import { HomeHeroRunway } from '@/components/home/HomeHeroRunway'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
@@ -8,6 +11,154 @@ import { HomeConceptTrackedArrowLink } from '@/components/home/HomeConceptTracke
 import { ConceptReferenceArrow } from '@/components/home/ConceptReferenceArrow'
 
 const imageBase = '/images/experiments/home-2026'
+
+const heroCss = `
+  /* The hero's ground colour, and the ONLY place it is written down. The runway
+     fade below dissolves into this exact value, so a seam is impossible.
+     They had drifted: the section carried Tailwind's \`bg-black\`, which this
+     site's theme redefines as #1d1b1a (--color-black), while the fade was
+     written as a literal #000 — so the flat top of the hero sat a visible step
+     lighter than the black the plane receded into. */
+  .eid-hero {
+    --eid-ink: 0 0 0;
+    background-color: rgb(var(--eid-ink));
+  }
+
+  /* The plane sits BELOW the fold line of the section and is clipped by it. The
+     mask keeps the first 200px from starting hard against the lettering, and
+     the last --eid-tail from ending hard against the section edge.
+
+     That tail is not decoration. The belt glides, so the section's bottom edge
+     lands on a DIFFERENT part of the plane every second — a row's near edge, the
+     26px gap between rows, the middle of a screenshot. Unmasked, that cut showed
+     as a stack of hard full-width bands (black gutter, then a solid stripe of
+     whatever colour the next row happened to be). Nothing static fixes a moving
+     seam; the layer has to dissolve before it gets there. It is masked on the
+     CONTAINER so the images AND the fade over them go together — .eid-runway-fade
+     alone can only tint toward the ink, it cannot end the layer. */
+  .eid-runway {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* How much of the layer the section crops, and how long the tail gets to
+       dissolve in. The mask has to reach zero at the CROP line, not at its own
+       100% — 40px of this element is never painted. */
+    --eid-lead-start: 60px;
+    --eid-lead: 200px;
+    --eid-overhang: 40px;
+    --eid-tail: 150px;
+    bottom: calc(-1 * var(--eid-overhang));
+    height: 560px;
+    perspective: 900px;
+    perspective-origin: 50% 0%;
+    overflow: hidden;
+    -webkit-mask-image: var(--eid-runway-mask);
+    mask-image: var(--eid-runway-mask);
+    --eid-runway-mask: linear-gradient(
+      180deg,
+      transparent 0,
+      transparent var(--eid-lead-start),
+      #000 var(--eid-lead),
+      #000 calc(100% - var(--eid-overhang) - var(--eid-tail)),
+      transparent calc(100% - var(--eid-overhang))
+    );
+  }
+
+  .eid-runway-plane {
+    position: absolute;
+    left: 50%;
+    top: 6px;
+    width: 860px;
+    height: 1400px;
+    margin-left: -430px;
+    transform-origin: 50% 0%;
+    transition: transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+    z-index: 1;
+  }
+
+  .eid-runway-belt { animation: eid-runway-glide 42s linear infinite; }
+
+  /* The belt is rendered twice and travels exactly one copy, so the seam never
+     shows. Change the row count and this still holds. */
+  @keyframes eid-runway-glide {
+    from { transform: translateY(-50%); }
+    to { transform: translateY(0); }
+  }
+
+  .eid-runway-row { padding-bottom: 26px; }
+
+  .eid-runway-row img {
+    width: 100%;
+    height: 600px;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+
+  /* Solid at the horizon end, clearing as the plane comes toward the viewer —
+     this is what makes the work read as receding INTO the black. */
+  .eid-runway-fade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    transform: translateZ(1px);
+    background: linear-gradient(
+      180deg,
+      rgb(var(--eid-ink)) 0%,
+      rgb(var(--eid-ink)) 18%,
+      rgb(var(--eid-ink) / 0.92) 32%,
+      rgb(var(--eid-ink) / 0.25) 65%,
+      rgb(var(--eid-ink) / 0) 100%
+    );
+  }
+
+  /* The design canvas is 1280px only. Below that the plane is scaled down
+     rather than cropped, so a phone gets the same picture, not a slice of it. */
+  @media (max-width: 767px) {
+    /* A 400px layer has to spend its budget differently: a shorter lead-in to
+       buy a LONGER tail. At 560px of plane the near rows are legible work worth
+       holding; at 390px wide they are a texture, and a solid-coloured frame
+       arriving at the section edge reads as a stripe unless it has real room to
+       dissolve. Set --eid-overhang here rather than the bottom offset — the mask
+       reads it, so the two can never drift apart. */
+    .eid-runway {
+      height: 400px;
+      --eid-lead-start: 40px;
+      --eid-lead: 140px;
+      --eid-overhang: 24px;
+      --eid-tail: 210px;
+    }
+    .eid-runway-plane { width: 560px; height: 1000px; margin-left: -280px; }
+    .eid-runway-row { padding-bottom: 18px; }
+    .eid-runway-row img { height: 420px; }
+  }
+
+  /* The design's gi-reveal: fade up on first paint, staggered via --d. */
+  .eid-hero .eid-reveal {
+    opacity: 0;
+    animation: eid-fade-up 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--d, 0) * 90ms + 120ms);
+  }
+
+  @keyframes eid-fade-up {
+    from { opacity: 0; transform: translate3d(0, 16px, 0); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .eid-hero .eid-reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+
+    .eid-runway-belt { animation: none; }
+    .eid-runway-plane { transition: none; }
+  }
+`
 
 const logos = [
   '3M',
@@ -203,10 +354,11 @@ function ArrowLink({
 }
 
 interface HomeConceptContentProps {
+  heroVariant?: HomeHeroVariant
   teamMembers?: { name: string; image: string }[]
 }
 
-export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps = {}) {
+export function HomeConceptContent({ teamMembers = [], heroVariant = 'control' }: HomeConceptContentProps = {}) {
   // A headshot grid stands in for the outdated group photo until a new one is
   // taken: ten photographed members (Jonathan Follett shown in place of Tala
   // Habbab, plus Alexandra Coston) followed by a 2-wide studio placeholder tile.
@@ -223,7 +375,73 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
   return (
     <div className="bg-[#fbfaf7] text-[#1d1b1a]">
       <HomeConceptInteractions />
-      <section className="relative overflow-hidden bg-[#1d1b1a] text-white">
+      {heroVariant === 'runway' ? (
+      <section data-experiment-section="hero" className="eid-hero relative isolate overflow-hidden bg-black text-white">
+        <style>{heroCss}</style>
+        <HomeHeroRunway />
+
+        {/* The tall bottom padding is what the runway occupies — it is clipped by
+            this section, so the plane needs the room to recede into. */}
+        {/* The design's 40px top padding sat the lettering hard under the header;
+            it gets room to breathe instead. */}
+        <div className="relative z-10 mx-auto max-w-[1280px] px-5 pb-[clamp(230px,26vw,320px)] pt-[clamp(72px,9vw,140px)] text-center sm:px-8 lg:px-14">
+          <h1 style={{ viewTransitionName: 'page-title' }}>
+            {/* Real text in the heading rather than only the image's alt — it is
+                what crawlers read, and it survives the image failing to load. */}
+            <span className="sr-only">Everything is designed</span>
+            <Image
+              src={`${imageBase}/everything-is-designed.png`}
+              alt=""
+              width={852}
+              height={459}
+              priority
+              sizes="(max-width: 940px) 100vw, 880px"
+              className="eid-reveal mx-auto block h-auto w-full max-w-[880px]"
+              // The ink is white on transparency and sits over photography, so it
+              // carries its own shadow rather than relying on the fade behind it.
+              style={{ filter: 'drop-shadow(0 10px 60px rgba(0,0,0,0.9))', '--d': 0 } as CSSProperties}
+            />
+          </h1>
+
+          {/* The design pulls this up 28px into the lettering's baked-in padding.
+              This PNG is cropped tight to the ink, so it gets a real gap instead. */}
+          <p
+            className="eid-reveal mx-auto mt-7 max-w-[54ch] text-[19px] leading-[1.55] text-white/[.78] sm:text-[21px]"
+            style={{ '--d': 1 } as CSSProperties}
+          >
+            Little of it is designed well.
+            <br />
+            We&rsquo;re a design studio that turns nascent ideas into shipped software for enterprise and healthcare leaders.
+          </p>
+
+          <div
+            className="eid-reveal mt-11 flex flex-wrap items-center justify-center gap-[18px]"
+            style={{ '--d': 2 } as CSSProperties}
+          >
+            <HomeConceptCtaLink
+              href="#book"
+              label="Book a discovery call"
+              location="concept hero"
+              variant="primary"
+              qualifiedDiscoveryCall
+              className={conceptButtonPrimary}
+            >
+              <span>Book a discovery call</span>
+              <ConceptReferenceArrow className="shrink-0 group-hover:translate-x-[5px]" />
+            </HomeConceptCtaLink>
+            <HomeConceptTrackedArrowLink
+              href="/work"
+              label="Or see the work"
+              location="concept hero"
+              className="text-[15px] opacity-85 hover:opacity-100"
+            >
+              Or see the work
+            </HomeConceptTrackedArrowLink>
+          </div>
+        </div>
+      </section>
+      ) : (
+      <section data-experiment-section="hero" className="relative overflow-hidden bg-[#1d1b1a] text-white">
         <Image
           src={`${imageBase}/ipsosherodark.jpg`}
           alt=""
@@ -282,8 +500,9 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
           Ipsos · Facto AI platform
         </div>
       </section>
+      )}
 
-      <section className="py-14 lg:py-20">
+      <section data-experiment-section="client-proof" className="py-14 lg:py-20">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
           <p className="text-center text-sm text-[#6a6560] mb-8">
             Twenty years designing enterprise and healthcare software for Fortune 500s, federal agencies, and funded startups.
@@ -315,7 +534,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="services" className="py-16 lg:py-24">
+      <section id="services" data-experiment-section="services" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[1fr_2.2fr]">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">What we do</p>
@@ -338,7 +557,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="work" className="py-16 lg:py-24 bg-[#f4f1ea]">
+      <section id="work" data-experiment-section="selected-work" className="py-16 lg:py-24 bg-[#f4f1ea]">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
           <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
             <div>
@@ -396,7 +615,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="about" className="py-16 lg:py-24">
+      <section id="about" data-experiment-section="why-goinvo" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[5fr_4fr]">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">Why GoInvo</p>
@@ -422,7 +641,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="open" className="py-16 lg:py-24 bg-[#1d1b1a] text-white">
+      <section id="open" data-experiment-section="open-source" className="py-16 lg:py-24 bg-[#1d1b1a] text-white">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14">
           <h2 className="font-serif text-3xl lg:text-5xl leading-tight mb-10">Open Source Design</h2>
           <div className="grid gap-6 lg:grid-cols-3">
@@ -449,7 +668,7 @@ export function HomeConceptContent({ teamMembers = [] }: HomeConceptContentProps
         </div>
       </section>
 
-      <section id="vision" className="py-16 lg:py-24">
+      <section id="vision" data-experiment-section="studio" className="py-16 lg:py-24">
         <div className="max-w-[1280px] mx-auto px-5 sm:px-8 lg:px-14 grid gap-10 lg:grid-cols-[1fr_1.05fr] items-center">
           <div>
             <p className="text-[11px] tracking-[0.16em] uppercase font-bold text-primary">The studio</p>

@@ -15,6 +15,7 @@ import {
   getExperimentExposure,
   home2026Experiment,
   homeShopSectionExperiment,
+  homeHeroExperiment,
   normalizeExperimentPath,
   validatePageExperimentRegistry,
   type PageExperiment,
@@ -99,20 +100,21 @@ afterEach(() => {
 })
 
 describe('page experiment registry', () => {
-  it('retires home-2026 and runs the shop-section experiment on the homepage', () => {
+  it('retires the previous tests and runs the hero experiment on the homepage', () => {
     expect(home2026Experiment.status).toBe('retired')
     expect(homeShopSectionExperiment).toMatchObject({
       id: 'home-shop-section',
       code: 'home-shop-section',
       targetPath: '/',
       flagKey: 'home-shop-section-variant',
-      status: 'running',
+      status: 'retired',
     })
     expect(homeShopSectionExperiment.variants.map((variant) => variant.key)).toEqual([
       'control',
       'present',
     ])
     // One running experiment on '/', each with a control variant -> valid.
+    expect(homeHeroExperiment.status).toBe('running')
     expect(validatePageExperimentRegistry()).toEqual([])
   })
 
@@ -148,23 +150,23 @@ describe('page experiment registry', () => {
   })
 
   it('validates forced preview variant query params for the current experiment path', () => {
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=present`))).toMatchObject({
-      experiment: homeShopSectionExperiment,
-      variant: 'present',
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=runway`))).toMatchObject({
+      experiment: homeHeroExperiment,
+      variant: 'runway',
       source: 'variant-param',
     })
-    expect(getForcedExperimentVariant('/', new URLSearchParams('home-shop-section-variant=control'))).toMatchObject({
-      experiment: homeShopSectionExperiment,
+    expect(getForcedExperimentVariant('/', new URLSearchParams('home-hero-runway-variant=control'))).toMatchObject({
+      experiment: homeHeroExperiment,
       variant: 'control',
       source: 'flag-key-param',
     })
-    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-shop-section:present`))).toMatchObject({
-      experiment: homeShopSectionExperiment,
-      variant: 'present',
+    expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_ASSIGNMENT_PARAM}=home-hero-runway:runway`))).toMatchObject({
+      experiment: homeHeroExperiment,
+      variant: 'runway',
       source: 'assignment-param',
     })
     expect(getForcedExperimentVariant('/', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=missing`))).toBeNull()
-    expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=present`))).toBeNull()
+    expect(getForcedExperimentVariant('/studio', new URLSearchParams(`${EXPERIMENT_FORCE_VARIANT_PARAM}=runway`))).toBeNull()
   })
 
   it('builds shareable forced preview URLs while preserving custom query params', () => {

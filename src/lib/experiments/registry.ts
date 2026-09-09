@@ -3,9 +3,11 @@ import {
   getMarketingFlagsSecret,
   home2026Variant,
   homeShopSectionVariant,
+  homeHeroVariant,
   marketingExperimentFlags,
   type Home2026Variant,
   type HomeShopSectionVariant,
+  type HomeHeroVariant,
 } from '@/flags'
 
 export type ExperimentPageKind = 'homepage' | 'vision'
@@ -65,8 +67,8 @@ export const homeShopSectionExperiment: PageExperiment<HomeShopSectionVariant> =
   code: 'home-shop-section',
   kind: 'homepage',
   targetPath: '/',
-  // The active homepage experiment now that home-2026 is retired.
-  status: 'running',
+  // The prints section shipped to everyone on 2026-08-17.
+  status: 'retired',
   flagKey: homeShopSectionVariant.key,
   measurementKey: '2026-08-12-initial-v1',
   flag: homeShopSectionVariant,
@@ -76,7 +78,22 @@ export const homeShopSectionExperiment: PageExperiment<HomeShopSectionVariant> =
   ],
 }
 
-export const pageExperiments = [home2026Experiment, homeShopSectionExperiment] as const
+export const homeHeroExperiment: PageExperiment<HomeHeroVariant> = {
+  id: 'home-hero-runway',
+  code: 'home-hero-runway',
+  kind: 'homepage',
+  targetPath: '/',
+  status: 'running',
+  flagKey: homeHeroVariant.key,
+  measurementKey: '2026-09-08-initial-v1',
+  flag: homeHeroVariant,
+  variants: [
+    { key: 'control', label: 'Current Ipsos hero' },
+    { key: 'runway', label: 'Everything is designed runway' },
+  ],
+}
+
+export const pageExperiments = [home2026Experiment, homeShopSectionExperiment, homeHeroExperiment] as const
 
 export function normalizeExperimentPath(pathname: string) {
   if (!pathname || pathname === '/') return '/'

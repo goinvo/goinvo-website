@@ -5,6 +5,7 @@ import { sanityFetch } from '@/sanity/lib/live'
 import { teamMembersQuery } from '@/sanity/lib/queries'
 import { urlForImage } from '@/sanity/lib/image'
 import type { TeamMember } from '@/types'
+import type { HomeHeroVariant } from '@/flags'
 
 async function getHomeTeamMembers() {
   const { data: members } = (await sanityFetch({ query: teamMembersQuery })) as { data: TeamMember[] }
@@ -34,7 +35,7 @@ async function withConceptGridMembers(base: { name: string; image: string }[]) {
   return [...base, { name: data.name, image: urlForImage(data.image).width(300).height(300).url() }]
 }
 
-export async function HomePageRenderer() {
+export async function HomePageRenderer({ heroVariant = 'control' }: { heroVariant?: HomeHeroVariant } = {}) {
   const teamMembers = await getHomeTeamMembers()
   const conceptMembers = await withConceptGridMembers(teamMembers)
 
@@ -42,7 +43,7 @@ export async function HomePageRenderer() {
   // section rides along, gated by its own presence/absence experiment.
   return (
     <>
-      <HomeConceptContent teamMembers={conceptMembers} />
+      <HomeConceptContent teamMembers={conceptMembers} heroVariant={heroVariant} />
       <ShopSectionGate>
         <HomeGoinvoAtHome />
       </ShopSectionGate>

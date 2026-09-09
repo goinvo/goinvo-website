@@ -105,5 +105,31 @@ export const homeShopSectionVariant = flag<HomeShopSectionVariant, MarketingFlag
   ...homeShopSectionFlagProvider,
 })
 
-export const marketingExperimentFlags = [home2026Variant, homeShopSectionVariant] as const
+export type HomeHeroVariant = 'control' | 'runway'
+
+// A fresh seed keeps this hero test independent of previous homepage cohorts.
+export function assignHomeHeroVariant(visitorId?: string): HomeHeroVariant {
+  if (!visitorId) return 'control'
+  const input = `home-hero-runway-variant:${visitorId}`
+  let hash = 2166136261
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0) % 100 < 50 ? 'control' : 'runway'
+}
+
+export const homeHeroVariant = flag<HomeHeroVariant, MarketingFlagEntities>({
+  key: 'home-hero-runway-variant',
+  description: '50/50 homepage hero test: Ipsos versus Everything is designed with the work runway.',
+  defaultValue: 'control',
+  options: [
+    { value: 'control', label: 'Current Ipsos hero' },
+    { value: 'runway', label: 'Everything is designed runway' },
+  ],
+  identify: identifyMarketingVisitor,
+  decide: ({ entities }) => assignHomeHeroVariant(entities?.visitor?.id),
+})
+
+export const marketingExperimentFlags = [home2026Variant, homeShopSectionVariant, homeHeroVariant] as const
 
