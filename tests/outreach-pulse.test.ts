@@ -70,6 +70,44 @@ describe('summarizeOutreach', () => {
     ])
   })
 
+  it('counts progress as a move into a state, not a touch that found them there', () => {
+    const pulse = summarizeOutreach(
+      [
+        contact({
+          interactions: [
+            // Booked last week, so this week's voicemail is not a new meeting.
+            { at: '2026-09-15T10:00:00Z', by: 'Juhan', channel: 'video', statusAfter: 'meeting' },
+            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'meeting' },
+          ],
+        }),
+        contact({
+          _id: 'client',
+          interactions: [
+            { at: '2026-09-23T10:00:00Z', by: 'Eric', channel: 'phone', statusAfter: 'won', value: 1 },
+            { at: '2026-09-24T10:00:00Z', by: 'Eric', channel: 'phone', statusAfter: 'won', value: 1 },
+          ],
+        }),
+      ],
+      WEEK,
+    )
+    expect(pulse).toMatchObject({ touches: 3, meetings: 0, won: 1, wonValue: 1 })
+  })
+
+  it('reads the order from the timestamps, not the array', () => {
+    const pulse = summarizeOutreach(
+      [
+        contact({
+          interactions: [
+            { at: '2026-09-23T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' },
+            { at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'contacted' },
+          ],
+        }),
+      ],
+      WEEK,
+    )
+    expect(pulse.replies).toBe(1)
+  })
+
   it('treats follow-ups as a state as of now, not an event in the window', () => {
     const pulse = summarizeOutreach(
       [
@@ -178,6 +216,13 @@ describe('marquetaActions', () => {
     expect(decodeCallLogMetadata('[]')).toBeNull()
     expect(decodeTaskStuckMetadata(undefined)).toBeNull()
     expect(decodeStrategyValue(JSON.stringify({ m: 'soon' }))).toBeNull()
+  })
+
+  it('stays inside Slack’s value cap even when JSON escaping inflates the text', () => {
+    // Newlines double and control characters grow sixfold once encoded.
+    const inflated = encodeContactRef({ contactId: 'c1', organization: 'MGB', note: '\n'.repeat(1200) + '\u0001'.repeat(1200) })
+    expect(inflated.length).toBeLessThanOrEqual(1900)
+    expect(decodeContactRef(inflated)?.contactId).toBe('c1')
   })
 
   it('stays inside Slack’s value cap however long the input', () => {

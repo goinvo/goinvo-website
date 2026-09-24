@@ -183,14 +183,67 @@ export type RunwayCheckIn = {
 }
 
 /**
+ * The most recent moment a contact BECAME won, as the check-in sees it.
+ *
+ * A transition into won — never the latest interaction that merely left a
+ * contact at won. Won is absorbing, so every call logged with a client already
+ * won also reads `statusAfter: 'won'`; built from those, this question would
+ * come back after every routine call. Build it with `latestWin`
+ * (strategyCheck.ts), which reads the call log that way.
+ */
+export type RunwayWin = {
+  /** ISO date or datetime of the log entry that moved the contact into won. */
+  at: string
+  /** Who or what was won, in the record's own words. "Jane Doe (Acme)". */
+  label: string
+}
+
+/** A win's label is record text; one line of a question is no place for a paragraph. */
+const WIN_LABEL_MAX = 120
+
+/**
+ * The label, made safe to sit in a sentence that ends up in Slack.
+ *
+ * Every current reader of `reason` pastes it into mrkdwn, and until wins
+ * arrived nothing in it came from a record. Angle brackets are Slack's control
+ * sequences — a contact called `<!here>` would ping the channel — and no real
+ * name or organisation contains them, so they are dropped here as a second
+ * line of defence. Renderers still escape; this only means one that forgets
+ * cannot be turned into a broadcast.
+ */
+function winLabel(label: string): string {
+  const flat = String(label || '')
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!flat) return 'A deal'
+  return flat.length > WIN_LABEL_MAX ? `${flat.slice(0, WIN_LABEL_MAX - 1).trimEnd()}…` : flat
+}
+
+/**
  * Should the suite ask about the runway?
  *
  * The point is to ask BEFORE the number stops being true, not to nag. Three
  * triggers, in order of how much they matter: nothing recorded at all; the end
  * is close enough that the strategy is about to change; the record has simply
  * gone stale.
+ *
+ * And a fourth, quieter one: somebody marked a deal WON after the runway was
+ * last confirmed. Winning work is the single most likely reason the date is
+ * now wrong — and in the good direction, which is exactly the change nobody
+ * rushes to record, because nothing feels urgent about good news. Left alone,
+ * the posture keeps planning a rescue for a studio that just signed its way out
+ * of one. It never outranks the other three: a runway that is running out, or
+ * that nobody has confirmed in a month, is the more important question, and
+ * whoever answers it will have the win in mind anyway.
+ *
+ * `latestWin` is optional so every existing caller behaves exactly as before.
  */
-export function runwayCheckIn(stored: StoredPosture, now: Date = new Date()): RunwayCheckIn {
+export function runwayCheckIn(
+  stored: StoredPosture,
+  now: Date = new Date(),
+  opts: { latestWin?: RunwayWin | null } = {},
+): RunwayCheckIn {
   const runway = stored.runway || {}
   const months = monthsOfRunway(runway.certainUntil, now)
 
@@ -233,6 +286,18 @@ export function runwayCheckIn(stored: StoredPosture, now: Date = new Date()): Ru
           ? 'The runway date has never been confirmed by a person.'
           : `The runway was last confirmed ${ageDays} days ago.`,
       question: `Still ${formatMonths(months)} of certain runway, or has that moved?`,
+    }
+  }
+
+  // Strictly newer than the confirmation: a win logged before somebody last
+  // said "still right" was already in their head when they said it.
+  const winAt = parse(opts.latestWin?.at)
+  if (opts.latestWin && winAt !== null && (confirmedAt === null || winAt > confirmedAt)) {
+    return {
+      due: true,
+      urgent: false,
+      reason: `${winLabel(opts.latestWin.label)} was marked won on ${formatRunwayDate(opts.latestWin.at)} — did it extend the runway?`,
+      question: `The date still says ${formatMonths(months)} (to ${formatRunwayDate(runway.certainUntil)}).`,
     }
   }
 
