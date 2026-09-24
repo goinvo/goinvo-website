@@ -75,6 +75,9 @@ export const checkInTaskActionsBlockId = (taskId: string) => `mq_task_actions_${
 
 const clip = (value: unknown, max: number) => String(value ?? '').slice(0, max)
 
+/** Under Slack's 2,000-character button value cap, with room to spare. */
+const BUTTON_VALUE_BUDGET = 1900
+
 function parseObject(value: string | undefined): Record<string, unknown> | null {
   try {
     const parsed = JSON.parse(String(value || ''))
@@ -114,15 +117,39 @@ export function encodeContactRef(input: {
   note?: string
   outcome?: string
 }): string {
-  return JSON.stringify({
-    c: clip(input.contactId, 180),
-    o: clip(input.organization, 180),
-    ...(input.name ? { p: clip(input.name, 120) } : {}),
-    ...(input.role ? { r: clip(input.role, 120) } : {}),
-    ...(input.outcome ? { g: clip(input.outcome, 24) } : {}),
-    // Last and shortest-capped so the whole value always fits Slack's 2000.
-    ...(input.note ? { n: clip(input.note, 1200) } : {}),
-  })
+  return fitJson(
+    {
+      c: clip(input.contactId, 180),
+      o: clip(input.organization, 180),
+      ...(input.name ? { p: clip(input.name, 120) } : {}),
+      ...(input.role ? { r: clip(input.role, 120) } : {}),
+      ...(input.outcome ? { g: clip(input.outcome, 24) } : {}),
+      ...(input.note ? { n: clip(input.note, 1200) } : {}),
+    },
+    // The note is the only part worth giving up: it just prefills a form.
+    ['n', 'r', 'p', 'o'],
+  )
+}
+
+/**
+ * Encode, then shrink the named fields until the result fits a button value.
+ *
+ * Clipping characters BEFORE encoding is not enough: JSON doubles a quote or a
+ * newline and turns a control character into six, so a 1,200-character note
+ * of line breaks encodes to ~2,400 — over Slack's 2,000, which makes Slack
+ * drop the whole message. Measuring the encoded string is the only honest cap.
+ */
+function fitJson(value: Record<string, string>, shrinkOrder: string[], max = BUTTON_VALUE_BUDGET): string {
+  const next = { ...value }
+  let encoded = JSON.stringify(next)
+  for (const key of shrinkOrder) {
+    while (encoded.length > max && next[key]) {
+      next[key] = next[key].slice(0, Math.floor(next[key].length / 2))
+      if (!next[key]) delete next[key]
+      encoded = JSON.stringify(next)
+    }
+  }
+  return encoded
 }
 
 export function decodeContactRef(value: string | undefined): ContactRef | null {
@@ -224,6 +251,13 @@ export function decodeTaskStuckMetadata(value: string | undefined): TaskStuckMet
  * Every field the quick log may change travels here with its PRIOR value, and
  * the interaction's own `_key`, so undo removes exactly that entry. An empty
  * string means the field was absent and must be unset again, not set to "".
+ *
+ * The close (`closedAt`, `closedValue`, `closeReason`) travels only when the
+ * log changed it — a Lost contact that picked up again, or a live one marked
+ * "Not a fit". Without it, "called Jane, no answer" about somebody lost last
+ * spring would erase the loss date and reason with no way back from Slack.
+ * `closedAt === undefined` means "not carried: leave the close alone";
+ * `''` / `null` mean "was absent: unset it again".
  */
 export type CallLogUndo = {
   contactId: string
@@ -234,11 +268,19 @@ export type CallLogUndo = {
     lastContactedAt: string
     attributionChannel: string
     nextStep: string
+    closedAt?: string
+    closedValue?: number | null
+    closeReason?: string
   }
 }
 
+/** The longest close reason an Undo button carries. A longer one is not carried at all. */
+export const CALL_LOG_UNDO_CLOSE_REASON_MAX = 500
+
+const BUTTON_VALUE_MAX = 2000
+
 export function encodeCallLogUndo(input: CallLogUndo): string {
-  return JSON.stringify({
+  const value: Record<string, unknown> = {
     c: clip(input.contactId, 180),
     k: clip(input.interactionKey, 120),
     s: clip(input.prior.status, 30),
@@ -246,7 +288,24 @@ export function encodeCallLogUndo(input: CallLogUndo): string {
     l: clip(input.prior.lastContactedAt, 40),
     a: clip(input.prior.attributionChannel, 30),
     x: clip(input.prior.nextStep, 600),
-  })
+  }
+  if (input.prior.closedAt !== undefined) {
+    const closedValue = input.prior.closedValue
+    value.z = [
+      clip(input.prior.closedAt, 40),
+      typeof closedValue === 'number' && Number.isFinite(closedValue) ? closedValue : null,
+      clip(input.prior.closeReason, CALL_LOG_UNDO_CLOSE_REASON_MAX),
+    ]
+  }
+  // JSON escaping can double a quote- or newline-heavy string, and Slack drops
+  // the whole message for one over-long value. The close goes first — an Undo
+  // without it refuses, which is safe — then the next step, whose clipped copy
+  // Undo already knows not to write over the full one.
+  if (JSON.stringify(value).length > BUTTON_VALUE_MAX) delete value.z
+  while (JSON.stringify(value).length > BUTTON_VALUE_MAX && String(value.x).length > 0) {
+    value.x = String(value.x).slice(0, Math.floor(String(value.x).length / 2))
+  }
+  return JSON.stringify(value)
 }
 
 export function decodeCallLogUndo(value: string | undefined): CallLogUndo | null {
@@ -255,6 +314,8 @@ export function decodeCallLogUndo(value: string | undefined): CallLogUndo | null
   const contactId = clip(parsed.c, 180).trim()
   const interactionKey = clip(parsed.k, 120).trim()
   if (!contactId || !interactionKey) return null
+  const close = Array.isArray(parsed.z) && parsed.z.length >= 3 ? parsed.z : null
+  const closedValue = close?.[1]
   return {
     contactId,
     interactionKey,
@@ -264,6 +325,13 @@ export function decodeCallLogUndo(value: string | undefined): CallLogUndo | null
       lastContactedAt: clip(parsed.l, 40).trim(),
       attributionChannel: clip(parsed.a, 30).trim(),
       nextStep: clip(parsed.x, 600),
+      ...(close
+        ? {
+            closedAt: clip(close[0], 40).trim(),
+            closedValue: typeof closedValue === 'number' && Number.isFinite(closedValue) ? closedValue : null,
+            closeReason: clip(close[2], CALL_LOG_UNDO_CLOSE_REASON_MAX),
+          }
+        : {}),
     },
   }
 }

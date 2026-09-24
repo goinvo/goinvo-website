@@ -47,6 +47,7 @@ import {
   OUTREACH_INTAKE_LIMITS,
 } from '@/lib/marketing/outreachIntake'
 import { marketingOperationHash } from '@/lib/marketing/operations'
+import { buildContactLogWrite } from '@/lib/marketing/callLog'
 import {
   buildMarketingContactIdentityClaims,
   fetchMarketingContactIdentityClaims,
@@ -77,7 +78,6 @@ import {
 } from '@/lib/marketing/outreachIntegrity'
 import {
   appendIntakeDraftEntries,
-  buildInteractionEntry,
   buildWarmStartSuggestions,
   compactEvidenceIndex,
   contactDedupeKey,
@@ -2061,7 +2061,6 @@ export function OutreachWorkspaceContent({
       return
     }
     setSavingLog(true)
-    const at = new Date().toISOString()
     const selectedProposal = (contact.proposedOffers || []).find(
       (offer) => logOfferRef === `proposal:${offer._key || slugify(offer.title || 'offer')}`,
     )
@@ -2069,56 +2068,35 @@ export function OutreachWorkspaceContent({
     const selectedOfferKey = selectedProposal ? logOfferRef : selectedCatalog?.key
     const selectedOfferTitle = selectedProposal?.title || selectedCatalog?.title
     const evidenceIds = [...new Set(logEvidenceIds.filter((id) => evidenceUrlById.has(id)))].slice(0, 10)
-    const terminal = ['won', 'lost', 'closed'].includes(logStatus)
-    const entry = buildInteractionEntry({
-      at,
-      by: currentUser?.name || currentUser?.id,
-      outcome: logOutcome.trim() || undefined,
-      intel: logIntel.trim() || undefined,
-      nextStep: terminal ? undefined : logNextStep.trim() || undefined,
-      statusAfter: logStatus,
-      channel: logChannel,
-      offerKey: selectedOfferKey,
-      offerTitle: selectedOfferTitle,
-      evidenceIds,
-      value: numericValue,
-    })
-    const set: Record<string, unknown> = { status: logStatus, lastContactedAt: at }
-    set.attributionChannel = logChannel
-    if (selectedOfferKey) set.attributedOfferKey = selectedOfferKey
-    if (selectedOfferTitle) set.attributedOfferTitle = selectedOfferTitle
-    if (evidenceIds.length > 0) set.attributedEvidenceIds = evidenceIds
-    if (numericValue !== undefined) {
-      if (logStatus === 'won') set.closedValue = numericValue
-      else set.estimatedValue = numericValue
-    }
-    if (logStatus === 'lost') set.closedValue = 0
-    if (terminal) {
-      set.closedAt = at
-      if (logOutcome.trim()) set.closeReason = logOutcome.trim()
-    }
-    if (!terminal && logNextStep.trim()) set.nextStep = logNextStep.trim()
-    if (!terminal && logFollowUpDays !== null) {
-      set.followUpAt = new Date(Date.now() + logFollowUpDays * 86400000).toISOString()
-    }
+    // The rules for what a log writes (what Won closes, what a reopened
+    // contact sheds) live in callLog.ts, shared with Marqueta's Slack log, so
+    // the two can never disagree about a contact's state.
+    const now = new Date()
     try {
+      const write = buildContactLogWrite({
+        contact,
+        at: now.toISOString(),
+        by: currentUser?.name || currentUser?.id,
+        statusAfter: logStatus,
+        channel: logChannel,
+        outcome: logOutcome,
+        intel: logIntel,
+        nextStep: logNextStep,
+        offerKey: selectedOfferKey,
+        offerTitle: selectedOfferTitle,
+        evidenceIds,
+        value: numericValue,
+        followUpDays: logFollowUpDays,
+        now,
+      })
       let patch = outreachClient
         .patch(contact._id)
         .setIfMissing({ interactions: [] })
-        .set(set)
-      const unset: string[] = []
-      if (terminal || !logNextStep.trim()) unset.push('nextStep')
-      if (terminal || logFollowUpDays === null) unset.push('followUpAt')
-      if (
-        !terminal &&
-        (contact.closedAt || typeof contact.closedValue === 'number' || contact.closeReason)
-      ) {
-        unset.push('closedAt', 'closedValue', 'closeReason')
-      }
-      if (unset.length > 0) patch = patch.unset(unset)
-      if (contact._rev) patch = patch.ifRevisionId(contact._rev)
+        .set(write.set)
+      if (write.unset.length > 0) patch = patch.unset(write.unset)
+      if (write.ifRevisionId) patch = patch.ifRevisionId(write.ifRevisionId)
       await patch
-        .insert('after', 'interactions[-1]', [entry])
+        .insert('after', 'interactions[-1]', [write.entry])
         .commit()
       setLoggingId(null)
       await loadOutreach()
@@ -2127,7 +2105,7 @@ export function OutreachWorkspaceContent({
       clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)
       say(
         `Logged ${labelForValue(STATUS_SHORT_OPTIONS, logStatus).toLowerCase()} for ${contact.name || 'contact'}` +
-          (!terminal && logFollowUpDays !== null ? ` — follows up in ${logFollowUpDays} day${logFollowUpDays === 1 ? '' : 's'}` : '') +
+          (!write.terminal && logFollowUpDays !== null ? ` — follows up in ${logFollowUpDays} day${logFollowUpDays === 1 ? '' : 's'}` : '') +
           '. The progress tracker has recalculated.',
       )
     } catch (err) {
