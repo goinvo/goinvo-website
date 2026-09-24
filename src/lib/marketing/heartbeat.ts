@@ -23,9 +23,31 @@
 export const HEARTBEAT_DOC_ID = 'marketingHeartbeat'
 export const HEARTBEAT_DOC_TYPE = 'marketingHeartbeat'
 
+/**
+ * The Thursday check-in keeps its own record, beside the tick's rather than
+ * inside it.
+ *
+ * Two schedules, two failure modes: a Monday tick that ran fine says nothing
+ * about whether Thursday's check-in did, and one shared document would let the
+ * second job's success overwrite the first job's failure. Same type, same
+ * shape, a different id — so `heartbeatHealth` reads either one.
+ */
+export const CHECKIN_HEARTBEAT_DOC_ID = 'marketingHeartbeat.checkin'
+
+/**
+ * The Monday digest's own record: the week it claimed and the week it POSTED.
+ *
+ * The tick's record says whether Monday's run worked; this one is the lock
+ * that makes the digest post once a week however many times the tick (or a
+ * person) calls it — the same claim-before-post the check-in takes on its
+ * record. Kept apart from the tick's document so the two never write over
+ * each other's fields.
+ */
+export const DIGEST_HEARTBEAT_DOC_ID = 'marketingHeartbeat.digest'
+
 /** What one scheduled run did, in the order it tried to do it. */
 export type HeartbeatStep = {
-  name: 'plan' | 'digest' | 'domains'
+  name: 'plan' | 'digest' | 'domains' | 'checkin'
   ok: boolean
   /** One line a person can read. "Planned 8h across 11 items." */
   detail: string
@@ -50,6 +72,17 @@ export type HeartbeatRecord = {
   steps?: HeartbeatStep[]
   /** Set when the last run failed, so the next digest can say so out loud. */
   error?: string
+  /**
+   * Check-in and digest records only: the week that was actually POSTED, and
+   * the message. Kept apart from `week` (the week last attempted) because
+   * "tried" and "posted" are different claims, and only "posted" may stop a
+   * second post.
+   */
+  postedWeek?: string
+  postedTs?: string
+  /** Check-in and digest records only: the claim a run takes BEFORE posting, so a double cron fire posts once. */
+  claimedWeek?: string
+  claimedAt?: string
 }
 
 const MS_PER_DAY = 86_400_000
@@ -85,7 +118,16 @@ export type HeartbeatHealth = {
  * completely different responses, and collapsing them is how a dead job looks
  * healthy.
  */
-export function heartbeatHealth(record: HeartbeatRecord | null | undefined, now: Date = new Date()): HeartbeatHealth {
+export function heartbeatHealth(
+  record: HeartbeatRecord | null | undefined,
+  now: Date = new Date(),
+  label = 'weekly tick',
+): HeartbeatHealth {
+  // The label names the job in every sentence below. Defaulted, so the tick's
+  // wording (and everything that already matches on it) is unchanged; the
+  // check-in passes its own name so "has never run" is about the right job.
+  const job = String(label || 'weekly tick').trim() || 'weekly tick'
+  const Job = job.charAt(0).toUpperCase() + job.slice(1)
   const ranAt = parse(record?.ranAt)
   if (!record || ranAt === null) {
     return {
@@ -93,7 +135,7 @@ export function heartbeatHealth(record: HeartbeatRecord | null | undefined, now:
       healthy: false,
       stale: true,
       daysSince: null,
-      summary: 'The weekly tick has never run. Nothing is scheduled, so nothing is happening on its own.',
+      summary: `The ${job} has never run. Nothing is scheduled, so nothing is happening on its own.`,
     }
   }
 
@@ -107,7 +149,7 @@ export function heartbeatHealth(record: HeartbeatRecord | null | undefined, now:
       healthy: false,
       stale,
       daysSince,
-      summary: `The weekly tick last ran ${describeAge(daysSince)} and failed: ${record.error || firstFailure(record)}`,
+      summary: `The ${job} last ran ${describeAge(daysSince)} and failed: ${record.error || firstFailure(record)}`,
     }
   }
   if (stale) {
@@ -116,7 +158,7 @@ export function heartbeatHealth(record: HeartbeatRecord | null | undefined, now:
       healthy: false,
       stale: true,
       daysSince,
-      summary: `The weekly tick has not run for ${daysSince} days. It is supposed to run every week.`,
+      summary: `The ${job} has not run for ${daysSince} days. It is supposed to run every week.`,
     }
   }
   return {
@@ -124,7 +166,7 @@ export function heartbeatHealth(record: HeartbeatRecord | null | undefined, now:
     healthy: true,
     stale: false,
     daysSince,
-    summary: `Weekly tick ran ${describeAge(daysSince)} for ${record.week || 'this week'}.`,
+    summary: `${Job} ran ${describeAge(daysSince)} for ${record.week || 'this week'}.`,
   }
 }
 
@@ -137,6 +179,43 @@ function describeAge(days: number): string {
   if (days <= 0) return 'today'
   if (days === 1) return 'yesterday'
   return `${days} days ago`
+}
+
+/**
+ * The tick's record of its digest step, from the digest route's answer.
+ *
+ * A digest that stood down because this week's was already posted (a
+ * duplicate cron delivery, a second tick the same Monday) is the week's lock
+ * doing its job, not a failed post — and recording it as a failure would
+ * overwrite the healthy record of the run that DID post, and have the watchdog
+ * email about a digest that is sitting in the channel. It is ok, and it counts
+ * nothing, because this run touched nothing.
+ */
+export function digestHeartbeatStep(
+  result: { ok: boolean; status: number; body: Record<string, unknown> },
+  opts: { dryRun: boolean; week: string },
+): HeartbeatStep {
+  const body = result.body || {}
+  const taskCount = Number(body.taskCount || 0)
+  if (result.ok && body.skipped === true) {
+    const reason = String(body.detail || body.skipReason || 'already posted')
+    return { name: 'digest', ok: true, count: 0, detail: `digest stood down for ${opts.week}: ${reason}` }
+  }
+  const posted = Boolean(body.posted) || Boolean(body.dryRun)
+  if (result.ok && posted) {
+    return {
+      name: 'digest',
+      ok: true,
+      count: taskCount,
+      detail: `digest ${opts.dryRun ? 'previewed' : 'posted'} with ${taskCount} task(s).`,
+    }
+  }
+  return {
+    name: 'digest',
+    ok: false,
+    count: taskCount,
+    detail: `digest returned ${result.status}: ${String(body.error || 'not posted')}`,
+  }
 }
 
 /**

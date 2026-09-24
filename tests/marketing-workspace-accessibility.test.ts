@@ -305,7 +305,9 @@ describe('workspace accessible names', () => {
     expect(outreach).toContain('data-outreach-contact-field="nextStep"')
     expect(outreach).toContain('subject=${encodeURIComponent(subject)}')
     expect(outreach).toContain('body=${encodeURIComponent(body)}')
-    expect(outreach).toContain("unset.push('closedAt', 'closedValue', 'closeReason')")
+    // The log's write rules moved to the shared core; the Studio must still use them.
+    expect(readFileSync('src/lib/marketing/callLog.ts', 'utf8')).toContain("unset.push('closedAt', 'closedValue', 'closeReason')")
+    expect(outreach).toContain('buildContactLogWrite({')
     expect(outreach).not.toContain('data-outreach-contact-field="status"')
     expect(outreach).toContain('Approve research or log an interaction to change pipeline status.')
     expect(outreach).toContain('Show completed contacts')

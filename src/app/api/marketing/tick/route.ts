@@ -4,10 +4,12 @@ import { createClient } from '@sanity/client'
 import { apiVersion, projectId, writeToken } from '@/sanity/env'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
+import { authorizeCron, cronDeniedStatus } from '@/lib/marketing/cronAuth'
 import { isoWeekKey } from '@/lib/marketing/weeklyPlan'
 import { checkWatchedDomains } from '@/lib/marketing/domainWatch.server'
 import { domainsWorthMentioning } from '@/lib/marketing/domainWatch'
 import {
+  digestHeartbeatStep,
   HEARTBEAT_DOC_ID,
   HEARTBEAT_DOC_TYPE,
   tickDidSomething,
@@ -41,20 +43,6 @@ import {
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
-
-/**
- * Cron-only, and deliberately NOT the Studio session auth the rest of the
- * marketing API uses: this writes the week and posts to a channel of
- * colleagues, so it must not be reachable by anything that merely has a browser
- * session open.
- */
-function authorizeCron(request: NextRequest): string | null {
-  const secret = process.env.CRON_SECRET || process.env.MARKETING_API_KEY || ''
-  if (!secret) return 'CRON_SECRET is not configured, so the tick cannot authenticate.'
-  const header = request.headers.get('authorization') || ''
-  if (header !== `Bearer ${secret}`) return 'Unauthorized.'
-  return null
-}
 
 /**
  * Where to call the routes this orchestrates: ALWAYS this deployment.
@@ -91,7 +79,7 @@ export async function POST(request: NextRequest) {
 async function run(request: NextRequest, dryRun: boolean) {
   const denied = authorizeCron(request)
   if (denied) {
-    return NextResponse.json({ error: denied }, { status: denied === 'Unauthorized.' ? 401 : 503 })
+    return NextResponse.json({ error: denied }, { status: cronDeniedStatus(denied) })
   }
   if (!projectId || !writeToken) {
     return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
@@ -188,16 +176,10 @@ async function run(request: NextRequest, dryRun: boolean) {
       headers: auth,
       body: JSON.stringify({ planRecorded: dryRun ? true : planRecorded, week, domainNotes }),
     })
-    const posted = Boolean(result.body.posted) || Boolean(result.body.dryRun)
-    steps.push({
-      name: 'digest',
-      ok: result.ok && posted,
-      count: Number(result.body.taskCount || 0),
-      detail:
-        result.ok && posted
-          ? `digest ${dryRun ? 'previewed' : 'posted'} with ${Number(result.body.taskCount || 0)} task(s).`
-          : `digest returned ${result.status}: ${String(result.body.error || 'not posted')}`,
-    })
+    // A digest that stands down because this week's is already posted is the
+    // lock working (a duplicate cron delivery), not a failure — see
+    // `digestHeartbeatStep`.
+    steps.push(digestHeartbeatStep(result, { dryRun, week }))
   } catch (error) {
     steps.push({ name: 'digest', ok: false, detail: `digest threw: ${String(error)}` })
   }
