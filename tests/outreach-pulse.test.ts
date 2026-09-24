@@ -3,10 +3,12 @@ import { describe, expect, it } from 'vitest'
 import { describePulse, summarizeOutreach, type PulseContact } from '@/lib/marketing/outreachPulse'
 import {
   decodeCallLogMetadata,
+  decodeCallLogUndo,
   decodeContactRef,
   decodeStrategyValue,
   decodeTaskStuckMetadata,
   encodeCallLogMetadata,
+  encodeCallLogUndo,
   encodeContactRef,
   encodeStrategyValue,
   encodeTaskStuckMetadata,
@@ -137,13 +139,36 @@ describe('marquetaActions', () => {
     expect(decodeContactRef(encodeContactRef({ contactId: 'contact-1', organization: 'MGB' }))).toEqual({
       contactId: 'contact-1',
       organization: 'MGB',
+      name: '',
+      role: '',
+      note: '',
+      outcome: '',
+    })
+    // Somebody not on file yet: the name alone is enough to add them.
+    expect(
+      decodeContactRef(encodeContactRef({ name: 'Sam Rivera', role: 'CMIO', note: 'left a voicemail', outcome: 'voicemail' })),
+    ).toMatchObject({ contactId: '', name: 'Sam Rivera', role: 'CMIO', note: 'left a voicemail', outcome: 'voicemail' })
+    expect(
+      decodeCallLogUndo(
+        encodeCallLogUndo({
+          contactId: 'contact-1',
+          interactionKey: 'slack-abc',
+          prior: { status: 'researched', followUpAt: '', lastContactedAt: '', attributionChannel: '', nextStep: '' },
+        }),
+      ),
+    ).toEqual({
+      contactId: 'contact-1',
+      interactionKey: 'slack-abc',
+      prior: { status: 'researched', followUpAt: '', lastContactedAt: '', attributionChannel: '', nextStep: '' },
     })
     expect(
       decodeCallLogMetadata(encodeCallLogMetadata({ contactId: 'contact-1', channel: 'C1', threadTs: '1.2' })),
     ).toEqual({ contactId: 'contact-1', channel: 'C1', threadTs: '1.2' })
     expect(
-      decodeTaskStuckMetadata(encodeTaskStuckMetadata({ taskId: 'marketingOperation.x', channel: 'C1', messageTs: '3.4' })),
-    ).toEqual({ taskId: 'marketingOperation.x', channel: 'C1', messageTs: '3.4' })
+      decodeTaskStuckMetadata(
+        encodeTaskStuckMetadata({ taskId: 'marketingOperation.x', channel: 'C1', threadTs: '1.0', messageTs: '3.4' }),
+      ),
+    ).toEqual({ taskId: 'marketingOperation.x', channel: 'C1', threadTs: '1.0', messageTs: '3.4' })
     expect(decodeStrategyValue(encodeStrategyValue('2026-09'))).toEqual({ monthKey: '2026-09' })
   })
 
@@ -157,7 +182,16 @@ describe('marquetaActions', () => {
 
   it('stays inside Slack’s value cap however long the input', () => {
     const huge = 'x'.repeat(5000)
-    expect(encodeContactRef({ contactId: huge, organization: huge }).length).toBeLessThan(2000)
+    expect(
+      encodeContactRef({ contactId: huge, organization: huge, name: huge, role: huge, note: huge, outcome: huge }).length,
+    ).toBeLessThan(2000)
+    expect(
+      encodeCallLogUndo({
+        contactId: huge,
+        interactionKey: huge,
+        prior: { status: huge, followUpAt: huge, lastContactedAt: huge, attributionChannel: huge, nextStep: huge },
+      }).length,
+    ).toBeLessThan(2000)
     expect(encodeCallLogMetadata({ contactId: huge, channel: huge, threadTs: huge }).length).toBeLessThan(3000)
   })
 })
