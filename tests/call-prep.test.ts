@@ -4,7 +4,9 @@ import {
   buildCallOutlineMessages,
   buildPrepCandidatesBlocks,
   buildPrepListBlocks,
+  clearlyFirst,
   composeCallOutline,
+  logCandidateLabel,
   newContactDocument,
   parsePrepRequest,
   resolvePrepTarget,
@@ -17,7 +19,7 @@ import {
 } from '@/lib/marketing/callPrep'
 import { CALL_ASK, PREMORTEM_QUESTION } from '@/lib/marketing/executionPlan'
 import { MARQUETA_ACTION, decodeContactRef, encodeContactRef } from '@/lib/marketing/marquetaActions'
-import { decodeSlackText } from '@/lib/marketing/slackText'
+import { decodeSlackText, escapeSlackText } from '@/lib/marketing/slackText'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -419,7 +421,9 @@ describe('resolvePrepTarget', () => {
 describe('composeCallOutline', () => {
   it('titles the outline the way the spec shows', () => {
     const outline = outlineFor({ kind: 'contact', contact: contact({ _id: 'c1' }) })
-    expect(outline.title).toBe('Call prep — Jane Doe, CMIO at Mass General Brigham')
+    expect(outline.title).toBe('Call prep: Jane Doe')
+    // Role and organisation are on the who line; the notification carries the organisation.
+    expect(buildCallOutlineMessages(outline).text).toBe('Call prep: Jane Doe (Mass General Brigham)')
     expect(outline.contactId).toBe('c1')
     expect(outline.personLabel).toBe('Jane Doe')
     expect(outline.who).toBe('CMIO · Mass General Brigham · warm — knows us · not contacted yet (Researched)')
@@ -517,7 +521,8 @@ describe('composeCallOutline', () => {
     const c = contact({ _id: 'c1', name: 'scott.shreeve@crossoverhealth.com', organization: 'Crossover Health', role: null })
     const outline = outlineFor({ kind: 'contact', contact: c })
     expect(outline.personLabel).toBe('Scott')
-    expect(outline.title).toBe('Call prep — Scott at Crossover Health')
+    expect(outline.title).toBe('Call prep: Scott')
+    expect(buildCallOutlineMessages(outline).text).toBe('Call prep: Scott (Crossover Health)')
     const rendered = JSON.stringify(buildCallOutlineMessages(outline, {}))
     expect(JSON.stringify(outline)).not.toContain('@crossoverhealth.com')
     expect(rendered).not.toContain('@crossoverhealth.com')
@@ -563,22 +568,38 @@ describe('composeCallOutline', () => {
       const c = contact({
         _id: 'c1',
         status: 'contacted',
-        interactions: [{ at: '2026-09-12T15:00:00Z', statusAfter: 'contacted', channel: 'phone', outcome: 'No answer' }],
+        interactions: [{ at: '2026-09-12T15:00:00Z', by: 'Juhan', statusAfter: 'contacted', channel: 'phone', outcome: 'No answer' }],
       })
       const outline = outlineFor({ kind: 'contact', contact: c })
       expect(outline.cheatSheet.say).toContain('following up on my call on 12 Sep')
       expect(outline.cheatSheet.say).not.toContain('spoke')
       const byEmail = outlineFor({
         kind: 'contact',
-        contact: contact({ _id: 'c2', status: 'contacted', lastContactedAt: '2026-09-10T15:00:00Z', interactions: [{ at: '2026-09-10T15:00:00Z', statusAfter: 'contacted', channel: 'email' }] }),
+        contact: contact({ _id: 'c2', status: 'contacted', lastContactedAt: '2026-09-10T15:00:00Z', interactions: [{ at: '2026-09-10T15:00:00Z', by: 'Juhan Sonin', statusAfter: 'contacted', channel: 'email' }] }),
       })
       expect(byEmail.cheatSheet.say).toContain('following up on my note from 10 Sep')
+    })
+
+    it('followUp: says "our call" when a colleague made it — or when nobody knows who did', () => {
+      // "My call on 11 Sep" said about Shirley's call is a sentence the prospect can catch out.
+      const touched = (by?: string) =>
+        outlineFor({
+          kind: 'contact',
+          contact: contact({ _id: 'c1', status: 'contacted', interactions: [{ at: '2026-09-11T15:00:00Z', statusAfter: 'contacted', channel: 'phone', ...(by ? { by } : {}) }] }),
+        })
+      expect(touched('Shirley').cheatSheet.say).toContain('following up on our call on 11 Sep')
+      expect(touched().cheatSheet.say).toContain('following up on our call on 11 Sep')
+      expect(touched('Shirley').voicemail).toContain('our call on 11 Sep')
+      expect(touched('juhan').cheatSheet.say).toContain('following up on my call on 11 Sep')
     })
 
     it('meeting: an agenda instead of a cold opener', () => {
       const outline = outlineFor({ kind: 'contact', contact: contact({ _id: 'c1', status: 'meeting' }) })
       expect(outline.mode).toBe('meeting')
-      expect(outline.title).toMatch(/^Meeting prep — /)
+      expect(outline.title).toBe('Meeting prep: Jane Doe')
+      // Cold-call pushback has no place in the prep for a meeting they said yes to.
+      expect(outline.ifTheySay).toEqual([])
+      expect(JSON.stringify(buildCallOutlineMessages(outline))).not.toContain('If they say')
       expect(outline.agenda).toHaveLength(4)
       expect(outline.agenda!.join(' ')).toMatch(/5 min.*15 min.*10 min.*After/)
       expect(outline.plan).toBeNull()
@@ -589,9 +610,8 @@ describe('composeCallOutline', () => {
       const outline = outlineFor({ kind: 'contact', contact: contact({ _id: 'c1', warmth: 'unknown', status: 'new' }) })
       expect(outline.mode).toBe('emailFirst')
       // Thursday + 3 days is a Sunday, so the call moves to Monday.
-      expect(outline.plan).toBe(
-        'Email first today (the draft is in the next message). If there’s no reply by Mon 28 Sep, call and open with “I sent you a note on Thursday”.',
-      )
+      expect(outline.title).toBe('Email first: Jane Doe')
+      expect(outline.plan).toBe('Send it today. If there’s no reply by Mon 28 Sep, call and open with “I sent you a note on Thursday”.')
       expect(outline.cheatSheet.say).toContain('I sent you a short note on Thursday')
       expect(outlineFor({ kind: 'contact', contact: contact({ _id: 'c2', warmth: null, status: null }) }).mode).toBe('emailFirst')
       expect(outlineFor({ kind: 'contact', contact: contact({ _id: 'c3', warmth: 'cold' }) }).mode).toBe('emailFirst')
@@ -631,7 +651,7 @@ describe('composeCallOutline', () => {
       })
       const outline = outlineFor({ kind: 'contact', contact: c }, { research: [verifiedResearch('Mass General Brigham')] })
       expect(outline.mode).toBe('holdOff')
-      expect(outline.title).toBe('Hold off — Jane Doe, CMIO at Mass General Brigham')
+      expect(outline.title).toBe('Hold off: Jane Doe')
       expect(outline.cheatSheet).toEqual({ say: '', ask: '', ifNo: '', exit: '' })
       expect(outline.voicemail).toBe('')
       expect(outline.email).toBe('')
@@ -661,7 +681,9 @@ describe('composeCallOutline', () => {
       for (const absent of ['*Say:*', '*Plan*', '*Email draft*', 'voicemail', '*Questions*', '*If they say', '*Why now*']) {
         expect(rendered).not.toContain(absent)
       }
-      expect(text).toMatch(/^Hold off — /)
+      expect(text).toBe('Hold off: Jane Doe (Mass General Brigham)')
+      // Nothing green on a message that asks for nothing.
+      expect(JSON.stringify(buildCallOutlineMessages(outline, { logRef: encodeContactRef({ contactId: 'c1' }) }).first)).not.toContain('primary')
     })
 
     it('do-not-contact even when a meeting is on file — the record needs a look first', () => {
@@ -724,7 +746,7 @@ describe('composeCallOutline', () => {
       expect(outline.email).toBe('')
       expect(reachesFor(outline)).not.toMatch(/e-?mail|a (?:short|two-line) note/i)
       expect(outline.voicemail).toBe(
-        'Hi Jane, it’s Juhan from GoInvo, following up on my call on 10 Sep. I’ll try you again later in the week — no need to call back. Thanks, and have a good day.',
+        'Hi Jane, it’s Juhan from GoInvo, following up on our call on 10 Sep. I’ll try you again later in the week — no need to call back. Thanks, and have a good day.',
       )
     })
 
@@ -807,7 +829,7 @@ describe('composeCallOutline', () => {
 
   it('shows dates in the studio’s time zone', () => {
     const c = contact({ _id: 'c1', status: 'contacted', interactions: [{ at: '2026-09-13T02:30:00Z', statusAfter: 'contacted', channel: 'phone' }] })
-    expect(outlineFor({ kind: 'contact', contact: c }).cheatSheet.say).toContain('my call on 12 Sep')
+    expect(outlineFor({ kind: 'contact', contact: c }).cheatSheet.say).toContain('our call on 12 Sep')
   })
 
   it('picks the offer: contact, then research, then segment default, then the general one', () => {
@@ -916,12 +938,15 @@ describe('composeCallOutline', () => {
     const outline = outlineFor({ kind: 'none', request })
     expect(outline.generic).toBe(true)
     expect(outline.contactId).toBeUndefined()
-    expect(outline.title).toBe('Call prep — Sam Rivera, CMIO at Acme')
+    expect(outline.title).toBe('Call prep: Sam Rivera')
     expect(outline.fromYourMessage).toEqual(['Name: Sam Rivera', 'Role: CMIO', 'Organization: Acme', 'Note: met her at HIMSS'])
     expect(outline.who).toBe('CMIO · Acme · from your message · not on file yet')
     expect(outline.caveats[0]).toMatch(/^Nothing on file for them yet/)
     expect(outline.whyNow).toBeNull()
-    expect(outline.email).toContain('[From your message — use it in your own words, or delete: met her at HIMSS]')
+    // The note is in the draft ONCE — as how you know each other — and under
+    // "From your message" in the thread; it used to be in the draft twice.
+    expect(outline.email.match(/met her at HIMSS/g)).toHaveLength(1)
+    expect(outline.email).not.toContain('[From your message')
   })
 
   it('uses verified research for someone not on file, and is then not generic', () => {
@@ -938,7 +963,8 @@ describe('composeCallOutline', () => {
       { research: [verifiedResearch('Ochsner Health')] },
     )
     expect(outline.personLabel).toBe('someone at Ochsner Health')
-    expect(outline.title).toBe('Call prep — someone at Ochsner Health')
+    expect(outline.title).toBe('Call prep: someone at Ochsner Health')
+    expect(buildCallOutlineMessages(outline).text).toBe('Call prep: someone at Ochsner Health')
     expect(outline.cheatSheet.say).toBe(
       'Hi, it’s Juhan from GoInvo — I’m hoping to reach whoever looks after clinical AI pilots at Ochsner Health. Is that you, or could you point me the right way?',
     )
@@ -948,7 +974,15 @@ describe('composeCallOutline', () => {
     const people = [contact({ _id: 'a', name: 'Ann Lee' }), contact({ _id: 'b', name: 'Bob Roe' }), contact({ _id: 'c', name: 'Cy Dee' }), contact({ _id: 'd', name: 'Di Eff' }), contact({ _id: 'e', name: 'Ed Gee' })]
     const outline = outlineFor({ kind: 'organization', organization: 'Mass General Brigham', contacts: people })
     expect(outline.contactId).toBe('a')
-    expect(outline.caveats).toContain('Also on file at Mass General Brigham: Bob Roe, Cy Dee, Di Eff and 1 more.')
+    expect(outline.alsoAt?.map((other) => other.label)).toEqual(['Bob Roe', 'Cy Dee', 'Di Eff', 'Ed Gee'])
+    expect(outline.caveats.join(' ')).not.toContain('Also on file')
+    const { first } = buildCallOutlineMessages(outline)
+    // Right under the who line, so the caller knows whose call it is before reading the script.
+    expect(first[2].text.text).toBe(
+      '5 people on file at Mass General Brigham — this is for Ann Lee (not contacted yet). Also: Bob Roe, Cy Dee, Di Eff and 1 more.',
+    )
+    // Several others: which one a lone Prep would mean is a guess.
+    expect(first[2].accessory).toBeUndefined()
   })
 
   it('flags doubt about identity and a closed relationship', () => {
@@ -964,7 +998,8 @@ describe('composeCallOutline', () => {
 
   it('never throws on thin or hostile records', () => {
     const thin = outlineFor({ kind: 'contact', contact: { _id: 'thin' } })
-    expect(thin.title).toBe('Call prep — someone')
+    // On file with nothing behind them: the first touch is an email.
+    expect(thin.title).toBe('Email first: someone')
     const empty = outlineFor({ kind: 'none', request: parsePrepRequest('') })
     expect(empty.personLabel).toBe('someone')
     const invalidNow = composeCallOutline({
@@ -1051,7 +1086,7 @@ describe('buildCallOutlineMessages', () => {
     const { first } = buildCallOutlineMessages(outlines.cold, {})
     expect(first[0]).toEqual({
       type: 'header',
-      text: { type: 'plain_text', text: 'Call prep — Jane Doe, CMIO at Mass General Brigham', emoji: false },
+      text: { type: 'plain_text', text: 'Call prep: Jane Doe', emoji: false },
     })
     expect(first[1].type).toBe('context')
     expect(first[2].text.text).toMatch(/^\*On the call\*\n\*Say:\* .+\n\*Ask:\* .+\n\*If no:\* .+\n\*Exit:\* .+$/)
@@ -1062,7 +1097,8 @@ describe('buildCallOutlineMessages', () => {
 
   it('labels the cheat sheet for the situation', () => {
     expect(buildCallOutlineMessages(outlines.meeting, {}).first[2].text.text).toMatch(/^\*In the meeting\*/)
-    expect(buildCallOutlineMessages(outlines.emailFirst, {}).first[2].text.text).toMatch(/^\*If you end up talking\*/)
+    expect(buildCallOutlineMessages(outlines.emailFirst, {}).first[2].text.text).toMatch(/^\*Today: send this email\*\n```/)
+    expect(buildCallOutlineMessages(outlines.emailFirst, {}).second[0].text.text).toMatch(/^\*If you end up talking\*/)
     expect(JSON.stringify(buildCallOutlineMessages(outlines.meeting, {}).first)).toContain('*Agenda (30 min)*')
     expect(JSON.stringify(buildCallOutlineMessages(outlines.emailFirst, {}).first)).toContain('*Plan*')
   })
@@ -1087,7 +1123,7 @@ describe('buildCallOutlineMessages', () => {
     }
     const { first } = buildCallOutlineMessages(outlines.hostile, {})
     expect(JSON.stringify(mrkdwnIn(first))).toContain('AT&amp;T')
-    expect(buildCallOutlineMessages(outlines.hostile, {}).text).toMatch(/^Call prep — /)
+    expect(buildCallOutlineMessages(outlines.hostile, {}).text).toMatch(/^Call prep: /)
     expect(buildCallOutlineMessages(outlines.hostile, {}).text).toContain('&lt;!here&gt;')
   })
 
@@ -1102,11 +1138,20 @@ describe('buildCallOutlineMessages', () => {
   })
 
   it('clips the email body before fencing it, so the fence always closes', () => {
-    for (const outline of [outlines.hostile, outlines.hostileGeneric, outlines.cold]) {
+    for (const outline of [outlines.hostile, outlines.cold]) {
       const { second } = buildCallOutlineMessages(outline, {})
       const email = second.find((block) => block.text?.text?.startsWith('*Email draft*'))!
       expect(email.text.text).toMatch(/^\*Email draft\* — edit before sending\n```[\s\S]*```$/)
       expect(email.text.text.match(/```/g)).toHaveLength(2)
+    }
+    // Email first: the draft is the first message's one thing to do, fenced the same way.
+    for (const outline of [outlines.hostileGeneric, outlines.emailFirst]) {
+      expect(outline.mode).toBe('emailFirst')
+      const { first } = buildCallOutlineMessages(outline, {})
+      const email = first.find((block) => block.text?.text?.startsWith('*Today: send this email*'))!
+      expect(email.text.text).toMatch(/^\*Today: send this email\*\n```[\s\S]*```\n\*Plan\* /)
+      expect(email.text.text.match(/```/g)).toHaveLength(2)
+      expect(email.text.text.length).toBeLessThanOrEqual(3000)
     }
   })
 
@@ -1121,14 +1166,14 @@ describe('buildCallOutlineMessages', () => {
     expect(rendered).not.toContain('6175550100')
   })
 
-  it('shows "Log how it went" iff logRef, "Add … to outreach" iff addRef, Studio iff an http url', () => {
+  it('shows "Log it…" iff logRef, "Add … to outreach" iff addRef, "Open Outreach" iff an http url', () => {
     const none = buttons(buildCallOutlineMessages(outlines.cold, {}).first)
     expect(none).toEqual([])
     expect(buildCallOutlineMessages(outlines.cold, {}).first.some((block) => block.type === 'actions')).toBe(false)
 
     const log = buttons(buildCallOutlineMessages(outlines.cold, { logRef }).first)
     expect(log).toEqual([
-      { type: 'button', action_id: MARQUETA_ACTION.logCall, text: { type: 'plain_text', text: 'Log how it went' }, value: logRef, style: 'primary' },
+      { type: 'button', action_id: MARQUETA_ACTION.logCall, text: { type: 'plain_text', text: 'Log it…' }, value: logRef, style: 'primary' },
     ])
 
     const add = buttons(buildCallOutlineMessages(outlines.generic, { addRef }).first)
@@ -1140,7 +1185,7 @@ describe('buildCallOutlineMessages', () => {
     expect(orgAdd[0].text.text).toBe('Add Ochsner Health to outreach')
 
     const studio = buttons(buildCallOutlineMessages(outlines.cold, { studioUrl: 'https://www.goinvo.com/studio' }).first)
-    expect(studio).toEqual([{ type: 'button', text: { type: 'plain_text', text: 'Open in Studio' }, url: 'https://www.goinvo.com/studio' }])
+    expect(studio).toEqual([{ type: 'button', text: { type: 'plain_text', text: 'Open Outreach', emoji: true }, url: 'https://www.goinvo.com/studio' }])
     expect(buttons(buildCallOutlineMessages(outlines.cold, { studioUrl: 'javascript:alert(1)' }).first)).toEqual([])
   })
 
@@ -1160,6 +1205,89 @@ describe('buildCallOutlineMessages', () => {
     const generic = JSON.stringify(buildCallOutlineMessages(outlines.generic, {}).second)
     expect(generic).toContain('*From your message*')
     expect(generic).toContain('Note: met her at HIMSS')
+  })
+})
+
+describe('the first message puts what to do on top', () => {
+  const logRef = encodeContactRef({ contactId: 'c1', organization: 'Mass General Brigham', name: 'Jane Doe' })
+  const addRef = encodeContactRef({ organization: 'Acme', name: 'Sam Rivera' })
+  const studioUrl = 'https://www.goinvo.com/studio/marketing?view=outreach&contact=c1&action=prep'
+
+  const cases: Record<string, CallOutline> = {
+    cold: outlineFor({ kind: 'contact', contact: contact({ _id: 'c1', howWeKnow: 'Old colleague' }) }, { research: [verifiedResearch('Mass General Brigham')] }),
+    followUp: outlineFor({ kind: 'contact', contact: contact({ _id: 'c2', status: 'contacted', interactions: [{ at: '2026-09-12T15:00:00Z', statusAfter: 'contacted', channel: 'phone' }] }) }),
+    meeting: outlineFor({ kind: 'contact', contact: contact({ _id: 'c3', status: 'meeting' }) }),
+    emailFirst: outlineFor({ kind: 'contact', contact: contact({ _id: 'c4', warmth: 'unknown' }) }, { research: [verifiedResearch('Mass General Brigham')] }),
+    phoneOnly: outlineFor({ kind: 'contact', contact: contact({ _id: 'c6', warmth: 'unknown', channelOverrides: [{ channel: 'email', state: 'doNotUse' }] }) }),
+    holdOff: outlineFor({ kind: 'contact', contact: contact({ _id: 'c5', channelOverrides: [{ channel: 'phone', state: 'doNotUse' }, { channel: 'email', state: 'doNotUse' }] }) }),
+    organisation: outlineFor({ kind: 'organization', organization: 'Crossover Health', contacts: [contact({ _id: 'sam', name: 'Sam Rivera', organization: 'Crossover Health' }), contact({ _id: 'scott', name: 'Scott Shreeve', organization: 'Crossover Health', status: 'contacted' })] }),
+    generic: outlineFor({ kind: 'none', request: parsePrepRequest('prep Alex Chen at Beacon Health — met him at HIMSS') }),
+  }
+
+  it.each(Object.entries(cases))('%s: the action row is within the first five blocks', (_name, outline) => {
+    const { first } = buildCallOutlineMessages(outline, { logRef, addRef, studioUrl })
+    const at = first.findIndex((block) => block.type === 'actions')
+    expect(at).toBeGreaterThan(-1)
+    expect(at).toBeLessThanOrEqual(4)
+    expectValidSlackBlocks(first, { maxBlocks: 15 })
+    // At most one green button, and it is the first.
+    const buttons = first[at].elements
+    expect(buttons.filter((button: Record<string, unknown>) => button.style === 'primary').length).toBeLessThanOrEqual(1)
+    buttons.slice(1).forEach((button: Record<string, unknown>) => expect(button.style).toBeUndefined())
+    expect(buttons[buttons.length - 1]).toMatchObject({ text: { text: 'Open Outreach' }, url: studioUrl })
+  })
+
+  it('email first: the email itself is the first thing, and the thread holds what to say if they pick up — no voicemail', () => {
+    const { first, second, threadText } = buildCallOutlineMessages(cases.emailFirst, { logRef })
+    expect(first[2].text.text).toMatch(/^\*Today: send this email\*\n```Subject: /)
+    const thread = JSON.stringify(second)
+    expect(thread).toContain('*If you end up talking*')
+    expect(thread).not.toMatch(/voicemail/i)
+    expect(thread).not.toContain('*Email draft*')
+    expect(threadText).toBe('If Jane Doe picks up: what to say, and the offer')
+  })
+
+  it('names what is in the thread, for its notification', () => {
+    expect(buildCallOutlineMessages(cases.cold).threadText).toBe('Offer, voicemail and email draft for Jane Doe')
+    expect(buildCallOutlineMessages(cases.phoneOnly).threadText).toBe('Offer and voicemail for Jane Doe')
+    expect(buildCallOutlineMessages(cases.holdOff).threadText).toBe('Background on Jane Doe')
+  })
+
+  it('an organisation’s outline says whose call it is, and one press preps the other person', () => {
+    const outline = cases.organisation
+    expect(outline.personLabel).toBe('Sam Rivera')
+    const { first } = buildCallOutlineMessages(outline)
+    expect(first[2].text.text).toBe('2 people on file at Crossover Health — this is for Sam Rivera (not contacted yet). Also: Scott Shreeve.')
+    expect(first[2].accessory).toMatchObject({ action_id: MARQUETA_ACTION.prepCall, text: { text: 'Prep' } })
+    expect(decodeContactRef(first[2].accessory.value)).toMatchObject({ contactId: 'scott', organization: 'Crossover Health' })
+  })
+
+  it('never names somebody on file as "someone" — they are counted instead', () => {
+    const outline = outlineFor({
+      kind: 'organization',
+      organization: 'Crossover Health',
+      contacts: [contact({ _id: 'sam', name: 'Sam Rivera', organization: 'Crossover Health' }), contact({ _id: 'x', name: null, email: null, organization: 'Crossover Health' })],
+    })
+    const { first } = buildCallOutlineMessages(outline)
+    expect(first[2].text.text).toBe('2 people on file at Crossover Health — this is for Sam Rivera (not contacted yet). And 1 more with no name on file.')
+    expect(JSON.stringify(first)).not.toMatch(/Also: someone/)
+  })
+
+  it('does not say "fixed-scope" twice in one sentence of the email', () => {
+    const outline = outlineFor({ kind: 'contact', contact: contact({ _id: 'c1', warmth: 'unknown' }) }, { research: [verifiedResearch('Mass General Brigham')] })
+    expect(outline.email.match(/fixed-scope/g)).toHaveLength(1)
+    expect(outline.email).toContain('clinical AI pilot')
+  })
+})
+
+describe('clearlyFirst', () => {
+  it('is true only when the top two differ on reachability, stage or warmth', () => {
+    const a = contact({ _id: 'a', name: 'Ann Lee', warmth: 'warm', status: 'new' })
+    expect(clearlyFirst([a])).toBe(true)
+    expect(clearlyFirst([a, contact({ _id: 'b', name: 'Bob Roe', warmth: 'cold', status: 'new' })])).toBe(true)
+    expect(clearlyFirst([a, contact({ _id: 'b', name: 'Bob Roe', warmth: 'warm', status: 'contacted' })])).toBe(true)
+    // Same stage, same warmth: the order is only the alphabet.
+    expect(clearlyFirst([a, contact({ _id: 'b', name: 'Bob Roe', warmth: 'warm', status: 'researched' })])).toBe(false)
   })
 })
 
@@ -1186,6 +1314,34 @@ describe('buildPrepCandidatesBlocks', () => {
     expect(decodeContactRef(blocks[2].accessory.value)).toMatchObject({ contactId: '', organization: 'General Dynamics Health' })
   })
 
+  it('logs instead of prepping when asked: each button opens the form for that contact, filled in', () => {
+    const blocks = buildPrepCandidatesBlocks(
+      [
+        { label: 'Jane Doe, CMIO — Acme Health', contactId: 'c-jane', organization: 'Acme Health' },
+        { label: 'Jane Smith — Beta Labs', contactId: 'c-jane-2', organization: 'Beta Labs' },
+        // Nobody on file to log against: left out.
+        { label: 'Someone at Gamma', organization: 'Gamma' },
+      ],
+      'Which Jane did you call?',
+      { action: 'log', note: 'called Jane, left a voicemail', outcome: 'voicemail' },
+    )
+    expectValidSlackBlocks(blocks)
+    expect(blocks).toHaveLength(3)
+    expect(blocks[1].accessory).toMatchObject({ action_id: MARQUETA_ACTION.logCall, text: { text: 'Log Jane Doe, CMIO — Acme Health…' } })
+    expect(decodeContactRef(blocks[1].accessory.value)).toMatchObject({
+      contactId: 'c-jane',
+      note: 'called Jane, left a voicemail',
+      outcome: 'voicemail',
+    })
+    expect(decodeContactRef(blocks[2].accessory.value)?.contactId).toBe('c-jane-2')
+  })
+
+  it('keeps a long Log label under Slack’s 75 characters, still ending in "…"', () => {
+    const label = logCandidateLabel('x'.repeat(200))
+    expect(label.length).toBeLessThanOrEqual(75)
+    expect(label).toMatch(/^Log x+…$/)
+  })
+
   it('caps at five and survives hostile labels', () => {
     const candidates = Array.from({ length: 9 }, (_, index) => ({
       label: `${HOSTILE} ${index}`,
@@ -1203,7 +1359,6 @@ describe('buildPrepCandidatesBlocks', () => {
 })
 
 describe('buildPrepListBlocks', () => {
-  const handle = '<@U0MARQUETA>'
   const entry = (index: number, temperature: 'replied' | 'knowsUs' | 'cold' = 'knowsUs') => ({
     label: `Person ${index} (Org ${index})`,
     temperature,
@@ -1211,44 +1366,46 @@ describe('buildPrepListBlocks', () => {
     contactId: `c-${index}`,
     organization: `Org ${index}`,
   })
+  const HINT = 'For someone not on file, say `Marqueta, prep Sam Rivera at Acme`.'
 
   it('labels how warm each call is, with a Prep button each', () => {
-    const blocks = buildPrepListBlocks([entry(1, 'replied'), entry(2, 'knowsUs'), entry(3, 'cold')], { heading: 'Your calls this week', handle })
+    const blocks = buildPrepListBlocks([entry(1, 'replied'), entry(2, 'knowsUs'), entry(3, 'cold')], { heading: '*Your calls* — 3 calls' })
     expectValidSlackBlocks(blocks)
-    expect(blocks).toHaveLength(4)
+    expect(blocks).toHaveLength(5)
+    expect(blocks[0].text.text).toBe('*Your calls* — 3 calls')
     expect(blocks[1].text.text).toBe('*Person 1 (Org 1)* — they replied\nFollow-up due Mon 28 Sep · last: Contacted on 14 Sep')
     expect(blocks[2].text.text).toMatch(/— they know us/)
     expect(blocks[3].text.text).toMatch(/— cold — email first/)
     expect(decodeContactRef(blocks[3].accessory.value)).toMatchObject({ contactId: 'c-3', organization: 'Org 3' })
     expect(blocks[3].accessory.action_id).toBe(MARQUETA_ACTION.prepCall)
+    expect(blocks[3].accessory.text.text).toBe('Prep')
   })
 
-  it('shows at most eight, and says how many more', () => {
+  it('shows at most eight, and says how many more — ending on the one hint', () => {
     const blocks = buildPrepListBlocks(
       Array.from({ length: 11 }, (_, index) => entry(index)),
-      { heading: 'Your calls', handle },
+      { heading: 'Your calls' },
     )
     expectValidSlackBlocks(blocks)
     expect(blocks.filter((block) => block.accessory)).toHaveLength(8)
-    expect(blocks[blocks.length - 1].elements[0].text).toBe('…and 3 more on file.')
+    expect(blocks[blocks.length - 1].elements[0].text).toBe(`+3 more on Outreach. ${HINT}`)
   })
 
-  it('says plainly when the list is short, and how to prep someone not on file', () => {
-    const short = buildPrepListBlocks([entry(1)], { heading: 'Your calls', handle })
+  it('says plainly when the list is short or empty, and how to prep someone not on file', () => {
+    const short = buildPrepListBlocks([entry(1)], { heading: 'Your calls' })
     expectValidSlackBlocks(short)
-    expect(short[short.length - 1].elements[0].text).toBe(
-      'That’s everyone on your list right now. For someone who isn’t on file yet, tell <@U0MARQUETA> `prep Sam Rivera at Acme` and I’ll put an outline together.',
-    )
-    const empty = buildPrepListBlocks([], { heading: 'Your calls', handle })
+    expect(short[short.length - 1].elements[0].text).toBe(`That’s everyone on your list. ${HINT}`)
+    const empty = buildPrepListBlocks([], { heading: 'Your calls' })
     expectValidSlackBlocks(empty)
-    expect(empty[empty.length - 1].elements[0].text).toMatch(/^Nobody is on your call list right now\./)
-    expect(buildPrepListBlocks(Array.from({ length: 3 }, (_, index) => entry(index)), { heading: 'x', handle }).some((block) => block.type === 'context')).toBe(false)
+    expect(empty).toEqual([
+      { type: 'section', text: { type: 'mrkdwn', text: 'Nobody’s on your list yet. Before a call, say `Marqueta, prep Sam Rivera at Acme`.' } },
+    ])
   })
 
   it('survives hostile entries', () => {
     const blocks = buildPrepListBlocks(
       Array.from({ length: 9 }, (_, index) => ({ label: HOSTILE, temperature: 'cold' as const, detail: HOSTILE, contactId: `c-${index}`, organization: HOSTILE })),
-      { heading: HOSTILE, handle },
+      { heading: escapeSlackText(HOSTILE) },
     )
     expectValidSlackBlocks(blocks)
     for (const text of mrkdwnIn(blocks)) {

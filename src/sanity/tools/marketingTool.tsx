@@ -84,6 +84,14 @@ import {
   type FinancialPostureId,
 } from '@/lib/marketing/financialPosture'
 import type { MarketingOperation } from '@/lib/marketing/operations'
+import {
+  MARKETING_CONTACT_ACTION_QUERY_PARAM,
+  MARKETING_CONTACT_QUERY_PARAM,
+  MARKETING_FOCUS_QUERY_PARAM,
+  MARKETING_OWNER_QUERY_PARAM,
+  type StudioContactAction,
+  type StudioFocus,
+} from '@/lib/marketing/taskLinks'
 
 import {
   MARKETING_SURFACES,
@@ -970,6 +978,65 @@ export function resolveMarketingViewParam(param: string | null | undefined): Mar
 function viewFromLocation(): MarketingViewId | null {
   if (typeof window === 'undefined') return null
   return resolveMarketingViewParam(new URLSearchParams(window.location.search).get(MARKETING_VIEW_QUERY_PARAM))
+}
+
+/**
+ * What a Slack link asked the Studio to land ON, beyond the tab: a contact and
+ * what to do about them (`?contact=&action=prep|log`), one person's share of
+ * This week (`?owner=`), or a section of it (`?focus=`). See taskLinks.ts.
+ */
+export type MarketingLanding = {
+  contact: { id: string; action: StudioContactAction } | null
+  owner: string
+  focus: StudioFocus | null
+}
+
+/** Opening one contact on Outreach; the nonce makes a second request for the same contact land again. */
+export type OutreachContactFocus = { id: string; action: StudioContactAction; nonce: number }
+
+const LANDING_FOCUSES = new Set<string>(['caught', 'followUps', 'decisions'])
+
+/**
+ * The landing params in a query string, validated — anything unrecognised is
+ * dropped rather than guessed at. A contact with no (or an unknown) action
+ * opens the contact's prep: showing someone is always safe, and opening a log
+ * form nobody asked for is not. Pure, so it is tested without a browser.
+ */
+export function readMarketingLandingParams(search: string): MarketingLanding {
+  const params = new URLSearchParams(search || '')
+  const clip = (value: string | null, max: number) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max)
+  const contactId = clip(params.get(MARKETING_CONTACT_QUERY_PARAM), 180)
+  const action = params.get(MARKETING_CONTACT_ACTION_QUERY_PARAM) === 'log' ? 'log' : 'prep'
+  const focus = String(params.get(MARKETING_FOCUS_QUERY_PARAM) || '')
+  return {
+    contact: contactId ? { id: contactId, action } : null,
+    owner: clip(params.get(MARKETING_OWNER_QUERY_PARAM), 80),
+    focus: LANDING_FOCUSES.has(focus) ? (focus as StudioFocus) : null,
+  }
+}
+
+/**
+ * The URL with the one-shot landing params removed, and nothing else touched.
+ * They are an arrival cue: left in the address bar, a reload or a copied link
+ * would replay the landing — reopen a log form, re-filter the week — days
+ * after the message that asked for it.
+ */
+export function marketingUrlWithoutLandingParams(currentUrl: string) {
+  const url = new URL(currentUrl)
+  for (const param of [
+    MARKETING_CONTACT_QUERY_PARAM,
+    MARKETING_CONTACT_ACTION_QUERY_PARAM,
+    MARKETING_OWNER_QUERY_PARAM,
+    MARKETING_FOCUS_QUERY_PARAM,
+  ]) {
+    url.searchParams.delete(param)
+  }
+  return url.toString()
+}
+
+function landingFromLocation(): MarketingLanding {
+  if (typeof window === 'undefined') return { contact: null, owner: '', focus: null }
+  return readMarketingLandingParams(window.location.search)
 }
 
 // Reflect the active view in the URL (?view=…) WITHOUT a history entry, so a
@@ -2969,10 +3036,24 @@ function marketingActionError(prefix: string, err: unknown) {
 function MarketingComponent() {
   const client = useClient({ apiVersion: API_VERSION })
   const compactLayout = useMarketingCompactLayout()
+  // A Slack link's landing (a contact, one person's week, a section), read
+  // once on the first render and stripped from the URL just after.
+  const [landing] = useState<MarketingLanding>(landingFromLocation)
   // Precedence: a ?view= deep link wins over the autopilot target and the
-  // last-stored view, so a shared link always lands where it points.
+  // last-stored view, so a shared link always lands where it points. A contact
+  // landing with no view is an Outreach landing.
   const [view, setView] = useState<MarketingViewId>(
-    () => viewFromLocation() || loadStoredMarketingView(loadStoredAutopilotTarget()?.view || 'dashboard'),
+    () =>
+      viewFromLocation() ||
+      (landing.contact ? 'outreach' : loadStoredMarketingView(loadStoredAutopilotTarget()?.view || 'dashboard')),
+  )
+  const [weekLanding, setWeekLanding] = useState<{ owner: string; focus: StudioFocus | null }>(() => ({
+    owner: landing.owner,
+    focus: landing.focus,
+  }))
+  const outreachFocusNonceRef = useRef(landing.contact ? 1 : 0)
+  const [outreachFocus, setOutreachFocus] = useState<OutreachContactFocus | null>(() =>
+    landing.contact ? { ...landing.contact, nonce: 1 } : null,
   )
   // Role tailors the Autopilot guided flow. Precedence mirrors view: a ?role=
   // deep link wins over the last-stored role, else the 'coworker' default.
@@ -2993,6 +3074,9 @@ function MarketingComponent() {
   const actionsMenuRef = useRef<HTMLDivElement | null>(null)
   const [operationsAttentionCount, setOperationsAttentionCount] = useState(0)
   const [operationsRefreshToken, setOperationsRefreshToken] = useState(0)
+  // The task banner saved a change: the desk and This week re-read, so the
+  // task is not left sitting in the section it just moved out of.
+  const bumpOperationsRefresh = useCallback(() => setOperationsRefreshToken((current) => current + 1), [])
   const [lastOperationId, setLastOperationId] = useState<string | null>(null)
   const [workflowTutorialRequest, setWorkflowTutorialRequest] = useState(0)
   const [workflowTutorialLibraryRequest, setWorkflowTutorialLibraryRequest] = useState(0)
@@ -3136,6 +3220,26 @@ function MarketingComponent() {
     syncViewToUrl(view)
   }, [view])
 
+  // Strip the landing params once they have been read, passing the router's
+  // history state through untouched (the Studio keeps its own there).
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.history?.replaceState) return
+    try {
+      const next = marketingUrlWithoutLandingParams(window.location.href)
+      if (next !== window.location.href) window.history.replaceState(window.history.state, '', next)
+    } catch {
+      // Router owns the URL — the landing still happened; only the cleanup did not.
+    }
+  }, [])
+
+  // A landing is for the tab it was meant for, once. Leaving that tab spends
+  // it, so coming back later shows everyone's week and does not reopen the
+  // contact somebody already dealt with.
+  useEffect(() => {
+    if (view !== 'thisWeek') setWeekLanding((current) => (current.owner || current.focus ? { owner: '', focus: null } : current))
+    if (view !== 'outreach') setOutreachFocus((current) => (current ? null : current))
+  }, [view])
+
   useEffect(() => {
     saveStoredAutopilotTarget(autopilotTarget)
   }, [autopilotTarget])
@@ -3189,6 +3293,24 @@ function MarketingComponent() {
       return true
     },
     [clearUnsavedChanges, confirmDiscardUnsavedChanges, view],
+  )
+
+  /**
+   * Prep / Log it… from This week (a follow-up row, the call sheet): switch to
+   * Outreach and open that contact, through the same unsaved-changes guard as
+   * any other tab switch. A fresh nonce each time, so asking twice for the same
+   * contact lands twice.
+   */
+  const requestOutreachContact = useCallback(
+    (contactId: string, action: StudioContactAction) => {
+      const id = String(contactId || '').trim()
+      if (!id) return false
+      if (!requestMarketingView('outreach')) return false
+      outreachFocusNonceRef.current += 1
+      setOutreachFocus({ id, action: action === 'log' ? 'log' : 'prep', nonce: outreachFocusNonceRef.current })
+      return true
+    },
+    [requestMarketingView],
   )
 
   const handleMarketingLinkCapture = useCallback(
@@ -3764,7 +3886,7 @@ function MarketingComponent() {
             {/* Above every view, not just the dashboard: a Slack deep link can
                 land on any of them, and the reason you came must arrive with
                 you rather than staying behind in Slack. */}
-            <TaskFocusBanner />
+            <TaskFocusBanner onSaved={bumpOperationsRefresh} />
             {view === 'dashboard' && (
               <>
                 <MarketingFinancialPostureSetting
@@ -3908,12 +4030,21 @@ function MarketingComponent() {
                 </div>
               </>
             )}
-            {view === 'thisWeek' && <WeeklyPlanWorkspace proofClient={outreachClient} />}
+            {view === 'thisWeek' && (
+              <WeeklyPlanWorkspace
+                proofClient={outreachClient}
+                initialOwner={weekLanding.owner}
+                focus={weekLanding.focus || undefined}
+                onOpenOutreachContact={requestOutreachContact}
+                refreshToken={operationsRefreshToken}
+              />
+            )}
             {view === 'shop' && <ShopWorkspace client={client} />}
             {view === 'outreach' && (
               <div data-tour-id="autopilot-outreach-workflow">
                 <OutreachWorkspace
                   client={client}
+                  focusContact={outreachFocus || undefined}
                   onOpenEvidence={() => requestMarketingView('workEvidence')}
                   onOpenSettings={() => requestMarketingView('channels')}
                   onAutopilotComplete={reportAutopilotCompletion}

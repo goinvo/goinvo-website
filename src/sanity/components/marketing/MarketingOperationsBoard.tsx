@@ -4,6 +4,7 @@ import { useClient } from 'sanity'
 
 import {
   getMarketingOperationCounts,
+  isWeeklyPlanRecord,
   marketingOperationGroup,
   marketingOperationIsOverdue,
   operationInputFromDashboardSignal,
@@ -16,6 +17,8 @@ import {
   type MarketingOperationTargetView,
 } from '@/lib/marketing/operations'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
+import { LABEL } from '@/lib/marketing/marquetaStyle'
+import { taskStatusWords } from '@/lib/marketing/weeklyCheckIn'
 import { authenticatedMarketingRequest } from './authenticatedMarketingRequest'
 
 const API_VERSION = '2024-01-01'
@@ -33,31 +36,166 @@ export function getMarketingOperationsPage<T>(items: T[], requestedPage: number,
 
 type OwnerOption = { _id: string; title?: string }
 
+/**
+ * The desk's work: every operation except the planner's weekly records.
+ *
+ * Those are stored as operations so a past week can be looked up, but they are
+ * notes about the work, not work — left in, every past week showed here as
+ * "Marqueta working" and then as overdue, and the desk's counts disagreed with
+ * Slack's, which already skipped them. They live on This week.
+ */
+export function deskOperations(items: MarketingOperation[]): MarketingOperation[] {
+  return (items || []).filter((item) => item && !isWeeklyPlanRecord(item))
+}
+
+const cleanName = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim()
+const nameKey = (value: unknown) => cleanName(value).toLowerCase()
+const firstNameKey = (value: unknown) => nameKey(value).split(' ')[0] || ''
+
+/**
+ * The one name in `names` that a website team member's title is, by first
+ * name — "Juhan Sonin" is "Juhan" — or '' when none is, or when more than one
+ * is (two Erics on the board: guessing would credit the wrong colleague).
+ */
+function nameForTitle(title: unknown, names: string[]): string {
+  const exact = names.find((name) => nameKey(name) === nameKey(title))
+  if (exact) return exact
+  const first = firstNameKey(title)
+  if (!first) return ''
+  const matches = names.filter((name) => firstNameKey(name) === first)
+  return matches.length === 1 ? matches[0] : ''
+}
+
+/**
+ * The names the owner select offers, once each whatever the case: the team
+ * roster, everyone who already owns something, and everyone the plan has
+ * suggested.
+ *
+ * Names, because the name IS the owner everywhere else. Slack writes
+ * `ownerName` when somebody presses "I’ll take it", the check-in and the
+ * digest group by it, and `mine` finds work by it. A select bound to a Studio
+ * user id showed a task taken in Slack as unassigned.
+ *
+ * And the ROSTER's names (`roster`, from `marketingTeamAvailability`), not the
+ * website's team pages. Those are titled with full names, so offering them
+ * put "Juhan" and "Juhan Sonin" side by side, and picking the second split one
+ * person into two for every Slack surface: Slack resolves a presser only to a
+ * roster name, exactly. A team page's title is used only to find a name here
+ * it unambiguously belongs to (see `deskOwnerPatch`). Only with no roster at
+ * all — a workspace nobody has linked yet, where Slack falls back to display
+ * names, which are usually full names — are the titles offered themselves, and
+ * even then one that is plainly a name already on the board is not added again.
+ */
+export function deskOwnerOptions(items: MarketingOperation[], owners: OwnerOption[], roster: string[] = []): string[] {
+  const seen = new Map<string, string>()
+  const add = (value: unknown) => {
+    const name = cleanName(value)
+    if (name && !seen.has(nameKey(name))) seen.set(nameKey(name), name)
+  }
+  for (const name of roster || []) add(name)
+  for (const item of items || []) {
+    add(item?.ownerName)
+    add(item?.suggestedOwner)
+  }
+  if (!(roster || []).some((name) => cleanName(name))) {
+    const known = [...seen.values()]
+    for (const owner of owners || []) {
+      if (!nameForTitle(owner?.title, known)) add(owner?.title)
+    }
+  }
+  return [...seen.values()].sort((left, right) => left.localeCompare(right))
+}
+
+/**
+ * The option the select shows for an owner: the offered spelling of their
+ * name ("Juhan" for a task that says "juhan"), so a task is never displayed as
+ * "Nobody has it" just because of how its owner's name was typed.
+ */
+export function deskOwnerValue(ownerName: string | undefined, options: string[]): string {
+  const key = nameKey(ownerName)
+  if (!key) return ''
+  return (options || []).find((option) => nameKey(option) === key) || String(ownerName ?? '').trim()
+}
+
+/**
+ * "Eric passed on this — who should pick it up?": the question the Slack
+ * "Not me" leaves, and the one its "I’ll take it" clears (`take` in
+ * taskActions.server.ts matches the same phrase).
+ */
+const PASSED_ON = /passed on this/i
+
+/**
+ * What choosing a name writes.
+ *
+ *   - The name, and the Studio id of the one team member it belongs to (by
+ *     title, or unambiguously by first name among `options`); '' clears a
+ *     stale id. The operations route also clears the Slack id stamped by the
+ *     previous owner's "I’ll take it", so Slack re-resolves the new name
+ *     against the roster rather than pinging whoever had it before.
+ *   - For a task somebody passed on in Slack, the end of the owner search it
+ *     was waiting on: back to not started with the "who should pick it up?"
+ *     question cleared — the same write Slack's "I’ll take it" makes. Without
+ *     it the desk showed an owner next to "Needs someone", and This week kept
+ *     listing a task that already had one.
+ */
+export function deskOwnerPatch(
+  name: string,
+  owners: OwnerOption[],
+  context: { options?: string[]; item?: Pick<MarketingOperation, 'status' | 'humanQuestion'> } = {},
+): MarketingOperationPatch {
+  const ownerName = cleanName(name)
+  const options = context.options?.length ? context.options : ownerName ? [ownerName] : []
+  const members = ownerName ? (owners || []).filter((owner) => nameKey(nameForTitle(owner?.title, options)) === nameKey(ownerName)) : []
+  const patch: MarketingOperationPatch = { ownerName, ownerSanityUserId: members.length === 1 ? members[0]._id : '' }
+  const item = context.item
+  if (ownerName && item?.status === 'needsHuman' && PASSED_ON.test(String(item.humanQuestion ?? ''))) {
+    patch.status = 'queued'
+    patch.humanQuestion = ''
+  }
+  return patch
+}
+
 type OperationsResponse = {
   items?: MarketingOperation[]
+  /** The team roster's names (see the operations route): who Slack knows. */
+  team?: string[]
   item?: MarketingOperation
   checked?: number
   mode?: string
   error?: string
 }
 
+/**
+ * "To do", not "In progress": the group holds work nobody has started as well
+ * as work somebody has, and its pills already say which ("Not started", "In
+ * progress", "Nobody has it"). Naming the group after one of them made the
+ * same words mean two things on one screen.
+ */
 const GROUP_LABELS: Record<MarketingOperationGroup | 'all', string> = {
   needsHuman: 'Needs a person',
-  marketingHandling: 'Marqueta handling',
+  marketingHandling: 'To do',
   comingUp: 'Coming up',
   history: 'Done / history',
   all: 'All active',
 }
 
-const STATUS_LABELS: Record<MarketingOperationStatus, string> = {
-  queued: 'Queued',
-  working: 'Marqueta working',
-  needsHuman: 'Needs a person',
-  waiting: 'Waiting',
-  blocked: 'Blocked',
-  scheduled: 'Scheduled check',
-  done: 'Done',
-  dismissed: 'Dismissed',
+/**
+ * The words for a status on THIS task — `taskStatusWords`, the function the
+ * Slack card uses, so the pill, the select and the card never describe one
+ * task two ways ("Nobody has it" rather than "Queued" when nobody does).
+ */
+function statusWordsFor(item: MarketingOperation, status: MarketingOperationStatus = item.status) {
+  return taskStatusWords({ status, kind: item.kind, humanQuestion: item.humanQuestion, ownerName: item.ownerName })
+}
+
+/**
+ * A status as the status select offers it. The same words as the pill, except
+ * that unowned, not-started work is "Not started" here: "Nobody has it" is
+ * about the owner, and it already heads the owner select right beside this one.
+ */
+function statusOptionWords(item: MarketingOperation, status: MarketingOperationStatus) {
+  const words = statusWordsFor(item, status)
+  return words === 'Nobody has it' ? 'Not started' : words
 }
 
 const STATUS_OPTIONS: MarketingOperationStatus[] = [
@@ -168,7 +306,7 @@ function StatusPill({ item }: { item: MarketingOperation }) {
       }}
     >
       <span aria-hidden="true">{item.status === 'blocked' ? '!' : item.status === 'needsHuman' ? '?' : '•'}</span>
-      {STATUS_LABELS[item.status]}
+      {statusWordsFor(item)}
     </span>
   )
 }
@@ -181,10 +319,10 @@ function ItemDetails({ item }: { item: MarketingOperation }) {
       </summary>
       <div style={{ display: 'grid', gap: 8, marginTop: 8, ...styles.small }}>
         {item.whyNow && <div><strong style={{ color: 'var(--card-fg-color)' }}>Why now: </strong>{item.whyNow}</div>}
-        {item.lastOutcome && <div><strong style={{ color: 'var(--card-fg-color)' }}>Marqueta already did: </strong>{item.lastOutcome}</div>}
+        {item.lastOutcome && <div><strong style={{ color: 'var(--card-fg-color)' }}>Latest: </strong>{item.lastOutcome}</div>}
         {item.humanQuestion && <div><strong style={{ color: 'var(--card-fg-color)' }}>Needed from a person: </strong>{item.humanQuestion}</div>}
         {item.humanResponse && <div><strong style={{ color: 'var(--card-fg-color)' }}>Latest team answer: </strong>{item.humanResponse}</div>}
-        {item.blocker && <div><strong style={{ color: '#E36216' }}>Blocker: </strong>{item.blocker}</div>}
+        {item.blocker && <div><strong style={{ color: '#E36216' }}>In the way: </strong>{item.blocker}</div>}
         {(item.evidence || []).length > 0 && (
           <div>
             <strong style={{ color: 'var(--card-fg-color)' }}>Internal CMS matches</strong>
@@ -246,6 +384,7 @@ export function MarketingOperationsBoardContent({
   request?: typeof authenticatedMarketingRequest
 }) {
   const [items, setItems] = useState<MarketingOperation[]>([])
+  const [roster, setRoster] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -288,7 +427,9 @@ export function MarketingOperationsBoardContent({
         proofClient,
       )
       if (generation !== loadGenerationRef.current) return false
-      setItems(rankMarketingOperations(response.items || []))
+      // Before ranking and before any count: a weekly plan record is not work.
+      setItems(rankMarketingOperations(deskOperations(response.items || [])))
+      setRoster(Array.isArray(response.team) ? response.team : [])
       return true
     } catch (loadError) {
       if (generation !== loadGenerationRef.current) return false
@@ -306,6 +447,7 @@ export function MarketingOperationsBoardContent({
   }, [load, refreshToken])
 
   const counts = useMemo(() => getMarketingOperationCounts(items), [items])
+  const ownerOptions = useMemo(() => deskOwnerOptions(items, owners, roster), [items, owners, roster])
   useEffect(() => {
     onAttentionCountChange?.(counts.needsHuman)
   }, [counts.needsHuman, onAttentionCountChange])
@@ -448,18 +590,15 @@ export function MarketingOperationsBoardContent({
       <select
         aria-label={`Accountable owner for ${item.title}`}
         style={styles.control}
-        value={item.ownerSanityUserId || ''}
+        value={deskOwnerValue(item.ownerName, ownerOptions)}
         disabled={savingIds.has(item._id)}
         onChange={(event) => {
-          const owner = owners.find((candidate) => candidate._id === event.currentTarget.value)
-          void updateItem(item, {
-            ownerSanityUserId: owner?._id || '',
-            ownerName: owner?.title || '',
-          }, owner ? `Assigned to ${owner.title || 'team member'}.` : 'Cleared the accountable owner.')
+          const patch = deskOwnerPatch(event.currentTarget.value, owners, { options: ownerOptions, item })
+          void updateItem(item, patch, patch.ownerName ? `Assigned to ${patch.ownerName}.` : 'Cleared the accountable owner.')
         }}
       >
-        <option value="">Unassigned</option>
-        {owners.map((owner) => <option key={owner._id} value={owner._id}>{owner.title || owner._id}</option>)}
+        <option value="">Nobody has it</option>
+        {ownerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
       </select>
       <input
         aria-label={`Due date for ${item.title}`}
@@ -483,15 +622,28 @@ export function MarketingOperationsBoardContent({
 
   const renderActions = (item: MarketingOperation) => (
     <div style={{ display: 'grid', gap: 7 }}>
+      {item.status === 'blocked' && (
+        // Unstuck is the Slack card's Unstuck: back in progress, with what was
+        // in the way cleared. The same label never means "go and look at it".
+        <button
+          type="button"
+          style={styles.primaryButton}
+          disabled={savingIds.has(item._id)}
+          aria-label={`Unstuck ${item.title}`}
+          onClick={() => void updateItem(item, { status: 'working', blocker: '' }, 'Unstuck from the desk.')}
+        >
+          {LABEL.UNSTUCK}
+        </button>
+      )}
       <button
         type="button"
         data-operation-focus={item._id}
-        style={styles.primaryButton}
+        style={item.status === 'blocked' ? styles.button : styles.primaryButton}
         disabled={savingIds.has(item._id)}
         aria-label={`Open ${item.title} in ${item.targetView}`}
         onClick={() => onOpenView(item.targetView)}
       >
-        {item.status === 'needsHuman' ? 'Review and continue' : item.status === 'blocked' ? 'Resolve blocker' : 'Open work'}
+        {item.status === 'needsHuman' ? 'Review and continue' : 'Open work'}
       </button>
       <select
         aria-label={`Status for ${item.title}`}
@@ -500,10 +652,10 @@ export function MarketingOperationsBoardContent({
         disabled={savingIds.has(item._id)}
         onChange={(event) => {
           const status = event.currentTarget.value as MarketingOperationStatus
-          void updateItem(item, { status }, `Changed status to ${STATUS_LABELS[status]}.`)
+          void updateItem(item, { status }, `Changed status to ${statusOptionWords(item, status)}.`)
         }}
       >
-        {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}
+        {STATUS_OPTIONS.map((status) => <option key={status} value={status}>{statusOptionWords(item, status)}</option>)}
       </select>
       {item.status !== 'done' && item.status !== 'dismissed' && (
         <button
@@ -563,7 +715,7 @@ export function MarketingOperationsBoardContent({
     ? 'You’re clear. Marqueta has no decisions waiting on the team.'
     : items.length === 0
       ? 'No shared work yet. Give Marqueta one rough update and it will build the queue.'
-      : `No work is currently in ${GROUP_LABELS[filter].toLowerCase()}.`
+      : `No work in “${GROUP_LABELS[filter]}” right now.`
 
   return (
     <section
@@ -595,6 +747,13 @@ export function MarketingOperationsBoardContent({
           <p style={{ ...styles.small, margin: '6px 0 0', fontSize: 13 }}>
             Marqueta handles safe internal work, keeps the next move visible, and stops when a person must decide, provide a fact, or approve an external action.
           </p>
+          <button
+            type="button"
+            style={{ ...styles.button, minHeight: 44, border: 0, padding: '8px 0', color: '#4dc4d6' }}
+            onClick={() => onOpenView('thisWeek')}
+          >
+            This week’s plan lives on This week →
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {onOpenGuide && <button type="button" style={styles.button} onClick={onOpenGuide}>How this works</button>}
@@ -607,7 +766,7 @@ export function MarketingOperationsBoardContent({
       <div data-marketing-ops-summary="true" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, marginTop: 14 }}>
         {[
           ['Needs you', counts.needsHuman],
-          ['Marqueta handling', counts.marketingHandling],
+          [GROUP_LABELS.marketingHandling, counts.marketingHandling],
           ['Coming up', counts.comingUp],
           ['Overdue', counts.overdue],
         ].map(([label, value]) => (

@@ -5,6 +5,7 @@ import {
   FOLLOW_UP_BUDGET_SHARE,
   FOLLOW_UP_MINUTES_EACH,
   followUpLine,
+  followUpParts,
   followUpPersonLabel,
   followUpReservationLabel,
   followUpReservedMinutes,
@@ -446,6 +447,57 @@ describe('followUpLine', () => {
     expectValidSlackBlocks(
       lines.map((line) => ({ type: 'section', text: { type: 'mrkdwn', text: `${line.label}\n${line.detail}` } })),
     )
+  })
+})
+
+describe('followUpParts — the same facts, laid out by the caller', () => {
+  const mixed = [
+    contact({
+      _id: 'jane',
+      warmth: 'warm',
+      owner: 'juhan',
+      followUpAt: '2026-09-21T13:00:00Z',
+      interactions: [{ at: '2026-09-14T15:00:00Z', by: 'Eric', statusAfter: 'contacted' }],
+    }),
+    contact({ _id: 'today', followUpAt: '2026-09-24T20:00:00Z', status: 'responded' }),
+    contact({ _id: 'no-name', name: 'jd@mgb.org', organization: 'MGB', warmth: 'cold' }),
+    contact({ _id: 'phone', name: 'Bo Chen 617-555-0123', organization: 'Y Clinic · West', status: 'meeting' }),
+    contact({ _id: 'old', status: 'dormant', interactions: [{ at: '2025-09-14T15:00:00Z', statusAfter: 'dormant' }] }),
+    contact({ _id: 'amp', name: 'Smith & Co.', organization: 'AT&T <5%>' }),
+  ]
+
+  it('reads the way the Studio row shows it', () => {
+    const [entry] = listFollowUps([mixed[0]], { now: NOW, resolveOwner: (raw) => (raw === 'juhan' ? 'Juhan' : raw) })
+    expect(followUpParts(entry, NOW)).toEqual({
+      contactId: 'jane',
+      who: 'Jane Doe (MGB)',
+      due: 'overdue since Mon 21 Sep',
+      last: 'last: Contacted on 14 Sep',
+      temperature: 'they know us',
+      overdue: true,
+      ownerName: 'Juhan',
+    })
+  })
+
+  it('is followUpLine, piece for piece — the line is byte-identical to its parts, escaped', () => {
+    for (const entry of listFollowUps(mixed, { now: NOW })) {
+      const parts = followUpParts(entry, NOW)
+      const line = followUpLine(entry, NOW)
+      const escape = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      expect(line.detail).toBe([parts.due, parts.last, parts.temperature].filter(Boolean).map(escape).join(' · '))
+      expect(line.label).toBe(`*Follow up with ${escape(parts.who)}*`)
+    }
+  })
+
+  it('keeps the plain text plain, with the contact details still removed', () => {
+    const byId = Object.fromEntries(listFollowUps(mixed, { now: NOW }).map((entry) => [entry.contactId, followUpParts(entry, NOW)]))
+    // React escapes for itself; an &amp; here would show up on the page as one.
+    expect(byId.amp.who).toBe('Smith & Co. (AT&T <5%>)')
+    expect(byId.phone.who).toBe('Bo Chen (Y Clinic · West)')
+    expect(byId['no-name'].who).toBe('someone at MGB')
+    expect(byId.today.due).toBe('due today')
+    expect(byId.old.last).toBe('last: Dormant on 14 Sep 2025')
+    expect(JSON.stringify(byId)).not.toMatch(/617|@mgb\.org/)
   })
 })
 

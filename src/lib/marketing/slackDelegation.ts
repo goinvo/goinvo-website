@@ -1,10 +1,20 @@
 /**
- * The weekly marketing message in Slack, and the buttons that make it useful.
+ * The Monday plan in Slack, and the buttons that make it useful.
  *
- * A digest nobody can act on is just noise in a channel. So every task carries
- * the two replies a person actually has — "I'll take it" and "not me this week"
- * — plus a way to say they are away, which is the thing that otherwise silently
- * breaks the plan.
+ * A digest nobody can act on is noise in a channel. The first version was also
+ * written in the order it was built rather than the order people act on it:
+ * the asks sat at the top with no buttons, the cards that HAD buttons arrived
+ * as attachments a hundred phone lines further down, and an asked task showed
+ * up twice with opposite buttons. So `buildWeeklyDigestBlocks` owns the whole
+ * message, top to bottom, in the order a person acts — what needs an owner,
+ * what needs a decision, who to call, the money question — and each task
+ * appears exactly once, drawn as the same card every other message draws.
+ *
+ * The cards arrive already drawn (`DigestCard`). `buildTaskCard` lives in
+ * weeklyCheckIn.ts, which reads `MARKETING_ACTION` from this module while it
+ * loads; importing the card builder back here would let whichever of the two
+ * happened to load first decide whether either works. The route draws the
+ * cards; this decides where they go and what is said around them.
  *
  * Pure Block Kit construction and pure parsing of what comes back. No network,
  * no Slack SDK, so the message shape and the action routing are both testable
@@ -12,9 +22,27 @@
  */
 
 import type { CallSheetEntry } from './callSheet'
+import { formatMinutes } from './effort'
 import { encodeContactRef, MARQUETA_ACTION } from './marquetaActions'
-import { marketingOperationHash } from './operations'
-import { clipSlackText, escapeSlackText, SLACK_LIMITS, slackLink } from './slackText'
+import {
+  actionsRow,
+  askMarqueta,
+  countLabel,
+  formatEffort,
+  formatSlackDay,
+  LABEL,
+  openViewButton,
+  slackReadable,
+  STATE_EMOJI,
+  VIEW_TITLE,
+  weekOfLabel,
+  type MarquetaView,
+} from './marquetaStyle'
+import { MARKETING_OPERATION_STATUSES, marketingOperationHash } from './operations'
+import { askMentionsText, type OwnerAsk } from './ownerAsk'
+import { formatMonths } from './runway'
+import { clipSlackText, escapeSlackText, SLACK_LIMITS, slackLink, slackMention } from './slackText'
+import { isDecisionTask, resolveTaskView, studioViewUrl } from './taskLinks'
 
 /** Namespaced like the chat and dispute actions already in the interactions route. */
 export const MARKETING_ACTION = {
@@ -44,11 +72,23 @@ export const RUNWAY_LABEL_INPUT = 'goinvo_runway_label_input'
 export const RUNWAY_BASIS_BLOCK = 'goinvo_runway_basis_block'
 export const RUNWAY_BASIS_INPUT = 'goinvo_runway_basis_input'
 
+/**
+ * Every block of the money-and-direction group carries an id starting with
+ * this, so a press can redraw exactly that group (`replaceBlocksByPrefix`)
+ * and leave the rest of the Monday plan — or of an answer — as it was.
+ */
+export const MONEY_BLOCK_PREFIX = 'mq_money'
+export const RUNWAY_QUESTION_BLOCK = `${MONEY_BLOCK_PREFIX}_runway`
+export const RUNWAY_ACTIONS_BLOCK = `${MONEY_BLOCK_PREFIX}_runway_actions`
+
 export type MarketingActionId = (typeof MARKETING_ACTION)[keyof typeof MARKETING_ACTION]
 
 export function isMarketingAction(actionId: string | undefined): actionId is MarketingActionId {
   return Object.values(MARKETING_ACTION).includes(actionId as MarketingActionId)
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Block = Record<string, any>
 
 /**
  * Action payloads travel in Slack's `value` string, so they are encoded rather
@@ -89,10 +129,11 @@ export function decodeActionValue(
 
 /**
  * A task's `askHistory`: one entry per person the digest ASKED to take it, and
- * one per person who PASSED on it ("Not me" / "Hand it back" on the digest
- * card). Both mean the same thing to the next ask — that person has answered —
- * so the next digest never puts the question to them again, and a task two
- * people have answered is offered as "drop it?" instead of to a third.
+ * one per person who PASSED on it ("Not me" — `passOnTask`; a `Hand back` is
+ * not a pass and records nothing here).
+ * Both mean the same thing to the next ask — that person has answered — so the
+ * next digest never puts the question to them again, and a task two people
+ * have answered is offered as "still worth doing?" instead of to a third.
  *
  * Every entry is keyed by Slack id, never by name. A name is whatever Slack's
  * display name is this month ("Shirley Wu"), and the roster says "Shirley";
@@ -150,7 +191,7 @@ export function askHistoryEntry(input: {
  * What a task's history means for this week's digest.
  *
  *   - `answeredIds`: every distinct person asked or passed, in any week. Never
- *     asked again; two of them make the task "drop it?".
+ *     asked again; two of them make the task "still worth doing?".
  *   - `askedThisWeek`: the person THIS week's digest already asked, when they
  *     have not since passed. A re-run shows them the same ask and records
  *     nothing, and the ask is not counted as a second person — it is the same
@@ -176,30 +217,44 @@ export function readAskHistory(
   return { answeredIds, ...(askedThisWeek ? { askedThisWeek } : {}) }
 }
 
-const mention = (slackUserId?: string, fallback?: string) =>
-  slackUserId ? `<@${slackUserId}>` : escapeSlackText(fallback || 'someone')
+// ── Small shared pieces ─────────────────────────────────────────────────────
 
-function formatMinutes(minutes: number): string {
-  const whole = Math.max(0, Math.round(minutes))
-  const hours = Math.floor(whole / 60)
-  const rest = whole % 60
-  if (hours && rest) return `${hours}h ${rest}m`
-  if (hours) return `${hours}h`
-  return `${rest}m`
+const clean = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim()
+
+const button = (actionId: string, label: string, value?: string, primary = false): Block => ({
+  type: 'button',
+  action_id: actionId,
+  text: { type: 'plain_text', text: label, emoji: true },
+  ...(value !== undefined ? { value } : {}),
+  ...(primary ? { style: 'primary' } : {}),
+})
+
+const section = (text: string, extra: Block = {}): Block => ({
+  type: 'section',
+  ...extra,
+  text: { type: 'mrkdwn', text: clipSlackText(text, SLACK_LIMITS.sectionText) },
+})
+
+const context = (text: string, extra: Block = {}): Block => ({
+  type: 'context',
+  ...extra,
+  elements: [{ type: 'mrkdwn', text: clipSlackText(text, SLACK_LIMITS.sectionText) }],
+})
+
+/** Record text for a line of mrkdwn: escaped, on one line, clipped. */
+const recordText = (value: unknown, max: number) => clipSlackText(escapeSlackText(clean(value)), max)
+
+/**
+ * "This week", linked to the tab when there is a Studio to link to. The words
+ * are the tab's own name either way, so a reader without the link still knows
+ * where to look.
+ */
+function thisWeekLink(studioBaseUrl: string | undefined, focus?: 'caught' | 'decisions' | 'followUps', label: string = VIEW_TITLE.thisWeek) {
+  const url = studioViewUrl(studioBaseUrl, 'thisWeek', focus ? { focus } : {})
+  return url ? slackLink(url, label) : escapeSlackText(label)
 }
 
-export type DigestTask = {
-  _id: string
-  title: string
-  kind?: string
-  priority?: string
-  status?: string
-  suggestedOwner?: string
-  ownerName?: string
-  slackUserId?: string
-  minutes?: number
-  whyNow?: string
-}
+// ── The Monday plan ─────────────────────────────────────────────────────────
 
 /**
  * A follow-up owed to somebody who already answered, rendered by the caller
@@ -212,226 +267,382 @@ export type DigestFollowUp = { label: string; detail: string; contactRef: string
 /** The digest shows this many follow-ups; the rest are one `my calls` away. */
 export const MAX_DIGEST_FOLLOW_UPS = 3
 
-export type DigestInput = {
-  theme: string
-  weekStart: string
-  weekEnd: string
-  plannedMinutes: number
-  budgetMinutes: number
-  tasks: DigestTask[]
-  callSheet?: CallSheetEntry[]
-  /** People who are away this week, with the work that needs a new owner. */
-  awayNotices?: { awayOwner: string; taskTitle: string; candidates: string[] }[]
-  /** Away notices left out to keep the message short, counted in one line rather than dropped silently. */
-  awayNoticesMore?: number
-  studioUrl?: string
-  /**
-   * Blocks placed directly under the week line, before anything else: how last
-   * week went, and the named asks. The asks belong at the top because they are
-   * the only part of the message addressed to a particular person — below a
-   * call sheet they are scrolled past by the very people they name.
-   */
-  lead?: Block[]
-  /** Follow-ups due, at most MAX_DIGEST_FOLLOW_UPS shown. */
-  followUps?: DigestFollowUp[]
-  /** One mrkdwn line (already escaped) under the follow-ups, e.g. "+4 more follow-ups due — …". */
-  followUpsMore?: string
-}
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Block = Record<string, any>
+/** One task, already drawn by `buildTaskCard` in plan mode: its section and its actions. */
+export type DigestCard = { taskId: string; blocks: Block[] }
 
 /**
- * Build the digest.
+ * At most this many cards under "Needs an owner". A Monday plan is read on a
+ * phone before the first coffee; five asks is already a lot of asking.
+ */
+export const MAX_OWNER_CARDS = 5
+/** "At most two other unowned" — the rest are counted, and This week has them all. */
+const MAX_OPEN_CARDS = 2
+const MAX_DECISION_CARDS = 2
+const MAX_CALL_SHEET = 3
+const MAX_STUCK_NAMED = 2
+const MAX_UNDRAFTED_NAMED = 3
+const MAX_IDEAS_NAMED = 3
+
+export type DigestInput = {
+  now: Date
+  /** Monday of the week, `YYYY-MM-DD`. */
+  weekStart: string
+  budgetMinutes: number
+  /** The recorded plan's numbers. Absent when the digest is showing the open board instead. */
+  plan?: { plannedMinutes: number; theme?: string | null } | null
+  /** Without a plan: minutes of open work, for "10h of open work for an 8h week". */
+  openMinutes?: number
+  /** False when the tick says this week's plan did not save. */
+  planRecorded?: boolean
+  /** Registry warnings, plain text (domainWatch.ts). */
+  renewals?: string[]
+  /** "Last week: 2 tasks done · Outreach: …", plain text. */
+  lastWeek?: string
+  needsOwner?: {
+    /** Asked by name (ownerAsk.ts). Never trimmed: the one part addressed to a person. */
+    asked?: DigestCard[]
+    /** Work belonging to someone away this week. */
+    away?: DigestCard[]
+    /** Asked twice, nobody took it. */
+    exhausted?: DigestCard[]
+    /** Everything else nobody owns. */
+    open?: DigestCard[]
+    /** Needs an owner but not handed in as a card at all — counted into "+N more". */
+    more?: number
+  }
+  decisions?: DigestCard[]
+  /** Every decision waiting, when more are waiting than are handed in. */
+  decisionsTotal?: number
+  /** Who already has work this week, and how much. Names as the board holds them. */
+  taken?: Array<{ name: string; slackUserId?: string; count: number }>
+  /** Work that is stuck, owned or not: shown so the room can see what is in the way. */
+  stuck?: Array<{ title: string; ownerName?: string; slackUserId?: string; blocker?: string; url?: string }>
+  followUps?: DigestFollowUp[]
+  /** Every follow-up due, shown or not. */
+  followUpsTotal?: number
+  callSheet?: CallSheetEntry[]
+  undraftedPosts?: Array<{ title?: string | null }>
+  /** The money-and-direction group (strategyCheck.ts), ids already on it. */
+  money?: Block[]
+  /** Ideas caught in Slack nobody has judged — titles for the first few. */
+  ideas?: Array<{ title: string }>
+  /** How many are waiting in all, when more than `ideas` holds. */
+  ideasTotal?: number
+  unmappedOwners?: string[]
+  studioBaseUrl?: string
+}
+
+/** The groups that give way, in this order, when the message would pass Slack's fifty blocks. */
+const TRIM_ORDER = ['followUps', 'callSheet', 'exhausted', 'away', 'decisions'] as const
+type TrimGroup = (typeof TRIM_ORDER)[number]
+
+const cardsOf = (list: DigestCard[] | undefined) =>
+  (list || []).filter((card) => card && clean(card.taskId) && Array.isArray(card.blocks) && card.blocks.length > 0)
+
+/**
+ * The week line: "Week of Mon 21 Sep · 7h 30m planned of 8h · _theme_", or,
+ * with no plan to report, the open work against the budget — and, when that
+ * does not fit, it says so rather than calling it a plan.
+ */
+function weekLine(input: DigestInput): string {
+  const week = weekOfLabel(input.weekStart, input.now)
+  const budget = formatMinutes(input.budgetMinutes)
+  if (input.plan) {
+    const theme = clean(input.plan.theme).replace(/[_*~`]/g, ' ').replace(/\s+/g, ' ').trim()
+    const planned = `${formatMinutes(input.plan.plannedMinutes)} planned of ${budget}`
+    return [week, planned, theme ? `_${recordText(theme, 120)}_` : ''].filter(Boolean).join(' · ')
+  }
+  const open = Math.max(0, Number(input.openMinutes) || 0)
+  const over = open > input.budgetMinutes ? ' — more than fits' : ''
+  // Said aloud, "8h" and "11h" start with a vowel: "an 8h week".
+  const article = /^(8|11h|18h)/.test(budget) ? 'an' : 'a'
+  return `${week} · ${formatMinutes(open)} of open work for ${article} ${budget} week${over}`
+}
+
+/**
+ * The Monday plan, in the order people act on it:
  *
- * Ordered the way the person reads it: what the week is about, then what is
- * theirs, then who to contact and why. The call sheet is capped — a Slack
- * message with fifty blocks is scrolled past, and the Studio holds the full
- * list anyway.
+ *   Monday plan
+ *   Week of Mon 21 Sep · 7h 30m planned of 8h · _theme_
+ *   ⚠️ the plan did not save / a domain is about to lapse
+ *   Last week: …
+ *   ── *Needs an owner*        asked, away cover, asked twice, two others; +N more
+ *      *Decisions waiting*     two at most
+ *      Already taken: …        a roll call, not cards: owned work is Thursday's
+ *      ⚠️ Stuck: …
+ *   ── *Outreach this week*    follow-ups · who to reach out to · posts with no draft
+ *   ── money and direction     one question at a time, when one is due
+ *   ── ideas · the identity prompt · Ask me: …
+ *      [Open This week] [I’m away this week]      ← always the last block
+ *
+ * Owned work is a roll call, not cards. The first green button used to be a
+ * hundred lines down, below a card per task somebody already had; the tasks
+ * that need a person to say "mine" come first, and owners get their own list
+ * on Thursday and in `my tasks`.
+ *
+ * Over fifty blocks Slack refuses the WHOLE message, so groups give way whole,
+ * from the least urgent (follow-up rows, one `my calls` away) to the most
+ * (decisions), each leaving a line that counts what went. Never a raw slice:
+ * that cut the footer — the one row every message ends on — first. The asks
+ * never give way: they are the part of the message addressed to a person.
  */
 export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
-  const blocks: Block[] = [
-    {
-      type: 'header',
-      text: { type: 'plain_text', text: input.theme || 'This week in marketing', emoji: true },
-    },
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text:
-            `${input.weekStart} – ${input.weekEnd}  ·  ` +
-            // "planned of" would imply the work has been fitted to the budget.
-            // The digest lists what is OPEN, which can exceed it — saying
-            // "planned" when it does not fit is how a plan quietly loses trust.
-            `${formatMinutes(input.plannedMinutes)} of open work  ·  ${formatMinutes(input.budgetMinutes)} budget` +
-            (input.plannedMinutes > input.budgetMinutes ? '  ·  more than fits' : ''),
-        },
-      ],
-    },
-    ...(input.lead || []),
-  ]
-
-  if (input.tasks.length > 0) {
-    blocks.push({ type: 'divider' })
-    for (const task of input.tasks.slice(0, 8)) {
-      const owner = mention(task.slackUserId, task.ownerName)
-      const meta = [task.minutes ? formatMinutes(task.minutes) : '', task.whyNow || '']
-        .filter(Boolean)
-        .join(' · ')
-      blocks.push({
-        type: 'section',
-        text: { type: 'mrkdwn', text: `*${task.title}*\n${owner}${meta ? `  ·  ${meta}` : ''}` },
-      })
-      blocks.push({
-        type: 'actions',
-        elements: [
-          {
-            type: 'button',
-            action_id: MARKETING_ACTION.claim,
-            text: { type: 'plain_text', text: "I'll take it" },
-            style: 'primary',
-            value: encodeActionValue({ taskId: task._id, ownerName: task.ownerName }),
-          },
-          {
-            type: 'button',
-            action_id: MARKETING_ACTION.decline,
-            text: { type: 'plain_text', text: 'Not me this week' },
-            value: encodeActionValue({ taskId: task._id, ownerName: task.ownerName }),
-          },
-          {
-            type: 'button',
-            action_id: MARKETING_ACTION.details,
-            text: { type: 'plain_text', text: "What's involved" },
-            value: encodeActionValue({ taskId: task._id, ownerName: task.ownerName }),
-          },
-        ],
-      })
-    }
+  const trimmed = new Set<TrimGroup>()
+  let blocks = composeDigest(input, trimmed)
+  for (const group of TRIM_ORDER) {
+    if (blocks.length <= SLACK_LIMITS.blocksPerMessage) break
+    trimmed.add(group)
+    blocks = composeDigest(input, trimmed)
   }
-
-  for (const notice of input.awayNotices || []) {
-    // Names and titles are record text: escaped, so a task called "Pilot <5%"
-    // renders as written instead of as a broken Slack control sequence.
-    const candidates = (notice.candidates || []).map((name) => escapeSlackText(name))
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: clipSlackText(
-          `:palm_tree: *${escapeSlackText(notice.awayOwner)} is away* — “${escapeSlackText(notice.taskTitle)}” needs someone.\n` +
-            (candidates.length
-              ? `Free this week: ${candidates.join(', ')}`
-              : '_Nobody is free this week — this one probably slips._'),
-          SLACK_LIMITS.sectionText,
-        ),
-      },
-    })
-  }
-  const awayMore = Math.max(0, Math.floor(Number(input.awayNoticesMore) || 0))
-  if (awayMore > 0) {
-    blocks.push({
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text: `…and ${awayMore} more task${awayMore === 1 ? '' : 's'} belonging to people who are away — the plan has them all.`,
-        },
-      ],
-    })
-  }
-
-  const sheet = (input.callSheet || []).slice(0, 3)
-  if (sheet.length > 0) {
-    blocks.push({ type: 'divider' })
-    blocks.push({
-      type: 'section',
-      text: { type: 'mrkdwn', text: '*Who to reach out to, and why now*' },
-    })
-    for (const entry of sheet) {
-      const people = entry.contacts.length
-      // slackLink, not a hand-built <url|…>: a research URL is record text, and
-      // a `|` or `>` in it would end the link early and spill the rest into the
-      // message as markup.
-      const source = entry.sourceUrl ? ` ${slackLink(entry.sourceUrl, 'source')}` : ''
-      const prep = callSheetPrepButton(entry)
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: clipSlackText(
-            `*${escapeSlackText(entry.organization)}* · ${people} ${people === 1 ? 'person' : 'people'}\n` +
-              `${escapeSlackText(entry.signal)}${source}`,
-            SLACK_LIMITS.sectionText,
-          ),
-        },
-        // An accessory rather than an actions row: the call sheet is three
-        // lines, and a row of buttons under each would double its height.
-        ...(prep ? { accessory: prep } : {}),
-      })
-    }
-  }
-
-  const followUps = (input.followUps || [])
-    .filter((followUp) => followUp && (String(followUp.label || '').trim() || String(followUp.detail || '').trim()))
-    .slice(0, MAX_DIGEST_FOLLOW_UPS)
-  const followUpsMore = String(input.followUpsMore || '').trim()
-  if (followUps.length > 0 || followUpsMore) {
-    blocks.push({ type: 'divider' })
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '*Follow-ups due*' } })
-    for (const followUp of followUps) blocks.push(...digestFollowUpBlocks(followUp))
-    if (followUpsMore) {
-      blocks.push({
-        type: 'context',
-        elements: [{ type: 'mrkdwn', text: clipSlackText(followUpsMore, SLACK_LIMITS.sectionText) }],
-      })
-    }
-  }
-
-  blocks.push({ type: 'divider' })
-  blocks.push({
-    type: 'actions',
-    elements: [
-      {
-        type: 'button',
-        action_id: MARKETING_ACTION.away,
-        text: { type: 'plain_text', text: "I'm away this week" },
-        value: encodeActionValue({ taskId: 'week' }),
-      },
-      ...(input.studioUrl
-        ? [
-            {
-              type: 'button',
-              text: { type: 'plain_text', text: 'Open the plan' },
-              url: input.studioUrl,
-            },
-          ]
-        : []),
-    ],
-  })
-
   return blocks
 }
 
-const buttonElement = (actionId: string, label: string, value: string, primary = false): Block => ({
-  type: 'button',
-  action_id: actionId,
-  text: { type: 'plain_text', text: label, emoji: true },
-  value,
-  ...(primary ? { style: 'primary' } : {}),
-})
+function composeDigest(input: DigestInput, trimmed: Set<TrimGroup>): Block[] {
+  const base = input.studioBaseUrl
+  const blocks: Block[] = [
+    { type: 'header', text: { type: 'plain_text', text: 'Monday plan', emoji: true } },
+    context(weekLine(input)),
+  ]
+
+  // Said out loud rather than hidden: if the scheduled plan did not persist,
+  // everything below is the raw board, not the week that was planned.
+  if (input.planRecorded === false) {
+    blocks.push(
+      context(
+        `${STATE_EMOJI.risk} This week’s plan didn’t save, so this is the open board, not the planned week — ` +
+          `re-plan on ${thisWeekLink(base)}.`,
+      ),
+    )
+  }
+
+  // Renewals, only when one is close — and every one of them. The cheapest
+  // item in the message, and the only one whose failure takes everything else
+  // down with it.
+  const renewals = (input.renewals || []).map(clean).filter(Boolean)
+  if (renewals.length) {
+    blocks.push(
+      context(
+        renewals
+          .map((note) => `${STATE_EMOJI.risk} ${clipSlackText(escapeSlackText(slackReadable(note, input.now)), 600)}`)
+          .join('\n'),
+      ),
+    )
+  }
+
+  const lastWeek = clean(input.lastWeek)
+  if (lastWeek) blocks.push(context(recordText(lastWeek, 600)))
+
+  blocks.push(...workBlocks(input, trimmed))
+  blocks.push(...outreachBlocks(input, trimmed))
+
+  const money = (input.money || []).filter(Boolean)
+  if (money.length) blocks.push({ type: 'divider' }, ...money)
+
+  const closing: Block[] = []
+  const ideas = ideaReviewLine(input.ideas || [], input.ideasTotal, base)
+  if (ideas) closing.push(context(ideas))
+  closing.push(...buildIdentityPromptBlocks(input.unmappedOwners || []))
+  closing.push(
+    context(
+      `Ask me: ${askMarqueta('my calls')} · ${askMarqueta('my tasks')} · ${escapeSlackText(askMarqueta('prep <name>'))}`,
+    ),
+  )
+  blocks.push({ type: 'divider' }, ...closing)
+
+  // Always the last block: the two things anyone can do with the whole plan.
+  blocks.push(
+    ...actionsRow(
+      [
+        openViewButton('thisWeek', studioViewUrl(base, 'thisWeek')),
+        button(MARKETING_ACTION.away, LABEL.AWAY, encodeActionValue({ taskId: 'week' })),
+      ],
+      'mq_footer',
+    ),
+  )
+  return blocks
+}
 
 /**
- * "Prep this call" for one call-sheet organisation.
+ * "Needs an owner", "Decisions waiting", the roll call and anything stuck.
  *
- * The sheet says who to call and why now; the thing that actually gets a
- * nervous person to pick up the phone is the outline, so it is one press away
- * from the line that suggested the call. The ref names the first contact the
- * sheet listed (the one it would have you call) and the organisation, so the
- * outline is about a person when there is one and about the organisation when
- * there is not. No button when there is nothing to prep, rather than one that
- * opens an empty outline.
+ * Needs an owner draws, in order: the people asked by name, cover for anyone
+ * away, the tasks asked about twice with nobody taking them, and then at most
+ * two more — five cards in all, the rest counted into one "+N more on This
+ * week". Every task id appears once: a task is a card in one group or it is
+ * counted, never both.
+ */
+function workBlocks(input: DigestInput, trimmed: Set<TrimGroup>): Block[] {
+  const base = input.studioBaseUrl
+  const seen = new Set<string>()
+  const unseen = (list: DigestCard[]) =>
+    list.filter((card) => {
+      if (seen.has(card.taskId)) return false
+      seen.add(card.taskId)
+      return true
+    })
+
+  const owner = input.needsOwner || {}
+  const asked = unseen(cardsOf(owner.asked))
+  const away = unseen(cardsOf(owner.away))
+  const exhausted = unseen(cardsOf(owner.exhausted))
+  const open = unseen(cardsOf(owner.open))
+  const decisions = unseen(cardsOf(input.decisions))
+
+  const shown: DigestCard[] = [...asked]
+  let counted = Math.max(0, Math.floor(Number(owner.more) || 0))
+  const take = (list: DigestCard[], limit: number, group?: TrimGroup) => {
+    if (group && trimmed.has(group)) {
+      counted += list.length
+      return
+    }
+    const room = Math.max(0, Math.min(limit, MAX_OWNER_CARDS - shown.length))
+    shown.push(...list.slice(0, room))
+    counted += Math.max(0, list.length - room)
+  }
+  take(away, MAX_OWNER_CARDS, 'away')
+  take(exhausted, MAX_OWNER_CARDS, 'exhausted')
+  // Once a group has given way for length, the rest do not take its place —
+  // that would only swap which cards make the message too long.
+  take(open, trimmed.has('exhausted') || trimmed.has('away') ? 0 : MAX_OPEN_CARDS)
+
+  const blocks: Block[] = []
+  if (shown.length || counted) {
+    blocks.push(section('*Needs an owner*'))
+    for (const card of shown) blocks.push(...card.blocks)
+    if (counted) {
+      blocks.push(context(`+${counted} more on ${thisWeekLink(base)}`))
+    }
+  }
+
+  const waiting = Math.max(decisions.length, Math.floor(Number(input.decisionsTotal) || 0))
+  if (waiting) {
+    if (trimmed.has('decisions')) {
+      blocks.push(section(`*Decisions waiting:* ${waiting} — answer them on ${thisWeekLink(base, 'decisions')}`))
+    } else {
+      const drawn = decisions.slice(0, MAX_DECISION_CARDS)
+      blocks.push(section('*Decisions waiting*'))
+      for (const card of drawn) blocks.push(...card.blocks)
+      if (waiting > drawn.length) blocks.push(context(`+${waiting - drawn.length} more on ${thisWeekLink(base, 'decisions')}`))
+    }
+  }
+
+  const taken = rollCall(input.taken || [])
+  if (taken) blocks.push(context(taken))
+  const stuck = stuckLine(input.stuck || [])
+  if (stuck) blocks.push(context(stuck))
+
+  return blocks.length ? [{ type: 'divider' }, ...blocks] : []
+}
+
+/**
+ * "Already taken: <@U1> 2 · <@U2> 1 — ask `Marqueta, my tasks` for yours".
+ * Alphabetical, like the check-in: ordered by count it would be a leaderboard.
+ */
+function rollCall(taken: NonNullable<DigestInput['taken']>): string {
+  const people = new Map<string, { label: string; name: string; count: number }>()
+  for (const entry of taken) {
+    const name = clean(entry?.name)
+    const count = Math.max(0, Math.floor(Number(entry?.count) || 0))
+    if (!name || !count) continue
+    const key = askId(entry.slackUserId) || `name:${name.toLowerCase()}`
+    const existing = people.get(key)
+    if (existing) existing.count += count
+    else people.set(key, { label: slackMention(askId(entry.slackUserId) || undefined, name), name, count })
+  }
+  const list = [...people.values()].sort((a, b) => a.name.localeCompare(b.name))
+  if (!list.length) return ''
+  return `Already taken: ${list.map((person) => `${person.label} ${person.count}`).join(' · ')} — ask ${askMarqueta('my tasks')} for yours`
+}
+
+/**
+ * "⚠️ Stuck: *Title* (<@U2>) — in the way: the numbers". Stuck work used to
+ * vanish from the Monday plan entirely (the read skipped `blocked`), which is
+ * the one week it most needs somebody to see it.
+ */
+function stuckLine(stuck: NonNullable<DigestInput['stuck']>): string {
+  const list = stuck.filter((task) => task && clean(task.title))
+  if (!list.length) return ''
+  const named = list.slice(0, MAX_STUCK_NAMED).map((task) => {
+    const title = clean(task.title)
+    const shownTitle = task.url ? slackLink(task.url, title.length > 120 ? `${title.slice(0, 119)}…` : title) : recordText(title, 120)
+    const who = clean(task.ownerName) ? slackMention(askId(task.slackUserId) || undefined, clean(task.ownerName)) : 'nobody has it'
+    const blocker = clean(task.blocker) ? ` — in the way: ${recordText(task.blocker, 200)}` : ''
+    return `${shownTitle} (${who})${blocker}`
+  })
+  const more = list.length - named.length
+  return `${STATE_EMOJI.risk} Stuck: ${named.join(' · ')}${more > 0 ? ` · +${more} more` : ''}`
+}
+
+/**
+ * "Outreach this week": follow-ups owed to people who answered, who to reach
+ * out to and why now, and any post going out with nothing written.
+ */
+function outreachBlocks(input: DigestInput, trimmed: Set<TrimGroup>): Block[] {
+  const base = input.studioBaseUrl
+  const blocks: Block[] = []
+
+  const followUps = (input.followUps || [])
+    .filter((followUp) => followUp && (clean(followUp.label) || clean(followUp.detail)))
+    .slice(0, MAX_DIGEST_FOLLOW_UPS)
+  const shownFollowUps = trimmed.has('followUps') ? [] : followUps
+  for (const followUp of shownFollowUps) blocks.push(...digestFollowUpBlocks(followUp))
+  const followUpsTotal = Math.max(followUps.length, Math.floor(Number(input.followUpsTotal) || 0))
+  const restFollowUps = followUpsTotal - shownFollowUps.length
+  if (restFollowUps > 0) {
+    const count = countLabel(restFollowUps, shownFollowUps.length ? 'more follow-up' : 'follow-up', shownFollowUps.length ? 'more follow-ups' : 'follow-ups')
+    blocks.push(context(`${shownFollowUps.length ? '+' : ''}${count} due — ask ${askMarqueta('my calls')}`))
+  }
+
+  const sheet = (input.callSheet || []).filter((entry) => entry && clean(entry.organization)).slice(0, MAX_CALL_SHEET)
+  if (sheet.length && trimmed.has('callSheet')) {
+    blocks.push(context(`${countLabel(sheet.length, 'organisation')} worth a call this week — on ${thisWeekLink(base)}`))
+  } else if (sheet.length) {
+    blocks.push(section('*Who to reach out to, and why now*'))
+    for (const entry of sheet) blocks.push(callSheetEntryBlock(entry))
+  }
+
+  const posts = (input.undraftedPosts || []).filter(Boolean)
+  if (posts.length) {
+    const titles = posts.slice(0, MAX_UNDRAFTED_NAMED).map((post) => recordText(clean(post.title) || 'Untitled post', 80))
+    const more = posts.length - titles.length
+    const verb = posts.length === 1 ? 'goes' : 'go'
+    blocks.push(
+      context(
+        `${STATE_EMOJI.risk} ${countLabel(posts.length, 'post')} ${verb} out this week with no draft yet: ${titles.join(' · ')}${more > 0 ? ` …and ${more} more` : ''}`,
+      ),
+    )
+  }
+
+  return blocks.length ? [{ type: 'divider' }, section('*Outreach this week*'), ...blocks] : []
+}
+
+/**
+ * One call-sheet organisation, with Prep as an accessory rather than a row of
+ * its own: the sheet is three lines, and a row of buttons under each would
+ * double its height.
+ */
+function callSheetEntryBlock(entry: CallSheetEntry): Block {
+  const people = (entry.contacts || []).length
+  // slackLink, not a hand-built <url|…>: a research URL is record text, and a
+  // `|` or `>` in it would end the link early and spill the rest as markup.
+  const source = entry.sourceUrl ? ` ${slackLink(entry.sourceUrl, 'source')}` : ''
+  const prep = callSheetPrepButton(entry)
+  return section(
+    `*${recordText(entry.organization, 150)}*${people ? ` · ${countLabel(people, 'person', 'people')}` : ''}\n` +
+      `${clipSlackText(escapeSlackText(entry.signal || ''), 1200)}${source}`,
+    prep ? { accessory: prep } : {},
+  )
+}
+
+/**
+ * Prep for one call-sheet organisation.
+ *
+ * The sheet says who to call and why now; what actually gets a nervous person
+ * to pick up the phone is the outline, so it is one press away from the line
+ * that suggested the call. The ref names the first contact the sheet listed
+ * and the organisation, so the outline is about a person when there is one. No
+ * button when there is nothing to prep, rather than one that opens an empty
+ * outline.
  */
 function callSheetPrepButton(entry: CallSheetEntry): Block | null {
   const contactId = String(entry.contacts.find((contact) => contact?._id)?._id || '').trim()
@@ -439,34 +650,54 @@ function callSheetPrepButton(entry: CallSheetEntry): Block | null {
   if (!contactId && !organization) return null
   const value = encodeContactRef({ contactId, organization })
   if (value.length > SLACK_LIMITS.buttonValue) return null
-  return buttonElement(MARQUETA_ACTION.prepCall, 'Prep this call', value)
+  return button(MARQUETA_ACTION.prepCall, LABEL.PREP, value)
 }
 
 /**
- * One follow-up line and its two buttons — Prep and Log, never Done: a
+ * One follow-up line and its two buttons — Prep and Log it…, never Done: a
  * follow-up is finished by logging what happened, which is what moves the
  * contact's date on. A ref Slack would refuse means no buttons, not a message
  * Slack rejects whole.
  */
 function digestFollowUpBlocks(followUp: DigestFollowUp): Block[] {
-  const body = [String(followUp.label || '').trim(), String(followUp.detail || '').trim()].filter(Boolean).join('\n')
+  const body = [clean(followUp.label), clean(followUp.detail)].filter(Boolean).join('\n')
   if (!body) return []
-  const blocks: Block[] = [
-    { type: 'section', text: { type: 'mrkdwn', text: clipSlackText(body, SLACK_LIMITS.sectionText) } },
-  ]
+  const blocks: Block[] = [section(body)]
   const ref = String(followUp.contactRef || '')
   if (ref && ref.length <= SLACK_LIMITS.buttonValue) {
     blocks.push({
       type: 'actions',
-      elements: [
-        buttonElement(MARQUETA_ACTION.prepCall, 'Prep', ref),
-        buttonElement(MARQUETA_ACTION.logCall, 'Log how it went', ref),
-      ],
+      elements: [button(MARQUETA_ACTION.prepCall, LABEL.PREP, ref), button(MARQUETA_ACTION.logCall, LABEL.LOG, ref)],
     })
   }
   return blocks
 }
 
+/**
+ * The top-level `text` — what a phone's lock screen shows, cut at about ninety
+ * characters. Mentions and the ask first, because a mention that only lives in
+ * the blocks reaches somebody's screen without ever reaching their phone; then
+ * the message's name and its numbers.
+ *
+ *   <@U3> <@U2> — could you take a task each? · Monday plan: 3 tasks need an owner, 3 follow-ups due
+ */
+export function digestNotificationText(input: {
+  asks: OwnerAsk[]
+  needsOwner: number
+  followUps: number
+  weekStart: string
+  now: Date
+}): string {
+  const owners = Math.max(0, Math.floor(Number(input.needsOwner) || 0))
+  const followUps = Math.max(0, Math.floor(Number(input.followUps) || 0))
+  const parts = [
+    owners ? `${countLabel(owners, 'task')} ${owners === 1 ? 'needs' : 'need'} an owner` : '',
+    followUps ? `${countLabel(followUps, 'follow-up')} due` : '',
+  ].filter(Boolean)
+  const summary = parts.length ? parts.join(', ') : weekOfLabel(input.weekStart, input.now).replace(/^Week of/, 'week of')
+  const mentions = askMentionsText(input.asks || [])
+  return clipSlackText(`${mentions ? `${mentions} · ` : ''}Monday plan: ${summary}`, SLACK_LIMITS.fallbackText)
+}
 
 /**
  * Ask people to say which name is theirs, once.
@@ -476,112 +707,123 @@ function digestFollowUpBlocks(followUp: DigestFollowUp): Block[] {
  * names is how a bot pings the wrong colleague.
  *
  * So it asks, and the asking IS the consent: the prompt states exactly what gets
- * stored and why before anybody presses anything. It only appears while owners
- * are still unmapped, so it disappears on its own rather than nagging.
+ * stored and why before anybody presses anything. One section with the choice
+ * beside it, and only while owners are still unmapped, so it disappears on its
+ * own rather than nagging.
  */
 export function buildIdentityPromptBlocks(unmappedOwners: string[]): Block[] {
-  const owners = unmappedOwners.filter(Boolean).slice(0, 20)
+  const owners = Array.from(new Set((unmappedOwners || []).map(clean).filter(Boolean))).slice(0, 20)
   if (owners.length === 0) return []
   return [
-    { type: 'divider' },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text:
-          "*One-time setup* — I don't know who is who yet, so the names above are plain text " +
-          'rather than @-mentions.\n' +
-          'Pick your name and I will store your Slack user ID against it, so future tasks ' +
-          'mention you directly. That is all it stores, and only for the people who choose to.',
-      },
-    },
-    {
-      type: 'actions',
-      elements: [
-        {
+    section(
+      '*One-time setup:* which name on the list is yours? I’ll store your Slack ID against it so I can ' +
+        '@-mention you on your own tasks — nothing else.',
+      {
+        accessory: {
           type: 'static_select',
           action_id: MARKETING_ACTION.linkIdentity,
           placeholder: { type: 'plain_text', text: 'Which one is you?' },
           options: owners.map((owner) => ({
-            text: { type: 'plain_text', text: owner },
-            value: owner,
+            text: { type: 'plain_text', text: owner.slice(0, SLACK_LIMITS.optionText) },
+            value: owner.slice(0, 150),
           })),
         },
-      ],
-    },
+      },
+    ),
   ]
 }
 
+// ── Money: the runway question ──────────────────────────────────────────────
+
+/** "11 Jan 2027": the studio's calendar, the year only when it is not this one. No weekday on a far-off date. */
+export function runwayDay(date: string | null | undefined, now: Date): string {
+  return formatSlackDay(String(date || ''), now).replace(/^[A-Z][a-z]{2} /, '')
+}
 
 /**
- * The runway line, and the three answers a principal actually has.
+ * The runway as its two facts — "4.5 months" and "11 Jan 2027" — or null when
+ * there is no future date to state. Months are rough on purpose (runway.ts).
+ */
+export function runwayParts(input: { months?: number | null; certainUntil?: string | null }, now: Date): { months: string; day: string } | null {
+  const months = typeof input.months === 'number' && Number.isFinite(input.months) ? input.months : null
+  const day = runwayDay(input.certainUntil, now)
+  if (months === null || months <= 0 || !day) return null
+  return { months: formatMonths(months), day }
+}
+
+/** "4.5 months (to 11 Jan 2027)", for receipts and answers. '' with no future date. */
+export function runwayFacts(input: { months?: number | null; certainUntil?: string | null }, now: Date): string {
+  const parts = runwayParts(input, now)
+  return parts ? `${parts.months} (to ${parts.day})` : ''
+}
+
+/**
+ * The runway question, and the three answers a principal actually has.
  *
- * Money is the input the whole strategy hangs off, and it was the one thing the
- * suite never asked about — it held a bin picked in July and would still have
- * been planning against it in 2027. So Marqueta asks, in the channel, at the
- * moment the number is about to stop being true.
+ * Money is the input the whole strategy hangs off, so Marqueta asks, in the
+ * channel, at the moment the number is about to stop being true — and states
+ * the number rather than the bin: "Rebuild" invites the reader to assume
+ * somebody decided it; "4.5 months, to 11 Jan 2027" can be argued with, and
+ * being argued with is the point.
  *
- * It states the number rather than the bin. "Rebuild" invites the reader to
- * assume somebody decided it; "4.5 months, to 11 Jan 2027" can be argued with,
- * and being argued with is the point.
+ * The check-in's reason says WHY it is asking (stale, close to the line, a
+ * deal was won since); the question is always the same one — is that number
+ * still true? — because all three answers answer it.
  *
- * Shown only when a check-in is due. A permanent banner about money in a team
- * channel is a banner people learn to scroll past.
+ * None of the three buttons is green. "Still right" is the cheap answer, and
+ * making it the brightest button invites a reflex press on the one number the
+ * whole strategy depends on.
+ *
+ * Nothing due and nothing to reconcile: nothing said. A permanent banner about
+ * money in a team channel is a banner people learn to scroll past.
  */
 export function buildRunwayBlocks(input: {
   summary: string
-  checkIn: { due: boolean; urgent: boolean; reason: string; question: string }
+  checkIn: { due: boolean; urgent?: boolean; reason: string; question: string }
   disagreement?: string | null
+  /** Months left and the date they reach. Without them the question is the check-in's own. */
+  months?: number | null
+  certainUntil?: string | null
+  now?: Date
+  /** "*Money and direction*" above the question: the digest's group heading. */
+  heading?: boolean
 }): Block[] {
-  if (!input.checkIn.due && !input.disagreement) return []
+  const disagreement = clean(input.disagreement)
+  if (!input.checkIn?.due && !disagreement) return []
+  const now = input.now || new Date()
 
-  // Escaped: since wins arrived, the check-in's reason can carry a won
-  // contact's name ("AT&T was marked won…"), and a record's text reaching
-  // mrkdwn raw is how a stray `<` breaks the card or a stored `<!here>` pings
-  // the channel. runway.ts strips angle brackets from that name as a second
-  // line of defence; this is the first.
-  const lines = [escapeSlackText(input.summary)]
-  if (input.checkIn.due) lines.push(escapeSlackText(input.checkIn.reason + ' ' + input.checkIn.question))
-  if (input.disagreement) lines.push('_' + escapeSlackText(input.disagreement) + '_')
+  // Escaped: the check-in's reason can carry a won contact's name ("AT&T was
+  // marked won…"), and record text reaching mrkdwn raw is how a stray `<`
+  // breaks the card or a stored `<!here>` pings the channel.
+  const parts = runwayParts(input, now)
+  const question = parts
+    ? `Still ${parts.months} of certain runway (to ${parts.day}), or has that moved?`
+    : clean(input.checkIn?.due ? input.checkIn.question : input.summary)
+  const reason = input.checkIn?.due ? clean(input.checkIn.reason).replace(/^The runway was last confirmed/, 'Last confirmed') : ''
+
+  const lines = [
+    input.heading ? '*Money and direction*' : '',
+    clipSlackText(escapeSlackText(question), 600),
+    reason ? `_${clipSlackText(escapeSlackText(reason), 600)}_` : '',
+    disagreement ? `_${clipSlackText(escapeSlackText(disagreement), 600)}_` : '',
+  ].filter(Boolean)
 
   return [
-    { type: 'divider' },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: clipSlackText('*Runway*' + '\n' + lines.filter(Boolean).join('\n'), SLACK_LIMITS.sectionText),
-      },
-    },
+    section(lines.join('\n'), { block_id: RUNWAY_QUESTION_BLOCK }),
     {
       type: 'actions',
+      block_id: RUNWAY_ACTIONS_BLOCK,
       elements: [
-        {
-          type: 'button',
-          action_id: MARKETING_ACTION.runwayConfirm,
-          text: { type: 'plain_text', text: 'Still right' },
-          // Not primary: confirming is the cheap answer, and making it the
-          // brightest button invites a reflex press on the one number the whole
-          // strategy depends on.
-        },
-        {
-          type: 'button',
-          action_id: MARKETING_ACTION.runwaySigned,
-          text: { type: 'plain_text', text: 'We signed something' },
-          style: 'primary',
-        },
-        {
-          type: 'button',
-          action_id: MARKETING_ACTION.runwayUpdate,
-          text: { type: 'plain_text', text: 'It has changed' },
-        },
+        button(MARKETING_ACTION.runwayConfirm, LABEL.RUNWAY_OK),
+        button(MARKETING_ACTION.runwaySigned, LABEL.RUNWAY_SIGNED),
+        button(MARKETING_ACTION.runwayUpdate, LABEL.RUNWAY_CHANGED),
       ],
     },
   ]
 }
 
 /**
- * The modal behind "we signed something" and "it has changed".
+ * The modal behind "We signed something…" and "It changed…".
  *
  * Two shapes, one callback. Signing asks what and how much runway it buys,
  * because a commitment with no months cannot move the date and guessing one
@@ -604,7 +846,7 @@ export function buildRunwayView(kind: 'signed' | 'update', current?: string): Re
       element: {
         type: 'plain_text_input',
         action_id: RUNWAY_LABEL_INPUT,
-        placeholder: { type: 'plain_text', text: 'SoW - Acme, discovery phase' },
+        placeholder: { type: 'plain_text', text: 'SoW — Acme, discovery phase' },
       },
     })
   }
@@ -677,6 +919,8 @@ export function readRunwaySubmission(values: Record<string, Record<string, { val
   }
 }
 
+// ── Ideas and drafts caught in the channel ──────────────────────────────────
+
 /**
  * What Marqueta says when she notices somebody proposing work.
  *
@@ -686,7 +930,7 @@ export function readRunwaySubmission(values: Record<string, Record<string, { val
  * you want it and invisible when you do not.
  *
  * It states what it did and offers the two honest answers. "Keep it" is not
- * primary: the capture was a guess, and making the confirm button the brightest
+ * green: the capture was a guess, and making the confirm button the brightest
  * thing in the message nudges people into blessing guesses.
  */
 export function buildIdeaCaptureBlocks(input: {
@@ -697,83 +941,62 @@ export function buildIdeaCaptureBlocks(input: {
   studioUrl?: string
 }): Block[] {
   const value = JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
-  const detail = input.category ? ' Filed under ' + input.category + '.' : ''
-
-  const elements: Array<Record<string, unknown>> = [
-    {
-      type: 'button',
-      action_id: MARKETING_ACTION.ideaKeep,
-      text: { type: 'plain_text', text: 'Keep it' },
-      value,
-    },
-    {
-      type: 'button',
-      action_id: MARKETING_ACTION.ideaDiscard,
-      text: { type: 'plain_text', text: 'Not an idea' },
-      value,
-    },
-  ]
-  if (input.studioUrl) {
-    elements.push({
-      type: 'button',
-      text: { type: 'plain_text', text: 'Open the board' },
-      url: input.studioUrl,
-    })
-  }
-
+  const category = clean(input.category)
   return [
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text:
-          'Noted this as an idea so it does not scroll away:' +
-          '\n' +
-          '*' + input.title + '*' +
-          detail +
-          '\n' +
-          '_Marked as needing review - it is my guess that this was a proposal, not yours._',
-      },
-    },
-    { type: 'actions', elements },
+    section(
+      'Filed as an idea so it doesn’t scroll away:\n' +
+        `*${recordText(input.title || 'Untitled idea', 300)}*${category ? ` · ${recordText(category, 80)}` : ''}\n` +
+        '_My guess — nothing happens until someone keeps it._',
+    ),
+    ...actionsRow([
+      button(MARKETING_ACTION.ideaKeep, LABEL.IDEA_KEEP, value),
+      button(MARKETING_ACTION.ideaDiscard, LABEL.IDEA_DISCARD, value),
+      openViewButton('thisWeek', input.studioUrl || ''),
+    ]),
   ]
 }
 
 /**
- * Ideas Marqueta caught that nobody has judged yet.
- *
- * The thread reply asks once, at the moment of capture, and a thread is easy to
- * miss. Without this an unreviewed idea sits in limbo forever - present on the
- * board, trusted by nobody, because no one ever said whether it was real.
+ * "*4 ideas I caught still need a yes or no:* A · B · C …and 1 more — Review
+ * them on This week". The count is every idea waiting, and "…and N more"
+ * counts only the ones not named — the old line said "4 things … and 1 more"
+ * about four ideas, which read as five.
  */
-export function buildIdeaReviewBlocks(ideas: Array<{ title: string }>, studioUrl?: string): Block[] {
-  if (ideas.length === 0) return []
-  const names = ideas.slice(0, 3).map((idea) => '• ' + clipSlackText(escapeSlackText(idea.title), 200))
-  const more = ideas.length > 3 ? ' and ' + (ideas.length - 3) + ' more' : ''
-  return [
-    {
-      type: 'context',
-      elements: [
-        {
-          type: 'mrkdwn',
-          text:
-            '_I caught ' + ideas.length + ' thing' + (ideas.length === 1 ? '' : 's') +
-            ' in the channel that might be ideas' + more + ' - still waiting on a yes or no:_' +
-            '\n' + names.join('\n') +
-            (studioUrl ? '\n' + '<' + studioUrl + '|Judge them on the board>' : ''),
-        },
-      ],
-    },
-  ]
+function ideaReviewLine(ideas: Array<{ title: string }>, total: number | undefined, studioBaseUrl?: string): string {
+  const list = (ideas || []).filter((idea) => idea && clean(idea.title))
+  const count = Math.max(list.length, Math.floor(Number(total) || 0))
+  if (!count) return ''
+  const named = list.slice(0, MAX_IDEAS_NAMED).map((idea) => recordText(idea.title, 80))
+  const more = count - named.length
+  const review = thisWeekLink(studioBaseUrl, 'caught', 'Review them on This week')
+  const noun = count === 1 ? 'idea I caught still needs' : 'ideas I caught still need'
+  return `*${count} ${noun} a yes or no:* ${named.join(' · ')}${more > 0 ? ` …and ${more} more` : ''} — ${review}`
+}
+
+/**
+ * Ideas Marqueta caught that nobody has judged yet, as the Monday plan shows
+ * them — one line, linked to where they are judged.
+ *
+ * The thread reply asks once, at the moment of capture, and a thread is easy
+ * to miss. Without this an unreviewed idea sits in limbo forever — present on
+ * the board, trusted by nobody, because no one ever said whether it was real.
+ */
+export function buildIdeaReviewBlocks(
+  ideas: Array<{ title: string }>,
+  opts: { total?: number; studioBaseUrl?: string } = {},
+): Block[] {
+  const line = ideaReviewLine(ideas, opts.total, opts.studioBaseUrl)
+  return line ? [context(line)] : []
 }
 
 /**
  * What Marqueta says when somebody shares written work rather than an idea.
  *
- * A draft is further along than a proposal, so the offer is different: it is
- * already on the calendar as `drafting`, with the copy attached, and the useful
- * next step is to open it and give it a date. It still says plainly that it
- * filed the thing on a guess, and binning it is the same one press.
+ * A draft is further along than a proposal: it is already on the calendar as
+ * `drafting`, with the copy attached. It says plainly that it filed the thing
+ * on a guess, where to find it (an undated draft is not on the month grid, so
+ * "open the calendar" alone sent people looking in the wrong place), and
+ * binning it is one press.
  */
 export function buildDraftCaptureBlocks(input: {
   title: string
@@ -783,39 +1006,18 @@ export function buildDraftCaptureBlocks(input: {
   studioUrl?: string
 }): Block[] {
   const value = JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
-  const kind = input.contentType && input.contentType !== 'other' ? input.contentType : 'draft'
-
-  const elements: Array<Record<string, unknown>> = [
-    {
-      type: 'button',
-      action_id: MARKETING_ACTION.ideaDiscard,
-      text: { type: 'plain_text', text: 'Not for the calendar' },
-      value,
-    },
-  ]
-  if (input.studioUrl) {
-    elements.unshift({
-      type: 'button',
-      text: { type: 'plain_text', text: 'Open it and set a date' },
-      url: input.studioUrl,
-      style: 'primary',
-    })
-  }
-
+  const kind = input.contentType && input.contentType !== 'other' ? clean(input.contentType) : 'draft'
   return [
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text:
-          'That looks like written work, so I put it on the calendar with the copy attached:' +
-          '\n' +
-          '*' + input.title + '*  ·  ' + kind + ', drafting' +
-          '\n' +
-          '_It has no date and will not post itself. My guess that this was a draft, not yours._',
-      },
-    },
-    { type: 'actions', elements },
+    section(
+      'That looks like a finished draft, so it’s on the calendar with the copy attached:\n' +
+        `*${recordText(input.title || 'Untitled draft', 300)}* · ${recordText(kind, 40)} · drafting, no date\n` +
+        '_It won’t post itself — it’s under *Unscheduled*, below the month grid._',
+    ),
+    // The link last, as on the idea receipt beside it in the thread (rule 2).
+    ...actionsRow([
+      button(MARKETING_ACTION.ideaDiscard, LABEL.DRAFT_DISCARD, value),
+      openViewButton('calendar', input.studioUrl || ''),
+    ]),
   ]
 }
 
@@ -831,6 +1033,8 @@ export function decodeIdeaValue(value: string | undefined): { channel: string; t
     return null
   }
 }
+
+// ── The task detail modal ───────────────────────────────────────────────────
 
 export type TaskDetail = {
   _id: string
@@ -858,90 +1062,140 @@ export type TaskDetail = {
  */
 export function modalTitle(text: string, fallback = 'Task'): string {
   const value = String(text || '').trim() || fallback
-  return value.length <= 24 ? value : `${value.slice(0, 23)}\u2026`
+  return value.length <= 24 ? value : `${value.slice(0, 23)}…`
 }
+
+const STATUS_SET = new Set<string>(MARKETING_OPERATION_STATUSES)
+const DETAIL_STATUS_WORDS: Record<string, string> = {
+  queued: 'Not started',
+  working: 'In progress',
+  needsHuman: 'Needs someone',
+  waiting: 'Waiting on someone',
+  blocked: 'Stuck',
+  scheduled: 'Scheduled',
+  done: 'Done',
+  dismissed: 'Dropped',
+}
+
+/**
+ * Where a task stands, in the card's and the Studio pill's words.
+ *
+ * The same rules as `taskStatusWords` (weeklyCheckIn.ts), which this module
+ * cannot import: that module reads `MARKETING_ACTION` from here while it
+ * loads, so importing it back would make load order decide whether either
+ * works. tests/slack-delegation.test.ts holds the two to each other for every
+ * status, owned and not, decision and not — a word changed in one place fails
+ * there, not in front of the team.
+ */
+export function detailStatusWords(task: Pick<TaskDetail, 'status' | 'kind' | 'humanQuestion' | 'ownerName'>): string {
+  const raw = clean(task?.status)
+  const status = STATUS_SET.has(raw) ? raw : 'queued'
+  if (['done', 'dismissed', 'blocked', 'waiting', 'scheduled'].includes(status)) return DETAIL_STATUS_WORDS[status]
+  if (status === 'needsHuman') return isDecisionTask({ ...task, status }) ? 'Needs a decision' : DETAIL_STATUS_WORDS.needsHuman
+  const owned = clean(task?.ownerName).length > 0
+  if (status === 'working') return owned ? DETAIL_STATUS_WORDS.working : 'Marqueta working'
+  return owned ? DETAIL_STATUS_WORDS.queued : 'Nobody has it'
+}
+
+const lowerFirst = (words: string) => (words.startsWith('Marqueta') ? words : words.charAt(0).toLowerCase() + words.slice(1))
 
 /**
  * Everything a person needs to actually start the task.
  *
- * The digest deliberately shows only a title and a line of context — a channel
- * message with six paragraphs per task is one nobody reads. But that left
- * "what am I actually supposed to do here?" unanswered, so this is the other
- * half: `nextAction` first, because it is the concrete instruction, then why it
- * matters now, then the background behind it.
+ * The plan shows only a title and a line — a channel message with six
+ * paragraphs per task is one nobody reads. This is the other half: the facts
+ * in the card's words ("Decision · Urgent · needs a decision · nobody has it ·
+ * due Fri 25 Sep · ~20m"), then `nextAction`, because it is the concrete
+ * instruction, then why it matters now, then the background.
  */
-export function buildTaskDetailBlocks(task: TaskDetail): Block[] {
+export function buildTaskDetailBlocks(task: TaskDetail, opts: { now?: Date } = {}): Block[] {
+  const now = opts.now || new Date()
+  const kind = clean(task.kind)
+  const status = detailStatusWords(task)
+  const owner = clean(task.ownerName)
+  const due = task.dueAt ? formatSlackDay(task.dueAt, now) : ''
   const chips = [
-    task.kind,
-    task.priority ? `${task.priority} priority` : '',
-    task.status,
-    task.ownerName ? `owner: ${task.ownerName}` : 'unowned',
-    task.dueAt ? `due ${String(task.dueAt).slice(0, 10)}` : '',
-    task.minutes ? formatMinutes(task.minutes) : '',
+    kind ? kind.charAt(0).toUpperCase() + kind.slice(1) : '',
+    task.priority === 'urgent' || task.priority === 'high' ? 'Urgent' : '',
+    lowerFirst(status),
+    // "Nobody has it" is already the status word for unowned work not started.
+    owner ? `owner ${owner}` : status === 'Nobody has it' ? '' : 'nobody has it',
+    due ? `due ${due}` : '',
+    formatEffort(Number(task.minutes)),
   ].filter(Boolean)
 
   const blocks: Block[] = [
-    { type: 'section', text: { type: 'mrkdwn', text: `*${task.title}*` } },
-    { type: 'context', elements: [{ type: 'mrkdwn', text: chips.join('  ·  ') }] },
+    section(`*${recordText(task.title || 'Untitled task', 300)}*`),
+    context(escapeSlackText(chips.join(' · '))),
   ]
 
-  const section = (label: string, body?: string) => {
+  const part = (label: string, body?: string) => {
     if (!body || !body.trim()) return
     blocks.push({ type: 'divider' })
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*${label}*\n${body.trim()}` } })
+    blocks.push(section(`*${label}*\n${clipSlackText(escapeSlackText(body.trim()), 2800)}`))
   }
 
-  section('What needs doing', task.nextAction)
-  section(task.kind === 'decision' ? 'The question to answer' : 'Why now', task.humanQuestion || task.whyNow)
-  if (task.humanQuestion && task.whyNow) section('Why now', task.whyNow)
-  section('Background', task.summary)
-  section('Blocked by', task.blocker)
+  part('What needs doing', task.nextAction)
+  part(task.kind === 'decision' ? 'The question to answer' : 'Why now', task.humanQuestion || task.whyNow)
+  if (task.humanQuestion && task.whyNow) part('Why now', task.whyNow)
+  part('Background', task.summary)
+  part('In the way', task.blocker)
 
   if (!task.nextAction && !task.summary && !task.whyNow && !task.humanQuestion) {
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: '_This task has no detail recorded yet. Open it in the Studio to add what needs doing._',
-      },
-    })
+    blocks.push(section(`_This task has no detail recorded yet. Add what needs doing on ${VIEW_TITLE.thisWeek}, in the Studio._`))
   }
 
   return blocks
 }
 
+const STUDIO_VIEWS = new Set<string>(Object.keys(VIEW_TITLE))
+
+/**
+ * The link out of the detail modal, named after the tab it opens.
+ *
+ * A task's own view when it is one Slack links to by name (This week,
+ * Outreach, Calendar); anything else opens This week with the task named —
+ * the banner there says why you came and can mark it done or stuck. A link
+ * called "Open where this happens" told nobody where they were going, which
+ * is how people stop pressing links.
+ */
+function detailLink(task: TaskDetail, opts: { studioBaseUrl?: string; studioUrl?: string }): Block | null {
+  let base = clean(opts.studioBaseUrl)
+  if (!base && opts.studioUrl) {
+    try {
+      base = new URL(opts.studioUrl).origin
+    } catch {
+      base = ''
+    }
+  }
+  const resolved = resolveTaskView(task)
+  const view: MarquetaView = STUDIO_VIEWS.has(resolved) ? (resolved as MarquetaView) : 'thisWeek'
+  return openViewButton(view, studioViewUrl(base, view, { task: task._id }))
+}
 
 /**
  * The whole modal, not just its body.
  *
  * A modal that only tells you things is a dead end: you read it, close it, and
- * still have to go and find the work. So this adds the two ways out —
- * answer a decision right here, or jump straight to the Studio view that owns
- * it, with the task named so the Studio can point at what needs filling.
+ * still have to go and find the work. So this adds the two ways out — answer a
+ * decision right here, or open the Studio tab that holds it, with the task
+ * named so the Studio can point at what needs filling.
  *
  * The text box appears ONLY for a decision with a question. Offering one for
  * "write the article" would promise something a modal cannot deliver.
  */
 export function buildTaskDetailView(
   task: TaskDetail,
-  options: { studioUrl?: string } = {},
+  options: { studioUrl?: string; studioBaseUrl?: string; now?: Date } = {},
 ): Record<string, unknown> {
-  const blocks = buildTaskDetailBlocks(task)
+  const blocks = buildTaskDetailBlocks(task, { now: options.now })
   const answerable = Boolean(task.humanQuestion && task.kind === 'decision')
 
-  if (options.studioUrl) {
+  const link = detailLink(task, options)
+  if (link) {
     blocks.push({ type: 'divider' })
-    blocks.push({
-      type: 'actions',
-      elements: [
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: 'Open where this happens' },
-          url: options.studioUrl,
-          style: answerable ? undefined : 'primary',
-        },
-      ],
-    })
+    // Green only when it is the one thing to do here; with an answer box, Save answer is.
+    blocks.push({ type: 'actions', elements: [answerable ? link : { ...link, style: 'primary' }] })
   }
 
   if (answerable) {
@@ -974,103 +1228,40 @@ export function buildTaskDetailView(
   }
 }
 
+// ── Legacy: the attachment cards of Monday plans posted before this one ─────
 
-/**
- * Rewrite the digest so a finished task checks itself off.
- *
- * Without this the message is a permanent to-do list: someone claims a task and
- * the channel still shows it unclaimed, so the next person claims it too. The
- * buttons for that task are removed as well — a button that has already been
- * pressed either does nothing or, worse, does it twice.
- *
- * Works by finding the actions block whose encoded value names the task, since
- * that is the only place the id appears; the section immediately above it is the
- * task's own line.
- */
-export function markTaskInBlocks(
-  blocks: Block[],
-  taskId: string,
-  statusLine: string,
-): Block[] {
-  if (!taskId) return blocks
-
-  const actionsIndex = blocks.findIndex(
-    (block) =>
-      block.type === 'actions' &&
-      (block.elements || []).some((element: Record<string, unknown>) => {
-        const decoded = decodeActionValue(element.value as string | undefined)
-        return decoded?.taskId === taskId
-      }),
-  )
-  if (actionsIndex < 1) return blocks
-
-  const sectionIndex = actionsIndex - 1
-  const original = String(blocks[sectionIndex]?.text?.text || '')
-  // Keep the title line, drop the buttons, and say what happened to it.
-  const titleLine = original.split('\n')[0].replace(/^\*|\*$/g, '')
-
-  const next = [...blocks]
-  next[sectionIndex] = {
-    type: 'section',
-    text: { type: 'mrkdwn', text: `:white_check_mark: ~${titleLine}~\n${statusLine}` },
-  }
-  next.splice(actionsIndex, 1)
-  return next
+/** The shape the attachment cards were drawn from. Only legacy redraws use it now. */
+export type DigestTask = {
+  _id: string
+  title: string
+  kind?: string
+  priority?: string
+  status?: string
+  suggestedOwner?: string
+  ownerName?: string
+  slackUserId?: string
+  minutes?: number
+  whyNow?: string
 }
 
-
 /**
- * Slack gives almost no styling control — no CSS, no fonts, no text colour. The
- * levers that DO exist are worth using deliberately:
+ * A task card from a Monday plan posted BEFORE the plan moved into blocks.
  *
- *   attachment color   the one custom colour available, a bar down the left edge
- *   section fields     two-column key/value instead of a run-on sentence
- *   accessory          a control on the RIGHT of a section, saving a whole row
- *   emoji              the only glyphs there are
+ * Nothing new is posted as an attachment: the notification never saw what was
+ * in one, and a phone showed it a hundred lines below the asks. But messages
+ * already in the channel still have these cards and their buttons, and a
+ * press on one redraws the card (`refreshTaskInAttachments`). So it keeps its
+ * old action ids — the interactions route still handles them — and speaks the
+ * current vocabulary: `I’ll take it` · `Details…` · `Not me`. Once somebody
+ * has it, `Not me` · `Details…`: the owned card's button is the old decline
+ * (`passOnTask` — needs someone, and a pass on record), so it wears the label
+ * that means exactly that. `Hand back` is `handBackTask` everywhere else, and
+ * one label doing two different writes is the reflex-press trap the
+ * vocabulary exists to close (rule 4). "Take it over" is gone; nothing in the
+ * current plan needs it.
  *
- * Priority is the thing worth colouring: it is what decides reading order, and
- * a wall of identical grey blocks hides it completely.
- */
-const PRIORITY_COLOR: Record<string, string> = {
-  urgent: '#d94d2f',
-  high: '#c08a6a',
-  normal: '#4fb3a5',
-  low: '#6f7a90',
-}
-
-export type DigestMessage = { blocks: Block[]; attachments: Block[] }
-
-/**
- * One card per task, rendered from its CURRENT state.
- *
- * The first version collapsed a claimed or declined task into a struck-through
- * line with a single Undo button. That made the MESSAGE the source of truth,
- * with two consequences: reverse it once and you are stuck, and reposting the
- * digest loses the button entirely — so somebody who declined a call had no way
- * back to it at all.
- *
- * The card is a function of the record instead. Every state offers the action
- * that reverses it, however many times it has changed hands:
- *
- *   unowned          I'll take it   ·   Not me
- *   owned by you     Hand it back
- *   owned by others  Take it over
- *   passed           I'll take it
- *
- * The card is one message for the whole channel, so both of an owned card's
- * buttons are shown to everybody; the rules are enforced when pressed
- * (`takeOverTask` / `passOnTask`): "Take it over" puts the PRESSER's name on
- * the work and names the previous owner, and "Hand it back" works only for
- * the owner — anyone else is told whose it is rather than clearing a
- * colleague's name off their work.
- *
- * Nothing collapses, so nothing is a dead end, and none of it depends on the
- * message still being the one you originally clicked.
- *
- * `askedName` is who this digest ASKED to take an unclaimed task (ownerAsk.ts).
- * The card still says Unclaimed — being asked is not agreeing — and names the
- * person as plain text, not a mention: the ask at the top of the message has
- * already pinged them once, and a second ping per card is how a bot gets muted.
+ * No colour bar: priority is the word "Urgent", which a screen reader reads
+ * and a colour-blind reader can see.
  */
 export function buildTaskAttachment(
   task: DigestTask & {
@@ -1083,77 +1274,51 @@ export function buildTaskAttachment(
   },
 ): Block {
   const value = encodeActionValue({ taskId: task._id, ownerName: task.ownerName })
-  const owner = String(task.ownerName || '').trim()
+  const owner = clean(task.ownerName)
   const passed = !owner && task.status === 'needsHuman'
 
-  const detailsButton = {
-    type: 'button',
-    action_id: MARKETING_ACTION.details,
-    text: { type: 'plain_text', text: "What's involved" },
-    value,
-  }
-  const takeButton = {
-    type: 'button',
-    action_id: MARKETING_ACTION.claim,
-    text: { type: 'plain_text', text: owner ? 'Take it over' : "I'll take it" },
-    style: 'primary',
-    value,
-  }
-  const releaseButton = {
-    type: 'button',
-    action_id: MARKETING_ACTION.decline,
-    text: { type: 'plain_text', text: owner ? 'Hand it back' : 'Not me' },
-    value,
-  }
-
-  // A passed task has nothing to hand back, so it offers only the way forward.
-  const elements = passed ? [takeButton, detailsButton] : [takeButton, detailsButton, releaseButton]
+  const details = button(MARKETING_ACTION.details, LABEL.DETAILS, value)
+  const elements = owner
+    ? [button(MARKETING_ACTION.decline, LABEL.NOT_ME, value), details]
+    : passed
+      ? [button(MARKETING_ACTION.claim, LABEL.TAKE, value, true), details]
+      : [button(MARKETING_ACTION.claim, LABEL.TAKE, value, true), details, button(MARKETING_ACTION.decline, LABEL.NOT_ME, value)]
 
   // A suggestion must read as a suggestion. Showing "Owner: Juhan" for someone
-  // who never accepted the work makes the board report commitment that does not
-  // exist, and hides the fact that nobody has picked it up.
-  const suggested = String(task.suggestedOwner || '').trim()
-  const asked = String(task.askedName || '').replace(/\s+/g, ' ').trim()
-  const ownerField = owner
-    ? '*Taken by*' + '\n' + mention(task.slackUserId, owner)
+  // who never accepted the work makes the board report commitment that does
+  // not exist, and hides the fact that nobody has picked it up.
+  const suggested = clean(task.suggestedOwner)
+  const asked = clean(task.askedName)
+  const who = owner
+    ? `Taken by ${slackMention(task.slackUserId, owner)}`
     : asked
-      ? '*Unclaimed*' + '\n' + '_asked: ' + clipSlackText(escapeSlackText(asked), 120) + '_'
+      ? `Nobody has it · asked ${recordText(asked, 120)}`
       : suggested
-        ? '*Unclaimed*' + '\n' + '_suggested: ' + clipSlackText(escapeSlackText(suggested), 120) + '_'
-        : '*Unclaimed*' + '\n' + '_anyone_'
-
-  const fields = [
-    ownerField,
-    task.minutes ? '*Effort*' + '\n' + formatMinutes(task.minutes) : '',
-    task.priority ? '*Priority*' + '\n' + task.priority : '',
-    task.kind ? '*Type*' + '\n' + task.kind : '',
+        ? `Nobody has it · suggested ${recordText(suggested, 120)}`
+        : 'Nobody has it'
+  const meta = [
+    task.priority === 'urgent' || task.priority === 'high' ? '*Urgent*' : '',
+    who,
+    formatEffort(Number(task.minutes)),
   ].filter(Boolean)
 
   return {
-    color: passed
-      ? '#6f7a90'
-      : PRIORITY_COLOR[String(task.priority || 'normal')] || PRIORITY_COLOR.normal,
     blocks: [
       // Title and why-now are record text, so escaped; `note` is mrkdwn the
       // caller built (it carries the presser's mention) and is passed through.
-      { type: 'section', text: { type: 'mrkdwn', text: '*' + clipSlackText(escapeSlackText(task.title), 2900) + '*' } },
-      { type: 'section', fields: fields.map((t) => ({ type: 'mrkdwn', text: t })) },
-      ...(task.whyNow
-        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: '_' + clipSlackText(escapeSlackText(task.whyNow), 2900) + '_' }] }]
-        : []),
+      section(`*${recordText(task.title, 2900)}*\n${meta.join(' · ')}`),
+      ...(task.whyNow ? [context(`_${recordText(task.whyNow, 2900)}_`)] : []),
       // What just happened, so the channel sees the change without re-reading.
-      ...(task.note ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: task.note }] }] : []),
+      ...(task.note ? [context(task.note)] : []),
       { type: 'actions', elements },
     ],
   }
 }
 
 /**
- * Swap one task's card for a freshly rendered one.
- *
- * Replaces the collapse-and-offer-undo approach. Because the card is drawn from
- * the record, "undo" is just the reverse action being available again — there is
- * no separate undo state to get stuck in.
+ * Swap one legacy attachment card for a fresh render. Because the card is
+ * drawn from the record, "undo" is just the reverse action being available
+ * again — there is no separate undo state to get stuck in.
  */
 export function refreshTaskInAttachments(
   attachments: Block[],
@@ -1166,13 +1331,10 @@ export function refreshTaskInAttachments(
   )
 }
 
-
 /**
- * What to say back when someone presses a button.
- *
- * Slack replaces the message with whatever is returned, so this has to restate
- * enough for the channel to still make sense afterwards — a bare "done" leaves
- * everyone else wondering what happened.
+ * The note a press leaves on a legacy attachment card, so the channel still
+ * makes sense afterwards — a bare "done" leaves everyone else wondering what
+ * happened.
  */
 export function buildActionAcknowledgement(input: {
   action: MarketingActionId
@@ -1180,14 +1342,14 @@ export function buildActionAcknowledgement(input: {
   taskTitle?: string
 }): string {
   const who = `<@${input.userId}>`
-  const task = input.taskTitle ? `*${input.taskTitle}*` : 'that'
+  const task = input.taskTitle ? `*${recordText(input.taskTitle, 300)}*` : 'that'
   switch (input.action) {
     case MARKETING_ACTION.claim:
       return `${who} picked up ${task}.`
     case MARKETING_ACTION.decline:
       return `${who} passed on ${task} — it needs another owner.`
     case MARKETING_ACTION.away:
-      return `${who} is away this week. Their work needs reassigning.`
+      return `${who} is away this week. Their work needs someone.`
     case MARKETING_ACTION.linkIdentity:
       return `${who} is now linked, and will be @-mentioned on their tasks.`
     default:

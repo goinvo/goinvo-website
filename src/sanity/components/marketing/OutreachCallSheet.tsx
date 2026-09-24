@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useClient } from 'sanity'
+import { useClient, useCurrentUser } from 'sanity'
 import { useToast } from '@sanity/ui'
 
 import { clientForType } from '../../../lib/marketing/datasetRouting'
@@ -9,7 +9,9 @@ import {
   firstNameFor,
   type CallSheetEntry,
 } from '../../../lib/marketing/callSheet'
+import { LABEL } from '../../../lib/marketing/marquetaStyle'
 import { styles } from '../../tools/marketingTool'
+import { studioSenderName } from './CallOutlinePanel'
 
 /**
  * "Do this now": the week's outreach, with everything needed to actually do it.
@@ -22,6 +24,14 @@ import { styles } from '../../tools/marketingTool'
  *
  * Only VERIFIED research appears. A signal whose quote was not found in the page
  * it cites must never reach the screen where somebody picks up the phone.
+ *
+ * The draft is signed by whoever is reading it. It used to be signed "— Juhan"
+ * whoever copied it, which put one person's name on another person's email.
+ * With no name to go on it says "[your name]", the same placeholder the call
+ * outline uses: a gap to fill is safer than somebody else's signature.
+ *
+ * Each organisation's Prep opens its first person on Outreach (the call
+ * outline, the log form), the Studio half of Slack's Prep button.
  */
 
 type Contact = {
@@ -32,6 +42,9 @@ type Contact = {
   email?: string | null
   status?: string | null
 }
+
+/** The same name the Monday plan gives this list, so the two read as one thing. */
+const CALL_SHEET_HEADING = 'Who to reach out to, and why now'
 
 const QUERY = `{
   "research": *[_type == "marketingOrgResearch" && verification.status == "verified"]{
@@ -44,7 +57,21 @@ const QUERY = `{
   "offers": *[_type == "marketingOffer" && status == "active"]{ key, title, oneLiner }
 }`
 
-export function OutreachCallSheet({ senderName = 'Juhan' }: { senderName?: string }) {
+/** Who the draft is from: an explicit name, else the Studio user's first name, else a placeholder. */
+export function callSheetSender(explicit: string | undefined, userName: string | null | undefined): string {
+  return String(explicit ?? '').trim() || studioSenderName(userName) || '[your name]'
+}
+
+export function OutreachCallSheet({
+  senderName: explicitSender,
+  onPrepContact,
+}: {
+  senderName?: string
+  /** Open this contact's prep on Outreach. Without it there is no Prep button. */
+  onPrepContact?: (contactId: string) => void
+}) {
+  const currentUser = useCurrentUser()
+  const senderName = callSheetSender(explicitSender, currentUser?.name)
   const baseClient = useClient({ apiVersion: '2024-01-01' })
   // Research and contacts both live in the private dataset; a bare workspace
   // client would read production and quietly find nothing.
@@ -95,7 +122,7 @@ export function OutreachCallSheet({ senderName = 'Juhan' }: { senderName?: strin
   if (loading) {
     return (
       <section style={styles.panel}>
-        <h3 style={{ margin: 0 }}>Your outreach this week</h3>
+        <h3 style={{ margin: 0 }}>{CALL_SHEET_HEADING}</h3>
         <p style={{ color: '#98a1b5', margin: '6px 0 0' }}>Loading…</p>
       </section>
     )
@@ -104,7 +131,7 @@ export function OutreachCallSheet({ senderName = 'Juhan' }: { senderName?: strin
   if (entries.length === 0) {
     return (
       <section style={styles.panel}>
-        <h3 style={{ margin: '0 0 6px' }}>Your outreach this week</h3>
+        <h3 style={{ margin: '0 0 6px' }}>{CALL_SHEET_HEADING}</h3>
         <p style={{ color: '#98a1b5', margin: 0, maxWidth: '70ch' }}>
           Nothing verified to act on yet. Openings appear here once an organisation has research
           whose quote was found in the page it cites, and at least one contact who has not been
@@ -117,7 +144,7 @@ export function OutreachCallSheet({ senderName = 'Juhan' }: { senderName?: strin
   return (
     <section style={styles.panel}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>Your outreach this week</h3>
+        <h3 style={{ margin: '0 0 4px', fontSize: 18 }}>{CALL_SHEET_HEADING}</h3>
         <span style={{ fontSize: 12, color: '#98a1b5' }}>
           {entries.length} {entries.length === 1 ? 'organisation' : 'organisations'} · every signal
           checked against its source
@@ -131,6 +158,7 @@ export function OutreachCallSheet({ senderName = 'Juhan' }: { senderName?: strin
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 10 }}>
         {entries.map((entry) => {
           const open = openOrg === entry.organization
+          const firstContact = entry.contacts.find((contact) => contact._id)
           return (
             <li
               key={entry.organization}
@@ -172,6 +200,20 @@ export function OutreachCallSheet({ senderName = 'Juhan' }: { senderName?: strin
               </p>
 
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Plain, like every Prep (§2.3 does not star it): Slack's, and the
+                    Follow-ups due rows right above this list on This week. Five
+                    green Preps under grey ones would say these calls outrank
+                    the follow-ups owed to people who already answered. */}
+                {onPrepContact && firstContact?._id && (
+                  <button
+                    type="button"
+                    aria-label={`Prep a call with ${firstNameFor(firstContact) || 'someone'} at ${entry.organization}`}
+                    style={styles.button}
+                    onClick={() => onPrepContact(firstContact._id as string)}
+                  >
+                    {LABEL.PREP}
+                  </button>
+                )}
                 <button type="button" style={styles.button} onClick={() => void copyNote(entry)}>
                   Copy draft note
                 </button>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { decodeSlackText } from '@/lib/marketing/slackText'
 import {
   buildCapturedDraft,
   buildCapturedIdea,
@@ -91,6 +92,32 @@ describe('the messages Marqueta actually missed', () => {
     expect(draft.status).toBe('drafting')
     // Nothing Marqueta catches may ever post itself.
     expect(draft.autoPublish).toBe(false)
+  })
+})
+
+/**
+ * The same messages as Slack DELIVERS them: a typed quote arrives as `&gt;`,
+ * an ampersand as `&amp;`, a link as `<url|label>`. The events route decodes
+ * before it classifies (`decodeSlackText`); these pin that the decoded form
+ * reads the way the typed one does — a short pasted draft was classified as
+ * nothing, and a long one kept a literal "&gt;" in the calendar copy.
+ */
+describe('the delivered form, decoded', () => {
+  const SHORT_DRAFT = 'Here’s a draft:\n&gt; Look across a parking lot.\n&gt; A bruise on our brains.'
+
+  it('reads a short pasted draft as a draft once decoded — and as nothing before', () => {
+    expect(classifyMessage(SHORT_DRAFT).kind).toBe('none')
+    expect(classifyMessage(decodeSlackText(SHORT_DRAFT)).kind).toBe('draft')
+  })
+
+  it('keeps no escaping in the copy it files', () => {
+    const delivered = JUHAN_NEWSLETTER.replace(/^>/gm, '&gt;')
+    const draft = buildCapturedDraft({ text: decodeSlackText(delivered), personName: 'Juhan', channel: 'C1', ts: '1.1' })
+    expect(draft.contentDraft).toContain('A bruise on our brains.')
+    expect(draft.contentDraft).not.toContain('&gt;')
+    expect(draft.title).toBe('Next newsletter is for TheBlanding.com')
+    const idea = buildCapturedIdea({ text: decodeSlackText('we should do a R&amp;D webinar with AT&amp;T'), personName: 'Juhan', channel: 'C1', ts: '1.2' })
+    expect(idea.title).toBe('we should do a R&D webinar with AT&T')
   })
 })
 
@@ -212,6 +239,34 @@ describe('ideaCategoryFrom', () => {
     expect(ideaCategoryFrom('we should do a reel about the intern work')).toBe('content')
     expect(ideaCategoryFrom('we should look at our search console rankings')).toBe('seo')
     expect(ideaCategoryFrom('custom patches and stickers are good, cheap experiments')).toBe('product')
+  })
+
+  it('files a table at an event as growth, not product — the idea is being there', () => {
+    // Was "Filed under product" because it mentions stickers.
+    expect(ideaCategoryFrom('we should do a merch table at Arlington Town Day, stickers and a tote')).toBe('growth')
+    expect(ideaCategoryFrom('what about a booth at the HIMSS conference')).toBe('growth')
+    // A table that is not at an event is not a presence.
+    expect(ideaCategoryFrom('we should add a table of offers to the report')).toBeUndefined()
+    // …and "every day" is not an event: bare "day" filed this under growth.
+    expect(ideaCategoryFrom('add a table of numbers to the report every day')).toBeUndefined()
+    expect(ideaCategoryFrom('a table in town for the market data')).toBeUndefined()
+    // A named place still is one.
+    expect(ideaCategoryFrom('a booth at HIMSS next spring')).toBe('growth')
+    expect(ideaCategoryFrom('a table at the farmers market')).toBe('growth')
+  })
+
+  it('still knows the longer words that whole-word matching stopped catching', () => {
+    // Substring matching found "measure" in measurement and "merch" in
+    // merchandise; whole words need them listed.
+    expect(ideaCategoryFrom('we need better measurement of the funnel')).toBe('measurement')
+    expect(ideaCategoryFrom('we should sell merchandise at cost')).toBe('product')
+    expect(ideaCategoryFrom('we should start blogging again')).toBe('content')
+  })
+
+  it('matches whole words, so a workshop is not a shop and a sprint is not a print', () => {
+    expect(ideaCategoryFrom('we should run a workshop on clinical AI')).toBeUndefined()
+    expect(ideaCategoryFrom('let’s sprint on the offer page')).toBeUndefined()
+    expect(ideaCategoryFrom('we should print posters for the lobby')).toBe('product')
   })
 
   it('returns nothing rather than guessing', () => {

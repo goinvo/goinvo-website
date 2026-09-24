@@ -17,6 +17,11 @@
  *   client `runway.server.ts` uses, so the two money records can never end up
  *   in different datasets.
  *
+ * A press on the money group (runway or strategy) is answered in place:
+ * `renderMoneyAndDirection` re-reads everything after the write and draws the
+ * receipt plus whatever question is due next, for the caller to swap into the
+ * message by block id.
+ *
  * The one rule that is easy to break here: the review record must be read
  * BEFORE anything is written. The rethink's board key is derived from the
  * answer it follows (`strategyReviewSourceKey`), which is what keeps two people
@@ -26,6 +31,7 @@
 import 'server-only'
 import { getMarketingWriteClientFor } from './client'
 import { FINANCIAL_POSTURE_DOC_ID, FINANCIAL_POSTURE_DOC_TYPE } from './financialPosture'
+import { errorLine } from './marquetaStyle'
 import {
   MARKETING_OPERATION_TYPE,
   marketingOperationHash,
@@ -37,6 +43,8 @@ import { summarizeOutreach, type PulseContact } from './outreachPulse'
 import type { RunwayWin } from './runway'
 import { readRunway, type RunwayState } from './runway.server'
 import {
+  answerMrkdwn,
+  buildMoneyAndDirectionBlocks,
   buildStrategyDecisionOperation,
   buildStrategySnapshot,
   latestWin,
@@ -44,13 +52,21 @@ import {
   monthLabel,
   monthWindow,
   PIPELINE_CONTACT_PROJECTION,
-  strategyAnswerText,
+  strategyAnswer,
   strategyReviewDue,
   strategyReviewSourceKey,
+  STRATEGY_REVIEW_INTERVAL_DAYS,
+  type MoneyReceipt,
   type PipelineContact,
   type StrategyReviewRecord,
   type StrategySnapshot,
 } from './strategyCheck'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Block = Record<string, any>
+
+/** What a money press did, for `renderMoneyAndDirection` — the same type the pure builder takes. */
+export type { MoneyReceipt }
 
 /** One contact as the pipeline, the pulse and the win detection all read it. */
 export type StrategyContact = PipelineContact & PulseContact
@@ -149,18 +165,64 @@ export async function loadStrategySnapshot(now: Date = new Date()): Promise<Stra
   }
 }
 
+/**
+ * The money-and-direction group as it stands now, for a press to redraw in
+ * place (`replaceBlocksByPrefix(blocks, 'mq_money', …)`): the receipt for what
+ * the press did, then the next question that is due, if any — the strategy
+ * question follows a confirmed runway in the same spot, one at a time.
+ *
+ * Read fresh AFTER the press's write, so the receipt's numbers and whether
+ * anything is still due are the records', not the button's. Every block id
+ * starts with `mq_money`.
+ *
+ * Never throws. If the re-read fails, the receipt is still drawn — without
+ * numbers, and with no question, since none can be asked about a number this
+ * could not read. With no receipt and nothing readable, [].
+ */
+export async function renderMoneyAndDirection(input: { now?: Date; receipt?: MoneyReceipt | null }): Promise<Block[]> {
+  const now = input.now || new Date()
+  const receipt = input.receipt || null
+  const studioBaseUrl = String(process.env.MARKETING_PUBLIC_BASE_URL || '').trim() || undefined
+  let loaded: StrategyLoad | null = null
+  try {
+    loaded = await loadStrategySnapshot(now)
+  } catch (error) {
+    console.error('[marqueta] money redraw read failed', error)
+  }
+  if (!loaded) return receipt ? buildMoneyAndDirectionBlocks({ now, runway: null, receipt, studioBaseUrl }) : []
+  return buildMoneyAndDirectionBlocks({
+    now,
+    runway: loaded.runway,
+    snapshot: loaded.snapshot,
+    strategyDue: loaded.due,
+    receipt,
+    studioBaseUrl,
+  })
+}
+
 export type StrategyVerdictResult = {
   ok: boolean
-  /** One plain-text line for the thread; the caller escapes it. */
+  /** One plain-text line for the thread, when the press cannot be redrawn in place. The caller escapes it. */
   message: string
   /** The press was for an earlier month's card: nothing was written. */
   stale?: boolean
-  /** For a stale press: this month's answer (mrkdwn, already escaped), so "here is this month's" is followed by it. */
+  /** For a stale press: this month's answer, as mrkdwn (already escaped). */
   answer?: string
-  /** The rethink decision this press filed or joined. */
-  operationId?: string
-  /** True when this press created the decision (false when it joined an open one). */
+  /** …and as blocks, carrying this month's buttons. */
+  answerBlocks?: Block[]
+  /** The rethink decision this press filed or joined — for the receipt's Open This week link. */
+  decisionTaskId?: string
+  /**
+   * True when this press filed the decision; false when it joined one already
+   * open. For a `repeat`, whether the ask it repeats was the one that filed it —
+   * so a double-tap redraws the presser's own receipt, not "asked … too".
+   */
   filed?: boolean
+  /**
+   * The same person pressed "Needs a rethink" again within a few minutes (a
+   * double-tap, or Slack retrying): nothing new was added to the decision.
+   */
+  repeat?: boolean
 }
 
 const RETHINK_ACTION = 'Asked for a rethink from Slack'
@@ -168,18 +230,25 @@ const RETHINK_ACTION = 'Asked for a rethink from Slack'
 const REPEAT_WINDOW_MS = 10 * 60 * 1000
 
 /**
- * Record an answer to "is the plan still right?".
+ * Record an answer to "does the plan still fit the money?".
  *
  * - A press on an earlier month's card writes nothing: that question was about
- *   a different month's money. It says so, and hands back this month's answer.
- * - "Still the right plan" stamps who said so, when, and against which posture
- *   — the posture is what makes a later runway change re-open the question.
- * - "Needs a rethink" files ONE decision on the board, suggested to the person
+ *   a different month's money. It says so, and hands back this month's answer
+ *   (as text and as blocks, with this month's buttons).
+ * - "Plan still fits" stamps who said so, when, and against which posture —
+ *   the posture is what makes a later runway change re-open the question.
+ * - "Needs a rethink" files ONE decision on This week, suggested to the person
  *   who asked (never assigned), or — when a rethink is already open — adds
- *   their voice to it instead of filing a second. The verdict is written every
+ *   their voice to it instead of filing a second. The same person again within
+ *   a few minutes is the same ask: nothing is added, and the result says
+ *   `repeat`, with `filed` as their first press had it. The verdict is written every
  *   time, AFTER the decision: if the verdict write fails, the next press reads
  *   the same prior answer, derives the same key, and converges on the same
  *   decision rather than filing a twin.
+ *
+ * `message` is the thread fallback for a message that has no money group to
+ * redraw (one posted before the group had ids); a press on one that does is
+ * answered by `renderMoneyAndDirection` with a receipt instead.
  *
  * Never throws.
  */
@@ -194,37 +263,48 @@ export async function recordStrategyVerdict(input: {
   const person = clean(input.personName) || 'Someone'
 
   if (clean(input.monthKey) !== current) {
-    let answer: string | undefined
+    let answer: ReturnType<typeof strategyAnswer> | null = null
     try {
       const loaded = await loadStrategySnapshot(now)
-      answer = strategyAnswerText(loaded.snapshot, loaded.due)
+      answer = strategyAnswer({ now, snapshot: loaded.snapshot, due: loaded.due, runway: loaded.runway })
     } catch (error) {
       console.error('[marqueta] strategy snapshot failed', error)
     }
-    const earlier = /^\d{4}-\d{2}$/.test(clean(input.monthKey)) ? `${monthLabel(clean(input.monthKey))}’s` : 'an earlier month’s'
+    // "August’s", with the year only when it is not this one (rule 7).
+    const earlier = /^\d{4}-\d{2}$/.test(clean(input.monthKey)) ? `${monthName(clean(input.monthKey), now)}’s` : 'an earlier month’s'
     return {
       ok: false,
       stale: true,
       message: `That was ${earlier} check — here is this month’s.`,
-      ...(answer ? { answer } : {}),
+      ...(answer ? { answer: answerMrkdwn(answer), answerBlocks: answer.blocks } : {}),
     }
   }
 
+  // Whether the rethink decision is already on the board when something
+  // fails: "nothing changed" must only ever be said when it is true.
+  let filedBeforeFailure = false
   try {
     const loaded = await loadStrategySnapshot(now)
-    const label = monthLabel(current)
+    const month = monthName(current, now)
     let operationId: string | undefined
     let filed = false
+    let repeat = false
 
     if (input.verdict === 'rethink') {
       const open = loaded.openRethink
       if (open) {
         operationId = open._id
+        const asks = (open.activity || []).filter((entry) => entry?.action === RETHINK_ACTION)
         const last = (open.activity || [])[(open.activity || []).length - 1]
-        const repeat =
+        repeat =
           last?.action === RETHINK_ACTION &&
           last?.outcome === `By ${person}` &&
           Math.abs(now.getTime() - Date.parse(last.at)) <= REPEAT_WINDOW_MS
+        // A repeat answers as the ask it repeats. The decision is filed with
+        // its filer's ask as the first entry, so a double-tap by whoever filed
+        // it still reads "asked for a rethink", never "asked … too" — which
+        // would tell the room a second person had asked.
+        if (repeat) filed = asks[0]?.outcome === `By ${person}`
         if (!repeat) {
           const at = now.toISOString()
           // Append-only, so two voices landing together both survive without a
@@ -261,6 +341,7 @@ export async function recordStrategyVerdict(input: {
           _type: MARKETING_OPERATION_TYPE,
         })
         filed = true
+        filedBeforeFailure = true
       }
     }
 
@@ -275,23 +356,37 @@ export async function recordStrategyVerdict(input: {
     await postureClient().patch(FINANCIAL_POSTURE_DOC_ID).set({ strategyReview: review }).commit()
 
     if (input.verdict === 'stillRight') {
+      const next = monthName(monthKeyFor(new Date(now.getTime() + STRATEGY_REVIEW_INTERVAL_DAYS * 86_400_000)), now)
       return {
         ok: true,
         message:
-          `Noted — ${person} says the plan is still right for ${label}. I’ll ask again in a month, or sooner if the runway crosses a line.` +
-          (loaded.openRethink ? ' The rethink already on the board stays open until someone settles it.' : ''),
+          `Plan confirmed for ${month} by ${person} — I’ll ask again in ${next}, or sooner if the runway crosses a line.` +
+          (loaded.openRethink ? ' The rethink already on This week stays open until someone settles it.' : ''),
       }
     }
     return {
       ok: true,
-      operationId,
+      decisionTaskId: operationId,
       filed,
+      ...(repeat ? { repeat: true } : {}),
       message: filed
-        ? `Filed “Rethink the marketing plan (${label})” as a decision on the board, suggested to ${person}. It’s on the This week tab.`
-        : `A rethink is already on the board — I’ve noted that ${person} asked for one too.`,
+        ? `${person} asked for a rethink — it’s a decision on This week, suggested to ${person}.`
+        : `${person} asked for a rethink too — it’s already a decision on This week.`,
     }
   } catch (error) {
     console.error('[marqueta] strategy verdict failed', error)
-    return { ok: false, message: 'I couldn’t record that just now. The Studio’s Strategy tab has the plan.' }
+    return {
+      ok: false,
+      message: filedBeforeFailure
+        ? 'The rethink is on This week, but I couldn’t record the answer — press again and it joins the same decision.'
+        : errorLine('record that', 'Answer it on This week in the Studio.'),
+    }
   }
+}
+
+/** "September" — the year only when it is not this one. */
+function monthName(key: string, now: Date): string {
+  const label = monthLabel(key)
+  const year = ` ${now.getUTCFullYear()}`
+  return label.endsWith(year) ? label.slice(0, -year.length) : label
 }

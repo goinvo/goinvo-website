@@ -4,11 +4,13 @@ import {
   assertAutomaticMarketingOperationAction,
   canTransitionMarketingOperation,
   getMarketingOperationCounts,
+  isWeeklyPlanRecord,
   marketingOperationDocumentId,
   marketingOperationGroup,
   normalizeMarketingOperationInput,
   operationInputFromDashboardSignal,
   rankMarketingOperations,
+  WEEKLY_PLAN_SOURCE_PREFIX,
   type MarketingOperation,
 } from '@/lib/marketing/operations'
 import { findWorkUpdatePrivacyIssue } from '@/lib/marketing/workUpdateSafety'
@@ -134,6 +136,19 @@ describe('private Marketing Operations domain', () => {
     expect(operation.sourceKey).toMatch(/^work-update:/)
     expect(JSON.stringify(operation)).not.toContain(rawMarker)
     expect(operation.linkedRecords).toEqual([])
+  })
+})
+
+describe('weekly plan records', () => {
+  it('names the planner’s own record by one prefix, and nothing else by accident', () => {
+    expect(WEEKLY_PLAN_SOURCE_PREFIX).toBe('weekly-plan/')
+    expect(isWeeklyPlanRecord({ sourceKey: 'weekly-plan/2026-W39' })).toBe(true)
+    expect(isWeeklyPlanRecord({ sourceKey: ' weekly-plan/2026-W39' })).toBe(true)
+    // A task that merely mentions a weekly plan is still a task.
+    expect(isWeeklyPlanRecord({ sourceKey: 'manual:weekly-plan/2026-W39' })).toBe(false)
+    expect(isWeeklyPlanRecord({ sourceKey: 'exec-plan-2026q4/phase1/call' })).toBe(false)
+    expect(isWeeklyPlanRecord({ sourceKey: undefined })).toBe(false)
+    expect(isWeeklyPlanRecord(null)).toBe(false)
   })
 })
 

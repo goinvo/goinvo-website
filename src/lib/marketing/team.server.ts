@@ -100,6 +100,15 @@ export function tidyAvailability(
  * and a failed read THROWS rather than falling back to the raw display name,
  * which would write "Juhan Sonin" as the owner of work the board files under
  * "Juhan".
+ *
+ * A NAMESAKE is nobody: "Someone", the resolver's word for a person it could
+ * not name, which every caller already refuses to write. The display-name
+ * match used to win even when that board name was linked to a DIFFERENT Slack
+ * account — so anybody whose display name read "Juhan" was Juhan: their Take
+ * made them the owner of his work, their "Not me" was filed as his, and "I'm
+ * away" booked his week off. A name linked to someone is theirs; only the
+ * linked account may use it. (The chat path's `presser` had this guard; the
+ * button paths go through here and did not.)
  */
 export async function resolvePresserName(input: {
   slackUserId?: string
@@ -120,7 +129,21 @@ export async function resolvePresserName(input: {
       displayName = ''
     }
   }
-  return resolveOwnerName({ slackUserId, displayName, entries })
+  const name = resolveOwnerName({ slackUserId, displayName, entries })
+  return linkedToSomeoneElse(entries, name, slackUserId) ? 'Someone' : name
+}
+
+/**
+ * Is this board name linked to a Slack account other than `slackUserId`?
+ * Any linked record for the name counts, so a presser without an id at all is
+ * never taken for a linked person.
+ */
+function linkedToSomeoneElse(entries: TeamMemberAvailability[], name: string, slackUserId: string): boolean {
+  const ids = (entries || [])
+    .filter((entry) => lower(entry?.ownerName) === lower(name))
+    .map((entry) => slackIdOf(entry.slackUserId))
+    .filter(Boolean)
+  return ids.length > 0 && !ids.includes(slackUserId)
 }
 
 /**

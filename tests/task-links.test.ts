@@ -2,9 +2,15 @@ import { describe, expect, it } from 'vitest'
 
 import {
   isAnswerableInSlack,
+  isDecisionTask,
+  MARKETING_CONTACT_ACTION_QUERY_PARAM,
+  MARKETING_CONTACT_QUERY_PARAM,
+  MARKETING_FOCUS_QUERY_PARAM,
+  MARKETING_OWNER_QUERY_PARAM,
   MARKETING_TASK_QUERY_PARAM,
   resolveTaskView,
   studioTaskUrl,
+  studioViewUrl,
 } from '@/lib/marketing/taskLinks'
 
 describe('resolveTaskView', () => {
@@ -22,6 +28,69 @@ describe('resolveTaskView', () => {
   it('lands somewhere real rather than nowhere', () => {
     expect(resolveTaskView({})).toBe('thisWeek')
     expect(resolveTaskView({ targetView: '', kind: 'unknown-kind' })).toBe('thisWeek')
+  })
+
+  it('sends a decision to This week first, whatever view the record names — that is where it can be answered', () => {
+    expect(resolveTaskView({ kind: 'decision', targetView: 'outreach' })).toBe('thisWeek')
+    expect(resolveTaskView({ kind: 'outreach', status: 'needsHuman', humanQuestion: 'Which offer first?', targetView: 'outreach' })).toBe(
+      'thisWeek',
+    )
+  })
+
+  it('does not treat a task somebody passed on as a decision', () => {
+    const passed = { kind: 'outreach', status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?', targetView: 'outreach' }
+    expect(isDecisionTask(passed)).toBe(false)
+    expect(resolveTaskView(passed)).toBe('outreach')
+  })
+})
+
+describe('studioViewUrl', () => {
+  const BASE = 'https://www.goinvo.com'
+  const params = (url: string) => Object.fromEntries(new URL(url).searchParams)
+
+  it('names the view, always — an unknown one becomes This week rather than the last tab opened', () => {
+    expect(params(studioViewUrl(BASE, 'outreach'))).toEqual({ view: 'outreach' })
+    expect(params(studioViewUrl(BASE, 'nonsense'))).toEqual({ view: 'thisWeek' })
+    expect(studioViewUrl(`${BASE}/`, 'calendar')).toBe(`${BASE}/studio/marketing?view=calendar`)
+  })
+
+  it('lands on the thing: a task, a contact and what to do about them, a person, a section', () => {
+    expect(params(studioViewUrl(BASE, 'thisWeek', { task: 'op1' }))).toEqual({ view: 'thisWeek', [MARKETING_TASK_QUERY_PARAM]: 'op1' })
+    expect(params(studioViewUrl(BASE, 'outreach', { contact: 'marketingContact.jane', contactAction: 'log' }))).toEqual({
+      view: 'outreach',
+      [MARKETING_CONTACT_QUERY_PARAM]: 'marketingContact.jane',
+      [MARKETING_CONTACT_ACTION_QUERY_PARAM]: 'log',
+    })
+    expect(params(studioViewUrl(BASE, 'thisWeek', { owner: 'Juhan', focus: 'followUps' }))).toEqual({
+      view: 'thisWeek',
+      [MARKETING_OWNER_QUERY_PARAM]: 'Juhan',
+      [MARKETING_FOCUS_QUERY_PARAM]: 'followUps',
+    })
+  })
+
+  it('leaves off what does not apply: an action with no contact, a focus the page has no section for', () => {
+    expect(params(studioViewUrl(BASE, 'outreach', { contactAction: 'prep' }))).toEqual({ view: 'outreach' })
+    expect(params(studioViewUrl(BASE, 'outreach', { contact: 'c1', contactAction: 'call' as 'prep' }))).toEqual({
+      view: 'outreach',
+      contact: 'c1',
+    })
+    expect(params(studioViewUrl(BASE, 'thisWeek', { focus: 'everything' as 'caught', owner: '  ' }))).toEqual({ view: 'thisWeek' })
+  })
+
+  it('pins the parameter names the Studio reads', () => {
+    expect([MARKETING_CONTACT_QUERY_PARAM, MARKETING_CONTACT_ACTION_QUERY_PARAM, MARKETING_OWNER_QUERY_PARAM, MARKETING_FOCUS_QUERY_PARAM]).toEqual([
+      'contact',
+      'action',
+      'owner',
+      'focus',
+    ])
+  })
+
+  it('escapes what it is given, and returns nothing without an absolute base', () => {
+    expect(studioViewUrl(BASE, 'thisWeek', { owner: 'Jen & Co' })).toContain('owner=Jen+%26+Co')
+    expect(studioViewUrl(undefined, 'thisWeek')).toBe('')
+    expect(studioViewUrl('www.goinvo.com', 'thisWeek')).toBe('')
+    expect(studioViewUrl('javascript:alert(1)', 'thisWeek')).toBe('')
   })
 })
 
@@ -47,6 +116,11 @@ describe('studioTaskUrl', () => {
   it('escapes an id that would otherwise break the query string', () => {
     const url = studioTaskUrl({ baseUrl: 'https://x.test', taskId: 'op 1&x=2' })
     expect(url).toContain('op+1%26x%3D2')
+  })
+
+  it('links a decision to This week, where it can be answered', () => {
+    const url = studioTaskUrl({ baseUrl: 'https://www.goinvo.com', taskId: 'op1', kind: 'decision', targetView: 'outreach' })
+    expect(url).toBe('https://www.goinvo.com/studio/marketing?view=thisWeek&task=op1')
   })
 })
 

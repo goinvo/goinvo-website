@@ -5,8 +5,8 @@
  * lists it under "anyone" is asking the whole room — which in practice means
  * asking no one. The fix is to put a name on the question. But setting
  * `ownerName` on somebody's behalf is how a plan loses the team's trust (the
- * same reason "Not me this week" never reassigns), so this only proposes an
- * @-mention with a take button. The person decides.
+ * same reason "Not me" never reassigns), so this only proposes an @-mention
+ * with a take button. The person decides.
  *
  * The rules, each of which exists because the alternative is worse:
  *
@@ -29,11 +29,7 @@
  */
 
 import { hoursForWeek, statusOn, type TeamMemberAvailability } from './availability'
-import { formatMinutes } from './effort'
-import { clipSlackText, escapeSlackText, SLACK_LIMITS, slackMention } from './slackText'
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Block = Record<string, any>
+import { slackMention } from './slackText'
 
 /** A teammate we can actually @-mention: mapped people only, one per Slack id. */
 export type AskTeamMember = { name: string; slackUserId: string }
@@ -151,31 +147,23 @@ export function proposeOwnerAsks(input: {
 }
 
 /**
- * One ask, as a sentence. The effort estimate is the only number in it, and it
- * is about the task — never about the person.
+ * The ask, as the meta line of the task's card in the Monday plan:
+ * "<@U3>, could you take this one? · the plan had you in mind".
+ *
+ * It rides on the card rather than in a list of its own at the top. The list
+ * repeated every asked task a second time, with no buttons, a hundred phone
+ * lines above the card that had them — so the one part of the message
+ * addressed to a person was the part they could not act on.
+ *
+ * No number in it at all. The effort estimate sits on the card, about the
+ * task; nothing here is about the person's week ("you have the most free
+ * time" is a claim about a colleague made in front of their colleagues, from
+ * numbers that are only an estimate). `buildTaskCard` composes the same words
+ * around the estimate — the tests hold the two to each other.
  */
-export function describeAsk(ask: OwnerAsk, minutes: number): string {
-  const who = slackMention(text(ask.slackUserId) || undefined, text(ask.name) || 'someone')
-  const effort = minutesOf(minutes) ? ` (~${formatMinutes(minutesOf(minutes))})` : ''
-  const base = `${who} could you take this one?${effort}`
-  return ask.reason === 'suggested' ? `${base} The plan had you in mind.` : base
-}
-
-/** "*Could you take these?*" and one line per ask, in a single section; [] when there is nothing to ask. */
-export function buildAskBlocks(asks: Array<OwnerAsk & { title: string; minutes: number }>): Block[] {
-  const lines = (asks || [])
-    .filter((ask) => ask && text(ask.taskId))
-    .map((ask) => {
-      const title = clipSlackText(escapeSlackText(text(ask.title).replace(/\s+/g, ' ') || 'Untitled task'), 150)
-      return `• *${title}* — ${describeAsk(ask, ask.minutes)}`
-    })
-  if (!lines.length) return []
-  return [
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: clipSlackText(['*Could you take these?*', ...lines].join('\n'), SLACK_LIMITS.sectionText) },
-    },
-  ]
+export function askMeta(ask: Pick<OwnerAsk, 'slackUserId' | 'name' | 'reason'>): string {
+  const who = slackMention(text(ask?.slackUserId) || undefined, text(ask?.name) || 'someone')
+  return `${who}, could you take this one?${ask?.reason === 'suggested' ? ' · the plan had you in mind' : ''}`
 }
 
 /**

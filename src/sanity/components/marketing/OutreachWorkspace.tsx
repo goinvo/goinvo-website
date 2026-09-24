@@ -4,6 +4,7 @@ import { useCurrentUser } from 'sanity'
 
 import { useConfirmDialog } from './ConfirmDialog'
 import { BrandVoiceLearningReview } from './BrandVoiceLearningReview'
+import { CallOutlinePanel, studioSenderName } from './CallOutlinePanel'
 import {
   buildContactIntakeRows,
   ContactIntakeGrid,
@@ -47,7 +48,18 @@ import {
   OUTREACH_INTAKE_LIMITS,
 } from '@/lib/marketing/outreachIntake'
 import { marketingOperationHash } from '@/lib/marketing/operations'
-import { buildContactLogWrite } from '@/lib/marketing/callLog'
+import {
+  buildContactLogWrite,
+  CALL_OUTCOMES,
+  FOLLOW_UP_CHOICES,
+  resolveStatusAfter,
+  type CallOutcomeKey,
+} from '@/lib/marketing/callLog'
+import { listFollowUps, type FollowUpContact } from '@/lib/marketing/followUps'
+import { countLabel, errorLine, formatSlackDay, LABEL } from '@/lib/marketing/marquetaStyle'
+import { describePulse, summarizeOutreach, type PulseContact } from '@/lib/marketing/outreachPulse'
+import { resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
+import type { StudioContactAction } from '@/lib/marketing/taskLinks'
 import {
   buildMarketingContactIdentityClaims,
   fetchMarketingContactIdentityClaims,
@@ -86,7 +98,6 @@ import {
   FINANCIAL_POSTURE_DOC_ID,
   getFinancialPosture,
   hasPricedOffer,
-  isFinancialPostureId,
   mergeWarmStartSuggestionsIntoIntake,
   normalizeParsedContacts,
   normalizeOutreachUrl,
@@ -124,6 +135,13 @@ interface OutreachWorkspaceProps {
   onOpenSettings?: () => void
   /** Report successful workspace actions so an open Autopilot plan can advance. */
   onAutopilotComplete?: (signal: AutopilotCompletionPayload) => void
+  /**
+   * Land on one contact (C9): a Slack "Open Outreach" link, or Prep / Log it…
+   * on This week. `prep` opens their call prep, `log` their "How did it go?"
+   * form. A new `nonce` asks again, even for the same contact; the same
+   * request, re-rendered, is acted on once.
+   */
+  focusContact?: { id: string; action: StudioContactAction; nonce: number }
 }
 
 interface OutreachWorkspaceContentProps extends OutreachWorkspaceProps {
@@ -260,13 +278,160 @@ const CONTACT_FIELDS = `
   interactions[]{_key, at, by, outcome, intel, nextStep, statusAfter, channel, offerKey, offerTitle, evidenceIds, value}
 `
 
-const FOLLOW_UP_PRESETS = [
-  { label: 'No follow-up', days: null },
-  { label: 'In 3 days', days: 3 },
-  { label: 'In 1 week', days: 7 },
-  { label: 'In 6 weeks', days: 42 },
-  { label: 'Next quarter', days: 90 },
-]
+const TERMINAL_LOG_STATUSES = ['won', 'lost', 'closed']
+
+/**
+ * What one outcome chip fills in on the log form — the same four decisions one
+ * press of Slack's "How did it go?" makes, from the same table (`CALL_OUTCOMES`):
+ * the words for what happened, where the contact ends up, the channel, and when
+ * they come back up.
+ *
+ * The status goes through `resolveStatusAfter`, so a chip never moves a
+ * contact backwards by accident: "No answer" on somebody at Meeting leaves them
+ * at Meeting, and Won absorbs everything, exactly as a Slack log would. A
+ * contact that ends Won, Lost or Closed gets no follow-up, because a closed
+ * contact must not keep resurfacing on somebody's list.
+ */
+export function outreachLogChoice(currentStatus: string | null | undefined, outcomeKey: CallOutcomeKey) {
+  const outcome = CALL_OUTCOMES.find((candidate) => candidate.key === outcomeKey) || CALL_OUTCOMES[0]
+  const statusAfter = resolveStatusAfter(currentStatus || undefined, outcome.status, outcome.progress)
+  return {
+    outcome: outcome.label,
+    statusAfter,
+    channel: outcome.channel,
+    followUpDays: TERMINAL_LOG_STATUSES.includes(statusAfter) ? null : outcome.defaultFollowUpDays,
+  }
+}
+
+/**
+ * The follow-up choices on the Studio log form: Slack's list (`FOLLOW_UP_CHOICES`)
+ * minus "When the outcome suggests" — the form shows the suggestion itself
+ * instead, as "In 3 days (suggested)", so nobody has to guess what "suggests"
+ * means. A value the form already holds that is on neither list stays
+ * selectable, so the select never shows one thing while saving another.
+ */
+export function outreachFollowUpOptions(
+  suggestedDays: number | null,
+  currentDays: number | null,
+): Array<{ value: string; label: string }> {
+  const valueFor = (days: number | null) => (days === null ? 'none' : String(days))
+  const choices = FOLLOW_UP_CHOICES.filter((choice) => choice.value !== 'default').map((choice) => ({
+    value: valueFor(choice.days),
+    label: choice.days !== null && choice.days === suggestedDays ? `${choice.label} (suggested)` : choice.label,
+  }))
+  const known = new Set(choices.map((choice) => choice.value))
+  const extra: Array<{ value: string; label: string }> = []
+  if (suggestedDays !== null && !known.has(valueFor(suggestedDays))) {
+    extra.push({ value: valueFor(suggestedDays), label: `In ${countLabel(suggestedDays, 'day')} (suggested)` })
+  }
+  if (currentDays !== null && currentDays !== suggestedDays && !known.has(valueFor(currentDays))) {
+    extra.push({ value: valueFor(currentDays), label: `In ${countLabel(currentDays, 'day')}` })
+  }
+  return [...extra, ...choices]
+}
+
+const HISTORY_CHANNEL_WORD: Record<string, string> = {
+  phone: 'phone',
+  email: 'email',
+  linkedin: 'LinkedIn',
+  referral: 'referral',
+  video: 'video',
+  inPerson: 'in person',
+  other: 'other',
+}
+
+/**
+ * One history row's lead line — "Thu 24 Sep — Shirley, phone" — in Slack's
+ * date format and with the logger's first name, so a touch logged in Slack and
+ * one logged here read the same way.
+ */
+export function interactionHistoryLine(
+  interaction: { at?: string | null; by?: string | null; channel?: string | null },
+  now: Date,
+): string {
+  const day = interaction.at ? formatSlackDay(interaction.at, now) : ''
+  const who = String(interaction.by ?? '').trim().split(/\s+/)[0] || ''
+  const channel = String(interaction.channel ?? '').trim()
+  const how = HISTORY_CHANNEL_WORD[channel] || channel
+  const detail = [who, how].filter(Boolean).join(', ')
+  return [day || 'Undated', detail].filter(Boolean).join(' — ')
+}
+
+const DAY_MS = 86_400_000
+
+/**
+ * This week for the outreach pulse: Monday 00:00 UTC to the next Monday — the
+ * window This week's header counts touches over (plan-week's `weekWindow`).
+ */
+export function outreachWeekWindow(now: Date): { from: string; to: string; now: Date } {
+  const today = Math.floor(now.getTime() / DAY_MS) * DAY_MS
+  const from = today - ((new Date(today).getUTCDay() + 6) % 7) * DAY_MS
+  return { from: new Date(from).toISOString(), to: new Date(from + 7 * DAY_MS).toISOString(), now }
+}
+
+/**
+ * "Outreach this week: …" — the sentence This week's header shows, built the
+ * way plan-week builds it, so the two tabs never disagree under one label.
+ *
+ * Touches are counted over the ISO week, but the follow-ups come from
+ * `listFollowUps` (a rolling seven days), not from `summarizeOutreach`'s own
+ * count (due before the END of the ISO week). On a Thursday those differ by
+ * the next Monday and Tuesday: this page said "no outreach logged yet" while
+ * This week said "… 2 follow-ups waiting" about the same two people. This
+ * week's number is the one it lays rows out for and holds time back for, so
+ * it is the one both pages say. A draft sitting next to its published contact
+ * is left out, as plan-week's query leaves it out.
+ */
+export function outreachPulseSentence(contacts: Array<FollowUpContact & PulseContact>, now: Date): string {
+  const published = (contacts || []).filter((contact) => contact && contact._id && !contact._id.startsWith('drafts.'))
+  const pulse = summarizeOutreach(published, outreachWeekWindow(now))
+  const followUps = listFollowUps(published, { now })
+  pulse.followUpsDue = followUps.length
+  pulse.followUpsOverdue = followUps.filter((entry) => entry.overdue).length
+  return describePulse(pulse, 'Outreach this week')
+}
+
+/**
+ * Landings already acted on — see the landing effect. Two memories, because a
+ * request is `{ id, action, nonce }` and each one alone gets a case wrong:
+ *
+ * - By OBJECT, across mounts (this WeakSet). This workspace unmounts whenever
+ *   another tab is open and the host keeps its request in state, so coming
+ *   back to Outreach would otherwise re-open the same contact with "Marqueta
+ *   sent you here" long after the person moved on.
+ * - By id + action + nonce, within one mount (`handledLandingKeysRef`). A
+ *   parent that rebuilds an equal request on every render must not re-land
+ *   on every render — pressing Close would last until the next re-render.
+ *
+ * Not by key across mounts: the host numbers its nonces from 1 each time it
+ * mounts, so after leaving the Marketing tool and coming back, the first
+ * "Prep Jane" from This week carries the same key as one handled an hour ago,
+ * and a module-wide key memory would silently swallow it.
+ */
+const handledLandings = new WeakSet<object>()
+
+const landingKey = (request: { id: string; action: string; nonce: number }) =>
+  `${request.id}\u0000${request.action}\u0000${request.nonce}`
+
+/**
+ * Scroll a landing target into view once React has drawn it. The landing runs
+ * from an effect, so the panel it opened may not be in the DOM on the next
+ * tick; a few animation frames is plenty, and giving up quietly is better
+ * than scrolling somewhere else.
+ */
+function revealWhenDrawn(elementId: string, block: ScrollLogicalPosition, attempts = 30) {
+  if (typeof window === 'undefined') return
+  const step = (left: number) => {
+    const element = document.getElementById(elementId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block })
+      element.focus({ preventScroll: true })
+      return
+    }
+    if (left > 0) window.requestAnimationFrame(() => step(left - 1))
+  }
+  window.requestAnimationFrame(() => step(attempts))
+}
 
 const OUTREACH_INTAKE_UNSAVED_ID = 'outreach-intake-draft'
 const OUTREACH_OFFER_UNSAVED_ID = 'outreach-tailored-offer-draft'
@@ -351,11 +516,14 @@ function followUpDateIso(value: string): string | null {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
 }
 
-function outreachDateLabel(value?: string): string {
-  if (!value) return '—'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return '—'
-  return parsed.toLocaleDateString('en-US', { timeZone: 'UTC' })
+/**
+ * A due or follow-up date as Slack prints it — "Mon 28 Sep", the year only when
+ * it is not this year's — so a card here and the message that linked to it
+ * show the same date the same way (it used to read "9/28/2026" beside history
+ * rows that read "Thu 24 Sep"). '—' when there is no readable date.
+ */
+export function outreachDateLabel(value?: string | null, now: Date = new Date()): string {
+  return (value && formatSlackDay(value, now)) || '—'
 }
 
 function buildChannelOptionDrafts(overrides: OutreachChannelOverride[] = []): ChannelOptionDraft[] {
@@ -405,7 +573,7 @@ function trackerActionLabel(action: OutreachProgressAction, modality?: string): 
     if (modality === 'phone') return 'Call now'
     if (modality === 'email') return 'Open email'
     if (modality === 'linkedin') return 'Open LinkedIn'
-    return 'Log result'
+    return LABEL.LOG
   }
   if (action === 'research') return 'Research'
   if (action === 'reviewResearch') return 'Review brief'
@@ -713,6 +881,7 @@ export function OutreachWorkspaceContent({
   onOpenEvidence,
   onOpenSettings,
   onAutopilotComplete,
+  focusContact,
   currentUser,
   request = outreachApi,
 }: OutreachWorkspaceContentProps) {
@@ -731,6 +900,10 @@ export function OutreachWorkspaceContent({
   const [evidenceLinks, setEvidenceLinks] = useState<Array<WorkEvidence & { _id: string }>>([])
   const [loading, setLoading] = useState(true)
   const [loadFailure, setLoadFailure] = useState<string | null>(null)
+  // True once the private records have loaded at least once — what a landing
+  // waits for. `loading` alone is not enough: after a failed load, Retry
+  // clears the failure while the list is still empty.
+  const [recordsLoaded, setRecordsLoaded] = useState(false)
   const { confirm, confirmDialog } = useConfirmDialog()
   const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -944,7 +1117,7 @@ export function OutreachWorkspaceContent({
     saveIntakeCheckpoint,
   ])
 
-  const [postureId, setPostureId] = useState<string | null>(null)
+  const [storedPosture, setStoredPosture] = useState<StoredPosture | null>(null)
   const [warmStart, setWarmStart] = useState<WarmStartSuggestion[] | null>(null)
   const [warmStartSelected, setWarmStartSelected] = useState<ReadonlySet<string>>(new Set())
   const [warmStartBusy, setWarmStartBusy] = useState<'load' | null>(null)
@@ -975,6 +1148,8 @@ export function OutreachWorkspaceContent({
   const [batch, setBatch] = useState<{ done: number; total: number; current: string } | null>(null)
 
   const [loggingId, setLoggingId] = useState<string | null>(null)
+  // The outcome chip last pressed — the same eight outcomes as Slack's log.
+  const [logOutcomeKey, setLogOutcomeKey] = useState<CallOutcomeKey | null>(null)
   const [logStatus, setLogStatus] = useState('contacted')
   const [logOutcome, setLogOutcome] = useState('')
   const [logIntel, setLogIntel] = useState('')
@@ -1058,7 +1233,7 @@ export function OutreachWorkspaceContent({
           offers: MarketingOffer[]
           evidenceLinks: Array<WorkEvidence & { _id: string }>
           intakeCheckpoints: OutreachIntakeCheckpoint[]
-          financialPosture: string | null
+          financialPosture: StoredPosture | null
         }>(
           `{
             "contacts": *[_type == "marketingContact"]|order(coalesce(feasibilityScore, -1) desc, _updatedAt desc){${CONTACT_FIELDS}},
@@ -1071,7 +1246,7 @@ export function OutreachWorkspaceContent({
             "intakeCheckpoints": *[_type == "marketingOutreachCheckpoint"]|order(updatedAt desc)[0...30]{
               _id, ownerName, ownerSanityUserId, stage, stagedCount, readyCount, savedCount, updatedAt
             },
-            "financialPosture": *[_id == "${FINANCIAL_POSTURE_DOC_ID}"][0].posture
+            "financialPosture": *[_id == "${FINANCIAL_POSTURE_DOC_ID}"][0]{ posture, setAt, runway }
           }`,
         ),
         client
@@ -1083,6 +1258,7 @@ export function OutreachWorkspaceContent({
       if (!isCurrentRequestGeneration(loadRequestGenerationRef, generation)) return
       const nextEvidenceLinks = result.evidenceLinks || []
       setContacts(result.contacts || [])
+      setRecordsLoaded(true)
       setOffers(result.offers || [])
       setIntakeCheckpoints(result.intakeCheckpoints || [])
       setBrandVoices(normalizeMarketingBrandVoices(voiceSettings))
@@ -1091,9 +1267,18 @@ export function OutreachWorkspaceContent({
       )
       setEvidenceLinks(nextEvidenceLinks)
       // The posture doc shares the PRIVATE outreach dataset (candid feasibility
-      // data — never the world-readable production dataset). Unset/unknown
-      // falls back to the survival copy in the plan panel.
-      setPostureId(isFinancialPostureId(result.financialPosture) ? result.financialPosture : null)
+      // data — never the world-readable production dataset). The whole record
+      // is kept, not just the hand-set bin: the runway date decides the posture
+      // (`resolveRunwayPosture`), and a bin read on its own is the stale one.
+      // A bare bin (the shape this query used to return) still means that bin.
+      const posture: unknown = result.financialPosture
+      setStoredPosture(
+        typeof posture === 'string'
+          ? { posture }
+          : posture && typeof posture === 'object'
+            ? (posture as StoredPosture)
+            : null,
+      )
     } catch (err) {
       if (!isCurrentRequestGeneration(loadRequestGenerationRef, generation)) return
       const message = err instanceof Error ? err.message : 'Could not load outreach data.'
@@ -1184,6 +1369,51 @@ export function OutreachWorkspaceContent({
       ? null
       : contacts.find((contact) => contact._id === loggingId) || null
   }, [contacts, loggingId, trackerDetailContactId])
+
+  // ---- Landing on one contact (C9) ----
+  // "Open Outreach" from a Slack prep, or Prep / Log it… on This week, asks for
+  // ONE contact. The request usually arrives before the private records do, so
+  // it waits for them; it is acted on once (`handledLandings` and the key ref —
+  // see `handledLandings` for why it takes both). The handler lives in a ref
+  // because the functions it calls (showTrackerDetail, openTrackerLog) are
+  // defined below the loading returns — the ref is set in the render that drew
+  // the loaded list, and the effect runs after that render.
+  const landOnContactRef = useRef<(contact: MarketingContact, action: StudioContactAction) => boolean>(() => false)
+  const handledLandingKeysRef = useRef(new Set<string>())
+  const [landing, setLanding] = useState<{
+    contactId: string
+    action: StudioContactAction
+    logOpened: boolean
+    /** The log form open when they landed — any other means they moved on. */
+    loggingAtLanding: string | null
+  } | null>(null)
+  useEffect(() => {
+    if (!focusContact) return
+    const key = landingKey(focusContact)
+    if (handledLandings.has(focusContact) || handledLandingKeysRef.current.has(key)) return
+    if (!canManageOutreach || loading || !recordsLoaded || loadFailure) return
+    handledLandings.add(focusContact)
+    handledLandingKeysRef.current.add(key)
+    const contact = contacts.find((candidate) => candidate._id === focusContact.id)
+    if (!contact) {
+      setNotice(null)
+      setError(errorLine('find that contact on Outreach', 'Search Contact records below.'))
+      return
+    }
+    landOnContactRef.current(contact, focusContact.action === 'log' ? 'log' : 'prep')
+  }, [canManageOutreach, contacts, focusContact, loadFailure, loading, recordsLoaded])
+  // "Marqueta sent you here" says how the person arrived, so it goes as soon as
+  // they move on: another contact, a closed panel, a saved or cancelled log —
+  // or, after a prep landing, opening the log form (the prep is done; the
+  // banner would otherwise sit above "How did it go?" describing the step
+  // before it).
+  useEffect(() => {
+    if (!landing) return
+    const movedOn =
+      trackerDetailContactId !== landing.contactId ||
+      (landing.logOpened ? loggingId !== landing.contactId : loggingId !== landing.loggingAtLanding)
+    if (movedOn) setLanding(null)
+  }, [landing, loggingId, trackerDetailContactId])
   const visibleContacts = useMemo(
     () => {
       const query = contactSearch.trim().toLowerCase()
@@ -1800,7 +2030,12 @@ export function OutreachWorkspaceContent({
 
   // ---- Call logging (append-only history + follow-up date) ----
 
-  const openLog = (contact: MarketingContact, recommendedChannel?: OutreachChannel) => {
+  const openLog = (
+    contact: MarketingContact,
+    recommendedChannel?: OutreachChannel,
+    /** An outcome to start from — "Sent an email" when the call prep said to email first. */
+    presetOutcome?: CallOutcomeKey,
+  ) => {
     if (loggingId === contact._id) {
       focusRevealedPanel(logPanelRef)
       return true
@@ -1813,6 +2048,7 @@ export function OutreachWorkspaceContent({
     // 'meeting' contact must not silently regress to 'contacted'.
     setLogStatus(LOG_STATUS_VALUES.includes(contact.status || '') ? (contact.status as string) : 'contacted')
     setLogOutcome('')
+    setLogOutcomeKey(null)
     setLogIntel('')
     setLogNextStep(contact.nextStep || '')
     setLogFollowUpDays(7)
@@ -1822,8 +2058,35 @@ export function OutreachWorkspaceContent({
     // the AI brief. The person logging the interaction makes both selections.
     setLogOfferRef('')
     setLogEvidenceIds([])
+    if (presetOutcome) {
+      // A starting point, not an edit: nothing is marked unsaved until the
+      // person changes something themselves.
+      const choice = outreachLogChoice(contact.status, presetOutcome)
+      setLogOutcomeKey(presetOutcome)
+      setLogOutcome(choice.outcome)
+      setLogStatus(choice.statusAfter)
+      setLogChannel(choice.channel)
+      setLogFollowUpDays(choice.followUpDays)
+    }
     focusRevealedPanel(logPanelRef)
     return true
+  }
+
+  /**
+   * An outcome chip: fills in what Slack's one-press log would decide, and
+   * leaves every field editable. "What happened?" is only replaced while it
+   * still holds a chip's words — never text the person typed.
+   */
+  const chooseLogOutcome = (contact: MarketingContact, outcomeKey: CallOutcomeKey) => {
+    const choice = outreachLogChoice(contact.status, outcomeKey)
+    setLogOutcomeKey(outcomeKey)
+    setLogOutcome((current) =>
+      !current.trim() || CALL_OUTCOMES.some((outcome) => outcome.label === current.trim()) ? choice.outcome : current,
+    )
+    setLogStatus(choice.statusAfter)
+    setLogChannel(choice.channel)
+    setLogFollowUpDays(choice.followUpDays)
+    markUnsavedChange(OUTREACH_LOG_UNSAVED_ID, 'call log draft')
   }
 
   const focusRevealedPanel = (
@@ -2558,9 +2821,13 @@ export function OutreachWorkspaceContent({
     }
   }
 
-  // Unset/unreadable posture falls back to survival — the confirmed reality
+  // The posture the rest of the suite plans against: the runway date decides,
+  // unless a hand-set bin is newer (`resolveRunwayPosture`) — the same rule as
+  // the plan, the digest and Slack's money answers, so this page cannot argue
+  // with them. Nothing recorded falls back to survival, the confirmed reality
   // this surface was built for (see the module comment).
-  const activePosture = getFinancialPosture(postureId) ?? getFinancialPosture(DEFAULT_FINANCIAL_POSTURE_ID)!
+  const activePosture =
+    getFinancialPosture(resolveRunwayPosture(storedPosture || {}).id) ?? getFinancialPosture(DEFAULT_FINANCIAL_POSTURE_ID)!
 
   if (!currentUser) {
     return (
@@ -2638,7 +2905,26 @@ export function OutreachWorkspaceContent({
     )
   }
 
+  /** The one line that says why this contact is open — see the landing effect. */
+  const renderLandingBanner = (text: string) => (
+    <div
+      role="status"
+      data-outreach-landing="true"
+      style={{
+        border: '1px solid rgba(0, 115, 133, 0.45)',
+        background: 'rgba(0, 115, 133, 0.1)',
+        borderRadius: 6,
+        padding: '8px 12px',
+        fontSize: 13,
+        lineHeight: 1.5,
+      }}
+    >
+      {text}
+    </div>
+  )
+
   const renderPlanCard = (contact: MarketingContact, index: number, context: 'plan' | 'followUp' | 'review') => {
+    const historyNow = new Date()
     const bucket = fitBucket(contact.feasibilityScore)
     const present = presentedOffer(contact, offerByKey)
     const isLogging = loggingId === contact._id
@@ -2698,7 +2984,7 @@ export function OutreachWorkspaceContent({
           )}
           {context === 'followUp' && contact.followUpAt && (
             <Pill
-              text={`${overdue ? 'Overdue: ' : 'Due '}${outreachDateLabel(contact.followUpAt)}`}
+              text={`${overdue ? 'Overdue since ' : 'Due '}${outreachDateLabel(contact.followUpAt, historyNow)}`}
               colors={overdue ? RED : AMBER}
             />
           )}
@@ -3041,9 +3327,14 @@ export function OutreachWorkspaceContent({
             <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
               {[...(contact.interactions || [])].reverse().map((it) => (
                 <div key={it._key} style={{ ...styles.small, borderLeft: '2px solid var(--card-border-color)', paddingLeft: 8 }}>
-                  <strong>{it.at ? new Date(it.at).toLocaleDateString() : '?'}</strong>
-                  {it.statusAfter ? ` · ${labelForValue(STATUS_SHORT_OPTIONS, it.statusAfter)}` : ''}
-                  {it.outcome ? ` — ${it.outcome}` : ''}
+                  <strong>{interactionHistoryLine(it, historyNow)}</strong>
+                  {(it.statusAfter || it.outcome) && (
+                    <div>
+                      {[it.statusAfter ? labelForValue(STATUS_SHORT_OPTIONS, it.statusAfter) : '', it.outcome || '']
+                        .filter(Boolean)
+                        .join(' — ')}
+                    </div>
+                  )}
                   {it.intel ? <div style={styles.muted}>Intel: {it.intel}</div> : null}
                   {it.nextStep ? <div style={styles.muted}>Next: {it.nextStep}</div> : null}
                 </div>
@@ -3115,10 +3406,51 @@ export function OutreachWorkspaceContent({
             tabIndex={-1}
             style={{ display: 'grid', gap: 10, borderTop: '1px solid var(--card-border-color)', paddingTop: 10 }}
           >
-            <h4 id="outreach-log-panel-heading" style={{ fontSize: 15, margin: 0 }}>
-              Log interaction for {contact.name || 'this contact'}
-            </h4>
-            <InputField label="What happened?" help="Required: this becomes the durable interaction record." unsavedId={OUTREACH_LOG_UNSAVED_ID} unsavedLabel="call log draft">
+            {landing?.action === 'log' && landing.contactId === contact._id && renderLandingBanner('Marqueta sent you here — log how the call went.')}
+            <div>
+              <h4 id="outreach-log-panel-heading" style={{ fontSize: 15, margin: 0 }}>
+                How did it go?
+              </h4>
+              <div style={{ ...styles.small, ...styles.muted, marginTop: 2 }}>Logging a touch with {contact.name || 'this contact'}.</div>
+            </div>
+            <div
+              role="group"
+              aria-label={`What happened with ${contact.name || 'this contact'}`}
+              data-outreach-log-outcomes="true"
+              style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
+            >
+              {CALL_OUTCOMES.map((outcome) => {
+                const chosen = logOutcomeKey === outcome.key
+                return (
+                  <button
+                    key={outcome.key}
+                    type="button"
+                    aria-pressed={chosen}
+                    disabled={savingLog}
+                    onClick={() => chooseLogOutcome(contact, outcome.key)}
+                    style={{
+                      ...styles.button,
+                      minHeight: 36,
+                      padding: '6px 10px',
+                      fontSize: 12,
+                      borderRadius: 999,
+                      ...(chosen ? { borderColor: '#007385', background: 'rgba(0, 115, 133, 0.18)' } : {}),
+                    }}
+                  >
+                    {outcome.label}
+                  </button>
+                )
+              })}
+            </div>
+            {logOutcomeKey && logStatus !== (contact.status || '') && (
+              <div role="status" style={{ ...styles.small, lineHeight: 1.45 }}>
+                Status: {labelForValue(STATUS_SHORT_OPTIONS, contact.status || 'new') || 'New'} → {labelForValue(STATUS_SHORT_OPTIONS, logStatus)}
+                {logFollowUpDays !== null && !TERMINAL_LOG_STATUSES.includes(logStatus)
+                  ? ` · back on the list in ${countLabel(logFollowUpDays, 'day')}`
+                  : ''}
+              </div>
+            )}
+            <InputField label="What happened?" help="Required: this becomes the durable interaction record. An outcome above fills it in." unsavedId={OUTREACH_LOG_UNSAVED_ID} unsavedLabel="call log draft">
               <textarea required style={{ ...styles.input, minHeight: 60 }} value={logOutcome} onChange={(e) => setLogOutcome(e.target.value)} placeholder="Outcome of the call/message" />
             </InputField>
             <InputField label="Intelligence gathered (optional)" help="e.g. what actually got funded in their org this year" unsavedId={OUTREACH_LOG_UNSAVED_ID} unsavedLabel="call log draft">
@@ -3196,16 +3528,19 @@ export function OutreachWorkspaceContent({
                   ))}
                 </select>
               </InputField>
-              <InputField label="Follow up" help="They'll resurface in the progress tracker" unsavedId={OUTREACH_LOG_UNSAVED_ID} unsavedLabel="call log draft">
+              <InputField label="Follow up" help="They’ll resurface in the progress tracker" unsavedId={OUTREACH_LOG_UNSAVED_ID} unsavedLabel="call log draft">
                 <select
                   style={styles.input}
                   disabled={['won', 'lost', 'closed'].includes(logStatus)}
                   value={logFollowUpDays === null ? 'none' : String(logFollowUpDays)}
                   onChange={(e) => setLogFollowUpDays(e.target.value === 'none' ? null : Number(e.target.value))}
                 >
-                  {FOLLOW_UP_PRESETS.map((p) => (
-                    <option key={p.label} value={p.days === null ? 'none' : String(p.days)}>
-                      {p.label}
+                  {outreachFollowUpOptions(
+                    logOutcomeKey ? CALL_OUTCOMES.find((outcome) => outcome.key === logOutcomeKey)?.defaultFollowUpDays ?? null : null,
+                    logFollowUpDays,
+                  ).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
@@ -3231,9 +3566,10 @@ export function OutreachWorkspaceContent({
           </div>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button type="button" style={styles.primaryButton} disabled={isEditingBrief} onClick={() => openLog(contact)}>
-              Log interaction
-            </button>
+            {/* No Log it… here. This card is only ever drawn closed inside call
+                prep, where the outline above has THE Log it… — under the cheat
+                sheet, "Sent an email" chosen for an email-first contact. A
+                second one here opened a blank form under the same label. */}
             <button type="button" style={styles.button} disabled={isEditingBrief || researchPendingIds.has(contact._id)} onClick={() => void researchOne(contact)}>
               {researchPendingIds.has(contact._id) ? 'Re-researching…' : 'Re-research'}
             </button>
@@ -3267,11 +3603,16 @@ export function OutreachWorkspaceContent({
     return true
   }
 
-  const openTrackerLog = (contact: MarketingContact, row: OutreachProgressRow) => {
-    const channel = row.recommendation.channel as OutreachChannel | null
-    if (!openLog(contact, channel || undefined)) return
+  const openTrackerLog = (
+    contact: MarketingContact,
+    row: OutreachProgressRow | null,
+    presetOutcome?: CallOutcomeKey,
+  ) => {
+    const channel = (row?.recommendation.channel || null) as OutreachChannel | null
+    if (!openLog(contact, channel || undefined, presetOutcome)) return false
     if (trackerDetailContactId !== contact._id) rememberRevealedPanelOpener('trackerDetail', trackerDetailRef)
     setTrackerDetailContactId(contact._id)
+    return true
   }
 
   const trackerEditField = (row: OutreachProgressRow): string | undefined => {
@@ -3417,6 +3758,22 @@ export function OutreachWorkspaceContent({
   const trackerDetailRow = trackerDetailContact
     ? outreachProgress.rows.find((row) => row.contactId === trackerDetailContact._id) || null
     : null
+  // The landing effect (above the loading returns) calls this after the render
+  // that drew the loaded list commits, so it always acts on the current rows.
+  // `prep` opens call prep; `log` opens "How did it go?" — unless their research
+  // is waiting for review, which the Studio asks for before any log (the log
+  // buttons are disabled for it everywhere else), so that lands on the prep
+  // with a line saying why.
+  landOnContactRef.current = (contact, action) => {
+    const row = outreachProgress.rows.find((candidate) => candidate.contactId === contact._id) || null
+    const canLog = !(contact.researchedAt && !contact.researchReviewedAt)
+    const logging = action === 'log' && canLog
+    if (!(logging ? openTrackerLog(contact, row) : showTrackerDetail(contact))) return false
+    setLanding({ contactId: contact._id, action, logOpened: logging, loggingAtLanding: logging ? contact._id : loggingId })
+    revealWhenDrawn(logging ? 'outreach-log-panel' : 'outreach-tracker-detail', logging ? 'center' : 'start')
+    return true
+  }
+
   const trackerDetailContext: 'plan' | 'followUp' | 'review' = trackerDetailContact
     ? trackerDetailContact.researchedAt && !trackerDetailContact.researchReviewedAt
       ? 'review'
@@ -3547,14 +3904,14 @@ export function OutreachWorkspaceContent({
                           Copy opener
                         </button>
                       )}
-                      {contact.researchedAt && (
-                        <button type="button" aria-label={`Open brief for ${row.name}`} style={styles.button} onClick={() => showTrackerDetail(contact)}>
-                          Open brief
+                      {row.action !== 'reviewResearch' && (
+                        <button type="button" aria-label={`Prep ${row.name}`} style={styles.button} onClick={() => showTrackerDetail(contact)}>
+                          {LABEL.PREP}
                         </button>
                       )}
                       {directHref && (row.action === 'firstTouch' || row.action === 'followUp') && (
-                        <button type="button" aria-label={`Log result for ${row.name}`} style={styles.button} onClick={() => openTrackerLog(contact, row)}>
-                          Log result
+                        <button type="button" aria-label={`Log it for ${row.name}`} style={styles.button} onClick={() => openTrackerLog(contact, row)}>
+                          {LABEL.LOG}
                         </button>
                       )}
                       <button type="button" aria-label={`Change modality for ${row.name}`} style={styles.button} onClick={() => startChannelOptions(contact)}>
@@ -3573,6 +3930,10 @@ export function OutreachWorkspaceContent({
               )}
             </div>
 
+            {/* This week's header sentence, built the same way — see outreachPulseSentence. */}
+            <p data-outreach-pulse="true" style={{ ...styles.small, margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+              {outreachPulseSentence(contacts, new Date())}
+            </p>
             <div role="group" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} aria-label="Outreach progress summary">
               <Pill text={`${outreachProgress.counts.contactNow} ready now`} colors={TEAL} />
               <Pill text={`${outreachProgress.counts.due} due / upcoming`} colors={AMBER} />
@@ -3711,17 +4072,20 @@ export function OutreachWorkspaceContent({
                           {row.dueAt ? <strong>{outreachDateLabel(row.dueAt)}</strong> : <span>—</span>}
                           {latestInteraction?.at && (
                             <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45, marginTop: 4 }}>
-                              Last touch {new Date(latestInteraction.at).toLocaleDateString()}
+                              Last touch {outreachDateLabel(latestInteraction.at)}
                             </div>
                           )}
                         </td>
                         <td style={{ padding: '10px 0', verticalAlign: 'top', minWidth: 215 }}>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {renderTrackerPrimaryAction(contact, row, true)}
-                            {directHref && (row.action === 'firstTouch' || row.action === 'followUp') && (
-                              <button type="button" aria-label={`Log result for ${row.name}`} style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => openTrackerLog(contact, row)}>Log result</button>
+                            {row.action !== 'reviewResearch' && (
+                              <button type="button" aria-label={`Prep ${row.name}`} style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => showTrackerDetail(contact)}>{LABEL.PREP}</button>
                             )}
-                            {(row.action !== 'complete' || showContactInfoEdit || contact.researchedAt) && (
+                            {directHref && (row.action === 'firstTouch' || row.action === 'followUp') && (
+                              <button type="button" aria-label={`Log it for ${row.name}`} style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => openTrackerLog(contact, row)}>{LABEL.LOG}</button>
+                            )}
+                            {(row.action !== 'complete' || showContactInfoEdit) && (
                               <details>
                                 <summary aria-label={`More actions for ${row.name}`} style={{ ...styles.button, cursor: 'pointer', listStyle: 'none', padding: '5px 9px', fontSize: 12 }}>More</summary>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
@@ -3730,9 +4094,6 @@ export function OutreachWorkspaceContent({
                                   )}
                                   {showContactInfoEdit && (
                                     <button type="button" aria-label={`Edit contact info for ${row.name}`} style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => startEditContact(contact, editField)}>Edit contact info</button>
-                                  )}
-                                  {contact.researchedAt && (
-                                    <button type="button" aria-label={`Open brief for ${row.name}`} style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }} onClick={() => showTrackerDetail(contact)}>Open brief</button>
                                   )}
                                 </div>
                               </details>
@@ -3791,10 +4152,13 @@ export function OutreachWorkspaceContent({
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                       {renderTrackerPrimaryAction(contact, row)}
-                      {directHref && (row.action === 'firstTouch' || row.action === 'followUp') && (
-                        <button type="button" aria-label={`Log result for ${row.name}`} style={styles.button} onClick={() => openTrackerLog(contact, row)}>Log result</button>
+                      {row.action !== 'reviewResearch' && (
+                        <button type="button" aria-label={`Prep ${row.name}`} style={styles.button} onClick={() => showTrackerDetail(contact)}>{LABEL.PREP}</button>
                       )}
-                      {(row.action !== 'complete' || showContactInfoEdit || contact.researchedAt) && (
+                      {directHref && (row.action === 'firstTouch' || row.action === 'followUp') && (
+                        <button type="button" aria-label={`Log it for ${row.name}`} style={styles.button} onClick={() => openTrackerLog(contact, row)}>{LABEL.LOG}</button>
+                      )}
+                      {(row.action !== 'complete' || showContactInfoEdit) && (
                         <details>
                           <summary aria-label={`More actions for ${row.name}`} style={{ ...styles.button, cursor: 'pointer', listStyle: 'none' }}>More actions</summary>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
@@ -3803,9 +4167,6 @@ export function OutreachWorkspaceContent({
                             )}
                             {showContactInfoEdit && (
                               <button type="button" aria-label={`Edit contact info for ${row.name}`} style={styles.button} onClick={() => startEditContact(contact, editField)}>Edit contact info</button>
-                            )}
-                            {contact.researchedAt && (
-                              <button type="button" aria-label={`Open brief for ${row.name}`} style={styles.button} onClick={() => showTrackerDetail(contact)}>Open brief</button>
                             )}
                           </div>
                         </details>
@@ -3927,12 +4288,12 @@ export function OutreachWorkspaceContent({
               >
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'start', justifyContent: 'space-between', gap: 10 }}>
                   <div>
-                    <h3 id="outreach-tracker-detail-heading" style={{ fontSize: 15, margin: 0 }}>Brief and activity for {trackerDetailContact.name || 'contact'}</h3>
+                    <h3 id="outreach-tracker-detail-heading" style={{ fontSize: 15, margin: 0 }}>Call prep: {trackerDetailContact.name || 'contact'}</h3>
                     {trackerDetailRow && <div style={{ ...styles.small, ...styles.muted, lineHeight: 1.45, marginTop: 3 }}>{trackerDetailRow.whyNext}</div>}
                   </div>
                   <button
                     type="button"
-                    aria-label={`Close brief for ${trackerDetailContact.name || 'contact'}`}
+                    aria-label={`Close call prep for ${trackerDetailContact.name || 'contact'}`}
                     style={styles.button}
                     onClick={() => {
                       if (editingBriefId === trackerDetailContact._id && !confirmDiscardUnsavedChange(OUTREACH_BRIEF_UNSAVED_ID)) return
@@ -3950,9 +4311,41 @@ export function OutreachWorkspaceContent({
                       restoreRevealedPanelOpener('trackerDetail')
                     }}
                   >
-                    Close brief
+                    Close
                   </button>
                 </div>
+                {landing && landing.contactId === trackerDetailContact._id && !landing.logOpened &&
+                  renderLandingBanner(
+                    landing.action === 'log'
+                      ? 'Marqueta sent you here — log how the call went. Approve their research below first; Log it… appears once it’s approved.'
+                      : 'Marqueta sent you here — prep this call.',
+                  )}
+                {/* Slack's outline, composed from the same records; the brief and history follow.
+                    Its Log it… is this panel's only one (the card below has none), so the
+                    label does one thing here: the same as Slack's, preset and colour included —
+                    green only when a call is what the outline asks for, plain on a hold-off
+                    or when no outline could be drawn. */}
+                <CallOutlinePanel
+                  client={outreachClient}
+                  contactId={trackerDetailContact._id}
+                  revision={trackerDetailContact._rev}
+                  senderName={studioSenderName(currentUser?.name)}
+                  actions={(outline) =>
+                    trackerDetailContext !== 'review' && loggingId !== trackerDetailContact._id ? (
+                      <button
+                        type="button"
+                        aria-label={`Log it for ${trackerDetailContact.name || 'contact'}`}
+                        style={outline && outline.mode !== 'holdOff' ? styles.primaryButton : styles.button}
+                        disabled={editingBriefId === trackerDetailContact._id}
+                        onClick={() =>
+                          openTrackerLog(trackerDetailContact, trackerDetailRow, outline?.mode === 'emailFirst' ? 'emailed' : undefined)
+                        }
+                      >
+                        {LABEL.LOG}
+                      </button>
+                    ) : null
+                  }
+                />
                 {renderPlanCard(trackerDetailContact, Math.max(0, (trackerDetailRow?.rank || 1) - 1), trackerDetailContext)}
               </div>
             )}
@@ -4596,7 +4989,7 @@ export function OutreachWorkspaceContent({
                         <div style={{ display: 'inline-flex', gap: 6 }}>
                           <button
                             type="button"
-                            aria-label={`Log interaction for ${contact.name || 'contact'}`}
+                            aria-label={`Log it for ${contact.name || 'contact'}`}
                             style={{ ...styles.button, padding: '5px 9px', fontSize: 12 }}
                             disabled={Boolean(contact.researchedAt && !contact.researchReviewedAt)}
                             onClick={() => {
@@ -4604,7 +4997,7 @@ export function OutreachWorkspaceContent({
                               window.setTimeout(() => document.getElementById('outreach-ad-hoc-log')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0)
                             }}
                           >
-                            Log
+                            {LABEL.LOG}
                           </button>
                           <button
                             type="button"
@@ -4660,7 +5053,7 @@ export function OutreachWorkspaceContent({
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     <button
                       type="button"
-                      aria-label={`Log interaction for ${contact.name || 'contact'}`}
+                      aria-label={`Log it for ${contact.name || 'contact'}`}
                       style={styles.button}
                       disabled={Boolean(contact.researchedAt && !contact.researchReviewedAt)}
                       onClick={() => {
@@ -4668,7 +5061,7 @@ export function OutreachWorkspaceContent({
                         window.setTimeout(() => document.getElementById('outreach-ad-hoc-log')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 0)
                       }}
                     >
-                      Log interaction
+                      {LABEL.LOG}
                     </button>
                     <button type="button" style={styles.button} disabled={researchPendingIds.has(contact._id) || batch !== null} onClick={() => void researchOne(contact)}>
                       {researchPendingIds.has(contact._id) ? 'Researching…' : contact.researchedAt ? 'Re-research' : 'Research'}

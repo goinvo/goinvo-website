@@ -26,16 +26,25 @@
  * - **Nothing is assigned on anybody's behalf.** Take sets the presser as the
  *   owner and nobody else; hand back (and the digest's "Not me") clears the
  *   owner rather than choosing a new one; a task somebody else owns cannot be
- *   handed back from under them in a shared channel, nor taken by the
- *   check-in's Take. The one way to move a colleague's task is the digest
- *   card's explicitly labelled "Take it over", which puts the PRESSER's own
- *   name on it (`takeOverTask`).
+ *   handed back from under them in a shared channel, nor taken by Take. The
+ *   one way a card moves a colleague's task is an away cover — Take with
+ *   `coverFor`, drawn for an owner who is away — which puts the PRESSER's own
+ *   name on it, and only while the task is still the away owner's. (Messages
+ *   posted before the shared card still carry the digest's "Take it over",
+ *   `takeOverTask`, which keeps working for them.)
  * - **Who owns a task is decided by the board name and the roster, never by
  *   the Slack id stamped on the task.** That stamp goes stale (Eric claims in
  *   Slack, the Studio reassigns to Juhan, the task still says Eric's id), and
  *   trusting it would let Eric clear Juhan's name off Juhan's work. When the
  *   answer depends on a roster that cannot be read, Take and Hand back refuse
  *   rather than guess.
+ *
+ * Every refusal and failure is one sentence in the shared error shape
+ * (`errorLine`): what could not be done, that nothing changed, and where to do
+ * it instead — This week, by its tab name. "Nothing changed" is the part a
+ * person needs most: a press that might have half-happened is the one they
+ * redo by hand. A press that changed nothing because it was already true
+ * ("Already done.") is not a failure, and says so plainly.
  *
  * The fresh task is built by applying the patch to the record that was read —
  * exact, because the write only succeeds if that record was current — and its
@@ -49,6 +58,7 @@
 import 'server-only'
 import { isRevisionConflict } from './apiBoundary'
 import type { TeamMemberAvailability } from './availability'
+import { errorLine } from './marquetaStyle'
 import {
   buildOperationStatusPatch,
   MARKETING_OPERATION_TYPE,
@@ -66,11 +76,17 @@ export type TaskActionInput = {
   personName: string
   slackUserId: string
   now?: Date
+  /**
+   * Take only: the away owner an away-cover card was drawn for. Taking is then
+   * allowed to move the task off THIS person — and only while it is still
+   * theirs. Anyone else's task is refused exactly as without it.
+   */
+  coverFor?: string
 }
 
 export type TaskActionResult = {
   ok: boolean
-  /** One plain-text sentence; the caller escapes it. */
+  /** One plain-text sentence (a refusal or failure in `errorLine`'s shape); the caller escapes it. */
   message?: string
   /** The task as it stands after the press (or as it stood, when nothing changed). */
   task?: CheckInTask
@@ -97,6 +113,9 @@ type StoredTask = {
   humanQuestion?: string
   lastOutcome?: string
   sourceKey?: string
+  /** Where the card's title links — read so a redraw links where the card first did (`resolveTaskView`). */
+  targetView?: string
+  humanResponse?: string
   activity?: MarketingOperationActivity[] | null
   /** Keys already in `askHistory`, so a repeated pass appends nothing. */
   askKeys?: (string | null)[] | null
@@ -104,7 +123,7 @@ type StoredTask = {
 
 const TASK_QUERY = `*[_type == "${MARKETING_OPERATION_TYPE}" && _id == $id][0]{
   _id, _rev, _createdAt, _updatedAt, title, ownerName, ownerSlackUserId, status, kind, priority,
-  dueAt, estimatedMinutes, blocker, humanQuestion, lastOutcome, sourceKey, activity,
+  dueAt, estimatedMinutes, blocker, humanQuestion, humanResponse, lastOutcome, sourceKey, targetView, activity,
   "askKeys": askHistory[]._key
 }`
 
@@ -132,6 +151,11 @@ type Plan =
  * who anybody is" — and only the second must stop an ownership decision.
  */
 type Roster = TeamMemberAvailability[] | null
+
+/** Where to do it instead, when a press cannot: the tab the task lives on. */
+const OPEN_THIS_WEEK = 'Open This week.'
+/** "Couldn’t update that task — nothing changed. <why> Open This week." */
+const couldNot = (why = '', verb = 'update that task') => errorLine(verb, why ? `${why} ${OPEN_THIS_WEEK}` : OPEN_THIS_WEEK)
 
 const DAY_MS = 86_400_000
 /** A second identical press inside this window is the same press. */
@@ -186,6 +210,7 @@ function toCheckInTask(task: StoredTask, entries: TeamMemberAvailability[]): Che
     ...(task._updatedAt ? { updatedAt: task._updatedAt } : {}),
     ...(task._createdAt ? { createdAt: task._createdAt } : {}),
     ...(task.sourceKey ? { sourceKey: task.sourceKey } : {}),
+    ...(text(task.targetView) ? { targetView: text(task.targetView) } : {}),
   }
 }
 
@@ -217,7 +242,11 @@ async function roster(): Promise<Roster> {
 /** Where the presser stands relative to the task's owner. */
 type Ownership = 'unowned' | 'presser' | 'someoneElse' | 'unknown'
 
-const couldNotCheck = 'I couldn’t check who owns that one just now — try again in a minute.'
+const couldNotCheck = errorLine('update that task', 'I couldn’t check who owns it just now — try again in a minute.')
+
+/** Someone else's task, refused by name: "Couldn’t hand that back — nothing changed. It’s Eric’s — only they can hand it back. Open This week." */
+const notYours = (task: StoredTask, verb: string) =>
+  couldNot(`It’s ${text(task.ownerName)}’s — only they can hand it back.`, verb)
 
 /**
  * Is the presser the task's owner?
@@ -258,7 +287,7 @@ async function runTaskAction(
 ): Promise<TaskActionResult> {
   const now = input.now || new Date()
   const taskId = text(input.taskId)
-  if (!taskId) return { ok: false, message: 'I don’t know which task that was.' }
+  if (!taskId) return { ok: false, message: couldNot('That button lost track of which task it was.') }
   try {
     const client = getOutreachClient()
     const entries = await roster()
@@ -266,7 +295,7 @@ async function runTaskAction(
     const drawWith = entries || []
     let task = await client.fetch<StoredTask | null>(TASK_QUERY, { id: taskId })
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      if (!task) return { ok: false, message: 'That task no longer exists.' }
+      if (!task) return { ok: false, message: couldNot('I can’t find it any more.') }
       const before = { ownerName: text(task.ownerName), status: statusOf(task) }
       const decision = plan(task, now, entries)
       if (decision.kind === 'refuse') return { ok: false, message: decision.message, task: toCheckInTask(task, drawWith), before }
@@ -299,14 +328,14 @@ async function runTaskAction(
         before,
       }
     }
-    return { ok: false, message: 'Somebody else changed that task at the same moment. Try again in a second.' }
+    return { ok: false, message: errorLine('update that task', 'Someone else changed it at the same moment — press again.') }
   } catch (error) {
     console.error('[marqueta] task action failed', error)
-    return { ok: false, message: 'I couldn’t update that task. The Studio’s This week tab can.' }
+    return { ok: false, message: couldNot() }
   }
 }
 
-const closedMessage = 'It’s already closed — press Reopen first.'
+const closedMessage = errorLine('update that task', 'It’s already closed — press Reopen first.')
 
 /** Done. The one press most worth making easy. */
 export function markTaskDone(input: TaskActionInput): Promise<TaskActionResult> {
@@ -319,7 +348,7 @@ export function markTaskDone(input: TaskActionInput): Promise<TaskActionResult> 
       outcome: `By ${person}`,
       set: { lastOutcome: `Done — said in Slack by ${person}` },
     })
-    if (!write) return { kind: 'refuse', message: 'The board won’t mark that one done from where it is — change it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('It can’t be marked done from where it is.', 'mark that done') }
     return { kind: 'write', ...write, message: 'Marked done.' }
   })
 }
@@ -352,7 +381,7 @@ export function markTaskUnstuck(input: TaskActionInput): Promise<TaskActionResul
             outcome: `By ${person}`,
             set: { lastOutcome: `Unstuck — said in Slack by ${person}` },
           })
-    if (!write) return { kind: 'refuse', message: 'The board won’t move that one from where it is — change it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('That move isn’t allowed from where it is.') }
     return { kind: 'write', ...write, message: status === 'blocked' ? 'Back in progress.' : 'Noted.' }
   })
 }
@@ -362,7 +391,7 @@ export function markTaskStuck(input: TaskActionInput & { blocker: string }): Pro
   const person = text(input.personName) || 'someone'
   const blocker = text(input.blocker).slice(0, 600)
   return runTaskAction(input, (task, now) => {
-    if (!blocker) return { kind: 'refuse', message: 'Say what’s in the way and I’ll put it on the task.' }
+    if (!blocker) return { kind: 'refuse', message: errorLine('mark that stuck', 'Say what’s in the way and I’ll put it on the task.') }
     const status = statusOf(task)
     if (CLOSED.has(status)) return { kind: 'refuse', message: closedMessage }
     if (status === 'blocked' && text(task.blocker) === blocker) return { kind: 'noop', message: 'Already noted.' }
@@ -372,7 +401,7 @@ export function markTaskStuck(input: TaskActionInput & { blocker: string }): Pro
       outcome: blocker,
       set: { blocker, lastOutcome: `Stuck — said in Slack by ${person}` },
     })
-    if (!write) return { kind: 'refuse', message: 'The board won’t mark that one stuck from where it is — change it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('It can’t be marked stuck from where it is.', 'mark that stuck') }
     return { kind: 'write', ...write, message: 'Marked stuck — what’s in the way is on the task.' }
   })
 }
@@ -390,7 +419,7 @@ export function reopenTask(input: TaskActionInput): Promise<TaskActionResult> {
       // A dropped task may carry a snooze date from the Studio; reopened, it is live now.
       unset: ['dismissedUntil'],
     })
-    if (!write) return { kind: 'refuse', message: 'The board won’t reopen that one — change it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('It can’t be reopened from where it is.', 'reopen that') }
     return { kind: 'write', ...write, message: 'Reopened.' }
   })
 }
@@ -418,10 +447,7 @@ export function handBackTask(input: TaskActionInput): Promise<TaskActionResult> 
     const who = ownership(task, input, entries)
     if (who === 'unknown') return { kind: 'refuse', message: couldNotCheck }
     if (who === 'someoneElse') {
-      return {
-        kind: 'refuse',
-        message: `That one is ${text(task.ownerName)}’s — only they can hand it back. (Or change it in the Studio.)`,
-      }
+      return { kind: 'refuse', message: notYours(task, 'hand that back') }
     }
     const write = move(task, status, {
       now,
@@ -430,7 +456,7 @@ export function handBackTask(input: TaskActionInput): Promise<TaskActionResult> 
       set: { lastOutcome: `Handed back in Slack by ${person}` },
       unset: ['ownerName', 'ownerSlackUserId'],
     })
-    if (!write) return { kind: 'refuse', message: 'The board won’t accept that change — do it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('That move isn’t allowed from where it is.', 'hand that back') }
     return { kind: 'write', ...write, message: 'Handed back — anyone can take it.' }
   })
 }
@@ -440,10 +466,13 @@ const DECLINED_BY_DIGEST = /passed on this/i
 
 /** "Someone" is resolveOwnerName's answer for a presser it could not name. */
 const unnamed = (person: string) => !person || /^someone$/i.test(person)
-const unnamedMessage = 'I couldn’t tell who you are on the board — link your name from the digest first.'
+const unnamedMessage = errorLine(
+  'take that',
+  'I couldn’t tell which name on the team list is yours — pick it in the Monday plan’s one-time setup first.',
+)
 
 /**
- * Take, and — from the digest card's "Take it over" — take over.
+ * Take, a cover, and — from a legacy digest card's "Take it over" — take over.
  *
  * The presser becomes the owner: the resolved board name and their own Slack
  * id, nobody else's. A task the digest parked in needsHuman only because
@@ -451,18 +480,24 @@ const unnamedMessage = 'I couldn’t tell who you are on the board — link your
  * found its answer: it goes back to queued and the question is cleared. Any
  * other question is a real decision still owed, and stays.
  *
- * `takeOver` is the one difference between the check-in's Take and the
- * digest's card. The check-in never takes a colleague's task from under them;
- * the digest card offers "Take it over" by name on an owned task, and pressing
- * it is the presser putting THEIR OWN name on the work — nothing is assigned on
- * anyone's behalf, and the previous owner is named in the activity entry and
- * in the card's note. Everything else is shared: an unnamed presser is
- * refused rather than filed as "Someone", a closed task is refused, the move
- * goes through the board's transition rules, and the write is conditional on
- * the revision it was built from.
+ * Take never takes a colleague's task from under them, with one exception
+ * the card has to ask for: an away cover (`coverFor`), drawn because the
+ * owner is away, may move the task off THAT owner. The check is against the
+ * task as it stands when the press lands, not as the card was drawn — so once
+ * Juhan has covered Eric's task, Shirley pressing the same stale card is told
+ * Juhan has it, instead of silently taking it from him.
+ *
+ * `takeOver` (the legacy "Take it over") takes from whoever owns it; messages
+ * posted before the shared card still carry it. Either way the presser puts
+ * THEIR OWN name on the work — nothing is assigned on anyone's behalf — and
+ * the previous owner is named in the activity entry. Everything else is
+ * shared: an unnamed presser is refused rather than filed as "Someone", a
+ * closed task is refused, the move goes through the board's transition rules,
+ * and the write is conditional on the revision it was built from.
  */
 function take(input: TaskActionInput, opts: { takeOver: boolean }): Promise<TaskActionResult> {
   const person = text(input.personName)
+  const coverFor = text(input.coverFor)
   return runTaskAction(input, (task, now, entries) => {
     // Writing "Someone" as an owner would put the task in nobody's list while looking taken.
     if (unnamed(person)) return { kind: 'refuse', message: unnamedMessage }
@@ -470,8 +505,9 @@ function take(input: TaskActionInput, opts: { takeOver: boolean }): Promise<Task
     if (CLOSED.has(status)) return { kind: 'refuse', message: closedMessage }
     const who = ownership(task, input, entries)
     if (who === 'unknown') return { kind: 'refuse', message: couldNotCheck }
-    if (who === 'someoneElse' && !opts.takeOver) {
-      return { kind: 'refuse', message: `${text(task.ownerName)} already has that one.` }
+    const covering = Boolean(coverFor) && same(task.ownerName, coverFor)
+    if (who === 'someoneElse' && !opts.takeOver && !covering) {
+      return { kind: 'refuse', message: errorLine('take that', `${text(task.ownerName)} already has it.`) }
     }
     const slackUserId = text(input.slackUserId)
     const declined = status === 'needsHuman' && DECLINED_BY_DIGEST.test(text(task.humanQuestion))
@@ -494,14 +530,15 @@ function take(input: TaskActionInput, opts: { takeOver: boolean }): Promise<Task
     const write = declined
       ? move(task, 'queued', { now, action, outcome, set, unset: ['humanQuestion'] })
       : move(task, status, { now, action, outcome, set })
-    if (!write) return { kind: 'refuse', message: 'The board won’t accept that change — do it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('That move isn’t allowed from where it is.', 'take that') }
     return { kind: 'write', ...write, message: previousOwner ? `It’s yours — taken over from ${previousOwner}.` : 'It’s yours.' }
   })
 }
 
 /**
- * Take (the check-in's button): a task somebody else already owns is not taken
- * from them — and "somebody else" is decided without the task's stamped id (see
+ * Take ("I’ll take it", on every card): a task somebody else already owns is
+ * not taken from them unless the card was an away cover for them (`coverFor`)
+ * — and "somebody else" is decided without the task's stamped id (see
  * `ownership`), so the previous owner of a reassigned task is told whose it is
  * now, not "It's already yours."
  */
@@ -509,7 +546,11 @@ export function takeTask(input: TaskActionInput): Promise<TaskActionResult> {
   return take(input, { takeOver: false })
 }
 
-/** The digest card's "I'll take it" / "Take it over" (see `take`). */
+/**
+ * A legacy digest card's "I'll take it" / "Take it over" (see `take`): takes
+ * from whoever owns it. New callers that know which owner the card showed
+ * should use `takeTask` with `coverFor`, which refuses once that has changed.
+ */
 export function takeOverTask(input: TaskActionInput): Promise<TaskActionResult> {
   return take(input, { takeOver: true })
 }
@@ -545,21 +586,18 @@ export function takeOverTask(input: TaskActionInput): Promise<TaskActionResult> 
  * `personName` must already be the BOARD name (resolvePresserName); the
  * question and the activity entry name the person the way the board does.
  */
+const passClosed = errorLine('pass on that', 'It’s already closed — press Reopen first.')
+
 export function passOnTask(input: TaskActionInput & { week?: string }): Promise<TaskActionResult> {
   const person = text(input.personName) || 'Someone'
   const slackUserId = text(input.slackUserId)
   const action = 'Passed on in Slack'
   return runTaskAction(input, (task, now, entries) => {
     const status = statusOf(task)
-    if (CLOSED.has(status)) return { kind: 'refuse', message: 'That task is already closed — reopen it in the Studio first.' }
+    if (CLOSED.has(status)) return { kind: 'refuse', message: passClosed }
     const who = ownership(task, input, entries)
     if (who === 'unknown') return { kind: 'refuse', message: couldNotCheck }
-    if (who === 'someoneElse') {
-      return {
-        kind: 'refuse',
-        message: `That one is ${text(task.ownerName)}’s — only they can hand it back. (Or change it in the Studio.)`,
-      }
-    }
+    if (who === 'someoneElse') return { kind: 'refuse', message: notYours(task, 'pass on that') }
     const question = text(task.humanQuestion)
     const isDecision = text(task.kind) === 'decision' || (question.length > 0 && !DECLINED_BY_DIGEST.test(question))
     const passedQuestion = `${person} passed on this — who should pick it up?`
@@ -596,7 +634,7 @@ export function passOnTask(input: TaskActionInput & { week?: string }): Promise<
     })
     // The board refuses the move only from a closed state, caught above; kept
     // as a sentence rather than a forced write in case the rules change.
-    if (!write) return { kind: 'refuse', message: 'That task is already closed — reopen it in the Studio first.' }
+    if (!write) return { kind: 'refuse', message: passClosed }
     return {
       kind: 'write',
       ...write,
@@ -606,13 +644,51 @@ export function passOnTask(input: TaskActionInput & { week?: string }): Promise<
   })
 }
 
+/**
+ * Answer… — a decision answered in Slack, from the detail form's answer box.
+ *
+ * The answer goes on `humanResponse`, and a decision still waiting on it
+ * (needsHuman) moves to queued: that is what unblocks the work downstream of
+ * it. The question stays, so the record reads as a question and its answer
+ * rather than an answer floating on its own. Answering a decision that was
+ * already answered revises the answer WITHOUT moving the work — something in
+ * progress does not go back to not started because its answer was reworded —
+ * and the same answer again (a retried submission) changes nothing.
+ *
+ * Through `runTaskAction` like every press: conditional on the revision it
+ * read, with the activity entry the Studio's own route writes, and the fresh
+ * task handed back so the card the form was opened from is redrawn in place
+ * instead of a second message saying the same thing.
+ */
+export function answerTask(input: TaskActionInput & { answer: string }): Promise<TaskActionResult> {
+  const person = text(input.personName) || 'someone'
+  // Not `text()`: an answer keeps its line breaks.
+  const answer = String(input.answer ?? '').trim()
+  return runTaskAction(input, (task, now) => {
+    if (!answer) return { kind: 'refuse', message: errorLine('save that answer', 'Write the answer first.') }
+    const status = statusOf(task)
+    if (CLOSED.has(status)) return { kind: 'refuse', message: errorLine('save that answer', 'It’s already closed — press Reopen first.') }
+    if (status !== 'needsHuman' && String(task.humanResponse ?? '').trim() === answer) {
+      return { kind: 'noop', message: 'That answer is already saved.' }
+    }
+    const write = move(task, status === 'needsHuman' ? 'queued' : status, {
+      now,
+      action: 'Answered in Slack',
+      outcome: `By ${person}`,
+      set: { humanResponse: answer, lastOutcome: `Answered in Slack by ${person}`, lastEvaluatedAt: now.toISOString() },
+    })
+    if (!write) return { kind: 'refuse', message: couldNot('That move isn’t allowed from where it is.', 'save that answer') }
+    return { kind: 'write', ...write, message: 'Answer saved.' }
+  })
+}
+
 /** Drop: dismissed, and reversible with Reopen. Only where the board allows it (not mid-progress). */
 export function dropTask(input: TaskActionInput): Promise<TaskActionResult> {
   const person = text(input.personName) || 'someone'
   return runTaskAction(input, (task, now) => {
     const status = statusOf(task)
     if (status === 'dismissed') return { kind: 'noop', message: 'Already dropped.' }
-    if (status === 'done') return { kind: 'refuse', message: 'It’s already done.' }
+    if (status === 'done') return { kind: 'refuse', message: couldNot('It’s already done.', 'drop that') }
     const write = move(task, 'dismissed', {
       now,
       action: 'Dropped in Slack',
@@ -620,7 +696,7 @@ export function dropTask(input: TaskActionInput): Promise<TaskActionResult> {
       set: { lastOutcome: `Dropped from Slack by ${person}` },
     })
     if (!write) {
-      return { kind: 'refuse', message: 'It’s in progress, so it can’t be dropped — mark it done, or hand it back.' }
+      return { kind: 'refuse', message: errorLine('drop that', 'It’s in progress — mark it done, or hand it back.') }
     }
     return { kind: 'write', ...write, message: 'Dropped. Reopen brings it back.' }
   })
@@ -646,7 +722,7 @@ export function snoozeTask(input: TaskActionInput): Promise<TaskActionResult> {
       outcome: `By ${person}`,
       set: { dueAt, lastOutcome: `Kept — moved to next week by ${person}` },
     })
-    if (!write) return { kind: 'refuse', message: 'The board won’t accept that change — do it in the Studio.' }
+    if (!write) return { kind: 'refuse', message: couldNot('That move isn’t allowed from where it is.', 'move that') }
     return { kind: 'write', ...write, message: 'Kept — moved to next week.' }
   })
 }
