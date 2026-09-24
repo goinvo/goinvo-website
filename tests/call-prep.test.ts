@@ -1341,3 +1341,34 @@ describe('newContactDocument', () => {
     )
   })
 })
+
+describe('somebody not on file whom the requester already knows', () => {
+  const now = new Date('2026-09-24T15:00:00Z')
+  const compose = (text: string) => {
+    const request = parsePrepRequest(text)
+    const match = resolvePrepTarget(request, [], [])
+    return composeCallOutline({
+      match: match as Exclude<typeof match, { kind: 'ambiguous' }>,
+      research: [],
+      offers: [],
+      evidence: [],
+      senderName: 'Juhan',
+      includeContactDetails: false,
+      now,
+      request,
+    })
+  }
+
+  it('is not treated as a cold email-first contact when the note says they have met', () => {
+    const outline = compose('prep Sam Rivera, CMIO at Acme Health — met him at HIMSS')
+    expect(outline.mode).not.toBe('emailFirst')
+    expect(outline.cheatSheet.say).toContain('met him at HIMSS')
+    const whoIsThis = outline.ifTheySay.find((entry) => /who is this/i.test(entry.theySay))
+    expect(whoIsThis?.youSay).not.toMatch(/came across/i)
+  })
+
+  it('stays email-first when the note says nothing about knowing them', () => {
+    const outline = compose('prep Sam Rivera, CMIO at Acme Health — they are hiring for AI')
+    expect(outline.mode).toBe('emailFirst')
+  })
+})

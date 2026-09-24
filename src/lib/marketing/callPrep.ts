@@ -740,6 +740,14 @@ function personScore(query: string, contact: PrepContact): number {
 }
 
 const IN_CONVERSATION = ['contacted', 'responded', 'meeting', 'opportunity']
+
+/**
+ * A note that says the requester already knows the person. Past-tense contact
+ * or an ongoing relationship only — "wants to talk about AI" says nothing about
+ * whether they have met.
+ */
+const TYPED_RELATIONSHIP =
+  /\b(?:met|know|knows|knew|worked (?:with|together)|work with|used to work|introduced|intro(?:duction)? from|friend|(?:ex-?|former )?colleague|former (?:client|boss|manager)|spoke (?:with|to)|talked (?:with|to)|we'?ve spoken|referred)\b/i
 const FINISHED = ['won', 'lost', 'dormant', 'closed']
 
 function stageRank(contact: PrepContact): number {
@@ -1271,8 +1279,16 @@ export function composeCallOutline(input: {
 
   const status = clean(contact?.status)
   const warmth = clean(contact?.warmth)
-  const howWeKnow = clipWords(withoutContactDetails(contact?.howWeKnow), 120)
-  const knowsUs = ['hot', 'warm', 'cool'].includes(warmth)
+  // Somebody not on file whom the requester says they KNOW — "met him at
+  // HIMSS", "worked with her at Partners" — is not a cold call, and treating
+  // them as one (email first, "I came across your work") would have the
+  // caller introduce themselves to a person they have already met. The note is
+  // their own words, so it is used only as the reminder of how they know them.
+  const typedNote = request ? clipWords(withoutContactDetails(request.note), 120) : ''
+  const typedRelationship = Boolean(typedNote) && TYPED_RELATIONSHIP.test(typedNote)
+  const howWeKnow =
+    clipWords(withoutContactDetails(contact?.howWeKnow), 120) || (typedRelationship ? typedNote : '')
+  const knowsUs = ['hot', 'warm', 'cool'].includes(warmth) || typedRelationship
   const reviewed = Boolean(clean(contact?.researchReviewedAt))
   const touch = lastTouchOf(contact)
   const touched =
@@ -1292,7 +1308,7 @@ export function composeCallOutline(input: {
 
   // "Email first" needs somebody to email: calling an organisation with nobody
   // on file is a switchboard call, which is its own (cold) opener.
-  const noRelationship = !touched && (!warmth || warmth === 'cold' || warmth === 'unknown')
+  const noRelationship = !touched && !typedRelationship && (!warmth || warmth === 'cold' || warmth === 'unknown')
   let mode: CallOutline['mode']
   if (phoneBlock && emailBlock) mode = 'holdOff'
   else if (status === 'meeting' || requestIsMeeting) mode = 'meeting'
