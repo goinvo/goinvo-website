@@ -41,14 +41,34 @@ export type WeeklyPlan = {
   weekStart: string
   weekEnd: string
   budgetMinutes: number
+  /**
+   * Everything the week is committed to: decisions, work, and any reserved
+   * time. `budgetMinutes - plannedMinutes` is the time genuinely left
+   * (negative when over), and that subtraction is exactly what every reader
+   * already does — the Studio's "1h spare", the model's "Planned: 2h", the
+   * stored summary line. So the reservation is counted IN this total rather
+   * than reported beside it, where any reader that did not know to add it
+   * would promise hours that are already spoken for.
+   */
   plannedMinutes: number
   /** Work chosen for this week, in the order it should be done. */
   items: WeeklyPlanItem[]
   /** Questions waiting on a person. Always surfaced, budget or not. */
   decisions: WeeklyPlanItem[]
   deferred: WeeklyPlanDeferral[]
-  /** True when the decisions alone already exceed the budget. */
+  /**
+   * `plannedMinutes > budgetMinutes` — defined from the same total, so the
+   * flag and the arithmetic can never disagree. Only decisions (on top of a
+   * reservation) can push it over, since work is only added while it fits.
+   */
   overCommitted: boolean
+  /**
+   * The part of `plannedMinutes` held back before any work was chosen, and
+   * what it is for — e.g. "Follow-ups: 3 (~45m reserved)". A breakdown, so a
+   * reader can explain why "planned" is more than the listed items add up to.
+   * Null when nothing was reserved.
+   */
+  reserved: { minutes: number; label: string } | null
 }
 
 const DONE_STATUSES = new Set(['done', 'dismissed'])
@@ -146,6 +166,36 @@ export type BuildWeeklyPlanInput = {
   budgetMinutes: number
   posture?: FinancialPostureId
   now?: Date
+  /**
+   * Minutes to hold back for work that is not on the board — follow-ups owed
+   * to people who replied, which live on the contact, not as operations.
+   * Taken off the budget before the fill and counted in `plannedMinutes`.
+   */
+  reservedMinutes?: number
+  /** What the reservation is for, as the plan will show it. */
+  reservedLabel?: string
+}
+
+const DEFAULT_RESERVED_LABEL = 'Reserved time'
+
+/**
+ * The reservation the planner will actually honour.
+ *
+ * Never negative (a negative reservation would quietly INCREASE the budget),
+ * never more than the budget itself, and absent when it rounds to nothing, so
+ * a plan with no reservation looks exactly like the plans before this existed.
+ */
+function resolveReservation(
+  reservedMinutes: number | undefined,
+  reservedLabel: string | undefined,
+  budgetMinutes: number,
+): { minutes: number; label: string } | null {
+  if (typeof reservedMinutes !== 'number' || !Number.isFinite(reservedMinutes)) return null
+  const ceiling = Number.isFinite(budgetMinutes) ? Math.max(0, budgetMinutes) : 0
+  const minutes = Math.min(Math.max(0, Math.round(reservedMinutes)), ceiling)
+  if (minutes <= 0) return null
+  const label = String(reservedLabel ?? '').replace(/\s+/g, ' ').trim().slice(0, 200)
+  return { minutes, label: label || DEFAULT_RESERVED_LABEL }
 }
 
 /**
@@ -161,10 +211,13 @@ export function buildWeeklyPlan({
   budgetMinutes,
   posture = 'stable',
   now = new Date(),
+  reservedMinutes,
+  reservedLabel,
 }: BuildWeeklyPlanInput): WeeklyPlan {
   const weekStart = startOfWeek(now)
   const weekEnd = endOfWeek(weekStart)
   const revenueFirst = REVENUE_POSTURES.has(posture)
+  const reserved = resolveReservation(reservedMinutes, reservedLabel, budgetMinutes)
 
   const items: WeeklyPlanItem[] = []
   const decisions: WeeklyPlanItem[] = []
@@ -241,7 +294,11 @@ export function buildWeeklyPlan({
   })
 
   const decisionMinutes = decisions.reduce((total, entry) => total + entry.minutes, 0)
-  let remaining = budgetMinutes - decisionMinutes
+  // The reservation comes off BEFORE the greedy fill. Taken afterwards it would
+  // only ever claim the scraps the tasks left behind — and the people waiting
+  // on a reply are the warmest leads the week has, not an afterthought.
+  const reservedTotal = reserved?.minutes ?? 0
+  let remaining = budgetMinutes - reservedTotal - decisionMinutes
 
   for (const operation of ordered) {
     const estimate = estimateOperationMinutes(operation)
@@ -270,7 +327,7 @@ export function buildWeeklyPlan({
   }
 
   const plannedMinutes =
-    decisionMinutes + items.reduce((total, entry) => total + entry.minutes, 0)
+    reservedTotal + decisionMinutes + items.reduce((total, entry) => total + entry.minutes, 0)
 
   return {
     weekStart: isoDate(weekStart),
@@ -281,5 +338,6 @@ export function buildWeeklyPlan({
     decisions,
     deferred,
     overCommitted: plannedMinutes > budgetMinutes,
+    reserved,
   }
 }

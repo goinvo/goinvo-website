@@ -67,6 +67,35 @@ export default defineType({
       validation: (Rule) => Rule.max(120),
     }),
     defineField({ name: 'ownerSanityUserId', title: 'Owner Sanity user ID', type: 'string', hidden: true }),
+    defineField({
+      // Written by the weekly digest after it has actually posted an ask, and
+      // by the digest card's "Not me" / "Hand it back" when someone passes.
+      // Declared so the Studio keeps the field intact, and hidden + read-only
+      // because it is bookkeeping rather than something a person edits: it is
+      // how Marqueta never asks the same person about the same task twice, and
+      // how a task two people have answered ends up offered as "drop it?".
+      // `week` is the UTC ISO week an ask was posted in: a second digest that
+      // week shows the same ask again instead of asking somebody else.
+      name: 'askHistory',
+      title: 'Asked in Slack',
+      type: 'array',
+      hidden: true,
+      readOnly: true,
+      of: [defineArrayMember({
+        type: 'object',
+        fields: [
+          defineField({ name: 'slackUserId', title: 'Slack user ID', type: 'string' }),
+          defineField({ name: 'at', title: 'Asked at', type: 'datetime' }),
+          defineField({ name: 'week', title: 'Week (UTC ISO)', type: 'string' }),
+          defineField({
+            name: 'kind',
+            title: 'Asked or passed',
+            type: 'string',
+            options: { list: [{ title: 'Asked', value: 'asked' }, { title: 'Passed', value: 'passed' }] },
+          }),
+        ],
+      })],
+    }),
     defineField({ name: 'dueAt', title: 'Due', type: 'datetime' }),
     defineField({
       name: 'estimatedMinutes',

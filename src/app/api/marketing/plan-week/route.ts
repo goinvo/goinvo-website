@@ -16,6 +16,13 @@ import {
 import { resolveWeeklyMinutes, formatMinutes } from '@/lib/marketing/effort'
 import { buildWeeklyPlan, isoWeekKey, type WeeklyPlan } from '@/lib/marketing/weeklyPlan'
 import {
+  followUpReservationLabel,
+  followUpReservedMinutes,
+  listFollowUps,
+  type FollowUpContact,
+} from '@/lib/marketing/followUps'
+import { getOutreachClient } from '@/lib/marketing/outreachClient.server'
+import {
   marketingOperationDocumentId,
   marketingOperationFingerprint,
   normalizeMarketingOperationInput,
@@ -45,6 +52,33 @@ const OPERATIONS_QUERY = `*[_type == "marketingOperation" && !(_id in path("draf
   origin, autonomy, ownerName, dueAt, nextCheckAt, blocker, targetView, sourceKey,
   estimatedMinutes
 }`
+
+/**
+ * Contacts owed a follow-up. Only the fields the due rule and the count need —
+ * the reservation is a number of minutes, so no name, note or address is read.
+ */
+const FOLLOW_UP_CONTACTS_QUERY = `*[_type == "marketingContact" && !(_id in path("drafts.**")) && defined(followUpAt)]{
+  _id, status, followUpAt
+}`
+
+/**
+ * The follow-ups due this week, read live from the contacts — the single place
+ * they live (see followUps.ts for why they are never mirrored onto the board).
+ *
+ * Through `getOutreachClient`, pinned to the private dataset with the published
+ * perspective, so a contact open in the Studio editor is counted once. A failed
+ * read is null, not []: "could not read the contacts" must not be reported as
+ * "nobody is owed a call", and the caller plans without a reservation either
+ * way — the week is the product, the reservation is a refinement of it.
+ */
+async function loadFollowUpContacts(): Promise<FollowUpContact[] | null> {
+  try {
+    return (await getOutreachClient().fetch<FollowUpContact[] | null>(FOLLOW_UP_CONTACTS_QUERY)) || []
+  } catch (error) {
+    console.error('[plan-week] could not read follow-ups', error)
+    return null
+  }
+}
 
 let privateClient: SanityClient | null = null
 function getClient(): SanityClient | null {
@@ -109,6 +143,7 @@ async function describeWeek(
       user: [
         `Financial posture: ${posture}.`,
         `Budget: ${formatMinutes(plan.budgetMinutes)}. Planned: ${formatMinutes(plan.plannedMinutes)}.`,
+        ...(plan.reserved ? [`Held back: ${plan.reserved.label}.`] : []),
         `Deferred to a later week: ${plan.deferred.length} items.`,
         '',
         'This week:',
@@ -148,7 +183,7 @@ async function handle(request: NextRequest, dryRun: boolean) {
 
   // Safe: the 503 guard above already proved the project id and token exist.
   const settingsClient = getMarketingWriteClientFor('marketingSettings')
-  const [operations, postureRaw, settings] = await Promise.all([
+  const [operations, postureRaw, settings, followUpContacts] = await Promise.all([
     client.fetch<MarketingOperation[]>(OPERATIONS_QUERY).catch(() => [] as MarketingOperation[]),
     // Both the hand-set bin AND the runway date, because the bin alone does not
     // decay: this record said "survival" from July onwards and would have said
@@ -167,6 +202,7 @@ async function handle(request: NextRequest, dryRun: boolean) {
         `*[_id == "marketingSettings"][0]{ weeklyMarketingHours }`,
       )
       .catch(() => null),
+    loadFollowUpContacts(),
   ])
 
   // The runway date wins when it is the newer fact, so the plan tightens on its
@@ -178,7 +214,21 @@ async function handle(request: NextRequest, dryRun: boolean) {
 
   // The plan document itself is an operation; it must never plan itself.
   const planning = operations.filter((item) => !item.sourceKey?.startsWith(PLAN_SOURCE_PREFIX))
-  const plan = buildWeeklyPlan({ operations: planning, budgetMinutes, posture, now })
+  // Follow-ups are owed to people who already answered, and they are not on
+  // the board — so without this the planner filled every hour with board work
+  // and the warmest calls of the week had no time at all. Held back before the
+  // fill (15m each, capped at 40% of the week so a backlog cannot swallow it).
+  const followUpsDue = followUpContacts ? listFollowUps(followUpContacts, { now }).length : 0
+  const reservedMinutes = followUpReservedMinutes(followUpsDue, budgetMinutes)
+  const plan = buildWeeklyPlan({
+    operations: planning,
+    budgetMinutes,
+    posture,
+    now,
+    ...(reservedMinutes > 0
+      ? { reservedMinutes, reservedLabel: followUpReservationLabel(followUpsDue, reservedMinutes) }
+      : {}),
+  })
   const theme = await describeWeek(client, plan, posture)
 
   const weekKey = isoWeekKey(now)
@@ -193,6 +243,11 @@ async function handle(request: NextRequest, dryRun: boolean) {
     budgetMinutes,
     plannedMinutes: plan.plannedMinutes,
     overCommitted: plan.overCommitted,
+    // Counted IN plannedMinutes (see WeeklyPlan), reported here so a reader can
+    // see what the held-back time is for. followUpsDue is null when the
+    // contacts could not be read — unknown, not zero.
+    reserved: plan.reserved,
+    followUpsDue: followUpContacts ? followUpsDue : null,
     theme: theme?.theme || null,
     rationale: theme?.rationale || null,
     items: plan.items.map((entry) => ({
@@ -230,7 +285,8 @@ async function handle(request: NextRequest, dryRun: boolean) {
     theme?.rationale || 'Planned from the operations board against the studio\'s weekly hours.',
     '',
     `Budget ${formatMinutes(budgetMinutes)} · planned ${formatMinutes(plan.plannedMinutes)} · ` +
-      `${plan.items.length} tasks, ${plan.decisions.length} decisions, ${plan.deferred.length} deferred.`,
+      `${plan.items.length} tasks, ${plan.decisions.length} decisions, ${plan.deferred.length} deferred.` +
+      (plan.reserved ? ` ${plan.reserved.label}.` : ''),
   ].join('\n')
 
   const document = normalizeMarketingOperationInput({
