@@ -39,11 +39,11 @@ export type OutreachPulse = {
   people: number
   calls: number
   emails: number
-  /** Touches that left the contact at `responded`. */
+  /** Touches that MOVED the contact to `responded` (not ones that found them there). */
   replies: number
-  /** Touches that left the contact at `meeting`. */
+  /** Touches that moved the contact to `meeting`. */
   meetings: number
-  /** Touches that left the contact at `opportunity`. */
+  /** Touches that moved the contact to `opportunity`. */
   opportunities: number
   won: number
   wonValue: number
@@ -99,17 +99,30 @@ export function summarizeOutreach(
 
   for (const contact of contacts || []) {
     let touched = false
-    for (const interaction of contact.interactions || []) {
-      const at = time(interaction?.at)
-      if (at === null || at < from || at >= to) continue
+    // Progress is a MOVE into a state, not a touch that left the contact there.
+    // A voicemail for someone already in `meeting` keeps them in `meeting`
+    // (logging never moves a contact backwards), and counting that touch as
+    // "1 meeting booked" would report progress nobody made. So the touches are
+    // walked in time order — including ones before the window, which set the
+    // starting point — and only a change of state counts.
+    const ordered = [...(contact.interactions || [])]
+      .map((interaction) => ({ interaction, at: time(interaction?.at) }))
+      .filter((entry): entry is { interaction: PulseInteraction; at: number } => entry.at !== null)
+      .sort((a, b) => a.at - b.at)
+    let previous: string | null = null
+    for (const { interaction, at } of ordered) {
+      const status = String(interaction.statusAfter || '') || null
+      const moved = Boolean(status) && status !== previous
+      if (status) previous = status
+      if (at < from || at >= to) continue
       touched = true
       pulse.touches += 1
       if (interaction.channel === 'phone') pulse.calls += 1
       if (interaction.channel === 'email') pulse.emails += 1
-      if (interaction.statusAfter === 'responded') pulse.replies += 1
-      if (interaction.statusAfter === 'meeting') pulse.meetings += 1
-      if (interaction.statusAfter === 'opportunity') pulse.opportunities += 1
-      if (interaction.statusAfter === 'won') {
+      if (moved && status === 'responded') pulse.replies += 1
+      if (moved && status === 'meeting') pulse.meetings += 1
+      if (moved && status === 'opportunity') pulse.opportunities += 1
+      if (moved && status === 'won') {
         pulse.won += 1
         if (typeof interaction.value === 'number' && Number.isFinite(interaction.value)) {
           pulse.wonValue += interaction.value
