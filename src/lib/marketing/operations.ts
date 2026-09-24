@@ -380,6 +380,58 @@ export function canTransitionMarketingOperation(from: MarketingOperationStatus, 
   return from === to || ALLOWED_TRANSITIONS[from].includes(to)
 }
 
+/**
+ * The write for moving a task to a new status, with the bookkeeping the
+ * operations route does on every transition — so a button pressed in Slack
+ * leaves exactly the record the Studio would have.
+ *
+ * Returns null when the move is not allowed. A caller that ignored that and
+ * wrote anyway would produce a task in a state the board cannot move it out of
+ * (`done` only reopens to `queued`; `working` cannot be dismissed).
+ *
+ * `completedAt` is set on the way into `done` and removed on the way out, and
+ * every move appends one activity entry, capped at the same twenty the route
+ * keeps. Extra fields to set or unset ride along in `set`/`unset`.
+ */
+export function buildOperationStatusPatch(
+  current: { status?: string; activity?: MarketingOperationActivity[] | null },
+  to: MarketingOperationStatus,
+  input: {
+    now: Date
+    actor?: MarketingOperationActivity['actor']
+    action: string
+    outcome?: string
+    set?: Record<string, unknown>
+    unset?: string[]
+  },
+): { set: Record<string, unknown>; unset: string[] } | null {
+  const from = member<MarketingOperationStatus>(current.status, STATUS_SET, 'queued')
+  if (!canTransitionMarketingOperation(from, to)) return null
+
+  const at = input.now.toISOString()
+  const action = compactText(input.action, 180) || `Moved to ${to}`
+  const outcome = compactText(input.outcome, 500)
+  const entry: MarketingOperationActivity = {
+    _key: `activity-${marketingOperationHash(`${at}:${action}:${outcome}`)}`,
+    at,
+    actor: input.actor || 'person',
+    action,
+    ...(outcome ? { outcome } : {}),
+  }
+
+  const set: Record<string, unknown> = {
+    ...(input.set || {}),
+    status: to,
+    activity: [...(current.activity || []), entry].slice(-20),
+    lastEvaluatedAt: at,
+  }
+  const unset = [...(input.unset || [])]
+  if (to === 'done') set.completedAt = at
+  else if (from === 'done') unset.push('completedAt')
+
+  return { set, unset: Array.from(new Set(unset)).filter((field) => !(field in set)) }
+}
+
 export type AutomaticMarketingOperationAction =
   | 'inspectCms'
   | 'deduplicate'
