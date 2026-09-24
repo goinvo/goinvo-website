@@ -11,6 +11,10 @@
     {
       "path": "/api/marketing/tick",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/marketing/checkin",
+      "schedule": "0 14 * * 4"
     }
   ]
 }
