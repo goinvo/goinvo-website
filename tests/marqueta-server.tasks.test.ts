@@ -228,6 +228,32 @@ const prepData = (extra: PrepDataContact[] = []): PrepData => ({
 const buttons = (blocks: Block[]) =>
   blocks.flatMap((block) => [...(block.elements || []), ...(block.accessory ? [block.accessory] : [])]).filter((element) => element.type === 'button')
 
+// ── Call log ─────────────────────────────────────────────────────────────────
+
+const loggable = {
+  _id: 'marketingContact.jane',
+  _rev: 'r1',
+  name: 'Jane Doe',
+  email: 'jane.doe@mgb.org',
+  organization: 'Mass General Brigham',
+  status: 'researched',
+  interactions: [] as { _key: string }[],
+}
+
+const quickLog = (extra: Partial<Parameters<typeof logCallFromSlack>[0]> = {}) =>
+  logCallFromSlack({
+    contactId: 'marketingContact.jane',
+    outcomeKey: 'voicemail',
+    notes: 'Left a message about the pilot',
+    followUp: 'default',
+    byName: 'Juhan',
+    key: 'slack-V123',
+    now: NOW,
+    ...extra,
+  })
+
+// ── Team ─────────────────────────────────────────────────────────────────────
+
 describe('team identity', () => {
   it('reads a task owner’s Slack id from the roster first, never a stale stamped one', () => {
     expect(slackIdForOwner(TEAM, 'Juhan', 'UERIC')).toBe('UJUHAN')
@@ -563,6 +589,56 @@ const strategyData = (extra: Record<string, unknown> = {}) => ({
   openRethink: null,
   ...extra,
 })
+
+// ── Weekly check-in ──────────────────────────────────────────────────────────
+
+const WEEK = '2026-W39'
+const checkInData = (extra: Record<string, unknown> = {}) => ({
+  tasks: [
+    {
+      _id: 'marketingOperation.c1',
+      title: 'Call three past clients',
+      ownerName: 'Juhan',
+      // Stale id: the roster must win, or Eric is pinged about Juhan's work.
+      ownerSlackUserId: 'UERIC',
+      status: 'queued',
+      dueAt: '2026-09-22T00:00:00Z',
+      _createdAt: '2026-09-01T00:00:00Z',
+      _updatedAt: '2026-09-15T00:00:00Z',
+    },
+    {
+      _id: 'marketingOperation.c2',
+      title: 'Draft the newsletter',
+      ownerName: 'Eric',
+      status: 'working',
+      _createdAt: '2026-09-01T00:00:00Z',
+      _updatedAt: '2026-09-15T00:00:00Z',
+    },
+    { _id: 'marketingOperation.c3', title: 'Update the offer page', status: 'queued', dueAt: '2026-09-25T00:00:00Z' },
+  ],
+  availability: TEAM,
+  contacts: [
+    {
+      _id: 'marketingContact.f1',
+      name: 'Riley Replied',
+      organization: 'Acme',
+      owner: 'juhan',
+      status: 'responded',
+      followUpAt: '2026-09-23T14:00:00Z',
+      interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }],
+    },
+  ],
+  ...extra,
+})
+
+function slackEnv() {
+  process.env.SLACK_BOT_TOKEN = 'xoxb-test'
+  process.env.SLACK_MARKETING_CHANNEL_ID = 'CMKTBOT'
+  process.env.SLACK_CHANNEL_ID = 'CVISITORCHAT'
+}
+
+const sectionIndex = (blocks: Block[], predicate: (text: string, block: Block) => boolean) =>
+  blocks.findIndex((block) => predicate(String(block?.text?.text || ''), block))
 
 describe('runWeeklyCheckIn', () => {
   it('uses the UTC ISO week', () => {

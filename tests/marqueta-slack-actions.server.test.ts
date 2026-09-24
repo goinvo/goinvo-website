@@ -350,6 +350,24 @@ afterEach(() => {
 
 // ── The preview ─────────────────────────────────────────────────────────────
 
+// ── Asks ────────────────────────────────────────────────────────────────────
+
+// ── The rest of the message ─────────────────────────────────────────────────
+
+// ── Posting for real ────────────────────────────────────────────────────────
+
+// ── Twice in one week ───────────────────────────────────────────────────────
+//
+// The reviewer's scenario: two runs on one Monday used to ask a DIFFERENT
+// person about the same task (the second read the first one's ask as history),
+// and the next week the task came back "nobody has taken these after two asks"
+// after one real ask. These feed run 1's recorded asks into run 2 — the
+// fixture used to be fed to both runs unchanged, which hid the bug.
+
+// ── Who is away ─────────────────────────────────────────────────────────────
+
+// ── "Not me this week" ──────────────────────────────────────────────────────
+
 describe('declineMarketingTask', () => {
   const TASK: Record<string, unknown> = {
     _id: 'op-1',
@@ -519,3 +537,9 @@ describe('declineMarketingTask', () => {
 })
 
 // ── "I'll take it" / "Take it over" ─────────────────────────────────────────
+
+// ── The tick's record of the digest ─────────────────────────────────────────
+
+// ── The builders the route composes ─────────────────────────────────────────
+
+// ── plan-week: the Monday plan holds time back for follow-ups ─────────────────

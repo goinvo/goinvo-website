@@ -792,6 +792,8 @@ describe('asks and absences', () => {
 
 // ── "Not me this week" ──────────────────────────────────────────────────────
 
+// ── "I'll take it" / "Take it over" ─────────────────────────────────────────
+
 describe('claimMarketingTask', () => {
   const TASK: Record<string, unknown> = { _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: '', status: 'queued', kind: 'outreach', activity: [] }
   const claim = async (task: Record<string, unknown> | null, person = { personName: 'Juhan Sonin', slackUserId: 'UJUHAN' }) => {
