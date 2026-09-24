@@ -350,6 +350,32 @@ afterEach(() => {
 
 // ── The preview ─────────────────────────────────────────────────────────────
 
+// ── Asks ────────────────────────────────────────────────────────────────────
+
+// ── The rest of the message ─────────────────────────────────────────────────
+
+// ── Posting for real ────────────────────────────────────────────────────────
+
+// ── Twice in one week ───────────────────────────────────────────────────────
+//
+// The reviewer's scenario: two runs on one Monday used to ask a DIFFERENT
+// person about the same task (the second read the first one's ask as history),
+// and the next week the task came back "nobody has taken these after two asks"
+// after one real ask. These feed run 1's recorded asks into run 2 — the
+// fixture used to be fed to both runs unchanged, which hid the bug.
+
+// ── Who is away ─────────────────────────────────────────────────────────────
+
+// ── "Not me this week" ──────────────────────────────────────────────────────
+
+// ── "I'll take it" / "Take it over" ─────────────────────────────────────────
+
+// ── The tick's record of the digest ─────────────────────────────────────────
+
+// ── The builders the route composes ─────────────────────────────────────────
+
+// ── plan-week: the Monday plan holds time back for follow-ups ─────────────────
+
 describe('plan-week reserves time for follow-ups', () => {
   // Four hours, and one 200-minute task due this week: it fits an empty week,
   // and must not fit once three follow-ups have taken their 45 minutes.

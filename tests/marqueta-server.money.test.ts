@@ -228,6 +228,80 @@ const prepData = (extra: PrepDataContact[] = []): PrepData => ({
 const buttons = (blocks: Block[]) =>
   blocks.flatMap((block) => [...(block.elements || []), ...(block.accessory ? [block.accessory] : [])]).filter((element) => element.type === 'button')
 
+// ── Call log ─────────────────────────────────────────────────────────────────
+
+const loggable = {
+  _id: 'marketingContact.jane',
+  _rev: 'r1',
+  name: 'Jane Doe',
+  email: 'jane.doe@mgb.org',
+  organization: 'Mass General Brigham',
+  status: 'researched',
+  interactions: [] as { _key: string }[],
+}
+
+const quickLog = (extra: Partial<Parameters<typeof logCallFromSlack>[0]> = {}) =>
+  logCallFromSlack({
+    contactId: 'marketingContact.jane',
+    outcomeKey: 'voicemail',
+    notes: 'Left a message about the pilot',
+    followUp: 'default',
+    byName: 'Jules',
+    key: 'slack-V123',
+    now: NOW,
+    ...extra,
+  })
+
+// ── Team ─────────────────────────────────────────────────────────────────────
+
+// ── Task actions ─────────────────────────────────────────────────────────────
+
+const TASK_ID = 'marketingOperation.t1'
+const task = (extra: Record<string, unknown> = {}) => ({
+  _id: TASK_ID,
+  _rev: 'rev1',
+  _createdAt: '2026-09-01T00:00:00Z',
+  _updatedAt: '2026-09-10T00:00:00Z',
+  title: 'Write the case study',
+  ownerName: 'Jules',
+  // Stale: claimed once by Ezra's id, then reassigned in the Studio.
+  ownerSlackUserId: 'UEZRA',
+  status: 'queued',
+  kind: 'content',
+  dueAt: '2026-09-20T00:00:00Z',
+  activity: [],
+  ...extra,
+})
+const jules = { taskId: TASK_ID, personName: 'Jules', slackUserId: 'UJULES', now: NOW }
+const ezra = { taskId: TASK_ID, personName: 'Ezra', slackUserId: 'UEZRA', now: NOW }
+
+// ── Strategy ─────────────────────────────────────────────────────────────────
+
+const STORED_POSTURE = { runway: { certainUntil: '2027-01-25', confirmedAt: '2026-09-10T00:00:00Z' } }
+const PRIOR_REVIEW = {
+  confirmedAt: '2026-09-02T00:00:00Z',
+  confirmedBy: 'Ezra',
+  verdict: 'stillRight',
+  monthKey: '2026-09',
+  postureAtReview: 'rebuild',
+}
+const wonContact = {
+  _id: 'marketingContact.won',
+  name: 'Jane Doe',
+  organization: 'Acme',
+  status: 'won',
+  interactions: [
+    { at: '2026-09-01T00:00:00Z', statusAfter: 'meeting', channel: 'phone', by: 'Jules' },
+    { at: '2026-09-20T15:00:00Z', statusAfter: 'won', value: 40000, channel: 'phone', by: 'Jules' },
+  ],
+}
+const strategyData = (extra: Record<string, unknown> = {}) => ({
+  contacts: [wonContact],
+  gates: [{ title: 'Pick the lead offer', dueAt: '2026-10-01T00:00:00Z', status: 'needsHuman' }],
+  openRethink: null,
+  ...extra,
+})
+
 describe('loadStrategySnapshot', () => {
   it('feeds the latest win into the runway check-in and reads the review before anything else', async () => {
     routeOutreach({ strategy: strategyData() })
@@ -391,3 +465,5 @@ function slackEnv() {
 
 const sectionIndex = (blocks: Block[], predicate: (text: string, block: Block) => boolean) =>
   blocks.findIndex((block) => predicate(String(block?.text?.text || ''), block))
+
+// ── Heartbeat + cron auth ────────────────────────────────────────────────────
