@@ -555,3 +555,103 @@ describe('undoCallLog', () => {
 })
 
 // ── Team ─────────────────────────────────────────────────────────────────────
+
+// ── Task actions ─────────────────────────────────────────────────────────────
+
+const TASK_ID = 'marketingOperation.t1'
+const task = (extra: Record<string, unknown> = {}) => ({
+  _id: TASK_ID,
+  _rev: 'rev1',
+  _createdAt: '2026-09-01T00:00:00Z',
+  _updatedAt: '2026-09-10T00:00:00Z',
+  title: 'Write the case study',
+  ownerName: 'Jules',
+  // Stale: claimed once by Ezra's id, then reassigned in the Studio.
+  ownerSlackUserId: 'UEZRA',
+  status: 'queued',
+  kind: 'content',
+  dueAt: '2026-09-20T00:00:00Z',
+  activity: [],
+  ...extra,
+})
+const jules = { taskId: TASK_ID, personName: 'Jules', slackUserId: 'UJULES', now: NOW }
+const ezra = { taskId: TASK_ID, personName: 'Ezra', slackUserId: 'UEZRA', now: NOW }
+
+// ── Strategy ─────────────────────────────────────────────────────────────────
+
+const STORED_POSTURE = { runway: { certainUntil: '2027-03-10', confirmedAt: '2026-09-10T00:00:00Z' } }
+const PRIOR_REVIEW = {
+  confirmedAt: '2026-09-02T00:00:00Z',
+  confirmedBy: 'Ezra',
+  verdict: 'stillRight',
+  monthKey: '2026-09',
+  postureAtReview: 'rebuild',
+}
+const wonContact = {
+  _id: 'marketingContact.won',
+  name: 'Jane Doe',
+  organization: 'Acme',
+  status: 'won',
+  interactions: [
+    { at: '2026-09-01T00:00:00Z', statusAfter: 'meeting', channel: 'phone', by: 'Jules' },
+    { at: '2026-09-20T15:00:00Z', statusAfter: 'won', value: 40000, channel: 'phone', by: 'Jules' },
+  ],
+}
+const strategyData = (extra: Record<string, unknown> = {}) => ({
+  contacts: [wonContact],
+  gates: [{ title: 'Pick the lead offer', dueAt: '2026-10-01T00:00:00Z', status: 'needsHuman' }],
+  openRethink: null,
+  ...extra,
+})
+
+// ── Weekly check-in ──────────────────────────────────────────────────────────
+
+const WEEK = '2026-W39'
+const checkInData = (extra: Record<string, unknown> = {}) => ({
+  tasks: [
+    {
+      _id: 'marketingOperation.c1',
+      title: 'Call three past clients',
+      ownerName: 'Jules',
+      // Stale id: the roster must win, or Ezra is pinged about Jules's work.
+      ownerSlackUserId: 'UEZRA',
+      status: 'queued',
+      dueAt: '2026-09-22T00:00:00Z',
+      _createdAt: '2026-09-01T00:00:00Z',
+      _updatedAt: '2026-09-15T00:00:00Z',
+    },
+    {
+      _id: 'marketingOperation.c2',
+      title: 'Draft the newsletter',
+      ownerName: 'Ezra',
+      status: 'working',
+      _createdAt: '2026-09-01T00:00:00Z',
+      _updatedAt: '2026-09-15T00:00:00Z',
+    },
+    { _id: 'marketingOperation.c3', title: 'Update the offer page', status: 'queued', dueAt: '2026-09-25T00:00:00Z' },
+  ],
+  availability: TEAM,
+  contacts: [
+    {
+      _id: 'marketingContact.f1',
+      name: 'Riley Replied',
+      organization: 'Acme',
+      owner: 'jules',
+      status: 'responded',
+      followUpAt: '2026-09-23T14:00:00Z',
+      interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' }],
+    },
+  ],
+  ...extra,
+})
+
+function slackEnv() {
+  process.env.SLACK_BOT_TOKEN = 'xoxb-test'
+  process.env.SLACK_MARKETING_CHANNEL_ID = 'CMKTBOT'
+  process.env.SLACK_CHANNEL_ID = 'CVISITORCHAT'
+}
+
+const sectionIndex = (blocks: Block[], predicate: (text: string, block: Block) => boolean) =>
+  blocks.findIndex((block) => predicate(String(block?.text?.text || ''), block))
+
+// ── Heartbeat + cron auth ────────────────────────────────────────────────────
