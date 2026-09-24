@@ -22,6 +22,7 @@ import {
   type ResolvedRunway,
   type RunwayCheckIn,
   type RunwayRecord,
+  type RunwayWin,
   type StoredPosture,
 } from './runway'
 
@@ -34,20 +35,31 @@ export type RunwayState = {
   summary: string
 }
 
-function state(stored: StoredPosture, now = new Date()): RunwayState {
+export type ReadRunwayOptions = {
+  /**
+   * The most recent contact that BECAME won (`latestWin` in strategyCheck.ts).
+   * Passed through to `runwayCheckIn`, which asks whether a win newer than the
+   * last confirmation moved the date. Optional so every existing caller reads
+   * the runway exactly as before; the callers that have the contacts loaded
+   * anyway (the digest, the strategy check) pass it.
+   */
+  latestWin?: RunwayWin | null
+}
+
+function state(stored: StoredPosture, now = new Date(), opts: ReadRunwayOptions = {}): RunwayState {
   return {
     stored,
     resolved: resolveRunwayPosture(stored, now),
-    checkIn: runwayCheckIn(stored, now),
+    checkIn: runwayCheckIn(stored, now, { latestWin: opts.latestWin }),
     summary: describeRunway(stored, now),
   }
 }
 
-export async function readRunway(now = new Date()): Promise<RunwayState> {
+export async function readRunway(now = new Date(), opts: ReadRunwayOptions = {}): Promise<RunwayState> {
   const stored = await client().fetch<StoredPosture | null>(`*[_id == $id][0]{ posture, setAt, runway }`, {
     id: FINANCIAL_POSTURE_DOC_ID,
   })
-  return state(stored || {}, now)
+  return state(stored || {}, now, opts)
 }
 
 async function writeRunway(runway: RunwayRecord, now: Date): Promise<RunwayState> {
