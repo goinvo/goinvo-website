@@ -35,6 +35,14 @@ export const MARQUETA_ACTION = {
   taskReopen: 'goinvo_marqueta_task_reopen',
   /** Take an unowned task from the check-in (or an ask addressed to you). */
   taskTake: 'goinvo_marqueta_task_take',
+  /** A task that keeps slipping: drop it (dismissed — reversible with Reopen). */
+  taskDrop: 'goinvo_marqueta_task_drop',
+  /** A task that keeps slipping: keep it, and move it to next week. */
+  taskSnooze: 'goinvo_marqueta_task_snooze',
+  /** Put somebody who is not on file yet into outreach, from a prep or a log. */
+  addContact: 'goinvo_marqueta_add_contact',
+  /** Reverse a call Marqueta logged straight from a message. */
+  callLogUndo: 'goinvo_marqueta_call_log_undo',
   /** Monthly strategy check: the plan still fits the money. */
   strategyConfirm: 'goinvo_marqueta_strategy_confirm',
   /** Monthly strategy check: it does not — put a decision on the board. */
@@ -77,24 +85,59 @@ function parseObject(value: string | undefined): Record<string, unknown> | null 
 }
 
 /**
- * Who a prep/log button is about.
+ * Who a prep/log/add button is about.
  *
- * A contact id when we know the person; otherwise the organisation name, which
- * is enough to prep a call to "someone at" a company. Never both empty.
+ * A contact id when we know the person; otherwise the organisation, plus the
+ * name and role the person TYPED — most calls the team makes are to people who
+ * are not in the CMS yet, and "Add them to outreach" needs something to add.
+ * Never all empty.
+ *
+ * `note` and `outcome` carry what somebody said when they reported a call
+ * ("called Jane, left a voicemail") so the log form can open already filled
+ * in: pressing the button delivers Marqueta's reply, not their message, so
+ * anything not carried here is lost by the time the modal opens.
  */
-export type ContactRef = { contactId: string; organization: string }
+export type ContactRef = {
+  contactId: string
+  organization: string
+  name: string
+  role: string
+  note: string
+  outcome: string
+}
 
-export function encodeContactRef(input: { contactId?: string; organization?: string }): string {
-  return JSON.stringify({ c: clip(input.contactId, 180), o: clip(input.organization, 180) })
+export function encodeContactRef(input: {
+  contactId?: string
+  organization?: string
+  name?: string
+  role?: string
+  note?: string
+  outcome?: string
+}): string {
+  return JSON.stringify({
+    c: clip(input.contactId, 180),
+    o: clip(input.organization, 180),
+    ...(input.name ? { p: clip(input.name, 120) } : {}),
+    ...(input.role ? { r: clip(input.role, 120) } : {}),
+    ...(input.outcome ? { g: clip(input.outcome, 24) } : {}),
+    // Last and shortest-capped so the whole value always fits Slack's 2000.
+    ...(input.note ? { n: clip(input.note, 1200) } : {}),
+  })
 }
 
 export function decodeContactRef(value: string | undefined): ContactRef | null {
   const parsed = parseObject(value)
   if (!parsed) return null
-  const contactId = clip(parsed.c, 180).trim()
-  const organization = clip(parsed.o, 180).trim()
-  if (!contactId && !organization) return null
-  return { contactId, organization }
+  const ref: ContactRef = {
+    contactId: clip(parsed.c, 180).trim(),
+    organization: clip(parsed.o, 180).trim(),
+    name: clip(parsed.p, 120).trim(),
+    role: clip(parsed.r, 120).trim(),
+    note: clip(parsed.n, 1200).trim(),
+    outcome: clip(parsed.g, 24).trim(),
+  }
+  if (!ref.contactId && !ref.organization && !ref.name) return null
+  return ref
 }
 
 /**
@@ -108,10 +151,17 @@ export type CallLogMetadata = {
   contactId: string
   channel: string
   threadTs: string
+  /** Who the form is about, for the confirmation — so it needs no extra read. */
+  label?: string
 }
 
 export function encodeCallLogMetadata(input: CallLogMetadata): string {
-  return JSON.stringify({ c: clip(input.contactId, 180), ch: clip(input.channel, 40), ts: clip(input.threadTs, 40) })
+  return JSON.stringify({
+    c: clip(input.contactId, 180),
+    ch: clip(input.channel, 40),
+    ts: clip(input.threadTs, 40),
+    ...(input.label ? { l: clip(input.label, 200) } : {}),
+  })
 }
 
 export function decodeCallLogMetadata(value: string | undefined): CallLogMetadata | null {
@@ -119,18 +169,38 @@ export function decodeCallLogMetadata(value: string | undefined): CallLogMetadat
   if (!parsed) return null
   const contactId = clip(parsed.c, 180).trim()
   if (!contactId) return null
-  return { contactId, channel: clip(parsed.ch, 40).trim(), threadTs: clip(parsed.ts, 40).trim() }
+  const label = clip(parsed.l, 200).trim()
+  return {
+    contactId,
+    channel: clip(parsed.ch, 40).trim(),
+    threadTs: clip(parsed.ts, 40).trim(),
+    ...(label ? { label } : {}),
+  }
 }
 
-/** Same idea for the Stuck modal: which task, and where to say it was recorded. */
+/**
+ * Same idea for the Stuck modal: which task, where to say it was recorded, and
+ * which message to redraw.
+ *
+ * Two timestamps, because they answer different questions. `threadTs` is where
+ * a note goes — always a thread's PARENT, since Slack asks callers not to
+ * thread under a reply's ts. `messageTs` is the message holding the card, which
+ * may itself be a reply (a "mine" answer lives in a thread).
+ */
 export type TaskStuckMetadata = {
   taskId: string
   channel: string
+  threadTs: string
   messageTs: string
 }
 
 export function encodeTaskStuckMetadata(input: TaskStuckMetadata): string {
-  return JSON.stringify({ t: clip(input.taskId, 180), ch: clip(input.channel, 40), ts: clip(input.messageTs, 40) })
+  return JSON.stringify({
+    t: clip(input.taskId, 180),
+    ch: clip(input.channel, 40),
+    th: clip(input.threadTs, 40),
+    ts: clip(input.messageTs, 40),
+  })
 }
 
 export function decodeTaskStuckMetadata(value: string | undefined): TaskStuckMetadata | null {
@@ -138,7 +208,64 @@ export function decodeTaskStuckMetadata(value: string | undefined): TaskStuckMet
   if (!parsed) return null
   const taskId = clip(parsed.t, 180).trim()
   if (!taskId) return null
-  return { taskId, channel: clip(parsed.ch, 40).trim(), messageTs: clip(parsed.ts, 40).trim() }
+  const messageTs = clip(parsed.ts, 40).trim()
+  return {
+    taskId,
+    channel: clip(parsed.ch, 40).trim(),
+    threadTs: clip(parsed.th, 40).trim() || messageTs,
+    messageTs,
+  }
+}
+
+/**
+ * What "Undo" needs to put a contact back exactly as it was before a call was
+ * logged straight from a message.
+ *
+ * Every field the quick log may change travels here with its PRIOR value, and
+ * the interaction's own `_key`, so undo removes exactly that entry. An empty
+ * string means the field was absent and must be unset again, not set to "".
+ */
+export type CallLogUndo = {
+  contactId: string
+  interactionKey: string
+  prior: {
+    status: string
+    followUpAt: string
+    lastContactedAt: string
+    attributionChannel: string
+    nextStep: string
+  }
+}
+
+export function encodeCallLogUndo(input: CallLogUndo): string {
+  return JSON.stringify({
+    c: clip(input.contactId, 180),
+    k: clip(input.interactionKey, 120),
+    s: clip(input.prior.status, 30),
+    f: clip(input.prior.followUpAt, 40),
+    l: clip(input.prior.lastContactedAt, 40),
+    a: clip(input.prior.attributionChannel, 30),
+    x: clip(input.prior.nextStep, 600),
+  })
+}
+
+export function decodeCallLogUndo(value: string | undefined): CallLogUndo | null {
+  const parsed = parseObject(value)
+  if (!parsed) return null
+  const contactId = clip(parsed.c, 180).trim()
+  const interactionKey = clip(parsed.k, 120).trim()
+  if (!contactId || !interactionKey) return null
+  return {
+    contactId,
+    interactionKey,
+    prior: {
+      status: clip(parsed.s, 30).trim(),
+      followUpAt: clip(parsed.f, 40).trim(),
+      lastContactedAt: clip(parsed.l, 40).trim(),
+      attributionChannel: clip(parsed.a, 30).trim(),
+      nextStep: clip(parsed.x, 600),
+    },
+  }
 }
 
 /** The strategy buttons carry the month they were asked about, so a stale press is recognisable. */
