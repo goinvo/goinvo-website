@@ -177,31 +177,58 @@ export async function getSlackPermalink(channel: string, ts: string): Promise<st
 }
 
 /**
- * Marqueta's own Slack user id, so she can tell when she is being addressed.
+ * Who the bot token belongs to: Marqueta's own user id and the workspace's
+ * team id, from one `auth.test`.
  *
  * Asked of Slack once and cached for the life of the process rather than
  * configured: an id pasted into an env var is one more thing to get wrong, and
- * getting it wrong makes her deaf to her own name with no error anywhere.
+ * getting either wrong fails silently — a wrong user id makes her deaf to her
+ * own name, a wrong team id would turn every colleague into an outsider (or,
+ * worse, an outsider into a colleague).
+ *
+ * Only a complete answer is cached. A failed call — a network blip, a rate
+ * limit (`ok: false`), a response without the ids — is retried next time, so a
+ * transient failure cannot make her deaf, or lock the whole team out of the
+ * guest gate, for the rest of the process. Cached per token, so a rotated token
+ * is asked about afresh.
  */
-let cachedBotUserId: string | null | undefined
+type SlackAuthIdentity = { token: string; userId: string; teamId: string }
+let cachedAuthIdentity: SlackAuthIdentity | undefined
 
-export async function getSlackBotUserId(): Promise<string | undefined> {
-  if (cachedBotUserId !== undefined) return cachedBotUserId || undefined
+async function getSlackAuthIdentity(): Promise<SlackAuthIdentity | undefined> {
   const { botToken } = getSlackConfig()
   if (!botToken) return undefined
+  if (cachedAuthIdentity?.token === botToken) return cachedAuthIdentity
   try {
     const response = await fetch('https://slack.com/api/auth.test', {
       method: 'POST',
       headers: { authorization: `Bearer ${botToken}` },
     })
-    const data = (await response.json()) as { ok?: boolean; user_id?: string }
-    cachedBotUserId = data.ok && data.user_id ? data.user_id : null
+    const data = (await response.json()) as { ok?: boolean; user_id?: string; team_id?: string }
+    if (!data?.ok || !data.user_id || !data.team_id) return undefined
+    cachedAuthIdentity = { token: botToken, userId: data.user_id, teamId: data.team_id }
+    return cachedAuthIdentity
   } catch {
-    // Not cached as a miss: a transient failure should not make her deaf for
-    // the rest of the process.
     return undefined
   }
-  return cachedBotUserId || undefined
+}
+
+/** Forget the cached `auth.test` answer. Tests only. */
+export function resetSlackAuthIdentityForTests() {
+  cachedAuthIdentity = undefined
+}
+
+/** Marqueta's own Slack user id, so she can tell when she is being addressed. */
+export async function getSlackBotUserId(): Promise<string | undefined> {
+  return (await getSlackAuthIdentity())?.userId
+}
+
+/**
+ * The id of the workspace the bot is installed in — the only workspace whose
+ * members count as the team. See `getSlackUserProfile`.
+ */
+export async function getSlackTeamId(): Promise<string | undefined> {
+  return (await getSlackAuthIdentity())?.teamId
 }
 
 export function isSlackPostingConfigured() {
@@ -864,6 +891,251 @@ function formatSlackApiError(
   ].filter(Boolean)
 
   return details.length ? `${error} (${details.join('; ')})` : error
+}
+
+// ── Marqueta's conversation helpers ─────────────────────────────────────────
+//
+// All of these fail SOFT: they return null / false / { ok: false } and never
+// throw. They run inside `after()` callbacks and button handlers, where an
+// exception reaches nobody — the person who pressed the button just sees
+// nothing happen. A false return at least lets the caller say so.
+
+export type SlackUserProfile =
+  | { ok: true; name: string; isGuest: boolean; isBot: boolean }
+  | { ok: false }
+
+interface SlackUserProfileResponse {
+  ok?: boolean
+  error?: string
+  user?: {
+    name?: string
+    real_name?: string
+    team_id?: string
+    deleted?: boolean
+    is_bot?: boolean
+    is_restricted?: boolean
+    is_ultra_restricted?: boolean
+    is_stranger?: boolean
+    profile?: { display_name?: string; real_name?: string }
+  }
+}
+
+/**
+ * Who pressed the button, and whether they are a full member of THIS workspace.
+ *
+ * FAILS CLOSED. Anything that is not a clean, positive answer — no token, a
+ * network error, a missing scope, a deactivated account, or not knowing which
+ * workspace is ours — is `{ ok: false }`, and callers treat `{ ok: false }`
+ * exactly like a guest. Outreach records name prospects and the runway says
+ * how close the studio is to running out of money; a client or contractor who
+ * happens to share a channel with Marqueta must never be able to ask her for
+ * either. The cost of a Slack hiccup is that a colleague is told "I can't
+ * check that right now"; the cost of failing open is a client reading our
+ * pipeline.
+ *
+ * Guest = any of:
+ *   - `is_restricted` (multi-channel guest) or `is_ultra_restricted`
+ *     (single-channel guest) in our workspace;
+ *   - a user whose `team_id` is not our workspace's (from `auth.test`), or who
+ *     has none. This is the Slack Connect case, and the one most likely to
+ *     matter: a partner organisation's member in a shared channel comes back
+ *     with both guest flags FALSE, because those flags describe their standing
+ *     in their own organisation, not in ours. Being a full member somewhere is
+ *     not being a member here;
+ *   - `is_stranger` — Slack's own word for a user from another workspace.
+ *
+ * Enterprise Grid (one org, several workspaces) would read colleagues in a
+ * sibling workspace as guests here too. That is the fail-closed direction, and
+ * the studio is a single workspace.
+ *
+ * Uses `users.info` and `auth.test`, both covered by the scopes already granted.
+ */
+export async function getSlackUserProfile(userId: string | undefined): Promise<SlackUserProfile> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !userId) return { ok: false }
+  try {
+    const [teamId, response] = await Promise.all([
+      getSlackTeamId(),
+      fetch(`https://slack.com/api/users.info?user=${encodeURIComponent(userId)}`, {
+        headers: { authorization: `Bearer ${botToken}` },
+      }),
+    ])
+    // Without our own team id there is no telling a colleague from a partner's employee.
+    if (!teamId) return { ok: false }
+    const data = (await response.json()) as SlackUserProfileResponse
+    const user = data?.user
+    if (!response.ok || !data?.ok || !user || user.deleted) return { ok: false }
+    const outsider = !user.team_id || user.team_id !== teamId || Boolean(user.is_stranger)
+    return {
+      ok: true,
+      name:
+        user.profile?.display_name ||
+        user.profile?.real_name ||
+        user.real_name ||
+        user.name ||
+        '',
+      isGuest: Boolean(user.is_restricted || user.is_ultra_restricted) || outsider,
+      isBot: Boolean(user.is_bot),
+    }
+  } catch {
+    return { ok: false }
+  }
+}
+
+/**
+ * A message only one person in the channel can see.
+ *
+ * This is where contact details go when a call outline is asked for in a
+ * channel: the outline is for the room, an email address or a phone number is
+ * for the caller. Text only, deliberately — an ephemeral message cannot be
+ * updated or deleted by the app afterwards, and a button in one produces an
+ * interaction with no message to act on, so nothing interactive belongs here.
+ */
+export async function postSlackEphemeral(input: {
+  channel: string
+  user: string
+  text: string
+  threadTs?: string
+  username?: string
+  iconEmoji?: string
+}): Promise<boolean> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !input.channel || !input.user || !input.text) return false
+  try {
+    const response = await fetch('https://slack.com/api/chat.postEphemeral', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${botToken}`,
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({
+        channel: input.channel,
+        user: input.user,
+        text: input.text,
+        ...(input.threadTs ? { thread_ts: input.threadTs } : {}),
+        ...(input.username ? { username: input.username } : {}),
+        ...(input.iconEmoji ? { icon_emoji: input.iconEmoji } : {}),
+      }),
+    })
+    const data = (await response.json()) as SlackPostMessageResponse
+    if (!response.ok || !data.ok) {
+      console.error('Slack chat.postEphemeral failed:', formatSlackApiError(data, response.statusText))
+      return false
+    }
+    return true
+  } catch (error) {
+    console.error('Slack chat.postEphemeral threw', error)
+    return false
+  }
+}
+
+/**
+ * Replace a message the app posted.
+ *
+ * `blocks` and `attachments` are sent only when given: Slack keeps whatever a
+ * message already has for a field that is left out, which is how a check-in
+ * card can be redrawn without disturbing the attachment cards around it.
+ */
+export async function updateSlackMessage(input: {
+  channel: string
+  ts: string
+  text: string
+  blocks?: SlackBlock[]
+  attachments?: unknown[]
+}): Promise<boolean> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !input.channel || !input.ts) return false
+  try {
+    const response = await fetch('https://slack.com/api/chat.update', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${botToken}`,
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({
+        channel: input.channel,
+        ts: input.ts,
+        text: input.text,
+        ...(input.blocks ? { blocks: input.blocks } : {}),
+        ...(input.attachments ? { attachments: input.attachments } : {}),
+      }),
+    })
+    const data = (await response.json()) as SlackPostMessageResponse
+    if (!response.ok || !data.ok) {
+      console.error('Slack chat.update failed:', formatSlackApiError(data, response.statusText))
+      return false
+    }
+    return true
+  } catch (error) {
+    console.error('Slack chat.update threw', error)
+    return false
+  }
+}
+
+export type SlackFetchedMessage = {
+  text: string
+  blocks: SlackBlock[]
+  attachments: unknown[]
+}
+
+/**
+ * Read back one message exactly as it stands now.
+ *
+ * A button press carries a copy of the message, but it is the copy from when
+ * THAT person's client last rendered it — two people pressing on the same
+ * check-in within a minute would each redraw it from their own stale copy and
+ * undo the other's change. Reading the live message first means each press
+ * edits the current state.
+ *
+ * A reply lives in its thread, not in the channel's history, so when `threadTs`
+ * names a different message than `ts` this asks `conversations.replies`. Both
+ * calls are bounded to the one timestamp (`latest` = `oldest` = ts, inclusive)
+ * and the result is checked for that exact ts: a deleted message would
+ * otherwise come back as its neighbour, and the caller would rewrite the wrong
+ * message. Returns null on any failure — including DMs, which need a history
+ * scope Marqueta does not have — so callers fall back to the payload's copy.
+ */
+export async function fetchSlackMessage(input: {
+  channel: string
+  ts: string
+  threadTs?: string
+}): Promise<SlackFetchedMessage | null> {
+  const { botToken } = getSlackConfig()
+  if (!botToken || !input.channel || !input.ts) return null
+  const inThread = Boolean(input.threadTs && input.threadTs !== input.ts)
+  const method = inThread ? 'conversations.replies' : 'conversations.history'
+  const params = new URLSearchParams({
+    channel: input.channel,
+    latest: input.ts,
+    oldest: input.ts,
+    inclusive: 'true',
+    limit: inThread ? '2' : '1',
+    ...(inThread ? { ts: String(input.threadTs) } : {}),
+  })
+  try {
+    const response = await fetch(`https://slack.com/api/${method}?${params.toString()}`, {
+      headers: { authorization: `Bearer ${botToken}` },
+    })
+    const data = (await response.json()) as {
+      ok?: boolean
+      error?: string
+      messages?: { ts?: string; text?: string; blocks?: SlackBlock[]; attachments?: unknown[] }[]
+    }
+    if (!response.ok || !data.ok) {
+      console.error(`Slack ${method} failed:`, formatSlackApiError(data, response.statusText))
+      return null
+    }
+    const message = (data.messages || []).find((candidate) => candidate?.ts === input.ts)
+    if (!message) return null
+    return {
+      text: String(message.text || ''),
+      blocks: Array.isArray(message.blocks) ? message.blocks : [],
+      attachments: Array.isArray(message.attachments) ? message.attachments : [],
+    }
+  } catch (error) {
+    console.error(`Slack ${method} threw`, error)
+    return null
+  }
 }
 
 /**
