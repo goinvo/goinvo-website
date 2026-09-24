@@ -12,6 +12,9 @@
  */
 
 import type { CallSheetEntry } from './callSheet'
+import { encodeContactRef, MARQUETA_ACTION } from './marquetaActions'
+import { marketingOperationHash } from './operations'
+import { clipSlackText, escapeSlackText, SLACK_LIMITS, slackLink } from './slackText'
 
 /** Namespaced like the chat and dispute actions already in the interactions route. */
 export const MARKETING_ACTION = {
@@ -82,8 +85,99 @@ export function decodeActionValue(
   }
 }
 
+// ── Who has been asked, and who has passed ──────────────────────────────────
+
+/**
+ * A task's `askHistory`: one entry per person the digest ASKED to take it, and
+ * one per person who PASSED on it ("Not me" / "Hand it back" on the digest
+ * card). Both mean the same thing to the next ask — that person has answered —
+ * so the next digest never puts the question to them again, and a task two
+ * people have answered is offered as "drop it?" instead of to a third.
+ *
+ * Every entry is keyed by Slack id, never by name. A name is whatever Slack's
+ * display name is this month ("Shirley Wu"), and the roster says "Shirley";
+ * excluding the passer by a name parsed out of a sentence missed exactly the
+ * person it was for, and asked her about the task she had just declined.
+ *
+ * `week` (the UTC ISO week the ask was POSTED in) is what makes a second digest
+ * in the same week harmless. The entry the first run wrote is not a second
+ * person's answer — it is this week's ask, and a re-run shows the same ask to
+ * the same person and writes nothing. Without it, a doubled Monday asked
+ * somebody else about the same task and the task came back the next week as
+ * "nobody has taken this after two asks" after one real ask.
+ */
+export const ASK_HISTORY_KIND = { asked: 'asked', passed: 'passed' } as const
+export type AskHistoryKind = (typeof ASK_HISTORY_KIND)[keyof typeof ASK_HISTORY_KIND]
+
+/** As stored. Entries written before `week`/`kind` existed are asks from an earlier week. */
+export type AskHistoryEntry = {
+  _key?: string | null
+  slackUserId?: string | null
+  at?: string | null
+  week?: string | null
+  kind?: string | null
+}
+
+const ASKABLE_SLACK_ID = /^[UW][A-Z0-9]+$/
+const askId = (value: unknown) => {
+  const id = String(value ?? '').trim()
+  return ASKABLE_SLACK_ID.test(id) ? id : ''
+}
+
+/**
+ * One `askHistory` entry. The key is the task and the person (and whether they
+ * were asked or passed), so writing the same fact twice is visibly the same
+ * entry — and a writer that finds the key already there writes nothing.
+ */
+export function askHistoryEntry(input: {
+  taskId: string
+  slackUserId: string
+  at: string
+  week: string
+  kind: AskHistoryKind
+}): { _key: string; slackUserId: string; at: string; week: string; kind: AskHistoryKind } {
+  const prefix = input.kind === ASK_HISTORY_KIND.passed ? 'pass' : 'ask'
+  return {
+    _key: `${prefix}-${marketingOperationHash(`${input.taskId}:${input.slackUserId}`)}`,
+    slackUserId: input.slackUserId,
+    at: input.at,
+    week: input.week,
+    kind: input.kind,
+  }
+}
+
+/**
+ * What a task's history means for this week's digest.
+ *
+ *   - `answeredIds`: every distinct person asked or passed, in any week. Never
+ *     asked again; two of them make the task "drop it?".
+ *   - `askedThisWeek`: the person THIS week's digest already asked, when they
+ *     have not since passed. A re-run shows them the same ask and records
+ *     nothing, and the ask is not counted as a second person — it is the same
+ *     question, posted twice.
+ */
+export function readAskHistory(
+  entries: AskHistoryEntry[] | null | undefined,
+  week: string,
+): { answeredIds: string[]; askedThisWeek?: string } {
+  const list = (entries || []).filter(Boolean)
+  const passed = new Set(
+    list.filter((entry) => entry.kind === ASK_HISTORY_KIND.passed).map((entry) => askId(entry.slackUserId)).filter(Boolean),
+  )
+  const answeredIds = Array.from(new Set(list.map((entry) => askId(entry.slackUserId)).filter(Boolean)))
+  const thisWeek = String(week || '').trim()
+  const askedThisWeek = thisWeek
+    ? list
+        .filter((entry) => entry.kind !== ASK_HISTORY_KIND.passed && String(entry.week || '').trim() === thisWeek)
+        .map((entry) => askId(entry.slackUserId))
+        .filter((id) => id && !passed.has(id))
+        .pop()
+    : undefined
+  return { answeredIds, ...(askedThisWeek ? { askedThisWeek } : {}) }
+}
+
 const mention = (slackUserId?: string, fallback?: string) =>
-  slackUserId ? `<@${slackUserId}>` : fallback || 'someone'
+  slackUserId ? `<@${slackUserId}>` : escapeSlackText(fallback || 'someone')
 
 function formatMinutes(minutes: number): string {
   const whole = Math.max(0, Math.round(minutes))
@@ -107,6 +201,17 @@ export type DigestTask = {
   whyNow?: string
 }
 
+/**
+ * A follow-up owed to somebody who already answered, rendered by the caller
+ * (`followUpLine` in followUps.ts owns the wording and the escaping, so the
+ * digest and the check-in can never describe the same contact two ways).
+ * `contactRef` is an encoded `ContactRef` for the Prep and Log buttons.
+ */
+export type DigestFollowUp = { label: string; detail: string; contactRef: string }
+
+/** The digest shows this many follow-ups; the rest are one `my calls` away. */
+export const MAX_DIGEST_FOLLOW_UPS = 3
+
 export type DigestInput = {
   theme: string
   weekStart: string
@@ -117,7 +222,20 @@ export type DigestInput = {
   callSheet?: CallSheetEntry[]
   /** People who are away this week, with the work that needs a new owner. */
   awayNotices?: { awayOwner: string; taskTitle: string; candidates: string[] }[]
+  /** Away notices left out to keep the message short, counted in one line rather than dropped silently. */
+  awayNoticesMore?: number
   studioUrl?: string
+  /**
+   * Blocks placed directly under the week line, before anything else: how last
+   * week went, and the named asks. The asks belong at the top because they are
+   * the only part of the message addressed to a particular person — below a
+   * call sheet they are scrolled past by the very people they name.
+   */
+  lead?: Block[]
+  /** Follow-ups due, at most MAX_DIGEST_FOLLOW_UPS shown. */
+  followUps?: DigestFollowUp[]
+  /** One mrkdwn line (already escaped) under the follow-ups, e.g. "+4 more follow-ups due — …". */
+  followUpsMore?: string
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -152,6 +270,7 @@ export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
         },
       ],
     },
+    ...(input.lead || []),
   ]
 
   if (input.tasks.length > 0) {
@@ -193,16 +312,33 @@ export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
   }
 
   for (const notice of input.awayNotices || []) {
+    // Names and titles are record text: escaped, so a task called "Pilot <5%"
+    // renders as written instead of as a broken Slack control sequence.
+    const candidates = (notice.candidates || []).map((name) => escapeSlackText(name))
     blocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text:
-          `:palm_tree: *${notice.awayOwner} is away* — “${notice.taskTitle}” needs someone.\n` +
-          (notice.candidates.length
-            ? `Free this week: ${notice.candidates.join(', ')}`
-            : '_Nobody is free this week — this one probably slips._'),
+        text: clipSlackText(
+          `:palm_tree: *${escapeSlackText(notice.awayOwner)} is away* — “${escapeSlackText(notice.taskTitle)}” needs someone.\n` +
+            (candidates.length
+              ? `Free this week: ${candidates.join(', ')}`
+              : '_Nobody is free this week — this one probably slips._'),
+          SLACK_LIMITS.sectionText,
+        ),
       },
+    })
+  }
+  const awayMore = Math.max(0, Math.floor(Number(input.awayNoticesMore) || 0))
+  if (awayMore > 0) {
+    blocks.push({
+      type: 'context',
+      elements: [
+        {
+          type: 'mrkdwn',
+          text: `…and ${awayMore} more task${awayMore === 1 ? '' : 's'} belonging to people who are away — the plan has them all.`,
+        },
+      ],
     })
   }
 
@@ -215,15 +351,40 @@ export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
     })
     for (const entry of sheet) {
       const people = entry.contacts.length
-      const source = entry.sourceUrl ? ` <${entry.sourceUrl}|source>` : ''
+      // slackLink, not a hand-built <url|…>: a research URL is record text, and
+      // a `|` or `>` in it would end the link early and spill the rest into the
+      // message as markup.
+      const source = entry.sourceUrl ? ` ${slackLink(entry.sourceUrl, 'source')}` : ''
+      const prep = callSheetPrepButton(entry)
       blocks.push({
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text:
-            `*${entry.organization}* · ${people} ${people === 1 ? 'person' : 'people'}\n` +
-            `${entry.signal}${source}`,
+          text: clipSlackText(
+            `*${escapeSlackText(entry.organization)}* · ${people} ${people === 1 ? 'person' : 'people'}\n` +
+              `${escapeSlackText(entry.signal)}${source}`,
+            SLACK_LIMITS.sectionText,
+          ),
         },
+        // An accessory rather than an actions row: the call sheet is three
+        // lines, and a row of buttons under each would double its height.
+        ...(prep ? { accessory: prep } : {}),
+      })
+    }
+  }
+
+  const followUps = (input.followUps || [])
+    .filter((followUp) => followUp && (String(followUp.label || '').trim() || String(followUp.detail || '').trim()))
+    .slice(0, MAX_DIGEST_FOLLOW_UPS)
+  const followUpsMore = String(input.followUpsMore || '').trim()
+  if (followUps.length > 0 || followUpsMore) {
+    blocks.push({ type: 'divider' })
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '*Follow-ups due*' } })
+    for (const followUp of followUps) blocks.push(...digestFollowUpBlocks(followUp))
+    if (followUpsMore) {
+      blocks.push({
+        type: 'context',
+        elements: [{ type: 'mrkdwn', text: clipSlackText(followUpsMore, SLACK_LIMITS.sectionText) }],
       })
     }
   }
@@ -250,6 +411,59 @@ export function buildWeeklyDigestBlocks(input: DigestInput): Block[] {
     ],
   })
 
+  return blocks
+}
+
+const buttonElement = (actionId: string, label: string, value: string, primary = false): Block => ({
+  type: 'button',
+  action_id: actionId,
+  text: { type: 'plain_text', text: label, emoji: true },
+  value,
+  ...(primary ? { style: 'primary' } : {}),
+})
+
+/**
+ * "Prep this call" for one call-sheet organisation.
+ *
+ * The sheet says who to call and why now; the thing that actually gets a
+ * nervous person to pick up the phone is the outline, so it is one press away
+ * from the line that suggested the call. The ref names the first contact the
+ * sheet listed (the one it would have you call) and the organisation, so the
+ * outline is about a person when there is one and about the organisation when
+ * there is not. No button when there is nothing to prep, rather than one that
+ * opens an empty outline.
+ */
+function callSheetPrepButton(entry: CallSheetEntry): Block | null {
+  const contactId = String(entry.contacts.find((contact) => contact?._id)?._id || '').trim()
+  const organization = String(entry.organization || '').trim()
+  if (!contactId && !organization) return null
+  const value = encodeContactRef({ contactId, organization })
+  if (value.length > SLACK_LIMITS.buttonValue) return null
+  return buttonElement(MARQUETA_ACTION.prepCall, 'Prep this call', value)
+}
+
+/**
+ * One follow-up line and its two buttons — Prep and Log, never Done: a
+ * follow-up is finished by logging what happened, which is what moves the
+ * contact's date on. A ref Slack would refuse means no buttons, not a message
+ * Slack rejects whole.
+ */
+function digestFollowUpBlocks(followUp: DigestFollowUp): Block[] {
+  const body = [String(followUp.label || '').trim(), String(followUp.detail || '').trim()].filter(Boolean).join('\n')
+  if (!body) return []
+  const blocks: Block[] = [
+    { type: 'section', text: { type: 'mrkdwn', text: clipSlackText(body, SLACK_LIMITS.sectionText) } },
+  ]
+  const ref = String(followUp.contactRef || '')
+  if (ref && ref.length <= SLACK_LIMITS.buttonValue) {
+    blocks.push({
+      type: 'actions',
+      elements: [
+        buttonElement(MARQUETA_ACTION.prepCall, 'Prep', ref),
+        buttonElement(MARQUETA_ACTION.logCall, 'Log how it went', ref),
+      ],
+    })
+  }
   return blocks
 }
 
@@ -321,15 +535,23 @@ export function buildRunwayBlocks(input: {
 }): Block[] {
   if (!input.checkIn.due && !input.disagreement) return []
 
-  const lines = [input.summary]
-  if (input.checkIn.due) lines.push(input.checkIn.reason + ' ' + input.checkIn.question)
-  if (input.disagreement) lines.push('_' + input.disagreement + '_')
+  // Escaped: since wins arrived, the check-in's reason can carry a won
+  // contact's name ("AT&T was marked won…"), and a record's text reaching
+  // mrkdwn raw is how a stray `<` breaks the card or a stored `<!here>` pings
+  // the channel. runway.ts strips angle brackets from that name as a second
+  // line of defence; this is the first.
+  const lines = [escapeSlackText(input.summary)]
+  if (input.checkIn.due) lines.push(escapeSlackText(input.checkIn.reason + ' ' + input.checkIn.question))
+  if (input.disagreement) lines.push('_' + escapeSlackText(input.disagreement) + '_')
 
   return [
     { type: 'divider' },
     {
       type: 'section',
-      text: { type: 'mrkdwn', text: '*Runway*' + '\n' + lines.filter(Boolean).join('\n') },
+      text: {
+        type: 'mrkdwn',
+        text: clipSlackText('*Runway*' + '\n' + lines.filter(Boolean).join('\n'), SLACK_LIMITS.sectionText),
+      },
     },
     {
       type: 'actions',
@@ -526,7 +748,7 @@ export function buildIdeaCaptureBlocks(input: {
  */
 export function buildIdeaReviewBlocks(ideas: Array<{ title: string }>, studioUrl?: string): Block[] {
   if (ideas.length === 0) return []
-  const names = ideas.slice(0, 3).map((idea) => '• ' + idea.title)
+  const names = ideas.slice(0, 3).map((idea) => '• ' + clipSlackText(escapeSlackText(idea.title), 200))
   const more = ideas.length > 3 ? ' and ' + (ideas.length - 3) + ' more' : ''
   return [
     {
@@ -835,8 +1057,20 @@ export type DigestMessage = { blocks: Block[]; attachments: Block[] }
  *   owned by others  Take it over
  *   passed           I'll take it
  *
+ * The card is one message for the whole channel, so both of an owned card's
+ * buttons are shown to everybody; the rules are enforced when pressed
+ * (`takeOverTask` / `passOnTask`): "Take it over" puts the PRESSER's name on
+ * the work and names the previous owner, and "Hand it back" works only for
+ * the owner — anyone else is told whose it is rather than clearing a
+ * colleague's name off their work.
+ *
  * Nothing collapses, so nothing is a dead end, and none of it depends on the
  * message still being the one you originally clicked.
+ *
+ * `askedName` is who this digest ASKED to take an unclaimed task (ownerAsk.ts).
+ * The card still says Unclaimed — being asked is not agreeing — and names the
+ * person as plain text, not a mention: the ask at the top of the message has
+ * already pinged them once, and a second ping per card is how a bot gets muted.
  */
 export function buildTaskAttachment(
   task: DigestTask & {
@@ -845,6 +1079,7 @@ export function buildTaskAttachment(
     status?: string
     note?: string
     suggestedOwner?: string
+    askedName?: string
   },
 ): Block {
   const value = encodeActionValue({ taskId: task._id, ownerName: task.ownerName })
@@ -878,11 +1113,14 @@ export function buildTaskAttachment(
   // who never accepted the work makes the board report commitment that does not
   // exist, and hides the fact that nobody has picked it up.
   const suggested = String(task.suggestedOwner || '').trim()
+  const asked = String(task.askedName || '').replace(/\s+/g, ' ').trim()
   const ownerField = owner
     ? '*Taken by*' + '\n' + mention(task.slackUserId, owner)
-    : suggested
-      ? '*Unclaimed*' + '\n' + '_suggested: ' + suggested + '_'
-      : '*Unclaimed*' + '\n' + '_anyone_'
+    : asked
+      ? '*Unclaimed*' + '\n' + '_asked: ' + clipSlackText(escapeSlackText(asked), 120) + '_'
+      : suggested
+        ? '*Unclaimed*' + '\n' + '_suggested: ' + clipSlackText(escapeSlackText(suggested), 120) + '_'
+        : '*Unclaimed*' + '\n' + '_anyone_'
 
   const fields = [
     ownerField,
@@ -896,10 +1134,12 @@ export function buildTaskAttachment(
       ? '#6f7a90'
       : PRIORITY_COLOR[String(task.priority || 'normal')] || PRIORITY_COLOR.normal,
     blocks: [
-      { type: 'section', text: { type: 'mrkdwn', text: '*' + task.title + '*' } },
+      // Title and why-now are record text, so escaped; `note` is mrkdwn the
+      // caller built (it carries the presser's mention) and is passed through.
+      { type: 'section', text: { type: 'mrkdwn', text: '*' + clipSlackText(escapeSlackText(task.title), 2900) + '*' } },
       { type: 'section', fields: fields.map((t) => ({ type: 'mrkdwn', text: t })) },
       ...(task.whyNow
-        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: '_' + task.whyNow + '_' }] }]
+        ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: '_' + clipSlackText(escapeSlackText(task.whyNow), 2900) + '_' }] }]
         : []),
       // What just happened, so the channel sees the change without re-reading.
       ...(task.note ? [{ type: 'context', elements: [{ type: 'mrkdwn', text: task.note }] }] : []),

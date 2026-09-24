@@ -43,6 +43,38 @@ export function availabilityDocId(ownerName: string): string {
   return `${TEAM_AVAILABILITY_TYPE}.${slug || 'unknown'}`
 }
 
+/**
+ * The board's name for the person who pressed a button in Slack.
+ *
+ * The board says "Juhan"; Slack says "Juhan Sonin", or a nickname, or whatever
+ * the display name is this month. Writing the Slack name as an owner splits one
+ * person into two — two check-in groups, two loads when asking who has time,
+ * and a `mine` that finds nothing. So the linked identity wins: the record
+ * whose slackUserId matches names them. Failing that, a record whose name is
+ * EXACTLY the display name. Only then the display name itself — never a
+ * guessed first-name match, which is how a bot credits the wrong colleague.
+ */
+export function resolveOwnerName(input: {
+  slackUserId?: string
+  displayName?: string
+  entries: Array<Pick<TeamMemberAvailability, 'ownerName' | 'slackUserId'>>
+}): string {
+  const id = String(input.slackUserId || '').trim()
+  if (id) {
+    const linked = input.entries.find((entry) => entry.slackUserId === id && String(entry.ownerName || '').trim())
+    if (linked) return String(linked.ownerName).trim()
+  }
+  const display = String(input.displayName || '').trim()
+  if (display) {
+    const exact = input.entries.find(
+      (entry) => String(entry.ownerName || '').trim().toLowerCase() === display.toLowerCase(),
+    )
+    if (exact) return String(exact.ownerName).trim()
+    return display
+  }
+  return 'Someone'
+}
+
 const asDate = (value?: string | null) => String(value || '').slice(0, 10)
 
 /**

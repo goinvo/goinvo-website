@@ -7,6 +7,18 @@ import { getExperimentExposure, getPrecomputedExperimentVariant, homeHeroExperim
 import { validateExperimentBeacon } from '@/lib/marketing/beaconValidation'
 import { HomeConceptContent } from '@/components/home/HomeConceptContent'
 
+/**
+ * The component's props parameter is optional (`= {}`), which makes
+ * createElement infer an empty props type and reject `heroVariant`. Naming the
+ * props explicitly keeps the test honest without changing the component.
+ */
+const renderHome = (heroVariant: 'control' | 'runway') =>
+  renderToStaticMarkup(
+    React.createElement(HomeConceptContent as (props: Parameters<typeof HomeConceptContent>[0] & object) => React.ReactElement, {
+      heroVariant,
+    }),
+  )
+
 vi.mock('@/components/home/HomeConceptInteractions', () => ({ HomeConceptInteractions: () => null }))
 vi.mock('@/components/home/HomeConceptCalendlyCta', () => ({ HomeConceptCalendlyCta: () => null }))
 
@@ -31,8 +43,8 @@ describe('homepage hero experiment', () => {
   })
 
   it('renders exactly one hero and keeps everything below it identical', () => {
-    const control = renderToStaticMarkup(React.createElement(HomeConceptContent, { heroVariant: 'control' }))
-    const runway = renderToStaticMarkup(React.createElement(HomeConceptContent, { heroVariant: 'runway' }))
+    const control = renderHome('control')
+    const runway = renderHome('runway')
     for (const html of [control, runway]) {
       expect(html.match(/<h1\b/g)).toHaveLength(1)
       expect(html.match(/data-experiment-section="hero"/g)).toHaveLength(1)

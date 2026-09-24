@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { getChatSanityClient } from '@/lib/chat/sanity'
-import { getSlackConfig, getSlackUserDisplayName, postSlackMessage, verifySlackRequest } from '@/lib/chat/slack'
+import {
+  getSlackBotUserId,
+  getSlackConfig,
+  getSlackUserDisplayName,
+  postSlackEphemeral,
+  postSlackMessage,
+  verifySlackRequest,
+} from '@/lib/chat/slack'
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
 import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
 import { classifyMessage } from '@/lib/marketing/ideaCapture'
-import { addressesMarqueta, stripMention } from '@/lib/marketing/marquetaChat'
-import { answerMarqueta } from '@/lib/marketing/marquetaChat.server'
-import { getSlackBotUserId } from '@/lib/chat/slack'
+import { addressesMarqueta } from '@/lib/marketing/marquetaChat'
+import { answerMarqueta, type MarquetaReply } from '@/lib/marketing/marquetaChat.server'
 import { captureFromMessage } from '@/lib/marketing/ideaCapture.server'
 import { buildDraftCaptureBlocks, buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
 
@@ -56,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (payload.type === 'event_callback' && payload.event) {
-    await handleSlackEvent(payload.event)
+    await handleSlackEvent(payload.event, { retryReason: request.headers.get('x-slack-retry-reason') || '' })
   }
 
   return NextResponse.json({ ok: true })
@@ -79,8 +85,12 @@ function watchedMarketingChannels(): string[] {
     .filter(Boolean)
 }
 
+/** Her name and icon, set per message: the app is shared with the website chat. */
+const MARQUETA = { username: 'Marqueta', iconEmoji: ':chart_with_upwards_trend:' } as const
+
 /**
- * Somebody spoke to Marqueta - by @-mentioning her, or in a direct message.
+ * Somebody spoke to Marqueta - by @-mentioning her, by starting with her name
+ * ("Marqueta, prep Jane"), or in a direct message.
  *
  * She answers, wherever it was, including in a channel where she is otherwise
  * silent. Being asked a question is not noise, and the whole reason to stay
@@ -88,30 +98,85 @@ function watchedMarketingChannels(): string[] {
  *
  * Every answer is a lookup or a write she already knows how to make - no model
  * call - so she cannot invent a runway figure or a task that does not exist.
+ *
+ * The raw event text goes to `answerMarqueta`, which strips her address and
+ * decodes Slack's escaping exactly once. Decoding here as well would decode
+ * twice, and a quote like "<5% of pilots" would come out as a link and vanish.
  */
-async function handleMarquetaConversation(event: SlackMessageEvent, addressed: boolean) {
-  const botUserId = await getSlackBotUserId()
-  const personName = (await getSlackUserDisplayName(event.user)) || 'Someone'
+async function handleMarquetaConversation(event: SlackMessageEvent, botUserId: string | undefined) {
+  // A failed name lookup is not a reason to leave somebody unanswered.
+  const personName = (await getSlackUserDisplayName(event.user).catch(() => undefined)) || 'Someone'
   const reply = await answerMarqueta({
-    text: stripMention(event.text || '', botUserId),
+    text: event.text || '',
     personName,
     slackUserId: event.user,
     channel: event.channel || '',
     ts: event.ts || '',
+    threadTs: event.thread_ts,
+    botUserId,
   })
   if (!reply) return
+  await deliverMarquetaReply(event, reply)
+}
 
-  await postSlackMessage({
-    channel: event.channel || '',
-    // In a channel, answer in a thread so a conversation with her does not
-    // push everyone else's messages up the screen. In a DM there is no thread
-    // to make, and one would just look odd.
-    threadTs: addressed && !isDirectMessage(event.channel) ? event.thread_ts || event.ts : undefined,
-    username: 'Marqueta',
-    iconEmoji: ':chart_with_upwards_trend:',
+/**
+ * Post an answer: the reply, then its follow-up in the same thread, then
+ * anything private to the person who asked.
+ *
+ * Threading:
+ * - In a channel, everything goes in the thread of the message she was asked
+ *   in (its parent when that message was itself a reply), so a conversation
+ *   with her does not push everyone else's messages up the screen.
+ * - In a DM there is no room to keep tidy. The reply goes where the person
+ *   wrote - top level, or their thread if they started one - and a follow-up
+ *   (a call outline's email draft) goes in a thread under her own reply, so
+ *   the opener stays on screen and the rest is one tap away.
+ *
+ * Blocks are sent only when there are some: an empty `blocks` array is a
+ * message Slack refuses. Nothing after a failed reply is posted - a thread
+ * follow-up or a set of contact details with no outline above it is worse
+ * than silence.
+ *
+ * The ephemeral goes to the person who asked and nobody else: it is where
+ * contact details go when an outline is asked for in a channel.
+ */
+async function deliverMarquetaReply(event: SlackMessageEvent, reply: MarquetaReply) {
+  const channel = event.channel || ''
+  const direct = isDirectMessage(channel)
+  const parent = event.thread_ts || event.ts
+  const replyThread = direct && !event.thread_ts ? undefined : parent
+
+  const posted = await postSlackMessage({
+    channel,
+    threadTs: replyThread,
+    ...MARQUETA,
     unfurl: false,
-    text: reply,
+    text: reply.text,
+    ...(reply.blocks?.length ? { blocks: reply.blocks } : {}),
   })
+  if (!posted) return
+
+  const followUpThread = replyThread || posted.ts
+  if (reply.thread && (reply.thread.blocks.length || reply.thread.text.trim())) {
+    await postSlackMessage({
+      channel,
+      threadTs: followUpThread,
+      ...MARQUETA,
+      unfurl: false,
+      text: reply.thread.text,
+      ...(reply.thread.blocks.length ? { blocks: reply.thread.blocks } : {}),
+    })
+  }
+
+  if (reply.ephemeral && event.user) {
+    await postSlackEphemeral({
+      channel,
+      user: event.user,
+      text: reply.ephemeral,
+      threadTs: followUpThread,
+      ...MARQUETA,
+    })
+  }
 }
 
 /** Slack gives every direct-message conversation an id beginning with D. */
@@ -154,6 +219,14 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   // conversation about a task into a second copy of that task.
   if (event.thread_ts && event.thread_ts !== event.ts) return
 
+  // The RAW text, deliberately not decoded. `captureFromMessage` classifies
+  // the text it is given again and stores it, so this check is only a cheap
+  // gate in front of that one (it saves a users.info call per message). A gate
+  // that read DIFFERENT text could only ever disagree in one useful direction:
+  // turning away a message the stored-text classifier would have kept — and
+  // decoding does shorten text (`&amp;` → `&`), which can drop a message under
+  // the length floor. Same text in both places, so they cannot disagree, and
+  // what is stored is exactly what it always was.
   const verdict = classifyMessage(event.text || '')
   if (!verdict.capture) return
 
@@ -217,7 +290,7 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
 }
 
 
-async function handleSlackEvent(event: SlackMessageEvent) {
+async function handleSlackEvent(event: SlackMessageEvent, opts: { retryReason?: string } = {}) {
   if (event.type !== 'message') return
   if (event.subtype || event.bot_id) return
   if (!event.text || !event.ts || !event.channel) return
@@ -228,10 +301,32 @@ async function handleSlackEvent(event: SlackMessageEvent) {
   // Addressed directly, or messaged privately: she answers wherever it was.
   // Checked BEFORE the silent-capture path, so "@Marqueta what's on this week"
   // gets an answer rather than being quietly filed as an idea.
+  //
+  // Addressing is read from the RAW text: her mention only exists there
+  // (decoding without her name drops it), and the name form reads the same
+  // either way.
   const botUserId = await getSlackBotUserId()
   const addressed = addressesMarqueta(event.text, botUserId)
   if (addressed || isDirectMessage(event.channel)) {
-    await handleMarquetaConversation(event, addressed)
+    // The conversation runs AFTER the 200. Answering can take several reads
+    // (and an outline, a thread follow-up and an ephemeral are three posts);
+    // Slack gives an event three seconds before it retries, and a retry of a
+    // slow answer is a second answer.
+    //
+    // A retry is skipped only when Slack says it timed out waiting for us —
+    // the first delivery is then still running in its after() and will reply.
+    // Any other retry reason means the first delivery never got as far as
+    // scheduling one, so this one must. A call logged from the message is
+    // keyed on the message, so even a duplicate run cannot log it twice.
+    if (opts.retryReason === 'http_timeout') return
+    const conversation = { ...event }
+    after(async () => {
+      try {
+        await handleMarquetaConversation(conversation, botUserId)
+      } catch (error) {
+        console.error('[marqueta] conversation failed', error)
+      }
+    })
     return
   }
 
