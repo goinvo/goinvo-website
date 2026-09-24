@@ -35,6 +35,14 @@ vi.mock('@/lib/marketing/auth', () => {
   }
   return { assertStudioWriterOrApiKey: vi.fn(async () => {}), MarketingAuthError: TestMarketingAuthError }
 })
+// plan-week answers 503 without a project id and write token. CI has neither,
+// so this test passed only on machines that happened to have real credentials
+// in the environment — pin them here, the way tests/plan-week-route.test.ts does.
+vi.mock('@/sanity/env', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/sanity/env')>()),
+  projectId: 'test-project',
+  writeToken: 'test-token',
+}))
 vi.mock('@/lib/marketing/outreachClient.server', () => ({ getOutreachClient: () => mocks.outreach }))
 vi.mock('@/lib/marketing/client', () => ({ getMarketingWriteClientFor: () => mocks.settings }))
 // plan-week pins its own client with createClient; everything else in the
