@@ -6,14 +6,15 @@ import { formatMinutes } from '../../../lib/marketing/effort'
 import type { FollowUpParts } from '../../../lib/marketing/followUps'
 import { countLabel, errorLine, LABEL, slackDayKey, weekOfLabel } from '../../../lib/marketing/marquetaStyle'
 import { isDecisionTask, type StudioContactAction, type StudioFocus } from '../../../lib/marketing/taskLinks'
-import { taskStatusWords } from '../../../lib/marketing/weeklyCheckIn'
 import { authenticatedMarketingRequest } from './authenticatedMarketingRequest'
 import { OutreachCallSheet } from './OutreachCallSheet'
 import { StudioVizScope } from './StudioVizScope'
 import { WeekGlance, type WeekGlanceData } from '../../../components/marketing-viz/WeekGlance'
-import { GLANCE_SLOTS } from '../../../lib/marketing/viz/weekGlance'
 import type { StoredPosture } from '../../../lib/marketing/runway'
 import { TASK_BANNER_ANSWER_MAX, taskBannerPatch } from './TaskFocusBanner'
+import { WeekWorkTable, workColumns, workMeta } from './WeekWorkTable'
+
+export { workColumns, workMeta }
 
 /**
  * The week, as decided.
@@ -102,27 +103,6 @@ export type CaughtIdea = {
   _createdAt?: string
 }
 
-/**
- * A task's kind wears the same colour as its share of the hours in the meter
- * above (weekGlance's fixed slots), so "outreach" is one colour everywhere on
- * the page — the dot carries it, the word stays ink.
- */
-function kindSlot(kind: string): number {
-  if (kind === 'outreach') return GLANCE_SLOTS.outreach
-  if (kind === 'decision') return GLANCE_SLOTS.decisions
-  return GLANCE_SLOTS.other
-}
-
-/** "overdue", said with a status mark rather than red text alone. */
-function OverdueMark({ label = 'overdue' }: { label?: string }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, marginLeft: 8, color: 'var(--card-fg-color)' }}>
-      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: 'var(--viz-serious)' }} />
-      {label}
-    </span>
-  )
-}
-
 const ownerKey = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
 
 /**
@@ -163,23 +143,12 @@ export function filterWeekByOwner<T extends Pick<WeekPlanResponse, 'items' | 'de
 }
 
 /** Status words that already say nobody has it, so "Nobody has it" would repeat them. */
-const SAYS_NOBODY = new Set(['Nobody has it', 'Marqueta working', 'Needs someone'])
 
 /**
  * "Juhan · In progress · 30m" / "Nobody has it · 30m (est.)" / "Needs
  * someone · 20m": who has it and where it stands, in `taskStatusWords` — the
  * Slack card's words.
  */
-export function workMeta(row: PlanRowStatus & { minutes: number; estimateSource?: string; question?: string | null }): string {
-  const owner = String(row.owner ?? '').trim()
-  const words = taskStatusWords({ status: row.status, kind: row.kind, humanQuestion: row.question || undefined, ownerName: owner })
-  // "Not started" says nothing a list of planned work does not; everything else does.
-  const status = words === 'Not started' ? '' : words
-  const who = owner || (SAYS_NOBODY.has(status) ? '' : 'Nobody has it')
-  const minutes = row.minutes > 0 ? `${formatMinutes(row.minutes)}${row.estimateSource === 'estimated' ? ' (est.)' : ''}` : ''
-  return [who, status, minutes].filter(Boolean).join(' · ')
-}
-
 /**
  * The planner's decisions, split into the real ones and the owner searches.
  *
@@ -565,7 +534,8 @@ export function WeeklyPlanWorkspace({
               {weekOfLabel(plan.weekStart, now)} · {plan.runway || plan.posture}
             </p>
             <h2 style={{ margin: '6px 0 4px', fontSize: 24 }}>{plan.theme || 'This week'}</h2>
-            {plan.pulse && <p style={{ margin: '0 0 6px', fontSize: 14, lineHeight: 1.5 }}>{plan.pulse}</p>}
+            {/* The figures below say this now; the sentence stays only when they could not be drawn. */}
+            {plan.pulse && !plan.outreachStats && <p style={{ margin: '0 0 6px', fontSize: 14, lineHeight: 1.5 }}>{plan.pulse}</p>}
             {plan.rationale && (
               <p style={{ ...styles.muted, maxWidth: '62ch', lineHeight: 1.5 }}>{plan.rationale}</p>
             )}
@@ -797,27 +767,7 @@ export function WeeklyPlanWorkspace({
               : 'No work fitted this week — the decisions above are using the budget. Answering them is the fastest way to free it up.'}
           </p>
         ) : (
-          <ol style={{ display: 'grid', gap: 10, margin: 0, paddingLeft: 20 }}>
-            {work.map((item) => {
-              return (
-                <li key={item.id}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                    <span>
-                      <strong>{item.title}</strong>
-                      {item.overdue && <OverdueMark />}
-                    </span>
-                    <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600 }}>
-                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: `var(--viz-series-${kindSlot(item.kind) + 1})` }} />
-                        {item.kind}
-                      </span>
-                      <span style={{ ...styles.muted, fontSize: 12 }}>{workMeta(item)}</span>
-                    </span>
-                  </div>
-                </li>
-              )
-            })}
-          </ol>
+          <WeekWorkTable rows={work} />
         )}
       </section>
 

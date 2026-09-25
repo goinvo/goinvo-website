@@ -113,7 +113,7 @@ export function WeekGlance({ data, now = new Date() }: { data: WeekGlanceData; n
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 168px), 1fr))',
           gap: 12,
         }}
       >

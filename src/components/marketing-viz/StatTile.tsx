@@ -73,7 +73,7 @@ export function StatTile({
         style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}
       >
         <div style={{ lineHeight: 1 }}>
-          <span style={{ fontSize: 30, fontWeight: 650, letterSpacing: -0.5, color: 'var(--viz-ink)' }}>{value}</span>
+          <span style={{ fontSize: /\d/.test(value) ? 30 : 22, fontWeight: 650, letterSpacing: -0.5, color: 'var(--viz-ink)' }}>{value}</span>
           {unit ? <span style={{ fontSize: 14, marginLeft: 4, color: 'var(--viz-secondary)' }}>{unit}</span> : null}
         </div>
         {trend && trend.length > 1 ? <Sparkline points={trend} unit={trendUnit} /> : null}
