@@ -21,6 +21,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { SanityClient } from '@sanity/client'
 import { datasetForType } from './datasetRouting'
+import { usageFromAnthropic } from './modelLedger'
+import { recordModelCall } from './modelLedger.server'
 import { dataset as PUBLIC_DATASET } from '@/sanity/env'
 
 export const MARKETING_ALLOWED_CLAUDE_MODELS = [
@@ -84,6 +86,12 @@ export interface GenerateClaudeOptions {
   /** Enable the built-in live web_search server tool. */
   webSearch?: boolean
   timeoutMs?: number
+  /**
+   * Which part of the suite is spending. Recorded on the ledger so the bill can
+   * be attributed. Unset shows up as "unlabelled", which the spend view calls
+   * out rather than hides.
+   */
+  feature?: string
 }
 
 export interface ClaudeTextResult {
@@ -93,6 +101,15 @@ export interface ClaudeTextResult {
   /** Cited sources (title + url), preferred for display. */
   sources: { title: string; url: string }[]
   model: string
+  /**
+   * Why the model stopped. `max_tokens` means the answer was CUT OFF, not
+   * finished — callers that parse JSON out of this should treat it as a failure
+   * rather than try to repair a truncated object.
+   *
+   * Optional only so existing test doubles stay valid; the real path always
+   * sets it.
+   */
+  stopReason?: string | null
 }
 
 export async function generateClaudeText(opts: GenerateClaudeOptions): Promise<ClaudeTextResult> {
@@ -100,22 +117,51 @@ export async function generateClaudeText(opts: GenerateClaudeOptions): Promise<C
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured.')
   const model = marketingClaudeModel(opts.model)
   const client = new Anthropic({ apiKey, maxRetries: 1 })
+  const feature = opts.feature || 'unlabelled'
+  const startedAt = Date.now()
 
-  // Stream so an (optional) web_search loop can't trip an HTTP timeout. Adaptive
-  // thinking only — Opus 4.8 rejects temperature / top_p / budget_tokens.
-  const stream = client.messages.stream(
-    {
+  // Every Claude call in the suite comes through here, which is the whole
+  // reason the ledger hangs off this function rather than each caller: a new
+  // feature is metered the day it ships, without anyone remembering to add it.
+  let message: Awaited<ReturnType<ReturnType<typeof client.messages.stream>['finalMessage']>>
+  try {
+    // Stream so an (optional) web_search loop can't trip an HTTP timeout. Adaptive
+    // thinking only — Opus 4.8 rejects temperature / top_p / budget_tokens.
+    const stream = client.messages.stream(
+      {
+        model,
+        max_tokens: opts.maxTokens ?? 2600,
+        system: opts.system,
+        messages: [{ role: 'user', content: opts.user }],
+        ...(opts.webSearch
+          ? { tools: [{ type: 'web_search_20260209' as const, name: 'web_search' as const }] }
+          : {}),
+      },
+      { timeout: opts.timeoutMs ?? 120000 },
+    )
+    message = await stream.finalMessage()
+  } catch (error) {
+    // A failure is a call that happened and cost latency, so it belongs on the
+    // ledger too — otherwise a route that fails every time looks free.
+    await recordModelCall({
+      feature,
       model,
-      max_tokens: opts.maxTokens ?? 2600,
-      system: opts.system,
-      messages: [{ role: 'user', content: opts.user }],
-      ...(opts.webSearch
-        ? { tools: [{ type: 'web_search_20260209' as const, name: 'web_search' as const }] }
-        : {}),
-    },
-    { timeout: opts.timeoutMs ?? 120000 },
-  )
-  const message = await stream.finalMessage()
+      usage: { inputTokens: 0, outputTokens: 0 },
+      latencyMs: Date.now() - startedAt,
+      ok: false,
+      errorKind: (error as { constructor?: { name?: string } })?.constructor?.name || 'Error',
+    })
+    throw error
+  }
+
+  await recordModelCall({
+    feature,
+    model,
+    usage: usageFromAnthropic((message as unknown as { usage?: unknown }).usage),
+    latencyMs: Date.now() - startedAt,
+    ok: true,
+    stopReason: (message as unknown as { stop_reason?: string | null }).stop_reason ?? null,
+  })
 
   let text = ''
   const citedUrls: string[] = []
@@ -140,7 +186,13 @@ export async function generateClaudeText(opts: GenerateClaudeOptions): Promise<C
       }
     }
   }
-  return { text, citedUrls, sources, model }
+  return {
+    text,
+    citedUrls,
+    sources,
+    model,
+    stopReason: (message as unknown as { stop_reason?: string | null }).stop_reason ?? null,
+  }
 }
 
 export function parseJsonObject<T = Record<string, unknown>>(text: string): T | null {

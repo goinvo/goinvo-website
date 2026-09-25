@@ -313,6 +313,7 @@ export async function POST(request: NextRequest) {
     try {
       const model = await resolveMarketingModel(client, body.model)
       const result = await generateClaudeText({
+    feature: 'outreach-intake',
         system: prompts.system,
         user: prompts.user,
         model,
