@@ -191,6 +191,7 @@ async function propose(
 
   const model = await resolveMarketingModel(client)
   const result = await generateClaudeText({
+    feature: 'brand-voice-learn',
     model,
     maxTokens: 1_800,
     timeoutMs: learningAiTimeoutMs(),

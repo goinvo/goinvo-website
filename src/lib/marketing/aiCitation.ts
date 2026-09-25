@@ -498,6 +498,7 @@ export async function checkAiCitation(
 
   try {
     const { text, citedUrls } = await generateClaudeText({
+    feature: 'ai-citation',
       system: AI_CITATION_SYSTEM,
       user: safePrompt,
       webSearch: true,

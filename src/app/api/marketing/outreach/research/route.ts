@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
   ])
   const prompts = buildResearchPrompts(contact, offers, evidenceIndex, brandVoicePromptContext(brandVoice))
   const result = await generateClaudeText({
+    feature: 'outreach-research',
     system: prompts.system,
     user: prompts.user,
     model,
