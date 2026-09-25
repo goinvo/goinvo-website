@@ -19,27 +19,35 @@ import {
 } from '@/lib/marketing/ideaCapture'
 
 /**
- * The two real messages Marqueta missed on 2026-08-27, verbatim.
+ * The two messages Marqueta missed on 2026-08-27 — SYNTHETIC stand-ins.
+ *
+ * These are NOT the original messages. They are rewritten in the same SHAPE:
+ * the same proposal markers in the same positions, the same bullet count, the
+ * same statement-then-blockquote structure. The shape is what the filter keys
+ * on, so the regression value survives while a colleague’s actual words are
+ * not committed to a public repository. If you edit these, keep the markers:
+ * "What about:" over bullets, "might be a good", "any other ideas",
+ * "inexpensive experiments", and a draft that announces itself then quotes.
  *
  * Pinned as fixtures because they are the reason the filter changed: the first
  * set of markers was written from imagination rather than from how this team
  * actually talks, and a regression here means she stops catching the exact
  * thing she was built for.
  */
-const JULES_MERCH = [
+const MERCH_BURST = [
   [
     'What about:',
     '• custom printed patch of Open Data Wins',
     '• custom enamel pins of Charts Not Dogma',
     '• custom iron-on decal for shirts, Open Data Wins',
-    '... for Riverside Town Day',
+    '... for the autumn street fair',
   ].join('\n'),
   "Yup, we'll have some tshirts... but this might be a good compliment.",
   'any other ideas or designs or...?',
   'custom patches and stickers are good, inexpensive experiments!',
 ]
 
-const JULES_NEWSLETTER = [
+const NEWSLETTER_DRAFT = [
   'Next newsletter is for <https://example.org|example.org>.',
   '',
   'Here’s a draft:',
@@ -54,7 +62,7 @@ const JULES_NEWSLETTER = [
 
 describe('the messages Marqueta actually missed', () => {
   it('catches every part of the merch burst', () => {
-    for (const text of JULES_MERCH) {
+    for (const text of MERCH_BURST) {
       expect(classifyMessage(text).kind, text).toBe('idea')
     }
   })
@@ -62,31 +70,31 @@ describe('the messages Marqueta actually missed', () => {
   it('reads the newsletter as a draft, not an idea', () => {
     // Filing this as an "idea" would throw away the copy, which is the only
     // part that took any effort.
-    expect(classifyMessage(JULES_NEWSLETTER).kind).toBe('draft')
+    expect(classifyMessage(NEWSLETTER_DRAFT).kind).toBe('draft')
   })
 
   it('titles the bulleted list by its subject, not its first bullet', () => {
     // "custom printed patch of Open Data Wins" as a title hides the other
     // two ideas and the occasion that made them worth having.
-    const title = ideaTitleFrom(JULES_MERCH[0])
-    expect(title).toContain('Riverside Town Day')
+    const title = ideaTitleFrom(MERCH_BURST[0])
+    expect(title).toContain('the autumn street fair')
     expect(title).toContain('3 ideas')
   })
 
   it('keeps all three merch ideas, each on its own line', () => {
-    const idea = buildCapturedIdea({ text: JULES_MERCH[0], personName: 'Jules', channel: 'C1', ts: '1.1' })
-    expect(bulletsIn(JULES_MERCH[0])).toHaveLength(3)
-    expect(idea.summary).toContain('Sugar Kills')
+    const idea = buildCapturedIdea({ text: MERCH_BURST[0], personName: 'Ada', channel: 'C1', ts: '1.1' })
+    expect(bulletsIn(MERCH_BURST[0])).toHaveLength(3)
+    expect(idea.summary).toContain('Charts Not Dogma')
     expect(idea.summary).toContain('iron-on decal')
     expect(idea.category).toBe('product')
   })
 
   it('files the newsletter with its copy, dateless and unable to post itself', () => {
-    const draft = buildCapturedDraft({ text: JULES_NEWSLETTER, personName: 'Jules', channel: 'C1', ts: '1.1' })
+    const draft = buildCapturedDraft({ text: NEWSLETTER_DRAFT, personName: 'Ada', channel: 'C1', ts: '1.1' })
     expect(draft.title).toContain('example.org')
     expect(draft.contentType).toBe('newsletter')
     expect(draft.contentDraft).toContain('A shrug, printed on paper.')
-    expect(draft.contentDraft).toContain('fun gene back into expression')
+    expect(draft.contentDraft).toContain('put it back in')
     // The announcement is not part of the copy.
     expect(draft.contentDraft).not.toContain('Next newsletter is for')
     expect(draft.status).toBe('drafting')
@@ -111,19 +119,19 @@ describe('the delivered form, decoded', () => {
   })
 
   it('keeps no escaping in the copy it files', () => {
-    const delivered = JULES_NEWSLETTER.replace(/^>/gm, '&gt;')
-    const draft = buildCapturedDraft({ text: decodeSlackText(delivered), personName: 'Jules', channel: 'C1', ts: '1.1' })
+    const delivered = NEWSLETTER_DRAFT.replace(/^>/gm, '&gt;')
+    const draft = buildCapturedDraft({ text: decodeSlackText(delivered), personName: 'Ada', channel: 'C1', ts: '1.1' })
     expect(draft.contentDraft).toContain('A shrug, printed on paper.')
     expect(draft.contentDraft).not.toContain('&gt;')
     expect(draft.title).toBe('Next newsletter is for example.org')
-    const idea = buildCapturedIdea({ text: decodeSlackText('we should do a R&amp;D webinar with AT&amp;T'), personName: 'Jules', channel: 'C1', ts: '1.2' })
+    const idea = buildCapturedIdea({ text: decodeSlackText('we should do a R&amp;D webinar with AT&amp;T'), personName: 'Ada', channel: 'C1', ts: '1.2' })
     expect(idea.title).toBe('we should do a R&D webinar with AT&T')
   })
 })
 
 describe('quotedBlockIn', () => {
   it('reads the pasted copy out of a Slack blockquote', () => {
-    expect(quotedBlockIn(JULES_NEWSLETTER)).toContain('Look at any discharge form.')
+    expect(quotedBlockIn(NEWSLETTER_DRAFT)).toContain('Look at any discharge form.')
   })
 
   it('ignores a single stray quoted line', () => {
@@ -134,7 +142,7 @@ describe('quotedBlockIn', () => {
 
 describe('draftContentTypeFrom', () => {
   it('uses what the message says it is', () => {
-    expect(draftContentTypeFrom(JULES_NEWSLETTER)).toBe('newsletter')
+    expect(draftContentTypeFrom(NEWSLETTER_DRAFT)).toBe('newsletter')
     expect(draftContentTypeFrom("here's a draft of the reel script")).toBe('reel')
   })
 
@@ -145,7 +153,7 @@ describe('draftContentTypeFrom', () => {
 
 describe('draftTitleFrom and draftBodyFrom', () => {
   it('names the thing from the line that announced it', () => {
-    expect(draftTitleFrom(JULES_NEWSLETTER)).toBe('Next newsletter is for example.org')
+    expect(draftTitleFrom(NEWSLETTER_DRAFT)).toBe('Next newsletter is for example.org')
   })
 
   it('separates the copy from the preamble when there is no blockquote', () => {
@@ -243,7 +251,7 @@ describe('ideaCategoryFrom', () => {
 
   it('files a table at an event as growth, not product — the idea is being there', () => {
     // Was "Filed under product" because it mentions stickers.
-    expect(ideaCategoryFrom('we should do a merch table at Riverside Town Day, stickers and a tote')).toBe('growth')
+    expect(ideaCategoryFrom('we should do a merch table at the autumn street fair, stickers and a tote')).toBe('growth')
     expect(ideaCategoryFrom('what about a booth at the HIMSS conference')).toBe('growth')
     // A table that is not at an event is not a presence.
     expect(ideaCategoryFrom('we should add a table of offers to the report')).toBeUndefined()
@@ -321,7 +329,7 @@ describe('slackPermalink', () => {
 describe('buildCapturedIdea', () => {
   const idea = buildCapturedIdea({
     text: 'we should do a reel about the Heard project before the intern leaves',
-    personName: 'Shay',
+    personName: 'Ada',
     channel: 'C0MKTBOT000',
     ts: '1756300000.123456',
     workspace: 'goinvo',
@@ -341,7 +349,7 @@ describe('buildCapturedIdea', () => {
   })
 
   it('says who said it and links back to where', () => {
-    expect(idea.source).toContain('Shay')
+    expect(idea.source).toContain('Ada')
     expect(idea.relatedUrl).toContain('goinvo.slack.com')
   })
 
