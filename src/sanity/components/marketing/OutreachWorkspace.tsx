@@ -3826,23 +3826,6 @@ export function OutreachWorkspaceContent({
         </section>
       )}
 
-      <section style={{ ...styles.panel, padding: '10px 14px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ ...styles.small, lineHeight: 1.5 }}>
-            <strong>Writing voice:</strong>{' '}
-            {defaultBrandVoice
-              ? `${defaultBrandVoice.name} is the suite default. Every contact inherits it unless you choose another voice while editing that contact.`
-              : 'no active voice is saved yet, so outreach uses its neutral, quiet-confidence fallback.'}
-            <span style={styles.muted}> Voice changes wording only — never research facts, proof, scores, prices, or sources.</span>
-          </div>
-          {onOpenSettings && (
-            <button type="button" style={styles.button} onClick={onOpenSettings}>
-              {defaultBrandVoice ? 'Manage brand voices' : 'Set up a brand voice'}
-            </button>
-          )}
-        </div>
-      </section>
-
       {evidenceCount === 0 && (
         <section style={{ ...styles.panel, padding: '10px 14px', borderColor: 'rgba(214, 169, 63, 0.5)' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
@@ -4376,6 +4359,24 @@ export function OutreachWorkspaceContent({
           {renderPlanCard(adHocLogContact, 0, 'followUp')}
         </section>
       )}
+
+      {/* A setting, not a step: it sits with the contacts it writes for, not between the plan and the queue. */}
+      <section style={{ ...styles.panel, padding: '10px 14px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ ...styles.small, lineHeight: 1.5 }}>
+            <strong>Writing voice:</strong>{' '}
+            {defaultBrandVoice
+              ? `${defaultBrandVoice.name} is the suite default. Every contact inherits it unless you choose another voice while editing that contact.`
+              : 'no active voice is saved yet, so outreach uses its neutral, quiet-confidence fallback.'}
+            <span style={styles.muted}> Voice changes wording only — never research facts, proof, scores, prices, or sources.</span>
+          </div>
+          {onOpenSettings && (
+            <button type="button" style={styles.button} onClick={onOpenSettings}>
+              {defaultBrandVoice ? 'Manage brand voices' : 'Set up a brand voice'}
+            </button>
+          )}
+        </div>
+      </section>
 
       <section id="outreach-add-contacts" data-tour-id="autopilot-outreach-intake" style={styles.panel}>
         <PanelHeading

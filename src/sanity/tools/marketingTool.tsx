@@ -846,6 +846,9 @@ const MARKETING_PUBLIC_QUERY = `{
 }`
 
 import { clientForType } from '@/lib/marketing/datasetRouting'
+import { StatTile, type StatusLevel } from '@/components/marketing-viz/StatTile'
+import { ContentCoverage } from '@/components/marketing-viz/ContentCoverage'
+import { StudioVizScope } from '../components/marketing/StudioVizScope'
 
 export type StudioClient = ReturnType<typeof useClient>
 export type MarketingDocumentInput = { _type: string } & Record<string, unknown>
@@ -4362,8 +4365,9 @@ function MarketingDashboard({
           title="Health at a glance"
           description="Context for planning after the shared owner, blocker, and next move are clear."
         />
+        <StudioVizScope>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
-          <AnalyticsMetricCard
+          <HealthTile
             label="Ready content runway"
             value={fastRevenuePosture ? 'Deprioritized' : `${stats.contentRunwayDays} day${stats.contentRunwayDays === 1 ? '' : 's'}`}
             tone={fastRevenuePosture ? 'ok' : stats.contentRunwayDays === 0 ? 'risk' : stats.contentRunwayDays < 7 ? 'warn' : 'ok'}
@@ -4375,25 +4379,26 @@ function MarketingDashboard({
                 : 'no review-ready or scheduled items'
             }
           />
-          <AnalyticsMetricCard
+          <HealthTile
             label="Ready items"
             value={`${stats.upcoming30Items.length}`}
             tone={fastRevenuePosture ? 'ok' : stats.coveredDaysNext30 < 4 ? 'warn' : 'ok'}
             detail={`next 30 dates · ${stats.coveredDaysNext30} publishing date${stats.coveredDaysNext30 === 1 ? '' : 's'}`}
           />
-          <AnalyticsMetricCard
+          <HealthTile
             label="Active campaigns"
             value={`${stats.activeCampaigns}/${data.campaigns.length}`}
             tone={stats.activeCampaigns === 0 ? 'warn' : 'ok'}
             detail={`${stats.campaignsWithUpcomingContent} with upcoming content`}
           />
-          <AnalyticsMetricCard
+          <HealthTile
             label="Measurement"
             value={`${analyticsStats.readinessScore}%`}
             tone={analyticsStats.readinessScore === 0 ? 'risk' : analyticsStats.readinessScore < 50 ? 'warn' : 'ok'}
             detail={`${analyticsStats.connectedMeasurementTargets}/${analyticsStats.measurementTargets} campaigns, funnels, channels, posts & links connected`}
           />
         </div>
+        </StudioVizScope>
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
@@ -4580,38 +4585,34 @@ function MarketingDashboard({
       <section style={styles.panel}>
         <PanelHeading
           title="Channel coverage"
-          description="A quick read on whether active channels have review-ready or scheduled work in the next 30 dates."
+          description="Posts in review or scheduled, per channel per week — where the calendar runs dry, and when."
         />
         {stats.channelCoverage.length === 0 ? (
           <EmptyInline title="Add channels to see channel coverage." />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 10 }}>
-            {stats.channelCoverage.map((channel) => (
-              <article
-                key={channel.key}
-                style={{
-                  border: '1px solid var(--card-border-color)',
-                  borderRadius: 8,
-                  padding: 12,
-                  display: 'grid',
-                  gap: 4,
-                  background: channel.upcoming30Count === 0 ? 'rgba(227, 98, 22, 0.08)' : 'var(--card-bg-color)',
-                }}
-              >
-                <strong>{channel.title}</strong>
-                <div style={{ ...styles.small, ...styles.muted }}>
-                  {channel.upcoming30Count} ready item{channel.upcoming30Count === 1 ? '' : 's'} in the next 30 dates
-                </div>
-                <div style={{ ...styles.small, color: channel.upcoming30Count === 0 ? '#E36216' : '#007385', fontWeight: 800 }}>
-                  {channel.upcoming30Count === 0 ? 'Coverage gap' : 'Covered'}
-                </div>
-              </article>
-            ))}
-          </div>
+          <StudioVizScope>
+            <ContentCoverage items={data.calendarItems} channels={data.channels} />
+          </StudioVizScope>
         )}
       </section>
     </div>
   )
+}
+
+/**
+ * The Overview's health figures on the shared stat tile, so they read the way
+ * This week's do: the value, a status said with an icon and a word (never a
+ * coloured border alone), and one line of detail.
+ */
+function HealthTile({ label, value, detail, tone }: { label: string; value: string; detail?: string; tone: 'ok' | 'warn' | 'risk' }) {
+  const status = HEALTH_STATUS[tone]
+  return <StatTile label={label} value={value} detail={detail} status={status.level} statusLabel={status.label} />
+}
+
+const HEALTH_STATUS: Record<'ok' | 'warn' | 'risk', { level: StatusLevel; label: string }> = {
+  ok: { level: 'good', label: 'on track' },
+  warn: { level: 'warning', label: 'thin' },
+  risk: { level: 'critical', label: 'none' },
 }
 
 export function GuidedAutofillControls({
