@@ -325,6 +325,34 @@ Both real messages are pinned verbatim as fixtures in `tests/idea-capture.test.t
   unknown `?view=` makes the Studio restore the last-opened view from localStorage — the same
   bug that once sent "open the plan" to the Shop. Links point at `view=thisWeek`.
 
+### Marqueta drafts on request, grounded + cited (built 2026-09-02, landed 2026-09-25)
+
+**The grammar is `draft <format>: <topic>`, and the colon is required.** Formats: `outline`
+(→`article`), `script` (→`video`), `post` (→`socialPost`), `email` (→`email`). The draft is a
+STARTING POINT — filed on the calendar as `drafting` with **no date**, so it can never post itself.
+
+- **Why the colon exists.** Call prep already owns the bare verbs: `^outline`, `script`,
+  `draft|write … email|note|message` in `PREP_VERBS`. Generation and prep would otherwise fight
+  over the same words, and the loser does not fail — it becomes **unreachable**. Prep never needs
+  a colon, so requiring one makes the split total. Generation is checked **before** prep (it is
+  the narrower rule; prep's `^draft\s+email` would otherwise swallow the colon forms first).
+  `tests/marqueta-trigger-collision.test.ts` pins both directions plus a liveness check that every
+  advertised format is reachable — **add a case there before giving either feature a new phrase.**
+- **Grounding is the whole point.** The generator only sees VERIFIED `marketingOrgResearch`
+  (quotes already confirmed to appear in the page they cite), real case studies and the brand
+  voice. Citations are rendered from OUR verified set (`marquetaCitations.ts`), never trusted
+  from the model, so a draft cannot invent a source or a stat. Unverified research is a lead,
+  labelled "do not repeat as fact"; a `#:~:text=` deep link scrolls to the exact sentence.
+- **Pure core:** `marquetaGenerate.ts` (`detectGenerationRequest`, per-format prompts + parse,
+  `generatedToCalendarDraft`, `chunkForSlack`), `marquetaCitations.ts` (re-exports the one
+  `escapeSlackText` from `slackText`). Server: `marquetaGenerate.server.ts`. Card:
+  `buildGenerationResultBlocks` in `slackDelegation.ts`, which reuses the **same discard action
+  and value shape** as `buildDraftCaptureBlocks`, so one handler bins both kinds of draft.
+- **Slack timing:** slow (a model call), so the events route acks immediately and does the work
+  behind `after()` (`maxDuration = 120`). Idempotent on redelivery via `draftDocIdForMessage`.
+- **Headless twin:** `POST /api/marketing/generate` runs the same core, fail-closed without
+  `ANTHROPIC_API_KEY`. No new Slack scope.
+
 ## The weekly tick — the suite finally runs on its own (built 2026-09-02)
 
 Nothing was ever scheduled. The planner, digest, runway check-in, identity prompt and

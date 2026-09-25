@@ -1021,6 +1021,69 @@ export function buildDraftCaptureBlocks(input: {
   ]
 }
 
+/**
+ * What Marqueta posts when she has drafted something on request.
+ *
+ * A generated draft is not a guess the way a caught idea is — somebody asked for
+ * it — but it is still a STARTING POINT, so the card says so and the draft is
+ * filed with no date. The body leads, because it is why she was asked; the
+ * sources follow, each linking to the exact passage it quotes.
+ *
+ * The actions reuse the caught-draft plumbing exactly: the same discard action
+ * id and the same value shape `buildDraftCaptureBlocks` uses, so one handler
+ * bins both and there is never a second kind of draft to clean up after.
+ *
+ * Body and citations arrive pre-chunked, because a Slack section tops out at
+ * 3000 characters and a long script would be rejected whole.
+ */
+export function buildGenerationResultBlocks(input: {
+  formatLabel: string
+  title: string
+  bodyChunks: string[]
+  citationChunks?: string[]
+  sourceCount?: number
+  brandVoiceName?: string
+  channel: string
+  ts: string
+  studioUrl?: string
+}): Block[] {
+  const value = JSON.stringify({ c: input.channel, ts: input.ts }).slice(0, 1900)
+  const sources = input.sourceCount || 0
+  const meta = [
+    `Drafted ${recordText(input.formatLabel, 40)}`,
+    // Said out loud either way: a draft with nothing behind it must not look
+    // like a draft that was grounded.
+    sources
+      ? `${sources} verified ${sources === 1 ? 'source' : 'sources'} cited`
+      : 'no verified source fit, so nothing here is cited as fact',
+    input.brandVoiceName ? `voice: ${recordText(input.brandVoiceName, 40)}` : '',
+    'a starting point — filed with no date, it never posts itself',
+  ]
+    .filter(Boolean)
+    .join('  ·  ')
+
+  const blocks: Block[] = [section(`*${recordText(input.title || 'Untitled draft', 300)}*`), context(meta)]
+
+  for (const chunk of input.bodyChunks) {
+    if (chunk.trim()) blocks.push(section(chunk))
+  }
+
+  const citations = (input.citationChunks || []).filter((chunk) => chunk.trim())
+  if (citations.length) {
+    blocks.push({ type: 'divider' })
+    blocks.push(section('*Grounded in*'))
+    for (const chunk of citations) blocks.push(section(chunk))
+  }
+
+  blocks.push(
+    ...actionsRow([
+      button(MARKETING_ACTION.ideaDiscard, LABEL.DRAFT_DISCARD, value),
+      openViewButton('calendar', input.studioUrl || ''),
+    ]),
+  )
+  return blocks
+}
+
 /** Which message a Keep / Not-an-idea press refers to. */
 export function decodeIdeaValue(value: string | undefined): { channel: string; ts: string } | null {
   try {

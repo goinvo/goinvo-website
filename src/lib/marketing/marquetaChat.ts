@@ -38,6 +38,7 @@
  */
 
 import { classifyMessage } from './ideaCapture'
+import { detectGenerationRequest, type GenerationFormat } from './marquetaGenerate'
 import { askMarqueta } from './marquetaStyle'
 import { clipSlackText, escapeSlackText } from './slackText'
 
@@ -93,6 +94,15 @@ export type MarquetaIntent =
    */
   | { kind: 'prep'; text: string; target: string; format: 'call' | 'email' }
   | { kind: 'prepList' }
+  /**
+   * "draft outline: remote cardiac trials" — write me a first draft on a TOPIC.
+   *
+   * Deliberately not the same as `prep`, which is material for a named person's
+   * call. The two would otherwise fight over the same words, so generation is
+   * gated behind an explicit `draft <format>:` with a colon and prep keeps every
+   * bare form. See `detectGenerationRequest`.
+   */
+  | { kind: 'generate'; format: GenerationFormat; topic: string }
   /**
    * "Called Jane at Acme, left a voicemail". `text` is the whole message — it
    * is what happened, so it is the note and what the outcome is guessed from
@@ -1018,6 +1028,14 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
   }
   if (HELP_MORE.test(lower)) return { kind: 'help', more: true }
   if (HELP.test(lower)) return { kind: 'help' }
+
+  // Asking her to draft something on a topic. Checked BEFORE prep on purpose:
+  // several of prep's patterns ("^draft email", "^…script") would otherwise
+  // swallow the colon forms first. Generation is the narrower rule — it needs an
+  // explicit "draft <format>:" — so it looks first and yields everything else,
+  // which leaves prep every bare form it already owns.
+  const generation = detectGenerationRequest(text)
+  if (generation) return { kind: 'generate', format: generation.format, topic: generation.topic }
 
   const prep = detectPrep(plain, flat, typed)
   if (prep !== 'notPrep') return prep

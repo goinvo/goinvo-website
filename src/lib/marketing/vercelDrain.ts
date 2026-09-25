@@ -294,7 +294,7 @@ export function aggregateDrainEvents(events: DrainEvent[], options: AggregateOpt
     const eventName = event.type === 'pageview' ? 'page_view' : event.eventName
     if (!eventName) continue
 
-    const key = [dimensions.experimentId, dimensions.flagKey, dimensions.variant, dimensions.pagePath, eventName].join(' ')
+    const key = [dimensions.experimentId, dimensions.flagKey, dimensions.variant, dimensions.pagePath, eventName].join('\x00')
     const existing = grouped.get(key)
     if (existing) {
       existing.count += event.count
