@@ -42,11 +42,16 @@ import {
   CALL_OUTCOME_INPUT,
   decodeCallLogUndo,
   encodeCallLogUndo,
+  MARQUETA_ACTION,
   type CallLogUndo,
 } from './marquetaActions'
+import { LABEL, STATE_EMOJI, formatSlackDay, slackDayKey } from './marquetaStyle'
 import { buildInteractionEntry } from './outreach'
 import { OUTREACH_STATUS_OPTIONS, type OutreachStatus } from './outreachEnums'
-import { clipSlackText, escapeSlackText } from './slackText'
+import { SLACK_LIMITS, clipSlackText, escapeSlackText, slackMention } from './slackText'
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Block = Record<string, any>
 
 // ---- The outcomes --------------------------------------------------------
 
@@ -60,6 +65,12 @@ import { clipSlackText, escapeSlackText } from './slackText'
  *
  * "Pointed me to someone else" has no default follow-up on purpose: the next
  * call is to the person they named, not back to this one.
+ *
+ * `confirmation` is the same outcome as the room reads it in a receipt —
+ * "<@U> logged a voicemail for Jane Doe" — with `{who}` for the contact. It
+ * names the contact, never a pronoun: a gender guessed from a name is a guess,
+ * and a wrong one in front of the room is worse than none. `word` is the
+ * outcome as it sits mid-sentence ("Sounds like *not right now* —").
  */
 export const CALL_OUTCOMES: readonly {
   key: 'noAnswer' | 'voicemail' | 'emailed' | 'referred' | 'notNow' | 'interested' | 'meeting' | 'notAFit'
@@ -68,15 +79,17 @@ export const CALL_OUTCOMES: readonly {
   channel: 'phone' | 'email'
   defaultFollowUpDays: number | null
   progress: boolean
+  confirmation: string
+  word: string
 }[] = [
-  { key: 'noAnswer', label: 'No answer', status: 'contacted', channel: 'phone', defaultFollowUpDays: 2, progress: true },
-  { key: 'voicemail', label: 'Left a voicemail', status: 'contacted', channel: 'phone', defaultFollowUpDays: 3, progress: true },
-  { key: 'emailed', label: 'Sent an email', status: 'contacted', channel: 'email', defaultFollowUpDays: 5, progress: true },
-  { key: 'referred', label: 'Pointed me to someone else', status: 'contacted', channel: 'phone', defaultFollowUpDays: null, progress: true },
-  { key: 'notNow', label: 'Talked — not right now', status: 'dormant', channel: 'phone', defaultFollowUpDays: 60, progress: false },
-  { key: 'interested', label: 'Talked — interested', status: 'responded', channel: 'phone', defaultFollowUpDays: 3, progress: true },
-  { key: 'meeting', label: 'Meeting booked', status: 'meeting', channel: 'phone', defaultFollowUpDays: 1, progress: true },
-  { key: 'notAFit', label: 'Not a fit', status: 'closed', channel: 'phone', defaultFollowUpDays: null, progress: false },
+  { key: 'noAnswer', label: 'No answer', status: 'contacted', channel: 'phone', defaultFollowUpDays: 2, progress: true, confirmation: 'a call to {who} — no answer', word: 'no answer' },
+  { key: 'voicemail', label: 'Left a voicemail', status: 'contacted', channel: 'phone', defaultFollowUpDays: 3, progress: true, confirmation: 'a voicemail for {who}', word: 'a voicemail' },
+  { key: 'emailed', label: 'Sent an email', status: 'contacted', channel: 'email', defaultFollowUpDays: 5, progress: true, confirmation: 'an email to {who}', word: 'an email' },
+  { key: 'referred', label: 'Pointed me to someone else', status: 'contacted', channel: 'phone', defaultFollowUpDays: null, progress: true, confirmation: '{who} pointed us to someone else', word: 'a referral' },
+  { key: 'notNow', label: 'Talked — not right now', status: 'dormant', channel: 'phone', defaultFollowUpDays: 60, progress: false, confirmation: '{who} said not right now', word: 'not right now' },
+  { key: 'interested', label: 'Talked — interested', status: 'responded', channel: 'phone', defaultFollowUpDays: 3, progress: true, confirmation: '{who} is interested', word: 'interested' },
+  { key: 'meeting', label: 'Meeting booked', status: 'meeting', channel: 'phone', defaultFollowUpDays: 1, progress: true, confirmation: 'a meeting booked with {who}', word: 'a meeting booked' },
+  { key: 'notAFit', label: 'Not a fit', status: 'closed', channel: 'phone', defaultFollowUpDays: null, progress: false, confirmation: '{who} is not a fit', word: 'not a fit' },
 ]
 
 export type CallOutcomeKey = (typeof CALL_OUTCOMES)[number]['key']
@@ -295,6 +308,19 @@ export function buildContactLogWrite(input: ContactLogInput): ContactLogWrite {
   }
 }
 
+/**
+ * Days to a follow-up, moved off a weekend: a Saturday gains two days and a
+ * Sunday one, so it lands on the Monday. The day is the studio's
+ * (America/New_York), the one the caller will actually be looking at.
+ */
+function offTheWeekend(now: Date, days: number | null): number | null {
+  if (days === null) return null
+  const key = slackDayKey(new Date(now.getTime() + days * 86400000))
+  if (!key) return days
+  const weekday = new Date(`${key}T00:00:00Z`).getUTCDay()
+  return weekday === 6 ? days + 2 : weekday === 0 ? days + 1 : days
+}
+
 // ---- The one-press log from Slack ----------------------------------------
 
 const NOTES_MAX = 2000
@@ -312,6 +338,12 @@ const NOTES_MAX = 2000
  *   log records the touch and nothing else. Re-running the terminal branch
  *   would restamp the close date and overwrite the close reason — rewriting
  *   when a deal closed because somebody rang them afterwards.
+ *
+ * A follow-up that would land on a Saturday or a Sunday (in the studio's
+ * zone) moves to the Monday. "Left a voicemail" on a Thursday is three days
+ * out — a Sunday — and a call list that tells somebody to ring a prospect on
+ * a Sunday is one they stop trusting. Slack only: the Studio form shows the
+ * date it will set before it is saved, so it keeps its exact arithmetic.
  *
  * `reversible` is false when the Undo button could not carry enough to put
  * the contact back exactly (in practice: a close reason too long for Slack's
@@ -375,7 +407,7 @@ export function buildQuickCallLog(input: {
       outcome: outcome.label,
       intel: notes,
       nextStep: contact.nextStep || undefined,
-      followUpDays: resolveFollowUpDays(input.outcomeKey, input.followUp),
+      followUpDays: offTheWeekend(now, resolveFollowUpDays(input.outcomeKey, input.followUp)),
       now,
       key: input.key,
     })
@@ -497,7 +529,7 @@ export function buildCallLogUndoWrite(
   undo: CallLogUndo,
 ): { ok: true; set: Record<string, unknown>; unset: string[]; removeKey: string } | { ok: false; reason: string } {
   if (contact._id !== undo.contactId) {
-    return { ok: false, reason: 'That undo belongs to a different contact — change it in the Studio.' }
+    return { ok: false, reason: 'That undo belongs to a different contact — change it on Outreach.' }
   }
   const key = interactionKey(undo.interactionKey)
   const interactions = contact.interactions || []
@@ -505,7 +537,7 @@ export function buildCallLogUndoWrite(
     return { ok: false, reason: 'That call is no longer on the record — it may already have been undone.' }
   }
   if (interactionKey(interactions[interactions.length - 1]?._key) !== key) {
-    return { ok: false, reason: 'Something else was logged since — change it in the Studio' }
+    return { ok: false, reason: 'Something else was logged since — change it on Outreach' }
   }
 
   const priorStatus = undo.prior.status
@@ -514,7 +546,7 @@ export function buildCallLogUndoWrite(
   if (!closeCarried && isTerminal(priorStatus) && currentStatus !== priorStatus) {
     return {
       ok: false,
-      reason: `They were marked ${statusTitle(priorStatus)} before this call, and Slack can't put the closing details back — change it in the Studio.`,
+      reason: `They were marked ${statusTitle(priorStatus)} before this call, and Slack can’t put the closing details back — change it on Outreach.`,
     }
   }
 
@@ -560,6 +592,171 @@ export function buildCallLogUndoWrite(
   }
 
   return { ok: true, set, unset, removeKey: key }
+}
+
+// ---- Before a one-press log, and after it --------------------------------
+
+/**
+ * Would this outcome move the contact somewhere they would not want to be
+ * moved without a second look?
+ *
+ * A one-press log from a message is only safe while it can only help: a touch,
+ * or a step up the pipeline. It is not safe when the outcome sets the contact
+ * aside — Dormant ("not right now") or Closed ("not a fit") — or would leave
+ * them lower than they are. "Keen but after the budget" reads as not right
+ * now, and logging that in one press moved somebody who had REPLIED to
+ * Dormant for two months. Those go through the form, prefilled, so the person
+ * sees the move before it is made.
+ *
+ * Nothing changes on a contact already where the outcome would put them, or on
+ * a Won (a win is never undone by a call), so those need no confirmation.
+ */
+export function needsConfirmation(contact: Pick<ContactLogContact, 'status'>, outcomeKey: CallOutcomeKey): boolean {
+  const current = trimmed(contact?.status)
+  const outcome = outcomeFor(outcomeKey)
+  const after = resolveStatusAfter(current || undefined, outcome.status, outcome.progress)
+  if (after === current) return false
+  if (after === 'dormant' || isTerminal(after)) return true
+  return (PIPELINE_RANK[after] ?? -1) < (PIPELINE_RANK[current] ?? -1)
+}
+
+/** "in 2 months", "in a week", "in 3 days" — '' for no follow-up. */
+function inTime(days: number | null): string {
+  if (days === null || !Number.isFinite(days) || days <= 0) return ''
+  if (days % 30 === 0) return days === 30 ? 'in a month' : `in ${days / 30} months`
+  if (days % 7 === 0) return days === 7 ? 'in a week' : `in ${days / 7} weeks`
+  return days === 1 ? 'tomorrow' : `in ${days} days`
+}
+
+/** A contact's name, safe inside bold, italics or strikethrough in mrkdwn. */
+const labelText = (label: string) => clipSlackText(escapeSlackText(trimmed(label).replace(/[*_~`]/g, ' ').replace(/\s+/g, ' ') || 'them'), 200)
+
+/**
+ * What was logged, as it follows "logged": "a voicemail for Jane Doe", or
+ * "that Priya Patel said not right now" when the phrase opens with the name.
+ * `who` goes in as given — plain for a plain-text caller, escaped for mrkdwn.
+ *
+ * With no outcome — or one this code no longer knows — it is "the call with
+ * Jane Doe". That happens for real: Undo reads the outcome back off the
+ * interaction it removed, and a hand-written outcome (or one logged before a
+ * label was renamed) matches no key. Throwing there broke the redraw AFTER the
+ * Undo had succeeded, leaving a live Undo on a receipt already taken back.
+ */
+export function loggedPhrase(outcomeKey: CallOutcomeKey | undefined, who: string): string {
+  const template = CALL_OUTCOMES.find((outcome) => outcome.key === outcomeKey)?.confirmation
+  if (!template) return `the call with ${who}`
+  const phrase = template.replace('{who}', who)
+  return template.startsWith('{who}') ? `that ${phrase}` : phrase
+}
+
+/** The same, with the contact's name made safe for mrkdwn. */
+const confirmationPhrase = (outcomeKey: CallOutcomeKey | undefined, contactLabel: string) => loggedPhrase(outcomeKey, labelText(contactLabel))
+
+/**
+ * The question asked instead of a one-press log that `needsConfirmation`
+ * stopped — what the outcome would do, with the contact's name, no pronoun:
+ *
+ *   Sounds like *not right now* — that moves Priya Patel from Responded to
+ *   Dormant, with a follow-up in 2 months.
+ *
+ * mrkdwn, escaped. The caller puts the prefilled "Log it…" under it.
+ */
+export function confirmationPrompt(input: { contactLabel: string; outcomeKey: CallOutcomeKey; statusBefore?: string | null }): string {
+  const outcome = outcomeFor(input.outcomeKey)
+  const who = labelText(input.contactLabel)
+  const before = trimmed(input.statusBefore)
+  const after = resolveStatusAfter(before || undefined, outcome.status, outcome.progress)
+  const move = before && before !== after ? `moves ${who} from ${statusTitle(before)} to ${statusTitle(after)}` : `marks ${who} ${statusTitle(after)}`
+  const when = inTime(isTerminal(after) ? null : outcome.defaultFollowUpDays)
+  return `Sounds like *${outcome.word}* — that ${move}${when ? `, with a follow-up ${when}` : ''}.`
+}
+
+/**
+ * The line a logged call leaves for the room:
+ *
+ *   ✅ <@U> logged a voicemail for Jane Doe (Mass General Brigham). Status:
+ *   Contacted (was Researched). Next follow-up Mon 28 Sep.
+ *
+ * The status clause only when the log changed it, and the follow-up only when
+ * there is one. mrkdwn, escaped — it is also the notification text.
+ */
+export function callLogReceiptLine(input: {
+  presserId?: string
+  contactLabel: string
+  outcomeKey: CallOutcomeKey
+  statusBefore?: string | null
+  statusAfter?: string | null
+  followUpAt?: string | null
+  now: Date
+}): string {
+  const who = slackMention(trimmed(input.presserId) || undefined, 'Someone')
+  const before = trimmed(input.statusBefore)
+  const after = trimmed(input.statusAfter)
+  const status = after && after !== before ? ` Status: ${statusTitle(after)}${before ? ` (was ${statusTitle(before)})` : ''}.` : ''
+  const day = input.followUpAt ? formatSlackDay(input.followUpAt, input.now) : ''
+  const next = day ? ` Next follow-up ${day}.` : ''
+  return `${STATE_EMOJI.done} ${who} logged ${confirmationPhrase(input.outcomeKey, input.contactLabel)}.${status}${next}`
+}
+
+/** Block ids for the receipt, so an Undo press can tell it is looking at one. */
+export const CALL_LOG_RECEIPT_BLOCK = 'mq_call_log'
+export const CALL_LOG_RECEIPT_ACTIONS_BLOCK = 'mq_call_log_actions'
+
+/**
+ * The receipt, with the Undo that takes it back. Posted in the thread the call
+ * was reported in (or the modal was opened from); Undo redraws THIS message
+ * as `buildCallLogUndoneBlocks`, so no second message and no live Undo are
+ * left behind. No Undo button without a value — a button Slack would refuse
+ * takes the whole message down with it.
+ */
+export function buildCallLogReceiptBlocks(input: {
+  presserId?: string
+  contactLabel: string
+  outcomeKey: CallOutcomeKey
+  statusBefore?: string | null
+  statusAfter?: string | null
+  followUpAt?: string | null
+  undoValue?: string | null
+  now: Date
+}): Block[] {
+  const line = callLogReceiptLine(input)
+  const undo = trimmed(input.undoValue)
+  return [
+    { type: 'section', block_id: CALL_LOG_RECEIPT_BLOCK, text: { type: 'mrkdwn', text: clipSlackText(line, SLACK_LIMITS.sectionText) } },
+    ...(undo && undo.length <= SLACK_LIMITS.buttonValue
+      ? [
+          {
+            type: 'actions',
+            block_id: CALL_LOG_RECEIPT_ACTIONS_BLOCK,
+            elements: [
+              { type: 'button', action_id: MARQUETA_ACTION.callLogUndo, text: { type: 'plain_text', text: LABEL.UNDO, emoji: true }, value: undo },
+            ],
+          },
+        ]
+      : []),
+  ]
+}
+
+/**
+ * What the receipt becomes once Undo worked: struck through, with who took it
+ * back, and nothing left to press.
+ *
+ *   ~Logged a voicemail for Jane Doe~ — undone by <@U>
+ *   ~Logged the call with Jane Doe~ — undone by <@U>      (outcome unknown)
+ *
+ * `outcomeKey` is optional because `undoCallLog` cannot always name it (see
+ * `loggedPhrase`); the redraw must never be the step that fails.
+ */
+export function buildCallLogUndoneBlocks(input: { contactLabel: string; outcomeKey?: CallOutcomeKey; undoerId?: string }): Block[] {
+  const phrase = confirmationPhrase(input.outcomeKey, input.contactLabel)
+  const who = slackMention(trimmed(input.undoerId) || undefined, 'someone')
+  return [
+    {
+      type: 'section',
+      block_id: CALL_LOG_RECEIPT_BLOCK,
+      text: { type: 'mrkdwn', text: clipSlackText(`~Logged ${phrase}~ — undone by ${who}`, SLACK_LIMITS.sectionText) },
+    },
+  ]
 }
 
 // ---- The modal -----------------------------------------------------------

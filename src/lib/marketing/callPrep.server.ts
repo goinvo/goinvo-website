@@ -15,8 +15,8 @@
  *   DM, or as an ephemeral message in a channel — and it is the route that
  *   knows which. Keeping them out of the blocks here means no route can put
  *   them in a channel by forgetting to.
- * - Which buttons an outline carries. "Log how it went" only when there is a
- *   contact on file to log against; "Add them to outreach" only when there is
+ * - Which buttons an outline carries. "Log it…" only when there is a
+ *   contact on file to log against; "Add <Name> to outreach" only when there is
  *   nobody on file AND the add would actually produce a record (a free-mail
  *   address with no name is neither a name nor an organisation, and a button
  *   that can only fail is worse than none).
@@ -32,6 +32,7 @@ import {
   buildCallOutlineMessages,
   buildPrepCandidatesBlocks,
   buildPrepListBlocks,
+  clearlyFirst,
   composeCallOutline,
   newContactDocument,
   parsePrepRequest,
@@ -48,9 +49,11 @@ import {
 import { buildOutreachCallSheet } from './callSheet'
 import { followUpLine, followUpOrganization, followUpPersonLabel, listFollowUps, type FollowUpEntry } from './followUps'
 import { encodeContactRef, type ContactRef } from './marquetaActions'
+import { askMarqueta, countLabel, errorLine } from './marquetaStyle'
 import { rankCallPlan, type OutreachContact } from './outreach'
 import { getOutreachClient } from './outreachClient.server'
 import { escapeSlackText } from './slackText'
+import { studioViewUrl, type StudioContactAction } from './taskLinks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Block = Record<string, any>
@@ -120,25 +123,37 @@ export type PrepReply =
       first: Block[]
       /** The threaded follow-up: offer, voicemail, email draft, background. */
       second: Block[]
+      /** The notification: "Call prep: Jane Doe (Mass General Brigham)". */
       text: string
+      /** The thread message's notification: "Offer, voicemail and email draft for Jane Doe". */
+      threadText: string
       /** "Email: …" / "Phone: …" lines, for the caller to deliver privately. Never rendered into blocks. */
       contactDetails: string[]
       /** The contact the outline is about, when there is one on file. */
       contactId?: string
     }
   | { kind: 'candidates'; blocks: Block[]; text: string }
-  | { kind: 'text'; text: string }
+  /**
+   * `error`: the text is a failure (`errorLine`), meant for the person who
+   * asked rather than the room — the Error shape of the message design system.
+   */
+  | { kind: 'text'; text: string; error?: boolean }
 
 const clean = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim()
 
-const NEED_SOMEONE =
-  'Who is the call with? Give me a name or an organisation — for example `prep Sam Rivera at Acme`.'
-const READ_FAILED = 'I couldn’t reach the outreach records just now. The Studio’s Outreach tab has the same information.'
+const NEED_SOMEONE = `Who is the call with? Say ${askMarqueta('prep Sam Rivera at Acme')} — a name, an organisation, or both.`
+const READ_FAILED = errorLine('read the outreach records just now', 'The Studio’s Outreach tab has the same information.')
 
-/** Where "Open in Studio" goes. MUST name a view: an unknown or missing one restores whatever was open last. */
-function outreachStudioUrl(): string | undefined {
-  const base = clean(process.env.MARKETING_PUBLIC_BASE_URL).replace(/\/+$/, '')
-  return /^https?:\/\//i.test(base) ? `${base}/studio/marketing?view=outreach` : undefined
+/**
+ * Where "Open Outreach" lands: the Outreach tab with THIS contact open, and
+ * what to do there (`prep` shows the outline, `log` opens "How did it go?").
+ * Without a contact, the tab. '' without an absolute base URL — Slack refuses
+ * a whole message for one button url it cannot parse.
+ */
+export function outreachStudioUrl(contactId?: string, action: StudioContactAction = 'prep'): string {
+  return studioViewUrl(clean(process.env.MARKETING_PUBLIC_BASE_URL) || undefined, 'outreach', {
+    ...(clean(contactId) ? { contact: clean(contactId), contactAction: action } : {}),
+  })
 }
 
 /**
@@ -229,7 +244,7 @@ export async function prepCallFor(input: {
     data = input.data || (await loadPrepData())
   } catch (error) {
     console.error('[marqueta] prep read failed', error)
-    return { kind: 'text', text: READ_FAILED }
+    return { kind: 'text', text: READ_FAILED, error: true }
   }
 
   let request: PrepRequest | null = null
@@ -259,6 +274,22 @@ export async function prepCallFor(input: {
     return { kind: 'candidates', blocks, text: heading }
   }
 
+  // "prep Crossover Health" with two people there and nothing to choose
+  // between them: an outline for whoever sorts first alphabetically is prep
+  // for a call nobody decided to make. Ask which.
+  if (match.kind === 'organization' && match.contacts.length > 1 && !clearlyFirst(match.contacts)) {
+    const heading = `Who at ${match.organization}?`
+    const candidates = scrubPrepCandidates(
+      match.contacts.map((contact) => ({
+        label: listLabel(contact).label,
+        contactId: contact._id,
+        organization: clean(contact.organization) || match.organization,
+      })),
+    )
+    const blocks = buildPrepCandidatesBlocks(candidates, heading)
+    if (blocks.length) return { kind: 'candidates', blocks, text: escapeSlackText(heading) }
+  }
+
   const composed = composeCallOutline({
     match,
     research: data.research,
@@ -272,8 +303,15 @@ export async function prepCallFor(input: {
   // Out of the outline before anything renders it — see the header.
   const { contactDetails = [], ...outline } = composed
 
+  // An email-first outline's Log opens with "Sent an email" already chosen:
+  // that is the touch it asks for.
   const logRef = outline.contactId
-    ? encodeContactRef({ contactId: outline.contactId, organization: outline.organization, name: outline.personLabel })
+    ? encodeContactRef({
+        contactId: outline.contactId,
+        organization: outline.organization,
+        name: outline.personLabel,
+        ...(outline.mode === 'emailFirst' ? { outcome: 'emailed' } : {}),
+      })
     : undefined
 
   let addRef: string | undefined
@@ -286,23 +324,38 @@ export async function prepCallFor(input: {
     addRef = addRefFor({ name: typed?.name, organization, role: typed?.role, note: typed?.note }, input.now)
   }
 
-  const messages = buildCallOutlineMessages(outline, { studioUrl: outreachStudioUrl(), logRef, addRef })
+  const messages = buildCallOutlineMessages(outline, { studioUrl: outreachStudioUrl(outline.contactId), logRef, addRef })
   return {
     kind: 'outline',
     first: messages.first,
     second: messages.second,
     text: messages.text,
+    threadText: messages.threadText,
     contactDetails: contactDetails.filter((line) => clean(line)),
     ...(outline.contactId ? { contactId: outline.contactId } : {}),
   }
 }
 
 const REPLIED = new Set(['responded', 'meeting', 'opportunity'])
-const KNOWS_US = new Set(['hot', 'warm', 'cool'])
+const KNOWS_US = new Set(['hot', 'warm'])
 
-function temperatureOf(contact: Pick<PrepContact, 'status' | 'warmth'> | undefined): PrepListEntry['temperature'] {
+/**
+ * "They replied", "they know us", or cold — from what the record says about
+ * the RELATIONSHIP, never from the contact merely being on file with a date.
+ *
+ * Replied is a status only a conversation produces. "Knows us" is a hot or
+ * warm relationship, or a cool one that has actually been touched: "cool"
+ * means a re-introduction is needed, and on a contact nobody has ever
+ * contacted it is a guess from an import. The call list once labelled a
+ * never-contacted prospect "they know us", and the caller opened with a
+ * familiarity that did not exist.
+ */
+function temperatureOf(contact: Pick<PrepContact, 'status' | 'warmth' | 'interactions' | 'lastContactedAt'> | undefined): PrepListEntry['temperature'] {
   if (REPLIED.has(clean(contact?.status))) return 'replied'
-  if (KNOWS_US.has(clean(contact?.warmth).toLowerCase())) return 'knowsUs'
+  const warmth = clean(contact?.warmth).toLowerCase()
+  if (KNOWS_US.has(warmth)) return 'knowsUs'
+  const touched = (contact?.interactions || []).length > 0 || Boolean(clean(contact?.lastContactedAt))
+  if (warmth === 'cool' && touched) return 'knowsUs'
   return 'cold'
 }
 
@@ -337,22 +390,21 @@ function followUpDetail(entry: FollowUpEntry, now: Date): string {
  * how two people end up ringing the same prospect in one afternoon.
  *
  * The list is passed whole to the builder, which shows eight and counts the
- * rest, so "and 12 more on file" is a true number. Never throws.
+ * rest, so "and 12 more on file" is a true number. Never throws: a failed read
+ * comes back as its sentence with `error` set, for the asker alone.
  */
 export async function prepCallList(input: {
   now: Date
   resolveOwner?: (raw: string) => string
   personName?: string
-  /** The working mention for Marqueta (`marquetaHandle(botUserId)`), used in the "not on file" hint. */
-  handle?: string
   data?: PrepData
-}): Promise<{ blocks: Block[]; text: string }> {
+}): Promise<{ blocks: Block[]; text: string; error?: boolean }> {
   let data: PrepData
   try {
     data = input.data || (await loadPrepData())
   } catch (error) {
     console.error('[marqueta] call list read failed', error)
-    return { blocks: [], text: READ_FAILED }
+    return { blocks: [], text: READ_FAILED, error: true }
   }
 
   const resolve = (raw: string) => clean(input.resolveOwner ? input.resolveOwner(raw) : raw)
@@ -372,8 +424,12 @@ export async function prepCallList(input: {
   }
 
   // 1. Follow-ups: promises already made. Warmest first, overdue first within each.
+  // The temperature is read from the contact itself (`temperatureOf`), the
+  // same rule as every other line on this list.
+  const byId = new Map(data.contacts.map((contact) => [contact._id, contact]))
   const followUps = listFollowUps(data.contacts, { now: input.now, resolveOwner: input.resolveOwner })
     .filter((entry) => !person || !entry.ownerName || entry.ownerName.toLowerCase() === person)
+    .map((entry) => ({ ...entry, temperature: temperatureOf(byId.get(entry.contactId)) }))
     .map((entry, index) => ({ entry, index }))
     .sort((a, b) => TEMPERATURE_ORDER[a.entry.temperature] - TEMPERATURE_ORDER[b.entry.temperature] || a.index - b.index)
     .map(({ entry }) => entry)
@@ -405,7 +461,6 @@ export async function prepCallList(input: {
   }
 
   // 3. A verified reason to call an organisation we have people at.
-  const byId = new Map(data.contacts.map((contact) => [contact._id, contact]))
   const sheet = buildOutreachCallSheet({
     research: data.research,
     contacts: data.contacts.filter((contact) => mineOrNobody(contact.owner)),
@@ -426,14 +481,15 @@ export async function prepCallList(input: {
     })
   }
 
-  const who = clean(input.personName)
+  const who = escapeSlackText(clean(input.personName)).replace(/[*_~`]/g, '')
+  const count = countLabel(entries.length, 'call')
+  const overdue = followUps.filter((entry) => entry.overdue).length
+  // The first line is the notification, and the answer in one breath.
+  const summary = `${count} worth making${overdue ? `, ${overdue} overdue` : ''}`
   const blocks = buildPrepListBlocks(entries, {
-    heading: who ? `*Calls for ${who}*` : '*Calls worth making*',
-    handle: clean(input.handle) || 'me',
+    heading: who ? `*Calls for ${who}* — ${summary}` : `*Calls worth making* — ${summary}`,
   })
-  const text = entries.length
-    ? `${entries.length} ${entries.length === 1 ? 'call' : 'calls'} worth making${who ? ` for ${escapeSlackText(who)}` : ''}.`
-    : 'Nobody is on the call list right now.'
+  const text = entries.length ? `${who ? `Calls for ${who}` : 'Calls worth making'} — ${summary}` : 'Nobody’s on your list yet.'
   return { blocks, text }
 }
 
@@ -488,6 +544,6 @@ export async function addContactFromSlack(input: {
     return { ok: true, contactId, label, created: true, message: `Added ${label} to outreach.` }
   } catch (error) {
     console.error('[marqueta] add contact failed', error)
-    return { ok: false, message: 'I couldn’t add them just now. The Studio’s Outreach tab can.' }
+    return { ok: false, message: errorLine('add them just now', 'The Studio’s Outreach tab can.') }
   }
 }

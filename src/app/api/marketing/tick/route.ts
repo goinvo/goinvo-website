@@ -6,6 +6,7 @@ import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import { authorizeCron, cronDeniedStatus } from '@/lib/marketing/cronAuth'
 import { isoWeekKey } from '@/lib/marketing/weeklyPlan'
+import { countLabel, weekOfLabel } from '@/lib/marketing/marquetaStyle'
 import { checkWatchedDomains } from '@/lib/marketing/domainWatch.server'
 import { domainsWorthMentioning } from '@/lib/marketing/domainWatch'
 import {
@@ -37,6 +38,13 @@ import {
  *    while doing nothing is indistinguishable from a working one, which is the
  *    failure mode this repo keeps meeting.
  *
+ * And one handover: the week plan-week just planned is passed to the digest
+ * (`plan: { itemIds, decisionIds, theme, plannedMinutes, budgetMinutes }`), so
+ * the Monday plan in Slack lists the same work as This week in the Studio.
+ * The digest could recompute it, but only by re-reading every input the
+ * planner read — posture, availability, settings — which is how two copies of
+ * one plan drift apart.
+ *
  *   GET  /api/marketing/tick        (Vercel cron sends Authorization: Bearer CRON_SECRET)
  *   POST /api/marketing/tick?dryRun=1
  */
@@ -57,6 +65,35 @@ export const maxDuration = 300
  */
 function baseUrl(request: NextRequest): string {
   return new URL(request.url).origin
+}
+
+/** The planned week, as the digest takes it. */
+type PlanHandover = {
+  itemIds: string[]
+  decisionIds: string[]
+  theme: string | null
+  plannedMinutes: number | null
+  budgetMinutes: number | null
+}
+
+/**
+ * plan-week's response, cut down to what the digest reads. Ids only — the
+ * digest reads each task itself, so a title or owner that changed between the
+ * two calls is shown as it is now, not as it was a second ago.
+ */
+function planHandover(plan: Record<string, unknown>): PlanHandover {
+  const ids = (list: unknown) =>
+    (Array.isArray(list) ? list : [])
+      .map((entry) => String((entry as { id?: unknown })?.id ?? '').trim())
+      .filter(Boolean)
+  const minutes = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : null)
+  return {
+    itemIds: ids(plan.items),
+    decisionIds: ids(plan.decisions),
+    theme: typeof plan.theme === 'string' && plan.theme.trim() ? plan.theme.trim() : null,
+    plannedMinutes: minutes(plan.plannedMinutes),
+    budgetMinutes: minutes(plan.budgetMinutes),
+  }
 }
 
 async function callRoute(
@@ -102,18 +139,22 @@ async function run(request: NextRequest, dryRun: boolean) {
   //    the Studio's benefit — a cron pointed straight at it would compute the
   //    week, return 200, and persist nothing.
   let planned = false
+  let handover: PlanHandover | null = null
   try {
     const planUrl = `${origin}/api/marketing/plan-week${dryRun ? '?dryRun=1' : ''}`
     const result = await callRoute(planUrl, { method: 'POST', headers: auth })
     const plan = (result.body.plan || result.body) as Record<string, unknown>
     const items = Array.isArray(plan.items) ? plan.items.length : 0
     planned = result.ok
+    if (result.ok) handover = planHandover(plan)
+    const weekStart = typeof plan.weekStart === 'string' ? plan.weekStart : ''
+    const weekName = weekStart ? weekOfLabel(weekStart, new Date()).replace(/^Week of/, 'the week of') : week
     steps.push({
       name: 'plan',
       ok: result.ok,
       count: items,
       detail: result.ok
-        ? `${items} item(s) planned for ${week}.`
+        ? `${countLabel(items, 'item')} planned for ${weekName}.`
         : `plan-week returned ${result.status}: ${String(result.body.error || 'no detail')}`,
     })
   } catch (error) {
@@ -160,21 +201,27 @@ async function run(request: NextRequest, dryRun: boolean) {
       ok: !statuses.some((status) => status.level === 'urgent' || status.level === 'expired'),
       count: worth.length,
       detail: worth.length
-        ? `${worth.length} domain(s) need attention.`
-        : `${statuses.length} domain(s) checked, all clear.`,
+        ? `${countLabel(worth.length, 'domain')} ${worth.length === 1 ? 'needs' : 'need'} attention.`
+        : `${countLabel(statuses.length, 'domain')} checked, all clear.`,
     })
   } catch (error) {
     steps.push({ name: 'domains', ok: false, count: 0, detail: `domain check threw: ${String(error)}` })
   }
 
   // 4. Tell the team. Posted even when the plan did not persist — silence would
-  //    hide the breakage — but the digest is told to say so.
+  //    hide the breakage — but the digest is told to say so, and then shows
+  //    the open board rather than a plan the Studio does not have.
   try {
     const digestUrl = `${origin}/api/marketing/slack/digest${dryRun ? '?dryRun=1' : ''}`
     const result = await callRoute(digestUrl, {
       method: 'POST',
       headers: auth,
-      body: JSON.stringify({ planRecorded: dryRun ? true : planRecorded, week, domainNotes }),
+      body: JSON.stringify({
+        planRecorded: dryRun ? true : planRecorded,
+        week,
+        domainNotes,
+        ...(handover ? { plan: handover } : {}),
+      }),
     })
     // A digest that stands down because this week's is already posted is the
     // lock working (a duplicate cron delivery), not a failure — see

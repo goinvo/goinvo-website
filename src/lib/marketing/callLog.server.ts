@@ -31,11 +31,13 @@ import {
   alreadyLogged,
   buildCallLogUndoWrite,
   buildQuickCallLog,
+  CALL_OUTCOMES,
   type CallOutcomeKey,
   type ContactLogContact,
 } from './callLog'
 import { followUpPersonLabel, followUpStatusLabel } from './followUps'
 import type { CallLogUndo } from './marquetaActions'
+import { errorLine, formatSlackDay } from './marquetaStyle'
 import { getOutreachClient } from './outreachClient.server'
 
 type LoggedContact = ContactLogContact & {
@@ -49,7 +51,7 @@ type LoggedContact = ContactLogContact & {
 const CONTACT_FOR_LOG = `*[_type == "marketingContact" && _id == $id][0]{
   _id, _rev, name, email, organization, status, closedAt, closedValue, closeReason,
   followUpAt, lastContactedAt, attributionChannel, nextStep,
-  "interactions": interactions[]{ _key }
+  "interactions": interactions[]{ _key, outcome }
 }`
 
 export type CallLogResult = {
@@ -58,6 +60,8 @@ export type CallLogResult = {
   message: string
   /** Who the log is about — never an email address. */
   label: string
+  /** The contact's status BEFORE this log — for the receipt's "(was Researched)". */
+  statusBefore?: string
   statusAfter?: string
   followUpAt?: string
   undo?: CallLogUndo
@@ -70,22 +74,8 @@ export type CallLogResult = {
   needsForm?: boolean
 }
 
-const STUDIO_TIME_ZONE = 'America/New_York'
-
-/** "Mon 28 Sep", in the studio's zone — the day the caller will actually ring back. */
-function weekdayDate(iso: string | undefined): string {
-  if (!iso) return ''
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ''
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: STUDIO_TIME_ZONE,
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).formatToParts(date)
-  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || ''
-  return `${pick('weekday')} ${pick('day')} ${pick('month')}`
-}
+const SAVE_FAILED = errorLine('log that', 'The Studio’s Outreach tab can log it.')
+const UNDO_FAILED = errorLine('undo that', 'The Studio’s Outreach tab can change it.')
 
 function labelFor(contact: LoggedContact): string {
   return followUpPersonLabel({ name: contact.name, email: contact.email, organization: contact.organization })
@@ -120,14 +110,15 @@ export async function logCallFromSlack(input: {
   onlyIfReversible?: boolean
 }): Promise<CallLogResult> {
   const contactId = String(input.contactId || '').trim()
-  if (!contactId) return { ok: false, message: 'I don’t know which contact that was.', label: 'them' }
+  if (!contactId) return { ok: false, message: errorLine('log that', 'That button lost track of who it was for.'), label: 'them' }
 
   try {
     const client = getOutreachClient()
     let contact = await readContact(contactId)
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      if (!contact) return { ok: false, message: 'That contact is no longer on file.', label: 'them' }
+      if (!contact) return { ok: false, message: errorLine('log that', 'That contact is no longer on file.'), label: 'them' }
       const label = labelFor(contact)
+      const statusBefore = String(contact.status || '').trim()
       if (alreadyLogged(contact, input.key)) {
         return {
           ok: true,
@@ -151,7 +142,7 @@ export async function logCallFromSlack(input: {
         return {
           ok: false,
           needsForm: true,
-          message: `I’d rather you logged that one with the form — I couldn’t undo it cleanly from here.`,
+          message: 'That one needs the form — I couldn’t undo it cleanly from here.',
           label,
         }
       }
@@ -172,11 +163,15 @@ export async function logCallFromSlack(input: {
         break
       }
 
-      const followUp = weekdayDate(write.followUpAt)
+      const followUp = write.followUpAt ? formatSlackDay(write.followUpAt, input.now) : ''
       return {
         ok: true,
+        // The plain-text fallback, in the shape the interactions route still
+        // reads ("Logged: …", lowercased after a mention). The room's receipt
+        // is `buildCallLogReceiptBlocks` / `callLogReceiptLine` in callLog.ts.
         message: `Logged: ${write.outcomeLabel} with ${label}${followUp ? ` · follow-up ${followUp}` : ''}.`,
         label,
+        ...(statusBefore ? { statusBefore } : {}),
         statusAfter: write.statusAfter,
         ...(write.followUpAt ? { followUpAt: write.followUpAt } : {}),
         undo: write.undo,
@@ -184,17 +179,26 @@ export async function logCallFromSlack(input: {
     }
     return {
       ok: false,
-      message: 'Somebody else was updating that contact at the same moment. Try again, or log it in the Studio.',
+      message: errorLine('log that', 'Somebody else was updating that contact at the same moment — try again, or log it on Outreach.'),
       label: contact ? labelFor(contact) : 'them',
     }
   } catch (error) {
     console.error('[marqueta] call log failed', error)
-    return { ok: false, message: 'I couldn’t save that. The Studio’s Outreach tab can log it.', label: 'them' }
+    return { ok: false, message: SAVE_FAILED, label: 'them' }
   }
 }
 
 /** Interaction keys are ours (`slack-…`, `int-…`); anything else never reaches a GROQ path. */
 const SAFE_KEY = /^[A-Za-z0-9._-]{1,120}$/
+
+export type CallLogUndoResult = {
+  ok: boolean
+  message: string
+  /** Who the call was with — for the struck-through receipt (`buildCallLogUndoneBlocks`). */
+  label?: string
+  /** What was logged, read back off the interaction it removed; absent for a hand-written outcome. */
+  outcomeKey?: CallOutcomeKey
+}
 
 /**
  * Take back a quick log.
@@ -204,21 +208,25 @@ const SAFE_KEY = /^[A-Za-z0-9._-]{1,120}$/
  * that exact interaction by its key, conditional on the revision it read.
  * A conflict is re-read and re-checked once — if something was logged in the
  * meantime the rule says no, and the answer is no.
+ *
+ * On success it also says who the call was with and what was logged, read off
+ * the interaction it removed: the Undo button's value carries neither, and the
+ * receipt it redraws ("~Logged a voicemail for Jane Doe~") needs both.
  */
-export async function undoCallLog(undo: CallLogUndo, byName: string): Promise<{ ok: boolean; message: string }> {
+export async function undoCallLog(undo: CallLogUndo, byName: string): Promise<CallLogUndoResult> {
   const contactId = String(undo?.contactId || '').trim()
   if (!contactId || !SAFE_KEY.test(String(undo?.interactionKey || ''))) {
-    return { ok: false, message: 'That undo button is no longer valid — change it in the Studio.' }
+    return { ok: false, message: errorLine('undo that', 'That Undo button is no longer valid — change it on Outreach.') }
   }
   try {
     const client = getOutreachClient()
     let contact = await readContact(contactId)
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      if (!contact) return { ok: false, message: 'That contact is no longer on file.' }
+      if (!contact) return { ok: false, message: errorLine('undo that', 'That contact is no longer on file.') }
       const result = buildCallLogUndoWrite(contact, undo)
-      if (!result.ok) return { ok: false, message: result.reason }
+      if (!result.ok) return { ok: false, message: errorLine('undo that', result.reason) }
       if (!SAFE_KEY.test(result.removeKey)) {
-        return { ok: false, message: 'That undo button is no longer valid — change it in the Studio.' }
+        return { ok: false, message: errorLine('undo that', 'That Undo button is no longer valid — change it on Outreach.') }
       }
 
       let patch = client.patch(contact._id)
@@ -239,11 +247,20 @@ export async function undoCallLog(undo: CallLogUndo, byName: string): Promise<{ 
       const label = labelFor(contact)
       const back = undo.prior.status ? ` — back to ${followUpStatusLabel(undo.prior.status)}` : ''
       const who = String(byName || '').trim()
-      return { ok: true, message: `Undone${who ? ` by ${who}` : ''}: the call with ${label} is off the record${back}.` }
+      const removed = (contact.interactions || []).find((interaction) => interaction?._key === result.removeKey) as
+        | { outcome?: string | null }
+        | undefined
+      const outcomeKey = CALL_OUTCOMES.find((outcome) => outcome.label === String(removed?.outcome || '').trim())?.key
+      return {
+        ok: true,
+        message: `Undone${who ? ` by ${who}` : ''}: the call with ${label} is off the record${back}.`,
+        label,
+        ...(outcomeKey ? { outcomeKey } : {}),
+      }
     }
-    return { ok: false, message: 'Somebody else was updating that contact at the same moment. Change it in the Studio.' }
+    return { ok: false, message: errorLine('undo that', 'Somebody else was updating that contact at the same moment — change it on Outreach.') }
   } catch (error) {
     console.error('[marqueta] call log undo failed', error)
-    return { ok: false, message: 'I couldn’t undo that. The Studio’s Outreach tab can.' }
+    return { ok: false, message: UNDO_FAILED }
   }
 }

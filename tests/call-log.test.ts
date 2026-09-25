@@ -3,11 +3,16 @@ import { describe, expect, it } from 'vitest'
 
 import {
   alreadyLogged,
+  buildCallLogReceiptBlocks,
+  buildCallLogUndoneBlocks,
   buildCallLogUndoWrite,
   buildCallLogView,
   buildContactLogWrite,
   buildQuickCallLog,
+  callLogReceiptLine,
   CALL_OUTCOMES,
+  confirmationPrompt,
+  needsConfirmation,
   FOLLOW_UP_CHOICES,
   guessCallOutcome,
   isCallOutcomeKey,
@@ -31,12 +36,13 @@ import {
   decodeCallLogUndo,
   encodeCallLogMetadata,
   encodeCallLogUndo,
+  MARQUETA_ACTION,
   type CallLogUndo,
 } from '@/lib/marketing/marquetaActions'
 import { buildInteractionEntry } from '@/lib/marketing/outreach'
 import { LOG_STATUS_VALUES } from '@/lib/marketing/outreachEnums'
 
-import { expectValidSlackModal } from './support/slackBlocks'
+import { expectValidSlackBlocks, expectValidSlackModal } from './support/slackBlocks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Doc = { _id: string } & Record<string, any>
@@ -426,19 +432,20 @@ describe('buildQuickCallLog', () => {
   const quick = (outcomeKey: CallOutcomeKey, overrides: Partial<Parameters<typeof buildQuickCallLog>[0]> = {}) =>
     buildQuickCallLog({ contact: contact(), outcomeKey, by: 'Sam', now: NOW, key: 'slack-V123', ...overrides })
 
-  it('logs a voicemail: contacted, phone, three days out, next step carried forward', () => {
+  it('logs a voicemail: contacted, phone, three days out (off the weekend), next step carried forward', () => {
     const write = quick('voicemail', { notes: '  Mentioned the kit  ' })
     expect(write.statusAfter).toBe('contacted')
     expect(write.outcomeLabel).toBe('Left a voicemail')
+    // Three days from Thursday is Sunday: the follow-up lands on Monday.
     expect(write.set).toEqual({
       status: 'contacted',
       lastContactedAt: AT,
       attributionChannel: 'phone',
       nextStep: 'Send the pre-mortem kit',
-      followUpAt: inDays(3),
+      followUpAt: inDays(4),
     })
     expect(write.unset).toEqual([])
-    expect(write.followUpAt).toBe(inDays(3))
+    expect(write.followUpAt).toBe(inDays(4))
     expect(write.ifRevisionId).toBe('rev-9')
     expect(write.entry).toMatchObject({
       _key: 'slack-V123',
@@ -462,7 +469,8 @@ describe('buildQuickCallLog', () => {
     const write = quick('noAnswer', { contact: contact({ status: 'meeting' }) })
     expect(write.statusAfter).toBe('meeting')
     expect(write.set.status).toBe('meeting')
-    expect(write.followUpAt).toBe(inDays(2))
+    // Two days from Thursday is Saturday: Monday.
+    expect(write.followUpAt).toBe(inDays(4))
   })
 
   it('honours the follow-up choice over the outcome default', () => {
@@ -533,7 +541,7 @@ describe('buildQuickCallLog', () => {
     expect(write.statusAfter).toBe('responded')
     expect(write.set.status).toBe('responded')
     expect(write.unset).toEqual(expect.arrayContaining(['closedAt', 'closedValue', 'closeReason']))
-    expect(write.followUpAt).toBe(inDays(3))
+    expect(write.followUpAt).toBe(inDays(4))
     const after = applyWrite(lost, write)
     for (const field of CLOSED_FIELDS) expect(after).not.toHaveProperty(field)
     expect(quick('noAnswer', { contact: lost }).statusAfter).toBe('contacted')
@@ -580,6 +588,133 @@ describe('buildQuickCallLog', () => {
     expect(write.statusAfter).toBe('contacted')
     expect(write.unset).toEqual(['nextStep'])
     expect(write.ifRevisionId).toBeUndefined()
+  })
+})
+
+describe('follow-ups never land on a weekend (Slack only)', () => {
+  const contact: ContactLogContact = { _id: 'c1', status: 'contacted' }
+  const on = (iso: string, outcomeKey: CallOutcomeKey, followUp?: string) =>
+    buildQuickCallLog({ contact, outcomeKey, followUp, by: 'Sam', now: new Date(iso), key: 'k' }).followUpAt
+
+  it('moves a Saturday or Sunday to the Monday, in the studio’s time zone', () => {
+    // Thursday voicemail → three days → Sunday → Monday 28 Sep.
+    expect(on('2026-09-24T15:00:00.000Z', 'voicemail')).toBe('2026-09-28T15:00:00.000Z')
+    // Thursday no answer → two days → Saturday → Monday.
+    expect(on('2026-09-24T15:00:00.000Z', 'noAnswer')).toBe('2026-09-28T15:00:00.000Z')
+    // Friday "in a week" is a Friday: left alone.
+    expect(on('2026-09-25T15:00:00.000Z', 'voicemail', '7')).toBe('2026-10-02T15:00:00.000Z')
+    // 11pm Thursday in Boston is 3am Friday UTC: three days on is Sunday night in Boston, so Monday.
+    expect(on('2026-09-25T03:00:00.000Z', 'voicemail')).toBe('2026-09-29T03:00:00.000Z')
+  })
+
+  it('leaves the Studio’s own builder exactly as it was', () => {
+    const write = buildContactLogWrite({ contact, at: AT, statusAfter: 'contacted', channel: 'phone', followUpDays: 3, now: NOW })
+    expect(write.followUpAt).toBe(inDays(3))
+  })
+})
+
+describe('needsConfirmation', () => {
+  it('asks before an outcome sets a contact aside or back', () => {
+    // "keen but after the budget" reads as not right now: a contact who
+    // replied must not drop to Dormant in one press.
+    expect(needsConfirmation({ status: 'responded' }, 'notNow')).toBe(true)
+    expect(needsConfirmation({ status: 'new' }, 'notNow')).toBe(true)
+    expect(needsConfirmation({ status: 'contacted' }, 'notAFit')).toBe(true)
+    expect(needsConfirmation({ status: 'meeting' }, 'notAFit')).toBe(true)
+  })
+
+  it('does not ask when the log can only help, or changes nothing', () => {
+    for (const outcome of ['noAnswer', 'voicemail', 'emailed', 'referred', 'interested', 'meeting'] as const) {
+      expect(needsConfirmation({ status: 'researched' }, outcome), outcome).toBe(false)
+      expect(needsConfirmation({ status: 'meeting' }, outcome), outcome).toBe(false)
+    }
+    expect(needsConfirmation({ status: 'dormant' }, 'notNow')).toBe(false)
+    expect(needsConfirmation({ status: 'won' }, 'notAFit')).toBe(false)
+  })
+
+  it('says what the log would do, naming the contact — never a pronoun', () => {
+    expect(confirmationPrompt({ contactLabel: 'Priya Patel', outcomeKey: 'notNow', statusBefore: 'responded' })).toBe(
+      'Sounds like *not right now* — that moves Priya Patel from Responded to Dormant, with a follow-up in 2 months.',
+    )
+    expect(confirmationPrompt({ contactLabel: 'Sam <Rivera>', outcomeKey: 'notAFit', statusBefore: 'contacted' })).toBe(
+      'Sounds like *not a fit* — that moves Sam &lt;Rivera&gt; from Contacted to Closed.',
+    )
+    expect(confirmationPrompt({ contactLabel: 'Priya', outcomeKey: 'notNow' })).not.toMatch(/\b(?:her|him|she|he)\b/)
+  })
+})
+
+describe('the receipt a logged call leaves', () => {
+  const undoValue = encodeCallLogUndo({
+    contactId: 'marketingContact.jane',
+    interactionKey: 'slack-msg-C1-1.1',
+    prior: { status: 'researched', followUpAt: '', lastContactedAt: '', attributionChannel: '', nextStep: '' },
+  })
+
+  it('reads naturally, says the status move and the next follow-up, and carries Undo', () => {
+    const blocks = buildCallLogReceiptBlocks({
+      presserId: 'U1',
+      contactLabel: 'Jane Doe (Mass General Brigham)',
+      outcomeKey: 'voicemail',
+      statusBefore: 'researched',
+      statusAfter: 'contacted',
+      followUpAt: '2026-09-28T15:00:00.000Z',
+      undoValue,
+      now: NOW,
+    })
+    expectValidSlackBlocks(blocks)
+    expect(blocks[0].text.text).toBe(
+      ':white_check_mark: <@U1> logged a voicemail for Jane Doe (Mass General Brigham). Status: Contacted (was Researched). Next follow-up Mon 28 Sep.',
+    )
+    expect(blocks[1].elements).toEqual([
+      { type: 'button', action_id: MARQUETA_ACTION.callLogUndo, text: { type: 'plain_text', text: 'Undo', emoji: true }, value: undoValue },
+    ])
+  })
+
+  it('leaves the status clause out when nothing moved, and the follow-up when there is none', () => {
+    const line = callLogReceiptLine({ presserId: 'U1', contactLabel: 'Leo Park', outcomeKey: 'noAnswer', statusBefore: 'meeting', statusAfter: 'meeting', now: NOW })
+    expect(line).toBe(':white_check_mark: <@U1> logged a call to Leo Park — no answer.')
+    expect(callLogReceiptLine({ presserId: 'U1', contactLabel: 'Priya Patel', outcomeKey: 'notNow', statusBefore: 'responded', statusAfter: 'dormant', now: NOW })).toBe(
+      ':white_check_mark: <@U1> logged that Priya Patel said not right now. Status: Dormant (was Responded).',
+    )
+  })
+
+  it('has no Undo button without a value Slack would take', () => {
+    const blocks = buildCallLogReceiptBlocks({ presserId: 'U1', contactLabel: 'Jane', outcomeKey: 'voicemail', undoValue: '', now: NOW })
+    expect(blocks).toHaveLength(1)
+    expectValidSlackBlocks(blocks)
+  })
+
+  it('is struck through once undone, with nothing left to press', () => {
+    const blocks = buildCallLogUndoneBlocks({ contactLabel: 'Jane Doe', outcomeKey: 'voicemail', undoerId: 'U2' })
+    expectValidSlackBlocks(blocks)
+    expect(blocks).toEqual([{ type: 'section', block_id: 'mq_call_log', text: { type: 'mrkdwn', text: '~Logged a voicemail for Jane Doe~ — undone by <@U2>' } }])
+    expect(JSON.stringify(blocks)).not.toContain('button')
+  })
+
+  it('still redraws when the outcome cannot be named — the Undo already happened', () => {
+    // undoCallLog reads the outcome back off the interaction it removed; a
+    // hand-written or renamed outcome matches no key. This used to throw
+    // after the write, leaving a live Undo on a receipt already taken back.
+    for (const outcomeKey of [undefined, 'somethingRenamed' as never]) {
+      const blocks = buildCallLogUndoneBlocks({ contactLabel: 'Jane Doe', outcomeKey, undoerId: 'U2' })
+      expectValidSlackBlocks(blocks)
+      expect(blocks[0].text.text).toBe('~Logged the call with Jane Doe~ — undone by <@U2>')
+      expect(JSON.stringify(blocks)).not.toContain('button')
+    }
+  })
+
+  it('escapes the name and keeps it from ending the formatting it sits in', () => {
+    const text = callLogReceiptLine({ presserId: 'U1', contactLabel: '<!here> ~Jane~ *Doe*', outcomeKey: 'voicemail', now: NOW })
+    expect(text).toContain('&lt;!here&gt;')
+    expect(text).not.toContain('<!here>')
+    expect(buildCallLogUndoneBlocks({ contactLabel: 'Jane ~Doe~', outcomeKey: 'voicemail', undoerId: 'U2' })[0].text.text.match(/~/g)).toHaveLength(2)
+  })
+
+  it('has a confirmation phrase for every outcome, naming the contact', () => {
+    for (const outcome of CALL_OUTCOMES) {
+      expect(outcome.confirmation, outcome.key).toContain('{who}')
+      expect(outcome.confirmation).not.toMatch(/\b(?:her|him|she|he)\b/)
+    }
   })
 })
 
@@ -687,7 +822,7 @@ describe('buildCallLogUndoWrite', () => {
     const later = { ...logged, interactions: [...logged.interactions, { _key: 'int-later' }] }
     expect(buildCallLogUndoWrite(later, undo)).toEqual({
       ok: false,
-      reason: 'Something else was logged since — change it in the Studio',
+      reason: 'Something else was logged since — change it on Outreach',
     })
   })
 

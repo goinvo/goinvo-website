@@ -14,7 +14,10 @@ import { classifyMessage } from '@/lib/marketing/ideaCapture'
 import { addressesMarqueta } from '@/lib/marketing/marquetaChat'
 import { answerMarqueta, type MarquetaReply } from '@/lib/marketing/marquetaChat.server'
 import { captureFromMessage } from '@/lib/marketing/ideaCapture.server'
+import { MARQUETA_IDENTITY } from '@/lib/marketing/marquetaStyle'
 import { buildDraftCaptureBlocks, buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
+import { clipSlackText, decodeSlackText, escapeSlackText } from '@/lib/marketing/slackText'
+import { studioViewUrl } from '@/lib/marketing/taskLinks'
 
 export const dynamic = 'force-dynamic'
 
@@ -86,7 +89,7 @@ function watchedMarketingChannels(): string[] {
 }
 
 /** Her name and icon, set per message: the app is shared with the website chat. */
-const MARQUETA = { username: 'Marqueta', iconEmoji: ':chart_with_upwards_trend:' } as const
+const MARQUETA = MARQUETA_IDENTITY
 
 /**
  * Somebody spoke to Marqueta - by @-mentioning her, by starting with her name
@@ -138,13 +141,28 @@ async function handleMarquetaConversation(event: SlackMessageEvent, botUserId: s
  * than silence.
  *
  * The ephemeral goes to the person who asked and nobody else: it is where
- * contact details go when an outline is asked for in a channel.
+ * contact details go when an outline is asked for in a channel, and where a
+ * failure goes. A reply with nothing for the room (no text, no blocks) is a
+ * failure said privately: only the ephemeral is sent — in a DM as the reply
+ * itself, since the room is already private and an ephemeral there vanishes
+ * on reload.
  */
 async function deliverMarquetaReply(event: SlackMessageEvent, reply: MarquetaReply) {
   const channel = event.channel || ''
   const direct = isDirectMessage(channel)
   const parent = event.thread_ts || event.ts
   const replyThread = direct && !event.thread_ts ? undefined : parent
+
+  if (!reply.text.trim() && !reply.blocks?.length) {
+    const privately = String(reply.ephemeral || '').trim()
+    if (!privately) return
+    if (direct) {
+      await postSlackMessage({ channel, threadTs: replyThread, ...MARQUETA, unfurl: false, text: privately })
+    } else if (event.user) {
+      await postSlackEphemeral({ channel, user: event.user, text: privately, threadTs: replyThread, ...MARQUETA })
+    }
+    return
+  }
 
   const posted = await postSlackMessage({
     channel,
@@ -219,20 +237,23 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   // conversation about a task into a second copy of that task.
   if (event.thread_ts && event.thread_ts !== event.ts) return
 
-  // The RAW text, deliberately not decoded. `captureFromMessage` classifies
-  // the text it is given again and stores it, so this check is only a cheap
-  // gate in front of that one (it saves a users.info call per message). A gate
-  // that read DIFFERENT text could only ever disagree in one useful direction:
-  // turning away a message the stored-text classifier would have kept — and
-  // decoding does shorten text (`&amp;` → `&`), which can drop a message under
-  // the length floor. Same text in both places, so they cannot disagree, and
-  // what is stored is exactly what it always was.
-  const verdict = classifyMessage(event.text || '')
+  // DECODED, once, before anything reads it. Slack delivers a typed quote as
+  // `&gt;`, and draft detection looks for a line starting with `>`: a short
+  // pasted draft was classified as nothing, and a long one was caught only by
+  // the prose fallback — with a literal `&gt;` stored in the calendar copy and
+  // `AT&amp;T` in the idea. The conversation path decodes the same way
+  // (answerMarqueta), so a message reads the same whichever path it takes.
+  //
+  // The same decoded text goes to the cheap gate here and to
+  // `captureFromMessage`, which classifies it again and stores it: they cannot
+  // disagree, and the gate still saves a users.info call per message.
+  const text = decodeSlackText(event.text || '')
+  const verdict = classifyMessage(text)
   if (!verdict.capture) return
 
   const personName = (await getSlackUserDisplayName(event.user)) || 'Someone'
   const result = await captureFromMessage({
-    text: event.text || '',
+    text,
     personName,
     channel: event.channel || '',
     ts: event.ts || '',
@@ -248,24 +269,25 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   // quiet here.
   if (!isMarquetasOwnChannel(event.channel || '')) return
 
-  const studioUrl = process.env.MARKETING_PUBLIC_BASE_URL
-    ? `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=${result.kind === 'draft' ? 'calendar' : 'thisWeek'}`
-    : undefined
+  const base = process.env.MARKETING_PUBLIC_BASE_URL
+
+  // The notification says what happened and asks the one question: the title
+  // is the person's own words, so it is escaped like any record text.
+  const title = (value: string) => clipSlackText(escapeSlackText(value), 200)
 
   if (result.kind === 'draft' && result.draft) {
     await postSlackMessage({
       channel: event.channel || '',
       threadTs: event.ts,
-      username: 'Marqueta',
-      iconEmoji: ':chart_with_upwards_trend:',
+      ...MARQUETA,
       unfurl: false,
-      text: `Put a draft on the calendar: ${result.draft.title}`,
+      text: `Put on the calendar as a draft: ${title(result.draft.title)}`,
       blocks: buildDraftCaptureBlocks({
         title: result.draft.title,
         contentType: result.draft.contentType,
         channel: event.channel || '',
         ts: event.ts || '',
-        studioUrl,
+        studioUrl: studioViewUrl(base, 'calendar'),
       }),
     })
     return
@@ -275,16 +297,15 @@ async function handleMarketingChannelMessage(event: SlackMessageEvent) {
   await postSlackMessage({
     channel: event.channel || '',
     threadTs: event.ts,
-    username: 'Marqueta',
-    iconEmoji: ':chart_with_upwards_trend:',
+    ...MARQUETA,
     unfurl: false,
-    text: `Noted an idea: ${result.idea.title}`,
+    text: `Filed as an idea: ${title(result.idea.title)} — keep it?`,
     blocks: buildIdeaCaptureBlocks({
       title: result.idea.title,
       category: result.idea.category,
       channel: event.channel || '',
       ts: event.ts || '',
-      studioUrl,
+      studioUrl: studioViewUrl(base, 'thisWeek', { focus: 'caught' }),
     }),
   })
 }

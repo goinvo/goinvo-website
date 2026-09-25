@@ -928,7 +928,7 @@ async function runFullOutreachPipeline(page: Page, baseUrl: string) {
 
   await page
     .getByRole('region', { name: 'Recommended next outreach', exact: true })
-    .getByRole('button', { name: 'Log result for Pipeline Principal', exact: true })
+    .getByRole('button', { name: 'Log it for Pipeline Principal', exact: true })
     .click()
   await page.getByPlaceholder('Outcome of the call/message', { exact: true }).fill('Interested; send the diagnostic outline next Tuesday.')
   await page.getByRole('button', { name: 'Save log', exact: true }).click()
