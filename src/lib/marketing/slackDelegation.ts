@@ -296,8 +296,10 @@ export type DigestInput = {
   planRecorded?: boolean
   /** Registry warnings, plain text (domainWatch.ts). */
   renewals?: string[]
-  /** "Last week: 2 tasks done · Outreach: …", plain text. */
+  /** "Last week: 2 tasks done · Outreach: …", plain text — said when there are no numbers to lay out. */
   lastWeek?: string
+  /** Last week as figures: drawn as a two-column grid in place of `lastWeek`. */
+  lastWeekNumbers?: LastWeekNumbers
   needsOwner?: {
     /** Asked by name (ownerAsk.ts). Never trimmed: the one part addressed to a person. */
     asked?: DigestCard[]
@@ -330,6 +332,59 @@ export type DigestInput = {
   ideasTotal?: number
   unmappedOwners?: string[]
   studioBaseUrl?: string
+}
+
+/**
+ * Last week, counted: tasks done and outreach logged, with the touches set
+ * against the week before so the one trend that matters reads at a glance.
+ * `outreach` is null when the call log could not be read — then only the
+ * tasks are known, and the sentence form says just that.
+ */
+export type LastWeekNumbers = {
+  tasksDone: number
+  outreach: {
+    touches: number
+    people: number
+    replies: number
+    meetings: number
+    opportunities: number
+    won: number
+    /** Touches the week before, for the trend. */
+    previousTouches: number
+  } | null
+}
+
+const bold = (n: number) => `*${Math.max(0, Math.round(n)).toLocaleString('en-US')}*`
+
+/**
+ * "Last week, in numbers" as a section with four fields — Slack lays them out
+ * two by two, a stat grid in a medium that has no charts. Numbers lead and
+ * are bold; the words after them say what was counted; the trend is written
+ * out ("+3 on the week before"), never an arrow a screen reader names.
+ */
+export function lastWeekNumbersBlock(numbers: LastWeekNumbers): Block {
+  const outreach = numbers.outreach
+  if (!outreach) return context(`Last week: ${countLabel(numbers.tasksDone, 'task')} done`)
+  const delta = outreach.touches - outreach.previousTouches
+  const trend = delta === 0 ? 'same as the week before' : `${delta > 0 ? '+' : '−'}${Math.abs(delta)} on the week before`
+  const moved = [
+    outreach.replies ? `${bold(outreach.replies)} ${outreach.replies === 1 ? 'reply' : 'replies'}` : '',
+    outreach.meetings ? `${bold(outreach.meetings)} ${outreach.meetings === 1 ? 'meeting' : 'meetings'}` : '',
+    outreach.opportunities ? `${bold(outreach.opportunities)} scoped` : '',
+    outreach.won ? `${bold(outreach.won)} won` : '',
+  ].filter(Boolean)
+  const field = (text: string) => ({ type: 'mrkdwn', text: clipSlackText(text, 1900) })
+  return {
+    type: 'section',
+    block_id: 'mq_last_week',
+    text: { type: 'mrkdwn', text: '*Last week, in numbers*' },
+    fields: [
+      field(`${bold(numbers.tasksDone)} ${numbers.tasksDone === 1 ? 'task' : 'tasks'} done`),
+      field(`${bold(outreach.touches)} ${outreach.touches === 1 ? 'touch' : 'touches'} · ${trend}`),
+      field(`${bold(outreach.people)} ${outreach.people === 1 ? 'person' : 'people'} reached`),
+      field(moved.length ? moved.join(' · ') : `${bold(0)} conversations moved forward`),
+    ],
+  }
 }
 
 /** The groups that give way, in this order, when the message would pass Slack's fifty blocks. */
@@ -430,7 +485,8 @@ function composeDigest(input: DigestInput, trimmed: Set<TrimGroup>): Block[] {
   }
 
   const lastWeek = clean(input.lastWeek)
-  if (lastWeek) blocks.push(context(recordText(lastWeek, 600)))
+  if (input.lastWeekNumbers) blocks.push(lastWeekNumbersBlock(input.lastWeekNumbers))
+  else if (lastWeek) blocks.push(context(recordText(lastWeek, 600)))
 
   blocks.push(...workBlocks(input, trimmed))
   blocks.push(...outreachBlocks(input, trimmed))

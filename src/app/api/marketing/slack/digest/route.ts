@@ -13,6 +13,7 @@ import {
   type AskHistoryEntry,
   type DigestCard,
   type DigestFollowUp,
+  type LastWeekNumbers,
 } from '@/lib/marketing/slackDelegation'
 import { readRunway } from '@/lib/marketing/runway.server'
 import { buildMoneyAndDirectionBlocks } from '@/lib/marketing/strategyCheck'
@@ -637,6 +638,27 @@ async function handle(request: NextRequest) {
       }
     : null
   const doneLastWeek = typeof data?.doneLastWeek === 'number' ? data.doneLastWeek : 0
+  // The same week as figures, set against the week before it — the grid the
+  // message opens with. Without the call log only the tasks are known.
+  const lastWeekNumbers: LastWeekNumbers = {
+    tasksDone: doneLastWeek,
+    outreach:
+      strategy && lastWeekPulse
+        ? {
+            touches: lastWeekPulse.touches,
+            people: lastWeekPulse.people,
+            replies: lastWeekPulse.replies,
+            meetings: lastWeekPulse.meetings,
+            opportunities: lastWeekPulse.opportunities,
+            won: lastWeekPulse.won,
+            previousTouches: summarizeOutreach(strategy.contacts, {
+              from: new Date(weekStartMs - 14 * DAY_MS).toISOString(),
+              to: new Date(weekStartMs - 7 * DAY_MS).toISOString(),
+              now,
+            }).touches,
+          }
+        : null,
+  }
   const lastWeek = [
     `Last week: ${countLabel(doneLastWeek, 'task')} done`,
     lastWeekPulse ? describePulse(lastWeekPulse, 'Outreach') : '',
@@ -704,6 +726,7 @@ async function handle(request: NextRequest) {
     planRecorded,
     renewals: domainNotes,
     lastWeek,
+    lastWeekNumbers,
     needsOwner: { asked: askedCards, away: awayCards, exhausted: exhaustedCards, open: openCards },
     decisions: decisions.map((row) => card(row)),
     // The plan puts four questions in front of people; the rest are still

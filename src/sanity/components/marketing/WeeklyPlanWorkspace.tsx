@@ -9,6 +9,10 @@ import { isDecisionTask, type StudioContactAction, type StudioFocus } from '../.
 import { taskStatusWords } from '../../../lib/marketing/weeklyCheckIn'
 import { authenticatedMarketingRequest } from './authenticatedMarketingRequest'
 import { OutreachCallSheet } from './OutreachCallSheet'
+import { StudioVizScope } from './StudioVizScope'
+import { WeekGlance, type WeekGlanceData } from '../../../components/marketing-viz/WeekGlance'
+import { GLANCE_SLOTS } from '../../../lib/marketing/viz/weekGlance'
+import type { StoredPosture } from '../../../lib/marketing/runway'
 import { TASK_BANNER_ANSWER_MAX, taskBannerPatch } from './TaskFocusBanner'
 
 /**
@@ -75,7 +79,11 @@ export type WeekPlanResponse = {
   plannedMinutes: number
   overCommitted: boolean
   reserved?: { minutes: number; label: string } | null
-  followUps?: FollowUpParts[]
+  /** `dueDay` is the studio's day (YYYY-MM-DD) the follow-up falls on, for the follow-up strip. */
+  followUps?: Array<FollowUpParts & { dueDay?: string | null }>
+  /** The pulse and the runway as numbers, for the week-at-a-glance charts; null when their read failed. */
+  outreachStats?: WeekGlanceData['outreachStats']
+  runwayStored?: StoredPosture | null
   theme: string | null
   rationale: string | null
   items: PlanItem[]
@@ -94,16 +102,25 @@ export type CaughtIdea = {
   _createdAt?: string
 }
 
-const KIND_TONE: Record<string, { color: string; background: string }> = {
-  outreach: { color: '#8fd4ff', background: 'rgba(76,150,214,.18)' },
-  content: { color: '#f3c98b', background: 'rgba(200,140,50,.18)' },
-  decision: { color: '#f0a8a0', background: 'rgba(190,80,70,.18)' },
-  research: { color: '#c9b6f5', background: 'rgba(130,100,210,.18)' },
-  measurement: { color: '#9fe0c4', background: 'rgba(60,160,120,.18)' },
+/**
+ * A task's kind wears the same colour as its share of the hours in the meter
+ * above (weekGlance's fixed slots), so "outreach" is one colour everywhere on
+ * the page — the dot carries it, the word stays ink.
+ */
+function kindSlot(kind: string): number {
+  if (kind === 'outreach') return GLANCE_SLOTS.outreach
+  if (kind === 'decision') return GLANCE_SLOTS.decisions
+  return GLANCE_SLOTS.other
 }
 
-function toneFor(kind: string) {
-  return KIND_TONE[kind] || { color: '#c5ccda', background: 'rgba(120,130,150,.16)' }
+/** "overdue", said with a status mark rather than red text alone. */
+function OverdueMark({ label = 'overdue' }: { label?: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 600, marginLeft: 8, color: 'var(--card-fg-color)' }}>
+      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: 'var(--viz-serious)' }} />
+      {label}
+    </span>
+  )
 }
 
 const ownerKey = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -275,20 +292,20 @@ export function weekFocusTarget(focus: StudioFocus | undefined | null, sections:
 
 const styles = {
   panel: {
-    background: 'rgba(19,22,31,.55)',
-    border: '1px solid rgba(140,150,170,.22)',
+    background: 'var(--card-bg-color)',
+    border: '1px solid var(--card-border-color)',
     borderRadius: 12,
     padding: 20,
     scrollMarginTop: 16,
   } as const,
-  muted: { color: '#98a1b5', margin: 0 } as const,
+  muted: { color: 'var(--card-muted-fg-color)', margin: 0 } as const,
   button: {
     minHeight: 44,
     padding: '8px 14px',
     borderRadius: 8,
-    border: '1px solid rgba(140,150,170,.3)',
+    border: '1px solid var(--card-border-color)',
     background: 'transparent',
-    color: '#e6eaf2',
+    color: 'var(--card-fg-color)',
     cursor: 'pointer',
     font: 'inherit',
   } as const,
@@ -307,7 +324,7 @@ const styles = {
     width: '100%',
     minHeight: 76,
     boxSizing: 'border-box',
-    border: '1px solid rgba(140,150,170,.35)',
+    border: '1px solid var(--card-border-color)',
     borderRadius: 8,
     padding: '8px 10px',
     background: 'transparent',
@@ -439,11 +456,6 @@ export function WeeklyPlanWorkspace({
     void load('refresh')
   }, [refreshToken, load])
 
-  const fill = useMemo(() => {
-    if (!plan || plan.budgetMinutes <= 0) return 0
-    return Math.min(100, Math.round((plan.plannedMinutes / plan.budgetMinutes) * 100))
-  }, [plan])
-
   const owners = useMemo(() => (plan ? weekOwners(plan, owner) : []), [plan, owner])
   const shown = useMemo(() => (plan ? filterWeekByOwner(plan, owner) : null), [plan, owner])
   const split = useMemo(() => splitWeekDecisions(shown?.decisions || []), [shown])
@@ -525,7 +537,15 @@ export function WeeklyPlanWorkspace({
   }
 
   const now = new Date()
-  const remaining = plan.budgetMinutes - plan.plannedMinutes
+  // The whole team's week, whoever the list below is filtered to: the hours
+  // are one budget, and a filtered meter would look like spare time.
+  const glance: WeekGlanceData = {
+    ...plan,
+    weekStart: plan.weekStart,
+    followUps: (plan.followUps || []).map((row) => ({ ...row, dueDay: row.dueDay ?? null })),
+    outreachStats: plan.outreachStats ?? null,
+    runwayStored: plan.runwayStored ?? null,
+  }
   // The planned work, then the tasks somebody passed on in Slack: planned for
   // the week too, and waiting only for somebody to take them ("Needs someone").
   const work: Array<PlanRowStatus & { id: string; title: string; kind: string; minutes: number; overdue?: boolean; estimateSource?: string; question?: string | null }> = [
@@ -536,6 +556,7 @@ export function WeeklyPlanWorkspace({
   const whose = filtered ? `${owner.trim()}’s` : ''
 
   return (
+    <StudioVizScope style={{ color: 'inherit' }}>
     <div style={{ display: 'grid', gap: 16 }}>
       <section style={styles.panel}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -559,32 +580,10 @@ export function WeeklyPlanWorkspace({
           </button>
         </div>
 
-        <div style={{ marginTop: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
-            <strong>
-              {formatMinutes(plan.plannedMinutes)} planned of {formatMinutes(plan.budgetMinutes)}
-            </strong>
-            <span style={styles.muted}>
-              {plan.overCommitted
-                ? `${formatMinutes(Math.abs(remaining))} over`
-                : `${formatMinutes(remaining)} spare`}
-            </span>
-          </div>
-          <div
-            style={{ height: 10, borderRadius: 6, background: 'rgba(120,130,150,.2)', overflow: 'hidden' }}
-            role="img"
-            aria-label={`${formatMinutes(plan.plannedMinutes)} planned of ${formatMinutes(plan.budgetMinutes)}`}
-          >
-            <div
-              style={{
-                width: `${fill}%`,
-                height: '100%',
-                background: plan.overCommitted ? '#e0725f' : '#4dc4d6',
-              }}
-            />
-          </div>
+        <div style={{ marginTop: 20 }}>
+          <WeekGlance data={glance} now={now} />
           {plan.reserved && (
-            <p style={{ ...styles.muted, fontSize: 12, marginTop: 8 }}>
+            <p style={{ ...styles.muted, fontSize: 12, marginTop: 12 }}>
               Includes {plan.reserved.label} — kept free for people who already answered.
             </p>
           )}
@@ -609,8 +608,9 @@ export function WeeklyPlanWorkspace({
                   aria-pressed={active}
                   style={{
                     ...styles.button,
-                    borderColor: active ? '#4dc4d6' : 'rgba(140,150,170,.3)',
-                    background: active ? 'rgba(77,196,214,.14)' : 'transparent',
+                    borderColor: active ? 'var(--viz-series-1)' : 'var(--card-border-color)',
+                    boxShadow: active ? 'inset 0 0 0 1px var(--viz-series-1)' : undefined,
+                    fontWeight: active ? 650 : 400,
                   }}
                   onClick={() => setOwner(name)}
                 >
@@ -641,13 +641,16 @@ export function WeeklyPlanWorkspace({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   flexWrap: 'wrap',
-                  borderTop: '1px solid rgba(140,150,170,.16)',
+                  borderTop: '1px solid var(--card-border-color)',
                   paddingTop: 10,
                 }}
               >
                 <span style={{ flex: '1 1 320px', display: 'grid', gap: 2, minWidth: 0 }}>
                   <strong>Follow up with {followUp.who}</strong>
-                  <span style={{ fontSize: 13, color: followUp.overdue ? '#e0725f' : '#98a1b5' }}>
+                  <span style={{ fontSize: 13, color: followUp.overdue ? 'var(--card-fg-color)' : 'var(--card-muted-fg-color)' }}>
+                    {followUp.overdue ? (
+                      <span aria-hidden style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: 'var(--viz-serious)', marginRight: 6 }} />
+                    ) : null}
                     {[followUp.due, followUp.last, followUp.temperature].filter(Boolean).join(' · ')}
                   </span>
                   <span style={{ ...styles.muted, fontSize: 12 }}>{followUp.ownerName || 'Nobody has it'}</span>
@@ -690,7 +693,7 @@ export function WeeklyPlanWorkspace({
       {split.decisions.length > 0 && (
         <section
           id={WEEK_FOCUS_SECTION_ID.decisions}
-          style={{ ...styles.panel, borderColor: 'rgba(190,80,70,.35)' }}
+          style={{ ...styles.panel, borderLeft: '3px solid var(--viz-series-3)' }}
           aria-labelledby="week-decisions-title"
         >
           <h3 id="week-decisions-title" style={{ margin: '0 0 4px' }}>Decisions waiting</h3>
@@ -705,7 +708,7 @@ export function WeeklyPlanWorkspace({
                 <article
                   key={decision.id}
                   style={{
-                    border: '1px solid rgba(140,150,170,.2)',
+                    border: '1px solid var(--card-border-color)',
                     borderRadius: 9,
                     padding: '12px 14px',
                     display: 'grid',
@@ -768,7 +771,7 @@ export function WeeklyPlanWorkspace({
                         </button>
                       </div>
                       {answerError && (
-                        <p role="alert" style={{ margin: 0, fontSize: 12.5, color: '#d98a8a' }}>
+                        <p role="alert" style={{ margin: 0, fontSize: 12.5, color: 'var(--card-fg-color)', borderLeft: '3px solid var(--viz-critical)', paddingLeft: 8 }}>
                           {answerError}
                         </p>
                       )}
@@ -796,27 +799,16 @@ export function WeeklyPlanWorkspace({
         ) : (
           <ol style={{ display: 'grid', gap: 10, margin: 0, paddingLeft: 20 }}>
             {work.map((item) => {
-              const tone = toneFor(item.kind)
               return (
                 <li key={item.id}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                     <span>
                       <strong>{item.title}</strong>
-                      {item.overdue && (
-                        <span style={{ color: '#e0725f', fontSize: 12, marginLeft: 8 }}>overdue</span>
-                      )}
+                      {item.overdue && <OverdueMark />}
                     </span>
                     <span style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      <span
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: 999,
-                          color: tone.color,
-                          background: tone.background,
-                        }}
-                      >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600 }}>
+                        <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: `var(--viz-series-${kindSlot(item.kind) + 1})` }} />
                         {item.kind}
                       </span>
                       <span style={{ ...styles.muted, fontSize: 12 }}>{workMeta(item)}</span>
@@ -848,7 +840,7 @@ export function WeeklyPlanWorkspace({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     flexWrap: 'wrap',
-                    borderTop: '1px solid rgba(140,150,170,.16)',
+                    borderTop: '1px solid var(--card-border-color)',
                     paddingTop: 10,
                   }}
                 >
@@ -860,7 +852,7 @@ export function WeeklyPlanWorkspace({
                         {meta.url && (
                           <>
                             {meta.line ? ' · ' : ''}
-                            <a href={meta.url} target="_blank" rel="noreferrer" style={{ color: '#4dc4d6' }}>
+                            <a href={meta.url} target="_blank" rel="noreferrer" style={{ color: 'var(--viz-series-1)' }}>
                               view the message in Slack ↗
                             </a>
                           </>
@@ -884,7 +876,7 @@ export function WeeklyPlanWorkspace({
       )}
 
       {deferred.stuck.length > 0 && (
-        <section style={{ ...styles.panel, borderColor: 'rgba(227,98,22,.35)' }} aria-labelledby="week-stuck-title">
+        <section style={{ ...styles.panel, borderLeft: '3px solid var(--viz-serious)' }} aria-labelledby="week-stuck-title">
           <h3 id="week-stuck-title" style={{ margin: '0 0 4px' }}>Stuck</h3>
           <p style={{ ...styles.muted, fontSize: 13, marginBottom: 14 }}>
             Not planned until what is in the way moves. If you can move it, that frees the work.
@@ -896,7 +888,7 @@ export function WeeklyPlanWorkspace({
                 <span style={{ ...styles.muted, fontSize: 12 }}>
                   ({[entry.owner || 'Nobody has it', formatMinutes(entry.minutes)].join(' · ')})
                 </span>
-                <div style={{ color: '#ffb07a', fontSize: 12.5, marginTop: 2 }}>
+                <div style={{ color: 'var(--card-fg-color)', fontSize: 12.5, marginTop: 2 }}>
                   {entry.blocker ? `In the way: ${entry.blocker}` : 'Nobody wrote down what’s in the way.'}
                 </div>
               </li>
@@ -943,5 +935,6 @@ export function WeeklyPlanWorkspace({
         </p>
       )}
     </div>
+    </StudioVizScope>
   )
 }

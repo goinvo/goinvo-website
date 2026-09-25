@@ -21,6 +21,8 @@ import {
 } from '../../../lib/marketing/runway'
 import { Select, styles } from '../../tools/marketingTool'
 import { authenticatedMarketingRequest } from './authenticatedMarketingRequest'
+import { StudioVizScope } from './StudioVizScope'
+import { RunwayChart } from '../../../components/marketing-viz/RunwayChart'
 
 /**
  * Money and direction: the runway the whole strategy is derived from, asked
@@ -63,6 +65,9 @@ type RunwayState = {
 }
 
 type RunwayForm = 'signed' | 'changed'
+
+/** An error said in ink with a status rule beside it — red text alone fails contrast in one scheme or the other. */
+const ALERT_STYLE = { color: 'var(--card-fg-color)', borderLeft: '3px solid var(--viz-critical)', paddingLeft: 8 } as const
 
 /**
  * Months as people type them — "4.5", "about 4.5", "4,5 months" — or null.
@@ -320,9 +325,9 @@ export function MarketingFinancialPostureSetting({
         </div>
       )}
       {state?.resolved?.disagreement && <div><em>{state.resolved.disagreement}</em></div>}
-      {notice && <div role="status" style={{ color: '#7dd69e' }}>{notice}</div>}
-      {saveError && <div role="alert" style={{ color: '#d98a8a' }}>{saveError}</div>}
-      {loadError && <div role="alert" style={{ color: '#d98a8a' }}>{loadError}</div>}
+      {notice && <div role="status" style={{ color: 'var(--viz-delta-good)', fontWeight: 600 }}>{notice}</div>}
+      {saveError && <div role="alert" style={ALERT_STYLE}>{saveError}</div>}
+      {loadError && <div role="alert" style={ALERT_STYLE}>{loadError}</div>}
       {readOnly && <div style={styles.muted}>Read-only here — changing the runway needs an editor.</div>}
     </div>
   )
@@ -441,22 +446,30 @@ export function MarketingFinancialPostureSetting({
     </form>
   )
 
+  // The date, drawn: which posture the studio is in, the day it tips into the
+  // next one, and the day the runway ends. Absent when no date is recorded.
+  const chart = state?.stored ? <RunwayChart stored={state.stored} title="The runway, on a calendar" /> : null
+
   if (compact) {
     return (
-      <div style={{ ...styles.panel, boxShadow: 'none', padding: 12, borderColor: 'rgba(214, 169, 63, 0.5)', marginBottom: 12 }}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <div style={{ ...styles.small, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Money and direction
+      <StudioVizScope>
+        <div style={{ ...styles.panel, boxShadow: 'none', padding: 12, borderColor: 'rgba(214, 169, 63, 0.5)', marginBottom: 12 }}>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div style={{ ...styles.small, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Money and direction
+            </div>
+            {summary}
+            {chart}
+            {buttons}
+            {runwayForm}
           </div>
-          {summary}
-          {buttons}
-          {runwayForm}
         </div>
-      </div>
+      </StudioVizScope>
     )
   }
 
   return (
+    <StudioVizScope>
     <div style={{ ...styles.panel, boxShadow: 'none', padding: 12 }}>
       <div style={{ display: 'grid', gap: 10, maxWidth: 720 }}>
         <div>
@@ -468,6 +481,7 @@ export function MarketingFinancialPostureSetting({
           </div>
         </div>
         {!loaded ? <div style={{ ...styles.small, ...styles.muted }}>Reading the runway…</div> : summary}
+        {chart}
         {posture && <div style={{ ...styles.small, lineHeight: 1.5 }}>{posture.strategy}</div>}
         {buttons}
         {runwayForm}
@@ -495,5 +509,6 @@ export function MarketingFinancialPostureSetting({
         </details>
       </div>
     </div>
+    </StudioVizScope>
   )
 }

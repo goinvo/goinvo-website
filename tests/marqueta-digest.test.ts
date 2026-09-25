@@ -521,11 +521,20 @@ describe('asks', () => {
 // ── The rest of the message ─────────────────────────────────────────────────
 
 describe('what else the digest says', () => {
-  it('opens with its name, the week, and last week: tasks done and outreach logged', async () => {
+  it('opens with its name, the week, and last week in numbers: tasks done and outreach logged', async () => {
     const body = await dryRun()
     expect(body.blocks[0]).toMatchObject({ type: 'header', text: { text: 'Monday plan' } })
     expect(body.blocks[1].elements[0].text).toBe('Week of Mon 21 Sep · 4h 5m of open work for an 8h week')
-    expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done · Outreach: 1 touch (1 person) · 1 reply.')
+    // A stat grid in a medium with no charts: bold figures first, what was
+    // counted after, and the trend written out rather than drawn as an arrow.
+    expect(body.blocks[2]).toMatchObject({ type: 'section', block_id: 'mq_last_week', text: { text: '*Last week, in numbers*' } })
+    expect(body.blocks[2].fields.map((field: Block) => field.text)).toEqual([
+      '*3* tasks done',
+      '*1* touch · +1 on the week before',
+      '*1* person reached',
+      '*1* reply',
+    ])
+    expectValidSlackBlocks(body.blocks)
   })
 
   // "Outreach this week" owns the follow-ups, counted from now. Counted here
@@ -544,7 +553,9 @@ describe('what else the digest says', () => {
       ],
     })
     const body = await dryRun()
-    expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done · Outreach: 1 touch (1 person) · 1 reply.')
+    const grid = body.blocks[2].fields.map((field: Block) => field.text).join(' | ')
+    expect(grid).toBe('*3* tasks done | *1* touch · +1 on the week before | *1* person reached | *1* reply')
+    expect(grid).not.toMatch(/follow-up/)
   })
 
   // The setup offered only names that already owned open work — Juhan and
