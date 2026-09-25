@@ -48,7 +48,7 @@ const ranResult = (overrides: Record<string, unknown> = {}) => ({
   text: 'Thursday check-in.',
   taskCount: 3,
   followUpCount: 2,
-  detail: 'Check-in posted for 2026-W39: 3 tasks and 2 follow-ups across 2 people.',
+  detail: 'Check-in posted for the week of Mon 21 Sep: 3 tasks and 2 follow-ups across 2 people.',
   ...overrides,
 })
 
@@ -107,8 +107,7 @@ describe('running it', () => {
     const response = await GET(request())
     expect(response.status).toBe(200)
     const input = mocks.runWeeklyCheckIn.mock.calls[0][0]
-    expect(input).toMatchObject({ dryRun: false, force: false, botUserId: 'UBOT' })
-    expect(input.now).toBeInstanceOf(Date)
+    expect(input).toEqual({ dryRun: false, force: false, now: expect.any(Date) })
     const body = await response.json()
     expect(body).toMatchObject({ ok: true, posted: true, week: '2026-W39', dryRun: false, force: false })
   })
@@ -121,16 +120,19 @@ describe('running it', () => {
     expect(mocks.runWeeklyCheckIn.mock.calls[1][0]).toMatchObject({ dryRun: false, force: false })
   })
 
-  it('still runs when Slack cannot say who the bot is — the hint falls back to her name', async () => {
+  // Her hints are phrases people type ("Marqueta, my calls"), not a mention
+  // of her, so a run no longer depends on Slack saying who the bot is.
+  it('never asks Slack who the bot is — one less call that can fail before the post', async () => {
     mocks.getSlackBotUserId.mockRejectedValue(new Error('auth.test down'))
     const response = await GET(request())
     expect(response.status).toBe(200)
-    expect(mocks.runWeeklyCheckIn.mock.calls[0][0].botUserId).toBeUndefined()
+    expect(mocks.getSlackBotUserId).not.toHaveBeenCalled()
+    expect(mocks.runWeeklyCheckIn.mock.calls[0][0]).not.toHaveProperty('botUserId')
   })
 
   it('reports a stand-down as success: the claim doing its job is not a failure', async () => {
     mocks.runWeeklyCheckIn.mockResolvedValue(
-      ranResult({ posted: false, skipped: true, skipReason: 'alreadyPosted', detail: 'The 2026-W39 check-in was already posted.' }),
+      ranResult({ posted: false, skipped: true, skipReason: 'alreadyPosted', detail: 'The check-in for the week of Mon 21 Sep was already posted.' }),
     )
     const response = await GET(request())
     expect(response.status).toBe(200)
@@ -139,7 +141,7 @@ describe('running it', () => {
 
   it('reports a run that should have posted and did not as a failure', async () => {
     mocks.runWeeklyCheckIn.mockResolvedValue(
-      ranResult({ ok: false, posted: false, detail: 'Slack refused the 2026-W39 check-in.' }),
+      ranResult({ ok: false, posted: false, detail: 'Slack refused the check-in for the week of Mon 21 Sep.' }),
     )
     const response = await GET(request())
     expect(response.status).toBe(502)

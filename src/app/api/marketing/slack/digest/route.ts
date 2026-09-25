@@ -1,67 +1,43 @@
 import type { NextRequest } from 'next/server'
 import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
-import { getSlackBotUserId, postSlackMessage } from '@/lib/chat/slack'
+import { postSlackMessage } from '@/lib/chat/slack'
 import { buildOutreachCallSheet } from '@/lib/marketing/callSheet'
 import {
   ASK_HISTORY_KIND,
   askHistoryEntry,
-  buildIdeaReviewBlocks,
-  buildIdentityPromptBlocks,
-  buildRunwayBlocks,
-  buildTaskAttachment,
   buildWeeklyDigestBlocks,
-  encodeActionValue,
-  MAX_DIGEST_FOLLOW_UPS,
+  digestNotificationText,
+  MAX_OWNER_CARDS,
   readAskHistory,
   type AskHistoryEntry,
+  type DigestCard,
   type DigestFollowUp,
-  type DigestTask,
 } from '@/lib/marketing/slackDelegation'
 import { readRunway } from '@/lib/marketing/runway.server'
 import { buildMoneyAndDirectionBlocks } from '@/lib/marketing/strategyCheck'
 import { loadStrategySnapshot, type StrategyLoad } from '@/lib/marketing/strategyCheck.server'
 import { ideasNeedingReview } from '@/lib/marketing/ideaCapture.server'
 import { findReassignments, resolveOwnerName, type TeamMemberAvailability } from '@/lib/marketing/availability'
-import { DEFAULT_WEEKLY_MARKETING_HOURS, estimateOperationMinutes } from '@/lib/marketing/effort'
+import { DEFAULT_WEEKLY_MARKETING_HOURS, estimateOperationMinutes, resolveWeeklyMinutes } from '@/lib/marketing/effort'
 import { getMarketingWriteClientFor } from '@/lib/marketing/client'
 import { getOutreachClient, isOutreachClientConfigured } from '@/lib/marketing/outreachClient.server'
-import { askableTeam, slackIdForOwner, TEAM_AVAILABILITY_PROJECTION, tidyAvailability } from '@/lib/marketing/team.server'
-import {
-  askMentionsText,
-  buildAskBlocks,
-  proposeOwnerAsks,
-  type AskTask,
-  type AskTeamMember,
-  type OwnerAsk,
-} from '@/lib/marketing/ownerAsk'
+import { askableTeam, marketingTeamNames, slackIdForOwner, TEAM_AVAILABILITY_PROJECTION, tidyAvailability } from '@/lib/marketing/team.server'
+import { proposeOwnerAsks, type AskTask, type AskTeamMember, type OwnerAsk } from '@/lib/marketing/ownerAsk'
 import { DIGEST_HEARTBEAT_DOC_ID } from '@/lib/marketing/heartbeat'
 import { absencesOn, claimWeek, recordWeekRun, utcIsoWeekKey } from '@/lib/marketing/weeklyCheckIn.server'
 import { followUpLine, listFollowUps, type FollowUpContact } from '@/lib/marketing/followUps'
-import { checkInTaskBlockId, encodeContactRef, MARQUETA_ACTION } from '@/lib/marketing/marquetaActions'
+import { encodeContactRef } from '@/lib/marketing/marquetaActions'
+import { countLabel, MARQUETA_IDENTITY, weekOfLabel } from '@/lib/marketing/marquetaStyle'
 import { describePulse, summarizeOutreach } from '@/lib/marketing/outreachPulse'
-import {
-  canTransitionMarketingOperation,
-  MARKETING_OPERATION_STATUSES,
-  MARKETING_OPERATION_TYPE,
-  type MarketingOperationStatus,
-} from '@/lib/marketing/operations'
-import { isDecisionTask } from '@/lib/marketing/weeklyCheckIn'
-import { clipSlackText, escapeSlackText, marquetaHandle, SLACK_LIMITS } from '@/lib/marketing/slackText'
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Block = Record<string, any>
+import { MARKETING_OPERATION_TYPE, WEEKLY_PLAN_SOURCE_PREFIX } from '@/lib/marketing/operations'
+import { escapeSlackText } from '@/lib/marketing/slackText'
+import { studioTaskUrl } from '@/lib/marketing/taskLinks'
+import { buildTaskCard, isDecisionTask, type CheckInTask, type TaskCardOptions } from '@/lib/marketing/weeklyCheckIn'
 
 /**
- * The weekly-plan record is itself a marketingOperation, so it arrives with the
- * work. Delegating "this week's plan" to a person is nonsense, and it showed up
- * in the digest owned by "someone".
- */
-const PLAN_SOURCE_PREFIX = 'weekly-plan/'
-
-/**
- * Post the week's marketing plan to Slack, with the buttons that make it a
- * delegation rather than an announcement.
+ * Post the Monday plan to Slack, with the buttons that make it a delegation
+ * rather than an announcement.
  *
  * Fail-closed twice over: without Slack credentials nothing is posted, and
  * `?dryRun=1` returns the exact blocks it WOULD send — and writes nothing, not
@@ -84,27 +60,18 @@ const PLAN_SOURCE_PREFIX = 'weekly-plan/'
  * stamped with the week it was posted in, and an ask from this week is shown
  * again to the same person and recorded nothing (see `weeklyAsks`).
  *
- * What the message carries, top to bottom, and why each part is where it is:
+ * WHICH work it shows is the planned week, when there is one. The tick passes
+ * what plan-week just recorded (`plan: { itemIds, decisionIds, … }`), and
+ * "Needs an owner" and "Decisions waiting" are drawn from exactly those ids —
+ * so the Monday plan and This week list the same work. Recomputing the plan
+ * here would need every input plan-week reads (posture, availability,
+ * settings), which is how two copies of one plan drift. Without a plan (a
+ * manual post, or a week whose plan did not save) it shows the open board,
+ * and says so.
  *
- *   - How last week went (tasks done, outreach logged) and any post going out
- *     this week with no draft — one line each, before anything asks for work.
- *   - The ASKS: an unclaimed task, a named person, "could you take this one?".
- *     An unowned task listed under "anyone" is asking the whole room, which is
- *     asking no one; but setting an owner on somebody's behalf is how a plan
- *     loses the team's trust. So Marqueta asks, by name, and the person
- *     decides (ownerAsk.ts). Top-level blocks and top-level `text`, because the
- *     task cards are attachments, and Slack builds the notification from `text`
- *     — a mention that only lives in an attachment reaches nobody's phone.
- *   - Tasks two people have already been asked about: offered as "drop it?",
- *     because the honest next question is whether they are worth doing.
- *   - Who to call and why now, each with "Prep this call"; follow-ups owed to
- *     people who already answered, with Prep and Log.
- *   - Money and direction — only when something is due.
+ * The ORDER of what it says is `buildWeeklyDigestBlocks`'s; this route only
+ * reads the records, decides who to ask, and draws each task's card.
  */
-
-/** The assistant's name in the Studio, and now in Slack. */
-const MARQUETA_NAME = 'Marqueta'
-const MARQUETA_ICON = ':chart_with_upwards_trend:'
 
 /**
  * Her own room, and only her own room.
@@ -119,15 +86,11 @@ const marketingChannelId = () => String(process.env.SLACK_MARKETING_CHANNEL_ID |
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/** Task cards the digest renders. Asks are proposed over exactly these, so nobody is asked about a task they cannot see. */
-const RENDERED_TASKS = 8
 /** Three @-mentions in one message reads as a pile-on (ownerAsk.ts). */
 const MAX_ASKS_PER_PERSON = 2
-/** Tasks offered as "drop it?" after two asks, and away notices, before the rest are counted instead of shown. */
-const MAX_EXHAUSTED_SHOWN = 3
-const MAX_AWAY_SHOWN = 3
 const MAX_CALL_SHEET = 3
-const MAX_UNDRAFTED_NAMED = 3
+/** The planned week names at most this many tasks; anything past it is not a plan anyone reads. */
+const MAX_PLANNED_IDS = 60
 const DAY_MS = 86_400_000
 
 /**
@@ -138,19 +101,38 @@ const DAY_MS = 86_400_000
  */
 const PASSED_BY = /^(.+?)\s+passed on this\b/i
 
+/** Every field a task card, an ask and a stuck line read — one projection for both task lists. */
+const OPERATION_PROJECTION = `{
+      _id, title, ownerName, suggestedOwner, ownerSlackUserId, estimatedMinutes, whyNow, kind, status,
+      priority, sourceKey, dueAt, humanQuestion, blocker, targetView,
+      "askHistory": askHistory[]{ slackUserId, at, week, kind }
+    }`
+
+/**
+ * Undated work sorts last. An operation created without a date stores `dueAt:
+ * ""` (older records; `normalizeMarketingOperationInput` now leaves it out),
+ * and `coalesce` keeps "" — which sorts ahead of every real date, so undated
+ * desk tasks pushed overdue work out of a capped read.
+ */
+const DUE_AT_ORDER = `select(defined(dueAt) && dueAt != "" => dueAt, "9999")`
+
+/**
+ * `operations` is the open board (stuck work included — it used to vanish from
+ * the Monday plan, the one week somebody most needed to see it). `planned` is
+ * the planned week by id, read on its own so a planned task can never fall off
+ * the end of the board's first forty.
+ */
 const DATA_QUERY = `{
   "operations": *[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
-    && status in ["queued", "working", "needsHuman"]
+    && status in ["queued", "working", "needsHuman", "blocked"]
     && !string::startsWith(coalesce(sourceKey, ""), $planPrefix)]
-    | order(coalesce(dueAt, "9999") asc)[0...40]{
-      _id, title, ownerName, suggestedOwner, ownerSlackUserId, estimatedMinutes, whyNow, kind, status,
-      priority, sourceKey, dueAt, humanQuestion,
-      "askHistory": askHistory[]{ slackUserId, at, week, kind }
-    },
+    | order(${DUE_AT_ORDER} asc)[0...40]${OPERATION_PROJECTION},
+  "planned": *[_type == "${MARKETING_OPERATION_TYPE}" && _id in $plannedIds && !(_id in path("drafts.**"))
+    && !(status in ["done", "dismissed"])]${OPERATION_PROJECTION},
   "owned": *[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
     && !(status in ["done", "dismissed"]) && defined(ownerName) && ownerName != ""
     && !string::startsWith(coalesce(sourceKey, ""), $planPrefix)
-    && (!defined(dueAt) || dateTime(dueAt) < dateTime($weekEnd))]{
+    && (!defined(dueAt) || dueAt == "" || dateTime(dueAt) < dateTime($weekEnd))]{
       ownerName, estimatedMinutes, kind, priority
     },
   "doneLastWeek": count(*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
@@ -185,6 +167,9 @@ const UNDRAFTED_POSTS_QUERY = `*[_type == "marketingCalendarItem" && !(_id in pa
   && (!defined(contentDraft) || contentDraft == "")]
   | order(publishAt asc){ title, publishAt }`
 
+/** How many unjudged ideas to read: enough to count them honestly, few enough to stay cheap. */
+const IDEAS_READ = 50
+
 type StoredOperation = {
   _id: string
   title?: string | null
@@ -199,6 +184,8 @@ type StoredOperation = {
   sourceKey?: string | null
   dueAt?: string | null
   humanQuestion?: string | null
+  blocker?: string | null
+  targetView?: string | null
   askHistory?: AskHistoryEntry[] | null
 }
 
@@ -206,6 +193,7 @@ type OwnedOperation = { ownerName?: string | null; estimatedMinutes?: number | n
 
 type DigestData = {
   operations?: StoredOperation[] | null
+  planned?: StoredOperation[] | null
   owned?: OwnedOperation[] | null
   doneLastWeek?: number | null
   availability?: Partial<Record<keyof TeamMemberAvailability, unknown>>[] | null
@@ -216,17 +204,45 @@ type DigestData = {
   weeklyHours?: number | null
 }
 
-/** A task as the digest handles it: the card's fields, plus what the ask logic needs. */
-type DigestRow = DigestTask & {
-  humanQuestion?: string
+/** A task as the digest handles it: what its card shows, plus what the ask logic needs. */
+type DigestRow = CheckInTask & {
+  suggestedOwner?: string
   askHistory: AskHistoryEntry[]
+}
+
+/** The week plan-week just recorded, as the tick hands it over. */
+type DigestPlan = {
+  itemIds: string[]
+  decisionIds: string[]
+  theme: string
+  plannedMinutes: number | null
+  budgetMinutes: number | null
 }
 
 const clean = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim()
 const lower = (value: unknown) => clean(value).toLowerCase()
 const orUndefined = (value: string | null | undefined) => clean(value) || undefined
-const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
-const STATUSES = new Set<string>(MARKETING_OPERATION_STATUSES)
+const finiteMinutes = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null)
+
+/**
+ * The planned week from the request body, or null. Nothing in it is trusted
+ * beyond its shape: ids are clipped strings (they are only ever looked up),
+ * the theme is plain text the builder escapes, the numbers must be numbers.
+ */
+function readPlan(value: unknown): DigestPlan | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const plan = value as Record<string, unknown>
+  if (!Array.isArray(plan.itemIds) && !Array.isArray(plan.decisionIds)) return null
+  const ids = (list: unknown) =>
+    Array.from(new Set((Array.isArray(list) ? list : []).map((id) => clean(id).slice(0, 180)).filter(Boolean))).slice(0, MAX_PLANNED_IDS)
+  return {
+    itemIds: ids(plan.itemIds),
+    decisionIds: ids(plan.decisionIds),
+    theme: typeof plan.theme === 'string' ? clean(plan.theme).slice(0, 120) : '',
+    plannedMinutes: finiteMinutes(plan.plannedMinutes),
+    budgetMinutes: finiteMinutes(plan.budgetMinutes),
+  }
+}
 
 /** Monday 00:00 UTC of the ISO week containing `now` — the same week the check-in and the pulse count. */
 function utcWeekStart(now: Date): number {
@@ -246,80 +262,55 @@ async function settle<T>(label: string, work: () => Promise<T>): Promise<T | nul
   }
 }
 
-/**
- * "2 posts go out this week with no draft yet: A · B" — or nothing.
- *
- * A calendar item left at `idea` the week it is due is the content version of
- * an unclaimed task: everybody assumes someone else is writing it.
- */
-function undraftedPostsBlock(posts: { title?: string | null }[] | null): Block | null {
-  const list = (posts || []).filter(Boolean)
-  if (!list.length) return null
-  const titles = list
-    .slice(0, MAX_UNDRAFTED_NAMED)
-    .map((post) => clipSlackText(escapeSlackText(clean(post.title) || 'Untitled post'), 80))
-  const more = list.length - titles.length
-  const verb = list.length === 1 ? 'post goes' : 'posts go'
+function toRow(operation: StoredOperation, availability: TeamMemberAvailability[]): DigestRow {
   return {
-    type: 'context',
-    elements: [
-      {
-        type: 'mrkdwn',
-        text: clipSlackText(
-          `${list.length} ${verb} out this week with no draft yet: ${titles.join(' · ')}${more > 0 ? ` …and ${more} more` : ''}`,
-          SLACK_LIMITS.sectionText,
-        ),
-      },
-    ],
+    _id: operation._id,
+    title: clean(operation.title) || 'Untitled task',
+    ownerName: orUndefined(operation.ownerName),
+    // The roster first, the task's stamped id last: that stamp is never
+    // cleared on a reassignment in the Studio, so trusting it first had the
+    // digest @-mention the previous owner about the new owner's work.
+    slackUserId: slackIdForOwner(availability, operation.ownerName, operation.ownerSlackUserId),
+    // Most operations carry no explicit estimate, so the shared effort model
+    // infers one from kind and priority. Summing the raw field reported "0m
+    // planned of 4h", which reads as though there is nothing to do.
+    minutes: estimateOperationMinutes({
+      kind: orUndefined(operation.kind),
+      priority: orUndefined(operation.priority),
+      estimatedMinutes: typeof operation.estimatedMinutes === 'number' ? operation.estimatedMinutes : undefined,
+    }).minutes,
+    kind: orUndefined(operation.kind),
+    priority: orUndefined(operation.priority),
+    status: orUndefined(operation.status),
+    suggestedOwner: orUndefined(operation.suggestedOwner),
+    humanQuestion: orUndefined(operation.humanQuestion),
+    dueAt: orUndefined(operation.dueAt),
+    blocker: orUndefined(operation.blocker),
+    targetView: orUndefined(operation.targetView),
+    sourceKey: orUndefined(operation.sourceKey),
+    askHistory: (operation.askHistory || []).filter(Boolean),
   }
 }
 
+/** A decision still waiting for its answer — the card's rule, and the planner's (needsHuman). */
+const waitingDecision = (row: DigestRow) => row.status === 'needsHuman' && isDecisionTask(row)
+const isStuck = (row: DigestRow) => row.status === 'blocked'
+const isOwned = (row: DigestRow) => Boolean(clean(row.ownerName))
+/** Waiting on a person, but for an OWNER, not an answer — what "Not me" leaves behind. */
+const lookingForOwner = (row: DigestRow) => row.status === 'needsHuman' && !waitingDecision(row) && !isOwned(row)
+
 /**
- * Tasks two different people have been asked to take, still unclaimed.
- *
- * Asking a third person is the wrong answer — the honest question now is
- * whether the task is worth doing at all. Each gets a Drop button, which the
- * board can undo with Reopen, and its section carries the check-in card's
- * block id, so a press redraws exactly this line (as a dropped card with
- * Reopen) and leaves the rest of the digest — and its task cards — alone.
- * A task the board will not let go straight to dismissed (one in progress)
- * is listed without the button rather than with one that fails.
+ * Without a plan: priority first, then date. Ordering on date alone buried the
+ * concrete outreach behind a wall of decisions, because a call scheduled for
+ * "this week" has no deadline the way a gate review does — and the work you
+ * can actually go and do is the work worth showing.
  */
-function exhaustedBlocks(tasks: DigestRow[], limit: number): Block[] {
-  if (!tasks.length || limit <= 0) return []
-  const shown = tasks.slice(0, limit)
-  const more = tasks.length - shown.length
-  const blocks: Block[] = [
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text:
-          '*Nobody has taken these after two asks.* Still worth doing? Drop what isn’t — Reopen brings it back.' +
-          (more > 0 ? ` (+${more} more on the plan)` : ''),
-      },
-    },
-  ]
-  for (const task of shown) {
-    const status = (STATUSES.has(clean(task.status)) ? clean(task.status) : 'queued') as MarketingOperationStatus
-    const canDrop = canTransitionMarketingOperation(status, 'dismissed')
-    blocks.push({
-      type: 'section',
-      block_id: checkInTaskBlockId(task._id),
-      text: { type: 'mrkdwn', text: `*${clipSlackText(escapeSlackText(task.title), 300)}*` },
-      ...(canDrop
-        ? {
-            accessory: {
-              type: 'button',
-              action_id: MARQUETA_ACTION.taskDrop,
-              text: { type: 'plain_text', text: 'Drop it', emoji: true },
-              value: encodeActionValue({ taskId: task._id.slice(0, 180), ownerName: '', status }),
-            },
-          }
-        : {}),
-    })
-  }
-  return blocks
+const PRIORITY_RANK: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 }
+const KIND_RANK: Record<string, number> = { outreach: 0, content: 1, decision: 2 }
+function boardOrder(a: DigestRow, b: DigestRow): number {
+  const byKind = (KIND_RANK[a.kind || ''] ?? 1.5) - (KIND_RANK[b.kind || ''] ?? 1.5)
+  if (byKind !== 0) return byKind
+  return (PRIORITY_RANK[a.priority || 'normal'] ?? 2) - (PRIORITY_RANK[b.priority || 'normal'] ?? 2)
 }
 
 /**
@@ -334,6 +325,9 @@ function exhaustedBlocks(tasks: DigestRow[], limit: number): Block[] {
  * second person. Everything else goes to `proposeOwnerAsks`, task by task,
  * with the load and the per-person count carried forward — which is exactly
  * what it does across a list, so the answers are the ones it would give.
+ *
+ * At most `maxAsks` in all, because every ask is drawn as a card and the
+ * Monday plan shows five: nobody is asked about a task they cannot see.
  *
  * Whoever passed on a task is in its history by Slack id. The name in "<name>
  * passed on this" is still read, for tasks passed on before the id was
@@ -350,6 +344,7 @@ function weeklyAsks(input: {
   ownedMinutesByName: Record<string, number>
   dateKey: string
   week: string
+  maxAsks: number
 }): { asks: OwnerAsk[]; repeated: string[]; exhausted: string[] } {
   const load: Record<string, number> = { ...input.ownedMinutesByName }
   const askCount = new Map<string, number>()
@@ -367,7 +362,7 @@ function weeklyAsks(input: {
 
   for (const task of input.tasks) {
     // A decision is a principal's question, not a task to ask the room to take.
-    if (task.ownerName || isDecisionTask(task)) continue
+    if (task.ownerName || waitingDecision(task)) continue
     const minutes = task.minutes || 0
     const history = readAskHistory(task.askHistory, input.week)
 
@@ -388,6 +383,16 @@ function weeklyAsks(input: {
 
     const passedBy = lower(PASSED_BY.exec(task.humanQuestion || '')?.[1])
     const passedById = passedBy ? idByName.get(passedBy) : undefined
+    const answered = new Set([...history.answeredIds, ...(passedById ? [passedById] : [])])
+    // Two people have answered: the honest question now is whether it is worth
+    // doing, not who a third person could be. Decided before the cap, so a task
+    // past the fifth card is still counted as what it is.
+    if (answered.size >= 2) {
+      exhausted.push(task._id)
+      continue
+    }
+    if (asks.length >= input.maxAsks) continue
+
     const askTask: AskTask = {
       _id: task._id,
       title: task.title,
@@ -395,7 +400,7 @@ function weeklyAsks(input: {
       suggestedOwner: task.suggestedOwner,
       minutes,
       kind: task.kind,
-      askedSlackUserIds: [...history.answeredIds, ...(passedById ? [passedById] : [])],
+      askedSlackUserIds: [...answered],
     }
     const result = proposeOwnerAsks({
       tasks: [askTask],
@@ -431,15 +436,16 @@ async function handle(request: NextRequest) {
   // digest that announces a week the Studio never recorded creates two sources
   // of truth on the one morning everybody reads it - so when the plan did not
   // land, the message says so instead of quietly presenting the raw board as
-  // though it were the plan.
-  const body = request.method === 'POST' ? await request.json().catch(() => ({})) : {}
-  const planRecorded = (body as { planRecorded?: boolean }).planRecorded !== false
+  // though it were the plan, and the planned ids are not used.
+  const body = (request.method === 'POST' ? await request.json().catch(() => ({})) : {}) as Record<string, unknown>
+  const planRecorded = body.planRecorded !== false
+  const plan = planRecorded ? readPlan(body.plan) : null
   // Registry warnings, passed in by the tick. Absent in a manual post, and
   // empty whenever every domain has months left - silence is the default.
-  const domainNotes = ((body as { domainNotes?: string[] }).domainNotes || []).filter(Boolean)
+  const domainNotes = (Array.isArray(body.domainNotes) ? body.domainNotes : []).map((note) => clean(note)).filter(Boolean)
   // Post this week's digest again, on purpose. Opt-in by an exact value, the
   // way the check-in reads it: `?force=0` must not become a force.
-  const force = params.get('force') === '1' || (body as { force?: unknown }).force === true
+  const force = params.get('force') === '1' || body.force === true
 
   if (!isOutreachClientConfigured()) {
     return privateMarketingJson({ error: 'Sanity is not configured.' }, { status: 503 })
@@ -465,12 +471,14 @@ async function handle(request: NextRequest) {
   // Vercel agree about which week an ask belongs to.
   const week = utcIsoWeekKey(now)
   const weekStartMs = utcWeekStart(now)
-  const start = isoDay(weekStartMs)
-  const end = isoDay(weekStartMs + 6 * DAY_MS)
+  const weekStart = isoDay(weekStartMs)
+  // Links people click. Never where this route calls anything (see the tick).
+  const studioBaseUrl = String(process.env.MARKETING_PUBLIC_BASE_URL || '').trim() || undefined
 
-  const [data, strategy, pendingIdeas, undraftedPosts, botUserId] = await Promise.all([
+  const [data, strategy, pendingIdeas, undraftedPosts] = await Promise.all([
     client.fetch<DigestData | null>(DATA_QUERY, {
-      planPrefix: PLAN_SOURCE_PREFIX,
+      planPrefix: WEEKLY_PLAN_SOURCE_PREFIX,
+      plannedIds: plan ? [...plan.itemIds, ...plan.decisionIds] : [],
       weekStart: new Date(weekStartMs).toISOString(),
       weekEnd: new Date(weekStartMs + 7 * DAY_MS).toISOString(),
       lastWeekStart: new Date(weekStartMs - 7 * DAY_MS).toISOString(),
@@ -479,15 +487,13 @@ async function handle(request: NextRequest) {
     // the latest win and hands it to the runway check-in, so a deal won since
     // the runway was last confirmed makes the card ask whether it moved the date.
     settle<StrategyLoad>('strategy read', () => loadStrategySnapshot(now)),
-    settle('idea review read', () => ideasNeedingReview(5)),
+    settle('idea review read', () => ideasNeedingReview(IDEAS_READ)),
     settle('calendar read', () =>
       getMarketingWriteClientFor('marketingCalendarItem').fetch<{ title?: string | null }[] | null>(UNDRAFTED_POSTS_QUERY, {
         from: now.toISOString(),
         to: new Date(now.getTime() + 7 * DAY_MS).toISOString(),
       }),
     ),
-    // Her own id turns "ask me for `my calls`" into a working mention.
-    settle('bot identity', () => getSlackBotUserId()),
   ])
 
   const availability = tidyAvailability(data?.availability)
@@ -495,50 +501,44 @@ async function handle(request: NextRequest) {
   // button files the absence under Slack's display name, next to the record
   // the roster knows the person by, and a name-only check asked people on
   // holiday. `absences.entries` carries that absence under every linked name,
-  // so hours, asks and the away notices all see it.
+  // so hours, asks and the away cover all see it.
   const absences = absencesOn(availability, today)
   const roster = askableTeam(availability)
   const team = roster.filter((member) => !absences.isAway(member.name, member.slackUserId))
 
-  const tasks: DigestRow[] = (data?.operations || [])
-    .filter((operation) => operation && operation._id && !clean(operation.sourceKey).startsWith(PLAN_SOURCE_PREFIX))
-    .map((operation) => ({
-      _id: operation._id,
-      title: clean(operation.title) || 'Untitled task',
-      ownerName: orUndefined(operation.ownerName),
-      // The roster first, the task's stamped id last: that stamp is never
-      // cleared on a reassignment in the Studio, so trusting it first had the
-      // digest @-mention the previous owner about the new owner's work.
-      slackUserId: slackIdForOwner(availability, operation.ownerName, operation.ownerSlackUserId),
-      // Most operations carry no explicit estimate, so the shared effort model
-      // infers one from kind and priority. Summing the raw field reported "0m
-      // planned of 4h", which reads as though there is nothing to do.
-      minutes: estimateOperationMinutes({
-        kind: orUndefined(operation.kind),
-        priority: orUndefined(operation.priority),
-        estimatedMinutes: typeof operation.estimatedMinutes === 'number' ? operation.estimatedMinutes : undefined,
-      }).minutes,
-      whyNow: orUndefined(operation.whyNow),
-      kind: orUndefined(operation.kind),
-      priority: orUndefined(operation.priority),
-      status: orUndefined(operation.status),
-      suggestedOwner: orUndefined(operation.suggestedOwner),
-      humanQuestion: orUndefined(operation.humanQuestion),
-      askHistory: (operation.askHistory || []).filter(Boolean),
-    }))
+  // ── The rows ────────────────────────────────────────────────────────────
+  const rows = new Map<string, DigestRow>()
+  for (const operation of [...(data?.planned || []), ...(data?.operations || [])]) {
+    // The plan's own record is a note about the work, not work (WEEKLY_PLAN_SOURCE_PREFIX).
+    if (!operation?._id || rows.has(operation._id) || clean(operation.sourceKey).startsWith(WEEKLY_PLAN_SOURCE_PREFIX)) continue
+    rows.set(operation._id, toRow(operation, availability))
+  }
+  const openRows = [...rows.values()]
+  const pick = (ids: string[]) => ids.map((id) => rows.get(id)).filter((row): row is DigestRow => Boolean(row))
 
-  // Sort by priority first, then by date. Ordering on date alone buried the
-  // concrete outreach behind a wall of decisions, because a call scheduled for
-  // "this week" has no deadline the way a gate review does — and the work you
-  // can actually go and do is the work worth showing.
-  const PRIORITY_RANK: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 }
-  const KIND_RANK: Record<string, number> = { outreach: 0, content: 1, decision: 2 }
-  tasks.sort((a, b) => {
-    const byKind = (KIND_RANK[a.kind || ''] ?? 1.5) - (KIND_RANK[b.kind || ''] ?? 1.5)
-    if (byKind !== 0) return byKind
-    return (PRIORITY_RANK[a.priority || 'normal'] ?? 2) - (PRIORITY_RANK[b.priority || 'normal'] ?? 2)
-  })
-  const rendered = tasks.slice(0, RENDERED_TASKS)
+  let work: DigestRow[]
+  let decisions: DigestRow[]
+  if (plan) {
+    const plannedDecisions = pick(plan.decisionIds)
+    decisions = plannedDecisions.filter(waitingDecision)
+    // A plan recorded before the planner stopped filing "Not me" tasks as
+    // decisions may still hold one here: it is looking for an owner, not an answer.
+    work = [...pick(plan.itemIds), ...plannedDecisions.filter((row) => !waitingDecision(row))]
+    // A task somebody passed on is shown whether or not the plan fitted it.
+    // Only the planned ids reach this message, so one the planner deferred
+    // "over budget" was never asked about again — and the "asked twice → drop
+    // it?" that ends an owner search could never come up.
+    const planned = new Set([...plan.itemIds, ...plan.decisionIds])
+    work.push(...openRows.filter((row) => !planned.has(row._id) && lookingForOwner(row)))
+  } else {
+    const board = [...openRows].sort(boardOrder)
+    decisions = board.filter(waitingDecision)
+    work = board.filter((row) => !waitingDecision(row))
+  }
+  // Stuck work has its own line: it cannot take this week's hours, and it is
+  // on the board whether or not the planner fitted it.
+  work = work.filter((row) => !isStuck(row))
+  const stuckRows = openRows.filter(isStuck)
 
   // ── Asks ────────────────────────────────────────────────────────────────
   // Load is this week's owned work, not the whole quarter's: comparing a
@@ -556,64 +556,95 @@ async function handle(request: NextRequest) {
         estimatedMinutes: typeof operation.estimatedMinutes === 'number' ? operation.estimatedMinutes : undefined,
       }).minutes
   }
+  const unowned = work.filter((row) => !isOwned(row))
   const { asks, repeated, exhausted } = weeklyAsks({
-    tasks: rendered,
+    tasks: unowned,
     team,
     roster,
     availability: absences.entries,
     ownedMinutesByName,
     dateKey: today,
     week,
+    maxAsks: MAX_OWNER_CARDS,
   })
-  const askByTask = new Map<string, OwnerAsk>(asks.map((ask) => [ask.taskId, ask]))
-  const askBlocks = buildAskBlocks(
-    asks.map((ask) => {
-      const task = rendered.find((entry) => entry._id === ask.taskId)
-      return { ...ask, title: task?.title || 'Untitled task', minutes: task?.minutes || 0 }
-    }),
-  )
-  const exhaustedTasks = exhausted
-    .map((id) => rendered.find((task) => task._id === id))
-    .filter((task): task is DigestRow => Boolean(task))
 
-  // ── Last week, and posts nobody has written ─────────────────────────────
+  // ── Away cover ──────────────────────────────────────────────────────────
+  // Work on the plan that belongs to someone away is surfaced for cover rather
+  // than silently left on their plate — with who is actually free: people on
+  // the team list, never a name that is away itself, and never somebody who
+  // merely has a task (an owner with no team record may not be on the team).
+  const coverNames = Array.from(
+    new Map(availability.map((entry) => clean(entry.ownerName)).filter(Boolean).map((name) => [lower(name), name])).values(),
+  )
+  const covers = findReassignments({
+    tasks: work.filter(isOwned).map((row) => ({ _id: row._id, title: row.title, ownerName: row.ownerName })),
+    entries: absences.entries,
+    team: coverNames,
+    dateKey: today,
+  })
+  const coverIds = new Set(covers.map((cover) => cover.task._id))
+
+  // ── Cards ───────────────────────────────────────────────────────────────
+  const card = (row: DigestRow, options: Partial<TaskCardOptions> = {}): DigestCard => ({
+    taskId: row._id,
+    blocks: buildTaskCard(row, { now, mode: 'plan', studioBaseUrl, ...options }),
+  })
+  const askByTask = new Map(asks.map((ask) => [ask.taskId, ask]))
+  const exhaustedIds = new Set(exhausted)
+  const askedCards = unowned
+    .filter((row) => askByTask.has(row._id))
+    .map((row) => {
+      const ask = askByTask.get(row._id)!
+      return card(row, { ask: { slackUserId: ask.slackUserId, name: ask.name, reason: ask.reason } })
+    })
+  const awayCards = covers
+    .map((cover) => {
+      const row = rows.get(cover.task._id)
+      if (!row) return null
+      // Names, not mentions: the people named are being suggested, not asked.
+      const free = cover.candidates.length ? `free this week: ${cover.candidates.join(', ')}` : 'nobody is free this week'
+      return card(row, { context: 'away', awayNote: escapeSlackText(`${clean(cover.awayOwner)} is away · ${free}`) })
+    })
+    .filter((entry): entry is DigestCard => Boolean(entry))
+  const exhaustedCards = unowned.filter((row) => exhaustedIds.has(row._id)).map((row) => card(row, { context: 'exhausted' }))
+  const openCards = unowned.filter((row) => !askByTask.has(row._id) && !exhaustedIds.has(row._id)).map((row) => card(row))
+  const needsOwnerCount = askedCards.length + awayCards.length + exhaustedCards.length + openCards.length
+
+  // Owned work is a roll call. Owners get their own cards on Thursday.
+  const taken = new Map<string, { name: string; slackUserId?: string; count: number }>()
+  for (const row of work) {
+    if (!isOwned(row) || coverIds.has(row._id)) continue
+    const key = row.slackUserId || `name:${lower(row.ownerName)}`
+    const entry = taken.get(key) || { name: clean(row.ownerName), ...(row.slackUserId ? { slackUserId: row.slackUserId } : {}), count: 0 }
+    entry.count += 1
+    taken.set(key, entry)
+  }
+
+  // ── Last week ───────────────────────────────────────────────────────────
+  // Follow-ups are left out of this sentence: "Outreach this week" owns them,
+  // counted from now. Counted here too they were a second, different number a
+  // few lines above it — due to last Monday but overdue to 9am today, so any
+  // follow-up set for this Monday read "1 follow-up due (3 overdue)".
   const lastWeekPulse = strategy
-    ? summarizeOutreach(strategy.contacts, {
-        from: new Date(weekStartMs - 7 * DAY_MS).toISOString(),
-        to: new Date(weekStartMs).toISOString(),
-        now,
-      })
+    ? {
+        ...summarizeOutreach(strategy.contacts, {
+          from: new Date(weekStartMs - 7 * DAY_MS).toISOString(),
+          to: new Date(weekStartMs).toISOString(),
+          now,
+        }),
+        followUpsDue: 0,
+        followUpsOverdue: 0,
+      }
     : null
   const doneLastWeek = typeof data?.doneLastWeek === 'number' ? data.doneLastWeek : 0
-  const lastWeekLine = [
-    `${plural(doneLastWeek, 'task')} done last week`,
+  const lastWeek = [
+    `Last week: ${countLabel(doneLastWeek, 'task')} done`,
     lastWeekPulse ? describePulse(lastWeekPulse, 'Outreach') : '',
   ]
     .filter(Boolean)
     .join(' · ')
-  const lastWeekBlock: Block = {
-    type: 'context',
-    elements: [{ type: 'mrkdwn', text: clipSlackText(escapeSlackText(lastWeekLine), SLACK_LIMITS.sectionText) }],
-  }
-  const undraftedBlock = undraftedPostsBlock(undraftedPosts)
 
-  // ── Away, call sheet, follow-ups ────────────────────────────────────────
-  // Anyone away this week has their work surfaced for reassignment rather than
-  // silently left on their plate.
-  const owners = Array.from(
-    new Set(tasks.map((task) => task.ownerName).filter((name): name is string => Boolean(name))),
-  )
-  const awayNotices = findReassignments({
-    tasks: tasks.map((task) => ({ _id: task._id, title: task.title, ownerName: task.ownerName })),
-    entries: absences.entries,
-    team: owners,
-    dateKey: today,
-  }).map((entry) => ({
-    awayOwner: entry.awayOwner,
-    taskTitle: entry.task.title,
-    candidates: entry.candidates,
-  }))
-
+  // ── Outreach ────────────────────────────────────────────────────────────
   const callSheet = buildOutreachCallSheet({
     research: data?.research || [],
     contacts: data?.contacts || [],
@@ -630,159 +661,89 @@ async function handle(request: NextRequest) {
     ...followUpLine(entry, now),
     contactRef: encodeContactRef({ contactId: entry.contactId, organization: entry.organization, name: entry.personLabel }),
   }))
-  const handle = marquetaHandle(botUserId || undefined)
-  const followUpsMore = (shown: number) => {
-    const rest = followUps.length - shown
-    return rest > 0 ? `+${plural(rest, 'more follow-up', 'more follow-ups')} due — ask ${handle} \`my calls\`` : ''
-  }
 
   // ── Money and direction ─────────────────────────────────────────────────
-  // One card for the runway and the strategy, and only when one of them is
-  // due. If the strategy read failed, the runway question still gets asked —
-  // it is the input everything else hangs off.
-  let moneyBlocks: Block[] = []
+  // Asked only when something is due, one question at a time. If the strategy
+  // read failed, the runway question is still asked — it is the input
+  // everything else hangs off.
+  let money: ReturnType<typeof buildMoneyAndDirectionBlocks> = []
   if (strategy) {
-    moneyBlocks = buildMoneyAndDirectionBlocks({
+    money = buildMoneyAndDirectionBlocks({
+      now,
+      runway: strategy.runway,
       snapshot: strategy.snapshot,
       strategyDue: strategy.due,
-      runwayBlocks: buildRunwayBlocks({
-        summary: strategy.runway.summary,
-        checkIn: strategy.runway.checkIn,
-        disagreement: strategy.runway.resolved.disagreement,
-      }),
+      studioBaseUrl,
     })
   } else {
     const runway = await settle('runway read', () => readRunway(now))
-    if (runway) {
-      moneyBlocks = buildRunwayBlocks({
-        summary: runway.summary,
-        checkIn: runway.checkIn,
-        disagreement: runway.resolved.disagreement,
-      })
-    }
+    if (runway) money = buildMoneyAndDirectionBlocks({ now, runway })
   }
 
   // Only while somebody is still unmapped: the prompt removes itself once
-  // everyone who wants to be linked has been.
+  // everyone who wants to be linked has been. The whole team is offered, not
+  // just names that already own work — linking is the only way onto the list
+  // of people who can be asked, and somebody with no work yet had no way in.
+  const linkedNames = new Set(availability.filter((entry) => entry.slackUserId).map((entry) => lower(entry.ownerName)))
   const unmappedOwners = Array.from(
-    new Set(tasks.filter((task) => task.ownerName && !task.slackUserId).map((task) => task.ownerName!)),
+    new Map(
+      [
+        ...openRows.filter((row) => row.ownerName && !row.slackUserId).map((row) => clean(row.ownerName)),
+        ...marketingTeamNames().filter((name) => !linkedNames.has(lower(name))),
+      ].map((name) => [lower(name), name]),
+    ).values(),
   )
 
-  const studioUrl = process.env.MARKETING_PUBLIC_BASE_URL
-    ? // MUST name the view. Without ?view= the Studio restores whatever the
-      // person last had open (localStorage), so "Open the plan" landed on the
-      // Shop for anyone who had been there last — a link that goes somewhere
-      // plausible but wrong is worse than one that is obviously broken. There
-      // is no "ideas" view either (marketingIdea only renders inside SEO).
-      `${process.env.MARKETING_PUBLIC_BASE_URL}/studio/marketing?view=thisWeek`
-    : undefined
+  const budgetMinutes = plan?.budgetMinutes || resolveWeeklyMinutes(data?.weeklyHours)
+  const blocks = buildWeeklyDigestBlocks({
+    now,
+    weekStart,
+    budgetMinutes,
+    plan: plan ? { plannedMinutes: plan.plannedMinutes ?? 0, theme: plan.theme } : null,
+    openMinutes: openRows.reduce((sum, row) => sum + (row.minutes || 0), 0),
+    planRecorded,
+    renewals: domainNotes,
+    lastWeek,
+    needsOwner: { asked: askedCards, away: awayCards, exhausted: exhaustedCards, open: openCards },
+    decisions: decisions.map((row) => card(row)),
+    // The plan puts four questions in front of people; the rest are still
+    // waiting, and "+N more" should say so rather than read as none.
+    decisionsTotal: Math.max(decisions.length, openRows.filter(waitingDecision).length),
+    taken: [...taken.values()],
+    stuck: stuckRows.map((row) => ({
+      title: row.title,
+      ownerName: row.ownerName,
+      slackUserId: row.slackUserId,
+      blocker: row.blocker,
+      url: studioTaskUrl({
+        baseUrl: studioBaseUrl,
+        taskId: row._id,
+        targetView: row.targetView,
+        kind: row.kind,
+        status: row.status,
+        humanQuestion: row.humanQuestion,
+      }),
+    })),
+    followUps: digestFollowUps,
+    followUpsTotal: followUps.length,
+    callSheet,
+    undraftedPosts: undraftedPosts || [],
+    money,
+    ideas: pendingIdeas || [],
+    ideasTotal: (pendingIdeas || []).length,
+    unmappedOwners,
+    studioBaseUrl,
+  })
 
-  type Limits = { followUps: number; exhausted: number; away: number; callSheet: number }
-  const compose = (limits: Limits): Block[] => {
-    const blocks = buildWeeklyDigestBlocks({
-      theme: 'This week in marketing',
-      weekStart: start,
-      weekEnd: end,
-      plannedMinutes: tasks.reduce((sum, task) => sum + (task.minutes || 0), 0),
-      // Read the real budget rather than assuming 4h: it is 8h now, split between
-      // calls and content, and hardcoding it made every week look over-committed.
-      budgetMinutes: (data?.weeklyHours || 4) * 60,
-      // Tasks render as coloured attachment cards instead of plain blocks.
-      tasks: [],
-      lead: [
-        lastWeekBlock,
-        ...(undraftedBlock ? [undraftedBlock] : []),
-        ...askBlocks,
-        ...exhaustedBlocks(exhaustedTasks, limits.exhausted),
-      ],
-      callSheet: callSheet.slice(0, limits.callSheet),
-      awayNotices: awayNotices.slice(0, limits.away),
-      awayNoticesMore: Math.max(0, awayNotices.length - limits.away),
-      followUps: digestFollowUps.slice(0, limits.followUps),
-      followUpsMore: followUpsMore(Math.min(limits.followUps, digestFollowUps.length)),
-      studioUrl,
-    })
-
-    // Said out loud rather than hidden: if the scheduled plan did not persist,
-    // everything below is the raw board, not the week that was planned.
-    if (!planRecorded) {
-      blocks.push({
-        type: 'context',
-        elements: [
-          {
-            type: 'mrkdwn',
-            text:
-              '_This week’s plan did not save, so this is the open board rather than a planned week. ' +
-              'Re-plan on the This week tab.  I would rather say that than pretend._',
-          },
-        ],
-      })
-    }
-
-    // Renewals, only when one is close. This is the cheapest item in the whole
-    // digest and the only one whose failure takes everything else down with it.
-    if (domainNotes.length) {
-      blocks.push({ type: 'divider' })
-      blocks.push({
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: clipSlackText('*Renewals*' + '\n' + domainNotes.map((note) => escapeSlackText(note)).join('\n'), SLACK_LIMITS.sectionText),
-        },
-      })
-    }
-
-    blocks.push(...moneyBlocks)
-    // Ideas caught in the channel that nobody has judged. The thread reply asks
-    // once, and a thread is easy to miss.
-    blocks.push(...buildIdeaReviewBlocks(pendingIdeas || [], studioUrl))
-    blocks.push(...buildIdentityPromptBlocks(unmappedOwners))
-    return blocks
-  }
-
-  // Slack refuses a message over fifty blocks outright — the whole digest, not
-  // the tail of it. Give things up in a fixed order, cheapest first: follow-up
-  // lines (one `my calls` away), then the drop offers, the away notices and
-  // the call sheet (each counted, never silently gone). The asks are never
-  // trimmed: they are the part addressed to a person.
-  const limits: Limits = {
-    followUps: MAX_DIGEST_FOLLOW_UPS,
-    exhausted: MAX_EXHAUSTED_SHOWN,
-    away: MAX_AWAY_SHOWN,
-    callSheet: MAX_CALL_SHEET,
-  }
-  let blocks = compose(limits)
-  for (const key of ['followUps', 'exhausted', 'away', 'callSheet'] as const) {
-    while (blocks.length > SLACK_LIMITS.blocksPerMessage && limits[key] > 0) {
-      limits[key] -= 1
-      blocks = compose(limits)
-    }
-  }
-  if (blocks.length > SLACK_LIMITS.blocksPerMessage) blocks = blocks.slice(0, SLACK_LIMITS.blocksPerMessage)
-
-  const attachments = rendered.map((task) =>
-    buildTaskAttachment({
-      _id: task._id,
-      title: task.title,
-      kind: task.kind,
-      priority: task.priority,
-      status: task.status,
-      suggestedOwner: task.suggestedOwner,
-      ownerName: task.ownerName,
-      slackUserId: task.slackUserId,
-      minutes: task.minutes,
-      whyNow: task.whyNow,
-      askedName: askByTask.get(task._id)?.name,
-    }),
-  )
-
-  // Slack builds the notification from `text`, so the asks' mentions go here
-  // as well as in the blocks — otherwise the people named are never told.
-  const mentions = askMentionsText(asks)
-  const text = clipSlackText(
-    `This week in marketing — ${tasks.length} task(s)` + (mentions ? `. ${mentions}` : ''),
-    SLACK_LIMITS.fallbackText,
-  )
+  // Slack builds the notification from `text`, so the asks' mentions lead it —
+  // otherwise the people named are never told.
+  const text = digestNotificationText({
+    asks,
+    needsOwner: needsOwnerCount,
+    followUps: followUps.length,
+    weekStart,
+    now,
+  })
 
   const askSummary = asks.map((ask) => ({ taskId: ask.taskId, name: ask.name, slackUserId: ask.slackUserId, reason: ask.reason }))
 
@@ -793,8 +754,10 @@ async function handle(request: NextRequest) {
       slackConfigured: Boolean(process.env.SLACK_BOT_TOKEN && channel),
       channel,
       week,
-      taskCount: tasks.length,
-      awayCount: awayNotices.length,
+      planned: Boolean(plan),
+      taskCount: openRows.length,
+      needsOwnerCount,
+      awayCount: covers.length,
       callSheetCount: callSheet.length,
       followUpCount: followUps.length,
       asks: askSummary,
@@ -804,7 +767,6 @@ async function handle(request: NextRequest) {
       unmappedOwners,
       text,
       blocks,
-      attachments,
     })
   }
 
@@ -830,7 +792,7 @@ async function handle(request: NextRequest) {
       detail: claim.detail,
       week,
       channel,
-      taskCount: tasks.length,
+      taskCount: openRows.length,
     })
   }
 
@@ -838,12 +800,10 @@ async function handle(request: NextRequest) {
   try {
     result = await postSlackMessage({
       channel,
-      attachments,
-      // The marketing assistant is Marqueta everywhere else, so she is Marqueta
-      // here too. Per-message, because the same Slack app also serves the website
-      // chat and must keep its own name there.
-      username: MARQUETA_NAME,
-      iconEmoji: MARQUETA_ICON,
+      // Per message, because the same Slack app also serves the website chat
+      // and must keep its own name there.
+      username: MARQUETA_IDENTITY.username,
+      iconEmoji: MARQUETA_IDENTITY.iconEmoji,
       // Every opening cites a source, and an unfurled card per link buries the
       // buttons under pages of hero images.
       unfurl: false,
@@ -857,9 +817,9 @@ async function handle(request: NextRequest) {
 
   // Only an ask that actually reached the channel is remembered. Recording one
   // from a failed post would count a question nobody saw towards the two asks
-  // that turn a task into "drop it?" — and would stop that person ever being
-  // asked it for real. An ask repeated from earlier this week is already on
-  // record, and is not written twice.
+  // that turn a task into "still worth doing?" — and would stop that person
+  // ever being asked it for real. An ask repeated from earlier this week is
+  // already on record, and is not written twice.
   const repeatedIds = new Set(repeated)
   const asksRecorded = result
     ? await recordAsks(
@@ -874,14 +834,15 @@ async function handle(request: NextRequest) {
   // until then the claim is fresh, and a fresh claim is never overridden.
   // A refused post gives the claim back, so a retry can post without force.
   const posted = result
-  const summary = `${plural(tasks.length, 'task')}, ${plural(asks.length, 'ask')} (${plural(asksRecorded, 'new one', 'new ones')} recorded)`
+  const weekOf = weekOfLabel(weekStart, now).replace(/^Week of/, 'the week of')
+  const summary = `${countLabel(openRows.length, 'task')}, ${countLabel(asks.length, 'ask')} (${countLabel(asksRecorded, 'new one', 'new ones')} recorded)`
   await recordWeekRun(client, {
     docId: DIGEST_HEARTBEAT_DOC_ID,
     week,
     now,
     step: posted
-      ? { name: 'digest', ok: true, count: tasks.length, detail: `Digest posted for ${week}: ${summary}.` }
-      : { name: 'digest', ok: false, count: 0, detail: `Slack refused the ${week} digest. Check the bot is in the channel.` },
+      ? { name: 'digest', ok: true, count: openRows.length, detail: `Digest posted for ${weekOf}: ${summary}.` }
+      : { name: 'digest', ok: false, count: 0, detail: `Slack refused the digest for ${weekOf}. Check the bot is in the channel.` },
     ...(posted ? { posted: { ts: posted.ts } } : { releaseClaim: true }),
   })
 
@@ -893,8 +854,9 @@ async function handle(request: NextRequest) {
     // bot has not been invited to the channel. Say so rather than reporting a
     // silent success.
     hint: result ? undefined : 'Slack returned no result — is the bot invited to that channel?',
-    taskCount: tasks.length,
-    awayCount: awayNotices.length,
+    taskCount: openRows.length,
+    needsOwnerCount,
+    awayCount: covers.length,
     callSheetCount: callSheet.length,
     followUpCount: followUps.length,
     asks: askSummary,
@@ -906,7 +868,7 @@ async function handle(request: NextRequest) {
 /**
  * Append each posted ask to its task's `askHistory` — the memory that keeps
  * Marqueta from asking the same person twice, and that turns a task two people
- * were asked about into a "drop it?".
+ * were asked about into "still worth doing?".
  *
  * Append-only, so two asks landing on one task (or a colleague claiming it at
  * the same moment) cannot overwrite each other. Each entry carries the week it

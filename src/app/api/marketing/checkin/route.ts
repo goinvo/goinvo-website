@@ -1,5 +1,4 @@
 import type { NextRequest } from 'next/server'
-import { getSlackBotUserId } from '@/lib/chat/slack'
 import { authorizeCron, cronDeniedStatus } from '@/lib/marketing/cronAuth'
 import { isOutreachClientConfigured } from '@/lib/marketing/outreachClient.server'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
@@ -62,16 +61,10 @@ async function run(request: NextRequest) {
   const dryRun = flag(params, 'dryRun')
   const force = flag(params, 'force')
 
-  // Her own id makes the "tell me `called Sam…`" hint a working mention. Fail
-  // soft: without it the hint says "Marqueta, …", which still reaches her.
-  let botUserId: string | undefined
-  try {
-    botUserId = await getSlackBotUserId()
-  } catch {
-    botUserId = undefined
-  }
-
-  const result = await runWeeklyCheckIn({ now: new Date(), dryRun, force, botUserId })
+  // No Slack lookup of her own id: the check-in's hints are phrases people
+  // type ("Marqueta, my calls"), which reach her in any room she is in — a
+  // mention of her would only add a round trip that can fail.
+  const result = await runWeeklyCheckIn({ now: new Date(), dryRun, force })
 
   // A stand-down (already posted, another run holds the claim) is the claim
   // doing its job: ok, 200. Anything that should have posted and did not is a

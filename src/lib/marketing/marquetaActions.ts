@@ -2,11 +2,12 @@
  * Every Slack control Marqueta added after the weekly digest, in one place.
  *
  * Deliberately a SEPARATE namespace from `MARKETING_ACTION` in
- * slackDelegation.ts. The interactions route has a catch-all for that set that
- * treats anything it does not recognise as "hand this task back" — so an id
- * added there by mistake would silently decline somebody's task. These ids use
- * the `goinvo_marqueta_` prefix, are matched by `isMarquetaAction`, and must be
- * dispatched BEFORE that catch-all.
+ * slackDelegation.ts. The interactions route's block for that set once treated
+ * anything it did not recognise as "hand this task back", so an id added there
+ * by mistake silently declined somebody's task; it now refuses an unknown id,
+ * and tests/marqueta-wiring.test.ts fails on any id without a handler. These
+ * ids use the `goinvo_marqueta_` prefix, are matched by `isMarquetaAction`, and
+ * are dispatched before that block.
  *
  * Modals are routed by `callback_id`, never by the mere presence of
  * `private_metadata`: the older task-answer handler treats ANY private_metadata
@@ -47,6 +48,8 @@ export const MARQUETA_ACTION = {
   strategyConfirm: 'goinvo_marqueta_strategy_confirm',
   /** Monthly strategy check: it does not — put a decision on the board. */
   strategyRethink: 'goinvo_marqueta_strategy_rethink',
+  /** Put somebody's availability back the way it was before "I'm away" (theirs only). */
+  availabilityUndo: 'goinvo_marqueta_availability_undo',
 } as const
 
 export type MarquetaActionId = (typeof MARQUETA_ACTION)[keyof typeof MARQUETA_ACTION]
@@ -219,6 +222,12 @@ export type TaskStuckMetadata = {
   channel: string
   threadTs: string
   messageTs: string
+  /**
+   * The mode of the card Stuck was pressed on, so the redraw after the form
+   * keeps a plan card a plan card. Absent means `mine` — the only card that
+   * offers Stuck, and every form opened before modes existed.
+   */
+  mode?: TaskCardMode
 }
 
 export function encodeTaskStuckMetadata(input: TaskStuckMetadata): string {
@@ -227,6 +236,7 @@ export function encodeTaskStuckMetadata(input: TaskStuckMetadata): string {
     ch: clip(input.channel, 40),
     th: clip(input.threadTs, 40),
     ts: clip(input.messageTs, 40),
+    ...(input.mode === 'plan' ? { m: 'plan' } : {}),
   })
 }
 
@@ -241,6 +251,7 @@ export function decodeTaskStuckMetadata(value: string | undefined): TaskStuckMet
     channel: clip(parsed.ch, 40).trim(),
     threadTs: clip(parsed.th, 40).trim() || messageTs,
     messageTs,
+    ...(parsed.m === 'plan' ? { mode: 'plan' as const } : {}),
   }
 }
 
@@ -345,4 +356,137 @@ export function decodeStrategyValue(value: string | undefined): { monthKey: stri
   const parsed = parseObject(value)
   const monthKey = clip(parsed?.m, 7)
   return /^\d{4}-\d{2}$/.test(monthKey) ? { monthKey } : null
+}
+
+// ── Task cards ──────────────────────────────────────────────────────────────
+
+/**
+ * Which message a task card is on, so a press can redraw it the right way:
+ * `plan` is the room's view (the Monday plan, `week`), where an owned card is
+ * just who took it; `mine` is one person's own list (the check-in, `my
+ * tasks`), where an owned card carries Done / Stuck… / Hand back.
+ *
+ * Carried in the button's value rather than in Slack message metadata, which
+ * would need `include_all_metadata` on every read of the message.
+ */
+export type TaskCardMode = 'plan' | 'mine'
+
+export type TaskCardValue = {
+  taskId: string
+  ownerName: string
+  status: string
+  mode: TaskCardMode
+  /**
+   * Present (and true) only on an away cover's "I’ll take it": the card was
+   * drawn to ask the room to cover `ownerName`'s work while they are away, so
+   * taking it may move it off them — but only if it is still theirs when the
+   * press lands. Every other take refuses a task somebody else owns.
+   */
+  cover?: true
+}
+
+/**
+ * A task card button's value: `{t, o, s, m}`, plus `c: 1` on an away cover.
+ *
+ * The first three keys are exactly what `encodeActionValue` (slackDelegation)
+ * writes, so `decodeActionValue` still reads every card — the digest's legacy
+ * handlers included — and ignores the keys it does not know about. Clipped
+ * field by field: a JSON string truncated as a whole decodes to nothing.
+ */
+export function encodeTaskCardValue(input: {
+  taskId: string
+  ownerName?: string
+  status?: string
+  mode: TaskCardMode
+  cover?: boolean
+}): string {
+  return JSON.stringify({
+    t: clip(input.taskId, 180),
+    o: clip(input.ownerName, 120),
+    ...(input.status ? { s: clip(input.status, 30) } : {}),
+    m: input.mode === 'plan' ? 'plan' : 'mine',
+    ...(input.cover ? { c: 1 } : {}),
+  })
+}
+
+/** A card value, or a legacy `encodeActionValue` one — which was always a check-in card, so `mine`. */
+export function decodeTaskCardValue(value: string | undefined): TaskCardValue | null {
+  const parsed = parseObject(value)
+  const taskId = clip(parsed?.t, 180).trim()
+  if (!taskId) return null
+  const ownerName = clip(parsed?.o, 120).trim()
+  return {
+    taskId,
+    ownerName,
+    status: clip(parsed?.s, 30).trim(),
+    mode: parsed?.m === 'plan' ? 'plan' : 'mine',
+    // A cover names whose work it covers; without a name there is nothing to cover.
+    ...(parsed?.c === 1 && ownerName ? { cover: true as const } : {}),
+  }
+}
+
+// ── Availability undo ───────────────────────────────────────────────────────
+
+/** An availability record's own fields, as they stood — `''` / null for absent. */
+export type AvailabilitySnapshot = {
+  status: string
+  from: string
+  until: string
+  weeklyHours: number | null
+}
+
+/**
+ * What "Undo" needs to put somebody's availability back exactly as it was.
+ *
+ * `prior` is the record before the press, or null when there was none (Undo
+ * then removes the record it created). `wrote` is what the press wrote, so
+ * Undo can tell "still what I wrote" from "changed since" and never undoes a
+ * later change. `slackUserId` is who pressed: the button sits in a thread the
+ * whole room can see, and only that person may take their time off back.
+ */
+export type AvailabilityUndo = {
+  ownerName: string
+  slackUserId: string
+  wrote: AvailabilitySnapshot
+  prior: AvailabilitySnapshot | null
+}
+
+const snapshotTuple = (value: AvailabilitySnapshot) => [
+  clip(value.status, 20),
+  clip(value.from, 10),
+  clip(value.until, 10),
+  typeof value.weeklyHours === 'number' && Number.isFinite(value.weeklyHours) ? value.weeklyHours : null,
+]
+
+function snapshotFrom(value: unknown): AvailabilitySnapshot | null {
+  if (!Array.isArray(value) || value.length < 4) return null
+  const hours = value[3]
+  return {
+    status: clip(value[0], 20).trim(),
+    from: clip(value[1], 10).trim(),
+    until: clip(value[2], 10).trim(),
+    weeklyHours: typeof hours === 'number' && Number.isFinite(hours) ? hours : null,
+  }
+}
+
+export function encodeAvailabilityUndo(input: AvailabilityUndo): string {
+  return JSON.stringify({
+    n: clip(input.ownerName, 120),
+    u: clip(input.slackUserId, 40),
+    w: snapshotTuple(input.wrote),
+    p: input.prior ? snapshotTuple(input.prior) : null,
+  })
+}
+
+export function decodeAvailabilityUndo(value: string | undefined): AvailabilityUndo | null {
+  const parsed = parseObject(value)
+  if (!parsed) return null
+  const ownerName = clip(parsed.n, 120).trim()
+  const slackUserId = clip(parsed.u, 40).trim()
+  const wrote = snapshotFrom(parsed.w)
+  // `p` must be present: null (no record before) and "missing" are different facts.
+  if (!ownerName || !slackUserId || !wrote || !('p' in parsed)) return null
+  const prior = parsed.p === null ? null : snapshotFrom(parsed.p)
+  if (parsed.p !== null && !prior) return null
+  return { ownerName, slackUserId, wrote, prior }
 }

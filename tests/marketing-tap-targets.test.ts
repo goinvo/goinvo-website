@@ -42,6 +42,18 @@ describe('marketing minimum tap targets', () => {
     expect(source).toContain('type="checkbox"\n                data-mobile-tap-target="true"')
   })
 
+  it('keeps the log form’s outcome chips and the call outline’s Copy buttons easy to hit', () => {
+    const outreach = readFileSync('src/sanity/components/marketing/OutreachWorkspace.tsx', 'utf8')
+    const chip = outreach.match(/onClick=\{\(\) => chooseLogOutcome\(contact, outcome\.key\)\}\s*style=\{\{([\s\S]*?)\}\}\s*>/)
+    expect(chip, 'Expected the outcome chip button').not.toBeNull()
+    expect(Number(chip?.[1].match(/minHeight:\s*(\d+)/)?.[1])).toBeGreaterThanOrEqual(24)
+
+    const panel = readFileSync('src/sanity/components/marketing/CallOutlinePanel.tsx', 'utf8')
+    const copy = panel.match(/const copyButton = \{([^}]*)\}/)
+    expect(copy, 'Expected the outline Copy button style').not.toBeNull()
+    expect(Number(copy?.[1].match(/minHeight:\s*(\d+)/)?.[1])).toBeGreaterThanOrEqual(24)
+  })
+
   it('keeps the Add Contacts row actions easy to hit', () => {
     const source = readFileSync('src/sanity/components/marketing/ContactIntakeGrid.tsx', 'utf8')
     const removeButton = source.match(

@@ -64,6 +64,12 @@ describe('escapeSlackText / clipSlackText / slackLink', () => {
     expect(marquetaHandle('U0000000001')).toBe('<@U0000000001>')
     expect(marquetaHandle(undefined)).not.toContain('@Marqueta')
   })
+
+  it('falls back to her name alone — never "DM me", which is not wired up', () => {
+    expect(marquetaHandle(undefined)).toBe('Marqueta')
+    expect(marquetaHandle('')).toBe('Marqueta')
+    expect(marquetaHandle(undefined)).not.toMatch(/DM/)
+  })
 })
 
 describe('resolveOwnerName', () => {
