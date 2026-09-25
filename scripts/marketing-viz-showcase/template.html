@@ -163,6 +163,29 @@
   .rule h3 { font-size: 18px; }
   .rule p { font-size: 15px; color: var(--secondary); }
 
+  /* contents */
+  .toc { display: flex; flex-wrap: wrap; gap: 6px 22px; padding-block: 18px; border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 13px; }
+  .toc a { color: var(--secondary); text-decoration: none; }
+  .toc a:hover { color: var(--accent-text); text-decoration: underline; }
+  .toc b { font-weight: 500; color: var(--accent-text); margin-right: 4px; }
+
+  /* decisions */
+  .decision { display: grid; gap: 14px; padding-block: 96px 0; }
+  .decision-mark { display: flex; align-items: baseline; gap: 14px; }
+  .decision-mark span { font-family: var(--mono); font-size: 13px; color: var(--accent-text); white-space: nowrap; }
+  .decision-mark hr { flex: 1; border: 0; border-top: 1px solid var(--rule); margin: 0; }
+  .decision h2 { font-size: clamp(32px, 4.4vw, 48px); max-width: 22ch; }
+  .decision .lede { font-size: 19px; line-height: 1.5; color: var(--secondary); max-width: 60ch; }
+  section.block.tight { padding-block: 48px 8px; }
+  .system svg { min-width: 900px; width: 100%; height: auto; display: block; }
+
+  /* findings */
+  .findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 0 40px; }
+  .finding { display: grid; gap: 10px; padding-block: 22px; border-top: 1px solid var(--rule); align-content: start; }
+  .finding b { font-family: var(--display); font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; color: var(--accent-text); }
+  .finding h3 { font-size: 17px; margin-bottom: 4px; }
+  .finding p { font-size: 15px; color: var(--secondary); }
+
   footer { margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--rule); display: grid; gap: 8px; font-size: 14px; color: var(--muted); max-width: 72ch; }
 
   @media (max-width: 900px) {
@@ -180,9 +203,9 @@
 <div class="wrap">
   <header class="hero">
     <div class="hero-text">
-      <p class="eyebrow">Case study · Data design · 2026</p>
+      <p class="eyebrow">Case study · Product and data design · 2026</p>
       <h1>Marqueta</h1>
-      <p class="hero-lede">A marketing system for a small healthcare design studio. It reads <strong>{{N.records}} records</strong> a week and turns them into <strong>one Monday message</strong> that says who to call, what to decide, and how long the money lasts.</p>
+      <p class="hero-lede">An autonomous marketer for a small healthcare design studio. It reads <strong>{{N.records}} records</strong> a week and turns them into <strong>one Monday message</strong> that says who to call, what to decide, and how long the money lasts.</p>
       <div class="hero-meta"><span>Studio: GoInvo</span><span>Surfaces: Sanity Studio · Slack</span><span>Charts: React + SVG, no chart library</span></div>
     </div>
     <figure class="hero-figure">
@@ -191,33 +214,56 @@
     </figure>
   </header>
 
-  <section class="block">
+  <nav class="toc" aria-label="Contents">
+    <a href="#problem">The problem</a>
+    <a href="#system">The system</a>
+    <a href="#decision-data"><b>1</b>Charts that say what to do</a>
+    <a href="#decision-trust"><b>2</b>Only what can be said on a call</a>
+    <a href="#decision-voice"><b>3</b>A marketer nobody mutes</a>
+    <a href="#results">What happened</a>
+  </nav>
+
+  <section class="block" id="problem">
     <div class="section-head">
-      <p class="eyebrow">The brief</p>
-      <h2>A marketer that runs the week, in the tools the team already uses</h2>
+      <p class="eyebrow">The problem</p>
+      <h2>A few hours of marketing a week, and none of it said what to do on Monday</h2>
     </div>
     <div class="prose">
-      <p>The studio needed outreach to lead: calls and emails to people who already know its work. The records to support that existed, spread across a contact list, a call log, web research on each organisation, a task board, a Slack channel and a date the money was certain until. None of it said what to do on Monday.</p>
-      <p>The team asked for an autonomous marketer named Marqueta. It plans the week against the hours people actually have, asks colleagues to take work in Slack, preps cold calls on request, and checks in on strategy and money. <strong>This case study is about the data design:</strong> what each number is compared with, which ones reach a person, and what a chart has to say before anyone reads its axis.</p>
+      <p>The studio needed outreach to lead: calls and emails to people who already know its work. Nobody on the team is a full-time marketer, cold calling is stressful, and the weekly budget for all of it is a handful of hours.</p>
+      <p>The records existed, spread across a contact list, a call log, web research on each organisation, a task board, a content calendar, a Slack channel and a date the money was certain until. Every number reached a person as a sentence, if it reached them at all.</p>
+      <p>The team asked for a marketer named Marqueta that runs the week: it plans the work against the hours people actually have, asks colleagues to take tasks in Slack, preps calls on request, and checks in on strategy and money.</p>
     </div>
   </section>
 
-  <section class="block">
+  <section class="block" id="system">
     <div class="section-head">
-      <p class="eyebrow">The mechanism</p>
-      <h2>From records to a decision</h2>
+      <p class="eyebrow">The system</p>
+      <h2>One set of records, two places people see it</h2>
+      <div class="prose"><p>Marqueta is a set of scheduled and on-request jobs over the studio’s own records. The Studio and Slack show the same numbers from the same code, so a figure on Monday’s message is the figure on This week.</p></div>
     </div>
-    <figure class="panel pipeline">
-      <div class="scroll-x">{{PIPELINE_SVG}}</div>
-      <figcaption class="caption">Nothing reaches a person until it has passed a check. A research claim has to quote words that really are on the page it cites. A draft beside its published contact is counted once. When the runway date and a hand-set posture disagree, the newer fact wins and the other is named. No language model produces a number anywhere in this path.</figcaption>
+    <figure class="panel system">
+      <div class="scroll-x">{{SYSTEM_SVG}}</div>
+      <figcaption class="caption">A language model writes one sentence a week: the theme at the top of the plan. It is handed the finished plan and cannot add, drop or reorder anything in it. Every number, every ask and every call outline comes from rules applied to records.</figcaption>
     </figure>
   </section>
 
-  <section class="block">
+  <section class="decision" id="decision-data">
+    <div class="decision-mark"><span>Decision 1 of 3</span><hr></div>
+    <h2>Every chart says what to do</h2>
+    <p class="lede">Each chart comes with one sentence that names the next move: start with the late follow-ups, fix the step where people drop out, re-check a runway nobody has confirmed in two months. The chart shows why.</p>
+  </section>
+
+  <section class="block tight">
+    <figure class="panel pipeline">
+      <div class="scroll-x">{{PIPELINE_SVG}}</div>
+      <figcaption class="caption">Nothing reaches a person until it has passed a check. A draft beside its published contact is counted once. When the runway date and a hand-set posture disagree, the newer fact wins and the other is named.</figcaption>
+    </figure>
+  </section>
+
+  <section class="block tight">
     <div class="section-head">
-      <p class="eyebrow">This week</p>
-      <h2>The week at a glance</h2>
-      <div class="prose"><p>The first screen of the Studio, and where most Slack links land. It answers four questions in order: where the hours go, whether outreach is happening, who is owed a call, and how long the money lasts.</p></div>
+      <h3>The week at a glance</h3>
+      <div class="prose"><p>The first screen of the Studio, and where most Slack links land. Four questions in order: where the hours go, whether outreach is happening, who is owed a call, and how long the money lasts.</p></div>
     </div>
     <div class="panel">
       <div class="split">
@@ -237,53 +283,63 @@
     </div>
   </section>
 
-  <section class="block">
+  <section class="block tight">
     <div class="section-head">
-      <p class="eyebrow">Outreach</p>
-      <h2>Outreach, read as shapes</h2>
-      <div class="prose"><p>Three questions about the list, each answered by one chart and one sentence. Every chart has a table view, and every value in a tooltip is also reachable without hovering.</p></div>
+      <h3>Outreach, read as shapes</h3>
+      <div class="prose"><p>Where people drop out, where the network is warm, and whether calling is a habit yet. Every chart has a table view, and every value in a tooltip is also reachable without hovering.</p></div>
     </div>
     <div class="panel">
       <div id="chart-outreach"></div>
       <div class="split">
-        <div class="note"><h3>The funnel counts the furthest stage ever reached</h3><p>A contact who met the team and has since gone quiet still counts as met. A logged call proves contact even when nobody moved the status. The weakest step with at least three people behind it is named in the sentence, so a 0-of-1 step does not read as a finding.</p></div>
+        <div class="note"><h3>The funnel counts the furthest stage ever reached</h3><p>A contact who met the team and has since gone quiet still counts as met. A logged call proves contact even when nobody moved the status. The weakest step with at least three people behind it is named, so a 0-of-1 step does not read as a finding.</p></div>
         <div class="note"><h3>Empty rows stay in the grid</h3><p>A segment with plenty of names and nobody warm is the finding, so every segment keeps its row at zero.</p></div>
       </div>
     </div>
   </section>
 
-  <section class="block">
+  <section class="block tight">
     <div class="section-head">
-      <p class="eyebrow">Research</p>
-      <h2>Only what can be said on a call</h2>
-      <div class="prose"><p>Web research on each organisation is useful only if a nervous caller can repeat it safely. A claim is checked in two stages: the quoted words must literally appear on the cited page, and the claim may not assert anything the quote does not. Call prep uses verified claims only. Everything else is shown as background.</p></div>
-    </div>
-    <div class="panel"><div id="chart-research"></div></div>
-  </section>
-
-  <section class="block">
-    <div class="section-head">
-      <p class="eyebrow">Money</p>
-      <h2>The runway as a calendar</h2>
-      <div class="prose"><p>The studio used to store its financial posture as a label (“survival”) set once in July. A label does not decay. The stored fact is now a date, the last day the studio is certain it can pay for, and the posture is computed from it. Drawn on a calendar, “4.5 months” becomes a plan: the day the strategy should tighten, and the signed work that bought time.</p></div>
+      <h3>The runway as a calendar</h3>
+      <div class="prose"><p>The financial posture used to be a label (“survival”) set once and never revisited. A label does not decay. The stored fact is now a date, the last day the studio is certain it can pay for, and the posture is computed from it. On a calendar, “4.5 months” becomes a plan: the day the strategy should tighten, and the signed work that bought time.</p></div>
     </div>
     <div class="panel"><div id="chart-runway"></div></div>
   </section>
 
-  <section class="block">
+  <section class="block tight">
     <div class="section-head">
-      <p class="eyebrow">Content</p>
-      <h2>When the calendar runs dry</h2>
-      <div class="prose"><p>The overview used to show a card per channel reading “covered” or “coverage gap”. One grid of channels against weeks shows when each one runs out, which is the thing to act on.</p></div>
+      <h3>When the content calendar runs dry</h3>
+      <div class="prose"><p>A card per channel used to say “covered” or “coverage gap”. One grid of channels against weeks shows when each one runs out, which is the thing to act on.</p></div>
     </div>
     <div class="panel"><div id="chart-coverage"></div></div>
   </section>
 
-  <section class="block">
-    <div class="section-head">
-      <p class="eyebrow">Slack</p>
-      <h2>Marqueta says it in numbers too</h2>
+  <section class="decision" id="decision-trust">
+    <div class="decision-mark"><span>Decision 2 of 3</span><hr></div>
+    <h2>Only what can be said on a call</h2>
+    <p class="lede">A nervous caller repeats what the call sheet says. So a research claim reaches the call sheet only when its evidence can be inspected, never because a model agreed with it.</p>
+  </section>
+
+  <section class="block tight">
+    <div class="panel">
+      <div id="chart-research"></div>
+      <div class="split">
+        <div class="note"><h3>Two checks that must not be merged</h3><p>First, the quoted words must literally appear on the page the claim cites: a fetch and a string match, no model. Then the claim may not assert any number, name or date the quote does not contain. A model asked to confirm a quote it just produced will confirm it.</p></div>
+        <div class="note"><h3>Unverified is shown, and labelled</h3><p>Claims that fail are not deleted. They appear as background, marked “not verified, do not repeat as fact”, and call prep never uses them as a line to say.</p></div>
+      </div>
+      <div class="split">
+        <div class="note"><h3>A failed fetch is not a failed claim</h3><p>Paywalls and bot walls are common. When too few cited pages could be read, the claim is “unchecked”, never “unsupported”; blaming the research for the network would teach the team to ignore the check.</p></div>
+        <div class="note"><h3>Private by routing, not by luck</h3><p>Contacts, research and the runway live in a private dataset. One routing rule decides where every record type goes, and a test fails if a new type is added without a route.</p></div>
+      </div>
     </div>
+  </section>
+
+  <section class="decision" id="decision-voice">
+    <div class="decision-mark"><span>Decision 3 of 3</span><hr></div>
+    <h2>A marketer nobody mutes</h2>
+    <p class="lede">A bot in a team channel has one chance. Marqueta asks rather than assigns, stays quiet when there is nothing to say, and fits the Monday plan to a phone held before the first coffee.</p>
+  </section>
+
+  <section class="block tight">
     <div class="slack-wrap">
       <div class="slack" role="img" aria-label="An example of Marqueta's Monday plan in Slack">
         <div class="slack-msg">
@@ -316,10 +372,27 @@
         </div>
       </div>
       <div class="notes">
+        <div class="note"><h3>Asks, not assignments</h3><p>An unowned task goes to one named, available person, never the same person twice. “Not me” records a pass without explanation; after two passes the task is offered for dropping.</p></div>
+        <div class="note"><h3>Quiet where people work</h3><p>In the team’s own channels she catches proposals silently, for review in one batch. “Thanks!” gets no reply at all. A typo gets a suggested command, which is never run on a guess.</p></div>
         <div class="note"><h3>A stat grid in a medium with no charts</h3><p>Slack cannot draw a chart, so last week becomes four fields laid out two by two. Figures are bold and lead; the words after them say what was counted.</p></div>
-        <div class="note"><h3>Trends in words, not arrows</h3><p>“+3 on the week before” reads the same aloud. A screen reader announces an arrow as “upwards arrow”.</p></div>
         <div class="note"><h3>Held to a phone screen</h3><p>A test renders the message at forty characters a line. The first “I’ll take it” has to appear inside thirty lines and the whole plan inside eighty, so the numbers grid had to earn its lines.</p></div>
       </div>
+    </div>
+  </section>
+
+  <section class="block" id="results">
+    <div class="section-head">
+      <p class="eyebrow">What happened</p>
+      <h2>What real data changed</h2>
+      <div class="prose"><p>Each of these came from running the system against the studio’s real messages and records, not from a mock-up. Most of them changed a design decision.</p></div>
+    </div>
+    <div class="findings">
+      <div class="finding"><b>22 → 7</b><div><h3>The idea filter, replayed on 189 real messages</h3><p>It would have posted 22 guesses in the team’s channel, and about 7 were worth keeping. A bot that is wrong two times in three gets muted, so in human channels it now captures silently.</p></div></div>
+      <div class="finding"><b>0 of 20</b><div><h3>Research claims verified under the first prompt</h3><p>Not invented, but over-specified: true in substance while asserting more than the page said. The prompt now forbids any number, name or date that is not in the quote.</p></div></div>
+      <div class="finding"><b>~100 → 30</b><div><h3>Phone lines before the first “I’ll take it”</h3><p>Slack draws attachments below every block, so the first ask sat far down the message. Rebuilt as blocks in the order people act, with a test that fails if the first ask drops below line 30.</p></div></div>
+      <div class="finding"><b>60 → 16</b><div><h3>Lines before “Log it…” on a call outline</h3><p>The button to record how a call went moved up under the ten-second cheat sheet, where a caller’s thumb already is.</p></div></div>
+      <div class="finding"><b>2</b><div><h3>Bugs only real text could find</h3><p>“bul-lets on them” matched the proposal marker “lets”, and “mo-ooo-ore” matched the away marker “ooo”. Markers now match on word boundaries.</p></div></div>
+      <div class="finding"><b>0</b><div><h3>Scheduled jobs that had ever run on their own</h3><p>Everything had been triggered by hand. A Monday run now records what it did, and a watchdog outside the host emails if it goes quiet.</p></div></div>
     </div>
   </section>
 
@@ -327,7 +400,7 @@
     <div class="section-head">
       <p class="eyebrow">Colour</p>
       <h2>A palette that was computed, not picked</h2>
-      <div class="prose"><p>The studio’s own teal and orange are too muted to carry identity in a chart: the teal sits below the chroma where a hue starts to read as grey. Every chart colour was generated in OKLCH from those two hues and run through a colour-vision validator in both themes before it shipped.</p></div>
+      <div class="prose"><p>The studio’s teal and orange are too muted to tell chart series apart. Every chart colour was generated from those two hues and tested for colour-blind readers in both themes before it shipped.</p></div>
     </div>
     <div class="panel palette">
       <div class="swatch-row"><span class="label">Categorical</span><div class="swatches">{{SW.cat}}</div></div>
@@ -345,21 +418,21 @@
 
   <section class="block">
     <div class="section-head">
-      <p class="eyebrow">What held up</p>
-      <h2>Rules the data design follows</h2>
+      <p class="eyebrow">Rules</p>
+      <h2>Rules the system follows</h2>
     </div>
     <div class="rules">
       <div class="rule"><h3>A failed read is “unknown”, never zero</h3><p>“Could not read the contacts” and “nobody is owed a call” look identical as a number. Every figure that can fail to load says so instead.</p></div>
       <div class="rule"><h3>Progress is a move, not a touch</h3><p>A voicemail left for a contact already in a meeting is not a new meeting. The pulse counts changes of state, walked in time order.</p></div>
-      <div class="rule"><h3>Every chart has one sentence</h3><p>It names what to do: start with the late follow-ups, fix the step where people drop, re-check a runway last confirmed 67 days ago.</p></div>
       <div class="rule"><h3>Colour follows the entity</h3><p>Outreach is orange in the meter, the table and the legend, every week. A filter never repaints the survivors.</p></div>
-      <div class="rule"><h3>The week that did not fit is shown</h3><p>A plan that hides what it dropped is a filter. Deferred work is listed with the reason it waits.</p></div>
-      <div class="rule"><h3>Silence is data too</h3><p>An empty Thursday still posts one line, because a missing message looks exactly like a job that died.</p></div>
+      <div class="rule"><h3>The work that did not fit is shown</h3><p>A plan that hides what it dropped is a filter. Deferred work is listed with the reason it waits.</p></div>
+      <div class="rule"><h3>Silence is a signal</h3><p>An empty Thursday still posts one line, because a missing message looks exactly like a job that died.</p></div>
+      <div class="rule"><h3>A person decides</h3><p>Marqueta files proposals and asks questions. Keeping an idea, taking a task and confirming the runway are always a person’s press.</p></div>
     </div>
   </section>
 
   <footer>
-    <p>Every chart above is the production component, rendering an invented week: all people, organisations and figures on this page are made up. Hover a mark for its value, or use “Show as table” for every number.</p>
+    <p>Every chart on this page is the production component, rendering an invented week: all people, organisations and figures in the charts and the Slack example are made up. The findings under “What happened” come from the real build. Hover a mark for its value, or use “Show as table” for every number.</p>
     <p>Built with React and hand-written SVG in the studio’s Next.js site and Sanity Studio, with Slack’s Block Kit for Marqueta’s messages.</p>
   </footer>
 </div>

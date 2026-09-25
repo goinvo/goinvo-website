@@ -118,6 +118,66 @@ function pipelineSvg() {
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Four stages: records are counted, only what passes the checks becomes a decision, and decisions are posted to Slack and the Studio." style="color: var(--ink)">${parts.join('')}</svg>`
 }
 
+// ── the system map: records → Marqueta → where people see it ────────────────
+function systemSvg() {
+  const W = 1040, parts = []
+  const box = (x, y, w, h, opts = {}) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${opts.rx ?? 8}" fill="${opts.fill ?? 'var(--surface)'}" stroke="${opts.stroke ?? 'var(--rule)'}" stroke-width="${opts.sw ?? 1}"/>`
+  const text = (x, y, t, o = {}) =>
+    `<text x="${x}" y="${y}" font-family="${o.font ?? 'var(--body)'}" font-size="${o.size ?? 13}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? 'start'}" fill="${o.fill ?? 'currentColor'}">${t}</text>`
+  const arrow = (x1, y1, x2, y2, label, o = {}) => {
+    const dir = Math.sign(x2 - x1) || 1
+    parts.push(`<path d="M${x1},${y1} H${x2 - dir * 9}" stroke="var(--accent)" stroke-width="2" fill="none"/>`)
+    parts.push(`<polygon points="${x2},${y2} ${x2 - dir * 10},${y2 - 5} ${x2 - dir * 10},${y2 + 5}" fill="var(--accent)"/>`)
+    if (label) parts.push(text((x1 + x2) / 2, y1 - 8, label, { font: 'var(--mono)', size: 11, anchor: 'middle', fill: 'var(--secondary)' }))
+  }
+  // lane headers
+  parts.push(text(0, 16, 'Records', { font: 'var(--display)', size: 16, weight: 600 }))
+  parts.push(text(0, 34, 'private dataset', { font: 'var(--mono)', size: 11, fill: 'var(--muted)' }))
+  parts.push(text(330, 16, 'Marqueta', { font: 'var(--display)', size: 16, weight: 600 }))
+  parts.push(text(330, 34, 'rules over records; no model in the numbers', { font: 'var(--mono)', size: 11, fill: 'var(--muted)' }))
+  parts.push(text(820, 16, 'Where people see it', { font: 'var(--display)', size: 16, weight: 600 }))
+  // records
+  const records = [['Contacts + call log', 'who, when, how it went'], ['Research claims', 'each with a quoted source'], ['Task board', 'owner, status, minutes'], ['Runway date', 'last day we can pay for'], ['Content calendar', 'posts by channel and day']]
+  records.forEach(([t, d], i) => {
+    const y = 52 + i * 58
+    parts.push(box(0, y, 230, 48))
+    parts.push(text(12, y + 20, t, { weight: 700, size: 14 }))
+    parts.push(text(12, y + 38, d, { font: 'var(--mono)', size: 11, fill: 'var(--secondary)' }))
+  })
+  // Marqueta's jobs
+  const jobs = [['Mon 9:00', 'Plan the week', 'fit work to the hours, ask for owners'], ['Thu 10:00', 'Check in', 'one list per person'], ['on request', 'Prep a call', 'verified claims only'], ['every message', 'Catch ideas', 'silently, in human channels'], ['every run', 'Heartbeat', 'record what the run did']]
+  parts.push(box(330, 52, 380, 280, { rx: 12, fill: 'var(--accent-wash)', stroke: 'var(--accent)', sw: 2 }))
+  jobs.forEach(([when, t, d], i) => {
+    const y = 72 + i * 52
+    parts.push(text(348, y + 14, when, { font: 'var(--mono)', size: 11, fill: 'var(--accent-text)' }))
+    parts.push(text(450, y + 14, t, { weight: 700, size: 14 }))
+    parts.push(text(450, y + 32, d, { font: 'var(--mono)', size: 11, fill: 'var(--secondary)' }))
+  })
+  // where people see it
+  parts.push(box(820, 52, 220, 128))
+  parts.push(text(834, 76, 'Slack', { weight: 700, size: 15 }))
+  ;['Monday plan', 'Thursday check-in', 'call prep in thread', 'answers when asked'].forEach((t, i) => parts.push(text(834, 100 + i * 20, t, { font: 'var(--mono)', size: 12, fill: 'var(--secondary)' })))
+  parts.push(box(820, 204, 220, 128))
+  parts.push(text(834, 228, 'Sanity Studio', { weight: 700, size: 15 }))
+  ;['This week', 'Outreach', 'Overview', 'Settings: money'].forEach((t, i) => parts.push(text(834, 252 + i * 20, t, { font: 'var(--mono)', size: 12, fill: 'var(--secondary)' })))
+  // flows
+  arrow(240, 192, 320, 192, 'read')
+  arrow(720, 116, 810, 116, 'posts')
+  arrow(720, 268, 810, 268, 'same numbers')
+  // the way back: presses and edits write to the records
+  parts.push(`<path d="M930,340 V400 H115 V354" stroke="var(--secondary)" stroke-width="1.5" fill="none"/>`)
+  parts.push(`<polygon points="115,344 110,354 120,354" fill="var(--secondary)"/>`)
+  parts.push(text(130, 420, 'presses and edits write back to the records', { font: 'var(--mono)', size: 11, fill: 'var(--secondary)' }))
+  // the watchdog, outside the host
+  parts.push(`<path d="M520,432 V${52 + 280}" stroke="var(--secondary)" stroke-width="1.5" fill="none"/>`)
+  parts.push(text(530, 372, 'emails if Monday goes quiet', { font: 'var(--mono)', size: 11, fill: 'var(--secondary)' }))
+  parts.push(box(420, 432, 200, 40, { rx: 8 }))
+  parts.push(text(520, 457, 'Watchdog, outside the host', { size: 12, weight: 700, anchor: 'middle' }))
+  const H = 476
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Records in a private dataset are read by Marqueta's scheduled and on-request jobs, which post to Slack and feed the same numbers to the Studio; presses and edits write back to the records, and an outside watchdog checks the Monday run happened." style="color: var(--ink)">${parts.join('')}</svg>`
+}
+
 // ── swatches from the real token module ─────────────────────────────────────
 await esbuild.build({ entryPoints: [path.join(REPO, 'src/lib/marketing/viz/tokens.ts')], bundle: true, platform: 'node', format: 'cjs', outfile: path.join(OUT, 'tokens.cjs'), logLevel: 'warning' })
 const { vizTokens } = require(path.join(OUT, 'tokens.cjs'))
@@ -148,7 +208,7 @@ const N = {
   moved, followUps: S.followUps, overdue: S.followUpsOverdue,
 }
 let html = readFileSync(path.join(HERE, 'template.html'), 'utf8')
-html = html.replace('{{HERO_SVG}}', heroSvg()).replace('{{PIPELINE_SVG}}', pipelineSvg())
+html = html.replace('{{HERO_SVG}}', heroSvg()).replace('{{PIPELINE_SVG}}', pipelineSvg()).replace('{{SYSTEM_SVG}}', systemSvg())
 html = html.replace(/\{\{N\.(\w+)\}\}/g, (_, k) => String(N[k]))
 html = html.replace(/\{\{SW\.(\w+)\}\}/g, (_, k) => SW[k])
 html = html.replace('{{BUNDLE}}', () => js)
