@@ -34,6 +34,7 @@
 import { draftOutreachNote, firstNameFor, type CallSheetEntry, type CallSheetResearchInput } from './callSheet'
 import { CALL_ASK, PREMORTEM_QUESTION } from './executionPlan'
 import { MARQUETA_ACTION, encodeContactRef } from './marquetaActions'
+import { LABEL, addContactLabel, askMarqueta, openViewButton } from './marquetaStyle'
 import { marketingOperationHash } from './operations'
 import { OUTREACH_STATUS_OPTIONS, WARMTH_RANK } from './outreachEnums'
 import { SLACK_LIMITS, clipSlackText, escapeSlackText, slackLink } from './slackText'
@@ -807,6 +808,24 @@ function sortForCalling(contacts: PrepContact[]): PrepContact[] {
   )
 }
 
+/**
+ * Is one person at an organisation clearly the one to call?
+ *
+ * "prep Crossover Health" is built around whoever `sortForCalling` puts
+ * first. That is a real choice when the first is reachable where the second
+ * is not, or not yet contacted where the second is already in conversation,
+ * or warmer. When the top two tie on all three, the order comes down to the
+ * alphabet — and an outline for whoever sorts first is prep for a call nobody
+ * chose. Then the caller should pick.
+ */
+export function clearlyFirst(contacts: PrepContact[]): boolean {
+  const sorted = sortForCalling((contacts || []).filter((contact) => contact && contact._id))
+  if (sorted.length < 2) return true
+  const [a, b] = sorted
+  const warmth = (contact: PrepContact) => WARMTH_RANK[clean(contact.warmth)] ?? 5
+  return Number(unreachable(a)) !== Number(unreachable(b)) || stageRank(a) !== stageRank(b) || warmth(a) !== warmth(b)
+}
+
 // ── Resolution ───────────────────────────────────────────────────────────────
 
 export type PrepCandidate = { label: string; contactId?: string; organization: string }
@@ -971,7 +990,11 @@ export function resolvePrepTarget(
 // ── The outline ──────────────────────────────────────────────────────────────
 
 export type CallOutline = {
-  /** "Call prep — Jane Doe, CMIO at Mass General Brigham" (plain text). */
+  /**
+   * The header, plain text: "Call prep: Jane Doe", "Meeting prep: Leo Park",
+   * "Email first: Jane Smith", "Hold off: Jane Doe". Role and organisation are
+   * on the `who` line under it; the notification adds the organisation.
+   */
   title: string
   /**
    * `holdOff`: they may be neither called nor emailed. The outline carries no
@@ -1010,6 +1033,14 @@ export type CallOutline = {
   contactDetails?: string[]
   /** Generic mode: what the requester typed. */
   fromYourMessage?: string[]
+  /**
+   * Everyone else on file at the organisation, when the outline is for one of
+   * several people there ("prep Crossover Health"): so the caller can see WHO
+   * it is for, and prep one of the others instead.
+   */
+  alsoAt?: PrepCandidate[]
+  /** Where things stand with the person, in a few words: "not contacted yet", "last touch 15 Sep (Contacted)". */
+  standing?: string
 }
 
 /**
@@ -1092,7 +1123,7 @@ const WARMTH_PHRASE: Record<string, string> = {
 const statusTitle = (status: string) =>
   (OUTREACH_STATUS_OPTIONS.find((option) => option.value === status)?.title || '').split(' — ')[0]
 
-type Touch = { at: string; statusAfter: string; channel: string }
+type Touch = { at: string; statusAfter: string; channel: string; by: string }
 
 function lastTouchOf(contact: PrepContact | undefined): Touch | null {
   if (!contact) return null
@@ -1101,30 +1132,49 @@ function lastTouchOf(contact: PrepContact | undefined): Touch | null {
   for (const interaction of contact.interactions || []) {
     const at = time(interaction?.at)
     if (at !== null && at > bestTime) {
-      best = { at: String(interaction.at), statusAfter: clean(interaction.statusAfter), channel: clean(interaction.channel) }
+      best = {
+        at: String(interaction.at),
+        statusAfter: clean(interaction.statusAfter),
+        channel: clean(interaction.channel),
+        by: clean(interaction.by),
+      }
       bestTime = at
     }
   }
   const contacted = time(contact.lastContactedAt)
-  if (contacted !== null && contacted > bestTime) best = { at: String(contact.lastContactedAt), statusAfter: '', channel: '' }
+  if (contacted !== null && contacted > bestTime) best = { at: String(contact.lastContactedAt), statusAfter: '', channel: '', by: '' }
   return best
+}
+
+/**
+ * Was the last touch made by the person about to make this one? Compared on
+ * the first name, because the board says "Juhan" and a spoken name may be
+ * "Juhan Sonin". Unknown either way is NOT a match: "our call" is true
+ * whoever made it, while "my call" said about a colleague's call is a
+ * sentence the prospect can catch out.
+ */
+function touchedBy(touch: Touch, sender: string): boolean {
+  const first = (value: string) => norm(value).split(' ')[0] || ''
+  return Boolean(first(touch.by)) && first(touch.by) === first(sender)
 }
 
 /**
  * How to refer to the last touch out loud. Derived from the channel and the
  * status it left, never from the free-text notes — and careful not to say
- * "when we spoke" about a call nobody answered.
+ * "when we spoke" about a call nobody answered, or "my call" about one a
+ * colleague made.
  */
-function followUpClause(touch: Touch | null): string {
+function followUpClause(touch: Touch | null, sender: string): string {
   if (!touch) return 'following up on my earlier message'
   const day = formatDay(touch.at)
   if (!day) return 'following up on my earlier message'
+  const whose = touchedBy(touch, sender) ? 'my' : 'our'
   const engaged = ['responded', 'meeting', 'opportunity', 'won', 'dormant'].includes(touch.statusAfter)
   if (['phone', 'video', 'inPerson'].includes(touch.channel)) {
-    return engaged ? `following up on when we spoke on ${day}` : `following up on my call on ${day}`
+    return engaged ? `following up on when we spoke on ${day}` : `following up on ${whose} call on ${day}`
   }
   if (['email', 'linkedin'].includes(touch.channel)) {
-    return engaged ? `following up on your note from ${day}` : `following up on my note from ${day}`
+    return engaged ? `following up on your note from ${day}` : `following up on ${whose} note from ${day}`
   }
   return `following up on when we were last in touch, on ${day}`
 }
@@ -1359,7 +1409,7 @@ export function composeCallOutline(input: {
 
   const todayLong = formatWeekday(now)
   const deadline = formatWeekdayDate(replyDeadline(now))
-  const clause = followUpClause(touch)
+  const clause = followUpClause(touch, sender)
 
   // ── Cheat sheet ──
   const permission = 'Have you got two minutes, or is this a bad time?'
@@ -1425,8 +1475,10 @@ export function composeCallOutline(input: {
               ? `I came across ${orgLabel}’s work and wanted to reach whoever looks after ${problem === 'this' ? 'it' : problem}.`
               : 'I’m reaching out to people working on healthcare software.'
       }`
-  // Nothing to answer on a call that must not happen.
-  const ifTheySay = holdOff ? [] : [
+  // Nothing to answer on a call that must not happen — and a booked meeting
+  // is not a cold call: "who is this, how did you get my number" has no place
+  // in the prep for a meeting they said yes to.
+  const ifTheySay = holdOff || mode === 'meeting' ? [] : [
     {
       theySay: 'Not a good time.',
       youSay: phoneBlock ? 'No problem — I’ll follow up by email instead.' : 'No problem — when would be better? I’ll call back then.',
@@ -1457,7 +1509,7 @@ export function composeCallOutline(input: {
     if (phoneBlock) {
       plan = `Email only — ${PHONE_BLOCK_REASON[phoneBlock]}. If there’s no reply by ${deadline}, one short follow-up email is plenty.`
     } else {
-      plan = `Email first today (the draft is in the next message). If there’s no reply by ${deadline}, call and open with “I sent you a note on ${todayLong}”.`
+      plan = `Send it today. If there’s no reply by ${deadline}, call and open with “I sent you a note on ${todayLong}”.`
     }
   } else if (emailBlock && mode !== 'meeting') {
     plan = `Phone only — ${EMAIL_BLOCK_REASON[emailBlock]}, so there’s no email draft. If it goes to voicemail, try again another day.`
@@ -1542,10 +1594,15 @@ export function composeCallOutline(input: {
       offer: offerRecord ? { key: offerRecord.key, title: offerRecord.title, oneLiner: offerRecord.oneLiner } : null,
       context: '',
     }
-    // draftOutreachNote lowercases the whole one-liner, which turns "AI" into
-    // "ai" in front of a prospect; put the capitals back.
+    // draftOutreachNote already says "a short fixed-scope piece of work", so
+    // a one-liner that opens "A fixed-scope…" said it twice in one sentence.
+    const oneLiner = clean(offerRecord?.oneLiner)
+      .replace(/[.\s]+$/, '')
+      .replace(/^(?:an?\s+)?(?:short\s*,?\s+)?fixed[- ]scope\s*,?\s+/i, '')
+    if (entry.offer) entry.offer = { ...entry.offer, oneLiner }
+    // It also lowercases the whole one-liner, which turns "AI" into "ai" in
+    // front of a prospect; put the capitals back.
     let note = draftOutreachNote(entry, sender)
-    const oneLiner = clean(offerRecord?.oneLiner).replace(/[.\s]+$/, '')
     if (oneLiner) note = note.replace(oneLiner.toLowerCase(), lowerFirst(oneLiner))
     email = ['Subject: A quick thought from GoInvo', '', note].join('\n')
   } else {
@@ -1556,10 +1613,10 @@ export function composeCallOutline(input: {
       hello,
       '',
       `I’m ${sender} from GoInvo, a design studio in Arlington that works on healthcare software.`,
+      // What the requester typed is NOT repeated here: it is under "From your
+      // message" in the thread, and a relationship note ("met at HIMSS") is
+      // already the line above — the draft carried it twice.
       ...(howWeKnow ? ['', `[Say how you know each other, in your own words: ${howWeKnow}]`] : []),
-      ...(request && clean(request.note)
-        ? ['', `[From your message — use it in your own words, or delete: ${clipWords(withoutContactDetails(request.note), 300)}]`]
-        : []),
       ...(reviewedOpener ? ['', clipWords(reviewedOpener, 700)] : []),
       ...(offerRecord
         ? [
@@ -1615,12 +1672,17 @@ export function composeCallOutline(input: {
   if (!reviewed && (clean(contact?.callBrief) || clean(contact?.suggestedOpener))) {
     caveats.push('Their research hasn’t been reviewed yet, so it’s only under Background — don’t read it out.')
   }
-  if (match.kind === 'organization' && match.contacts.length > 1) {
-    const others = match.contacts.slice(1)
-    const names = others.slice(0, 3).map((other) => personLabelFor(other, ''))
-    const more = others.length - names.length
-    caveats.push(`Also on file at ${orgLabel}: ${names.join(', ')}${more > 0 ? ` and ${more} more` : ''}.`)
-  }
+  // Who else is on file there travels as `alsoAt`, shown near the top where
+  // the caller can see who the outline is for — not as a caveat at the bottom
+  // of the thread that once read "Also on file at Crossover Health: someone."
+  const alsoAt =
+    match.kind === 'organization' && match.contacts.length > 1
+      ? match.contacts.slice(1).map((other) => ({
+          label: personLabelFor(other, ''),
+          contactId: other._id,
+          organization: clean(other.organization),
+        }))
+      : undefined
 
   // ── Who, in one line ──
   const standing = touch
@@ -1630,6 +1692,14 @@ export function composeCallOutline(input: {
         ? statusTitle(status) || 'in touch before'
         : `not contacted yet${statusTitle(status) ? ` (${statusTitle(status)})` : ''}`
       : 'not on file yet'
+  // The same, short, for the line that says who an organisation's outline is for.
+  const shortStanding = contact
+    ? touch
+      ? `last touch ${formatDay(touch.at)}`
+      : touched
+        ? statusTitle(status) || 'in touch before'
+        : 'not contacted yet'
+    : ''
   const identityDoubt =
     contact && (contact.personVerified === false || ['low', 'none'].includes(clean(contact.identityConfidence))) ? 'identity not confirmed' : ''
   const who = [
@@ -1650,12 +1720,10 @@ export function composeCallOutline(input: {
         ? 'Today’s job is just the email. No reply for a few days is normal — that’s what the follow-up is for.'
         : 'Your only job on this call is to find out whether they own a problem we can help with. A quick no is a fine outcome — log it and move on.'
 
-  // The title is what a notification shows, so a hold-off says so there too.
-  const lead = holdOff ? 'Hold off' : mode === 'meeting' ? 'Meeting prep' : 'Call prep'
-  const title =
-    personLabel.startsWith('someone')
-      ? `${lead} — ${personLabel}`
-      : `${lead} — ${personLabel}${role ? `, ${role}` : ''}${orgLabel ? ` at ${orgLabel}` : ''}`
+  // The title leads with what kind of prep this is, because it is also what a
+  // notification shows: a hold-off says so before anyone reads further.
+  const lead = holdOff ? 'Hold off' : mode === 'meeting' ? 'Meeting prep' : mode === 'emailFirst' ? 'Email first' : 'Call prep'
+  const title = `${lead}: ${personLabel}`
 
   const outline: CallOutline = {
     title,
@@ -1679,6 +1747,8 @@ export function composeCallOutline(input: {
     brief,
     caveats,
     reassurance,
+    ...(shortStanding ? { standing: shortStanding } : {}),
+    ...(alsoAt?.length ? { alsoAt } : {}),
   }
 
   if (input.includeContactDetails) {
@@ -1733,54 +1803,136 @@ function actionButton(text: string, actionId: string, value: string | undefined,
   }
 }
 
+/** "Jane Doe (Mass General Brigham)" — who, and where, in a notification. */
+function whoAndWhere(outline: CallOutline): string {
+  const person = clean(outline.personLabel)
+  const org = clean(outline.organization)
+  return !person.startsWith('someone') && org ? `${person} (${org})` : person || org || 'someone'
+}
+
 /**
- * Two messages, because the opener must be on screen without scrolling.
+ * "2 people on file at Crossover Health — this is for Sam Rivera (not
+ * contacted yet). Also: Scott" — so an organisation's outline says whose call
+ * it is, and one press preps the other person instead. Only people with a
+ * real name are named; the rest are counted.
+ */
+function alsoAtBlock(outline: CallOutline): Block | null {
+  const others = (outline.alsoAt || []).filter(Boolean)
+  if (!others.length) return null
+  const named = others.map((other) => clean(other.label)).filter((label) => label && !/^someone\b/i.test(label))
+  const shown = named.slice(0, 3)
+  const more = others.length - shown.length
+  const standing = clean(outline.standing)
+  const place = clean(outline.organization) || 'this organisation'
+  const also = shown.length
+    ? ` Also: ${shown.map((name) => safe(name, 80)).join(', ')}${more > 0 ? ` and ${more} more` : ''}.`
+    : ` And ${more} more with no name on file.`
+  const text =
+    `${others.length + 1} people on file at ${safe(place, 120)} — this is for ${safe(outline.personLabel, 120)}` +
+    `${standing ? ` (${safe(standing, 80)})` : ''}.${also}`
+  // One other person: one press preps them. Several: which one a lone Prep
+  // button meant would be a guess.
+  const only = others.length === 1 && clean(others[0].contactId) ? others[0] : null
+  const prep = only
+    ? actionButton(LABEL.PREP, MARQUETA_ACTION.prepCall, encodeContactRef({ contactId: only.contactId, organization: only.organization }))
+    : null
+  return { ...section(text), ...(prep ? { accessory: prep } : {}) }
+}
+
+/** The four spoken lines, under a heading that says when they are for. */
+function cheatSheetText(outline: CallOutline, heading: string): string {
+  const cheatSheet = outline.cheatSheet || { say: '', ask: '', ifNo: '', exit: '' }
+  return [
+    `*${heading}*`,
+    clean(cheatSheet.say) ? `*Say:* ${safe(cheatSheet.say, 700)}` : '',
+    clean(cheatSheet.ask) ? `*Ask:* ${safe(cheatSheet.ask, 400)}` : '',
+    clean(cheatSheet.ifNo) ? `*If no:* ${safe(cheatSheet.ifNo, 400)}` : '',
+    clean(cheatSheet.exit) ? `*Exit:* ${safe(cheatSheet.exit, 300)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
+/**
+ * An email draft in a code fence. The body is clipped BEFORE fencing, so the
+ * closing fence always survives, and a stray ``` inside a record cannot close
+ * the fence early.
+ */
+function fencedEmail(email: string, max: number): string {
+  const body = clipSlackText(escapeSlackText(String(email).replace(/```/g, "'''")), Math.max(200, max))
+  return `\`\`\`${body}\`\`\``
+}
+
+function ifTheySayText(outline: CallOutline): string {
+  return [
+    '*If they say…*',
+    ...outline.ifTheySay.slice(0, 8).map((line) => `• _${safe(line.theySay, 120)}_ → ${safe(line.youSay, 320)}`),
+  ].join('\n')
+}
+
+/**
+ * "Call prep: Jane Doe" as a caller reads it: TWO messages, because what to
+ * do must be on screen without scrolling.
  *
- * `first` is what the caller reads before dialling: who, the four spoken
- * lines, the plan or agenda, why now, the questions and the pushback answers.
- * `second` goes in the thread and holds everything that is only needed if the
- * call goes a particular way — the offer, a voicemail, the email draft — plus
- * the labelled background that must not be read out.
+ * `first`, top to bottom: the header; who they are; (for an organisation) who
+ * the outline is for and who else is there; THE ONE THING TO DO NOW — the four
+ * spoken lines, or, when the right first touch is an email, the email itself;
+ * then the actions (`Log it…`, `Add <Name> to outreach`, `Open Outreach`),
+ * right under it, where a caller who has just hung up can find them; then the
+ * reference below: agenda, why now, questions, what to say if they push back.
+ * The actions used to come last, sixty phone lines down.
  *
- * A hold-off puts "Don't contact — check the Studio" and its reason where the
- * cheat sheet would be, and there is no script under it to read by mistake.
+ * `second` goes in the thread: the kit that is only needed if the call goes a
+ * particular way — the offer, a voicemail, the email draft — plus the labelled
+ * background that must not be read out. For an email-first outline the email
+ * is already on top, so the thread holds what to say if they pick up instead,
+ * and no voicemail: the first touch is not a call.
  *
- * Contact details are never rendered here, whatever the outline carries.
+ * A meeting has no "If they say…": that is cold-call pushback, and the other
+ * person already said yes. A hold-off puts "Don't contact — check the Studio"
+ * and its reason where the spoken lines would be, with no script under it to
+ * read by mistake, and nothing green.
+ *
+ * `text` is the notification ("Call prep: Jane Doe (Mass General Brigham)");
+ * `threadText` the second message's ("Offer, voicemail and email draft for
+ * Jane Doe"). Contact details are never rendered here, whatever the outline
+ * carries.
  */
 export function buildCallOutlineMessages(
   outline: CallOutline,
   opts: { studioUrl?: string; logRef?: string; addRef?: string } = {},
-): { first: Block[]; second: Block[]; text: string } {
+): { first: Block[]; second: Block[]; text: string; threadText: string } {
+  const holdOff = outline.mode === 'holdOff'
+  const emailFirst = outline.mode === 'emailFirst' && Boolean(clean(outline.email))
   const first: Block[] = []
   first.push({ type: 'header', text: { type: 'plain_text', text: plainClip(outline.title, SLACK_LIMITS.headerText), emoji: false } })
   if (clean(outline.who)) first.push(context(safe(outline.who, 1000)))
+  const also = alsoAtBlock(outline)
+  if (also) first.push(also)
 
-  if (outline.mode === 'holdOff') {
-    // In the cheat sheet's place, so the first thing read is "don't".
-    first.push(
-      section(`*Don’t contact — check the Studio*\n${safe(outline.plan || 'They asked not to be called or emailed.', 800)}`),
-    )
+  // The one thing to do now.
+  if (holdOff) {
+    first.push(section(`*Don’t contact — check the Studio*\n${safe(outline.plan || 'They asked not to be called or emailed.', 800)}`))
+  } else if (emailFirst) {
+    const plan = outline.plan ? `\n*Plan* ${safe(outline.plan, 600)}` : ''
+    const room = SLACK_LIMITS.sectionText - '*Today: send this email*\n'.length - plan.length - 10
+    first.push(section(`*Today: send this email*\n${fencedEmail(outline.email, room)}${plan}`))
   } else {
-    const heading =
-      outline.mode === 'meeting' ? 'In the meeting' : outline.mode === 'emailFirst' ? 'If you end up talking' : 'On the call'
-    const cheatSheet = outline.cheatSheet || { say: '', ask: '', ifNo: '', exit: '' }
-    first.push(
-      section(
-        [
-          `*${heading}*`,
-          clean(cheatSheet.say) ? `*Say:* ${safe(cheatSheet.say, 700)}` : '',
-          clean(cheatSheet.ask) ? `*Ask:* ${safe(cheatSheet.ask, 400)}` : '',
-          clean(cheatSheet.ifNo) ? `*If no:* ${safe(cheatSheet.ifNo, 400)}` : '',
-          clean(cheatSheet.exit) ? `*Exit:* ${safe(cheatSheet.exit, 300)}` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
-      ),
-    )
-    if (outline.plan) first.push(section(`*Plan*\n${safe(outline.plan, 800)}`))
+    const heading = outline.mode === 'meeting' ? 'In the meeting' : 'On the call'
+    const plan = outline.plan ? `\n*Plan* ${safe(outline.plan, 800)}` : ''
+    first.push(section(`${cheatSheetText(outline, heading)}${plan}`))
   }
-  if (outline.agenda?.length) first.push(section(`*Agenda (30 min)*\n${bullets(outline.agenda, 300)}`))
 
+  const addLabel = outline.personLabel.startsWith('someone') && outline.organization ? outline.organization : outline.personLabel
+  const elements = [
+    // Green only when a call is what the message is asking for.
+    actionButton(LABEL.LOG, MARQUETA_ACTION.logCall, opts.logRef, holdOff ? undefined : 'primary'),
+    actionButton(addContactLabel(clipWords(addLabel, 50) || 'them'), MARQUETA_ACTION.addContact, opts.addRef),
+    openViewButton('outreach', opts.studioUrl || ''),
+  ].filter((element): element is Block => Boolean(element))
+  if (elements.length) first.push({ type: 'actions', elements })
+
+  if (outline.agenda?.length) first.push(section(`*Agenda (30 min)*\n${bullets(outline.agenda, 300)}`))
   if (outline.whyNow) {
     const quote = safe(outline.whyNow.quote, 1200)
       .split('\n')
@@ -1789,34 +1941,19 @@ export function buildCallOutlineMessages(
     const source = outline.whyNow.sourceUrl ? `\n${slackLink(outline.whyNow.sourceUrl, 'Source')}` : ''
     first.push(section(`*Why now*\n${safe(outline.whyNow.signal, 600)}\n${quote}${source}`))
   }
-
   if (outline.questions.length) first.push(section(`*Questions*\n${bullets(outline.questions.slice(0, 4), 300)}`))
-
-  if (outline.ifTheySay.length) {
-    first.push(
-      section(
-        [
-          '*If they say…*',
-          ...outline.ifTheySay.slice(0, 8).map((line) => `• _${safe(line.theySay, 120)}_ → ${safe(line.youSay, 320)}`),
-        ].join('\n'),
-      ),
-    )
-  }
-
+  if (!emailFirst && outline.ifTheySay.length) first.push(section(ifTheySayText(outline)))
   if (clean(outline.reassurance)) first.push(context(safe(outline.reassurance, 400)))
 
-  const addLabel = outline.personLabel.startsWith('someone') && outline.organization ? outline.organization : outline.personLabel
-  const elements = [
-    actionButton('Log how it went', MARQUETA_ACTION.logCall, opts.logRef, 'primary'),
-    actionButton(`Add ${clipWords(addLabel, 50) || 'them'} to outreach`, MARQUETA_ACTION.addContact, opts.addRef),
-    opts.studioUrl && /^https?:\/\//i.test(opts.studioUrl)
-      ? { type: 'button', text: { type: 'plain_text', text: 'Open in Studio' }, url: opts.studioUrl }
-      : null,
-  ].filter((element): element is Block => Boolean(element))
-  if (elements.length) first.push({ type: 'actions', elements })
-
   const second: Block[] = []
+  const threadParts: string[] = []
+  if (emailFirst) {
+    const talking = cheatSheetText(outline, 'If you end up talking')
+    if (talking.includes('*Say:*')) second.push(section(talking))
+    if (outline.ifTheySay.length) second.push(section(ifTheySayText(outline)))
+  }
   if (outline.offer) {
+    threadParts.push('offer')
     second.push(
       section(
         [
@@ -1830,12 +1967,13 @@ export function buildCallOutlineMessages(
     )
   }
   if (clean(outline.askNote)) second.push(context(`_The ask — for you, not to read out:_ ${safe(outline.askNote, 600)}`))
-  if (clean(outline.voicemail)) second.push(section(`*If it goes to voicemail* (about 20 seconds)\n${safe(outline.voicemail, 800)}`))
-  if (clean(outline.email)) {
-    // Clip the body BEFORE fencing, so the closing fence always survives; and
-    // a stray ``` inside a record cannot close the fence early.
-    const body = clipSlackText(escapeSlackText(String(outline.email).replace(/```/g, "'''")), 2600)
-    second.push(section(`*Email draft* — edit before sending\n\`\`\`${body}\`\`\``))
+  if (!emailFirst && clean(outline.voicemail)) {
+    threadParts.push('voicemail')
+    second.push(section(`*If it goes to voicemail* (about 20 seconds)\n${safe(outline.voicemail, 800)}`))
+  }
+  if (!emailFirst && clean(outline.email)) {
+    threadParts.push('email draft')
+    second.push(section(`*Email draft* — edit before sending\n${fencedEmail(outline.email, 2600)}`))
   }
   if (outline.brief) second.push(section(`*Call brief* (reviewed)\n${safe(outline.brief, 2500)}`))
   if (outline.background.length) {
@@ -1846,27 +1984,69 @@ export function buildCallOutlineMessages(
     second.push(section(`*From your message*\n${bullets(outline.fromYourMessage.slice(0, 6), 700)}`))
   }
 
+  const person = clean(outline.personLabel) || 'them'
+  const list = threadParts.length > 1 ? `${threadParts.slice(0, -1).join(', ')} and ${threadParts[threadParts.length - 1]}` : threadParts[0] || ''
+  const threadText = emailFirst
+    ? `If ${person} picks up: what to say${outline.offer ? ', and the offer' : ''}`
+    : list
+      ? `${capitalise(list)} for ${person}`
+      : `Background on ${person}`
+
   return {
     first: first.slice(0, 15),
     second: second.slice(0, 20),
-    text: clipSlackText(escapeSlackText(clean(outline.title)), SLACK_LIMITS.fallbackText) || 'Call prep',
+    text: clipSlackText(escapeSlackText(`${clean(outline.title).split(':')[0]}: ${whoAndWhere(outline)}`), SLACK_LIMITS.fallbackText) || 'Call prep',
+    threadText: clipSlackText(escapeSlackText(threadText), SLACK_LIMITS.fallbackText),
   }
 }
 
+/** A candidate's Log button: "Log Jane Doe, CMIO — Acme Health…". The "…" says it opens the form. */
+export function logCandidateLabel(label: string): string {
+  const name = clean(label) || 'them'
+  // One ellipsis either way: a clipped name already ends where the form opens.
+  const room = SLACK_LIMITS.buttonText - 'Log …'.length
+  return `Log ${name.length > room ? name.slice(0, room).trimEnd() : name}…`
+}
+
 /**
- * "Which one did you mean?" — each candidate with its own Prep button, so the
+ * "Which one did you mean?" — each candidate with its own button, so the
  * answer is one press rather than retyping the name more carefully.
+ *
+ * `action: 'prep'` (the default) gives each a Prep button. `action: 'log'`
+ * is for a call reported in a message that fits more than one person ("called
+ * Jane, left a voicemail" with two Janes on file): each button opens the log
+ * form for THAT contact, already filled in with what was said (`note`,
+ * `outcome`) — nothing is written until the form is sent. A candidate with no
+ * contact on file cannot be logged against, and is left out.
  *
  * `heading` is plain text and is escaped like everything else.
  */
-export function buildPrepCandidatesBlocks(candidates: PrepCandidate[], heading: string): Block[] {
-  const usable = (candidates || []).filter((candidate) => candidate && (clean(candidate.contactId) || clean(candidate.organization)))
+export function buildPrepCandidatesBlocks(
+  candidates: PrepCandidate[],
+  heading: string,
+  opts: { action?: 'prep' | 'log'; label?: (candidate: PrepCandidate) => string; note?: string; outcome?: string } = {},
+): Block[] {
+  const logging = opts.action === 'log'
+  const usable = (candidates || []).filter(
+    (candidate) => candidate && (logging ? clean(candidate.contactId) : clean(candidate.contactId) || clean(candidate.organization)),
+  )
   if (!usable.length) return []
   const blocks: Block[] = [section(safe(heading, 600) || 'Which one did you mean?')]
   usable.slice(0, MAX_CANDIDATES).forEach((candidate) => {
     const label = clean(candidate.label) || clean(candidate.organization) || 'Unnamed contact'
-    const value = encodeContactRef({ contactId: candidate.contactId, organization: candidate.organization })
-    const button = actionButton('Prep', MARQUETA_ACTION.prepCall, value)
+    const button = logging
+      ? actionButton(
+          opts.label ? opts.label(candidate) : logCandidateLabel(label),
+          MARQUETA_ACTION.logCall,
+          encodeContactRef({
+            contactId: candidate.contactId,
+            organization: candidate.organization,
+            name: label,
+            note: opts.note,
+            outcome: opts.outcome,
+          }),
+        )
+      : actionButton(LABEL.PREP, MARQUETA_ACTION.prepCall, encodeContactRef({ contactId: candidate.contactId, organization: candidate.organization }))
     blocks.push({ ...section(`*${safe(label, 400)}*`), ...(button ? { accessory: button } : {}) })
   })
   return blocks
@@ -1888,39 +2068,52 @@ const TEMPERATURE_LABEL: Record<PrepListEntry['temperature'], string> = {
 
 const PREP_LIST_MAX = 8
 
+/** How to prep somebody who is not on the list — the command, as people can copy it. */
+const PREP_ANYONE = askMarqueta('prep Sam Rivera at Acme')
+
 /**
  * "Who should I call?" — the people worth a call, warmest first, each one a
  * Prep press away. A short list says it is short, plainly, and says how to
  * prep somebody who is not on file, because most calls are to people who are
- * not in the CMS yet.
+ * not in the CMS yet. It always ends on that one hint.
  *
- * `heading` is plain text (escaped); `handle` is already mrkdwn — the working
- * mention from `marquetaHandle` — and is used as given.
+ * `heading` is mrkdwn the caller built (escaped).
  */
-export function buildPrepListBlocks(entries: PrepListEntry[], opts: { heading: string; handle: string }): Block[] {
+export function buildPrepListBlocks(entries: PrepListEntry[], opts: { heading: string }): Block[] {
   const list = (entries || []).filter((entry) => entry && (clean(entry.label) || clean(entry.organization)))
-  const blocks: Block[] = [section(safe(opts.heading, 600) || '*Your calls*')]
+  if (!list.length) {
+    return [section(`Nobody’s on your list yet. Before a call, say ${PREP_ANYONE}.`)]
+  }
+  const blocks: Block[] = [section(clipSlackText(opts.heading, 600) || '*Your calls*')]
   list.slice(0, PREP_LIST_MAX).forEach((entry) => {
     const label = clean(entry.label) || clean(entry.organization)
     const temperature = TEMPERATURE_LABEL[entry.temperature] || TEMPERATURE_LABEL.cold
     const text = [`*${safe(label, 300)}* — ${temperature}`, clean(entry.detail) ? safe(entry.detail, 600) : ''].filter(Boolean).join('\n')
     const button =
       clean(entry.contactId) || clean(entry.organization)
-        ? actionButton('Prep', MARQUETA_ACTION.prepCall, encodeContactRef({ contactId: entry.contactId, organization: entry.organization }))
+        ? actionButton(LABEL.PREP, MARQUETA_ACTION.prepCall, encodeContactRef({ contactId: entry.contactId, organization: entry.organization }))
         : null
     blocks.push({ ...section(text), ...(button ? { accessory: button } : {}) })
   })
-  if (list.length > PREP_LIST_MAX) blocks.push(context(`…and ${list.length - PREP_LIST_MAX} more on file.`))
-  if (list.length < 3) {
-    const lead = list.length === 0 ? 'Nobody is on your call list right now.' : 'That’s everyone on your list right now.'
-    blocks.push(
-      context(`${lead} For someone who isn’t on file yet, tell ${opts.handle || 'me'} \`prep Sam Rivera at Acme\` and I’ll put an outline together.`),
-    )
-  }
+  const more = list.length - PREP_LIST_MAX
+  blocks.push(
+    context(
+      more > 0
+        ? `+${more} more on Outreach. For someone not on file, say ${PREP_ANYONE}.`
+        : `That’s everyone on your list. For someone not on file, say ${PREP_ANYONE}.`,
+    ),
+  )
   return blocks
 }
 
 // ── Adding someone who is not on file ────────────────────────────────────────
+
+/**
+ * The status a contact added from Slack starts at — exported so a caller can
+ * ask what a log would do to the record this makes (`needsConfirmation`)
+ * before it offers to add and log in one press.
+ */
+export const NEW_CONTACT_STATUS = 'new'
 
 /**
  * The contact record for somebody first mentioned in Slack.
@@ -1944,6 +2137,7 @@ export function buildPrepListBlocks(entries: PrepListEntry[], opts: { heading: s
  * cannot be found, called or told apart from the next one. The caller asks for
  * a name or an organisation instead of writing a blank contact.
  */
+
 export function newContactDocument(input: {
   name: string
   organization: string
@@ -1970,7 +2164,7 @@ export function newContactDocument(input: {
     ...(name ? { name } : {}),
     ...(organization ? { organization } : {}),
     ...(role ? { role } : {}),
-    status: 'new',
+    status: NEW_CONTACT_STATUS,
     warmth: 'unknown',
     ...(owner ? { owner } : {}),
     ...(note ? { howWeKnow: note } : {}),

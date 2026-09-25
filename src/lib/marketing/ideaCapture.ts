@@ -364,20 +364,51 @@ function truncate(value: string, maxLength: number): string {
   return `${(lastSpace > maxLength * 0.45 ? cut.slice(0, lastSpace) : cut).trim()}…`
 }
 
+/**
+ * Being somewhere in person — a table or a booth AT an event — which is how
+ * people find us, whatever is on the table. "We should do a merch table at
+ * Arlington Town Day, stickers and a tote" was filed under product because it
+ * mentions stickers; the idea is the table, not a new thing to sell. Both
+ * halves are required, so "a table in the report" stays whatever it was.
+ *
+ * The event half names an EVENT, not a word that is often near one. Bare
+ * "day", "town" and "market" put "add a table of numbers to the report every
+ * day" under growth; a day counts only as a named one ("Arlington Town Day",
+ * "open day"), and anything else has to be somewhere you can stand — "a booth
+ * at HIMSS" is at a capitalised place.
+ */
+const BEING_THERE = /\b(?:table|tables|tabling|booth|booths|stall|stalls|tent)\b/
+const AN_EVENT =
+  /\b(?:fairs?|festivals?|conferences?|events?|expos?|meetups?|summits?|parades?|block\s+part(?:y|ies)|trade\s+shows?|town\s+(?:day|hall|meeting)|open\s+(?:day|house)|(?:farmers['’]?|flea|craft|night|christmas|holiday)\s+markets?|(?:market|field|fun|family|career|community|demo|launch|volunteer)\s+day)\b/
+/** A named day or a named place, read on the text as typed: "Town Day", "at HIMSS". */
+const A_NAMED_EVENT = /\b[A-Z][\w'’-]*\s+Day\b|\b(?:at|during)\s+(?:the\s+)?[A-Z]/
+
+/**
+ * A needle as a whole word — with an s, es, ed or ing on the end at most.
+ * Plain `includes` filed a "workshop" under the shop, a "sprint" under print
+ * and "leadership" under leads.
+ */
+const hasWord = (lower: string, needle: string) =>
+  new RegExp(`(?:^|[^a-z0-9])${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:s|es|ed|ing)?(?![a-z0-9])`).test(lower)
+
 /** Cheap category guess. Undefined when unsure — a wrong label is worse than none. */
 export function ideaCategoryFrom(text: string): string | undefined {
-  const lower = messageProse(text).toLowerCase()
+  const prose = messageProse(text)
+  const lower = prose.toLowerCase()
+  if (BEING_THERE.test(lower) && (AN_EVENT.test(lower) || A_NAMED_EVENT.test(prose))) return 'growth'
+  // Whole words only (see `hasWord`), so a word that grows by more than an
+  // ending — merchandise, measurement, blogging — is listed as itself.
   const table: Array<[string, string[]]> = [
-    ['product', ['patch', 'sticker', 'tattoo', 'decal', 'tshirt', 't-shirt', 'merch', 'shop', 'poster', 'print']],
-    ['content', ['reel', 'video', 'article', 'blog', 'newsletter', 'case study', 'writeup', 'write-up']],
+    ['product', ['patch', 'sticker', 'tattoo', 'decal', 'tshirt', 't-shirt', 'merch', 'merchandise', 'shop', 'shopping', 'poster', 'print', 'tote']],
+    ['content', ['reel', 'video', 'article', 'blog', 'blogging', 'blogger', 'newsletter', 'case study', 'writeup', 'write-up']],
     ['seo', ['seo', 'keyword', 'search console', 'ranking', 'backlink']],
-    ['measurement', ['analytics', 'ga4', 'measure', 'conversion rate', 'dashboard']],
+    ['measurement', ['analytics', 'ga4', 'measure', 'measurement', 'measuring', 'conversion rate', 'dashboard']],
     ['growth', ['funnel', 'campaign', 'lead', 'outreach', 'pipeline', 'email list', 'subscriber']],
     ['technical', ['refactor', 'migrate', 'api', 'bug', 'performance', 'deploy']],
     ['process', ['process', 'workflow', 'cadence', 'checklist', 'roadmap']],
   ]
   for (const [category, needles] of table) {
-    if (needles.some((needle) => lower.includes(needle))) return category
+    if (needles.some((needle) => hasWord(lower, needle))) return category
   }
   return undefined
 }

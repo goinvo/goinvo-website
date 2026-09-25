@@ -87,9 +87,14 @@ export function slackMention(slackUserId: string | undefined, fallbackName?: str
  * "@Marqueta" is NOT one: she posts as the website-chat app with a per-message
  * name, so typing "@Marqueta" produces plain text that never reaches her as a
  * mention. Her bot user id renders as the real, clickable thing.
+ *
+ * Without the id she is just "Marqueta" — the name people start a message
+ * with ("Marqueta, my calls"), which reaches her in any channel she is in. No
+ * "DM me": DMs need a Slack scope she has not been given, so the old
+ * parenthetical pointed people at a door that does not open.
  */
 export function marquetaHandle(botUserId?: string): string {
-  return botUserId ? `<@${botUserId}>` : 'Marqueta (DM me, or start your message with "Marqueta,")'
+  return botUserId ? `<@${botUserId}>` : 'Marqueta'
 }
 
 /**

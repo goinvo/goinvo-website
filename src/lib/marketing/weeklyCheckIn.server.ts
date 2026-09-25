@@ -43,16 +43,16 @@ import {
 } from './followUps'
 import { CHECKIN_HEARTBEAT_DOC_ID, HEARTBEAT_DOC_TYPE, type HeartbeatStep } from './heartbeat'
 import { encodeContactRef } from './marquetaActions'
+import { countLabel, MARQUETA_IDENTITY, STATE_EMOJI, weekOfLabel } from './marquetaStyle'
 import { MARKETING_OPERATION_TYPE } from './operations'
 import { getOutreachClient } from './outreachClient.server'
 import { summarizeOutreach, type PulseContact } from './outreachPulse'
-import { clipSlackText, escapeSlackText, marquetaHandle, SLACK_LIMITS } from './slackText'
+import { escapeSlackText } from './slackText'
 import { checkInRoster, TEAM_AVAILABILITY_PROJECTION, tidyAvailability } from './team.server'
 import {
   buildWeeklyCheckInBlocks,
   checkInFallbackText,
   groupCheckInTasks,
-  MAX_CHECK_IN_BLOCKS,
   type CheckInFollowUp,
   type CheckInGroup,
   type CheckInTask,
@@ -60,10 +60,6 @@ import {
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Block = Record<string, any>
-
-/** Her name and icon in Slack — the same the digest uses, set per message. */
-const MARQUETA_NAME = 'Marqueta'
-const MARQUETA_ICON = ':chart_with_upwards_trend:'
 
 const DAY_MS = 86_400_000
 /** After this long, a claim with no post behind it is a crashed run, not one in flight. */
@@ -106,6 +102,7 @@ type StoredTask = {
   humanQuestion?: string | null
   lastOutcome?: string | null
   sourceKey?: string | null
+  targetView?: string | null
 }
 
 type CheckInContact = FollowUpContact & PulseContact
@@ -120,7 +117,7 @@ export const CHECK_IN_DATA_QUERY = `{
     && !(status in ["done", "dismissed"])
     && !string::startsWith(coalesce(sourceKey, ""), $planPrefix)]{
       _id, _createdAt, _updatedAt, title, ownerName, ownerSlackUserId, status, kind, priority,
-      dueAt, estimatedMinutes, blocker, humanQuestion, lastOutcome, sourceKey
+      dueAt, estimatedMinutes, blocker, humanQuestion, lastOutcome, sourceKey, targetView
     },
   "availability": *[_type == "marketingTeamAvailability" && !(_id in path("drafts.**"))]${TEAM_AVAILABILITY_PROJECTION},
   "contacts": *[_type == "marketingContact" && !(_id in path("drafts.**"))
@@ -131,7 +128,6 @@ export const CHECK_IN_DATA_QUERY = `{
 }`
 
 const clean = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim()
-const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
 const orUndefined = <T>(value: T | null | undefined): T | undefined => (value === null ? undefined : value)
 
 /**
@@ -158,13 +154,6 @@ function weekStart(now: Date): number {
   return today - ((new Date(today).getUTCDay() + 6) % 7) * DAY_MS
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const shortDate = (ms: number) => {
-  const date = new Date(ms)
-  return `${WEEKDAYS[date.getUTCDay()]} ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`
-}
-
 function toCheckInTask(task: StoredTask): CheckInTask {
   return {
     _id: task._id,
@@ -184,6 +173,8 @@ function toCheckInTask(task: StoredTask): CheckInTask {
     updatedAt: orUndefined(task._updatedAt),
     createdAt: orUndefined(task._createdAt),
     sourceKey: orUndefined(task.sourceKey),
+    // Where the title links: the same tab the Monday plan and `my tasks` link to.
+    targetView: orUndefined(task.targetView),
   }
 }
 
@@ -193,20 +184,42 @@ export type WeekClaim =
   | { kind: 'claimed' }
   | { kind: 'skip'; reason: CheckInSkipReason; detail: string }
 
+/** Monday (UTC) of an ISO week key ("2026-W39" → "2026-09-21"); '' for anything else. */
+function mondayOfIsoWeek(key: string): string {
+  const match = /^(\d{4})-W(\d{2})$/.exec(clean(key))
+  if (!match) return ''
+  const jan4 = Date.UTC(Number(match[1]), 0, 4)
+  const week1Monday = jan4 - ((new Date(jan4).getUTCDay() + 6) % 7) * DAY_MS
+  return new Date(week1Monday + (Number(match[2]) - 1) * 7 * DAY_MS).toISOString().slice(0, 10)
+}
+
+/**
+ * "the week of Mon 21 Sep" — the week as a sentence names it.
+ *
+ * The ISO key stays in the `week` and `postedWeek` fields, where machines
+ * compare it; the heartbeat's `detail` is read aloud (`Marqueta, tick` quotes
+ * it in Slack), and nobody reads "2026-W39" as a date.
+ */
+export function weekInWords(week: string, now: Date): string {
+  const monday = mondayOfIsoWeek(week)
+  return monday ? weekOfLabel(monday, now).replace(/^Week of/, 'the week of') : 'this week'
+}
+
 /**
  * Take this week's claim on a scheduled post's own record, or say why not.
  *
  * Shared by the Thursday check-in and the Monday digest: each keeps its claim
  * on its own heartbeat document (`docId`), and `label` names the post in the
- * sentences ("The 2026-W39 digest was already posted."). Conditional on the
- * revision read, so two runs cannot both succeed: the loser's write is rejected
- * and it stands down as `claimed`.
+ * sentences ("The digest for the week of Mon 21 Sep was already posted.").
+ * Conditional on the revision read, so two runs cannot both succeed: the
+ * loser's write is rejected and it stands down as `claimed`.
  */
 export async function claimWeek(
   client: Client,
   input: { docId: string; label: string; week: string; now: Date; force: boolean },
 ): Promise<WeekClaim> {
   const { docId, label, week, now, force } = input
+  const which = `${label} for ${weekInWords(week, now)}`
   await client.createIfNotExists({ _id: docId, _type: HEARTBEAT_DOC_TYPE })
   const record = await client.fetch<{
     _rev?: string
@@ -217,19 +230,19 @@ export async function claimWeek(
   if (!record?._rev) throw new Error(`could not read the ${label} record to claim the week`)
 
   if (record.postedWeek === week && !force) {
-    return { kind: 'skip', reason: 'alreadyPosted', detail: `The ${week} ${label} was already posted.` }
+    return { kind: 'skip', reason: 'alreadyPosted', detail: `The ${which} was already posted.` }
   }
   if (record.claimedWeek === week && record.postedWeek !== week) {
     const claimedAt = Date.parse(String(record.claimedAt || ''))
     const age = Number.isFinite(claimedAt) ? now.getTime() - claimedAt : 0
     if (age < CHECK_IN_CLAIM_STALE_MS) {
-      return { kind: 'skip', reason: 'claimed', detail: `Another run is posting the ${week} ${label}.` }
+      return { kind: 'skip', reason: 'claimed', detail: `Another run is posting the ${which}.` }
     }
     if (!force) {
       return {
         kind: 'skip',
         reason: 'staleClaim',
-        detail: `A run claimed ${week} ${Math.round(age / 60000)} minutes ago and never posted. Run again with force=1 to post it.`,
+        detail: `A run claimed the ${which} ${countLabel(Math.round(age / 60000), 'minute')} ago and never posted. Run again with force=1 to post it.`,
       }
     }
   }
@@ -244,7 +257,7 @@ export async function claimWeek(
     // Only a revision conflict means another run won. Anything else is a
     // failure to claim, and is reported as one rather than as a quiet stand-down.
     if (!isRevisionConflict(error)) throw error
-    return { kind: 'skip', reason: 'claimed', detail: `Another run claimed the ${week} ${label} first.` }
+    return { kind: 'skip', reason: 'claimed', detail: `Another run claimed the ${which} first.` }
   }
   return { kind: 'claimed' }
 }
@@ -355,85 +368,39 @@ export function absencesOn(
 }
 
 /**
- * "Away, so not asked: Shirley (2 tasks, 1 follow-up)." — names as plain,
- * escaped text, never mentions. Their lists are left for them (or for cover
- * from the plan) rather than put in front of them on holiday.
+ * "🌴 Away, so not asked this week: Shirley (2 tasks, 1 follow-up). That list
+ * is on This week if anything needs cover." Names as plain, escaped text,
+ * never mentions, and no pronoun guessed from a name. Their lists are left for
+ * them (or for cover from the plan) rather than put in front of them on
+ * holiday.
  */
 function awayLine(groups: CheckInGroup[]): string {
   if (!groups.length) return ''
   const people = groups.map((group) => {
     const tasks = group.tasks.length + group.hidden
     const parts = [
-      tasks ? plural(tasks, 'task') : '',
-      group.followUps.length ? plural(group.followUps.length, 'follow-up') : '',
+      tasks ? countLabel(tasks, 'task') : '',
+      group.followUps.length ? countLabel(group.followUps.length, 'follow-up') : '',
     ].filter(Boolean)
     return `${escapeSlackText(clean(group.ownerName) || 'Someone')}${parts.length ? ` (${parts.join(', ')})` : ''}`
   })
-  return `Away, so not asked this week: ${people.join(', ')}. Their lists are on the plan if anything needs cover.`
-}
-
-/** The builder's fixed copy for the ownerless-work line (weeklyCheckIn.ts). */
-const NOBODY_HAS_TAKEN = 'Nobody has taken:'
-
-const isContext = (block: Block | undefined) => block?.type === 'context' && Array.isArray(block.elements)
-const contextHasRoom = (block: Block) => block.elements.length < SLACK_LIMITS.contextElements
-const withElement = (block: Block, element: Block): Block => ({ ...block, elements: [...block.elements, element] })
-
-/**
- * Put the "Follow-ups nobody owns" line somewhere it cannot be trimmed away.
- *
- * It is added AFTER `buildWeeklyCheckInBlocks` has fitted the message to
- * MAX_CHECK_IN_BLOCKS, so on a busy week — five people with full lists — there
- * is no block left for it, and a line that needs its own block is silently
- * dropped. That is exactly the wrong line to lose: these are often the warmest
- * leads on file (someone replied, a date was set, nobody is on the record to
- * chase it), and nothing else in the message names them.
- *
- * So it costs a block only when a block is free. In order:
- *   1. a second element in the "Nobody has taken" context block — where the
- *      team already looks for work without an owner, and free;
- *   2. its own context block just above the "Open the plan" button, when the
- *      message is under the ceiling;
- *   3. a second element in the first context line with room — the week line
- *      under the header, which every check-in has.
- *
- * `placed: false` only when none of those exists, so the caller can say so in
- * the run's record instead of claiming follow-ups it never showed.
- */
-export function withUnownedFollowUps(blocks: Block[], line: string): { blocks: Block[]; placed: boolean } {
-  if (!line) return { blocks, placed: true }
-  const element: Block = { type: 'mrkdwn', text: clipSlackText(line, SLACK_LIMITS.sectionText) }
-
-  const nobody = blocks.findIndex(
-    (block) => isContext(block) && String(block.elements[0]?.text || '').startsWith(NOBODY_HAS_TAKEN) && contextHasRoom(block),
-  )
-  if (nobody >= 0) {
-    return { blocks: blocks.map((block, index) => (index === nobody ? withElement(block, element) : block)), placed: true }
-  }
-
-  if (blocks.length < MAX_CHECK_IN_BLOCKS) {
-    const context: Block = { type: 'context', elements: [element] }
-    const last = blocks[blocks.length - 1]
-    // The trailing "Open the plan" button has no block id; task cards always do.
-    if (last?.type === 'actions' && !last.block_id) return { blocks: [...blocks.slice(0, -1), context, last], placed: true }
-    return { blocks: [...blocks, context], placed: true }
-  }
-
-  const any = blocks.findIndex((block) => isContext(block) && contextHasRoom(block))
-  if (any >= 0) {
-    return { blocks: blocks.map((block, index) => (index === any ? withElement(block, element) : block)), placed: true }
-  }
-  return { blocks, placed: false }
+  const lists = groups.length === 1 ? 'That list is' : 'Those lists are'
+  return `${STATE_EMOJI.away} Away, so not asked this week: ${people.join(', ')}. ${lists} on This week if anything needs cover.`
 }
 
 /**
  * Build the check-in from the records and, unless it is a dry run, claim the
  * week, post it to #marketing-bot and record the run.
+ *
+ * A week with nothing on anyone's list is still posted — as one line — and
+ * recorded as a healthy run that had nothing to say. Skipping it would look,
+ * to the team and to the watchdog, exactly like a job that had died.
  */
 export async function runWeeklyCheckIn(input: {
   now?: Date
   dryRun?: boolean
   force?: boolean
+  /** Ignored: the hints are typed phrases, never a mention of her. Accepted so older callers compile. */
   botUserId?: string
 }): Promise<CheckInRunResult> {
   const now = input.now || new Date()
@@ -478,10 +445,12 @@ export async function runWeeklyCheckIn(input: {
     taskCount: number
     followUpCount: number
     people: number
-    /** Ownerless follow-ups that could not be shown (0 unless the message had no room anywhere). */
-    unshownUnowned: number
+    /** Tasks nobody has taken, shown as cards (or counted) under their own heading. */
+    unowned: number
     /** People with work on the list who are away, and so were not asked. */
     away: number
+    /** Nothing on anyone's list, nothing unowned, nothing to note: the one-line check-in. */
+    quiet: boolean
   }
   try {
     const data = await client.fetch<{
@@ -505,6 +474,7 @@ export async function runWeeklyCheckIn(input: {
       if (!owner) continue // nobody's — rendered as its own line below
       followUpsByOwner[owner] = entries.map((entry) => ({
         ...followUpLine(entry, now),
+        overdue: entry.overdue,
         contactRef: encodeContactRef({
           contactId: entry.contactId,
           organization: entry.organization,
@@ -534,34 +504,30 @@ export async function runWeeklyCheckIn(input: {
       now,
     })
 
+    // Lines about work nobody is being asked about: the follow-ups nobody
+    // owns (often the warmest leads on file) and who is away. The builder
+    // places them inside its block budget, so neither can be trimmed away.
+    const notes = [unownedFollowUpsText(followUps, now), awayLine(awayGroups)].filter(Boolean)
     const base = clean(process.env.MARKETING_PUBLIC_BASE_URL).replace(/\/+$/, '')
-    const unownedLine = unownedFollowUpsText(followUps, now)
-    const withUnowned = withUnownedFollowUps(
-      buildWeeklyCheckInBlocks({
-        weekLabel: `${week} · week of ${shortDate(from)}`,
+
+    built = {
+      blocks: buildWeeklyCheckInBlocks({
+        weekLabel: weekOfLabel(new Date(from).toISOString().slice(0, 10), now),
         groups,
         unowned,
         pulse,
-        handle: marquetaHandle(input.botUserId),
-        // MUST name the view: without it the Studio reopens whatever view was last used.
-        studioUrl: /^https?:\/\//i.test(base) ? `${base}/studio/marketing?view=thisWeek` : undefined,
+        notes,
+        // Card titles, "+2 more" and Open This week all link into the Studio, each naming its view.
+        studioBaseUrl: /^https?:\/\//i.test(base) ? base : undefined,
         now,
       }),
-      unownedLine,
-    )
-    // Placed the same way as the ownerless follow-ups: beside "Nobody has
-    // taken" where there is one (it is the same question — whose is this?),
-    // otherwise wherever a block or a context slot is free.
-    const placed = withUnownedFollowUps(withUnowned.blocks, awayLine(awayGroups))
-
-    built = {
-      blocks: placed.blocks,
-      text: checkInFallbackText(groups),
+      text: checkInFallbackText(groups, { unowned: unowned.length }),
       taskCount: groups.reduce((sum, group) => sum + group.tasks.length + group.hidden, 0),
       followUpCount: followUps.length,
       people: groups.length,
-      unshownUnowned: withUnowned.placed ? 0 : followUps.filter((entry) => !clean(entry.ownerName)).length,
+      unowned: unowned.length,
       away: awayGroups.length,
+      quiet: !groups.length && !unowned.length && !notes.length,
     }
   } catch (error) {
     const detail = `Could not build the check-in: ${String((error as Error)?.message || error)}`
@@ -571,11 +537,11 @@ export async function runWeeklyCheckIn(input: {
     return { ok: false, posted: false, ...empty, detail }
   }
 
-  const summary =
-    `${plural(built.taskCount, 'task')} and ${plural(built.followUpCount, 'follow-up')} across ${plural(built.people, 'person', 'people')}` +
-    // Say so rather than count follow-ups the message never showed.
-    (built.unshownUnowned ? ` (${plural(built.unshownUnowned, 'follow-up')} nobody owns did not fit in the message)` : '') +
-    (built.away ? `; ${plural(built.away, 'person', 'people')} away, not asked` : '')
+  const summary = built.quiet
+    ? 'nothing to say'
+    : `${countLabel(built.taskCount, 'task')} and ${countLabel(built.followUpCount, 'follow-up')} across ${countLabel(built.people, 'person', 'people')}` +
+      (built.unowned ? `; ${countLabel(built.unowned, 'task')} nobody has taken` : '') +
+      (built.away ? `; ${countLabel(built.away, 'person', 'people')} away, not asked` : '')
   if (dryRun) {
     return {
       ok: true,
@@ -585,7 +551,7 @@ export async function runWeeklyCheckIn(input: {
       text: built.text,
       taskCount: built.taskCount,
       followUpCount: built.followUpCount,
-      detail: `Dry run for ${week}: ${summary}. Nothing claimed, posted or recorded.`,
+      detail: `Dry run for ${weekInWords(week, now)}: ${summary}. Nothing claimed, posted or recorded.`,
     }
   }
 
@@ -595,8 +561,7 @@ export async function runWeeklyCheckIn(input: {
       channel,
       text: built.text,
       ...(built.blocks.length ? { blocks: built.blocks } : {}),
-      username: MARQUETA_NAME,
-      iconEmoji: MARQUETA_ICON,
+      ...MARQUETA_IDENTITY,
       unfurl: false,
     })
   } catch (error) {
@@ -606,7 +571,7 @@ export async function runWeeklyCheckIn(input: {
 
   const count = built.taskCount + built.followUpCount
   if (!posted) {
-    const detail = `Slack refused the ${week} check-in (${summary}). Check the bot is in the channel.`
+    const detail = `Slack refused the check-in for ${weekInWords(week, now)} (${summary}). Check the bot is in the channel.`
     await recordHeartbeat(client, { week, now, step: { name: 'checkin', ok: false, count: 0, detail }, releaseClaim: true })
     return {
       ok: false,
@@ -620,7 +585,7 @@ export async function runWeeklyCheckIn(input: {
     }
   }
 
-  const detail = `Check-in posted for ${week}: ${summary}.`
+  const detail = `Check-in posted for ${weekInWords(week, now)}: ${summary}.`
   await recordHeartbeat(client, { week, now, step: { name: 'checkin', ok: true, count, detail }, posted: { ts: posted.ts } })
   return {
     ok: true,

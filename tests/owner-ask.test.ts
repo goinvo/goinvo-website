@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 
 import {
   askMentionsText,
-  buildAskBlocks,
-  describeAsk,
+  askMeta,
   proposeOwnerAsks,
   type AskTask,
   type AskTeamMember,
   type OwnerAsk,
 } from '@/lib/marketing/ownerAsk'
 import type { TeamMemberAvailability } from '@/lib/marketing/availability'
+import { buildTaskCard } from '@/lib/marketing/weeklyCheckIn'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 const TEAM: AskTeamMember[] = [
@@ -142,65 +142,39 @@ describe('proposeOwnerAsks', () => {
   })
 })
 
-describe('describeAsk', () => {
+describe('askMeta', () => {
   const ask = (reason: OwnerAsk['reason']): OwnerAsk => ({ taskId: 't1', name: 'Shirley', slackUserId: 'U2', reason })
 
-  it('says who, what it costs, and — only when true — that the plan had them in mind', () => {
-    expect(describeAsk(ask('suggested'), 30)).toBe('<@U2> could you take this one? (~30m) The plan had you in mind.')
-    expect(describeAsk(ask('open'), 30)).toBe('<@U2> could you take this one? (~30m)')
-    expect(describeAsk(ask('open'), 90)).toBe('<@U2> could you take this one? (~1h 30m)')
-    expect(describeAsk(ask('open'), 0)).toBe('<@U2> could you take this one?')
+  it('says who, and — only when true — that the plan had them in mind', () => {
+    expect(askMeta(ask('suggested'))).toBe('<@U2>, could you take this one? · the plan had you in mind')
+    expect(askMeta(ask('open'))).toBe('<@U2>, could you take this one?')
   })
 
-  it('makes no claim about anybody’s capacity', () => {
+  it('makes no claim about anybody’s capacity, and carries no number at all', () => {
     for (const reason of ['suggested', 'open'] as const) {
-      expect(describeAsk(ask(reason), 45)).not.toMatch(CAPACITY_CLAIM)
+      expect(askMeta(ask(reason))).not.toMatch(CAPACITY_CLAIM)
+      expect(askMeta(ask(reason)).replace(/<@U2>/, '')).not.toMatch(/\d/)
     }
   })
 
   it('falls back to an escaped name without a usable Slack id', () => {
-    expect(describeAsk({ taskId: 't', name: 'Jen & <Co>', slackUserId: 'nope', reason: 'open' }, 15)).toBe(
-      'Jen &amp; &lt;Co&gt; could you take this one? (~15m)',
+    expect(askMeta({ name: 'Jen & <Co>', slackUserId: 'nope', reason: 'open' })).toBe(
+      'Jen &amp; &lt;Co&gt;, could you take this one?',
     )
-  })
-})
-
-describe('buildAskBlocks', () => {
-  it('has nothing to say when there is nothing to ask', () => {
-    expect(buildAskBlocks([])).toEqual([])
+    expect(askMeta({ name: '<!channel>', slackUserId: '', reason: 'open' })).not.toContain('<!channel>')
   })
 
-  it('is one section: a heading and a line per ask', () => {
-    const blocks = buildAskBlocks([
-      { taskId: 'a', name: 'Shirley', slackUserId: 'U2', reason: 'suggested', title: 'Call AT&T', minutes: 30 },
-      { taskId: 'b', name: 'Eric', slackUserId: 'U3', reason: 'open', title: 'Draft the <5% post', minutes: 60 },
-    ])
-    expectValidSlackBlocks(blocks)
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].text.text).toBe(
-      '*Could you take these?*\n' +
-        '• *Call AT&amp;T* — <@U2> could you take this one? (~30m) The plan had you in mind.\n' +
-        '• *Draft the &lt;5% post* — <@U3> could you take this one? (~1h)',
-    )
-    expect(blocks[0].text.text).not.toMatch(CAPACITY_CLAIM)
-  })
-
-  it('survives hostile and huge values', () => {
-    const hostile = '<!here> & <5% of pilots > ' + 'x'.repeat(5000)
-    const blocks = buildAskBlocks(
-      Array.from({ length: 40 }, (_, index) => ({
-        taskId: `t${index}`,
-        name: hostile,
-        slackUserId: index % 2 ? `U${index}` : 'bad id',
-        reason: 'open' as const,
-        title: hostile,
-        minutes: 30,
-      })),
-    )
-    expectValidSlackBlocks(blocks)
-    expect(blocks).toHaveLength(1)
-    expect(blocks[0].text.text).not.toContain('<!here>')
-    expect(blocks[0].text.text).not.toContain('<5%')
+  it('reads the same as the ask on the card the Monday plan draws', () => {
+    // The card composes its own line around the estimate; with none, the two are word for word.
+    for (const reason of ['suggested', 'open'] as const) {
+      const card = buildTaskCard(
+        { _id: 't1', title: 'Write the pre-mortem post', status: 'queued' },
+        { now: new Date('2026-09-21T13:00:00Z'), mode: 'plan', ask: { slackUserId: 'U2', name: 'Shirley', reason } },
+      )
+      expectValidSlackBlocks(card)
+      expect(card[0].text.text.split('\n')[1]).toBe(askMeta(ask(reason)))
+      expect(card[0].text.text).not.toMatch(CAPACITY_CLAIM)
+    }
   })
 })
 

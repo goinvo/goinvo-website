@@ -13,6 +13,7 @@ import {
   type MarketingOperationActivity,
   type MarketingOperationEvidence,
 } from '@/lib/marketing/operations'
+import { TEAM_AVAILABILITY_TYPE } from '@/lib/marketing/availability'
 import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import { apiVersion, dataset, projectId, writeToken } from '@/sanity/env'
@@ -25,7 +26,7 @@ const OPERATIONS_QUERY = `*[_type == "marketingOperation"]|order(_updatedAt desc
   _id, _type, _rev, _createdAt, _updatedAt,
   title, summary, whyNow, nextAction, humanQuestion, humanResponse,
   status, priority, kind, origin, autonomy,
-  ownerName, ownerSanityUserId, dueAt, nextCheckAt,
+  ownerName, suggestedOwner, ownerSanityUserId, dueAt, nextCheckAt,
   blocker, lastOutcome, targetView,
   sourceKey, sourceFingerprint, sourceRevision,
   linkedRecords, evidence, activity,
@@ -292,6 +293,19 @@ async function upsertReviewedHandoff(
   return { item, idempotent: false, checkedCms: true }
 }
 
+/**
+ * The team roster's names — the names Slack resolves a presser to
+ * (`resolveOwnerName`), and so the only spelling of a person that every Slack
+ * surface recognises as them.
+ *
+ * The desk's owner select offers these rather than the website's team pages,
+ * whose titles are full names ("Juhan Sonin"): an owner written that way is a
+ * second person to the check-in, `mine` and the digest's @-mentions. Names
+ * only — the desk has no use for a Slack id. A failed read is an empty list:
+ * the desk still works, it just offers the names already on the board.
+ */
+const TEAM_ROSTER_QUERY = `*[_type == "${TEAM_AVAILABILITY_TYPE}" && !(_id in path("drafts.**")) && defined(ownerName)].ownerName`
+
 export async function GET(request: NextRequest) {
   const authError = await authorize(request)
   if (authError) return authError
@@ -299,7 +313,11 @@ export async function GET(request: NextRequest) {
     const clients = getClients()
     if (!clients) return privateMarketingJson({ error: 'Sanity write token is not configured.' }, { status: 500 })
     const items = await clients.privateClient.fetch<MarketingOperation[]>(OPERATIONS_QUERY)
-    return privateMarketingJson({ items, checked: items.length, mode: 'studio-open' })
+    const roster = await clients.privateClient.fetch<unknown>(TEAM_ROSTER_QUERY).catch(() => [])
+    const team = Array.from(
+      new Set((Array.isArray(roster) ? roster : []).map((name) => String(name ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean)),
+    )
+    return privateMarketingJson({ items, checked: items.length, mode: 'studio-open', team })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Marketing Operations could not load.'
     return privateMarketingJson({ error: message }, { status: 503 })
@@ -400,6 +418,12 @@ export async function POST(request: NextRequest) {
       }
       if (nextStatus === 'done') set.completedAt = patch.completedAt || now
       else if (current.status === 'done') unset.push('completedAt')
+      // A new owner from the Studio clears the Slack id stamped by whoever last
+      // pressed "I'll take it". The Studio has no field for that id, so left in
+      // place it names the PREVIOUS owner: Slack then @-mentions the wrong
+      // person about the new owner's work. With it gone, the team roster
+      // decides who the name is in Slack, which is the rule everywhere else.
+      if ('ownerName' in patch) unset.push('ownerSlackUserId')
 
       let builder = clients.privateClient.patch(id).ifRevisionId(expectedRevision).set(set)
       if (unset.length > 0) builder = builder.unset(Array.from(new Set(unset)))

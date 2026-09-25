@@ -140,7 +140,7 @@ describe('the check-in and people who are away', () => {
     expect(JSON.stringify(blocks)).not.toContain('marketingOperation.j1')
     // Eric, who is here, is still asked.
     expect(post.text).toContain('<@UERIC>')
-    expect(JSON.stringify(blocks)).toContain('<@UERIC> — here')
+    expect(JSON.stringify(blocks)).toContain('*<@UERIC>* · 1 task')
 
     // Named once, as plain text, with what is waiting — so the room can cover it.
     expect(JSON.stringify(blocks)).toContain('Away, so not asked this week: Juhan (2 tasks, 1 follow-up).')

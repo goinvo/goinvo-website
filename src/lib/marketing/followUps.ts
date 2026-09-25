@@ -394,7 +394,7 @@ function dueText(entry: FollowUpEntry, now: number): string {
 }
 
 /**
- * "Jane Doe (MGB)" or "someone at MGB", escaped and clipped.
+ * Who a follow-up is with: a name and an organisation, both scrubbed.
  *
  * Contact details are PII in a channel. Entries built by `listFollowUps` are
  * already scrubbed, but an entry is a plain object that can be built or cached
@@ -402,15 +402,78 @@ function dueText(entry: FollowUpEntry, now: number): string {
  * trusted. A label that loses everything but "someone" to the scrub (a
  * hand-built "someone at jd@x.org") is rebuilt from what is left.
  */
-function whoFor(entry: FollowUpEntry): string {
+function whoParts(entry: FollowUpEntry): { personLabel: string; organization: string; named: boolean } {
   const organization = followUpOrganization(entry.organization)
   const given = withoutContactDetails(entry.personLabel)
   const personLabel = isUsableName(given) && !/^someone$/i.test(given) ? given : someoneAt(organization)
+  // "someone at MGB (MGB)" says the organisation twice.
+  return { personLabel, organization, named: personLabel !== someoneAt(organization) }
+}
+
+/** "Jane Doe (MGB)" or "someone at MGB", escaped and then clipped, for mrkdwn. */
+function whoFor(entry: FollowUpEntry): string {
+  const { personLabel, organization, named } = whoParts(entry)
   const person = clipSlackText(escapeSlackText(personLabel), 120)
   const org = clipSlackText(escapeSlackText(organization), 80)
-  // "someone at MGB (MGB)" says the organisation twice.
-  const named = personLabel !== someoneAt(organization)
   return named && org ? `${person} (${org})` : person
+}
+
+/** A plain-text clip, for text that is not going into mrkdwn. */
+const clipPlain = (value: string, max: number) => (value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`)
+
+/** "last: Contacted on 14 Sep", from the status enum and a date only; '' with nothing dated logged. */
+function lastTouchText(entry: FollowUpEntry, nowMs: number): string {
+  const touch = entry.lastTouch ? time(entry.lastTouch.at) : null
+  return entry.lastTouch && touch !== null
+    ? `last: ${shownStatusLabel(entry.lastTouch.statusLabel)} on ${dayMonth(touch, nowMs)}`
+    : ''
+}
+
+/** One follow-up's facts as plain text — see `followUpParts`. */
+export type FollowUpParts = {
+  contactId: string
+  who: string
+  due: string
+  last: string
+  temperature: string
+  overdue: boolean
+  /** The board's name for whoever owns it; '' when nobody does. */
+  ownerName: string
+}
+
+/**
+ * One follow-up as its separate facts, in PLAIN text:
+ *
+ *   who          "Jane Doe (MGB)" / "someone at MGB"
+ *   due          "overdue since Tue 22 Sep" / "due today" / "due Fri 25 Sep"
+ *   last         "last: Contacted on 14 Sep", or '' when nothing dated is logged
+ *   temperature  "they replied" / "they know us" / "cold"
+ *
+ * For a surface that lays the pieces out itself — the Studio's "Follow-ups
+ * due" rows, or a list that wants the date without the temperature — rather
+ * than splitting `followUpLine`'s sentence back apart on " · ", which breaks
+ * the first time a name contains one.
+ *
+ * The same guarantees as the line: the name and organisation are scrubbed of
+ * contact details, and the other three are built only from dates, the status
+ * enum and fixed words, so no note can arrive through any of them. What this
+ * does NOT do is escape: React escapes on its own, and mrkdwn wants
+ * `followUpLine`, which escapes before it clips.
+ */
+export function followUpParts(entry: FollowUpEntry, now: Date): FollowUpParts {
+  const nowMs = now.getTime()
+  const { personLabel, organization, named } = whoParts(entry)
+  const person = clipPlain(personLabel, 120)
+  const org = clipPlain(organization, 80)
+  return {
+    contactId: clean(entry.contactId),
+    who: named && org ? `${person} (${org})` : person,
+    due: dueText(entry, nowMs),
+    last: lastTouchText(entry, nowMs),
+    temperature: TEMPERATURE_TEXT[entry.temperature] || TEMPERATURE_TEXT.cold,
+    overdue: Boolean(entry.overdue),
+    ownerName: clean(entry.ownerName),
+  }
 }
 
 /**
@@ -425,22 +488,15 @@ function whoFor(entry: FollowUpEntry): string {
  * a record holding a phone number cannot post it, a record holding `<!here>`
  * cannot ping a channel and a 5,000-character name cannot push a section past
  * Slack's limit.
+ *
+ * The detail's pieces are `followUpParts`'s, escaped; the name keeps its own
+ * escape-then-clip, so a clip can never land inside an `&amp;`.
  */
 export function followUpLine(entry: FollowUpEntry, now: Date): { label: string; detail: string } {
-  const nowMs = now.getTime()
-  const who = whoFor(entry)
-
-  const touch = entry.lastTouch ? time(entry.lastTouch.at) : null
-  const last =
-    entry.lastTouch && touch !== null
-      ? `last: ${escapeSlackText(shownStatusLabel(entry.lastTouch.statusLabel))} on ${dayMonth(touch, nowMs)}`
-      : ''
-
+  const parts = followUpParts(entry, now)
   return {
-    label: `*Follow up with ${who}*`,
-    detail: [dueText(entry, nowMs), last, TEMPERATURE_TEXT[entry.temperature] || TEMPERATURE_TEXT.cold]
-      .filter(Boolean)
-      .join(' · '),
+    label: `*Follow up with ${whoFor(entry)}*`,
+    detail: [parts.due, escapeSlackText(parts.last), parts.temperature].filter(Boolean).join(' · '),
   }
 }
 

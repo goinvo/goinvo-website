@@ -1,12 +1,13 @@
 /**
- * The Monday digest, against a mocked Sanity and a mocked Slack.
+ * What a press on the Monday plan writes, against a mocked Sanity and a mocked
+ * Slack: "Not me" (`declineMarketingTask`), "I’m away this week" and its Undo
+ * (`setMarketingAvailability` / `restoreMarketingAvailability`), and the
+ * one-time identity link.
  *
- * What these pin is what the route adds around the pure builders: asks are
- * made of the right people and put where a notification can see them; the
- * record of an ask is written only after it really reached the channel; a
- * preview writes nothing at all; the message never exceeds Slack's fifty
- * blocks; no contact detail reaches the channel; and the digest never falls
- * back to the website-chat channel.
+ * These pin the parts a Slack retry, a double press or a colleague with the
+ * same first name would otherwise break: every write is conditional on the
+ * revision it read, only the presser's own record changes, a record is
+ * patched and never replaced, and Undo puts back exactly what was there.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
@@ -87,28 +88,24 @@ vi.mock('@/lib/marketing/anthropicJson', () => ({
 }))
 
 import { POST } from '@/app/api/marketing/slack/digest/route'
-import { DIGEST_HEARTBEAT_DOC_ID, digestHeartbeatStep } from '@/lib/marketing/heartbeat'
+import { availabilityDocId } from '@/lib/marketing/availability'
 import { TEAM_AVAILABILITY_QUERY } from '@/lib/marketing/team.server'
-import { GET as PLAN_WEEK_GET, POST as PLAN_WEEK_POST } from '@/app/api/marketing/plan-week/route'
-import {
-  checkInTaskBlockId,
-  decodeContactRef,
-  MARQUETA_ACTION,
-} from '@/lib/marketing/marquetaActions'
+import { decodeAvailabilityUndo, encodeAvailabilityUndo, type AvailabilityUndo } from '@/lib/marketing/marquetaActions'
 import { summarizeOutreach } from '@/lib/marketing/outreachPulse'
 import { describeRunway, resolveRunwayPosture, runwayCheckIn, type StoredPosture } from '@/lib/marketing/runway'
-import { claimMarketingTask, declineMarketingTask } from '@/lib/marketing/slackActions.server'
 import {
-  askHistoryEntry,
-  buildRunwayBlocks,
-  buildTaskAttachment,
-  buildWeeklyDigestBlocks,
-  decodeActionValue,
-  MARKETING_ACTION,
-  readAskHistory,
-} from '@/lib/marketing/slackDelegation'
+  answerMarketingTask,
+  AVAILABILITY_WRITE_QUERY,
+  claimMarketingTask,
+  declineMarketingTask,
+  LINKED_RECORDS_QUERY,
+  linkMarketingIdentity,
+  OWNED_OPEN_TASKS_QUERY,
+  restoreMarketingAvailability,
+  setMarketingAvailability,
+} from '@/lib/marketing/slackActions.server'
+import { askHistoryEntry } from '@/lib/marketing/slackDelegation'
 import { buildStrategySnapshot, monthWindow } from '@/lib/marketing/strategyCheck'
-import { expectValidSlackBlocks } from './support/slackBlocks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Block = Record<string, any>
@@ -249,6 +246,7 @@ function routeOutreach() {
     if (query.includes('_type == "marketingOperation" && _id == $id')) {
       return store.tasks.length > 1 ? store.tasks.shift() : store.tasks[0] ?? null
     }
+    if (query === OWNED_OPEN_TASKS_QUERY) return 0
     return store.data
   })
   mocks.outreach.createIfNotExists.mockImplementation(async (doc: { _id: string }) => {
@@ -273,19 +271,6 @@ async function commitRecord(record: PatchRecord): Promise<unknown> {
 
 const isTaskPatch = (record: PatchRecord) => !record.id.startsWith('marketingHeartbeat')
 const taskPatches = () => mocks.patches.filter(isTaskPatch)
-const askEntriesFor = (taskId: string) =>
-  taskPatches()
-    .filter((record) => record.id === taskId)
-    .flatMap((record) => record.ops.filter((op) => op[0] === 'insert').flatMap((op) => op[3] as Block[]))
-
-/** Run 1's recorded asks, written back onto the fixture the way Sanity would hold them. */
-function withRecordedAsks(operations: Record<string, any>[]) {
-  return operations.map((operation) => {
-    const added = askEntriesFor(operation._id)
-    return added.length ? { ...operation, askHistory: [...(operation.askHistory || []), ...added] } : operation
-  })
-}
-
 const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL'] as const
 const saved: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
 
@@ -303,8 +288,6 @@ async function dryRun(body: Record<string, unknown> = {}) {
   return (await response.json()) as { blocks: Block[]; attachments: Block[]; text: string; asks: Block[]; exhausted: string[]; followUpCount: number }
 }
 
-const sectionText = (block: Block) => String(block?.text?.text || '')
-const indexOfText = (blocks: Block[], needle: string) => blocks.findIndex((block) => json(block).includes(needle))
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -348,25 +331,35 @@ afterEach(() => {
   }
 })
 
-// ── The preview ─────────────────────────────────────────────────────────────
+// ── Answer… ─────────────────────────────────────────────────────────────────
 
-// ── Asks ────────────────────────────────────────────────────────────────────
+describe('answerMarketingTask', () => {
+  // The same conditional write as every other press (answerTask), and the
+  // fresh card back — which is what lets the interactions route redraw the
+  // card the form was opened from instead of posting a second message.
+  it('saves the answer under the revision read, and hands back the card to redraw', async () => {
+    store.tasks = [
+      { _id: 'op-d', _rev: 'rev7', title: 'Publish the taxonomy?', ownerName: '', status: 'needsHuman', kind: 'decision', humanQuestion: 'Publish it?', activity: [] },
+    ]
+    const result = await answerMarketingTask({ taskId: 'op-d', answer: 'Keep it internal.', personName: 'Juhan', slackUserId: 'UJUHAN' })
+    expect(result).toMatchObject({
+      ok: true,
+      changed: true,
+      taskTitle: 'Publish the taxonomy?',
+      task: { _id: 'op-d', status: 'queued', kind: 'decision', humanQuestion: 'Publish it?' },
+    })
+    const [record] = taskPatches()
+    expect(record.id).toBe('op-d')
+    expect(record.ops).toEqual(
+      expect.arrayContaining([
+        ['set', expect.objectContaining({ humanResponse: 'Keep it internal.', status: 'queued', lastOutcome: 'Answered in Slack by Juhan' })],
+        ['ifRevisionId', 'rev7'],
+      ]),
+    )
+  })
+})
 
-// ── The rest of the message ─────────────────────────────────────────────────
-
-// ── Posting for real ────────────────────────────────────────────────────────
-
-// ── Twice in one week ───────────────────────────────────────────────────────
-//
-// The reviewer's scenario: two runs on one Monday used to ask a DIFFERENT
-// person about the same task (the second read the first one's ask as history),
-// and the next week the task came back "nobody has taken these after two asks"
-// after one real ask. These feed run 1's recorded asks into run 2 — the
-// fixture used to be fed to both runs unchanged, which hid the bug.
-
-// ── Who is away ─────────────────────────────────────────────────────────────
-
-// ── "Not me this week" ──────────────────────────────────────────────────────
+// ── "Not me" ────────────────────────────────────────────────────────────────
 
 describe('declineMarketingTask', () => {
   const TASK: Record<string, unknown> = {
@@ -525,7 +518,7 @@ describe('declineMarketingTask', () => {
 
   it('says so when the task is gone', async () => {
     const { result } = await decline(null)
-    expect(result).toMatchObject({ ok: false, message: 'That task no longer exists.' })
+    expect(result).toMatchObject({ ok: false, message: 'Couldn’t update that task — nothing changed. I can’t find it any more. Open This week.' })
   })
 
   it('refuses rather than guessing a name when the team list cannot be read', async () => {
@@ -536,10 +529,589 @@ describe('declineMarketingTask', () => {
   })
 })
 
-// ── "I'll take it" / "Take it over" ─────────────────────────────────────────
+// ── "I’m away this week", and its Undo ───────────────────────────────────────
 
-// ── The tick's record of the digest ─────────────────────────────────────────
+describe('setMarketingAvailability — the same safe write the chat path uses', () => {
+  /** The availability records, as Sanity holds them: every write bumps the revision. */
+  const records = new Map<string, Record<string, any>>()
+  let openTasks: number | Error = 2
+  let transactions: Array<Array<[string, ...unknown[]]>> = []
 
-// ── The builders the route composes ─────────────────────────────────────────
+  const idFor = (name: string) => availabilityDocId(name)
+  const record = (name: string) => records.get(idFor(name))
+  const seed = (doc: Record<string, any>) => records.set(doc._id || idFor(doc.ownerName), { _id: idFor(doc.ownerName), _rev: 'r1', ...doc })
+  const bump = (doc: Record<string, any>) => {
+    doc._rev = `r${Number(String(doc._rev || 'r0').slice(1)) + 1}`
+  }
+  const apply = (doc: Record<string, any>, ops: Op[]) => {
+    for (const [op, arg] of ops) {
+      if (op === 'set') Object.assign(doc, arg)
+      if (op === 'unset') for (const field of arg as string[]) delete doc[field]
+    }
+    bump(doc)
+  }
+  const availabilityPatches = () => mocks.patches.filter((patch) => patch.id.startsWith('marketingTeamAvailability.'))
+  const opsOf = (patch: PatchRecord | undefined, name: string) => (patch?.ops || []).filter((op) => op[0] === name).map((op) => op[1])
 
-// ── plan-week: the Monday plan holds time back for follow-ups ─────────────────
+  /** A transaction builder that applies atomically, the way Sanity's does — a failed revision check applies nothing. */
+  function transaction() {
+    const steps: Array<[string, ...unknown[]]> = []
+    const chain: Record<string, any> = {
+      createIfNotExists: (doc: Record<string, any>) => (steps.push(['createIfNotExists', doc]), chain),
+      patch: (id: string, build: (patch: any) => any) => {
+        const ops: Op[] = []
+        const builder: Record<string, any> = {}
+        for (const op of ['set', 'unset', 'ifRevisionId']) builder[op] = (arg: unknown) => (ops.push([op, arg]), builder)
+        build(builder)
+        steps.push(['patch', id, ops])
+        return chain
+      },
+      delete: (id: string) => (steps.push(['delete', id]), chain),
+      commit: async () => {
+        transactions.push(steps)
+        for (const step of steps) {
+          if (step[0] !== 'patch') continue
+          const doc = records.get(step[1] as string)
+          const expected = (step[2] as Op[]).find((op) => op[0] === 'ifRevisionId')?.[1]
+          if (expected !== undefined && (!doc || doc._rev !== expected)) throw conflict()
+        }
+        for (const step of steps) {
+          if (step[0] === 'createIfNotExists') {
+            const doc = step[1] as Record<string, any>
+            if (!records.has(doc._id)) records.set(doc._id, { ...doc, _rev: 'r0' })
+          }
+          if (step[0] === 'patch') {
+            const doc = records.get(step[1] as string)
+            if (doc) apply(doc, (step[2] as Op[]).filter((op) => op[0] !== 'ifRevisionId'))
+          }
+          if (step[0] === 'delete') records.delete(step[1] as string)
+        }
+        return {}
+      },
+    }
+    return chain
+  }
+
+  beforeEach(() => {
+    records.clear()
+    transactions = []
+    openTasks = 2
+    // Juhan's record carries everything the old createOrReplace used to wipe.
+    seed({ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available', weeklyHours: 4, note: 'Calls on Tuesdays' })
+    seed({ ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' })
+    mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string; name?: string }) => {
+      if (query === AVAILABILITY_WRITE_QUERY) {
+        const doc = records.get(String(params?.id))
+        return doc ? { ...doc } : null
+      }
+      if (query === OWNED_OPEN_TASKS_QUERY) {
+        if (openTasks instanceof Error) throw openTasks
+        return openTasks
+      }
+      if (query === TEAM_AVAILABILITY_QUERY) {
+        if (store.availability instanceof Error) throw store.availability
+        return store.availability
+      }
+      throw new Error(`unexpected query: ${query.slice(0, 80)}`)
+    })
+    mocks.outreach.createIfNotExists.mockImplementation(async (doc: { _id: string }) => {
+      if (!records.has(doc._id)) records.set(doc._id, { ...doc, _rev: 'r0' })
+      return records.get(doc._id)
+    })
+    mocks.outreach.transaction.mockImplementation(transaction)
+    mocks.commit.mockImplementation(async (patch: PatchRecord) => {
+      const doc = records.get(patch.id)
+      if (!doc) return commitRecord(patch)
+      const expected = patch.ops.find((op) => op[0] === 'ifRevisionId')?.[1]
+      if (expected !== undefined && expected !== doc._rev) throw conflict()
+      apply(doc, patch.ops.filter((op) => op[0] !== 'ifRevisionId'))
+      return doc
+    })
+  })
+
+  const away = (input: Partial<Parameters<typeof setMarketingAvailability>[0]> = {}) =>
+    setMarketingAvailability({ personName: 'Juhan Sonin', slackUserId: 'UJUHAN', status: 'away', now: NOW, ...input })
+
+  it('patches status and dates onto the presser’s own record, and keeps the link, the hours and the note', async () => {
+    const result = await away()
+    expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Juhan', status: 'away', from: '2026-09-21', until: '2026-09-27', openTasks: 2 })
+    expect(result.message).toBe(
+      'You’re away Mon 21 – Sun 27 Sep. I’ll leave you out of this week’s plan, and your 2 open tasks will show as needing someone.',
+    )
+    // The room's line for the same write: third person, a real mention, no pronoun guessed from a name.
+    expect(result.receipt).toBe(':palm_tree: <@UJUHAN> is away Mon 21 – Sun 27 Sep — I’ll leave them out of this week’s plan.')
+    const [patch] = availabilityPatches()
+    expect(patch.id).toBe(idFor('Juhan'))
+    expect(opsOf(patch, 'set')[0]).toEqual({ status: 'away', from: '2026-09-21', until: '2026-09-27', updatedAt: NOW.toISOString() })
+    expect(opsOf(patch, 'ifRevisionId')[0]).toBe('r1')
+    // Nothing that identifies or allocates the person is touched.
+    expect(record('Juhan')).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN', weeklyHours: 4, note: 'Calls on Tuesdays' })
+    expect(JSON.stringify(opsOf(patch, 'set'))).not.toMatch(/slackUserId|ownerName|weeklyHours|note/)
+    expect(result.message).not.toMatch(/\d{4}-\d{2}-\d{2}/)
+  })
+
+  it('books next week as next week, by name', async () => {
+    const result = await away({ from: '2026-09-28', until: '2026-10-04' })
+    expect(result.message).toBe(
+      'You’re away Mon 28 Sep – Sun 4 Oct. I’ll leave you out of next week’s plan, and your 2 open tasks will show as needing someone.',
+    )
+  })
+
+  it('reads "this week" on the studio’s calendar: 9pm on a Sunday in Boston is still that Sunday', async () => {
+    // 01:00 UTC on Monday 28 Sep is 21:00 on Sunday 27 Sep in Boston. In UTC
+    // this press would have booked the whole of next week off.
+    const result = await away({ now: new Date('2026-09-28T01:00:00Z') })
+    expect(result).toMatchObject({ ok: true, from: '2026-09-27', until: '2026-09-27' })
+  })
+
+  it('says nothing about open work it could not count, rather than a wrong number', async () => {
+    openTasks = new Error('count failed')
+    const result = await away()
+    expect(result.ok).toBe(true)
+    expect(result.message).toBe('You’re away Mon 21 – Sun 27 Sep. I’ll leave you out of this week’s plan.')
+    expect(result).not.toHaveProperty('openTasks')
+  })
+
+  it('changes nothing, and offers no Undo, when the record already says exactly this', async () => {
+    await away()
+    mocks.patches.length = 0
+    const again = await away()
+    expect(again).toMatchObject({ ok: true, changed: false })
+    expect(again.undoValue).toBeUndefined()
+    expect(again.message).toMatch(/already down as away Mon 21 – Sun 27 Sep/)
+    expect(availabilityPatches()).toHaveLength(0)
+  })
+
+  it('refuses a namesake: a display name matching someone else’s linked name books nothing', async () => {
+    const result = await away({ personName: 'Juhan', slackUserId: 'UIMPOSTOR' })
+    expect(result.ok).toBe(false)
+    expect(result.message).toMatch(/^Couldn’t tell which name on the team list is yours — nothing changed\./)
+    expect(availabilityPatches()).toHaveLength(0)
+    expect(record('Juhan')?.status).toBe('available')
+  })
+
+  it('refuses a record that shares the id’s slug but is somebody else’s', async () => {
+    seed({ _id: idFor('Jo Ann'), ownerName: 'Jo Ann', slackUserId: 'UJO1', status: 'available' })
+    const result = await away({ personName: 'Jo-Ann', slackUserId: 'UJO2' })
+    expect(result.ok).toBe(false)
+    expect(availabilityPatches()).toHaveLength(0)
+  })
+
+  it('refuses rather than guessing when the team list cannot be read', async () => {
+    store.availability = new Error('outreach down')
+    const result = await away()
+    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/^Couldn’t read the team list — nothing changed\./) })
+    expect(availabilityPatches()).toHaveLength(0)
+  })
+
+  it('re-reads once on a conflict, and never overwrites what landed in between', async () => {
+    mocks.commit.mockImplementationOnce(async () => {
+      // Somebody set an allocation between the read and the write.
+      const doc = record('Juhan')!
+      doc.weeklyHours = 2
+      bump(doc)
+      throw conflict()
+    })
+    const result = await away()
+    expect(result.ok).toBe(true)
+    const patches = availabilityPatches()
+    expect(patches).toHaveLength(2)
+    expect(opsOf(patches[1], 'ifRevisionId')[0]).toBe('r2')
+    expect(record('Juhan')).toMatchObject({ status: 'away', weeklyHours: 2 })
+  })
+
+  it('creates a record for someone with work on the board but no record yet, under the name the board uses', async () => {
+    // openTasks: the board files 2 open tasks under exactly "Pat Lee".
+    const result = await away({ personName: 'Pat Lee', slackUserId: 'UPAT' })
+    expect(result).toMatchObject({ ok: true, ownerName: 'Pat Lee' })
+    expect(mocks.outreach.createIfNotExists).toHaveBeenCalledWith({
+      _id: idFor('Pat Lee'),
+      _type: 'marketingTeamAvailability',
+      ownerName: 'Pat Lee',
+      status: 'available',
+    })
+    // Nothing here links an identity: that is the one-time setup's job, which asks first.
+    expect(record('Pat Lee')).not.toHaveProperty('slackUserId')
+  })
+
+  // The record holds ONE range, and the press used to overwrite it whatever it held.
+  describe('never cuts booked time off short', () => {
+    it('changes nothing for someone already away for longer — pressed on Thursday, next week stays booked', async () => {
+      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-14', until: '2026-10-04' })
+      const result = await away({ now: new Date('2026-09-24T14:00:00Z') })
+      expect(result).toMatchObject({ ok: true, changed: false, from: '2026-09-14', until: '2026-10-04' })
+      expect(result.message).toBe('You’re already down as away Mon 14 Sep – Sun 4 Oct — nothing changed.')
+      expect(result.undoValue).toBeUndefined()
+      expect(result.receipt).toBeUndefined()
+      expect(availabilityPatches()).toHaveLength(0)
+    })
+
+    it('pressed on Monday and again on Wednesday, keeps Monday', async () => {
+      await away()
+      mocks.patches.length = 0
+      const again = await away({ now: new Date('2026-09-23T14:00:00Z') })
+      expect(again).toMatchObject({ ok: true, changed: false })
+      expect(availabilityPatches()).toHaveLength(0)
+      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-09-27' })
+    })
+
+    it('joins time off it meets end to start, and Undo puts back exactly what was booked', async () => {
+      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-28', until: '2026-10-04' })
+      const result = await away()
+      expect(result).toMatchObject({ ok: true, changed: true, from: '2026-09-21', until: '2026-10-04' })
+      expect(result.message).toBe(
+        'You’re away Mon 21 Sep – Sun 4 Oct (joined up with the time off you’d already booked). I’ll leave you out of those weeks’ plans, and your 2 open tasks will show as needing someone.',
+      )
+      expect(result.message).not.toContain('replaces')
+      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-10-04' })
+      await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      expect(record('Juhan')).toMatchObject({ status: 'away', from: '2026-09-28', until: '2026-10-04' })
+    })
+
+    it('joins time off it overlaps', async () => {
+      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-24', until: '2026-10-02' })
+      const result = await away()
+      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-10-02' })
+      expect(result.message).toMatch(/^You’re away Mon 21 Sep – Fri 2 Oct \(joined up/)
+    })
+
+    it('replaces time off that has already ended without a word — it is history, not a booking', async () => {
+      Object.assign(record('Juhan')!, { status: 'away', from: '2026-09-01', until: '2026-09-04' })
+      const result = await away()
+      expect(result.message).not.toContain('replaces')
+      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-09-27' })
+    })
+  })
+
+  it('refuses a date that is not a real day, rather than throwing or booking the wrong one', async () => {
+    for (const bad of [{ from: '2026-13-01' }, { from: '2026-09-28', until: '2026-02-31' }, { until: 'next friday' }]) {
+      const result = await away(bad)
+      expect(result, JSON.stringify(bad)).toEqual({ ok: false, message: 'Couldn’t save those days — nothing changed. One of them isn’t a real date.' })
+    }
+    expect(availabilityPatches()).toHaveLength(0)
+  })
+
+  describe('a name the board does not know', () => {
+    it('is refused, not booked as a second person — the unlinked Juhan whose Slack says "Juhan Sonin"', async () => {
+      store.availability = [{ ownerName: 'Juhan', status: 'available' }]
+      records.get(idFor('Juhan'))!.slackUserId = undefined
+      openTasks = 0
+      const result = await away({ personName: 'Juhan Sonin', slackUserId: 'UJUHAN' })
+      expect(result).toEqual({
+        ok: false,
+        message:
+          'Couldn’t tell which name on the team list is yours — nothing changed. Nothing is filed under “Juhan Sonin”. If your work is filed under another name, pick it in the Monday plan’s one-time setup.',
+      })
+      expect(mocks.outreach.createIfNotExists).not.toHaveBeenCalled()
+      expect(availabilityPatches()).toHaveLength(0)
+      expect(record('Juhan Sonin')).toBeUndefined()
+    })
+
+    // Somebody on the marketing team who owns nothing yet was refused and told
+    // to use a setup that listed only people who already owned work.
+    it('books a marketing teammate who owns nothing yet, under the team’s name for them', async () => {
+      openTasks = 0
+      const result = await away({ personName: 'Jon', slackUserId: 'UJON' })
+      expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Jon', status: 'away' })
+      expect(record('Jon')).toMatchObject({ ownerName: 'Jon', status: 'away' })
+    })
+
+    it('is refused when the board’s work cannot be counted to prove it is somebody', async () => {
+      openTasks = new Error('count failed')
+      const result = await away({ personName: 'Pat Lee', slackUserId: 'UPAT' })
+      expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/^Couldn’t read the team list — nothing changed\./) })
+      expect(mocks.outreach.createIfNotExists).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Undo', () => {
+    it('puts the record back exactly as it was — the link, the hours and the note never moved', async () => {
+      const result = await away()
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      expect(undo).toEqual({
+        ok: true,
+        changed: true,
+        message: 'Undone — you’re available again.',
+        // What the room's receipt is redrawn as: struck through, nothing left to press.
+        receipt: '~<@UJUHAN> away Mon 21 – Sun 27 Sep~ — undone by <@UJUHAN>.',
+      })
+      const doc = record('Juhan')!
+      expect(doc).toMatchObject({ status: 'available', slackUserId: 'UJUHAN', weeklyHours: 4, note: 'Calls on Tuesdays' })
+      expect(doc).not.toHaveProperty('from')
+      expect(doc).not.toHaveProperty('until')
+      const last = availabilityPatches().at(-1)
+      expect(opsOf(last, 'ifRevisionId')[0]).toBe('r2')
+    })
+
+    it('restores an earlier holiday rather than clearing it', async () => {
+      Object.assign(record('Juhan')!, { status: 'away', from: '2026-10-05', until: '2026-10-09' })
+      const result = await away()
+      // The record holds one range: a separate booking is replaced — out loud, never silently.
+      expect(result.message).toMatch(/ This replaces your time off Mon 5 – Fri 9 Oct\.$/)
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      expect(undo.message).toBe('Undone — you’re away Mon 5 – Fri 9 Oct again.')
+      expect(undo.receipt).toBe('~<@UJUHAN> away Mon 21 – Sun 27 Sep~ — undone by <@UJUHAN>. Back to away Mon 5 – Fri 9 Oct.')
+      expect(record('Juhan')).toMatchObject({ status: 'away', from: '2026-10-05', until: '2026-10-09', weeklyHours: 4 })
+    })
+
+    it('removes the record the press created — in one transaction with a revision check', async () => {
+      const result = await away({ personName: 'Pat Lee', slackUserId: 'UPAT' })
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UPAT', now: NOW })
+      expect(undo.ok).toBe(true)
+      expect(record('Pat Lee')).toBeUndefined()
+      const [steps] = transactions
+      expect(steps.map((step) => step[0])).toEqual(['patch', 'delete'])
+      expect((steps[0][2] as Op[]).find((op) => op[0] === 'ifRevisionId')?.[1]).toBe('r1')
+    })
+
+    it('keeps a created record that has since been linked, and only takes the time off it', async () => {
+      const result = await away({ personName: 'Pat Lee', slackUserId: 'UPAT' })
+      Object.assign(record('Pat Lee')!, { slackUserId: 'UPAT' })
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UPAT', now: NOW })
+      expect(undo.ok).toBe(true)
+      expect(record('Pat Lee')).toMatchObject({ status: 'available', slackUserId: 'UPAT' })
+      expect(record('Pat Lee')).not.toHaveProperty('from')
+    })
+
+    it('is only for the person who set it — the button sits in a thread the room can see', async () => {
+      const result = await away()
+      mocks.patches.length = 0
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UERIC', now: NOW })
+      expect(undo).toMatchObject({ ok: false, message: expect.stringMatching(/^Couldn’t undo that — nothing changed\. Only the person/) })
+      expect(availabilityPatches()).toHaveLength(0)
+      expect(record('Juhan')?.status).toBe('away')
+    })
+
+    it('never undoes a later change', async () => {
+      const result = await away()
+      // Next week, on top of this week: joined into one range (see below).
+      await away({ from: '2026-09-28', until: '2026-10-04' })
+      mocks.patches.length = 0
+      const undo = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      expect(undo.ok).toBe(false)
+      expect(undo.message).toContain('`Marqueta, away next week`')
+      expect(availabilityPatches()).toHaveLength(0)
+      expect(record('Juhan')).toMatchObject({ from: '2026-09-21', until: '2026-10-04' })
+    })
+
+    it('pressed twice, says it is already undone and writes nothing more', async () => {
+      const result = await away()
+      await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      mocks.patches.length = 0
+      const again = await restoreMarketingAvailability({ undo: result.undoValue!, slackUserId: 'UJUHAN', now: NOW })
+      expect(again).toEqual({ ok: true, changed: false, message: 'Already undone.' })
+      expect(availabilityPatches()).toHaveLength(0)
+
+      const created = await away({ personName: 'Pat Lee', slackUserId: 'UPAT' })
+      await restoreMarketingAvailability({ undo: created.undoValue!, slackUserId: 'UPAT', now: NOW })
+      expect(await restoreMarketingAvailability({ undo: created.undoValue!, slackUserId: 'UPAT', now: NOW })).toMatchObject({
+        ok: true,
+        changed: false,
+      })
+    })
+
+    it('refuses a value it cannot read', async () => {
+      expect(await restoreMarketingAvailability({ undo: 'not json', slackUserId: 'UJUHAN', now: NOW })).toMatchObject({ ok: false })
+    })
+  })
+})
+
+describe('the availability Undo value', () => {
+  const undo: AvailabilityUndo = {
+    ownerName: 'Juhan',
+    slackUserId: 'UJUHAN',
+    wrote: { status: 'away', from: '2026-09-21', until: '2026-09-27', weeklyHours: null },
+    prior: { status: 'reduced', from: '2026-09-01', until: '', weeklyHours: 2 },
+  }
+
+  it('round-trips, including "there was no record before"', () => {
+    expect(decodeAvailabilityUndo(encodeAvailabilityUndo(undo))).toEqual(undo)
+    expect(decodeAvailabilityUndo(encodeAvailabilityUndo({ ...undo, prior: null }))).toEqual({ ...undo, prior: null })
+  })
+
+  it('is small enough for a button, whatever the name', () => {
+    expect(encodeAvailabilityUndo({ ...undo, ownerName: 'x'.repeat(5000) }).length).toBeLessThan(400)
+  })
+
+  it('refuses anything that would make Undo guess', () => {
+    const value = JSON.parse(encodeAvailabilityUndo(undo))
+    expect(decodeAvailabilityUndo(JSON.stringify({ ...value, u: '' }))).toBeNull()
+    expect(decodeAvailabilityUndo(JSON.stringify({ ...value, w: 'away' }))).toBeNull()
+    const { p: _prior, ...withoutPrior } = value
+    expect(_prior).toBeTruthy()
+    // "No prior" must be said (null), never assumed from a missing key.
+    expect(decodeAvailabilityUndo(JSON.stringify(withoutPrior))).toBeNull()
+    expect(decodeAvailabilityUndo(undefined)).toBeNull()
+  })
+})
+
+describe('linkMarketingIdentity', () => {
+  const records = new Map<string, Record<string, any>>()
+  let steps: Array<[string, ...unknown[]]> = []
+  /** Reads of the record that should miss once — the other half of a race that has not landed yet. */
+  let hideRecordOnce = false
+
+  beforeEach(() => {
+    records.clear()
+    steps = []
+    hideRecordOnce = false
+    records.set(availabilityDocId('Juhan'), { _id: availabilityDocId('Juhan'), _rev: 'r1', ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'away' })
+    records.set(availabilityDocId('Shirley'), { _id: availabilityDocId('Shirley'), _rev: 'r1', ownerName: 'Shirley', status: 'away', from: '2026-09-21' })
+    mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string; uid?: string }) => {
+      if (query === AVAILABILITY_WRITE_QUERY) {
+        if (hideRecordOnce) {
+          hideRecordOnce = false
+          return null
+        }
+        const doc = records.get(String(params?.id))
+        return doc ? { ...doc } : null
+      }
+      if (query === LINKED_RECORDS_QUERY) {
+        return [...records.values()].filter((doc) => doc.slackUserId === params?.uid).map((doc) => ({ _id: doc._id, ownerName: doc.ownerName }))
+      }
+      throw new Error(`unexpected query: ${query.slice(0, 80)}`)
+    })
+    // Applies atomically, as Sanity's does: a failed revision check applies nothing.
+    mocks.outreach.transaction.mockImplementation(() => {
+      const pending: Array<() => void> = []
+      const chain: Record<string, any> = {
+        createIfNotExists: (doc: Record<string, any>) => {
+          steps.push(['createIfNotExists', doc])
+          pending.push(() => {
+            if (!records.has(doc._id)) records.set(doc._id, { ...doc, _rev: 'r0' })
+          })
+          return chain
+        },
+        patch: (id: string, build: (patch: any) => any) => {
+          const ops: Op[] = []
+          const builder: Record<string, any> = {}
+          for (const op of ['set', 'unset', 'setIfMissing', 'ifRevisionId']) builder[op] = (arg: unknown) => (ops.push([op, arg]), builder)
+          build(builder)
+          steps.push(['patch', id, ops])
+          pending.push(() => {
+            const doc = records.get(id)
+            if (!doc) return
+            for (const [op, arg] of ops) {
+              if (op === 'setIfMissing') for (const [key, value] of Object.entries(arg as object)) if (!(key in doc)) doc[key] = value
+              if (op === 'set') Object.assign(doc, arg)
+            }
+          })
+          return chain
+        },
+        commit: async () => {
+          for (const [kind, id, ops] of steps) {
+            if (kind !== 'patch') continue
+            const expected = (ops as Op[]).find((op) => op[0] === 'ifRevisionId')?.[1]
+            if (expected !== undefined && records.get(id as string)?._rev !== expected) throw conflict()
+          }
+          for (const apply of pending) apply()
+          return {}
+        },
+      }
+      return chain
+    })
+  })
+
+  const linkedAs = (name: string) => `You’re linked as *${name}* — I’ll @-mention you on your own tasks from now on.`
+
+  it('links an unlinked name — only the Slack id, on the revision it read, keeping the holiday already booked', async () => {
+    const result = await linkMarketingIdentity({ ownerName: 'Shirley', slackUserId: 'USHIRLEY' })
+    expect(result).toEqual({ ok: true, message: linkedAs('Shirley') })
+    const patch = steps.find((step) => step[0] === 'patch')!
+    const ops = patch[2] as Op[]
+    // setIfMissing: an id that landed first is never overwritten.
+    expect(ops.find((op) => op[0] === 'setIfMissing')?.[1]).toEqual({ slackUserId: 'USHIRLEY' })
+    expect(ops.find((op) => op[0] === 'set')?.[1]).toEqual({ updatedAt: expect.any(String) })
+    expect(ops.find((op) => op[0] === 'ifRevisionId')?.[1]).toBe('r1')
+    expect(records.get(availabilityDocId('Shirley'))).toMatchObject({ slackUserId: 'USHIRLEY', status: 'away', from: '2026-09-21' })
+  })
+
+  it('never moves a name linked to someone else onto the presser (an old digest’s select)', async () => {
+    const result = await linkMarketingIdentity({ ownerName: 'Juhan', slackUserId: 'UIMPOSTOR' })
+    expect(result.ok).toBe(false)
+    expect(result.message).toMatch(/^Couldn’t link you as Juhan — nothing changed\./)
+    expect(steps).toHaveLength(0)
+  })
+
+  it('is a no-op for someone already linked to that name', async () => {
+    expect(await linkMarketingIdentity({ ownerName: 'Juhan', slackUserId: 'UJUHAN' })).toEqual({ ok: true, message: linkedAs('Juhan') })
+    expect(steps).toHaveLength(0)
+  })
+
+  it('never links one account to a second name — they would own two people’s work', async () => {
+    const result = await linkMarketingIdentity({ ownerName: 'Shirley', slackUserId: 'UJUHAN' })
+    expect(result).toEqual({ ok: false, message: 'Couldn’t link you as Shirley — nothing changed. You’re already linked as Juhan.' })
+    expect(steps).toHaveLength(0)
+    expect(records.get(availabilityDocId('Shirley'))).not.toHaveProperty('slackUserId')
+  })
+
+  it('creates the record for a name with none, and tells only the first of two simultaneous presses it is theirs', async () => {
+    const first = await linkMarketingIdentity({ ownerName: 'Eric', slackUserId: 'UERIC' })
+    expect(first).toEqual({ ok: true, message: linkedAs('Eric') })
+    expect(records.get(availabilityDocId('Eric'))).toMatchObject({ ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' })
+
+    // A second press that read "no record yet" before the first landed.
+    steps = []
+    hideRecordOnce = true
+    const second = await linkMarketingIdentity({ ownerName: 'Eric', slackUserId: 'UOTHER' })
+    expect(second).toEqual({ ok: false, message: 'Couldn’t link you as Eric — nothing changed. Someone else linked that name just now.' })
+    expect(records.get(availabilityDocId('Eric'))?.slackUserId).toBe('UERIC')
+  })
+
+  it('escapes a name that would otherwise be markup', async () => {
+    const result = await linkMarketingIdentity({ ownerName: 'Jen <!here>', slackUserId: 'UJEN' })
+    expect(result.message).toBe(linkedAs('Jen &lt;!here&gt;'))
+  })
+})
+
+describe('claim and "Not me" refuse a namesake', () => {
+  it('writes nothing for a presser whose display name is someone else’s linked name', async () => {
+    store.tasks = [{ _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: '', status: 'queued', kind: 'outreach', activity: [] }]
+    for (const run of [claimMarketingTask, declineMarketingTask]) {
+      const result = await run({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UIMPOSTOR' })
+      expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/which name on the team list is yours/) })
+    }
+    expect(taskPatches()).toHaveLength(0)
+  })
+})
+
+// The legacy Monday plan's "I’ll take it" / "Take it over" stay in the channel for weeks.
+describe('claimMarketingTask takes a task only as its card showed it', () => {
+  const owned = () => ({ _id: 'op-1', _rev: 'rev1', title: 'Call MGB', ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN', status: 'queued', kind: 'outreach', activity: [] })
+  const setOf = (record: PatchRecord | undefined) => (record?.ops.find((op) => op[0] === 'set')?.[1] || {}) as Record<string, unknown>
+
+  it('refuses, and writes nothing, when an unowned card’s task has been taken since', async () => {
+    store.tasks = [owned()]
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC', expectedOwner: '' })
+    expect(result).toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    expect(taskPatches()).toHaveLength(0)
+  })
+
+  it('refuses a "Take it over" once someone else has it — never from whoever covered it first', async () => {
+    store.tasks = [owned()]
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Shirley', slackUserId: 'USHIRLEY', expectedOwner: 'Eric' })
+    expect(result).toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+    expect(taskPatches()).toHaveLength(0)
+  })
+
+  // Never an away cover: Juhan is not away, and "Take it over" still takes it.
+  it('takes it over while it is still the owner the card named, and returns the task to redraw', async () => {
+    store.tasks = [owned()]
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC', expectedOwner: 'Juhan' })
+    expect(result).toMatchObject({ ok: true, changed: true, task: { _id: 'op-1', ownerName: 'Eric', slackUserId: 'UERIC' } })
+    expect(setOf(taskPatches()[0])).toMatchObject({ ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
+  })
+
+  it('without a card to go by, is the old unconditional take-over', async () => {
+    store.tasks = [owned()]
+    await expect(claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC' })).resolves.toMatchObject({ ok: true })
+  })
+
+  it('never makes an unlinked presser the owner under their Slack display name', async () => {
+    store.tasks = [{ ...owned(), ownerName: '', ownerSlackUserId: '' }]
+    store.availability = [{ ownerName: 'Juhan', status: 'available' }]
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Juhan Sonin', slackUserId: 'UJUHAN', expectedOwner: '' })
+    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/which name on the team list is yours/) })
+    expect(taskPatches()).toHaveLength(0)
+  })
+})

@@ -53,7 +53,7 @@ vi.mock('@/lib/chat/slack', () => ({
   getSlackUserDisplayName: mocks.getSlackUserDisplayName,
 }))
 
-import { hoursForWeek, type TeamMemberAvailability } from '@/lib/marketing/availability'
+import type { TeamMemberAvailability } from '@/lib/marketing/availability'
 import { logCallFromSlack, undoCallLog } from '@/lib/marketing/callLog.server'
 import {
   addContactFromSlack,
@@ -63,35 +63,10 @@ import {
   type PrepData,
   type PrepDataContact,
 } from '@/lib/marketing/callPrep.server'
-import { authorizeCron, cronDeniedStatus } from '@/lib/marketing/cronAuth'
-import { CHECKIN_HEARTBEAT_DOC_ID, heartbeatHealth } from '@/lib/marketing/heartbeat'
 import { decodeContactRef, encodeContactRef, MARQUETA_ACTION, type CallLogUndo } from '@/lib/marketing/marquetaActions'
-import { marketingOperationDocumentId } from '@/lib/marketing/operations'
-import { readRunway } from '@/lib/marketing/runway.server'
-import { loadStrategySnapshot, recordStrategyVerdict, STRATEGY_DATA_QUERY } from '@/lib/marketing/strategyCheck.server'
-import {
-  dropTask,
-  handBackTask,
-  markTaskDone,
-  markTaskStuck,
-  markTaskUnstuck,
-  reopenTask,
-  snoozeTask,
-  takeTask,
-} from '@/lib/marketing/taskActions.server'
-import {
-  askableTeam,
-  resolvePresserName,
-  slackIdForOwner,
-  TEAM_AVAILABILITY_QUERY,
-  tidyAvailability,
-} from '@/lib/marketing/team.server'
-import {
-  CHECK_IN_DATA_QUERY,
-  runWeeklyCheckIn,
-  utcIsoWeekKey,
-  withUnownedFollowUps,
-} from '@/lib/marketing/weeklyCheckIn.server'
+import { STRATEGY_DATA_QUERY } from '@/lib/marketing/strategyCheck.server'
+import { TEAM_AVAILABILITY_QUERY } from '@/lib/marketing/team.server'
+import { CHECK_IN_DATA_QUERY } from '@/lib/marketing/weeklyCheckIn.server'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -99,15 +74,10 @@ type Block = Record<string, any>
 
 /** Thursday 24 Sep 2026, 10am in Arlington. */
 const NOW = new Date('2026-09-24T14:00:00Z')
-const minutesAgo = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000).toISOString()
 const daysFromNow = (days: number) => new Date(NOW.getTime() + days * 86_400_000).toISOString()
 
 const conflict = () => Object.assign(new Error('Document has been modified since the revision given'), { statusCode: 409 })
 
-const TEAM: TeamMemberAvailability[] = [
-  { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
-  { ownerName: 'Eric', slackUserId: 'UERIC', status: 'available' },
-]
 
 // ── Fixture routing ──────────────────────────────────────────────────────────
 
@@ -144,14 +114,6 @@ function routeOutreach(fixtures: Fixtures) {
     if (query.includes('_type == "marketingOperation" && _id == $id')) return nextFrom(tasks)
     if (query.startsWith('*[_id == $id][0]{ _id }')) return fixtures.existingById ?? null
     throw new Error(`unexpected query: ${query.slice(0, 80)}`)
-  })
-}
-
-function routePosture(input: { stored?: Record<string, unknown>; review?: Record<string, unknown> | null }) {
-  mocks.posture.fetch.mockImplementation(async (query: string) => {
-    if (query.includes('strategyReview')) return input.review ?? null
-    if (query.includes('posture, setAt, runway')) return input.stored ?? {}
-    throw new Error(`unexpected posture query: ${query}`)
   })
 }
 
@@ -248,14 +210,17 @@ describe('prepCallFor', () => {
     const log = buttons(reply.first).find((button) => button.action_id === MARQUETA_ACTION.logCall)
     expect(decodeContactRef(log?.value)).toMatchObject({ contactId: 'marketingContact.jane', name: 'Jane Doe' })
     expect(buttons(reply.first).some((button) => button.action_id === MARQUETA_ACTION.addContact)).toBe(false)
+    // "Open Outreach" lands on THIS contact, with the outline open.
     const studio = buttons(reply.first).find((button) => button.url)
-    expect(studio?.url).toBe('https://www.goinvo.com/studio/marketing?view=outreach')
+    expect(studio?.text.text).toBe('Open Outreach')
+    expect(studio?.url).toBe('https://www.goinvo.com/studio/marketing?view=outreach&contact=marketingContact.jane&action=prep')
+    expect(reply.threadText).toBe('Offer, voicemail and email draft for Jane Doe')
   })
 
   it('passes the typed request through, so "my meeting with Jane tomorrow" is meeting prep', async () => {
     routeOutreach({ prep: prepData() })
     const typed = await prepCallFor({ text: 'prep me for my meeting with Jane Doe tomorrow', senderName: 'Juhan', now: NOW })
-    expect(typed.kind === 'outline' && typed.text).toMatch(/^Meeting prep — Jane Doe/)
+    expect(typed.kind === 'outline' && typed.text).toBe('Meeting prep: Jane Doe (Mass General Brigham)')
 
     // From a button there is no request: Jane's own record decides.
     const pressed = await prepCallFor({
@@ -263,7 +228,7 @@ describe('prepCallFor', () => {
       senderName: 'Juhan',
       now: NOW,
     })
-    expect(pressed.kind === 'outline' && pressed.text).toMatch(/^Call prep — Jane Doe/)
+    expect(pressed.kind === 'outline' && pressed.text).toBe('Call prep: Jane Doe (Mass General Brigham)')
   })
 
   it('prepares an organisation around its best contact, with a Log button for that contact', async () => {
@@ -320,6 +285,36 @@ describe('prepCallFor', () => {
     expect(all.some((button) => button.action_id === MARQUETA_ACTION.addContact)).toBe(false)
   })
 
+  it('asks which person when nobody at an organisation is clearly the one to call', async () => {
+    // Same stage, same warmth: an outline for whoever sorts first alphabetically
+    // is prep for a call nobody decided to make.
+    routeOutreach({
+      prep: prepData([
+        { _id: 'marketingContact.sam2', name: 'Sam Rivera', organization: 'Crossover Health', warmth: 'cold', status: 'new' },
+        { _id: 'marketingContact.scott', name: 'Scott Shreeve', organization: 'Crossover Health', warmth: 'cold', status: 'new' },
+      ]),
+    })
+    const reply = await prepCallFor({ text: 'prep Crossover Health', senderName: 'Juhan', now: NOW })
+    expect(reply.kind).toBe('candidates')
+    if (reply.kind !== 'candidates') return
+    expect(reply.text).toBe('Who at Crossover Health?')
+    expectValidSlackBlocks(reply.blocks)
+    expect(buttons(reply.blocks).map((button) => decodeContactRef(button.value)?.contactId).sort()).toEqual([
+      'marketingContact.sam2',
+      'marketingContact.scott',
+    ])
+  })
+
+  it('an email-first outline’s Log it… opens with "Sent an email" chosen', async () => {
+    routeOutreach({ prep: prepData() })
+    const reply = await prepCallFor({ text: 'prep Sam Rivera at Acme Health', senderName: 'Juhan', now: NOW })
+    expect(reply.kind).toBe('outline')
+    if (reply.kind !== 'outline') return
+    expect(reply.text).toBe('Email first: Sam Rivera (Acme Health)')
+    const log = buttons(reply.first).find((button) => button.action_id === MARQUETA_ACTION.logCall)
+    expect(decodeContactRef(log?.value)).toMatchObject({ contactId: 'marketingContact.sam', outcome: 'emailed' })
+  })
+
   it('answers in words when there is nobody to prep, or the records cannot be read', async () => {
     routeOutreach({ prep: prepData() })
     await expect(prepCallFor({ text: 'prep', senderName: 'Juhan', now: NOW })).resolves.toMatchObject({ kind: 'text' })
@@ -350,7 +345,7 @@ describe('prepCallList', () => {
       ]),
     })
     const resolveOwner = (raw: string) => (raw.toLowerCase() === 'juhan' ? 'Juhan' : raw)
-    const { blocks, text } = await prepCallList({ now: NOW, resolveOwner, personName: 'Juhan', handle: '<@UBOT>' })
+    const { blocks, text } = await prepCallList({ now: NOW, resolveOwner, personName: 'Juhan' })
     expectValidSlackBlocks(blocks)
     const rendered = JSON.stringify(blocks)
     expect(rendered.indexOf('Riley Replied')).toBeGreaterThan(-1)
@@ -359,15 +354,32 @@ describe('prepCallList', () => {
     // Ready for a first call: research reviewed, identity confirmed, owned by Juhan.
     expect(rendered).toContain('Jane Doe')
     expect(rendered).toContain('Calls for Juhan')
-    expect(text).toMatch(/calls worth making for Juhan/)
+    // The first line is the notification: who, how many, how many overdue.
+    expect(text).toMatch(/^Calls for Juhan — \d+ calls worth making, 2 overdue$/)
+  })
+
+  it('calls somebody "they know us" only when the relationship says so — never for merely being on file', async () => {
+    routeOutreach({
+      prep: {
+        ...prepData([
+          // Imported as "cool", never contacted: a guess, not a relationship.
+          followUp('marketingContact.never', 'Sam Rivera', { owner: 'Juhan', warmth: 'cool', status: 'researched', interactions: [], followUpAt: daysFromNow(1) }),
+          followUp('marketingContact.cool', 'Casey Cool', { owner: 'Juhan', warmth: 'cool', followUpAt: daysFromNow(1) }),
+        ]),
+      },
+    })
+    const { blocks } = await prepCallList({ now: NOW, personName: 'Juhan', resolveOwner: (raw) => raw })
+    const line = (name: string) => String(blocks.find((block) => String(block.text?.text || '').includes(name))?.text?.text || '')
+    expect(line('Casey Cool')).toContain('they know us')
+    expect(line('Sam Rivera')).not.toContain('they know us')
   })
 
   it('says plainly when nobody is on the list', async () => {
     routeOutreach({ prep: { contacts: [], research: [], offers: [], evidence: [] } })
-    const { blocks, text } = await prepCallList({ now: NOW, handle: '<@UBOT>' })
+    const { blocks, text } = await prepCallList({ now: NOW })
     expectValidSlackBlocks(blocks)
-    expect(JSON.stringify(blocks)).toContain('prep Sam Rivera at Acme')
-    expect(text).toMatch(/Nobody is on the call list/)
+    expect(JSON.stringify(blocks)).toContain('`Marqueta, prep Sam Rivera at Acme`')
+    expect(text).toBe('Nobody’s on your list yet.')
   })
 })
 
@@ -437,9 +449,10 @@ describe('logCallFromSlack', () => {
   it('writes the quick log conditionally on the revision it read', async () => {
     routeOutreach({ logContact: loggable })
     const result = await quickLog()
-    expect(result).toMatchObject({ ok: true, statusAfter: 'contacted', label: 'Jane Doe' })
-    // Three days from Thursday 10am is Sunday in Arlington.
-    expect(result.message).toBe('Logged: Left a voicemail with Jane Doe · follow-up Sun 27 Sep.')
+    expect(result).toMatchObject({ ok: true, statusBefore: 'researched', statusAfter: 'contacted', label: 'Jane Doe' })
+    // Three days from Thursday 10am is Sunday in Arlington: the follow-up moves to Monday.
+    expect(result.message).toBe('Logged: Left a voicemail with Jane Doe · follow-up Mon 28 Sep.')
+    expect(result.followUpAt).toBe('2026-09-28T14:00:00.000Z')
     expect(result.undo).toMatchObject({ contactId: 'marketingContact.jane', interactionKey: 'slack-V123' })
     expect(result.undo?.prior.status).toBe('researched')
 
@@ -522,13 +535,15 @@ describe('undoCallLog', () => {
     followUpAt: daysFromNow(3),
     lastContactedAt: NOW.toISOString(),
     attributionChannel: 'phone',
-    interactions: [{ _key: 'int-earlier' }, { _key: 'slack-V123' }],
+    interactions: [{ _key: 'int-earlier' }, { _key: 'slack-V123', outcome: 'Left a voicemail' }],
   }
 
   it('removes exactly that interaction and restores the prior fields', async () => {
     routeOutreach({ logContact: afterLog })
     const result = await undoCallLog(undo, 'Juhan')
     expect(result.ok).toBe(true)
+    // What the struck-through receipt needs, read off the interaction it removed.
+    expect(result).toMatchObject({ label: 'Jane Doe', outcomeKey: 'voicemail' })
     expect(result.message).toMatch(/Undone by Juhan: the call with Jane Doe is off the record — back to Researched/)
     const [patch] = patchesFor('marketingContact.jane')
     expect(setOf(patch)).toEqual({ status: 'researched' })
@@ -553,105 +568,3 @@ describe('undoCallLog', () => {
     expect(mocks.outreach.fetch).not.toHaveBeenCalled()
   })
 })
-
-// ── Team ─────────────────────────────────────────────────────────────────────
-
-// ── Task actions ─────────────────────────────────────────────────────────────
-
-const TASK_ID = 'marketingOperation.t1'
-const task = (extra: Record<string, unknown> = {}) => ({
-  _id: TASK_ID,
-  _rev: 'rev1',
-  _createdAt: '2026-09-01T00:00:00Z',
-  _updatedAt: '2026-09-10T00:00:00Z',
-  title: 'Write the case study',
-  ownerName: 'Juhan',
-  // Stale: claimed once by Eric's id, then reassigned in the Studio.
-  ownerSlackUserId: 'UERIC',
-  status: 'queued',
-  kind: 'content',
-  dueAt: '2026-09-20T00:00:00Z',
-  activity: [],
-  ...extra,
-})
-const juhan = { taskId: TASK_ID, personName: 'Juhan', slackUserId: 'UJUHAN', now: NOW }
-const eric = { taskId: TASK_ID, personName: 'Eric', slackUserId: 'UERIC', now: NOW }
-
-// ── Strategy ─────────────────────────────────────────────────────────────────
-
-const STORED_POSTURE = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-10T00:00:00Z' } }
-const PRIOR_REVIEW = {
-  confirmedAt: '2026-09-02T00:00:00Z',
-  confirmedBy: 'Eric',
-  verdict: 'stillRight',
-  monthKey: '2026-09',
-  postureAtReview: 'rebuild',
-}
-const wonContact = {
-  _id: 'marketingContact.won',
-  name: 'Jane Doe',
-  organization: 'Acme',
-  status: 'won',
-  interactions: [
-    { at: '2026-09-01T00:00:00Z', statusAfter: 'meeting', channel: 'phone', by: 'Juhan' },
-    { at: '2026-09-20T15:00:00Z', statusAfter: 'won', value: 40000, channel: 'phone', by: 'Juhan' },
-  ],
-}
-const strategyData = (extra: Record<string, unknown> = {}) => ({
-  contacts: [wonContact],
-  gates: [{ title: 'Pick the lead offer', dueAt: '2026-10-01T00:00:00Z', status: 'needsHuman' }],
-  openRethink: null,
-  ...extra,
-})
-
-// ── Weekly check-in ──────────────────────────────────────────────────────────
-
-const WEEK = '2026-W39'
-const checkInData = (extra: Record<string, unknown> = {}) => ({
-  tasks: [
-    {
-      _id: 'marketingOperation.c1',
-      title: 'Call three past clients',
-      ownerName: 'Juhan',
-      // Stale id: the roster must win, or Eric is pinged about Juhan's work.
-      ownerSlackUserId: 'UERIC',
-      status: 'queued',
-      dueAt: '2026-09-22T00:00:00Z',
-      _createdAt: '2026-09-01T00:00:00Z',
-      _updatedAt: '2026-09-15T00:00:00Z',
-    },
-    {
-      _id: 'marketingOperation.c2',
-      title: 'Draft the newsletter',
-      ownerName: 'Eric',
-      status: 'working',
-      _createdAt: '2026-09-01T00:00:00Z',
-      _updatedAt: '2026-09-15T00:00:00Z',
-    },
-    { _id: 'marketingOperation.c3', title: 'Update the offer page', status: 'queued', dueAt: '2026-09-25T00:00:00Z' },
-  ],
-  availability: TEAM,
-  contacts: [
-    {
-      _id: 'marketingContact.f1',
-      name: 'Riley Replied',
-      organization: 'Acme',
-      owner: 'juhan',
-      status: 'responded',
-      followUpAt: '2026-09-23T14:00:00Z',
-      interactions: [{ at: '2026-09-21T14:00:00Z', by: 'Juhan', channel: 'phone', statusAfter: 'responded' }],
-    },
-  ],
-  ...extra,
-})
-
-function slackEnv() {
-  process.env.SLACK_BOT_TOKEN = 'xoxb-test'
-  process.env.SLACK_MARKETING_CHANNEL_ID = 'CMKTBOT'
-  process.env.SLACK_CHANNEL_ID = 'CVISITORCHAT'
-}
-
-const sectionIndex = (blocks: Block[], predicate: (text: string, block: Block) => boolean) =>
-  blocks.findIndex((block) => predicate(String(block?.text?.text || ''), block))
-
-// ── Heartbeat + cron auth ────────────────────────────────────────────────────

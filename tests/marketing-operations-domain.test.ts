@@ -4,11 +4,13 @@ import {
   assertAutomaticMarketingOperationAction,
   canTransitionMarketingOperation,
   getMarketingOperationCounts,
+  isWeeklyPlanRecord,
   marketingOperationDocumentId,
   marketingOperationGroup,
   normalizeMarketingOperationInput,
   operationInputFromDashboardSignal,
   rankMarketingOperations,
+  WEEKLY_PLAN_SOURCE_PREFIX,
   type MarketingOperation,
 } from '@/lib/marketing/operations'
 import { findWorkUpdatePrivacyIssue } from '@/lib/marketing/workUpdateSafety'
@@ -57,6 +59,18 @@ describe('private Marketing Operations domain', () => {
     expect(normalized).not.toHaveProperty('dataset')
     expect(normalized).not.toHaveProperty('patch')
     expect(JSON.stringify(normalized)).not.toContain('RAW-PRIVATE-NOTE-991')
+  })
+
+  // GROQ reads a stored "" as a date that is not one: `defined("")` is true and
+  // `dateTime("")` is null, so the digest's owned-load filter dropped the task
+  // and every `order(coalesce(dueAt, …))` sorted it ahead of real dates.
+  it('stores no due date at all for undated work, never an empty string', () => {
+    const undated = normalizeMarketingOperationInput(operationInputFromDashboardSignal({
+      id: 'gap', title: 'A gap', why: 'Because', action: 'Fix it', view: 'dashboard', severity: 'normal',
+    }))
+    expect(undated).not.toHaveProperty('dueAt')
+    expect(normalizeMarketingOperationInput({ title: 'Dated', sourceKey: 'dated', dueAt: '2026-10-01T12:00:00Z' }).dueAt).toBe('2026-10-01T12:00:00.000Z')
+    expect(normalizeMarketingOperationInput({ title: 'Junk', sourceKey: 'junk', dueAt: 'not a date' })).not.toHaveProperty('dueAt')
   })
 
   it('hard-denies every non-allowlisted automatic action regardless of claimed safety', () => {
@@ -134,6 +148,19 @@ describe('private Marketing Operations domain', () => {
     expect(operation.sourceKey).toMatch(/^work-update:/)
     expect(JSON.stringify(operation)).not.toContain(rawMarker)
     expect(operation.linkedRecords).toEqual([])
+  })
+})
+
+describe('weekly plan records', () => {
+  it('names the planner’s own record by one prefix, and nothing else by accident', () => {
+    expect(WEEKLY_PLAN_SOURCE_PREFIX).toBe('weekly-plan/')
+    expect(isWeeklyPlanRecord({ sourceKey: 'weekly-plan/2026-W39' })).toBe(true)
+    expect(isWeeklyPlanRecord({ sourceKey: ' weekly-plan/2026-W39' })).toBe(true)
+    // A task that merely mentions a weekly plan is still a task.
+    expect(isWeeklyPlanRecord({ sourceKey: 'manual:weekly-plan/2026-W39' })).toBe(false)
+    expect(isWeeklyPlanRecord({ sourceKey: 'exec-plan-2026q4/phase1/call' })).toBe(false)
+    expect(isWeeklyPlanRecord({ sourceKey: undefined })).toBe(false)
+    expect(isWeeklyPlanRecord(null)).toBe(false)
   })
 })
 

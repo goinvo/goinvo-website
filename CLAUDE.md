@@ -293,9 +293,10 @@ allowed (`inexpensive experiments`) but nothing longer, so `we can` is not found
 `we cannot` — which means the opposite. Both are pinned in `tests/idea-capture.test.ts`.
 
 ### Talking TO Marqueta (built 2026-09-01)
-She listens silently but ANSWERS when addressed — `@Marqueta <x>` in any channel she is in,
-or a DM. Being asked is not noise, so she replies even in a channel where she is otherwise
-quiet (in-thread in a channel, plain in a DM).
+She listens silently but ANSWERS when addressed — `Marqueta, <x>` or a mention of her bot user in
+any channel she is in, or a DM (see "Marqueta v2" below: a typed "@Marqueta" is not a mention).
+Being asked is not noise, so she replies even in a channel where she is otherwise quiet (in-thread
+in a channel, plain in a DM).
 
 - **Pure intent parsing:** `src/lib/marketing/marquetaChat.ts` (`parseMarquetaIntent`,
   `addressesMarqueta`, `stripMention`, `marquetaHelpText`). Answers:
@@ -340,7 +341,7 @@ exactly 2 `weekly-plan/*` records, both from a human calling the route by hand.
 - **Liveness is the point, not the schedule.** `src/lib/marketing/heartbeat.ts` +
   `marketingHeartbeat` doc record what each run DID; `heartbeatHealth` separates never-ran /
   ran-and-failed / stale (collapsing them is how a dead job looks healthy) and `tickDidSomething`
-  asks whether anything actually changed. Ask her in Slack: **`@Marqueta tick`**.
+  asks whether anything actually changed. Ask her in Slack: **`Marqueta, tick`**.
 - **Step counts are DATA, not prose.** The first `tickDidSomething` regex-matched `detail` for a
   non-zero digit and found the YEAR in `"0 item(s) planned for 2026-W36"` — an inert run reporting
   itself productive, which is the exact bug the feature exists to catch. Tests: `tests/heartbeat.test.ts`.
@@ -374,6 +375,149 @@ A lapsed domain takes the site, client email and every scheduled job down togeth
   went stale, so GitHub emails somebody. A watchdog inside the tick shares its failure domain and
   is decoration. Needs repo secrets `NEXT_PUBLIC_SANITY_PROJECT_ID` + `SANITY_API_READ_TOKEN`.
   It correctly FAILS today, because nothing is scheduled in production yet.
+
+## Marqueta v2 — outreach-first, and she runs the week (built 2026-09-24)
+
+Outreach is the priority and cold calling is stressful, so Marqueta now preps calls on request,
+logs them from Slack, checks in on Thursdays, and ASKS (never assigns) people to take work. Still
+**no model call anywhere in Marqueta**: everything is composed from reviewed records + fixed copy.
+
+**Addressing her:** start a message with `Marqueta,` (or `Marqueta:`), or mention her real bot user
+(`@goinvo_website_chat`). She posts as "Marqueta" per message, so a typed "@Marqueta" is plain text
+and never reaches her. In copy she names herself with `marquetaHandle(botUserId)` / hints with
+`askMarqueta('my calls')` → `` `Marqueta, my calls` `` — never the literal "@Marqueta".
+
+What she does (pure module → server module):
+- **Call prep** `Marqueta, prep Jane Doe at MGB` · `my calls` — `callPrep.ts` / `callPrep.server.ts`.
+  First message: header (`Call prep:` / `Meeting prep:` / `Email first:` / `Hold off:`), who, the
+  10-second cheat sheet (say / ask / if no / exit), the action row (`Log it…` · Add · Open Outreach),
+  why now (VERIFIED research quote only), questions, "if they say…". Thread: offer, voicemail, email
+  draft, background. An unreviewed `callBrief`/`suggestedOpener` is background, never "say this".
+  Somebody not on file is the COMMON case (the warm network is not in the CMS): the outline uses only
+  the typed words, a typed "met him at HIMSS" counts as knowing them, and *Add <Name> to outreach*
+  creates `marketingContact.slack-<hash>` (never infers email/phone/warmth/segment).
+- **Logging calls** — the `Log it…` modal, or `Marqueta, called Jane at MGB, left a voicemail`:
+  exactly one contact + a guessable outcome logs at once with *Undo*; two matches → one `Log …`
+  button each; a log that would move a contact DOWN (`needsConfirmation`) always goes through the
+  prefilled form. `callLog.ts` is the single definition of a logged touch — the Studio's `saveLog`
+  calls `buildContactLogWrite` too. `won` is absorbing; interaction `_key` = `slack-<view id>` makes a
+  resubmit a no-op; the Slack path rolls weekend follow-ups to Monday.
+- **Follow-ups stay on the contact** (`followUpAt`); `followUps.ts` reads them live. plan-week reserves
+  `min(15m × due, 40% of budget)` for them (`reservedMinutes`) instead of minting tasks.
+- **Thursday check-in** — `/api/marketing/checkin` (`vercel.json` `0 14 * * 4`, CRON_SECRET via
+  `cronAuth.ts`, `?dryRun=1`, `?force=1`). Scope: owned work that is overdue, due by end of next week,
+  or working/blocked. Each person @-mentioned once, fitted to 45 phone lines (`checkInPhoneLines`).
+  Cards: Done · Stuck… · Hand back; Unstuck on stuck; Keep — next week / Drop it on work slipping ≥14
+  days; Reopen on done/dropped. No "still on it" button — silence means still on it. An empty week
+  still posts one line (silence looks like a dead job). **Claim-before-post** on
+  `marketingHeartbeat.checkin` (`ifRevisionId`); the Monday digest claims `marketingHeartbeat.digest`
+  the same way. The GitHub watchdog checks the check-in doc with stale/failed rules only.
+- **The Monday plan** — blocks only (no attachments: Slack draws attachments BELOW every block, which
+  put the first take button ~100 phone lines down). Order: header · week line · warnings · last week ·
+  *Needs an owner* (asks first) · *Decisions waiting* · *Outreach this week* · money and direction ·
+  ideas · setup · hint · footer actions LAST. The tick passes `plan: {itemIds, decisionIds, …}` so the
+  digest shows the same week This week shows; without it, it says it is the open board. Over 50 blocks,
+  whole groups give way (follow-ups, call sheet, asked twice, away, decisions), each leaving a count.
+  A needsHuman task is a DECISION to the planner only when `isDecisionTask` says so — a "Not me" task
+  is unowned work (it lost the 4 decision slots to the seeded gates and vanished from every Monday);
+  decisions sort this-week-first, then priority, then overdue, and the digest still shows a passed-on
+  task the plan did not fit. The last-week line carries no follow-ups ("Outreach this week" owns them).
+- **Asks, not assignments** (`ownerAsk.ts`) — one mapped, available person per unclaimed task, in the
+  TOP-LEVEL blocks and `text` (mentions inside attachments don't reliably notify). Never the same
+  person twice (`askHistory` with `week` + `kind`); after two asks → *Drop it*. No capacity claims
+  about colleagues. "Not me" = `decline` → `passOnTask` (records a pass); "Hand back" =
+  `taskHandBack` → `handBackTask` (clears owner, records nothing) — one label, one action, always.
+- **Money and direction** (`strategyCheck.ts`) — one question at a time in `mq_money_*` blocks:
+  the runway check-in first, then "does the plan still fit". The strategy review is due every
+  `RUNWAY_STALE_DAYS` and IMMEDIATELY when the runway moves the studio into a different posture;
+  *Needs a rethink* files one urgent dated decision on This week. A new win makes the runway check-in
+  ask whether it extended the runway. `runway` (with pipeline), `strategy`, `pipeline` answer in Slack.
+- **Conversation ladder** (`parseMarquetaIntent`): acknowledgement → SILENCE ("thanks!") · greeting
+  → 3 lines · help (short) · prep · log · signed · time-off question · availability · proposal ·
+  contact · topics · unknown → suggest a command, never run a guess. Work answers only in her own rooms
+  or a DM. Time off is written only from a first-person statement with readable dates, via the same
+  safe write as the Monday button, with Undo ("is Eric away next week?" writes nothing).
+
+**The message design system is code:** `src/lib/marketing/marquetaStyle.ts` — `LABEL` (every button
+label), `VIEW_TITLE` (Studio tab names), `formatSlackDay` ("Mon 21 Sep", New York time, never ISO),
+`countLabel` (never "(s)"), `stateNote`, `errorLine`, `askMarqueta`, `slackReadable` (for stored log
+text shown in Slack). Rules: ≤1 green button per card and it is leftmost (never green for taking over,
+confirming a number, or dropping); ≤3 buttons per card; a label ending "…" opens a form; every press
+redraws its OWN block in place with a state note and the reversing button; ephemeral only for errors
+and private details. One task card everywhere: `buildTaskCard(mode: 'plan'|'mine')`; status words from
+`taskStatusWords` (shared with the Studio pill).
+
+**CI guards (these fail the build — keep them green, don't loosen them):**
+- `tests/marqueta-style.test.ts` — a hand-typed or retired button label, or "the board" in Slack copy.
+- `tests/marqueta-wiring.test.ts` — every emitted `action_id` has a handler whose value reader matches
+  the encoder; every modal is routed by `callback_id` above the answer-form catch-all; every Studio
+  landing param is read. **Adding a button:** id in `MARQUETA_ACTION`/`MARKETING_ACTION`, an explicit
+  handler in the interactions route, and a `VALUE_READER` entry in that test. The route now REFUSES an
+  unknown `MARKETING_ACTION` id (it used to treat it as "Not me").
+- `tests/slack-delegation.test.ts` — one label never maps to two action ids.
+- Every Block Kit builder's tests run `expectValidSlackBlocks` / `expectValidSlackModal`
+  (`tests/support/slackBlocks.ts`) — Slack rejects a whole message for one empty text object.
+
+Rules that each cost a review round to learn:
+- **Slack text in/out goes through `slackText.ts`.** Inbound is escaped (`AT&amp;T`,
+  `<mailto:…|…>`, a pasted quote arrives as `&gt;`) — decode BEFORE parsing or capture. Outbound record
+  text is escaped before mrkdwn, clipped after escaping, never cut inside `<…>`.
+- **Status writes use `buildOperationStatusPatch`** (operations.ts) — the operations route's transition
+  rules and completedAt bookkeeping. Unstuck clears `blocker` (the planner defers anything with one).
+- **A presser's board name is `resolvePresserName`/`resolveOwnerName`** (linked identity first); a
+  namesake linked to a different Slack id resolves to `'Someone'`, and every write refuses `'Someone'`.
+  A write that files something UNDER the name (Take, Add to outreach, Log it) uses
+  `resolveOwnerNameForWrite`: an unlinked display name the team list does not know is `'Someone'` too
+  ("Juhan Sonin" became an owner nobody could hand back once he linked as "Juhan").
+- **`MARKETING_TEAM_NAMES`** (default `Juhan,Shirley,Eric,Jon`; empty = board owners only) is who the
+  Monday setup offers. It used to offer only names that owned open work, so a teammate with none could
+  never link — and only linked people are ever asked. The Studio desk's owner select offers every
+  team page by first name for the same reason.
+- **A redraw rewrites the WHOLE message**, so two presses that both read before either writes lose one
+  card. After every redraw (and on a press that changed nothing) `settleTaskCards` re-reads the message
+  once and redraws any card whose drawn owner/status disagrees with its record (`refreshStaleTaskCards`).
+  The money group has no record to compare with; its next press redraws it.
+- **An away cover takes only while the owner is away TODAY** (`absencesOn`); the legacy "Take it
+  over" passes `takeOverFrom`, never `coverFor`.
+- **Undated operations have no `dueAt`** (a stored `""` falls out of GROQ date filters and sorts
+  first); queries still treat `""` as undated for older records.
+- **`getOutreachClient()`** (pinned OUTREACH_DATASET, `perspective: 'published'`) for contacts,
+  operations, availability and heartbeat docs — not the router, whose escape hatch can point at the
+  public dataset.
+- **Every Marqueta button is team-only**: guests, Slack Connect users (other `team_id`, `is_stranger`)
+  and failed profile lookups are refused before anything is read. Contact email/phone go only to the
+  requester (ephemeral) or inline in a DM. No buttons in ephemeral messages, ever.
+- **view_submission has no response_url.** Modals carry channel + thread (+ message ts) in
+  `private_metadata` and confirm/redraw via `chat.postMessage`/`chat.update`. Redraws re-read the live
+  message (`conversations.history`/`replies`) rather than trusting the press-time snapshot.
+- **No Sanity read before `views.open`** — trigger_id lives ~3s; labels come from the button value or
+  the clicked blocks.
+- `slackDelegation.ts` must never import `weeklyCheckIn.ts` (load-order cycle).
+
+**Studio landings** (`marketingTool.tsx`): `?contact=&action=prep|log`, `?owner=`, `?focus=caught|
+followUps|decisions` are read once and stripped (keeping `window.history.state`); `?task=` stays for
+`TaskFocusBanner`, which can now act (Done / Stuck / Unstuck / Reopen / answer a decision). This week
+shows follow-ups, the reserved time, the pulse sentence and the runway line; the desk's owner is
+`ownerName` (the name Slack writes) and a Studio owner change clears `ownerSlackUserId`; weekly-plan
+records are filtered with `isWeeklyPlanRecord`. The Studio money nudge never writes `setAt` — only the
+explicit "Override the runway" select does (writing it used to make a stale bin beat the runway). The
+Outreach landing opens the contact with the same outline (`CallOutlinePanel`) and the same outcome
+chips; the browser e2e clicks `Log it for <name>` by that name (`scripts/test-marketing-principal-e2e.ts`).
+
+**Manual Slack steps (no new scopes):**
+1. Everyone who owns marketing tasks must JOIN #marketing-bot — a mention of a non-member notifies
+   nobody and Slack reports no error, so asks and check-ins fail silently.
+2. Optional, recommended: rename the app's display name to **Marqueta** (App Home) so `@Marqueta`
+   becomes a real mention. Only after the website chat and shop set their own per-message names, or
+   their posts will say "Marqueta" too.
+3. DMs need `im:history` + the `message.im` event (reinstall) AND App Home → Messages Tab → allow
+   messages; then set `SLACK_MARQUETA_DMS=1` so help mentions DMs. Without it, contact details arrive
+   as a message only the requester can see.
+
+**Gallery harness:** a before/after renderer of every message runs the REAL routes against an
+in-memory dataset (groq-js) and a fake Slack workspace with signed requests. It found bugs unit tests
+missed (the `&gt;` draft miss, blocked tasks invisible on Monday, weekend follow-ups) — rerun it when
+changing message shapes (it lived in the session scratchpad; see the PR for how it was built).
 
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 

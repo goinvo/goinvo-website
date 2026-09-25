@@ -48,6 +48,15 @@ describe('marketing workspace unsaved-change wiring', () => {
     expect(source).toContain('clearUnsavedChanges(OUTREACH_CONTACT_UNSAVED_ID)')
     expect(source).toContain('unsavedId={OUTREACH_EVIDENCE_UNSAVED_ID}')
     expect(source).toContain('clearUnsavedChanges(OUTREACH_EVIDENCE_UNSAVED_ID)')
+
+    // Pressing an outcome chip is an edit; the outcome a call prep preselects
+    // (email first → "Sent an email") is a starting point, not an edit.
+    const chip = source.slice(source.indexOf('const chooseLogOutcome ='), source.indexOf('const focusRevealedPanel ='))
+    expect(chip).toContain("markUnsavedChange(OUTREACH_LOG_UNSAVED_ID, 'call log draft')")
+    const openLog = source.slice(source.indexOf('const openLog = ('), source.indexOf('const chooseLogOutcome ='))
+    expect(openLog).toContain('clearUnsavedChanges(OUTREACH_LOG_UNSAVED_ID)')
+    expect(openLog).toContain('if (presetOutcome) {')
+    expect(openLog).not.toContain('markUnsavedChange(')
   })
 
   it('guards brand voice edits until they are saved, discarded, or reloaded', () => {

@@ -5,8 +5,10 @@ import { OUTREACH_DATASET } from '@/lib/marketing/outreachEnums'
 import { getMarketingWriteClientFor } from '@/lib/marketing/client'
 import { assertStudioWriterOrApiKey, MarketingAuthError } from '@/lib/marketing/auth'
 import { privateMarketingJson } from '@/lib/marketing/privateResponse'
-import { FINANCIAL_POSTURE_DOC_ID } from '@/lib/marketing/financialPosture'
-import { resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
+import { FINANCIAL_POSTURE_DOC_ID, getFinancialPosture } from '@/lib/marketing/financialPosture'
+import { formatMonths, formatRunwayDate, resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
+import { resolveOwnerName, TEAM_AVAILABILITY_TYPE } from '@/lib/marketing/availability'
+import { describePulse, summarizeOutreach, type PulseContact } from '@/lib/marketing/outreachPulse'
 import {
   generateClaudeText,
   isAnthropicConfigured,
@@ -16,6 +18,7 @@ import {
 import { resolveWeeklyMinutes, formatMinutes } from '@/lib/marketing/effort'
 import { buildWeeklyPlan, isoWeekKey, type WeeklyPlan } from '@/lib/marketing/weeklyPlan'
 import {
+  followUpParts,
   followUpReservationLabel,
   followUpReservedMinutes,
   listFollowUps,
@@ -23,9 +26,11 @@ import {
 } from '@/lib/marketing/followUps'
 import { getOutreachClient } from '@/lib/marketing/outreachClient.server'
 import {
+  isWeeklyPlanRecord,
   marketingOperationDocumentId,
   marketingOperationFingerprint,
   normalizeMarketingOperationInput,
+  WEEKLY_PLAN_SOURCE_PREFIX,
   type MarketingOperation,
 } from '@/lib/marketing/operations'
 
@@ -45,39 +50,108 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-const PLAN_SOURCE_PREFIX = 'weekly-plan/'
-
 const OPERATIONS_QUERY = `*[_type == "marketingOperation" && !(_id in path("drafts.**"))]{
-  _id, _type, title, summary, whyNow, nextAction, humanQuestion, status, priority, kind,
+  _id, _rev, _type, title, summary, whyNow, nextAction, humanQuestion, status, priority, kind,
   origin, autonomy, ownerName, dueAt, nextCheckAt, blocker, targetView, sourceKey,
-  estimatedMinutes
+  estimatedMinutes, completedAt
 }`
 
 /**
- * Contacts owed a follow-up. Only the fields the due rule and the count need —
- * the reservation is a number of minutes, so no name, note or address is read.
+ * The contacts This week needs, and the team roster to name their owners.
+ *
+ * Contacts with a follow-up date (the reservation, and the "Follow-ups due"
+ * rows) or anything logged (the week's outreach pulse). Name, email and
+ * organisation are read ONLY so `followUpParts` can say who a follow-up is
+ * with — the same scrubbed label Slack shows; an email address is only ever a
+ * source for a first name and never leaves this route. No phone field and no
+ * call note is read at all: the log is projected down to when, who, how and
+ * the status it left, which is all the pulse counts.
+ *
+ * The roster maps a contact's owner ("juhan") onto the board's name
+ * ("Juhan"), the same way the digest and the check-in do, so filtering This
+ * week to one person finds their follow-ups as well as their tasks.
  */
-const FOLLOW_UP_CONTACTS_QUERY = `*[_type == "marketingContact" && !(_id in path("drafts.**")) && defined(followUpAt)]{
-  _id, status, followUpAt
+const OUTREACH_CONTEXT_QUERY = `{
+  "contacts": *[_type == "marketingContact" && !(_id in path("drafts.**"))
+    && (defined(followUpAt) || defined(interactions[0]))]{
+      _id, name, email, organization, owner, status, warmth, followUpAt,
+      "interactions": interactions[]{ at, by, channel, statusAfter, value }
+    },
+  "team": *[_type == "${TEAM_AVAILABILITY_TYPE}" && !(_id in path("drafts.**"))]{ ownerName, slackUserId }
 }`
 
+type OutreachContext = {
+  contacts: Array<FollowUpContact & PulseContact>
+  team: Array<{ ownerName: string; slackUserId?: string }>
+}
+
 /**
- * The follow-ups due this week, read live from the contacts — the single place
- * they live (see followUps.ts for why they are never mirrored onto the board).
+ * Read live from the contacts — the single place follow-ups live (see
+ * followUps.ts for why they are never mirrored onto the board).
  *
  * Through `getOutreachClient`, pinned to the private dataset with the published
  * perspective, so a contact open in the Studio editor is counted once. A failed
- * read is null, not []: "could not read the contacts" must not be reported as
- * "nobody is owed a call", and the caller plans without a reservation either
+ * read is null, not empty: "could not read the contacts" must not be reported
+ * as "nobody is owed a call", and the caller plans without a reservation either
  * way — the week is the product, the reservation is a refinement of it.
  */
-async function loadFollowUpContacts(): Promise<FollowUpContact[] | null> {
+async function loadOutreachContext(): Promise<OutreachContext | null> {
   try {
-    return (await getOutreachClient().fetch<FollowUpContact[] | null>(FOLLOW_UP_CONTACTS_QUERY)) || []
+    const found = await getOutreachClient().fetch<Partial<OutreachContext> | null>(OUTREACH_CONTEXT_QUERY)
+    return {
+      contacts: (found?.contacts || []).filter((contact) => contact && contact._id),
+      team: (found?.team || []).filter((member) => member && String(member.ownerName || '').trim()),
+    }
   } catch (error) {
     console.error('[plan-week] could not read follow-ups', error)
     return null
   }
+}
+
+const DAY_MS = 86_400_000
+
+/**
+ * The week the pulse counts, from Monday 00:00 UTC of the plan's week start —
+ * the same window the Thursday check-in counts in, so the two sentences agree.
+ */
+function weekWindow(weekStart: string, now: Date): { from: string; to: string; now: Date } {
+  const parsed = Date.parse(`${weekStart}T00:00:00.000Z`)
+  const from = Number.isNaN(parsed) ? Math.floor(now.getTime() / DAY_MS) * DAY_MS : parsed
+  return { from: new Date(from).toISOString(), to: new Date(from + 7 * DAY_MS).toISOString(), now }
+}
+
+/**
+ * The week's outreach sentence, with the follow-up count taken from the rows.
+ *
+ * `summarizeOutreach` counts follow-ups due before the END OF THE ISO WEEK;
+ * the "Follow-ups due" rows and the reservation use `listFollowUps`, which
+ * looks a rolling seven days ahead. On a Thursday those disagree by the next
+ * Monday and Tuesday, and the header read "1 follow-up waiting" above a
+ * section of three rows and a three-follow-up reservation. The rows are what
+ * the page lays out and what the time was held back for, so the sentence uses
+ * their count.
+ */
+function weekPulse(contacts: PulseContact[], followUps: Array<{ overdue: boolean }>, weekStart: string, now: Date): string {
+  const pulse = summarizeOutreach(contacts, weekWindow(weekStart, now))
+  pulse.followUpsDue = followUps.length
+  pulse.followUpsOverdue = followUps.filter((entry) => entry.overdue).length
+  return describePulse(pulse, 'Outreach this week')
+}
+
+/**
+ * "Rebuild — 4.5 months of certain runway (to 11 Jan 2027)": the posture this
+ * week was planned against, and the fact it came from.
+ *
+ * From the same read that chose the posture, so the header can never name a
+ * different posture from the one the plan used. When a hand-set posture is
+ * overriding the date it says so, or the line would look like arithmetic.
+ */
+function runwayHeadline(stored: StoredPosture, now: Date): string {
+  const resolved = resolveRunwayPosture(stored, now)
+  const title = getFinancialPosture(resolved.id)?.title || resolved.id
+  const byHand = resolved.source === 'manual' ? ' · posture set by hand' : ''
+  if (resolved.months === null) return `${title} — no runway date recorded${byHand}`
+  return `${title} — ${formatMonths(resolved.months)} of certain runway (to ${formatRunwayDate(resolved.certainUntil)})${byHand}`
 }
 
 let privateClient: SanityClient | null = null
@@ -183,16 +257,18 @@ async function handle(request: NextRequest, dryRun: boolean) {
 
   // Safe: the 503 guard above already proved the project id and token exist.
   const settingsClient = getMarketingWriteClientFor('marketingSettings')
-  const [operations, postureRaw, settings, followUpContacts] = await Promise.all([
+  const [operations, postureRaw, settings, outreach] = await Promise.all([
     client.fetch<MarketingOperation[]>(OPERATIONS_QUERY).catch(() => [] as MarketingOperation[]),
     // Both the hand-set bin AND the runway date, because the bin alone does not
     // decay: this record said "survival" from July onwards and would have said
     // it in 2027. resolveRunwayPosture picks whichever is the newer fact.
+    // undefined when the read FAILED, null when there is no record: the
+    // header must not say "no runway date recorded" about a read that broke.
     client
       .fetch<StoredPosture | null>(`*[_id == $id][0]{ posture, setAt, runway }`, {
         id: FINANCIAL_POSTURE_DOC_ID,
       })
-      .catch(() => null),
+      .catch(() => undefined),
     // marketingSettings is routed, NOT pinned to the private dataset like the
     // operations above. Reading it from the wrong side is silent: the Studio
     // writes the hours where the router says, this read looked somewhere else,
@@ -202,7 +278,7 @@ async function handle(request: NextRequest, dryRun: boolean) {
         `*[_id == "marketingSettings"][0]{ weeklyMarketingHours }`,
       )
       .catch(() => null),
-    loadFollowUpContacts(),
+    loadOutreachContext(),
   ])
 
   // The runway date wins when it is the newer fact, so the plan tightens on its
@@ -213,12 +289,18 @@ async function handle(request: NextRequest, dryRun: boolean) {
   const now = new Date()
 
   // The plan document itself is an operation; it must never plan itself.
-  const planning = operations.filter((item) => !item.sourceKey?.startsWith(PLAN_SOURCE_PREFIX))
+  const planning = operations.filter((item) => !isWeeklyPlanRecord(item))
   // Follow-ups are owed to people who already answered, and they are not on
   // the board — so without this the planner filled every hour with board work
   // and the warmest calls of the week had no time at all. Held back before the
   // fill (15m each, capped at 40% of the week so a backlog cannot swallow it).
-  const followUpsDue = followUpContacts ? listFollowUps(followUpContacts, { now }).length : 0
+  const followUps = outreach
+    ? listFollowUps(outreach.contacts, {
+        now,
+        resolveOwner: (raw) => resolveOwnerName({ displayName: raw, entries: outreach.team }),
+      })
+    : []
+  const followUpsDue = followUps.length
   const reservedMinutes = followUpReservedMinutes(followUpsDue, budgetMinutes)
   const plan = buildWeeklyPlan({
     operations: planning,
@@ -232,7 +314,7 @@ async function handle(request: NextRequest, dryRun: boolean) {
   const theme = await describeWeek(client, plan, posture)
 
   const weekKey = isoWeekKey(now)
-  const sourceKey = `${PLAN_SOURCE_PREFIX}${weekKey}`
+  const sourceKey = `${WEEKLY_PLAN_SOURCE_PREFIX}${weekKey}`
   const planId = marketingOperationDocumentId(sourceKey)
 
   const response = {
@@ -247,14 +329,29 @@ async function handle(request: NextRequest, dryRun: boolean) {
     // see what the held-back time is for. followUpsDue is null when the
     // contacts could not be read — unknown, not zero.
     reserved: plan.reserved,
-    followUpsDue: followUpContacts ? followUpsDue : null,
+    followUpsDue: outreach ? followUpsDue : null,
+    // Who each follow-up is with, and when — the rows This week shows above the
+    // call sheet, worded exactly as Slack words them. Scrubbed of contact
+    // details (followUpParts); empty, not absent, when the contacts could not
+    // be read, with `followUpsDue: null` saying which it was.
+    followUps: followUps.map((entry) => followUpParts(entry, now)),
+    // "Outreach this week: 3 touches (2 people) · …" — the check-in's sentence
+    // over the same week. Null when the contacts could not be read: a failed
+    // read is not "no outreach logged yet".
+    pulse: outreach ? weekPulse(outreach.contacts, followUps, plan.weekStart, now) : null,
+    runway: postureRaw === undefined ? null : runwayHeadline(postureRaw || {}, now),
     theme: theme?.theme || null,
     rationale: theme?.rationale || null,
+    // Status, blocker and owner on every row, so This week can use the same
+    // status words as the Slack card and the desk, say what is in the way of
+    // stuck work, and filter to one person.
     items: plan.items.map((entry) => ({
       id: entry.operation._id,
       title: entry.operation.title,
       kind: entry.operation.kind,
       owner: entry.operation.ownerName || null,
+      status: entry.operation.status,
+      blocker: entry.operation.blocker || null,
       minutes: entry.minutes,
       estimateSource: entry.estimateSource,
       overdue: entry.overdue,
@@ -262,15 +359,29 @@ async function handle(request: NextRequest, dryRun: boolean) {
     decisions: plan.decisions.map((entry) => ({
       id: entry.operation._id,
       title: entry.operation.title,
+      kind: entry.operation.kind,
       question: entry.operation.humanQuestion || null,
       owner: entry.operation.ownerName || null,
+      status: entry.operation.status,
+      blocker: entry.operation.blocker || null,
       minutes: entry.minutes,
+      // So an answer given on This week goes through the operations route's
+      // revision check: a decision answered in Slack since is refused, not
+      // overwritten.
+      rev: entry.operation._rev || null,
     })),
     deferred: plan.deferred.map((entry) => ({
       id: entry.operation._id,
       title: entry.operation.title,
+      kind: entry.operation.kind,
+      owner: entry.operation.ownerName || null,
+      status: entry.operation.status,
+      blocker: entry.operation.blocker || null,
       minutes: entry.minutes,
       reason: entry.reason,
+      // "3 tasks done this week" counts by this; done work from any other
+      // week is history, not this week's news.
+      completedAt: entry.operation.completedAt || null,
     })),
     planDocumentId: planId,
     dryRun,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { buildQuickCallLog, type ContactLogContact } from '@/lib/marketing/callLog'
 import { decodeStrategyValue, MARQUETA_ACTION } from '@/lib/marketing/marquetaActions'
+import { LABEL, replaceBlocksByPrefix } from '@/lib/marketing/marquetaStyle'
 import {
   marketingOperationDocumentId,
   normalizeMarketingOperationInput,
@@ -13,30 +14,37 @@ import {
   type PulseContact,
 } from '@/lib/marketing/outreachPulse'
 import {
+  describeRunway,
   monthsOfRunway,
   postureForRunwayMonths,
+  resolveRunwayPosture,
   RUNWAY_STALE_DAYS,
   runwayCheckIn,
   type StoredPosture,
 } from '@/lib/marketing/runway'
-import { buildRunwayBlocks } from '@/lib/marketing/slackDelegation'
+import { MARKETING_ACTION } from '@/lib/marketing/slackDelegation'
 import {
+  answerMrkdwn,
   buildMoneyAndDirectionBlocks,
   buildStrategyDecisionOperation,
   buildStrategySnapshot,
   latestWin,
+  moneyAnswer,
   moneyAnswerText,
   monthKey,
   monthLabel,
   monthWindow,
   PIPELINE_CONTACT_PROJECTION,
+  pipelineAnswer,
   pipelineAnswerText,
   STRATEGY_REVIEW_INTERVAL_DAYS,
+  strategyAnswer,
   strategyAnswerText,
   strategyReviewDue,
   strategyReviewSourceKey,
   summarizePipeline,
   winsInWindow,
+  type MoneyRunway,
   type PipelineContact,
   type StrategyReviewRecord,
   type StrategySnapshot,
@@ -90,6 +98,42 @@ function snapshot(overrides: Partial<Parameters<typeof buildStrategySnapshot>[0]
 }
 
 const allText = (blocks: Block[]) => JSON.stringify(blocks)
+
+/** The runway as `readRunway` returns it, from a stored record. Confirmed 1 Aug by default: stale on 24 Sep. */
+function runwayState(stored: StoredPosture = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-01T00:00:00Z' } }, now = SEPT): MoneyRunway {
+  return { summary: describeRunway(stored, now), checkIn: runwayCheckIn(stored, now), resolved: resolveRunwayPosture(stored, now) }
+}
+const freshRunway = () => runwayState({ runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } })
+const buttons = (blocks: Block[]) =>
+  blocks.flatMap((block) => [...(block.elements || []), ...(block.accessory ? [block.accessory] : [])]).filter((element) => element.type === 'button')
+const labels = (blocks: Block[]) => buttons(blocks).map((button) => button.text.text)
+/** Lines on a 40-character phone screen: a rough render, enough to hold "one screen" to account. */
+function phoneLines(blocks: Block[]): number {
+  const wrap = (text: string) =>
+    text.split('\n').reduce((total, line) => total + Math.max(1, Math.ceil(line.replace(/<[^|>]*\|([^>]*)>/g, '$1').length / 40)), 0)
+  return blocks.reduce((total, block) => {
+    if (block.type === 'section') return total + wrap(String(block.text?.text || '')) + (block.accessory ? 1 : 0)
+    if (block.type === 'context') return total + wrap(block.elements.map((element: Block) => element.text).join(' '))
+    if (block.type === 'actions') return total + Math.ceil(block.elements.length / 2)
+    return total + 1
+  }, 0)
+}
+/** Answer anatomy: no header, no divider, and exactly one next action at the end — buttons, or one hint. */
+function expectAnswerAnatomy(answer: { text: string; blocks: Block[] }) {
+  expectValidSlackBlocks(answer.blocks)
+  expect(answer.blocks.some((block) => block.type === 'header' || block.type === 'divider')).toBe(false)
+  expect(String(answer.blocks[0].text.text).split('\n')[0]).toBe(answer.text)
+  const last = answer.blocks.at(-1)!
+  if (last.type === 'actions') {
+    expect(last.elements.length).toBeGreaterThan(0)
+    expect(answer.blocks.filter((block) => block.type === 'actions')).toHaveLength(1)
+  } else {
+    expect(last.type).toBe('context')
+    expect(last.elements[0].text.match(/`Marqueta, [^`]+`/g)).toHaveLength(1)
+  }
+  expect(phoneLines(answer.blocks)).toBeLessThanOrEqual(22)
+  expect(buttons(answer.blocks).some((button) => button.style === 'primary')).toBe(false)
+}
 
 describe('monthKey / monthLabel / monthWindow', () => {
   it('keys a month in UTC, so the last evening of September is September everywhere', () => {
@@ -147,8 +191,7 @@ describe('strategyReviewDue', () => {
       'rebuild',
     )
     expect(check.due).toBe(false)
-    expect(check.reason).toContain('Juhan')
-    expect(check.reason).toContain('10 Oct 2026')
+    expect(check.reason).toBe('Checked on Thu 10 Sep by Juhan; the next check is due Sat 10 Oct, sooner if the runway crosses a line.')
   })
 
   it('asks again once the answer is as old as the runway stale line', () => {
@@ -183,7 +226,7 @@ describe('strategyReviewDue', () => {
   it('does not ask while a rethink is already on the board, but does not hide a move either', () => {
     const quiet = strategyReviewDue(null, SEPT, 'rebuild', { openRethink: true })
     expect(quiet.due).toBe(false)
-    expect(quiet.reason).toMatch(/already on the board/)
+    expect(quiet.reason).toBe('A rethink of the plan is already waiting on This week.')
 
     const moved = strategyReviewDue(
       { confirmedAt: '2026-09-01T00:00:00Z', postureAtReview: 'stable' },
@@ -337,15 +380,21 @@ describe('wins are moments a contact BECAME won, not touches with a client alrea
     const contact = afterTwoRoutineCalls()
     const snap = snapshot({ thisMonth: pulse([contact]), pipelineContacts: [contact] })
     const card = allText(
-      buildMoneyAndDirectionBlocks({ snapshot: snap, strategyDue: { due: true, reason: 'due' }, runwayBlocks: [] }),
+      buildMoneyAndDirectionBlocks({ now: SEPT, runway: null, snapshot: snap, strategyDue: { due: true, reason: 'due' } }),
     )
-    expect(card).toContain('Won this month: none')
+    expect(card).toContain('2 touches this month')
+    expect(card).not.toMatch(/\bwins?\b/)
+    expect(allText(moneyAnswer({ now: SEPT, runway: runwayState(), snapshot: snap }).blocks)).toContain('Won this month: none')
     expect(moneyAnswerText({ runwaySummary: 'x', pipeline: snap.pipeline })).toContain('Won this month: none')
 
-    const answer = pipelineAnswerText(snap.thisMonth, snap.thisMonth, snap.pipeline)
-    expect(answer).toContain('Won this month: none')
-    // The pulse line must not contradict it with its own won-state count.
-    expect(answer).not.toMatch(/\d+ won/)
+    for (const answer of [
+      answerMrkdwn(pipelineAnswer({ week: snap.thisMonth, snapshot: snap })),
+      pipelineAnswerText(snap.thisMonth, snap.thisMonth, snap.pipeline),
+    ]) {
+      expect(answer).toContain('Won this month: none')
+      // The pulse line must not contradict it with its own won-state count.
+      expect(answer).not.toMatch(/\d+ won/)
+    }
   })
 
   it('does not bring the runway question back after a routine call', () => {
@@ -500,7 +549,7 @@ describe('buildStrategySnapshot', () => {
 
   it('calls a direction only when it is already settled', () => {
     expect(snapshot({ thisMonth: pulse(touches(7)) }).trend).toBe(
-      "7 touches logged this month — already past last month's 6.",
+      '7 touches logged this month — already past last month’s 6.',
     )
     expect(snapshot({ thisMonth: pulse([]), lastMonth: pulse([], SEPT, -1) }).trend).toBe(
       'No outreach logged this month or last.',
@@ -535,113 +584,295 @@ describe('buildStrategySnapshot', () => {
 })
 
 describe('buildMoneyAndDirectionBlocks', () => {
-  const quietRunway = buildRunwayBlocks({
-    summary: 'x',
-    checkIn: { due: false, urgent: false, reason: '', question: '' },
-  })
-  const dueRunway = buildRunwayBlocks({
-    summary: '3.5 months of certain runway (to 11 Jan 2027) — Rebuild.',
-    checkIn: {
-      due: true,
-      urgent: false,
-      reason: 'The runway was last confirmed 31 days ago.',
-      question: 'Still 3.5 months of certain runway, or has that moved?',
-    },
-  })
-  const notDue = { due: false, reason: 'Checked on 10 Sep 2026.' }
+  const notDue = { due: false, reason: 'Checked on Thu 10 Sep.' }
   const due = { due: true, reason: 'The runway moved us from Rebuild to Survival — the plan you confirmed was set for Rebuild.' }
+  const RUNWAY_IDS: string[] = [MARKETING_ACTION.runwayConfirm, MARKETING_ACTION.runwaySigned, MARKETING_ACTION.runwayUpdate]
+  const STRATEGY_IDS: string[] = [MARQUETA_ACTION.strategyConfirm, MARQUETA_ACTION.strategyRethink]
+  const actionIds = (blocks: Block[]) => buttons(blocks).map((button) => button.action_id)
+  /** How many questions the group puts: one per set of answer buttons. */
+  const questions = (blocks: Block[]) =>
+    [RUNWAY_IDS, STRATEGY_IDS].filter((ids) => actionIds(blocks).some((id) => ids.includes(id))).length
 
   it('says nothing when neither question is due', () => {
-    expect(quietRunway).toEqual([])
-    expect(buildMoneyAndDirectionBlocks({ snapshot: snapshot(), strategyDue: notDue, runwayBlocks: quietRunway })).toEqual([])
+    expect(buildMoneyAndDirectionBlocks({ now: SEPT, runway: freshRunway(), snapshot: snapshot(), strategyDue: notDue })).toEqual([])
   })
 
-  it('shows only the runway half when only the runway is due', () => {
-    const blocks = buildMoneyAndDirectionBlocks({ snapshot: snapshot(), strategyDue: notDue, runwayBlocks: dueRunway })
+  it('asks the runway alone, with the number and its date, and no green button', () => {
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: runwayState(), snapshot: snapshot(), strategyDue: notDue })
     expectValidSlackBlocks(blocks)
-    expect(blocks[0].type).toBe('divider')
-    expect(blocks[1].text.text).toBe('*Money and direction*')
-    // One divider per card, not the runway group's own on top of ours.
-    expect(blocks.filter((block) => block.type === 'divider')).toHaveLength(1)
-    expect(allText(blocks)).toContain('*Runway*')
-    expect(allText(blocks)).not.toContain(MARQUETA_ACTION.strategyConfirm)
+    expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
+    expect(blocks[0].text.text).toBe(
+      '*Money and direction*\nStill 3.5 months of certain runway (to 11 Jan 2027), or has that moved?\n_Last confirmed 54 days ago._',
+    )
+    expect(labels(blocks)).toEqual([LABEL.RUNWAY_OK, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED])
+    expect(buttons(blocks).some((button) => button.style)).toBe(false)
   })
 
-  it('asks the strategy question, with the money stated, when only the strategy is due', () => {
-    const blocks = buildMoneyAndDirectionBlocks({ snapshot: snapshot(), strategyDue: due, runwayBlocks: quietRunway })
+  it('asks ONE question when both are due — the runway — and says the strategy is next', () => {
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: runwayState(), snapshot: snapshot(), strategyDue: due })
     expectValidSlackBlocks(blocks)
-    const text = allText(blocks)
-    expect(text).toContain('*Money and direction*')
-    expect(text).toContain('Money: 3.5 months of certain runway')
-    expect(text).toContain('from Rebuild to Survival')
-    expect(text).toContain('Pipeline: 2 in meeting/opportunity, ~$120,000 estimated')
-    expect(text).toContain('Gate: keep the pre-mortem offer?')
-    // en-GB dates: newer ICU spells September "Sept".
-    expect(text).toMatch(/overdue since 20 Sept? 2026/)
+    expect(questions(blocks)).toBe(1)
+    // "Plan still fits" never sits next to the runway's buttons.
+    expect(labels(blocks)).not.toContain(LABEL.PLAN_FITS)
+    expect(blocks.at(-1)).toMatchObject({
+      type: 'context',
+      block_id: 'mq_money_next',
+      elements: [{ text: 'Next: whether the plan still fits — I’ll ask once the runway’s confirmed.' }],
+    })
+  })
 
-    const actions = blocks[blocks.length - 1]
-    expect(actions.type).toBe('actions')
-    const [confirm, rethink] = actions.elements
-    expect(confirm.action_id).toBe(MARQUETA_ACTION.strategyConfirm)
-    expect(confirm.text.text).toBe('Still the right plan')
-    expect(confirm.style).toBe('primary')
-    expect(rethink.action_id).toBe(MARQUETA_ACTION.strategyRethink)
-    expect(rethink.text.text).toBe('Needs a rethink')
-    expect(rethink.style).toBeUndefined()
-    expect(decodeStrategyValue(confirm.value)).toEqual({ monthKey: '2026-09' })
+  it('asks the strategy question when only it is due: the question, why, the two facts, two answers — none green', () => {
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: freshRunway(), snapshot: snapshot(), strategyDue: due })
+    expectValidSlackBlocks(blocks)
+    expect(blocks.map((block) => block.block_id)).toEqual(['mq_money_strategy', 'mq_money_strategy_actions'])
+    expect(blocks[0].text.text).toBe(
+      '*Money and direction*\n' +
+        '*Runway says Rebuild: outreach leads. 2 touches logged this month — is outreach getting the hours it needs?*\n' +
+        '_The runway moved us from Rebuild to Survival — the plan you confirmed was set for Rebuild._\n' +
+        '2 touches this month (6 last month) · 1 in meeting and 1 in opportunity, ~$120,000 estimated',
+    )
+    const [fits, rethink] = blocks[1].elements
+    expect([fits.text.text, fits.action_id]).toEqual([LABEL.PLAN_FITS, MARQUETA_ACTION.strategyConfirm])
+    expect([rethink.text.text, rethink.action_id]).toEqual([LABEL.PLAN_RETHINK, MARQUETA_ACTION.strategyRethink])
+    expect(buttons(blocks).some((button) => button.style)).toBe(false)
+    expect(decodeStrategyValue(fits.value)).toEqual({ monthKey: '2026-09' })
     expect(decodeStrategyValue(rethink.value)).toEqual({ monthKey: '2026-09' })
   })
 
-  it('renders both halves as one card, without repeating the money', () => {
-    const blocks = buildMoneyAndDirectionBlocks({ snapshot: snapshot(), strategyDue: due, runwayBlocks: dueRunway })
-    expectValidSlackBlocks(blocks)
-    const text = allText(blocks)
-    expect(text).toContain('*Runway*')
-    expect(text).not.toContain('Money: ')
-    expect(text.match(/Money and direction/g)).toHaveLength(1)
-    expect(blocks.filter((block) => block.type === 'actions')).toHaveLength(2)
+  it('asks about a disagreement only while the hand-set posture is winning', () => {
+    // Set by hand after the runway was confirmed: the plan is following the setting, not the date.
+    const manual = runwayState({ posture: 'survival', setAt: '2026-09-22T00:00:00Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } })
+    expect(manual.resolved.source).toBe('manual')
+    const asked = buildMoneyAndDirectionBlocks({ now: SEPT, runway: manual, snapshot: snapshot(), strategyDue: notDue })
+    expect(allText(asked)).toContain('but the posture is set to Survival')
+    expect(questions(asked)).toBe(1)
+    // Confirmed after the setting: the date already wins, so nothing to ask on Monday.
+    const settled = runwayState({ posture: 'survival', setAt: '2026-09-18T00:00:00Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-20T00:00:00Z' } })
+    expect(settled.resolved.source).toBe('runway')
+    expect(buildMoneyAndDirectionBlocks({ now: SEPT, runway: settled, snapshot: snapshot(), strategyDue: notDue })).toEqual([])
+  })
+
+  it('asks no question it cannot read the number for, and the strategy alone without a runway', () => {
+    expect(buildMoneyAndDirectionBlocks({ now: SEPT, runway: null, snapshot: null, strategyDue: due })).toEqual([])
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: null, snapshot: snapshot(), strategyDue: due })
+    expect(questions(blocks)).toBe(1)
+    expect(actionIds(blocks)).toEqual(STRATEGY_IDS)
   })
 
   it('stays valid, and inert, with hostile and enormous record text', () => {
     const hostile = snapshot({
       runwaySummary: `${HOSTILE} ${HUGE}`,
-      gates: [
-        { title: `${HOSTILE}${HUGE}`, dueAt: '2026-09-01T00:00:00Z' },
-        { title: HOSTILE },
-        { title: HUGE },
-        { title: 'fourth' },
-        { title: 'fifth' },
-      ],
+      gates: [{ title: `${HOSTILE}${HUGE}`, dueAt: '2026-09-01T00:00:00Z' }, { title: HOSTILE }, { title: HUGE }, { title: 'fourth' }],
     })
-    const winRunway = buildRunwayBlocks({
-      summary: 'summary',
+    const winRunway: MoneyRunway = {
+      ...freshRunway(),
       checkIn: runwayCheckIn(
         { runway: { certainUntil: '2027-06-01', confirmedAt: '2026-09-01T00:00:00Z' } },
         SEPT,
         { latestWin: { at: '2026-09-20T00:00:00Z', label: `${HOSTILE} ${HUGE}` } },
       ),
-    })
-    for (const runwayBlocks of [quietRunway, dueRunway, winRunway]) {
-      const blocks = buildMoneyAndDirectionBlocks({
-        snapshot: hostile,
-        strategyDue: { due: true, reason: `${HOSTILE} ${HUGE}` },
-        runwayBlocks,
-      })
-      expectValidSlackBlocks(blocks)
-      const text = allText(blocks)
-      expect(text).not.toContain('<!here>')
-      expect(text).not.toContain('<@U123>')
-      expect(text).not.toContain('<https://evil')
-      expect(text).toContain('(and 2 more)')
     }
-    const strategyOnly = allText(
-      buildMoneyAndDirectionBlocks({ snapshot: hostile, strategyDue: { due: true, reason: HOSTILE }, runwayBlocks: [] }),
-    )
-    expect(strategyOnly).toContain('&lt;!here&gt; &amp; &lt;5% of pilots')
+    for (const runway of [freshRunway(), runwayState(), winRunway, null]) {
+      for (const receipt of [undefined, { kind: 'runwaySigned' as const, who: HOSTILE, label: `${HOSTILE}${HUGE}` }]) {
+        const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway, snapshot: hostile, strategyDue: { due: true, reason: `${HOSTILE} ${HUGE}` }, receipt })
+        expectValidSlackBlocks(blocks)
+        const text = allText(blocks)
+        expect(text).not.toContain('<!here>')
+        expect(text).not.toContain('<@U123>')
+        expect(text).not.toContain('<https://evil')
+      }
+    }
   })
 })
 
-describe('answer texts', () => {
+describe('money receipts — what a press leaves where its question was', () => {
+  const RUNWAY_DUE = runwayState()
+  const due = { due: true, reason: 'Nobody has checked the marketing plan against the money yet.' }
+
+  it('a confirmed runway: who, when, the number now — with It changed… — and the strategy question next', () => {
+    // After the press the record reads fresh, so the check-in is no longer due.
+    const blocks = buildMoneyAndDirectionBlocks({
+      now: SEPT,
+      runway: freshRunway(),
+      snapshot: snapshot(),
+      strategyDue: due,
+      receipt: { kind: 'runwayConfirmed', who: '<@U1>' },
+    })
+    expectValidSlackBlocks(blocks)
+    expect(blocks[0]).toMatchObject({ block_id: 'mq_money_receipt' })
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@U1> · Thu 24 Sep — 3.5 months (to 11 Jan 2027).')
+    expect(blocks[1].elements.map((element: Block) => [element.text.text, element.action_id])).toEqual([
+      [LABEL.RUNWAY_CHANGED, MARKETING_ACTION.runwayUpdate],
+    ])
+    // The strategy question follows in the same redraw, without the group heading.
+    expect(blocks[2].block_id).toBe('mq_money_strategy')
+    expect(blocks[2].text.text).not.toContain('Money and direction')
+    expect(labels(blocks)).toEqual([LABEL.RUNWAY_CHANGED, LABEL.PLAN_FITS, LABEL.PLAN_RETHINK])
+    expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
+  })
+
+  it('never asks the runway again straight after it was answered', () => {
+    // Even if the re-read still says due (a stale read, a disagreement), the answer just given stands.
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: RUNWAY_DUE, receipt: { kind: 'runwayUpdated', who: 'Juhan & *co*' } })
+    // A name that is not a mention is escaped and kept out of the formatting around it.
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway updated by Juhan &amp; co · Thu 24 Sep — now 3.5 months (to 11 Jan 2027).')
+    expect(labels(blocks)).toEqual([LABEL.RUNWAY_CHANGED])
+  })
+
+  it('signed work says what was signed and where the runway now reaches', () => {
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: freshRunway(), receipt: { kind: 'runwaySigned', who: '<@U2>', label: 'SoW — Acme' } })
+    expect(blocks[0].text.text).toBe(
+      ':white_check_mark: Signed work recorded by <@U2> · Thu 24 Sep (SoW — Acme) — runway now 3.5 months (to 11 Jan 2027).',
+    )
+  })
+
+  it('a confirmed plan says when it will ask again, with nothing to press', () => {
+    const blocks = buildMoneyAndDirectionBlocks({
+      now: SEPT,
+      runway: freshRunway(),
+      snapshot: snapshot(),
+      strategyDue: due,
+      receipt: { kind: 'planConfirmed', who: '<@U1>', monthKey: '2026-09' },
+    })
+    expectValidSlackBlocks(blocks)
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0].text.text).toBe(':white_check_mark: Plan confirmed for September by <@U1> — I’ll ask again in October.')
+  })
+
+  it('a rethink says it is a decision on This week, suggested to the person who asked, and links to it', () => {
+    const blocks = buildMoneyAndDirectionBlocks({
+      now: SEPT,
+      runway: freshRunway(),
+      receipt: { kind: 'rethink', who: '<@U1>', suggestedTo: 'Juhan', decisionTaskId: 'marketingOperation.rethink' },
+      studioBaseUrl: 'https://www.goinvo.com',
+    })
+    expectValidSlackBlocks(blocks)
+    expect(blocks[0].text.text).toBe('<@U1> asked for a rethink — it’s a decision on This week, suggested to Juhan.')
+    expect(blocks[1].elements[0]).toMatchObject({
+      text: { text: 'Open This week' },
+      url: 'https://www.goinvo.com/studio/marketing?view=thisWeek&task=marketingOperation.rethink',
+    })
+    const joined = buildMoneyAndDirectionBlocks({ now: SEPT, runway: null, receipt: { kind: 'rethink', who: '<@U2>', joined: true } })
+    expect(joined[0].text.text).toBe('<@U2> asked for a rethink too — it’s already a decision on This week.')
+    // No Studio, no link — never a button Slack would refuse.
+    expect(joined).toHaveLength(1)
+  })
+
+  it('still says what happened when the numbers could not be read back', () => {
+    const blocks = buildMoneyAndDirectionBlocks({ now: SEPT, runway: null, receipt: { kind: 'runwayConfirmed', who: '<@U1>' } })
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@U1> · Thu 24 Sep.')
+  })
+
+  it('redraws in place: only the money group changes, everything else is the very same block', () => {
+    const header = { type: 'header', text: { type: 'plain_text', text: 'Monday plan' } }
+    const footer = { type: 'actions', block_id: 'mq_footer', elements: [{ type: 'button', action_id: 'x', text: { type: 'plain_text', text: 'x' } }] }
+    const before = [header, { type: 'divider' }, ...buildMoneyAndDirectionBlocks({ now: SEPT, runway: RUNWAY_DUE, snapshot: snapshot(), strategyDue: due }), footer]
+    const after = replaceBlocksByPrefix(
+      before,
+      'mq_money',
+      buildMoneyAndDirectionBlocks({ now: SEPT, runway: freshRunway(), snapshot: snapshot(), strategyDue: due, receipt: { kind: 'runwayConfirmed', who: '<@U1>' } }),
+    )
+    expectValidSlackBlocks(after)
+    expect(after[0]).toBe(header)
+    expect(after.at(-1)).toBe(footer)
+    expect(allText(after)).toContain('Runway confirmed by <@U1>')
+    expect(allText(after)).not.toContain(MARKETING_ACTION.runwayConfirm)
+  })
+})
+
+describe('answers — moneyAnswer, strategyAnswer, pipelineAnswer', () => {
+  const week = summarizeOutreach(touches(3, { by: 'Eric Benoit', at: '2026-09-22T12:00:00Z' }), {
+    from: '2026-09-21T00:00:00Z',
+    to: '2026-09-28T00:00:00Z',
+    now: SEPT,
+  })
+
+  it('"runway": the number first, the pipeline, and the check-in’s own buttons when one is due', () => {
+    const answer = moneyAnswer({ now: SEPT, runway: runwayState(), snapshot: snapshot() })
+    expectAnswerAnatomy(answer)
+    expect(answer.text).toBe('*Runway* — 3.5 months of certain runway, to 11 Jan 2027 (Rebuild)')
+    expect(answer.blocks[0].text.text).toContain('Pipeline: 2 in meeting/opportunity, ~$120,000 estimated · Won this month: none')
+    expect(labels(answer.blocks)).toEqual([LABEL.RUNWAY_OK, LABEL.RUNWAY_SIGNED, LABEL.RUNWAY_CHANGED])
+    // The question carries the group's id, so a press redraws it in place.
+    expect(answer.blocks.map((block) => block.block_id)).toEqual([undefined, 'mq_money_runway', 'mq_money_runway_actions'])
+    expect(allText(answer.blocks)).not.toContain('next digest')
+  })
+
+  it('"runway" with nothing due ends on the next question worth asking', () => {
+    const answer = moneyAnswer({ now: SEPT, runway: freshRunway(), snapshot: snapshot() })
+    expectAnswerAnatomy(answer)
+    expect(answer.blocks.at(-1)!.elements[0].text).toBe('`Marqueta, pipeline` for who’s in play')
+    expect(buttons(answer.blocks)).toHaveLength(0)
+  })
+
+  it('"runway" with none recorded says so rather than inventing a number', () => {
+    const answer = moneyAnswer({ now: SEPT, runway: runwayState({}), snapshot: snapshot() })
+    expectAnswerAnatomy(answer)
+    expect(answer.text).toBe('*Runway* — none recorded, so the plan assumes Survival')
+  })
+
+  it('"strategy": the question first, then the facts, then the two answers when the check is due', () => {
+    const answer = strategyAnswer({ now: SEPT, snapshot: snapshot(), due: { due: true, reason: 'Nobody has checked the marketing plan against the money yet.' }, runway: runwayState() })
+    expectAnswerAnatomy(answer)
+    expect(answer.text).toBe(
+      '*Runway says Rebuild: outreach leads. 2 touches logged this month — is outreach getting the hours it needs?*',
+    )
+    const text = answer.blocks[0].text.text
+    expect(text).toContain('Runway: 3.5 months of certain runway, to 11 Jan 2027 (Rebuild)')
+    expect(text).toContain('Pipeline: 2 in meeting/opportunity')
+    // Midnight UTC on the 20th is the evening of the 19th in Boston, where the studio reads it.
+    expect(text).toContain('Decision gates: Gate: keep the pre-mortem offer? — overdue since Sat 19 Sep')
+    expect(labels(answer.blocks)).toEqual([LABEL.PLAN_FITS, LABEL.PLAN_RETHINK])
+    expect(answer.blocks.map((block) => block.block_id)).toEqual(['mq_money_strategy', 'mq_money_strategy_actions'])
+    expect(allText(answer.blocks)).not.toContain('next digest')
+  })
+
+  it('"strategy" when it is not due says when it will be, and ends on a hint', () => {
+    const answer = strategyAnswer({ now: SEPT, snapshot: snapshot(), due: { due: false, reason: 'Checked on Thu 10 Sep by Juhan.' } })
+    expectAnswerAnatomy(answer)
+    expect(buttons(answer.blocks)).toHaveLength(0)
+    expect(answer.blocks[0].text.text).toContain('_Checked on Thu 10 Sep by Juhan._')
+  })
+
+  it('"pipeline": what is live first, counts only — never who logged what — and where to go next', () => {
+    const month = pulse(touches(4, { by: 'Eric Benoit', at: '2026-09-22T12:00:00Z' }))
+    const answer = pipelineAnswer({
+      week,
+      snapshot: { thisMonth: month, pipeline: summarizePipeline([{ status: 'opportunity', estimatedValue: 5000, interactions: null }], month) },
+    })
+    expectAnswerAnatomy(answer)
+    expect(answer.text).toBe('*Pipeline* — 1 in meeting/opportunity, ~$5,000 estimated')
+    const text = answer.blocks[0].text.text
+    expect(text).toContain('Outreach this week: 3 touches')
+    expect(text).toContain('This month: 4 touches')
+    expect(text).toContain('Won this month: none')
+    expect(text).not.toContain('Eric')
+    expect(answer.blocks.at(-1)!.elements[0].text).toBe('`Marqueta, my calls` shows who to ring')
+  })
+
+  it('keeps every answer inside one screen and escapes everything it is handed', () => {
+    const hostile = snapshot({ runwaySummary: `${HOSTILE}${HUGE}`, gates: [{ title: `${HOSTILE}${HUGE}` }] })
+    const answers = [
+      strategyAnswer({ now: SEPT, snapshot: hostile, due: { due: true, reason: `${HOSTILE}` } }),
+      moneyAnswer({ now: SEPT, runway: { ...runwayState(), resolved: { ...runwayState().resolved, disagreement: HOSTILE } }, snapshot: hostile }),
+      pipelineAnswer({ week, snapshot: hostile }),
+    ]
+    for (const answer of answers) {
+      expectValidSlackBlocks(answer.blocks)
+      const text = allText(answer.blocks)
+      expect(text).not.toContain('<!here>')
+      expect(text).not.toContain('<@U123>')
+      expect(text).not.toContain('<https://evil')
+    }
+  })
+
+  it('answerMrkdwn joins an answer’s sections, for a caller that can only post text', () => {
+    const answer = strategyAnswer({ now: SEPT, snapshot: snapshot(), due: { due: true, reason: 'r' } })
+    expect(answerMrkdwn(answer)).toBe(answer.blocks[0].text.text)
+  })
+})
+
+describe('legacy answer texts (kept until the conversation code moves to the answers above)', () => {
   it('answers "strategy" with the facts and the question, and says when it will ask', () => {
     const due = { due: true, reason: 'Nobody has checked the marketing plan against the money yet.' }
     const text = strategyAnswerText(snapshot(), due)
@@ -742,7 +973,8 @@ describe('buildStrategyDecisionOperation', () => {
     expect(op.priority).toBe('urgent')
     expect(op.origin).toBe('manual')
     expect(op.autonomy).toBe('humanReview')
-    expect(op.targetView).toBe('strategy')
+    // This week, where a decision can be answered — never the Strategy tab's Q&A.
+    expect(op.targetView).toBe('thisWeek')
     expect(op.humanQuestion).toBe(
       'What should change about the plan, given the runway and how outreach is going?',
     )
@@ -817,7 +1049,9 @@ describe('buildStrategyDecisionOperation', () => {
     // B2 finds open rethinks by prefix; every key must still match it.
     for (const op of [first, second]) expect(op.sourceKey.startsWith('strategy-review/')).toBe(true)
     // And it says why it is not a duplicate of the one that was settled.
-    expect(second.summary).toContain('The last answer was "needs a rethink", on 5 Oct 2026 by Juhan.')
+    // In the day Slack prints everywhere else — never an always-on year.
+    expect(second.summary).toContain('The last answer was “needs a rethink”, on Mon 5 Oct by Juhan.')
+    expect(second.summary).not.toMatch(/on \w+ \d+ \w+ 2026/)
   })
 
   it('keeps a double press on the same card to one decision', () => {

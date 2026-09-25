@@ -102,9 +102,29 @@ describe('Marketing Operations private API', () => {
 
     expect(response.status).toBe(200)
     expect(response.headers.get('cache-control')).toBe('private, no-store')
-    await expect(response.json()).resolves.toEqual({ items: [], checked: 0, mode: 'studio-open' })
+    await expect(response.json()).resolves.toEqual({ items: [], checked: 0, mode: 'studio-open', team: [] })
     expect(mocks.createClient).toHaveBeenCalledWith(expect.objectContaining({ dataset: 'outreach' }))
     expect(mocks.createClient).toHaveBeenCalledWith(expect.objectContaining({ dataset: 'production' }))
+  })
+
+  it('gives the desk the roster’s names — who Slack knows — from the private dataset, and survives a failed read', async () => {
+    mocks.privateFetch
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(['Juhan', ' Eric ', 'Juhan', null, ''])
+    const response = await GET(new NextRequest('https://www.goinvo.com/api/marketing/operations'))
+    const body = await response.json()
+    expect(body.team).toEqual(['Juhan', 'Eric'])
+    const [rosterQuery] = mocks.privateFetch.mock.calls[1] as [string]
+    expect(rosterQuery).toContain('_type == "marketingTeamAvailability"')
+    expect(rosterQuery).toContain('!(_id in path("drafts.**"))')
+    // Names only: the desk has no use for a Slack id.
+    expect(rosterQuery).toMatch(/\]\.ownerName$/)
+    expect(mocks.publicFetch).not.toHaveBeenCalled()
+
+    mocks.privateFetch.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('roster unavailable'))
+    const degraded = await GET(new NextRequest('https://www.goinvo.com/api/marketing/operations'))
+    expect(degraded.status).toBe(200)
+    await expect(degraded.json()).resolves.toMatchObject({ items: [], team: [] })
   })
 
   it('stores only the reviewed normalized item privately and runs a CMS-only read', async () => {
@@ -229,6 +249,66 @@ describe('Marketing Operations private API', () => {
 
     expect(response.status).toBe(409)
     expect(mocks.patch).not.toHaveBeenCalled()
+  })
+
+  it('clears the stale Slack id whenever the Studio names a new owner', async () => {
+    // Claimed in Slack by Eric (his id stamped), then reassigned to Juhan here.
+    // Left in place, that id would have Slack @-mention Eric about Juhan's work.
+    mocks.privateFetch.mockResolvedValueOnce({
+      _id: 'marketingOperation.abc1234',
+      _type: 'marketingOperation',
+      _rev: 'rev-1',
+      status: 'queued',
+      activity: [],
+    })
+    const response = await POST(request({
+      action: 'update',
+      id: 'marketingOperation.abc1234',
+      expectedRevision: 'rev-1',
+      patch: { ownerName: 'Juhan', ownerSanityUserId: 'user-juhan' },
+      note: 'Assigned to Juhan.',
+    }))
+
+    expect(response.status).toBe(200)
+    expect(mocks.ifRevisionId).toHaveBeenCalledWith('rev-1')
+    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ ownerName: 'Juhan', ownerSanityUserId: 'user-juhan' }))
+    expect(mocks.unset).toHaveBeenCalledWith(['ownerSlackUserId'])
+  })
+
+  it('finishes an owner search from the desk with the same write Slack’s take makes', async () => {
+    // Passed on in Slack ("Not me"), then assigned on the desk.
+    mocks.privateFetch.mockResolvedValueOnce({
+      _id: 'marketingOperation.abc1234',
+      _type: 'marketingOperation',
+      _rev: 'rev-1',
+      status: 'needsHuman',
+      activity: [],
+    })
+    const response = await POST(request({
+      action: 'update',
+      id: 'marketingOperation.abc1234',
+      expectedRevision: 'rev-1',
+      patch: { ownerName: 'Juhan', ownerSanityUserId: 'tm-juhan', status: 'queued', humanQuestion: '' },
+      note: 'Assigned to Juhan.',
+    }))
+    expect(response.status).toBe(200)
+    expect(mocks.set).toHaveBeenCalledWith(expect.objectContaining({ ownerName: 'Juhan', status: 'queued' }))
+    // The "who should pick it up?" question goes, and so does the old Slack id.
+    expect(mocks.unset).toHaveBeenCalledWith(expect.arrayContaining(['humanQuestion', 'ownerSlackUserId']))
+  })
+
+  it('clears the Slack id with the name when the owner is cleared, and leaves it alone otherwise', async () => {
+    const current = { _id: 'marketingOperation.abc1234', _type: 'marketingOperation', _rev: 'rev-1', status: 'queued', activity: [] }
+
+    mocks.privateFetch.mockResolvedValueOnce(current)
+    await POST(request({ action: 'update', id: current._id, expectedRevision: 'rev-1', patch: { ownerName: '', ownerSanityUserId: '' } }))
+    expect(mocks.unset).toHaveBeenLastCalledWith(expect.arrayContaining(['ownerName', 'ownerSanityUserId', 'ownerSlackUserId']))
+
+    mocks.unset.mockClear()
+    mocks.privateFetch.mockResolvedValueOnce(current)
+    await POST(request({ action: 'update', id: current._id, expectedRevision: 'rev-1', patch: { status: 'working' } }))
+    // A status change says nothing about who the owner is in Slack.
+    for (const call of mocks.unset.mock.calls as unknown[][]) expect(call[0]).not.toContain('ownerSlackUserId')
   })
 
   it('rejects unauthenticated and read-only Studio members before touching Sanity', async () => {

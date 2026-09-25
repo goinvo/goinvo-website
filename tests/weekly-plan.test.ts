@@ -10,6 +10,8 @@ import {
 import { buildWeeklyPlan, isoWeekKey, startOfWeek } from '@/lib/marketing/weeklyPlan'
 import { followUpReservationLabel, followUpReservedMinutes } from '@/lib/marketing/followUps'
 import { normalizeMarketingOperationInput, type MarketingOperation } from '@/lib/marketing/operations'
+import { buildSeedOperationDocs } from '@/lib/marketing/executionPlanSeed'
+import { buildStrategyDecisionOperation } from '@/lib/marketing/strategyCheck'
 
 // Wednesday 26 August 2026, mid-morning.
 const NOW = new Date(2026, 7, 26, 10, 0)
@@ -245,6 +247,53 @@ describe('buildWeeklyPlan', () => {
       ...plan.deferred.map((entry) => entry.operation.sourceKey),
     ]
     expect(new Set(seen).size).toBe(9)
+  })
+
+  // "Not me" leaves a task in needsHuman with "X passed on this — who should
+  // pick it up?". Counted as a decision it lost its slot to four older gates
+  // and was deferred; the digest shows only what the plan holds, so it was
+  // never asked about again.
+  it('plans a task somebody passed on as work looking for an owner, not as a decision', () => {
+    const operations = [
+      ...Array.from({ length: 5 }, (_, index) =>
+        op({ sourceKey: `gate-${index}`, kind: 'decision', status: 'needsHuman', humanQuestion: 'Which way?', dueAt: new Date(2026, 7, 1 + index).toISOString() }),
+      ),
+      op({ sourceKey: 'passed', kind: 'content', status: 'needsHuman', humanQuestion: 'Eric passed on this — who should pick it up?', estimatedMinutes: 30 }),
+    ]
+    const plan = buildWeeklyPlan({ operations, budgetMinutes: 240, now: NOW })
+    expect(plan.decisions.map((entry) => entry.operation.sourceKey)).not.toContain('passed')
+    expect(plan.items.map((entry) => entry.operation.sourceKey)).toContain('passed')
+    expect(plan.decisions).toHaveLength(4)
+  })
+
+  it('puts an urgent decision due this week ahead of older, less urgent ones — but not one due next month', () => {
+    const operations = [
+      ...Array.from({ length: 4 }, (_, index) =>
+        op({ sourceKey: `old-${index}`, kind: 'decision', priority: 'high', status: 'needsHuman', humanQuestion: 'Which way?', dueAt: new Date(2026, 7, 10 + index).toISOString() }),
+      ),
+      op({ sourceKey: 'rethink', kind: 'decision', priority: 'urgent', status: 'needsHuman', humanQuestion: 'Rethink?', dueAt: new Date(2026, 7, 28, 12).toISOString() }),
+      op({ sourceKey: 'gate-november', kind: 'decision', priority: 'urgent', status: 'needsHuman', humanQuestion: 'Launch?', dueAt: new Date(2026, 10, 30).toISOString() }),
+    ]
+    const plan = buildWeeklyPlan({ operations, budgetMinutes: 240, now: NOW })
+    const chosen = plan.decisions.map((entry) => entry.operation.sourceKey)
+    expect(chosen[0]).toBe('rethink')
+    expect(chosen).not.toContain('gate-november')
+    expect(chosen).toEqual(['rethink', 'old-0', 'old-1', 'old-2'])
+  })
+
+  // The real first weeks: the seeded quarter's overdue gates, plus the urgent
+  // "Needs a rethink" decision filed from the Monday plan of 28 Sep.
+  it('shows the rethink filed on 28 Sep in the plan for Mon 5 Oct, over the seeded quarter’s overdue gates', () => {
+    const filed = new Date('2026-09-28T13:20:00Z')
+    const rethink = normalizeMarketingOperationInput(
+      buildStrategyDecisionOperation({ monthKey: '2026-09', personName: 'Juhan', now: filed, priorReview: null }),
+    )
+    const operations = [...buildSeedOperationDocs(), rethink].map(
+      (input) => ({ ...input, _id: input._id || input.sourceKey, _type: 'marketingOperation' }) as MarketingOperation,
+    )
+    const plan = buildWeeklyPlan({ operations, budgetMinutes: 240, posture: 'rebuild', now: new Date('2026-10-05T13:00:00Z') })
+    expect(plan.decisions.map((entry) => entry.operation.sourceKey)).toContain(rethink.sourceKey)
+    expect(plan.deferred.map((entry) => entry.operation.sourceKey)).not.toContain(rethink.sourceKey)
   })
 
   it('leaves room for real work once decisions are capped', () => {

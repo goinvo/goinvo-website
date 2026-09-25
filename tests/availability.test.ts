@@ -143,12 +143,9 @@ describe('parseAvailabilityCommand', () => {
     })
   })
 
-  it('understands being away from today with no end', () => {
-    expect(parseAvailabilityCommand('I am out sick', today)).toEqual({
-      status: 'away',
-      from: today,
-      until: undefined,
-    })
+  it('reads out sick as today — never "from today with no end"', () => {
+    // An open-ended record kept somebody off every plan until they noticed.
+    expect(parseAvailabilityCommand('I am out sick', today)).toEqual({ status: 'away', from: today, until: today })
   })
 
   it('understands coming back', () => {
@@ -168,6 +165,108 @@ describe('parseAvailabilityCommand', () => {
     expect(parseAvailabilityCommand('hello there', today)).toBeNull()
     expect(parseAvailabilityCommand('', today)).toBeNull()
     expect(parseAvailabilityCommand('what is my status?', today)).toBeNull()
+  })
+})
+
+describe('parseAvailabilityCommand — the days people actually say', () => {
+  /** Thursday 24 Sep 2026, the fixture day. */
+  const THURSDAY = '2026-09-24'
+  const read = (text: string) => parseAvailabilityCommand(text, THURSDAY)
+  const days = (text: string) => {
+    const parsed = read(text)
+    return parsed ? `${parsed.status} ${parsed.from}..${parsed.until ?? ''}` : null
+  }
+
+  it('reads "next week" as next Monday to Sunday, not the rest of this one', () => {
+    expect(read('away next week')).toEqual({ status: 'away', from: '2026-09-28', until: '2026-10-04' })
+    expect(days('I’m on holiday next week')).toBe('away 2026-09-28..2026-10-04')
+  })
+
+  it('reads this week, today, tomorrow and a weekday', () => {
+    expect(days('ooo this week')).toBe('away 2026-09-24..2026-09-27')
+    expect(days('away the rest of the week')).toBe('away 2026-09-24..2026-09-27')
+    expect(days('out today')).toBe('away 2026-09-24..2026-09-24')
+    expect(days('off tomorrow')).toBe('away 2026-09-25..2026-09-25')
+    expect(days('away Fri')).toBe('away 2026-09-25..2026-09-25')
+    expect(days('I’m on holiday friday')).toBe('away 2026-09-25..2026-09-25')
+    // The same weekday is today, not a week from now.
+    expect(days('away Thursday')).toBe('away 2026-09-24..2026-09-24')
+    expect(days('out this afternoon')).toBe('away 2026-09-24..2026-09-24')
+  })
+
+  it('reads "until X" as today to X, and a single date as that day', () => {
+    expect(days('away until Fri')).toBe('away 2026-09-24..2026-09-25')
+    expect(days('I’m out until 2026-10-02')).toBe('away 2026-09-24..2026-10-02')
+    expect(days('away 2026-10-05')).toBe('away 2026-10-05..2026-10-05')
+    expect(days('away 5 Oct')).toBe('away 2026-10-05..2026-10-05')
+  })
+
+  it('reads a range however it is written', () => {
+    for (const text of ['away 1–5 Oct', 'away 1-5 Oct', 'away Oct 1-5', 'away 1 Oct - 5 Oct', 'away 1st to 5th Oct', 'away 2026-10-01 2026-10-05']) {
+      expect(days(text), text).toBe('away 2026-10-01..2026-10-05')
+    }
+    expect(days('away 28 Sep – 2 Oct')).toBe('away 2026-09-28..2026-10-02')
+    expect(days('away mon-fri')).toBe('away 2026-09-28..2026-10-02')
+    expect(days('away today and tomorrow')).toBe('away 2026-09-24..2026-09-25')
+    // December into January rolls the year.
+    expect(parseAvailabilityCommand('away 28 Dec - 3 Jan', '2026-12-10')).toEqual({ status: 'away', from: '2026-12-28', until: '2027-01-03' })
+  })
+
+  it('reads a weekday written beside a date as ONE day — the way Marqueta prints dates', () => {
+    // "Fri 2 Oct" used to be a range: the weekday became this Friday and the
+    // date the end, so it booked eight days off instead of one.
+    expect(days('away Fri 2 Oct')).toBe('away 2026-10-02..2026-10-02')
+    expect(days('away friday 2 october')).toBe('away 2026-10-02..2026-10-02')
+    expect(days('away Thu 1 Oct')).toBe('away 2026-10-01..2026-10-01')
+    expect(days('away Fri, 2 Oct')).toBe('away 2026-10-02..2026-10-02')
+    expect(days('away Oct 2 Fri')).toBe('away 2026-10-02..2026-10-02')
+    // "until" still means today to that day.
+    expect(days('away until Fri 2 Oct')).toBe('away 2026-09-24..2026-10-02')
+    expect(days('back Mon 28 Sep')).toBe('away 2026-09-24..2026-09-27')
+    // The range she prints herself (formatSlackRange) reads back as itself.
+    expect(days('away Mon 28 Sep – Sun 4 Oct')).toBe('away 2026-09-28..2026-10-04')
+    expect(days('away Mon 28 Sep to Fri 2 Oct')).toBe('away 2026-09-28..2026-10-02')
+  })
+
+  it('asks when the weekday and the date disagree — there is no Friday 3 October', () => {
+    expect(read('away Fri 3 Oct')).toBeNull()
+    expect(read('away 2 Oct Thu')).toBeNull()
+    // Nor two days after "until": which one is the last?
+    expect(read('away until 1 Oct - 5 Oct')).toBeNull()
+  })
+
+  it('reads "back Mon" as away until the day before', () => {
+    expect(days('back Mon')).toBe('away 2026-09-24..2026-09-27')
+    expect(days('I’m back on Monday')).toBe('away 2026-09-24..2026-09-27')
+    expect(read('I’m back today')).toEqual({ status: 'available', from: THURSDAY })
+  })
+
+  it('bare "away" is the rest of this week, as the Monday plan’s button books it; bare "out" or "off" is not enough', () => {
+    expect(days('away')).toBe('away 2026-09-24..2026-09-27')
+    expect(read('I’m out')).toBeNull()
+    expect(read('I’m off')).toBeNull()
+  })
+
+  it('returns null whenever it is unsure — never today with no end', () => {
+    for (const text of [
+      'away for 2 weeks',
+      'away in October',
+      'away next Friday', // this one, or the one after?
+      'away Mon and Wed', // two days, not one stretch
+      'away from Monday', // no end
+      'away 2026-09-01 2026-09-05', // already over
+      'away 1-5 Sep', // passed this year; eleven months out is more likely a slip
+      'away until the 5th',
+      'I may be away tomorrow',
+      'away 2026-09-28, back 2026-10-05', // two statements
+      'available from Monday',
+      'away 2026-02-31',
+    ]) {
+      expect(read(text), text).toBeNull()
+    }
+    for (const text of ['away', 'away next week', 'out sick', 'away Fri', 'back Mon']) {
+      expect(read(text)?.until, text).toBeTruthy()
+    }
   })
 })
 

@@ -54,44 +54,35 @@ vi.mock('@/lib/chat/slack', () => ({
 }))
 
 import { hoursForWeek, type TeamMemberAvailability } from '@/lib/marketing/availability'
-import { logCallFromSlack, undoCallLog } from '@/lib/marketing/callLog.server'
-import {
-  addContactFromSlack,
-  PREP_DATA_QUERY,
-  prepCallFor,
-  prepCallList,
-  type PrepData,
-  type PrepDataContact,
-} from '@/lib/marketing/callPrep.server'
+import { PREP_DATA_QUERY, type PrepData } from '@/lib/marketing/callPrep.server'
 import { authorizeCron, cronDeniedStatus } from '@/lib/marketing/cronAuth'
 import { CHECKIN_HEARTBEAT_DOC_ID, heartbeatHealth } from '@/lib/marketing/heartbeat'
-import { decodeContactRef, encodeContactRef, MARQUETA_ACTION, type CallLogUndo } from '@/lib/marketing/marquetaActions'
-import { marketingOperationDocumentId } from '@/lib/marketing/operations'
-import { readRunway } from '@/lib/marketing/runway.server'
-import { loadStrategySnapshot, recordStrategyVerdict, STRATEGY_DATA_QUERY } from '@/lib/marketing/strategyCheck.server'
+import { STRATEGY_DATA_QUERY } from '@/lib/marketing/strategyCheck.server'
 import {
+  answerTask,
   dropTask,
   handBackTask,
   markTaskDone,
   markTaskStuck,
   markTaskUnstuck,
+  readTaskCardRecords,
   reopenTask,
   snoozeTask,
   takeTask,
+  TASK_CARDS_QUERY,
 } from '@/lib/marketing/taskActions.server'
 import {
   askableTeam,
+  marketingTeamNames,
+  OWNED_OPEN_TASKS_QUERY,
+  resolveOwnerNameForWrite,
   resolvePresserName,
   slackIdForOwner,
   TEAM_AVAILABILITY_QUERY,
   tidyAvailability,
 } from '@/lib/marketing/team.server'
-import {
-  CHECK_IN_DATA_QUERY,
-  runWeeklyCheckIn,
-  utcIsoWeekKey,
-  withUnownedFollowUps,
-} from '@/lib/marketing/weeklyCheckIn.server'
+import { CHECK_IN_FOOTER_BLOCK, MAX_CHECK_IN_BLOCKS } from '@/lib/marketing/weeklyCheckIn'
+import { CHECK_IN_DATA_QUERY, runWeeklyCheckIn, utcIsoWeekKey } from '@/lib/marketing/weeklyCheckIn.server'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -124,6 +115,10 @@ type Fixtures = {
   checkIn?: Record<string, unknown>
   heartbeat?: Record<string, unknown> | null
   strategy?: Record<string, unknown>
+  /** Open tasks filed under the name being checked (`OWNED_OPEN_TASKS_QUERY`). */
+  openTasks?: number
+  /** Every task on one message, as `readTaskCardRecords` reads them. */
+  cards?: Record<string, unknown>[]
 }
 
 function routeOutreach(fixtures: Fixtures) {
@@ -142,16 +137,10 @@ function routeOutreach(fixtures: Fixtures) {
     if (query.includes('_type == "marketingContact" && _id == $id') && query.includes('closeReason')) return nextFrom(contacts)
     if (query.includes('_type == "marketingContact" && _id == $id')) return fixtures.existingContact ?? null
     if (query.includes('_type == "marketingOperation" && _id == $id')) return nextFrom(tasks)
+    if (query === TASK_CARDS_QUERY) return fixtures.cards ?? []
+    if (query === OWNED_OPEN_TASKS_QUERY) return fixtures.openTasks ?? 0
     if (query.startsWith('*[_id == $id][0]{ _id }')) return fixtures.existingById ?? null
     throw new Error(`unexpected query: ${query.slice(0, 80)}`)
-  })
-}
-
-function routePosture(input: { stored?: Record<string, unknown>; review?: Record<string, unknown> | null }) {
-  mocks.posture.fetch.mockImplementation(async (query: string) => {
-    if (query.includes('strategyReview')) return input.review ?? null
-    if (query.includes('posture, setAt, runway')) return input.stored ?? {}
-    throw new Error(`unexpected posture query: ${query}`)
   })
 }
 
@@ -185,73 +174,6 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// ── Call prep ────────────────────────────────────────────────────────────────
-
-const jane: PrepDataContact = {
-  _id: 'marketingContact.jane',
-  name: 'Jane Doe',
-  organization: 'Mass General Brigham',
-  role: 'CMIO',
-  segment: 'provider',
-  warmth: 'warm',
-  status: 'researched',
-  owner: 'Juhan',
-  howWeKnow: 'Met at HIMSS 2025',
-  email: 'jane.doe@mgb.org',
-  phone: '617-555-0100',
-  researchReviewedAt: '2026-09-01T00:00:00Z',
-  callBrief: 'Jane runs the clinical AI pilots and has spoken publicly about getting clinicians to adopt them.',
-  suggestedOpener: 'Hi Jane, I saw your HIMSS talk on clinical AI adoption.',
-  relevantEvidence: [{ evidenceId: 'ev1', title: 'Care navigation' }],
-  personVerified: true,
-  identityConfidence: 'high',
-  interactions: [],
-}
-
-const prepData = (extra: PrepDataContact[] = []): PrepData => ({
-  contacts: [
-    jane,
-    { _id: 'marketingContact.sam', name: 'Sam Rivera', organization: 'Acme Health', role: 'VP Product', warmth: 'cold', status: 'new' },
-    { _id: 'marketingContact.pat', name: 'Pat Lee', organization: 'Acme Health', warmth: 'warm', status: 'new' },
-    { _id: 'marketingContact.alexk', name: 'Alex Kim', organization: 'Foo Labs' },
-    { _id: 'marketingContact.alexp', name: 'Alex Park', organization: 'Bar Systems' },
-    ...extra,
-  ],
-  research: [],
-  offers: [
-    { key: 'ai-pilot-premortem', title: 'AI Pilot Pre-Mortem', oneLiner: 'A short, fixed-scope look at what could stall a pilot.', proofPoints: 'Ipsos Facto' },
-    { key: 'clinician-adoption-rescue', title: 'Clinician Adoption Rescue', oneLiner: 'Find out why clinicians work around a tool.' },
-  ],
-  evidence: [{ _id: 'ev1', title: 'Care navigation', client: 'A health system' }],
-})
-
-const buttons = (blocks: Block[]) =>
-  blocks.flatMap((block) => [...(block.elements || []), ...(block.accessory ? [block.accessory] : [])]).filter((element) => element.type === 'button')
-
-// ── Call log ─────────────────────────────────────────────────────────────────
-
-const loggable = {
-  _id: 'marketingContact.jane',
-  _rev: 'r1',
-  name: 'Jane Doe',
-  email: 'jane.doe@mgb.org',
-  organization: 'Mass General Brigham',
-  status: 'researched',
-  interactions: [] as { _key: string }[],
-}
-
-const quickLog = (extra: Partial<Parameters<typeof logCallFromSlack>[0]> = {}) =>
-  logCallFromSlack({
-    contactId: 'marketingContact.jane',
-    outcomeKey: 'voicemail',
-    notes: 'Left a message about the pilot',
-    followUp: 'default',
-    byName: 'Juhan',
-    key: 'slack-V123',
-    now: NOW,
-    ...extra,
-  })
-
 // ── Team ─────────────────────────────────────────────────────────────────────
 
 describe('team identity', () => {
@@ -273,15 +195,98 @@ describe('team identity', () => {
     await expect(resolvePresserName({ slackUserId: 'UJUHAN', entries: TEAM })).resolves.toBe('Juhan')
     expect(mocks.getSlackUserDisplayName).not.toHaveBeenCalled()
 
-    mocks.getSlackUserDisplayName.mockResolvedValue('eric')
-    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: TEAM })).resolves.toBe('Eric')
+    // An exact match on a record nobody has linked yet is still that name.
+    const roster: TeamMemberAvailability[] = [...TEAM, { ownerName: 'Shirley', status: 'available' }]
+    mocks.getSlackUserDisplayName.mockResolvedValue('shirley')
+    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: roster })).resolves.toBe('Shirley')
     mocks.getSlackUserDisplayName.mockResolvedValue('Juhan Sonin')
     await expect(resolvePresserName({ slackUserId: 'UNEW', entries: TEAM })).resolves.toBe('Juhan Sonin')
+  })
+
+  // Reviewer finding: the display-name match won even when that board name was
+  // linked to a DIFFERENT Slack account — so anybody whose display name read
+  // "Eric" took, passed and booked time off as Eric.
+  it('treats a namesake as nobody: a name linked to someone else is only theirs', async () => {
+    mocks.getSlackUserDisplayName.mockResolvedValue('eric')
+    await expect(resolvePresserName({ slackUserId: 'UNEW', entries: TEAM })).resolves.toBe('Someone')
+    await expect(resolvePresserName({ slackUserId: 'UNEW', displayName: 'Juhan', entries: TEAM })).resolves.toBe('Someone')
+    // No Slack id at all proves nothing about a linked name either.
+    await expect(resolvePresserName({ displayName: 'Juhan', entries: TEAM })).resolves.toBe('Someone')
+    // The linked account itself, under any display name, is still that person.
+    await expect(resolvePresserName({ slackUserId: 'UERIC', displayName: 'Eric B', entries: TEAM })).resolves.toBe('Eric')
+    // A name with two records is theirs if either record is linked to them.
+    const split: TeamMemberAvailability[] = [
+      { ownerName: 'Sam', slackUserId: 'USAM1', status: 'available' },
+      { ownerName: 'sam', slackUserId: 'USAM2', status: 'available' },
+    ]
+    await expect(resolvePresserName({ slackUserId: 'USAM2', displayName: 'Sam', entries: split })).resolves.toBe('sam')
+    await expect(resolvePresserName({ slackUserId: 'UOTHER', displayName: 'Sam', entries: split })).resolves.toBe('Someone')
   })
 
   it('throws rather than guessing when the roster cannot be read', async () => {
     routeOutreach({ availability: new Error('down') })
     await expect(resolvePresserName({ slackUserId: 'UJUHAN' })).rejects.toThrow('down')
+  })
+
+  // Reviewer finding: an unlinked Juhan whose Slack says "Juhan Sonin" pressed
+  // Take and became the owner "Juhan Sonin". Once he linked as "Juhan" the task
+  // was nobody's — Hand back refused him, `mine` did not list it, and the setup
+  // kept offering a name he could no longer pick.
+  describe('the name a write files something under', () => {
+    const unlinkedJuhan: TeamMemberAvailability[] = [{ ownerName: 'Juhan', status: 'available' }]
+
+    it('never files work under a display name the team list does not know', async () => {
+      routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin' })).resolves.toBe('Someone')
+      // resolvePresserName itself is unchanged: fine for a sentence, never for an owner.
+      await expect(resolvePresserName({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin', entries: unlinkedJuhan })).resolves.toBe('Juhan Sonin')
+    })
+
+    it('uses the name when they are linked, on the team list, on the marketing team, or already own open work', async () => {
+      routeOutreach({ availability: TEAM })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin' })).resolves.toBe('Juhan')
+      routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'juhan' })).resolves.toBe('Juhan')
+      // Jon owns nothing and has no record, but he is on the marketing team.
+      delete process.env.MARKETING_TEAM_NAMES
+      expect(marketingTeamNames()).toEqual(['Juhan', 'Shirley', 'Eric', 'Jon'])
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJON', displayName: 'Jon' })).resolves.toBe('Jon')
+      // Somebody new with work already filed under exactly their name.
+      routeOutreach({ availability: unlinkedJuhan, openTasks: 2 })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UDANA', displayName: 'Dana' })).resolves.toBe('Dana')
+      // A namesake is still nobody.
+      routeOutreach({ availability: TEAM })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Eric' })).resolves.toBe('Someone')
+    })
+
+    it('throws rather than guessing when the open work cannot be counted', async () => {
+      routeOutreach({ availability: unlinkedJuhan })
+      mocks.outreach.fetch.mockImplementation(async (query: string) => {
+        if (query === TEAM_AVAILABILITY_QUERY) return unlinkedJuhan
+        throw new Error('down')
+      })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Dana' })).rejects.toThrow('down')
+    })
+  })
+
+  it('reads every task on a message in one query, drawn as a card draws them — and an empty map when it cannot', async () => {
+    routeOutreach({
+      availability: TEAM,
+      cards: [
+        { _id: 'op-a', title: 'Task A', ownerName: 'Juhan', ownerSlackUserId: 'USTALE', status: 'done' },
+        { _id: 'op-b', title: 'Task B', status: 'queued' },
+      ],
+    })
+    const records = await readTaskCardRecords(['op-a', 'op-b', 'op-a', ''])
+    expect([...records.keys()]).toEqual(['op-a', 'op-b'])
+    // The roster's id, never the stamped one.
+    expect(records.get('op-a')).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'done' })
+    const call = mocks.outreach.fetch.mock.calls.find(([query]) => query === TASK_CARDS_QUERY)!
+    expect(call[1]).toEqual({ ids: ['op-a', 'op-b'] })
+
+    mocks.outreach.fetch.mockRejectedValue(new Error('down'))
+    await expect(readTaskCardRecords(['op-a'])).resolves.toEqual(new Map())
+    await expect(readTaskCardRecords([])).resolves.toEqual(new Map())
   })
 
   it('turns GROQ nulls into absent fields, so a missing allocation is the default week, not zero hours', () => {
@@ -440,8 +445,91 @@ describe('task actions', () => {
 
   it('Take does not take a task somebody else owns', async () => {
     routeOutreach({ task: task(), availability: TEAM })
-    await expect(takeTask(eric)).resolves.toMatchObject({ ok: false, message: 'Juhan already has that one.' })
+    await expect(takeTask(eric)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
     expect(mocks.patches).toHaveLength(0)
+  })
+
+  // One error shape for every refusal and failure: what could not be done,
+  // that nothing changed, and where to do it instead.
+  it('refuses in one shape — "Couldn’t … — nothing changed." — and never says it did something', async () => {
+    const refusals: Array<[string, () => Promise<{ ok: boolean; message?: string }>]> = [
+      ['closed', async () => (routeOutreach({ task: task({ status: 'done' }), availability: TEAM }), handBackTask(juhan))],
+      ['someone else’s', async () => (routeOutreach({ task: task(), availability: TEAM }), handBackTask(eric))],
+      ['in progress', async () => (routeOutreach({ task: task({ status: 'working' }), availability: TEAM }), dropTask(juhan))],
+      ['no blocker', async () => (routeOutreach({ task: task(), availability: TEAM }), markTaskStuck({ ...juhan, blocker: '  ' }))],
+      ['gone', async () => (routeOutreach({ task: null, availability: TEAM }), markTaskDone(juhan))],
+      ['no task id', async () => markTaskDone({ ...juhan, taskId: '' })],
+    ]
+    for (const [name, run] of refusals) {
+      const result = await run()
+      expect(result.ok, name).toBe(false)
+      expect(result.message, name).toMatch(/^Couldn’t [^—]+ — nothing changed\. \S/)
+      expect(result.message, name).not.toMatch(/Studio’s|in the Studio|'/)
+    }
+    expect(mocks.patches).toHaveLength(0)
+  })
+
+  // The away cover: the one card whose Take may move a task off its owner.
+  describe('Take as an away cover', () => {
+    const erics = () => task({ ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
+    const shirley = { taskId: TASK_ID, personName: 'Shirley', slackUserId: 'USHIRLEY', now: NOW }
+    /** Eric away Mon 21 – Sun 27 Sep; NOW is the Thursday. */
+    const ericAway: TeamMemberAvailability[] = [
+      TEAM[0],
+      { ownerName: 'Eric', slackUserId: 'UERIC', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+    ]
+
+    it('moves the task off the away owner it was drawn for, onto the presser, and names who it came from', async () => {
+      routeOutreach({ task: erics(), availability: ericAway })
+      const result = await takeTask({ ...juhan, coverFor: 'Eric' })
+      expect(result).toMatchObject({ ok: true, changed: true, message: 'It’s yours — taken over from Eric.' })
+      const [patch] = patchesFor(TASK_ID)
+      expect(setOf(patch)).toMatchObject({
+        ownerName: 'Juhan',
+        ownerSlackUserId: 'UJUHAN',
+        lastOutcome: 'Taken over from Eric in Slack by Juhan',
+      })
+      expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('rev1')
+      expect(result.task).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN' })
+    })
+
+    // The card stays in the channel after the absence ends. Pressed then, it
+    // would take Eric's task from under him while he works on it.
+    it('refuses once the owner is back — the card was drawn while they were away, and nothing changes', async () => {
+      routeOutreach({ task: erics(), availability: TEAM })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({
+        ok: false,
+        message: 'Couldn’t take that — nothing changed. Eric is back — ask them before taking it.',
+      })
+      // Back after the time off ended, too: the day after his last day.
+      routeOutreach({ task: erics(), availability: [TEAM[0], { ...ericAway[1], from: '2026-09-14', until: '2026-09-23' }] })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false })
+      // A roster that cannot be read cannot say he is still away: refused, not guessed.
+      routeOutreach({ task: erics(), availability: new Error('down') })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false })
+      expect(mocks.patches).toHaveLength(0)
+    })
+
+    it('never takes it from whoever covered it first — a stale cover card is refused', async () => {
+      // Juhan covered Eric's task; Shirley presses the same card later.
+      routeOutreach({ task: task({ ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN' }), availability: TEAM })
+      await expect(takeTask({ ...shirley, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
+      expect(mocks.patches).toHaveLength(0)
+    })
+
+    it('is only a cover for the owner named — without it, or for someone else, Take still refuses', async () => {
+      routeOutreach({ task: erics(), availability: TEAM })
+      await expect(takeTask(juhan)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Eric already has it.' })
+      await expect(takeTask({ ...juhan, coverFor: 'Shirley' })).resolves.toMatchObject({ ok: false })
+      await expect(takeTask({ ...juhan, coverFor: '' })).resolves.toMatchObject({ ok: false })
+      expect(mocks.patches).toHaveLength(0)
+    })
+
+    it('is an ordinary take when the task has come free since', async () => {
+      routeOutreach({ task: task({ ownerName: '', ownerSlackUserId: '' }), availability: TEAM })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: true, message: 'It’s yours.' })
+      expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ ownerName: 'Juhan', lastOutcome: 'Taken in Slack by Juhan' })
+    })
   })
 
   it('Drop: dismissed with who dropped it, but not while in progress', async () => {
@@ -519,7 +607,7 @@ describe('task actions', () => {
 
   it('Take by the previous owner of a reassigned task is refused, never "already yours"', async () => {
     routeOutreach({ task: task(), availability: [] })
-    await expect(takeTask(eric)).resolves.toMatchObject({ ok: false, message: 'Juhan already has that one.' })
+    await expect(takeTask(eric)).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
     expect(mocks.patches).toHaveLength(0)
 
     routeOutreach({ task: task(), availability: new Error('down') })
@@ -550,8 +638,59 @@ describe('task actions', () => {
     // An unlinked colleague whose display name happens to be "Juhan".
     routeOutreach({ task: task(), availability: TEAM })
     await expect(handBackTask({ ...juhan, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false })
-    await expect(takeTask({ ...juhan, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false, message: 'Juhan already has that one.' })
+    await expect(takeTask({ ...juhan, slackUserId: 'UOTHER' })).resolves.toMatchObject({ ok: false, message: 'Couldn’t take that — nothing changed. Juhan already has it.' })
     expect(mocks.patches).toHaveLength(0)
+  })
+
+  // A redraw links the title where the card first linked it: the record's
+  // own targetView, not its kind's default tab.
+  it('hands back the record’s own targetView, so a redrawn card links where it did before', async () => {
+    routeOutreach({ task: task({ kind: 'content', targetView: 'seo' }), availability: TEAM })
+    const result = await markTaskDone(juhan)
+    expect(result.task).toMatchObject({ kind: 'content', targetView: 'seo' })
+  })
+
+  describe('Answer… (answerTask)', () => {
+    const decision = (extra: Record<string, unknown> = {}) =>
+      task({ kind: 'decision', status: 'needsHuman', humanQuestion: 'Publish the taxonomy, or keep it internal?', ...extra })
+
+    it('saves the answer and moves a waiting decision to queued, keeping the question — conditional on the revision read', async () => {
+      routeOutreach({ task: decision(), availability: TEAM })
+      const result = await answerTask({ ...juhan, answer: '  Keep it internal.\nRevisit in Q1.  ' })
+      expect(result).toMatchObject({ ok: true, changed: true })
+      const [patch] = patchesFor(TASK_ID)
+      expect(setOf(patch)).toMatchObject({
+        status: 'queued',
+        humanResponse: 'Keep it internal.\nRevisit in Q1.',
+        lastOutcome: 'Answered in Slack by Juhan',
+        lastEvaluatedAt: NOW.toISOString(),
+      })
+      expect(setOf(patch).activity).toEqual([expect.objectContaining({ action: 'Answered in Slack', outcome: 'By Juhan' })])
+      expect(unsetOf(patch)).not.toContain('humanQuestion')
+      expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('rev1')
+      // The fresh card: no longer waiting, the question kept, the roster's id for the mention.
+      expect(result.task).toMatchObject({ status: 'queued', humanQuestion: 'Publish the taxonomy, or keep it internal?', slackUserId: 'UJUHAN' })
+    })
+
+    it('revises an answer without moving the work, and changes nothing for the same answer again', async () => {
+      routeOutreach({ task: decision({ status: 'working', humanResponse: 'Publish it.' }), availability: TEAM })
+      await expect(answerTask({ ...juhan, answer: 'Keep it internal.' })).resolves.toMatchObject({ ok: true, changed: true })
+      expect(setOf(patchesFor(TASK_ID)[0])).toMatchObject({ status: 'working', humanResponse: 'Keep it internal.' })
+
+      mocks.patches.length = 0
+      routeOutreach({ task: decision({ status: 'queued', humanResponse: 'Keep it internal.' }), availability: TEAM })
+      await expect(answerTask({ ...juhan, answer: 'Keep it internal.' })).resolves.toMatchObject({ ok: true, changed: false })
+      expect(mocks.patches).toHaveLength(0)
+    })
+
+    it('refuses a closed decision, and an empty answer, in the one error shape', async () => {
+      routeOutreach({ task: decision({ status: 'done' }), availability: TEAM })
+      const closed = await answerTask({ ...juhan, answer: 'Yes.' })
+      expect(closed).toMatchObject({ ok: false, message: 'Couldn’t save that answer — nothing changed. It’s already closed — press Reopen first.' })
+      routeOutreach({ task: decision(), availability: TEAM })
+      await expect(answerTask({ ...juhan, answer: '   ' })).resolves.toMatchObject({ ok: false })
+      expect(mocks.patches).toHaveLength(0)
+    })
   })
 
   it('still writes when the roster cannot be read — only the card’s mention id is lost', async () => {
@@ -561,33 +700,6 @@ describe('task actions', () => {
     // Without a roster the stamped id is all there is.
     expect(result.task?.slackUserId).toBe('UERIC')
   })
-})
-
-// ── Strategy ─────────────────────────────────────────────────────────────────
-
-const STORED_POSTURE = { runway: { certainUntil: '2027-01-11', confirmedAt: '2026-09-10T00:00:00Z' } }
-const PRIOR_REVIEW = {
-  confirmedAt: '2026-09-02T00:00:00Z',
-  confirmedBy: 'Eric',
-  verdict: 'stillRight',
-  monthKey: '2026-09',
-  postureAtReview: 'rebuild',
-}
-const wonContact = {
-  _id: 'marketingContact.won',
-  name: 'Jane Doe',
-  organization: 'Acme',
-  status: 'won',
-  interactions: [
-    { at: '2026-09-01T00:00:00Z', statusAfter: 'meeting', channel: 'phone', by: 'Juhan' },
-    { at: '2026-09-20T15:00:00Z', statusAfter: 'won', value: 40000, channel: 'phone', by: 'Juhan' },
-  ],
-}
-const strategyData = (extra: Record<string, unknown> = {}) => ({
-  contacts: [wonContact],
-  gates: [{ title: 'Pick the lead offer', dueAt: '2026-10-01T00:00:00Z', status: 'needsHuman' }],
-  openRethink: null,
-  ...extra,
 })
 
 // ── Weekly check-in ──────────────────────────────────────────────────────────
@@ -651,6 +763,7 @@ describe('runWeeklyCheckIn', () => {
     routeOutreach({ checkIn: checkInData() })
     const result = await runWeeklyCheckIn({ now: NOW, dryRun: true, botUserId: 'UBOT' })
     expect(result).toMatchObject({ ok: true, posted: false, week: WEEK, followUpCount: 1 })
+    expect(result.detail).toMatch(/^Dry run for the week of Mon 21 Sep: /)
     expect(result.taskCount).toBe(2)
     expectValidSlackBlocks(result.blocks, { maxBlocks: 30 })
     expect(mocks.outreach.createIfNotExists).not.toHaveBeenCalled()
@@ -670,20 +783,26 @@ describe('runWeeklyCheckIn', () => {
     expect(opsOf(claim, 'ifRevisionId')[0][0]).toBe('h1')
 
     const post = mocks.postSlackMessage.mock.calls[0][0]
-    expect(post).toMatchObject({ channel: 'CMKTBOT', username: 'Marqueta', unfurl: false })
-    expect(post.text).toContain('<@UJUHAN>')
-    expect(post.text).toContain('<@UERIC>')
+    expect(post).toMatchObject({ channel: 'CMKTBOT', username: 'Marqueta', iconEmoji: ':chart_with_upwards_trend:', unfurl: false })
+    // The lock screen: mentions first, then what it is and how much.
+    expect(post.text).toBe('<@UERIC> <@UJUHAN> — Thursday check-in: 3 open tasks, 1 follow-up (1 overdue)')
     const blocks: Block[] = post.blocks
-    expectValidSlackBlocks(blocks, { maxBlocks: 30 })
-    const ericHeading = sectionIndex(blocks, (text) => text.startsWith('<@UERIC> — here'))
-    const juhanHeading = sectionIndex(blocks, (text) => text.startsWith('<@UJUHAN> — here'))
+    expectValidSlackBlocks(blocks, { maxBlocks: MAX_CHECK_IN_BLOCKS })
+    expect(blocks[1].elements[0].text).toBe('Week of Mon 21 Sep · 2 working days left')
+    expect(JSON.stringify(blocks)).not.toMatch(/2026-W39/)
+    const ericHeading = sectionIndex(blocks, (text) => text.startsWith('*<@UERIC>*'))
+    const juhanHeading = sectionIndex(blocks, (text) => text.startsWith('*<@UJUHAN>*'))
     const juhanTask = sectionIndex(blocks, (text) => text.includes('Call three past clients'))
     expect(ericHeading).toBeGreaterThan(-1)
     // Juhan's task sits under Juhan, whatever id is stamped on it.
     expect(juhanTask).toBeGreaterThan(juhanHeading)
     expect(juhanHeading).toBeGreaterThan(ericHeading)
+    expect(blocks[juhanHeading].text.text).toBe('*<@UJUHAN>* · 1 task, 1 follow-up')
     expect(JSON.stringify(blocks)).toContain('Follow up with Riley Replied')
-    expect(JSON.stringify(blocks)).toContain('Nobody has taken: Update the offer page')
+    // The room's card for the work nobody has, linked into the Studio.
+    const nobody = sectionIndex(blocks, (text) => text === '*Nobody has taken*')
+    expect(blocks[nobody + 1].text.text).toContain('https://www.goinvo.com/studio/marketing?view=thisWeek&task=marketingOperation.c3|Update the offer page')
+    expect(blocks.at(-1)).toMatchObject({ block_id: CHECK_IN_FOOTER_BLOCK })
 
     expect(setOf(record)).toMatchObject({
       week: WEEK,
@@ -692,7 +811,28 @@ describe('runWeeklyCheckIn', () => {
       lastHealthyAt: NOW.toISOString(),
     })
     expect(setOf(record).steps[0]).toMatchObject({ name: 'checkin', ok: true, count: 3 })
+    // Never "2026-W39" in a sentence: `Marqueta, tick` reads these out in Slack.
+    expect(setOf(record).steps[0].detail).toMatch(/^Check-in posted for the week of Mon 21 Sep: /)
     expect(unsetOf(record)).toContain('error')
+  })
+
+  // The same task links to the same tab in every message: the check-in used
+  // to read no targetView, so a content task the record files under SEO linked
+  // to the Calendar here and to SEO in the Monday plan and `my tasks`.
+  it('links each card where the record says it lives, as the Monday plan does', async () => {
+    const seoTask = {
+      _id: 'marketingOperation.meta',
+      title: 'Fix the meta descriptions',
+      ownerName: 'Juhan',
+      kind: 'content',
+      targetView: 'seo',
+      status: 'working',
+      dueAt: '2026-09-25T00:00:00Z',
+    }
+    routeOutreach({ checkIn: checkInData({ tasks: [seoTask], contacts: [] }) })
+    expect(CHECK_IN_DATA_QUERY).toMatch(/\btargetView\b/)
+    const result = await runWeeklyCheckIn({ now: NOW, dryRun: true })
+    expect(JSON.stringify(result.blocks)).toContain('studio/marketing?view=seo&task=marketingOperation.meta|Fix the meta descriptions')
   })
 
   it('stands down when another run wins the claim', async () => {
@@ -710,7 +850,11 @@ describe('runWeeklyCheckIn', () => {
   it('skips a week already posted unless forced', async () => {
     slackEnv()
     routeOutreach({ checkIn: checkInData(), heartbeat: { _rev: 'h1', postedWeek: WEEK, claimedWeek: WEEK } })
-    await expect(runWeeklyCheckIn({ now: NOW })).resolves.toMatchObject({ skipped: true, skipReason: 'alreadyPosted' })
+    await expect(runWeeklyCheckIn({ now: NOW })).resolves.toMatchObject({
+      skipped: true,
+      skipReason: 'alreadyPosted',
+      detail: 'The check-in for the week of Mon 21 Sep was already posted.',
+    })
     expect(mocks.patches).toHaveLength(0)
 
     mocks.postSlackMessage.mockResolvedValue({ channel: 'CMKTBOT', ts: '2.2' })
@@ -720,10 +864,18 @@ describe('runWeeklyCheckIn', () => {
   it('never overrides a fresh claim, even with force; a stale one only with force', async () => {
     slackEnv()
     routeOutreach({ checkIn: checkInData(), heartbeat: { _rev: 'h1', claimedWeek: WEEK, claimedAt: minutesAgo(2) } })
-    await expect(runWeeklyCheckIn({ now: NOW, force: true })).resolves.toMatchObject({ skipped: true, skipReason: 'claimed' })
+    await expect(runWeeklyCheckIn({ now: NOW, force: true })).resolves.toMatchObject({
+      skipped: true,
+      skipReason: 'claimed',
+      detail: 'Another run is posting the check-in for the week of Mon 21 Sep.',
+    })
 
     routeOutreach({ checkIn: checkInData(), heartbeat: { _rev: 'h1', claimedWeek: WEEK, claimedAt: minutesAgo(20) } })
-    await expect(runWeeklyCheckIn({ now: NOW })).resolves.toMatchObject({ skipped: true, skipReason: 'staleClaim' })
+    await expect(runWeeklyCheckIn({ now: NOW })).resolves.toMatchObject({
+      skipped: true,
+      skipReason: 'staleClaim',
+      detail: 'A run claimed the check-in for the week of Mon 21 Sep 20 minutes ago and never posted. Run again with force=1 to post it.',
+    })
     expect(mocks.postSlackMessage).not.toHaveBeenCalled()
 
     mocks.postSlackMessage.mockResolvedValue({ channel: 'CMKTBOT', ts: '3.3' })
@@ -741,10 +893,12 @@ describe('runWeeklyCheckIn', () => {
     expect(setOf(record).error).toMatch(/SLACK_MARKETING_CHANNEL_ID/)
   })
 
-  // A busy week: five people with four due tasks each fills the message to the
-  // ceiling, and the follow-up nobody owns — a contact who REPLIED — used to be
-  // appended after the trim and silently dropped, while the run still counted it.
-  it('keeps the "follow-ups nobody owns" line on a week that fills all thirty blocks', async () => {
+  // A busy week: five people with four due tasks each. The follow-up nobody
+  // owns — a contact who REPLIED — used to be appended after the message was
+  // trimmed and silently dropped, while the run still counted it. The builder
+  // now places it inside its own budget, so it cannot be the thing that did
+  // not fit.
+  it('keeps the "follow-ups nobody owns" line on a crowded week', async () => {
     const people = ['Ana', 'Ben', 'Cal', 'Dee', 'Eve']
     const busy = {
       tasks: people.flatMap((name) =>
@@ -772,20 +926,18 @@ describe('runWeeklyCheckIn', () => {
       ],
     }
     routeOutreach({ checkIn: busy })
-    const result = await runWeeklyCheckIn({ now: NOW, dryRun: true, botUserId: 'UBOT' })
-    expect(result).toMatchObject({ ok: true, followUpCount: 1 })
-    expectValidSlackBlocks(result.blocks, { maxBlocks: 30 })
-    // At the ceiling, so the line could not have had a block of its own.
-    expect(result.blocks).toHaveLength(30)
+    const result = await runWeeklyCheckIn({ now: NOW, dryRun: true })
+    expect(result).toMatchObject({ ok: true, followUpCount: 1, taskCount: 20 })
+    expectValidSlackBlocks(result.blocks, { maxBlocks: MAX_CHECK_IN_BLOCKS })
     const holder = result.blocks.find((block) => JSON.stringify(block).includes('Follow-ups nobody owns'))
-    expect(holder).toBeDefined()
     expect(holder?.type).toBe('context')
-    expect(holder?.elements.length).toBeGreaterThan(1)
     expect(JSON.stringify(holder)).toContain('Robin Replied')
+    // Each of the five is still asked, once.
+    for (const name of people) expect(JSON.stringify(result.blocks).split(`<@U${name.toUpperCase()}>`)).toHaveLength(2)
     expect(result.detail).not.toMatch(/did not fit/)
   })
 
-  it('puts the line beside "Nobody has taken" without spending a block', async () => {
+  it('puts the ownerless follow-ups with the other work nobody has, above the hints', async () => {
     routeOutreach({
       checkIn: checkInData({
         contacts: [
@@ -801,41 +953,37 @@ describe('runWeeklyCheckIn', () => {
       }),
     })
     const result = await runWeeklyCheckIn({ now: NOW, dryRun: true })
-    expectValidSlackBlocks(result.blocks, { maxBlocks: 30 })
-    const nobody = result.blocks.find((block) => block.type === 'context' && String(block.elements[0]?.text).startsWith('Nobody has taken:'))
-    expect(nobody?.elements).toHaveLength(2)
-    expect(nobody?.elements[1].text).toMatch(/^Follow-ups nobody owns: /)
+    expectValidSlackBlocks(result.blocks, { maxBlocks: MAX_CHECK_IN_BLOCKS })
+    const texts = result.blocks.map((block) => JSON.stringify(block))
+    const nobody = texts.findIndex((text) => text.includes('*Nobody has taken*'))
+    const note = texts.findIndex((text) => text.includes('Follow-ups nobody owns: '))
+    // The one line on how to talk to her: "Ask me", or on a week with nothing logged, the zero-touch hint.
+    const hints = texts.findIndex((text) => /Ask me:|not on file\?/.test(text))
+    expect(nobody).toBeGreaterThan(-1)
+    expect(note).toBeGreaterThan(nobody)
+    expect(note).toBeLessThan(hints)
   })
 
-  it('withUnownedFollowUps: a block only when one is free, and says when there was no room at all', () => {
-    const line = 'Follow-ups nobody owns: Robin (Acme), overdue'
-    const header: Block = { type: 'header', text: { type: 'plain_text', text: 'Thursday check-in' } }
-    const week: Block = { type: 'context', elements: [{ type: 'mrkdwn', text: '2026-W39' }] }
-    const button: Block = { type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open the plan' }, url: 'https://x.test' }] }
-    const card = (n: number): Block => ({ type: 'section', block_id: `card-${n}`, text: { type: 'mrkdwn', text: `task ${n}` } })
+  // To the team — and to the watchdog — a skipped post looks exactly like a
+  // job that died. So a week with nothing on anyone's list still posts, as
+  // one line, and is recorded as a healthy run that had nothing to say.
+  it('posts the one-line check-in on a week with nothing to say, and records it as healthy', async () => {
+    slackEnv()
+    routeOutreach({ checkIn: { tasks: [], availability: TEAM, contacts: [] }, heartbeat: { _rev: 'h1' } })
+    mocks.postSlackMessage.mockResolvedValue({ channel: 'CMKTBOT', ts: '4.4' })
+    const result = await runWeeklyCheckIn({ now: NOW })
+    expect(result).toMatchObject({ ok: true, posted: true, taskCount: 0, followUpCount: 0 })
 
-    // Under the ceiling: its own context block, above the Studio button.
-    const roomy = withUnownedFollowUps([header, week, card(1), button], line)
-    expect(roomy.placed).toBe(true)
-    expect(roomy.blocks.map((block) => block.type)).toEqual(['header', 'context', 'section', 'context', 'actions'])
-    expectValidSlackBlocks(roomy.blocks)
+    const post = mocks.postSlackMessage.mock.calls[0][0]
+    expect(post.text).toBe('Thursday check-in: nothing is on anyone’s list for this week or next.')
+    expect(post.blocks).toHaveLength(1)
+    expect(post.blocks[0].text.text).toMatch(/^\*Thursday check-in:\* nothing is on anyone’s list for this week or next\./)
+    expectValidSlackBlocks(post.blocks)
 
-    // At the ceiling with no "Nobody has taken": into the week line, same block count.
-    const full = [header, week, ...Array.from({ length: 27 }, (_, n) => card(n)), button]
-    const packed = withUnownedFollowUps(full, line)
-    expect(packed).toMatchObject({ placed: true })
-    expect(packed.blocks).toHaveLength(30)
-    expect(packed.blocks[1].elements.map((element: Block) => element.text)).toEqual(['2026-W39', line])
-    expectValidSlackBlocks(packed.blocks, { maxBlocks: 30 })
-    // The input is not mutated — the builder's blocks are the caller's.
-    expect(week.elements).toHaveLength(1)
-
-    // Nowhere at all: reported, never silently lost.
-    const bare = [header, ...Array.from({ length: 28 }, (_, n) => card(n)), button]
-    expect(withUnownedFollowUps(bare, line)).toEqual({ blocks: bare, placed: false })
-
-    // Nothing to say is not a failure.
-    expect(withUnownedFollowUps(bare, '')).toEqual({ blocks: bare, placed: true })
+    const [, record] = patchesFor(CHECKIN_HEARTBEAT_DOC_ID)
+    // Read aloud (`Marqueta, tick` quotes it), so the week is in words; the key stays in the fields.
+    expect(setOf(record).steps[0]).toMatchObject({ name: 'checkin', ok: true, count: 0, detail: 'Check-in posted for the week of Mon 21 Sep: nothing to say.' })
+    expect(setOf(record)).toMatchObject({ week: WEEK, postedWeek: WEEK })
   })
 
   it('gives the claim back and records the failure when Slack refuses the post', async () => {
@@ -844,8 +992,9 @@ describe('runWeeklyCheckIn', () => {
     mocks.postSlackMessage.mockResolvedValue(null)
     const result = await runWeeklyCheckIn({ now: NOW })
     expect(result).toMatchObject({ ok: false, posted: false })
+    expect(result.detail).toMatch(/^Slack refused the check-in for the week of Mon 21 Sep \(/)
     const [, record] = patchesFor(CHECKIN_HEARTBEAT_DOC_ID)
-    expect(setOf(record).steps[0]).toMatchObject({ name: 'checkin', ok: false })
+    expect(setOf(record).steps[0]).toMatchObject({ name: 'checkin', ok: false, detail: result.detail })
     expect(setOf(record)).not.toHaveProperty('postedWeek')
     expect(unsetOf(record)).toEqual(expect.arrayContaining(['claimedWeek', 'claimedAt']))
   })

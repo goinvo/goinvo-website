@@ -11,26 +11,32 @@
  * So once a month — on the same clock as the runway, so the two money questions
  * arrive together instead of as two separate nags — Marqueta lays out what the
  * money says and how outreach actually went, and asks one question with two
- * answers: still the right plan, or it needs a rethink. A rethink becomes a
- * DECISION on the board, suggested to the person who asked for it, never
+ * answers: the plan still fits, or it needs a rethink. A rethink becomes a
+ * DECISION on This week, suggested to the person who asked for it, never
  * assigned; confirming records who said so and against which posture.
  *
  * Recording the posture the plan was confirmed against is the whole trick. A
  * confirmation is only good for the reality it was given in: when the runway
  * crosses a line, the check comes due at once, however recently somebody said
- * "still right" — because they said it about a different studio.
+ * "plan still fits" — because they said it about a different studio.
  *
  * Silence is the default. When neither the runway nor the strategy is due,
  * the digest says nothing about money at all; a permanent banner about money
- * in a team channel is a banner people learn to scroll past.
+ * in a team channel is a banner people learn to scroll past. And when both
+ * are due it asks ONE of them: the runway first, because the strategy
+ * question is about the money and cannot be answered against a stale number.
+ * The strategy question follows in the same place once the runway is
+ * confirmed (`buildMoneyAndDirectionBlocks` with a receipt).
  *
  * Marqueta does not do bookkeeping. "Money" here is the runway date, signed
  * commitments and the pipeline as people logged it — counts and the estimated
  * values typed on contacts, nothing reconciled against an invoice.
  *
- * Dates are UTC throughout. The check runs on Vercel (UTC) and its tests run on
- * laptops in Boston; a local-time month would put the last evening of September
- * in October depending on which machine did the arithmetic.
+ * The arithmetic is UTC throughout. The check runs on Vercel (UTC) and its
+ * tests run on laptops in Boston; a local-time month would put the last evening
+ * of September in October depending on which machine did the arithmetic. The
+ * days it SAYS ("checked on Thu 10 Sep") follow the studio's calendar, through
+ * `formatSlackDay`, like every other date Marqueta prints.
  *
  * Pure: no fetch, no Sanity, no environment. `strategyCheck.server.ts` reads the
  * records; this decides what they mean and how to say it.
@@ -42,15 +48,30 @@ import {
   type FinancialPostureId,
 } from './financialPosture'
 import { encodeStrategyValue, MARQUETA_ACTION } from './marquetaActions'
+import { askMarqueta, countLabel, formatSlackDay, LABEL, openViewButton, STATE_EMOJI } from './marquetaStyle'
 import { describePulse, type OutreachPulse } from './outreachPulse'
-import { formatRunwayDate, RUNWAY_STALE_DAYS, type RunwayWin } from './runway'
-import { clipSlackText, escapeSlackText, SLACK_LIMITS } from './slackText'
+import {
+  RUNWAY_STALE_DAYS,
+  type ResolvedRunway,
+  type RunwayCheckIn,
+  type RunwayWin,
+} from './runway'
+import {
+  buildRunwayBlocks,
+  MARKETING_ACTION,
+  MONEY_BLOCK_PREFIX,
+  runwayDay,
+  runwayFacts,
+  runwayParts,
+} from './slackDelegation'
+import { clipSlackText, decodeSlackText, escapeSlackText, SLACK_LIMITS } from './slackText'
+import { studioViewUrl } from './taskLinks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Block = Record<string, any>
 
 /**
- * How long a "still the right plan" stands. Deliberately the runway's own
+ * How long a "plan still fits" stands. Deliberately the runway's own
  * number: the two monthly money questions should come due in the same digest,
  * not on two different Mondays that each feel like a nag.
  */
@@ -184,7 +205,7 @@ export function strategyReviewDue(
   if (opts.openRethink) {
     return {
       due: false,
-      reason: ['A rethink of the plan is already on the board.', movedLine].filter(Boolean).join(' '),
+      reason: ['A rethink of the plan is already waiting on This week.', movedLine].filter(Boolean).join(' '),
     }
   }
 
@@ -197,17 +218,18 @@ export function strategyReviewDue(
 
   const ageDays = Math.floor((now.getTime() - confirmedAt) / MS_PER_DAY)
   const by = record?.confirmedBy ? ` by ${String(record.confirmedBy).replace(/\s+/g, ' ').trim()}` : ''
+  const checked = formatSlackDay(new Date(confirmedAt), now)
   if (ageDays >= STRATEGY_REVIEW_INTERVAL_DAYS) {
     return {
       due: true,
-      reason: `The plan was last checked against the money on ${formatRunwayDate(record?.confirmedAt)}${by}, ${ageDays} days ago.`,
+      reason: `The plan was last checked against the money on ${checked}${by}, ${ageDays} days ago.`,
     }
   }
 
-  const next = formatRunwayDate(new Date(confirmedAt + STRATEGY_REVIEW_INTERVAL_DAYS * MS_PER_DAY).toISOString())
+  const next = formatSlackDay(new Date(confirmedAt + STRATEGY_REVIEW_INTERVAL_DAYS * MS_PER_DAY), now)
   return {
     due: false,
-    reason: `Checked on ${formatRunwayDate(record?.confirmedAt)}${by}; the next check is due ${next}, sooner if the runway crosses a line.`,
+    reason: `Checked on ${checked}${by}; the next check is due ${next}, sooner if the runway crosses a line.`,
   }
 }
 
@@ -432,26 +454,27 @@ function formatMoney(value: number): string {
 }
 
 /**
- * "Pipeline: 3 in meeting/opportunity, ~$120,000 estimated · Won this month: 1 ($40,000)".
- *
- * Zeros are said plainly rather than rendered as "~$0", which reads like a
- * measured value instead of a missing one.
+ * "3 in meeting/opportunity, ~$120,000 estimated". Zeros are said plainly
+ * rather than rendered as "~$0", which reads like a measured value instead of
+ * a missing one.
  */
-function pipelineLine(pipeline: StrategySnapshot['pipeline']): string {
+function liveLine(pipeline: StrategySnapshot['pipeline']): string {
   const live = pipeline.inMeeting + pipeline.inOpportunity
-  const conversations =
-    live === 0
-      ? 'Pipeline: nothing in meeting or opportunity yet'
-      : `Pipeline: ${live} in meeting/opportunity, ${
-          pipeline.estimatedValue > 0 ? `~${formatMoney(pipeline.estimatedValue)} estimated` : 'no value estimated yet'
-        }`
-  const won =
-    pipeline.wonThisMonth === 0
-      ? 'Won this month: none'
-      : `Won this month: ${pipeline.wonThisMonth}${
-          pipeline.wonValueThisMonth > 0 ? ` (${formatMoney(pipeline.wonValueThisMonth)})` : ''
-        }`
-  return `${conversations} · ${won}`
+  if (live === 0) return 'nothing in meeting or opportunity yet'
+  const estimate = pipeline.estimatedValue > 0 ? `~${formatMoney(pipeline.estimatedValue)} estimated` : 'no value estimated yet'
+  return `${live} in meeting/opportunity, ${estimate}`
+}
+
+/** "Won this month: 1 ($40,000)" / "Won this month: none". */
+function wonLine(pipeline: StrategySnapshot['pipeline']): string {
+  if (pipeline.wonThisMonth === 0) return 'Won this month: none'
+  const amount = pipeline.wonValueThisMonth > 0 ? ` (${formatMoney(pipeline.wonValueThisMonth)})` : ''
+  return `Won this month: ${pipeline.wonThisMonth}${amount}`
+}
+
+/** "Pipeline: 3 in meeting/opportunity, ~$120,000 estimated · Won this month: 1 ($40,000)". */
+function pipelineLine(pipeline: StrategySnapshot['pipeline']): string {
+  return `Pipeline: ${liveLine(pipeline)} · ${wonLine(pipeline)}`
 }
 
 /**
@@ -467,7 +490,7 @@ function describeTrend(thisMonth: OutreachPulse, lastMonth: OutreachPulse | null
   const before = lastMonth.touches
   if (touches === 0 && before === 0) return 'No outreach logged this month or last.'
   if (before === 0) return `${plural(touches, 'touch', 'touches')} logged this month; none last month.`
-  if (touches >= before) return `${plural(touches, 'touch', 'touches')} logged this month — already past last month's ${before}.`
+  if (touches >= before) return `${plural(touches, 'touch', 'touches')} logged this month — already past last month’s ${before}.`
   const day = now.getUTCDate()
   const daysInMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate()
   return `${plural(touches, 'touch', 'touches')} logged so far this month (day ${day} of ${daysInMonth}), against ${before} in all of last month.`
@@ -535,11 +558,12 @@ export function buildStrategySnapshot(input: {
 }
 
 /** At most three gates, overdue ones named as such. Record text, so escaped. */
-function gateLines(gates: StrategySnapshot['gates']): string[] {
+function gateLines(gates: StrategySnapshot['gates'], now: Date): string[] {
   const open = gates.filter((gate) => gate.status !== 'done' && gate.status !== 'dismissed')
   if (open.length === 0) return []
   const shown = open.slice(0, 3).map((gate) => {
-    const when = gate.dueAt ? ` — ${gate.overdue ? 'overdue since' : 'due'} ${formatRunwayDate(gate.dueAt)}` : ''
+    const day = gate.dueAt ? formatSlackDay(gate.dueAt, now) : ''
+    const when = day ? ` — ${gate.overdue ? 'overdue since' : 'due'} ${day}` : ''
     return `${clipSlackText(escapeSlackText(gate.title), 150)}${when}`
   })
   const more = open.length > 3 ? ` (and ${open.length - 3} more)` : ''
@@ -549,87 +573,393 @@ function gateLines(gates: StrategySnapshot['gates']): string[] {
 /** Join escaped lines into one section's text, clipped to what Slack accepts. */
 const sectionText = (lines: string[]) => clipSlackText(lines.filter(Boolean).join('\n'), SLACK_LIMITS.sectionText)
 
-/**
- * The digest's one card about money: the runway question and the strategy
- * question, together.
- *
- * They are the same conversation — "how much time do we have" and "are we
- * spending it on the right things" — and asked separately they read as two
- * nags from two bots. The runway half is `buildRunwayBlocks` (slackDelegation),
- * passed in already built so its buttons and modals stay exactly as they are;
- * this only adds the heading and, when due, the strategy half.
- *
- * When the runway is quiet but the strategy is due, the runway line is still
- * stated, in the strategy section — "does the plan fit the money?" is not a
- * question anybody can answer without the money.
- *
- * Nothing due, nothing said: returns [] and the digest omits the card.
- */
-export function buildMoneyAndDirectionBlocks(input: {
-  snapshot: StrategySnapshot
-  strategyDue: { due: boolean; reason: string }
-  runwayBlocks: Block[]
-}): Block[] {
-  const runway = input.runwayBlocks || []
-  // The runway group opens with its own divider; one per card is enough.
-  let start = 0
-  while (start < runway.length && runway[start]?.type === 'divider') start += 1
-  const runwayBody = runway.slice(start)
-  const strategyDue = Boolean(input.strategyDue?.due)
+// ── Money and direction: the group, its receipts, and the answers ───────────
 
-  if (runwayBody.length === 0 && !strategyDue) return []
-
-  const blocks: Block[] = [
-    { type: 'divider' },
-    { type: 'section', text: { type: 'mrkdwn', text: '*Money and direction*' } },
-    ...runwayBody,
-  ]
-
-  if (!strategyDue) return blocks
-
-  const { snapshot } = input
-  const lines = [
-    `*Is the plan still right for ${escapeSlackText(monthLabel(snapshot.monthKey))}?*`,
-    input.strategyDue.reason ? `_${clipSlackText(escapeSlackText(input.strategyDue.reason), 600)}_` : '',
-    runwayBody.length === 0 && snapshot.money ? `Money: ${clipSlackText(escapeSlackText(snapshot.money), 600)}` : '',
-    snapshot.postureStrategy
-      ? `Plan for *${escapeSlackText(snapshot.postureTitle)}*: ${clipSlackText(escapeSlackText(snapshot.postureStrategy), 600)}`
-      : '',
-    escapeSlackText(snapshot.trend),
-    escapeSlackText(pipelineLine(snapshot.pipeline)),
-    ...gateLines(snapshot.gates),
-    `*${clipSlackText(escapeSlackText(snapshot.question), 600)}*`,
-  ]
-
-  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: sectionText(lines) } })
-  blocks.push({
-    type: 'actions',
-    elements: [
-      {
-        type: 'button',
-        action_id: MARQUETA_ACTION.strategyConfirm,
-        text: { type: 'plain_text', text: 'Still the right plan' },
-        style: 'primary',
-        value: encodeStrategyValue(snapshot.monthKey),
-      },
-      {
-        type: 'button',
-        action_id: MARQUETA_ACTION.strategyRethink,
-        text: { type: 'plain_text', text: 'Needs a rethink' },
-        value: encodeStrategyValue(snapshot.monthKey),
-      },
-    ],
-  })
-  return blocks
+/** The runway as the money group reads it: `readRunway`'s state, or the parts of it that matter here. */
+export type MoneyRunway = {
+  summary: string
+  checkIn: RunwayCheckIn
+  resolved: Pick<ResolvedRunway, 'id' | 'source' | 'months' | 'certainUntil' | 'disagreement'>
 }
 
 /**
- * The answer to "@Marqueta strategy": the same facts as the digest card, as
- * one message, without buttons — the check itself is answered on the digest,
- * where there is one card for the whole team rather than one per person who
- * happened to ask.
+ * What a press on the money group just did, for the receipt that takes the
+ * place of the question it answered. `who` is the presser's mention
+ * (`<@U123>`); a plain name is escaped and works too. `suggestedTo` is the
+ * board name the rethink was suggested to — the presser, since asking for a
+ * rethink is raising a hand, not volunteering (see
+ * `buildStrategyDecisionOperation`).
  */
-export function strategyAnswerText(snapshot: StrategySnapshot, due: { due: boolean; reason: string }): string {
+export type MoneyReceipt =
+  | { kind: 'runwayConfirmed'; who: string }
+  | { kind: 'runwayUpdated'; who: string }
+  | { kind: 'runwaySigned'; who: string; label?: string }
+  | { kind: 'planConfirmed'; who: string; monthKey?: string }
+  | { kind: 'rethink'; who: string; decisionTaskId?: string; suggestedTo?: string; joined?: boolean }
+
+export const MONEY_RECEIPT_BLOCK = `${MONEY_BLOCK_PREFIX}_receipt`
+export const MONEY_RECEIPT_ACTIONS_BLOCK = `${MONEY_BLOCK_PREFIX}_receipt_actions`
+export const STRATEGY_QUESTION_BLOCK = `${MONEY_BLOCK_PREFIX}_strategy`
+export const STRATEGY_ACTIONS_BLOCK = `${MONEY_BLOCK_PREFIX}_strategy_actions`
+export const MONEY_NEXT_BLOCK = `${MONEY_BLOCK_PREFIX}_next`
+
+const MENTION = /^<@[UW][A-Z0-9]+>$/
+
+/** A mention as it is; anything else decoded, escaped and kept out of the formatting around it. */
+function receiptWho(who: string): string {
+  const raw = String(who ?? '').trim()
+  if (MENTION.test(raw)) return raw
+  return escapeSlackText(decodeSlackText(raw)).replace(/[_*~`]/g, ' ').replace(/\s+/g, ' ').trim() || 'Someone'
+}
+
+/** "September" — with the year only when it is not this one. */
+function monthName(key: string, now: Date): string {
+  const label = monthLabel(key)
+  const year = ` ${now.getUTCFullYear()}`
+  return label.endsWith(year) ? label.slice(0, -year.length) : label
+}
+
+const moneyButton = (actionId: string, label: string, value?: string): Block => ({
+  type: 'button',
+  action_id: actionId,
+  text: { type: 'plain_text', text: label, emoji: true },
+  ...(value !== undefined ? { value } : {}),
+})
+
+/** "Plan still fits" · "Needs a rethink" — neither green: the cheap answer must not be the brightest. */
+const strategyActions = (snapshot: StrategySnapshot): Block => {
+  const value = encodeStrategyValue(snapshot.monthKey)
+  return {
+    type: 'actions',
+    block_id: STRATEGY_ACTIONS_BLOCK,
+    elements: [
+      moneyButton(MARQUETA_ACTION.strategyConfirm, LABEL.PLAN_FITS, value),
+      moneyButton(MARQUETA_ACTION.strategyRethink, LABEL.PLAN_RETHINK, value),
+    ],
+  }
+}
+
+/**
+ * "4 touches this month (none last month) · 1 in meeting, ~$60,000 estimated"
+ * — the two facts the strategy question is about, on one line.
+ */
+function strategyFacts(snapshot: StrategySnapshot): string {
+  const touches = `${countLabel(snapshot.thisMonth?.touches || 0, 'touch', 'touches')} this month`
+  const last = snapshot.lastMonth
+    ? ` (${snapshot.lastMonth.touches ? `${snapshot.lastMonth.touches} last month` : 'none last month'})`
+    : ''
+  const pipeline = snapshot.pipeline
+  const live = [
+    pipeline.inMeeting ? `${pipeline.inMeeting} in meeting` : '',
+    pipeline.inOpportunity ? `${pipeline.inOpportunity} in opportunity` : '',
+  ]
+    .filter(Boolean)
+    .join(' and ')
+  const estimate = live && pipeline.estimatedValue > 0 ? `, ~${formatMoney(pipeline.estimatedValue)} estimated` : ''
+  const won = pipeline.wonThisMonth
+    ? ` · ${countLabel(pipeline.wonThisMonth, 'win')} this month${
+        pipeline.wonValueThisMonth > 0 ? ` (${formatMoney(pipeline.wonValueThisMonth)})` : ''
+      }`
+    : ''
+  return `${touches}${last} · ${live ? `${live}${estimate}` : 'nothing in meeting or opportunity yet'}${won}`
+}
+
+/** The strategy question: the question in bold, why it is asked now, the two facts it is about. */
+function strategyQuestionBlocks(input: { snapshot: StrategySnapshot; reason: string; heading: boolean }): Block[] {
+  const { snapshot } = input
+  const lines = [
+    input.heading ? '*Money and direction*' : '',
+    `*${clipSlackText(escapeSlackText(snapshot.question), 600)}*`,
+    input.reason ? `_${clipSlackText(escapeSlackText(input.reason), 600)}_` : '',
+    escapeSlackText(strategyFacts(snapshot)),
+  ]
+  return [
+    { type: 'section', block_id: STRATEGY_QUESTION_BLOCK, text: { type: 'mrkdwn', text: sectionText(lines) } },
+    strategyActions(snapshot),
+  ]
+}
+
+/**
+ * The line a money press leaves where its question was, with the press that
+ * reverses it where there is one:
+ *
+ *   ✅ Runway confirmed by <@U> · Thu 24 Sep — 4.5 months (to 11 Jan 2027).   [It changed…]
+ *   ✅ Plan confirmed for September by <@U> — I’ll ask again in October.
+ *   <@U> asked for a rethink — it’s a decision on This week, suggested to Juhan.   [Open This week]
+ *
+ * The numbers are the record as it reads AFTER the press, so the receipt says
+ * what is now true rather than what the button assumed. No pronouns.
+ */
+function receiptBlocks(receipt: MoneyReceipt, input: { runway: MoneyRunway | null; now: Date; studioBaseUrl?: string }): Block[] {
+  const { now } = input
+  const who = receiptWho(receipt.who)
+  const day = formatSlackDay(now, now)
+  const facts = input.runway ? runwayFacts(input.runway.resolved, now) : ''
+  const changed = moneyButton(MARKETING_ACTION.runwayUpdate, LABEL.RUNWAY_CHANGED)
+  let text: string
+  let elements: Block[] = []
+  switch (receipt.kind) {
+    case 'runwayConfirmed':
+      text = `${STATE_EMOJI.done} Runway confirmed by ${who} · ${day}${facts ? ` — ${facts}` : ''}.`
+      elements = [changed]
+      break
+    case 'runwayUpdated':
+      text = `${STATE_EMOJI.done} Runway updated by ${who} · ${day}${facts ? ` — now ${facts}` : ''}.`
+      elements = [changed]
+      break
+    case 'runwaySigned': {
+      const label = String(receipt.label ?? '').replace(/\s+/g, ' ').trim()
+      const what = label ? ` (${clipSlackText(escapeSlackText(label), 120)})` : ''
+      text = `${STATE_EMOJI.done} Signed work recorded by ${who} · ${day}${what}${facts ? ` — runway now ${facts}` : ''}.`
+      elements = [changed]
+      break
+    }
+    case 'planConfirmed': {
+      const key = /^\d{4}-\d{2}$/.test(String(receipt.monthKey || '')) ? String(receipt.monthKey) : monthKey(now)
+      // When the check comes due again — STRATEGY_REVIEW_INTERVAL_DAYS on — not simply "next month".
+      const next = monthName(monthKey(new Date(now.getTime() + STRATEGY_REVIEW_INTERVAL_DAYS * MS_PER_DAY)), now)
+      text = `${STATE_EMOJI.done} Plan confirmed for ${monthName(key, now)} by ${who} — I’ll ask again in ${next}.`
+      break
+    }
+    case 'rethink': {
+      const suggested = String(receipt.suggestedTo || '').trim() ? receiptWho(String(receipt.suggestedTo)) : ''
+      text = receipt.joined
+        ? `${who} asked for a rethink too — it’s already a decision on This week.`
+        : `${who} asked for a rethink — it’s a decision on This week${suggested ? `, suggested to ${suggested}` : ''}.`
+      const task = String(receipt.decisionTaskId || '').trim()
+      const open = openViewButton('thisWeek', studioViewUrl(input.studioBaseUrl, 'thisWeek', task ? { task } : {}))
+      elements = open ? [open] : []
+      break
+    }
+    default:
+      text = `${STATE_EMOJI.done} Noted by ${who} · ${day}.`
+  }
+  return [
+    { type: 'section', block_id: MONEY_RECEIPT_BLOCK, text: { type: 'mrkdwn', text: clipSlackText(text, SLACK_LIMITS.sectionText) } },
+    ...(elements.length ? [{ type: 'actions', block_id: MONEY_RECEIPT_ACTIONS_BLOCK, elements }] : []),
+  ]
+}
+
+const RUNWAY_RECEIPTS = new Set<MoneyReceipt['kind']>(['runwayConfirmed', 'runwayUpdated', 'runwaySigned'])
+const STRATEGY_RECEIPTS = new Set<MoneyReceipt['kind']>(['planConfirmed', 'rethink'])
+
+/**
+ * The money-and-direction group: in the Monday plan, and redrawn in place
+ * after a press (`renderMoneyAndDirection`). Every block's id starts with
+ * `mq_money`, so a press swaps exactly this group and nothing else.
+ *
+ * One question at a time. The runway is asked first whenever it is due: the
+ * strategy question is "does the plan fit the money?", which cannot be
+ * answered against a number nobody has confirmed. When both are due a line
+ * says the strategy question is next, and it takes the runway's place once
+ * the runway is answered. Two questions and five buttons in one card read as
+ * a form, and a form in a channel gets skipped.
+ *
+ * A disagreement between the runway date and a hand-set posture is asked
+ * about only while the hand-set posture is WINNING — then the plan is not
+ * following the runway, which is worth a conversation. Once the runway is
+ * confirmed later it wins on its own, and asking every Monday about a setting
+ * the plan already ignores is the banner people learn to scroll past.
+ *
+ * `runway` null (the read failed): no question — never one about a number
+ * nobody could read — and a receipt without numbers.
+ */
+export function buildMoneyAndDirectionBlocks(input: {
+  now: Date
+  runway: MoneyRunway | null
+  snapshot?: StrategySnapshot | null
+  strategyDue?: { due: boolean; reason: string } | null
+  receipt?: MoneyReceipt | null
+  studioBaseUrl?: string
+}): Block[] {
+  const { now, runway, snapshot, receipt } = input
+  const blocks: Block[] = receipt ? receiptBlocks(receipt, { runway, now, studioBaseUrl: input.studioBaseUrl }) : []
+  // Under a receipt the group already has its opening line.
+  const heading = !receipt
+
+  const answeredRunway = Boolean(receipt && RUNWAY_RECEIPTS.has(receipt.kind))
+  const answeredStrategy = Boolean(receipt && STRATEGY_RECEIPTS.has(receipt.kind))
+  const disagreement = runway && runway.resolved.source === 'manual' ? runway.resolved.disagreement : null
+  const runwayDue = Boolean(runway && !answeredRunway && (runway.checkIn.due || disagreement))
+  const strategyDue = Boolean(snapshot && input.strategyDue?.due && !answeredStrategy)
+
+  if (runwayDue && runway) {
+    blocks.push(
+      ...buildRunwayBlocks({
+        summary: runway.summary,
+        checkIn: runway.checkIn,
+        disagreement,
+        months: runway.resolved.months,
+        certainUntil: runway.resolved.certainUntil,
+        now,
+        heading,
+      }),
+    )
+    if (strategyDue) {
+      blocks.push({
+        type: 'context',
+        block_id: MONEY_NEXT_BLOCK,
+        elements: [{ type: 'mrkdwn', text: 'Next: whether the plan still fits — I’ll ask once the runway’s confirmed.' }],
+      })
+    }
+  } else if (strategyDue && snapshot) {
+    blocks.push(...strategyQuestionBlocks({ snapshot, reason: input.strategyDue?.reason || '', heading }))
+  }
+  return blocks
+}
+
+/** An answer to a question put to Marqueta: its notification line (`text`) and its blocks. */
+export type MoneyAnswer = { text: string; blocks: Block[] }
+
+/** What the three answers read: `loadStrategySnapshot`'s result, plus `now`. */
+export type MoneyState = {
+  now: Date
+  runway: MoneyRunway
+  snapshot: StrategySnapshot
+  due: { due: boolean; reason: string }
+}
+
+const hint = (text: string): Block => ({ type: 'context', elements: [{ type: 'mrkdwn', text }] })
+
+/** "3.5 months of certain runway, to 11 Jan 2027 (Rebuild)": the number first, the bin after it. */
+function runwayHeadline(runway: MoneyRunway, now: Date): string {
+  const title = getFinancialPosture(runway.resolved.id)?.title || String(runway.resolved.id || '')
+  const parts = runwayParts(runway.resolved, now)
+  if (parts) return `${parts.months} of certain runway, to ${parts.day} (${title})`
+  const day = runwayDay(runway.resolved.certainUntil, now)
+  if (day) return `the recorded runway ran out on ${day} (${title})`
+  return `none recorded, so the plan assumes ${title}`
+}
+
+/**
+ * The answer to "Marqueta, runway" (and money, and finances): the number, any
+ * disagreement with a hand-set bin, and the pipeline — "how are we for
+ * money?" in a studio that does not keep its books in Slack means "how long,
+ * and what is coming".
+ *
+ * It ends on the one next thing. When a check-in is due that is the check-in
+ * itself — the Monday plan's three buttons, which redraw in place — because
+ * "confirm it on the digest" sent the person asking somewhere else to do what
+ * they were already looking at. Otherwise the next question worth asking.
+ */
+export function moneyAnswer(
+  state: Pick<MoneyState, 'now' | 'runway'> & { snapshot: Pick<StrategySnapshot, 'pipeline'> },
+): MoneyAnswer {
+  const { now, runway } = state
+  const first = `*Runway* — ${clipSlackText(escapeSlackText(runwayHeadline(runway, now)), 400)}`
+  const disagreement = runway.resolved.disagreement
+  const lines = [
+    first,
+    disagreement ? `_${clipSlackText(escapeSlackText(disagreement), 600)}_` : '',
+    escapeSlackText(pipelineLine(state.snapshot.pipeline)),
+  ]
+  const question = runway.checkIn.due
+    ? buildRunwayBlocks({
+        summary: runway.summary,
+        checkIn: runway.checkIn,
+        months: runway.resolved.months,
+        certainUntil: runway.resolved.certainUntil,
+        now,
+      })
+    : []
+  return {
+    text: first,
+    blocks: [
+      { type: 'section', text: { type: 'mrkdwn', text: sectionText(lines) } },
+      ...(question.length ? question : [hint(`${askMarqueta('pipeline')} for who’s in play`)]),
+    ],
+  }
+}
+
+/**
+ * The answer to "Marqueta, strategy": the question first, in bold — it is the
+ * point of asking — then the facts it is about, then the two answers when the
+ * check is due. It used to end "I will ask on the next digest", which left the
+ * person who asked with nothing to do but wait for Monday.
+ */
+export function strategyAnswer(
+  state: Pick<MoneyState, 'now' | 'snapshot' | 'due'> & { runway?: MoneyRunway | null },
+): MoneyAnswer {
+  const { now, snapshot, due } = state
+  const first = `*${clipSlackText(escapeSlackText(snapshot.question), 600)}*`
+  const money = state.runway ? runwayHeadline(state.runway, now) : snapshot.money
+  const lines = [
+    first,
+    money ? `Runway: ${clipSlackText(escapeSlackText(money), 400)}` : '',
+    escapeSlackText(snapshot.trend),
+    escapeSlackText(pipelineLine(snapshot.pipeline)),
+    ...gateLines(snapshot.gates, now),
+    due?.reason ? `_${clipSlackText(escapeSlackText(due.reason), 600)}_` : '',
+  ]
+  if (!due?.due) {
+    return {
+      text: first,
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn', text: sectionText(lines) } },
+        hint(`${askMarqueta('pipeline')} for who’s in play`),
+      ],
+    }
+  }
+  return {
+    text: first,
+    blocks: [
+      { type: 'section', block_id: STRATEGY_QUESTION_BLOCK, text: { type: 'mrkdwn', text: sectionText(lines) } },
+      strategyActions(snapshot),
+    ],
+  }
+}
+
+/**
+ * The answer to "Marqueta, pipeline": what is live, this week, this month.
+ *
+ * Counts only. `byPerson` is deliberately never shown: in a channel it is a
+ * leaderboard, and a leaderboard of who made the most cold calls is the
+ * fastest way to make sure nobody logs the calls they did make.
+ *
+ * Wins are said once, from `summarizePipeline`. The pulse's own `won` counts
+ * every touch that left a contact at won, so a month of calls to one existing
+ * client would read "2 won" beside "Won this month: none" — the pulse lines
+ * are described with their won count removed.
+ */
+export function pipelineAnswer(state: {
+  week: OutreachPulse
+  snapshot: Pick<StrategySnapshot, 'thisMonth' | 'pipeline'>
+}): MoneyAnswer {
+  const withoutWins = (pulse: OutreachPulse): OutreachPulse => ({ ...pulse, won: 0, wonValue: 0 })
+  const { pipeline, thisMonth } = state.snapshot
+  const first = `*Pipeline* — ${escapeSlackText(liveLine(pipeline))}`
+  const lines = [
+    first,
+    escapeSlackText(describePulse(withoutWins(state.week), 'Outreach this week')),
+    escapeSlackText(describePulse(withoutWins(thisMonth), 'This month')),
+    escapeSlackText(wonLine(pipeline)),
+  ]
+  return {
+    text: first,
+    blocks: [
+      { type: 'section', text: { type: 'mrkdwn', text: sectionText(lines) } },
+      hint(`${askMarqueta('my calls')} shows who to ring`),
+    ],
+  }
+}
+
+/** An answer as one mrkdwn string: its sections' text, for a caller that can only post text. */
+export function answerMrkdwn(answer: MoneyAnswer): string {
+  return sectionText(
+    (answer?.blocks || [])
+      .filter((block) => block?.type === 'section')
+      .map((block) => String(block.text?.text || '')),
+  )
+}
+
+// ── Legacy answer texts ─────────────────────────────────────────────────────
+//
+// The answers as one mrkdwn string, from before they carried their own
+// buttons. Kept only while the conversation code moves to `moneyAnswer`,
+// `strategyAnswer` and `pipelineAnswer`; nothing new should call them.
+
+/** @deprecated Use `strategyAnswer`, which carries the two answers instead of promising a later digest. */
+export function strategyAnswerText(snapshot: StrategySnapshot, due: { due: boolean; reason: string }, now: Date = new Date()): string {
   const lines = [
     `*Strategy — ${escapeSlackText(monthLabel(snapshot.monthKey))}*`,
     snapshot.money ? `Money: ${clipSlackText(escapeSlackText(snapshot.money), 600)}` : '',
@@ -638,7 +968,7 @@ export function strategyAnswerText(snapshot: StrategySnapshot, due: { due: boole
       : `Posture: *${escapeSlackText(snapshot.postureTitle)}*`,
     escapeSlackText(snapshot.trend),
     escapeSlackText(pipelineLine(snapshot.pipeline)),
-    ...gateLines(snapshot.gates),
+    ...gateLines(snapshot.gates, now),
     escapeSlackText(snapshot.question),
     due?.reason
       ? `_${clipSlackText(escapeSlackText(due.reason), 600)}${due.due ? ' I will ask on the next digest.' : ''}_`
@@ -647,16 +977,7 @@ export function strategyAnswerText(snapshot: StrategySnapshot, due: { due: boole
   return sectionText(lines)
 }
 
-/**
- * The answer to "@Marqueta runway" (and money, and finances): the runway line,
- * any disagreement between the date and a hand-set bin, the check-in if one is
- * due, and the pipeline — because "how are we for money?" asked in a studio
- * that does not do its bookkeeping in Slack means "how long, and what is
- * coming".
- *
- * Every input is plain text and escaped here. `checkInLine` in particular can
- * now carry a won contact's name.
- */
+/** @deprecated Use `moneyAnswer`, which carries the runway buttons when a check-in is due. */
 export function moneyAnswerText(input: {
   runwaySummary: string
   disagreement?: string | null
@@ -672,18 +993,7 @@ export function moneyAnswerText(input: {
   return sectionText(lines)
 }
 
-/**
- * The answer to "@Marqueta pipeline": this week, this month, and what is live.
- *
- * Counts only. `byPerson` is deliberately never shown: in a channel it is a
- * leaderboard, and a leaderboard of who made the most cold calls is the fastest
- * way to make sure nobody logs the calls they did make.
- *
- * Wins are said once, in the pipeline line, from `summarizePipeline`. The
- * pulse's own `won` counts every touch that left a contact at won, so a month
- * of calls to one existing client would read "2 won" directly above "Won this
- * month: none" — the pulse lines are described with their won count removed.
- */
+/** @deprecated Use `pipelineAnswer`, which ends on the one next thing to ask. */
 export function pipelineAnswerText(
   week: OutreachPulse,
   month: OutreachPulse,
@@ -728,7 +1038,7 @@ export function strategyReviewSourceKey(
 }
 
 const VERDICT_WORDS: Record<NonNullable<StrategyReviewRecord['verdict']>, string> = {
-  stillRight: 'still the right plan',
+  stillRight: 'plan still fits',
   rethink: 'needs a rethink',
 }
 
@@ -766,10 +1076,12 @@ export function buildStrategyDecisionOperation(input: {
   const priorWords = (prior?.verdict && VERDICT_WORDS[prior.verdict]) || ''
   const priorBy = String(prior?.confirmedBy || '').replace(/\s+/g, ' ').trim()
   // What the last answer was, so a second rethink in a month says why it is
-  // not a duplicate of the first.
+  // not a duplicate of the first. The day as Slack prints every day ("Mon 5
+  // Oct"): it is read as Background in the Details modal, and the month label
+  // in the same sentence already carries the year.
   const previously =
     parse(prior?.confirmedAt) !== null && priorWords
-      ? ` The last answer was "${priorWords}", on ${formatRunwayDate(prior?.confirmedAt)}${priorBy ? ` by ${priorBy}` : ''}.`
+      ? ` The last answer was “${priorWords}”, on ${formatSlackDay(String(prior?.confirmedAt), input.now)}${priorBy ? ` by ${priorBy}` : ''}.`
       : ''
   return {
     sourceKey: strategyReviewSourceKey(input.monthKey, prior),
@@ -783,7 +1095,10 @@ export function buildStrategyDecisionOperation(input: {
     priority: 'urgent',
     origin: 'manual',
     autonomy: 'humanReview',
-    targetView: 'strategy',
+    // This week, where a decision can be answered. The Strategy tab is the
+    // content Q&A: a rethink linked there landed on a page with nothing on it
+    // to answer.
+    targetView: 'thisWeek',
     dueAt: new Date(input.now.getTime() + 7 * MS_PER_DAY).toISOString(),
     ...(person ? { suggestedOwner: person } : {}),
     activity: [

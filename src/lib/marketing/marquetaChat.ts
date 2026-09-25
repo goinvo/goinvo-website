@@ -12,7 +12,9 @@
  * involved:
  *
  *   @-mention             in any channel she is in (her real bot mention)
- *   "Marqueta, …"         her name as the first word, followed by a comma or colon
+ *   "Marqueta, …"         her name as the first word, followed by a comma or
+ *                         colon — or by one of her own commands ("Marqueta prep
+ *                         Jane"), because people drop the comma on a phone
  *   a direct message      to her
  *
  * The name form exists because the mention is not something people can type:
@@ -22,7 +24,8 @@
  * heard of.
  *
  * When she is addressed she answers, including in a channel where she is
- * otherwise silent. Being asked a question is not noise.
+ * otherwise silent. Being asked a question is not noise — but being thanked
+ * is not a question, and "thanks!" gets nothing back.
  *
  * Deliberately deterministic — no model call. Every answer here is a lookup or
  * a write she already knows how to do, so it costs nothing per message and
@@ -35,16 +38,44 @@
  */
 
 import { classifyMessage } from './ideaCapture'
+import { askMarqueta } from './marquetaStyle'
 import { clipSlackText, escapeSlackText } from './slackText'
 
 export type MarquetaIntent =
+  /** "thanks!", "ok", "👍": said to her, but nothing to answer. Silence. */
+  | { kind: 'ack' }
+  /** "hi", "Marqueta?", "are you there": a short hello that ends on their most useful thing. */
+  | { kind: 'greeting' }
   | { kind: 'week' }
   | { kind: 'runway' }
   | { kind: 'ideas' }
   | { kind: 'heartbeat' }
   | { kind: 'capture'; text: string; explicit: boolean }
   | { kind: 'availability'; text: string }
-  | { kind: 'help' }
+  /** `more`: the second page — ideas, capture, and what she listens for. */
+  | { kind: 'help'; more?: boolean }
+  /**
+   * "who's Jane Doe", "status of Jane", "when did we last talk to Jane": one
+   * contact, looked up. `otherwise` is set when the name was not typed like a
+   * name ("who's got the newsletter", "status of town day merch"): it is what
+   * the message would have been without the lookup, and it is answered
+   * instead when nobody on file matches — a confident "nobody by that name"
+   * to a question about a task is the wrong answer in front of the room.
+   */
+  | { kind: 'contact'; target: string; otherwise?: TopicIntent | Extract<MarquetaIntent, { kind: 'unknown' }> }
+  /**
+   * "We signed Acme for 3 months." Money is never written from a sentence —
+   * the answer is the runway's own "We signed something…" form. `label` and
+   * `months` are what she heard, repeated back so the form is easy to fill.
+   */
+  | { kind: 'signed'; text: string; label: string; months?: number }
+  /**
+   * Nothing she knows how to do. `suggestion` is a command the first word
+   * looks like a typo of ("runwya" → "runway") — offered, NEVER run: a wrong
+   * guess answers a different question in a shared channel. `closest` is a
+   * command about the same thing ("revenue" → "pipeline").
+   */
+  | { kind: 'unknown'; question: boolean; suggestion?: string; closest?: string }
   /**
    * "Prep Jane Doe at Acme". `target` is who it is for, with the command words
    * already taken off ("Jane Doe at Acme") — it is what goes to
@@ -77,6 +108,9 @@ export type MarquetaIntent =
   | { kind: 'pipeline' }
   | { kind: 'mine' }
 
+/** A question about one of her topics, answered from the records. */
+export type TopicIntent = Extract<MarquetaIntent, { kind: 'mine' | 'week' | 'runway' | 'strategy' | 'pipeline' | 'ideas' | 'heartbeat' }>
+
 /**
  * Slack wraps a mention as <@U…>; strip it so the rest parses as plain text.
  *
@@ -107,9 +141,20 @@ const mentionOf = (botUserId: string, flags = '') =>
  * typed "@Marqueta" is deliberate enough on its own. A greeting in front
  * ("hey Marqueta,") does not change which of those it is.
  *
+ * The bare name followed by one of HER commands is addressed too — "Marqueta
+ * prep Jane", "Marqueta my calls" — because people drop the comma on a phone.
+ * The list is closed on purpose: every word on it is something she does, and
+ * none is a verb somebody would use to say what she did ("caught", "posted",
+ * "said"). "Marqueta caught two ideas" stays unaddressed.
+ *
  * Start only. A name mid-sentence is almost always a mention in passing.
  */
-const NAME_ADDRESS = /^\s*(?:(?:hey|hi|hello|hiya|ok|okay|yo)[\s,!]+)?(?:@marqueta\b(?![’'])|marqueta\s*(?:[,:!?]|$))/i
+const HER_COMMANDS =
+  "prep|prepare|brief|outline|script|draft|my|what['’]s|whats|runway|strategy|pipeline|week|ideas|help|capture|called|emailed|away"
+const NAME_ADDRESS = new RegExp(
+  String.raw`^\s*(?:(?:hey|hi|hello|hiya|ok|okay|yo)[\s,!]+)?(?:@marqueta\b(?![’'])|marqueta\s*(?:[,:!?]|$)|marqueta\s+(?:${HER_COMMANDS})(?![\w’'-]))`,
+  'i',
+)
 
 /**
  * Was she actually addressed, rather than merely present?
@@ -125,9 +170,15 @@ export function addressesMarqueta(text: string, botUserId: string | undefined): 
   return NAME_ADDRESS.test(value)
 }
 
-const LEADING_EMOJI = /^(?::[a-z0-9_+'-]+:\s*)+/i
+/** Slack's `:shortcode:` and a phone's pictographs ("hi 👋" is a hello, not a request for "👋"). */
+const LEADING_EMOJI = /^(?:(?::[a-z0-9_+'-]+:|\p{Extended_Pictographic}|\uFE0F|\u200D|\p{Emoji_Modifier})\s*)+/iu
 const LEADING_PUNCTUATION = /^(?:[\s,;.!?—–-]+|:(?=\s|$)\s*)+/
-const LEADING_GREETING = /^(?:hey|hi|hello|hiya|ok|okay|yo)(?=[\s,!:.]|$)[\s,!:.]*/i
+/**
+ * A colon after a greeting is punctuation ("hey: prep Jane"), unless it opens
+ * an emoji — "hi :wave:" lost its colon here and left "wave:" to be read as a
+ * request.
+ */
+const LEADING_GREETING = /^(?:hey|hi|hello|hiya|ok|okay|yo)(?=[\s,!:.]|$)(?:[\s,!.]|:(?![a-z0-9_+'-]+:))*/i
 const LEADING_NAME = /^@?marqueta\b(?![’'])[\s,:;.!?—–-]*/i
 
 /**
@@ -166,12 +217,22 @@ function stripLeadingAddress(text: string): string {
  * better to lose a colleague's mention than to parse her own as a word.
  */
 export function stripAddress(text: string, botUserId?: string): string {
+  return stripLeadingAddress(removeMention(text, botUserId))
+}
+
+/**
+ * Her mention taken out, and nothing else: a greeting and her name stay, so
+ * `parseMarquetaIntent` can still tell "ok" (an acknowledgement — silence)
+ * from "ok, prep Jane" (a request). Line breaks survive, as in `stripAddress`.
+ * Without a bot id every user mention is removed.
+ */
+export function removeMention(text: string, botUserId?: string): string {
   const mentions = botUserId ? mentionOf(botUserId, 'g') : /<@[A-Z0-9]+(?:\|[^>]*)?>/g
-  const withoutMention = String(text || '')
+  return String(text || '')
     .replace(mentions, ' ')
     .replace(/[ \t]+/g, ' ')
     .replace(/ *\n */g, '\n')
-  return stripLeadingAddress(withoutMention)
+    .trim()
 }
 
 /**
@@ -286,6 +347,8 @@ const EMAIL_OBJECT = /^(?:(?:me|us)\s+)?(?:an?\s+)?(?:(?:first|intro|cold|follow
  */
 const PREP_LIST_QUESTIONS: RegExp[] = [
   /\bwho\s+(?:should|do|can|could|shall|must|will)\s+(?:i|we)\s+(?:call|ring|phone|contact|reach\s+out\s+to|be\s+calling)\b/i,
+  /\bwho\s+do\s+(?:i|we)\s+owe\s+(?:a\s+|an\s+)?(?:call|reply|email|follow[- ]?up)\b/i,
+  /\bwhat\s+are\s+(?:my|our)\s+follow[- ]?ups\b/i,
   /\bwho(?:'s|’s|s|\s+is)\s+(?:on\s+)?(?:my|our|the)\s+call(?:ing)?\s+list\b/i,
   /\b(?:my|our)\s+call(?:ing)?\s+list\b/i,
   /\bwho(?:'s|’s|s|\s+is)\s+next\s+to\s+call\b/i,
@@ -297,6 +360,8 @@ const PREP_LIST_QUESTIONS: RegExp[] = [
  */
 const PREP_LIST_OPENERS: RegExp[] = [
   /^(?:(?:show|list|give)\s+(?:me\s+)?|what\s+are\s+|which\s+are\s+)?(?:all\s+)?(?:my|our)\s+(?:[\w-]+\s+)?calls\b/i,
+  // "follow ups", "my follow-ups" — the list, not "follow up with Jane".
+  /^(?:(?:show|list|give)\s+(?:me\s+)?)?(?:all\s+)?(?:my\s+|our\s+|the\s+)?follow[- ]?ups\b/i,
   /^(?:what|which)\s+calls\b/i,
   /^calls\s+(?:for\s+)?(?:this\s+week|today|tomorrow|next\s+week)\b/i,
 ]
@@ -516,7 +581,7 @@ function logTargetOf(value: string): string {
 
 /**
  * "log a call with Jane", "log: called Jane, no answer", "log that I emailed
- * Sam". Every button she posts says "Log how it went", so people will type it.
+ * Sam". The buttons she posts say "Log it…", so people will type it.
  * "log" followed by anything else is not a call and falls through.
  */
 const LOG_COMMAND = /^log\b(?:\s+(?:it|this|that)\b)?\s*[:,-]?\s*/i
@@ -564,10 +629,94 @@ const NOT_ABOUT_TIME_OFF: RegExp[] = [
   /\b(?:holiday|vacation)s?\s+(?:campaign|post|posts|newsletter|card|cards|sale|sales|season|party|content|email|emails|merch|special|theme|strategy|plan|promo|promotion|gift|gifts|mailer|video|reel)\b/gi,
 ]
 
+/**
+ * "I'm off Friday", "I'm sick today", "I'll be out until Mon": time off said
+ * with the plain words. "Out", "off" and "sick" are too ordinary to route on
+ * alone — "I'm out of ideas", "I'm off to call Jane tomorrow" — so they count
+ * only as the sender's OWN sentence, at the start, with a day straight after
+ * (an "on", "all", "until" or "from" between them at most). Anything looser
+ * would reach the one path that writes on the strength of a keyword.
+ */
+const MONTH_WORD = String.raw`(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*`
+const DAY_WORD = String.raw`(?:today|tomorrow|tonight|this\s+(?:week|morning|afternoon|evening)|next\s+week|(?:the\s+)?rest\s+of\s+(?:the|this)\s+week|(?:mon|tue|tues|wed|weds|thu|thur|thurs|fri|sat|sun)(?:day|nesday|sday|urday|rsday)?|\d{1,2}(?:st|nd|rd|th)?(?:\s*[-–]\s*\d{1,2}(?:st|nd|rd|th)?)?\s+${MONTH_WORD}|${MONTH_WORD}\s+\d{1,2}|\d{4}-\d{2}-\d{2})`
+const FIRST_PERSON_OFF = new RegExp(
+  String.raw`^(?:(?:fyi|btw|heads[- ]up|just so you know|jsyk)[\s,:;.!—–-]+)?(?:i['’]?m|im|i am|i['’]?ll be|ill be|i will be)\s+(?:off|out|sick)\s+(?:(?:on|all|until|till|til|through|from)\s+)?${DAY_WORD}\b`,
+  'i',
+)
+
 function mentionsTimeOff(text: string): boolean {
   const scrubbed = NOT_ABOUT_TIME_OFF.reduce((value, pattern) => value.replace(pattern, ' '), text)
-  return TIME_OFF.test(scrubbed)
+  return TIME_OFF.test(scrubbed) || FIRST_PERSON_OFF.test(text)
 }
+
+// ── Said to her, but nothing to answer ───────────────────────────────────────
+
+/**
+ * Words that make up a thank-you, an "ok", or a "nice one". A message made of
+ * nothing else — at most five of them — gets silence.
+ *
+ * Every "thanks!" used to get 1,285 characters of help text back. In a
+ * channel people work in, that is exactly the noise a bot gets muted for; in a
+ * thread it buries the answer the thanks was for.
+ */
+const ACK_CORE = new Set([
+  'thanks', 'thank', 'thx', 'ty', 'tysm', 'cheers', 'ok', 'okay', 'k', 'kk', 'cool', 'great', 'perfect', 'nice',
+  'got', 'noted', 'awesome', 'lovely', 'brilliant', 'sweet', 'good', 'sure', 'yep', 'yup', 'np', 'lol', 'haha', 'ta',
+  'excellent', 'amazing', 'wonderful', 'fab', 'fantastic', 'gotcha', 'roger', 'will', 'sounds',
+])
+/**
+ * Words that ride along with a thank-you without changing it. The greetings
+ * are here because people say hello to her name before thanking her — "hey
+ * Marqueta, thanks!" — and without them that thank-you fell through to the
+ * typo check, which read "thanks" as a slip of "tasks" and asked "Did you
+ * mean `Marqueta, my tasks`?" in front of the room. A greeting ALONE is still
+ * a greeting: a message is an acknowledgement only when one of the core words
+ * (or an emoji) is in it.
+ */
+const ACK_FILLER = new Set([
+  'you', 'u', 'so', 'much', 'a', 'lot', 'ton', 'tons', 'bunch', 'heaps', 'very', 'really', 'super', 'it', 'one', 'job',
+  'work', 'done', 'again', 'all', 'do', 'that', 'this', 'for', 'the', 'marqueta', 'thats', "that's", 'is', 'too',
+  'helps', 'helped', 'helpful',
+  'hey', 'hi', 'hello', 'hiya', 'yo',
+])
+/** A GREETING with an emoji on it is still a greeting — "hi 👋" wants hello back, not silence. */
+const ACK_GREETING_WORDS = new Set(['hey', 'hi', 'hello', 'hiya', 'yo'])
+const WAVE = /:wave(?::|::skin-tone-\d:)|👋/u
+/** "thanks for the help": the phrase, not the command. "ok help" still asks for help. */
+const FOR_THE_HELP = /\bfor (?:(?:all )?(?:the|your) )?help\b/g
+
+/** Slack's `:shortcode:` emoji and the pictographs a phone sends. */
+const EMOJI = /:[a-z0-9_+'-]+:|\p{Extended_Pictographic}|️|‍|\p{Emoji_Modifier}/gu
+
+/**
+ * "thanks!", "ok", "great, thank you", "👍", "Marqueta, cheers", "hey
+ * Marqueta, thanks!", "hey 👍": nothing to answer. Works on the text with or
+ * without her address on it.
+ */
+export function isAcknowledgement(text: string): boolean {
+  const value = straighten(String(text || ''))
+    .replace(/<@[A-Z0-9]+(?:\|[^>]*)?>/gi, ' ')
+    .toLowerCase()
+  const hadEmoji = new RegExp(EMOJI.source, 'u').test(value)
+  const words = value
+    .replace(EMOJI, ' ')
+    .replace(/@?marqueta\b/g, ' ')
+    .replace(FOR_THE_HELP, ' ')
+    .replace(/[^a-z' ]+/g, ' ')
+    .split(/\s+/)
+    .map((word) => word.replace(/^'+|'+$/g, ''))
+    .filter(Boolean)
+  if (!words.length) return hadEmoji
+  if (words.length > 5) return false
+  if (!words.every((word) => ACK_CORE.has(word) || ACK_FILLER.has(word))) return false
+  if (words.some((word) => ACK_CORE.has(word))) return true
+  // Only filler left: "hey 👍" is a thumbs-up, "hi 👋" is a hello.
+  return hadEmoji && !WAVE.test(value) && words.every((word) => ACK_GREETING_WORDS.has(word))
+}
+
+/** A hello with nothing asked: "hi", "morning", "are you there?". Checked after her address is taken off. */
+const GREETING =
+  /^(?:(?:hi|hello|hey|hiya|howdy|yo|morning|good\s+(?:morning|afternoon|evening)|afternoon|evening|are\s+you\s+(?:there|around|awake|alive)|you\s+there|anyone\s+(?:there|home))(?:\s+(?:there|all|team|everyone|folks))?|there|all|team|everyone|folks)[\s!?.,]*$/i
 
 // ── Questions ────────────────────────────────────────────────────────────────
 
@@ -582,37 +731,267 @@ const MINE: RegExp[] = [
 
 const HOW_ARE_WE_DOING = /\bhow(?:['’]re|\s+are)?\s+we\s+(?:doing|going|tracking)\b/i
 
+/** Reads like a question: a question mark anywhere, or a question word first. */
+const QUESTION_OPENER =
+  /^(?:who|who's|whos|whom|whose|is|isn't|are|aren't|was|were|when|does|do|did|what|what's|whats|which|how|how's|hows|where|will|would|can|could|should|has|have|anyone|anybody|any)\b/i
+const looksLikeAQuestion = (plain: string) => plain.includes('?') || QUESTION_OPENER.test(plain)
+
+/**
+ * The topic a question names, if any: mine → week → runway → strategy →
+ * pipeline → the weak words for the week → ideas → heartbeat. "Mine" first,
+ * because "what's on my plate" opens like "what's on" (the week) but asks
+ * about one person. The bare word "week" is weaker than a named topic, so
+ * "how's outreach this week?" gets the outreach numbers rather than the task
+ * list; "plan" and "what's on" still mean the week. "The board", "status",
+ * "agenda", "digest" and "check-in" are what people call the week too.
+ */
+function topicOf(lower: string): TopicIntent | null {
+  if (matchesAny(lower, MINE)) return { kind: 'mine' }
+  // Keywords, plus the openers people actually type that name nothing at
+  // all: "what's on?" is a question about the week even though the word
+  // "week" never appears in it.
+  const asksWhatToDo = startsWithAny(lower, ["what's on", 'whats on', 'what should i do', "what's next", 'whats next', 'what do i do'])
+  if (asksWhatToDo || mentionsAny(lower, ['plan', 'todo', 'workload'])) return { kind: 'week' }
+  if (mentionsAny(lower, ['runway', 'money', 'finances', 'finance', 'financial', 'posture', 'budget', 'cash'])) return { kind: 'runway' }
+  if (mentionsAny(lower, ['strategy', 'strategic', 'on track', 'direction', 'priorities'])) return { kind: 'strategy' }
+  if (mentionsAny(lower, ['pipeline', 'outreach', 'scoreboard', 'leads'])) return { kind: 'pipeline' }
+  if (HOW_ARE_WE_DOING.test(lower)) return { kind: 'strategy' }
+  if (mentionsAny(lower, ['week', 'board', 'status', 'agenda', 'digest', 'check-in', 'checkin'])) return { kind: 'week' }
+  if (mentionsAny(lower, ['ideas', 'review', 'caught'])) return { kind: 'ideas' }
+  // Asking whether she is still running at all. Worth its own answer: the
+  // whole suite spent months built-but-never-fired, and the only way that
+  // becomes visible is if somebody can ask.
+  if (mentionsAny(lower, ['heartbeat', 'tick', 'schedule', 'cron', 'running', 'alive'])) return { kind: 'heartbeat' }
+  return null
+}
+
+/**
+ * Asking for help, in so many words — the whole message, so "help me call
+ * Jane" is still call prep.
+ */
+const HELP =
+  /^(?:help(?:\s+me)?|halp|\?+|commands|what\s+(?:else\s+)?can\s+you\s+do|what\s+do\s+you\s+do|how\s+do\s+i\s+use\s+you|how\s+does\s+this\s+work)(?:\s+(?:please|pls))?[\s!?.]*$/i
+const HELP_MORE = /^(?:help\s+(?:more|ideas|capture)|more\s+help)[\s!?.]*$/i
+
+// ── "Who's Jane Doe" ─────────────────────────────────────────────────────────
+
+/**
+ * Asking about one person on file. The name has to look like a name or a
+ * place: "who's free this week", "who is doing the newsletter" and "status of
+ * the pipeline" start with a word no name starts with, and go on down the
+ * ladder to the questions they are.
+ */
+const CONTACT_QUESTIONS: RegExp[] = [
+  /^who(?:'s|s|\s+is)\s+(.+)$/i,
+  /^(?:what(?:'s|s|\s+is)\s+)?(?:the\s+)?status\s+(?:of|on|with)\s+(.+)$/i,
+  /^(?:when\s+did\s+(?:we|i)\s+)?last\s+(?:talk(?:ed)?|spoke|speak|spoken|call(?:ed)?|email(?:ed)?)\s+(?:to\s+|with\s+)?(.+)$/i,
+  /^when\s+did\s+(?:we|i)\s+(?:last\s+)?(?:talk|speak|call|email|hear\s+from)\s+(?:to\s+|with\s+)?(.+?)(?:\s+last)?$/i,
+  /^(?:tell\s+me\s+about|what\s+do\s+(?:we|i)\s+know\s+about|look\s*up|find)\s+(.+)$/i,
+]
+
+const NOT_A_NAME =
+  /^(?:the|a|an|my|our|your|this|that|these|those|next|free|around|available|away|out|off|on|in|at|up|here|there|it|he|she|they|we|i|you|me|us|them|who|what|going|supposed|responsible|left|back|anyone|anybody|everyone|someone|somebody|nobody|todays?|tomorrows?|got|gotten|has|had|have|behind|ahead|late|done|finished|ready|meant|gonna|coming|in\s+charge|best|worst|first|last|most|least|still|already|also|really|actually)\b/i
+
+/**
+ * The person asked about, or null when the question is not about one.
+ *
+ * `named` says whether it was typed like a name — a capital letter, as people
+ * write names even on a phone, where only the first word of a message is
+ * capitalised for them. A lower-case target is still looked up ("who's jane
+ * doe"), but only answered as a contact if somebody on file matches; see
+ * `otherwise` on the intent.
+ */
+function contactTarget(plain: string, flat: string): { target: string; named: boolean } | null {
+  const question = plain.replace(/[?.!\s]+$/, '')
+  for (const pattern of CONTACT_QUESTIONS) {
+    const match = pattern.exec(question)
+    const who = match?.[1]?.trim()
+    if (!who) continue
+    const first = who.split(/\s+/)[0]
+    const named = /^\p{Lu}/u.test(first)
+    // "doing", "running", "handling": a verb, not a name — unless it is
+    // capitalised, because Sterling and Channing are people.
+    if (NOT_A_NAME.test(who) || (!named && /ing$/i.test(first)) || OWN_TOPIC.test(who) || A_THING_NOT_A_PERSON.test(who)) return null
+    // As typed — curly apostrophes and all — from the same position.
+    const at = question.lastIndexOf(who)
+    return { target: at >= 0 ? flat.slice(at, at + who.length) : who, named }
+  }
+  return null
+}
+
+// ── "We signed Acme for 3 months" ────────────────────────────────────────────
+
+const SIGNED = /^(?:(?:tell\s+(?:you|me)\s+)?(?:that\s+)?(?:i|we)(?:'ve|\s+have)?\s+(?:just\s+|finally\s+)?|just\s+|finally\s+)?signed\b\s*(.*)$/i
+const SIGNED_MONTHS = /\bfor\s+(\d+(?:\.\d+)?)\s*(?:months?|mos?)\b/i
+
+/**
+ * "Signed" that is not a deal. This path runs before the proposal check, so
+ * whatever it claims is never filed: "we signed up for a table at Arlington
+ * Town Day, we should do stickers" was a proposal, and came back as "Signed
+ * work — record it and the runway moves". A phrasal verb (up, off, in, out…)
+ * or a signature on paperwork is never work signed.
+ */
+const SIGNED_SOMETHING_ELSE: RegExp[] = [
+  /^(?:up|off|on|in|out|onto|into|over|away|back|for\s+(?:a|an|the)\b)/i,
+  /^(?:(?:the|an?|our|my|that|this|their|its)\s+)?(?:m?ndas?|non[- ]disclosure|forms?|petitions?|cards?|paperwork|lease|waivers?|releases?|timesheets?|guest\s*book|books?|letters?|papers|documents?|docs?|consent|permission|birthday|register|check|cheque)\b/i,
+]
+
+/**
+ * What makes "we signed …" about work: how long it runs ("for 3 months"), a
+ * word for a deal, "with" somebody, or a name — the help teaches "we signed
+ * Acme for 3 months". "Something" is here because it is the runway button's
+ * own word ("tell me we signed something").
+ */
+const SIGNED_DEAL = /\b(?:contract|contracts|deal|deals|sow|statement\s+of\s+work|engagement|retainer|project|pilot|renewal|extension|client|customer|msa|agreement|phase|something|work|with)\b/i
+
+function detectSigned(plain: string, typed: string): MarquetaIntent | null {
+  if (looksLikeAQuestion(plain)) return null
+  const match = SIGNED.exec(plain)
+  if (!match) return null
+  const rest = match[1] || ''
+  if (matchesAny(rest, SIGNED_SOMETHING_ELSE)) return null
+  const months = SIGNED_MONTHS.exec(rest)
+  const named = /^(?:(?:the|a|an)\s+)?[A-Z]/.test(rest)
+  if (!months && !named && !SIGNED_DEAL.test(rest)) return null
+  const label = rest
+    .replace(SIGNED_MONTHS, ' ')
+    .replace(/^(?:something|a\s+deal|the\s+deal|a\s+contract|the\s+contract)\b\s*/i, '')
+    .replace(/^with\s+/i, '')
+    .replace(/[\s,.;:!—–-]+$/, '')
+    .trim()
+  const value = months ? Number(months[1]) : undefined
+  return {
+    kind: 'signed',
+    text: typed,
+    label: label.slice(0, 120),
+    ...(value && Number.isFinite(value) && value > 0 ? { months: value } : {}),
+  }
+}
+
+// ── Nothing she knows ────────────────────────────────────────────────────────
+
+/** Edit distance with transpositions: "runwya" is one slip from "runway". */
+export function damerauLevenshtein(a: string, b: string): number {
+  const rows = a.length + 1
+  const cols = b.length + 1
+  const d: number[][] = Array.from({ length: rows }, (_, i) => Array.from({ length: cols }, (_, j) => (i === 0 ? j : j === 0 ? i : 0)))
+  for (let i = 1; i < rows; i += 1) {
+    for (let j = 1; j < cols; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1)
+    }
+  }
+  return d[a.length][b.length]
+}
+
+/** The one-word commands a typo can be a slip of, and the command to suggest for each. */
+const SUGGESTABLE: Record<string, string> = {
+  runway: 'runway',
+  money: 'runway',
+  strategy: 'strategy',
+  pipeline: 'pipeline',
+  week: 'week',
+  ideas: 'ideas',
+  help: 'help',
+  tasks: 'my tasks',
+  calls: 'my calls',
+  tick: 'tick',
+}
+
+/**
+ * "Did you mean `Marqueta, runway`?" — for a short message whose first word is
+ * one or two slips from one of her commands. Suggest only, never run: a wrong
+ * guess answers a different question in a shared channel, and one more
+ * message is cheaper than a confident wrong answer.
+ *
+ * Only short messages (three words at most) and words of four letters or more
+ * — "we" is two slips from "week" and is not a typo of it — and a word of five
+ * letters or fewer may be only one slip away. Two slips also need the first
+ * letter right, which is where people almost never slip.
+ *
+ * A word she already knows the meaning of is never a typo, however close it
+ * sits to a command: "thanks" is two slips from "tasks", and "hey Marqueta,
+ * thanks!" once came back as "Did you mean `Marqueta, my tasks`?".
+ */
+const NEVER_A_TYPO = new Set([...ACK_CORE, ...ACK_FILLER, 'hello', 'morning', 'afternoon', 'evening', 'there'])
+
+export function suggestCommand(text: string): string | undefined {
+  const words = straighten(String(text || ''))
+    .toLowerCase()
+    .replace(/[^a-z' ]+/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+  if (!words.length || words.length > 3) return undefined
+  const first = words[0].replace(/'/g, '')
+  if (first.length < 4 || NEVER_A_TYPO.has(first)) return undefined
+  let best: { command: string; distance: number } | undefined
+  for (const [word, command] of Object.entries(SUGGESTABLE)) {
+    const distance = damerauLevenshtein(first, word)
+    if (distance === 0) return undefined
+    if (distance > (first.length <= 5 ? 1 : 2)) continue
+    if (distance === 2 && first[0] !== word[0]) continue
+    if (!best || distance < best.distance) best = { command, distance }
+  }
+  return best?.command
+}
+
+/** What she keeps that is nearest to a question she cannot answer. */
+const CLOSEST: Array<[RegExp, string]> = [
+  [/\b(?:revenue|sales|deals?|targets?|forecasts?|clients?|customers?|opportunit(?:y|ies)|wins?|won|signed|quotes?|proposals?)\b/, 'pipeline'],
+  [/\b(?:cash|burn|payroll|invoices?|bank|months?)\b/, 'runway'],
+  [/\b(?:calls?|contacts?|prospects?|ring|phone|emails?|people)\b/, 'my calls'],
+  [/\b(?:tasks?|work|deadlines?|due|overdue|assigned|doing)\b/, 'my tasks'],
+  [/\b(?:posts?|newsletters?|calendar|content|reels?|linkedin|instagram|publish)\b/, 'week'],
+  [/\b(?:suggestions?|proposals?)\b/, 'ideas'],
+]
+
+// ── The ladder ───────────────────────────────────────────────────────────────
+
 /**
  * What is being asked of her.
  *
+ * `rawText` is decoded Slack text with her mention removed (`removeMention`)
+ * — her name and a greeting may still be on the front; they are taken off
+ * here, AFTER the acknowledgement check, so "ok" stays "ok" and is not
+ * mistaken for a hello with nothing after it.
+ *
  * Order matters, and each step earns its place:
  *
- * 1. An explicit "capture this" beats everything. When somebody tells her to
- *    put something on the board, her opinion about whether it sounds like a
- *    proposal is not wanted.
- * 2. Call prep, and the call list — but only as an instruction at the start
- *    ("prep Jane", "can you prep Jane"). The same verbs sit inside proposals
- *    ("we should prep a script for payers") and those belong on the board.
- * 3. A logged call — first-person past tense at the start. Before availability,
- *    because a report of a call routinely mentions somebody else's time off
- *    ("called Jane, she's away until October") and that must not mark the
- *    person reporting it as away.
- * 4. Availability, which has a parser of its own that only claims text it is
- *    sure of.
- * 5. A proposal, through the shared classifier, so there is one definition of
- *    "this is an idea" rather than a second subtly different one for messages
- *    sent directly to her. Before the questions, so "we should review the
- *    board every week" is filed as the idea it is instead of answered as a
- *    question about the board.
- * 6. A question, recognised by its keywords ANYWHERE rather than only at the
- *    start — people write "how is the runway looking?", not "runway":
- *    mine → week → runway → strategy → pipeline → ideas → heartbeat → help.
- *    "Mine" first, because "what's on my plate" opens like "what's on" (the
- *    week) but asks about one person. The bare word "week" is weaker than a
- *    named topic, so "how's outreach this week?" gets the outreach numbers
- *    rather than the task list; "plan" and "what's on" still mean the week.
+ *  0. An acknowledgement ("thanks!", "ok", "👍") is silence. A hello with
+ *     nothing asked is a short greeting, not the help page.
+ *  1. An explicit "capture this" beats everything. When somebody tells her to
+ *     put something on the list, her opinion about whether it sounds like a
+ *     proposal is not wanted. "help" and "help more" come next.
+ *  2. Call prep, and the call list — but only as an instruction at the start
+ *     ("prep Jane", "can you prep Jane"). The same verbs sit inside proposals
+ *     ("we should prep a script for payers") and those belong on the list.
+ *  3. A logged call — first-person past tense at the start. Before availability,
+ *     because a report of a call routinely mentions somebody else's time off
+ *     ("called Jane, she's away until October") and that must not mark the
+ *     person reporting it as away. Signed work ("we signed Acme") likewise.
+ *  4. A QUESTION about one of her topics, when it also mentions time off: "what
+ *     does the pipeline look like with Eric away?" is about the pipeline, and
+ *     "who's away this week?" is about the week. Before availability, which
+ *     would otherwise read the word "away" and answer about the asker's own
+ *     time off.
+ *  5. Availability, which has a parser of its own that only claims text it is
+ *     sure of.
+ *  6. A proposal, through the shared classifier, so there is one definition of
+ *     "this is an idea" rather than a second subtly different one for messages
+ *     sent directly to her. Before the questions, so "we should review the
+ *     board every week" is filed as the idea it is instead of answered.
+ *  7. One contact ("who's Jane Doe"), then a question by its keywords ANYWHERE
+ *     rather than only at the start — people write "how is the runway
+ *     looking?", not "runway" (`topicOf`). A contact typed in lower case
+ *     carries what the message would otherwise have been, for when nobody on
+ *     file matches it.
+ *  8. Anything else is `unknown`: a typo offered back as a suggestion, or the
+ *     nearest thing she does. Never the help page — that is five lines of
+ *     noise in answer to a sentence she did not understand.
  */
 export function parseMarquetaIntent(rawText: string): MarquetaIntent {
+  if (isAcknowledgement(rawText)) return { kind: 'ack' }
   const text = stripLeadingAddress(String(rawText || ''))
   // Matching happens on a flattened, clipped, straightened copy (see
   // MATCH_LIMIT); what is returned is what the person typed.
@@ -620,6 +999,9 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
   const plain = straighten(flat)
   const lower = plain.toLowerCase()
   const typed = clipTyped(text, MATCH_LIMIT)
+
+  // Her name, or a greeting, with nothing after it: hello.
+  if (!plain || GREETING.test(plain)) return { kind: 'greeting' }
 
   const capturePrefix = startsWithAny(lower, ['capture', 'note', 'idea', 'remember', 'add'])
   if (capturePrefix) {
@@ -634,6 +1016,8 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
     if (body.length >= 8) return { kind: 'capture', text: body, explicit: true }
     return { kind: 'help' }
   }
+  if (HELP_MORE.test(lower)) return { kind: 'help', more: true }
+  if (HELP.test(lower)) return { kind: 'help' }
 
   const prep = detectPrep(plain, flat, typed)
   if (prep !== 'notPrep') return prep
@@ -641,87 +1025,100 @@ export function parseMarquetaIntent(rawText: string): MarquetaIntent {
   if (CALLED_IN_SICK.test(plain)) return { kind: 'availability', text }
   const logCall = detectLogCall(plain, flat, typed)
   if (logCall) return logCall
+  const signed = detectSigned(plain, typed)
+  if (signed) return signed
 
-  if (mentionsTimeOff(plain)) return { kind: 'availability', text }
+  if (mentionsTimeOff(plain)) {
+    // A question mark, or a question WORD — not "is"/"are" alone: a colleague's
+    // mention is dropped by decoding, and "<@U…> is away next week" arrives
+    // as "is away next week", which is a statement about them, not a question.
+    const asking = plain.includes('?') || /^(?:who|who's|whos|whose|what|what's|whats|which|when|where|how|how's|hows)\b/i.test(plain)
+    const topic = asking ? topicOf(lower) : null
+    return topic || { kind: 'availability', text }
+  }
 
   // Anything substantial said directly to her is meant for her. The shared
   // classifier reads the text with its line breaks, because a quoted block is
   // how it tells a draft from a remark.
   if (classifyMessage(straighten(text)).capture) return { kind: 'capture', text, explicit: false }
 
-  if (matchesAny(lower, MINE)) return { kind: 'mine' }
-
-  // Keywords, plus the openers people actually type that name nothing at
-  // all: "what's on?" is a question about the week even though the word
-  // "week" never appears in it.
-  const asksWhatToDo = startsWithAny(lower, [
-    "what's on",
-    'whats on',
-    'what should i do',
-    "what's next",
-    'whats next',
-    'what do i do',
-  ])
-  if (asksWhatToDo || mentionsAny(lower, ['plan', 'todo', 'workload'])) return { kind: 'week' }
-  if (mentionsAny(lower, ['runway', 'money', 'finances', 'finance', 'financial', 'posture', 'budget', 'cash'])) {
-    return { kind: 'runway' }
-  }
-  if (mentionsAny(lower, ['strategy', 'strategic', 'on track', 'direction', 'priorities'])) return { kind: 'strategy' }
-  if (mentionsAny(lower, ['pipeline', 'outreach', 'scoreboard', 'leads'])) return { kind: 'pipeline' }
-  if (HOW_ARE_WE_DOING.test(lower)) return { kind: 'strategy' }
-  if (mentionsAny(lower, ['week'])) return { kind: 'week' }
-  if (mentionsAny(lower, ['ideas', 'board', 'review'])) return { kind: 'ideas' }
-  // Asking whether she is still running at all. Worth its own answer:
-  // the whole suite spent months built-but-never-fired, and the only
-  // way that becomes visible is if somebody can ask.
-  if (mentionsAny(lower, ['heartbeat', 'tick', 'schedule', 'cron', 'running', 'alive'])) {
-    return { kind: 'heartbeat' }
-  }
-
-  return { kind: 'help' }
+  const rest = topicOf(lower) || unknownIntent(plain, lower)
+  const who = contactTarget(plain, flat)
+  if (who) return who.named ? { kind: 'contact', target: who.target } : { kind: 'contact', target: who.target, otherwise: rest }
+  return rest
 }
 
-/** A real mention, as `marquetaHandle(botUserId)` returns when it knows her id. */
-const WORKING_MENTION = /^<@[UW][A-Z0-9]+>$/
+function unknownIntent(plain: string, lower: string): Extract<MarquetaIntent, { kind: 'unknown' }> {
+  const suggestion = suggestCommand(plain)
+  const closest = CLOSEST.find(([pattern]) => pattern.test(lower))?.[1]
+  return {
+    kind: 'unknown',
+    question: looksLikeAQuestion(plain),
+    ...(suggestion ? { suggestion } : {}),
+    ...(closest && !suggestion ? { closest } : {}),
+  }
+}
+
+// ── What she says back that is not a lookup ──────────────────────────────────
 
 /**
- * What she can actually do, in the words somebody would use to ask.
+ * What she can do, in five lines, as phrases people can copy. The examples are
+ * fixed copy with no angle brackets: Slack reads `<thing>` as a control
+ * sequence and renders it as nothing.
  *
- * `handle` is `marquetaHandle(botUserId)`. When it is a real mention the help
- * shows it, because that is the one thing people cannot work out for
- * themselves — typing "@Marqueta" produces plain text that never reaches her.
- * Anything else (no id, or the handle's own fallback) gets the two ways in
- * that always work. The examples are fixed copy with no angle brackets:
- * Slack reads `<thing>` as a control sequence and renders it as nothing.
+ *   - `more`: the second page — ideas, capture, and the one thing people have
+ *     a right to know without asking: that she listens in the channels she is
+ *     in, and never posts there uninvited.
+ *   - `guest`: somebody outside the studio. What the list and the numbers are
+ *     is not theirs to know; capture still works for them.
+ *   - `dms`: "you can also DM me", only when DMs are actually wired up
+ *     (`SLACK_MARQUETA_DMS=1`) — the old line pointed people at a door that
+ *     did not open.
+ *
+ * `tick` still works and is not listed: it is for whoever set up the crons.
  */
-export function marquetaHelpText(handle?: string): string {
-  const mention = typeof handle === 'string' && WORKING_MENTION.test(handle.trim()) ? handle.trim() : ''
-  const howToAsk = mention
-    ? `Mention me (${mention}) in a channel I am in, or DM me, and ask:`
-    : 'DM me, or start a message with "Marqueta," in a channel I am in, and ask:'
+export function marquetaHelpText(opts: { more?: boolean; guest?: boolean; dms?: boolean } = {}): string {
+  if (opts.guest) {
+    return (
+      'I’m GoInvo’s marketing assistant. The outreach list and the numbers are for the GoInvo team — ' +
+      `${askMarqueta('capture a booth at Town Day')} still works if you want something on our list.`
+    )
+  }
+  if (opts.more) {
+    return [
+      'I also listen quietly in the channels I’m in and catch anything that sounds like a proposal or a draft. I never post there uninvited — what I caught waits on This week for a yes or no.',
+      `*Who* ${askMarqueta('who’s Jane Doe')} — where things stand with someone on file.`,
+      `*Signed work* ${askMarqueta('we signed Acme for 3 months')} — moves the runway.`,
+      `*Capture* ${askMarqueta('capture a booth at Town Day')} — puts anything on the list, whatever it sounds like.`,
+      `*Ideas* ${askMarqueta('ideas')} — what I’ve caught that still needs a yes or no.`,
+    ].join('\n')
+  }
   return [
-    `I keep the marketing board, the week, the runway and the outreach list. ${howToAsk}`,
-    '• *prep Sam Rivera at Acme* — a call outline: what to say first, what to ask, what to say if they say no, and an email draft',
-    '• *my calls* — who to call or follow up with next, people who replied first',
-    '• *called Sam at Acme, left a voicemail* — I log it on their record, or give you a button to',
-    '• *my tasks* — what is on your list, with buttons to mark it done',
-    '• *week* — what is on this week and what nobody has taken',
-    '• *runway* — how long the studio can pay for, the pipeline, and whether it needs re-confirming',
-    '• *strategy* — whether the plan still fits the runway and how outreach is going',
-    '• *pipeline* — touches logged, meetings and opportunities',
-    '• *ideas* — what I have caught that still needs a yes or no',
-    '• *tick* — whether my weekly schedule actually ran, and what it did',
-    '• *capture …* — put something on the board, whatever it sounds like',
-    '• *away next week* — I will note it and stop planning work for you',
-    '',
-    'I also listen in the channels I am in and quietly catch anything that sounds like a',
-    'proposal or a draft, so nothing has to be said twice. I never post there uninvited —',
-    'you review what I caught on the This week tab in the Studio.',
+    `I keep GoInvo’s outreach list, the week’s marketing tasks and the runway.${opts.dms ? ' You can also DM me.' : ''}`,
+    `*Calls* ${askMarqueta('prep Jane Doe at MGB')} · ${askMarqueta('my calls')} · ${askMarqueta('called Jane, left a voicemail')}`,
+    `*Tasks* ${askMarqueta('my tasks')} · ${askMarqueta('week')} · ${askMarqueta('away next week')}`,
+    `*Money* ${askMarqueta('runway')} · ${askMarqueta('strategy')} · ${askMarqueta('pipeline')}`,
+    `${askMarqueta('help more')} for ideas, capture and what I listen for.`,
   ].join('\n')
 }
 
 /**
- * Confirmation for a capture, saying plainly whose judgement it was.
+ * The reply to a message she could not place — one line, ending on the one
+ * thing most likely to help: the command it looks like a typo of, or the
+ * nearest thing she does, or the help.
+ */
+export function unknownReplyText(intent: Extract<MarquetaIntent, { kind: 'unknown' }>): string {
+  if (intent.suggestion) return `Did you mean ${askMarqueta(intent.suggestion)}?`
+  const lead = intent.question ? 'I don’t have that' : 'I’m not sure what to do with that'
+  return intent.closest
+    ? `${lead} — I keep calls, tasks and the runway. Closest: ${askMarqueta(intent.closest)}.`
+    : `${lead} — I keep calls, tasks and the runway. ${askMarqueta('help')} for what I can do.`
+}
+
+/**
+ * Confirmation for a capture, saying plainly whose judgement it was. The
+ * buttons that act on it (Keep it · Not an idea, or Not for the calendar) are
+ * the caller's.
  *
  * The title is escaped: it comes from what somebody typed, which now reaches
  * here decoded, so "AT&T" or "<5% of pilots" would otherwise be read by Slack
@@ -732,10 +1129,15 @@ export function captureConfirmation(input: {
   title: string
   explicit: boolean
 }): string {
-  const where = input.kind === 'draft' ? 'on the calendar, with the copy attached' : 'on the board'
-  const whose = input.explicit
-    ? 'Filed because you asked.'
-    : 'That is my guess that it was worth keeping — bin it on the This week tab if I read it wrong.'
-  const title = clipSlackText(escapeSlackText(input.title), 300) || 'Untitled'
-  return `Noted ${where}: *${title}*\n_${whose}_`
+  const title = clipSlackText(escapeSlackText(input.title), 300).replace(/[*]/g, '') || 'Untitled'
+  if (input.kind === 'draft') {
+    return (
+      'That’s on the calendar as a draft, with the copy attached:\n' +
+      `*${title}* · drafting, no date\n` +
+      '_It won’t post itself — it’s under *Unscheduled*, below the month grid._'
+    )
+  }
+  return input.explicit
+    ? `Filed as an idea, as you asked:\n*${title}*`
+    : `Filed as an idea so it doesn’t scroll away:\n*${title}*\n_My guess — nothing happens until someone keeps it._`
 }

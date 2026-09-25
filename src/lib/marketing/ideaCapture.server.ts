@@ -158,7 +158,7 @@ async function judgeIdea(id: string, keep: boolean, personName: string): Promise
     const updated = await client().patch(id).set(fields).commit<CapturedIdea>()
     return { ok: true, kind: 'idea', idea: updated }
   } catch {
-    return { ok: false, message: 'That idea is no longer on the board.' }
+    return { ok: false, message: 'That idea is gone — someone may have deleted it in the Studio.' }
   }
 }
 
@@ -188,7 +188,7 @@ export async function discardCapturedIdea(input: { channel: string; ts: string; 
       .commit()
     return { ok: true, kind: 'draft' as const }
   } catch {
-    return { ok: false, message: 'That is no longer on the board or the calendar.' }
+    return { ok: false, message: 'That’s gone — someone may have deleted it in the Studio.' }
   }
 }
 
@@ -201,10 +201,32 @@ export function discardIdeaById(id: string, personName: string) {
   return judgeIdea(id, false, personName)
 }
 
-/** Ideas still waiting on a human, for the digest to mention. */
-export async function ideasNeedingReview(limit = 5): Promise<Array<{ _id: string; title: string }>> {
+/** An idea still waiting on a person, with enough to judge it without opening it. */
+export type IdeaAwaitingReview = {
+  _id: string
+  title: string
+  summary?: string
+  /** "Slack — Juhan, not yet reviewed": who said it. */
+  source?: string
+  /** The Slack permalink back to the message it was caught from. */
+  relatedUrl?: string
+  category?: string
+  _createdAt?: string
+}
+
+/**
+ * Ideas still waiting on a human, for the digest to mention and for This week
+ * to ask about.
+ *
+ * A bare title is not enough to judge a guess by: "Merch table" could be a
+ * proposal or somebody's aside. The Studio row shows who said it, when, and a
+ * link back to the message, so a person can answer without going to find it.
+ */
+export async function ideasNeedingReview(limit = 5): Promise<IdeaAwaitingReview[]> {
   return client().fetch(
-    `*[_type == $type && needsReview == true] | order(_createdAt desc)[0...$limit]{ _id, title }`,
+    `*[_type == $type && needsReview == true] | order(_createdAt desc)[0...$limit]{
+      _id, title, summary, source, relatedUrl, category, _createdAt
+    }`,
     { type: IDEA_TYPE, limit },
   )
 }
