@@ -37,7 +37,7 @@ export function ShareBar({ slices, height = 22 }: { slices: ShareSlice[]; height
   const segments = stackSegments(slices, (slice) => slice.value, { width })
   return (
     <div ref={ref} data-viz-frame style={{ position: 'relative' }}>
-      <svg width={width} height={height} role="img" aria-label={slices.map((slice) => `${slice.label} ${slice.value}`).join(', ')} style={{ display: 'block' }}>
+      <svg width={width} height={height} role="img" aria-label={slices.map((slice) => `${slice.label} ${slice.value}`).join(', ')} style={{ display: 'block', maxWidth: '100%' }}>
         {segments.map((segment, index) => {
           const slice = segment.item
           const share = formatPercent(slice.value / total)

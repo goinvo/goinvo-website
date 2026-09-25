@@ -44,7 +44,7 @@ export function OutreachInsights({
   const people = useMemo(() => touchesByPerson(list, now, weeks * 7), [list, now, weeks])
   return (
     <section aria-label="Outreach at a glance" style={{ display: 'grid', gap: 22 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 22 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 22 }}>
         <ChartFrame
           title="Where the pipeline leaks"
           insight={funnelInsight(funnel)}

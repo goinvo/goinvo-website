@@ -1,0 +1,366 @@
+<title>Marqueta</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f2f5f5;
+    --surface: #ffffff;
+    --ink: #0e1a1c;
+    --secondary: #465559;
+    --muted: #5f6e72;
+    --rule: #d4dddf;
+    --accent: #007f9a;
+    --accent-text: #006a80;
+    --accent-wash: #e1f1f4;
+    --signal: #c4531c;
+    --slack-bg: #ffffff;
+    --slack-ink: #1d1c1d;
+    --slack-muted: #616061;
+    --slack-button: #ffffff;
+    --slack-border: #dddddd;
+    --slack-green: #007a5a;
+    --slack-mention-bg: #e8f5fa;
+    --slack-mention: #1264a3;
+    --card-bg-color: var(--surface);
+    --card-fg-color: var(--ink);
+    --card-muted-fg-color: var(--secondary);
+    --card-border-color: var(--rule);
+    --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0a1112;
+      --surface: #111a1c;
+      --ink: #e9f0f0;
+      --secondary: #a9b7ba;
+      --muted: #8d9ea2;
+      --rule: #25353a;
+      --accent: #0ca3be;
+      --accent-text: #52c3d8;
+      --accent-wash: #0f2a31;
+      --signal: #e27a45;
+      --slack-bg: #1a1d21;
+      --slack-ink: #d1d2d3;
+      --slack-muted: #ababad;
+      --slack-button: #1a1d21;
+      --slack-border: #565856;
+      --slack-green: #007a5a;
+      --slack-mention-bg: #1d3a4c;
+      --slack-mention: #73c0ea;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0a1112;
+    --surface: #111a1c;
+    --ink: #e9f0f0;
+    --secondary: #a9b7ba;
+    --muted: #8d9ea2;
+    --rule: #25353a;
+    --accent: #0ca3be;
+    --accent-text: #52c3d8;
+    --accent-wash: #0f2a31;
+    --signal: #e27a45;
+    --slack-bg: #1a1d21;
+    --slack-ink: #d1d2d3;
+    --slack-muted: #ababad;
+    --slack-button: #1a1d21;
+    --slack-border: #565856;
+    --slack-green: #007a5a;
+    --slack-mention-bg: #1d3a4c;
+    --slack-mention: #73c0ea;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.6;
+    padding-inline: 20px;
+    padding-block: 0 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-text); text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(56px, 9vw, 104px); font-weight: 700; line-height: 0.92; letter-spacing: -0.035em; }
+  h2 { font-size: clamp(28px, 3.6vw, 38px); font-weight: 600; line-height: 1.1; }
+  h3 { font-size: 20px; font-weight: 600; line-height: 1.25; }
+  p { margin: 0; }
+  .prose { max-width: 64ch; display: grid; gap: 14px; }
+  .prose p { color: var(--secondary); }
+  .prose strong { color: var(--ink); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: 0.88em; }
+  code { background: var(--accent-wash); color: var(--ink); padding: 1px 5px; border-radius: 4px; }
+
+  /* hero */
+  .hero { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; padding-block: 64px 56px; border-bottom: 1px solid var(--rule); }
+  .hero-text { display: grid; gap: 22px; }
+  .hero-lede { font-size: 21px; line-height: 1.45; color: var(--secondary); max-width: 34ch; }
+  .hero-lede strong { color: var(--ink); font-weight: 700; }
+  .hero-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+  .hero-meta span { white-space: nowrap; }
+  figure { margin: 0; }
+  .hero-figure svg { width: 100%; height: auto; display: block; }
+  figcaption.caption { margin-top: 12px; font-size: 14px; line-height: 1.5; color: var(--muted); max-width: 68ch; }
+
+  /* sections */
+  section.block { display: grid; gap: 28px; padding-block: 72px 8px; }
+  .section-head { display: grid; gap: 12px; }
+  .panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 28px; display: grid; gap: 32px; min-width: 0; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; align-items: start; }
+  .notes { display: grid; gap: 22px; align-content: start; }
+  .note { display: grid; gap: 6px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .note h3 { font-size: 16px; }
+  .note p { font-size: 15px; line-height: 1.55; color: var(--secondary); }
+  .scroll-x { overflow-x: auto; }
+  .panel > *, .split > *, .slack-wrap > * { min-width: 0; }
+  .pipeline svg { min-width: 900px; width: 100%; height: auto; display: block; }
+
+  /* slack */
+  .slack-wrap { display: grid; grid-template-columns: minmax(0, 540px) minmax(0, 1fr); gap: 40px; align-items: start; }
+  .slack { background: var(--slack-bg); color: var(--slack-ink); border: 1px solid var(--rule); border-radius: 12px; padding: 20px 20px 22px; font-family: "Lato", "Segoe UI", system-ui, sans-serif; font-size: 15px; line-height: 1.46; }
+  .slack-msg { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; }
+  .slack-avatar { width: 36px; height: 36px; border-radius: 6px; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; font-family: var(--display); }
+  .slack-body { display: grid; gap: 8px; min-width: 0; }
+  .slack-meta { display: flex; gap: 6px; align-items: baseline; }
+  .slack-meta b { font-weight: 900; }
+  .slack-app { font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; background: var(--slack-border); color: var(--slack-muted); }
+  .slack-time { font-size: 12px; color: var(--slack-muted); }
+  .slack-header { font-weight: 900; font-size: 18px; }
+  .slack-context { font-size: 13px; color: var(--slack-muted); }
+  .slack-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-top: 4px; }
+  .slack hr { border: 0; border-top: 1px solid var(--slack-border); margin: 6px 0; }
+  .slack-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .slack-buttons span { border: 1px solid var(--slack-border); background: var(--slack-button); border-radius: 4px; padding: 3px 12px; font-size: 14px; font-weight: 700; }
+  .slack-buttons span.primary { background: var(--slack-green); border-color: var(--slack-green); color: #fff; }
+  .mention { background: var(--slack-mention-bg); color: var(--slack-mention); border-radius: 3px; padding: 0 2px; }
+  .slack code { background: transparent; border: 1px solid var(--slack-border); color: #e01e5a; font-size: 12px; }
+
+  /* palette */
+  .palette { display: grid; gap: 22px; }
+  .swatch-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 16px; align-items: center; }
+  .swatch-row .label { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatch { width: 44px; height: 30px; border-radius: 5px; }
+  .swatch.wide { width: 34px; }
+  .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+  .check { border-top: 1px solid var(--rule); padding-top: 12px; display: grid; gap: 4px; }
+  .check b { font-family: var(--display); font-size: 26px; font-weight: 600; }
+  .check span { font-size: 14px; color: var(--secondary); }
+
+  /* rules */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 40px; }
+  .rule { display: grid; gap: 6px; padding-block: 18px; border-top: 1px solid var(--rule); }
+  .rule h3 { font-size: 18px; }
+  .rule p { font-size: 15px; color: var(--secondary); }
+
+  footer { margin-top: 72px; padding-top: 24px; border-top: 1px solid var(--rule); display: grid; gap: 8px; font-size: 14px; color: var(--muted); max-width: 72ch; }
+
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; padding-block: 40px 40px; gap: 32px; }
+    .split, .slack-wrap { grid-template-columns: 1fr; }
+    .panel { padding: 18px; }
+  }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    .swatch-row { grid-template-columns: 1fr; gap: 6px; }
+    .slack-fields { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">Case study · Data design · 2026</p>
+      <h1>Marqueta</h1>
+      <p class="hero-lede">A marketing system for a small healthcare design studio. It reads <strong>{{N.records}} records</strong> a week and turns them into <strong>one Monday message</strong> that says who to call, what to decide, and how long the money lasts.</p>
+      <div class="hero-meta"><span>Studio: GoInvo</span><span>Surfaces: Sanity Studio · Slack</span><span>Charts: React + SVG, no chart library</span></div>
+    </div>
+    <figure class="hero-figure">
+      {{HERO_SVG}}
+      <figcaption class="caption">Each dot is one record in an invented week. The teal ones are the {{N.kept}} that reach Monday’s message; the rest are counted, checked, and left out of the way.</figcaption>
+    </figure>
+  </header>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">The brief</p>
+      <h2>A marketer that runs the week, in the tools the team already uses</h2>
+    </div>
+    <div class="prose">
+      <p>The studio needed outreach to lead: calls and emails to people who already know its work. The records to support that existed, spread across a contact list, a call log, web research on each organisation, a task board, a Slack channel and a date the money was certain until. None of it said what to do on Monday.</p>
+      <p>The team asked for an autonomous marketer named Marqueta. It plans the week against the hours people actually have, asks colleagues to take work in Slack, preps cold calls on request, and checks in on strategy and money. <strong>This case study is about the data design:</strong> what each number is compared with, which ones reach a person, and what a chart has to say before anyone reads its axis.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">The mechanism</p>
+      <h2>From records to a decision</h2>
+    </div>
+    <figure class="panel pipeline">
+      <div class="scroll-x">{{PIPELINE_SVG}}</div>
+      <figcaption class="caption">Nothing reaches a person until it has passed a check. A research claim has to quote words that really are on the page it cites. A draft beside its published contact is counted once. When the runway date and a hand-set posture disagree, the newer fact wins and the other is named. No language model produces a number anywhere in this path.</figcaption>
+    </figure>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">This week</p>
+      <h2>The week at a glance</h2>
+      <div class="prose"><p>The first screen of the Studio, and where most Slack links land. It answers four questions in order: where the hours go, whether outreach is happening, who is owed a call, and how long the money lasts.</p></div>
+    </div>
+    <div class="panel">
+      <div class="split">
+        <div id="chart-week"></div>
+        <aside class="notes" aria-label="Design notes">
+          <div class="note"><h3>A bullet chart against the budget</h3><p>The hours are split by what they are for, and the unspent time is left as track. “Can we take one more call?” is answered by the picture.</p></div>
+          <div class="note"><h3>A week in progress is never “down”</h3><p>On a Thursday the figure is set against last week’s total as a target to beat. Calling it a drop would be false three days early.</p></div>
+          <div class="note"><h3>Status is an icon and a word</h3><p>Overdue follow-ups are the dots left of today and the tile says “8 overdue”. Colour is never the only signal.</p></div>
+        </aside>
+      </div>
+      <div class="split">
+        <div id="chart-work"></div>
+        <aside class="notes" aria-label="Design notes">
+          <div class="note"><h3>One line per task</h3><p>The work list became a table with aligned columns. The bar in each time cell shows the week’s hours down the right edge, in the same colour as the task’s share of the meter above.</p></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">Outreach</p>
+      <h2>Outreach, read as shapes</h2>
+      <div class="prose"><p>Three questions about the list, each answered by one chart and one sentence. Every chart has a table view, and every value in a tooltip is also reachable without hovering.</p></div>
+    </div>
+    <div class="panel">
+      <div id="chart-outreach"></div>
+      <div class="split">
+        <div class="note"><h3>The funnel counts the furthest stage ever reached</h3><p>A contact who met the team and has since gone quiet still counts as met. A logged call proves contact even when nobody moved the status. The weakest step with at least three people behind it is named in the sentence, so a 0-of-1 step does not read as a finding.</p></div>
+        <div class="note"><h3>Empty rows stay in the grid</h3><p>A segment with plenty of names and nobody warm is the finding, so every segment keeps its row at zero.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">Research</p>
+      <h2>Only what can be said on a call</h2>
+      <div class="prose"><p>Web research on each organisation is useful only if a nervous caller can repeat it safely. A claim is checked in two stages: the quoted words must literally appear on the cited page, and the claim may not assert anything the quote does not. Call prep uses verified claims only. Everything else is shown as background.</p></div>
+    </div>
+    <div class="panel"><div id="chart-research"></div></div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">Money</p>
+      <h2>The runway as a calendar</h2>
+      <div class="prose"><p>The studio used to store its financial posture as a label (“survival”) set once in July. A label does not decay. The stored fact is now a date, the last day the studio is certain it can pay for, and the posture is computed from it. Drawn on a calendar, “4.5 months” becomes a plan: the day the strategy should tighten, and the signed work that bought time.</p></div>
+    </div>
+    <div class="panel"><div id="chart-runway"></div></div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">Content</p>
+      <h2>When the calendar runs dry</h2>
+      <div class="prose"><p>The overview used to show a card per channel reading “covered” or “coverage gap”. One grid of channels against weeks shows when each one runs out, which is the thing to act on.</p></div>
+    </div>
+    <div class="panel"><div id="chart-coverage"></div></div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">Slack</p>
+      <h2>Marqueta says it in numbers too</h2>
+    </div>
+    <div class="slack-wrap">
+      <div class="slack" role="img" aria-label="An example of Marqueta's Monday plan in Slack">
+        <div class="slack-msg">
+          <div class="slack-avatar" aria-hidden="true">M</div>
+          <div class="slack-body">
+            <div class="slack-meta"><b>Marqueta</b><span class="slack-app">APP</span><span class="slack-time">9:00 AM</span></div>
+            <div class="slack-header">Monday plan</div>
+            <div class="slack-context">Week of Mon 21 Sep · 3h 45m planned of 4h · <i>Calls first, then the scorecard</i></div>
+            <div><b>Last week, in numbers</b>
+              <div class="slack-fields">
+                <div><b>{{N.done}}</b> tasks done</div>
+                <div><b>{{N.lastTouches}}</b> touches · {{N.trend}}</div>
+                <div><b>{{N.lastPeople}}</b> people reached</div>
+                <div>{{N.moved}}</div>
+              </div>
+            </div>
+            <hr>
+            <div><b>Needs an owner</b></div>
+            <div>Email the three Tidewell leads · 30m · outreach<br><span class="mention">@Cleo</span>, could you take this one?</div>
+            <div class="slack-buttons"><span class="primary">I’ll take it</span><span>Not me</span><span>Details…</span></div>
+            <div>Tighten the pre-mortem scorecard · 45m · content</div>
+            <div class="slack-buttons"><span class="primary">I’ll take it</span><span>Details…</span></div>
+            <hr>
+            <div><b>Outreach this week</b><br>{{N.followUps}} follow-ups owed, {{N.overdue}} late · first up: Avery Okafor (Riverbend Health)</div>
+            <div class="slack-buttons"><span>Prep</span><span>Log it…</span></div>
+            <hr>
+            <div class="slack-context">Ask me: <code>Marqueta, my calls</code> · <code>Marqueta, my tasks</code> · <code>Marqueta, prep &lt;name&gt;</code></div>
+            <div class="slack-buttons"><span>Open This week</span><span>I’m away this week</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <div class="note"><h3>A stat grid in a medium with no charts</h3><p>Slack cannot draw a chart, so last week becomes four fields laid out two by two. Figures are bold and lead; the words after them say what was counted.</p></div>
+        <div class="note"><h3>Trends in words, not arrows</h3><p>“+3 on the week before” reads the same aloud. A screen reader announces an arrow as “upwards arrow”.</p></div>
+        <div class="note"><h3>Held to a phone screen</h3><p>A test renders the message at forty characters a line. The first “I’ll take it” has to appear inside thirty lines and the whole plan inside eighty, so the numbers grid had to earn its lines.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">Colour</p>
+      <h2>A palette that was computed, not picked</h2>
+      <div class="prose"><p>The studio’s own teal and orange are too muted to carry identity in a chart: the teal sits below the chroma where a hue starts to read as grey. Every chart colour was generated in OKLCH from those two hues and run through a colour-vision validator in both themes before it shipped.</p></div>
+    </div>
+    <div class="panel palette">
+      <div class="swatch-row"><span class="label">Categorical</span><div class="swatches">{{SW.cat}}</div></div>
+      <div class="swatch-row"><span class="label">Ordinal (stages)</span><div class="swatches">{{SW.ord}}</div></div>
+      <div class="swatch-row"><span class="label">Sequential</span><div class="swatches">{{SW.seq}}</div></div>
+      <div class="swatch-row"><span class="label">Status</span><div class="swatches">{{SW.status}}</div></div>
+      <div class="checks">
+        <div class="check"><b>16.0 / 15.9</b><span>worst colour-blind separation between neighbouring slots, light / dark (target 8)</span></div>
+        <div class="check"><b>23.2 / 21.5</b><span>worst separation for full-colour vision (floor 15)</span></div>
+        <div class="check"><b>≥ 0.06</b><span>lightness step between every ordinal stage, so the order reads in the colour</span></div>
+        <div class="check"><b>Every chart</b><span>has a table view, and a value that does not fit on its mark moves to the tooltip and the table</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="section-head">
+      <p class="eyebrow">What held up</p>
+      <h2>Rules the data design follows</h2>
+    </div>
+    <div class="rules">
+      <div class="rule"><h3>A failed read is “unknown”, never zero</h3><p>“Could not read the contacts” and “nobody is owed a call” look identical as a number. Every figure that can fail to load says so instead.</p></div>
+      <div class="rule"><h3>Progress is a move, not a touch</h3><p>A voicemail left for a contact already in a meeting is not a new meeting. The pulse counts changes of state, walked in time order.</p></div>
+      <div class="rule"><h3>Every chart has one sentence</h3><p>It names what to do: start with the late follow-ups, fix the step where people drop, re-check a runway last confirmed 67 days ago.</p></div>
+      <div class="rule"><h3>Colour follows the entity</h3><p>Outreach is orange in the meter, the table and the legend, every week. A filter never repaints the survivors.</p></div>
+      <div class="rule"><h3>The week that did not fit is shown</h3><p>A plan that hides what it dropped is a filter. Deferred work is listed with the reason it waits.</p></div>
+      <div class="rule"><h3>Silence is data too</h3><p>An empty Thursday still posts one line, because a missing message looks exactly like a job that died.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Every chart above is the production component, rendering an invented week: all people, organisations and figures on this page are made up. Hover a mark for its value, or use “Show as table” for every number.</p>
+    <p>Built with React and hand-written SVG in the studio’s Next.js site and Sanity Studio, with Slack’s Block Kit for Marqueta’s messages.</p>
+  </footer>
+</div>
+<script>{{BUNDLE}}</script>

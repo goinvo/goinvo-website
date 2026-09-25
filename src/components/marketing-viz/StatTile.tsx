@@ -57,25 +57,20 @@ export function StatTile({
         gap: 6,
       }}
     >
+      <div style={{ fontSize: 12, color: 'var(--viz-secondary)' }}>{label}</div>
       <div
-        style={{
-          fontSize: 12,
-          color: 'var(--viz-secondary)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: 8,
-        }}
-      >
-        <span>{label}</span>
-        {status ? <StatusChip level={status} label={statusLabel ?? status} /> : null}
-      </div>
-      <div
-        style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}
+        style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '6px 10px', flexWrap: 'wrap' }}
       >
         <div style={{ lineHeight: 1 }}>
           <span style={{ fontSize: /\d/.test(value) ? 30 : 22, fontWeight: 650, letterSpacing: -0.5, color: 'var(--viz-ink)' }}>{value}</span>
           {unit ? <span style={{ fontSize: 14, marginLeft: 4, color: 'var(--viz-secondary)' }}>{unit}</span> : null}
         </div>
+        {/* The status sits beside the figure it qualifies, not in the label row, where it squeezed the label. */}
+        {status ? (
+          <span style={{ paddingBottom: 3 }}>
+            <StatusChip level={status} label={statusLabel ?? status} />
+          </span>
+        ) : null}
         {trend && trend.length > 1 ? <Sparkline points={trend} unit={trendUnit} /> : null}
       </div>
       {delta ? (

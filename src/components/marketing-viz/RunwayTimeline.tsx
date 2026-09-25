@@ -1,7 +1,7 @@
 'use client'
 
 import type { RunwayTimeline as Timeline } from '@/lib/marketing/viz/runwayTimeline'
-import { linear } from '@/lib/marketing/viz/scale'
+import { estimateTextWidth, linear } from '@/lib/marketing/viz/scale'
 
 import { roundedRight } from './BudgetMeter'
 import { Legend, LegendItem } from './ChartFrame'
@@ -47,6 +47,21 @@ export function RunwayTimeline({ timeline, formatDay }: { timeline: Timeline; fo
     (tick, index) => index === 0 || tick.x - ticks[index - 1].x >= minTickGap || index % 2 === 0,
   )
 
+  // Posture labels sit above where each span starts; a short span's label may
+  // run on past it, and the next label then starts after it. One that would
+  // leave the chart is dropped (the tooltip and the table still name it).
+  const labelAt: Array<number | null> = []
+  let labelEnd = -Infinity
+  for (const segment of timeline.segments) {
+    const start = Math.max(x(Date.parse(segment.from)), labelEnd + 10)
+    const size = estimateTextWidth(segment.title, 11) + 18
+    if (start + size > width) labelAt.push(null)
+    else {
+      labelAt.push(start)
+      labelEnd = start + size
+    }
+  }
+
   const endX = timeline.endsAt ? x(Date.parse(timeline.endsAt)) : null
 
   return (
@@ -56,7 +71,7 @@ export function RunwayTimeline({ timeline, formatDay }: { timeline: Timeline; fo
         height={height}
         role="img"
         aria-label={`Runway from today to ${timeline.endsAt ?? 'unknown'}`}
-        style={{ display: 'block', overflow: 'visible' }}
+        style={{ display: 'block', maxWidth: '100%', overflow: 'visible' }}
       >
         {/* the timeline itself */}
         <line x1={0} x2={width} y1={barY + barH / 2} y2={barY + barH / 2} stroke="var(--viz-grid)" strokeWidth={2} />
@@ -65,7 +80,7 @@ export function RunwayTimeline({ timeline, formatDay }: { timeline: Timeline; fo
           const ex = x(Date.parse(segment.to))
           const w = Math.max(2, ex - sx - (index < timeline.segments.length - 1 ? 2 : 0))
           const id = `seg-${segment.posture}`
-          const fits = w > segment.title.length * 7 + 22
+          const place = labelAt[index]
           return (
             <g
               key={id}
@@ -86,11 +101,11 @@ export function RunwayTimeline({ timeline, formatDay }: { timeline: Timeline; fo
                 fill={`var(--viz-${segment.level})`}
                 opacity={activeId && activeId !== id ? 0.6 : 1}
               />
-              {fits ? (
+              {place !== null ? (
                 <g pointerEvents="none">
-                  <circle cx={sx + 6} cy={labelRow - 4} r={6} fill={`var(--viz-${segment.level})`} />
+                  <circle cx={place + 6} cy={labelRow - 4} r={6} fill={`var(--viz-${segment.level})`} />
                   <text
-                    x={sx + 6}
+                    x={place + 6}
                     y={labelRow - 0.5}
                     fontSize={9}
                     fontWeight={800}
@@ -100,7 +115,7 @@ export function RunwayTimeline({ timeline, formatDay }: { timeline: Timeline; fo
                     {ICON[segment.level]}
                   </text>
                   <text
-                    x={sx + 16}
+                    x={place + 16}
                     y={labelRow}
                     fontSize={11}
                     fill="var(--viz-ink)"

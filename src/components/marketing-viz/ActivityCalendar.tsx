@@ -79,7 +79,7 @@ export function ActivityCalendar({
         height={height}
         role="img"
         aria-label={`${unit} per day over ${weeks} weeks`}
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '100%' }}
       >
         {monthLabels.map((month) => (
           <text

@@ -39,7 +39,7 @@ const WEEK_TABLE_CSS = `
   [data-week-table] { display: grid; font-size: 13px; }
   [data-week-row] {
     display: grid;
-    grid-template-columns: 22px minmax(0, 1fr) 104px minmax(80px, 120px) minmax(96px, 160px) 104px;
+    grid-template-columns: 22px minmax(0, 1fr) 96px minmax(56px, 110px) minmax(72px, 140px) 96px;
     gap: 10px;
     align-items: center;
     padding: 7px 0;

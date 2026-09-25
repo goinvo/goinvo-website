@@ -519,6 +519,44 @@ in-memory dataset (groq-js) and a fake Slack workspace with signed requests. It 
 missed (the `&gt;` draft miss, blocked tasks invisible on Monday, weekend follow-ups) — rerun it when
 changing message shapes (it lived in the session scratchpad; see the PR for how it was built).
 
+## Marketing data design — charts that say what to do (built 2026-09-25)
+
+The suite had no charts: every number reached a person as a sentence. There is now one small
+chart system, used by This week, Outreach, Money and direction, the Overview and /audience-brief.
+
+- **Palette = code:** `src/lib/marketing/viz/tokens.ts`. Generated in OKLCH from GoInvo teal and
+  orange (the brand hexes are too muted to carry identity — teal sits below the 0.10 chroma floor)
+  and run through the dataviz validator in BOTH schemes against the Studio surfaces: adjacent CVD
+  ΔE 16.0 / 15.9, normal-vision 23.2 / 21.5; first three slots pass all-pairs. Slot 4 (gold) is
+  under 3:1 on light, so it only ever appears with its value printed. Don't hand-pick a new
+  colour; re-run the validator (the dataviz skill's `validate_palette.js`) on any change.
+- **Components:** `src/components/marketing-viz/` (React + hand-written SVG, NO chart library, NO
+  Sanity imports so they also render in the showcase and tests). `ChartFrame` = title + ONE
+  sentence saying what to do + a "Show as table" twin. Charts draw against CSS roles
+  (`var(--viz-series-1)`), set by `VizScope`; in the Studio use `StudioVizScope`, which reads the
+  scheme from the rendered card colour — NOT from Sanity's theme context, because the Outreach
+  page also renders in the e2e harness with no Studio providers (a context hook would throw there).
+- **Models are pure + tested:** `src/lib/marketing/viz/*` (`outreachViz`, `runwayTimeline`,
+  `weekGlance`, `briefViz`, `contentViz`, `scale`, `format`) — `tests/marketing-viz-core.test.ts`,
+  `tests/marketing-viz-models.test.ts`.
+- **Rules the charts rely on:** colour follows the entity (fixed slots: follow-ups 1, outreach 2,
+  decisions 3, other 4 — the same in the meter, the work table and the legend); status colours
+  mean good/warning/serious/critical only and always come with an icon + word; a week in
+  progress is never called "down" (`formatRunningDelta`); the funnel counts the FURTHEST stage
+  ever reached (a dormant contact who met still counts as met); empty segment rows stay in the
+  warmth grid (a gap is the finding); a draft beside its published contact counts once.
+- **Data:** plan-week now also returns `outreachStats` (this week / last week / 8 weekly totals),
+  `runwayStored` (date, confirmedAt, commitments — no notes) and `dueDay` on each follow-up.
+  The Monday digest opens with **"Last week, in numbers"** (`lastWeekNumbersBlock`, a 2×2 fields
+  grid; trends in words, never arrows) — it still passes the 30-phone-line first-ask budget.
+- **Phone widths:** chart grids use `minmax(min(100%, Npx), 1fr)` and chart SVGs `max-width:
+  100%`; a bare `minmax(340px, …)` overflowed a 400px screen (found by the showcase).
+- **Portfolio case study:** `npm run showcase:marketing` → `test-results/marketing-viz-showcase/
+  marqueta.html` — the production components mounted on an INVENTED week
+  (`scripts/marketing-viz-showcase/fixtures.ts`; no real contacts, clients or teammates, keep it
+  that way — the page is meant to be shared). Published as a private artifact from the session
+  that built it.
+
 ## Runway — the number the whole strategy is derived from (built 2026-08-27)
 
 The financial posture used to be a hand-picked bin (`survival`) with a timestamp. A bin does

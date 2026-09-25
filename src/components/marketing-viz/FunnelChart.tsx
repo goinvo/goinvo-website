@@ -42,7 +42,7 @@ export function FunnelChart({ rows, barHeight = 20 }: { rows: FunnelRow[]; barHe
         height={height}
         role="img"
         aria-label={rows.map((row) => `${row.label} ${row.count}`).join(', ')}
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '100%' }}
       >
         <line
           x1={labelWidth}
