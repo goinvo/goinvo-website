@@ -165,6 +165,7 @@ export async function runMarquetaGeneration(input: {
     const brandVoice = brandVoicePromptContext(resolvedVoice)
 
     const { text } = await generateClaudeText({
+    feature: 'marqueta-generate',
       model,
       maxTokens: maxTokensForFormat(input.format),
       timeoutMs: generationTimeoutMs(),

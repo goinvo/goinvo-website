@@ -79,6 +79,12 @@ export const INTERNAL_MARKETING_TYPES: readonly string[] = [
   // It also put a colleague's name and Slack id in the world-readable dataset.
   'marketingTeamAvailability',
   'marketingFinancialPosture',
+  // What every Claude call cost, took and returned. Internal for two reasons:
+  // it is the studio's spend, and the `feature` field says which parts of the
+  // business are being worked on. Listed here in the same commit that
+  // introduced the type, per the rule above — an unlisted marketing type is
+  // passed straight through to the PUBLIC dataset and reports success.
+  'marketingModelCall',
 ]
 
 export function isInternalMarketingType(type: string): boolean {
