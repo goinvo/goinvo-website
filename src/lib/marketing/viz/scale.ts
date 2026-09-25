@@ -73,15 +73,34 @@ export function stackSegments<T>(
 }
 
 /**
- * Whether a label fits inside a mark with comfortable padding. An estimate
- * (system sans averages ~0.56em a character) — generous on purpose: a label
- * that is wrongly judged to fit gets clipped, one wrongly judged not to fit
- * just moves to the tooltip and the table.
+ * Whether a label fits inside a mark with comfortable padding. Measured in a
+ * browser, estimated generously elsewhere: a label wrongly judged to fit gets
+ * clipped, one wrongly judged not to fit just moves to the tooltip and the
+ * table. Labels inside marks are set semibold, so that is the default weight.
  */
-export function labelFits(text: string, markWidth: number, fontSize = 12, padding = 6): boolean {
-  return estimateTextWidth(text, fontSize) + padding * 2 <= markWidth
+export function labelFits(text: string, markWidth: number, fontSize = 12, padding = 6, weight: number | string = 600): boolean {
+  return estimateTextWidth(text, fontSize, weight) + padding * 2 <= markWidth
 }
 
-export function estimateTextWidth(text: string, fontSize = 12): number {
-  return Array.from(String(text)).length * fontSize * 0.58
+export function estimateTextWidth(text: string, fontSize = 12, weight: number | string = 400): number {
+  const measured = measureText(text, fontSize, weight)
+  if (measured !== null) return measured
+  // No canvas (a server render, a test): err wide, since an under-estimate clips.
+  const perChar = Number(weight) >= 600 ? 0.64 : 0.6
+  return Array.from(String(text)).length * fontSize * perChar
+}
+
+let measureContext: CanvasRenderingContext2D | null | undefined
+
+/** The real rendered width in the chart font, where a browser can tell us. */
+function measureText(text: string, fontSize: number, weight: number | string): number | null {
+  if (measureContext === undefined) {
+    measureContext =
+      typeof document !== 'undefined' && typeof document.createElement === 'function'
+        ? (document.createElement('canvas').getContext?.('2d') ?? null)
+        : null
+  }
+  if (!measureContext) return null
+  measureContext.font = `${weight} ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+  return measureContext.measureText(String(text)).width
 }

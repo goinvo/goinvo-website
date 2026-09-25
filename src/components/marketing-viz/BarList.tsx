@@ -37,7 +37,7 @@ export function BarList({
   const { ref, width } = useElementWidth<HTMLDivElement>(480)
   const { hover, bind, activeId } = useChartTooltip()
   const anyEmphasis = items.some((item) => item.emphasis)
-  const labelWidth = Math.min(200, Math.max(70, ...items.map((item) => estimateTextWidth(item.label, 12) + 12)))
+  const labelWidth = Math.min(Math.max(120, width * 0.4), Math.max(70, ...items.map((item) => estimateTextWidth(item.label, 12, item.emphasis ? 650 : 400) + 14)))
   const valueWidth = 64
   const plot = Math.max(40, width - labelWidth - valueWidth)
   const max = Math.max(1, target?.value ?? 0, ...items.map((item) => item.value))
