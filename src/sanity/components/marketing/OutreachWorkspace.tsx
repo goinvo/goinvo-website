@@ -122,6 +122,8 @@ import {
   type StudioClient,
   useMarketingUnsavedGuard,
 } from '../../tools/marketingTool'
+import { OutreachInsights } from '../../../components/marketing-viz/OutreachInsights'
+import { StudioVizScope } from './StudioVizScope'
 
 // Contacts/offers/evidence live in the PRIVATE outreach dataset (contact PII
 // must never enter the world-readable production dataset), so this workspace
@@ -3811,6 +3813,18 @@ export function OutreachWorkspaceContent({
         contactCount={contacts.length}
         onOpenEvidence={onOpenEvidence}
       />
+
+      {contacts.length > 0 && (
+        <section id="outreach-at-a-glance" style={styles.panel}>
+          <PanelHeading
+            title="Outreach at a glance"
+            description="Counted from the contacts and their call logs, so there is nothing extra to keep up to date. Every chart has a table view."
+          />
+          <StudioVizScope>
+            <OutreachInsights contacts={contacts} />
+          </StudioVizScope>
+        </section>
+      )}
 
       <section style={{ ...styles.panel, padding: '10px 14px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>

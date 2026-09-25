@@ -15,10 +15,13 @@ import {
   coverageGaps,
   groupDecisionsByOwner,
   leadRecommendation,
+  SEGMENT_LABEL,
   summariseSegments,
   type BriefContact,
   type BriefDecision,
 } from '@/lib/marketing/audienceBrief'
+import { buyerShare, coverageInsight, researchFunnel, researchInsight, segmentCoverage } from '@/lib/marketing/viz/briefViz'
+import { AudienceSegmentCharts, ResearchFunnelChart } from '@/components/marketing-viz/AudienceCharts'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GoInvo — Audience Brief
@@ -94,6 +97,7 @@ type BriefData = {
       checkedAt?: string
       evidence?: { url: string; title: string; quote: string; textFragmentUrl: string }[]
     }
+    quoteCheck?: { status?: string }
   })[]
 }
 
@@ -115,7 +119,8 @@ const BRIEF_QUERY = `{
     organization, recentSignal, context, quote, quoteUrl, reachableAbout, suggestedOfferKey,
     confidence, researchedAt,
     sources[]{ title, url },
-    verification{ status, reason, checkedAt, evidence[]{ url, title, quote, textFragmentUrl } }
+    verification{ status, reason, checkedAt, evidence[]{ url, title, quote, textFragmentUrl } },
+    quoteCheck{ status }
   }
 }`
 
@@ -222,6 +227,15 @@ export default async function AudienceBriefPage({
       const byStatus = rank(a.research?.verification?.status) - rank(b.research?.verification?.status)
       return byStatus !== 0 ? byStatus : b.org.count - a.org.count
     })
+  // The two charts: the list split by who could buy, and the research as the
+  // checks it had to pass. Same counts as the prose and table below them.
+  const share = buyerShare(segments)
+  const buyerTotal = share[0].value
+  const coverage = segmentCoverage(segments.rows, TARGETED_SEGMENTS, 10, (segment) => SEGMENT_LABEL[segment]?.split(' / ')[0] || segment)
+  const namedOrganisations = new Set(
+    data.contacts.map((contact) => String(contact.organization || '').trim().toLowerCase()).filter(Boolean),
+  ).size
+  const research = researchFunnel(namedOrganisations, data.orgResearch || [])
   const buyerRows = segments.rows.filter((row) => row.isBuyer)
   const otherRows = segments.rows.filter((row) => !row.isBuyer)
 
@@ -365,6 +379,7 @@ export default async function AudienceBriefPage({
             tied to something specific and published — anything the research could not cite is not
             here, because an uncited signal read out on a call is worse than no call.
           </p>
+          <ResearchFunnelChart stages={research} insight={researchInsight(research)} paper="#fdfcfa" />
           <ol className="ab-openings">
             {openings.map(({ org, cluster, research }) => (
               <li key={org.name}>
@@ -473,6 +488,15 @@ export default async function AudienceBriefPage({
           somebody works, never that they know us, which is why warmth is left blank rather than
           guessed.
         </p>
+
+        <AudienceSegmentCharts
+          share={share}
+          shareInsight={`${pct(buyerTotal, segments.total)}% of the list works somewhere that could commission design work; the rest is real audience, but not a buyer.`}
+          coverage={coverage}
+          coverageNote={coverageInsight(coverage, 10)}
+          threshold={10}
+          paper="#fdfcfa"
+        />
 
         <h3>Where the audience actually is</h3>
         <table className="ab-table">

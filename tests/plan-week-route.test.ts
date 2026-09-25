@@ -236,6 +236,8 @@ describe('plan-week gives This week what it lays out', () => {
       overdue: true,
       // "jules" on the contact, "Jules" on the board: one person.
       ownerName: 'Jules',
+      // The studio's day, for the follow-up strip on the week-at-a-glance band.
+      dueDay: '2026-09-18',
     })
     expect(body.followUps).toHaveLength(body.followUpsDue)
   })
@@ -253,6 +255,39 @@ describe('plan-week gives This week what it lays out', () => {
     // 10 Mar 2027 is 5.5 months from 21 Sep — the stored date, read on the day.
     expect(body.runway).toBe('Rebuild — 5.5 months of certain runway (to 10 Mar 2027)')
     expect(body.posture).toBe('rebuild')
+  })
+
+  it('carries the pulse and the runway as numbers too, and they agree with the sentences', async () => {
+    const touched = {
+      ...FOLLOW_UP_CONTACTS[2],
+      interactions: [
+        { at: '2026-09-15T12:00:00Z', by: 'Ezra', channel: 'email', statusAfter: 'contacted' },
+        { at: '2026-09-21T12:00:00Z', by: 'Jules', channel: 'phone', statusAfter: 'responded' },
+      ],
+    }
+    mocks.outreach.fetch.mockResolvedValue({ contacts: [FOLLOW_UP_CONTACTS[0], touched], team: TEAM })
+    routePlanWeek([BIG_TASK], {
+      runway: {
+        certainUntil: '2027-03-10',
+        confirmedAt: '2026-09-01T00:00:00Z',
+        commitments: [{ label: 'SoW — discovery', signedAt: '2026-08-20', monthsAdded: 2, recordedBy: 'Jules', note: 'private note' }],
+      },
+    })
+
+    const body = await (await PLAN_WEEK_GET(planRequest('GET'))).json()
+    expect(body.outreachStats.thisWeek).toMatchObject({ touches: 1, calls: 1, replies: 1 })
+    expect(body.outreachStats.lastWeek).toMatchObject({ touches: 1, emails: 1 })
+    // Eight weeks, oldest first, ending with this one — the sparkline.
+    expect(body.outreachStats.weekly).toHaveLength(8)
+    expect(body.outreachStats.weekly.at(-1)).toEqual({ weekStart: body.weekStart, touches: 1 })
+    expect(body.outreachStats.weekly.at(-2).touches).toBe(1)
+    expect(body.pulse).toMatch(/^Outreach this week: 1 touch \(1 person\) · 1 reply/)
+    // Only what the timeline draws: no free-text note or who recorded it.
+    expect(body.runwayStored.runway).toEqual({
+      certainUntil: '2027-03-10',
+      confirmedAt: '2026-09-01T00:00:00Z',
+      commitments: [{ label: 'SoW — discovery', signedAt: '2026-08-20', monthsAdded: 2 }],
+    })
   })
 
   it('counts follow-ups in the header the way the rows under it do', async () => {

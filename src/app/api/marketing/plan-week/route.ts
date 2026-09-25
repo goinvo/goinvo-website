@@ -8,7 +8,8 @@ import { privateMarketingJson } from '@/lib/marketing/privateResponse'
 import { FINANCIAL_POSTURE_DOC_ID, getFinancialPosture } from '@/lib/marketing/financialPosture'
 import { formatMonths, formatRunwayDate, resolveRunwayPosture, type StoredPosture } from '@/lib/marketing/runway'
 import { resolveOwnerName, TEAM_AVAILABILITY_TYPE } from '@/lib/marketing/availability'
-import { describePulse, summarizeOutreach, type PulseContact } from '@/lib/marketing/outreachPulse'
+import { describePulse, summarizeOutreach, type OutreachPulse, type PulseContact } from '@/lib/marketing/outreachPulse'
+import { studioDay } from '@/lib/marketing/viz/outreachViz'
 import {
   generateClaudeText,
   isAnthropicConfigured,
@@ -136,6 +137,65 @@ function weekPulse(contacts: PulseContact[], followUps: Array<{ overdue: boolean
   pulse.followUpsDue = followUps.length
   pulse.followUpsOverdue = followUps.filter((entry) => entry.overdue).length
   return describePulse(pulse, 'Outreach this week')
+}
+
+/** The counts a chart needs, without the per-person breakdown's raw names beyond the board's own. */
+function pulseCounts(pulse: OutreachPulse) {
+  return {
+    touches: pulse.touches,
+    people: pulse.people,
+    calls: pulse.calls,
+    emails: pulse.emails,
+    replies: pulse.replies,
+    meetings: pulse.meetings,
+    opportunities: pulse.opportunities,
+    won: pulse.won,
+    byPerson: pulse.byPerson,
+  }
+}
+
+/**
+ * The same pulse as numbers, for the week-at-a-glance charts: this week, last
+ * week (the delta's named period), and touches per week for the eight weeks up
+ * to this one (the sparkline). Same windows as the sentence, so the figure and
+ * the words can never disagree.
+ */
+function outreachStats(contacts: PulseContact[], weekStart: string, now: Date) {
+  const window = weekWindow(weekStart, now)
+  const from = Date.parse(window.from)
+  const span = (start: number) => ({ from: new Date(start).toISOString(), to: new Date(start + 7 * DAY_MS).toISOString(), now })
+  const weekly = Array.from({ length: 8 }, (_, index) => {
+    const start = from - (7 - index) * 7 * DAY_MS
+    return { weekStart: new Date(start).toISOString().slice(0, 10), touches: summarizeOutreach(contacts, span(start)).touches }
+  })
+  return {
+    thisWeek: pulseCounts(summarizeOutreach(contacts, window)),
+    lastWeek: pulseCounts(summarizeOutreach(contacts, span(from - 7 * DAY_MS))),
+    weekly,
+  }
+}
+
+/**
+ * The stored runway, trimmed to what the timeline draws: the date, when it was
+ * last confirmed, and the signed work that moved it. Private (this route is
+ * Studio-writer or API-key only, and says `private` on the response).
+ */
+function runwayForChart(stored: StoredPosture) {
+  return {
+    posture: stored.posture,
+    setAt: stored.setAt,
+    runway: stored.runway
+      ? {
+          certainUntil: stored.runway.certainUntil,
+          confirmedAt: stored.runway.confirmedAt,
+          commitments: (stored.runway.commitments || []).map((commitment) => ({
+            label: commitment.label,
+            signedAt: commitment.signedAt,
+            monthsAdded: commitment.monthsAdded,
+          })),
+        }
+      : undefined,
+  }
 }
 
 /**
@@ -334,12 +394,16 @@ async function handle(request: NextRequest, dryRun: boolean) {
     // call sheet, worded exactly as Slack words them. Scrubbed of contact
     // details (followUpParts); empty, not absent, when the contacts could not
     // be read, with `followUpsDue: null` saying which it was.
-    followUps: followUps.map((entry) => followUpParts(entry, now)),
+    followUps: followUps.map((entry) => ({ ...followUpParts(entry, now), dueDay: studioDay(entry.dueAt) })),
     // "Outreach this week: 3 touches (2 people) · …" — the check-in's sentence
     // over the same week. Null when the contacts could not be read: a failed
     // read is not "no outreach logged yet".
     pulse: outreach ? weekPulse(outreach.contacts, followUps, plan.weekStart, now) : null,
     runway: postureRaw === undefined ? null : runwayHeadline(postureRaw || {}, now),
+    // The same two facts as numbers, for the week-at-a-glance charts. Null for
+    // the same reasons as the sentences above (a failed read is not "none").
+    outreachStats: outreach ? outreachStats(outreach.contacts, plan.weekStart, now) : null,
+    runwayStored: postureRaw === undefined ? null : runwayForChart(postureRaw || {}),
     theme: theme?.theme || null,
     rationale: theme?.rationale || null,
     // Status, blocker and owner on every row, so This week can use the same
