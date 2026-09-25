@@ -38,7 +38,13 @@ import { MARKETING_OPERATION_TYPE } from './operations'
 import { getOutreachClient } from './outreachClient.server'
 import { escapeSlackText, slackMention } from './slackText'
 import { answerTask, passOnTask, takeOverTask, takeTask, type TaskActionResult } from './taskActions.server'
-import { loadTeamAvailability, resolvePresserName } from './team.server'
+import {
+  loadTeamAvailability,
+  marketingTeamNames,
+  OWNED_OPEN_TASKS_QUERY,
+  resolveOwnerNameForWrite,
+  resolvePresserName,
+} from './team.server'
 import type { CheckInTask } from './weeklyCheckIn'
 import { utcIsoWeekKey } from './weeklyCheckIn.server'
 
@@ -94,6 +100,23 @@ async function boardName(input: { slackUserId?: string; personName: string }): P
   }
 }
 
+/**
+ * The presser's name for a write that makes them an OWNER (`resolveOwnerNameForWrite`):
+ * never a display name the team list does not know. Null when the roster
+ * cannot be read; "Someone" when it can and does not know them.
+ */
+async function ownerBoardName(input: { slackUserId?: string; personName: string }): Promise<string | null> {
+  try {
+    return await resolveOwnerNameForWrite({
+      slackUserId: String(input.slackUserId || '').trim() || undefined,
+      displayName: String(input.personName || '').trim() || undefined,
+    })
+  } catch (error) {
+    console.error('[slack] could not read the team roster', error)
+    return null
+  }
+}
+
 function toSlackActionResult(result: TaskActionResult): MarketingSlackActionResult {
   return {
     ok: result.ok,
@@ -131,12 +154,12 @@ export async function claimMarketingTask(input: {
   slackUserId: string
   expectedOwner?: string
 }): Promise<MarketingSlackActionResult> {
-  const person = await boardName(input)
+  const person = await ownerBoardName(input)
   if (person === null) return { ok: false, message: COULD_NOT_READ_TEAM }
   if (unnamed(person)) return { ok: false, message: NOT_ON_BOARD }
   const take = { taskId: input.taskId, personName: person, slackUserId: input.slackUserId }
   if (input.expectedOwner === undefined) return toSlackActionResult(await takeOverTask(take))
-  return toSlackActionResult(await takeTask({ ...take, coverFor: clean(input.expectedOwner) }))
+  return toSlackActionResult(await takeTask({ ...take, takeOverFrom: clean(input.expectedOwner) }))
 }
 
 /**
@@ -191,8 +214,8 @@ type StoredAvailability = {
 /** One record, read through the dataset the roster is read from (`getOutreachClient`). */
 export const AVAILABILITY_WRITE_QUERY = `*[_type == "${TEAM_AVAILABILITY_TYPE}" && _id == $id][0]{ _id, _rev, ownerName, slackUserId, status, from, until, weeklyHours, note }`
 
-/** Open work somebody owns — what "your 2 open tasks" counts. Weekly-plan records are the planner's, not theirs. */
-export const OWNED_OPEN_TASKS_QUERY = `count(*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**")) && lower(ownerName) == $name && !(status in ["done", "dismissed"]) && !string::startsWith(coalesce(sourceKey, ""), "weekly-plan/")])`
+/** Open work somebody owns (team.server.ts): what "your 2 open tasks" counts. */
+export { OWNED_OPEN_TASKS_QUERY }
 
 /** Every record already linked to one Slack account — how "you’re already linked as Eric" is known. */
 export const LINKED_RECORDS_QUERY = `*[_type == "${TEAM_AVAILABILITY_TYPE}" && slackUserId == $uid && !(_id in path("drafts.**"))]{ _id, ownerName }`
@@ -348,8 +371,9 @@ const nobodyOnTheBoard = (name: string) =>
  *     linked to their Slack account, else the board name their display name
  *     exactly matches. A display name that matches NOTHING is used only if
  *     the board files open work under exactly that name (someone with tasks
- *     but no record yet). Otherwise it is refused and pointed at the one-time
- *     setup: an unlinked Juhan whose Slack says "Juhan Sonin" would book a
+ *     but no record yet) or it is on the marketing team (`marketingTeamNames`).
+ *     Otherwise it is refused and pointed at the one-time setup, which lists
+ *     the whole team: an unlinked Juhan whose Slack says "Juhan Sonin" would book a
  *     second "Juhan Sonin" off while the real "Juhan" kept getting work. A
  *     roster that cannot be read is a refusal too.
  *   - **Patched, never replaced.** The record also holds the person's Slack
@@ -424,7 +448,8 @@ export async function setMarketingAvailability(input: {
   if (unnamed(name)) return { ok: false, message: NOT_ON_BOARD }
 
   let openTasks: number | undefined
-  if (!entries.some((entry) => lower(entry.ownerName) === lower(name))) {
+  const known = [...entries.map((entry) => entry.ownerName), ...marketingTeamNames()]
+  if (!known.some((candidate) => lower(candidate) === lower(name))) {
     openTasks = await countOpenTasks(name)
     if (openTasks === undefined) return { ok: false, message: COULD_NOT_READ_TEAM }
     if (openTasks === 0) return { ok: false, message: nobodyOnTheBoard(name) }

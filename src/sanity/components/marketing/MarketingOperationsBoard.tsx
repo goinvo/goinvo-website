@@ -81,10 +81,16 @@ function nameForTitle(title: unknown, names: string[]): string {
  * put "Juhan" and "Juhan Sonin" side by side, and picking the second split one
  * person into two for every Slack surface: Slack resolves a presser only to a
  * roster name, exactly. A team page's title is used only to find a name here
- * it unambiguously belongs to (see `deskOwnerPatch`). Only with no roster at
- * all — a workspace nobody has linked yet, where Slack falls back to display
- * names, which are usually full names — are the titles offered themselves, and
- * even then one that is plainly a name already on the board is not added again.
+ * it unambiguously belongs to (see `deskOwnerPatch`).
+ *
+ * A team member nobody on the board has a name for yet is still offered, by
+ * first name — the way the roster, the one-time setup and every Slack surface
+ * name people ("Eric", "Jon"). The roster only ever holds people who already
+ * linked, and linking was offered only to people who already owned work, so
+ * offering team pages only while the roster was empty dropped half the team
+ * from this select the day the first person linked: nobody could hand Eric or
+ * Jon anything from the Studio. A first name two team pages share is offered
+ * as the full title instead — a guess would credit the wrong colleague.
  */
 export function deskOwnerOptions(items: MarketingOperation[], owners: OwnerOption[], roster: string[] = []): string[] {
   const seen = new Map<string, string>()
@@ -97,11 +103,16 @@ export function deskOwnerOptions(items: MarketingOperation[], owners: OwnerOptio
     add(item?.ownerName)
     add(item?.suggestedOwner)
   }
-  if (!(roster || []).some((name) => cleanName(name))) {
-    const known = [...seen.values()]
-    for (const owner of owners || []) {
-      if (!nameForTitle(owner?.title, known)) add(owner?.title)
-    }
+  const known = [...seen.values()]
+  const pagesByFirstName = new Map<string, number>()
+  for (const owner of owners || []) {
+    const first = firstNameKey(owner?.title)
+    if (first) pagesByFirstName.set(first, (pagesByFirstName.get(first) || 0) + 1)
+  }
+  for (const owner of owners || []) {
+    if (nameForTitle(owner?.title, known)) continue
+    const unique = pagesByFirstName.get(firstNameKey(owner?.title)) === 1
+    add(unique ? cleanName(owner?.title).split(' ')[0] : owner?.title)
   }
   return [...seen.values()].sort((left, right) => left.localeCompare(right))
 }

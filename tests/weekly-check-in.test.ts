@@ -17,8 +17,10 @@ import {
   MAX_CHECK_IN_BLOCKS,
   MAX_CHECK_IN_PHONE_LINES,
   readTaskStuckSubmission,
+  refreshStaleTaskCards,
   replaceCheckInTask,
   TASK_STATUS_WORDS,
+  taskCardsOn,
   taskStatusWords,
   type CheckInFollowUp,
   type CheckInGroup,
@@ -1117,6 +1119,60 @@ describe('the Stuck modal', () => {
     expect(readTaskStuckSubmission(undefined)).toBe('')
     expect(readTaskStuckSubmission({})).toBe('')
     expect(readTaskStuckSubmission(values('y'.repeat(5000)))).toHaveLength(600)
+  })
+})
+
+// Two presses on one message each rewrite the whole block array; when both
+// read it before either writes, the second write puts the first card back as
+// it was. These find and redraw exactly such cards.
+describe('putting back a card that lost a race', () => {
+  const blocks = () => [
+    { type: 'header', text: { type: 'plain_text', text: 'Thursday check-in' } },
+    ...buildCheckInTaskBlocks(task({ _id: 'a', title: 'A', status: 'queued' }), { now: NOW }),
+    ...buildTaskCard(task({ _id: 'b', title: 'B', ownerName: '', status: 'queued' }), { now: NOW, mode: 'plan', ask: { slackUserId: 'U2', name: 'Shirley' } }),
+    ...buildCheckInTaskBlocks(task({ _id: 'c', title: 'C', status: 'working' }), { now: NOW }),
+  ]
+
+  it('reads each card as it was drawn: its task, owner, status and mode', () => {
+    expect(taskCardsOn(blocks()).map(({ taskId, ownerName, status, mode }) => ({ taskId, ownerName, status, mode }))).toEqual([
+      { taskId: 'a', ownerName: 'Juhan', status: 'queued', mode: 'mine' },
+      { taskId: 'b', ownerName: '', status: 'queued', mode: 'plan' },
+      { taskId: 'c', ownerName: 'Juhan', status: 'working', mode: 'mine' },
+    ])
+    // A legacy value never said its status: nothing to compare, so it is left out.
+    const legacy = [{ type: 'actions', block_id: checkInTaskActionsBlockId('z'), elements: [{ type: 'button', value: JSON.stringify({ t: 'z', o: '' }) }] }]
+    expect(taskCardsOn(legacy)).toEqual([])
+    expect(taskCardsOn(undefined)).toEqual([])
+  })
+
+  it('redraws only the cards whose record disagrees, in the mode they were drawn in, and leaves the rest byte-identical', () => {
+    const before = blocks()
+    const records = new Map<string, CheckInTask>([
+      ['a', task({ _id: 'a', title: 'A', status: 'done' })],
+      ['b', task({ _id: 'b', title: 'B', ownerName: 'Eric', slackUserId: 'U3', status: 'queued' })],
+      ['c', task({ _id: 'c', title: 'C', status: 'working' })],
+    ])
+    const next = refreshStaleTaskCards(before, records, { now: NOW })
+    expect(actionIds([next.find((block) => block.block_id === checkInTaskActionsBlockId('a'))!])).toEqual([MARQUETA_ACTION.taskReopen])
+    // B was an ask on the Monday plan; somebody took it since. Still a plan card: Taken by, and Hand back.
+    const b = next.find((block) => block.block_id === checkInTaskBlockId('b'))!
+    expect(b.text.text).toContain('Taken by <@U3>')
+    expect(actionIds([next.find((block) => block.block_id === checkInTaskActionsBlockId('b'))!])).toEqual([MARQUETA_ACTION.taskHandBack])
+    // C agrees with its record: the very same objects.
+    expect(next.find((block) => block.block_id === checkInTaskBlockId('c'))).toBe(before.find((block) => block.block_id === checkInTaskBlockId('c')))
+    expect(next[0]).toBe(before[0])
+    expectValidSlackBlocks(next)
+  })
+
+  it('is the same array when every card agrees, a record is missing, or the card is the one just drawn', () => {
+    const before = blocks()
+    const agree = new Map<string, CheckInTask>([['a', task({ _id: 'a', status: 'queued' })]])
+    expect(refreshStaleTaskCards(before, agree, { now: NOW })).toBe(before)
+    expect(refreshStaleTaskCards(before, new Map(), { now: NOW })).toBe(before)
+    const done = new Map<string, CheckInTask>([['a', task({ _id: 'a', status: 'done' })]])
+    expect(refreshStaleTaskCards(before, done, { now: NOW, except: 'a' })).toBe(before)
+    // Owner names compare without case: "juhan" on the record is the card's "Juhan".
+    expect(refreshStaleTaskCards(before, new Map([['a', task({ _id: 'a', ownerName: 'juhan', status: 'queued' })]]), { now: NOW })).toBe(before)
   })
 })
 

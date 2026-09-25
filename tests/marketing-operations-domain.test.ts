@@ -61,6 +61,18 @@ describe('private Marketing Operations domain', () => {
     expect(JSON.stringify(normalized)).not.toContain('RAW-PRIVATE-NOTE-991')
   })
 
+  // GROQ reads a stored "" as a date that is not one: `defined("")` is true and
+  // `dateTime("")` is null, so the digest's owned-load filter dropped the task
+  // and every `order(coalesce(dueAt, …))` sorted it ahead of real dates.
+  it('stores no due date at all for undated work, never an empty string', () => {
+    const undated = normalizeMarketingOperationInput(operationInputFromDashboardSignal({
+      id: 'gap', title: 'A gap', why: 'Because', action: 'Fix it', view: 'dashboard', severity: 'normal',
+    }))
+    expect(undated).not.toHaveProperty('dueAt')
+    expect(normalizeMarketingOperationInput({ title: 'Dated', sourceKey: 'dated', dueAt: '2026-10-01T12:00:00Z' }).dueAt).toBe('2026-10-01T12:00:00.000Z')
+    expect(normalizeMarketingOperationInput({ title: 'Junk', sourceKey: 'junk', dueAt: 'not a date' })).not.toHaveProperty('dueAt')
+  })
+
   it('hard-denies every non-allowlisted automatic action regardless of claimed safety', () => {
     expect(assertAutomaticMarketingOperationAction('inspectCms')).toBe('inspectCms')
     for (const forbidden of ['publish', 'schedule', 'email', 'call', 'linkedin', 'paidSeo', 'delete', 'approveClaim', 'changeBrandVoice', { action: 'publish', safetyClass: 'low' }]) {

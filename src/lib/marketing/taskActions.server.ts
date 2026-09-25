@@ -58,7 +58,7 @@
 import 'server-only'
 import { isRevisionConflict } from './apiBoundary'
 import type { TeamMemberAvailability } from './availability'
-import { errorLine } from './marquetaStyle'
+import { errorLine, slackDayKey } from './marquetaStyle'
 import {
   buildOperationStatusPatch,
   MARKETING_OPERATION_TYPE,
@@ -69,6 +69,7 @@ import { getOutreachClient } from './outreachClient.server'
 import { ASK_HISTORY_KIND, askHistoryEntry } from './slackDelegation'
 import { loadTeamAvailability, slackIdForOwner } from './team.server'
 import type { CheckInTask } from './weeklyCheckIn'
+import { absencesOn } from './weeklyCheckIn.server'
 
 export type TaskActionInput = {
   taskId: string
@@ -79,9 +80,16 @@ export type TaskActionInput = {
   /**
    * Take only: the away owner an away-cover card was drawn for. Taking is then
    * allowed to move the task off THIS person — and only while it is still
-   * theirs. Anyone else's task is refused exactly as without it.
+   * theirs, and only while they are still away. Anyone else's task is refused
+   * exactly as without it.
    */
   coverFor?: string
+  /**
+   * Take only, for a legacy Monday plan's "Take it over" (`claimMarketingTask`):
+   * the owner that card was drawn with. Taken over only while it is still
+   * theirs — away or not, which is what that button always did.
+   */
+  takeOverFrom?: string
 }
 
 export type TaskActionResult = {
@@ -125,6 +133,12 @@ const TASK_QUERY = `*[_type == "${MARKETING_OPERATION_TYPE}" && _id == $id][0]{
   _id, _rev, _createdAt, _updatedAt, title, ownerName, ownerSlackUserId, status, kind, priority,
   dueAt, estimatedMinutes, blocker, humanQuestion, humanResponse, lastOutcome, sourceKey, targetView, activity,
   "askKeys": askHistory[]._key
+}`
+
+/** What a card draws, for every task on one message (`readTaskCardRecords`). */
+export const TASK_CARDS_QUERY = `*[_type == "${MARKETING_OPERATION_TYPE}" && _id in $ids]{
+  _id, _createdAt, _updatedAt, title, ownerName, ownerSlackUserId, status, kind, priority,
+  dueAt, estimatedMinutes, blocker, humanQuestion, lastOutcome, sourceKey, targetView
 }`
 
 /**
@@ -236,6 +250,30 @@ async function roster(): Promise<Roster> {
   } catch (error) {
     console.error('[marqueta] could not read the team roster', error)
     return null
+  }
+}
+
+/** A Monday plan holds far fewer cards than this; the cap only bounds the read. */
+const MAX_CARDS_PER_MESSAGE = 50
+
+/**
+ * The records behind a message's task cards, as a card draws them — so a
+ * press can put back a card another press's redraw wrote over
+ * (`refreshStaleTaskCards`). One read for the whole message. Never throws: a
+ * failed read is an empty map, and an empty map puts nothing back.
+ */
+export async function readTaskCardRecords(ids: string[]): Promise<Map<string, CheckInTask>> {
+  const unique = Array.from(new Set((ids || []).map(text).filter(Boolean))).slice(0, MAX_CARDS_PER_MESSAGE)
+  if (!unique.length) return new Map()
+  try {
+    const [tasks, entries] = await Promise.all([
+      getOutreachClient().fetch<StoredTask[] | null>(TASK_CARDS_QUERY, { ids: unique }),
+      roster(),
+    ])
+    return new Map((tasks || []).filter((task) => task?._id).map((task) => [task._id, toCheckInTask(task, entries || [])]))
+  } catch (error) {
+    console.error('[marqueta] could not read the tasks on a message', error)
+    return new Map()
   }
 }
 
@@ -485,7 +523,10 @@ const unnamedMessage = errorLine(
  * owner is away, may move the task off THAT owner. The check is against the
  * task as it stands when the press lands, not as the card was drawn — so once
  * Juhan has covered Eric's task, Shirley pressing the same stale card is told
- * Juhan has it, instead of silently taking it from him.
+ * Juhan has it, instead of silently taking it from him. The same goes for the
+ * absence itself: the card stays in the channel after Eric is back, and a
+ * cover pressed then would take his task from under him while he works on it,
+ * so it is refused unless the roster still has him away today.
  *
  * `takeOver` (the legacy "Take it over") takes from whoever owns it; messages
  * posted before the shared card still carry it. Either way the presser puts
@@ -498,6 +539,7 @@ const unnamedMessage = errorLine(
 function take(input: TaskActionInput, opts: { takeOver: boolean }): Promise<TaskActionResult> {
   const person = text(input.personName)
   const coverFor = text(input.coverFor)
+  const takeOverFrom = text(input.takeOverFrom)
   return runTaskAction(input, (task, now, entries) => {
     // Writing "Someone" as an owner would put the task in nobody's list while looking taken.
     if (unnamed(person)) return { kind: 'refuse', message: unnamedMessage }
@@ -506,8 +548,19 @@ function take(input: TaskActionInput, opts: { takeOver: boolean }): Promise<Task
     const who = ownership(task, input, entries)
     if (who === 'unknown') return { kind: 'refuse', message: couldNotCheck }
     const covering = Boolean(coverFor) && same(task.ownerName, coverFor)
-    if (who === 'someoneElse' && !opts.takeOver && !covering) {
+    const takingOver = opts.takeOver || (Boolean(takeOverFrom) && same(task.ownerName, takeOverFrom))
+    if (who === 'someoneElse' && !takingOver && !covering) {
       return { kind: 'refuse', message: errorLine('take that', `${text(task.ownerName)} already has it.`) }
+    }
+    // A cover moves a colleague's task only while they are away TODAY — the
+    // studio's day, the one their time off was booked in.
+    if (who === 'someoneElse' && !takingOver) {
+      if (!entries) return { kind: 'refuse', message: couldNotCheck }
+      const today = slackDayKey(now) || now.toISOString().slice(0, 10)
+      const owner = text(task.ownerName)
+      if (!absencesOn(entries, today).isAway(owner, slackIdForOwner(entries, owner, null))) {
+        return { kind: 'refuse', message: errorLine('take that', `${owner} is back — ask them before taking it.`) }
+      }
     }
     const slackUserId = text(input.slackUserId)
     const declined = status === 'needsHuman' && DECLINED_BY_DIGEST.test(text(task.humanQuestion))

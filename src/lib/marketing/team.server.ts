@@ -24,6 +24,7 @@
 import 'server-only'
 import { getSlackUserDisplayName } from '@/lib/chat/slack'
 import { resolveOwnerName, TEAM_AVAILABILITY_TYPE, type TeamMemberAvailability } from './availability'
+import { MARKETING_OPERATION_TYPE } from './operations'
 import { getOutreachClient } from './outreachClient.server'
 import type { AskTeamMember } from './ownerAsk'
 import type { CheckInTeamMember } from './weeklyCheckIn'
@@ -131,6 +132,71 @@ export async function resolvePresserName(input: {
   }
   const name = resolveOwnerName({ slackUserId, displayName, entries })
   return linkedToSomeoneElse(entries, name, slackUserId) ? 'Someone' : name
+}
+
+/** Open work somebody owns — what "your 2 open tasks" counts. Weekly-plan records are the planner's, not theirs. */
+export const OWNED_OPEN_TASKS_QUERY = `count(*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**")) && lower(ownerName) == $name && !(status in ["done", "dismissed"]) && !string::startsWith(coalesce(sourceKey, ""), "weekly-plan/")])`
+
+/** Who does the studio's marketing, when `MARKETING_TEAM_NAMES` does not say. */
+export const DEFAULT_MARKETING_TEAM_NAMES = ['Juhan', 'Shirley', 'Eric', 'Jon']
+
+/**
+ * The marketing team by the names the board files work under — everyone the
+ * one-time setup offers, whether or not they own anything yet.
+ *
+ * The setup used to offer only names that already owned open work, and every
+ * other way onto the team list was closed to somebody who owned none: "I'm
+ * away" refuses a name nothing is filed under (and points at the setup, which
+ * did not list them), and there is no Studio form for the roster. Only people
+ * on it are ever ASKED to take work — so asks could only go to the two people
+ * who already owned every seeded task, while the teammates with time were
+ * never asked. `MARKETING_TEAM_NAMES` (comma-separated) overrides the default;
+ * set it empty to offer only the names on the board.
+ */
+export function marketingTeamNames(): string[] {
+  const configured = process.env.MARKETING_TEAM_NAMES
+  const names = configured === undefined ? DEFAULT_MARKETING_TEAM_NAMES : configured.split(',')
+  const byName = new Map<string, string>()
+  for (const name of names.map(text).filter(Boolean)) if (!byName.has(lower(name))) byName.set(lower(name), name.slice(0, 120))
+  return [...byName.values()].slice(0, 20)
+}
+
+/**
+ * The presser's board name for a write that files something UNDER that name —
+ * a task's owner (Take), a contact's owner (Add to outreach), who made a call
+ * (Log it) — or "Someone" when the team list does not know them yet.
+ *
+ * `resolvePresserName` falls back to the raw display name when nothing on the
+ * roster matches. That is fine for words said aloud and wrong for an owner: an
+ * unlinked Juhan whose Slack says "Juhan Sonin" pressed Take and became the
+ * owner "Juhan Sonin". Once he linked as "Juhan" the task was nobody's — Hand
+ * back refused him ("It's Juhan Sonin's"), `mine` did not list it, the
+ * check-in could not mention him, and the setup kept offering "Juhan Sonin",
+ * which he could no longer pick. Follow-ups filed under that name split off
+ * the same way.
+ *
+ * So the same rule "I'm away" already applied: the name is used when the
+ * presser is linked, when it is already a name on the team list (or in
+ * `marketingTeamNames`), or when open work is already filed under it.
+ * Anything else is "Someone", which every write refuses and points at the
+ * one-time setup — which now lists the whole team, so there is a way in.
+ *
+ * THROWS when the roster or the open-work count cannot be read.
+ */
+export async function resolveOwnerNameForWrite(input: {
+  slackUserId?: string
+  displayName?: string
+  entries?: TeamMemberAvailability[]
+}): Promise<string> {
+  const entries = input.entries || (await loadTeamAvailability())
+  const name = text(await resolvePresserName({ ...input, entries }))
+  if (!name || /^someone$/i.test(name)) return 'Someone'
+  const slackUserId = text(input.slackUserId)
+  if (slackUserId && entries.some((entry) => entry.slackUserId === slackUserId)) return name
+  const known = [...entries.map((entry) => entry.ownerName), ...marketingTeamNames()]
+  if (known.some((candidate) => lower(candidate) === lower(name))) return name
+  const open = await getOutreachClient().fetch<number | null>(OWNED_OPEN_TASKS_QUERY, { name: lower(name) })
+  return typeof open === 'number' && open > 0 ? name : 'Someone'
 }
 
 /**

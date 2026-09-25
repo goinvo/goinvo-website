@@ -344,7 +344,11 @@ export function normalizeMarketingOperationInput(value: unknown): MarketingOpera
     ownerName: compactText(input.ownerName, 120),
     suggestedOwner: compactText(input.suggestedOwner, 120),
     ownerSanityUserId: compactText(input.ownerSanityUserId, 180),
-    dueAt: safeIso(input.dueAt),
+    // Left out when there is no date. An empty string is not "no date" to
+    // GROQ: `defined("")` is true and `dateTime("")` is null, so a stored ""
+    // fell out of every date filter (an undated task stopped counting towards
+    // its owner's week) and sorted ahead of every real date.
+    ...(safeIso(input.dueAt) ? { dueAt: safeIso(input.dueAt) } : {}),
     nextCheckAt: safeIso(input.nextCheckAt),
     ...(typeof input.estimatedMinutes === 'number' && Number.isFinite(input.estimatedMinutes) && input.estimatedMinutes > 0
       ? { estimatedMinutes: Math.round(input.estimatedMinutes) }

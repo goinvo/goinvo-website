@@ -101,9 +101,45 @@ export function runwayAnswerBody(
   return { action: 'set', months, ...(basis ? { basis } : {}), ...signedBy }
 }
 
-/** Whether the Dashboard should ask: a check-in is due, or the date and the bin disagree. */
+/**
+ * Whether the Dashboard should ask: a check-in is due, or the date and the bin
+ * disagree WHILE the hand-set bin is the one the plan follows.
+ *
+ * Once the runway is confirmed later than the bin was set, the runway wins on
+ * its own and the stale bin only ever loses. Nagging about it then left a card
+ * none of its answers could clear: "Still right" re-confirmed the runway and
+ * the disagreement stayed, on every visit, until the months happened to cross
+ * a bin boundary — and the one way out, the Override select, writes `setAt`
+ * and hands the plan back to the stale bin. Slack asks the same way
+ * (`buildMoneyAndDirectionBlocks`).
+ */
 export function moneyNudgeDue(state: Pick<RunwayState, 'checkIn' | 'resolved'> | null): boolean {
-  return Boolean(state && (state.checkIn?.due || state.resolved?.disagreement))
+  return Boolean(state && (state.checkIn?.due || (state.resolved?.disagreement && state.resolved?.source === 'manual')))
+}
+
+/**
+ * The "Override the runway" select: its value and its options.
+ *
+ * It shows a posture only while that override is the one the plan follows.
+ * Bound to the stored bin, it showed "Survival" selected directly above "The
+ * plan is following the runway date right now" — a posture not in effect —
+ * and since a native select fires no change for the option already selected,
+ * that one posture (the one the disagreement line names, and so the one
+ * somebody who knows the money is worse would reach for) could not be picked
+ * at all. The placeholder is always there, so every choice is a change.
+ */
+export function postureOverrideSelect(state: Pick<RunwayState, 'stored' | 'resolved'> | null): {
+  value: string
+  options: Array<{ title: string; value: string }>
+} {
+  const stored = getFinancialPosture(state?.stored?.posture)
+  return {
+    value: state?.resolved?.source === 'manual' && stored ? stored.id : '',
+    options: [
+      { title: 'Choose a posture…', value: '' },
+      ...FINANCIAL_POSTURES.map((p) => ({ title: `${p.title} — ${p.runwayLabel}`, value: p.id })),
+    ],
+  }
 }
 
 /**
@@ -259,7 +295,8 @@ export function MarketingFinancialPostureSetting({
   )
 
   const posture = getFinancialPosture(state?.resolved?.id)
-  const stored = getFinancialPosture(state?.stored?.posture)
+  const overriding = state?.resolved?.source === 'manual'
+  const overrideSelect = postureOverrideSelect(state)
   const due = moneyNudgeDue(state)
 
   // The Dashboard only asks somebody who can answer: nothing while loading,
@@ -441,11 +478,8 @@ export function MarketingFinancialPostureSetting({
           <div style={{ display: 'grid', gap: 6, marginTop: 8, maxWidth: 420 }}>
             <Select
               ariaLabel="Financial posture"
-              value={stored?.id || ''}
-              options={[
-                ...(stored ? [] : [{ title: 'Choose a posture…', value: '' }]),
-                ...FINANCIAL_POSTURES.map((p) => ({ title: `${p.title} — ${p.runwayLabel}`, value: p.id })),
-              ]}
+              value={overrideSelect.value}
+              options={overrideSelect.options}
               disabled={!loaded || saving || Boolean(loadError) || readOnly}
               onChange={(value) => {
                 const found = getFinancialPosture(value)
@@ -453,7 +487,7 @@ export function MarketingFinancialPostureSetting({
               }}
             />
             <div style={{ ...styles.small, ...styles.muted }}>
-              {state?.resolved?.source === 'manual'
+              {overriding
                 ? 'The plan is following this setting right now, not the runway date.'
                 : 'The plan is following the runway date right now.'}
             </div>

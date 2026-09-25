@@ -154,9 +154,14 @@ export function summarizeOutreach(
  * a week with no touches is reported as a week with no touches.
  */
 export function describePulse(pulse: OutreachPulse, label = 'This week'): string {
+  // Due is counted to the window's end and overdue to now, so a window that
+  // ended before now (last week, read on Monday) can count more overdue than
+  // due. "1 follow-up due (3 overdue)" contradicts itself; overdue is a part
+  // of what is due, and never says more than it.
+  const overdue = Math.min(pulse.followUpsOverdue, pulse.followUpsDue)
   if (pulse.touches === 0) {
     const due = pulse.followUpsDue
-      ? ` ${pulse.followUpsDue} follow-up${pulse.followUpsDue === 1 ? '' : 's'} waiting${pulse.followUpsOverdue ? `, ${pulse.followUpsOverdue} overdue` : ''}.`
+      ? ` ${pulse.followUpsDue} follow-up${pulse.followUpsDue === 1 ? '' : 's'} waiting${overdue ? `, ${overdue} overdue` : ''}.`
       : ''
     return `${label}: no outreach logged yet.${due}`
   }
@@ -168,7 +173,7 @@ export function describePulse(pulse: OutreachPulse, label = 'This week'): string
     pulse.won ? `${pulse.won} won` : '',
   ].filter(Boolean)
   const due = pulse.followUpsDue
-    ? ` · ${pulse.followUpsDue} follow-up${pulse.followUpsDue === 1 ? '' : 's'} due${pulse.followUpsOverdue ? ` (${pulse.followUpsOverdue} overdue)` : ''}`
+    ? ` · ${pulse.followUpsDue} follow-up${pulse.followUpsDue === 1 ? '' : 's'} due${overdue ? ` (${overdue} overdue)` : ''}`
     : ''
   return `${label}: ${parts.join(' · ')}${due}.`
 }

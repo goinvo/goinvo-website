@@ -392,6 +392,24 @@ describe('logging a call from a message', () => {
     expectValidSlackBlocks(reply.blocks!)
   })
 
+  // An unlinked Juhan whose Slack says "Juhan Sonin": the log's `by` is where
+  // his follow-ups are filed, and "Juhan Sonin" would file them under a
+  // second person the moment he linked as "Juhan".
+  it('never logs a call under a display name the team list does not know', async () => {
+    const unlinked = [{ ownerName: 'Juhan', status: 'available' as const }]
+    routeOutreach({ availability: unlinked, openTasks: 0, logContact: { ...JANE, _rev: 'rev-1', interactions: [] } })
+    const reply = await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail', { slackUserId: 'UNEW' })
+    expect(mocks.patches).toHaveLength(0)
+    expect(reply.text).toBe('')
+    expect(reply.ephemeral).toMatch(/which name on the team list is yours/)
+
+    // A name already on the marketing team is somebody, linked or not.
+    routeOutreach({ availability: unlinked, openTasks: 0, logContact: { ...JANE, _rev: 'rev-1', interactions: [] } })
+    await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail', { slackUserId: 'UNEW', personName: 'Juhan' })
+    const insert = mocks.patches[0]?.ops.find((op) => op[0] === 'insert') as [string, string, string, Record<string, unknown>[]]
+    expect(insert[3][0]).toMatchObject({ by: 'Juhan' })
+  })
+
   it('writes nothing the second time the same message arrives', async () => {
     routeOutreach({ logContact: { ...JANE, _rev: 'rev-2', interactions: [{ _key: KEY }] } })
     const reply = await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail')
@@ -816,10 +834,13 @@ describe('availability', () => {
     expect(mine.ephemeral).toMatch(/which name on the team list is yours/)
     expect(mocks.outreach.fetch).not.toHaveBeenCalledWith(MINE_DATA_QUERY, expect.anything())
 
+    // Refused outright, like the other two: the form behind a Log button would
+    // refuse them too, after they had typed their notes into it.
     routeOutreach({ logContact: { ...JANE, _rev: 'rev-1', interactions: [] } })
     const logged = await ask('<@UBOT> called Jane Doe at Acme Health, left a voicemail', namesake)
     expect(mocks.patches).toHaveLength(0)
-    expect(buttonsIn(logged.blocks).map((element) => element.action_id)).toEqual([MARQUETA_ACTION.logCall])
+    expect(logged.ephemeral).toMatch(/which name on the team list is yours/)
+    expect(buttonsIn(logged.blocks)).toEqual([])
   })
 
   it('refuses a record that is linked to someone else even when the roster did not show it', async () => {

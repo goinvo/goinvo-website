@@ -146,6 +146,24 @@ describe('describePulse', () => {
     expect(describePulse(pulse)).toContain('1 follow-up waiting, 1 overdue')
   })
 
+  // Due is counted to the window's end, overdue to now. Last week's window,
+  // read at 9am on Monday, ends before now — and a follow-up set for that
+  // Monday is overdue without being due, which printed "1 due (3 overdue)".
+  it('never says more follow-ups are overdue than are due', () => {
+    const lastWeek = { from: '2026-09-21T00:00:00Z', to: '2026-09-28T00:00:00Z', now: new Date('2026-09-28T13:00:00Z') }
+    const pulse = summarizeOutreach(
+      [
+        contact({ _id: 'fri', followUpAt: '2026-09-25T12:00:00Z', interactions: [{ at: '2026-09-22T10:00:00Z', by: 'Juhan', channel: 'phone' }] }),
+        contact({ _id: 'mon1', followUpAt: '2026-09-28T12:00:00Z' }),
+        contact({ _id: 'mon2', followUpAt: '2026-09-28T12:00:00Z' }),
+      ],
+      lastWeek,
+    )
+    expect(pulse.followUpsOverdue).toBeGreaterThan(pulse.followUpsDue)
+    expect(describePulse(pulse, 'Outreach')).toBe('Outreach: 1 touch (1 person) · 1 follow-up due (1 overdue).')
+    expect(describePulse({ ...pulse, touches: 0 }, 'Outreach')).toBe('Outreach: no outreach logged yet. 1 follow-up waiting, 1 overdue.')
+  })
+
   it('names the numbers that matter', () => {
     const pulse = summarizeOutreach(
       [

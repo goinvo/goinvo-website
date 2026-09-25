@@ -83,6 +83,7 @@ import {
   markTaskDone,
   markTaskStuck,
   markTaskUnstuck,
+  readTaskCardRecords,
   reopenTask,
   snoozeTask,
   takeTask,
@@ -90,13 +91,15 @@ import {
   type TaskActionResult,
 } from '@/lib/marketing/taskActions.server'
 import { MARKETING_VIEW_QUERY_PARAM, studioTaskUrl } from '@/lib/marketing/taskLinks'
-import { resolvePresserName } from '@/lib/marketing/team.server'
+import { resolveOwnerNameForWrite, resolvePresserName } from '@/lib/marketing/team.server'
 import {
   buildTaskStuckView,
   checkInAcknowledgement,
   findTaskTitleInBlocks,
   readTaskStuckSubmission,
+  refreshStaleTaskCards,
   replaceCheckInTask,
+  taskCardsOn,
   type CheckInTask,
 } from '@/lib/marketing/weeklyCheckIn'
 import {
@@ -347,10 +350,20 @@ async function teamMember(userId: string): Promise<{ ok: true; name: string } | 
  * person (a logged call, an added contact, a take, a strategy answer) refuse
  * instead. "Someone" — the resolver's word for nobody it could name — comes
  * back as '' so it is never written as a person.
+ *
+ * `owner`: the name will be written as somebody's — a task's owner, a
+ * contact's owner, who made a call — so a display name the team list does not
+ * know comes back as '' too (`resolveOwnerNameForWrite`), rather than filing
+ * work under a second name for the same person.
  */
-async function presserName(userId: string, displayName?: string): Promise<{ name: string; resolved: boolean }> {
+async function presserName(
+  userId: string,
+  displayName?: string,
+  opts: { owner?: boolean } = {},
+): Promise<{ name: string; resolved: boolean }> {
   try {
-    const name = clean(await resolvePresserName({ slackUserId: userId, displayName: clean(displayName) || undefined }))
+    const resolve = opts.owner ? resolveOwnerNameForWrite : resolvePresserName
+    const name = clean(await resolve({ slackUserId: userId, displayName: clean(displayName) || undefined }))
     return { name: /^someone$/i.test(name) ? '' : name, resolved: true }
   } catch (error) {
     console.error('[slack] could not read the team roster', error)
@@ -544,7 +557,48 @@ async function redrawTaskCard(input: {
   })
   // Same array back means the card is not on this message.
   if (next === source.blocks) return false
-  return rewritePressedMessage(input.where, source, next, { fallback: input.fallback?.text })
+  const rewritten = await rewritePressedMessage(input.where, source, next, { fallback: input.fallback?.text })
+  if (rewritten && source.live) await settleTaskCards(input.where, input.now, input.taskId)
+  return rewritten
+}
+
+/**
+ * Put back any task card on the message that another press's redraw wrote
+ * over — and, on a press that changed nothing, the pressed card itself.
+ *
+ * Reading the live message before a redraw (`readPressedMessage`) narrows the
+ * race between two presses on one message but cannot close it: when both reads
+ * land before either chat.update, the second update writes the first card back
+ * as it was. Sanity has it done; the card says not started, with Done still
+ * live, and pressing Done again changes nothing in Sanity, so nothing used to
+ * redraw it. So once a press has updated the message it reads it once more and
+ * compares every card with its record (`refreshStaleTaskCards`). Whichever
+ * press updates LAST sees every earlier press's write in Sanity (each one is
+ * written before its redraw starts), so it puts back any card that lost. One
+ * pass, never a loop, and cards only ever move toward their records — two
+ * presses settling at once cannot fight.
+ *
+ * `except` is the card this press has just drawn from the record it wrote.
+ * Only a live read counts: the presser's own copy is older than the message it
+ * would be written over. Never throws; true when a card was put back.
+ */
+async function settleTaskCards(where: Where, now: Date, except?: string): Promise<boolean> {
+  try {
+    if (!where.channel || !where.messageTs) return false
+    const live = await fetchSlackMessage({ channel: where.channel, ts: where.messageTs, threadTs: where.threadTs })
+    if (!live) return false
+    const blocks = live.blocks as Block[]
+    const ids = taskCardsOn(blocks)
+      .map((card) => card.taskId)
+      .filter((id) => id !== except)
+    if (!ids.length) return false
+    const next = refreshStaleTaskCards(blocks, await readTaskCardRecords(ids), { now, studioBaseUrl: studioBase(), except })
+    if (next === blocks) return false
+    return await rewritePressedMessage(where, { text: live.text, blocks, attachments: live.attachments, live: true }, next)
+  } catch (error) {
+    console.error('[slack] putting task cards back failed', error)
+    return false
+  }
 }
 
 /** The first line a set of blocks says, as the notification text of a post made from them. */
@@ -578,7 +632,12 @@ async function answerMoneyInPlace(input: {
   const source = await readPressedMessage(input.where, input.fallback)
   if (source) {
     const next = replaceBlocksByPrefix(source.blocks, MONEY_BLOCK_PREFIX, blocks)
-    if (next !== source.blocks && (await rewritePressedMessage(input.where, source, next, { fallback: input.fallback?.text }))) return true
+    if (next !== source.blocks && (await rewritePressedMessage(input.where, source, next, { fallback: input.fallback?.text }))) {
+      // The Monday plan's task cards share this message: a card pressed at the
+      // same moment must not be written back as it was by this update.
+      if (source.live) await settleTaskCards(input.where, input.now)
+      return true
+    }
   }
   return postInThread(input.where, firstLineOf(blocks), blocks)
 }
@@ -667,13 +726,17 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
       try {
         // The modal only opened for a team member (the Log button is gated),
         // so the check here is only whose name the log carries. A log is a
-        // record of who spoke to a prospect: with no board name it is not
-        // written under a display name — the notes go back to the person
+        // record of who spoke to a prospect, and follow-ups are filed by it:
+        // with no board name — or one the team list does not know — it is not
+        // written under a display name. The notes go back to the person
         // privately so nothing they typed is lost.
-        const who = await presserName(userId)
-        if (!who.resolved) {
+        const who = await presserName(userId, undefined, { owner: true })
+        if (!who.resolved || !who.name) {
           const notes = submission.notes ? `\nYour notes, so you don’t lose them:\n>${safe(submission.notes, 2000)}` : ''
-          await tellPresser(where, userId, `${errorLine('log that', 'I couldn’t read the team list just now — try again in a minute.')}${notes}`)
+          const why = who.resolved
+            ? notOnTheList('log that')
+            : errorLine('log that', 'I couldn’t read the team list just now — try again in a minute.')
+          await tellPresser(where, userId, `${why}${notes}`)
           return
         }
 
@@ -742,11 +805,15 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
         const result = await markTaskStuck({ taskId: meta.taskId, personName: who.name, slackUserId: userId, blocker, now })
         if (!result.ok || !result.task) {
           await tellPresser(where, userId, safe(result.message || errorLine('mark that stuck', 'Open This week.')))
+          // A refusal on a card that lost a race (a closed task still offering
+          // Stuck): the card is put back as its record says.
+          if (result.task) await settleTaskCards(where, now)
           return
         }
         // Already stuck on exactly this: tell the presser, not the room.
         if (result.changed === false) {
           await tellPresser(where, userId, safe(result.message || 'Already noted.'))
+          await settleTaskCards(where, now)
           return
         }
         const mention = slackMention(userId, who.name)
@@ -862,13 +929,15 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
           return
         }
         const now = new Date()
+        const taking = actionId === MARQUETA_ACTION.taskTake
         // The profile already has the display name: no second users.info.
-        const who = await presserName(userId, member.name)
+        const who = await presserName(userId, member.name, { owner: taking })
         // Take writes the presser in as the OWNER: never under a display name
-        // (an empty name makes takeTask refuse with the reason). Every other
-        // press only names them in the task's activity, and taskActions is
-        // built to go ahead without the roster for those.
-        const personName = actionId === MARQUETA_ACTION.taskTake && !who.resolved ? '' : who.name
+        // (an empty name makes takeTask refuse with the reason), nor under one
+        // the team list does not know. Every other press only names them in
+        // the task's activity, and taskActions is built to go ahead without
+        // the roster for those.
+        const personName = taking && !who.resolved ? '' : who.name
         const result = await runTask({
           taskId: decoded.taskId,
           personName,
@@ -880,12 +949,19 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
         })
         if (!result.ok || !result.task) {
           await respond(safe(result.message || errorLine('update that task', 'Open This week.')))
+          // Refused with the task in hand (Hand back on a task that is closed
+          // but still drawn open): put the card back as its record says.
+          if (result.task) await settleTaskCards(where, now)
           return
         }
-        // Already true, or a double-tap: say so to the presser and leave the
-        // card (and whatever note is on it) alone.
+        // Already true, or a double-tap: say so to the presser. The card is
+        // redrawn only if it disagrees with the record — a card that lost a
+        // race to another press (Done in Sanity, "not started" on the card)
+        // would otherwise stay wrong, since pressing it again changes nothing.
+        // A card that already matches keeps whatever note is on it.
         if (result.changed === false) {
           await respond(safe(result.message || 'Nothing to change.'))
+          await settleTaskCards(where, now)
           return
         }
         const note = checkInAcknowledgement(actionId, slackMention(userId, who.name), now)
@@ -939,7 +1015,8 @@ async function handleMarqueta(payload: SlackInteractionPayload): Promise<NextRes
           await respond(LOST_CONTACT)
           return
         }
-        const who = await presserName(userId, member.name)
+        // The contact's owner is the presser: a name the team list knows, or nobody.
+        const who = await presserName(userId, member.name, { owner: true })
         if (!who.resolved || !who.name) {
           await respond(who.resolved ? notOnTheList('add them') : COULD_NOT_READ_TEAM)
           return
@@ -1698,12 +1775,16 @@ export async function POST(request: NextRequest) {
           : await declineMarketingTask({ taskId: decoded.taskId, personName, slackUserId: userId })
 
         // Task-action sentences are plain text (a board name can hold anything): escaped here.
+        // A press that changed nothing may be on a card that lost a race to
+        // another press: it is put back as its record says (settleTaskCards).
         if (!result.ok) {
           await respond(safe(result.message || errorLine('update that task', 'Open This week.')))
+          if (result.task) await settleTaskCards(whereFrom(payload), now)
           return
         }
         if (result.changed === false) {
           await respond(safe(result.message || 'Nothing to change.'))
+          await settleTaskCards(whereFrom(payload), now)
           return
         }
 

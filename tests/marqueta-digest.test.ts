@@ -93,6 +93,7 @@ import { claimMarketingTask } from '@/lib/marketing/slackActions.server'
 import { assessDomain } from '@/lib/marketing/domainWatch'
 import { askHistoryEntry, decodeActionValue, MARKETING_ACTION, readAskHistory } from '@/lib/marketing/slackDelegation'
 import { buildStrategySnapshot, monthWindow } from '@/lib/marketing/strategyCheck'
+import { evaluate, parse } from 'groq-js'
 import { expectValidSlackBlocks } from './support/slackBlocks'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -319,7 +320,7 @@ function withRecordedAsks(operations: Record<string, any>[]) {
   })
 }
 
-const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL', 'CRON_SECRET', 'MARKETING_API_KEY'] as const
+const ENV_KEYS = ['SLACK_BOT_TOKEN', 'SLACK_MARKETING_CHANNEL_ID', 'SLACK_CHANNEL_ID', 'MARKETING_PUBLIC_BASE_URL', 'CRON_SECRET', 'MARKETING_API_KEY', 'MARKETING_TEAM_NAMES'] as const
 const saved: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
 
 function digestRequest(query = '', body: Record<string, unknown> = {}) {
@@ -525,6 +526,63 @@ describe('what else the digest says', () => {
     expect(body.blocks[0]).toMatchObject({ type: 'header', text: { text: 'Monday plan' } })
     expect(body.blocks[1].elements[0].text).toBe('Week of Mon 21 Sep · 4h 5m of open work for an 8h week')
     expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done · Outreach: 1 touch (1 person) · 1 reply.')
+  })
+
+  // "Outreach this week" owns the follow-ups, counted from now. Counted here
+  // as well, to last Monday's window but overdue to 9am today, any follow-up
+  // set for this Monday made the line say "1 follow-up due (3 overdue)".
+  it('leaves follow-ups out of last week’s line — the Outreach section counts them', async () => {
+    const load = strategyLoad()
+    const waiting = (id: string, followUpAt: string) => ({ _id: id, name: id, organization: 'X', status: 'contacted', followUpAt, estimatedValue: null, interactions: [] })
+    mocks.loadStrategySnapshot.mockResolvedValue({
+      ...load,
+      contacts: [
+        ...load.contacts,
+        waiting('c-fri', '2026-09-18T12:00:00.000Z'),
+        waiting('c-mon-1', '2026-09-21T12:00:00.000Z'),
+        waiting('c-mon-2', '2026-09-21T12:00:00.000Z'),
+      ],
+    })
+    const body = await dryRun()
+    expect(body.blocks[2].elements[0].text).toBe('Last week: 3 tasks done · Outreach: 1 touch (1 person) · 1 reply.')
+  })
+
+  // The setup offered only names that already owned open work — Juhan and
+  // Shirley, in the seeded quarter — and every other way onto the team list
+  // was closed to somebody who owned nothing. Only people on it are ever asked.
+  it('offers the whole team in the one-time setup, not only the names that own work', async () => {
+    delete process.env.MARKETING_TEAM_NAMES
+    store.data = digestData({ availability: [AVAILABILITY[0]] })
+    const setupOf = (blocks: Block[]) => blocks.find((block) => block.accessory?.action_id === MARKETING_ACTION.linkIdentity)
+    const options = (blocks: Block[]) => (setupOf(blocks)?.accessory.options || []).map((option: Block) => option.value)
+    // Juhan is linked; Shirley, Eric and Jon are not, whatever they own.
+    expect(options((await dryRun()).blocks)).toEqual(['Shirley', 'Eric', 'Jon'])
+    // Configurable, and a name is offered once whatever its case.
+    process.env.MARKETING_TEAM_NAMES = 'juhan, Dana ,dana'
+    expect(options((await dryRun()).blocks)).toEqual(['Dana'])
+    // Set empty: the board's own unmapped owners only — none here, so no prompt.
+    process.env.MARKETING_TEAM_NAMES = ''
+    expect(setupOf((await dryRun()).blocks)).toBeUndefined()
+  })
+
+  // An operation created without a date stored `dueAt: ""`. GROQ does not read
+  // that as undated: `defined("")` is true and `dateTime("")` is null, so the
+  // task fell out of its owner's load (making the busiest person look free to
+  // ask) and "" sorted ahead of every real date in the capped board read.
+  it('reads a stored "" due date as undated: it counts towards the week, and sorts last', async () => {
+    await dryRun()
+    const [query, params] = mocks.outreach.fetch.mock.calls.find(([candidate]) => String(candidate).includes('"owned"'))!
+    const op = (id: string, dueAt?: string) => ({
+      _id: id, _type: 'marketingOperation', title: id, ownerName: 'Eric', status: 'queued', kind: 'content', ...(dueAt === undefined ? {} : { dueAt }),
+    })
+    const dataset = [op('undated', ''), op('overdue', '2026-09-01T12:00:00.000Z'), op('missing'), op('this-week', '2026-09-24T12:00:00.000Z'), op('later', '2026-11-02T12:00:00.000Z')]
+    const result = (await (await evaluate(parse(String(query)), { dataset, params: params as Record<string, unknown> })).get()) as {
+      owned: unknown[]
+      operations: Array<{ _id: string }>
+    }
+    // Undated work counts towards this week's load (the later task does not).
+    expect(result.owned).toHaveLength(4)
+    expect(result.operations.map((operation) => operation._id).slice(0, 3)).toEqual(['overdue', 'this-week', 'later'])
   })
 
   it('names posts going out this week with no draft, escaped', async () => {
@@ -763,6 +821,50 @@ describe('the busy week, as a phone shows it', () => {
     // Owned planned work is the roll call — Juhan's two, Shirley's one, Jen by name — and nothing is counted twice.
     expect(json(body.blocks)).toContain('Already taken: Jen 1 · <@UJUHAN> 1 · <@USHIRLEY> 1 — ask `Marqueta, my tasks` for yours')
     expect(body.needsOwnerCount).toBe(4)
+  })
+
+  // The planner used to file a "Not me" task as a decision, where four older
+  // gates took every slot; deferred "over budget", it never reached this
+  // message again — no card, no ask, and never the "asked twice → drop it?".
+  it('still shows a task somebody passed on when the plan did not fit it', async () => {
+    const passed = {
+      _id: 'op-kit',
+      title: 'Draft the kit email',
+      kind: 'content',
+      priority: 'normal',
+      status: 'needsHuman',
+      estimatedMinutes: 20,
+      humanQuestion: 'Shirley passed on this — who should pick it up?',
+      askHistory: [{ slackUserId: 'USHIRLEY', week: LAST_WEEK, kind: 'passed' }],
+    }
+    store.data = digestData({
+      operations: [...BUSY_OPERATIONS, passed],
+      planned: BUSY_OPERATIONS.filter((operation) => [...PLAN.itemIds, ...PLAN.decisionIds].includes(operation._id)),
+      availability: BUSY_AVAILABILITY,
+      owned: [{ ownerName: 'Shirley', estimatedMinutes: 120 }],
+    })
+    const body = await dryRun({ planRecorded: true, plan: PLAN })
+    expect(body.needsOwnerCount).toBe(5)
+    expect(cardIds(body.blocks)).toContain('op-kit')
+    // Asked of somebody who has not already said no.
+    const ask = body.asks.find((entry) => entry.taskId === 'op-kit')
+    expect(ask?.slackUserId).toBe('UJUHAN')
+  })
+
+  it('counts the decisions the plan left for later, rather than reading as though there were none', async () => {
+    const later = ['a', 'b', 'c'].map((key) => ({
+      _id: `op-gate-${key}`, title: `Gate ${key}`, kind: 'decision', priority: 'high', status: 'needsHuman', humanQuestion: `Gate ${key}?`,
+    }))
+    store.data = digestData({
+      operations: [...BUSY_OPERATIONS, ...later],
+      planned: BUSY_OPERATIONS.filter((operation) => [...PLAN.itemIds, ...PLAN.decisionIds].includes(operation._id)),
+      availability: BUSY_AVAILABILITY,
+      owned: [{ ownerName: 'Shirley', estimatedMinutes: 120 }],
+    })
+    const body = await dryRun({ planRecorded: true, plan: PLAN })
+    // One drawn (the plan's), three more counted.
+    expect(cardIds(body.blocks).filter((id) => id.startsWith('op-gate'))).toEqual([])
+    expect(json(body.blocks)).toContain('+3 more on <https://www.goinvo.com/studio/marketing?view=thisWeek&focus=decisions|This week>')
   })
 
   it('never asks someone away — Eric’s own task is offered for cover, naming who is free', async () => {

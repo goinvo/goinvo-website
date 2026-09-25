@@ -123,7 +123,7 @@ import { clipSlackText, decodeSlackText, escapeSlackText, SLACK_LIMITS, slackLin
 import { moneyAnswer, pipelineAnswer, strategyAnswer } from './strategyCheck'
 import { loadStrategySnapshot } from './strategyCheck.server'
 import { studioViewUrl, type StudioFocus } from './taskLinks'
-import { loadTeamAvailability, resolvePresserName, slackIdForOwner } from './team.server'
+import { loadTeamAvailability, resolveOwnerNameForWrite, resolvePresserName, slackIdForOwner } from './team.server'
 import { buildCheckInTaskBlocks, buildTaskCard, isDecisionTask, isSlipping, type CheckInTask } from './weeklyCheckIn'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -255,6 +255,15 @@ function presser(input: { slackUserId?: string; personName: string }) {
     if (linkedIds.length && !linkedIds.includes(slackUserId)) return null
     return name
   }
+  /**
+   * The board name for a write filed UNDER it — who made a logged call
+   * (`resolveOwnerNameForWrite`): null when the team list does not know them,
+   * rather than a display name that would split one person into two.
+   */
+  const ownerName = async (): Promise<string | null> => {
+    const name = clean(await resolveOwnerNameForWrite({ slackUserId, displayName, entries: await entries() }))
+    return !name || /^someone$/i.test(name) ? null : name
+  }
   /** The board name when it can be had, else the display name — for words said aloud, never for writes. */
   const spokenName = async (): Promise<string> => {
     try {
@@ -263,7 +272,7 @@ function presser(input: { slackUserId?: string; personName: string }) {
       return displayName || 'someone from GoInvo'
     }
   }
-  return { entries, boardName, spokenName }
+  return { entries, boardName, ownerName, spokenName }
 }
 
 type Presser = ReturnType<typeof presser>
@@ -367,7 +376,7 @@ async function answerGreeting(input: { who: Presser; slackUserId?: string; now: 
 export const WEEK_QUERY = `*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
   && status in ["queued", "working", "needsHuman", "blocked"]
   && !string::startsWith(coalesce(sourceKey, ""), $planPrefix)]
-  | order(coalesce(dueAt, "9999") asc)[0...60]{
+  | order(select(defined(dueAt) && dueAt != "" => dueAt, "9999") asc)[0...60]{
     _id, _createdAt, _updatedAt, title, ownerName, kind, priority, estimatedMinutes,
     status, dueAt, blocker, humanQuestion, lastOutcome, sourceKey, targetView
   }`
@@ -992,11 +1001,15 @@ async function answerLogCall(input: {
     }
 
     let byName: string | null = null
+    let known = true
     try {
-      byName = await input.who.boardName()
+      byName = await input.who.ownerName()
+      known = Boolean(byName)
     } catch (error) {
       console.error('[marqueta] could not read the team roster', error)
     }
+    // Read, and not anybody on the team list: the form would refuse too.
+    if (!known) return failed(NOT_ON_BOARD)
     // No board name, no one-press write: the form resolves the name itself.
     if (!byName) return logButtonReply(`Log the call with *${inline(label, 200)}* here:`, contact, note, outcome)
 

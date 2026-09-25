@@ -18,6 +18,7 @@ import {
   rankMarketingOperations,
   type MarketingOperation,
 } from './operations'
+import { isDecisionTask } from './taskLinks'
 
 export type DeferralReason = 'over budget' | 'blocked' | 'not due yet' | 'already done'
 
@@ -123,8 +124,42 @@ export function isoWeekKey(now: Date): string {
   return `${date.getFullYear()}-W${`${week}`.padStart(2, '0')}`
 }
 
+/**
+ * A question somebody has to ANSWER — `isDecisionTask`, the rule the cards,
+ * the banner and the digest already use.
+ *
+ * Not every needsHuman task is one. "Not me" leaves a task in needsHuman with
+ * "Eric passed on this — who should pick it up?", which is a task looking for
+ * an owner. Counted as a decision it competed for the four decision slots —
+ * and the seeded quarter's overdue gates fill all four — so it was deferred
+ * "over budget", and the digest, which shows only what the plan holds, never
+ * showed it again: no card, no ask, and never the "asked twice → drop it?".
+ * As work it is planned like any other unowned task.
+ */
 function isDecision(operation: MarketingOperation): boolean {
-  return operation.status === 'needsHuman'
+  return operation.status === 'needsHuman' && isDecisionTask(operation)
+}
+
+/**
+ * The decision order: this week's before later weeks', then the most urgent,
+ * then overdue, then soonest due.
+ *
+ * Priority used to count for nothing, so an urgent question filed today (the
+ * "Needs a rethink" decision, due in a week) queued behind four older gates
+ * and was deferred — and while it stays open the monthly strategy question
+ * stays quiet, so nobody was ever shown it. Priority ranks only within the
+ * week: an urgent gate for the end of November must not push this week's
+ * overdue question off the page.
+ */
+const PRIORITY_RANK: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 }
+function decisionOrder(a: MarketingOperation, b: MarketingOperation, now: Date, weekEnd: Date): number {
+  const futureDelta = Number(isFutureWork(a, weekEnd)) - Number(isFutureWork(b, weekEnd))
+  if (futureDelta !== 0) return futureDelta
+  const priorityDelta = (PRIORITY_RANK[a.priority] ?? 2) - (PRIORITY_RANK[b.priority] ?? 2)
+  if (priorityDelta !== 0) return priorityDelta
+  const overdueDelta = Number(marketingOperationIsOverdue(b, now)) - Number(marketingOperationIsOverdue(a, now))
+  if (overdueDelta !== 0) return overdueDelta
+  return dueRank(a) - dueRank(b)
 }
 
 /**
@@ -246,14 +281,10 @@ export function buildWeeklyPlan({
     else work.push(operation)
   }
 
-  // Soonest and latest first, then cap. Everything past the cap is deferred with
-  // a reason rather than hidden, so the count of open questions stays visible.
-  const orderedDecisions = [...pendingDecisions].sort((a, b) => {
-    const overdueDelta =
-      Number(marketingOperationIsOverdue(b, now)) - Number(marketingOperationIsOverdue(a, now))
-    if (overdueDelta !== 0) return overdueDelta
-    return dueRank(a) - dueRank(b)
-  })
+  // Most pressing first (`decisionOrder`), then cap. Everything past the cap is
+  // deferred with a reason rather than hidden, so the count of open questions
+  // stays visible.
+  const orderedDecisions = [...pendingDecisions].sort((a, b) => decisionOrder(a, b, now, weekEnd))
 
   orderedDecisions.forEach((operation, index) => {
     const estimate = estimateOperationMinutes(operation)

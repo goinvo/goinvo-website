@@ -177,7 +177,8 @@ import {
   encodeActionValue,
 } from '@/lib/marketing/slackDelegation'
 import { AVAILABILITY_WRITE_QUERY } from '@/lib/marketing/slackActions.server'
-import { TEAM_AVAILABILITY_QUERY } from '@/lib/marketing/team.server'
+import { TASK_CARDS_QUERY } from '@/lib/marketing/taskActions.server'
+import { OWNED_OPEN_TASKS_QUERY, TEAM_AVAILABILITY_QUERY } from '@/lib/marketing/team.server'
 import { CALL_LOG_RECEIPT_ACTIONS_BLOCK, CALL_LOG_RECEIPT_BLOCK } from '@/lib/marketing/callLog'
 import { buildMoneyAndDirectionBlocks, MONEY_RECEIPT_BLOCK, type MoneyReceipt } from '@/lib/marketing/strategyCheck'
 import { buildCheckInTaskBlocks, buildTaskCard } from '@/lib/marketing/weeklyCheckIn'
@@ -246,6 +247,8 @@ type Fixtures = {
   /** Availability records by id, as Undo reads them. */
   records?: Map<string, Record<string, unknown>>
   task?: Record<string, unknown> | null
+  /** Open tasks filed under a name the team list does not know (`OWNED_OPEN_TASKS_QUERY`). */
+  openTasks?: number
   contact?: Record<string, unknown> | null
   existingContact?: Record<string, unknown> | null
   prep?: PrepData
@@ -253,7 +256,7 @@ type Fixtures = {
 
 /** Answer each query the way the dataset would. Anything unrouted is a test bug, loudly. */
 function routeOutreach(fixtures: Fixtures = {}) {
-  mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string }) => {
+  mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string; ids?: string[] }) => {
     mocks.calls.push('sanity.fetch')
     if (query === TEAM_AVAILABILITY_QUERY) {
       if (fixtures.availability instanceof Error) throw fixtures.availability
@@ -265,6 +268,12 @@ function routeOutreach(fixtures: Fixtures = {}) {
       return doc ? { ...doc } : null
     }
     if (query.includes('_type == "marketingOperation" && _id == $id')) return fixtures.task === undefined ? TASK : fixtures.task
+    // Every task on a pressed message, read after a redraw to put back a card another press overwrote.
+    if (query === TASK_CARDS_QUERY) {
+      const task = fixtures.task === undefined ? TASK : fixtures.task
+      return task && (params?.ids || []).includes(String(task._id)) ? [task] : []
+    }
+    if (query === OWNED_OPEN_TASKS_QUERY) return fixtures.openTasks ?? 0
     if (query.includes('_type == "marketingContact" && _id == $id') && query.includes('closeReason')) {
       return fixtures.contact === undefined ? JANE_LOG : fixtures.contact
     }
@@ -911,6 +920,74 @@ describe('Add to outreach', () => {
 
 // ── The check-in's task buttons ──────────────────────────────────────────────
 
+// ── A presser the team list does not know yet ────────────────────────────────
+
+/**
+ * Juhan has a roster record but has not linked his Slack, which calls him
+ * "Juhan Sonin". Take, Add and Log each wrote that display name as an owner —
+ * and the moment he linked as "Juhan" it was nobody's: Hand back refused him,
+ * his list did not show it, and the setup kept offering a name he could no
+ * longer pick. "I'm away" already refused this; so does every owner write now.
+ */
+describe('a presser the team list does not know yet', () => {
+  const unlinked: TeamMemberAvailability[] = [{ ownerName: 'Juhan', status: 'available' }]
+  const SETUP = 'I couldn’t tell which name on the team list is yours — pick it in the Monday plan’s one-time setup first.'
+  const unowned = { ...TASK, ownerName: undefined, ownerSlackUserId: undefined }
+  const card = buildCheckInTaskBlocks({ _id: TASK._id, title: TASK.title, status: 'queued' }, { now: NOW })
+  const take = () => post(press(MARQUETA_ACTION.taskTake, encodeTaskCardValue({ taskId: TASK._id, status: 'queued', mode: 'plan' }), { message: { ts: '200.2', blocks: card } }))
+
+  it('is not made a task’s owner under their display name — Take points them at the setup', async () => {
+    routeOutreach({ availability: unlinked, task: unowned, openTasks: 0 })
+    await take()
+    await runAfter()
+    expect(mocks.patches).toHaveLength(0)
+    expect(responses()[0]).toMatchObject({ response_type: 'ephemeral', text: `Couldn’t take that — nothing changed. ${SETUP}` })
+  })
+
+  it('takes it under a name the marketing team already uses, linked or not', async () => {
+    mocks.getSlackUserProfile.mockResolvedValue({ ...MEMBER, name: 'Juhan' })
+    routeOutreach({ availability: unlinked, task: unowned, openTasks: 0 })
+    await take()
+    await runAfter()
+    expect(mocks.patches[0].ops[0]).toEqual(['set', expect.objectContaining({ ownerName: 'Juhan', ownerSlackUserId: 'UJUHAN' })])
+  })
+
+  it('adds nobody to outreach with a display name as the owner', async () => {
+    routeOutreach({ availability: unlinked, openTasks: 0 })
+    await post(press(MARQUETA_ACTION.addContact, encodeContactRef({ name: 'Sam Rivera', organization: 'Acme' })))
+    await runAfter()
+    expect(mocks.outreach.createIfNotExists).not.toHaveBeenCalled()
+    expect(responses()[0].text).toBe(`Couldn’t add them — nothing changed. ${SETUP}`)
+  })
+
+  it('logs no call under a display name, and hands the notes back', async () => {
+    routeOutreach({ availability: unlinked, openTasks: 0 })
+    const metadata = encodeCallLogMetadata({ contactId: 'contact-jane', channel: 'CBOT', threadTs: '200.1', label: 'Jane Doe' })
+    await post({
+      type: 'view_submission',
+      user: { id: 'UJUHAN', name: 'juhan' },
+      view: {
+        id: 'V9',
+        callback_id: CALL_LOG_CALLBACK,
+        private_metadata: metadata,
+        state: {
+          values: {
+            [CALL_OUTCOME_BLOCK]: { [CALL_OUTCOME_INPUT]: { selected_option: { value: 'voicemail' } } },
+            [CALL_NOTES_BLOCK]: { [CALL_NOTES_INPUT]: { value: 'She is at HIMSS next week' } },
+          },
+        },
+      },
+    })
+    await runAfter()
+    expect(mocks.patches).toHaveLength(0)
+    expect(mocks.postSlackMessage).not.toHaveBeenCalled()
+    const ephemeral = mocks.postSlackEphemeral.mock.calls[0][0]
+    expect(ephemeral).toMatchObject({ channel: 'CBOT', user: 'UJUHAN' })
+    expect(ephemeral.text).toContain(`Couldn’t log that — nothing changed. ${SETUP}`)
+    expect(ephemeral.text).toContain('She is at HIMSS next week')
+  })
+})
+
 describe('a check-in task button', () => {
   const card = buildCheckInTaskBlocks(
     { _id: TASK._id, title: TASK.title, ownerName: 'Juhan', status: 'queued', dueAt: TASK.dueAt },
@@ -979,12 +1056,119 @@ describe('a check-in task button', () => {
     expectValidSlackBlocks(update.blocks)
   })
 
-  it('tells only the presser when the press changed nothing, and leaves the card alone', async () => {
+  it('tells only the presser when the press changed nothing, and leaves a card that already says so alone', async () => {
+    const done = buildCheckInTaskBlocks({ ...TASK, status: 'done', ownerName: 'Juhan' }, { now: NOW, note: '_Done by <@UJUHAN> · Thu 24 Sep_' })
     routeOutreach({ task: { ...TASK, status: 'done' } })
+    mocks.fetchSlackMessage.mockResolvedValue({ text: 'Thursday check-in', blocks: [header, ...done], attachments: [] })
     await post(press(MARQUETA_ACTION.taskDone, value, { message: { ts: '200.2', blocks: [header, ...card] } }))
     await runAfter()
     expect(mocks.updateSlackMessage).not.toHaveBeenCalled()
     expect(responses()[0]).toMatchObject({ response_type: 'ephemeral', text: 'Already done.' })
+
+    // Nor when the message cannot be read back: nothing to compare with.
+    mocks.fetchSlackMessage.mockResolvedValue(null)
+    await post(press(MARQUETA_ACTION.taskDone, value, { message: { ts: '200.2', blocks: [header, ...card] } }))
+    await runAfter()
+    expect(mocks.updateSlackMessage).not.toHaveBeenCalled()
+  })
+
+  // A card that lost a race to another press says "not started" with Done
+  // still live while Sanity has it done. Pressing it changes nothing in
+  // Sanity, so it used to be told "Already done." and stay wrong all week.
+  it('puts back a card that disagrees with its record when a press changes nothing — and says why privately', async () => {
+    routeOutreach({ task: { ...TASK, status: 'done' } })
+    mocks.fetchSlackMessage.mockResolvedValue({ text: 'Thursday check-in', blocks: [header, ...card, ...other], attachments })
+    await post(press(MARQUETA_ACTION.taskDone, value, { message: { ts: '200.2', blocks: [header, ...card] } }))
+    await runAfter()
+    expect(mocks.patches).toHaveLength(0)
+    expect(responses()[0]).toMatchObject({ response_type: 'ephemeral', text: 'Already done.' })
+    expect(mocks.updateSlackMessage).toHaveBeenCalledTimes(1)
+    const update = mocks.updateSlackMessage.mock.calls[0][0]
+    expectValidSlackBlocks(update.blocks)
+    expect(update.attachments).toEqual(attachments)
+    expect(buttonsIn([update.blocks.find((block: Block) => block.block_id === checkInTaskActionsBlockId(TASK._id))]).map((button) => button.action_id)).toEqual([
+      MARQUETA_ACTION.taskReopen,
+    ])
+    // Everybody else's card is exactly as it was.
+    expect(update.blocks[0]).toEqual(header)
+    expect(update.blocks.slice(3)).toEqual(other)
+  })
+
+  // Juhan taps Done on two of his cards half a second apart. Each press reads
+  // the live message, swaps its own card and writes the WHOLE block array
+  // back; when both reads land before either write, the second write puts the
+  // first card back as it was — done in Sanity, "not started" in Slack.
+  it('two presses on one message at the same moment both end up on it — the later redraw puts back the card it overwrote', async () => {
+    const tasks: Record<string, Record<string, any>> = {
+      'op-a': { ...TASK, _id: 'op-a', _rev: 'ra', title: 'Task A', activity: [] },
+      'op-b': { ...TASK, _id: 'op-b', _rev: 'rb', title: 'Task B', activity: [] },
+    }
+    mocks.outreach.fetch.mockImplementation(async (query: string, params?: { id?: string; ids?: string[] }) => {
+      if (query === TEAM_AVAILABILITY_QUERY) return TEAM
+      if (query === TASK_CARDS_QUERY) return (params?.ids || []).filter((id) => tasks[id]).map((id) => ({ ...tasks[id] }))
+      if (query.includes('_type == "marketingOperation" && _id == $id')) return tasks[String(params?.id)] ? { ...tasks[String(params?.id)] } : null
+      throw new Error(`unrouted query: ${query.slice(0, 80)}`)
+    })
+    // The dataset applies what each press writes, as Sanity would.
+    mocks.commit.mockImplementation(async (record: PatchRecord) => {
+      const doc = tasks[record.id]
+      for (const [op, arg] of record.ops) {
+        if (op === 'set') Object.assign(doc, arg)
+        if (op === 'unset') for (const field of arg as string[]) delete doc[field]
+      }
+      doc._rev = `${doc._rev}+`
+      return doc
+    })
+    const drawn = (id: string, title: string) =>
+      buildCheckInTaskBlocks({ _id: id, title, ownerName: 'Juhan', status: 'queued', dueAt: TASK.dueAt }, { now: NOW })
+    let live = { text: 'Thursday check-in', blocks: [header, ...drawn('op-a', 'Task A'), ...drawn('op-b', 'Task B')] as Block[], attachments: [] as unknown[] }
+    // Slack, as both presses see it: both reads land before either write.
+    let reads = 0
+    let release!: () => void
+    const bothRead = new Promise<void>((resolve) => (release = resolve))
+    mocks.fetchSlackMessage.mockImplementation(async () => {
+      const snapshot = JSON.parse(JSON.stringify(live))
+      reads += 1
+      if (reads <= 2) {
+        if (reads === 2) release()
+        await bothRead
+      }
+      return snapshot
+    })
+    mocks.updateSlackMessage.mockImplementation(async (input: { text: string; blocks: Block[]; attachments?: unknown[] }) => {
+      live = { text: input.text, blocks: input.blocks, attachments: input.attachments || [] }
+      return true
+    })
+    const actionsOf = (id: string) => live.blocks.find((block) => block.block_id === checkInTaskActionsBlockId(id))!
+    const doneOn = (id: string) => actionsOf(id).elements[0].value
+
+    const pressed = { ts: '200.2', blocks: live.blocks }
+    await post(press(MARQUETA_ACTION.taskDone, doneOn('op-a'), { message: pressed }))
+    await post(press(MARQUETA_ACTION.taskDone, doneOn('op-b'), { message: pressed }))
+    // Two after() tasks, running at once as two function instances would.
+    await Promise.all(mocks.afterQueue.splice(0).map((task) => task()))
+
+    expect(tasks['op-a'].status).toBe('done')
+    expect(tasks['op-b'].status).toBe('done')
+    // The message ends as Sanity says: both done, both offering only Reopen.
+    for (const id of ['op-a', 'op-b']) {
+      expect(actionsOf(id).elements.map((button: Block) => button.action_id), id).toEqual([MARQUETA_ACTION.taskReopen])
+    }
+    expect(live.blocks[0]).toEqual(header)
+    expectValidSlackBlocks(live.blocks)
+  })
+
+  it('puts back a card a refusal was pressed on: Hand back on a task that is already done', async () => {
+    routeOutreach({ task: { ...TASK, status: 'done' } })
+    mocks.fetchSlackMessage.mockResolvedValue({ text: 'Thursday check-in', blocks: [header, ...card], attachments: [] })
+    await post(press(MARQUETA_ACTION.taskHandBack, value, { message: { ts: '200.2', blocks: [header, ...card] } }))
+    await runAfter()
+    expect(mocks.patches).toHaveLength(0)
+    expect(responses()[0].text).toMatch(/^Couldn’t update that task — nothing changed\. It’s already closed/)
+    const update = mocks.updateSlackMessage.mock.calls[0][0]
+    expect(update.blocks.find((block: Block) => block.block_id === checkInTaskActionsBlockId(TASK._id)).elements.map((button: Block) => button.action_id)).toEqual([
+      MARQUETA_ACTION.taskReopen,
+    ])
   })
 
   it('answers a refusal through response_url', async () => {
@@ -1796,8 +1980,14 @@ describe('a press on the shared task card', () => {
     expect(responses()).toHaveLength(0)
   })
 
+  // Eric is away this week, on the roster the press reads.
+  const ericAway: TeamMemberAvailability[] = [
+    { ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'available' },
+    { ownerName: 'Eric', slackUserId: 'UERIC', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+  ]
+
   it('an away cover takes the task off the away owner it was drawn for, onto the presser', async () => {
-    routeOutreach({ task: { ...TASK, ownerName: 'Eric', ownerSlackUserId: 'UERIC' } })
+    routeOutreach({ availability: ericAway, task: { ...TASK, ownerName: 'Eric', ownerSlackUserId: 'UERIC' } })
     const cover = buildTaskCard({ _id: TASK._id, title: TASK.title, ownerName: 'Eric', slackUserId: 'UERIC', status: 'queued' }, { now: NOW, mode: 'plan', context: 'away' })
     const before = message(cover)
     mocks.fetchSlackMessage.mockResolvedValue({ text: 'Monday plan', blocks: before, attachments: [] })
@@ -1813,6 +2003,18 @@ describe('a press on the shared task card', () => {
     const { blocks } = mocks.updateSlackMessage.mock.calls[0][0]
     expect(cardOf(blocks).labels).toEqual(['Hand back'])
     untouched(blocks, before)
+  })
+
+  it('an away cover pressed after the owner is back takes nothing from them', async () => {
+    // Monday's card said Eric was away; he is back, and working on it.
+    routeOutreach({ task: { ...TASK, ownerName: 'Eric', ownerSlackUserId: 'UERIC' } })
+    const cover = buildTaskCard({ _id: TASK._id, title: TASK.title, ownerName: 'Eric', slackUserId: 'UERIC', status: 'queued' }, { now: NOW, mode: 'plan', context: 'away' })
+    const take = cover.find((block) => block.type === 'actions')!.elements[0]
+    await post(press(take.action_id, take.value, { message: { ts: '200.2', blocks: message(cover) } }))
+    await runAfter()
+    expect(mocks.patches).toHaveLength(0)
+    expect(mocks.updateSlackMessage).not.toHaveBeenCalled()
+    expect(responses()[0].text).toBe('Couldn’t take that — nothing changed. Eric is back — ask them before taking it.')
   })
 
   it('a stale away cover never takes the task from whoever covered it first', async () => {

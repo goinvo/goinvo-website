@@ -52,6 +52,7 @@ import { taskStatusWords } from '@/lib/marketing/weeklyCheckIn'
 import {
   moneyNudgeDue,
   parseRunwayMonths,
+  postureOverrideSelect,
   runwayAnswerBody,
   runwayAnswersOffered,
   runwayStateFrom,
@@ -248,12 +249,27 @@ describe('the desk shows the owner Slack uses', () => {
     expect(deskOwnerPatch('Eric', owners, { options: boardTwoErics }).ownerSanityUserId).toBe('')
   })
 
-  it('offers the team pages only when there is no roster to disagree with, and not twice for a name already there', () => {
+  it('offers every team member, by first name, and never twice for a name already there', () => {
     const items = [operation({ _id: 'a', ownerName: 'Juhan' })]
     // "Juhan Sonin" is plainly the Juhan already on the board.
-    expect(deskOwnerOptions(items, owners, [])).toEqual(['Eric Benoit', 'Juhan', 'Shirley Xu'])
-    // With a roster, the roster decides who exists in Slack.
-    expect(deskOwnerOptions(items, owners, ['Juhan'])).toEqual(['Juhan'])
+    expect(deskOwnerOptions(items, owners, [])).toEqual(['Eric', 'Juhan', 'Shirley'])
+    // The day the first person links, the rest of the team is still there to pick.
+    expect(deskOwnerOptions(items, owners, ['Juhan'])).toEqual(['Eric', 'Juhan', 'Shirley'])
+  })
+
+  it('keeps Eric and Jon assignable once Juhan and Shirley have linked — they own nothing yet and never had a roster record', () => {
+    const team = [...owners, { _id: 'tm-jon', title: 'Jon Follett' }]
+    // The seeded quarter: only Juhan and Shirley own anything; only they could link.
+    const items = [operation({ _id: 'a', ownerName: 'Juhan' }), operation({ _id: 'b', ownerName: 'Shirley' })]
+    const options = deskOwnerOptions(items, team, ['Juhan', 'Shirley'])
+    expect(options).toEqual(['Eric', 'Jon', 'Juhan', 'Shirley'])
+    expect(options).not.toContain('Jon Follett')
+    // Picked here, the name is the one Slack and the setup use, with the right Studio id.
+    expect(deskOwnerPatch('Jon', team, { options })).toEqual({ ownerName: 'Jon', ownerSanityUserId: 'tm-jon' })
+    expect(deskOwnerPatch('Eric', team, { options })).toEqual({ ownerName: 'Eric', ownerSanityUserId: 'tm-eric' })
+    // Two team pages sharing a first name are offered in full rather than guessed between.
+    const twoErics = [...team, { _id: 'tm-eric-2', title: 'Eric Chen' }]
+    expect(deskOwnerOptions(items, twoErics, ['Juhan', 'Shirley'])).toEqual(['Eric Benoit', 'Eric Chen', 'Jon', 'Juhan', 'Shirley'])
   })
 
   it('finishes the owner search when somebody is picked for a task passed on in Slack — Slack’s own take', () => {
@@ -409,12 +425,61 @@ describe('money and direction in the Studio', () => {
     expect(MONEY).toContain('if (compact && (!loaded || readOnly || loadError || (!due && !saveError && !notice))) return null')
   })
 
-  it('asks on the Dashboard only when a check-in is due or the two inputs disagree', () => {
-    const quiet = { checkIn: { due: false, urgent: false, reason: '', question: '' }, resolved: { disagreement: null } }
+  it('asks on the Dashboard only when a check-in is due, or the two inputs disagree while the hand-set bin is in charge', () => {
+    const quiet = { checkIn: { due: false, urgent: false, reason: '', question: '' }, resolved: { disagreement: null, source: 'runway' } }
     expect(moneyNudgeDue(quiet as never)).toBe(false)
     expect(moneyNudgeDue({ ...quiet, checkIn: { ...quiet.checkIn, due: true } } as never)).toBe(true)
-    expect(moneyNudgeDue({ ...quiet, resolved: { disagreement: 'The runway date works out to…' } } as never)).toBe(true)
+    expect(moneyNudgeDue({ ...quiet, resolved: { disagreement: 'The runway date works out to…', source: 'manual' } } as never)).toBe(true)
+    // The runway is in charge: the stale bin only ever loses, and nothing here could clear it.
+    expect(moneyNudgeDue({ ...quiet, resolved: { disagreement: 'The runway date works out to…', source: 'runway' } } as never)).toBe(false)
     expect(moneyNudgeDue(null)).toBe(false)
+  })
+
+  it('lets "Still right" put the nudge away on the real record — it used to stay up until the bins agreed', async () => {
+    // Production: a bin set by hand in July, the runway confirmed in August.
+    const record = {
+      _id: 'marketingFinancialPosture',
+      posture: 'survival',
+      setAt: '2026-07-11T15:19:37.000Z',
+      runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-27T12:00:00.000Z' },
+    }
+    const monday = new Date('2026-09-28T13:00:00Z')
+    store.doc = JSON.parse(JSON.stringify(record))
+    const before = runwayStateFrom(store.doc as StoredPosture, monday)
+    expect(before.checkIn.due).toBe(true)
+    expect(moneyNudgeDue(before)).toBe(true)
+
+    const after = await confirmRunway({ personName: 'Shirley', now: monday })
+    // Still a disagreement (3.4 months is Rebuild; the stale bin says Survival) — said, not nagged about.
+    expect(after.resolved).toMatchObject({ source: 'runway', id: 'rebuild' })
+    expect(after.resolved.disagreement).toBeTruthy()
+    expect(moneyNudgeDue(after)).toBe(false)
+    // And it stays down on every visit after, not only until the page reloads.
+    expect(moneyNudgeDue(runwayStateFrom(after.stored as StoredPosture, new Date('2026-10-05T13:00:00Z')))).toBe(false)
+  })
+
+  it('shows an override in the select only while it is the one in charge, and can always pick any posture', () => {
+    // The runway is in charge: the stored "Survival" is not what the plan uses.
+    const runwayInCharge = runwayStateFrom(
+      { posture: 'survival', setAt: '2026-07-11T15:19:37.000Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      NOW,
+    )
+    expect(runwayInCharge.resolved.source).toBe('runway')
+    const select = postureOverrideSelect(runwayInCharge)
+    expect(select.value).toBe('')
+    // Survival is an option that is not selected, so picking it is a change a native select reports.
+    expect(select.options[0]).toEqual({ title: 'Choose a posture…', value: '' })
+    expect(select.options.map((option) => option.value)).toContain('survival')
+
+    // The override in charge: shown as chosen.
+    const overriding = runwayStateFrom(
+      { posture: 'survival', setAt: '2026-09-20T00:00:00.000Z', runway: { certainUntil: '2027-01-11', confirmedAt: '2026-08-27T12:00:00.000Z' } },
+      NOW,
+    )
+    expect(overriding.resolved.source).toBe('manual')
+    expect(postureOverrideSelect(overriding).value).toBe('survival')
+    expect(postureOverrideSelect(null).value).toBe('')
+    expect(MONEY).toContain('value={overrideSelect.value}')
   })
 })
 

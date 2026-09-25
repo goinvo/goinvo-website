@@ -418,6 +418,10 @@ What she does (pure module → server module):
   ideas · setup · hint · footer actions LAST. The tick passes `plan: {itemIds, decisionIds, …}` so the
   digest shows the same week This week shows; without it, it says it is the open board. Over 50 blocks,
   whole groups give way (follow-ups, call sheet, asked twice, away, decisions), each leaving a count.
+  A needsHuman task is a DECISION to the planner only when `isDecisionTask` says so — a "Not me" task
+  is unowned work (it lost the 4 decision slots to the seeded gates and vanished from every Monday);
+  decisions sort this-week-first, then priority, then overdue, and the digest still shows a passed-on
+  task the plan did not fit. The last-week line carries no follow-ups ("Outreach this week" owns them).
 - **Asks, not assignments** (`ownerAsk.ts`) — one mapped, available person per unclaimed task, in the
   TOP-LEVEL blocks and `text` (mentions inside attachments don't reliably notify). Never the same
   person twice (`askHistory` with `week` + `kind`); after two asks → *Drop it*. No capacity claims
@@ -462,6 +466,21 @@ Rules that each cost a review round to learn:
   rules and completedAt bookkeeping. Unstuck clears `blocker` (the planner defers anything with one).
 - **A presser's board name is `resolvePresserName`/`resolveOwnerName`** (linked identity first); a
   namesake linked to a different Slack id resolves to `'Someone'`, and every write refuses `'Someone'`.
+  A write that files something UNDER the name (Take, Add to outreach, Log it) uses
+  `resolveOwnerNameForWrite`: an unlinked display name the team list does not know is `'Someone'` too
+  ("Juhan Sonin" became an owner nobody could hand back once he linked as "Juhan").
+- **`MARKETING_TEAM_NAMES`** (default `Juhan,Shirley,Eric,Jon`; empty = board owners only) is who the
+  Monday setup offers. It used to offer only names that owned open work, so a teammate with none could
+  never link — and only linked people are ever asked. The Studio desk's owner select offers every
+  team page by first name for the same reason.
+- **A redraw rewrites the WHOLE message**, so two presses that both read before either writes lose one
+  card. After every redraw (and on a press that changed nothing) `settleTaskCards` re-reads the message
+  once and redraws any card whose drawn owner/status disagrees with its record (`refreshStaleTaskCards`).
+  The money group has no record to compare with; its next press redraws it.
+- **An away cover takes only while the owner is away TODAY** (`absencesOn`); the legacy "Take it
+  over" passes `takeOverFrom`, never `coverFor`.
+- **Undated operations have no `dueAt`** (a stored `""` falls out of GROQ date filters and sorts
+  first); queries still treat `""` as undated for older records.
 - **`getOutreachClient()`** (pinned OUTREACH_DATASET, `perspective: 'published'`) for contacts,
   operations, availability and heartbeat docs — not the router, whose escape hatch can point at the
   public dataset.

@@ -44,6 +44,7 @@
 import {
   checkInTaskActionsBlockId,
   checkInTaskBlockId,
+  decodeTaskCardValue,
   encodeTaskCardValue,
   MARQUETA_ACTION,
   TASK_BLOCKER_BLOCK,
@@ -51,6 +52,7 @@ import {
   TASK_STUCK_CALLBACK,
   type MarquetaActionId,
   type TaskCardMode,
+  type TaskCardValue,
 } from './marquetaActions'
 import {
   actionsRow,
@@ -1271,6 +1273,67 @@ export function replaceCheckInTask(
     if (index === at) next.push(...card)
     if (!isCard(block)) next.push(block)
   })
+  return next
+}
+
+/**
+ * Every task card on a message, as it was DRAWN: the owner and status its
+ * buttons carry (`encodeTaskCardValue`), and the mode it was drawn in. A card
+ * whose value never said its status (a legacy one) is left out — there is
+ * nothing to compare it with.
+ */
+export function taskCardsOn(blocks: Block[] | undefined): TaskCardValue[] {
+  const cards: TaskCardValue[] = []
+  const seen = new Set<string>()
+  for (const block of Array.isArray(blocks) ? blocks : []) {
+    if (block?.type !== 'actions' || typeof block.block_id !== 'string') continue
+    for (const element of Array.isArray(block.elements) ? block.elements : []) {
+      const drawn = decodeTaskCardValue(element?.value)
+      // The value must be THIS card's: the block id is derived from the task.
+      if (!drawn || block.block_id !== checkInTaskActionsBlockId(drawn.taskId)) continue
+      if (drawn.status && !seen.has(drawn.taskId)) {
+        seen.add(drawn.taskId)
+        cards.push(drawn)
+      }
+      break
+    }
+  }
+  return cards
+}
+
+/**
+ * Redraw every card on a message that no longer matches its record, and
+ * nothing else.
+ *
+ * Two presses on one message each read the live message, swap their own card
+ * and chat.update the whole block array. When both reads land before either
+ * update, the second update writes the first card back as it was: Sanity says
+ * done, the card still says not started, and pressing it again changes
+ * nothing — so nothing ever redraws it. Comparing what each card was drawn
+ * with (`taskCardsOn`) against its record finds exactly those cards; they are
+ * redrawn from the record, in the mode they were drawn in, without a note (the
+ * note belonged to a press this message no longer shows).
+ *
+ * A card with no record here (deleted, or not read) is left alone, and so is
+ * `except` — the card the caller has just drawn from the record it wrote.
+ * Same array back when nothing disagreed.
+ */
+export function refreshStaleTaskCards(
+  blocks: Block[],
+  records: ReadonlyMap<string, CheckInTask>,
+  opts: { now: Date; studioBaseUrl?: string; except?: string },
+): Block[] {
+  let next = blocks
+  for (const drawn of taskCardsOn(blocks)) {
+    if (drawn.taskId === text(opts.except)) continue
+    const record = records.get(drawn.taskId)
+    if (!record) continue
+    const status = text(record.status) || 'queued'
+    // Compared as the value clips it, or a long name would never match and redraw forever.
+    const owner = text(record.ownerName).slice(0, 120).trim()
+    if (drawn.status === status && drawn.ownerName.toLowerCase() === owner.toLowerCase()) continue
+    next = replaceCheckInTask(next, drawn.taskId, record, { now: opts.now, mode: drawn.mode, studioBaseUrl: opts.studioBaseUrl })
+  }
   return next
 }
 

@@ -22,7 +22,7 @@ import { findReassignments, resolveOwnerName, type TeamMemberAvailability } from
 import { DEFAULT_WEEKLY_MARKETING_HOURS, estimateOperationMinutes, resolveWeeklyMinutes } from '@/lib/marketing/effort'
 import { getMarketingWriteClientFor } from '@/lib/marketing/client'
 import { getOutreachClient, isOutreachClientConfigured } from '@/lib/marketing/outreachClient.server'
-import { askableTeam, slackIdForOwner, TEAM_AVAILABILITY_PROJECTION, tidyAvailability } from '@/lib/marketing/team.server'
+import { askableTeam, marketingTeamNames, slackIdForOwner, TEAM_AVAILABILITY_PROJECTION, tidyAvailability } from '@/lib/marketing/team.server'
 import { proposeOwnerAsks, type AskTask, type AskTeamMember, type OwnerAsk } from '@/lib/marketing/ownerAsk'
 import { DIGEST_HEARTBEAT_DOC_ID } from '@/lib/marketing/heartbeat'
 import { absencesOn, claimWeek, recordWeekRun, utcIsoWeekKey } from '@/lib/marketing/weeklyCheckIn.server'
@@ -109,6 +109,14 @@ const OPERATION_PROJECTION = `{
     }`
 
 /**
+ * Undated work sorts last. An operation created without a date stores `dueAt:
+ * ""` (older records; `normalizeMarketingOperationInput` now leaves it out),
+ * and `coalesce` keeps "" — which sorts ahead of every real date, so undated
+ * desk tasks pushed overdue work out of a capped read.
+ */
+const DUE_AT_ORDER = `select(defined(dueAt) && dueAt != "" => dueAt, "9999")`
+
+/**
  * `operations` is the open board (stuck work included — it used to vanish from
  * the Monday plan, the one week somebody most needed to see it). `planned` is
  * the planned week by id, read on its own so a planned task can never fall off
@@ -118,13 +126,13 @@ const DATA_QUERY = `{
   "operations": *[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
     && status in ["queued", "working", "needsHuman", "blocked"]
     && !string::startsWith(coalesce(sourceKey, ""), $planPrefix)]
-    | order(coalesce(dueAt, "9999") asc)[0...40]${OPERATION_PROJECTION},
+    | order(${DUE_AT_ORDER} asc)[0...40]${OPERATION_PROJECTION},
   "planned": *[_type == "${MARKETING_OPERATION_TYPE}" && _id in $plannedIds && !(_id in path("drafts.**"))
     && !(status in ["done", "dismissed"])]${OPERATION_PROJECTION},
   "owned": *[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
     && !(status in ["done", "dismissed"]) && defined(ownerName) && ownerName != ""
     && !string::startsWith(coalesce(sourceKey, ""), $planPrefix)
-    && (!defined(dueAt) || dateTime(dueAt) < dateTime($weekEnd))]{
+    && (!defined(dueAt) || dueAt == "" || dateTime(dueAt) < dateTime($weekEnd))]{
       ownerName, estimatedMinutes, kind, priority
     },
   "doneLastWeek": count(*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**"))
@@ -288,6 +296,8 @@ function toRow(operation: StoredOperation, availability: TeamMemberAvailability[
 const waitingDecision = (row: DigestRow) => row.status === 'needsHuman' && isDecisionTask(row)
 const isStuck = (row: DigestRow) => row.status === 'blocked'
 const isOwned = (row: DigestRow) => Boolean(clean(row.ownerName))
+/** Waiting on a person, but for an OWNER, not an answer — what "Not me" leaves behind. */
+const lookingForOwner = (row: DigestRow) => row.status === 'needsHuman' && !waitingDecision(row) && !isOwned(row)
 
 /**
  * Without a plan: priority first, then date. Ordering on date alone buried the
@@ -511,9 +521,15 @@ async function handle(request: NextRequest) {
   if (plan) {
     const plannedDecisions = pick(plan.decisionIds)
     decisions = plannedDecisions.filter(waitingDecision)
-    // The planner files every needsHuman task as a decision, including the ones
-    // "Not me" left behind. Those are looking for an owner, not an answer.
+    // A plan recorded before the planner stopped filing "Not me" tasks as
+    // decisions may still hold one here: it is looking for an owner, not an answer.
     work = [...pick(plan.itemIds), ...plannedDecisions.filter((row) => !waitingDecision(row))]
+    // A task somebody passed on is shown whether or not the plan fitted it.
+    // Only the planned ids reach this message, so one the planner deferred
+    // "over budget" was never asked about again — and the "asked twice → drop
+    // it?" that ends an owner search could never come up.
+    const planned = new Set([...plan.itemIds, ...plan.decisionIds])
+    work.push(...openRows.filter((row) => !planned.has(row._id) && lookingForOwner(row)))
   } else {
     const board = [...openRows].sort(boardOrder)
     decisions = board.filter(waitingDecision)
@@ -605,12 +621,20 @@ async function handle(request: NextRequest) {
   }
 
   // ── Last week ───────────────────────────────────────────────────────────
+  // Follow-ups are left out of this sentence: "Outreach this week" owns them,
+  // counted from now. Counted here too they were a second, different number a
+  // few lines above it — due to last Monday but overdue to 9am today, so any
+  // follow-up set for this Monday read "1 follow-up due (3 overdue)".
   const lastWeekPulse = strategy
-    ? summarizeOutreach(strategy.contacts, {
-        from: new Date(weekStartMs - 7 * DAY_MS).toISOString(),
-        to: new Date(weekStartMs).toISOString(),
-        now,
-      })
+    ? {
+        ...summarizeOutreach(strategy.contacts, {
+          from: new Date(weekStartMs - 7 * DAY_MS).toISOString(),
+          to: new Date(weekStartMs).toISOString(),
+          now,
+        }),
+        followUpsDue: 0,
+        followUpsOverdue: 0,
+      }
     : null
   const doneLastWeek = typeof data?.doneLastWeek === 'number' ? data.doneLastWeek : 0
   const lastWeek = [
@@ -657,9 +681,17 @@ async function handle(request: NextRequest) {
   }
 
   // Only while somebody is still unmapped: the prompt removes itself once
-  // everyone who wants to be linked has been.
+  // everyone who wants to be linked has been. The whole team is offered, not
+  // just names that already own work — linking is the only way onto the list
+  // of people who can be asked, and somebody with no work yet had no way in.
+  const linkedNames = new Set(availability.filter((entry) => entry.slackUserId).map((entry) => lower(entry.ownerName)))
   const unmappedOwners = Array.from(
-    new Set(openRows.filter((row) => row.ownerName && !row.slackUserId).map((row) => row.ownerName!)),
+    new Map(
+      [
+        ...openRows.filter((row) => row.ownerName && !row.slackUserId).map((row) => clean(row.ownerName)),
+        ...marketingTeamNames().filter((name) => !linkedNames.has(lower(name))),
+      ].map((name) => [lower(name), name]),
+    ).values(),
   )
 
   const budgetMinutes = plan?.budgetMinutes || resolveWeeklyMinutes(data?.weeklyHours)
@@ -674,6 +706,9 @@ async function handle(request: NextRequest) {
     lastWeek,
     needsOwner: { asked: askedCards, away: awayCards, exhausted: exhaustedCards, open: openCards },
     decisions: decisions.map((row) => card(row)),
+    // The plan puts four questions in front of people; the rest are still
+    // waiting, and "+N more" should say so rather than read as none.
+    decisionsTotal: Math.max(decisions.length, openRows.filter(waitingDecision).length),
     taken: [...taken.values()],
     stuck: stuckRows.map((row) => ({
       title: row.title,

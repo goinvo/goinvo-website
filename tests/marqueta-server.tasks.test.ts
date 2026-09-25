@@ -65,12 +65,17 @@ import {
   markTaskDone,
   markTaskStuck,
   markTaskUnstuck,
+  readTaskCardRecords,
   reopenTask,
   snoozeTask,
   takeTask,
+  TASK_CARDS_QUERY,
 } from '@/lib/marketing/taskActions.server'
 import {
   askableTeam,
+  marketingTeamNames,
+  OWNED_OPEN_TASKS_QUERY,
+  resolveOwnerNameForWrite,
   resolvePresserName,
   slackIdForOwner,
   TEAM_AVAILABILITY_QUERY,
@@ -110,6 +115,10 @@ type Fixtures = {
   checkIn?: Record<string, unknown>
   heartbeat?: Record<string, unknown> | null
   strategy?: Record<string, unknown>
+  /** Open tasks filed under the name being checked (`OWNED_OPEN_TASKS_QUERY`). */
+  openTasks?: number
+  /** Every task on one message, as `readTaskCardRecords` reads them. */
+  cards?: Record<string, unknown>[]
 }
 
 function routeOutreach(fixtures: Fixtures) {
@@ -128,6 +137,8 @@ function routeOutreach(fixtures: Fixtures) {
     if (query.includes('_type == "marketingContact" && _id == $id') && query.includes('closeReason')) return nextFrom(contacts)
     if (query.includes('_type == "marketingContact" && _id == $id')) return fixtures.existingContact ?? null
     if (query.includes('_type == "marketingOperation" && _id == $id')) return nextFrom(tasks)
+    if (query === TASK_CARDS_QUERY) return fixtures.cards ?? []
+    if (query === OWNED_OPEN_TASKS_QUERY) return fixtures.openTasks ?? 0
     if (query.startsWith('*[_id == $id][0]{ _id }')) return fixtures.existingById ?? null
     throw new Error(`unexpected query: ${query.slice(0, 80)}`)
   })
@@ -215,6 +226,67 @@ describe('team identity', () => {
   it('throws rather than guessing when the roster cannot be read', async () => {
     routeOutreach({ availability: new Error('down') })
     await expect(resolvePresserName({ slackUserId: 'UJUHAN' })).rejects.toThrow('down')
+  })
+
+  // Reviewer finding: an unlinked Juhan whose Slack says "Juhan Sonin" pressed
+  // Take and became the owner "Juhan Sonin". Once he linked as "Juhan" the task
+  // was nobody's — Hand back refused him, `mine` did not list it, and the setup
+  // kept offering a name he could no longer pick.
+  describe('the name a write files something under', () => {
+    const unlinkedJuhan: TeamMemberAvailability[] = [{ ownerName: 'Juhan', status: 'available' }]
+
+    it('never files work under a display name the team list does not know', async () => {
+      routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin' })).resolves.toBe('Someone')
+      // resolvePresserName itself is unchanged: fine for a sentence, never for an owner.
+      await expect(resolvePresserName({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin', entries: unlinkedJuhan })).resolves.toBe('Juhan Sonin')
+    })
+
+    it('uses the name when they are linked, on the team list, on the marketing team, or already own open work', async () => {
+      routeOutreach({ availability: TEAM })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJUHAN', displayName: 'Juhan Sonin' })).resolves.toBe('Juhan')
+      routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'juhan' })).resolves.toBe('Juhan')
+      // Jon owns nothing and has no record, but he is on the marketing team.
+      delete process.env.MARKETING_TEAM_NAMES
+      expect(marketingTeamNames()).toEqual(['Juhan', 'Shirley', 'Eric', 'Jon'])
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UJON', displayName: 'Jon' })).resolves.toBe('Jon')
+      // Somebody new with work already filed under exactly their name.
+      routeOutreach({ availability: unlinkedJuhan, openTasks: 2 })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UDANA', displayName: 'Dana' })).resolves.toBe('Dana')
+      // A namesake is still nobody.
+      routeOutreach({ availability: TEAM })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Eric' })).resolves.toBe('Someone')
+    })
+
+    it('throws rather than guessing when the open work cannot be counted', async () => {
+      routeOutreach({ availability: unlinkedJuhan })
+      mocks.outreach.fetch.mockImplementation(async (query: string) => {
+        if (query === TEAM_AVAILABILITY_QUERY) return unlinkedJuhan
+        throw new Error('down')
+      })
+      await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Dana' })).rejects.toThrow('down')
+    })
+  })
+
+  it('reads every task on a message in one query, drawn as a card draws them — and an empty map when it cannot', async () => {
+    routeOutreach({
+      availability: TEAM,
+      cards: [
+        { _id: 'op-a', title: 'Task A', ownerName: 'Juhan', ownerSlackUserId: 'USTALE', status: 'done' },
+        { _id: 'op-b', title: 'Task B', status: 'queued' },
+      ],
+    })
+    const records = await readTaskCardRecords(['op-a', 'op-b', 'op-a', ''])
+    expect([...records.keys()]).toEqual(['op-a', 'op-b'])
+    // The roster's id, never the stamped one.
+    expect(records.get('op-a')).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN', status: 'done' })
+    const call = mocks.outreach.fetch.mock.calls.find(([query]) => query === TASK_CARDS_QUERY)!
+    expect(call[1]).toEqual({ ids: ['op-a', 'op-b'] })
+
+    mocks.outreach.fetch.mockRejectedValue(new Error('down'))
+    await expect(readTaskCardRecords(['op-a'])).resolves.toEqual(new Map())
+    await expect(readTaskCardRecords([])).resolves.toEqual(new Map())
   })
 
   it('turns GROQ nulls into absent fields, so a missing allocation is the default week, not zero hours', () => {
@@ -401,9 +473,14 @@ describe('task actions', () => {
   describe('Take as an away cover', () => {
     const erics = () => task({ ownerName: 'Eric', ownerSlackUserId: 'UERIC' })
     const shirley = { taskId: TASK_ID, personName: 'Shirley', slackUserId: 'USHIRLEY', now: NOW }
+    /** Eric away Mon 21 – Sun 27 Sep; NOW is the Thursday. */
+    const ericAway: TeamMemberAvailability[] = [
+      TEAM[0],
+      { ownerName: 'Eric', slackUserId: 'UERIC', status: 'away', from: '2026-09-21', until: '2026-09-27' },
+    ]
 
     it('moves the task off the away owner it was drawn for, onto the presser, and names who it came from', async () => {
-      routeOutreach({ task: erics(), availability: TEAM })
+      routeOutreach({ task: erics(), availability: ericAway })
       const result = await takeTask({ ...juhan, coverFor: 'Eric' })
       expect(result).toMatchObject({ ok: true, changed: true, message: 'It’s yours — taken over from Eric.' })
       const [patch] = patchesFor(TASK_ID)
@@ -414,6 +491,23 @@ describe('task actions', () => {
       })
       expect(opsOf(patch, 'ifRevisionId')[0][0]).toBe('rev1')
       expect(result.task).toMatchObject({ ownerName: 'Juhan', slackUserId: 'UJUHAN' })
+    })
+
+    // The card stays in the channel after the absence ends. Pressed then, it
+    // would take Eric's task from under him while he works on it.
+    it('refuses once the owner is back — the card was drawn while they were away, and nothing changes', async () => {
+      routeOutreach({ task: erics(), availability: TEAM })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({
+        ok: false,
+        message: 'Couldn’t take that — nothing changed. Eric is back — ask them before taking it.',
+      })
+      // Back after the time off ended, too: the day after his last day.
+      routeOutreach({ task: erics(), availability: [TEAM[0], { ...ericAway[1], from: '2026-09-14', until: '2026-09-23' }] })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false })
+      // A roster that cannot be read cannot say he is still away: refused, not guessed.
+      routeOutreach({ task: erics(), availability: new Error('down') })
+      await expect(takeTask({ ...juhan, coverFor: 'Eric' })).resolves.toMatchObject({ ok: false })
+      expect(mocks.patches).toHaveLength(0)
     })
 
     it('never takes it from whoever covered it first — a stale cover card is refused', async () => {

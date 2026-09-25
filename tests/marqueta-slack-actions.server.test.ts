@@ -246,6 +246,7 @@ function routeOutreach() {
     if (query.includes('_type == "marketingOperation" && _id == $id')) {
       return store.tasks.length > 1 ? store.tasks.shift() : store.tasks[0] ?? null
     }
+    if (query === OWNED_OPEN_TASKS_QUERY) return 0
     return store.data
   })
   mocks.outreach.createIfNotExists.mockImplementation(async (doc: { _id: string }) => {
@@ -806,6 +807,15 @@ describe('setMarketingAvailability — the same safe write the chat path uses', 
       expect(record('Juhan Sonin')).toBeUndefined()
     })
 
+    // Somebody on the marketing team who owns nothing yet was refused and told
+    // to use a setup that listed only people who already owned work.
+    it('books a marketing teammate who owns nothing yet, under the team’s name for them', async () => {
+      openTasks = 0
+      const result = await away({ personName: 'Jon', slackUserId: 'UJON' })
+      expect(result).toMatchObject({ ok: true, changed: true, ownerName: 'Jon', status: 'away' })
+      expect(record('Jon')).toMatchObject({ ownerName: 'Jon', status: 'away' })
+    })
+
     it('is refused when the board’s work cannot be counted to prove it is somebody', async () => {
       openTasks = new Error('count failed')
       const result = await away({ personName: 'Pat Lee', slackUserId: 'UPAT' })
@@ -1084,6 +1094,7 @@ describe('claimMarketingTask takes a task only as its card showed it', () => {
     expect(taskPatches()).toHaveLength(0)
   })
 
+  // Never an away cover: Juhan is not away, and "Take it over" still takes it.
   it('takes it over while it is still the owner the card named, and returns the task to redraw', async () => {
     store.tasks = [owned()]
     const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC', expectedOwner: 'Juhan' })
@@ -1094,5 +1105,13 @@ describe('claimMarketingTask takes a task only as its card showed it', () => {
   it('without a card to go by, is the old unconditional take-over', async () => {
     store.tasks = [owned()]
     await expect(claimMarketingTask({ taskId: 'op-1', personName: 'Eric', slackUserId: 'UERIC' })).resolves.toMatchObject({ ok: true })
+  })
+
+  it('never makes an unlinked presser the owner under their Slack display name', async () => {
+    store.tasks = [{ ...owned(), ownerName: '', ownerSlackUserId: '' }]
+    store.availability = [{ ownerName: 'Juhan', status: 'available' }]
+    const result = await claimMarketingTask({ taskId: 'op-1', personName: 'Juhan Sonin', slackUserId: 'UJUHAN', expectedOwner: '' })
+    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/which name on the team list is yours/) })
+    expect(taskPatches()).toHaveLength(0)
   })
 })
