@@ -84,7 +84,7 @@ export function DayStrip({
         height={height}
         role="img"
         aria-label={`${events.length} dated follow-ups around today`}
-        style={{ display: 'block', overflow: 'visible' }}
+        style={{ display: 'block', maxWidth: '100%', overflow: 'visible' }}
       >
         <rect
           x={pad}

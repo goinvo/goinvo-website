@@ -46,7 +46,7 @@ export function HeatGrid({
         height={height}
         role="img"
         aria-label={`${rows.length} by ${columns.length} grid of ${unit}`}
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '100%' }}
       >
         {columns.map((column, c) => (
           <text

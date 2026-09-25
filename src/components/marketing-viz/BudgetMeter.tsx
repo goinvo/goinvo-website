@@ -45,7 +45,7 @@ export function BudgetMeter({
         height={svgHeight}
         role="img"
         aria-label={`${format(spent)} planned of ${budgetLabel}`}
-        style={{ display: 'block', overflow: 'visible' }}
+        style={{ display: 'block', maxWidth: '100%', overflow: 'visible' }}
       >
         {/* the unspent budget: a light step of the fill's own hue */}
         <rect x={0} y={top} width={Math.max(0, budgetX)} height={height} rx={4} fill="var(--viz-track)" />

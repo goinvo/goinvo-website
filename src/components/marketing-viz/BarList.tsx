@@ -52,7 +52,7 @@ export function BarList({
         height={height}
         role="img"
         aria-label={items.map((item) => `${item.label} ${item.display ?? format(item.value)}`).join(', ')}
-        style={{ display: 'block' }}
+        style={{ display: 'block', maxWidth: '100%' }}
       >
         {items.map((item, index) => {
           const y = top + index * rowHeight + 6
