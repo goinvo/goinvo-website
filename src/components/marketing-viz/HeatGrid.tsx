@@ -28,7 +28,7 @@ export function HeatGrid({
 }) {
   const { ref, width } = useElementWidth<HTMLDivElement>(560)
   const { hover, bind, activeId } = useChartTooltip()
-  const labelWidth = Math.min(190, Math.max(96, ...rows.map((row) => estimateTextWidth(row.label, 12) + 14)))
+  const labelWidth = Math.min(Math.max(120, width * 0.35), Math.max(96, ...rows.map((row) => estimateTextWidth(row.label, 12, highlightRow === row.key ? 650 : 400) + 14)))
   const totalWidth = 52
   const gap = 2
   const cellWidth = Math.max(28, (width - labelWidth - totalWidth - gap * (columns.length - 1)) / columns.length)

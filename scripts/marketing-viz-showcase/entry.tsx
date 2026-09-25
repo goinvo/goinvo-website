@@ -89,7 +89,7 @@ function useScheme(): VizScheme {
 function Scope({ children }: { children: ReactNode }) {
   const scheme = useScheme()
   return (
-    <VizScope scheme={scheme} style={{ ['--viz-surface' as string]: 'var(--surface)', fontFamily: 'inherit' }}>
+    <VizScope scheme={scheme} style={{ ['--viz-surface' as string]: 'var(--surface)' }}>
       {children}
     </VizScope>
   )

@@ -27,7 +27,7 @@ export type FunnelRow = {
 export function FunnelChart({ rows, barHeight = 20 }: { rows: FunnelRow[]; barHeight?: number }) {
   const { ref, width } = useElementWidth<HTMLDivElement>(560)
   const { hover, bind, activeId } = useChartTooltip()
-  const labelWidth = Math.min(132, Math.max(80, ...rows.map((row) => estimateTextWidth(row.label, 12) + 12)))
+  const labelWidth = Math.min(Math.max(120, width * 0.35), Math.max(80, ...rows.map((row) => estimateTextWidth(row.label, 12) + 14)))
   const narrow = width < 520
   const rateWidth = narrow ? 104 : 150
   const plotWidth = Math.max(60, width - labelWidth - rateWidth)
@@ -57,7 +57,7 @@ export function FunnelChart({ rows, barHeight = 20 }: { rows: FunnelRow[]; barHe
           const w = row.count > 0 ? Math.max(3, x(row.count)) : 0
           const id = row.key
           const countText = row.count.toLocaleString('en-US')
-          const inside = estimateTextWidth(countText, 12) + 12 <= w
+          const inside = estimateTextWidth(countText, 12, 650) + 12 <= w
           const rate =
             row.fromPrevious === null
               ? ''
