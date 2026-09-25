@@ -3,6 +3,7 @@ import { getChatSanityClient } from '@/lib/chat/sanity'
 import {
   getSlackBotUserId,
   getSlackConfig,
+  getSlackPermalink,
   getSlackUserDisplayName,
   postSlackEphemeral,
   postSlackMessage,
@@ -10,16 +11,36 @@ import {
 } from '@/lib/chat/slack'
 import { createChatMessage, normalizeChatText, previewText, type SanityChatMessage } from '@/lib/chat/validation'
 import { appendDisputeNoteFromSlack } from '@/lib/shop/disputeChat'
-import { classifyMessage } from '@/lib/marketing/ideaCapture'
-import { addressesMarqueta } from '@/lib/marketing/marquetaChat'
+import { classifyMessage, draftDocIdForMessage } from '@/lib/marketing/ideaCapture'
+import { addressesMarqueta, parseMarquetaIntent, removeMention } from '@/lib/marketing/marquetaChat'
 import { answerMarqueta, type MarquetaReply } from '@/lib/marketing/marquetaChat.server'
 import { captureFromMessage } from '@/lib/marketing/ideaCapture.server'
+import { getMarketingWriteClientFor } from '@/lib/marketing/client'
+import { formatCitationsForSlack } from '@/lib/marketing/marquetaCitations'
+import {
+  chunkForSlack,
+  FORMAT_LABEL,
+  generatedToCalendarDraft,
+  type GenerationFormat,
+} from '@/lib/marketing/marquetaGenerate'
+import { runMarquetaGeneration } from '@/lib/marketing/marquetaGenerate.server'
 import { MARQUETA_IDENTITY } from '@/lib/marketing/marquetaStyle'
-import { buildDraftCaptureBlocks, buildIdeaCaptureBlocks } from '@/lib/marketing/slackDelegation'
+import {
+  buildDraftCaptureBlocks,
+  buildGenerationResultBlocks,
+  buildIdeaCaptureBlocks,
+} from '@/lib/marketing/slackDelegation'
 import { clipSlackText, decodeSlackText, escapeSlackText } from '@/lib/marketing/slackText'
 import { studioViewUrl } from '@/lib/marketing/taskLinks'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Drafting is a model call plus a grounding fetch, so it needs more than the
+ * default. It runs behind after(), but the function still has to stay alive
+ * long enough for that work to finish.
+ */
+export const maxDuration = 120
 
 /** Well under Stripe's 20k evidence cap, but far above the visitor-chat limit. */
 const MAX_DISPUTE_NOTE_LENGTH = 8000
@@ -109,6 +130,17 @@ const MARQUETA = MARQUETA_IDENTITY
 async function handleMarquetaConversation(event: SlackMessageEvent, botUserId: string | undefined) {
   // A failed name lookup is not a reason to leave somebody unanswered.
   const personName = (await getSlackUserDisplayName(event.user).catch(() => undefined)) || 'Someone'
+
+  // Being asked to draft something is its own path: it is slow, and it produces
+  // a card rather than a line, so it cannot go through the plain-text answer
+  // below. Canonicalised exactly the way `answerMarqueta` does it, so the route
+  // and the server can never disagree about what was asked.
+  const intent = parseMarquetaIntent(decodeSlackText(removeMention(event.text || '', botUserId)))
+  if (intent.kind === 'generate') {
+    await handleMarquetaGeneration({ event, format: intent.format, topic: intent.topic, personName })
+    return
+  }
+
   const reply = await answerMarqueta({
     text: event.text || '',
     personName,
@@ -120,6 +152,110 @@ async function handleMarquetaConversation(event: SlackMessageEvent, botUserId: s
   })
   if (!reply) return
   await deliverMarquetaReply(event, reply)
+}
+
+/** "a script" / "an outline" — a small article, so the confirmation reads right. */
+function withArticle(word: string): string {
+  return `${/^[aeiou]/i.test(word) ? 'an' : 'a'} ${word}`
+}
+
+/**
+ * She was asked to draft something.
+ *
+ * Acknowledged immediately, then the slow part — the model call, the grounding
+ * fetch, filing the draft, posting the card — runs behind `after()`, so Slack
+ * gets its 200 in time and never retries the message into a second draft.
+ * Idempotent regardless: the draft lands at a deterministic id keyed by this
+ * message, so a redelivery that slips past the ack finds it already there and
+ * stops.
+ *
+ * Threaded the same way `deliverMarquetaReply` threads an answer — in a channel
+ * under the message she was asked in, in a DM wherever the person wrote.
+ */
+async function handleMarquetaGeneration(input: {
+  event: SlackMessageEvent
+  format: GenerationFormat
+  topic: string
+  personName: string
+}) {
+  const { event, format, topic, personName } = input
+  const channel = event.channel || ''
+  const ts = event.ts || ''
+  const direct = isDirectMessage(channel)
+  const threadTs = direct && !event.thread_ts ? undefined : event.thread_ts || ts
+  const label = FORMAT_LABEL[format]
+
+  const post = (text: string, blocks?: Record<string, unknown>[]) =>
+    postSlackMessage({
+      channel,
+      threadTs,
+      ...MARQUETA,
+      unfurl: false,
+      text,
+      ...(blocks ? { blocks } : {}),
+    })
+
+  // Clear format, unclear subject: ask, rather than draft something about nothing.
+  if (!topic.trim()) {
+    await post(`What should the ${label} be about? Try \`draft ${format}: <topic>\`.`)
+    return
+  }
+
+  // A Slack redelivery of the same message must not produce a second draft.
+  const draftId = draftDocIdForMessage({ channel, ts })
+  try {
+    const existing = await getMarketingWriteClientFor('marketingCalendarItem').fetch<{ _id: string } | null>(
+      `*[_id == $id][0]{ _id }`,
+      { id: draftId },
+    )
+    if (existing) return
+  } catch {
+    // A failed existence check is not a reason to withhold a first draft.
+  }
+
+  await post(`On it — drafting ${withArticle(label)} on “${topic}”. Back in a moment.`)
+
+  after(async () => {
+    try {
+      const result = await runMarquetaGeneration({ format, topic })
+      if (!result.ok) {
+        await post(result.message)
+        return
+      }
+
+      const permalink = await getSlackPermalink(channel, ts)
+      await getMarketingWriteClientFor('marketingCalendarItem').createIfNotExists(
+        generatedToCalendarDraft({
+          generated: result.generated,
+          channel,
+          ts,
+          personName,
+          topic,
+          permalink,
+          sources: result.citations,
+        }),
+      )
+
+      const base = process.env.MARKETING_PUBLIC_BASE_URL
+      await post(
+        `Drafted ${withArticle(label)}: ${result.generated.title}`,
+        buildGenerationResultBlocks({
+          formatLabel: label,
+          title: result.generated.title,
+          bodyChunks: chunkForSlack(result.generated.body),
+          citationChunks: chunkForSlack(formatCitationsForSlack(result.citations)),
+          sourceCount: result.citations.length,
+          brandVoiceName: result.brandVoiceName,
+          channel,
+          ts,
+          studioUrl: base ? studioViewUrl(base, 'calendar') : undefined,
+        }),
+      )
+    } catch (error) {
+      console.error('[marqueta] generation failed', error)
+      await post('That draft did not come together. Try again in a moment, or the Studio assistant can.')
+    }
+  })
 }
 
 /**
