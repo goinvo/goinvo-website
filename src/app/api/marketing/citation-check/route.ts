@@ -230,6 +230,7 @@ async function checkClaims(text: string, pageUrl: string, model?: string): Promi
   ].join('\n')
 
   const { text: out } = await generateClaudeText({
+    feature: 'citation-check',
     system,
     user: JSON.stringify({ pageUrl, pageText: text.slice(0, CITATION_CHECK_LIMITS.modelTextCharacters) }),
     maxTokens: 2600,
