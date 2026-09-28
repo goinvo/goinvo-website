@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { motion, useInView, type TargetAndTransition } from 'framer-motion'
 import { useReducedMotion } from '@/lib/motion'
 
@@ -53,6 +53,17 @@ export function Reveal({
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once, margin: '-60px' })
   const prefersReducedMotion = useReducedMotion()
+  // The server HTML renders the content visible, so text above the fold paints without
+  // waiting for JavaScript. After mount, content already on screen stays as it is; content
+  // that starts off screen is hidden there (unseen) and animates in as it scrolls into view.
+  const [animateIn, setAnimateIn] = useState(false)
+
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const rect = element.getBoundingClientRect()
+    if (rect.top >= window.innerHeight || rect.bottom <= 0) setAnimateIn(true)
+  }, [])
 
   const v = variants[style]
 
@@ -60,17 +71,19 @@ export function Reveal({
     return <div ref={ref} className={className}>{children}</div>
   }
 
+  const shown = !animateIn || isInView
+
   return (
     <motion.div
       ref={ref}
       className={className}
-      initial={v.hidden}
-      animate={isInView ? v.visible : v.hidden}
-      transition={{
-        duration,
-        delay,
-        ease: [0.25, 0.1, 0.25, 1],
-      }}
+      initial={false}
+      animate={shown ? v.visible : v.hidden}
+      transition={
+        shown
+          ? { duration, delay, ease: [0.25, 0.1, 0.25, 1] }
+          : { duration: 0 }
+      }
     >
       {children}
     </motion.div>
