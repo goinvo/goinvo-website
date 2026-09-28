@@ -20,6 +20,8 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { SanityClient } from '@sanity/client'
 import { marketingClaudeModel } from './anthropicJson'
+import { usageFromAnthropic } from './modelLedger'
+import { recordModelCall } from './modelLedger.server'
 import { nextRecommendedPublishAt, type PostingTimeSlot } from './postingTimeSchedule'
 
 // Re-export the SDK-free scheduling helper + slot type so existing server callers
@@ -172,17 +174,45 @@ export async function researchChannelPostingTimes(
   // combined with the web_search server tool currently returns a server-side 500
   // from the API, while web_search alone is reliable. (No temperature/top_p
   // either — Opus 4.8 rejects them.)
-  const stream = client.messages.stream(
-    {
+  // This route builds its own client rather than going through
+  // `generateClaudeText`, because it needs a much larger max_tokens and its own
+  // timeout for the web_search loop. That means it has to record its own call:
+  // a bypass of the gateway is a bypass of the meter, and an unmetered route is
+  // exactly how spend goes missing. `tests/model-ledger-coverage.test.ts` fails
+  // if a new file constructs an Anthropic client without recording.
+  const startedAt = Date.now()
+  let message
+  try {
+    const stream = client.messages.stream(
+      {
+        model,
+        max_tokens: 8192,
+        tools: [{ type: 'web_search_20260209', name: 'web_search' }],
+        system,
+        messages: [{ role: 'user', content: user }],
+      },
+      { timeout: opts.timeoutMs || Number(process.env.MARKETING_RESEARCH_TIMEOUT_MS || 180000) },
+    )
+    message = await stream.finalMessage()
+  } catch (error) {
+    await recordModelCall({
+      feature: 'posting-times',
       model,
-      max_tokens: 8192,
-      tools: [{ type: 'web_search_20260209', name: 'web_search' }],
-      system,
-      messages: [{ role: 'user', content: user }],
-    },
-    { timeout: opts.timeoutMs || Number(process.env.MARKETING_RESEARCH_TIMEOUT_MS || 180000) },
-  )
-  const message = await stream.finalMessage()
+      usage: { inputTokens: 0, outputTokens: 0 },
+      latencyMs: Date.now() - startedAt,
+      ok: false,
+      errorKind: (error as { constructor?: { name?: string } })?.constructor?.name || 'Error',
+    })
+    throw error
+  }
+  await recordModelCall({
+    feature: 'posting-times',
+    model,
+    usage: usageFromAnthropic((message as unknown as { usage?: unknown }).usage),
+    latencyMs: Date.now() - startedAt,
+    ok: true,
+    stopReason: (message as unknown as { stop_reason?: string | null }).stop_reason ?? null,
+  })
   const { text, sources } = extractTextAndSources(message)
   const parsed = parseRecommendationJson(text)
 
