@@ -1,8 +1,12 @@
 # Mobile Lighthouse performance: `perf/defer-third-parties` (2026-09-28)
 
 Production (`https://www.goinvo.com`, which was still the pre-branch code throughout) measured
-against a Vercel preview of the branch after each step. Every raw Lighthouse JSON is in the
-step folders; `summary.json` in each holds the medians.
+against a Vercel preview of the branch after each step. **`runs.csv` holds every run** (311:
+set, runner, target, page, category scores, FCP, LCP, TBT, CLS, Speed Index, observed first
+paint); `summary.json` in each step folder holds that step's medians. The raw Lighthouse
+reports (about 1 MB each, mostly embedded screenshots; 309 MB in all) are kept outside this
+public repository, at `Programming/GoInvo/perf-measurements-raw/defer-third-parties-2026-09-28/`
+on the machine that ran them, under the same folder names as the `file` column.
 
 ## Method
 
