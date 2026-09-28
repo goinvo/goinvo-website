@@ -26,6 +26,33 @@ declare global {
 }
 
 let calendlyPromise: Promise<void> | null = null
+let newsletterPopupPromise: Promise<void> | null = null
+let newsletterPopupReady = false
+
+function ensureNewsletterPopupLoaded() {
+  if (newsletterPopupPromise) return newsletterPopupPromise
+  newsletterPopupPromise = new Promise<void>((resolve) => {
+    const src = `https://eocampaign1.com/form/${newsletterPopupFormId}.js`
+    const done = () => {
+      newsletterPopupReady = true
+      resolve()
+    }
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`)
+    if (existing) {
+      done()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = src
+    script.async = true
+    script.dataset.form = newsletterPopupFormId
+    script.addEventListener('load', done, { once: true })
+    // A blocked script never wires the button; stop replaying clicks into it.
+    script.addEventListener('error', done, { once: true })
+    document.body.appendChild(script)
+  })
+  return newsletterPopupPromise
+}
 
 function ensureCalendlyLoaded() {
   if (typeof window === 'undefined') return Promise.resolve()
@@ -60,6 +87,7 @@ function ensureCalendlyLoaded() {
 
 export function HomeConceptCalendlyCta() {
   const inlineRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLElement>(null)
   const [loadError, setLoadError] = useState(false)
   const [inlineReady, setInlineReady] = useState(false)
   const [showFallback, setShowFallback] = useState(false)
@@ -151,17 +179,34 @@ export function HomeConceptCalendlyCta() {
     }
   }, [])
 
-  // Load the EmailOctopus popup form once. Its embed script wires up any element
-  // bearing data-eo-form-toggle-id={newsletterPopupFormId} to open the popup.
+  // The EmailOctopus popup form's embed script wires up any element bearing
+  // data-eo-form-toggle-id={newsletterPopupFormId}. Its only trigger is the Subscribe
+  // button in this section, so the script loads when the section nears the viewport
+  // (or the button is pointed at or focused) instead of during the first render.
   useEffect(() => {
-    const src = `https://eocampaign1.com/form/${newsletterPopupFormId}.js`
-    if (document.querySelector(`script[src="${src}"]`)) return
-    const script = document.createElement('script')
-    script.src = src
-    script.async = true
-    script.dataset.form = newsletterPopupFormId
-    document.body.appendChild(script)
+    const section = sectionRef.current
+    if (!section || typeof IntersectionObserver === 'undefined') {
+      void ensureNewsletterPopupLoaded()
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        observer.disconnect()
+        void ensureNewsletterPopupLoaded()
+      },
+      { rootMargin: '600px 0px' },
+    )
+    observer.observe(section)
+    return () => observer.disconnect()
   }, [])
+
+  // A click that lands before the script has wired the button is replayed once it has.
+  function handleSubscribeClick(event: React.MouseEvent<HTMLButtonElement>) {
+    if (newsletterPopupReady) return
+    const button = event.currentTarget
+    void ensureNewsletterPopupLoaded().then(() => button.click())
+  }
 
   // Calendly runs in a cross-origin iframe, so field focus is not observable.
   // The shared hook reports discovery_form_start on date/time selection and a
@@ -193,7 +238,7 @@ export function HomeConceptCalendlyCta() {
   }
 
   return (
-    <section id="book" data-experiment-section="book-call" className="py-16 lg:py-24 bg-[#b84a0e] text-white">
+    <section ref={sectionRef} id="book" data-experiment-section="book-call" className="py-16 lg:py-24 bg-[#b84a0e] text-white">
       <div className="max-w-[960px] mx-auto px-5 sm:px-8 text-center">
         <h2 className="font-serif text-3xl lg:text-5xl leading-tight mb-5 max-w-[20ch] mx-auto">
           Have a product that needs to ship?
@@ -261,6 +306,9 @@ export function HomeConceptCalendlyCta() {
           <button
             type="button"
             data-eo-form-toggle-id={newsletterPopupFormId}
+            onPointerEnter={() => void ensureNewsletterPopupLoaded()}
+            onFocus={() => void ensureNewsletterPopupLoaded()}
+            onClick={handleSubscribeClick}
             className="group inline-flex cursor-pointer items-baseline gap-1 text-white underline underline-offset-4"
           >
             Subscribe
