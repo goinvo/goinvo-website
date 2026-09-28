@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import { siteConfig } from '@/lib/config'
 import { JsonLd } from '@/components/seo/JsonLd'
+// Open Sans and Montserrat are self-hosted (scripts/self-host-google-fonts.mjs): the same
+// @font-face rules Google serves, from our origin, so no page waits on two extra origins.
+import './fonts.css'
 import './globals.css'
 
-const FONT_STYLESHEETS = [
-  `https://use.typekit.net/${siteConfig.typekitId}.css`,
-  'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;600&display=swap',
-]
+const FONT_STYLESHEETS = [`https://use.typekit.net/${siteConfig.typekitId}.css`]
 
 export const metadata: Metadata = {
   title: {
@@ -70,17 +70,11 @@ export default function RootLayout({
         <link rel="preconnect" href="https://use.typekit.net" />
         <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
         <link rel="preconnect" href={siteConfig.cloudfrontUrl} />
-        {/* Google Fonts hosts (Open Sans/Montserrat globally; EB Garamond +
-            JetBrains Mono on the Services page) — open the TLS handshake during
-            HTML parse so the @import font fetch isn't a cold-connection waterfall. */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/* The global font stylesheets load without blocking first paint: they are
-            preloaded, then attached by script (a script-inserted stylesheet does not
-            block rendering), with a <noscript> fallback. Text renders in the fallback
-            stack until the fonts arrive (a brief swap, the trade-off in issue #24).
-            Family names are unchanged, so every stylesheet naming "Montserrat",
-            "Open Sans" or "adobe-jenson-pro" keeps working. */}
+        {/* The Typekit stylesheet (adobe-jenson-pro, which its licence keeps on Adobe's
+            servers) loads without blocking first paint: it is preloaded, then attached
+            by script (a script-inserted stylesheet does not block rendering), with a
+            <noscript> fallback. Text renders in the fallback stack until the font
+            arrives (a brief swap, the trade-off in issue #24). */}
         {FONT_STYLESHEETS.map((href) => (
           <link key={href} rel="preload" as="style" href={href} />
         ))}
