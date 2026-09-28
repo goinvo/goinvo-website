@@ -67,9 +67,7 @@ export function HomeConceptCalendlyCta() {
   useEffect(() => {
     let cancelled = false
     let observer: MutationObserver | null = null
-    const fallbackTimer = window.setTimeout(() => {
-      if (!cancelled) setShowFallback(true)
-    }, 6500)
+    let fallbackTimer: number | undefined
 
     function markReady() {
       if (cancelled) return
@@ -98,32 +96,58 @@ export function HomeConceptCalendlyCta() {
       observer.observe(parent, { childList: true, subtree: true })
     }
 
-    ensureCalendlyLoaded()
-      .then(() => {
-        if (cancelled || !inlineRef.current || !window.Calendly?.initInlineWidget) return
-        if (inlineRef.current.dataset.calendlyInitialized === 'true') {
+    function load() {
+      fallbackTimer = window.setTimeout(() => {
+        if (!cancelled) setShowFallback(true)
+      }, 6500)
+      ensureCalendlyLoaded()
+        .then(() => {
+          if (cancelled || !inlineRef.current || !window.Calendly?.initInlineWidget) return
+          if (inlineRef.current.dataset.calendlyInitialized === 'true') {
+            watchForIframe()
+            if (inlineRef.current.querySelector('iframe')) window.setTimeout(markReady, 1200)
+            return
+          }
+          inlineRef.current.dataset.calendlyInitialized = 'true'
           watchForIframe()
-          if (inlineRef.current.querySelector('iframe')) window.setTimeout(markReady, 1200)
-          return
-        }
-        inlineRef.current.dataset.calendlyInitialized = 'true'
-        watchForIframe()
-        window.Calendly.initInlineWidget({
-          url: calendlyUrl,
-          parentElement: inlineRef.current,
+          window.Calendly.initInlineWidget({
+            url: calendlyUrl,
+            parentElement: inlineRef.current,
+          })
         })
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setLoadError(true)
-          setShowFallback(true)
-        }
-      })
+        .catch(() => {
+          if (!cancelled) {
+            setLoadError(true)
+            setShowFallback(true)
+          }
+        })
+    }
+
+    // The booking widget is ~2.8 MB (Calendly's app plus the Stripe it embeds) and sits
+    // below the fold, so it loads only when the section nears the viewport rather than
+    // competing with the first render.
+    let viewportObserver: IntersectionObserver | null = null
+    const target = inlineRef.current
+    if (!target || typeof IntersectionObserver === 'undefined') {
+      load()
+    } else {
+      viewportObserver = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return
+          viewportObserver?.disconnect()
+          viewportObserver = null
+          load()
+        },
+        { rootMargin: '600px 0px' },
+      )
+      viewportObserver.observe(target)
+    }
 
     return () => {
       cancelled = true
       window.clearTimeout(fallbackTimer)
       observer?.disconnect()
+      viewportObserver?.disconnect()
     }
   }, [])
 
