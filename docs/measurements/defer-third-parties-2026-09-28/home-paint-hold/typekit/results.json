@@ -1,0 +1,106 @@
+{
+ "normal": [
+  {
+   "score": 60,
+   "obsFCP": 1423,
+   "LCP": 7141
+  },
+  {
+   "score": 61,
+   "obsFCP": 1381,
+   "LCP": 7072
+  },
+  {
+   "score": 86,
+   "obsFCP": 418,
+   "LCP": 3563
+  },
+  {
+   "score": 86,
+   "obsFCP": 480,
+   "LCP": 3504
+  },
+  {
+   "score": 58,
+   "obsFCP": 1471,
+   "LCP": 7134
+  },
+  {
+   "score": 60,
+   "obsFCP": 1425,
+   "LCP": 6917
+  },
+  {
+   "score": 62,
+   "obsFCP": 1397,
+   "LCP": 7070
+  },
+  {
+   "score": 62,
+   "obsFCP": 1394,
+   "LCP": 6988
+  },
+  {
+   "score": 89,
+   "obsFCP": 409,
+   "LCP": 3272
+  },
+  {
+   "score": 62,
+   "obsFCP": 1431,
+   "LCP": 6941
+  }
+ ],
+ "no-typekit": [
+  {
+   "score": 67,
+   "obsFCP": 1395,
+   "LCP": 6041
+  },
+  {
+   "score": 67,
+   "obsFCP": 1425,
+   "LCP": 5950
+  },
+  {
+   "score": 67,
+   "obsFCP": 1384,
+   "LCP": 5902
+  },
+  {
+   "score": 64,
+   "obsFCP": 1404,
+   "LCP": 5957
+  },
+  {
+   "score": 66,
+   "obsFCP": 1383,
+   "LCP": 6043
+  },
+  {
+   "score": 67,
+   "obsFCP": 1423,
+   "LCP": 6121
+  },
+  {
+   "score": 66,
+   "obsFCP": 1421,
+   "LCP": 6095
+  },
+  {
+   "score": 85,
+   "obsFCP": 462,
+   "LCP": 3702
+  },
+  {
+   "score": 85,
+   "obsFCP": 459,
+   "LCP": 3619
+  },
+  {
+   "score": 67,
+   "obsFCP": 1435,
+   "LCP": 6002
+  }
+ ]
+}

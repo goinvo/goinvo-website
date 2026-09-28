@@ -21,10 +21,37 @@ jobs:
   lighthouse:
     name: Lighthouse (${{ inputs.base_url || 'prod' }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read
     env:
       BASE_URL: ${{ inputs.base_url || 'https://www.goinvo.com' }}
     steps:
       - uses: actions/checkout@v5
+      # On a push, production is still the previous commit until Vercel finishes deploying
+      # this one. Auditing then would grade the old site, so wait for this commit's
+      # Production deployment (Vercel records one per main commit) and fail if it failed.
+      - name: Wait for this commit's production deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 60); do
+            id=$(gh api "repos/${{ github.repository }}/deployments?sha=${{ github.sha }}&environment=Production" --jq '.[0].id // empty')
+            if [ -n "$id" ]; then
+              state=$(gh api "repos/${{ github.repository }}/deployments/$id/statuses" --jq '.[0].state // empty')
+              echo "deployment $id: ${state:-pending}"
+              case "$state" in
+                success) exit 0 ;;
+                failure|error) echo "::error::Production deployment $id ended in $state"; exit 1 ;;
+              esac
+            else
+              echo "no Production deployment for ${{ github.sha }} yet"
+            fi
+            sleep 20
+          done
+          echo "::error::No successful Production deployment for ${{ github.sha }} after 20 minutes"
+          exit 1
       - name: Audit pages
         uses: treosh/lighthouse-ci-action@v12
         with:
@@ -34,8 +61,10 @@ jobs:
             ${{ env.BASE_URL }}/
             ${{ env.BASE_URL }}/work
             ${{ env.BASE_URL }}/work/mitre-flux-notes
-          # 5 runs per URL. Mobile lab scores are bimodal here (Chrome holds the first
-          # paint in some runs), so the assertions read the median run, not one sample.
+          # 5 runs per URL; the score and TBT floors read the median run and the CLS
+          # ceiling the worst run (lighthouserc.json). Floors were set from this runner's
+          # own scores for the branch that set them (2026-09-28): preview medians 72-83,
+          # TBT 340-490 ms, CLS <= 0.025; production before it scored 43-48 and failed.
           runs: 5
           uploadArtifacts: true
           temporaryPublicStorage: true
