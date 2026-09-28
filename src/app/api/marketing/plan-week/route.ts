@@ -205,6 +205,7 @@ async function describeWeek(
   try {
     const model = await resolveMarketingModel(client)
     const { text } = await generateClaudeText({
+    feature: 'plan-week',
       model,
       maxTokens: 600,
       system:
