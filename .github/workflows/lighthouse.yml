@@ -62,9 +62,12 @@ jobs:
             ${{ env.BASE_URL }}/work
             ${{ env.BASE_URL }}/work/mitre-flux-notes
           # 5 runs per URL; the score and TBT floors read the median run and the CLS
-          # ceiling the worst run (lighthouserc.json). Floors were set from this runner's
-          # own scores for the branch that set them (2026-09-28): preview medians 72-83,
-          # TBT 340-490 ms, CLS <= 0.025; production before it scored 43-48 and failed.
+          # ceiling the worst run (lighthouserc.json). Floors come from GitHub-runner
+          # scores of the branch that set them (2026-09-28, six passes): runner speed
+          # moves a whole pass (home 62 to 92 on identical code), so the score floors
+          # leave room for a slow machine (home 0.60, other pages 0.70) and TBT <= 600 ms
+          # and CLS <= 0.1 are the sharp gates. Production before it: 43-57, TBT 630-900
+          # ms, CLS 0.328 on the case study; it fails.
           runs: 5
           uploadArtifacts: true
           temporaryPublicStorage: true

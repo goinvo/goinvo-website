@@ -89,5 +89,25 @@ driven Lighthouse never reproduced the hold, so it depends on how Chrome is laun
 
 On these Linux runners the paint hold shows up in about 1 run in 5 per page, so home scores
 like the other pages. The runners' CPUs are slower: TBT reads 340-490 ms on the preview and
-630-900 ms on production. `lighthouserc.json` now fails the build below a performance score
-of 0.65 (median run), above 600 ms TBT (median run) or above 0.1 CLS (worst run).
+630-900 ms on production.
+
+Two later changes, each measured with two CI passes (median of 5 runs per page):
+
+| Build | Home | /work | Flux Notes |
+|---|---|---|---|
+| Step 5 (above) | 74, 72 | 77, 76 | 83, 74 |
+| + Open Sans and Montserrat self-hosted | 76, 73 | 77, 79 | 71, 73 |
+| + page hero fetched at high priority | 62, 92 | 83, 93 | 82, 92 |
+
+- **Self-hosted fonts** moved home's simulated FCP from 2.9 s to 2.45 s in both passes; the
+  score change is inside the noise. The real gain is two fewer third-party origins per page.
+  Screenshots of 8 pages at two widths are pixel-identical to the Google-hosted build.
+- **`fetchpriority="high"`** on the hero (the LCP element on /work and case studies) cut
+  their LCP render delay from about 1.2-1.9 s to 0.4-0.7 s. Home's code did not change in
+  this build: its 62 vs 92 is runner-to-runner variance. GitHub gives each job a different
+  machine and a slow one moves the whole pass (that pass's home TBT was 478 ms against 248).
+
+**Gate** (`lighthouserc.json`, per page via `assertMatrix`): performance at least 0.60 on
+home and 0.70 elsewhere (median run), TBT at most 600 ms (median run) and CLS at most 0.1
+(worst run) everywhere. The score floors leave room for a slow runner; TBT and CLS are the
+sharp gates. Production before this branch fails it (performance 0.46-0.57, CLS 0.328).
