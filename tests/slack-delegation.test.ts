@@ -691,14 +691,14 @@ describe('buildRunwayBlocks', () => {
     due: true,
     urgent: false,
     reason: 'The runway was last confirmed 32 days ago.',
-    question: 'Still 4.5 months of certain runway, or has that moved?',
+    question: 'Still 9.5 months of certain runway, or has that moved?',
   }
-  const facts = { months: 4.5, certainUntil: '2027-01-11', now: NOW }
+  const facts = { months: 9.5, certainUntil: '2099-12-31', now: NOW }
 
   it('says nothing when the number was recently confirmed', () => {
     // A permanent banner about money in a team channel is a banner people learn
     // to scroll past, and then it is worthless on the week it matters.
-    expect(buildRunwayBlocks({ summary: '4.5 months', checkIn: quiet, ...facts })).toEqual([])
+    expect(buildRunwayBlocks({ summary: '9.5 months', checkIn: quiet, ...facts })).toEqual([])
   })
 
   it('asks one question with the number and its date, and says why it is asking', () => {
@@ -706,7 +706,7 @@ describe('buildRunwayBlocks', () => {
     expectValidSlackBlocks(blocks)
     expect(blocks[0].block_id).toBe('mq_money_runway')
     expect(sectionText(blocks[0])).toBe(
-      '*Money and direction*\nStill 4.5 months of certain runway (to 11 Jan 2027), or has that moved?\n_Last confirmed 32 days ago._',
+      '*Money and direction*\nStill 9.5 months of certain runway (to 31 Dec 2099), or has that moved?\n_Last confirmed 32 days ago._',
     )
   })
 
@@ -734,7 +734,7 @@ describe('buildRunwayBlocks', () => {
 
   it('surfaces a disagreement even when nothing is due, and escapes everything', () => {
     const blocks = buildRunwayBlocks({
-      summary: '4.5 months',
+      summary: '9.5 months',
       checkIn: { ...asking, reason: 'AT&T was marked won on 20 Sep 2026 — did it extend the runway?' },
       disagreement: 'Posture <b>',
       ...facts,
@@ -764,7 +764,7 @@ describe('buildRunwayView', () => {
 
   it('does not ask what was signed when nothing was', () => {
     expect(JSON.stringify(buildRunwayView('update'))).not.toContain(RUNWAY_LABEL_BLOCK)
-    expectValidSlackModal(buildRunwayView('update', '4.5 months'))
+    expectValidSlackModal(buildRunwayView('update', '9.5 months'))
   })
 
   it('keeps both titles inside Slack limit of 24 characters', () => {
@@ -782,10 +782,10 @@ describe('readRunwaySubmission', () => {
   })
 
   it('takes the number out of what people actually type', () => {
-    expect(readRunwaySubmission(withMonths('4.5')).months).toBe(4.5)
-    expect(readRunwaySubmission(withMonths('4.5 months')).months).toBe(4.5)
+    expect(readRunwaySubmission(withMonths('9.5')).months).toBe(9.5)
+    expect(readRunwaySubmission(withMonths('9.5 months')).months).toBe(9.5)
     expect(readRunwaySubmission(withMonths('about 3')).months).toBe(3)
-    expect(readRunwaySubmission(withMonths('4,5')).months).toBe(4.5)
+    expect(readRunwaySubmission(withMonths('9,5')).months).toBe(9.5)
   })
 
   it('returns null rather than storing a guess', () => {
@@ -809,7 +809,7 @@ describe('every label means one action, in every message (rule 4)', () => {
   const pulseOf = (offset: number) => summarizeOutreach([], { ...monthWindow(MONEY_NOW, offset), now: MONEY_NOW })
   const snapshot = buildStrategySnapshot({
     now: MONEY_NOW,
-    runwaySummary: 'Certain to 11 Jan 2027',
+    runwaySummary: 'Certain to 31 Dec 2099',
     postureId: 'rebuild',
     thisMonth: pulseOf(0),
     lastMonth: pulseOf(-1),
@@ -817,9 +817,9 @@ describe('every label means one action, in every message (rule 4)', () => {
     gates: [],
   })
   const runway = {
-    summary: 'Certain to 11 Jan 2027',
+    summary: 'Certain to 31 Dec 2099',
     checkIn: { due: true, urgent: false, reason: 'The runway was last confirmed 32 days ago.', question: 'Still?' },
-    resolved: { id: 'rebuild' as const, source: 'runway' as const, months: 3.5, certainUntil: '2027-01-11', disagreement: null },
+    resolved: { id: 'rebuild' as const, source: 'runway' as const, months: 5.5, certainUntil: '2099-12-31', disagreement: null },
   }
   const due = { due: true, reason: 'Nobody has checked the marketing plan against the money yet.' }
   const past = '2026-09-01T16:00:00Z' // three weeks overdue: slipping
