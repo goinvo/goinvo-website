@@ -170,8 +170,11 @@ export function PersistentHero() {
     }
   }
 
+  // initial={false}: a hero present on first load renders visible from the server
+  // HTML instead of waiting at opacity 0 for hydration to fade it in (it is the
+  // page's largest paint). Heroes that mount on client navigation still fade.
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {config && displayImage ? (
         <motion.section
           ref={heroOuterRef}
