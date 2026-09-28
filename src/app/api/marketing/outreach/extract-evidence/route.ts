@@ -481,6 +481,7 @@ export async function POST(request: NextRequest) {
         }
         const prompts = buildEvidenceExtractionPrompts(source)
         const result = await generateClaudeText({
+    feature: 'outreach-evidence',
           system: prompts.system,
           user: prompts.user,
           model,

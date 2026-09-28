@@ -777,6 +777,7 @@ async function generateStrategistClaudeSuggestion(
   const safeDraft = sanitizePromptRecord(draft)
   const safePrompt = sanitizeMultilineText(prompt, 900) || ''
   const { text } = await generateClaudeText({
+    feature: 'assist',
     model,
     maxTokens: 2600,
     timeoutMs: marketingAiTimeoutMs(),
@@ -843,6 +844,7 @@ async function generateClaudeSuggestion(
     ? brandVoicePromptContext(brandVoice || null)
     : null
   const { text } = await generateClaudeText({
+    feature: 'assist',
     model,
     maxTokens,
     timeoutMs: marketingAiTimeoutMs(),
