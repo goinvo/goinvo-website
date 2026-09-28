@@ -62,6 +62,7 @@ export function SetCaseStudyHero({
           quality={95}
           sizes="100vw"
           priority
+          fetchPriority="high"
         />
       </div>
     </div>

@@ -277,6 +277,10 @@ export function PersistentHero() {
                     quality={95}
                     sizes="100vw"
                     priority
+                    // The hero is the page's largest paint: without this Next 16 emits the
+                    // preload and <img> at default priority and the browser raises it only
+                    // after layout, so the download queued behind scripts.
+                    fetchPriority="high"
                   />
                 )}
               </motion.div>
