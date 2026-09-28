@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, codex/marketing-cms]
   workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Site to audit (e.g. a Vercel preview URL). Defaults to production."
+        required: false
+        default: "https://www.goinvo.com"
   schedule:
     # Weekly drift check (Mondays, 12:00 UTC).
     - cron: "0 12 * * 1"
@@ -14,20 +19,25 @@ concurrency:
 
 jobs:
   lighthouse:
-    name: Lighthouse (prod)
+    name: Lighthouse (${{ inputs.base_url || 'prod' }})
     runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ inputs.base_url || 'https://www.goinvo.com' }}
     steps:
       - uses: actions/checkout@v5
-      - name: Audit production pages
+      - name: Audit pages
         uses: treosh/lighthouse-ci-action@v12
         with:
+          # Home, the work index and one case study (case-study heroes are where the
+          # hidden-until-hydration and layout-shift bugs lived; see lighthouserc.json).
           urls: |
-            https://www.goinvo.com/
-            https://www.goinvo.com/work
-          # 3 runs per URL, report the median — smooths out network noise.
-          runs: 3
+            ${{ env.BASE_URL }}/
+            ${{ env.BASE_URL }}/work
+            ${{ env.BASE_URL }}/work/mitre-flux-notes
+          # 5 runs per URL. Mobile lab scores are bimodal here (Chrome holds the first
+          # paint in some runs), so the assertions read the median run, not one sample.
+          runs: 5
           uploadArtifacts: true
           temporaryPublicStorage: true
-          # Budgets: accessibility must stay 100 (hard gate); regression floors on
-          # the rest; performance is a soft warn (mobile lab perf is network-noisy).
+          # Budgets live in lighthouserc.json.
           configPath: ./lighthouserc.json
