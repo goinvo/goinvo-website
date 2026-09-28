@@ -41,7 +41,7 @@ const localHeroImagePrefixes = [
   '/images/services/',
 ]
 
-function heroImageSrc(src: string) {
+export function heroImageSrc(src: string) {
   if (localHeroImagePrefixes.some((prefix) => src.startsWith(prefix))) {
     return src
   }
@@ -181,7 +181,13 @@ export function PersistentHero() {
           aria-label="Page hero"
           key="persistent-hero"
           variants={containerVariants}
-          initial="enter"
+          // Replacing SetCaseStudyHero's server-rendered stand-in: appear at once, since
+          // the stand-in is hidden in the same frame and a fade would flash a gap.
+          initial={
+            typeof document !== 'undefined' && document.querySelector('[data-hero-ssr]')
+              ? false
+              : 'enter'
+          }
           animate="visible"
           exit="exit"
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}

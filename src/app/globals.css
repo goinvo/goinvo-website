@@ -932,6 +932,12 @@
       margin-bottom: -350px;
     }
   }
+
+  /* SetCaseStudyHero's server-rendered stand-in gives way to the real PersistentHero
+     in the same frame it mounts, so the page content does not move. */
+  body:has(section[aria-label="Page hero"]) [data-hero-ssr] {
+    display: none;
+  }
 }
 
 /* ── View Transitions (cross-page morphing) ── */
