@@ -933,8 +933,20 @@
     }
   }
 
-  /* SetCaseStudyHero's server-rendered stand-in gives way to the real PersistentHero
-     in the same frame it mounts, so the page content does not move. */
+  /* SetCaseStudyHero's server-rendered stand-in: its height is reserved on <body> (outside
+     <main>, which the real hero is inserted before), and both give way to the real
+     PersistentHero in the frame it mounts, so neither the content nor <main> moves. The
+     heights mirror PersistentHero's image box (220px, 450px from lg) plus the header. */
+  body:has([data-hero-ssr]):not(:has(section[aria-label="Page hero"])) {
+    padding-top: calc(var(--spacing-header-height) + 220px);
+  }
+
+  @media (min-width: 1024px) {
+    body:has([data-hero-ssr]):not(:has(section[aria-label="Page hero"])) {
+      padding-top: calc(var(--spacing-header-height) + 450px);
+    }
+  }
+
   body:has(section[aria-label="Page hero"]) [data-hero-ssr] {
     display: none;
   }

@@ -11,9 +11,12 @@ import { heroImageSrc } from '@/components/layout/PersistentHero'
  * For direct URL access, this component sets it on mount so PersistentHero appears.
  *
  * Until then it renders a stand-in with the hero's exact geometry, so the server HTML
- * already shows the image and reserves its space. Without it the hero arrived only after
- * hydration and pushed the whole page down (a 0.33 layout shift on direct loads). A rule
- * in globals.css hides the stand-in in the same frame the real hero mounts.
+ * already shows the image. Without it the hero arrived only after hydration and pushed
+ * the whole page down (a 0.33 layout shift on direct loads). The stand-in sits at the top
+ * of the page out of flow, and globals.css reserves its height as padding on <body>, i.e.
+ * OUTSIDE <main>: the real hero is inserted before <main>, so a space held inside <main>
+ * would still let <main>'s own box move, which Chrome counts as a shift. The same rules
+ * drop the padding and hide the stand-in in the frame the real hero mounts.
  *
  * Pass `editTarget` in draft mode when the image is a placeholder to
  * make the hero click-through to the Sanity Presentation edit panel
@@ -48,7 +51,7 @@ export function SetCaseStudyHero({
   if (editTarget) return null
 
   return (
-    <div data-hero-ssr aria-hidden className="pt-[var(--spacing-header-height)]">
+    <div data-hero-ssr aria-hidden className="absolute inset-x-0 top-0 pt-[var(--spacing-header-height)]">
       <div className="relative overflow-hidden h-[220px] lg:h-[450px]">
         <Image
           src={heroImageSrc(image)}
