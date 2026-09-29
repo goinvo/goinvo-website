@@ -5,15 +5,16 @@
 The website for [GoInvo](https://www.goinvo.com), a healthcare design + engineering studio —
 rebuilt on **Next.js 16** (App Router) with a [**Sanity** CMS](https://www.sanity.io/login), migrated from Gatsby. Beyond the
 marketing site it includes a custom marketing-operations suite and a privacy-respecting,
-blocker-resilient A/B testing system.
+first-party A/B testing system.
 
 ## Highlights
 
 - **First-party A/B measurement.** Experiment exposures, conversions, and engagement
-  (time-on-page, bounce) are captured through a same-origin beacon — so the ~95% of analytics
-  events that ad/privacy blockers strip from a third-party tag are still counted. Google
-  Analytics is fed the same events **server-side** via the Measurement Protocol, so it stays the
-  reporting hub with accurate numbers. See [ADR-001](docs/engineering-practices.md).
+  (time-on-page, bounce) are captured through a same-origin beacon, so a live test actually
+  reads out instead of reporting "Measurement blocked" — Vercel Web Analytics never forwarded
+  our custom events. Google Analytics is fed the same events **server-side** via the
+  Measurement Protocol, so it stays the reporting hub. See
+  [ADR-001](docs/engineering-practices.md).
 - **Portable marketing CMS.** A custom Sanity Studio tool (content calendar, channels, funnels,
   campaigns, research, SEO) backed by a fail-closed REST API, with the write/derive logic in a
   site-agnostic core so the suite can be lifted into another Sanity site.

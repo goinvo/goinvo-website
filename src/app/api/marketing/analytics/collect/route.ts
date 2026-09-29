@@ -181,8 +181,8 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Forward the EVENT to GA4 via the Measurement Protocol so experiment events
-  // recover the ~95% that the client gtag loses to blockers. Inert until
+  // Forward the EVENT to GA4 via the Measurement Protocol so GA4 carries the
+  // same experiment numbers the first-party collector already has. Inert until
   // GA4_MP_API_SECRET is set (sendGa4MpEvents returns false). Best-effort: a
   // short awaited call wrapped in try/catch so it can never throw or change the
   // 204 response. The client gtag is skipped for these events, so MP is their
