@@ -652,6 +652,12 @@ Protocol** to recover the rest.
   legacy stylesheet to its page. Refuses to write if the rule count changes.
 - `npx vitest run tests/page-css-scoping.test.ts` — fails if any page stylesheet uses a
   selector that doesn't start with a class/id.
+- `node scripts/check-hidden-until-hydration.mjs [--base <url>] [route ...]` — renders each
+  route with JavaScript off and on at a phone viewport; fails on first-screen content the
+  server HTML ships invisible (framer-motion `initial={{ opacity: 0 }}`, CSS reveals) and on
+  a heading that jumps once JS runs (a hero inserted by an effect). Both cost LCP/CLS for
+  real visitors. Scroll reveals go through `src/lib/useScrollReveal.ts`, which keeps
+  first-screen content visible from the server; don't hand-roll a new `initial` opacity 0.
 
 **When fixing a rendering/layout bug, run the detector against PRODUCTION first.** A checker
 that doesn't fail on the broken site isn't evidence of anything. Both checkers above earned

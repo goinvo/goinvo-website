@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        // Self-hosted font files carry the upstream version in their names
+        // (scripts/self-host-google-fonts.mjs), so a new version is a new URL.
+        source: '/fonts/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ]
+  },
   async redirects() {
     return Object.entries(redirectsJson).map(([source, destination]) => ({
       source: source.startsWith('/') ? source : `/${source}`,

@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, codex/marketing-cms]
   workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Site to audit (e.g. a Vercel preview URL). Defaults to production."
+        required: false
+        default: "https://www.goinvo.com"
   schedule:
     # Weekly drift check (Mondays, 12:00 UTC).
     - cron: "0 12 * * 1"
@@ -14,20 +19,57 @@ concurrency:
 
 jobs:
   lighthouse:
-    name: Lighthouse (prod)
+    name: Lighthouse (${{ inputs.base_url || 'prod' }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: read
+    env:
+      BASE_URL: ${{ inputs.base_url || 'https://www.goinvo.com' }}
     steps:
       - uses: actions/checkout@v5
-      - name: Audit production pages
+      # On a push, production is still the previous commit until Vercel finishes deploying
+      # this one. Auditing then would grade the old site, so wait for this commit's
+      # Production deployment (Vercel records one per main commit) and fail if it failed.
+      - name: Wait for this commit's production deployment
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 60); do
+            id=$(gh api "repos/${{ github.repository }}/deployments?sha=${{ github.sha }}&environment=Production" --jq '.[0].id // empty')
+            if [ -n "$id" ]; then
+              state=$(gh api "repos/${{ github.repository }}/deployments/$id/statuses" --jq '.[0].state // empty')
+              echo "deployment $id: ${state:-pending}"
+              case "$state" in
+                success) exit 0 ;;
+                failure|error) echo "::error::Production deployment $id ended in $state"; exit 1 ;;
+              esac
+            else
+              echo "no Production deployment for ${{ github.sha }} yet"
+            fi
+            sleep 20
+          done
+          echo "::error::No successful Production deployment for ${{ github.sha }} after 20 minutes"
+          exit 1
+      - name: Audit pages
         uses: treosh/lighthouse-ci-action@v12
         with:
+          # Home, the work index and one case study (case-study heroes are where the
+          # hidden-until-hydration and layout-shift bugs lived; see lighthouserc.json).
           urls: |
-            https://www.goinvo.com/
-            https://www.goinvo.com/work
-          # 3 runs per URL, report the median — smooths out network noise.
-          runs: 3
+            ${{ env.BASE_URL }}/
+            ${{ env.BASE_URL }}/work
+            ${{ env.BASE_URL }}/work/mitre-flux-notes
+          # 5 runs per URL; the score and TBT floors read the median run and the CLS
+          # ceiling the worst run (lighthouserc.json). Floors come from GitHub-runner
+          # scores of the branch that set them (2026-09-28, six passes): runner speed
+          # moves a whole pass (home 62 to 92 on identical code), so the score floors
+          # leave room for a slow machine (home 0.60, other pages 0.70) and TBT <= 600 ms
+          # and CLS <= 0.1 are the sharp gates. Production before it: 43-57, TBT 630-900
+          # ms, CLS 0.328 on the case study; it fails.
+          runs: 5
           uploadArtifacts: true
           temporaryPublicStorage: true
-          # Budgets: accessibility must stay 100 (hard gate); regression floors on
-          # the rest; performance is a soft warn (mobile lab perf is network-noisy).
+          # Budgets live in lighthouserc.json.
           configPath: ./lighthouserc.json

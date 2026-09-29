@@ -3,7 +3,8 @@
 import { Children, cloneElement, createContext, Fragment, isValidElement, useContext, useEffect, useRef, useState } from 'react'
 import { PortableText, type PortableTextComponents } from '@portabletext/react'
 import type { PortableTextBlock } from '@portabletext/types'
-import { motion, useInView } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { useScrollReveal } from '@/lib/useScrollReveal'
 import Image from 'next/image'
 import { stegaClean } from '@sanity/client/stega'
 import { urlForImage } from '@/sanity/lib/image'
@@ -71,8 +72,7 @@ function ArticleReveal({
   children: React.ReactNode
   intensity?: 'visual' | 'heading' | 'text'
 }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: '-40px' })
+  const { ref, shown, instant } = useScrollReveal<HTMLDivElement>({ margin: '-40px' })
 
   const config = {
     visual: { y: 30, duration: 0.6 },
@@ -83,9 +83,9 @@ function ArticleReveal({
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: config.y }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: config.y }}
-      transition={{ duration: config.duration, ease: EASE }}
+      initial={false}
+      animate={shown ? { opacity: 1, y: 0 } : { opacity: 0, y: config.y }}
+      transition={instant ? { duration: 0 } : { duration: config.duration, ease: EASE }}
     >
       {children}
     </motion.div>
