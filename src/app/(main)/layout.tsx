@@ -6,7 +6,6 @@ import { PersistentHero } from '@/components/layout/PersistentHero'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics'
-import { HubSpotTracking } from '@/components/analytics/HubSpotTracking'
 import { ChatWidgetLazy } from '@/components/chat/ChatWidgetLazy'
 import { WebVitals } from '@/components/analytics/WebVitals'
 import { ScrollDepthTracker } from '@/components/analytics/ScrollDepthTracker'
@@ -39,7 +38,6 @@ export default async function MainLayout({
         {children}
       </TransitionLayout>
       <GoogleAnalytics />
-      <HubSpotTracking />
       <ChatWidgetLazy />
       <Analytics />
       <SpeedInsights />

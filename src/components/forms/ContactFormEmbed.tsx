@@ -30,6 +30,9 @@ export function ContactFormEmbed({
           id={`JotFormIFrame-${siteConfig.jotformId}`}
           title="Contact"
           scrolling="no"
+          // Below the fold on most pages; the browser fetches it as it nears the
+          // viewport instead of alongside the page's hero image.
+          loading="lazy"
           src={`https://form.jotform.com/${siteConfig.jotformId}`}
           className="w-full border-0"
           style={{ height: '548px' }}

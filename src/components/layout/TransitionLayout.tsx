@@ -17,6 +17,12 @@ import { Footer } from './Footer'
 /*  Variants                                                           */
 /* ------------------------------------------------------------------ */
 
+// The settled clip leaves room above <main> (a negative top inset) so SetCaseStudyHero's
+// server-rendered stand-in, positioned at the top of the page from inside <main>, is not
+// clipped away. Only the bottom inset animates (the card reveal), so this changes nothing
+// visible.
+const SETTLED_CLIP = 'inset(-1000px 0 0% 0)'
+
 const pageVariants = {
   enter: (custom: { isCard?: boolean } | undefined) =>
     custom?.isCard
@@ -36,13 +42,13 @@ const pageVariants = {
           // from filter:blur(0px) -> filter:none on settle creates/
           // removes a containing block, which Lighthouse flags as a
           // layout shift on the main element (~0.13 CLS on mobile).
-          clipPath: 'inset(0 0 0% 0)',
+          clipPath: SETTLED_CLIP,
           opacity: 0.55,
           scale: 1.008,
           y: 8,
         },
   visible: {
-    clipPath: 'inset(0 0 0% 0)',
+    clipPath: SETTLED_CLIP,
     opacity: 1,
     scale: 1,
     y: 0,

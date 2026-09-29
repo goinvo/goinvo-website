@@ -1,18 +1,27 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 
 export function HomeConceptInteractions() {
-  useEffect(() => {
+  // The reveal rule below applies only once this has run (data-home-concept-js on <html>),
+  // so the server HTML paints every section visible. Elements already on screen are marked
+  // visible first and never hide; the rest are hidden off screen and fade up as they arrive.
+  useLayoutEffect(() => {
+    const root = document.documentElement
     const elements = Array.from(document.querySelectorAll<HTMLElement>('[data-home-concept-reveal]'))
-    if (elements.length === 0) return
-
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reducedMotion || !('IntersectionObserver' in window)) {
-      elements.forEach((element) => {
-        element.dataset.homeConceptVisible = 'true'
-      })
-      return
+    const canObserve = 'IntersectionObserver' in window && !reducedMotion
+    const pending = elements.filter((element) => {
+      const rect = element.getBoundingClientRect()
+      const onScreen = rect.top < window.innerHeight && rect.bottom > 0
+      if (onScreen || !canObserve) element.dataset.homeConceptVisible = 'true'
+      return !onScreen && canObserve
+    })
+    root.dataset.homeConceptJs = 'true'
+    if (pending.length === 0) {
+      return () => {
+        delete root.dataset.homeConceptJs
+      }
     }
 
     const observer = new IntersectionObserver(
@@ -27,12 +36,13 @@ export function HomeConceptInteractions() {
       { threshold: 0.12, rootMargin: '0px 0px -40px' },
     )
 
-    elements.forEach((element) => {
+    pending.forEach((element) => {
       observer.observe(element)
     })
 
     return () => {
       observer.disconnect()
+      delete root.dataset.homeConceptJs
     }
   }, [])
 
@@ -71,7 +81,7 @@ export function HomeConceptInteractions() {
       }
 
       @media (prefers-reduced-motion: no-preference) {
-        [data-home-concept-reveal] {
+        [data-home-concept-js] [data-home-concept-reveal] {
           opacity: 0;
           transform: translateY(30px);
           transition:
@@ -80,7 +90,7 @@ export function HomeConceptInteractions() {
           transition-delay: calc(var(--home-concept-reveal-index, 0) * 70ms);
         }
 
-        [data-home-concept-visible='true'] {
+        [data-home-concept-js] [data-home-concept-visible='true'] {
           opacity: 1;
           transform: translateY(0);
         }
