@@ -29,13 +29,6 @@ export const siteConfig = {
   emailoctopus: {
     formId: 'e260d99a-9007-11f0-9271-35d5d1204339',
   },
-  hubspot: {
-    portalId: '356419',
-    contactFormId: '888955e3-1618-46d8-b553-c06a855723be',
-    newsletterFormId: '7bb39794-e6f9-4c94-9b26-e7de3a81f716',
-    newsletterFullFormId: '42f0daf8-2815-4436-9f44-8e70fd91bd7a',
-    applicationFormId: '953741a9-2774-4205-9b72-16f551c1139d',
-  },
   analytics: {
     ga4Id: 'G-P00K4KL2Y9',
     googleAdsId: 'AW-973476681',

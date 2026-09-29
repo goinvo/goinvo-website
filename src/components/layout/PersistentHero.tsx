@@ -41,7 +41,7 @@ const localHeroImagePrefixes = [
   '/images/services/',
 ]
 
-function heroImageSrc(src: string) {
+export function heroImageSrc(src: string) {
   if (localHeroImagePrefixes.some((prefix) => src.startsWith(prefix))) {
     return src
   }
@@ -170,15 +170,24 @@ export function PersistentHero() {
     }
   }
 
+  // initial={false}: a hero present on first load renders visible from the server
+  // HTML instead of waiting at opacity 0 for hydration to fade it in (it is the
+  // page's largest paint). Heroes that mount on client navigation still fade.
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       {config && displayImage ? (
         <motion.section
           ref={heroOuterRef}
           aria-label="Page hero"
           key="persistent-hero"
           variants={containerVariants}
-          initial="enter"
+          // Replacing SetCaseStudyHero's server-rendered stand-in: appear at once, since
+          // the stand-in is hidden in the same frame and a fade would flash a gap.
+          initial={
+            typeof document !== 'undefined' && document.querySelector('[data-hero-ssr]')
+              ? false
+              : 'enter'
+          }
           animate="visible"
           exit="exit"
           transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
@@ -268,6 +277,10 @@ export function PersistentHero() {
                     quality={95}
                     sizes="100vw"
                     priority
+                    // The hero is the page's largest paint: without this Next 16 emits the
+                    // preload and <img> at default priority and the browser raises it only
+                    // after layout, so the download queued behind scripts.
+                    fetchPriority="high"
                   />
                 )}
               </motion.div>
