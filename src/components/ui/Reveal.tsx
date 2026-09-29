@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef } from 'react'
-import { motion, useInView, type TargetAndTransition } from 'framer-motion'
+import { motion, type TargetAndTransition } from 'framer-motion'
+import { useScrollReveal } from '@/lib/useScrollReveal'
 import { useReducedMotion } from '@/lib/motion'
 
 type RevealStyle = 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'clip-up' | 'clip-left'
@@ -50,8 +50,7 @@ export function Reveal({
   duration = 0.6,
   once = true,
 }: RevealProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once, margin: '-60px' })
+  const { ref, shown, instant } = useScrollReveal<HTMLDivElement>({ once })
   const prefersReducedMotion = useReducedMotion()
 
   const v = variants[style]
@@ -64,13 +63,9 @@ export function Reveal({
     <motion.div
       ref={ref}
       className={className}
-      initial={v.hidden}
-      animate={isInView ? v.visible : v.hidden}
-      transition={{
-        duration,
-        delay,
-        ease: [0.25, 0.1, 0.25, 1],
-      }}
+      initial={false}
+      animate={shown ? v.visible : v.hidden}
+      transition={instant ? { duration: 0 } : { duration, delay, ease: [0.25, 0.1, 0.25, 1] }}
     >
       {children}
     </motion.div>

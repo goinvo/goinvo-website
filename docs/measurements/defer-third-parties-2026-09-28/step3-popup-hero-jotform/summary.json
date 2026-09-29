@@ -1,0 +1,80 @@
+{
+ "prod home": {
+  "runs": 7,
+  "performance": 53,
+  "accessibility": 100,
+  "best-practices": 79,
+  "seo": 100,
+  "FCP_ms": 4956.439,
+  "LCP_ms": 7670.161999999999,
+  "TBT_ms": 449,
+  "CLS": 0,
+  "SpeedIndex_ms": 5580.09425,
+  "finalUrl": "https://www.goinvo.com/"
+ },
+ "preview home": {
+  "runs": 7,
+  "performance": 64,
+  "accessibility": 100,
+  "best-practices": 75,
+  "seo": 69,
+  "FCP_ms": 4318.093,
+  "LCP_ms": 6887.566999999997,
+  "TBT_ms": 216.5,
+  "CLS": 0,
+  "SpeedIndex_ms": 4343.565333591841,
+  "finalUrl": "https://goinvo-website-next-k5g7wjnz9-goinvo.vercel.app/"
+ },
+ "prod work": {
+  "runs": 7,
+  "performance": 48,
+  "accessibility": 100,
+  "best-practices": 79,
+  "seo": 100,
+  "FCP_ms": 6070.066000000002,
+  "LCP_ms": 9849.446000000002,
+  "TBT_ms": 504.5,
+  "CLS": 0,
+  "SpeedIndex_ms": 6070.066000000002,
+  "finalUrl": "https://www.goinvo.com/work"
+ },
+ "preview work": {
+  "runs": 7,
+  "performance": 86,
+  "accessibility": 100,
+  "best-practices": 75,
+  "seo": 69,
+  "FCP_ms": 1816.0484999999994,
+  "LCP_ms": 3337.973999999999,
+  "TBT_ms": 198,
+  "CLS": 0.001457632440514094,
+  "SpeedIndex_ms": 1816.0484999999994,
+  "finalUrl": "https://goinvo-website-next-k5g7wjnz9-goinvo.vercel.app/work"
+ },
+ "prod case-flux-notes": {
+  "runs": 7,
+  "performance": 55,
+  "accessibility": 98,
+  "best-practices": 79,
+  "seo": 100,
+  "FCP_ms": 3917.7975,
+  "LCP_ms": 5372.644500000002,
+  "TBT_ms": 509,
+  "CLS": 0,
+  "SpeedIndex_ms": 5297.717777668133,
+  "finalUrl": "https://www.goinvo.com/work/mitre-flux-notes"
+ },
+ "preview case-flux-notes": {
+  "runs": 7,
+  "performance": 63,
+  "accessibility": 98,
+  "best-practices": 75,
+  "seo": 69,
+  "FCP_ms": 1185.6525,
+  "LCP_ms": 5303.681999999998,
+  "TBT_ms": 122.5,
+  "CLS": 0.3280680437424058,
+  "SpeedIndex_ms": 1856.7965,
+  "finalUrl": "https://goinvo-website-next-k5g7wjnz9-goinvo.vercel.app/work/mitre-flux-notes"
+ }
+}
