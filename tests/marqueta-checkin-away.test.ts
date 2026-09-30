@@ -63,7 +63,7 @@ const ROSTER: TeamMemberAvailability[] = [
   { ownerName: 'Ezra', slackUserId: 'UEZRA', status: 'available' },
 ]
 /** What "I'm away this week" writes: Slack's display name, the same Slack id. */
-const JUHAN_AWAY: TeamMemberAvailability = {
+const JULES_AWAY: TeamMemberAvailability = {
   ownerName: 'Jules Soren',
   slackUserId: 'UJULES',
   status: 'away',
@@ -127,7 +127,7 @@ afterEach(() => {
 
 describe('the check-in and people who are away', () => {
   it('does not @-mention someone away — matched by Slack id when the record carries their display name', async () => {
-    route([...ROSTER, JUHAN_AWAY])
+    route([...ROSTER, JULES_AWAY])
     const result = await runWeeklyCheckIn({ now: NOW, botUserId: 'UBOT' })
     expect(result).toMatchObject({ ok: true, posted: true })
 
@@ -161,7 +161,7 @@ describe('the check-in and people who are away', () => {
   })
 
   it('asks as usual once the absence is over', async () => {
-    route([...ROSTER, { ...JUHAN_AWAY, from: '2026-09-07', until: '2026-09-13' }])
+    route([...ROSTER, { ...JULES_AWAY, from: '2026-09-07', until: '2026-09-13' }])
     const result = await runWeeklyCheckIn({ now: NOW, dryRun: true })
     expect(result.text).toContain('<@UJULES>')
     expect(JSON.stringify(result.blocks)).not.toContain('Away, so not asked')
@@ -182,7 +182,7 @@ describe('the check-in and people who are away', () => {
 
 describe('absencesOn', () => {
   it('files an id-linked absence under every name that shares the id, ahead of "available"', () => {
-    const { entries, isAway } = absencesOn([...ROSTER, JUHAN_AWAY], TODAY)
+    const { entries, isAway } = absencesOn([...ROSTER, JULES_AWAY], TODAY)
     // The name-keyed helpers now see the absence under the board's name.
     expect(statusOn(entries, 'Jules', TODAY)).toBe('away')
     expect(hoursForWeek({ entries, ownerName: 'Jules', dateKey: TODAY, defaultHours: 4 })).toBe(0)
@@ -193,8 +193,8 @@ describe('absencesOn', () => {
   })
 
   it('is exactly the roster when nobody is away today', () => {
-    const { entries, isAway } = absencesOn([...ROSTER, JUHAN_AWAY], '2026-10-01')
-    expect(entries).toEqual([...ROSTER, JUHAN_AWAY])
+    const { entries, isAway } = absencesOn([...ROSTER, JULES_AWAY], '2026-10-01')
+    expect(entries).toEqual([...ROSTER, JULES_AWAY])
     expect(isAway('Jules', 'UJULES')).toBe(false)
   })
 })

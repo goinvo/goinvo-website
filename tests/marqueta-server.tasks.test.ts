@@ -233,26 +233,26 @@ describe('team identity', () => {
   // was nobody's — Hand back refused him, `mine` did not list it, and the setup
   // kept offering a name he could no longer pick.
   describe('the name a write files something under', () => {
-    const unlinkedJuhan: TeamMemberAvailability[] = [{ ownerName: 'Jules', status: 'available' }]
+    const unlinkedJules: TeamMemberAvailability[] = [{ ownerName: 'Jules', status: 'available' }]
 
     it('never files work under a display name the team list does not know', async () => {
-      routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
+      routeOutreach({ availability: unlinkedJules, openTasks: 0 })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UJULES', displayName: 'Jules Soren' })).resolves.toBe('Someone')
       // resolvePresserName itself is unchanged: fine for a sentence, never for an owner.
-      await expect(resolvePresserName({ slackUserId: 'UJULES', displayName: 'Jules Soren', entries: unlinkedJuhan })).resolves.toBe('Jules Soren')
+      await expect(resolvePresserName({ slackUserId: 'UJULES', displayName: 'Jules Soren', entries: unlinkedJules })).resolves.toBe('Jules Soren')
     })
 
     it('uses the name when they are linked, on the team list, on the marketing team, or already own open work', async () => {
       routeOutreach({ availability: TEAM })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UJULES', displayName: 'Jules Soren' })).resolves.toBe('Jules')
-      routeOutreach({ availability: unlinkedJuhan, openTasks: 0 })
+      routeOutreach({ availability: unlinkedJules, openTasks: 0 })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'jules' })).resolves.toBe('Jules')
       // Joss owns nothing and has no record, but he is on the marketing team (the deployment's list, task_1008).
       process.env.MARKETING_TEAM_NAMES = 'Jules,Shay,Ezra,Joss'
       expect(marketingTeamNames()).toEqual(['Jules', 'Shay', 'Ezra', 'Joss'])
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UJOSS', displayName: 'Joss' })).resolves.toBe('Joss')
       // Somebody new with work already filed under exactly their name.
-      routeOutreach({ availability: unlinkedJuhan, openTasks: 2 })
+      routeOutreach({ availability: unlinkedJules, openTasks: 2 })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UDANA', displayName: 'Dana' })).resolves.toBe('Dana')
       // A namesake is still nobody.
       routeOutreach({ availability: TEAM })
@@ -260,9 +260,9 @@ describe('team identity', () => {
     })
 
     it('throws rather than guessing when the open work cannot be counted', async () => {
-      routeOutreach({ availability: unlinkedJuhan })
+      routeOutreach({ availability: unlinkedJules })
       mocks.outreach.fetch.mockImplementation(async (query: string) => {
-        if (query === TEAM_AVAILABILITY_QUERY) return unlinkedJuhan
+        if (query === TEAM_AVAILABILITY_QUERY) return unlinkedJules
         throw new Error('down')
       })
       await expect(resolveOwnerNameForWrite({ slackUserId: 'UNEW', displayName: 'Dana' })).rejects.toThrow('down')
