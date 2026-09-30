@@ -30,9 +30,10 @@ export const dynamic = 'force-dynamic'
  * POST { email, magnetSlug?, sourcePath?, website? (honeypot), ga_client_id? }
  *  → 200 { ok: true, downloadUrl? }
  *
- * Replaces reliance on the third-party EmailOctopus embed script (blocked by
- * the ad/tracking blockers most of our audience runs — the same ~95% loss we
- * measured on client-side GA). The exchange: EmailOctopus owns the list, the
+ * Replaces reliance on the third-party EmailOctopus embed script, which is
+ * third-party and uninstrumented — GA4 has recorded no signup event from it,
+ * ever. The exchange: EmailOctopus owns
+ * the list, the
  * private outreach dataset gets a cold contact (per-magnet opt-out via
  * `createOutreachContacts`), GA4 gets a best-effort `newsletter_signup` event.
  *
