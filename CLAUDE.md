@@ -102,7 +102,8 @@ never silently "passes").
 ## Sharing draft previews (built 2026-07)
 
 Unpublished drafts 404 on the public site (verified: unauth GROQ returns `[]` for `drafts.*`,
-even though PUBLISHED prod data is world-readable). Three ways to show one to a reviewer:
+and since 2026-09-30 the whole `production` dataset is private — see "The production dataset is
+PRIVATE" below). Three ways to show one to a reviewer:
 
 - **"Share preview" document action** — the primary, self-serve path. On any `feature` or
   `caseStudy` (the two types with a public page: `/vision/<slug>`, `/work/<slug>`), the editor's
@@ -118,8 +119,8 @@ even though PUBLISHED prod data is world-readable). Three ways to show one to a 
 
 How the token links work (`/preview/<token>`):
 - **Storage** = a `previewShareLink` doc (managed purely via the data API — NOT a Studio schema)
-  holding `{ tokenHash (sha256), docId (bare), createdAt, expiresAt, revokedAt }`. Safe in the
-  world-readable prod dataset: hash reveals nothing, `docId` is an opaque uuid (no title/path
+  holding `{ tokenHash (sha256), docId (bare), createdAt, expiresAt, revokedAt }`. Safe even when
+  the prod dataset was world-readable (it is private since 2026-09-30): hash reveals nothing, `docId` is an opaque uuid (no title/path
   leak — the consume route resolves the slug server-side at open time). Raw 256-bit token lives
   only in the URL.
 - **Core:** `src/lib/previewShare.ts` (pure, isomorphic, unit-tested: paths, expiry clamp,
@@ -171,8 +172,8 @@ openers/offers/evidence, email templates, offer one-pagers).
   survive, catalog edits do NOT propagate (birth certificate, not a sync source). Catalog:
   `src/lib/marketing/executionPlanSeed.ts`; pure helpers `src/lib/marketing/executionPlan.ts`;
   tests `tests/execution-plan.test.ts` include a **neutrality guard** (production-bound
-  titles/briefs must carry no crisis framing / person names / emails — that dataset is
-  world-readable; candid framing lives only on the outreach-dataset operations).
+  titles/briefs must carry no crisis framing / person names / emails — that dataset was
+  world-readable until 2026-09-30 and a flip back to public is the rollback; candid framing lives only on the outreach-dataset operations).
 - **/audience-brief (built 2026-08-24)** answers WHO WE ACTUALLY HAVE — the other three are
   written around a warm network the CMS does not contain. Renders live from the private
   dataset: segment mix, the named organisations behind each buyer segment, coverage gaps
@@ -813,6 +814,30 @@ with a `#:~:text=` deep link, the fuller claim is demoted to "Unverified", and v
 openings sort first. Pure helpers + tests: `src/lib/marketing/orgResearch.ts`,
 `src/lib/marketing/sourceVerification.ts`, `tests/org-research.test.ts`,
 `tests/source-verification.test.ts`.
+
+## The production dataset is PRIVATE (since 2026-09-30)
+
+`production`, `production-comments` and `outreach` all read `private`
+(`npx sanity dataset visibility get <name>`). Anonymous GROQ returns nothing; images and files on
+`cdn.sanity.io` stay public (Sanity's design). Everything the site renders is read with a token:
+
+- `src/sanity/lib/client.ts` uses `SANITY_API_READ_TOKEN` when set (published perspective, no CDN).
+  **Without that env var every page renders empty** — it is set on Vercel for Production, Preview
+  and Development. Any NEW Sanity client must pass a token; a tokenless one now reads `[]` silently.
+- Preview-only clients that must see drafts pin `perspective: 'raw'` (the base client pins published).
+- Live updates still work anonymously: the Live Content API delivers change tags on a private
+  dataset (verified with a probe document), so published edits revalidate as before.
+- **`src/lib/sanity-actions.ts` is a PUBLIC endpoint** (server actions are POST-able by anyone).
+  `refetchQuery` runs only the two allowlisted page queries with `{slug}`; it once ran any GROQ with
+  the server token (task_2160). Never add a server action that takes a query, a type or a tag from
+  the caller. Guard: `tests/sanity-actions-allowlist.test.ts`.
+- CI reads live content with the repo secret `SANITY_API_READ_TOKEN` (Viewer; also used by the
+  heartbeat watchdog). **GitHub Actions logs on this repo are public** — a test may count or assert
+  on documents but must never print their contents.
+- Rollback: `npx sanity dataset visibility set production public` (no redeploy needed).
+- Before any change like this: `npx sanity dataset export <name> <file>` (the 2026-09-30 exports
+  are outside the repo) and record article credits before and after — the flip was checked with an
+  83-article authors/contributors/special-thanks comparison that came back identical.
 
 ## Marketing dataset split — internal records out of the public dataset (in progress 2026-08-24)
 
