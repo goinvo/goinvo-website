@@ -1483,7 +1483,7 @@ describe('the runway modal', () => {
     })
 
   it('remembers where it was opened, and redraws that message’s money group on save', async () => {
-    mocks.readRunway.mockResolvedValue({ summary: '5 months of certain runway — Rebuild.' })
+    mocks.readRunway.mockResolvedValue({ summary: '5.5 months of certain runway — Rebuild.' })
     const plan = mondayPlan()
     await post(press(MARKETING_ACTION.runwayUpdate, '', { message: { ts: '200.2', blocks: plan.blocks } }))
     const [, view] = mocks.openSlackModal.mock.calls[0]
@@ -1491,7 +1491,7 @@ describe('the runway modal', () => {
     expectValidSlackModal(view)
     expect(JSON.parse(view.private_metadata)).toEqual({ k: 'update', ch: 'CBOT', th: '200.2' })
 
-    mocks.setRunway.mockResolvedValue({ summary: '5 months of certain runway (to 10 Mar 2027) — Rebuild.' })
+    mocks.setRunway.mockResolvedValue({ summary: '5.5 months of certain runway (to 10 Mar 2027) — Rebuild.' })
     mocks.fetchSlackMessage.mockResolvedValue({ text: plan.text, blocks: plan.blocks, attachments: [] })
     const response = await submitRunway(view.private_metadata)
     expect(await response.json()).toEqual({})

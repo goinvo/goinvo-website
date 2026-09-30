@@ -3,9 +3,7 @@ import { z } from 'zod'
 
 // Default print price when a marketingProduct doc doesn't override it.
 //
-// $30 since 2026-08-07 ($6 at launch). A rise to $50 was decided on 2026-08-17
-// and dropped on 2026-09-30: no poster had ever sold at $30, so there was no
-// demand for a higher price to stand on.
+// Kept equal to the CMS print price.
 //
 // The CMS is the source of truth: every piece on the storefront has a
 // marketingProduct document whose `price` wins over this constant, so in

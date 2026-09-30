@@ -209,7 +209,7 @@ describe('errorLine and askMarqueta', () => {
 describe('replaceBlocksByPrefix', () => {
   const blocks: Block[] = [
     { type: 'header', text: { type: 'plain_text', text: 'Monday plan' } },
-    { type: 'section', block_id: 'mq_money_runway', text: { type: 'mrkdwn', text: 'Still 5 months?' } },
+    { type: 'section', block_id: 'mq_money_runway', text: { type: 'mrkdwn', text: 'Still 5.5 months?' } },
     { type: 'context', block_id: 'mq_money_next', elements: [{ type: 'mrkdwn', text: 'Next: the plan' }] },
     { type: 'actions', block_id: 'mq_footer', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Open This week' }, url: 'https://x.test' }] },
   ]
