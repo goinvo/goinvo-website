@@ -9,7 +9,7 @@
  *
  * So the stored fact is a DATE — the last day the studio is confident it can
  * pay for — and the bin is computed from it. "5 months, certain" becomes
- * `certainUntil: 2027-03-10`, which is 5 months today, 2.5 months in
+ * `certainUntil: 2027-03-10`, which is 5 months today, 3 months in
  * November, and 0 in January whether or not anyone remembers to update it. The
  * strategy follows the number down on its own, and the check-in fires before it
  * crosses a line rather than after.

@@ -185,8 +185,8 @@ async function run(request: NextRequest, dryRun: boolean) {
   }
 
   // 3. Registry records. Free, keyless, no model: an expiry date is a fact to
-  //    be read, not a judgement. goinvo.com was close to expiry on
-  //    2026-09-02 and nobody knew - and a lapsed domain takes the site, the
+  //    be read, not a judgement. A renewal can come due with nobody watching,
+  //    and a lapsed domain takes the site, the
   //    client email and every other job on this list down together.
   let domainNotes: string[] = []
   try {

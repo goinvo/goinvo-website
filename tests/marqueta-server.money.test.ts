@@ -313,7 +313,7 @@ describe('renderMoneyAndDirection — the redraw a money press leaves in place',
     const blocks = await renderMoneyAndDirection({ now: NOW, receipt: { kind: 'runwayConfirmed', who: '<@UJULES>' } })
     expectValidSlackBlocks(blocks)
     expect(blocks.every((block) => String(block.block_id).startsWith('mq_money'))).toBe(true)
-    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJULES> · Thu 24 Sep — 5.5 months (to 10 Mar 2027).')
+    expect(blocks[0].text.text).toBe(':white_check_mark: Runway confirmed by <@UJULES> · Thu 24 Sep — 4 months (to 10 Mar 2027).')
     expect(buttons(blocks).map((button) => button.text.text)).toEqual([LABEL.RUNWAY_CHANGED, LABEL.PLAN_FITS, LABEL.PLAN_RETHINK])
     expect(buttons(blocks).some((button) => button.style)).toBe(false)
   })

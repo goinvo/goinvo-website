@@ -137,8 +137,11 @@ export async function resolvePresserName(input: {
 /** Open work somebody owns — what "your 2 open tasks" counts. Weekly-plan records are the planner's, not theirs. */
 export const OWNED_OPEN_TASKS_QUERY = `count(*[_type == "${MARKETING_OPERATION_TYPE}" && !(_id in path("drafts.**")) && lower(ownerName) == $name && !(status in ["done", "dismissed"]) && !string::startsWith(coalesce(sourceKey, ""), "weekly-plan/")])`
 
-/** Who does the studio's marketing, when `MARKETING_TEAM_NAMES` does not say. */
-export const DEFAULT_MARKETING_TEAM_NAMES = ['Jules', 'Shay', 'Ezra', 'Joss']
+/**
+ * Who does the studio's marketing when `MARKETING_TEAM_NAMES` does not say: nobody beyond the board's owners.
+ * The studio's list lives in the deployment's environment, not in this public repository (task_1008).
+ */
+export const DEFAULT_MARKETING_TEAM_NAMES: string[] = []
 
 /**
  * The marketing team by the names the board files work under — everyone the

@@ -250,8 +250,8 @@ describe('plan-week gives This week what it lays out', () => {
 
     const body = await (await PLAN_WEEK_GET(planRequest('GET'))).json()
     expect(body.pulse).toMatch(/^Outreach this week: 1 touch \(1 person\)/)
-    // 10 Mar 2027 is 5.5 months from 21 Sep — the stored date, read on the day.
-    expect(body.runway).toBe('Rebuild — 5.5 months of certain runway (to 10 Mar 2027)')
+    // 10 Mar 2027 is 4 months from 21 Sep — the stored date, read on the day.
+    expect(body.runway).toBe('Rebuild — 4 months of certain runway (to 10 Mar 2027)')
     expect(body.posture).toBe('rebuild')
   })
 
@@ -311,6 +311,6 @@ describe('plan-week gives This week what it lays out', () => {
       runway: { certainUntil: '2027-03-10', confirmedAt: '2026-09-01T00:00:00Z' },
     })
     const body = await (await PLAN_WEEK_GET(planRequest('GET'))).json()
-    expect(body.runway).toBe('Survival — 5.5 months of certain runway (to 10 Mar 2027) · posture set by hand')
+    expect(body.runway).toBe('Survival — 4 months of certain runway (to 10 Mar 2027) · posture set by hand')
   })
 })
